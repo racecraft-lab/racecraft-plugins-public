@@ -1,12 +1,14 @@
 {
   "name": "racecraft-local-plugins",
-  "description": "Racecraft private Claude Code plugins for productivity and planning workflows",
+  "owner": {
+    "name": "Fredrick Gabelmann"
+  },
   "plugins": [
     {
       "name": "racecraft-weekly-planning",
+      "source": "./racecraft-weekly-planning",
       "description": "Weekly planning for Racecraft across E84, Inbanx, Racecraft, Personal, and Family calendars",
-      "version": "1.0.0",
-      "path": "./racecraft-weekly-planning"
+      "version": "1.0.0"
     }
   ]
 }
