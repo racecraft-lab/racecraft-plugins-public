@@ -7,8 +7,8 @@
     {
       "name": "racecraft",
       "source": "./racecraft",
-      "description": "Racecraft productivity plugin: weekly planning, status checks, and workflow automation across E84, Inbanx, Racecraft, Personal, and Family domains",
-      "version": "1.2.0"
+      "description": "Racecraft productivity plugin: weekly planning, weekly/monthly/quarterly reviews, competitor intelligence, and workflow automation with subagent architecture and Chrome browser automation",
+      "version": "2.0.0"
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Racecraft Local Plugins
 
-Private Claude Code plugins for Racecraft productivity and planning workflows.
+Private Claude Code plugins for Racecraft productivity, planning, and competitor intelligence workflows.
 
 ## Installation
 
@@ -22,14 +22,19 @@ From GitHub:
 
 | Plugin | Version | Description |
 |--------|---------|-------------|
-| `racecraft` | 1.1.0 | Weekly planning, status checks, and workflow automation |
+| `racecraft` | 2.0.0 | Weekly planning, reviews, competitor intelligence, and workflow automation with subagent architecture |
 
 ## Available Commands
 
-| Command | Description |
-|---------|-------------|
-| `/racecraft:check` | Quick 5-minute status check |
-| `/racecraft:plan` | Full weekly planning session |
+| Command | Duration | Description |
+|---------|----------|-------------|
+| `/racecraft:check` | 5 min | Quick status check |
+| `/racecraft:weekly-plan` | 90-120 min | Full weekly planning session |
+| `/racecraft:weekly-review` | 90 min | Full weekly review with competitor intel |
+| `/racecraft:weekly-technical` | 30 min | Technical review only (no intel) |
+| `/racecraft:intel` | 45 min | Standalone competitor intelligence scan |
+| `/racecraft:monthly-review` | 45 min | End-of-month strategy review |
+| `/racecraft:quarterly-review` | 60 min | End-of-quarter strategic review |
 
 ## Available Subagents
 
@@ -38,6 +43,7 @@ From GitHub:
 | `asana-collector` | Gathers Asana task data |
 | `calendar-collector` | Gathers calendar events |
 | `vault-collector` | Gathers Obsidian vault context |
+| `feedly-scanner` | Chrome automation for Feedly competitor intel |
 
 ## Updating
 
@@ -61,6 +67,7 @@ Then in Claude Code:
    new-plugin-name/
    ├── .claude-plugin/
    │   └── plugin.json
+   ├── commands/
    ├── skills/
    ├── agents/
    └── README.md
@@ -74,20 +81,54 @@ Then in Claude Code:
 claude-plugins/
 ├── .claude-plugin/
 │   └── marketplace.json      ← Marketplace registry
-├── racecraft/                 ← Racecraft plugin (v1.1.0)
+├── racecraft/                 ← Racecraft plugin (v2.0.0)
 │   ├── .claude-plugin/
 │   │   └── plugin.json
 │   ├── agents/
 │   │   ├── asana-collector.md
 │   │   ├── calendar-collector.md
-│   │   └── vault-collector.md
+│   │   ├── vault-collector.md
+│   │   └── feedly-scanner.md
+│   ├── commands/
+│   │   ├── check.md
+│   │   ├── weekly-plan.md
+│   │   ├── weekly-review.md
+│   │   ├── weekly-technical.md
+│   │   ├── intel.md
+│   │   ├── monthly-review.md
+│   │   └── quarterly-review.md
 │   ├── skills/
 │   │   ├── check/
 │   │   │   └── SKILL.md
-│   │   └── plan/
+│   │   ├── weekly-plan/
+│   │   │   ├── SKILL.md
+│   │   │   └── templates/
+│   │   ├── weekly-review/
+│   │   │   ├── SKILL.md
+│   │   │   └── templates/
+│   │   ├── weekly-technical/
+│   │   │   └── SKILL.md
+│   │   ├── intel/
+│   │   │   └── SKILL.md
+│   │   ├── monthly-review/
+│   │   │   ├── SKILL.md
+│   │   │   └── templates/
+│   │   └── quarterly-review/
 │   │       ├── SKILL.md
 │   │       └── templates/
-│   │           └── weekly-plan.md
 │   └── README.md
 └── [future-plugins]/
 ```
+
+## Version History
+
+- **2.0.0** (2026-01-31): Weekly review + competitor intelligence + quarterly
+  - Renamed commands for consistency (weekly-plan, weekly-review, etc.)
+  - Added weekly-review, weekly-technical, intel, monthly-review commands
+  - Added quarterly-review for end-of-quarter strategic planning
+  - Added feedly-scanner agent with Chrome automation
+  - Ideaverse Pro aligned templates
+  - Subagent architecture for parallel data gathering
+
+- **1.2.0**: Enhanced subagents
+- **1.0.0**: Initial release
