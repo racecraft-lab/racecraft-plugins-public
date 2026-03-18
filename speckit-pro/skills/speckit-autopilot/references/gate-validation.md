@@ -4,6 +4,24 @@ Programmatic gate checks performed after each SDD phase. The autopilot validates
 
 ## Gate Definitions
 
+### G0 — Prerequisites (Before Specify)
+
+**Check:** Constitution principles validated against the current codebase.
+
+```
+1. pnpm typecheck → must pass (0 errors)
+2. pnpm test → must pass (record count as baseline)
+3. pnpm build → must pass
+4. pnpm lint → must pass
+5. Architecture patterns verified (e.g., definitions/primitives split exists)
+6. Workflow file's Prerequisites table filled with baselines
+7. Constitution Check summary line set to "✅ Verified"
+```
+
+**Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.
+
+**Failure Escalation:** Immediate STOP. Report which checks failed with output. The user must resolve codebase issues before autopilot can proceed.
+
 ### G1 — After Specify
 
 **Check:** Determine if clarification is needed.

@@ -31,6 +31,8 @@ This creates `.specify/`, templates, and slash commands.
 
 The constitution must exist at `.specify/memory/constitution.md`. Without it, the autopilot cannot validate constitutional gates during the Plan phase.
 
+**Note:** The autopilot also validates each constitution principle against the current codebase before starting Phase 1 (Specify). It runs `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm lint`, records baselines (test count, file count), and fills in the workflow file's Prerequisites → Constitution Validation table. If any check fails, the autopilot stops — the codebase must be healthy before starting a new spec.
+
 ### 4. Master Plan Exists (Recommended)
 
 For multi-spec projects, create a master plan first:
@@ -100,6 +102,7 @@ Each phase has a programmatic gate that validates its output:
 
 | Gate | After | What It Checks | Auto-Fix |
 |------|-------|---------------|----------|
+| G0 | Prerequisites | Typecheck, test, build, lint all pass | None (user must fix) |
 | G1 | Specify | `[NEEDS CLARIFICATION]` markers | Routing (not pass/fail) |
 | G2 | Clarify | 0 markers + 0 human review flags | Re-run clarify |
 | G3 | Plan | Artifacts exist, gates pass | Re-run plan |

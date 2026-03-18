@@ -83,6 +83,47 @@ fi
 
 Verify the branch matches the workflow file's `Branch` field. If they don't match, warn the user and ask whether to proceed.
 
+### 0.7 Constitution Validation (Workflow Prerequisites)
+
+The workflow file has a "Prerequisites" section with a constitution validation table. This is **not** the same as Step 0.3 (which just checks the file exists). This step validates that each constitution principle is satisfied in the current codebase and records baselines.
+
+**Procedure:**
+
+1. Read the constitution from `.specify/memory/constitution.md` — extract all numbered principles
+2. Read the workflow file's Prerequisites → Constitution Validation table
+3. If the table is already `✅ Verified`, skip (resuming a previously started workflow)
+4. For each constitution principle, run the appropriate verification:
+
+| Verification Type | How to Check |
+|-------------------|-------------|
+| Type safety | Run `pnpm typecheck` (or project equivalent) |
+| Test suite | Run `pnpm test` — record current test count and file count as baseline |
+| Build discipline | Run `pnpm build` |
+| Lint/format | Run `pnpm lint` |
+| Architecture patterns | Use Glob/Grep to verify the pattern exists (e.g., definitions/primitives split) |
+| Code review items (KISS, YAGNI, SOLID) | Mark as `✅ Verified` — these are validated during implementation, not pre-flight |
+
+5. Update the workflow file's Prerequisites table:
+   - Fill in each principle's Status column (`✅ Pass` or `⚠️ Issue: ...`)
+   - Record baseline numbers (e.g., "1924 tests pass", "34 definitions, 34 primitives")
+   - Set the "Constitution Check" summary line: `✅ Verified <date> — Constitution v<version>, all principles satisfied`
+
+6. If any verification **fails** (typecheck errors, test failures, build broken):
+   - STOP and report: "Constitution validation failed — fix these issues before starting the workflow"
+   - Do NOT proceed to Phase 1
+
+**Example output** (from SPEC-007):
+
+```markdown
+| Principle | Requirement | Verification | Status |
+|-----------|-------------|--------------|--------|
+| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` | ✅ Pass |
+| II. Separation of Concerns | definitions/ + primitives/ split | Code review | ✅ 34 definitions, 34 primitives |
+| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ✅ 1924 tests pass |
+
+**Constitution Check:** ✅ Verified 2026-03-17 — Constitution v2.0.0 (RATIFIED), all principles satisfied
+```
+
 ## Step 1: Parse Workflow State
 
 Read the workflow file and parse the "Workflow Overview" status table. Find the first phase with status `⏳ Pending` or `🔄 In Progress`.

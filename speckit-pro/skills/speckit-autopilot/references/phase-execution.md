@@ -39,6 +39,33 @@ Verify the detected branch matches the workflow file's `Branch` field. If they d
 
 ## Phase-by-Phase Execution
 
+### Phase 0: Prerequisites (Constitution Validation)
+
+**Context sources:** Constitution + CLAUDE.md + current codebase state
+
+**Purpose:** Validate that the codebase satisfies all constitution principles before starting the workflow. Records baselines (test count, file count) in the workflow file's Prerequisites table so the Implement phase can measure delta.
+
+**Execution strategy:** Runs directly in the main session (no sub-agent needed).
+
+**Procedure:**
+
+1. Read `.specify/memory/constitution.md` — extract all numbered principles
+2. For each principle, determine the verification type and run it:
+   - **Automated** (`pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm lint`) — run and check exit code
+   - **Structural** (definitions/primitives split, contract dirs) — use Glob to count matching files
+   - **Review-only** (KISS, YAGNI, SOLID) — mark as `✅ Verified` (validated during implementation)
+3. Record baseline numbers from command output (e.g., test count, file count)
+4. Update the workflow file's Prerequisites → Constitution Validation table with results
+5. Set the "Constitution Check" summary line
+
+**Gate:** G0 — all automated checks must pass. If any fail, STOP immediately.
+
+**Workflow updates:**
+- Prerequisites → Constitution Validation table: principle, requirement, verification, status
+- Constitution Check summary: `✅ Verified <date> — Constitution v<version>, all principles satisfied`
+
+**Commit:** No commit for prerequisites (no code changed).
+
 ### Phase 1: Specify
 
 **Context sources:** Master plan scope + CLAUDE.md tech stack + constitution + RepoPrompt codebase scan
