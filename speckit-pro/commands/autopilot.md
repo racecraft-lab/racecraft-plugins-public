@@ -1,22 +1,6 @@
 ---
 description: Execute a SpecKit workflow autonomously. Reads a populated workflow file and runs all 7 SDD phases with programmatic gate validation, multi-agent consensus resolution, and auto-commits. Requires SpecKit CLI installed, constitution created, and a populated workflow file.
-allowed-tools:
-  - Agent
-  - Read
-  - Write
-  - Edit
-  - Bash
-  - Glob
-  - Grep
-  - Skill
-  - mcp__RepoPrompt__context_builder
-  - mcp__RepoPrompt__file_search
-  - mcp__RepoPrompt__get_code_structure
-  - mcp__RepoPrompt__read_file
-  - mcp__tavily-mcp__tavily-search
-  - mcp__tavily-mcp__tavily-extract
-  - mcp__context7__resolve-library-id
-  - mcp__context7__get-library-docs
+allowed-tools: "*"
 argument-hint: "path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID]"
 ---
 
