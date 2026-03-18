@@ -9,7 +9,9 @@ argument-hint: "[SPEC-ID or 'all']"
 
 # SpecKit Status Dashboard
 
-Show the full project roadmap: completed specs, in-progress specs, specs that haven't started yet, and a recommendation for what to work on next.
+Show the full project roadmap: completed specs, in-progress
+specs, specs that haven't started yet, and a recommendation for
+what to work on next.
 
 ## Invocation
 
@@ -34,7 +36,9 @@ Also check:      docs/ai/specs/*-workflow.md
 
 ### 2. Parse the Master Plan (Full Roadmap)
 
-If a master plan file exists, extract the **Progress Tracking** table. This contains ALL specs in the project — including those that haven't started the SpecKit workflow yet.
+If a master plan file exists, extract the **Progress Tracking**
+table. This contains ALL specs in the project — including those
+that haven't started the SpecKit workflow yet.
 
 For each spec in the progress table, extract:
 
@@ -46,15 +50,19 @@ For each spec in the progress table, extract:
 
 Also extract:
 
-- The **Dependency Graph** or tier information to show which specs can run in parallel and which are blocked
-- Each spec's **Priority** (P1/P2/P3) from its section in the master plan (line format: `**Priority:** P1 | **Depends On:** ...`)
+- The **Dependency Graph** or tier information to show which
+  specs can run in parallel and which are blocked
+- Each spec's **Priority** (P1/P2/P3) from its section in the
+  master plan (line format:
+  `**Priority:** P1 | **Depends On:** ...`)
 
 ### 3. Parse Workflow Files (Phase Detail)
 
 For each workflow file found, extract:
 
 - **Spec ID and Name** from the header
-- **Phase statuses** from the "Workflow Overview" table (look for ⏳, 🔄, ✅, ⚠️)
+- **Phase statuses** from the "Workflow Overview" table
+  (look for ⏳, 🔄, ✅, ⚠️)
 - **Current phase** (the first ⏳ or 🔄 phase)
 - **Branch** from the "Specification Context" table
 
@@ -113,15 +121,23 @@ table:
 
 ### 5. Recommend Next Spec
 
-After the dashboard tables, add a `## Recommended Next` section that proposes the next spec to implement.
+After the dashboard tables, add a `## Recommended Next` section
+that proposes the next spec to implement.
 
 **Algorithm:**
 
-1. From the master plan, collect all unblocked specs with status `⏳ Pending` (not `✅ Complete`, not `🔄 In Progress`, not blocked by incomplete specs).
-2. For each, read its **Priority** (P1/P2/P3) from the spec's section in the master plan.
-3. Sort by: Priority (P1 first) → then master plan order (preserves tier sequencing).
-4. The **top recommendation** is the first spec in the sorted list.
-5. Also list 1-2 **alternatives** from the same or next priority level, especially if they are smaller (fewer tools) for a quicker win.
+1. From the master plan, collect all unblocked specs with status
+   `⏳ Pending` (not `✅ Complete`, not `🔄 In Progress`, not
+   blocked by incomplete specs).
+2. For each, read its **Priority** (P1/P2/P3) from the spec's
+   section in the master plan.
+3. Sort by: Priority (P1 first) → then master plan order
+   (preserves tier sequencing).
+4. The **top recommendation** is the first spec in the sorted
+   list.
+5. Also list 1-2 **alternatives** from the same or next priority
+   level, especially if they are smaller (fewer tools) for a
+   quicker win.
 
 **Output format:**
 
@@ -148,9 +164,13 @@ To start:
 
 **Edge cases:**
 
-- If no unblocked specs remain, say "All unblocked specs are complete. Remaining specs are blocked by dependencies."
-- If a spec is `🔄 In Progress`, recommend finishing it first: "SPEC-XXX is already in progress — finish it before starting a new spec."
-- If all specs are complete, say "All specs complete — project roadmap is finished."
+- If no unblocked specs remain, say "All unblocked specs are
+  complete. Remaining specs are blocked by dependencies."
+- If a spec is `🔄 In Progress`, recommend finishing it first:
+  "SPEC-XXX is already in progress — finish it before starting
+  a new spec."
+- If all specs are complete, say "All specs complete — project
+  roadmap is finished."
 
 ### 6. If Specific Spec Requested
 
@@ -163,7 +183,8 @@ Show detailed information for that spec:
 - Current blockers (if any)
 - Files generated
 
-If no workflow file exists for the requested spec, show the master plan scope and suggest creating a workflow file:
+If no workflow file exists for the requested spec, show the
+master plan scope and suggest creating a workflow file:
 
 ```text
 SPEC-008 (Perspectives) — ⏳ Not Started
@@ -177,5 +198,7 @@ No workflow file found. To begin:
 Tell the user:
 
 - No master plan or workflow files found in the project
-- Guide them to create a master plan: `/speckit-pro:coach help me create a master plan`
-- Or create a single workflow: copy `skills/speckit-coach/templates/workflow-template.md`
+- Guide them to create a master plan:
+  `/speckit-pro:coach help me create a master plan`
+- Or create a single workflow: copy
+  `skills/speckit-coach/templates/workflow-template.md`

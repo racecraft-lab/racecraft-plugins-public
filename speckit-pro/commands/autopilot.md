@@ -35,16 +35,22 @@ The user provides a path to a workflow file and optionally a starting phase:
 
 ## What to Do
 
-1. **Load the speckit-autopilot skill** using the Skill tool: `Skill("speckit-autopilot")`
+1. **Load the speckit-autopilot skill** using the Skill tool:
+   `Skill("speckit-autopilot")`
 2. **Pass the workflow file path** and any arguments to the skill
 3. The skill contains the full orchestration logic — follow it exactly
 
-The autopilot skill invokes the real `/speckit.*` commands (in `.claude/commands/`) via the Skill tool for each phase. These commands use the `.specify/scripts/bash/` infrastructure for branch creation, prerequisite validation, and path resolution. The autopilot enriches each command's arguments with context from the workflow file, master plan, and codebase analysis.
+The autopilot skill invokes the real `/speckit.*` commands
+(in `.claude/commands/`) via the Skill tool for each phase. These
+commands use the `.specify/scripts/bash/` infrastructure for branch
+creation, prerequisite validation, and path resolution. The autopilot
+enriches each command's arguments with context from the workflow file,
+master plan, and codebase analysis.
 
 ### SpecKit Commands Used
 
 | Phase | Command Invoked | Key Script |
-|-------|----------------|------------|
+| ----- | -------------- | ---------- |
 | Specify | `Skill("speckit.specify", ...)` | `create-new-feature.sh` |
 | Clarify | `Skill("speckit.clarify", ...)` | `check-prerequisites.sh` |
 | Plan | `Skill("speckit.plan", ...)` | `setup-plan.sh`, `update-agent-context.sh` |
@@ -68,7 +74,7 @@ If any prerequisite fails, tell the user what's missing and how to fix it.
 ## Arguments
 
 | Argument | Description |
-|----------|-------------|
+| -------- | ----------- |
 | `path` (required) | Path to the populated workflow file |
 | `--from-phase` | Start from a specific phase (skip completed phases) |
 | `--spec` | Override spec ID detection |
