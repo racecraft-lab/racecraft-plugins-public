@@ -40,7 +40,23 @@ directly to the `/speckit.*` command as the argument.
 **No enrichment or supplementation is performed** — the
 workflow prompt is the complete input.
 
-The commands themselves handle context gathering internally:
+**CRITICAL: After invoking a Skill, follow ONLY the loaded
+command's explicit instructions. Do NOT:**
+
+- Read additional files for "pattern consistency" or
+  "reference"
+- Explore the codebase beyond what the command asks for
+- Add extra context-gathering steps not specified in the
+  command
+- Supplement the command's instructions with your own
+  initiative
+
+**The commands are self-contained.** They already include
+all the steps needed to produce their output. Treat each
+invocation the same way a human would: copy the prompt,
+paste it into Claude Code, press enter, and wait.
+
+The commands handle context gathering internally:
 
 - `/speckit.specify` reads the spec template
 - `/speckit.plan` reads spec.md, constitution, runs research
@@ -78,6 +94,35 @@ prompt is a complete, self-contained instruction that starts
 with the `/speckit.*` command to run. The autopilot reads
 each prompt and executes it — the same way a human would
 copy-paste the prompt into Claude Code and press enter.
+
+**NEVER STOP between phases unless:**
+
+- Gate failure after 2 auto-fix attempts
+- Failed consensus (all 3 agents disagree)
+- Security keyword triggers mandatory human review
+- Missing prerequisite that blocks execution
+
+**If a phase completes and its gate passes, IMMEDIATELY
+advance to the next phase.** Do not stop to summarize, ask
+for confirmation, or recommend next steps.
+
+### Progress Task List
+
+Before executing phases, create a **granular** task list
+(visible in the CLI, survives context compaction):
+
+- One task per single-prompt phase (Specify, Plan, Tasks,
+  Analyze, Implement)
+- One task **per prompt** for multi-prompt phases (each
+  Clarify session, each Checklist domain)
+- One task for consensus/remediation after multi-prompt
+  phases (only runs if needed)
+- Parse the workflow file to get session/domain names
+
+Update tasks dynamically as each prompt completes. If
+execution produces unexpected work (new questions, extra
+remediation loops), create additional tasks via TaskCreate
+to keep the list accurate.
 
 ### Phase 0: Prerequisites (Constitution Validation)
 
@@ -118,14 +163,27 @@ spec content generation."
 
 Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
 
-Read each clarify session from the workflow file's
-`### Clarify Prompts` section. Execute each via
-`Skill("speckit.clarify", args: "<the prompt>")`.
+The workflow file may define **multiple clarify sessions**
+(e.g., "Session 1: OmniJS API", "Session 2: UX"). Execute
+**EACH session as a separate Skill invocation**:
 
-**Post-execution:** For each question the command surfaces,
-spawn 3 consensus agents in parallel (codebase-analyst,
+```text
+For each clarify session in the workflow file:
+  1. Read the session prompt
+  2. Skill("speckit.clarify", args: "<that session prompt>")
+  3. Log the session results (questions surfaced, answers given)
+  4. Proceed to the next session
+```
+
+**Post-execution (after ALL sessions):** Check for
+`[NEEDS CLARIFICATION]` markers remaining in spec.md. For
+each question — check for security keywords, spawn 3
+consensus agents in parallel (codebase-analyst,
 spec-context-analyst, domain-researcher). Apply consensus
 rules. If no consensus, flag `[HUMAN REVIEW NEEDED]`.
+
+**If no questions remain after all sessions, the phase is
+complete — advance immediately to Plan. Do NOT stop.**
 
 **Gate:** G2 — verify 0 markers remain
 
@@ -146,13 +204,22 @@ exist
 
 ### Phase 4: Checklist
 
-Read each domain prompt from the workflow file's
-`### Checklist Prompts` section. Execute each via
-`Skill("speckit.checklist", args: "<the prompt>")`.
+The workflow file defines **multiple domain prompts**
+(e.g., api-workaround, type-safety, requirements). Execute
+**EACH domain as a separate Skill invocation**:
 
-**Post-execution:** Parse `[Gap]` markers across all
-checklists. If gaps found, run the Checklist Remediation
-Loop with consensus agents (max 2 loops).
+```text
+For each checklist domain in the workflow file:
+  1. Read the domain prompt
+  2. Skill("speckit.checklist", args: "<that domain prompt>")
+  3. Log the domain results
+  4. Proceed to the next domain
+```
+
+**Post-execution (after ALL domains):** Parse `[Gap]`
+markers across all checklists. If gaps found, run the
+Checklist Remediation Loop with consensus agents (max 2
+loops). If no gaps, advance immediately.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 

@@ -186,7 +186,62 @@ the status table.
 If all phases are `✅ Complete`, report "All phases complete" and
 stop.
 
+### 1.1 Create Progress Task List
+
+After parsing the workflow state, create a **granular** task list.
+For multi-prompt phases (Clarify, Checklist), create one task per
+prompt/session so the autopilot knows exactly what to execute next.
+
+**Read the workflow file to determine the exact tasks:**
+
+```text
+TaskCreate (example for a spec with 2 clarify sessions, 3 checklist domains):
+  - "Phase 0: Prerequisites (Constitution Validation)"
+  - "Phase 1: Specify"
+  - "Phase 2: Clarify - Session 1: Search Behavior"
+  - "Phase 2: Clarify - Session 2: Database Operations"
+  - "Phase 2: Clarify - Consensus Resolution"
+  - "Phase 3: Plan"
+  - "Phase 4: Checklist - Domain 1: api-workaround"
+  - "Phase 4: Checklist - Domain 2: type-safety"
+  - "Phase 4: Checklist - Domain 3: requirements"
+  - "Phase 4: Checklist - Gap Remediation"
+  - "Phase 5: Tasks"
+  - "Phase 6: Analyze"
+  - "Phase 6: Analyze - Finding Remediation"
+  - "Phase 7: Implement"
+  - "Post: PR Creation"
+```
+
+**Rules:**
+
+- Parse the workflow file's Clarify and Checklist sections to
+  extract session/domain names and counts
+- Create one task per clarify session and one per checklist domain
+- Add a "Consensus Resolution" or "Gap Remediation" task after
+  each multi-prompt phase (only runs if needed)
+- Single-prompt phases (Specify, Plan, Tasks, Analyze, Implement)
+  get one task each
+- Mark already-completed phases as `completed` immediately
+- Mark the first pending task as `in_progress`
+
+**Why granular:** When "Clarify - Session 1" completes, the next
+task ("Clarify - Session 2") is visible and in_progress — the
+autopilot knows to keep going instead of stopping.
+
 ## Step 2: Main Execution Loop
+
+**NEVER STOP unless one of these conditions is met:**
+
+- Gate failure after 2 auto-fix attempts
+- Failed consensus (all 3 agents disagree)
+- Security keyword triggers mandatory human review
+- Missing prerequisite that blocks execution
+
+**If a phase completes successfully (gate passes), IMMEDIATELY
+advance to the next phase.** Do not stop to summarize, ask for
+confirmation, or recommend next steps. The autopilot is autonomous
+— it runs all 7 phases without pausing.
 
 For each pending phase, execute in order:
 
@@ -195,18 +250,31 @@ PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
     1. Log: "Starting [phase] phase..."
-    2. Read the workflow file's prompt for this phase
-    3. Invoke Skill("speckit.<phase>", args: "<workflow prompt>")
-    4. Validate gate (see gate-validation.md)
-    5. If gate fails:
+    2. Read the workflow file's prompt(s) for this phase
+    3. For EACH prompt in the phase:
+       a. TaskUpdate: set this prompt's task to "in_progress"
+       b. Invoke Skill("speckit.<phase>", args: "<that prompt>")
+       c. TaskUpdate: set this prompt's task to "completed"
+       (Multi-prompt phases have one task per prompt — see below)
+    4. Run post-execution consensus if needed (Clarify/Checklist/Analyze)
+       a. If consensus needed: TaskUpdate consensus/remediation task to "in_progress"
+       b. After resolution: TaskUpdate consensus/remediation task to "completed"
+    5. Validate gate (see gate-validation.md)
+    6. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
        b. If still failing and gate-failure == "stop": STOP, ask human
        c. If gate-failure == "skip-and-log": log override, continue
-    6. Update workflow file with results
-    7. If auto-commit == "per-phase":
+    7. Update workflow file with results
+    8. If auto-commit == "per-phase":
        git add specs/ && git commit -m "feat(SPEC-XXX): complete [phase] phase"
-    8. Advance to next phase
+    9. IMMEDIATELY advance to next phase (do NOT stop or ask)
 ```
+
+**Dynamic task updates:** If execution produces unexpected work
+(e.g., consensus reveals new questions, remediation adds extra
+loops), create additional tasks dynamically via TaskCreate to
+keep the task list accurate. The task list should always reflect
+the current state of work — not just the initial plan.
 
 ### Phase Dispatch
 
@@ -214,13 +282,23 @@ The workflow file contains a pre-written prompt for each phase. Each
 prompt starts with the `/speckit.*` command to run. The autopilot
 **reads the prompt and executes it as-is** via the `Skill` tool.
 
+**CRITICAL: After invoking a Skill, follow ONLY the loaded command's
+explicit instructions. Do NOT read additional files for "pattern
+consistency," explore the codebase for reference, or add any
+context-gathering steps that the command does not ask for. The
+commands are self-contained — they already include all steps needed
+to produce their output. Treat each command invocation the same way
+a human would: copy the prompt, paste it into Claude Code, press
+enter, and wait for the result.**
+
 ```text
 For each phase:
   1. Read the phase's prompt section from the workflow file
      (e.g., "### Specify Prompt", "### Plan Prompt", "### Checklist Prompts")
   2. The prompt contains the /speckit.* command and all arguments
   3. Execute it: Skill("speckit.<phase>", args: "<the prompt content>")
-  4. Validate the gate
+  4. Do NOT supplement the command with extra file reads or codebase exploration
+  5. Validate the gate
 ```
 
 #### Specify — Branch-Aware Exception
@@ -240,22 +318,44 @@ All other commands use `check-prerequisites.sh` →
 `get_current_branch()` which detects the worktree branch
 automatically. No special handling needed.
 
-#### Consensus Phases — Post-Execution Resolution
+#### Multi-Prompt Phases
 
-**Clarify, Checklist, Analyze** — after executing the workflow
-prompt, these phases may need consensus agents for resolution. These
-run in the MAIN SESSION (not sub-agents) because they must spawn
-consensus agents directly.
+Some phases have **multiple prompts** in the workflow file. Each
+prompt must be executed as a **separate Skill invocation**:
 
-- **Clarify:** After executing the prompt, for each question
-  surfaced — check for security keywords, spawn 3 consensus agents
-  in parallel, apply consensus rules (see consensus-protocol.md)
-- **Checklist:** After executing each domain prompt, parse `[Gap]`
-  markers. If gaps found, run the Checklist Remediation Loop with
-  consensus agents (max 2 loops)
+- **Clarify:** The workflow file may define multiple clarify
+  sessions (e.g., "Session 1: OmniJS API", "Session 2: UX").
+  Execute EACH session as its own
+  `Skill("speckit.clarify", args: "<session prompt>")`.
+  Log the results of each session before proceeding to the next.
+- **Checklist:** The workflow file defines multiple domain prompts
+  (e.g., api-workaround, type-safety, requirements). Execute EACH
+  domain as its own
+  `Skill("speckit.checklist", args: "<domain prompt>")`.
+
+All other phases (Specify, Plan, Tasks, Analyze, Implement) have
+a single prompt.
+
+#### Consensus — Post-Execution Resolution
+
+After executing ALL prompts for a consensus phase, check whether
+consensus agents are needed. These run in the MAIN SESSION (not
+sub-agents) because they must spawn consensus agents directly.
+
+- **Clarify:** After executing ALL clarify session prompts, check
+  for `[NEEDS CLARIFICATION]` markers remaining in spec.md. For
+  each question — check for security keywords, spawn 3 consensus
+  agents in parallel, apply consensus rules (see
+  consensus-protocol.md). If no questions remain, the phase is
+  complete — advance immediately.
+- **Checklist:** After executing ALL domain prompts, parse `[Gap]`
+  markers across all checklists. If gaps found, run the Checklist
+  Remediation Loop with consensus agents (max 2 loops). If no
+  gaps, advance immediately.
 - **Analyze:** After executing the prompt, parse findings by
-  severity. For CRITICAL/HIGH findings, run the Analyze Remediation
-  Loop with consensus agents (max 2 loops)
+  severity. For CRITICAL/HIGH findings, run the Analyze
+  Remediation Loop with consensus agents (max 2 loops). If no
+  CRITICAL findings, advance immediately.
 
 #### Implement — Parallel Sub-Agents
 
