@@ -85,24 +85,25 @@ spawn sub-agents directly. This avoids the subagent nesting
 limitation (sub-agents cannot spawn their own sub-agents).
 
 Each phase **invokes the real `/speckit.*` command** via the
-`Skill` tool. The commands handle their own infrastructure
-(branch creation, template copying, prerequisite validation
-via `.specify/scripts/bash/`). The autopilot enriches each
-command's arguments with context from the workflow file, master
-plan, and codebase analysis.
+`Skill` tool, passing the **workflow file's prompt directly**
+as the argument. The autopilot does not enrich, supplement, or
+modify the prompts — it passes them as-is, like a human would
+copy-paste the prompt into Claude Code. The commands handle
+their own infrastructure (branch creation, template copying,
+prerequisite validation via `.specify/scripts/bash/`).
 
 ```text
 Main session (speckit-autopilot skill loaded)
     │
-    ├── Simple phases → invoke /speckit.* command via Skill tool
-    │   ├── Specify → Skill("speckit.specify", enriched args) → spec.md
-    │   ├── Plan    → Skill("speckit.plan", enriched args)    → plan.md + artifacts
-    │   └── Tasks   → Skill("speckit.tasks", enriched args)   → tasks.md
+    ├── Simple phases → pass workflow prompt to /speckit.* via Skill
+    │   ├── Specify → Skill("speckit.specify", args: "<workflow prompt>")
+    │   ├── Plan    → Skill("speckit.plan", args: "<workflow prompt>")
+    │   └── Tasks   → Skill("speckit.tasks", args: "<workflow prompt>")
     │
-    ├── Consensus phases → invoke command, then orchestrate consensus
-    │   ├── Clarify   → Skill("speckit.clarify") + 3 consensus agents per question
-    │   ├── Checklist  → Skill("speckit.checklist") per domain + 3 agents per gap
-    │   └── Analyze    → Skill("speckit.analyze") + 3 agents per finding
+    ├── Multi-prompt phases → one Skill() per session/domain
+    │   ├── Clarify   → Skill("speckit.clarify") per session + consensus
+    │   ├── Checklist  → Skill("speckit.checklist") per domain + consensus
+    │   └── Analyze    → Skill("speckit.analyze") + consensus per finding
     │
     └── Implement → Skill("speckit.implement") or project-specific agent
         └── Parallel sub-agents with worktree isolation for [P] tasks
@@ -115,14 +116,13 @@ sequentially:
 
 1. **Parse workflow state** — Find the next `⏳ Pending`
    phase
-2. **Check prerequisites** — Verify required prior-phase
-   artifacts exist (commands handle this via
-   `check-prerequisites.sh`)
-3. **Enrich arguments** — Build from workflow + master plan +
-   CLAUDE.md + constitution + codebase scan
+2. **Create task list** — One task per prompt (granular
+   tracking for multi-prompt phases like Clarify/Checklist)
+3. **Read the workflow prompt** — Copy the phase's prompt
+   from the workflow file
 4. **Invoke command** —
-   `Skill("speckit.<phase>", args: "<enriched context>")` —
-   the command runs its own scripts internally
+   `Skill("speckit.<phase>", args: "<the prompt>")` —
+   the command handles its own context gathering internally
 5. **Orchestrate consensus** — For clarify/checklist/analyze
    phases, spawn 3 agents per question/gap/finding
 6. **Validate gate** — Run programmatic gate checks
@@ -131,7 +131,7 @@ sequentially:
 8. **Update workflow file** — Mark phase complete with results
 9. **Commit** —
    `git add specs/ && git commit -m "feat(SPEC-XXX): complete [phase] phase"`
-10. **Advance** — Loop to step 1 for next phase
+10. **Advance** — Immediately start next phase (never stop)
 
 ### Gate Validation
 

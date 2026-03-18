@@ -40,12 +40,13 @@ The user provides a path to a workflow file and optionally a starting phase:
 2. **Pass the workflow file path** and any arguments to the skill
 3. The skill contains the full orchestration logic — follow it exactly
 
-The autopilot skill invokes the real `/speckit.*` commands
-(in `.claude/commands/`) via the Skill tool for each phase. These
-commands use the `.specify/scripts/bash/` infrastructure for branch
-creation, prerequisite validation, and path resolution. The autopilot
-enriches each command's arguments with context from the workflow file,
-master plan, and codebase analysis.
+The autopilot skill reads each phase's prompt from the workflow
+file and passes it directly to the corresponding `/speckit.*`
+command via the Skill tool. It does not enrich, supplement, or
+modify the prompts — it passes them as-is, the same way a human
+would copy-paste the prompt into Claude Code. The commands use
+the `.specify/scripts/bash/` infrastructure for branch creation,
+prerequisite validation, and path resolution.
 
 ### SpecKit Commands Used
 

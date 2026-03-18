@@ -1,5 +1,20 @@
 # Phase Execution Reference
 
+**RULES (from SKILL.md — repeated here for clarity):**
+
+1. **COPY-PASTE ONLY** — Read the workflow prompt, pass it to
+   `Skill("speckit.<phase>")`. Do NOT read the master plan,
+   prior specs, or explore the codebase.
+2. **NEVER STOP** — After a phase completes, immediately
+   advance. Only stop for gate failure, failed consensus,
+   security keywords, or missing prerequisites.
+3. **MULTI-PROMPT** — Clarify and Checklist have multiple
+   prompts. Execute EACH as a separate `Skill()` invocation.
+4. **COMMANDS ARE SELF-CONTAINED** — After invoking a Skill,
+   follow only the command's instructions. Do not supplement.
+
+---
+
 How each SDD phase is executed by the autopilot. Each phase
 **invokes the real `/speckit.*` command** via the `Skill` tool,
 passing the **workflow file's prompt directly** as the command
@@ -33,30 +48,10 @@ commands and scripts:
 
 ## Prompt Passthrough
 
-The workflow file contains a pre-populated prompt for each
-phase (e.g., "Specify Prompt", "Plan Prompt", "Checklist
-Prompts"). The autopilot reads the prompt and passes it
-directly to the `/speckit.*` command as the argument.
-**No enrichment or supplementation is performed** — the
-workflow prompt is the complete input.
+Read the workflow prompt. Pass it to the Skill. Wait. That's
+it. (See Rules 1 and 5 above for the full rationale.)
 
-**CRITICAL: After invoking a Skill, follow ONLY the loaded
-command's explicit instructions. Do NOT:**
-
-- Read additional files for "pattern consistency" or
-  "reference"
-- Explore the codebase beyond what the command asks for
-- Add extra context-gathering steps not specified in the
-  command
-- Supplement the command's instructions with your own
-  initiative
-
-**The commands are self-contained.** They already include
-all the steps needed to produce their output. Treat each
-invocation the same way a human would: copy the prompt,
-paste it into Claude Code, press enter, and wait.
-
-The commands handle context gathering internally:
+The commands handle their own context gathering internally:
 
 - `/speckit.specify` reads the spec template
 - `/speckit.plan` reads spec.md, constitution, runs research
@@ -77,12 +72,18 @@ CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
 GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
 IS_WORKTREE=$( [ "$GIT_DIR" != "$GIT_COMMON" ] && echo "true" || echo "false" )
-
-# Set SPECIFY_FEATURE if on a feature branch
-if [[ "$CURRENT_BRANCH" =~ ^[0-9]{3}- ]]; then
-  export SPECIFY_FEATURE="$CURRENT_BRANCH"
-fi
 ```
+
+Record two facts:
+
+- **`ON_FEATURE_BRANCH`**: `true` if `CURRENT_BRANCH` matches
+  `^[0-9]{3}-`
+- **`IS_WORKTREE`**: `true` if `GIT_DIR != GIT_COMMON`
+
+When `ON_FEATURE_BRANCH` is true, the Specify phase prefixes
+the workflow prompt with a "skip branch creation" instruction
+(see Phase 1 below). Do NOT use `export SPECIFY_FEATURE` —
+env vars do not persist across Skill tool invocations.
 
 Verify the detected branch matches the workflow file's
 `Branch` field. If they don't match, STOP and ask the user.

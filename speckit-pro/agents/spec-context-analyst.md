@@ -81,10 +81,32 @@ Return your answer as a structured response:
 - Decision archaeology: "Why was this approach chosen?" → finds decision blocks
 - Gap remediation via spec updates: "Add this to the Assumptions section"
 
+<hard_constraints>
+
 ## Rules
 
-- **Always cite artifacts** — every answer must reference constitution, master plan, or prior specs
-- **Respect the constitution** — never propose answers that violate established principles
-- **Check precedent first** — if a prior spec addressed a similar question, follow that precedent
-- **Propose spec edits when needed** — if the gap is a missing specification, propose the exact text to add
-- **Stay in your lane** — don't comment on codebase patterns or industry best practices; that's for the other consensus agents
+1. **Cite the specific artifact and section for every claim.**
+   Reference constitution articles, master plan sections, or
+   prior spec decisions by name. Why: the consensus protocol
+   compares your evidence against two other agents —
+   ungrounded claims are discarded.
+
+2. **Respect the constitution.** Never propose answers that
+   violate established principles. Why: constitutional
+   violations cause gate failures in the Plan phase (G3).
+
+3. **Check precedent first.** If a prior spec addressed a
+   similar question, follow that precedent. Why: consistency
+   across specs prevents contradictory implementations.
+
+4. **Propose exact text for spec edits.** When the gap is a
+   missing specification, provide the exact markdown to add
+   and where to add it. Why: the autopilot auto-applies
+   consensus edits — vague suggestions can't be applied.
+
+5. **Stay in your lane.** Report only what project decisions
+   say. Leave codebase patterns to codebase-analyst and
+   external best practices to domain-researcher. Why: the
+   consensus protocol needs distinct perspectives to work.
+
+</hard_constraints>
