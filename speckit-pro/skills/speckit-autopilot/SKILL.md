@@ -71,7 +71,6 @@ Read the provided workflow file path. If it doesn't exist, STOP.
 
 Read `.claude/speckit-pro.local.md` if it exists. Parse YAML frontmatter for:
 - `consensus-mode` (default: `moderate`)
-- `context-enrichment` (default: `always`)
 - `gate-failure` (default: `stop`)
 - `auto-commit` (default: `per-phase`)
 - `security-keywords` (default: the standard list)
@@ -158,8 +157,8 @@ PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
     1. Log: "Starting [phase] phase..."
-    2. Gather context (see phase-execution.md for per-phase details)
-    3. Execute phase (sub-agent or main session — depends on phase type)
+    2. Read the workflow file's prompt for this phase
+    3. Invoke Skill("speckit.<phase>", args: "<workflow prompt>")
     4. Validate gate (see gate-validation.md)
     5. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
@@ -173,25 +172,20 @@ for phase in PHASES starting from first_pending:
 
 ### Phase Dispatch
 
-Each phase **invokes the real `/speckit.*` command** via the `Skill` tool. The commands handle their own infrastructure (branch creation, template copying, prerequisite validation via `.specify/scripts/bash/`). The autopilot enriches the command's arguments with context from the workflow file, master plan, CLAUDE.md, and codebase analysis.
+Each phase **invokes the real `/speckit.*` command** via the `Skill` tool, passing the **workflow file's prompt directly** as the argument. The workflow prompts are pre-populated by the user with all necessary context. The commands handle their own infrastructure (branch creation, template copying, prerequisite validation via `.specify/scripts/bash/`).
 
-#### Simple Phases (Skill invocation with enrichment)
+#### Simple Phases (Skill invocation with workflow prompt)
 
 **Specify, Plan, Tasks** — these produce artifacts without needing multi-agent resolution.
 
 ```text
-1. Gather enrichment context from relevant sources (see phase-execution.md)
-2. Compose enriched arguments from:
-   - The workflow file's phase-specific prompt section
-   - Master plan scope, CLAUDE.md tech stack, constitution principles
-   - RepoPrompt codebase scan (if context-enrichment setting allows)
-   - Prior specs for cross-spec consistency
-3. Invoke the command via Skill tool:
-   - Plan:    Skill("speckit.plan", args: "<enriched planning context>")
-   - Tasks:   Skill("speckit.tasks", args: "<enriched task constraints>")
+1. Read the workflow file's prompt for this phase (e.g., "Specify Prompt", "Plan Prompt")
+2. Invoke the command via Skill tool, passing the workflow prompt directly:
+   - Plan:    Skill("speckit.plan", args: "<workflow prompt>")
+   - Tasks:   Skill("speckit.tasks", args: "<workflow prompt>")
    - Specify: See special handling below
-4. The command runs its own scripts (.specify/scripts/bash/*) internally
-5. Validate the gate
+3. The command runs its own scripts (.specify/scripts/bash/*) internally
+4. Validate the gate
 ```
 
 ##### Specify Phase — Branch-Aware Invocation
@@ -210,7 +204,7 @@ IF ON_FEATURE_BRANCH is true (detected in Step 0.7):
     3. If spec-template.md exists, copy it: cp .specify/templates/spec-template.md specs/<branch-name>/spec.md
     4. Now execute the CONTENT portion of /speckit.specify:
        - Read the spec template structure
-       - Use the enriched feature description from the workflow file
+       - Use the workflow prompt as the feature description
        - Write spec.md to the existing feature directory
        - Generate checklists/requirements.md
        (This is the same work the command does AFTER branch creation —
@@ -218,7 +212,7 @@ IF ON_FEATURE_BRANCH is true (detected in Step 0.7):
 
 IF ON_FEATURE_BRANCH is false:
   — We are on main/develop, starting a fresh spec
-  — Invoke normally: Skill("speckit.specify", args: "<enriched feature description>")
+  — Invoke normally: Skill("speckit.specify", args: "<workflow prompt>")
   — The command creates the branch and directory via create-new-feature.sh
 ```
 
@@ -228,7 +222,7 @@ IF ON_FEATURE_BRANCH is false:
 
 #### Consensus Phases (Skill invocation + main session orchestration)
 
-**Clarify, Checklist, Analyze** — these invoke the real command first, then use consensus agents for resolution.
+**Clarify, Checklist, Analyze** — these invoke the real command with the workflow prompt, then use consensus agents for resolution.
 
 These phases run in the MAIN SESSION because the main session must spawn the consensus agents directly (no nesting).
 
@@ -236,7 +230,7 @@ These phases run in the MAIN SESSION because the main session must spawn the con
 
 ```text
 1. For each clarify session in the workflow file:
-   a. Invoke: Skill("speckit.clarify", args: "<focus area from workflow>")
+   a. Invoke: Skill("speckit.clarify", args: "<clarify prompt from workflow>")
    b. The command calls check-prerequisites.sh, reads spec.md, and surfaces questions
    c. For each question surfaced:
       i.  Check for security keywords → if found, present to human
@@ -255,7 +249,7 @@ These phases run in the MAIN SESSION because the main session must spawn the con
 ```text
 1. Read all checklist prompts from the workflow file
 2. For each domain:
-   a. Invoke: Skill("speckit.checklist", args: "<domain> <enriched prompt>")
+   a. Invoke: Skill("speckit.checklist", args: "<domain prompt from workflow>")
    b. The command calls check-prerequisites.sh and generates the checklist
 3. Parse [Gap] markers across all produced checklists
 4. If gaps found, run the Checklist Remediation Loop:
@@ -270,7 +264,7 @@ These phases run in the MAIN SESSION because the main session must spawn the con
 ##### Analyze Phase
 
 ```text
-1. Invoke: Skill("speckit.analyze", args: "<focus areas from workflow>")
+1. Invoke: Skill("speckit.analyze", args: "<analyze prompt from workflow>")
    - The command calls check-prerequisites.sh --require-tasks --include-tasks
    - It performs READ-ONLY cross-artifact analysis
 2. Parse findings by severity
@@ -286,7 +280,7 @@ These phases run in the MAIN SESSION because the main session must spawn the con
 
 ```text
 1. Check CLAUDE.md for a specialized implementation agent (e.g., "omnifocus-developer")
-2. Invoke: Skill("speckit.implement", args: "<implementation context>")
+2. Invoke: Skill("speckit.implement", args: "<implement prompt from workflow>")
    - The command calls check-prerequisites.sh --require-tasks --include-tasks
    - It checks checklist completion status
    - It loads tasks.md, plan.md, and all available design docs

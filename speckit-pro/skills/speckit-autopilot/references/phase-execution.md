@@ -1,6 +1,6 @@
 # Phase Execution Reference
 
-How each SDD phase is executed by the autopilot. Each phase **invokes the real `/speckit.*` command** via the `Skill` tool, with enriched arguments from the workflow file and project context. The commands handle their own infrastructure (branch creation, template copying, prerequisite validation) via `.specify/scripts/bash/`.
+How each SDD phase is executed by the autopilot. Each phase **invokes the real `/speckit.*` command** via the `Skill` tool, passing the **workflow file's prompt directly** as the command argument. The workflow prompts are pre-populated by the user with all necessary context — the autopilot does not enrich or supplement them. The commands handle their own infrastructure (branch creation, template copying, prerequisite validation) via `.specify/scripts/bash/`.
 
 ## SpecKit Infrastructure
 
@@ -23,19 +23,15 @@ The autopilot relies on the project's installed SpecKit commands and scripts:
 | `check-prerequisites.sh` | `/speckit.clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
 | `update-agent-context.sh` | `/speckit.plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
 
-## Context Enrichment
+## Prompt Passthrough
 
-Before invoking each command, the autopilot enriches the prompt with context the user would otherwise provide manually. These sources are gathered once and injected as arguments:
+The workflow file contains a pre-populated prompt for each phase (e.g., "Specify Prompt", "Plan Prompt", "Checklist Prompts"). The autopilot reads the prompt and passes it directly to the `/speckit.*` command as the argument. **No enrichment or supplementation is performed** — the workflow prompt is the complete input.
 
-| Source | How to Gather |
-|--------|--------------|
-| **Workflow file** | Read the workflow file's phase-specific prompt section |
-| **Master plan** | Read the master plan file for this spec's scope description |
-| **CLAUDE.md** | Read CLAUDE.md for tech stack, constraints, conventions |
-| **Constitution** | Read `.specify/memory/constitution.md` for project principles |
-| **RepoPrompt scan** | Use `mcp__RepoPrompt__context_builder` for codebase analysis (if `context-enrichment` setting allows) |
-| **Prior specs** | Read `specs/*/spec.md` and `specs/*/plan.md` for precedent |
-| **Settings** | Read `.claude/speckit-pro.local.md` for configuration |
+The commands themselves handle context gathering internally:
+- `/speckit.specify` reads the spec template
+- `/speckit.plan` reads spec.md, constitution, runs research
+- `/speckit.checklist` reads spec.md + plan.md + available design docs
+- `/speckit.implement` reads tasks.md + plan.md + all design docs
 
 ## Branch/Worktree Detection
 
@@ -101,15 +97,8 @@ Verify the detected branch matches the workflow file's `Branch` field. If they d
 **Autopilot execution (branch-aware):**
 
 ```text
-1. Gather enrichment context:
-   - Read the workflow file's "Specify Prompt" section
-   - Read master plan scope for this spec
-   - Read CLAUDE.md tech stack section
-   - Read constitution principles summary
-   - Run RepoPrompt context_builder for codebase patterns
-   - Read prior specs' scope sections for cross-spec consistency
-2. Compose the enriched feature description by combining all sources
-3. Check ON_FEATURE_BRANCH (detected in Step 0.7):
+1. Read the workflow file's "Specify Prompt" section — this is the complete prompt
+2. Check ON_FEATURE_BRANCH (detected in Step 0.7):
 
    IF ON_FEATURE_BRANCH is true:
      — Already on a feature branch (e.g., worktree 009-search-database)
@@ -122,7 +111,7 @@ Verify the detected branch matches the workflow file's `Branch` field. If they d
           cp .specify/templates/spec-template.md <FEATURE_SPEC>
        d. Execute the content generation portion of specify:
           - Read the spec template structure
-          - Use the enriched feature description
+          - Use the workflow prompt as the feature description
           - Write spec.md to the existing feature directory
           - Generate checklists/requirements.md quality checklist
        e. This is the same work the command does AFTER branch creation —
@@ -130,10 +119,10 @@ Verify the detected branch matches the workflow file's `Branch` field. If they d
 
    IF ON_FEATURE_BRANCH is false:
      — On main/develop, starting a fresh spec
-     — Invoke normally: Skill("speckit.specify", args: "<enriched feature description>")
+     — Invoke normally: Skill("speckit.specify", args: "<workflow prompt>")
      — The command creates the branch and directory via create-new-feature.sh
 
-4. Validate G1 gate
+3. Validate G1 gate
 ```
 
 **Why the other commands don't have this problem:** They all use `check-prerequisites.sh` → `get_current_branch()`, which reads the git branch directly (no `SPECIFY_FEATURE` env var needed). On a worktree, `git rev-parse --abbrev-ref HEAD` returns the worktree branch automatically.
@@ -204,14 +193,9 @@ This phase runs in the MAIN SESSION because it needs to spawn consensus agents.
 **Autopilot execution:**
 
 ```text
-1. Gather enrichment context:
-   - Read the workflow file's "Plan Prompt" section (tech stack, constraints)
-   - Read CLAUDE.md tech stack section (auto-injected so user doesn't repeat it)
-   - Read constitution principles (for gate checking)
-   - Read prior specs' plan.md files (for architectural consistency)
-   - Run RepoPrompt codebase scan (existing architecture patterns)
-2. Invoke: Skill("speckit.plan", args: "<enriched planning context>")
-   - The command handles template copying, agent context update
+1. Read the workflow file's "Plan Prompt" section — this is the complete prompt
+2. Invoke: Skill("speckit.plan", args: "<workflow prompt>")
+   - The command handles template copying, context gathering, and agent context update
 3. Validate G3 gate
 ```
 
@@ -237,9 +221,9 @@ This phase runs in the MAIN SESSION because it needs to spawn consensus agents.
 This phase runs in the MAIN SESSION because it may need consensus agents for gap remediation.
 
 ```text
-1. Read ALL checklist prompts from the workflow file's "Run Enriched Checklist Prompts" section
+1. Read ALL checklist prompts from the workflow file's checklist section
 2. For each domain prompt:
-   a. Invoke: Skill("speckit.checklist", args: "<domain> <enriched prompt from workflow>")
+   a. Invoke: Skill("speckit.checklist", args: "<domain prompt from workflow>")
    b. The command generates the checklist with [Gap] markers for issues found
 3. Parse [Gap] markers across all produced checklists
 4. If gaps found, run the Checklist Remediation Loop:
@@ -272,12 +256,8 @@ This phase runs in the MAIN SESSION because it may need consensus agents for gap
 **Autopilot execution:**
 
 ```text
-1. Gather enrichment context:
-   - Read the workflow file's "Tasks Prompt" section (task structure constraints)
-   - Read CLAUDE.md file layout conventions (where tests go, where source goes)
-   - Read prior specs' tasks.md files (for consistent task structure)
-   - Read project directory structure (via ls or RepoPrompt get_file_tree)
-2. Invoke: Skill("speckit.tasks", args: "<enriched task constraints>")
+1. Read the workflow file's "Tasks Prompt" section — this is the complete prompt
+2. Invoke: Skill("speckit.tasks", args: "<workflow prompt>")
    - The command handles prerequisite validation and doc discovery
 3. Validate G5 gate
 ```
@@ -305,8 +285,8 @@ This phase runs in the MAIN SESSION because it may need consensus agents for gap
 This phase runs in the MAIN SESSION because it may need consensus agents for finding remediation.
 
 ```text
-1. Read the workflow file's "Analyze Prompt" section for focus areas
-2. Invoke: Skill("speckit.analyze", args: "<enriched focus areas>")
+1. Read the workflow file's "Analyze Prompt" section — this is the complete prompt
+2. Invoke: Skill("speckit.analyze", args: "<workflow prompt>")
    - The command validates prerequisites and runs the analysis
    - It is READ-ONLY — it only reports findings, does not modify files
 3. Parse findings by severity
@@ -341,20 +321,19 @@ This phase runs in the MAIN SESSION because it may need consensus agents for fin
 **Autopilot execution:**
 
 ```text
-1. Check if the project has a specialized implementation agent:
+1. Read the workflow file's "Implement Prompt" section — this is the complete prompt
+2. Check if the project has a specialized implementation agent:
    - Look in CLAUDE.md for agent references (e.g., "omnifocus-developer")
    - If found, delegate to that agent instead of /speckit.implement
-2. Read tasks.md and identify implementation phases
-3. For each implementation phase:
-   a. Identify tasks in this phase
-   b. For tasks marked [P] → spawn background sub-agents (one per task)
+3. Invoke: Skill("speckit.implement", args: "<workflow prompt>")
+   - The command handles prerequisite validation, checklist checks, and doc loading
+4. For implementation, read tasks.md and identify phases:
+   a. For tasks marked [P] → spawn background sub-agents (one per task)
       - Use isolation: "worktree" if available for file-conflict safety
-      - Each sub-agent invokes: Skill("speckit.implement", args: "Execute task TXXX")
-        OR uses the project-specific implementation agent
-   c. For sequential tasks → spawn one foreground sub-agent at a time
-   d. After each implementation phase completes:
+   b. For sequential tasks → spawn one foreground sub-agent at a time
+   c. After each implementation phase completes:
       git add . && git commit -m "feat(SPEC-XXX): implement phase N - <description>"
-4. After all tasks: run G7 verification suite
+5. After all tasks: run G7 verification suite
 ```
 
 **Gate:** G7 — full verification suite (build + typecheck + lint + test)

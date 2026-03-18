@@ -221,7 +221,6 @@ Create `.claude/speckit-pro.local.md` for per-project settings:
 ```yaml
 ---
 consensus-mode: moderate    # conservative | moderate | aggressive
-context-enrichment: always  # always | dependent-specs-only | never
 gate-failure: stop          # stop | skip-and-log
 auto-commit: per-phase      # per-phase | batch | none
 security-keywords:
@@ -244,12 +243,11 @@ security-keywords:
 | Setting | Description |
 |---------|-------------|
 | `consensus-mode` | How strict the consensus protocol is (see Consensus Modes above) |
-| `context-enrichment` | Whether to run RepoPrompt context_builder before each phase |
 | `gate-failure` | Whether to stop or log-and-skip when a gate fails after max fix attempts |
 | `auto-commit` | When to commit — after each phase, all at once, or never |
 | `security-keywords` | Additional keywords that trigger mandatory human review |
 
-If the file doesn't exist, defaults are used (moderate, always, stop, per-phase).
+If the file doesn't exist, defaults are used (moderate, stop, per-phase).
 
 ---
 

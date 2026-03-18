@@ -61,7 +61,6 @@ Create `.claude/speckit-pro.local.md` for per-project settings:
 ```yaml
 ---
 consensus-mode: moderate    # conservative | moderate | aggressive
-context-enrichment: always  # always | dependent-specs-only | never
 gate-failure: stop          # stop | skip-and-log
 auto-commit: per-phase      # per-phase | batch | none
 ---
