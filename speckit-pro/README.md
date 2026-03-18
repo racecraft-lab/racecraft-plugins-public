@@ -25,7 +25,7 @@ Two skills packaged as a single plugin:
 |---------|-------------|
 | `/speckit-pro:autopilot <workflow.md>` | Execute SpecKit workflow autonomously |
 | `/speckit-pro:coach <question>` | Get SDD coaching and guidance |
-| `/speckit-pro:status [SPEC-ID]` | Check workflow progress dashboard |
+| `/speckit-pro:status [SPEC-ID]` | Full project roadmap, phase detail, and next-spec recommendation |
 
 ## Architecture
 

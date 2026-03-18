@@ -50,7 +50,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "upgrade speckit", "update templates", "new version" | Provide upgrade guidance (back up constitution first!) |
 | **Plugin Usage** | |
 | "run autopilot", "execute workflow", "autonomous" | Guide to `/speckit-pro:autopilot` — prerequisites, workflow file setup, `--dangerously-skip-permissions`. See [autopilot guide](./references/autopilot-guide.md) |
-| "check status", "where am I", "workflow progress" | Guide to `/speckit-pro:status` — reading the status dashboard |
+| "check status", "where am I", "workflow progress", "what's next", "roadmap" | Guide to `/speckit-pro:status` — full project roadmap (completed, ready, blocked specs), active workflow phase detail, and next-spec recommendation based on priority and dependencies |
 | "configure autopilot", "settings", "consensus mode" | Guide to `.claude/speckit-pro.local.md` settings — consensus mode, auto-commit, gate failure behavior. See [autopilot guide](./references/autopilot-guide.md) |
 | "how does consensus work", "clarify automation" | Explain the 3-agent consensus protocol — codebase-analyst, spec-context-analyst, domain-researcher. See [autopilot guide](./references/autopilot-guide.md) |
 | "gap remediation", "checklist automation" | Explain checklist gap remediation loop — consensus agents propose fixes, auto-edit, re-verify. See [autopilot guide](./references/autopilot-guide.md) |
