@@ -53,11 +53,21 @@ cat .specify/memory/constitution.md
 
 If missing: "No constitution found. Run: `/speckit.constitution`"
 
-### 0.4 Workflow File Exists
+### 0.4 SpecKit Commands Installed
+
+Verify the `/speckit.*` commands exist in `.claude/commands/`:
+
+```bash
+ls .claude/commands/speckit.specify.md .claude/commands/speckit.plan.md .claude/commands/speckit.tasks.md .claude/commands/speckit.implement.md
+```
+
+If missing: "SpecKit commands not found. Run: `specify init --ai claude` to install commands."
+
+### 0.5 Workflow File Exists
 
 Read the provided workflow file path. If it doesn't exist, STOP.
 
-### 0.5 Load Settings
+### 0.6 Load Settings
 
 Read `.claude/speckit-pro.local.md` if it exists. Parse YAML frontmatter for:
 - `consensus-mode` (default: `moderate`)
@@ -68,22 +78,29 @@ Read `.claude/speckit-pro.local.md` if it exists. Parse YAML frontmatter for:
 
 If the file doesn't exist, use all defaults.
 
-### 0.6 Branch Detection
+### 0.7 Branch Detection
+
+Detect whether we're already on a feature branch (e.g., in a worktree). This determines how the Specify phase behaves.
 
 ```bash
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
 GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
 IS_WORKTREE=$( [ "$GIT_DIR" != "$GIT_COMMON" ] && echo "true" || echo "false" )
-
-if [[ "$CURRENT_BRANCH" =~ ^[0-9]{3}- ]]; then
-  export SPECIFY_FEATURE="$CURRENT_BRANCH"
-fi
 ```
+
+**Record two facts for later use:**
+
+1. **`ON_FEATURE_BRANCH`**: `true` if `CURRENT_BRANCH` matches `^[0-9]{3}-` (e.g., `009-search-database`)
+2. **`IS_WORKTREE`**: `true` if `GIT_DIR != GIT_COMMON`
+
+**Why this matters:** The `/speckit.specify` command always calls `create-new-feature.sh`, which runs `git checkout -b` to create a new branch. On a worktree or existing feature branch, this would fail or create a wrong nested branch. When `ON_FEATURE_BRANCH` is `true`, the Specify phase must skip branch creation and use the existing branch/directory instead (see Phase Dispatch → Specify below).
 
 Verify the branch matches the workflow file's `Branch` field. If they don't match, warn the user and ask whether to proceed.
 
-### 0.7 Constitution Validation (Workflow Prerequisites)
+**Important:** Do NOT use `export SPECIFY_FEATURE=...` to try to pass the branch to commands. Environment variables set in one Bash call do not persist to Skill tool invocations. Instead, the autopilot handles this by adjusting how it invokes each phase (see Phase Dispatch).
+
+### 0.8 Constitution Validation (Workflow Prerequisites)
 
 The workflow file has a "Prerequisites" section with a constitution validation table. This is **not** the same as Step 0.3 (which just checks the file exists). This step validates that each constitution principle is satisfied in the current codebase and records baselines.
 
@@ -156,55 +173,90 @@ for phase in PHASES starting from first_pending:
 
 ### Phase Dispatch
 
-Each phase is executed differently based on whether it needs consensus:
+Each phase **invokes the real `/speckit.*` command** via the `Skill` tool. The commands handle their own infrastructure (branch creation, template copying, prerequisite validation via `.specify/scripts/bash/`). The autopilot enriches the command's arguments with context from the workflow file, master plan, CLAUDE.md, and codebase analysis.
 
-#### Simple Phases (sub-agent delegation)
+#### Simple Phases (Skill invocation with enrichment)
 
 **Specify, Plan, Tasks** — these produce artifacts without needing multi-agent resolution.
 
-```
-1. Gather context from all relevant sources
-2. Construct enriched prompt (see phase-execution.md)
-3. Spawn a FOREGROUND sub-agent with the Agent tool:
-   - prompt: The constructed prompt
-   - description: "Execute [phase] phase for SPEC-XXX"
-   - mode: "bypassPermissions"
-4. Receive the sub-agent's result
+```text
+1. Gather enrichment context from relevant sources (see phase-execution.md)
+2. Compose enriched arguments from:
+   - The workflow file's phase-specific prompt section
+   - Master plan scope, CLAUDE.md tech stack, constitution principles
+   - RepoPrompt codebase scan (if context-enrichment setting allows)
+   - Prior specs for cross-spec consistency
+3. Invoke the command via Skill tool:
+   - Plan:    Skill("speckit.plan", args: "<enriched planning context>")
+   - Tasks:   Skill("speckit.tasks", args: "<enriched task constraints>")
+   - Specify: See special handling below
+4. The command runs its own scripts (.specify/scripts/bash/*) internally
 5. Validate the gate
 ```
 
-#### Consensus Phases (main session orchestration)
+##### Specify Phase — Branch-Aware Invocation
 
-**Clarify, Checklist, Analyze** — these require spawning consensus agents for resolution.
+The `/speckit.specify` command always calls `create-new-feature.sh`, which runs `git checkout -b` to create a new branch. This is correct when starting fresh from `main`, but **wrong when already on a feature branch or worktree**.
+
+```text
+IF ON_FEATURE_BRANCH is true (detected in Step 0.7):
+  — We are on an existing feature branch (e.g., worktree 009-search-database)
+  — Do NOT invoke Skill("speckit.specify") directly (it would try to create a new branch)
+  — Instead:
+    1. Run: .specify/scripts/bash/check-prerequisites.sh --json --paths-only
+       This uses get_current_branch() which reads the git branch directly
+       and returns FEATURE_DIR, FEATURE_SPEC paths for the existing branch
+    2. If the specs/ directory doesn't exist yet: mkdir -p specs/<branch-name>/
+    3. If spec-template.md exists, copy it: cp .specify/templates/spec-template.md specs/<branch-name>/spec.md
+    4. Now execute the CONTENT portion of /speckit.specify:
+       - Read the spec template structure
+       - Use the enriched feature description from the workflow file
+       - Write spec.md to the existing feature directory
+       - Generate checklists/requirements.md
+       (This is the same work the command does AFTER branch creation —
+        we skip only the create-new-feature.sh step)
+
+IF ON_FEATURE_BRANCH is false:
+  — We are on main/develop, starting a fresh spec
+  — Invoke normally: Skill("speckit.specify", args: "<enriched feature description>")
+  — The command creates the branch and directory via create-new-feature.sh
+```
+
+**Why not just set SPECIFY_FEATURE?** Environment variables from Bash calls don't persist to Skill tool invocations. And even if they did, the specify command unconditionally calls `create-new-feature.sh` — there's no flag to skip it.
+
+**For other commands (plan, clarify, checklist, tasks, analyze, implement):** These all use `check-prerequisites.sh` → `get_current_branch()`, which reads the git branch directly. On a worktree, this returns the worktree branch automatically. No special handling needed.
+
+#### Consensus Phases (Skill invocation + main session orchestration)
+
+**Clarify, Checklist, Analyze** — these invoke the real command first, then use consensus agents for resolution.
 
 These phases run in the MAIN SESSION because the main session must spawn the consensus agents directly (no nesting).
 
 ##### Clarify Phase
 
-```
-1. Run /speckit.clarify (or construct equivalent) to identify questions
-2. For each question surfaced:
-   a. Check for security keywords → if found, present to human
-   b. Spawn 3 consensus agents IN PARALLEL using the Agent tool:
-      - codebase-analyst (background sub-agent)
-      - spec-context-analyst (background sub-agent)
-      - domain-researcher (background sub-agent)
-      Each receives: spec.md excerpt + the question + their agent prompt
-   c. Wait for all 3 to complete
-   d. Evaluate agreement (see consensus-protocol.md):
-      - Same conclusion from 2+ agents = agreement
-      - Consider substance, not exact wording
-   e. Apply consensus rules based on configured mode:
-      - If consensus → respond with the agreed answer
-      - If no consensus → flag [HUMAN REVIEW NEEDED]
-3. Validate G2: no remaining markers
+```text
+1. For each clarify session in the workflow file:
+   a. Invoke: Skill("speckit.clarify", args: "<focus area from workflow>")
+   b. The command calls check-prerequisites.sh, reads spec.md, and surfaces questions
+   c. For each question surfaced:
+      i.  Check for security keywords → if found, present to human
+      ii. Spawn 3 consensus agents IN PARALLEL (background):
+          - codebase-analyst, spec-context-analyst, domain-researcher
+          Each receives: spec.md excerpt + the question
+      iii. Wait for all 3 to complete
+      iv.  Apply consensus rules (see consensus-protocol.md)
+      v.   If consensus → respond with the agreed answer
+      vi.  If no consensus → flag [HUMAN REVIEW NEEDED]
+2. Validate G2: no remaining markers
 ```
 
 ##### Checklist Phase
 
-```
+```text
 1. Read all checklist prompts from the workflow file
-2. For each domain, spawn a sub-agent to run /speckit.checklist
+2. For each domain:
+   a. Invoke: Skill("speckit.checklist", args: "<domain> <enriched prompt>")
+   b. The command calls check-prerequisites.sh and generates the checklist
 3. Parse [Gap] markers across all produced checklists
 4. If gaps found, run the Checklist Remediation Loop:
    For EACH gap (sequentially to prevent conflicting edits):
@@ -217,8 +269,10 @@ These phases run in the MAIN SESSION because the main session must spawn the con
 
 ##### Analyze Phase
 
-```
-1. Spawn a sub-agent to run /speckit.analyze
+```text
+1. Invoke: Skill("speckit.analyze", args: "<focus areas from workflow>")
+   - The command calls check-prerequisites.sh --require-tasks --include-tasks
+   - It performs READ-ONLY cross-artifact analysis
 2. Parse findings by severity
 3. For each CRITICAL or HIGH finding, run the Analyze Remediation Loop:
    a. Spawn 3 consensus agents IN PARALLEL
@@ -228,20 +282,22 @@ These phases run in the MAIN SESSION because the main session must spawn the con
 5. Validate G6: 0 CRITICAL findings
 ```
 
-#### Implement Phase (parallel sub-agents)
+#### Implement Phase (Skill invocation with parallel sub-agents)
 
-```
-1. Read tasks.md and identify implementation phases
-2. For each implementation phase:
-   a. Identify tasks
-   b. For [P] tasks: spawn BACKGROUND sub-agents (one per task)
+```text
+1. Check CLAUDE.md for a specialized implementation agent (e.g., "omnifocus-developer")
+2. Invoke: Skill("speckit.implement", args: "<implementation context>")
+   - The command calls check-prerequisites.sh --require-tasks --include-tasks
+   - It checks checklist completion status
+   - It loads tasks.md, plan.md, and all available design docs
+3. For implementation, read tasks.md and identify phases:
+   a. For [P] tasks: spawn BACKGROUND sub-agents (one per task)
       - Use isolation: "worktree" if available for file-conflict safety
-      - If project has a specialized agent (check CLAUDE.md for agent names
-        like "omnifocus-developer"), delegate to that agent
-   c. For sequential tasks: spawn one FOREGROUND sub-agent at a time
-   d. After each implementation phase completes, commit:
+      - If project has a specialized agent, delegate to that agent
+   b. For sequential tasks: spawn one FOREGROUND sub-agent at a time
+   c. After each implementation phase completes, commit:
       git add . && git commit -m "feat(SPEC-XXX): implement phase N"
-3. After all tasks: run G7 verification suite
+4. After all tasks: run G7 verification suite
 ```
 
 ## Step 3: Post-Implementation

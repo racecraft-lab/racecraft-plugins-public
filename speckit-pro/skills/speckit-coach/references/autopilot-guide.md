@@ -66,20 +66,23 @@ The more detail in the workflow file's prompts, the better the autopilot's outpu
 
 The autopilot skill runs **in the main session** so it can spawn sub-agents directly. This avoids the subagent nesting limitation (sub-agents cannot spawn their own sub-agents).
 
-```
+Each phase **invokes the real `/speckit.*` command** via the `Skill` tool. The commands handle their own infrastructure (branch creation, template copying, prerequisite validation via `.specify/scripts/bash/`). The autopilot enriches each command's arguments with context from the workflow file, master plan, and codebase analysis.
+
+```text
 Main session (speckit-autopilot skill loaded)
     │
-    ├── Simple phases → spawn ONE sub-agent (foreground)
-    │   ├── Specify → sub-agent returns spec.md
-    │   ├── Plan → sub-agent returns plan.md + artifacts
-    │   └── Tasks → sub-agent returns tasks.md
+    ├── Simple phases → invoke /speckit.* command via Skill tool
+    │   ├── Specify → Skill("speckit.specify", enriched args) → spec.md
+    │   ├── Plan    → Skill("speckit.plan", enriched args)    → plan.md + artifacts
+    │   └── Tasks   → Skill("speckit.tasks", enriched args)   → tasks.md
     │
-    ├── Consensus phases → main session orchestrates
-    │   ├── Clarify → spawns 3 consensus agents per question
-    │   ├── Checklist → spawns 3 consensus agents per gap
-    │   └── Analyze → spawns 3 consensus agents per finding
+    ├── Consensus phases → invoke command, then orchestrate consensus
+    │   ├── Clarify   → Skill("speckit.clarify") + 3 consensus agents per question
+    │   ├── Checklist  → Skill("speckit.checklist") per domain + 3 agents per gap
+    │   └── Analyze    → Skill("speckit.analyze") + 3 agents per finding
     │
-    └── Implement → parallel sub-agents with worktree isolation
+    └── Implement → Skill("speckit.implement") or project-specific agent
+        └── Parallel sub-agents with worktree isolation for [P] tasks
 ```
 
 ### Phase-by-Phase Execution
@@ -87,14 +90,15 @@ Main session (speckit-autopilot skill loaded)
 The autopilot reads the workflow file and executes phases sequentially:
 
 1. **Parse workflow state** — Find the next `⏳ Pending` phase
-2. **Check prerequisites** — Verify required prior-phase artifacts exist
-3. **Construct prompt** — Build from workflow + master plan + CLAUDE.md + constitution + codebase scan
-4. **Execute phase** — Spawn sub-agent or orchestrate consensus
-5. **Validate gate** — Run programmatic gate checks
-6. **Handle failure** — Auto-fix (max 2 attempts), then escalate to human
-7. **Update workflow file** — Mark phase complete with results
-8. **Commit** — `git add specs/ && git commit -m "feat(SPEC-XXX): complete [phase] phase"`
-9. **Advance** — Loop to step 1 for next phase
+2. **Check prerequisites** — Verify required prior-phase artifacts exist (commands handle this via `check-prerequisites.sh`)
+3. **Enrich arguments** — Build from workflow + master plan + CLAUDE.md + constitution + codebase scan
+4. **Invoke command** — `Skill("speckit.<phase>", args: "<enriched context>")` — the command runs its own scripts internally
+5. **Orchestrate consensus** — For clarify/checklist/analyze phases, spawn 3 agents per question/gap/finding
+6. **Validate gate** — Run programmatic gate checks
+7. **Handle failure** — Auto-fix (max 2 attempts), then escalate to human
+8. **Update workflow file** — Mark phase complete with results
+9. **Commit** — `git add specs/ && git commit -m "feat(SPEC-XXX): complete [phase] phase"`
+10. **Advance** — Loop to step 1 for next phase
 
 ### Gate Validation
 
@@ -185,21 +189,28 @@ The autopilot supports three branch scenarios:
 
 | Scenario | Detection | Behavior |
 |----------|----------|----------|
-| **New spec on main** | On main/develop branch | Let `/speckit.specify` create the feature branch |
-| **Existing feature branch** | Branch matches `NNN-feature-name` | Set `SPECIFY_FEATURE` automatically |
-| **Git worktree** | `git-dir` ≠ `git-common-dir` | Works automatically via branch detection |
+| **New spec on main** | On main/develop branch | Specify creates the feature branch via `create-new-feature.sh` |
+| **Existing feature branch** | Branch matches `NNN-feature-name` | Specify skips branch creation, uses existing `specs/` directory |
+| **Git worktree** | `git-dir` ≠ `git-common-dir` | Same as existing feature branch — branch already exists |
 
-Before executing any phase, the autopilot detects the branch:
-
-```bash
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-# Set SPECIFY_FEATURE if on a feature branch
-if [[ "$CURRENT_BRANCH" =~ ^[0-9]{3}- ]]; then
-  export SPECIFY_FEATURE="$CURRENT_BRANCH"
-fi
-```
+Before executing any phase, the autopilot detects the branch and records two flags:
+- `ON_FEATURE_BRANCH`: `true` if the branch matches `^[0-9]{3}-`
+- `IS_WORKTREE`: `true` if git-dir differs from git-common-dir
 
 It also verifies the detected branch matches the workflow file's `Branch` field.
+
+### Why Specify Needs Special Handling
+
+The `/speckit.specify` command always calls `create-new-feature.sh`, which runs `git checkout -b` to create a new branch. On a worktree or existing feature branch, this would fail or create a wrong nested branch.
+
+When `ON_FEATURE_BRANCH` is `true`, the autopilot:
+1. Runs `check-prerequisites.sh --paths-only --json` to get the existing feature directory paths
+2. Sets up the `specs/` directory if needed (mkdir + copy spec template)
+3. Executes only the content-generation portion of `/speckit.specify` (skipping branch creation)
+
+The other 6 commands (clarify, plan, checklist, tasks, analyze, implement) all use `check-prerequisites.sh` → `get_current_branch()`, which reads the git branch directly. On a worktree, `git rev-parse --abbrev-ref HEAD` returns the worktree branch automatically — no special handling needed.
+
+**Note:** Environment variables set via `export` in a Bash call do NOT persist to Skill tool invocations. The autopilot does not rely on `SPECIFY_FEATURE` — it handles the worktree case explicitly in its Specify phase logic.
 
 ---
 

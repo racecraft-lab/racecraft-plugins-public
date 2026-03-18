@@ -1,10 +1,31 @@
 # Phase Execution Reference
 
-How each SDD phase's prompt is constructed and executed by the autopilot. Each phase follows a pattern: gather context → construct prompt → spawn sub-agent → validate gate → update workflow → commit.
+How each SDD phase is executed by the autopilot. Each phase **invokes the real `/speckit.*` command** via the `Skill` tool, with enriched arguments from the workflow file and project context. The commands handle their own infrastructure (branch creation, template copying, prerequisite validation) via `.specify/scripts/bash/`.
 
-## Context Sources
+## SpecKit Infrastructure
 
-Every phase draws from some combination of these sources:
+The autopilot relies on the project's installed SpecKit commands and scripts:
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| **Commands** | `.claude/commands/speckit.*.md` | Slash commands that orchestrate each SDD phase |
+| **Scripts** | `.specify/scripts/bash/` | Shell scripts for branch creation, path resolution, prerequisite checking |
+| **Templates** | `.specify/templates/` | Spec, plan, tasks, checklist, and agent file templates |
+| **Constitution** | `.specify/memory/constitution.md` | Project principles for gate validation |
+
+### Key Scripts
+
+| Script | Used By | What It Does |
+|--------|---------|-------------|
+| `common.sh` | All scripts | Branch detection (`get_current_branch`), feature path resolution (`get_feature_paths`, `find_feature_dir_by_prefix`) |
+| `create-new-feature.sh` | `/speckit.specify` | Creates git branch, `specs/` dir, copies spec template. Supports `--json`, `--short-name`, `--number` |
+| `setup-plan.sh` | `/speckit.plan` | Copies plan template to feature dir. Outputs `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH` |
+| `check-prerequisites.sh` | `/speckit.clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
+| `update-agent-context.sh` | `/speckit.plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
+
+## Context Enrichment
+
+Before invoking each command, the autopilot enriches the prompt with context the user would otherwise provide manually. These sources are gathered once and injected as arguments:
 
 | Source | How to Gather |
 |--------|--------------|
@@ -12,7 +33,7 @@ Every phase draws from some combination of these sources:
 | **Master plan** | Read the master plan file for this spec's scope description |
 | **CLAUDE.md** | Read CLAUDE.md for tech stack, constraints, conventions |
 | **Constitution** | Read `.specify/memory/constitution.md` for project principles |
-| **RepoPrompt scan** | Use `mcp__RepoPrompt__context_builder` for codebase analysis |
+| **RepoPrompt scan** | Use `mcp__RepoPrompt__context_builder` for codebase analysis (if `context-enrichment` setting allows) |
 | **Prior specs** | Read `specs/*/spec.md` and `specs/*/plan.md` for precedent |
 | **Settings** | Read `.claude/speckit-pro.local.md` for configuration |
 
@@ -45,7 +66,7 @@ Verify the detected branch matches the workflow file's `Branch` field. If they d
 
 **Purpose:** Validate that the codebase satisfies all constitution principles before starting the workflow. Records baselines (test count, file count) in the workflow file's Prerequisites table so the Implement phase can measure delta.
 
-**Execution strategy:** Runs directly in the main session (no sub-agent needed).
+**Execution strategy:** Runs directly in the main session (no sub-agent needed). Does NOT invoke a `/speckit.*` command — this is autopilot-specific pre-flight.
 
 **Procedure:**
 
@@ -68,21 +89,54 @@ Verify the detected branch matches the workflow file's `Branch` field. If they d
 
 ### Phase 1: Specify
 
-**Context sources:** Master plan scope + CLAUDE.md tech stack + constitution + RepoPrompt codebase scan
+**Invokes:** `/speckit.specify` via the `Skill` tool — **with branch-aware handling**
 
-**Prompt construction:**
+**What the command does internally:**
+1. Calls `create-new-feature.sh --json --short-name "<name>" --number <N>` to create branch + `specs/` directory + copy spec template
+2. Reads the spec template and generates the specification from the feature description
+3. Outputs `spec.md` and optionally `checklists/requirements.md`
 
+**Problem:** The command ALWAYS calls `create-new-feature.sh`, which runs `git checkout -b`. On a worktree or existing feature branch, this would fail or create a wrong nested branch.
+
+**Autopilot execution (branch-aware):**
+
+```text
+1. Gather enrichment context:
+   - Read the workflow file's "Specify Prompt" section
+   - Read master plan scope for this spec
+   - Read CLAUDE.md tech stack section
+   - Read constitution principles summary
+   - Run RepoPrompt context_builder for codebase patterns
+   - Read prior specs' scope sections for cross-spec consistency
+2. Compose the enriched feature description by combining all sources
+3. Check ON_FEATURE_BRANCH (detected in Step 0.7):
+
+   IF ON_FEATURE_BRANCH is true:
+     — Already on a feature branch (e.g., worktree 009-search-database)
+     — Do NOT invoke Skill("speckit.specify") — it would try to create a new branch
+     — Instead:
+       a. Run: .specify/scripts/bash/check-prerequisites.sh --json --paths-only
+          to get FEATURE_DIR and FEATURE_SPEC paths for the existing branch
+       b. Ensure specs/<branch-name>/ directory exists (mkdir -p if needed)
+       c. Copy spec template if spec.md doesn't exist yet:
+          cp .specify/templates/spec-template.md <FEATURE_SPEC>
+       d. Execute the content generation portion of specify:
+          - Read the spec template structure
+          - Use the enriched feature description
+          - Write spec.md to the existing feature directory
+          - Generate checklists/requirements.md quality checklist
+       e. This is the same work the command does AFTER branch creation —
+          we skip only the create-new-feature.sh step
+
+   IF ON_FEATURE_BRANCH is false:
+     — On main/develop, starting a fresh spec
+     — Invoke normally: Skill("speckit.specify", args: "<enriched feature description>")
+     — The command creates the branch and directory via create-new-feature.sh
+
+4. Validate G1 gate
 ```
-Compose a detailed /speckit.specify prompt from:
-1. The workflow file's "Specify Prompt" section (user-written scope description)
-2. Master plan's scope section for this spec (detailed deliverables, constraints)
-3. CLAUDE.md tech stack section (languages, frameworks, versions)
-4. Constitution principles summary (for the agent to respect)
-5. RepoPrompt context_builder output (existing code patterns, related files)
-6. Prior specs' scope sections (for cross-spec consistency)
-```
 
-**Execution:** Spawn a foreground sub-agent with the composed prompt. The sub-agent runs the equivalent of `/speckit.specify` with the enriched prompt.
+**Why the other commands don't have this problem:** They all use `check-prerequisites.sh` → `get_current_branch()`, which reads the git branch directly (no `SPECIFY_FEATURE` env var needed). On a worktree, `git rev-parse --abbrev-ref HEAD` returns the worktree branch automatically.
 
 **Gate:** G1 — check for `[NEEDS CLARIFICATION]` markers (routing decision)
 
@@ -95,22 +149,36 @@ Compose a detailed /speckit.specify prompt from:
 
 ### Phase 2: Clarify (Conditional)
 
+**Invokes:** `/speckit.clarify` via the `Skill` tool (for initial question identification)
+
 **Trigger:** Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
 
-**Context sources:** spec.md + constitution + master plan + codebase patterns
+**What the command does internally:**
+1. Calls `check-prerequisites.sh --json --paths-only` to get feature paths
+2. Reads spec.md and performs structured ambiguity scan
+3. Asks up to 5 clarification questions and encodes answers into spec.md
 
-**Execution strategy:** This phase runs in the MAIN SESSION (not a sub-agent) because it needs to spawn consensus agents.
+**Autopilot execution (consensus mode):**
 
-```
-For each clarify session defined in the workflow file:
-1. Identify questions/ambiguities in spec.md
-2. For each question:
-   a. Check for security keywords → if found, flag for human
-   b. Spawn 3 consensus agents IN PARALLEL (background)
-   c. Wait for all 3 to complete
-   d. Apply consensus rules (see consensus-protocol.md)
-   e. If consensus → integrate answer into spec.md
-   f. If no consensus → flag for human review
+This phase runs in the MAIN SESSION because it needs to spawn consensus agents.
+
+```text
+1. Read the workflow file's "Clarify Prompts" section for focus areas
+2. For each clarify session defined in the workflow:
+   a. Invoke: Skill("speckit.clarify", args: "<focus area from workflow>")
+   b. The command surfaces questions about the spec
+   c. For each question surfaced:
+      i.  Check for security keywords → if found, flag for human
+      ii. Spawn 3 consensus agents IN PARALLEL (background):
+          - codebase-analyst
+          - spec-context-analyst
+          - domain-researcher
+          Each receives: spec.md excerpt + the question
+      iii. Wait for all 3 to complete
+      iv.  Apply consensus rules (see consensus-protocol.md)
+      v.   If consensus → respond to the clarify command with the agreed answer
+      vi.  If no consensus → flag [HUMAN REVIEW NEEDED]
+3. Validate G2: no remaining markers
 ```
 
 **Gate:** G2 — verify 0 `[NEEDS CLARIFICATION]` and 0 `[HUMAN REVIEW NEEDED]` markers
@@ -123,20 +191,29 @@ For each clarify session defined in the workflow file:
 
 ### Phase 3: Plan
 
-**Context sources:** spec.md + CLAUDE.md tech stack + constitution + prior specs' plans
+**Invokes:** `/speckit.plan` via the `Skill` tool
 
-**Prompt construction:**
+**What the command does internally:**
+1. Calls `setup-plan.sh --json` to copy plan template and get paths
+2. Reads spec.md and constitution
+3. Fills Technical Context, runs Constitution Check gates
+4. Phase 0: Generates `research.md` (resolves unknowns)
+5. Phase 1: Generates `data-model.md`, `contracts/`, `quickstart.md`
+6. Calls `update-agent-context.sh` to update CLAUDE.md with tech stack
 
+**Autopilot execution:**
+
+```text
+1. Gather enrichment context:
+   - Read the workflow file's "Plan Prompt" section (tech stack, constraints)
+   - Read CLAUDE.md tech stack section (auto-injected so user doesn't repeat it)
+   - Read constitution principles (for gate checking)
+   - Read prior specs' plan.md files (for architectural consistency)
+   - Run RepoPrompt codebase scan (existing architecture patterns)
+2. Invoke: Skill("speckit.plan", args: "<enriched planning context>")
+   - The command handles template copying, agent context update
+3. Validate G3 gate
 ```
-Compose a /speckit.plan prompt from:
-1. The workflow file's "Plan Prompt" section (tech stack, constraints)
-2. CLAUDE.md tech stack section (auto-injected so user doesn't have to repeat it)
-3. Constitution principles (for gate checking)
-4. Prior specs' plan.md files (for architectural consistency)
-5. RepoPrompt codebase scan (existing architecture patterns)
-```
-
-**Execution:** Spawn a foreground sub-agent with the composed prompt.
 
 **Gate:** G3 — verify plan.md, research.md, data-model.md exist; check constitutional gates
 
@@ -148,16 +225,30 @@ Compose a /speckit.plan prompt from:
 
 ### Phase 4: Checklist
 
-**Context sources:** spec.md + plan.md + signal extraction from checklist-domains-guide
+**Invokes:** `/speckit.checklist` via the `Skill` tool (once per domain)
 
-**Execution strategy:** This phase runs in the MAIN SESSION because it may need consensus agents for gap remediation.
+**What the command does internally:**
+1. Calls `check-prerequisites.sh --json` to get paths and available docs
+2. Reads spec.md + plan.md + available design docs
+3. Generates a domain-specific checklist in `checklists/<domain>.md`
 
-```
-Step 1: Read ALL checklist prompts from the workflow file
-Step 2: For each domain prompt, spawn a sub-agent to run /speckit.checklist
-Step 3: Collect results, parse [Gap] markers across all checklists
-Step 4: If gaps found → run Checklist Remediation Loop (see gate-validation.md)
-Step 5: Re-run checklists to verify gaps closed
+**Autopilot execution (consensus mode for gap remediation):**
+
+This phase runs in the MAIN SESSION because it may need consensus agents for gap remediation.
+
+```text
+1. Read ALL checklist prompts from the workflow file's "Run Enriched Checklist Prompts" section
+2. For each domain prompt:
+   a. Invoke: Skill("speckit.checklist", args: "<domain> <enriched prompt from workflow>")
+   b. The command generates the checklist with [Gap] markers for issues found
+3. Parse [Gap] markers across all produced checklists
+4. If gaps found, run the Checklist Remediation Loop:
+   For EACH gap (sequentially to prevent conflicting edits):
+   a. Spawn 3 consensus agents IN PARALLEL
+   b. Apply consensus rules → produce proposed spec/plan edit
+   c. Apply the edit
+5. Re-run all checklists to verify gaps closed (max 2 loops)
+6. Validate G4: 0 [Gap] markers
 ```
 
 **Gate:** G4 — verify 0 `[Gap]` markers across all checklist files
@@ -171,19 +262,25 @@ Step 5: Re-run checklists to verify gaps closed
 
 ### Phase 5: Tasks
 
-**Context sources:** spec.md + plan.md + CLAUDE.md file layout + prior specs' task patterns
+**Invokes:** `/speckit.tasks` via the `Skill` tool
 
-**Prompt construction:**
+**What the command does internally:**
+1. Calls `check-prerequisites.sh --json` to get paths and available docs
+2. Reads plan.md (tech stack, structure), spec.md (user stories), and optional docs
+3. Generates `tasks.md` organized by user story with dependency ordering
 
+**Autopilot execution:**
+
+```text
+1. Gather enrichment context:
+   - Read the workflow file's "Tasks Prompt" section (task structure constraints)
+   - Read CLAUDE.md file layout conventions (where tests go, where source goes)
+   - Read prior specs' tasks.md files (for consistent task structure)
+   - Read project directory structure (via ls or RepoPrompt get_file_tree)
+2. Invoke: Skill("speckit.tasks", args: "<enriched task constraints>")
+   - The command handles prerequisite validation and doc discovery
+3. Validate G5 gate
 ```
-Compose a /speckit.tasks prompt from:
-1. The workflow file's "Tasks Prompt" section (task structure constraints)
-2. CLAUDE.md file layout conventions (where tests go, where source goes)
-3. Prior specs' tasks.md files (for consistent task structure)
-4. Project directory structure (via ls or RepoPrompt get_file_tree)
-```
-
-**Execution:** Spawn a foreground sub-agent with the composed prompt.
 
 **Gate:** G5 — cross-reference every FR-XXX in spec.md with tasks.md
 
@@ -195,15 +292,30 @@ Compose a /speckit.tasks prompt from:
 
 ### Phase 6: Analyze
 
-**Context sources:** spec.md + plan.md + tasks.md + constitution
+**Invokes:** `/speckit.analyze` via the `Skill` tool
 
-**Execution strategy:** This phase runs in the MAIN SESSION because it may need consensus agents for finding remediation.
+**What the command does internally:**
+1. Calls `check-prerequisites.sh --json --require-tasks --include-tasks` to validate all artifacts
+2. Reads spec.md + plan.md + tasks.md + constitution
+3. Performs cross-artifact consistency analysis (READ-ONLY — does not modify files)
+4. Outputs findings by severity (CRITICAL, HIGH, MEDIUM, LOW)
 
-```
-Step 1: Spawn sub-agent to run /speckit.analyze
-Step 2: Parse findings by severity
-Step 3: If CRITICAL or HIGH findings → run Analyze Remediation Loop (see gate-validation.md)
-Step 4: Re-run analyze to verify findings resolved
+**Autopilot execution (consensus mode for finding remediation):**
+
+This phase runs in the MAIN SESSION because it may need consensus agents for finding remediation.
+
+```text
+1. Read the workflow file's "Analyze Prompt" section for focus areas
+2. Invoke: Skill("speckit.analyze", args: "<enriched focus areas>")
+   - The command validates prerequisites and runs the analysis
+   - It is READ-ONLY — it only reports findings, does not modify files
+3. Parse findings by severity
+4. For each CRITICAL or HIGH finding, run the Analyze Remediation Loop:
+   a. Spawn 3 consensus agents IN PARALLEL
+   b. Apply consensus rules → produce proposed fix
+   c. Apply the fix to the appropriate artifact (spec.md, plan.md, or tasks.md)
+5. Re-run analyze to verify (max 2 loops)
+6. Validate G6: 0 CRITICAL findings
 ```
 
 **Gate:** G6 — verify 0 CRITICAL findings
@@ -218,22 +330,31 @@ Step 4: Re-run analyze to verify findings resolved
 
 ### Phase 7: Implement
 
-**Context sources:** tasks.md + plan.md + CLAUDE.md + all prior artifacts
+**Invokes:** `/speckit.implement` via the `Skill` tool (or delegates to project-specific implementation agent)
 
-**Execution strategy:**
+**What the command does internally:**
+1. Calls `check-prerequisites.sh --json --require-tasks --include-tasks` to validate all artifacts
+2. Checks checklist completion status — if incomplete, warns (autopilot proceeds since checklists already passed G4)
+3. Reads tasks.md for the task list, plan.md for architecture, and all optional docs
+4. Executes tasks following TDD Red-Green-Refactor cycle
 
-```
-Step 1: Read tasks.md and identify phases
-Step 2: For each phase:
-  a. Identify tasks in this phase
-  b. For tasks marked [P] → spawn background sub-agents (one per task)
-     - If worktree isolation is available, use isolation: "worktree"
-  c. For sequential tasks → spawn one foreground sub-agent at a time
-  d. If the project has a specialized implementation agent (e.g., omnifocus-developer),
-     delegate to that agent instead
-Step 3: After each implementation phase, commit:
-     git add . && git commit -m "feat(SPEC-XXX): implement phase N - <description>"
-Step 4: After all tasks complete → run G7 verification suite
+**Autopilot execution:**
+
+```text
+1. Check if the project has a specialized implementation agent:
+   - Look in CLAUDE.md for agent references (e.g., "omnifocus-developer")
+   - If found, delegate to that agent instead of /speckit.implement
+2. Read tasks.md and identify implementation phases
+3. For each implementation phase:
+   a. Identify tasks in this phase
+   b. For tasks marked [P] → spawn background sub-agents (one per task)
+      - Use isolation: "worktree" if available for file-conflict safety
+      - Each sub-agent invokes: Skill("speckit.implement", args: "Execute task TXXX")
+        OR uses the project-specific implementation agent
+   c. For sequential tasks → spawn one foreground sub-agent at a time
+   d. After each implementation phase completes:
+      git add . && git commit -m "feat(SPEC-XXX): implement phase N - <description>"
+4. After all tasks: run G7 verification suite
 ```
 
 **Gate:** G7 — full verification suite (build + typecheck + lint + test)
@@ -250,7 +371,7 @@ Step 4: After all tasks complete → run G7 verification suite
 
 After G7 passes:
 
-```
+```text
 Step 1: Run final verification suite (build, typecheck, lint, test)
 Step 2: Detect remote name: git remote -v
 Step 3: Push branch: git push -u <remote> <branch>
@@ -272,43 +393,17 @@ The PR body is auto-generated from:
 
 After PR creation, monitor for review comments:
 
-```
+```text
 Poll every 5 minutes (max 1 hour / 12 iterations):
 1. Check for pending review comments via gh api
 2. Filter to unresolved comments
-3. For each unresolved comment:
-   a. Read comment body + file context
-   b. Determine action (code fix, style fix, reply, false positive)
-   c. If code changed → verify suite → commit → push
-   d. Reply to comment thread
-4. If no unresolved comments → exit loop
+3. For each:
+   - Code fix needed → edit file, run verify suite, commit, push
+   - Style/format → pnpm lint:fix, commit, push
+   - Question → reply with design rationale
+   - False positive → reply explaining why no change needed
+4. If 0 unresolved → exit loop
 5. After 1 hour → exit, notify user of remaining comments
-```
-
-## Sub-Agent Prompt Template
-
-When spawning a sub-agent for a phase, use this prompt structure:
-
-```
-You are executing phase [N] ([Phase Name]) of the SpecKit SDD workflow for [SPEC-ID]: [Spec Name].
-
-## Context
-[Gathered context from the sources listed above]
-
-## Your Task
-[Phase-specific instructions — what to produce, what format, what constraints]
-
-## Constraints
-- Follow the existing project patterns documented in CLAUDE.md
-- Respect constitution principles
-- Output artifacts to specs/<feature-name>/
-- Return a summary of what was produced when complete
-
-## Output
-When complete, return:
-1. List of files created or modified
-2. Summary of key decisions made
-3. Any concerns or flags for human review
 ```
 
 ## Workflow File Update Protocol

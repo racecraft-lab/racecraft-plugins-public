@@ -28,7 +28,7 @@ Execute a SpecKit workflow autonomously from a populated workflow file.
 
 The user provides a path to a workflow file and optionally a starting phase:
 
-```
+```text
 /speckit-pro:autopilot docs/ai/specs/SPEC-013-workflow.md
 /speckit-pro:autopilot docs/ai/specs/SPEC-013-workflow.md --from-phase plan
 ```
@@ -39,13 +39,29 @@ The user provides a path to a workflow file and optionally a starting phase:
 2. **Pass the workflow file path** and any arguments to the skill
 3. The skill contains the full orchestration logic — follow it exactly
 
+The autopilot skill invokes the real `/speckit.*` commands (in `.claude/commands/`) via the Skill tool for each phase. These commands use the `.specify/scripts/bash/` infrastructure for branch creation, prerequisite validation, and path resolution. The autopilot enriches each command's arguments with context from the workflow file, master plan, and codebase analysis.
+
+### SpecKit Commands Used
+
+| Phase | Command Invoked | Key Script |
+|-------|----------------|------------|
+| Specify | `Skill("speckit.specify", ...)` | `create-new-feature.sh` |
+| Clarify | `Skill("speckit.clarify", ...)` | `check-prerequisites.sh` |
+| Plan | `Skill("speckit.plan", ...)` | `setup-plan.sh`, `update-agent-context.sh` |
+| Checklist | `Skill("speckit.checklist", ...)` | `check-prerequisites.sh` |
+| Tasks | `Skill("speckit.tasks", ...)` | `check-prerequisites.sh` |
+| Analyze | `Skill("speckit.analyze", ...)` | `check-prerequisites.sh` |
+| Implement | `Skill("speckit.implement", ...)` | `check-prerequisites.sh` |
+
 ## Prerequisites Check
 
 Before invoking the skill, verify:
+
 - The workflow file exists at the provided path
 - SpecKit CLI is installed: `specify check`
-- `.specify/` directory exists
+- `.specify/` directory exists (with `scripts/bash/` and `templates/`)
 - `.specify/memory/constitution.md` exists
+- `.claude/commands/speckit.*.md` commands are installed
 
 If any prerequisite fails, tell the user what's missing and how to fix it.
 
