@@ -172,23 +172,34 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 
 Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
 
-Spawn a **separate subagent for each clarify session**,
-with consensus resolution **after each session**:
+Spawn a **separate subagent for each clarify session**.
+Each subagent gets the **interactive prefix** telling it
+to research and answer every question the command surfaces.
 
 ```text
 For each clarify session in the workflow file:
   1. TaskUpdate: session task → in_progress
   2. Agent(subagent_type: "phase-executor",
-          prompt: "Run /speckit.clarify with: <session prompt>")
+          prompt: """
+            <interactive prefix — see SKILL.md Clarify prefix>
+
+            Run /speckit.clarify with: <session prompt>
+          """)
   3. Grep spec.md for [NEEDS CLARIFICATION] markers
-  4. If markers → use context_builder(response_type: "question")
-     to investigate and resolve each marker
+  4. If markers remain → use context_builder(response_type:
+     "question") to investigate and resolve each marker
   5. TaskUpdate: session task → completed
   6. Proceed to next session
 ```
 
+**The interactive prefix tells the subagent:** research
+each question using Tavily (API docs), Context7 (library
+docs), RepoPrompt (codebase patterns), and Read/Grep
+(constitution, prior specs). Pick the best-supported answer
+for each question. Answer ALL questions before completing.
+
 **Why after each session:** Session 2 may depend on
-Session 1's resolved questions. Consensus updates the
+Session 1's resolved questions. Resolution updates the
 spec before the next session runs.
 
 **Gate:** G2 — verify 0 markers remain
@@ -276,8 +287,22 @@ isolation.
 **Commit:**
 `git add . && git commit -m "feat(SPEC-XXX): implement phase N"`
 
-**After G7 passes:** Execute PR Creation Protocol
-(see below).
+**After G7 passes:** Run Integration/E2E Test Verification,
+then execute PR Creation Protocol (see below).
+
+## Integration / E2E Test Verification
+
+Before creating a PR, check whether the project has
+integration or e2e tests. If it does, implement spec-specific
+tests and run the **full** integration/e2e suite.
+
+1. Detect: `Glob("tests/integration/**" or "tests/e2e/**")`
+2. If project has integration tests:
+   a. Check for spec-specific tests
+   b. If missing → create them following existing patterns
+   c. Run the FULL integration suite (not just new tests)
+   d. Fix failures (max 2 attempts)
+3. If no integration tests in the project → skip
 
 ## PR Creation Protocol
 

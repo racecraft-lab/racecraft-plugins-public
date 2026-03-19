@@ -474,7 +474,10 @@ Agent(
     Run the /speckit.<phase> command.
     Use: Skill("speckit.<phase>", args: "<workflow prompt below>")
 
-    <branch prefix if ON_FEATURE_BRANCH — see below>
+    <phase-specific prefix — see below>
+    - Specify: branch-aware prefix (if ON_FEATURE_BRANCH)
+    - Clarify: interactive prefix (ALWAYS for clarify)
+    - All others: no prefix needed
 
     Workflow prompt:
     ---
@@ -485,7 +488,9 @@ Agent(
 ```
 
 The phase-executor agent handles summary formatting and
-the "no recommendations" constraint automatically.
+the "no recommendations" constraint automatically. The
+phase-specific prefixes handle Specify's branch skipping
+and Clarify's interactive question-answering behavior.
 
 #### Specify — Branch-Aware Prefix
 
@@ -502,6 +507,34 @@ exist. Skip directly to spec content generation.
 All other phases use `check-prerequisites.sh` →
 `get_current_branch()` which detects the worktree branch
 automatically. No prefix needed.
+
+#### Clarify — Interactive Prefix
+
+The `/speckit.clarify` command is interactive — it surfaces
+questions and expects YOU to answer them. Always add this
+prefix to clarify subagent prompts:
+
+```text
+IMPORTANT: The clarify command will surface clarification
+questions about the spec. You MUST answer every question
+it asks. Do NOT respond with "done" or end the session
+without answering all questions.
+
+For each question the command surfaces:
+1. Research the answer using these tools:
+   - mcp__tavily-mcp__tavily-search (API docs, standards)
+   - mcp__context7__resolve-library-id + get-library-docs
+     (library documentation)
+   - mcp__RepoPrompt__context_builder (codebase patterns)
+   - mcp__RepoPrompt__file_search (find existing code)
+   - Read/Grep (constitution, prior specs, CLAUDE.md)
+2. Pick the best-supported answer (or use "Custom" with
+   your researched answer if the offered options are wrong)
+3. Provide the answer to the command
+
+Answer ALL questions before completing. Cite your sources
+in the summary you return.
+```
 
 #### Multi-Prompt Phases
 
@@ -557,7 +590,53 @@ specialized implementation agent in CLAUDE.md (e.g.,
 
 After all 7 phases complete and G7 passes:
 
-### 3.1 PR Creation
+### 3.1 Integration / E2E Test Verification
+
+Before creating a PR, check whether the project has
+integration or e2e tests. If it does, implement spec-specific
+tests and run the full suite.
+
+```text
+1. Detect project testing patterns:
+   Glob("tests/integration/**" or "tests/e2e/**" or
+        "**/*.integration.test.*" or "**/*.e2e.test.*")
+
+2. If the project HAS integration/e2e tests:
+   a. Check if spec-specific tests already exist:
+      Glob("tests/integration/*<spec-name>*" or
+           "tests/e2e/*<spec-name>*")
+
+   b. If NO spec-specific tests exist:
+      - Study existing integration/e2e tests to understand
+        the pattern (test structure, setup, teardown)
+      - Create spec-specific integration tests covering
+        the spec's key user stories (at minimum P1 stories)
+      - Each test should verify end-to-end behavior through
+        the tool interface
+      - Follow the existing test patterns exactly
+
+   c. Run the FULL integration/e2e test suite (not just
+      the new tests):
+      pnpm test tests/integration/ (or project equivalent)
+
+   d. If any fail → fix and re-run (max 2 attempts)
+
+3. If the project does NOT have integration/e2e tests:
+   Skip this step — only unit/contract tests apply.
+
+4. Record results:
+   - Integration/e2e tests: N new, M total
+   - Pass/fail status
+   - User stories covered
+```
+
+**Why:** The full integration suite must pass before opening
+a PR — not just the new tests. Existing integration tests
+may break due to changes in shared infrastructure, new tool
+registration, or side effects. Running the full suite catches
+regressions.
+
+### 3.2 PR Creation
 
 ```text
 1. Run final verification: pnpm build && pnpm typecheck && pnpm lint && pnpm test
@@ -600,7 +679,7 @@ After all 7 phases complete and G7 passes:
 If `gh` is not installed, push the branch and tell the user to
 create the PR manually.
 
-### 3.2 Copilot Review Remediation Loop
+### 3.3 Copilot Review Remediation Loop
 
 After PR creation, monitor for automated review comments:
 
