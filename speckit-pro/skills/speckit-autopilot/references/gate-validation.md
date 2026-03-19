@@ -111,31 +111,37 @@ Step 5: If gaps remain after 2 loops → STOP, present to human
 
 ### G6 — After Analyze
 
-**Check:** No CRITICAL findings. HIGH findings reviewed.
+**Check:** All findings remediated at every severity level.
 
 ```
 1. Run /speckit.analyze and capture output
-2. Count findings by severity:
-   - CRITICAL count must be 0
-   - HIGH findings must be reviewed (either fixed or justified)
-3. MEDIUM and LOW are logged but don't block
+2. Count findings by severity (CRITICAL, HIGH, MEDIUM, LOW)
+3. ALL findings must be remediated — none left unresolved
 ```
 
 **Auto-Fix:** This is the **Analyze Remediation Loop**:
 
 ```
-Step 1: Run /speckit.analyze
-Step 2: Parse findings by severity (CRITICAL, HIGH, MEDIUM, LOW)
-Step 3: For each CRITICAL or HIGH finding:
-  a. Spawn 3 consensus agents in parallel with finding + artifact context
-  b. Apply consensus rules → produce proposed fix
-  c. Auto-edit tasks.md, spec.md, or plan.md as needed
-Step 4: For MEDIUM/LOW: Log for post-hoc review, do not auto-fix
-Step 5: Re-run analyze to verify CRITICAL/HIGH resolved
-  - If new CRITICAL → remediate (max 2 total loops)
-  - If 0 CRITICAL → G6 PASS
-Step 6: If CRITICAL remains after 2 loops → STOP, present to human
+Step 1: Run /speckit.analyze (via phase-executor subagent)
+Step 2: Parse ALL findings by severity
+Step 3: For EACH finding (CRITICAL, HIGH, MEDIUM, LOW):
+  a. Use context_builder(response_type: "question") to
+     investigate the finding with codebase context
+  b. Determine the fix: add task, amend task, edit spec,
+     edit plan, remove stale marker, etc.
+  c. Apply the fix to the relevant artifact
+Step 4: Re-run analyze to verify all findings resolved
+  - If new findings appear → remediate (max 2 total loops)
+  - If 0 findings → G6 PASS
+Step 5: If findings remain after 2 loops → STOP, present
+  to human with all remaining findings and attempted fixes
 ```
+
+**Why remediate everything:** The autopilot runs unattended.
+Leaving MEDIUM/LOW issues for "post-hoc review" means they
+never get fixed. Fixing all findings produces cleaner
+artifacts and prevents issues from compounding during
+implementation.
 
 ### G7 — After Implement
 
@@ -166,9 +172,9 @@ Step 6: If CRITICAL remains after 2 loops → STOP, present to human
 | G1 | Specify | NEEDS CLARIFICATION markers | N/A (routing) | N/A |
 | G2 | Clarify | 0 markers remain | Re-run clarify | 2 |
 | G3 | Plan | Artifacts exist, gates pass | Re-run plan | 2 |
-| G4 | Checklist | 0 [Gap] markers | Consensus remediation loop | 2 |
+| G4 | Checklist | 0 [Gap] markers | context_builder remediation | 2 |
 | G5 | Tasks | All FRs mapped to tasks | Generate missing tasks | 2 |
-| G6 | Analyze | 0 CRITICAL findings | Consensus remediation loop | 2 |
+| G6 | Analyze | 0 findings (all severities) | context_builder remediation | 2 |
 | G7 | Implement | Build+type+lint+test pass | Fix errors | 2 |
 
 ## Failure Escalation Protocol

@@ -2,27 +2,27 @@
 
 **RULES (from SKILL.md — repeated here for clarity):**
 
-1. **COPY-PASTE ONLY** — Read the workflow prompt, pass it to
-   `Skill("speckit.<phase>")`. Do NOT read the master plan,
-   prior specs, or explore the codebase.
-2. **NEVER STOP** — After a phase completes, immediately
-   advance. Only stop for gate failure, failed consensus,
-   security keywords, or missing prerequisites.
-3. **MULTI-PROMPT** — Clarify and Checklist have multiple
-   prompts. Execute EACH as a separate `Skill()` invocation.
-4. **COMMANDS ARE SELF-CONTAINED** — After invoking a Skill,
-   follow only the command's instructions. Do not supplement.
+1. **SUBAGENT PER PHASE** — Spawn a foreground subagent for
+   each phase via the Agent tool. The subagent runs the
+   `/speckit.*` command and returns a summary. The parent
+   receives the result as a tool response, keeping the agent
+   loop alive.
+2. **MULTI-PROMPT** — Clarify and Checklist have multiple
+   prompts. Spawn a separate subagent for each prompt.
+3. **RESOLUTION IN MAIN SESSION** — After subagents return,
+   the main session checks for markers and resolves them
+   using RepoPrompt `context_builder` and `chat_send`.
+4. **TASK LIST DRIVES EXECUTION** — Check the task list
+   after each subagent returns to know what's next.
 
 ---
 
 How each SDD phase is executed by the autopilot. Each phase
-**invokes the real `/speckit.*` command** via the `Skill` tool,
-passing the **workflow file's prompt directly** as the command
-argument. The workflow prompts are pre-populated by the user
-with all necessary context — the autopilot does not enrich or
-supplement them. The commands handle their own infrastructure
-(branch creation, template copying, prerequisite validation)
-via `.specify/scripts/bash/`.
+is delegated to a **foreground subagent** that runs the real
+`/speckit.*` command via the `Skill` tool. The subagent
+operates in its own context — the command's noise (template
+reads, file exploration, completion reports) stays there and
+never touches the parent. The parent receives only a summary.
 
 ## SpecKit Infrastructure
 
@@ -46,19 +46,45 @@ commands and scripts:
 | `check-prerequisites.sh` | `/speckit.clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
 | `update-agent-context.sh` | `/speckit.plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
 
-## Prompt Passthrough
+## Subagent Delegation
 
-Read the workflow prompt. Pass it to the Skill. Wait. That's
-it. (See Rules 1 and 5 above for the full rationale.)
+Each phase is executed by spawning a foreground subagent via
+the Agent tool. The subagent:
 
-The commands handle their own context gathering internally:
+1. Loads the `/speckit.*` command via `Skill()`
+2. Runs the command in its own context
+3. Returns a concise summary to the parent
 
-- `/speckit.specify` reads the spec template
-- `/speckit.plan` reads spec.md, constitution, runs research
-- `/speckit.checklist` reads spec.md + plan.md + available
-  design docs
-- `/speckit.implement` reads tasks.md + plan.md + all
-  design docs
+The parent receives the summary as a tool result, which keeps
+the parent's agent loop alive. The parent then validates the
+gate and spawns the next subagent.
+
+### Subagent Prompt Template
+
+Use the `phase-executor` agent type for every phase. This
+agent is pre-configured with rules to run the command and
+return only a structured summary.
+
+```text
+Agent(
+  subagent_type: "phase-executor",
+  description: "SPEC-XXX <phase>",
+  prompt: """
+    Run the /speckit.<phase> command.
+    Use: Skill("speckit.<phase>", args: "<workflow prompt>")
+
+    <branch prefix if ON_FEATURE_BRANCH>
+
+    Workflow prompt:
+    ---
+    <exact prompt from workflow file>
+    ---
+  """
+)
+```
+
+The phase-executor handles summary formatting and the
+"no recommendations" constraint automatically.
 
 ## Branch/Worktree Detection
 
@@ -80,32 +106,15 @@ Record two facts:
   `^[0-9]{3}-`
 - **`IS_WORKTREE`**: `true` if `GIT_DIR != GIT_COMMON`
 
-When `ON_FEATURE_BRANCH` is true, the Specify phase prefixes
-the workflow prompt with a "skip branch creation" instruction
-(see Phase 1 below). Do NOT use `export SPECIFY_FEATURE` —
-env vars do not persist across Skill tool invocations.
-
-Verify the detected branch matches the workflow file's
-`Branch` field. If they don't match, STOP and ask the user.
+When `ON_FEATURE_BRANCH` is true, the Specify subagent gets
+a "skip branch creation" prefix in its prompt. Do NOT use
+`export SPECIFY_FEATURE` — env vars do not persist across
+tool invocations.
 
 ## Phase-by-Phase Execution
 
-The workflow file contains a prompt for each phase. Each
-prompt is a complete, self-contained instruction that starts
-with the `/speckit.*` command to run. The autopilot reads
-each prompt and executes it — the same way a human would
-copy-paste the prompt into Claude Code and press enter.
-
-**NEVER STOP between phases unless:**
-
-- Gate failure after 2 auto-fix attempts
-- Failed consensus (all 3 agents disagree)
-- Security keyword triggers mandatory human review
-- Missing prerequisite that blocks execution
-
-**If a phase completes and its gate passes, IMMEDIATELY
-advance to the next phase.** Do not stop to summarize, ask
-for confirmation, or recommend next steps.
+Each phase follows the same pattern: read prompt → spawn
+subagent → receive summary → validate gate → advance.
 
 ### Progress Task List
 
@@ -120,15 +129,12 @@ Before executing phases, create a **granular** task list
   phases (only runs if needed)
 - Parse the workflow file to get session/domain names
 
-Update tasks dynamically as each prompt completes. If
-execution produces unexpected work (new questions, extra
-remediation loops), create additional tasks via TaskCreate
-to keep the list accurate.
+Update tasks as each subagent returns.
 
 ### Phase 0: Prerequisites (Constitution Validation)
 
-**No workflow prompt.** This is autopilot-specific
-pre-flight — it does NOT invoke a `/speckit.*` command.
+**No subagent.** This runs directly in the main session —
+it does NOT invoke a `/speckit.*` command.
 
 1. Read `.specify/memory/constitution.md` — extract all
    numbered principles
@@ -146,16 +152,18 @@ fail, STOP.
 ### Phase 1: Specify
 
 Read the workflow file's `### Specify Prompt` section.
-Execute it via
-`Skill("speckit.specify", args: "<the prompt>")`.
+Spawn a subagent:
 
-**Branch-aware exception:** If `ON_FEATURE_BRANCH` is true,
-prefix the prompt with: "Already on feature branch
-`<branch>`. Do NOT run `create-new-feature.sh`. Skip to
-spec content generation."
+```text
+Agent(description: "SPEC-XXX specify", prompt: "...")
+```
 
-**Gate:** G1 — check for `[NEEDS CLARIFICATION]` markers
-(routing decision)
+**Branch-aware:** If `ON_FEATURE_BRANCH` is true, add
+prefix: "Already on feature branch `<branch>`. Do NOT run
+`create-new-feature.sh`. Skip to spec content generation."
+
+**Gate:** G1 — check subagent summary for
+`[NEEDS CLARIFICATION]` markers (routing decision)
 
 **Commit:**
 `git add specs/ && git commit -m "feat(SPEC-XXX): complete specify phase"`
@@ -164,27 +172,24 @@ spec content generation."
 
 Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
 
-The workflow file may define **multiple clarify sessions**
-(e.g., "Session 1: OmniJS API", "Session 2: UX"). Execute
-**EACH session as a separate Skill invocation**:
+Spawn a **separate subagent for each clarify session**,
+with consensus resolution **after each session**:
 
 ```text
 For each clarify session in the workflow file:
-  1. Read the session prompt
-  2. Skill("speckit.clarify", args: "<that session prompt>")
-  3. Log the session results (questions surfaced, answers given)
-  4. Proceed to the next session
+  1. TaskUpdate: session task → in_progress
+  2. Agent(subagent_type: "phase-executor",
+          prompt: "Run /speckit.clarify with: <session prompt>")
+  3. Grep spec.md for [NEEDS CLARIFICATION] markers
+  4. If markers → use context_builder(response_type: "question")
+     to investigate and resolve each marker
+  5. TaskUpdate: session task → completed
+  6. Proceed to next session
 ```
 
-**Post-execution (after ALL sessions):** Check for
-`[NEEDS CLARIFICATION]` markers remaining in spec.md. For
-each question — check for security keywords, spawn 3
-consensus agents in parallel (codebase-analyst,
-spec-context-analyst, domain-researcher). Apply consensus
-rules. If no consensus, flag `[HUMAN REVIEW NEEDED]`.
-
-**If no questions remain after all sessions, the phase is
-complete — advance immediately to Plan. Do NOT stop.**
+**Why after each session:** Session 2 may depend on
+Session 1's resolved questions. Consensus updates the
+spec before the next session runs.
 
 **Gate:** G2 — verify 0 markers remain
 
@@ -194,8 +199,7 @@ complete — advance immediately to Plan. Do NOT stop.**
 ### Phase 3: Plan
 
 Read the workflow file's `### Plan Prompt` section.
-Execute it via
-`Skill("speckit.plan", args: "<the prompt>")`.
+Spawn a subagent.
 
 **Gate:** G3 — verify plan.md, research.md, data-model.md
 exist
@@ -205,22 +209,24 @@ exist
 
 ### Phase 4: Checklist
 
-The workflow file defines **multiple domain prompts**
-(e.g., api-workaround, type-safety, requirements). Execute
-**EACH domain as a separate Skill invocation**:
+Spawn a **separate subagent for each checklist domain**,
+with gap remediation **after each domain**:
 
 ```text
 For each checklist domain in the workflow file:
-  1. Read the domain prompt
-  2. Skill("speckit.checklist", args: "<that domain prompt>")
-  3. Log the domain results
-  4. Proceed to the next domain
+  1. TaskUpdate: domain task → in_progress
+  2. Agent(subagent_type: "phase-executor",
+          prompt: "Run /speckit.checklist with: <domain prompt>")
+  3. Grep checklists for [Gap] markers
+  4. If gaps → use context_builder(response_type: "question")
+     to investigate and fix each gap (max 2 loops)
+  5. TaskUpdate: domain task → completed
+  6. Proceed to next domain
 ```
 
-**Post-execution (after ALL domains):** Parse `[Gap]`
-markers across all checklists. If gaps found, run the
-Checklist Remediation Loop with consensus agents (max 2
-loops). If no gaps, advance immediately.
+**Why after each domain:** Domain 2 may depend on Domain
+1's gap fixes. Remediation updates the spec/plan before
+the next domain runs.
 
 **Gate:** G4 — verify 0 `[Gap]` markers
 
@@ -230,8 +236,7 @@ loops). If no gaps, advance immediately.
 ### Phase 5: Tasks
 
 Read the workflow file's `### Tasks Prompt` section.
-Execute it via
-`Skill("speckit.tasks", args: "<the prompt>")`.
+Spawn a subagent.
 
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
@@ -242,12 +247,14 @@ tasks.md
 ### Phase 6: Analyze
 
 Read the workflow file's `### Analyze Prompt` section.
-Execute it via
-`Skill("speckit.analyze", args: "<the prompt>")`.
+Spawn a subagent.
 
-**Post-execution:** Parse findings by severity. For
-CRITICAL/HIGH findings, run the Analyze Remediation Loop
-with consensus agents (max 2 loops).
+**Post-execution (main session):** Parse ALL findings at
+every severity level (CRITICAL, HIGH, MEDIUM, LOW). For
+EACH finding, use `context_builder` with
+`response_type: "question"` to investigate and apply the
+fix. Re-run analyze to verify 0 findings remain (max 2
+loops). If 0 findings from the start, advance immediately.
 
 **Gate:** G6 — verify 0 CRITICAL findings
 
@@ -257,13 +264,11 @@ with consensus agents (max 2 loops).
 ### Phase 7: Implement
 
 Read the workflow file's `### Implement Prompt` section.
-Execute it via
-`Skill("speckit.implement", args: "<the prompt>")`.
+Spawn a subagent (or delegate to project's implementation
+agent if one exists in CLAUDE.md, e.g., "omnifocus-developer").
 
-If the project has a specialized implementation agent in
-CLAUDE.md (e.g., "omnifocus-developer"), delegate to that
-agent instead. For `[P]` tasks, spawn parallel sub-agents
-with worktree isolation.
+For `[P]` tasks, spawn parallel sub-agents with worktree
+isolation.
 
 **Gate:** G7 — full verification suite
 (build + typecheck + lint + test)
@@ -289,13 +294,6 @@ Step 4: Create PR via gh CLI:
 Step 5: Update workflow file with PR URL
 Step 6: Final commit: "feat(SPEC-XXX): open PR for review"
 ```
-
-The PR body is auto-generated from:
-
-- spec.md Summary section
-- Implementation results from the workflow file
-- Verification results (test counts, build status)
-- Test plan checklist
 
 ## Copilot Review Remediation Loop
 

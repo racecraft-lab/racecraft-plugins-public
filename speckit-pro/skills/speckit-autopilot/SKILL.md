@@ -18,11 +18,11 @@ approaches its limit, allowing you to continue working
 indefinitely. Do not stop tasks early. Always be as persistent
 and autonomous as possible and complete all 7 phases fully.
 
-You are a **copy-paste executor** for SpecKit workflows. Your job
-is simple: read each prompt from the workflow file and pass it to
-the corresponding `/speckit.*` command via the `Skill` tool. This
-is how a human would run the workflow — copy the prompt, paste it
-into Claude Code, press enter, wait for the result, move on.
+You are an **orchestrator** for SpecKit workflows. You read
+prompts from the workflow file and delegate each phase to a
+**subagent** that runs the `/speckit.*` command. You never run
+the commands yourself — you spawn, collect results, validate
+gates, and advance.
 
 <hard_constraints>
 
@@ -30,80 +30,69 @@ into Claude Code, press enter, wait for the result, move on.
 
 These rules are non-negotiable. Follow them exactly.
 
-### 1. Copy-paste only
+### 1. Subagent per phase
 
-Read the workflow prompt. Pass it to the Skill. That's it.
+For each phase, spawn a **foreground subagent** via the Agent
+tool. The subagent runs the `/speckit.*` command and returns a
+summary. You (the parent) receive the result as a tool call
+response, which keeps your agent loop alive.
 
-**Why:** The workflow prompts already contain all the context the
-commands need (tech stack, constraints, user stories, API details).
-The commands themselves gather additional context internally
-(reading templates, running scripts, scanning code). Adding more
-context causes duplication, confusion, and slower execution.
+**Why:** Claude Code's agent loop terminates when a response
+has no tool calls. If you run a Skill directly, the loaded
+command's "report completion" instruction causes you to output
+plain text, killing the loop. With subagents, the command runs
+in an isolated context and its completion behavior is harmless
+— the result returns to you as a tool response, and your loop
+continues.
 
 **What this looks like:**
 
 ```text
 CORRECT:
   1. Read workflow file's "### Specify Prompt" section
-  2. Skill("speckit.specify", args: "<the prompt text>")
-  3. Wait for result
-  4. Validate gate
+  2. Agent(prompt: "Run /speckit.specify with: <prompt>")
+  3. Subagent runs command, returns summary   ← TOOL RESULT
+  4. TaskUpdate: Specify → completed          ← TOOL CALL
+  5. Grep for [NEEDS CLARIFICATION] markers   ← TOOL CALL
+  6. Agent(prompt: "Run /speckit.clarify...") ← TOOL CALL
+  ...every step is a tool call — loop never dies...
 
 WRONG:
-  1. Search for the master plan
-  2. Read prior specs "for pattern consistency"
-  3. Explore the codebase for existing patterns
-  4. "Compose enriched arguments"
-  5. Skill("speckit.specify", args: "<enriched prompt>")
+  1. Skill("speckit.specify", args: "<prompt>")
+  2. Command loads into YOUR context
+  3. You output: "The spec is ready for /speckit.plan"
+     ↑ plain text, no tool call → loop terminates
 ```
 
-### 2. Never stop — always make a tool call
+### 2. Use the phase-executor agent
 
-After a phase completes, your very next action MUST be a tool
-call (TaskUpdate, Bash, Read, etc.). Never output plain text
-without a tool call between phases.
-
-**Why (technical):** Claude Code's agent loop continues as long
-as responses include tool calls. When you output plain text
-with no tool call, the loop terminates and control returns to
-the user. By always including a tool call (e.g., TaskUpdate to
-mark the phase completed), you keep the agent loop alive.
-
-**Why (product):** The whole point of the autopilot is
-autonomous execution. The user launched it to run unattended
-through all 7 phases.
-
-**Important:** The `/speckit.*` commands were designed for
-standalone use — they end with "report completion" and
-"recommend next step" instructions. When running under the
-autopilot, **ignore these completion/recommendation steps**.
-After the command finishes, your very next action is a tool
-call:
+Every phase subagent uses the `phase-executor` agent type.
+This agent is pre-configured with rules to run the command
+and return only a summary.
 
 ```text
-CORRECT (after Specify completes):
-  1. Command produces spec.md and checklist
-  2. TaskUpdate("Phase 1: Specify" → completed)  ← TOOL CALL
-  3. Grep for [NEEDS CLARIFICATION] markers       ← TOOL CALL
-  4. Edit workflow file status                    ← TOOL CALL
-  5. Bash: git commit                             ← TOOL CALL
-  6. TaskUpdate("Clarify Session 1" → in_progress)← TOOL CALL
-  7. Read Session 1 prompt from workflow file      ← TOOL CALL
-  8. Skill("speckit.clarify", args: "<prompt>")   ← TOOL CALL
-  ...keep going — every step is a tool call...
+Agent(
+  subagent_type: "phase-executor",
+  description: "SPEC-XXX <phase>",
+  prompt: """
+    Run the /speckit.<phase> command.
+    Use: Skill("speckit.<phase>", args: "<workflow prompt>")
 
-WRONG (after Specify completes):
-  1. Command produces spec.md and checklist
-  2. Output text: "The spec is ready for /speckit.plan"
-     ↑ NO TOOL CALL → agent loop terminates → user sees prompt
+    <any branch-aware prefix if needed>
+
+    Workflow prompt:
+    ---
+    <paste the prompt from the workflow file>
+    ---
+  """
+)
 ```
 
-**The only reasons to stop:**
-
-- Gate failure after 2 auto-fix attempts
-- Failed consensus (all 3 agents disagree)
-- Security keyword triggers mandatory human review
-- Missing prerequisite that blocks execution
+The phase-executor loads the Skill in its own context, runs
+the command, and returns only a structured summary. All the
+command's noise (template reads, file exploration, completion
+reports) stays in the subagent's context and never touches
+yours.
 
 ### 3. Task list first
 
@@ -111,9 +100,8 @@ Before executing any phase, create a granular task list using
 TaskCreate. Parse the workflow file's Clarify and Checklist
 sections to determine the exact number of sessions/domains.
 
-**Why:** The task list drives execution. When "Clarify - Session 1"
-completes, the next task ("Clarify - Session 2") is visible and
-tells you to keep going. Without it, you lose track and stop.
+**Why:** The task list drives your execution loop. After each
+subagent returns, check the task list to know what's next.
 
 **Example for a spec with 2 clarify sessions and 3 checklist
 domains:**
@@ -137,49 +125,94 @@ TaskCreate:
   "Post: PR Creation"
 ```
 
-Set each task to `in_progress` when starting and `completed` when
-done. Add tasks dynamically if unexpected work arises.
+Set each task to `in_progress` when starting and `completed`
+when done. Add tasks dynamically if unexpected work arises.
 
 ### 4. Multi-prompt phases
 
-Clarify and Checklist have multiple prompts in the workflow file.
-Execute each prompt as a separate `Skill()` invocation.
-
-**Why:** Each clarify session focuses on different questions. Each
-checklist domain covers different concerns. Combining them loses
-focus and produces worse results.
+Clarify and Checklist have multiple prompts in the workflow
+file. Spawn a **separate subagent for each prompt**.
 
 **What this looks like:**
 
 ```text
 CORRECT (Clarify with 2 sessions):
-  1. Read "Session 1: Search Behavior" prompt
-  2. Skill("speckit.clarify", args: "<session 1 prompt>")
-  3. TaskUpdate: "Clarify - Session 1" → completed
-  4. Read "Session 2: Database Operations" prompt
-  5. Skill("speckit.clarify", args: "<session 2 prompt>")
-  6. TaskUpdate: "Clarify - Session 2" → completed
-  7. Check for [NEEDS CLARIFICATION] markers → consensus if needed
-  8. Validate G2 gate
-  9. Advance to Plan
+  1. TaskUpdate: "Clarify - Session 1" → in_progress
+  2. Agent(subagent_type: "phase-executor", prompt: "Run /speckit.clarify with: <session 1>")
+  3. Grep spec.md for [NEEDS CLARIFICATION] markers
+  4. If markers → spawn 3 consensus agents, resolve
+  5. TaskUpdate: "Clarify - Session 1" → completed
+  6. TaskUpdate: "Clarify - Session 2" → in_progress
+  7. Agent(subagent_type: "phase-executor", prompt: "Run /speckit.clarify with: <session 2>")
+  8. Grep spec.md for [NEEDS CLARIFICATION] markers
+  9. If markers → spawn 3 consensus agents, resolve
+  10. TaskUpdate: "Clarify - Session 2" → completed
+  11. Validate G2 gate (0 markers remaining)
+  12. Advance to Plan
 
 WRONG:
-  1. Skill("speckit.clarify") — invoke once with no specific prompt
-  2. Do your own analysis of the spec
-  3. Stop and say "ready for /speckit.plan"
+  1. Run all sessions, then check for markers at the end
+  2. Or skip sessions and do your own analysis
 ```
 
-### 5. Commands are self-contained
+### 5. Clarify is interactive — research and answer
 
-After invoking a Skill, follow only the loaded command's
-instructions. The commands read their own templates, run their own
-scripts, and gather their own context.
+The `/speckit.clarify` command is inherently interactive. It
+surfaces clarification questions and expects answers. The
+phase-executor subagent acts as the answerer — it uses
+research tools to find evidence-grounded answers for each
+question the command surfaces.
 
-**Why:** The `/speckit.*` commands were designed to run
-independently. They call `check-prerequisites.sh` for path
-resolution, `create-new-feature.sh` for branch creation, and read
-templates directly. Adding your own file reads causes the command
-to process redundant or conflicting context.
+After the subagent returns, YOU (the main session) check for
+any remaining `[NEEDS CLARIFICATION]` markers. If markers
+remain, use RepoPrompt to investigate and resolve them:
+
+1. **`context_builder`** with `response_type: "question"` —
+   ask the question and let RepoPrompt autonomously explore
+   the codebase, build context, and provide an answer
+2. **`chat_send`** with the Evaluator or Senior-Planner
+   model — get a second perspective on ambiguous questions
+3. Apply the answer to spec.md and remove the marker
+
+**Two-layer resolution:**
+
+1. **Subagent (first pass):** The phase-executor researches
+   and answers questions using Tavily (API docs), Context7
+   (library docs), RepoPrompt (codebase patterns), and
+   Read/Grep (constitution, prior specs). This handles most
+   questions.
+2. **Main session (second pass):** For any remaining markers,
+   use `context_builder(response_type: "question")` to
+   investigate. For security-keyword questions, always use
+   this second pass regardless of what the subagent answered.
+
+### 6. Consensus/remediation after each prompt
+
+After EACH subagent returns for a consensus phase, check for
+markers and run resolution BEFORE spawning the next subagent.
+
+**Why:** Session 2 may depend on Session 1's resolved
+questions. Checklist Domain 2 may depend on Domain 1's gap
+fixes. Running resolution after each prompt ensures the spec
+is updated before the next prompt runs.
+
+**What this looks like:**
+
+- **Clarify:** After each session subagent → grep for
+  `[NEEDS CLARIFICATION]` → consensus via RepoPrompt chat
+  if found → next session
+- **Checklist:** After each domain subagent → grep for
+  `[Gap]` → remediation via RepoPrompt chat if found →
+  next domain
+- **Analyze:** Single prompt → grep for CRITICAL/HIGH →
+  remediation via RepoPrompt chat if found
+
+**The only reasons to stop:**
+
+- Gate failure after 2 auto-fix attempts
+- Failed consensus (all 3 agents disagree)
+- Security keyword triggers mandatory human review
+- Missing prerequisite that blocks execution
 
 </hard_constraints>
 
@@ -396,112 +429,128 @@ autopilot knows to keep going instead of stopping.
 
 ## Step 2: Main Execution Loop
 
-For each pending phase, execute in order (see RULES 1-5 above):
+For each pending phase, spawn a subagent, collect the result,
+validate the gate, and advance. Every step is a tool call.
 
 ```text
 PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
-    1. Log: "Starting [phase] phase..."
+    1. TaskUpdate: set phase task to "in_progress"
     2. Read the workflow file's prompt(s) for this phase
     3. For EACH prompt in the phase:
-       a. TaskUpdate: set this prompt's task to "in_progress"
-       b. Invoke Skill("speckit.<phase>", args: "<that prompt>")
+       a. Agent(prompt: "Run /speckit.<phase> with: <prompt>")
+       b. Receive subagent summary (tool result)
        c. TaskUpdate: set this prompt's task to "completed"
-       (Multi-prompt phases have one task per prompt — see below)
-    4. Run post-execution consensus if needed (Clarify/Checklist/Analyze)
-       a. If consensus needed: TaskUpdate consensus/remediation task to "in_progress"
-       b. After resolution: TaskUpdate consensus/remediation task to "completed"
+    4. Run consensus in main session if needed
+       (Clarify/Checklist/Analyze — see below)
     5. Validate gate (see gate-validation.md)
     6. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
-       b. If still failing and gate-failure == "stop": STOP, ask human
-       c. If gate-failure == "skip-and-log": log override, continue
+       b. If still failing and gate-failure == "stop": STOP
+       c. If gate-failure == "skip-and-log": log, continue
     7. Update workflow file with results
     8. If auto-commit == "per-phase":
-       git add specs/ && git commit -m "feat(SPEC-XXX): complete [phase] phase"
-    9. IMMEDIATELY advance to next phase (do NOT stop or ask)
+       Bash: git add specs/ && git commit
+    9. Advance to next phase (next iteration of loop)
 ```
 
-**Dynamic task updates:** If execution produces unexpected work
-(e.g., consensus reveals new questions, remediation adds extra
-loops), create additional tasks dynamically via TaskCreate to
-keep the task list accurate. The task list should always reflect
-the current state of work — not just the initial plan.
+**Dynamic task updates:** If consensus reveals new questions or
+remediation adds loops, create additional tasks via TaskCreate.
 
 ### Phase Dispatch
 
-Per RULE 1: read the prompt, pass it to the Skill, validate the
-gate. Nothing else.
+For each phase: read the prompt, spawn a subagent, validate.
+
+#### Subagent Prompt Construction
+
+Use the `phase-executor` agent type for every phase:
 
 ```text
-For each phase:
-  1. Read the phase's prompt section from the workflow file
-  2. Execute: Skill("speckit.<phase>", args: "<the prompt content>")
-  3. Validate the gate
+Agent(
+  subagent_type: "phase-executor",
+  description: "SPEC-XXX <phase>",
+  prompt: """
+    Run the /speckit.<phase> command.
+    Use: Skill("speckit.<phase>", args: "<workflow prompt below>")
+
+    <branch prefix if ON_FEATURE_BRANCH — see below>
+
+    Workflow prompt:
+    ---
+    <paste the exact prompt from the workflow file>
+    ---
+  """
+)
 ```
 
-#### Specify — Branch-Aware Exception
+The phase-executor agent handles summary formatting and
+the "no recommendations" constraint automatically.
 
-When `ON_FEATURE_BRANCH` is true (Step 0.7), prefix the workflow
-prompt with:
+#### Specify — Branch-Aware Prefix
 
-> IMPORTANT: Already on feature branch `<CURRENT_BRANCH>`. Do NOT
-> run `create-new-feature.sh` or create a new branch. The branch
-> and `specs/<CURRENT_BRANCH>/` directory already exist. Skip
-> directly to spec content generation.
+When `ON_FEATURE_BRANCH` is true (Step 0.7), add this prefix
+to the subagent prompt before the workflow prompt:
 
-Then execute normally:
-`Skill("speckit.specify", args: "<prefixed prompt>")`
+```text
+IMPORTANT: Already on feature branch `<CURRENT_BRANCH>`.
+Do NOT run `create-new-feature.sh` or create a new branch.
+The branch and `specs/<CURRENT_BRANCH>/` directory already
+exist. Skip directly to spec content generation.
+```
 
-All other commands use `check-prerequisites.sh` →
+All other phases use `check-prerequisites.sh` →
 `get_current_branch()` which detects the worktree branch
-automatically. No special handling needed.
+automatically. No prefix needed.
 
 #### Multi-Prompt Phases
 
-Some phases have **multiple prompts** in the workflow file. Each
-prompt must be executed as a **separate Skill invocation**:
+Clarify and Checklist have multiple prompts. Spawn a
+**separate subagent for each prompt**:
 
-- **Clarify:** The workflow file may define multiple clarify
-  sessions (e.g., "Session 1: OmniJS API", "Session 2: UX").
-  Execute EACH session as its own
-  `Skill("speckit.clarify", args: "<session prompt>")`.
-  Log the results of each session before proceeding to the next.
-- **Checklist:** The workflow file defines multiple domain prompts
-  (e.g., api-workaround, type-safety, requirements). Execute EACH
-  domain as its own
-  `Skill("speckit.checklist", args: "<domain prompt>")`.
+- **Clarify:** One subagent per session (e.g., "Session 1:
+  Search Behavior", "Session 2: Database Operations")
+- **Checklist:** One subagent per domain (e.g.,
+  api-workaround, type-safety, requirements)
 
-All other phases (Specify, Plan, Tasks, Analyze, Implement) have
-a single prompt.
+#### Resolution — After Each Prompt (Main Session)
 
-#### Consensus — Post-Execution Resolution
+After EACH subagent returns, check for markers and resolve
+BEFORE spawning the next subagent.
 
-After executing ALL prompts for a consensus phase, check whether
-consensus agents are needed. These run in the MAIN SESSION (not
-sub-agents) because they must spawn consensus agents directly.
+**Resolution tools (RepoPrompt MCP):**
 
-- **Clarify:** After executing ALL clarify session prompts, check
-  for `[NEEDS CLARIFICATION]` markers remaining in spec.md. For
-  each question — check for security keywords, spawn 3 consensus
-  agents in parallel, apply consensus rules (see
-  consensus-protocol.md). If no questions remain, the phase is
-  complete — advance immediately.
-- **Checklist:** After executing ALL domain prompts, parse `[Gap]`
-  markers across all checklists. If gaps found, run the Checklist
-  Remediation Loop with consensus agents (max 2 loops). If no
-  gaps, advance immediately.
-- **Analyze:** After executing the prompt, parse findings by
-  severity. For CRITICAL/HIGH findings, run the Analyze
-  Remediation Loop with consensus agents (max 2 loops). If no
-  CRITICAL findings, advance immediately.
+- `context_builder(response_type: "question")` — ask the
+  question, let RepoPrompt explore the codebase and answer
+- `chat_send(mode: "chat", model: "Evaluator")` — get a
+  second perspective for ambiguous questions
+- `manage_selection` + `chat_send(mode: "plan")` — curate
+  specific file context and get targeted analysis
+
+**Per-phase resolution:**
+
+- **Clarify:** After each session subagent → grep spec.md
+  for `[NEEDS CLARIFICATION]`. Use `context_builder` with
+  `response_type: "question"` to investigate each marker.
+  Check security keywords (see consensus-protocol.md).
+  Apply answer to spec.md, remove marker, proceed to next
+  session.
+- **Checklist:** After each domain subagent → grep
+  checklists for `[Gap]`. Use `context_builder` to
+  investigate each gap and propose a spec/plan edit. Apply
+  fix, re-run domain to verify (max 2 loops). Proceed to
+  next domain.
+- **Analyze:** Single prompt. After subagent → parse ALL
+  findings at every severity (CRITICAL, HIGH, MEDIUM, LOW).
+  For EACH finding, use `context_builder` to investigate
+  and fix. Re-run analyze to verify 0 findings remain
+  (max 2 loops).
 
 #### Implement — Parallel Sub-Agents
 
-After executing the workflow prompt, the implement phase may use
-parallel sub-agents for `[P]` tasks with worktree isolation. If the
-project has a specialized implementation agent in CLAUDE.md (e.g.,
+The implement phase may use parallel sub-agents for `[P]`
+tasks with worktree isolation. If the project has a
+specialized implementation agent in CLAUDE.md (e.g.,
 "omnifocus-developer"), delegate to that agent.
 
 ## Step 3: Post-Implementation
