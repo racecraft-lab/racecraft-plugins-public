@@ -1,6 +1,37 @@
 # Consensus Protocol Reference
 
-The consensus protocol is the core autonomy mechanism used by 3 phases: Clarify, Checklist, and Analyze. Each phase presents a different type of "question" to resolve, but the resolution mechanism is the same.
+The consensus protocol is the second layer of the autopilot's
+two-layer resolution system, used by 3 phases: Clarify,
+Checklist, and Analyze.
+
+## Two-Layer Resolution Architecture
+
+**Layer 1 — Executor agent (first pass):** Each phase has a
+specialized executor agent (clarify-executor,
+checklist-executor, analyze-executor) that runs the
+`/speckit.*` command AND does direct research using Tavily,
+Context7, RepoPrompt, and codebase search. The executor
+resolves most items directly (~80%) and applies fixes to
+artifacts. Items it can't resolve with high confidence are
+flagged in its "Unresolved for consensus" summary section.
+
+**Layer 2 — Consensus agents (second pass):** The main
+session (not the executor) spawns 3 consensus agents in
+parallel for each unresolved item. Each agent provides a
+distinct perspective. The main session compares answers and
+applies consensus rules.
+
+**Why two layers:** Single-agent research handles
+straightforward items efficiently. Multi-agent consensus
+provides the distinct perspectives needed for genuinely
+ambiguous items — codebase patterns vs. project decisions vs.
+industry best practices.
+
+**When consensus is triggered:**
+- Executor flagged the item as low-confidence
+- Executor's research sources disagreed
+- Item remained unresolved after 2 remediation loops
+- Item contains security keywords (always goes to consensus)
 
 ## The 3 Perspective Agents
 
@@ -52,38 +83,48 @@ When a security keyword is detected:
 
 ## Phase-Specific Consensus Flows
 
+Each flow follows the same pattern: executor handles Layer 1,
+main session handles Layer 2 (consensus) for unresolved items.
+
 ### Clarify Consensus
 
-The clarify phase surfaces questions about the specification. For each question:
-
 ```
-/speckit.clarify surfaces Question Q
+clarify-executor runs /speckit.clarify session
     │
-    ├── Spawn 3 agents IN PARALLEL (background):
-    │   ├── codebase-analyst: "Given this spec and question Q, what's the right answer?"
-    │   ├── spec-context-analyst: "Given this spec and question Q, what's the right answer?"
-    │   └── domain-researcher: "Given this spec and question Q, what's the right answer?"
+    ├── Layer 1: Executor researches and answers all questions
+    │   using Tavily, Context7, RepoPrompt, Read/Grep
     │
-    ├── Wait for all 3 to complete
+    ├── Executor returns summary with:
+    │   ├── Questions answered (with citations)
+    │   └── "Unresolved for consensus" section
     │
-    ├── Compare answers:
-    │   ├── Check for security keywords in Q → if found, flag for human
-    │   ├── 2/3 or 3/3 agree → use consensus answer
-    │   └── All disagree → flag for human
-    │
-    ├── If consensus reached:
-    │   └── Respond to clarify with "recommended" + the consensus answer
-    │       (This integrates the answer into spec.md automatically)
-    │
-    └── If no consensus:
-        └── Respond to clarify with "done" to end the session
-            Flag the question as [HUMAN REVIEW NEEDED] in the workflow file
+    └── Main session Layer 2 (for each unresolved item):
+        │
+        ├── Spawn 3 agents IN PARALLEL (background):
+        │   ├── codebase-analyst: "Given this spec and question, what's the right answer?"
+        │   ├── spec-context-analyst: "Given this spec and question, what's the right answer?"
+        │   └── domain-researcher: "Given this spec and question, what's the right answer?"
+        │
+        ├── Wait for all 3 to complete
+        │
+        ├── Compare answers:
+        │   ├── Check for security keywords → if found, flag for human
+        │   ├── 2/3 or 3/3 agree → use consensus answer
+        │   └── All disagree → flag for human
+        │
+        ├── If consensus reached:
+        │   └── Edit spec.md with the consensus answer, remove marker
+        │
+        └── If no consensus:
+            └── Flag as [HUMAN REVIEW NEEDED] in workflow file, STOP
 ```
 
 **Prompt template for consensus agents during Clarify:**
 
 ```
-You are participating in a consensus resolution for a SpecKit clarification question.
+You are participating in a consensus resolution for a SpecKit
+clarification question that the executor could not resolve
+with high confidence.
 
 ## Specification Context
 [Insert relevant spec.md excerpt]
@@ -91,48 +132,72 @@ You are participating in a consensus resolution for a SpecKit clarification ques
 ## Question
 [Insert the clarify question]
 
+## Executor's Attempt
+[Insert the executor's answer and why it was flagged —
+conflicting sources, low confidence, or security keyword]
+
 ## Your Task
-Propose the best answer to this question from your perspective. Be specific and actionable.
-Follow your agent instructions for output format (Answer, Evidence/References/Citations, Confidence).
+Propose the best answer to this question from your
+perspective. Be specific and actionable. If you agree with
+the executor's answer, say so and explain why from your
+perspective. If you disagree, explain why and propose an
+alternative.
+
+Follow your agent instructions for output format
+(Answer, Evidence/References/Citations, Confidence).
 ```
 
-### Checklist Gap Remediation
-
-When a checklist identifies `[Gap]` markers, each gap becomes a "question" for consensus:
+### Checklist Gap Consensus
 
 ```
-Checklist produces [Gap]: "No requirement specifies array index behavior for batch results"
+checklist-executor runs /speckit.checklist domain
     │
-    ├── Spawn 3 agents IN PARALLEL (background):
-    │   ├── codebase-analyst: "How should we close this gap? Propose a spec/plan edit."
-    │   ├── spec-context-analyst: "How should we close this gap? Propose a spec/plan edit."
-    │   └── domain-researcher: "How should we close this gap? Propose a spec/plan edit."
+    ├── Layer 1: Executor runs checklist, researches each gap,
+    │   applies fixes, re-runs to verify (max 2 loops)
     │
-    ├── Wait for all 3 to complete
+    ├── Executor returns summary with:
+    │   ├── Gaps fixed (with citations)
+    │   └── "Unresolved for consensus" section
     │
-    ├── Compare proposed edits:
-    │   ├── Check for security keywords → if found, flag for human
-    │   ├── 2/3 or 3/3 agree on approach → use consensus edit
-    │   └── All disagree → flag for human
-    │
-    ├── If consensus reached:
-    │   ├── Apply the edit to spec.md or plan.md
-    │   └── Log the edit with rationale in the workflow file
-    │
-    └── If no consensus:
-        └── Flag as [HUMAN REVIEW NEEDED] in the workflow file
+    └── Main session Layer 2 (for each unresolved gap):
+        │
+        ├── Spawn 3 agents IN PARALLEL (background):
+        │   ├── codebase-analyst: "How should we close this gap?"
+        │   ├── spec-context-analyst: "How should we close this gap?"
+        │   └── domain-researcher: "How should we close this gap?"
+        │
+        ├── Wait for all 3 to complete
+        │
+        ├── Compare proposed edits:
+        │   ├── Check for security keywords → if found, flag for human
+        │   ├── 2/3 or 3/3 agree → apply consensus edit
+        │   └── All disagree → flag for human
+        │
+        ├── If consensus reached:
+        │   ├── Apply the edit to spec.md or plan.md
+        │   └── Log the edit in the workflow file
+        │
+        └── If no consensus:
+            └── Flag as [HUMAN REVIEW NEEDED] in workflow file, STOP
 ```
 
 **Prompt template for consensus agents during Gap Remediation:**
 
 ```
-You are participating in a consensus resolution for a SpecKit checklist gap.
+You are participating in a consensus resolution for a SpecKit
+checklist gap that the executor could not resolve with high
+confidence.
 
 ## Specification Context
 [Insert relevant spec.md and plan.md excerpts]
 
 ## Gap Description
 [Insert the [Gap] marker text and surrounding checklist context]
+
+## Executor's Attempt
+[Insert what the executor tried, if anything, and why it
+was flagged — remained after 2 loops, low confidence, or
+security keyword]
 
 ## Your Task
 Propose how to close this gap. Specifically:
@@ -143,44 +208,58 @@ Propose how to close this gap. Specifically:
 Follow your agent instructions for output format.
 ```
 
-### Analyze Finding Remediation
-
-When analyze produces CRITICAL/HIGH findings, each finding is resolved via consensus:
+### Analyze Finding Consensus
 
 ```
-Analyze finding C1 (MEDIUM): "Plan references tests/integration/ but no task creates it"
+analyze-executor runs /speckit.analyze
     │
-    ├── Spawn 3 agents IN PARALLEL (background):
-    │   ├── codebase-analyst: "How should we fix this finding? Propose artifact edits."
-    │   ├── spec-context-analyst: "How should we fix this finding? Propose artifact edits."
-    │   └── domain-researcher: "How should we fix this finding? Propose artifact edits."
+    ├── Layer 1: Executor runs analysis, researches each finding,
+    │   applies fixes, re-runs to verify (max 2 loops)
     │
-    ├── Wait for all 3 to complete
+    ├── Executor returns summary with:
+    │   ├── Findings fixed (with citations)
+    │   └── "Unresolved for consensus" section
     │
-    ├── Compare proposed fixes:
-    │   ├── Check for security keywords → if found, flag for human
-    │   ├── 2/3 or 3/3 agree → apply fix
-    │   └── All disagree → flag for human
-    │
-    ├── If consensus reached:
-    │   ├── Apply the fix to tasks.md, spec.md, or plan.md
-    │   └── Log the fix with rationale in the workflow file
-    │
-    └── If no consensus:
-        └── Flag as [HUMAN REVIEW NEEDED] in the workflow file
+    └── Main session Layer 2 (for each unresolved finding):
+        │
+        ├── Spawn 3 agents IN PARALLEL (background):
+        │   ├── codebase-analyst: "How should we fix this finding?"
+        │   ├── spec-context-analyst: "How should we fix this finding?"
+        │   └── domain-researcher: "How should we fix this finding?"
+        │
+        ├── Wait for all 3 to complete
+        │
+        ├── Compare proposed fixes:
+        │   ├── Check for security keywords → if found, flag for human
+        │   ├── 2/3 or 3/3 agree → apply fix
+        │   └── All disagree → flag for human
+        │
+        ├── If consensus reached:
+        │   ├── Apply the fix to tasks.md, spec.md, or plan.md
+        │   └── Log the fix in the workflow file
+        │
+        └── If no consensus:
+            └── Flag as [HUMAN REVIEW NEEDED] in workflow file, STOP
 ```
 
 **Prompt template for consensus agents during Finding Remediation:**
 
 ```
-You are participating in a consensus resolution for a SpecKit analysis finding.
+You are participating in a consensus resolution for a SpecKit
+analysis finding that the executor could not resolve with high
+confidence.
 
 ## Artifact Context
 [Insert relevant excerpts from spec.md, plan.md, and tasks.md]
 
 ## Finding
-Severity: [CRITICAL/HIGH]
+Severity: [CRITICAL/HIGH/MEDIUM/LOW]
 Description: [Insert finding text]
+
+## Executor's Attempt
+[Insert what the executor tried, if anything, and why it
+was flagged — remained after 2 loops, low confidence, or
+security keyword]
 
 ## Your Task
 Propose how to fix this finding. Specifically:

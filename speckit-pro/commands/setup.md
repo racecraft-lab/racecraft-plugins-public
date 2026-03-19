@@ -52,6 +52,13 @@ master plan. Available specs: <list pending specs>."
 
 ### 3. Create Git Worktree
 
+<hard_constraints>
+
+**NEVER commit or push to main.** All work happens in the
+worktree. The worktree branch is what gets pushed to remote.
+
+</hard_constraints>
+
 ```text
 1. Detect remote name:
    Bash("git remote -v")
@@ -59,8 +66,16 @@ master plan. Available specs: <list pending specs>."
 2. Create the branch and worktree:
    Bash("git worktree add .worktrees/<number>-<short-name> -b <number>-<short-name>")
 
-3. Push the branch to origin:
-   Bash("git push -u <remote> <number>-<short-name>")
+3. Switch your working directory to the worktree:
+   ALL subsequent commands run FROM the worktree path:
+   .worktrees/<number>-<short-name>/
+
+4. Push the WORKTREE BRANCH (not main) to remote:
+   Bash("cd .worktrees/<number>-<short-name> && git push -u <remote> <number>-<short-name>")
+
+5. Verify you're on the correct branch:
+   Bash("cd .worktrees/<number>-<short-name> && git rev-parse --abbrev-ref HEAD")
+   Must show: <number>-<short-name> (NOT main)
 ```
 
 If the worktree already exists, ask the user whether to use
@@ -69,27 +84,27 @@ the existing one or recreate it.
 If the branch already exists (locally or remotely), check it
 out in the worktree instead of creating a new one.
 
-### 4. Copy Workflow Template
+### 4. Copy Workflow Template (IN the Worktree)
 
-Find the workflow template in the plugin:
-
-```text
-Glob("**/workflow-template.md")
-```
-
-Copy it to the spec's workflow location:
+All file operations happen in the worktree directory.
 
 ```text
-Bash("cp <template-path> <worktree>/docs/ai/specs/SPEC-<ID>-workflow.md")
-```
+1. Create docs directory in the WORKTREE:
+   Bash("mkdir -p .worktrees/<number>-<short-name>/docs/ai/specs/")
 
-Create the `docs/ai/specs/` directory in the worktree if it
-doesn't exist.
+2. Read the workflow template from the plugin:
+   Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md")
+
+3. Write the template to the WORKTREE:
+   Write(".worktrees/<number>-<short-name>/docs/ai/specs/SPEC-<ID>-workflow.md",
+         content: <template content from step 2>)
+```
 
 ### 5. Populate the Workflow File
 
-Read the copied workflow file and replace ALL placeholders
-with spec-specific values from the master plan:
+Read the copied workflow file (in the worktree) and replace
+ALL placeholders with spec-specific values from the master
+plan:
 
 | Placeholder | Replace With |
 | ----------- | ------------ |
@@ -123,13 +138,27 @@ description. Each phase prompt should include:
 
 - **Implement Prompt:** Reference tasks.md and plan.md
 
-### 6. Verify and Report
+### 6. Commit and Verify (IN the Worktree)
 
-After populating the workflow file:
+All commits happen on the worktree branch — NEVER on main.
 
-1. Read it back and verify no placeholders remain
-2. Verify the worktree is on the correct branch
-3. Verify the branch is pushed to remote
+```text
+1. Stage and commit IN THE WORKTREE:
+   Bash("cd .worktrees/<number>-<short-name> && \
+     git add docs/ai/specs/SPEC-<ID>-workflow.md && \
+     git commit -m 'chore(SPEC-XXX): set up workflow for autopilot'")
+
+2. Push the WORKTREE BRANCH:
+   Bash("cd .worktrees/<number>-<short-name> && \
+     git push")
+
+3. Verify:
+   - Read the workflow file back — no placeholders remain
+   - Bash("cd .worktrees/... && git rev-parse --abbrev-ref HEAD")
+     → must show the spec branch, NOT main
+   - Bash("cd .worktrees/... && git log --oneline -1")
+     → must show the workflow commit
+```
 
 Report:
 
@@ -139,7 +168,7 @@ Report:
 **Spec:** SPEC-009 Search & Database
 **Branch:** 009-search-database
 **Worktree:** .worktrees/009-search-database/
-**Workflow:** docs/ai/specs/SPEC-009-workflow.md
+**Workflow:** .worktrees/009-search-database/docs/ai/specs/SPEC-009-workflow.md
 **Remote:** Pushed to <remote>/009-search-database
 
 **Ready to run:**
@@ -150,13 +179,22 @@ have enough context for autonomous execution. The more detail
 in the prompts, the better the autopilot's output.
 ```
 
-### 7. Update Master Plan Status
+### 7. Update Master Plan Status (IN the Worktree)
 
-Update the master plan's Progress Tracking table to mark
-the spec as `🔄 In Progress`:
+Update the master plan's Progress Tracking table IN THE
+WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
 
 ```text
-| SPEC-009 | Search & Database | 10 | 🔄 In Progress | ... | Specify |
+1. Edit the master plan IN THE WORKTREE:
+   Edit(".worktrees/<number>-<short-name>/docs/ai/omnifocus-mcp-master-plan.md"
+     or wherever the master plan lives in the worktree)
+
+2. Commit IN THE WORKTREE:
+   Bash("cd .worktrees/<number>-<short-name> && \
+     git add docs/ai/ && \
+     git commit -m 'chore(SPEC-XXX): mark as In Progress' && \
+     git push")
 ```
 
-Commit: `"chore(SPEC-XXX): set up worktree and workflow for autopilot"`
+**NEVER push to main.** The master plan update will reach
+main when the spec's PR is merged.

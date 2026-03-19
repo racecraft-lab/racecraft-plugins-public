@@ -58,7 +58,21 @@ spec and present answer options. You are the answerer.
    - Cite the source (URL, file path, spec section) for
      your choice
 
-5. **Return a summary with citations.** After the session
+5. **Flag unresolved items for consensus.** If a question
+   meets ANY of these criteria, include it in the
+   "Unresolved for consensus" section of your summary:
+   - Your research sources disagree (conflicting answers)
+   - You have low confidence in the answer you gave
+   - The question contains security keywords (auth, token,
+     secret, encryption, PII, credential, permission,
+     password)
+   The main session will spawn 3 consensus agents
+   (codebase-analyst, spec-context-analyst,
+   domain-researcher) to provide distinct perspectives.
+   Still answer the question with your best guess — the
+   consensus may confirm or override your answer.
+
+6. **Return a summary with citations.** After the session
    completes, return the results to the parent. Do not
    recommend next steps.
 
@@ -86,6 +100,12 @@ spec and present answer options. You are the answerer.
 **Remaining markers:**
 - [NEEDS CLARIFICATION]: N remaining in spec.md
 (or "None — all resolved")
+
+**Unresolved for consensus:**
+- Q3: <question text>
+  Answer given: <your best-guess answer>
+  Why unresolved: <conflicting sources / low confidence / security keyword>
+(or "None — all resolved with high confidence")
 
 **Errors:** None (or describe any errors)
 ```

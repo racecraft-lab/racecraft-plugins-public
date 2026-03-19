@@ -74,7 +74,7 @@ Each phase type has its own specialized executor agent:
 | Clarify | `clarify-executor` | Interactive: must research and answer questions |
 | Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
-| Implement | Project agent (detected in 0.9) or `phase-executor` | Domain-specific TDD |
+| Implement | `implement-executor` | Enforces strict TDD red-green-refactor + mandatory integration tests |
 
 ```text
 Agent(
@@ -181,39 +181,68 @@ remain, use RepoPrompt to investigate and resolve them:
 
 **Two-layer resolution:**
 
-1. **Subagent (first pass):** The phase-executor researches
+1. **Executor (first pass):** The clarify-executor researches
    and answers questions using Tavily (API docs), Context7
    (library docs), RepoPrompt (codebase patterns), and
    Read/Grep (constitution, prior specs). This handles most
-   questions.
-2. **Main session (second pass):** For any remaining markers,
-   use `context_builder(response_type: "question")` to
-   investigate. For security-keyword questions, always use
-   this second pass regardless of what the subagent answered.
+   questions. Items it can't resolve with high confidence are
+   flagged in its "Unresolved for consensus" summary section.
+2. **Main session + consensus agents (second pass):** For
+   each unresolved item, spawn 3 consensus agents IN PARALLEL
+   (codebase-analyst, spec-context-analyst,
+   domain-researcher). Apply consensus rules: 2/3 agree →
+   use majority, all disagree → flag for human. Security-
+   keyword questions ALWAYS go to consensus regardless of
+   what the executor answered.
 
-### 6. Consensus/remediation after each prompt
+### 6. Two-layer resolution with consensus agents
 
-After EACH subagent returns for a consensus phase, check for
-markers and run resolution BEFORE spawning the next subagent.
+After EACH executor subagent returns for a consensus phase
+(Clarify, Checklist, Analyze), run a two-layer resolution
+process BEFORE spawning the next subagent.
 
-**Why:** Session 2 may depend on Session 1's resolved
-questions. Checklist Domain 2 may depend on Domain 1's gap
-fixes. Running resolution after each prompt ensures the spec
-is updated before the next prompt runs.
+**Layer 1 — Executor does direct research:** The executor
+agent (clarify-executor, checklist-executor,
+analyze-executor) researches using Tavily, Context7,
+RepoPrompt, and codebase search. It resolves most items
+directly and applies fixes to artifacts. Items it can't
+resolve are flagged in its "Unresolved for consensus"
+summary section.
 
-**What this looks like:**
+**Layer 2 — Consensus agents for unresolved items:** For
+EACH unresolved item from the executor's summary, spawn 3
+consensus agents IN PARALLEL:
 
-- **Clarify:** After each session subagent → grep for
-  `[NEEDS CLARIFICATION]` → consensus via RepoPrompt chat
-  if found → next session
-- **Checklist:** After each domain subagent → grep for
-  `[Gap]` → for each gap: research with `context_builder`
-  + Tavily + constitution/prior specs → apply fix → re-run
-  domain to verify → next domain
-- **Analyze:** Single prompt → parse ALL findings at every
-  severity → for each finding: research with
-  `context_builder` + Tavily + constitution/prior specs →
-  apply fix → re-run analyze to verify 0 findings remain
+```text
+For each unresolved item:
+  Agent(subagent_type: "codebase-analyst",
+        run_in_background: true,
+        prompt: "<consensus prompt>")     ← TOOL CALL
+  Agent(subagent_type: "spec-context-analyst",
+        run_in_background: true,
+        prompt: "<consensus prompt>")     ← TOOL CALL
+  Agent(subagent_type: "domain-researcher",
+        run_in_background: true,
+        prompt: "<consensus prompt>")     ← TOOL CALL
+  Wait for all 3 to complete              ← TOOL CALLS
+  Apply consensus rules                   ← decision
+  Edit artifact with consensus answer     ← TOOL CALL
+```
+
+**Consensus rules (see consensus-protocol.md):**
+- 2/3 agree → use majority answer
+- 3/3 agree → use with high confidence
+- All disagree → flag `[HUMAN REVIEW NEEDED]`, STOP
+- Security keyword → always flag for human
+
+**Why two layers:** Most items are straightforward — the
+executor handles ~80% directly. Consensus provides distinct
+perspectives (codebase patterns vs. project decisions vs.
+best practices) for genuinely ambiguous items.
+
+**Why after each prompt:** Session 2 may depend on Session
+1's resolved questions. Checklist Domain 2 may depend on
+Domain 1's gap fixes.
 
 **The only reasons to stop:**
 
@@ -431,18 +460,21 @@ TaskCreate (example for a spec with 2 clarify sessions, 3 checklist domains):
   - "Phase 0: Prerequisites (Constitution Validation)"
   - "Phase 1: Specify"
   - "Phase 2: Clarify - Session 1: Search Behavior"
+  - "Phase 2: Clarify - Session 1 Consensus"
   - "Phase 2: Clarify - Session 2: Database Operations"
-  - "Phase 2: Clarify - Consensus Resolution"
+  - "Phase 2: Clarify - Session 2 Consensus"
   - "Phase 3: Plan"
   - "Phase 4: Checklist - Domain 1: api-workaround"
+  - "Phase 4: Checklist - Domain 1 Consensus"
   - "Phase 4: Checklist - Domain 2: type-safety"
+  - "Phase 4: Checklist - Domain 2 Consensus"
   - "Phase 4: Checklist - Domain 3: requirements"
-  - "Phase 4: Checklist - Gap Remediation"
+  - "Phase 4: Checklist - Domain 3 Consensus"
   - "Phase 5: Tasks"
   - "Phase 6: Analyze"
-  - "Phase 6: Analyze - Finding Remediation"
+  - "Phase 6: Analyze - Consensus"
   - "Phase 7: Implement"
-  - "Post: Integration/E2E Test Suite"
+  - "Post: Full Integration/E2E Suite Verification"
   - "Post: PR Creation"
   - "Post: PR Review Remediation Loop"
 ```
@@ -478,8 +510,11 @@ for phase in PHASES starting from first_pending:
        a. Agent(prompt: "Run /speckit.<phase> with: <prompt>")
        b. Receive subagent summary (tool result)
        c. TaskUpdate: set this prompt's task to "completed"
-    4. Run consensus in main session if needed
-       (Clarify/Checklist/Analyze — see below)
+    4. Run consensus in main session if needed:
+       Parse executor's "Unresolved for consensus" section.
+       For each item → spawn 3 consensus agents in parallel
+       (codebase-analyst, spec-context-analyst, domain-researcher)
+       → apply consensus rules → edit artifacts
     5. Validate gate (see gate-validation.md)
     6. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
@@ -493,7 +528,7 @@ for phase in PHASES starting from first_pending:
 POST-IMPLEMENTATION (after all 7 phases complete):
     These are tasks in your task list — execute them in order:
 
-    10. TaskUpdate: "Post: Integration/E2E Test Suite" → in_progress
+    10. TaskUpdate: "Post: Full Integration/E2E Suite Verification" → in_progress
         Execute Step 3.1 (detect, create, run full suite)
         TaskUpdate: → completed
 
@@ -543,7 +578,7 @@ Agent(
 | Checklist | `checklist-executor` | None |
 | Tasks | `phase-executor` | None |
 | Analyze | `analyze-executor` | None |
-| Implement | Project agent or `phase-executor` | TDD instructions |
+| Implement | `implement-executor` | Project agent context (if detected in 0.9) |
 
 #### Specify — Branch-Aware Prefix
 
@@ -601,162 +636,173 @@ Clarify and Checklist have multiple prompts. Spawn a
 
 #### Resolution — After Each Prompt (Main Session)
 
-After EACH subagent returns, check for markers and resolve
-BEFORE spawning the next subagent.
+After EACH executor subagent returns, run the two-layer
+resolution process BEFORE spawning the next subagent.
 
-**Resolution tools (RepoPrompt MCP):**
+**Layer 1 — Check executor results:**
 
-- `context_builder(response_type: "question")` — ask the
-  question, let RepoPrompt explore the codebase and answer
-- `chat_send(mode: "chat", model: "Evaluator")` — get a
-  second perspective for ambiguous questions
-- `manage_selection` + `chat_send(mode: "plan")` — curate
-  specific file context and get targeted analysis
+Parse the executor's summary for:
+- Remaining markers (`[NEEDS CLARIFICATION]`, `[Gap]`)
+- Items in the "Unresolved for consensus" section
+- Security keyword items (always go to consensus)
 
-**Per-phase resolution:**
+If no unresolved items → skip to next prompt/gate.
 
-- **Clarify:** After each session subagent → grep spec.md
-  for `[NEEDS CLARIFICATION]`. Use `context_builder` with
-  `response_type: "question"` to investigate each marker.
-  Check security keywords (see consensus-protocol.md).
-  Apply answer to spec.md, remove marker, proceed to next
-  session.
-- **Checklist:** The `checklist-executor` agent runs the
-  checklist AND remediates gaps internally (using
-  context_builder + Tavily + constitution research). After
-  it returns, verify its summary reports 0 gaps remaining.
-  If gaps remain, escalate to human. Proceed to next domain.
-- **Analyze:** The `analyze-executor` agent runs the
-  analysis AND remediates ALL findings internally (using
-  context_builder + Tavily + constitution research). After
-  it returns, verify its summary reports 0 findings. If
-  findings remain, escalate to human.
+**Layer 2 — Spawn consensus agents:**
 
-#### Implement — Project Agent Detection
-
-The Implement phase uses the project's own implementation
-agent if one exists, falling back to phase-executor if not.
-
-**Detection (done during Step 0 — see 0.9 below):**
+For each unresolved item, spawn 3 consensus agents in
+parallel:
 
 ```text
-1. Glob(".claude/agents/*.md") to find all project agents
-2. Read each agent file's description field
-3. Look for keywords: "implement", "TDD", "development",
-   "developer", "coding", "build"
-4. If found → record agent name (e.g., "omnifocus-developer")
-5. If not found → use "phase-executor" as fallback
+TaskUpdate: "<Phase> - <Prompt> Consensus" → in_progress
+
+For each unresolved item from executor summary:
+  Agent(
+    subagent_type: "codebase-analyst",
+    run_in_background: true,
+    description: "SPEC-XXX consensus: <item summary>",
+    prompt: """
+      You are participating in consensus resolution.
+      Context: <spec/plan/tasks excerpts relevant to item>
+      Item: <unresolved question/gap/finding text>
+      Executor's attempt: <what the executor tried>
+      Your task: Propose the best answer from your
+      perspective (existing codebase patterns).
+    """
+  )                                        ← TOOL CALL
+  Agent(
+    subagent_type: "spec-context-analyst",
+    run_in_background: true,
+    description: "SPEC-XXX consensus: <item summary>",
+    prompt: "...<same item, your perspective>..."
+  )                                        ← TOOL CALL
+  Agent(
+    subagent_type: "domain-researcher",
+    run_in_background: true,
+    description: "SPEC-XXX consensus: <item summary>",
+    prompt: "...<same item, your perspective>..."
+  )                                        ← TOOL CALL
+
+  Wait for all 3 to complete
+  Compare answers using consensus rules:
+    - 2/3 agree → Edit artifact with majority answer
+    - 3/3 agree → Edit artifact with high confidence
+    - All disagree → flag [HUMAN REVIEW NEEDED], STOP
+    - Security keyword → present all 3 to human, STOP
+  Log result to Consensus Resolution Log in workflow file
+
+TaskUpdate: "<Phase> - <Prompt> Consensus" → completed
 ```
 
-**Why project agent over phase-executor:** Project agents
-have domain-specific knowledge — OmniJS patterns, TDD
-workflows, architecture conventions, API references — that
-a generic phase-executor lacks. The project team designed
-their agent for exactly this purpose.
+**Per-phase specifics:**
+
+- **Clarify:** After each session → grep spec.md for
+  `[NEEDS CLARIFICATION]`. Parse executor's "Unresolved
+  for consensus" section. Run consensus for each. Apply
+  consensus answers to spec.md, remove markers. Proceed
+  to next session.
+- **Checklist:** After each domain → parse executor's
+  "Unresolved for consensus" section. Run consensus for
+  each unresolved gap. Apply consensus fixes to spec.md
+  or plan.md. Re-run domain checklist to verify if any
+  gaps were fixed by consensus. Proceed to next domain.
+- **Analyze:** After analysis → parse executor's
+  "Unresolved for consensus" section. Run consensus for
+  each unresolved finding. Apply consensus fixes to
+  tasks.md, spec.md, or plan.md. Re-run analyze to verify
+  if findings were fixed by consensus.
+
+#### Implement — TDD Enforcement via implement-executor
+
+The Implement phase ALWAYS uses the `implement-executor`
+agent. This agent has TDD red-green-refactor as
+`<hard_constraints>` — tests are written and verified
+FAILING before any implementation code. This is
+NON-NEGOTIABLE.
+
+**If a project implementation agent was detected (Step 0.9),**
+include its domain-specific context in the prompt so the
+implement-executor knows the project's patterns (OmniJS,
+definitions/primitives split, etc.). The project agent's
+patterns govern WHAT gets built; the implement-executor's
+TDD constraints govern HOW it gets built.
 
 **Execution:**
 
 ```text
-If PROJECT_IMPLEMENTATION_AGENT was detected:
-  Agent(
-    subagent_type: "<detected agent name>",
-    prompt: """
-      Implement tasks from tasks.md for SPEC-XXX.
-      Follow the plan in plan.md.
+Agent(
+  subagent_type: "implement-executor",
+  description: "SPEC-XXX implement",
+  prompt: """
+    Implement tasks from tasks.md for SPEC-XXX.
+    Follow the plan in plan.md.
 
-      MANDATORY: Use strict TDD red-green-refactor for
-      EVERY task:
+    <if PROJECT_IMPLEMENTATION_AGENT was detected>
+    PROJECT CONTEXT: This project uses the
+    "<detected agent name>" patterns. Read its agent
+    definition at .claude/agents/<agent>.md for
+    domain-specific conventions (architecture, file
+    layout, naming, API patterns). Follow those
+    patterns for WHAT you build.
+    </if>
 
-      1. RED — Write failing tests FIRST:
-         - Contract tests for input/output schemas
-         - Unit tests for business logic
-         - Run tests → verify they FAIL
-         - Do NOT write implementation code yet
+    Integration tests are MANDATORY — create spec-specific
+    integration tests alongside unit and contract tests.
 
-      2. GREEN — Write MINIMUM code to pass:
-         - Implement only what's needed to make tests green
-         - Run tests → verify they PASS
-         - Do NOT optimize or refactor yet
-
-      3. REFACTOR — Clean up while green:
-         - Improve code quality, remove duplication
-         - Run tests → verify they STAY GREEN
-         - Optimize only if needed
-
-      After each task completes all 3 phases, run the full
-      verification suite (build + typecheck + lint + test)
-      before moving to the next task.
-
-      <workflow implement prompt>
-    """
-  )
-
-If no project agent found:
-  Agent(
-    subagent_type: "phase-executor",
-    prompt: """
-      Run /speckit.implement with the workflow prompt below.
-
-      MANDATORY: Use strict TDD red-green-refactor for
-      EVERY task:
-      1. RED — Write failing tests first (contract + unit)
-      2. GREEN — Write minimum code to pass tests
-      3. REFACTOR — Clean up while tests stay green
-
-      Workflow prompt:
-      ---
-      <workflow implement prompt>
-      ---
-    """
-  )
+    Workflow prompt:
+    ---
+    <workflow implement prompt>
+    ---
+  """
+)
 ```
 
-For `[P]` tasks, spawn parallel sub-agents (using the same
-detected agent type) with worktree isolation. Each parallel
-agent follows the same TDD cycle independently.
+The implement-executor agent enforces:
+- RED: Write tests first, verify they FAIL
+- GREEN: Write minimum code, verify tests PASS
+- REFACTOR: Clean up, verify tests STAY GREEN
+- Integration tests created for every spec
+- Full verification suite after each task phase
+
+For `[P]` tasks, spawn parallel implement-executor agents
+with worktree isolation. Each parallel agent follows the
+same TDD cycle independently.
 
 ## Step 3: Post-Implementation
 
 After all 7 phases complete and G7 passes:
 
-### 3.1 Integration / E2E Test Verification
+### 3.1 Full Integration / E2E Suite Verification
 
-**This step is MANDATORY before PR creation.** Execute
-these tool calls in sequence:
+Integration tests for the spec are created DURING the
+Implement phase (the implement-executor agent creates them
+as part of TDD). This step runs the FULL suite to catch
+regressions from other specs.
 
-**Step 1 — Detect:** Check if the project has integration
-or e2e tests:
-
-```text
-Glob("tests/integration/**")  ← TOOL CALL
-Glob("tests/e2e/**")          ← TOOL CALL
-```
-
-If BOTH return empty, skip to 3.2 PR Creation.
-
-**Step 2 — Check for spec-specific tests:**
+**Step 1 — Verify spec-specific tests exist:**
 
 ```text
 Glob("tests/integration/*<spec-name>*")  ← TOOL CALL
+Glob("tests/e2e/*<spec-name>*")          ← TOOL CALL
 ```
 
-**Step 3 — Create if missing:** If no spec-specific tests
-exist, spawn the implementation agent (detected in 0.9)
-to create them:
+If no spec-specific tests exist, the implement-executor
+failed to create them. Spawn it again to fix:
 
 ```text
 Agent(
-  subagent_type: PROJECT_IMPLEMENTATION_AGENT or "phase-executor",
-  description: "SPEC-XXX integration tests",
+  subagent_type: "implement-executor",
+  description: "SPEC-XXX missing integration tests",
   prompt: """
-    Create integration tests for SPEC-XXX (<spec name>).
+    The implementation phase did not create integration
+    tests for SPEC-XXX. This is NON-NEGOTIABLE.
 
     1. Read existing integration tests to understand the
        pattern (test structure, setup, teardown)
     2. Create spec-specific integration tests covering
-       the P1 user stories
-    3. Each test should verify end-to-end behavior
-    4. Follow existing test patterns exactly
+       the P1 user stories from spec.md
+    3. Follow TDD: write tests → verify FAIL → write
+       implementation stubs if needed → verify PASS
 
     Spec: specs/<number>-<name>/spec.md
     Plan: specs/<number>-<name>/plan.md
@@ -764,7 +810,7 @@ Agent(
 )
 ```
 
-**Step 4 — Run the FULL suite:** Run ALL integration tests,
+**Step 2 — Run the FULL suite:** Run ALL integration tests,
 not just the new ones:
 
 ```text
@@ -774,8 +820,8 @@ Bash("pnpm test tests/integration/")  ← TOOL CALL
 If any fail → fix and re-run (max 2 attempts). Commit
 fixes before proceeding.
 
-**Step 5 — Record results** in the workflow file:
-integration tests created, total count, pass/fail.
+**Step 3 — Record results** in the workflow file:
+integration test count, pass/fail, regressions found.
 
 **Why:** Existing integration tests may break due to new
 tool registration, shared infrastructure changes, or side
@@ -829,17 +875,58 @@ create the PR manually.
 **This step is MANDATORY after PR creation.** Use the `/loop`
 command to schedule recurring review comment monitoring.
 
+**Before invoking `/loop`, extract these values:**
+
+```text
+PR_NUMBER = <from gh pr create output>       ← TOOL CALL
+REPO = <owner/name from git remote -v>       ← TOOL CALL
+BRANCH = <current branch name>               ← TOOL CALL
+```
+
 **Execute this immediately after PR creation:**
 
 ```text
-Skill("loop", args: "5m Check PR #<number> for review
-  comments. For each unresolved comment:
-  - If code fix needed → edit file, run pnpm build &&
-    pnpm typecheck && pnpm test, commit, push
-  - If style/format → pnpm lint:fix, commit, push
-  - If question → reply via gh api with design rationale
-  - If false positive → reply explaining why no change
-  Exit when 0 unresolved comments remain.")
+Skill("loop", args: "5m
+  Check PR #<PR_NUMBER> in <REPO> for unresolved review
+  comments and resolve them.
+
+  Step 1 — Fetch comments:
+  Bash('gh api repos/<REPO>/pulls/<PR_NUMBER>/reviews
+    --jq \".[] | select(.state == \\\"CHANGES_REQUESTED\\\"
+    or .state == \\\"COMMENTED\\\") | {id, state, body}\"')
+
+  Bash('gh api repos/<REPO>/pulls/<PR_NUMBER>/comments
+    --jq \".[] | select(.in_reply_to_id == null) | {id,
+    path, line, body, created_at}\"')
+
+  Step 2 — If 0 unresolved comments, report 'No unresolved
+  comments on PR #<PR_NUMBER>' and stop.
+
+  Step 3 — For each unresolved comment:
+  a. Read the comment body and the file it references
+  b. If code fix needed:
+     - Edit the file
+     - Bash('pnpm build && pnpm typecheck && pnpm test')
+     - Bash('git add <file> && git commit -m
+       \"fix(SPEC-XXX): address review - <summary>\"')
+     - Bash('git push')
+     - Reply: Bash('gh api
+       repos/<REPO>/pulls/<PR_NUMBER>/comments
+       -f body=\"Fixed in $(git rev-parse --short HEAD).
+       <explanation>\"
+       -f in_reply_to=<comment_id>')
+     - Resolve: Bash('gh api graphql -f query=\"mutation {
+       minimizeComment(input:{subjectId:\\\"<comment_node_id>\\\",
+       classifier:RESOLVED}) { minimizedComment { isMinimized }
+       }}\"')
+  c. If style/format:
+     - Bash('pnpm lint:fix')
+     - Commit, push, reply, resolve
+  d. If question or false positive:
+     - Reply with explanation via gh api, then resolve
+
+  Step 4 — After addressing all comments, report summary.
+")
 ```
 
 **Why `/loop`:** The loop runs every 5 minutes in the
@@ -849,12 +936,10 @@ Copilot or human reviewers. It automatically expires after
 doesn't need to wait — it schedules the loop and reports
 completion.
 
-**How to construct the loop prompt:**
-
-1. Extract the PR number from the `gh pr create` output
-2. Extract the repo owner/name from `git remote -v`
-3. Build the loop prompt with the specific PR number and
-   repo path for `gh api` calls
+**Critical:** The loop prompt must be **self-contained** —
+each cron fire runs in a fresh context with no memory of
+prior iterations. All values (PR number, repo, branch) must
+be hardcoded in the prompt, not referenced as variables.
 
 **After scheduling the loop, the autopilot is DONE.** Report
 the final summary with PR URL and note that review

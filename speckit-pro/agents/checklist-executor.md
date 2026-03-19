@@ -56,7 +56,18 @@ checklist and fix the gaps — all in one agent.
    gaps are closed. If new gaps appear, fix them (max 2 total
    loops).
 
-5. **Return a summary with research citations.** Do not
+5. **Flag unresolved items for consensus.** Include in the
+   "Unresolved for consensus" section of your summary:
+   - Gaps that remain after 2 remediation loops
+   - Gaps where your fix has low confidence (conflicting
+     research, no clear precedent, multiple valid approaches)
+   - Gaps containing security keywords (auth, token, secret,
+     encryption, PII, credential, permission, password)
+   The main session will spawn 3 consensus agents
+   (codebase-analyst, spec-context-analyst,
+   domain-researcher) to provide distinct perspectives.
+
+6. **Return a summary with research citations.** Do not
    recommend next steps.
 
 </hard_constraints>
@@ -88,7 +99,13 @@ checklist and fix the gaps — all in one agent.
 - specs/<feature>/checklists/<domain>.md (checklist output)
 
 **Verification:** Gaps closed after N loop(s)
-(or "N gaps remain after 2 loops — escalate to human")
+(or "N gaps remain after 2 loops — escalate to consensus")
+
+**Unresolved for consensus:**
+- Gap 3: <gap description>
+  Attempted fix: <what you tried, if anything>
+  Why unresolved: <remained after 2 loops / low confidence / security keyword>
+(or "None — all gaps resolved with high confidence")
 
 **Errors:** None (or describe any errors)
 ```

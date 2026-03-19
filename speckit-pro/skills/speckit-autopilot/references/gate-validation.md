@@ -196,23 +196,37 @@ implementation.
 
 ### G7 — After Implement
 
-**Check:** Full verification suite passes.
+**Check:** Full verification suite passes AND TDD was followed.
 
 ```
 1. Run build command (e.g., pnpm build) → must pass
 2. Run typecheck (e.g., pnpm typecheck) → must pass
 3. Run lint (e.g., pnpm lint) → must pass
 4. Run tests (e.g., pnpm test) → must pass (unit + contract + integration)
-5. ALL must pass for G7 to pass
+5. Verify spec-specific integration tests exist:
+   Glob("tests/integration/*<spec-name>*") → must find files
+6. Verify test count increased from G0 baseline
+7. ALL must pass for G7 to pass
 ```
+
+**TDD Verification:** The implement-executor's summary
+includes RED→GREEN evidence for each task. If the summary
+shows implementation without RED phase verification, the
+gate FAILS — re-run the Implement phase.
+
+**Integration Test Requirement:** Spec-specific integration
+tests MUST exist. If missing, spawn implement-executor to
+create them before G7 can pass.
 
 **Auto-Fix:**
 - Build failures: Check for syntax errors, missing imports
 - Type errors: Fix type mismatches, add missing types
 - Lint errors: Run auto-fix (e.g., `pnpm lint:fix`)
 - Test failures: Fix failing tests or implementation bugs
+- Missing integration tests: Spawn implement-executor
 
-**After G7 passes:** Push branch and create PR via `gh pr create`.
+**After G7 passes:** Run full integration suite (Step 3.1),
+then push branch and create PR via `gh pr create`.
 
 **Failure Escalation:** If verification suite fails after 2 fix attempts, STOP. Present the specific failures to human.
 
@@ -226,7 +240,7 @@ implementation.
 | G4 | Checklist | 0 [Gap] markers | context_builder remediation | 2 |
 | G5 | Tasks | All FRs mapped to tasks | Generate missing tasks | 2 |
 | G6 | Analyze | 0 findings (all severities) | context_builder remediation | 2 |
-| G7 | Implement | Build+type+lint+test pass | Fix errors | 2 |
+| G7 | Implement | Build+type+lint+test pass, integration tests exist, TDD evidence | Fix errors, create tests | 2 |
 
 ## Failure Escalation Protocol
 
