@@ -33,6 +33,7 @@ Two skills packaged as a single plugin:
 
 | Command | Description |
 | ------- | ----------- |
+| `/speckit-pro:setup <SPEC-ID>` | Set up a spec for autopilot — creates worktree, branch, and populated workflow file |
 | `/speckit-pro:autopilot <workflow.md>` | Execute SpecKit workflow autonomously |
 | `/speckit-pro:coach <question>` | Get SDD coaching and guidance |
 | `/speckit-pro:status [SPEC-ID]` | Full project roadmap, phase detail, and next-spec recommendation |

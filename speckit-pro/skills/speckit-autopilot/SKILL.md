@@ -64,21 +64,24 @@ WRONG:
      ↑ plain text, no tool call → loop terminates
 ```
 
-### 2. Use the phase-executor agent
+### 2. Use phase-specific executor agents
 
-Every phase subagent uses the `phase-executor` agent type.
-This agent is pre-configured with rules to run the command
-and return only a summary.
+Each phase type has its own specialized executor agent:
+
+| Phase | Agent | Why specialized |
+| ----- | ----- | --------------- |
+| Specify, Plan, Tasks | `phase-executor` | Simple: run command, return summary |
+| Clarify | `clarify-executor` | Interactive: must research and answer questions |
+| Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
+| Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
+| Implement | Project agent (detected in 0.9) or `phase-executor` | Domain-specific TDD |
 
 ```text
 Agent(
-  subagent_type: "phase-executor",
+  subagent_type: "<agent for this phase>",
   description: "SPEC-XXX <phase>",
   prompt: """
-    Run the /speckit.<phase> command.
-    Use: Skill("speckit.<phase>", args: "<workflow prompt>")
-
-    <any branch-aware prefix if needed>
+    <phase-specific prefix if needed>
 
     Workflow prompt:
     ---
@@ -88,11 +91,10 @@ Agent(
 )
 ```
 
-The phase-executor loads the Skill in its own context, runs
-the command, and returns only a structured summary. All the
-command's noise (template reads, file exploration, completion
-reports) stays in the subagent's context and never touches
-yours.
+Each agent loads the Skill in its own context, runs the
+command (and any post-execution work like gap remediation),
+and returns a structured summary. All noise stays in the
+subagent's context.
 
 ### 3. Task list first
 
@@ -138,14 +140,17 @@ file. Spawn a **separate subagent for each prompt**.
 ```text
 CORRECT (Clarify with 2 sessions):
   1. TaskUpdate: "Clarify - Session 1" → in_progress
-  2. Agent(subagent_type: "phase-executor", prompt: "Run /speckit.clarify with: <session 1>")
+  2. Agent(subagent_type: "clarify-executor",
+          prompt: "<interactive prefix> + <session 1 prompt>")
+     The clarify-executor researches and answers all questions
   3. Grep spec.md for [NEEDS CLARIFICATION] markers
-  4. If markers → spawn 3 consensus agents, resolve
+  4. If markers remain → use context_builder to resolve
   5. TaskUpdate: "Clarify - Session 1" → completed
   6. TaskUpdate: "Clarify - Session 2" → in_progress
-  7. Agent(subagent_type: "phase-executor", prompt: "Run /speckit.clarify with: <session 2>")
+  7. Agent(subagent_type: "clarify-executor",
+          prompt: "<interactive prefix> + <session 2 prompt>")
   8. Grep spec.md for [NEEDS CLARIFICATION] markers
-  9. If markers → spawn 3 consensus agents, resolve
+  9. If markers remain → use context_builder to resolve
   10. TaskUpdate: "Clarify - Session 2" → completed
   11. Validate G2 gate (0 markers remaining)
   12. Advance to Plan
@@ -159,9 +164,9 @@ WRONG:
 
 The `/speckit.clarify` command is inherently interactive. It
 surfaces clarification questions and expects answers. The
-phase-executor subagent acts as the answerer — it uses
-research tools to find evidence-grounded answers for each
-question the command surfaces.
+`clarify-executor` agent is purpose-built for this — it
+researches each question using Tavily, Context7, RepoPrompt,
+and codebase search, then provides evidence-grounded answers.
 
 After the subagent returns, YOU (the main session) check for
 any remaining `[NEEDS CLARIFICATION]` markers. If markers
@@ -484,6 +489,22 @@ for phase in PHASES starting from first_pending:
     8. If auto-commit == "per-phase":
        Bash: git add specs/ && git commit
     9. Advance to next phase (next iteration of loop)
+
+POST-IMPLEMENTATION (after all 7 phases complete):
+    These are tasks in your task list — execute them in order:
+
+    10. TaskUpdate: "Post: Integration/E2E Test Suite" → in_progress
+        Execute Step 3.1 (detect, create, run full suite)
+        TaskUpdate: → completed
+
+    11. TaskUpdate: "Post: PR Creation" → in_progress
+        Execute Step 3.2 (verify, push, gh pr create)
+        TaskUpdate: → completed
+
+    12. TaskUpdate: "Post: PR Review Remediation Loop" → in_progress
+        Execute Step 3.3 (Skill("loop", args: "5m ..."))
+        TaskUpdate: → completed
+        THIS IS THE FINAL STEP — autopilot is done.
 ```
 
 **Dynamic task updates:** If consensus reveals new questions or
@@ -495,20 +516,14 @@ For each phase: read the prompt, spawn a subagent, validate.
 
 #### Subagent Prompt Construction
 
-Use the `phase-executor` agent type for every phase:
+Use the phase-specific executor agent:
 
 ```text
 Agent(
-  subagent_type: "phase-executor",
+  subagent_type: "<agent for this phase>",
   description: "SPEC-XXX <phase>",
   prompt: """
-    Run the /speckit.<phase> command.
-    Use: Skill("speckit.<phase>", args: "<workflow prompt below>")
-
-    <phase-specific prefix — see below>
-    - Specify: branch-aware prefix (if ON_FEATURE_BRANCH)
-    - Clarify: interactive prefix (ALWAYS for clarify)
-    - All others: no prefix needed
+    <phase-specific prefix if needed>
 
     Workflow prompt:
     ---
@@ -518,10 +533,17 @@ Agent(
 )
 ```
 
-The phase-executor agent handles summary formatting and
-the "no recommendations" constraint automatically. The
-phase-specific prefixes handle Specify's branch skipping
-and Clarify's interactive question-answering behavior.
+**Agent selection:**
+
+| Phase | subagent_type | Prefix |
+| ----- | ------------- | ------ |
+| Specify | `phase-executor` | Branch-aware (if ON_FEATURE_BRANCH) |
+| Clarify | `clarify-executor` | Interactive (ALWAYS) |
+| Plan | `phase-executor` | None |
+| Checklist | `checklist-executor` | None |
+| Tasks | `phase-executor` | None |
+| Analyze | `analyze-executor` | None |
+| Implement | Project agent or `phase-executor` | TDD instructions |
 
 #### Specify — Branch-Aware Prefix
 
@@ -599,27 +621,16 @@ BEFORE spawning the next subagent.
   Check security keywords (see consensus-protocol.md).
   Apply answer to spec.md, remove marker, proceed to next
   session.
-- **Checklist:** After each domain subagent → grep
-  checklists for `[Gap]`. For each gap:
-  1. `context_builder(response_type: "question")` —
-     investigate codebase patterns for the gap
-  2. `mcp__tavily-mcp__tavily-search` — search for API
-     docs, standards, or best practices relevant to gap
-  3. Read constitution + prior specs for precedent
-  4. Determine fix (which artifact, what text, where)
-  5. Apply fix, re-run domain to verify (max 2 loops)
-  Proceed to next domain.
-- **Analyze:** Single prompt. After subagent → parse ALL
-  findings at every severity (CRITICAL, HIGH, MEDIUM, LOW).
-  For EACH finding:
-  1. `context_builder(response_type: "question")` —
-     investigate codebase patterns for the finding
-  2. `mcp__tavily-mcp__tavily-search` — search for API
-     docs, standards, or best practices relevant to finding
-  3. Read constitution + prior specs for precedent
-  4. Determine and apply fix to tasks.md, spec.md, or
-     plan.md
-  Re-run analyze to verify 0 findings remain (max 2 loops).
+- **Checklist:** The `checklist-executor` agent runs the
+  checklist AND remediates gaps internally (using
+  context_builder + Tavily + constitution research). After
+  it returns, verify its summary reports 0 gaps remaining.
+  If gaps remain, escalate to human. Proceed to next domain.
+- **Analyze:** The `analyze-executor` agent runs the
+  analysis AND remediates ALL findings internally (using
+  context_builder + Tavily + constitution research). After
+  it returns, verify its summary reports 0 findings. If
+  findings remain, escalate to human.
 
 #### Implement — Project Agent Detection
 
