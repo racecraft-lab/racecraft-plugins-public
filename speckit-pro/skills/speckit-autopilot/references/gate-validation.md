@@ -74,22 +74,51 @@ This is a routing decision, not a pass/fail gate. The presence of markers is exp
 3. Total must be 0
 ```
 
-**Auto-Fix:** This is the **Checklist Remediation Loop**:
+**Auto-Fix:** This is the **Checklist Gap Remediation Loop**.
+Runs after each domain subagent returns (not batched — see
+SKILL.md Rule 6).
 
-```
-Step 1: Run all checklist prompts from the workflow file
-Step 2: Parse all [Gap] markers across all checklists/*.md
-Step 3: For EACH gap:
-  a. Spawn 3 consensus agents in parallel with gap description + spec/plan context
-  b. Apply consensus rules → produce proposed edit
-  c. Auto-edit spec.md or plan.md with the remediation
-Step 4: Re-run ALL checklists to verify gaps closed
-  - If new gaps appear → remediate (max 2 total loops)
-  - If 0 gaps → G4 PASS
-Step 5: If gaps remain after 2 loops → STOP, present to human
+```text
+For EACH [Gap] marker found after a domain subagent:
+
+Step 1: Research the gap using multiple tools:
+  a. context_builder(response_type: "question") — ask
+     "How should we close this gap?" with the gap text,
+     spec.md excerpt, and plan.md excerpt as context.
+     RepoPrompt explores the codebase for established
+     patterns and proposes an evidence-grounded fix.
+  b. Tavily search (mcp__tavily-mcp__tavily-search) —
+     search for API docs, standards, or best practices
+     relevant to the gap (e.g., OmniJS behavior, MCP
+     patterns, error handling standards)
+  c. Read constitution + prior specs — check if project
+     principles or precedent decisions address the gap
+
+Step 2: Determine the fix:
+  - Which artifact to edit (spec.md, plan.md, or both)
+  - What exact text to add or modify
+  - Where in the artifact the edit goes (section name)
+
+Step 3: Apply the fix to the relevant artifact(s)
+
+Step 4: Re-run the domain checklist to verify the gap
+  is closed
+  - If new gaps appear → remediate (max 2 total loops
+    per domain)
+  - If 0 gaps → domain complete, proceed to next domain
+
+Step 5: If gaps remain after 2 loops → STOP, present
+  to human with the gap description, research findings,
+  and attempted fixes
 ```
 
-**Critical:** Run gap remediation sequentially (one gap at a time), even though checklist execution is parallel. This prevents conflicting spec edits.
+**Why research + consensus:** Gaps often require understanding
+both what the codebase already does (context_builder) AND what
+the API/standard requires (Tavily). Using multiple research
+sources produces higher-quality fixes than guessing.
+
+**Critical:** Run gap remediation sequentially (one gap at a
+time) to prevent conflicting spec edits.
 
 ### G5 — After Tasks
 
@@ -119,22 +148,44 @@ Step 5: If gaps remain after 2 loops → STOP, present to human
 3. ALL findings must be remediated — none left unresolved
 ```
 
-**Auto-Fix:** This is the **Analyze Remediation Loop**:
+**Auto-Fix:** This is the **Analyze Remediation Loop**. Uses
+the same research + consensus workflow as Checklist Gap
+Remediation.
 
-```
+```text
 Step 1: Run /speckit.analyze (via phase-executor subagent)
 Step 2: Parse ALL findings by severity
+
 Step 3: For EACH finding (CRITICAL, HIGH, MEDIUM, LOW):
-  a. Use context_builder(response_type: "question") to
-     investigate the finding with codebase context
-  b. Determine the fix: add task, amend task, edit spec,
-     edit plan, remove stale marker, etc.
-  c. Apply the fix to the relevant artifact
+
+  a. Research the finding using multiple tools:
+     - context_builder(response_type: "question") — ask
+       "How should we fix this finding?" with the finding
+       text, spec.md/plan.md/tasks.md excerpts as context.
+       RepoPrompt explores the codebase for established
+       patterns and proposes an evidence-grounded fix.
+     - Tavily search (mcp__tavily-mcp__tavily-search) —
+       search for API docs, standards, or best practices
+       relevant to the finding
+     - Read constitution + prior specs — check if project
+       principles or precedent decisions inform the fix
+
+  b. Determine the fix:
+     - Which artifact to edit (tasks.md, spec.md, plan.md)
+     - What exact change to make (add task, amend task,
+       edit requirement, fix coverage gap, remove stale
+       marker, etc.)
+     - Cite the research source supporting the fix
+
+  c. Apply the fix to the relevant artifact(s)
+
 Step 4: Re-run analyze to verify all findings resolved
   - If new findings appear → remediate (max 2 total loops)
   - If 0 findings → G6 PASS
+
 Step 5: If findings remain after 2 loops → STOP, present
-  to human with all remaining findings and attempted fixes
+  to human with all remaining findings, research results,
+  and attempted fixes
 ```
 
 **Why remediate everything:** The autopilot runs unattended.
@@ -186,7 +237,7 @@ When auto-fix fails after max attempts:
    - Which gate failed
    - What the specific failure is
    - What auto-fix attempts were made
-   - The 3 consensus agent perspectives (for G4/G6)
+   - Research findings from context_builder and Tavily (for G4/G6)
 3. **Wait for guidance** — the human can:
    - Provide a fix and resume: "Fix X, then continue"
    - Skip the gate: "Proceed anyway" (logged as a deliberate override)

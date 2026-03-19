@@ -202,10 +202,13 @@ is updated before the next prompt runs.
   `[NEEDS CLARIFICATION]` → consensus via RepoPrompt chat
   if found → next session
 - **Checklist:** After each domain subagent → grep for
-  `[Gap]` → remediation via RepoPrompt chat if found →
-  next domain
-- **Analyze:** Single prompt → grep for CRITICAL/HIGH →
-  remediation via RepoPrompt chat if found
+  `[Gap]` → for each gap: research with `context_builder`
+  + Tavily + constitution/prior specs → apply fix → re-run
+  domain to verify → next domain
+- **Analyze:** Single prompt → parse ALL findings at every
+  severity → for each finding: research with
+  `context_builder` + Tavily + constitution/prior specs →
+  apply fix → re-run analyze to verify 0 findings remain
 
 **The only reasons to stop:**
 
@@ -372,6 +375,32 @@ principle is satisfied in the current codebase and records baselines.
 **Constitution Check:** ✅ Verified 2026-03-17 — Constitution v2.0.0 (RATIFIED), all principles satisfied
 ```
 
+### 0.9 Implementation Agent Detection
+
+Detect whether the project has a specialized implementation
+agent for the Implement phase. This avoids hardcoding agent
+names and makes the plugin work with any project.
+
+```text
+1. Glob(".claude/agents/*.md") to find all project agents
+2. For each agent file, read the YAML frontmatter
+3. Check the description for implementation keywords:
+   "implement", "TDD", "development", "developer",
+   "coding", "build", "test-first"
+4. If exactly one match → record its name as
+   PROJECT_IMPLEMENTATION_AGENT
+5. If multiple matches → pick the one with the most
+   specific description (or ask the user)
+6. If no matches → set PROJECT_IMPLEMENTATION_AGENT to
+   "phase-executor" (fallback)
+```
+
+Also check CLAUDE.md for references to a specific
+implementation agent (e.g., "omnifocus-developer" or
+"use the X agent for implementation").
+
+**Record the result** for use in Step 2's Implement phase.
+
 ## Step 1: Parse Workflow State
 
 Read the workflow file and parse the "Workflow Overview" status
@@ -408,7 +437,9 @@ TaskCreate (example for a spec with 2 clarify sessions, 3 checklist domains):
   - "Phase 6: Analyze"
   - "Phase 6: Analyze - Finding Remediation"
   - "Phase 7: Implement"
+  - "Post: Integration/E2E Test Suite"
   - "Post: PR Creation"
+  - "Post: PR Review Remediation Loop"
 ```
 
 **Rules:**
@@ -569,22 +600,109 @@ BEFORE spawning the next subagent.
   Apply answer to spec.md, remove marker, proceed to next
   session.
 - **Checklist:** After each domain subagent → grep
-  checklists for `[Gap]`. Use `context_builder` to
-  investigate each gap and propose a spec/plan edit. Apply
-  fix, re-run domain to verify (max 2 loops). Proceed to
-  next domain.
+  checklists for `[Gap]`. For each gap:
+  1. `context_builder(response_type: "question")` —
+     investigate codebase patterns for the gap
+  2. `mcp__tavily-mcp__tavily-search` — search for API
+     docs, standards, or best practices relevant to gap
+  3. Read constitution + prior specs for precedent
+  4. Determine fix (which artifact, what text, where)
+  5. Apply fix, re-run domain to verify (max 2 loops)
+  Proceed to next domain.
 - **Analyze:** Single prompt. After subagent → parse ALL
   findings at every severity (CRITICAL, HIGH, MEDIUM, LOW).
-  For EACH finding, use `context_builder` to investigate
-  and fix. Re-run analyze to verify 0 findings remain
-  (max 2 loops).
+  For EACH finding:
+  1. `context_builder(response_type: "question")` —
+     investigate codebase patterns for the finding
+  2. `mcp__tavily-mcp__tavily-search` — search for API
+     docs, standards, or best practices relevant to finding
+  3. Read constitution + prior specs for precedent
+  4. Determine and apply fix to tasks.md, spec.md, or
+     plan.md
+  Re-run analyze to verify 0 findings remain (max 2 loops).
 
-#### Implement — Parallel Sub-Agents
+#### Implement — Project Agent Detection
 
-The implement phase may use parallel sub-agents for `[P]`
-tasks with worktree isolation. If the project has a
-specialized implementation agent in CLAUDE.md (e.g.,
-"omnifocus-developer"), delegate to that agent.
+The Implement phase uses the project's own implementation
+agent if one exists, falling back to phase-executor if not.
+
+**Detection (done during Step 0 — see 0.9 below):**
+
+```text
+1. Glob(".claude/agents/*.md") to find all project agents
+2. Read each agent file's description field
+3. Look for keywords: "implement", "TDD", "development",
+   "developer", "coding", "build"
+4. If found → record agent name (e.g., "omnifocus-developer")
+5. If not found → use "phase-executor" as fallback
+```
+
+**Why project agent over phase-executor:** Project agents
+have domain-specific knowledge — OmniJS patterns, TDD
+workflows, architecture conventions, API references — that
+a generic phase-executor lacks. The project team designed
+their agent for exactly this purpose.
+
+**Execution:**
+
+```text
+If PROJECT_IMPLEMENTATION_AGENT was detected:
+  Agent(
+    subagent_type: "<detected agent name>",
+    prompt: """
+      Implement tasks from tasks.md for SPEC-XXX.
+      Follow the plan in plan.md.
+
+      MANDATORY: Use strict TDD red-green-refactor for
+      EVERY task:
+
+      1. RED — Write failing tests FIRST:
+         - Contract tests for input/output schemas
+         - Unit tests for business logic
+         - Run tests → verify they FAIL
+         - Do NOT write implementation code yet
+
+      2. GREEN — Write MINIMUM code to pass:
+         - Implement only what's needed to make tests green
+         - Run tests → verify they PASS
+         - Do NOT optimize or refactor yet
+
+      3. REFACTOR — Clean up while green:
+         - Improve code quality, remove duplication
+         - Run tests → verify they STAY GREEN
+         - Optimize only if needed
+
+      After each task completes all 3 phases, run the full
+      verification suite (build + typecheck + lint + test)
+      before moving to the next task.
+
+      <workflow implement prompt>
+    """
+  )
+
+If no project agent found:
+  Agent(
+    subagent_type: "phase-executor",
+    prompt: """
+      Run /speckit.implement with the workflow prompt below.
+
+      MANDATORY: Use strict TDD red-green-refactor for
+      EVERY task:
+      1. RED — Write failing tests first (contract + unit)
+      2. GREEN — Write minimum code to pass tests
+      3. REFACTOR — Clean up while tests stay green
+
+      Workflow prompt:
+      ---
+      <workflow implement prompt>
+      ---
+    """
+  )
+```
+
+For `[P]` tasks, spawn parallel sub-agents (using the same
+detected agent type) with worktree isolation. Each parallel
+agent follows the same TDD cycle independently.
 
 ## Step 3: Post-Implementation
 
@@ -592,49 +710,65 @@ After all 7 phases complete and G7 passes:
 
 ### 3.1 Integration / E2E Test Verification
 
-Before creating a PR, check whether the project has
-integration or e2e tests. If it does, implement spec-specific
-tests and run the full suite.
+**This step is MANDATORY before PR creation.** Execute
+these tool calls in sequence:
+
+**Step 1 — Detect:** Check if the project has integration
+or e2e tests:
 
 ```text
-1. Detect project testing patterns:
-   Glob("tests/integration/**" or "tests/e2e/**" or
-        "**/*.integration.test.*" or "**/*.e2e.test.*")
-
-2. If the project HAS integration/e2e tests:
-   a. Check if spec-specific tests already exist:
-      Glob("tests/integration/*<spec-name>*" or
-           "tests/e2e/*<spec-name>*")
-
-   b. If NO spec-specific tests exist:
-      - Study existing integration/e2e tests to understand
-        the pattern (test structure, setup, teardown)
-      - Create spec-specific integration tests covering
-        the spec's key user stories (at minimum P1 stories)
-      - Each test should verify end-to-end behavior through
-        the tool interface
-      - Follow the existing test patterns exactly
-
-   c. Run the FULL integration/e2e test suite (not just
-      the new tests):
-      pnpm test tests/integration/ (or project equivalent)
-
-   d. If any fail → fix and re-run (max 2 attempts)
-
-3. If the project does NOT have integration/e2e tests:
-   Skip this step — only unit/contract tests apply.
-
-4. Record results:
-   - Integration/e2e tests: N new, M total
-   - Pass/fail status
-   - User stories covered
+Glob("tests/integration/**")  ← TOOL CALL
+Glob("tests/e2e/**")          ← TOOL CALL
 ```
 
-**Why:** The full integration suite must pass before opening
-a PR — not just the new tests. Existing integration tests
-may break due to changes in shared infrastructure, new tool
-registration, or side effects. Running the full suite catches
-regressions.
+If BOTH return empty, skip to 3.2 PR Creation.
+
+**Step 2 — Check for spec-specific tests:**
+
+```text
+Glob("tests/integration/*<spec-name>*")  ← TOOL CALL
+```
+
+**Step 3 — Create if missing:** If no spec-specific tests
+exist, spawn the implementation agent (detected in 0.9)
+to create them:
+
+```text
+Agent(
+  subagent_type: PROJECT_IMPLEMENTATION_AGENT or "phase-executor",
+  description: "SPEC-XXX integration tests",
+  prompt: """
+    Create integration tests for SPEC-XXX (<spec name>).
+
+    1. Read existing integration tests to understand the
+       pattern (test structure, setup, teardown)
+    2. Create spec-specific integration tests covering
+       the P1 user stories
+    3. Each test should verify end-to-end behavior
+    4. Follow existing test patterns exactly
+
+    Spec: specs/<number>-<name>/spec.md
+    Plan: specs/<number>-<name>/plan.md
+  """
+)
+```
+
+**Step 4 — Run the FULL suite:** Run ALL integration tests,
+not just the new ones:
+
+```text
+Bash("pnpm test tests/integration/")  ← TOOL CALL
+```
+
+If any fail → fix and re-run (max 2 attempts). Commit
+fixes before proceeding.
+
+**Step 5 — Record results** in the workflow file:
+integration tests created, total count, pass/fail.
+
+**Why:** Existing integration tests may break due to new
+tool registration, shared infrastructure changes, or side
+effects. The full suite catches regressions before the PR.
 
 ### 3.2 PR Creation
 
@@ -681,20 +815,39 @@ create the PR manually.
 
 ### 3.3 Copilot Review Remediation Loop
 
-After PR creation, monitor for automated review comments:
+**This step is MANDATORY after PR creation.** Use the `/loop`
+command to schedule recurring review comment monitoring.
+
+**Execute this immediately after PR creation:**
 
 ```text
-Poll every 5 minutes (max 1 hour):
-1. gh api repos/{owner}/{repo}/pulls/{pr_number}/comments
-2. Filter to unresolved comments
-3. For each:
-   - Code fix needed → edit file, run verify suite, commit, push
-   - Style/format → pnpm lint:fix, commit, push
-   - Question → reply with design rationale
-   - False positive → reply explaining why no change needed
-4. If 0 unresolved → exit loop early
-5. After 1 hour → exit, notify user of remaining comments
+Skill("loop", args: "5m Check PR #<number> for review
+  comments. For each unresolved comment:
+  - If code fix needed → edit file, run pnpm build &&
+    pnpm typecheck && pnpm test, commit, push
+  - If style/format → pnpm lint:fix, commit, push
+  - If question → reply via gh api with design rationale
+  - If false positive → reply explaining why no change
+  Exit when 0 unresolved comments remain.")
 ```
+
+**Why `/loop`:** The loop runs every 5 minutes in the
+background, checking for new review comments from GitHub
+Copilot or human reviewers. It automatically expires after
+3 days (Claude Code's built-in safety limit). The autopilot
+doesn't need to wait — it schedules the loop and reports
+completion.
+
+**How to construct the loop prompt:**
+
+1. Extract the PR number from the `gh pr create` output
+2. Extract the repo owner/name from `git remote -v`
+3. Build the loop prompt with the specific PR number and
+   repo path for `gh api` calls
+
+**After scheduling the loop, the autopilot is DONE.** Report
+the final summary with PR URL and note that review
+remediation is running in the background via `/loop`.
 
 ## Workflow File Update Protocol
 

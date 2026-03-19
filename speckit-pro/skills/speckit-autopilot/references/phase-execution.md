@@ -229,10 +229,15 @@ For each checklist domain in the workflow file:
   2. Agent(subagent_type: "phase-executor",
           prompt: "Run /speckit.checklist with: <domain prompt>")
   3. Grep checklists for [Gap] markers
-  4. If gaps → use context_builder(response_type: "question")
-     to investigate and fix each gap (max 2 loops)
-  5. TaskUpdate: domain task → completed
-  6. Proceed to next domain
+  4. For each gap:
+     a. context_builder(response_type: "question") —
+        investigate codebase patterns
+     b. Tavily search — API docs, standards, best practices
+     c. Read constitution + prior specs for precedent
+     d. Determine and apply fix to spec.md or plan.md
+  5. Re-run domain checklist to verify (max 2 loops)
+  6. TaskUpdate: domain task → completed
+  7. Proceed to next domain
 ```
 
 **Why after each domain:** Domain 2 may depend on Domain
@@ -262,10 +267,17 @@ Spawn a subagent.
 
 **Post-execution (main session):** Parse ALL findings at
 every severity level (CRITICAL, HIGH, MEDIUM, LOW). For
-EACH finding, use `context_builder` with
-`response_type: "question"` to investigate and apply the
-fix. Re-run analyze to verify 0 findings remain (max 2
-loops). If 0 findings from the start, advance immediately.
+EACH finding:
+
+1. `context_builder(response_type: "question")` —
+   investigate codebase patterns for the finding
+2. `mcp__tavily-mcp__tavily-search` — search for API
+   docs, standards, or best practices relevant to finding
+3. Read constitution + prior specs for precedent
+4. Determine and apply fix to tasks.md, spec.md, or plan.md
+
+Re-run analyze to verify 0 findings remain (max 2 loops).
+If 0 findings from the start, advance immediately.
 
 **Gate:** G6 — verify 0 CRITICAL findings
 
@@ -275,11 +287,33 @@ loops). If 0 findings from the start, advance immediately.
 ### Phase 7: Implement
 
 Read the workflow file's `### Implement Prompt` section.
-Spawn a subagent (or delegate to project's implementation
-agent if one exists in CLAUDE.md, e.g., "omnifocus-developer").
 
-For `[P]` tasks, spawn parallel sub-agents with worktree
-isolation.
+Use the implementation agent detected in Step 0.9:
+
+```text
+If PROJECT_IMPLEMENTATION_AGENT was detected:
+  Agent(
+    subagent_type: "<detected agent name>",
+    prompt: "Implement tasks from tasks.md for SPEC-XXX.
+            Follow the plan in plan.md. Use TDD.
+            <workflow implement prompt>"
+  )
+
+If no project agent found (fallback):
+  Agent(
+    subagent_type: "phase-executor",
+    prompt: "Run /speckit.implement with: <workflow prompt>"
+  )
+```
+
+**Why:** Project agents have domain-specific knowledge
+(OmniJS patterns, TDD workflows, architecture conventions)
+that a generic phase-executor lacks. The autopilot detects
+the right agent at startup (Step 0.9) by scanning
+`.claude/agents/` for implementation keywords.
+
+For `[P]` tasks, spawn parallel sub-agents (same agent
+type) with worktree isolation.
 
 **Gate:** G7 — full verification suite
 (build + typecheck + lint + test)
