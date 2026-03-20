@@ -149,3 +149,27 @@ Use framework features directly. No wrapping layers unless migration is planned.
 ```
 
 This is 4 principles, all testable, with clear governance. Start here and add principles as your project matures.
+
+## Protecting Your Constitution During Upgrades
+
+**Critical:** Running `specify init --here --force` overwrites
+`constitution.md` with the default template. Your customized
+principles will be lost unless you back up first.
+
+**Best practice:**
+
+```bash
+# Before upgrading
+cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
+
+# After upgrading
+git restore .specify/memory/constitution.md
+# or: cp .specify/memory/constitution-backup.md .specify/memory/constitution.md
+```
+
+**Why this happens:** The SpecKit upgrade replaces all files in
+`.specify/memory/` with fresh templates. The constitution is the
+only file that's project-specific — all others are generic.
+
+**Long-term solution:** Commit your constitution to git. Then
+`git restore` will always recover it after an upgrade.

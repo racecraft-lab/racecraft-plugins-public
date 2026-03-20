@@ -151,6 +151,17 @@ it does NOT invoke a `/speckit.*` command.
 **Gate:** G0 — all automated checks must pass. If any
 fail, STOP.
 
+**Extension: Doctor Health Check (if installed):**
+After G0 passes, run `/speckit.doctor` for a full
+project diagnostic (structure, agents, features, scripts,
+extensions, git). Log the report in the workflow file.
+
+```text
+TaskUpdate: "Phase 0: Doctor Health Check" → in_progress
+Skill("speckit.doctor")
+TaskUpdate: → completed
+```
+
 ### Phase 1: Specify
 
 Read the workflow file's `### Specify Prompt` section.
@@ -284,6 +295,18 @@ Spawn a subagent.
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
 
+**Extension: Verify Tasks (if installed):**
+After G5 passes, run `/speckit.verify-tasks` to detect
+phantom completions — tasks marked `[X]` that have no real
+implementation. This catches tasks that were incorrectly
+marked complete during previous iterations.
+
+```text
+TaskUpdate: "Phase 5: Verify Tasks" → in_progress
+Skill("speckit.verify-tasks")
+TaskUpdate: → completed
+```
+
 **Commit:**
 `git add specs/ && git commit -m "feat(SPEC-XXX): complete tasks phase"`
 
@@ -397,6 +420,46 @@ regressions from other specs.
    `Bash("<INTEGRATION_TEST command>")`
 4. Fix any failures (max 2 attempts)
 5. Record results in workflow file
+
+## Extension Hook Events
+
+If extensions with hook events are installed (detected in Step
+0.11), the autopilot must handle prompts that fire after certain
+phases. These are configured in `.specify/extensions.yml`.
+
+### Hook Behavior During Autopilot
+
+| Hook Event | Typical Extension | Autopilot Behavior |
+|------------|------------------|-------------------|
+| `after_tasks` | verify-tasks | **Accept** — verifies task completeness, non-destructive |
+| `after_implement` | verify | **Accept** — validates implementation against spec, non-destructive |
+| `after_implement` | retrospective | **Accept** — generates retrospective report, non-destructive |
+| `after_implement` | cleanup | **Skip** — autopilot already runs lint, build, test verification |
+| `before_*` | any | **Accept** — pre-flight checks are non-destructive |
+
+**Rules for hook handling:**
+
+1. **Accept non-destructive hooks** — read-only verification,
+   reports, and analysis hooks are safe to run automatically
+2. **Skip hooks that duplicate autopilot verification** — if
+   the autopilot already runs the same check (e.g., cleanup
+   vs the autopilot's own lint/test verification), skip to
+   avoid redundancy
+3. **Document decisions in workflow file** — log which hooks
+   were accepted, skipped, and why
+
+**When `optional: true`** — the extension prompts before running.
+The autopilot should respond "yes" for accepted hooks and "no"
+for skipped hooks.
+
+### Template Resolution Awareness
+
+If presets are installed, template resolution follows a 4-tier
+stack: overrides > presets > extensions > core. The autopilot
+doesn't need to manage this — the `/speckit.*` commands handle
+resolution automatically. But if generated artifacts have
+unexpected structure, check `specify preset resolve <template>`
+to see which template file is being used.
 
 ## PR Creation Protocol
 

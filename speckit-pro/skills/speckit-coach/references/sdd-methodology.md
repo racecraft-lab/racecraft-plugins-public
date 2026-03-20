@@ -131,6 +131,53 @@ From SpecKit community discussions, four patterns have emerged for managing spec
 
 **Critical insight**: Specifications and code naturally diverge. The workflow should include explicit loops to fold code changes back into specs. Close feedback loops between implementation and specification throughout development.
 
+## Extensibility: Presets & Extensions (v0.3.2)
+
+SDD workflows are customizable through two mechanisms:
+
+### Presets — Methodology Customization
+
+Presets override templates to adapt the SDD workflow for
+specific methodologies or organizational requirements:
+
+- **Agile/Scrum** — add sprint planning sections, story point estimates
+- **DDD (Domain-Driven Design)** — enforce bounded context analysis, aggregate roots
+- **Compliance** — add regulatory sections, audit trail requirements
+- **Localization** — translate template sections to other languages
+
+Presets stack with priority ordering (lower number wins) and
+don't modify core files — they survive upgrades.
+
+### Extensions — Workflow Augmentation
+
+Extensions add new capabilities to the SDD workflow:
+
+- **Code review** — structured review with specialized agents (quality, tests, types, errors)
+- **Verification** — validate implementation against spec artifacts
+- **Integration** — sync specs to Jira, Azure DevOps, or other platforms
+- **Visibility** — project health diagnostics, workflow progress reports
+- **Post-implementation** — retrospectives, cleanup, spec reconciliation
+
+Extensions register **hook events** that fire before/after
+core commands (e.g., `after_tasks` → auto-verify tasks,
+`after_implement` → run retrospective). This enables
+automated quality workflows without modifying the core
+SDD phases.
+
+### Template Resolution
+
+When presets and extensions both provide templates, resolution
+follows a 4-tier priority stack:
+
+1. Project overrides (`.specify/templates/overrides/`)
+2. Installed presets (by priority number)
+3. Extension templates
+4. Core templates
+
+This ensures project-specific needs always win, followed by
+methodology presets, then extension additions, with core
+defaults as the fallback.
+
 ## Key Takeaways for Developers
 
 1. **Specs are executable** — They generate implementation plans and code, not just document intent

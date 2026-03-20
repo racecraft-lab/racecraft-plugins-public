@@ -262,6 +262,19 @@ then push branch and create PR via `gh pr create`.
 | G6 | Analyze | 0 findings (all severities) | context_builder remediation | 2 |
 | G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | 2 |
 
+## Optional: Extension Verification at G7
+
+If the `verify` extension is installed, the autopilot can
+run `speckit.verify` as additional validation alongside
+the standard G7 checks. This validates the implementation
+against spec artifacts from the extension's perspective.
+
+If the `verify-tasks` extension is installed, it can
+complement G5 by detecting phantom completions — tasks
+marked `[X]` that have no real implementation behind them.
+
+These are additive checks, not replacements for gates.
+
 ## Failure Escalation Protocol
 
 When auto-fix fails after max attempts:

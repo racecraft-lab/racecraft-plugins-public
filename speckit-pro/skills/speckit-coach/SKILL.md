@@ -16,7 +16,7 @@ This skill **enhances** the official SpecKit CLI — it does not replace it. The
 
 ```bash
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --ai copilot    # or: --ai claude, --ai cursor, etc.
+specify init --ai claude     # 25+ agents: copilot, cursor-agent, gemini, codex, etc.
 ```
 
 After installation, the developer has access to all `/speckit.*` slash commands. This skill provides **coaching, guidance, and enhancement** on top of those commands.
@@ -47,16 +47,25 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | **Deep-Dive References** | |
 | "checklist domains", "what checklists", "which domains" | Guide domain selection from [checklist guide](./references/checklist-domains-guide.md) |
 | "constitution design", "good principles", "constitution tips" | Guide constitution design from [constitution guide](./references/constitution-guide.md) |
-| "upgrade speckit", "update templates", "new version" | Provide upgrade guidance (back up constitution first!) |
+| "upgrade speckit", "update templates" | Provide upgrade guidance from [command guide](./references/command-guide.md) — see "Upgrade Guidance" |
 | **Plugin Usage** | |
 | "run autopilot", "execute workflow", "autonomous" | Guide to `/speckit-pro:autopilot` — prerequisites, workflow file setup, `--dangerously-skip-permissions`. See [autopilot guide](./references/autopilot-guide.md) |
-| "check status", "where am I", "workflow progress", "what's next", "roadmap" | Guide to `/speckit-pro:status` — full project roadmap (completed, ready, blocked specs), active workflow phase detail, and next-spec recommendation based on priority and dependencies |
+| "check status", "where am I", "workflow progress", "what's next", "roadmap", "project health" | Guide to `/speckit-pro:status` for master plan progress (completed, ready, blocked specs), or `/speckit.doctor` for project health diagnostics |
 | "configure autopilot", "settings", "consensus mode" | Guide to `.claude/speckit-pro.local.md` settings — consensus mode, auto-commit, gate failure behavior. See [autopilot guide](./references/autopilot-guide.md) |
 | "how does consensus work", "clarify automation" | Explain the 3-agent consensus protocol — codebase-analyst, spec-context-analyst, domain-researcher. See [autopilot guide](./references/autopilot-guide.md) |
 | "gap remediation", "checklist automation" | Explain checklist gap remediation loop — consensus agents propose fixes, auto-edit, re-verify. See [autopilot guide](./references/autopilot-guide.md) |
 | "analyze automation", "finding remediation" | Explain analyze remediation loop — CRITICAL/HIGH findings auto-fixed via consensus. See [autopilot guide](./references/autopilot-guide.md) |
 | "PR automation", "review loop", "copilot review" | Explain the post-PR review remediation loop — polling, auto-fix, comment resolution. See [autopilot guide](./references/autopilot-guide.md) |
 | "branching", "worktree", "SPECIFY_FEATURE" | Explain branch detection hierarchy — env var → git branch → specs/ scan. See [autopilot guide](./references/autopilot-guide.md) |
+| **Presets & Extensions (v0.3.2)** | |
+| "preset", "customize templates", "override templates", "methodology" | Explain presets — stackable template overrides, resolution order, commands. See [presets & extensions guide](./references/presets-extensions-guide.md) |
+| "extension", "add extension", "install extension", "community catalog" | Explain extensions — 26 community extensions, hook events, commands. See [presets & extensions guide](./references/presets-extensions-guide.md) |
+| "hook events", "after_implement", "before_specify" | Explain the 8 hook events and how extensions use them. See [presets & extensions guide](./references/presets-extensions-guide.md) |
+| "template resolution", "which template", "preset resolve" | Explain 4-tier resolution: overrides > presets > extensions > core. See [presets & extensions guide](./references/presets-extensions-guide.md) |
+| "catalog", "custom catalog", "extension catalog", "preset catalog" | Explain multi-catalog stacks, custom catalogs, env vars. See [presets & extensions guide](./references/presets-extensions-guide.md) |
+| "doctor", "project diagnostics", "health check" | Run `/speckit.doctor` for full project diagnostic (structure, agents, features, scripts, extensions, git). See [presets & extensions guide](./references/presets-extensions-guide.md) |
+| "upgrade speckit", "update speckit", "new version", "latest version" | Guide full upgrade: backup constitution → upgrade CLI → init --here --force → restore. See [command guide](./references/command-guide.md) upgrade section |
+| "verify extension", "verify-tasks", "review extension", "cleanup extension" | Explain installed extensions and their commands. See [presets & extensions guide](./references/presets-extensions-guide.md) |
 | **Troubleshooting & Recovery** | |
 | "I'm stuck", "don't know what to do", "what's next" | Diagnose current state and recommend next step from [getting started](./references/getting-started.md) — see "Troubleshooting & Recovery" |
 | "something went wrong", "this isn't working", "bad output" | Identify the problem phase and guide recovery from [getting started](./references/getting-started.md) — see "Troubleshooting & Recovery" |
@@ -68,6 +77,13 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "is my spec good", "evaluate", "review quality" | Walk through quality signals from [getting started](./references/getting-started.md) — see "How to Evaluate Quality at Each Gate" |
 | "is my plan good", "review my plan" | Check plan quality signals: gates, research, data model, contracts |
 | "are my tasks good", "review tasks" | Check task quality: story organization, granularity, traceability, parallelism |
+| **Enhancement Commands (speckit-pro plugin)** | |
+| "master plan", "decompose feature", "multi-spec", "too large for one spec" | Guide master plan creation — decompose large features into sequential specs. See Enhancement section below |
+| "workflow tracking", "track phases", "workflow file" | Guide workflow file creation — per-spec 7-phase tracking. See Enhancement section below |
+| "recommend checklists", "which checklists", "what domains to check" | Run spec-driven domain recommendation — analyze spec to suggest enriched checklist prompts. See Enhancement section below |
+| "decompose", "create spec directories", "break into specs" | Guide spec decomposition — generate individual spec directories from master plan. See Enhancement section below |
+| "setup spec", "create worktree", "prepare for autopilot" | Guide to `/speckit-pro:setup <SPEC-ID>` — creates worktree, branch, workflow file |
+| "resolve PR", "fix review comments", "address copilot comments" | Guide to `/speckit-pro:resolve-pr <PR>` — addresses review comments, fixes code, resolves threads |
 | **Team Workflow** | |
 | "team", "who reviews", "PR workflow", "collaboration" | Guide team workflow from [getting started](./references/getting-started.md) — see "Working with a Team" |
 
@@ -210,6 +226,7 @@ constitution → specify → clarify (opt) → plan → checklist (opt) → task
 
 | Gate | After | Pass Criteria |
 |------|-------|---------------|
+| G0 | Prerequisites | Build, typecheck, lint, tests all pass |
 | G1 | Specify | No `[NEEDS CLARIFICATION]` markers remain |
 | G2 | Clarify | All decisions documented in spec |
 | G3 | Plan | Architecture approved, constitution gates pass |
@@ -258,6 +275,7 @@ specs/<number>-<feature-name>/
 - [Constitution Guide](./references/constitution-guide.md) — Designing effective project constitutions
 - [Checklist Domains Guide](./references/checklist-domains-guide.md) — Identifying and creating domain checklists
 - [Best Practices](./references/best-practices.md) — Lessons learned, anti-patterns, tips
+- [Presets & Extensions Guide](./references/presets-extensions-guide.md) — Presets, extensions, hooks, catalogs, custom presets
 - [Autopilot Guide](./references/autopilot-guide.md) — Autonomous execution, consensus protocol, configuration
 - [Master Plan Template](./templates/master-plan-template.md) — Multi-spec project decomposition
 - [Workflow Template](./templates/workflow-template.md) — Per-spec 7-phase tracking

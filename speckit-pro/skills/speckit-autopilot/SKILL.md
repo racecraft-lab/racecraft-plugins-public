@@ -109,22 +109,23 @@ subagent returns, check the task list to know what's next.
 domains:**
 
 ```text
-TaskCreate:
+TaskCreate (simplified — see Step 1.1 for full example):
   "Phase 0: Prerequisites"
   "Phase 1: Specify"
-  "Phase 2: Clarify - Session 1: Search Behavior"
-  "Phase 2: Clarify - Session 2: Database Operations"
-  "Phase 2: Clarify - Consensus Resolution"
+  "Phase 2: Clarify - Session 1"
+  "Phase 2: Clarify - Session 1 Consensus"
   "Phase 3: Plan"
-  "Phase 4: Checklist - Domain 1: api-workaround"
-  "Phase 4: Checklist - Domain 2: type-safety"
-  "Phase 4: Checklist - Domain 3: requirements"
-  "Phase 4: Checklist - Gap Remediation"
+  "Phase 4: Checklist - Domain 1"
+  "Phase 4: Checklist - Domain 1 Consensus"
   "Phase 5: Tasks"
   "Phase 6: Analyze"
-  "Phase 6: Analyze - Finding Remediation"
+  "Phase 6: Analyze - Consensus"
   "Phase 7: Implement"
+  "Post: Verify Implementation"    ← extension (if installed)
+  "Post: Code Review"              ← extension (if installed)
   "Post: PR Creation"
+  "Post: PR Review Remediation Loop"
+  "Post: Retrospective"            ← extension (if installed)
 ```
 
 Set each task to `in_progress` when starting and `completed`
@@ -489,6 +490,33 @@ section so the commands persist across context compactions.
 Pass these commands to every subagent prompt that needs
 to run builds or tests.
 
+### 0.11 Preset and Extension Detection
+
+Check for installed presets and extensions that may affect
+template resolution or provide hook events:
+
+```text
+1. Glob(".specify/presets/*/preset.yml") → list installed presets
+2. Glob(".specify/extensions/*/extension.yml") → list installed extensions
+3. If .specify/extensions.yml exists → Read and parse:
+   - List of installed extensions
+   - Hook events configured (after_tasks, after_implement, etc.)
+4. If presets found → note that template resolution may differ:
+   overrides > presets > extensions > core
+5. If hook events configured → note which phases have hooks
+   (e.g., after_tasks → verify-tasks, after_implement → verify)
+6. Record installed presets/extensions in workflow file
+```
+
+**Why:** SpecKit commands read templates through the resolution
+stack. If a preset overrides `tasks-template.md`, the tasks
+generated will have different structure. If extensions register
+hook events, the autopilot must handle prompts that fire after
+certain phases (accept non-destructive hooks, skip duplicates
+of the autopilot's own verification).
+
+**If no presets or extensions are installed, skip this step.**
+
 ## Step 1: Parse Workflow State
 
 Read the workflow file and parse the "Workflow Overview" status
@@ -512,6 +540,7 @@ prompt/session so the autopilot knows exactly what to execute next.
 ```text
 TaskCreate (example for a spec with 2 clarify sessions, 3 checklist domains):
   - "Phase 0: Prerequisites (Constitution Validation)"
+  - "Phase 0: Doctor Health Check"
   - "Phase 1: Specify"
   - "Phase 2: Clarify - Session 1: Search Behavior"
   - "Phase 2: Clarify - Session 1 Consensus"
@@ -525,12 +554,17 @@ TaskCreate (example for a spec with 2 clarify sessions, 3 checklist domains):
   - "Phase 4: Checklist - Domain 3: requirements"
   - "Phase 4: Checklist - Domain 3 Consensus"
   - "Phase 5: Tasks"
+  - "Phase 5: Verify Tasks"
   - "Phase 6: Analyze"
   - "Phase 6: Analyze - Consensus"
   - "Phase 7: Implement"
+  - "Post: Verify Implementation"
+  - "Post: Code Review"
   - "Post: Full Integration/E2E Suite Verification"
+  - "Post: Cleanup"
   - "Post: PR Creation"
   - "Post: PR Review Remediation Loop"
+  - "Post: Retrospective"
 ```
 
 **Rules:**
@@ -538,10 +572,19 @@ TaskCreate (example for a spec with 2 clarify sessions, 3 checklist domains):
 - Parse the workflow file's Clarify and Checklist sections to
   extract session/domain names and counts
 - Create one task per clarify session and one per checklist domain
-- Add a "Consensus Resolution" or "Gap Remediation" task after
-  each multi-prompt phase (only runs if needed)
+- Add a "Consensus" task after each prompt in multi-prompt
+  phases (e.g., "Clarify - Session 1 Consensus") — only runs
+  if executor reports unresolved items
 - Single-prompt phases (Specify, Plan, Tasks, Analyze, Implement)
   get one task each
+- Add extension tasks where they fit (only if extensions are
+  installed — check Step 0.11):
+  - "Phase 0: Doctor Health Check" — after prerequisites
+  - "Phase 5: Verify Tasks" — after tasks generation
+  - "Post: Verify Implementation" — after implement, before PR
+  - "Post: Code Review" — after verify, before PR
+  - "Post: Cleanup" — after review, before PR
+  - "Post: Retrospective" — after PR merge (final task)
 - Mark already-completed phases as `completed` immediately
 - Mark the first pending task as `in_progress`
 
@@ -580,18 +623,41 @@ for phase in PHASES starting from first_pending:
     9. Advance to next phase (next iteration of loop)
 
 POST-IMPLEMENTATION (after all 7 phases complete):
-    These are tasks in your task list — execute them in order:
+    These are tasks in your task list — execute them in order.
+    Extension tasks only run if the extension is installed
+    (detected in Step 0.11). Skip if not installed.
 
-    10. TaskUpdate: "Post: Full Integration/E2E Suite Verification" → in_progress
+    10. TaskUpdate: "Post: Verify Implementation" → in_progress
+        Skill("speckit.verify") — validate implementation
+        against spec artifacts (non-destructive)
+        TaskUpdate: → completed
+
+    11. TaskUpdate: "Post: Code Review" → in_progress
+        Skill("speckit.review") — comprehensive code review
+        with 6 specialized agents. Fix any issues found.
+        TaskUpdate: → completed
+
+    12. TaskUpdate: "Post: Full Integration/E2E Suite Verification" → in_progress
         Execute Step 3.1 (detect, create, run full suite)
         TaskUpdate: → completed
 
-    11. TaskUpdate: "Post: PR Creation" → in_progress
+    13. TaskUpdate: "Post: Cleanup" → in_progress
+        Skill("speckit.cleanup") — fix small issues,
+        create tasks for medium, analyze large. Commit fixes.
+        TaskUpdate: → completed
+
+    14. TaskUpdate: "Post: PR Creation" → in_progress
         Execute Step 3.2 (verify, push, gh pr create)
         TaskUpdate: → completed
 
-    12. TaskUpdate: "Post: PR Review Remediation Loop" → in_progress
+    15. TaskUpdate: "Post: PR Review Remediation Loop" → in_progress
         Execute Step 3.3 (Skill("loop", args: "5m ..."))
+        TaskUpdate: → completed
+
+    16. TaskUpdate: "Post: Retrospective" → in_progress
+        Skill("speckit.retrospective.analyze") — measure spec
+        adherence, identify deviations, capture lessons learned.
+        Generates retrospective.md in the spec directory.
         TaskUpdate: → completed
         THIS IS THE FINAL STEP — autopilot is done.
 ```

@@ -4,6 +4,13 @@ Comprehensive guide to the speckit-pro autonomous workflow
 executor. Use this when coaching developers on how to set up,
 configure, run, and troubleshoot the autopilot.
 
+**Related commands:**
+- `/speckit-pro:setup <SPEC-ID>` — create worktree + workflow file
+- `/speckit-pro:autopilot <workflow.md>` — run the autopilot
+- `/speckit-pro:status` — check progress across all specs
+- `/speckit-pro:resolve-pr <PR>` — fix review comments post-PR
+- `/speckit-pro:coach` — get help with any of the above
+
 ---
 
 ## Prerequisites
@@ -37,12 +44,12 @@ cannot validate constitutional gates during the Plan phase.
 
 **Note:** The autopilot also validates each constitution
 principle against the current codebase before starting Phase 1
-(Specify). It runs `pnpm typecheck`, `pnpm test`,
-`pnpm build`, and `pnpm lint`, records baselines (test count,
-file count), and fills in the workflow file's Prerequisites →
-Constitution Validation table. If any check fails, the
-autopilot stops — the codebase must be healthy before starting
-a new spec.
+(Specify). It discovers the project's build, typecheck, lint,
+and test commands (Step 0.10) and runs them all to record
+baselines (test count, file count). It fills in the workflow
+file's Prerequisites → Constitution Validation table. If any
+check fails, the autopilot stops — the codebase must be healthy
+before starting a new spec.
 
 ### 4. Master Plan Exists (Recommended)
 
@@ -175,6 +182,20 @@ questions, gaps, and findings.
 | **Conservative** | Flag for human (with recommendation) | Auto-answer | Flag for human | Always flag |
 | **Moderate** (default) | Auto-answer | Auto-answer | Flag for human | Always flag |
 | **Aggressive** | Auto-answer | Auto-answer | Attempt synthesis | Always flag |
+
+**When to choose each mode:**
+
+| Mode | Best For |
+|------|----------|
+| **Conservative** | Security-sensitive projects, regulated industries, first-time autopilot users. Stops more often for human review — slower but safer. |
+| **Moderate** | Most projects. Balances autonomy with safety. Auto-answers when 2/3 agents agree, stops when all disagree. |
+| **Aggressive** | Well-established projects with strong constitutions and experienced users. Attempts to synthesize even when agents disagree. Only stops for security keywords. |
+
+Configure in `.claude/speckit-pro.local.md`:
+
+```yaml
+consensus-mode: moderate
+```
 
 ### Security Keywords
 
@@ -399,6 +420,26 @@ so it can be resumed:
 This starts from the checklist phase, reading prior artifacts
 from disk.
 
+### Resuming After Any Interruption
+
+The workflow file persists all state. To resume from any point:
+
+```text
+# 1. Check where you left off
+/speckit-pro:status
+
+# 2. Look at the workflow file for the last completed phase
+cat docs/ai/specs/SPEC-XXX-workflow.md | grep "✅\|⏳\|🔄"
+
+# 3. Resume from the next pending phase
+/speckit-pro:autopilot docs/ai/specs/SPEC-XXX-workflow.md --from-phase <next>
+```
+
+**Safe to re-run:** Phases are idempotent — re-running a
+completed phase overwrites its artifacts but doesn't corrupt
+state. If you're unsure where you left off, it's safe to
+re-run from an earlier phase.
+
 ---
 
 ## Running Autopilot — Step by Step
@@ -454,3 +495,54 @@ After the autopilot creates a PR:
 - Review the code changes
 - Verify OmniJS scripts in Script Editor (if applicable)
 - Merge when satisfied
+
+---
+
+## v0.3.2 Capabilities
+
+### `/speckit.doctor` — Project Health Diagnostics
+
+The autopilot can use the doctor extension at any point to
+check project health across structure, agents, features,
+scripts, extensions, and git. This is useful for:
+
+- Logging progress in the workflow file
+- Verifying phase completion after gates pass
+- Resuming after interruption
+
+### Preset and Extension Awareness
+
+The autopilot detects installed presets and extensions at
+startup (Step 0.11). This matters because:
+
+**Presets** may modify template content. If a preset overrides
+`tasks-template.md` (e.g., to enforce TDD or add extra
+sections), the `/speckit.tasks` command will generate tasks
+with different structure. The autopilot's task parsing should
+handle any template variant.
+
+**Extensions** may register hook events. For example:
+- `after_tasks` → verify-tasks extension prompts to check
+  task completeness
+- `after_implement` → verify extension validates against spec,
+  retrospective extension scores spec adherence
+
+The autopilot handles extension hooks by:
+1. Accepting optional, non-destructive hooks automatically
+2. Skipping hooks that duplicate its own verification
+3. Documenting hook decisions in the workflow file
+
+### Template Resolution
+
+When presets are installed, template resolution follows a
+4-tier priority stack:
+
+1. Project overrides (`.specify/templates/overrides/`)
+2. Installed presets (by priority number)
+3. Extension templates
+4. Core templates
+
+The autopilot doesn't need to know the resolution order — it
+just invokes `/speckit.*` commands and the template system
+handles resolution. But awareness helps with debugging if
+generated artifacts have unexpected structure.

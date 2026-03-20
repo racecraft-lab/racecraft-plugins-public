@@ -22,18 +22,65 @@ specify check
 
 ```bash
 cd your-project
-specify init --ai copilot    # or: --ai claude, --ai cursor, --ai codex
+specify init --ai claude
 ```
+
+**`specify init` options:**
+
+| Flag | Description |
+|------|-------------|
+| `--ai <agent>` | Agent type (see table below) |
+| `--ai-skills` | Install as agent skills (for Codex, Antigravity) |
+| `--ai-commands-dir <path>` | Custom command directory (for `--ai generic`) |
+| `--here` | Initialize in current directory (for upgrades) |
+| `--force` | Overwrite without confirmation |
+| `--no-git` | Skip git initialization |
+| `--script sh\|ps` | Script type (bash or PowerShell) |
+| `--skip-tls` | Disable SSL/TLS verification |
+| `--debug` | Verbose troubleshooting output |
+| `--ignore-agent-tools` | Skip agent availability checks |
+| `--github-token` | Explicit GitHub credentials |
+
+**Supported agents (25+):**
+
+| Agent | CLI Name | Notes |
+|-------|----------|-------|
+| Claude Code | `claude` | |
+| GitHub Copilot | `copilot` | IDE-based |
+| Cursor | `cursor-agent` | IDE-based |
+| Gemini CLI | `gemini` | |
+| Codex CLI | `codex` | Requires `--ai-skills` |
+| Windsurf | `windsurf` | IDE-based |
+| Qwen Code | `qwen` | |
+| opencode | `opencode` | |
+| Junie | `junie` | |
+| Kilo Code | `kilocode` | IDE-based |
+| Auggie CLI | `auggie` | |
+| Roo Code | `roo` | IDE-based |
+| CodeBuddy | `codebuddy` | |
+| Qoder CLI | `qodercli` | |
+| Kiro CLI | `kiro` | Alias: `kiro-cli` |
+| Amp | `amp` | |
+| SHAI | `shai` | |
+| Tabnine CLI | `tabnine` | |
+| Antigravity | `agy` | IDE-based, requires `--ai-skills` |
+| IBM Bob | `bob` | IDE-based |
+| Mistral Vibe | `vibe` | |
+| Kimi Code | `kimi` | |
+| Trae | `trae` | IDE-based |
+| Pi Coding Agent | `pi` | No MCP by default |
+| iFlow CLI | `iflow` | |
+| Generic | `generic` | Bring-your-own agent support |
 
 This creates:
 
 | Directory/File | Purpose |
 |---|---|
 | `.specify/templates/` | Templates that guide each SpecKit command |
-| `.specify/scripts/bash/` | Helper scripts for prerequisites checking |
-| `.specify/memory/constitution.md` | Your project's constitution (starts as a template) |
-| `.github/agents/speckit.*.agent.md` | Agent definitions for each slash command |
-| `.github/prompts/speckit.*.prompt.md` | Slash command stubs that invoke the agents |
+| `.specify/scripts/bash/` | Helper scripts (prerequisites, branch creation, plan setup) |
+| `.specify/memory/constitution.md` | Your project's constitution (starts as template) |
+| `.claude/commands/speckit.*.md` | Slash commands for Claude Code (varies by `--ai`) |
+| `.specify/init-options.json` | Persisted init options for upgrades |
 
 ### 3. Create Your Feature Branch
 
@@ -56,6 +103,67 @@ Before writing any specs, establish your project's principles:
 Tell the agent about your project: tech stack, testing philosophy, code style preferences, and architectural constraints. The agent will help you craft testable principles.
 
 **Tip:** Start with 4-5 principles. You can always amend later. See the [Constitution Guide](./constitution-guide.md) for detailed design guidance.
+
+### 5. Customize with Presets (Optional)
+
+Presets override templates to enforce methodology, compliance,
+or project-specific patterns:
+
+```bash
+specify preset search                          # browse available
+specify preset add <preset-name>               # install one
+specify preset add --dev ./my-preset           # install local preset
+specify preset resolve spec-template           # verify which template wins
+```
+
+See the [Presets & Extensions Guide](./presets-extensions-guide.md) for details.
+
+### 6. Add Extensions (Optional)
+
+Extensions add new commands and hooks — code review, verification,
+integration with Jira/Azure DevOps, and more:
+
+```bash
+specify extension search                       # browse 26+ community extensions
+specify extension add verify --from <zip-url>  # install from URL
+specify extension list                         # show installed
+```
+
+See the [Presets & Extensions Guide](./presets-extensions-guide.md) for the full catalog.
+
+### Upgrading an Existing Project
+
+If you already have SpecKit installed and want the latest version:
+
+```bash
+# 1. Upgrade CLI
+uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
+
+# 2. Back up constitution (will be overwritten)
+cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
+
+# 3. Update project files
+specify init --here --force --ai claude
+
+# 4. Restore constitution
+git restore .specify/memory/constitution.md
+
+# 5. Verify
+specify check
+```
+
+**Safe:** `specs/` is never modified by upgrades.
+
+### Non-Git Repos
+
+For projects without Git, set the `SPECIFY_FEATURE` environment
+variable to tell SpecKit which feature directory to use:
+
+```bash
+export SPECIFY_FEATURE="001-my-feature"
+```
+
+This replaces the auto-detection from Git branch names.
 
 ---
 
@@ -468,8 +576,12 @@ After implementation, specs and code naturally diverge as bugs are fixed and req
 
 ```
 INSTALL:    uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-INIT:       specify init --ai copilot
+INIT:       specify init --ai claude     # 25+ agents supported
+UPGRADE:    specify init --here --force --ai claude
 CHECK:      specify check
+DOCTOR:     /speckit.doctor         # project health diagnostics
+PRESETS:    specify preset search         # browse presets
+EXTENSIONS: specify extension search      # browse extensions
 BRANCH:     git checkout -b feature/my-feature
 
 WORKFLOW:   constitution → specify → clarify → plan → checklist → tasks → analyze → implement
@@ -496,6 +608,7 @@ MARKERS:
   [Gap]                 Missing requirement — address before Tasks
 
 GATES:
+  G0 (Prereqs)    Build, typecheck, lint, tests pass
   G1 (Specify)    No [NEEDS CLARIFICATION] markers
   G2 (Clarify)    All decisions documented
   G3 (Plan)       Architecture approved, gates pass

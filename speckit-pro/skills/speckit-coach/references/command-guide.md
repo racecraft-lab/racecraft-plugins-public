@@ -66,7 +66,7 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - Not defining Out of Scope — leads to unbounded features
 - Forgetting to commit spec.md before moving to the next phase
 
-### Phase Gate G1
+### Gate G1
 - [ ] No `[NEEDS CLARIFICATION]` markers remain
 - [ ] Requirements are testable and unambiguous
 - [ ] Success criteria are measurable
@@ -110,7 +110,7 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - Accepting all AI recommendations without thinking critically
 - Not reviewing the updated spec after clarification
 
-### Phase Gate G2
+### Gate G2
 - [ ] All `[NEEDS CLARIFICATION]` markers resolved
 - [ ] All decisions documented in `## Clarifications` section
 - [ ] Updated spec reviewed and approved
@@ -143,7 +143,7 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - Including too much implementation detail in plan.md — use supporting files
 - Forgetting to review generated data models and contracts
 
-### Phase Gate G3
+### Gate G3
 - [ ] Architecture approved
 - [ ] Constitution gates pass (Simplicity, Anti-Abstraction, Integration-First)
 - [ ] Dependencies identified
@@ -189,7 +189,7 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Not addressing `[Gap]` items — they represent missing requirements
 - Choosing domains based on project type alone instead of analyzing what's actually in the spec
 
-### Phase Gate G4
+### Gate G4
 - [ ] All `[Gap]` markers addressed (spec/plan updated)
 - [ ] Traceability ≥80% across all checklists
 - [ ] No unaddressed ambiguities
@@ -228,7 +228,7 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Not marking parallel-safe tasks with `[P]`
 - Forgetting the foundational phase
 
-### Phase Gate G5
+### Gate G5
 - [ ] Coverage verified — every FR and user story has tasks
 - [ ] Dependencies ordered correctly
 - [ ] Parallel opportunities identified with `[P]`
@@ -267,7 +267,7 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Running analyze without tasks.md (it needs all three: spec, plan, tasks)
 - Not re-running after fixing issues from the report
 
-### Phase Gate G6
+### Gate G6
 - [ ] No CRITICAL issues
 - [ ] HIGH issues reviewed and either fixed or justified
 - [ ] Coverage summary shows no unmapped requirements
@@ -297,7 +297,7 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Not committing after each phase — makes rollback impossible
 - Trying to implement everything at once instead of phase-by-phase
 
-### Phase Gate G7
+### Gate G7
 - [ ] All tasks marked complete in tasks.md
 - [ ] Tests pass
 - [ ] Manual verification complete
@@ -309,14 +309,412 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 
 ---
 
+## `/speckit.taskstoissues` — Export to GitHub Issues
+
+### When to Run
+- After tasks.md is finalized and you want to track tasks as GitHub Issues.
+
+### What It Does
+- Converts tasks.md entries into dependency-ordered GitHub Issues
+- Requires GitHub MCP server connection
+
+### What It Produces
+- GitHub Issues for each task with labels, dependencies, and descriptions
+
+---
+
+## Extension Commands (Installed)
+
+These commands are provided by installed SpecKit extensions.
+They extend the core workflow with post-implementation quality
+gates, code review, and project diagnostics.
+
+### Verify Extension — `/speckit.verify` / `/speckit.verify.run`
+
+**Purpose:** Post-implementation verification gate. Validates
+that the implementation matches spec.md, plan.md, tasks.md,
+and constitution.md.
+
+**When to run:** After `/speckit.implement`, before PR creation.
+Non-destructive (read-only report).
+
+**What it checks:** Spec adherence, plan conformance, task
+completion, constitution alignment.
+
+### Verify Tasks — `/speckit.verify-tasks` / `/speckit.verify-tasks.run`
+
+**Purpose:** Detect phantom completions — tasks marked `[X]`
+in tasks.md that have no real implementation behind them
+(missing files, dead code, or empty stubs).
+
+**When to run:** After implementation, especially if tasks were
+marked complete programmatically.
+
+**What it checks:** Five-layer verification cascade against
+every completed task.
+
+### Review Extension — `/speckit.review` / `/speckit.review.run`
+
+**Purpose:** Comprehensive code review using 6 specialized
+agents. Orchestrates all sub-reviews sequentially.
+
+**Sub-commands** (can be run individually):
+
+| Command | Focus |
+|---------|-------|
+| `/speckit.review.code` | Project guideline compliance, bug detection, code quality |
+| `/speckit.review.comments` | Comment accuracy, documentation completeness, comment rot |
+| `/speckit.review.tests` | Behavioral coverage, critical gaps, test resilience |
+| `/speckit.review.errors` | Silent failure detection, catch block analysis, error logging |
+| `/speckit.review.types` | Encapsulation, invariant expression, usefulness, enforcement |
+| `/speckit.review.simplify` | Clarity, unnecessary complexity, redundant abstractions (advisory) |
+
+**When to run:** After implementation, as part of code review
+workflow. Can run full suite (`/speckit.review`) or individual
+agents for focused review.
+
+### Retrospective — `/speckit.retrospective.analyze`
+
+**Purpose:** Post-implementation retrospective measuring spec
+adherence, implementation deviations, and lessons learned.
+Generates a `retrospective.md` with adherence scoring and
+drift analysis.
+
+**When to run:** After implementation is complete and PR is
+merged. Human-gated spec updates based on findings.
+
+### Cleanup — `/speckit.cleanup` / `/speckit.cleanup.run`
+
+**Purpose:** Post-implementation quality gate following the
+scout rule — fix small issues immediately, create tasks for
+medium issues, generate analysis for large issues.
+
+**When to run:** After implementation. Can fix small issues
+(formatting, naming, dead code) and flag larger concerns.
+
+### Doctor — `/speckit.doctor` / `/speckit.doctor.check`
+
+**Purpose:** Full project health diagnostic. Checks structure,
+agents, features, scripts, extensions, and git status.
+
+**When to run:** Anytime. Useful for:
+- Verifying project setup after `specify init`
+- Diagnosing issues with extensions or commands
+- Health check before starting a new spec
+
+---
+
+## CLI Commands (v0.3.2)
+
+Beyond the slash commands above, the `specify` CLI provides
+project management commands for presets, extensions, and
+project health.
+
+### `specify check` — Installation Health
+
+Verifies all required tools are installed and operational.
+
+```bash
+specify check
+```
+
+Shows which AI agents are detected (25+ supported), Git status, and CLI readiness.
+
+### `specify version` — Version Information
+
+```bash
+specify version
+```
+
+Shows CLI version, template version, platform, and architecture.
+
+---
+
+## Presets — Customizing Workflows
+
+Presets are **stackable, priority-ordered collections of template
+and command overrides**. They customize how specs, plans, tasks,
+checklists, and constitutions are generated without modifying
+core files.
+
+### When to Use Presets
+
+- **Methodology adaptation** — enforce Agile, Kanban, DDD, or custom methodology patterns in templates
+- **Compliance formatting** — add required sections, disclaimers, or formatting to artifacts
+- **Localization** — translate template sections to other languages
+- **Project-specific patterns** — encode TDD enforcement, architecture conventions, or testing mandates
+
+### Preset Commands
+
+| Command | Description |
+|---------|-------------|
+| `specify preset search` | Browse available presets in catalogs |
+| `specify preset add <name>` | Install preset from catalog |
+| `specify preset add --dev <path>` | Install from local directory (development) |
+| `specify preset add <name> --priority N` | Install with specific priority (lower wins) |
+| `specify preset list` | Show installed presets |
+| `specify preset resolve <template>` | Show which file wins for a template name |
+| `specify preset info <name>` | Get detailed preset information |
+| `specify preset remove <name>` | Uninstall preset |
+| `specify preset catalog list` | List active preset catalogs |
+| `specify preset catalog add <url>` | Add custom preset catalog |
+| `specify preset catalog remove <name>` | Remove preset catalog |
+
+### Template Resolution Order
+
+When a `/speckit.*` command needs a template, resolution checks
+these locations in order (first match wins):
+
+1. **Project overrides** — `.specify/templates/overrides/`
+2. **Installed presets** — `.specify/presets/<id>/templates/` (sorted by priority, lower number wins)
+3. **Extension templates** — `.specify/extensions/<id>/templates/`
+4. **Core templates** — `.specify/templates/`
+
+Use `specify preset resolve <template-name>` to debug which
+file is actually being used.
+
+### Stacking Presets
+
+Multiple presets can be installed simultaneously. Lower priority
+numbers win when templates conflict:
+
+```bash
+specify preset add compliance --priority 5    # wins over...
+specify preset add agile --priority 10        # ...this one
+```
+
+**Presets override, they don't merge.** When two presets provide
+the same template, the lower priority number's version is used
+entirely.
+
+### Creating Custom Presets
+
+1. Copy the `scaffold/` directory from the spec-kit repo
+2. Edit `preset.yml` with your metadata (id, name, version, priority)
+3. Add/modify templates in `templates/`
+4. Test locally: `specify preset add --dev .`
+5. Verify: `specify preset resolve spec-template`
+
+### Configuration
+
+| Location | Scope |
+|----------|-------|
+| `.specify/preset-catalogs.yml` | Project-level custom catalogs |
+| `~/.specify/preset-catalogs.yml` | User-level custom catalogs |
+| `SPECKIT_PRESET_CATALOG_URL` env var | Environment override |
+
+---
+
+## Extensions — Adding Capabilities
+
+Extensions are **modular packages** that add new commands, hooks,
+and workflows to SpecKit without modifying the core framework.
+They're independently versioned and optionally installed.
+
+### Extension Categories
+
+| Category | Purpose | Examples |
+|----------|---------|----------|
+| **docs** | Read, validate, or generate spec artifacts | Archive, DocGuard, Retrospective, Spec Sync |
+| **code** | Review, validate, or modify source code | Cleanup, Review, Verify, Verify Tasks |
+| **process** | Orchestrate workflow across phases | Conduct, Fleet Orchestrator, SDD Utilities |
+| **integration** | Sync with external platforms | Azure DevOps, Jira |
+| **visibility** | Report on project health or progress | Project Health Check, Project Status |
+
+### Extension Commands
+
+| Command | Description |
+|---------|-------------|
+| `specify extension search` | Browse all extension catalogs |
+| `specify extension search <keyword>` | Search by keyword |
+| `specify extension search --tag <tag>` | Filter by tag |
+| `specify extension search --author <name>` | Filter by author |
+| `specify extension search --verified` | Show verified only |
+| `specify extension info <name>` | Detailed extension info |
+| `specify extension add <name>` | Install from approved catalog |
+| `specify extension add --from <url>` | Install from ZIP URL |
+| `specify extension add --dev <path>` | Install from local directory |
+| `specify extension list` | Show installed extensions |
+| `specify extension update [name]` | Check for / apply updates |
+| `specify extension disable <name>` | Disable temporarily |
+| `specify extension enable <name>` | Re-enable |
+| `specify extension remove <name>` | Remove completely |
+| `specify extension remove <name> --keep-config` | Remove but preserve config |
+| `specify extension catalog list` | List active extension catalogs |
+| `specify extension catalog add <url>` | Add custom catalog |
+| `specify extension catalog remove <name>` | Remove catalog |
+
+### Community Extensions (26 available)
+
+| Extension | Category | Purpose |
+|-----------|----------|---------|
+| Archive | docs | Archive merged features into project memory |
+| Cognitive Squad | docs | Multi-agent system with Triadic Model |
+| DocGuard | docs | Documentation validation and scoring |
+| Iterate | docs | Two-phase refine-and-apply for spec docs |
+| Learning | docs | Generate educational guides from implementations |
+| Reconcile | docs | Update artifacts to address implementation drift |
+| Retrospective | docs | Post-implementation review with spec adherence scoring |
+| Spec Sync | docs | Detect and resolve drift between specs and code |
+| Understanding | docs | Quality analysis using 31 metrics (IEEE/ISO) |
+| V-Model | docs | Paired generation of development and test specs |
+| Cleanup | code | Quality gate — fix small issues, create tasks for medium |
+| Ralph Loop | code | Autonomous implementation using AI agent CLI |
+| Review | code | Comprehensive code review with 6 specialized agents |
+| Verify | code | Post-implementation verification against spec artifacts |
+| Verify Tasks | code | Detect phantom completions (tasks marked done but not implemented) |
+| Conduct | process | Orchestrate phases via sub-agent delegation |
+| Fleet Orchestrator | process | Full feature lifecycle with human-in-the-loop gates |
+| SDD Utilities | process | Resume workflows, validate health, verify traceability |
+| Azure DevOps | integration | Sync user stories and tasks to Azure DevOps work items |
+| Jira | integration | Create Epics, Stories, and Issues from specifications |
+| Project Health Check | visibility | Diagnose project across multiple dimensions |
+| Project Status | visibility | Show current SDD workflow progress |
+
+### Hook Events
+
+Extensions can register hooks that fire before or after core
+commands. Available hook events:
+
+| Event | Fires | Example Use |
+|-------|-------|-------------|
+| `before_specify` | Before `/speckit.specify` | Pre-flight checks |
+| `after_specify` | After `/speckit.specify` | Auto-sync to external tools |
+| `before_plan` | Before `/speckit.plan` | Validate prerequisites |
+| `after_plan` | After `/speckit.plan` | Generate additional artifacts |
+| `before_tasks` | Before `/speckit.tasks` | Verify plan completeness |
+| `after_tasks` | After `/speckit.tasks` | Verify tasks, create issues |
+| `before_implement` | Before `/speckit.implement` | Checklist pre-check |
+| `after_implement` | After `/speckit.implement` | Code review, retrospective |
+
+Configure hooks in `.specify/extensions.yml`:
+
+```yaml
+hooks:
+  after_tasks:
+    - extension: verify-tasks
+      command: speckit.verify-tasks.run
+      enabled: true
+      optional: true
+      prompt: "Verify all tasks are properly specified?"
+  after_implement:
+    - extension: verify
+      command: speckit.verify.run
+      enabled: true
+      optional: true
+      prompt: "Verify implementation against spec?"
+```
+
+### Extension Configuration Layers
+
+Configuration resolves in priority order (higher overrides lower):
+
+1. **Extension defaults** — built into the extension
+2. **Project config** — `.specify/extensions/<ext>/<ext>-config.yml` (committed to git)
+3. **Local overrides** — `.specify/extensions/<ext>/<ext>-config.local.yml` (gitignored)
+4. **Environment variables** — `SPECKIT_<EXT_ID>_*` (e.g., `SPECKIT_JIRA_PROJECT_KEY`)
+
+### Catalog Management
+
+SpecKit searches a **catalog stack** — multiple catalogs
+checked simultaneously:
+
+| Priority | Catalog | Installable? | Purpose |
+|----------|---------|-------------|---------|
+| 1 | `catalog.json` (default) | Yes | Curated, installable extensions |
+| 2 | `catalog.community.json` | No | Discovery-only community extensions |
+
+Add custom catalogs for your organization:
+
+```bash
+specify extension catalog add \
+  --name "internal" \
+  --install-allowed \
+  https://internal.company.com/spec-kit/catalog.json
+```
+
+Or configure in `.specify/extension-catalogs.yml`:
+
+```yaml
+catalogs:
+  - name: "internal"
+    url: "https://internal.company.com/catalog.json"
+    priority: 2
+    install_allowed: true
+```
+
+### Version Control for Extensions
+
+**Commit to git:**
+- `.specify/extensions.yml` (installed extension list + hooks)
+- `.specify/extensions/*/<ext>-config.yml` (shared config)
+
+**Gitignore:**
+- `.specify/extensions/.cache/`
+- `.specify/extensions/.backup/`
+- `.specify/extensions/*/*.local.yml`
+- `.specify/extensions/.registry`
+
+---
+
 ## Upgrade Guidance
 
-When upgrading SpecKit (`specify init --here --force --ai copilot`):
+### Upgrading the CLI
 
-1. **Always back up constitution.md first** — `specify init --here --force` overwrites it with the default template
-2. **Back up custom templates** — `.specify/templates/` will be overwritten
-3. **`specs/` is safe** — never included in upgrade packages, never overwritten
-4. **Restore after upgrade**: `git restore .specify/memory/constitution.md`
-5. **Use `specify check`** to verify CLI installation
-6. **`SPECIFY_FEATURE` env var** for non-git repos: `export SPECIFY_FEATURE="001-my-feature"`
-7. **Duplicate slash commands** in IDE agents — manually delete old files and restart IDE
+```bash
+uv tool install specify-cli --force --from git+https://github.com/github/spec-kit.git
+```
+
+Verify: `specify version` → should show latest version.
+
+### Upgrading Project Files
+
+```bash
+# 1. Back up constitution (WILL be overwritten)
+cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
+
+# 2. Back up custom templates
+cp -r .specify/templates .specify/templates-backup
+
+# 3. Run upgrade
+specify init --here --force --ai claude
+
+# 4. Restore constitution
+git restore .specify/memory/constitution.md
+# or: cp .specify/memory/constitution-backup.md .specify/memory/constitution.md
+
+# 5. Verify
+specify check
+```
+
+### What's Safe
+
+- **`specs/` directory** — completely excluded from template packages, never modified
+- **Extension configurations** — not touched by `specify init`
+- **Preset configurations** — not touched by `specify init`
+
+### What's Overwritten
+
+- **Constitution** (`constitution.md`) — always back up first
+- **Templates** (`.specify/templates/`) — custom modifications lost
+- **Scripts** (`.specify/scripts/`) — replaced with latest hardened versions
+- **Commands** (`.claude/commands/speckit.*`) — replaced with latest versions
+
+### Version Compatibility
+
+| Feature | Minimum Version |
+|---------|----------------|
+| Core commands (specify, plan, tasks, etc.) | Any version |
+| Presets (`specify preset *`) | v0.3.0+ |
+| Extensions (`specify extension *`) | v0.2.0+ |
+| Hook events (before/after) | v0.3.1+ |
+| Enable/disable toggle | v0.3.2+ |
+| `init-options.json` persistence | v0.3.0+ |
+
+Check your version: `specify version`
+
+### Common Issues
+
+- **Duplicate slash commands** in IDE agents — delete old files, restart IDE
+- **`SPECIFY_FEATURE` env var** for non-git repos: `export SPECIFY_FEATURE="001-my-feature"`
+- **Custom templates lost** — use presets instead of modifying core templates (presets survive upgrades)

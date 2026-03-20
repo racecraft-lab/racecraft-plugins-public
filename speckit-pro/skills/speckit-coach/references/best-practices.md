@@ -192,6 +192,78 @@ Since specs are decoupled from code, you can request AI agents to generate compe
 
 This enables rapid exploration without rewriting requirements.
 
+## Presets & Extensions Best Practices
+
+### When to Use What
+
+| Need | Solution | Why |
+|------|----------|-----|
+| Enforce methodology across templates | **Preset** | Overrides template content without modifying core files |
+| Add new commands/workflows | **Extension** | Provides new slash commands and hook events |
+| One-off template tweak for one project | **Project override** (`.specify/templates/overrides/`) | Highest priority, no preset needed |
+| Modify core template permanently | **Fork + custom catalog** | Don't modify `.specify/templates/` directly — upgrades overwrite it |
+
+### Preset Stacking
+
+- Use **lower priority numbers** for more important presets (lower wins)
+- **Presets override, they don't merge** — if two presets provide the same template, only the lower-priority one is used
+- Debug resolution issues with `specify preset resolve <template-name>`
+- Keep custom presets in `.specify/presets/` and install with `--dev` for local development
+
+### Extension Selection Guide
+
+| Project Needs | Recommended Extensions |
+|---------------|----------------------|
+| Post-implementation quality | verify, cleanup, verify-tasks |
+| Code review workflow | review (7 specialized agents) |
+| Spec-code drift detection | retrospective, spec-sync, reconcile |
+| External tool integration | jira, azure-devops |
+| Project health monitoring | doctor (health check), project-status |
+| Full lifecycle orchestration | conduct, fleet-orchestrator |
+| Educational/learning | learning, understanding |
+
+### Extension Hooks
+
+- Configure hooks in `.specify/extensions.yml` — not in individual extension configs
+- Use `optional: true` for hooks that should prompt before running
+- The autopilot handles hooks automatically (accepts non-destructive, skips duplicates)
+- Common hook patterns: `after_tasks` → verify-tasks, `after_implement` → verify + retrospective
+
+### Template Resolution Debugging
+
+When templates aren't behaving as expected:
+
+```bash
+specify preset resolve spec-template     # which file wins?
+specify preset list                      # check priorities
+specify extension list                   # check extension templates
+ls .specify/templates/overrides/         # check project overrides
+```
+
+Resolution order: overrides > presets (by priority) > extensions > core.
+
+## Phase Re-execution (Idempotence)
+
+SpecKit phases are **safe to re-run**. Re-running a phase
+overwrites its artifacts with freshly generated versions but
+doesn't corrupt upstream or downstream state:
+
+- Re-running `/speckit.specify` regenerates `spec.md`
+- Re-running `/speckit.plan` regenerates `plan.md`, `research.md`, etc.
+- Re-running `/speckit.tasks` regenerates `tasks.md`
+
+**When to re-run:**
+- After fixing a spec issue discovered during plan or tasks
+- After the autopilot resumes from an interruption
+- After consensus changes that affect artifacts
+
+**What to watch for:**
+- Re-running specify after clarify may lose clarification answers
+  (they're in spec.md which gets overwritten) — copy the
+  Clarifications section before re-running
+- Re-running tasks after implementation has started will reset
+  task completion markers (`[X]` → `[ ]`)
+
 ## Anti-Patterns
 
 | Anti-Pattern | Why It's Bad | Fix |
