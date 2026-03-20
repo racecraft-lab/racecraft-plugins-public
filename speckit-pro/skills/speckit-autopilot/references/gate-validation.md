@@ -9,10 +9,11 @@ Programmatic gate checks performed after each SDD phase. The autopilot validates
 **Check:** Constitution principles validated against the current codebase.
 
 ```
-1. pnpm typecheck → must pass (0 errors)
-2. pnpm test → must pass (record count as baseline)
-3. pnpm build → must pass
-4. pnpm lint → must pass
+1. TYPECHECK command → must pass (0 errors)
+2. UNIT_TEST + INTEGRATION_TEST commands → must pass (record count as baseline)
+3. BUILD command → must pass
+4. LINT command → must pass
+(use PROJECT_COMMANDS discovered in Step 0.10)
 5. Architecture patterns verified (e.g., definitions/primitives split exists)
 6. Workflow file's Prerequisites table filled with baselines
 7. Constitution Check summary line set to "✅ Verified"
@@ -196,32 +197,51 @@ implementation.
 
 ### G7 — After Implement
 
-**Check:** Full verification suite passes AND TDD was followed.
+**Check:** Full verification suite passes, TDD was followed,
+and no placeholder tests exist.
 
 ```
-1. Run build command (e.g., pnpm build) → must pass
-2. Run typecheck (e.g., pnpm typecheck) → must pass
-3. Run lint (e.g., pnpm lint) → must pass
-4. Run tests (e.g., pnpm test) → must pass (unit + contract + integration)
-5. Verify spec-specific integration tests exist:
+1. Run BUILD command → must pass
+2. Run TYPECHECK command → must pass (skip if N/A)
+3. Run LINT command → must pass
+4. Run UNIT_TEST command → must pass
+5. Run INTEGRATION_TEST command separately → must pass.
+   Many projects exclude integration tests from the default
+   test command — you MUST run both.
+(use PROJECT_COMMANDS discovered in Step 0.10)
+6. Verify spec-specific integration tests exist:
    Glob("tests/integration/*<spec-name>*") → must find files
-6. Verify test count increased from G0 baseline
-7. ALL must pass for G7 to pass
+7. Verify test count increased from G0 baseline
+8. Verify NO placeholder tests in new files:
+   Grep("it\.todo\(|test\.todo\(|it\.skip\(|xit\(|xtest\(|xit\(",
+        path: "specs/<number>-<name>/") → must be 0
+   Grep("it\.todo\(|test\.todo\(|it\.skip\(|xit\(",
+        path: "tests/integration/*<spec-name>*") → must be 0
+9. ALL must pass for G7 to pass
 ```
+
+**Placeholder Test Check:** `it.todo()`, `it.skip()`,
+`xit()`, `test.todo()`, and empty test bodies are NOT real
+tests. They don't fail during RED and don't verify behavior
+during GREEN. If ANY are found in spec-related files, G7
+FAILS. The implement-executor must replace them with real
+assertions.
 
 **TDD Verification:** The implement-executor's summary
 includes RED→GREEN evidence for each task. If the summary
-shows implementation without RED phase verification, the
-gate FAILS — re-run the Implement phase.
+shows implementation without RED phase verification (real
+assertion failures, not "skipped" or "todo"), the gate
+FAILS — re-run the Implement phase.
 
 **Integration Test Requirement:** Spec-specific integration
-tests MUST exist. If missing, spawn implement-executor to
-create them before G7 can pass.
+tests MUST exist with real assertions. If missing or all
+placeholders, spawn implement-executor to create/fix them
+before G7 can pass.
 
 **Auto-Fix:**
 - Build failures: Check for syntax errors, missing imports
 - Type errors: Fix type mismatches, add missing types
-- Lint errors: Run auto-fix (e.g., `pnpm lint:fix`)
+- Lint errors: Run LINT_FIX command
 - Test failures: Fix failing tests or implementation bugs
 - Missing integration tests: Spawn implement-executor
 
@@ -240,7 +260,7 @@ then push branch and create PR via `gh pr create`.
 | G4 | Checklist | 0 [Gap] markers | context_builder remediation | 2 |
 | G5 | Tasks | All FRs mapped to tasks | Generate missing tasks | 2 |
 | G6 | Analyze | 0 findings (all severities) | context_builder remediation | 2 |
-| G7 | Implement | Build+type+lint+test pass, integration tests exist, TDD evidence | Fix errors, create tests | 2 |
+| G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | 2 |
 
 ## Failure Escalation Protocol
 

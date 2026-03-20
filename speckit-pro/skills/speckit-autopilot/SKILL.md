@@ -377,10 +377,10 @@ principle is satisfied in the current codebase and records baselines.
 
    | Verification Type | How to Check |
    | --- | --- |
-   | Type safety | Run `pnpm typecheck` (or project equivalent) |
-   | Test suite | Run `pnpm test` — record current test count and file count as baseline |
-   | Build discipline | Run `pnpm build` |
-   | Lint/format | Run `pnpm lint` |
+   | Type safety | Run TYPECHECK command (from Step 0.10) |
+   | Test suite | Run UNIT_TEST + INTEGRATION_TEST commands — record count as baseline |
+   | Build discipline | Run BUILD command |
+   | Lint/format | Run LINT command |
    | Architecture patterns | Use Glob/Grep to verify the pattern exists (e.g., definitions/primitives split) |
    | Code review items (KISS, YAGNI, SOLID) | Mark as `✅ Verified` — these are validated during implementation, not pre-flight |
 
@@ -402,7 +402,7 @@ principle is satisfied in the current codebase and records baselines.
 ```markdown
 | Principle | Requirement | Verification | Status |
 |-----------|-------------|--------------|--------|
-| I. Type-First Development | All functions typed, Zod contracts | `pnpm typecheck` | ✅ Pass |
+| I. Type-First Development | All functions typed, Zod contracts | TYPECHECK command | ✅ Pass |
 | II. Separation of Concerns | definitions/ + primitives/ split | Code review | ✅ 34 definitions, 34 primitives |
 | V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ✅ 1924 tests pass |
 
@@ -434,6 +434,60 @@ implementation agent (e.g., "omnifocus-developer" or
 "use the X agent for implementation").
 
 **Record the result** for use in Step 2's Implement phase.
+
+### 0.10 Project Command Discovery
+
+Discover how this project builds, lints, typechecks, and
+tests. This makes the plugin work with ANY tech stack —
+not just Node.js/pnpm projects.
+
+**Discovery order (first match wins for each command):**
+
+1. **CLAUDE.md** — Look for a "Build Commands" table or
+   similar section listing project commands. This is the
+   most authoritative source.
+2. **package.json** (Node.js) — Parse `scripts` for
+   `build`, `test`, `lint`, `typecheck`, `test:integration`,
+   `test:e2e` keys. Detect package manager from lockfile:
+   `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn,
+   `package-lock.json` → npm, `bun.lockb` → bun.
+3. **Makefile** — Look for `build`, `test`, `lint`,
+   `integration` targets
+4. **pyproject.toml / setup.cfg** (Python) — Look for
+   pytest config, ruff/flake8 config, mypy config
+5. **Cargo.toml** (Rust) — `cargo build`, `cargo test`,
+   `cargo clippy`
+6. **go.mod** (Go) — `go build`, `go test`, `go vet`,
+   `golangci-lint`
+
+**Record these commands:**
+
+```text
+PROJECT_COMMANDS:
+  BUILD:              <e.g., pnpm build, cargo build, go build>
+  TYPECHECK:          <e.g., pnpm typecheck, mypy ., tsc --noEmit>
+  LINT:               <e.g., pnpm lint, ruff check, cargo clippy>
+  LINT_FIX:           <e.g., pnpm lint:fix, ruff check --fix>
+  UNIT_TEST:          <e.g., pnpm test, pytest, cargo test, go test ./...>
+  INTEGRATION_TEST:   <e.g., pnpm test:integration, pytest tests/integration>
+  SINGLE_FILE_TEST:   <e.g., pnpm test <file>, pytest <file>, go test <file>>
+  SINGLE_FILE_INTEGRATION: <e.g., pnpm test:integration:file <file>>
+  FULL_VERIFY:        <BUILD && TYPECHECK && LINT && UNIT_TEST && INTEGRATION_TEST>
+```
+
+**If a command type is not found** (e.g., no typecheck for
+a Python project without mypy), set it to `"N/A"` — it
+will be skipped during verification.
+
+**If integration tests use a separate config** (e.g.,
+`vitest.integration.config.ts`), the default test command
+may EXCLUDE them. Discover both commands and record them
+separately.
+
+**Record in the workflow file** under the Prerequisites
+section so the commands persist across context compactions.
+Pass these commands to every subagent prompt that needs
+to run builds or tests.
 
 ## Step 1: Parse Workflow State
 
@@ -737,6 +791,16 @@ Agent(
     Implement tasks from tasks.md for SPEC-XXX.
     Follow the plan in plan.md.
 
+    PROJECT_COMMANDS (from Step 0.10):
+      BUILD: <discovered build command>
+      TYPECHECK: <discovered typecheck command>
+      LINT: <discovered lint command>
+      LINT_FIX: <discovered lint fix command>
+      UNIT_TEST: <discovered unit test command>
+      INTEGRATION_TEST: <discovered integration test command>
+      SINGLE_FILE_TEST: <discovered single file test command>
+      SINGLE_FILE_INTEGRATION: <discovered single file integration command>
+
     <if PROJECT_IMPLEMENTATION_AGENT was detected>
     PROJECT CONTEXT: This project uses the
     "<detected agent name>" patterns. Read its agent
@@ -814,7 +878,7 @@ Agent(
 not just the new ones:
 
 ```text
-Bash("pnpm test tests/integration/")  ← TOOL CALL
+Bash("<INTEGRATION_TEST command>")     ← TOOL CALL
 ```
 
 If any fail → fix and re-run (max 2 attempts). Commit
@@ -830,8 +894,9 @@ effects. The full suite catches regressions before the PR.
 ### 3.2 PR Creation
 
 ```text
-1. Run final verification: pnpm build && pnpm typecheck && pnpm lint && pnpm test
-   (or project-equivalent commands from CLAUDE.md)
+1. Run final verification (BOTH test suites):
+   <BUILD> && <TYPECHECK> && <LINT> && <UNIT_TEST> && <INTEGRATION_TEST>
+   (use PROJECT_COMMANDS discovered in Step 0.10)
 2. Detect remote: git remote -v
 3. Push: git push -u <remote> <branch>
 4. Create PR:
@@ -906,7 +971,7 @@ Skill("loop", args: "5m
   a. Read the comment body and the file it references
   b. If code fix needed:
      - Edit the file
-     - Bash('pnpm build && pnpm typecheck && pnpm test')
+     - Bash('<BUILD> && <TYPECHECK> && <UNIT_TEST> && <INTEGRATION_TEST>')
      - Bash('git add <file> && git commit -m
        \"fix(SPEC-XXX): address review - <summary>\"')
      - Bash('git push')
@@ -920,7 +985,7 @@ Skill("loop", args: "5m
        classifier:RESOLVED}) { minimizedComment { isMinimized }
        }}\"')
   c. If style/format:
-     - Bash('pnpm lint:fix')
+     - Bash('<LINT_FIX>')
      - Commit, push, reply, resolve
   d. If question or false positive:
      - Reply with explanation via gh api, then resolve

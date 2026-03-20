@@ -37,6 +37,7 @@ Two skills packaged as a single plugin:
 | `/speckit-pro:autopilot <workflow.md>` | Execute SpecKit workflow autonomously |
 | `/speckit-pro:coach <question>` | Get SDD coaching and guidance |
 | `/speckit-pro:status [SPEC-ID]` | Full project roadmap, phase detail, and next-spec recommendation |
+| `/speckit-pro:resolve-pr <PR>` | Address all GitHub review comments, fix code, and resolve threads via gh CLI |
 
 ## Architecture
 

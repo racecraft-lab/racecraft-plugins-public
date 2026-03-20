@@ -140,8 +140,8 @@ it does NOT invoke a `/speckit.*` command.
 
 1. Read `.specify/memory/constitution.md` — extract all
    numbered principles
-2. Run automated checks (`pnpm typecheck`, `pnpm test`,
-   `pnpm build`, `pnpm lint`)
+2. Run automated checks using PROJECT_COMMANDS from Step
+   0.10 (BUILD, TYPECHECK, LINT, UNIT_TEST, INTEGRATION_TEST)
 3. Verify structural patterns (e.g., definitions/primitives
    split)
 4. Record baselines in the workflow file's Prerequisites
@@ -394,7 +394,7 @@ regressions from other specs.
 2. If missing → spawn implement-executor to create them
    (the Implement phase failed to meet this requirement)
 3. Run the FULL integration suite (all specs, not just new):
-   `Bash("pnpm test tests/integration/")`
+   `Bash("<INTEGRATION_TEST command>")`
 4. Fix any failures (max 2 attempts)
 5. Record results in workflow file
 
