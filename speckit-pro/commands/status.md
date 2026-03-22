@@ -149,12 +149,14 @@ that proposes the next spec to implement.
 This is the highest-priority unblocked spec. It adds full-text search, smart
 queries, and database access — the most-requested capabilities for GTD workflows.
 
-To start:
+To get started:
 
-1. Create workflow file:
-   `cp templates/workflow-template.md docs/ai/specs/SPEC-009-workflow.md`
-2. Populate the workflow prompts with project-specific details
-3. Run: `/speckit-pro:autopilot docs/ai/specs/SPEC-009-workflow.md`
+```text
+/speckit-pro:setup SPEC-009
+```
+
+This creates the worktree, branch, and populated workflow file.
+Then run `/speckit-pro:autopilot` to execute it.
 
 **Alternatives** (if you prefer a smaller spec first):
 
@@ -189,8 +191,7 @@ master plan scope and suggest creating a workflow file:
 ```text
 SPEC-008 (Perspectives) — ⏳ Not Started
 No workflow file found. To begin:
-1. Create workflow: cp templates/workflow-template.md docs/ai/specs/SPEC-008-workflow.md
-2. Run autopilot: /speckit-pro:autopilot docs/ai/specs/SPEC-008-workflow.md
+/speckit-pro:setup SPEC-008
 ```
 
 ### 7. If No Master Plan or Workflow Files Found

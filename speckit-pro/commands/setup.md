@@ -185,9 +185,8 @@ Update the master plan's Progress Tracking table IN THE
 WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
 
 ```text
-1. Edit the master plan IN THE WORKTREE:
-   Edit(".worktrees/<number>-<short-name>/docs/ai/omnifocus-mcp-master-plan.md"
-     or wherever the master plan lives in the worktree)
+1. Edit the master plan found in Step 1, using the WORKTREE path:
+   Edit(".worktrees/<number>-<short-name>/<master-plan-path-from-step-1>")
 
 2. Commit IN THE WORKTREE:
    Bash("cd .worktrees/<number>-<short-name> && \

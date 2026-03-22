@@ -142,8 +142,8 @@ it does NOT invoke a `/speckit.*` command.
    numbered principles
 2. Run automated checks using PROJECT_COMMANDS from Step
    0.10 (BUILD, TYPECHECK, LINT, UNIT_TEST, INTEGRATION_TEST)
-3. Verify structural patterns (e.g., definitions/primitives
-   split)
+3. Verify structural patterns documented in CLAUDE.md
+   (e.g., source code organization, module boundaries)
 4. Record baselines in the workflow file's Prerequisites
    table
 5. Set the "Constitution Check" summary line
@@ -151,16 +151,24 @@ it does NOT invoke a `/speckit.*` command.
 **Gate:** G0 — all automated checks must pass. If any
 fail, STOP.
 
-**Extension: Doctor Health Check (if installed):**
+**Doctor Health Check (ALWAYS — plugin skill):**
 After G0 passes, run `/speckit.doctor` for a full
 project diagnostic (structure, agents, features, scripts,
 extensions, git). Log the report in the workflow file.
 
 ```text
 TaskUpdate: "Phase 0: Doctor Health Check" → in_progress
-Skill("speckit.doctor")
+Agent(
+  subagent_type: "general-purpose",
+  description: "SPEC-XXX doctor health check",
+  prompt: "Run /speckit.doctor for this project.
+    Return the diagnostic report summary."
+)
 TaskUpdate: → completed
 ```
+
+⚠️ Use Agent() subagent, NOT Skill() directly — Skill() loads
+the command into your context and can kill the agent loop.
 
 ### Phase 1: Specify
 
@@ -186,16 +194,14 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
 
 Spawn a **separate subagent for each clarify session**.
-Each subagent gets the **interactive prefix** telling it
-to research and answer every question the command surfaces.
+The clarify-executor invokes `/speckit.clarify` and answers
+questions autonomously using its research tools.
 
 ```text
 For each clarify session in the workflow file:
   1. TaskUpdate: session task → in_progress
   2. Agent(subagent_type: "clarify-executor",
           prompt: """
-            <interactive prefix — see SKILL.md Clarify prefix>
-
             Run /speckit.clarify with: <session prompt>
           """)
   3. Parse executor's "Unresolved for consensus" section
@@ -295,7 +301,7 @@ Spawn a subagent.
 **Gate:** G5 — cross-reference every FR in spec.md with
 tasks.md
 
-**Extension: Verify Tasks (if installed):**
+**Verify Tasks (ALWAYS — plugin skill):**
 After G5 passes, run `/speckit.verify-tasks` to detect
 phantom completions — tasks marked `[X]` that have no real
 implementation. This catches tasks that were incorrectly
@@ -303,9 +309,35 @@ marked complete during previous iterations.
 
 ```text
 TaskUpdate: "Phase 5: Verify Tasks" → in_progress
-Skill("speckit.verify-tasks")
+Agent(
+  subagent_type: "general-purpose",
+  description: "SPEC-XXX verify tasks",
+  prompt: "Run /speckit.verify-tasks for SPEC-XXX.
+    Check for phantom completions — tasks marked [X]
+    that have no real implementation. Return findings."
+)
 TaskUpdate: → completed
 ```
+
+⚠️ Use Agent() subagent, NOT Skill() directly.
+
+**Optional: Tasks to GitHub Issues:**
+If the project uses GitHub Issues for tracking and the GitHub
+MCP server is available, export tasks to issues:
+
+```text
+TaskUpdate: "Phase 5: Tasks to Issues" → in_progress
+Agent(
+  subagent_type: "general-purpose",
+  description: "SPEC-XXX tasks to issues",
+  prompt: "Run /speckit.taskstoissues for SPEC-XXX."
+)
+TaskUpdate: → completed
+```
+
+Skip if GitHub MCP is not configured or the project uses a
+different tracker (Jira, Azure DevOps, etc. — those have
+their own extensions).
 
 **Commit:**
 `git add specs/ && git commit -m "feat(SPEC-XXX): complete tasks phase"`
@@ -347,68 +379,150 @@ advance immediately.
 **Commit:**
 `git add specs/ && git commit -m "feat(SPEC-XXX): complete analyze phase"`
 
-### Phase 7: Implement
+### Phase 7: Implement (Task-Level Dispatch)
 
-Read the workflow file's `### Implement Prompt` section.
+Phase 7 uses **task-level dispatch**: the orchestrator parses
+tasks.md and dispatches each task (or parallel group) to the
+best-fit agent. This replaces the monolithic implement-executor
+pattern.
 
-ALWAYS use the `implement-executor` agent. This agent has
-TDD red-green-refactor as `<hard_constraints>` — tests
-are written and verified FAILING before any implementation
-code. Integration tests are mandatory.
+**Why task-level:** Subagents cannot spawn other subagents
+(Claude Code platform constraint). The flat orchestrator-worker
+pattern — recommended by Anthropic's BrowseComp architecture
+and Research system — routes each task to a specialized agent
+from the orchestrator level.
+
+#### Step 1: Parse tasks.md
 
 ```text
-Agent(
-  subagent_type: "implement-executor",
-  description: "SPEC-XXX implement",
-  prompt: """
-    Implement tasks from tasks.md for SPEC-XXX.
-    Follow the plan in plan.md.
-
-    <if PROJECT_IMPLEMENTATION_AGENT detected in Step 0.9>
-    PROJECT CONTEXT: Read .claude/agents/<agent>.md for
-    domain-specific conventions (architecture, file
-    layout, naming, API patterns).
-    </if>
-
-    Integration tests are MANDATORY.
-
-    Workflow prompt:
-    ---
-    <workflow implement prompt>
-    ---
-  """
-)
+1. Read tasks.md from specs/<feature>/
+2. Parse phase groups (## Phase 1: Setup, ## Phase 2: ..., etc.)
+3. Within each phase group:
+   - Identify [P] (parallel) vs sequential tasks
+   - Classify: test-only, implementation, verification
+4. Build ordered task list respecting phase dependencies
 ```
 
-The implement-executor enforces:
-- **RED:** Write tests first → run → verify FAILURE
-- **GREEN:** Write minimum code → run → verify PASS
-- **REFACTOR:** Clean up → run → verify STILL PASSING
-- Integration tests created for every spec
-- Full verification suite after each task phase
+#### Step 2: Load TDD Protocol
 
-**Project agent context (Step 0.9):** If a project
-implementation agent was detected, its description is
-included in the prompt so the implement-executor follows
-the project's patterns for WHAT to build. TDD governs
-HOW to build it.
+```text
+Read references/tdd-protocol.md → store as TDD_PROTOCOL
+```
 
-For `[P]` tasks, spawn parallel implement-executor agents
-with worktree isolation. Each follows the same TDD cycle.
+This protocol is injected into every implementation agent's
+prompt, ensuring identical RED→GREEN→REFACTOR discipline
+regardless of which agent executes the task.
+
+#### Step 3: Task-Level Execution Loop
+
+```text
+Initialize COMPLETED_TASKS = {}
+
+For each phase group in tasks.md:
+  TaskUpdate: "<Phase 7: group name>" → in_progress
+
+  For each task in the group:
+    1. ROUTE to agent:
+       a. PROJECT_IMPLEMENTATION_AGENT — if task description
+          matches keywords from the detected agent (Step 0.9)
+       b. implement-executor — if test-only task (keywords:
+          "test", "contract test", "unit test", "integration")
+       c. domain-researcher — if research task (keywords:
+          "research", "investigate", "explore API")
+       d. orchestrator-direct — if verification-only (keywords:
+          "verify", "run", "check", "build", "lint")
+       e. implement-executor — default fallback
+
+    2. BUILD prompt and DISPATCH:
+       Agent(
+         subagent_type: "<routed agent>",
+         isolation: "worktree" (if [P] task in parallel group),
+         description: "SPEC-XXX <task-id> <brief>",
+         prompt: """
+           <tdd_protocol>
+           <TDD_PROTOCOL contents>
+           </tdd_protocol>
+
+           PROJECT_COMMANDS:
+             BUILD: <cmd>  TYPECHECK: <cmd>  LINT: <cmd>
+             UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
+             SINGLE_FILE_TEST: <cmd>
+             SINGLE_FILE_INTEGRATION: <cmd>
+
+           <if PRESET_CONVENTIONS>
+           PRESET_CONVENTIONS: ...
+           </if>
+
+           COMPLETED_TASKS:
+             <structured list of prior task results>
+
+           Your task:
+           ---
+           <exact task description from tasks.md>
+           ---
+         """
+       )
+
+    3. PARALLEL dispatch for [P] groups:
+       Spawn ALL [P] tasks simultaneously — each with
+       isolation: "worktree". Collect all results.
+       If merge conflicts → fall back to sequential.
+
+    4. SEQUENTIAL dispatch:
+       Spawn one agent, await result, pass context to next.
+
+    5. ACCUMULATE context:
+       COMPLETED_TASKS[T00X] = {
+         files: [paths created/modified],
+         tests: N,
+         status: "GREEN" | "RED" | "error"
+       }
+
+  Phase-group verification (orchestrator-direct):
+    Bash(BUILD) && Bash(TYPECHECK) && Bash(LINT) &&
+    Bash(UNIT_TEST)
+    If any fail → dispatch fix agent, re-run.
+
+  TaskUpdate: "<Phase 7: group name>" → completed
+```
+
+#### Step 4: Final Verification
+
+After all phase groups complete:
+
+```text
+Run FULL_VERIFY:
+  Bash(BUILD) && Bash(TYPECHECK) && Bash(LINT) &&
+  Bash(UNIT_TEST) && Bash(INTEGRATION_TEST)
+```
+
+#### Agent Routing Table
+
+| Task Type | Agent | TDD Protocol? |
+|-----------|-------|---------------|
+| Contract/unit/integration tests | `implement-executor` | Yes |
+| Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
+| Research / API investigation | `domain-researcher` | No |
+| Verification (build, lint, typecheck) | orchestrator-direct (Bash) | No |
+
+Every agent receiving implementation work gets the TDD protocol
+injected. Agent selection is about DOMAIN EXPERTISE — the
+implement-executor is a TDD specialist, the project agent brings
+domain knowledge. Both follow identical discipline.
 
 **Gate:** G7 — full verification suite
-(build + typecheck + lint + test)
+(build + typecheck + lint + unit tests + integration tests)
 
 **Commit:**
-`git add . && git commit -m "feat(SPEC-XXX): implement phase N"`
+`git add -A && git commit -m "feat(SPEC-XXX): implement phase"`
 
 **After G7 passes:** Run Integration/E2E Test Verification,
 then execute PR Creation Protocol (see below).
 
 ## Full Integration / E2E Suite Verification
 
-Integration tests are created DURING the Implement phase
-by the implement-executor (mandatory, not optional). This
+Integration tests are created DURING the Implement phase by
+implementation agents (mandatory, not optional). This
 post-implementation step runs the FULL suite to catch
 regressions from other specs.
 
@@ -423,21 +537,47 @@ regressions from other specs.
 
 ## Extension Hook Events
 
-If extensions with hook events are installed (detected in Step
-0.11), the autopilot must handle prompts that fire after certain
-phases. These are configured in `.specify/extensions.yml`.
+If extension hook events are configured (detected in Step
+0.11 via `.specify/extensions/.registry` or Glob fallback),
+the autopilot must handle prompts that fire at each phase.
+Hooks are configured in `.specify/extensions.yml`.
 
-### Hook Behavior During Autopilot
+**Extension detection priority (Step 0.11):**
+1. `.specify/extensions/.registry` (JSON) — MOST authoritative.
+   Check each extension's `enabled` field.
+2. Glob `.specify/extensions/*/extension.yml` — fallback if
+   no registry exists.
+3. NEVER rely on the `installed` field in `.specify/extensions.yml`
+   — it may be stale or empty even when extensions are active.
 
-| Hook Event | Typical Extension | Autopilot Behavior |
-|------------|------------------|-------------------|
-| `after_tasks` | verify-tasks | **Accept** — verifies task completeness, non-destructive |
-| `after_implement` | verify | **Accept** — validates implementation against spec, non-destructive |
-| `after_implement` | retrospective | **Accept** — generates retrospective report, non-destructive |
-| `after_implement` | cleanup | **Skip** — autopilot already runs lint, build, test verification |
-| `before_*` | any | **Accept** — pre-flight checks are non-destructive |
+### All 8 Hook Events in the Autopilot Flow
 
-**Rules for hook handling:**
+| Hook Event | When It Fires | Autopilot Behavior |
+|------------|--------------|-------------------|
+| `before_specify` | Before Phase 1 starts | **Accept** — pre-flight checks are non-destructive |
+| `after_specify` | After Phase 1 completes | **Accept** — may sync to external tools |
+| `before_plan` | Before Phase 3 starts | **Accept** — validates prerequisites |
+| `after_plan` | After Phase 3 completes | **Accept** — may generate additional artifacts |
+| `before_tasks` | Before Phase 5 starts | **Accept** — verifies plan completeness |
+| `after_tasks` | After Phase 5 completes | **Accept** — e.g., verify-tasks checks for phantom completions |
+| `before_implement` | Before Phase 7 starts | **Accept** — checklist pre-checks |
+| `after_implement` | After Phase 7 completes | **Accept** — e.g., verify, review, retrospective |
+
+**Where hooks fire in the execution loop:**
+
+```text
+for each phase:
+  1. Check .specify/extensions.yml for before_<phase> hooks
+  2. If hooks exist → run accepted hooks, skip duplicates
+  3. Spawn subagent for the phase
+  4. Receive result
+  5. Check .specify/extensions.yml for after_<phase> hooks
+  6. If hooks exist → run accepted hooks, skip duplicates
+  7. Validate gate
+  8. Advance
+```
+
+### Hook Handling Rules
 
 1. **Accept non-destructive hooks** — read-only verification,
    reports, and analysis hooks are safe to run automatically
@@ -447,19 +587,40 @@ phases. These are configured in `.specify/extensions.yml`.
    avoid redundancy
 3. **Document decisions in workflow file** — log which hooks
    were accepted, skipped, and why
+4. **Check ALL 8 events** — don't assume only after_tasks
+   and after_implement have hooks. Extensions may register
+   hooks for any event. Read `.specify/extensions.yml` to
+   know which events have hooks configured.
 
-**When `optional: true`** — the extension prompts before running.
-The autopilot should respond "yes" for accepted hooks and "no"
-for skipped hooks.
+**Hook `optional` field behavior:**
+- `optional: true` — In interactive mode, the CLI prompts the user
+  before running. The autopilot runs NON-INTERACTIVELY, so it
+  must decide automatically: **auto-accept** hooks that match the
+  acceptance rules above (non-destructive, no duplication).
+  The autopilot does NOT literally respond to a prompt — it
+  invokes the hook's command directly via `Skill()`.
+- `optional: false` — The hook auto-executes without prompting.
+  The autopilot should always run these.
+- `enabled: false` — The hook is disabled. Skip it entirely.
 
-### Template Resolution Awareness
+### Preset-Aware Phase Execution
 
-If presets are installed, template resolution follows a 4-tier
-stack: overrides > presets > extensions > core. The autopilot
-doesn't need to manage this — the `/speckit.*` commands handle
-resolution automatically. But if generated artifacts have
-unexpected structure, check `specify preset resolve <template>`
-to see which template file is being used.
+If presets are installed (detected in Step 0.11), the autopilot
+should understand what the presets enforce:
+
+1. **Read preset templates** at startup (Step 0.11) to learn
+   what conventions the project uses (TDD mandates, architecture
+   patterns, test requirements, etc.)
+2. **Pass conventions to subagents** — include PRESET_CONVENTIONS
+   in the implement-executor and other subagent prompts so they
+   follow the project's patterns without hardcoding
+3. **Expect different artifact structure** — if a preset overrides
+   `tasks-template.md`, the generated tasks will have different
+   sections than core defaults. The autopilot's task parsing
+   should handle any structure.
+4. **Debug with `specify preset resolve`** — if artifacts have
+   unexpected structure, run `specify preset resolve <template>`
+   to see which file the `/speckit.*` command actually used
 
 ## PR Creation Protocol
 

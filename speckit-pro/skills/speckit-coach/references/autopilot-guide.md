@@ -221,7 +221,7 @@ api-key, access-control
 From the completed SPEC-013 workflow:
 
 - **Clarify**: 6 questions resolved via domain-researcher
-  (OmniJS API docs), 0 needed human input
+  (official API docs), 0 needed human input
 - **Checklist**: 9 gaps remediated — 4 via codebase-analyst
   (existing patterns), 2 via domain-researcher (Tavily), 2
   via spec-context-analyst (spec edits), 1 via disambiguation
@@ -493,7 +493,7 @@ After the autopilot creates a PR:
 
 - Review the spec artifacts in `specs/<number>-<name>/`
 - Review the code changes
-- Verify OmniJS scripts in Script Editor (if applicable)
+- Run project-specific manual verification (if applicable)
 - Merge when satisfied
 
 ---

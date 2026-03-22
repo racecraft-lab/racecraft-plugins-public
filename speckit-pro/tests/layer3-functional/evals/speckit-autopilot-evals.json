@@ -1,0 +1,39 @@
+{
+  "skill_name": "speckit-autopilot",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run check-prerequisites.sh with no arguments to verify the autopilot environment is ready. Report whether the SpecKit CLI, git repo, and .specify directory checks pass.",
+      "expected_output": "Runs check-prerequisites.sh and returns JSON with per-check results. The all_pass field indicates whether all prerequisites are satisfied.",
+      "expectations": [
+        "Executes scripts/check-prerequisites.sh from the speckit-autopilot skill directory",
+        "Output contains JSON with a 'checks' array or individual check results",
+        "Each check has a 'pass' boolean field",
+        "Output includes an 'all_pass' field summarizing overall status",
+        "Checks include speckit_cli, project_init, and branch at minimum"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Run validate-gate.sh G7 on the specs/008-perspectives feature directory to verify the final implementation gate passes. The spec should have all required artifacts.",
+      "expected_output": "Runs validate-gate.sh G7 against the 008-perspectives feature directory and returns JSON indicating whether the gate passed, with marker counts and details.",
+      "expectations": [
+        "Executes scripts/validate-gate.sh with arguments 'G7' and the feature directory path",
+        "Output contains JSON with a 'pass' or 'result' boolean field",
+        "Includes marker count or artifact verification details",
+        "Gate G7 checks implementation-phase artifacts (code, tests, or final deliverables)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Run detect-commands.sh in the omnifocus-mcp project root to discover the build, test, and lint commands for this Node.js/TypeScript project.",
+      "expected_output": "Runs detect-commands.sh and returns JSON with discovered commands for the project's tech stack, including the package manager, build, test, and lint commands.",
+      "expectations": [
+        "Executes scripts/detect-commands.sh from the project root",
+        "Output contains JSON with detected package manager (pnpm for this project)",
+        "Detects Node.js/TypeScript as the runtime/language",
+        "Includes build, test, and lint command entries derived from package.json scripts"
+      ]
+    }
+  ]
+}

@@ -6,6 +6,17 @@ description: >
   Returns a concise summary of results — files created, metrics,
   markers found, and errors. Does not recommend next steps.
 model: opus
+tools:
+  - Skill
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+permissionMode: acceptEdits
+maxTurns: 50
+effort: medium
 ---
 
 # Phase Executor

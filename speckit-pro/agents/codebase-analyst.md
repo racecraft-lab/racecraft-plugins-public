@@ -7,7 +7,7 @@ description: >
   (remediating gaps), and Analyze (fixing findings). Spawned with a specific
   question, gap description, or finding — returns a structured answer with
   file-level evidence from the codebase.
-model: sonnet
+model: opus
 tools:
   - mcp__RepoPrompt__context_builder
   - mcp__RepoPrompt__file_search
@@ -16,6 +16,10 @@ tools:
   - Read
   - Glob
   - Grep
+permissionMode: plan
+maxTurns: 25
+background: true
+effort: medium
 ---
 
 # Codebase Analyst — Consensus Agent

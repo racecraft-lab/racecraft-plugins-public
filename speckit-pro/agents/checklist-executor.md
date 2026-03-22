@@ -8,6 +8,22 @@ description: >
   applies them to spec.md or plan.md. Use for every checklist
   domain in the autopilot workflow.
 model: opus
+tools:
+  - Skill
+  - Read
+  - Write
+  - Edit
+  - Bash
+  - Grep
+  - Glob
+  - mcp__tavily-mcp__tavily-search
+  - mcp__context7__resolve-library-id
+  - mcp__context7__get-library-docs
+  - mcp__RepoPrompt__context_builder
+  - mcp__RepoPrompt__file_search
+permissionMode: acceptEdits
+maxTurns: 100
+effort: high
 ---
 
 # Checklist Executor
@@ -37,7 +53,7 @@ checklist and fix the gaps — all in one agent.
 
    b. **Tavily** (`mcp__tavily-mcp__tavily-search`) — search
       for API docs, standards, or best practices relevant to
-      the gap (e.g., OmniJS behavior, MCP patterns, error
+      the gap (e.g., API behavior, framework patterns, error
       handling standards)
 
    c. **Read** constitution (`.specify/memory/constitution.md`)

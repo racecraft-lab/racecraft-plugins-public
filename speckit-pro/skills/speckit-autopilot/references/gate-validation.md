@@ -14,7 +14,7 @@ Programmatic gate checks performed after each SDD phase. The autopilot validates
 3. BUILD command → must pass
 4. LINT command → must pass
 (use PROJECT_COMMANDS discovered in Step 0.10)
-5. Architecture patterns verified (e.g., definitions/primitives split exists)
+5. Architecture patterns verified (e.g., patterns documented in CLAUDE.md)
 6. Workflow file's Prerequisites table filled with baselines
 7. Constitution Check summary line set to "✅ Verified"
 ```
@@ -90,7 +90,7 @@ Step 1: Research the gap using multiple tools:
      patterns and proposes an evidence-grounded fix.
   b. Tavily search (mcp__tavily-mcp__tavily-search) —
      search for API docs, standards, or best practices
-     relevant to the gap (e.g., OmniJS behavior, MCP
+     relevant to the gap (e.g., API behavior, framework
      patterns, error handling standards)
   c. Read constitution + prior specs — check if project
      principles or precedent decisions address the gap
@@ -227,11 +227,16 @@ during GREEN. If ANY are found in spec-related files, G7
 FAILS. The implement-executor must replace them with real
 assertions.
 
-**TDD Verification:** The implement-executor's summary
-includes RED→GREEN evidence for each task. If the summary
-shows implementation without RED phase verification (real
-assertion failures, not "skipped" or "todo"), the gate
-FAILS — re-run the Implement phase.
+**TDD Verification:** Each implementation agent's summary
+includes RED→GREEN evidence for its task. G7 validates the
+AGGREGATE — all task results must show RED phase verification
+(real assertion failures, not "skipped" or "todo"). If any
+task lacks TDD evidence, the gate FAILS.
+
+**Note:** G7 runs AFTER all Phase 7 task groups complete, not
+after each individual task. Per-group verification (build +
+typecheck + lint + unit tests) happens within the task-level
+dispatch loop. G7 is the final aggregate check.
 
 **Integration Test Requirement:** Spec-specific integration
 tests MUST exist with real assertions. If missing or all
@@ -262,18 +267,22 @@ then push branch and create PR via `gh pr create`.
 | G6 | Analyze | 0 findings (all severities) | context_builder remediation | 2 |
 | G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | 2 |
 
-## Optional: Extension Verification at G7
+## Additional Verification (Extension Commands)
 
-If the `verify` extension is installed, the autopilot can
-run `speckit.verify` as additional validation alongside
-the standard G7 checks. This validates the implementation
-against spec artifacts from the extension's perspective.
+If the `verify` extension is enabled in `.registry` (detected
+in Step 0.11), run `speckit.verify` as additional validation
+alongside the standard G7 checks. This validates the
+implementation against spec artifacts.
 
-If the `verify-tasks` extension is installed, it can
-complement G5 by detecting phantom completions — tasks
-marked `[X]` that have no real implementation behind them.
+If the `verify-tasks` extension is enabled in `.registry`,
+run `speckit.verify-tasks` to complement G5 by detecting
+phantom completions — tasks marked `[X]` that have no real
+implementation behind them.
 
-These are additive checks, not replacements for gates.
+These commands are installed by `specify extension add` and
+exist as `.claude/commands/` files. They are additive checks,
+not replacements for gates. If the extension is not installed,
+skip the check and log a recommendation to install it.
 
 ## Failure Escalation Protocol
 

@@ -1,6 +1,6 @@
 ---
 name: speckit-coach
-description: "Coaches developers through Spec-Driven Development using the official SpecKit CLI and the speckit-pro plugin. Provides SDD methodology guidance, per-command coaching, phase gate validation, multi-spec master plan creation, workflow tracking, and guidance on using the autonomous autopilot executor."
+description: "Coaches developers through Spec-Driven Development using the official SpecKit CLI and the speckit-pro plugin. Provides SDD methodology guidance, per-command coaching, phase gate validation, multi-spec master plan creation, and workflow tracking. Use when user asks about SDD methodology, SpecKit commands, spec writing, feature decomposition, gate failures, master plans, autopilot workflows, or consensus protocol."
 argument-hint: "e.g. 'walk me through SDD', 'write testable requirements', 'decompose feature into specs', 'which checklist domains for this spec', 'simplicity gate is failing', 'how does autopilot work', 'consensus protocol'"
 user-invokable: true
 license: MIT
@@ -22,6 +22,24 @@ specify init --ai claude     # 25+ agents: copilot, cursor-agent, gemini, codex,
 After installation, the developer has access to all `/speckit.*` slash commands. This skill provides **coaching, guidance, and enhancement** on top of those commands.
 
 ## What This Skill Does
+
+### Dynamic Project Awareness
+
+Before coaching, check for installed presets and extensions
+that affect this project's workflow:
+
+```text
+1. Glob(".specify/presets/*/preset.yml") → any presets installed?
+2. If yes → Read each preset.yml to learn what it enforces
+   (TDD mandates, architecture patterns, test requirements)
+3. Glob(".specify/extensions/*/extension.yml") → any extensions?
+4. Tailor coaching to include preset/extension context
+```
+
+This ensures coaching reflects the project's actual configuration,
+not just generic SpecKit defaults. For example, if a preset
+mandates TDD, coaching on `/speckit.implement` should emphasize
+the red-green-refactor cycle that the preset enforces.
 
 ### Coaching (guidance for official SpecKit commands)
 

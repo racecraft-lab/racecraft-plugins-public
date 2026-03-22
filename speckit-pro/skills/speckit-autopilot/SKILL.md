@@ -24,9 +24,7 @@ prompts from the workflow file and delegate each phase to a
 the commands yourself — you spawn, collect results, validate
 gates, and advance.
 
-<hard_constraints>
-
-## Execution Rules
+## Critical: Execution Rules
 
 These rules are non-negotiable. Follow them exactly.
 
@@ -74,7 +72,7 @@ Each phase type has its own specialized executor agent:
 | Clarify | `clarify-executor` | Interactive: must research and answer questions |
 | Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
-| Implement | `implement-executor` | Enforces strict TDD red-green-refactor + mandatory integration tests |
+| Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
 
 ```text
 Agent(
@@ -99,37 +97,9 @@ subagent's context.
 ### 3. Task list first
 
 Before executing any phase, create a granular task list using
-TaskCreate. Parse the workflow file's Clarify and Checklist
-sections to determine the exact number of sessions/domains.
-
-**Why:** The task list drives your execution loop. After each
-subagent returns, check the task list to know what's next.
-
-**Example for a spec with 2 clarify sessions and 3 checklist
-domains:**
-
-```text
-TaskCreate (simplified — see Step 1.1 for full example):
-  "Phase 0: Prerequisites"
-  "Phase 1: Specify"
-  "Phase 2: Clarify - Session 1"
-  "Phase 2: Clarify - Session 1 Consensus"
-  "Phase 3: Plan"
-  "Phase 4: Checklist - Domain 1"
-  "Phase 4: Checklist - Domain 1 Consensus"
-  "Phase 5: Tasks"
-  "Phase 6: Analyze"
-  "Phase 6: Analyze - Consensus"
-  "Phase 7: Implement"
-  "Post: Verify Implementation"    ← extension (if installed)
-  "Post: Code Review"              ← extension (if installed)
-  "Post: PR Creation"
-  "Post: PR Review Remediation Loop"
-  "Post: Retrospective"            ← extension (if installed)
-```
-
-Set each task to `in_progress` when starting and `completed`
-when done. Add tasks dynamically if unexpected work arises.
+TaskCreate. The task list drives the loop — after each subagent
+returns, check it to know what's next. See Step 1.1 for the
+full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
@@ -142,14 +112,14 @@ file. Spawn a **separate subagent for each prompt**.
 CORRECT (Clarify with 2 sessions):
   1. TaskUpdate: "Clarify - Session 1" → in_progress
   2. Agent(subagent_type: "clarify-executor",
-          prompt: "<interactive prefix> + <session 1 prompt>")
+          prompt: "<session 1 prompt>")
      The clarify-executor researches and answers all questions
   3. Grep spec.md for [NEEDS CLARIFICATION] markers
   4. If markers remain → use context_builder to resolve
   5. TaskUpdate: "Clarify - Session 1" → completed
   6. TaskUpdate: "Clarify - Session 2" → in_progress
   7. Agent(subagent_type: "clarify-executor",
-          prompt: "<interactive prefix> + <session 2 prompt>")
+          prompt: "<session 2 prompt>")
   8. Grep spec.md for [NEEDS CLARIFICATION] markers
   9. If markers remain → use context_builder to resolve
   10. TaskUpdate: "Clarify - Session 2" → completed
@@ -161,40 +131,13 @@ WRONG:
   2. Or skip sessions and do your own analysis
 ```
 
-### 5. Clarify is interactive — research and answer
+### 5. Clarify — executor answers autonomously
 
-The `/speckit.clarify` command is inherently interactive. It
-surfaces clarification questions and expects answers. The
-`clarify-executor` agent is purpose-built for this — it
-researches each question using Tavily, Context7, RepoPrompt,
-and codebase search, then provides evidence-grounded answers.
-
-After the subagent returns, YOU (the main session) check for
-any remaining `[NEEDS CLARIFICATION]` markers. If markers
-remain, use RepoPrompt to investigate and resolve them:
-
-1. **`context_builder`** with `response_type: "question"` —
-   ask the question and let RepoPrompt autonomously explore
-   the codebase, build context, and provide an answer
-2. **`chat_send`** with the Evaluator or Senior-Planner
-   model — get a second perspective on ambiguous questions
-3. Apply the answer to spec.md and remove the marker
-
-**Two-layer resolution:**
-
-1. **Executor (first pass):** The clarify-executor researches
-   and answers questions using Tavily (API docs), Context7
-   (library docs), RepoPrompt (codebase patterns), and
-   Read/Grep (constitution, prior specs). This handles most
-   questions. Items it can't resolve with high confidence are
-   flagged in its "Unresolved for consensus" summary section.
-2. **Main session + consensus agents (second pass):** For
-   each unresolved item, spawn 3 consensus agents IN PARALLEL
-   (codebase-analyst, spec-context-analyst,
-   domain-researcher). Apply consensus rules: 2/3 agree →
-   use majority, all disagree → flag for human. Security-
-   keyword questions ALWAYS go to consensus regardless of
-   what the executor answered.
+The `clarify-executor` invokes `/speckit.clarify` and answers
+all questions itself using research tools (Tavily, Context7,
+RepoPrompt, codebase search). After it returns, check for
+remaining `[NEEDS CLARIFICATION]` markers and resolve via
+consensus if needed (see Rule 6).
 
 ### 6. Two-layer resolution with consensus agents
 
@@ -236,23 +179,15 @@ For each unresolved item:
 - All disagree → flag `[HUMAN REVIEW NEEDED]`, STOP
 - Security keyword → always flag for human
 
-**Why two layers:** Most items are straightforward — the
-executor handles ~80% directly. Consensus provides distinct
-perspectives (codebase patterns vs. project decisions vs.
-best practices) for genuinely ambiguous items.
+**Why two layers:** Executor handles ~80% directly. Consensus
+provides distinct perspectives for genuinely ambiguous items.
 
-**Why after each prompt:** Session 2 may depend on Session
-1's resolved questions. Checklist Domain 2 may depend on
-Domain 1's gap fixes.
+**Why after each prompt:** Later sessions may depend on
+earlier resolved questions/gaps.
 
-**The only reasons to stop:**
-
-- Gate failure after 2 auto-fix attempts
-- Failed consensus (all 3 agents disagree)
-- Security keyword triggers mandatory human review
-- Missing prerequisite that blocks execution
-
-</hard_constraints>
+**Stop conditions:** Gate failure after 2 auto-fix attempts,
+failed consensus (all disagree), security keyword, or
+missing prerequisite.
 
 You run in the **main session** (not as a sub-agent) so you can
 spawn sub-agents directly. Sub-agents cannot nest — this is the
@@ -268,147 +203,48 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 
 ## Step 0: Prerequisites
 
-Before executing any phase, verify ALL of the following. If any check
-fails, STOP with a clear message.
+Run the prerequisite scripts to verify the environment. If any
+check fails, STOP with the error message from the JSON output.
 
-### 0.1 SpecKit CLI
+### 0.1-0.7 Environment Checks
 
-```bash
-specify check
+```text
+Bash("bash scripts/check-prerequisites.sh <workflow_file_path>")
 ```
 
-If this fails: "SpecKit CLI not found. Install:
-`uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`"
+Parse the JSON result:
+- `all_pass`: if `false`, report each failed check's `message` and STOP
+- `branch`: current git branch name
+- `on_feature_branch`: if `true`, Specify must skip branch creation
+- `is_worktree`: if `true`, already in an isolated worktree
 
-### 0.2 Project Initialized
+If `on_feature_branch` is `true`, verify the branch matches the
+workflow file's `Branch` field. Warn if they don't match.
 
-```bash
-ls .specify/
-```
-
-If missing: "SpecKit not initialized. Run: `specify init --ai claude`"
-
-### 0.3 Constitution Exists
-
-```bash
-cat .specify/memory/constitution.md
-```
-
-If missing: "No constitution found. Run: `/speckit.constitution`"
-
-### 0.4 SpecKit Commands Installed
-
-Verify the `/speckit.*` commands exist in `.claude/commands/`:
-
-```bash
-ls .claude/commands/speckit.specify.md .claude/commands/speckit.plan.md .claude/commands/speckit.tasks.md .claude/commands/speckit.implement.md
-```
-
-If missing: "SpecKit commands not found. Run:
-`specify init --ai claude` to install commands."
-
-### 0.5 Workflow File Exists
-
-Read the provided workflow file path. If it doesn't exist, STOP.
+**Important:** Environment variables set in Bash do NOT persist to
+Skill tool invocations. The autopilot handles branch context by
+adjusting how it invokes each phase (see Phase Dispatch).
 
 ### 0.6 Load Settings
 
 Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
-frontmatter for:
-
-- `consensus-mode` (default: `moderate`)
-- `gate-failure` (default: `stop`)
-- `auto-commit` (default: `per-phase`)
-- `security-keywords` (default: the standard list)
-
+frontmatter for: `consensus-mode` (default: `moderate`),
+`gate-failure` (default: `stop`), `auto-commit` (default:
+`per-phase`), `security-keywords` (default: standard list).
 If the file doesn't exist, use all defaults.
 
-### 0.7 Branch Detection
+### 0.8 Constitution Validation
 
-Detect whether we're already on a feature branch (e.g., in a
-worktree). This determines how the Specify phase behaves.
+Read the workflow file's Prerequisites table. If already
+`Verified`, skip (resuming a workflow). Otherwise:
 
-```bash
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
-GIT_DIR=$(git rev-parse --git-dir 2>/dev/null)
-GIT_COMMON=$(git rev-parse --git-common-dir 2>/dev/null)
-IS_WORKTREE=$( [ "$GIT_DIR" != "$GIT_COMMON" ] && echo "true" || echo "false" )
-```
-
-**Record two facts for later use:**
-
-1. **`ON_FEATURE_BRANCH`**: `true` if `CURRENT_BRANCH` matches
-   `^[0-9]{3}-` (e.g., `009-search-database`)
-2. **`IS_WORKTREE`**: `true` if `GIT_DIR != GIT_COMMON`
-
-**Why this matters:** The `/speckit.specify` command always calls
-`create-new-feature.sh`, which runs `git checkout -b` to create a
-new branch. On a worktree or existing feature branch, this would
-fail or create a wrong nested branch. When `ON_FEATURE_BRANCH` is
-`true`, the Specify phase must skip branch creation and use the
-existing branch/directory instead (see Phase Dispatch → Specify
-below).
-
-Verify the branch matches the workflow file's `Branch` field. If
-they don't match, warn the user and ask whether to proceed.
-
-**Important:** Do NOT use `export SPECIFY_FEATURE=...` to try to
-pass the branch to commands. Environment variables set in one Bash
-call do not persist to Skill tool invocations. Instead, the
-autopilot handles this by adjusting how it invokes each phase
-(see Phase Dispatch).
-
-### 0.8 Constitution Validation (Workflow Prerequisites)
-
-The workflow file has a "Prerequisites" section with a constitution
-validation table. This is **not** the same as Step 0.3 (which just
-checks the file exists). This step validates that each constitution
-principle is satisfied in the current codebase and records baselines.
-
-**Procedure:**
-
-1. Read the constitution from `.specify/memory/constitution.md` —
-   extract all numbered principles
-2. Read the workflow file's Prerequisites → Constitution Validation
-   table
-3. If the table is already `✅ Verified`, skip (resuming a previously
-   started workflow)
-4. For each constitution principle, run the appropriate
-   verification:
-
-   | Verification Type | How to Check |
-   | --- | --- |
-   | Type safety | Run TYPECHECK command (from Step 0.10) |
-   | Test suite | Run UNIT_TEST + INTEGRATION_TEST commands — record count as baseline |
-   | Build discipline | Run BUILD command |
-   | Lint/format | Run LINT command |
-   | Architecture patterns | Use Glob/Grep to verify the pattern exists (e.g., definitions/primitives split) |
-   | Code review items (KISS, YAGNI, SOLID) | Mark as `✅ Verified` — these are validated during implementation, not pre-flight |
-
-5. Update the workflow file's Prerequisites table:
-   - Fill in each principle's Status column
-     (`✅ Pass` or `⚠️ Issue: ...`)
-   - Record baseline numbers (e.g., "1924 tests pass",
-     "34 definitions, 34 primitives")
-   - Set the "Constitution Check" summary line:
-     `✅ Verified <date> — Constitution v<version>, all principles satisfied`
-6. If any verification **fails** (typecheck errors, test failures,
-   build broken):
-   - STOP and report: "Constitution validation failed — fix these
-     issues before starting the workflow"
-   - Do NOT proceed to Phase 1
-
-**Example output** (from SPEC-007):
-
-```markdown
-| Principle | Requirement | Verification | Status |
-|-----------|-------------|--------------|--------|
-| I. Type-First Development | All functions typed, Zod contracts | TYPECHECK command | ✅ Pass |
-| II. Separation of Concerns | definitions/ + primitives/ split | Code review | ✅ 34 definitions, 34 primitives |
-| V. Defensive Error Handling | Structured errors, no swallowed exceptions | Unit tests | ✅ 1924 tests pass |
-
-**Constitution Check:** ✅ Verified 2026-03-17 — Constitution v2.0.0 (RATIFIED), all principles satisfied
-```
+1. Read constitution from `.specify/memory/constitution.md`
+2. For each principle, run the appropriate PROJECT_COMMANDS
+   check (typecheck, test suite, build, lint). For code
+   review items (KISS, YAGNI, SOLID), mark `Verified` —
+   these are validated during implementation.
+3. Update the workflow file's table with results and baselines
+4. If any check fails, STOP — do not proceed to Phase 1
 
 ### 0.9 Implementation Agent Detection
 
@@ -431,91 +267,48 @@ names and makes the plugin work with any project.
 ```
 
 Also check CLAUDE.md for references to a specific
-implementation agent (e.g., "omnifocus-developer" or
+implementation agent (e.g., "my-project-developer" or
 "use the X agent for implementation").
 
 **Record the result** for use in Step 2's Implement phase.
 
 ### 0.10 Project Command Discovery
 
-Discover how this project builds, lints, typechecks, and
-tests. This makes the plugin work with ANY tech stack —
-not just Node.js/pnpm projects.
-
-**Discovery order (first match wins for each command):**
-
-1. **CLAUDE.md** — Look for a "Build Commands" table or
-   similar section listing project commands. This is the
-   most authoritative source.
-2. **package.json** (Node.js) — Parse `scripts` for
-   `build`, `test`, `lint`, `typecheck`, `test:integration`,
-   `test:e2e` keys. Detect package manager from lockfile:
-   `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn,
-   `package-lock.json` → npm, `bun.lockb` → bun.
-3. **Makefile** — Look for `build`, `test`, `lint`,
-   `integration` targets
-4. **pyproject.toml / setup.cfg** (Python) — Look for
-   pytest config, ruff/flake8 config, mypy config
-5. **Cargo.toml** (Rust) — `cargo build`, `cargo test`,
-   `cargo clippy`
-6. **go.mod** (Go) — `go build`, `go test`, `go vet`,
-   `golangci-lint`
-
-**Record these commands:**
-
 ```text
-PROJECT_COMMANDS:
-  BUILD:              <e.g., pnpm build, cargo build, go build>
-  TYPECHECK:          <e.g., pnpm typecheck, mypy ., tsc --noEmit>
-  LINT:               <e.g., pnpm lint, ruff check, cargo clippy>
-  LINT_FIX:           <e.g., pnpm lint:fix, ruff check --fix>
-  UNIT_TEST:          <e.g., pnpm test, pytest, cargo test, go test ./...>
-  INTEGRATION_TEST:   <e.g., pnpm test:integration, pytest tests/integration>
-  SINGLE_FILE_TEST:   <e.g., pnpm test <file>, pytest <file>, go test <file>>
-  SINGLE_FILE_INTEGRATION: <e.g., pnpm test:integration:file <file>>
-  FULL_VERIFY:        <BUILD && TYPECHECK && LINT && UNIT_TEST && INTEGRATION_TEST>
+Bash("bash scripts/detect-commands.sh")
 ```
 
-**If a command type is not found** (e.g., no typecheck for
-a Python project without mypy), set it to `"N/A"` — it
-will be skipped during verification.
+Parse the JSON result for `commands` object containing:
+BUILD, TYPECHECK, LINT, LINT_FIX, UNIT_TEST,
+INTEGRATION_TEST, SINGLE_FILE_TEST, SINGLE_FILE_INTEGRATION,
+FULL_VERIFY. Commands set to `"N/A"` are skipped during
+verification. The script auto-detects Node.js, Rust, Go,
+Python, and Makefile projects.
 
-**If integration tests use a separate config** (e.g.,
-`vitest.integration.config.ts`), the default test command
-may EXCLUDE them. Discover both commands and record them
-separately.
+**Also check CLAUDE.md** for a "Build Commands" table — it's
+the most authoritative source and may override script results.
 
-**Record in the workflow file** under the Prerequisites
-section so the commands persist across context compactions.
-Pass these commands to every subagent prompt that needs
-to run builds or tests.
+Record PROJECT_COMMANDS in the workflow file so they persist
+across context compactions. Pass them to every subagent.
 
 ### 0.11 Preset and Extension Detection
 
-Check for installed presets and extensions that may affect
-template resolution or provide hook events:
-
 ```text
-1. Glob(".specify/presets/*/preset.yml") → list installed presets
-2. Glob(".specify/extensions/*/extension.yml") → list installed extensions
-3. If .specify/extensions.yml exists → Read and parse:
-   - List of installed extensions
-   - Hook events configured (after_tasks, after_implement, etc.)
-4. If presets found → note that template resolution may differ:
-   overrides > presets > extensions > core
-5. If hook events configured → note which phases have hooks
-   (e.g., after_tasks → verify-tasks, after_implement → verify)
-6. Record installed presets/extensions in workflow file
+Bash("bash scripts/detect-presets.sh")
 ```
 
-**Why:** SpecKit commands read templates through the resolution
-stack. If a preset overrides `tasks-template.md`, the tasks
-generated will have different structure. If extensions register
-hook events, the autopilot must handle prompts that fire after
-certain phases (accept non-destructive hooks, skip duplicates
-of the autopilot's own verification).
+Parse the JSON result for: `has_presets`, `presets` (names +
+templates they override), `extensions`, `hooks`, and
+`templates` (resolved paths for tasks/spec/plan templates).
 
-**If no presets or extensions are installed, skip this step.**
+If `has_presets` is `true`:
+1. Read each preset's overridden templates to understand
+   the conventions it enforces (TDD, architecture, etc.)
+2. Record as PRESET_CONVENTIONS for subagent prompts
+3. Include PRESET_CONVENTIONS in ALL subagent prompts —
+   presets affect every phase, not just implement
+
+If no presets AND no extensions, skip this step.
 
 ## Step 1: Parse Workflow State
 
@@ -535,62 +328,38 @@ After parsing the workflow state, create a **granular** task list.
 For multi-prompt phases (Clarify, Checklist), create one task per
 prompt/session so the autopilot knows exactly what to execute next.
 
-**Read the workflow file to determine the exact tasks:**
+**Task naming pattern** (parse from workflow file):
 
 ```text
-TaskCreate (example for a spec with 2 clarify sessions, 3 checklist domains):
-  - "Phase 0: Prerequisites (Constitution Validation)"
-  - "Phase 0: Doctor Health Check"
-  - "Phase 1: Specify"
-  - "Phase 2: Clarify - Session 1: Search Behavior"
-  - "Phase 2: Clarify - Session 1 Consensus"
-  - "Phase 2: Clarify - Session 2: Database Operations"
-  - "Phase 2: Clarify - Session 2 Consensus"
-  - "Phase 3: Plan"
-  - "Phase 4: Checklist - Domain 1: api-workaround"
-  - "Phase 4: Checklist - Domain 1 Consensus"
-  - "Phase 4: Checklist - Domain 2: type-safety"
-  - "Phase 4: Checklist - Domain 2 Consensus"
-  - "Phase 4: Checklist - Domain 3: requirements"
-  - "Phase 4: Checklist - Domain 3 Consensus"
-  - "Phase 5: Tasks"
-  - "Phase 5: Verify Tasks"
-  - "Phase 6: Analyze"
-  - "Phase 6: Analyze - Consensus"
-  - "Phase 7: Implement"
-  - "Post: Verify Implementation"
-  - "Post: Code Review"
-  - "Post: Full Integration/E2E Suite Verification"
-  - "Post: Cleanup"
-  - "Post: PR Creation"
-  - "Post: PR Review Remediation Loop"
-  - "Post: Retrospective"
+  "Phase 0: Prerequisites"
+  "Phase 1: Specify"
+  "Phase 2: Clarify - <Session Name>"           ← one per session
+  "Phase 2: Clarify - <Session Name> Consensus" ← MANDATORY after each session
+  "Phase 3: Plan"
+  "Phase 4: Checklist - <Domain>"               ← one per domain
+  "Phase 4: Checklist - <Domain> Consensus"     ← MANDATORY after each domain
+  "Phase 5: Tasks"
+  "Phase 6: Analyze"
+  "Phase 6: Analyze - Consensus"                ← MANDATORY after analyze
+  "Phase 7: <Group> (<task IDs>)"               ← parsed from tasks.md
+  "Post: <task name>"                           ← from post-impl table
 ```
 
-**Rules:**
+**CRITICAL — Consensus tasks are MANDATORY:**
 
-- Parse the workflow file's Clarify and Checklist sections to
-  extract session/domain names and counts
-- Create one task per clarify session and one per checklist domain
-- Add a "Consensus" task after each prompt in multi-prompt
-  phases (e.g., "Clarify - Session 1 Consensus") — only runs
-  if executor reports unresolved items
-- Single-prompt phases (Specify, Plan, Tasks, Analyze, Implement)
-  get one task each
-- Add extension tasks where they fit (only if extensions are
-  installed — check Step 0.11):
-  - "Phase 0: Doctor Health Check" — after prerequisites
-  - "Phase 5: Verify Tasks" — after tasks generation
-  - "Post: Verify Implementation" — after implement, before PR
-  - "Post: Code Review" — after verify, before PR
-  - "Post: Cleanup" — after review, before PR
-  - "Post: Retrospective" — after PR merge (final task)
-- Mark already-completed phases as `completed` immediately
-- Mark the first pending task as `in_progress`
+Every Clarify session, every Checklist domain, and the Analyze
+phase MUST have a corresponding Consensus task immediately after
+it. The consensus task runs the two-layer resolution process
+(Rule 6) — skipped only if the executor reports zero unresolved
+items. **Never omit consensus tasks from the task list.**
 
-**Why granular:** When "Clarify - Session 1" completes, the next
-task ("Clarify - Session 2") is visible and in_progress — the
-autopilot knows to keep going instead of stopping.
+**Other rules:**
+- Phase 7 decomposed into groups after tasks.md is created
+  (test/impl/verify per phase, see `references/phase-execution.md`)
+- Extension tasks (doctor, verify-tasks, verify, review,
+  cleanup, retrospective): add if extension is in .registry
+  with enabled: true, or if extension directory exists via Glob
+- Mark completed phases immediately; first pending as in_progress
 
 ## Step 2: Main Execution Loop
 
@@ -602,64 +371,72 @@ PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
     1. TaskUpdate: set phase task to "in_progress"
-    2. Read the workflow file's prompt(s) for this phase
-    3. For EACH prompt in the phase:
+    2. Check .specify/extensions.yml for before_<phase> hooks
+       → run accepted hooks (non-destructive), skip duplicates
+    3. Read the workflow file's prompt(s) for this phase
+    4. For EACH prompt in the phase:
        a. Agent(prompt: "Run /speckit.<phase> with: <prompt>")
        b. Receive subagent summary (tool result)
        c. TaskUpdate: set this prompt's task to "completed"
-    4. Run consensus in main session if needed:
+    5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section.
        For each item → spawn 3 consensus agents in parallel
        (codebase-analyst, spec-context-analyst, domain-researcher)
        → apply consensus rules → edit artifacts
-    5. Validate gate (see gate-validation.md)
-    6. If gate fails:
+    6. Check .specify/extensions.yml for after_<phase> hooks
+       → run accepted hooks (non-destructive), skip duplicates
+    7. Validate gate (see gate-validation.md)
+    8. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
        b. If still failing and gate-failure == "stop": STOP
        c. If gate-failure == "skip-and-log": log, continue
-    7. Update workflow file with results
-    8. If auto-commit == "per-phase":
-       Bash: git add specs/ && git commit
-    9. Advance to next phase (next iteration of loop)
+    9. Update workflow file with results
+   10. If auto-commit == "per-phase":
+       For phases 1-6: Bash: git add specs/ && git commit
+       For phase 7 (implement): Bash: git add -A && git commit
+       (implementation changes include src/, tests/, etc.)
+   11. Advance to next phase (next iteration of loop)
 
 POST-IMPLEMENTATION (after all 7 phases complete):
     These are tasks in your task list — execute them in order.
-    Extension tasks only run if the extension is installed
-    (detected in Step 0.11). Skip if not installed.
 
-    10. TaskUpdate: "Post: Verify Implementation" → in_progress
-        Skill("speckit.verify") — validate implementation
-        against spec artifacts (non-destructive)
-        TaskUpdate: → completed
+    ⚠️ HOW EXTENSION COMMANDS BECOME AVAILABLE:
+    Commands like speckit.verify, speckit.review, speckit.cleanup,
+    speckit.doctor, speckit.retrospective.analyze are INSTALLED by
+    `specify extension add <name>`. The CLI creates command files
+    in .claude/commands/ (or equivalent for other agents). These
+    commands then appear as invocable skills.
 
-    11. TaskUpdate: "Post: Code Review" → in_progress
-        Skill("speckit.review") — comprehensive code review
-        with 6 specialized agents. Fix any issues found.
-        TaskUpdate: → completed
+    If Step 0.11 detected the extension in .registry as enabled,
+    its commands ARE available — run the task.
+    If an extension is NOT in .registry and NOT in Glob results,
+    log a warning and skip that specific task (do NOT fail the
+    entire autopilot). Recommend: `specify extension add <name>`.
 
-    12. TaskUpdate: "Post: Full Integration/E2E Suite Verification" → in_progress
-        Execute Step 3.1 (detect, create, run full suite)
-        TaskUpdate: → completed
+    ⚠️ CRITICAL: Use Agent() subagents for ALL post-implementation
+    tasks — NEVER use Skill() directly. Rule #1 applies here too:
+    a Skill() call loads the command into YOUR context, and the
+    command's completion text can kill the agent loop, preventing
+    subsequent tasks from running.
 
-    13. TaskUpdate: "Post: Cleanup" → in_progress
-        Skill("speckit.cleanup") — fix small issues,
-        create tasks for medium, analyze large. Commit fixes.
-        TaskUpdate: → completed
+    Post-implementation tasks (execute in order):
 
-    14. TaskUpdate: "Post: PR Creation" → in_progress
-        Execute Step 3.2 (verify, push, gh pr create)
-        TaskUpdate: → completed
+    | # | Task | Requires | Command |
+    |---|------|----------|---------|
+    | 10 | Verify Implementation | verify ext | /speckit.verify |
+    | 11 | Code Review | review ext | /speckit.review |
+    | 12 | Integration Suite | (none) | Step 3.1 direct |
+    | 13 | Cleanup | cleanup ext | /speckit.cleanup |
+    | 14 | PR Creation | (none) | Step 3.2 direct |
+    | 15 | Review Remediation | (none) | Step 3.3 /loop |
+    | 16 | Retrospective | retrospective ext | /speckit.retrospective.analyze |
 
-    15. TaskUpdate: "Post: PR Review Remediation Loop" → in_progress
-        Execute Step 3.3 (Skill("loop", args: "5m ..."))
-        TaskUpdate: → completed
-
-    16. TaskUpdate: "Post: Retrospective" → in_progress
-        Skill("speckit.retrospective.analyze") — measure spec
-        adherence, identify deviations, capture lessons learned.
-        Generates retrospective.md in the spec directory.
-        TaskUpdate: → completed
-        THIS IS THE FINAL STEP — autopilot is done.
+    Extension tasks: Agent(subagent_type: "general-purpose",
+      prompt: "Run /<command> for SPEC-XXX. Return summary.")
+    Non-extension tasks (12, 14, 15): execute directly per Step 3.
+    Missing extension: log warning and skip (don't fail).
+    See references/post-implementation.md for detailed prompts.
+    Task 16 is the FINAL STEP.
 ```
 
 **Dynamic task updates:** If consensus reveals new questions or
@@ -680,6 +457,19 @@ Agent(
   prompt: """
     <phase-specific prefix if needed>
 
+    [IF presets detected in Step 0.11]
+    PRESET_CONVENTIONS:
+      Preset: <name> (priority <N>)
+      Overrides: <templates this preset replaces>
+      Enforces: <conventions from preset templates>
+    [/IF]
+
+    [IF PROJECT_COMMANDS discovered in Step 0.10]
+    PROJECT_COMMANDS:
+      BUILD: <cmd>  TYPECHECK: <cmd>  LINT: <cmd>
+      UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
+    [/IF]
+
     Workflow prompt:
     ---
     <paste the exact prompt from the workflow file>
@@ -698,7 +488,7 @@ Agent(
 | Checklist | `checklist-executor` | None |
 | Tasks | `phase-executor` | None |
 | Analyze | `analyze-executor` | None |
-| Implement | `implement-executor` | Project agent context (if detected in 0.9) |
+| Implement | per-task routing | TDD protocol + COMPLETED_TASKS context (see "Implement — Task-Level Dispatch") |
 
 #### Specify — Branch-Aware Prefix
 
@@ -716,33 +506,15 @@ All other phases use `check-prerequisites.sh` →
 `get_current_branch()` which detects the worktree branch
 automatically. No prefix needed.
 
-#### Clarify — Interactive Prefix
+#### Clarify — Autonomous Answering Prefix
 
 The `/speckit.clarify` command is interactive — it surfaces
-questions and expects YOU to answer them. Always add this
-prefix to clarify subagent prompts:
-
-```text
-IMPORTANT: The clarify command will surface clarification
-questions about the spec. You MUST answer every question
-it asks. Do NOT respond with "done" or end the session
-without answering all questions.
-
-For each question the command surfaces:
-1. Research the answer using these tools:
-   - mcp__tavily-mcp__tavily-search (API docs, standards)
-   - mcp__context7__resolve-library-id + get-library-docs
-     (library documentation)
-   - mcp__RepoPrompt__context_builder (codebase patterns)
-   - mcp__RepoPrompt__file_search (find existing code)
-   - Read/Grep (constitution, prior specs, CLAUDE.md)
-2. Pick the best-supported answer (or use "Custom" with
-   your researched answer if the offered options are wrong)
-3. Provide the answer to the command
-
-Answer ALL questions before completing. Cite your sources
-in the summary you return.
-```
+questions and expects answers. The clarify-executor invokes
+the command and answers autonomously. Its agent definition
+contains strong override instructions telling it to research
+and answer every question immediately without waiting for
+human input. No additional prefix needed in the prompt —
+just pass the session prompt from the workflow file.
 
 #### Multi-Prompt Phases
 
@@ -832,249 +604,43 @@ TaskUpdate: "<Phase> - <Prompt> Consensus" → completed
   tasks.md, spec.md, or plan.md. Re-run analyze to verify
   if findings were fixed by consensus.
 
-#### Implement — TDD Enforcement via implement-executor
+#### Implement — Task-Level Dispatch
 
-The Implement phase ALWAYS uses the `implement-executor`
-agent. This agent has TDD red-green-refactor as
-`<hard_constraints>` — tests are written and verified
-FAILING before any implementation code. This is
-NON-NEGOTIABLE.
+Phase 7 dispatches each task to the best-fit agent instead of
+one monolithic executor. Subagents can't nest — task-level
+routing solves this with flat orchestrator-worker.
 
-**If a project implementation agent was detected (Step 0.9),**
-include its domain-specific context in the prompt so the
-implement-executor knows the project's patterns (OmniJS,
-definitions/primitives split, etc.). The project agent's
-patterns govern WHAT gets built; the implement-executor's
-TDD constraints govern HOW it gets built.
+**Agent routing:**
 
-**Execution:**
+| Task Type | Agent | TDD? |
+|-----------|-------|------|
+| Tests (contract/unit/integration) | `implement-executor` | Yes |
+| Domain implementation | PROJECT_IMPLEMENTATION_AGENT | Yes |
+| Research / API investigation | `domain-researcher` | No |
+| Verification (build, lint) | orchestrator-direct | No |
 
-```text
-Agent(
-  subagent_type: "implement-executor",
-  description: "SPEC-XXX implement",
-  prompt: """
-    Implement tasks from tasks.md for SPEC-XXX.
-    Follow the plan in plan.md.
+Every implementation agent receives the TDD protocol from
+`references/tdd-protocol.md`. Agent selection is about domain
+expertise — all follow identical RED-GREEN-REFACTOR discipline.
 
-    PROJECT_COMMANDS (from Step 0.10):
-      BUILD: <discovered build command>
-      TYPECHECK: <discovered typecheck command>
-      LINT: <discovered lint command>
-      LINT_FIX: <discovered lint fix command>
-      UNIT_TEST: <discovered unit test command>
-      INTEGRATION_TEST: <discovered integration test command>
-      SINGLE_FILE_TEST: <discovered single file test command>
-      SINGLE_FILE_INTEGRATION: <discovered single file integration command>
-
-    <if PROJECT_IMPLEMENTATION_AGENT was detected>
-    PROJECT CONTEXT: This project uses the
-    "<detected agent name>" patterns. Read its agent
-    definition at .claude/agents/<agent>.md for
-    domain-specific conventions (architecture, file
-    layout, naming, API patterns). Follow those
-    patterns for WHAT you build.
-    </if>
-
-    Integration tests are MANDATORY — create spec-specific
-    integration tests alongside unit and contract tests.
-
-    Workflow prompt:
-    ---
-    <workflow implement prompt>
-    ---
-  """
-)
-```
-
-The implement-executor agent enforces:
-- RED: Write tests first, verify they FAIL
-- GREEN: Write minimum code, verify tests PASS
-- REFACTOR: Clean up, verify tests STAY GREEN
-- Integration tests created for every spec
-- Full verification suite after each task phase
-
-For `[P]` tasks, spawn parallel implement-executor agents
-with worktree isolation. Each parallel agent follows the
-same TDD cycle independently.
+**Full algorithm** (parse tasks, route, dispatch, accumulate
+context, verify): see `references/phase-execution.md` —
+"Phase 7: Implement (Task-Level Dispatch)".
 
 ## Step 3: Post-Implementation
 
-After all 7 phases complete and G7 passes:
+After all 7 phases complete and G7 passes, follow the
+detailed procedures in `references/post-implementation.md`:
 
-### 3.1 Full Integration / E2E Suite Verification
+1. **3.1 Integration Suite** — verify spec-specific tests
+   exist, run FULL suite to catch regressions, fix failures
+2. **3.2 PR Creation** — final verification, push, create PR
+   with auto-generated summary, update workflow file
+3. **3.3 Review Remediation** — schedule `/loop` to monitor
+   and resolve Copilot/human review comments every 5 minutes
 
-Integration tests for the spec are created DURING the
-Implement phase (the implement-executor agent creates them
-as part of TDD). This step runs the FULL suite to catch
-regressions from other specs.
-
-**Step 1 — Verify spec-specific tests exist:**
-
-```text
-Glob("tests/integration/*<spec-name>*")  ← TOOL CALL
-Glob("tests/e2e/*<spec-name>*")          ← TOOL CALL
-```
-
-If no spec-specific tests exist, the implement-executor
-failed to create them. Spawn it again to fix:
-
-```text
-Agent(
-  subagent_type: "implement-executor",
-  description: "SPEC-XXX missing integration tests",
-  prompt: """
-    The implementation phase did not create integration
-    tests for SPEC-XXX. This is NON-NEGOTIABLE.
-
-    1. Read existing integration tests to understand the
-       pattern (test structure, setup, teardown)
-    2. Create spec-specific integration tests covering
-       the P1 user stories from spec.md
-    3. Follow TDD: write tests → verify FAIL → write
-       implementation stubs if needed → verify PASS
-
-    Spec: specs/<number>-<name>/spec.md
-    Plan: specs/<number>-<name>/plan.md
-  """
-)
-```
-
-**Step 2 — Run the FULL suite:** Run ALL integration tests,
-not just the new ones:
-
-```text
-Bash("<INTEGRATION_TEST command>")     ← TOOL CALL
-```
-
-If any fail → fix and re-run (max 2 attempts). Commit
-fixes before proceeding.
-
-**Step 3 — Record results** in the workflow file:
-integration test count, pass/fail, regressions found.
-
-**Why:** Existing integration tests may break due to new
-tool registration, shared infrastructure changes, or side
-effects. The full suite catches regressions before the PR.
-
-### 3.2 PR Creation
-
-```text
-1. Run final verification (BOTH test suites):
-   <BUILD> && <TYPECHECK> && <LINT> && <UNIT_TEST> && <INTEGRATION_TEST>
-   (use PROJECT_COMMANDS discovered in Step 0.10)
-2. Detect remote: git remote -v
-3. Push: git push -u <remote> <branch>
-4. Create PR:
-   gh pr create \
-     --title "feat(SPEC-XXX): <Spec Name>" \
-     --body "$(cat <<'EOF'
-   ## Summary
-   <Auto-generated from spec.md Summary section>
-
-   ## Spec Artifacts
-   - spec.md — Requirements and user stories
-   - plan.md — Technical architecture
-   - tasks.md — Implementation task breakdown
-
-   ## Implementation
-   - <N> tasks completed across <M> phases
-   - <X> new tests (<Y> unit + <Z> contract + <W> integration)
-   - All gates passed (G1-G7)
-
-   ## Verification
-   - [x] Build passes
-   - [x] Type check passes
-   - [x] Lint passes
-   - [x] Tests pass (<total> tests)
-
-   ## Test Plan
-   - [ ] Review spec artifacts in specs/<number>-<name>/
-   - [ ] Verify scripts in Script Editor (manual)
-   - [ ] Manual verification (manual)
-   EOF
-   )"
-5. Update workflow file with PR URL
-6. Commit: "feat(SPEC-XXX): open PR for review"
-```
-
-If `gh` is not installed, push the branch and tell the user to
-create the PR manually.
-
-### 3.3 Copilot Review Remediation Loop
-
-**This step is MANDATORY after PR creation.** Use the `/loop`
-command to schedule recurring review comment monitoring.
-
-**Before invoking `/loop`, extract these values:**
-
-```text
-PR_NUMBER = <from gh pr create output>       ← TOOL CALL
-REPO = <owner/name from git remote -v>       ← TOOL CALL
-BRANCH = <current branch name>               ← TOOL CALL
-```
-
-**Execute this immediately after PR creation:**
-
-```text
-Skill("loop", args: "5m
-  Check PR #<PR_NUMBER> in <REPO> for unresolved review
-  comments and resolve them.
-
-  Step 1 — Fetch comments:
-  Bash('gh api repos/<REPO>/pulls/<PR_NUMBER>/reviews
-    --jq \".[] | select(.state == \\\"CHANGES_REQUESTED\\\"
-    or .state == \\\"COMMENTED\\\") | {id, state, body}\"')
-
-  Bash('gh api repos/<REPO>/pulls/<PR_NUMBER>/comments
-    --jq \".[] | select(.in_reply_to_id == null) | {id,
-    path, line, body, created_at}\"')
-
-  Step 2 — If 0 unresolved comments, report 'No unresolved
-  comments on PR #<PR_NUMBER>' and stop.
-
-  Step 3 — For each unresolved comment:
-  a. Read the comment body and the file it references
-  b. If code fix needed:
-     - Edit the file
-     - Bash('<BUILD> && <TYPECHECK> && <UNIT_TEST> && <INTEGRATION_TEST>')
-     - Bash('git add <file> && git commit -m
-       \"fix(SPEC-XXX): address review - <summary>\"')
-     - Bash('git push')
-     - Reply: Bash('gh api
-       repos/<REPO>/pulls/<PR_NUMBER>/comments
-       -f body=\"Fixed in $(git rev-parse --short HEAD).
-       <explanation>\"
-       -f in_reply_to=<comment_id>')
-     - Resolve: Bash('gh api graphql -f query=\"mutation {
-       minimizeComment(input:{subjectId:\\\"<comment_node_id>\\\",
-       classifier:RESOLVED}) { minimizedComment { isMinimized }
-       }}\"')
-  c. If style/format:
-     - Bash('<LINT_FIX>')
-     - Commit, push, reply, resolve
-  d. If question or false positive:
-     - Reply with explanation via gh api, then resolve
-
-  Step 4 — After addressing all comments, report summary.
-")
-```
-
-**Why `/loop`:** The loop runs every 5 minutes in the
-background, checking for new review comments from GitHub
-Copilot or human reviewers. It automatically expires after
-3 days (Claude Code's built-in safety limit). The autopilot
-doesn't need to wait — it schedules the loop and reports
-completion.
-
-**Critical:** The loop prompt must be **self-contained** —
-each cron fire runs in a fresh context with no memory of
-prior iterations. All values (PR number, repo, branch) must
-be hardcoded in the prompt, not referenced as variables.
-
-**After scheduling the loop, the autopilot is DONE.** Report
-the final summary with PR URL and note that review
-remediation is running in the background via `/loop`.
+After scheduling the loop, the autopilot is DONE. Report
+the final summary with PR URL.
 
 ## Workflow File Update Protocol
 
@@ -1109,6 +675,19 @@ The workflow file persists all state. To resume:
 The autopilot reads prior artifacts from disk and continues from
 the specified phase.
 
+### Common Issues
+
+- **Subagent returns empty/incomplete summary:** Re-spawn with
+  the same prompt. If it fails again, run the command directly
+  via Bash and parse the output.
+- **Gate fails after 2 auto-fix attempts:** If `gate-failure`
+  setting is `stop`, STOP and report. Show the gate script
+  output so the user can diagnose.
+- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`
+  and STOP. Present all 3 perspectives to the user.
+- **MCP tool unavailable:** Skip research that depends on it.
+  Use Read/Grep fallback for codebase analysis. Log warning.
+
 ### Context Window Management
 
 For large specs, the context window may fill across 7 phases.
@@ -1128,3 +707,20 @@ Mitigations:
   Multi-agent resolution rules and flows
 - [Gate Validation](./references/gate-validation.md) — Programmatic
   gate checks and remediation loops
+- [Post-Implementation](./references/post-implementation.md) —
+  Integration suite, PR creation, review remediation loop
+- [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor
+  rules injected into implementation agent prompts
+
+## Scripts
+
+Deterministic bash scripts for prerequisite checks and validation:
+
+- `scripts/check-prerequisites.sh <workflow_file>` — Verify CLI,
+  project init, constitution, commands, branch detection (JSON)
+- `scripts/validate-gate.sh <G1-G7> <feature_dir>` — Validate
+  any gate with marker counts and details (JSON)
+- `scripts/detect-commands.sh` — Auto-detect build/test/lint
+  commands for Node.js, Rust, Go, Python, Makefile (JSON)
+- `scripts/detect-presets.sh` — Find installed presets,
+  extensions, hooks, template resolution (JSON)

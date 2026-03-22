@@ -41,25 +41,43 @@ Read CLAUDE.md and package.json (or equivalent) to find:
 
 Detect package manager from lockfile if Node.js project.
 
-### 3. Fetch All Unresolved Review Comments
+### 3. Fetch All Unresolved Review Threads
+
+Fetch review threads via GraphQL to get thread IDs (needed
+for resolution) and comment details in one call:
 
 ```text
-Bash("gh api repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/comments \
-  --jq '.[] | select(.in_reply_to_id == null) | \
-  {id, node_id, path, line, original_line, diff_hunk, body, \
-  created_at, user: .user.login}'")
+Bash("gh api graphql -f query='query {
+  repository(owner: \"<OWNER>\", name: \"<REPO>\") {
+    pullRequest(number: <PR_NUMBER>) {
+      reviewThreads(first: 100) {
+        nodes {
+          id
+          isResolved
+          path
+          line
+          comments(first: 10) {
+            nodes {
+              id
+              databaseId
+              body
+              author { login }
+              createdAt
+            }
+          }
+        }
+      }
+    }
+  }
+}'")
 ```
 
-Also fetch review-level comments:
+Filter to unresolved threads only (`isResolved == false`).
+Each thread's `id` is the threadId needed for resolution.
+Each thread's `comments.nodes[0]` is the original review
+comment with the reviewer's feedback.
 
-```text
-Bash("gh api repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/reviews \
-  --jq '.[] | select(.state == \"CHANGES_REQUESTED\" or \
-  .state == \"COMMENTED\") | {id, node_id, body, state, \
-  user: .user.login}'")
-```
-
-If 0 unresolved comments, report "No unresolved comments
+If 0 unresolved threads, report "No unresolved comments
 on PR #<PR_NUMBER>" and stop.
 
 ### 4. Process Each Comment
@@ -103,16 +121,19 @@ Bash("gh api repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/comments \
   -f body='<explanation of what was fixed or why no change>' \
   -f in_reply_to=<comment_id>")
 
-Resolve the thread:
+Resolve the review thread:
 Bash("gh api graphql -f query='mutation {
-  minimizeComment(input: {
-    subjectId: \"<comment_node_id>\",
-    classifier: RESOLVED
+  resolveReviewThread(input: {
+    threadId: \"<thread_id>\"
   }) {
-    minimizedComment { isMinimized }
+    thread { isResolved }
   }
 }'")
 ```
+
+The `<thread_id>` comes from the GraphQL query in Step 3
+(each thread's `id` field). Do NOT use the comment's
+node_id — thread resolution requires the thread ID.
 
 ### 6. Push All Changes
 

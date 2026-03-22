@@ -28,10 +28,13 @@ core files.
 ```bash
 # Discovery
 specify preset search                         # browse available presets
+specify preset search --tag <tag>             # filter by tag
+specify preset search --author <author>       # filter by author
 specify preset info <name>                     # detailed preset info
 
 # Installation
 specify preset add <name>                      # install from catalog
+specify preset add --from <url>                # install from ZIP URL
 specify preset add <name> --priority 5         # install with priority (lower wins)
 specify preset add --dev ./my-preset           # install from local directory
 
@@ -39,6 +42,9 @@ specify preset add --dev ./my-preset           # install from local directory
 specify preset list                            # show installed presets
 specify preset resolve <template-name>         # show which file wins for a template
 specify preset remove <name>                   # uninstall preset
+specify preset enable <name>                   # re-enable a disabled preset
+specify preset disable <name>                  # disable without removing
+specify preset set-priority <name> <N>         # change resolution priority
 
 # Catalog management
 specify preset catalog list                    # list active preset catalogs
@@ -75,31 +81,32 @@ are not combined.
 mkdir -p /tmp/my-preset/{templates,commands}
 ```
 
-2. Create `preset.yml` with the **required schema**:
+2. Create `preset.yml` with the schema:
 
 ```yaml
-schema_version: "1.0"
+schema_version: "1.0"                    # Required
 
 preset:
-  id: "my-preset"
-  name: "My Custom Preset"
-  version: "1.0.0"
-  description: "Enforces team-specific patterns"
-  author: "your-team"
-  license: "MIT"
+  id: "my-preset"                        # Required, lowercase-hyphenated
+  name: "My Custom Preset"              # Required, human-readable
+  version: "1.0.0"                       # Required, semantic version
+  description: "Enforces team patterns"  # Required, <200 chars
+  author: "your-team"                    # Optional
+  repository: "https://github.com/..."   # Optional
+  license: "MIT"                         # Optional
 
 requires:
-  speckit_version: ">=0.3.0"
+  speckit_version: ">=0.3.0"             # Required
 
 provides:
-  templates:
-    - type: "template"
-      name: "tasks-template"
+  templates:                             # Required, at least one entry
+    - type: "template"                   # "template" or "command"
+      name: "tasks-template"            # template name to override
       file: "templates/tasks-template.md"
       description: "Custom tasks template with TDD enforcement"
-      replaces: "tasks-template"
+      replaces: "tasks-template"         # which core template this overrides
 
-tags:
+tags:                                    # Optional
   - "tdd"
   - "custom"
 ```
@@ -107,7 +114,10 @@ tags:
 **Critical fields:**
 - `schema_version: "1.0"` is REQUIRED (validation fails without it)
 - Fields are nested under `preset:` (not top-level)
-- Each template needs `type`, `name`, `file`, and `replaces`
+- `id`, `name`, `version`, `description` are required
+- `author`, `repository`, `license` are optional
+- Each template needs `type`, `name`, `file`, and `description`
+- `replaces` is optional but needed to override core templates
 
 3. Add template overrides in `templates/` — copy the core
    template from `.specify/templates/` and modify the sections
@@ -180,12 +190,16 @@ specify extension add --dev <path>             # install from local directory
 
 # Management
 specify extension list                         # show installed extensions
+specify extension list --available             # show available from catalogs
+specify extension list --all                   # show all (installed + available)
 specify extension update [name]                # check for / apply updates
 specify extension disable <name>               # disable temporarily
 specify extension enable <name>                # re-enable
 specify extension remove <name>                # remove completely
+specify extension remove <name> --force        # force removal without confirmation
 specify extension remove <name> --keep-config  # remove but preserve config
 specify extension remove <name> --force        # skip confirmation
+specify extension set-priority <name> <N>     # change resolution priority
 
 # Catalog management
 specify extension catalog list                 # list active catalogs
@@ -225,6 +239,40 @@ Install them using `--from <zip-url>`:
 
 ```bash
 specify extension add verify --from https://github.com/author/spec-kit-verify/archive/refs/tags/v1.0.0.zip
+```
+
+### extension.yml Schema (for creating extensions)
+
+```yaml
+schema_version: "1.0"                    # Required
+
+extension:
+  id: "my-extension"                     # Required, lowercase-hyphenated
+  name: "My Extension"                   # Required, human-readable
+  version: "1.0.0"                       # Required, semantic version
+  description: "Brief description"       # Required, <200 chars
+  author: "Your Name"                    # Required
+  repository: "https://github.com/..."   # Required
+  license: "MIT"                         # Required
+  homepage: "https://..."                # Optional
+
+requires:
+  speckit_version: ">=0.3.0"             # Required
+
+provides:
+  commands:                              # Required, at least one
+    - name: "speckit.my-ext.run"         # pattern: speckit.<ext-id>.<cmd>
+      file: "commands/run.md"            # relative path to command file
+      description: "What this command does"
+
+hooks:                                   # Optional
+  after_implement:
+    command: "speckit.my-ext.run"
+    optional: true
+    prompt: "Run my extension?"
+    description: "Hook description"
+
+tags: ["code", "review"]                 # Optional
 ```
 
 ### Hook Events
@@ -330,10 +378,46 @@ catalogs:
 
 Environment override: `SPECKIT_CATALOG_URL`
 
+### The Extension Registry
+
+The CLI maintains a structured registry at `.specify/extensions/.registry`
+(JSON). This is the **most authoritative** source for extension status:
+
+```json
+{
+  "schema_version": "1.0",
+  "extensions": {
+    "verify": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:...",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": ["speckit.verify.run", "speckit.verify"],
+        "gemini": ["speckit.verify.run", "speckit.verify"]
+      },
+      "installed_at": "2026-03-20T02:25:31Z"
+    }
+  }
+}
+```
+
+**Key fields:**
+- `enabled` — whether the extension is active (true/false)
+- `registered_commands` — which command files were created per platform
+- `priority` — resolution order (lower = higher precedence)
+- `source` — "catalog" or "local" (from `--dev` flag)
+
+**Detection priority for automation:**
+1. `.registry` (most authoritative — has enabled/disabled status)
+2. Glob for `.specify/extensions/*/extension.yml` (fallback)
+3. NEVER rely solely on `installed` field in `.specify/extensions.yml`
+
 ### Version Control
 
 **Commit to git:**
-- `.specify/extensions.yml` — installed extension list + hooks
+- `.specify/extensions.yml` — hook configuration
 - `.specify/extensions/*/<ext>-config.yml` — shared config
 
 **Gitignore:**
@@ -341,6 +425,12 @@ Environment override: `SPECKIT_CATALOG_URL`
 - `.specify/extensions/.backup/`
 - `.specify/extensions/*/*.local.yml`
 - `.specify/extensions/.registry`
+
+Note: `.registry` is gitignored because it contains machine-specific
+install timestamps and manifest hashes. Extension presence is determined
+from the extension directories and `extensions.yml` hooks config. The
+`installed` field in `extensions.yml` SHOULD list installed extensions
+but may be empty if extensions were installed with older CLI versions.
 
 ---
 
@@ -356,3 +446,5 @@ Environment override: `SPECKIT_CATALOG_URL`
 | Config not applied | Wrong config layer or file name | Check 4-tier config priority |
 | Preset lost after upgrade | Presets survive `specify init --here --force` | Presets are safe — only core templates reset |
 | Extension lost after upgrade | Extensions survive upgrades | Extensions are safe — check with `specify extension list` |
+| `installed: []` but extensions exist | CLI didn't update field or older version | Check `.registry` or Glob for directories — those are authoritative |
+| Autopilot skips extension tasks | Wrong detection — not reading `.registry` | Ensure Step 0.11 checks `.registry` first, then Glob fallback |

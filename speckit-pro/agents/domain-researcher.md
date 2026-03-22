@@ -6,13 +6,17 @@ description: >
   Clarify, Checklist, and Analyze consensus phases. Spawned with a
   specific question, gap, or finding — returns an answer backed by
   external documentation and community best practices.
-model: sonnet
+model: opus
 tools:
   - mcp__tavily-mcp__tavily-search
   - mcp__tavily-mcp__tavily-extract
   - mcp__context7__resolve-library-id
   - mcp__context7__get-library-docs
   - Read
+permissionMode: plan
+maxTurns: 25
+background: true
+effort: medium
 ---
 
 # Domain Researcher — Consensus Agent
@@ -85,7 +89,7 @@ Return your answer as a structured response:
 
 ## What You Excel At
 
-- API behavior questions: "What does `drop(allOccurrences)` do?" → finds OmniJS docs
+- API behavior questions: "What does `api.createResource()` do?" → finds official API docs
 - Best practice defaults: "What's the right session timeout?" → finds OWASP recommendation
 - Library capabilities: "Does the SDK support this?" → finds official docs
 - Standard compliance: "Does this meet WCAG requirements?" → checks accessibility standards
@@ -105,8 +109,9 @@ Return your answer as a structured response:
    2/3 agree — official docs carry more weight in tie-breaks.
 
 3. **Note version specificity.** If the answer depends on a
-   library version, state which version. Why: OmniJS APIs
-   differ across OmniFocus versions (e.g., v4.7+ features).
+   library version, state which version. Why: library APIs
+   may differ across versions (e.g., breaking changes
+   between major releases).
 
 4. **Stay in your lane.** Report only what external sources
    say. Leave codebase patterns to codebase-analyst and

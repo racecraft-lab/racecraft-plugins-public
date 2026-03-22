@@ -407,8 +407,30 @@ agents, features, scripts, extensions, and git status.
 ## CLI Commands (v0.3.2)
 
 Beyond the slash commands above, the `specify` CLI provides
-project management commands for presets, extensions, and
-project health.
+project management commands for initialization, presets,
+extensions, and project health.
+
+### `specify init` — Project Initialization
+
+```bash
+specify init [PROJECT_NAME]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--ai <agent>` | Target AI agent (claude, gemini, copilot, etc.) |
+| `--here` | Initialize in current directory (no new folder) |
+| `--force` | Overwrite existing `.specify/` config |
+| `--no-git` | Skip Git initialization |
+| `--ai-skills` | Generate skill files (not just commands) |
+| `--preset <name>` | Install a preset during init |
+| `--branch-numbering` | Enable numbered branch prefixes |
+| `--script <name>` | Run a post-init script |
+| `--ignore-agent-tools` | Skip agent tool detection |
+| `--skip-tls` | Skip TLS verification for downloads |
+| `--debug` | Enable debug output |
+| `--github-token <token>` | GitHub API token for private repos |
+| `--ai-commands-dir <path>` | Custom commands directory |
 
 ### `specify check` — Installation Health
 
@@ -448,14 +470,20 @@ core files.
 
 | Command | Description |
 |---------|-------------|
-| `specify preset search` | Browse available presets in catalogs |
+| `specify preset search [query]` | Browse available presets in catalogs |
+| `specify preset search --tag <tag>` | Filter presets by tag |
+| `specify preset search --author <author>` | Filter presets by author |
 | `specify preset add <name>` | Install preset from catalog |
+| `specify preset add --from <url>` | Install preset from ZIP URL |
 | `specify preset add --dev <path>` | Install from local directory (development) |
 | `specify preset add <name> --priority N` | Install with specific priority (lower wins) |
 | `specify preset list` | Show installed presets |
 | `specify preset resolve <template>` | Show which file wins for a template name |
 | `specify preset info <name>` | Get detailed preset information |
 | `specify preset remove <name>` | Uninstall preset |
+| `specify preset enable <name>` | Re-enable a disabled preset |
+| `specify preset disable <name>` | Disable without removing (templates skipped during resolution) |
+| `specify preset set-priority <name> <N>` | Change resolution priority (lower wins) |
 | `specify preset catalog list` | List active preset catalogs |
 | `specify preset catalog add <url>` | Add custom preset catalog |
 | `specify preset catalog remove <name>` | Remove preset catalog |
@@ -535,11 +563,15 @@ They're independently versioned and optionally installed.
 | `specify extension add --from <url>` | Install from ZIP URL |
 | `specify extension add --dev <path>` | Install from local directory |
 | `specify extension list` | Show installed extensions |
+| `specify extension list --available` | Show available extensions from catalogs |
+| `specify extension list --all` | Show all (installed + available) |
 | `specify extension update [name]` | Check for / apply updates |
 | `specify extension disable <name>` | Disable temporarily |
 | `specify extension enable <name>` | Re-enable |
 | `specify extension remove <name>` | Remove completely |
 | `specify extension remove <name> --keep-config` | Remove but preserve config |
+| `specify extension remove <name> --force` | Force removal without confirmation |
+| `specify extension set-priority <name> <N>` | Change resolution priority |
 | `specify extension catalog list` | List active extension catalogs |
 | `specify extension catalog add <url>` | Add custom catalog |
 | `specify extension catalog remove <name>` | Remove catalog |

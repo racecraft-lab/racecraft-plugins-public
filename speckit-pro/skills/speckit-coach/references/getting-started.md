@@ -35,6 +35,8 @@ specify init --ai claude
 | `--here` | Initialize in current directory (for upgrades) |
 | `--force` | Overwrite without confirmation |
 | `--no-git` | Skip git initialization |
+| `--preset <name>` | Install a preset during initialization |
+| `--branch-numbering` | Enable numbered branch prefixes (e.g., 001-feature) |
 | `--script sh\|ps` | Script type (bash or PowerShell) |
 | `--skip-tls` | Disable SSL/TLS verification |
 | `--debug` | Verbose troubleshooting output |
@@ -579,6 +581,7 @@ INSTALL:    uv tool install specify-cli --from git+https://github.com/github/spe
 INIT:       specify init --ai claude     # 25+ agents supported
 UPGRADE:    specify init --here --force --ai claude
 CHECK:      specify check
+VERSION:    specify version
 DOCTOR:     /speckit.doctor         # project health diagnostics
 PRESETS:    specify preset search         # browse presets
 EXTENSIONS: specify extension search      # browse extensions

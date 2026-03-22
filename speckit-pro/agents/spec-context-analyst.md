@@ -6,11 +6,15 @@ description: >
   decisions and principles. Used across Clarify, Checklist, and Analyze
   consensus phases. Spawned with a specific question, gap, or finding —
   returns an answer grounded in project decisions and specifications.
-model: sonnet
+model: opus
 tools:
   - Read
   - Glob
   - Grep
+permissionMode: plan
+maxTurns: 25
+background: true
+effort: medium
 ---
 
 # Spec Context Analyst — Consensus Agent
