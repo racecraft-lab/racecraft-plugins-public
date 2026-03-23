@@ -83,15 +83,16 @@ SKILL.md Rule 6).
 For EACH [Gap] marker found after a domain subagent:
 
 Step 1: Research the gap using multiple tools:
-  a. context_builder(response_type: "question") — ask
+  a. Codebase exploration — use RepoPrompt context_builder
+     (preferred) or Grep/Glob/Read (fallback) to ask
      "How should we close this gap?" with the gap text,
      spec.md excerpt, and plan.md excerpt as context.
-     RepoPrompt explores the codebase for established
-     patterns and proposes an evidence-grounded fix.
-  b. Tavily search (mcp__tavily-mcp__tavily-search) —
-     search for API docs, standards, or best practices
-     relevant to the gap (e.g., API behavior, framework
-     patterns, error handling standards)
+     Explore the codebase for established patterns and
+     propose an evidence-grounded fix.
+  b. Web search — use Tavily (preferred) or WebSearch/
+     WebFetch (fallback) to search for API docs, standards,
+     or best practices relevant to the gap (e.g., API
+     behavior, framework patterns, error handling standards)
   c. Read constitution + prior specs — check if project
      principles or precedent decisions address the gap
 
@@ -114,8 +115,8 @@ Step 5: If gaps remain after 2 loops → STOP, present
 ```
 
 **Why research + consensus:** Gaps often require understanding
-both what the codebase already does (context_builder) AND what
-the API/standard requires (Tavily). Using multiple research
+both what the codebase already does (codebase exploration) AND what
+the API/standard requires (via web search). Using multiple research
 sources produces higher-quality fixes than guessing.
 
 **Critical:** Run gap remediation sequentially (one gap at a
@@ -160,14 +161,15 @@ Step 2: Parse ALL findings by severity
 Step 3: For EACH finding (CRITICAL, HIGH, MEDIUM, LOW):
 
   a. Research the finding using multiple tools:
-     - context_builder(response_type: "question") — ask
+     - Codebase exploration — use RepoPrompt context_builder
+       (preferred) or Grep/Glob/Read (fallback) to ask
        "How should we fix this finding?" with the finding
        text, spec.md/plan.md/tasks.md excerpts as context.
-       RepoPrompt explores the codebase for established
-       patterns and proposes an evidence-grounded fix.
-     - Tavily search (mcp__tavily-mcp__tavily-search) —
-       search for API docs, standards, or best practices
-       relevant to the finding
+       Explore the codebase for established patterns and
+       propose an evidence-grounded fix.
+     - Web search — use Tavily (preferred) or WebSearch/
+       WebFetch (fallback) to search for API docs, standards,
+       or best practices relevant to the finding
      - Read constitution + prior specs — check if project
        principles or precedent decisions inform the fix
 
@@ -293,7 +295,7 @@ When auto-fix fails after max attempts:
    - Which gate failed
    - What the specific failure is
    - What auto-fix attempts were made
-   - Research findings from context_builder and Tavily (for G4/G6)
+   - Research findings from codebase exploration and web search (for G4/G6)
 3. **Wait for guidance** — the human can:
    - Provide a fix and resume: "Fix X, then continue"
    - Skip the gate: "Proceed anyway" (logged as a deliberate override)

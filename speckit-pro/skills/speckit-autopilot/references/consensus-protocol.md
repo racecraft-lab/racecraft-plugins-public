@@ -9,8 +9,9 @@ Checklist, and Analyze.
 **Layer 1 — Executor agent (first pass):** Each phase has a
 specialized executor agent (clarify-executor,
 checklist-executor, analyze-executor) that runs the
-`/speckit.*` command AND does direct research using Tavily,
-Context7, RepoPrompt, and codebase search. The executor
+`/speckit.*` command AND does direct research using web search,
+library docs, and codebase exploration (MCP tools when available,
+built-in fallbacks otherwise). The executor
 resolves most items directly (~80%) and applies fixes to
 artifacts. Items it can't resolve with high confidence are
 flagged in its "Unresolved for consensus" summary section.
@@ -37,9 +38,9 @@ industry best practices.
 
 | Agent | Perspective | Primary Tools | Strength |
 |-------|------------|---------------|----------|
-| `codebase-analyst` | What does the existing code show? | RepoPrompt context_builder, file_search, get_code_structure | Finding established patterns, types, naming conventions, error handling |
+| `codebase-analyst` | What does the existing code show? | RepoPrompt (preferred) or Grep/Glob/Read (fallback) | Finding established patterns, types, naming conventions, error handling |
 | `spec-context-analyst` | What do project decisions say? | Read (constitution, master plan, prior specs, CLAUDE.md) | Grounding answers in established principles and prior decisions |
-| `domain-researcher` | What do best practices recommend? | Tavily search, Context7 docs | External evidence — API docs, standards, community patterns |
+| `domain-researcher` | What do best practices recommend? | Tavily/Context7 (preferred) or WebSearch/WebFetch (fallback) | External evidence — API docs, standards, community patterns |
 
 ## Consensus Rules
 
@@ -92,7 +93,7 @@ main session handles Layer 2 (consensus) for unresolved items.
 clarify-executor runs /speckit.clarify session
     │
     ├── Layer 1: Executor researches and answers all questions
-    │   using Tavily, Context7, RepoPrompt, Read/Grep
+    │   using available research tools (MCP preferred, built-in fallbacks)
     │
     ├── Executor returns summary with:
     │   ├── Questions answered (with citations)

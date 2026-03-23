@@ -140,7 +140,7 @@ section "clarify-executor"
 AGENT_FILE="$AGENTS_DIR/clarify-executor.md"
 TOOLS=$(extract_tools "$AGENT_FILE")
 
-for tool in Skill Read Write Edit Bash Grep Glob; do
+for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
   set_test "clarify-executor has $tool"
   assert_tool_present "$TOOLS" "$tool" "clarify-executor"
 done
@@ -165,7 +165,7 @@ section "checklist-executor"
 AGENT_FILE="$AGENTS_DIR/checklist-executor.md"
 TOOLS=$(extract_tools "$AGENT_FILE")
 
-for tool in Skill Read Write Edit Bash Grep Glob; do
+for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
   set_test "checklist-executor has $tool"
   assert_tool_present "$TOOLS" "$tool" "checklist-executor"
 done
@@ -190,7 +190,7 @@ section "analyze-executor"
 AGENT_FILE="$AGENTS_DIR/analyze-executor.md"
 TOOLS=$(extract_tools "$AGENT_FILE")
 
-for tool in Skill Read Write Edit Bash Grep Glob; do
+for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
   set_test "analyze-executor has $tool"
   assert_tool_present "$TOOLS" "$tool" "analyze-executor"
 done
@@ -311,8 +311,10 @@ section "domain-researcher"
 AGENT_FILE="$AGENTS_DIR/domain-researcher.md"
 TOOLS=$(extract_tools "$AGENT_FILE")
 
-set_test "domain-researcher has Read"
-assert_tool_present "$TOOLS" "Read" "domain-researcher"
+for tool in Read WebSearch WebFetch; do
+  set_test "domain-researcher has $tool"
+  assert_tool_present "$TOOLS" "$tool" "domain-researcher"
+done
 
 for tool in Write Edit Bash Glob Grep; do
   set_test "domain-researcher does NOT have $tool"

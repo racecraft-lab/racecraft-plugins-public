@@ -50,11 +50,22 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 ### Search Strategy
 
-- Use `mcp__RepoPrompt__file_search` for broad pattern matching across the codebase
-- Use `mcp__RepoPrompt__get_code_structure` to understand API surfaces without reading full files
-- Use `mcp__RepoPrompt__context_builder` for deep exploration of related code
-- Use `Grep` for specific pattern searches (error handling, naming conventions)
-- Use `Glob` to find files matching structural patterns
+Use the best available tools. RepoPrompt MCP tools are preferred
+when installed; built-in tools are automatic fallbacks.
+
+- **Broad pattern matching** across the codebase
+  - Preferred: `mcp__RepoPrompt__file_search`
+  - Fallback: `Grep` with regex patterns
+- **API surface exploration** — understand function/type
+  signatures without reading full files
+  - Preferred: `mcp__RepoPrompt__get_code_structure`
+  - Fallback: `Grep` for function/class/type definitions
+- **Deep code exploration** — understand relationships and
+  context across related files
+  - Preferred: `mcp__RepoPrompt__context_builder`
+  - Fallback: `Glob` to find files + `Read` for content
+- `Grep` for specific pattern searches (always available)
+- `Glob` to find files matching structural patterns (always available)
 
 ## Output Format
 

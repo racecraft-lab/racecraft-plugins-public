@@ -171,9 +171,9 @@ questions, gaps, and findings.
 
 | Agent | Perspective | What It Does |
 | ----- | ----------- | ------------ |
-| **codebase-analyst** | What does the code show? | Searches existing code via RepoPrompt for established patterns, types, naming conventions |
+| **codebase-analyst** | What does the code show? | Searches existing code (via RepoPrompt or Grep/Glob/Read) for established patterns, types, naming conventions |
 | **spec-context-analyst** | What do decisions say? | Reads constitution, master plan, prior specs for established principles and precedent |
-| **domain-researcher** | What do best practices say? | Searches Tavily/Context7 for official docs, standards, community patterns |
+| **domain-researcher** | What do best practices say? | Searches web (via Tavily/Context7 or WebSearch/WebFetch) for official docs, standards, community patterns |
 
 ### Consensus Modes
 
@@ -223,7 +223,7 @@ From the completed SPEC-013 workflow:
 - **Clarify**: 6 questions resolved via domain-researcher
   (official API docs), 0 needed human input
 - **Checklist**: 9 gaps remediated — 4 via codebase-analyst
-  (existing patterns), 2 via domain-researcher (Tavily), 2
+  (existing patterns), 2 via domain-researcher (web search), 2
   via spec-context-analyst (spec edits), 1 via disambiguation
 - **Analyze**: 5 findings remediated — added tasks, amended
   coverage, removed markers

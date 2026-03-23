@@ -219,9 +219,9 @@ For each clarify session in the workflow file:
 ```
 
 **Layer 1 (executor):** The clarify-executor researches
-each question using Tavily (API docs), Context7 (library
-docs), RepoPrompt (codebase patterns), and Read/Grep
-(constitution, prior specs). It resolves most questions
+each question using web search, library docs, codebase
+exploration, and local file analysis (MCP tools preferred
+when available). It resolves most questions
 directly.
 
 **Layer 2 (consensus):** For items the executor flagged
@@ -277,8 +277,9 @@ For each checklist domain in the workflow file:
 ```
 
 **Layer 1 (executor):** The checklist-executor handles
-gap research and remediation internally using Tavily,
-RepoPrompt, Context7, and codebase search.
+gap research and remediation internally using web search,
+codebase exploration, and library docs (MCP tools preferred
+when available).
 
 **Layer 2 (consensus):** For gaps the executor couldn't
 resolve (remained after 2 loops, low confidence, security

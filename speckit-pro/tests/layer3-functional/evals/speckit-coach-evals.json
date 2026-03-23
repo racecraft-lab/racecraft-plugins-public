@@ -19,20 +19,21 @@
       "expectations": [
         "Recommends at least 2 and no more than 4 checklist domains",
         "Includes 'api' or 'http' related domain for the REST API surface",
-        "Includes 'resilience' or 'reliability' domain for retry logic",
+        "Includes 'resilience', 'reliability', or 'error-handling' domain for retry logic",
         "Includes 'security' domain for signature verification",
         "Explains why each recommended domain is relevant to the webhook delivery feature"
       ]
     },
     {
       "id": 3,
-      "prompt": "I ran specify analyze on my spec and the simplicity gate is failing. The error says I have 14 acceptance criteria and the threshold is 10. But I really think all 14 are necessary for the feature. How do I fix this without losing important requirements?",
-      "expected_output": "Explains what the simplicity gate checks, why the threshold exists, and provides concrete strategies to reduce criteria count without losing coverage.",
+      "prompt": "I keep hearing about 'gates' G1 through G7 in the SpecKit autopilot. What does each gate specifically validate? I want to understand what artifacts need to exist and what markers need to be absent before each phase transition succeeds.",
+      "expected_output": "Lists all 7 gates with their specific validation criteria — what files they check, what markers they scan for, and what conditions cause pass/fail.",
       "expectations": [
-        "Explains the simplicity gate's purpose: preventing scope creep and ensuring specs are focused",
-        "Suggests splitting the spec into 2 or more smaller specs if criteria cannot be reduced",
-        "Offers techniques for consolidating related criteria into fewer, broader ones",
-        "Warns against simply deleting criteria to pass the gate — quality over count"
+        "Lists all 7 gates G1 through G7 by name or number",
+        "Explains that G1 validates the specify phase output (spec.md exists, no [TBD] markers)",
+        "Explains that G4 validates checklist completion (no [Gap] markers in spec.md or plan.md)",
+        "Explains that G7 validates task completion (all tasks marked [x] in tasks.md)",
+        "Mentions how gate validation is performed (validate-gate.sh script, programmatic checks, or marker scanning)"
       ]
     },
     {
@@ -55,6 +56,50 @@
         "Identifies dependency relationships between specs (e.g., catalog before inventory, inventory before orders)",
         "Suggests a sequential or partially-parallel implementation order based on dependencies",
         "Recommends using the master plan template to track cross-spec progress"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "What MCP servers does speckit-pro need? I'm setting up a new machine and want to know what's required vs optional for the full autopilot experience.",
+      "expected_output": "Lists Tavily, Context7, and RepoPrompt as optional MCP server enhancements. Explains they improve research quality but the plugin works without them using built-in Claude Code tools.",
+      "expectations": [
+        "Lists Tavily, Context7, and RepoPrompt as the three relevant MCP servers",
+        "States clearly that NONE are required — all are optional enhancements",
+        "Explains what each MCP server adds (better search, library docs, codebase exploration)",
+        "Mentions that built-in tools (WebSearch, WebFetch, Grep, Glob, Read) serve as automatic fallbacks"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Can you just run the full autopilot for me right now on SPEC-025? I have the workflow file ready at docs/ai/specs/SPEC-025-workflow.md.",
+      "expected_output": "Redirects to /speckit-pro:autopilot as the correct command. The coach does not execute the autopilot itself.",
+      "expectations": [
+        "Does NOT attempt to execute the autopilot workflow itself",
+        "Redirects the user to /speckit-pro:autopilot as the correct command",
+        "Mentions /speckit-pro:setup OR correctly assumes the workflow file exists since the user stated they have it",
+        "Provides brief guidance on what to expect when running the autopilot"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "What are SpecKit extensions? I see references to 'verify', 'review', 'cleanup', and 'retrospective' extensions in the autopilot workflow. How do I install them and what do they do?",
+      "expected_output": "Explains the extension system: extensions are optional post-implementation workflow steps. Lists available extensions and what each does.",
+      "expectations": [
+        "Explains that extensions are optional post-implementation workflow steps",
+        "Lists at least 4 extensions: verify, review, cleanup, retrospective",
+        "Explains that extensions are configured in .specify/extensions.yml",
+        "Describes what at least 2 extensions do (e.g., verify checks implementation against spec, review runs code review)"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "I want to understand the workflow file that /speckit-pro:setup creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
+      "expected_output": "Describes the workflow file structure: overview table with 7 phases, status tracking, SPEC-ID, feature branch, and configuration.",
+      "expectations": [
+        "Describes the workflow overview table showing all 7 phases with status columns",
+        "Mentions the SPEC-ID and feature branch fields",
+        "Explains that /speckit-pro:setup auto-populates the file from the master plan",
+        "References the workflow file location pattern (docs/ai/specs/SPEC-NNN-workflow.md)"
       ]
     }
   ]

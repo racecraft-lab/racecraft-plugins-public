@@ -4,9 +4,10 @@ description: >
   Executes a single /speckit.clarify session. The clarify command
   is interactive — it surfaces clarification questions about the
   spec and expects researched, evidence-grounded answers. This
-  agent researches each question using Tavily, Context7, RepoPrompt,
-  and codebase search, then provides the best-supported answer.
-  Use for every clarify session in the autopilot workflow.
+  agent researches each question using web search, library docs,
+  codebase exploration, and local file analysis, then provides
+  the best-supported answer. Use for every clarify session in
+  the autopilot workflow.
 model: opus
 tools:
   - Skill
@@ -16,6 +17,8 @@ tools:
   - Bash
   - Grep
   - Glob
+  - WebSearch
+  - WebFetch
   - mcp__tavily-mcp__tavily-search
   - mcp__tavily-mcp__tavily-extract
   - mcp__context7__resolve-library-id
@@ -59,22 +62,28 @@ clarification questions and present options. **You are the user.**
    You must complete the ENTIRE clarify workflow in one pass —
    generating questions, answering them, and applying answers.
 
-3. **Research before answering.** For each question:
+3. **Research before answering.** For each question, use the
+   best available tools. MCP tools are preferred when installed;
+   built-in tools are automatic fallbacks.
 
-   a. **Tavily** (`mcp__tavily-mcp__tavily-search`) — search
-      for API docs, library behavior, standards, and best
-      practices relevant to the question
+   a. **Web research** — search for API docs, library behavior,
+      standards, and best practices
+      - Preferred: `mcp__tavily-mcp__tavily-search`
+      - Fallback: `WebSearch` + `WebFetch`
 
-   b. **Context7** (`mcp__context7__resolve-library-id`,
-      `mcp__context7__get-library-docs`) — look up library
-      documentation for specific APIs mentioned in the question
+   b. **Library documentation** — look up specific API docs
+      for libraries mentioned in the question
+      - Preferred: `mcp__context7__resolve-library-id` +
+        `mcp__context7__get-library-docs`
+      - Fallback: `WebSearch` for "[library] [version] docs"
 
-   c. **RepoPrompt** (`mcp__RepoPrompt__context_builder`,
-      `mcp__RepoPrompt__file_search`) — explore the codebase
-      for existing patterns, implementations, and conventions
-      that inform the answer
+   c. **Codebase exploration** — explore the codebase for
+      existing patterns, implementations, and conventions
+      - Preferred: `mcp__RepoPrompt__context_builder` +
+        `mcp__RepoPrompt__file_search`
+      - Fallback: `Grep` + `Glob` + `Read`
 
-   d. **Read/Grep** — check the constitution
+   d. **Project context** — check the constitution
       (`.specify/memory/constitution.md`), prior specs
       (`specs/*/spec.md`), and CLAUDE.md for project
       decisions and precedent

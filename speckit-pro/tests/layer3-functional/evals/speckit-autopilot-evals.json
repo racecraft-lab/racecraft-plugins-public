@@ -26,13 +26,98 @@
     },
     {
       "id": 3,
-      "prompt": "Run detect-commands.sh in the omnifocus-mcp project root to discover the build, test, and lint commands for this Node.js/TypeScript project.",
-      "expected_output": "Runs detect-commands.sh and returns JSON with discovered commands for the project's tech stack, including the package manager, build, test, and lint commands.",
+      "prompt": "The autopilot is about to start the implement phase. I have 15 tasks in tasks.md — 4 are marked [P] for parallel execution. How does the autopilot decide execution order? What agent handles each task? What happens if a parallel task fails?",
+      "expected_output": "Explains implement-executor agents, parallel vs sequential dispatch, failure handling, and TDD protocol.",
       "expectations": [
-        "Executes scripts/detect-commands.sh from the project root",
-        "Output contains JSON with detected package manager (pnpm for this project)",
-        "Detects Node.js/TypeScript as the runtime/language",
-        "Includes build, test, and lint command entries derived from package.json scripts"
+        "States that each task is executed by a separate implement-executor agent",
+        "Explains that [P] tasks can run in parallel as concurrent agents",
+        "Explains sequential ordering for non-[P] tasks based on dependency order",
+        "Describes failure handling for individual task executors",
+        "Mentions TDD red-green-refactor as the protocol each implement-executor follows"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I heard the autopilot has different consensus modes — conservative, moderate, and aggressive. What do these modes control? Which is the default? And how do I change the mode for a specific workflow run?",
+      "expected_output": "Explains the 3 consensus modes and their voting behavior: conservative requires unanimity, moderate uses 2/3 majority (default), aggressive auto-accepts single-agent answers.",
+      "expectations": [
+        "Names or describes the 3 consensus modes: conservative, moderate, and aggressive",
+        "Explains that moderate is the default mode",
+        "Describes how conservative mode differs (requires unanimity or higher threshold)",
+        "Describes how aggressive mode differs (auto-accepts with lower agreement threshold)",
+        "Explains how to configure the consensus mode in the workflow file or autopilot invocation"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I need to generate a task list for a new spec. According to the autopilot workflow, what mandatory task entries must appear in the task list? Specifically, I want to know about consensus tasks — when are they required and what's the naming convention?",
+      "expected_output": "Lists the mandatory consensus tasks that must appear after each Clarify session, Checklist domain, and Analyze phase, with the correct naming convention.",
+      "expectations": [
+        "States that consensus tasks are MANDATORY after each Clarify session",
+        "States that consensus tasks are MANDATORY after each Checklist domain",
+        "States that consensus tasks are MANDATORY after the Analyze phase",
+        "Shows the naming convention including 'Consensus' in the task name",
+        "Explains that consensus spawns 3 agents: codebase-analyst, spec-context-analyst, domain-researcher"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "I'm running the autopilot and gate G4 (checklist complete) just failed — it found 3 [Gap] markers remaining in spec.md and 1 in plan.md. What does the autopilot do next? Does it stop, retry, or move on?",
+      "expected_output": "Explains the gate failure remediation loop: the autopilot re-runs the checklist phase to fix gaps, then re-validates G4, with a maximum retry count.",
+      "expectations": [
+        "Explains that autopilot does NOT stop on gate failure — it retries",
+        "States that it re-runs the checklist-executor to remediate [Gap] markers",
+        "Mentions re-validating G4 after remediation",
+        "References a maximum retry count or iteration limit",
+        "Mentions that the gate validation uses validate-gate.sh G4"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
+      "expected_output": "Lists the post-implementation steps: verify, code review, integration tests, cleanup, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
+      "expectations": [
+        "Lists verify implementation as a post-implementation step",
+        "Lists code review as a post-implementation step",
+        "Lists integration test suite verification",
+        "Lists PR creation with the gh CLI",
+        "Lists review remediation loop using /loop command",
+        "Distinguishes which steps require extensions (verify, review, cleanup, retrospective) vs built-in (integration tests, PR creation, review loop)"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "The autopilot needs to work in a git worktree. What branch rules does it enforce? Can it commit to main? What happens if it detects it's on the main branch instead of a feature branch?",
+      "expected_output": "Explains worktree branch rules: never commit to main, all work on feature branch, detection via branch name pattern (NNN-feature-name), warning if on main.",
+      "expectations": [
+        "States that autopilot must NEVER commit or push to main",
+        "Explains that all work happens on the worktree feature branch",
+        "Describes the feature branch naming pattern (NNN-short-name)",
+        "Explains what happens when the autopilot detects it's on main (warns or stops)",
+        "References check-prerequisites.sh branch detection as part of this check"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "I want to use the speckit-pro autopilot but I don't have Tavily, Context7, or RepoPrompt MCP servers installed. Will the autopilot still work? What am I missing without them?",
+      "expected_output": "Explains that MCP servers are optional enhancements. The autopilot works with built-in Claude Code tools as fallbacks. Tavily provides better search, Context7 gives library-specific docs, RepoPrompt enables deeper codebase exploration — but none are required.",
+      "expectations": [
+        "States that Tavily, Context7, and RepoPrompt are NOT required for the autopilot to function",
+        "Explains graceful degradation to built-in Claude Code tools",
+        "Mentions WebSearch and WebFetch as fallbacks for web research",
+        "Mentions Grep, Glob, and Read as fallbacks for codebase exploration",
+        "Describes what quality improvements the MCP servers provide when available"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "I'm new to SDD. Can you explain the philosophy behind Spec-Driven Development and why each of the 7 phases matters? I want a deep dive into the methodology before I start using the autopilot.",
+      "expected_output": "Briefly answers or redirects to /speckit-pro:coach for methodology questions. The autopilot is an executor, not a methodology teacher.",
+      "expectations": [
+        "Does NOT provide an extensive multi-page methodology lecture",
+        "Either briefly answers and redirects to /speckit-pro:coach for deeper guidance",
+        "Or provides a concise practical answer rather than philosophical deep-dive",
+        "Acknowledges that the coach skill is the appropriate resource for methodology learning"
       ]
     }
   ]

@@ -13,6 +13,13 @@ license: MIT
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+## Scope
+
+This skill handles autonomous workflow EXECUTION. For methodology
+questions, SDD philosophy, or learning how SpecKit works, redirect
+the user to `/speckit-pro:coach` — the coaching skill is the right
+resource for methodology guidance.
+
 Your context window will be automatically compacted as it
 approaches its limit, allowing you to continue working
 indefinitely. Do not stop tasks early. Always be as persistent
@@ -134,8 +141,10 @@ WRONG:
 ### 5. Clarify — executor answers autonomously
 
 The `clarify-executor` invokes `/speckit.clarify` and answers
-all questions itself using research tools (Tavily, Context7,
-RepoPrompt, codebase search). After it returns, check for
+all questions itself using research tools (web search, library docs,
+codebase exploration — uses Tavily, Context7, RepoPrompt when
+available, falls back to built-in WebSearch, WebFetch, Grep/Glob/Read).
+After it returns, check for
 remaining `[NEEDS CLARIFICATION]` markers and resolve via
 consensus if needed (see Rule 6).
 
@@ -147,8 +156,10 @@ process BEFORE spawning the next subagent.
 
 **Layer 1 — Executor does direct research:** The executor
 agent (clarify-executor, checklist-executor,
-analyze-executor) researches using Tavily, Context7,
-RepoPrompt, and codebase search. It resolves most items
+analyze-executor) researches using web search, library docs,
+and codebase exploration (Tavily, Context7, RepoPrompt when
+available, built-in WebSearch, WebFetch, Grep/Glob/Read
+otherwise). It resolves most items
 directly and applies fixes to artifacts. Items it can't
 resolve are flagged in its "Unresolved for consensus"
 summary section.

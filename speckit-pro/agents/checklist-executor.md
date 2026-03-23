@@ -3,10 +3,10 @@ name: checklist-executor
 description: >
   Executes a single /speckit.checklist domain and remediates any
   [Gap] markers found. After running the checklist, this agent
-  researches each gap using Tavily, Context7, RepoPrompt, and
-  codebase search to determine evidence-grounded fixes, then
-  applies them to spec.md or plan.md. Use for every checklist
-  domain in the autopilot workflow.
+  researches each gap using web search, library docs, codebase
+  exploration, and local file analysis to determine evidence-grounded
+  fixes, then applies them to spec.md or plan.md. Use for every
+  checklist domain in the autopilot workflow.
 model: opus
 tools:
   - Skill
@@ -16,6 +16,8 @@ tools:
   - Bash
   - Grep
   - Glob
+  - WebSearch
+  - WebFetch
   - mcp__tavily-mcp__tavily-search
   - mcp__context7__resolve-library-id
   - mcp__context7__get-library-docs
@@ -43,20 +45,23 @@ checklist and fix the gaps — all in one agent.
    Read the checklist output and grep the checklist files for
    `[Gap]` markers.
 
-3. **Research and fix EVERY gap.** For each `[Gap]` found:
+3. **Research and fix EVERY gap.** For each `[Gap]` found,
+   use the best available tools. MCP tools are preferred when
+   installed; built-in tools are automatic fallbacks.
 
-   a. **RepoPrompt** (`mcp__RepoPrompt__context_builder` with
-      `response_type: "question"`) — ask "How should we close
-      this gap?" with the gap text and spec/plan excerpts.
-      Let RepoPrompt explore the codebase for established
-      patterns that inform the fix.
+   a. **Codebase exploration** — ask "How should we close this
+      gap?" with the gap text and spec/plan excerpts. Explore
+      the codebase for established patterns that inform the fix.
+      - Preferred: `mcp__RepoPrompt__context_builder` with
+        `response_type: "question"`
+      - Fallback: `Grep` + `Glob` + `Read`
 
-   b. **Tavily** (`mcp__tavily-mcp__tavily-search`) — search
-      for API docs, standards, or best practices relevant to
-      the gap (e.g., API behavior, framework patterns, error
-      handling standards)
+   b. **Web research** — search for API docs, standards, or
+      best practices relevant to the gap
+      - Preferred: `mcp__tavily-mcp__tavily-search`
+      - Fallback: `WebSearch` + `WebFetch`
 
-   c. **Read** constitution (`.specify/memory/constitution.md`)
+   c. **Project context** — read constitution (`.specify/memory/constitution.md`)
       and prior specs (`specs/*/spec.md`) — check if project
       principles or precedent decisions address the gap
 

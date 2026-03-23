@@ -3,10 +3,11 @@ name: analyze-executor
 description: >
   Executes /speckit.analyze and remediates ALL findings at every
   severity level (CRITICAL, HIGH, MEDIUM, LOW). After running the
-  analysis, this agent researches each finding using Tavily,
-  Context7, RepoPrompt, and codebase search to determine
-  evidence-grounded fixes, then applies them to the relevant
-  artifacts. Use for the analyze phase in the autopilot workflow.
+  analysis, this agent researches each finding using web search,
+  library docs, codebase exploration, and local file analysis to
+  determine evidence-grounded fixes, then applies them to the
+  relevant artifacts. Use for the analyze phase in the autopilot
+  workflow.
 model: opus
 tools:
   - Skill
@@ -16,6 +17,8 @@ tools:
   - Bash
   - Grep
   - Glob
+  - WebSearch
+  - WebFetch
   - mcp__tavily-mcp__tavily-search
   - mcp__context7__resolve-library-id
   - mcp__context7__get-library-docs
@@ -44,20 +47,24 @@ analysis and fix the findings — all in one agent.
    HIGH, MEDIUM, LOW. Every finding gets remediated — none
    are skipped or "logged for later."
 
-3. **Research and fix EVERY finding.** For each finding:
+3. **Research and fix EVERY finding.** For each finding,
+   use the best available tools. MCP tools are preferred when
+   installed; built-in tools are automatic fallbacks.
 
-   a. **RepoPrompt** (`mcp__RepoPrompt__context_builder` with
-      `response_type: "question"`) — ask "How should we fix
-      this finding?" with the finding text and relevant
-      artifact excerpts (spec.md, plan.md, tasks.md). Let
-      RepoPrompt explore the codebase for patterns that
-      inform the fix.
+   a. **Codebase exploration** — ask "How should we fix this
+      finding?" with the finding text and relevant artifact
+      excerpts (spec.md, plan.md, tasks.md). Explore the
+      codebase for patterns that inform the fix.
+      - Preferred: `mcp__RepoPrompt__context_builder` with
+        `response_type: "question"`
+      - Fallback: `Grep` + `Glob` + `Read`
 
-   b. **Tavily** (`mcp__tavily-mcp__tavily-search`) — search
-      for API docs, standards, or best practices relevant to
-      the finding
+   b. **Web research** — search for API docs, standards, or
+      best practices relevant to the finding
+      - Preferred: `mcp__tavily-mcp__tavily-search`
+      - Fallback: `WebSearch` + `WebFetch`
 
-   c. **Read** constitution (`.specify/memory/constitution.md`)
+   c. **Project context** — read constitution (`.specify/memory/constitution.md`)
       and prior specs (`specs/*/spec.md`) — check if project
       principles or precedent decisions inform the fix
 

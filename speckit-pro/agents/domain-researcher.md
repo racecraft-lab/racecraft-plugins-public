@@ -12,6 +12,8 @@ tools:
   - mcp__tavily-mcp__tavily-extract
   - mcp__context7__resolve-library-id
   - mcp__context7__get-library-docs
+  - WebSearch
+  - WebFetch
   - Read
 permissionMode: plan
 maxTurns: 25
@@ -47,10 +49,23 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 ### Search Strategy
 
-- Use `mcp__tavily-mcp__tavily-search` for broad web searches (API docs, standards, community patterns)
-- Use `mcp__tavily-mcp__tavily-extract` to extract specific content from documentation pages
-- Use `mcp__context7__resolve-library-id` + `mcp__context7__get-library-docs` for library-specific documentation
-- Use `Read` to review any local documentation referenced in the question
+Use the best available tools. MCP tools are preferred when
+installed; built-in tools are automatic fallbacks.
+
+- **Web search** — broad searches for API docs, standards,
+  community patterns
+  - Preferred: `mcp__tavily-mcp__tavily-search`
+  - Fallback: `WebSearch`
+- **Content extraction** — extract specific content from
+  documentation pages
+  - Preferred: `mcp__tavily-mcp__tavily-extract`
+  - Fallback: `WebFetch` with the URL
+- **Library documentation** — library-specific API docs
+  - Preferred: `mcp__context7__resolve-library-id` +
+    `mcp__context7__get-library-docs`
+  - Fallback: `WebSearch` for "[library] [version] docs"
+- Use `Read` to review any local documentation referenced
+  in the question
 
 ### Search Tips
 
