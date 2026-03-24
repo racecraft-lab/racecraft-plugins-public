@@ -1,15 +1,9 @@
 {
-  "name": "racecraft-local-plugins",
+  "name": "racecraft-public-plugins",
   "owner": {
     "name": "Fredrick Gabelmann"
   },
   "plugins": [
-    {
-      "name": "racecraft",
-      "source": "./racecraft",
-      "description": "Racecraft productivity plugin: weekly planning, weekly/monthly/quarterly reviews, competitor intelligence, and workflow automation with subagent architecture and Chrome browser automation",
-      "version": "2.0.0"
-    },
     {
       "name": "speckit-pro",
       "source": "./speckit-pro",

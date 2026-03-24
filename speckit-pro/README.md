@@ -17,7 +17,7 @@ Two skills packaged as a single plugin:
 
 ## Quick Start
 
-1. Install the plugin: `/plugin install speckit-pro@racecraft-local-plugins`
+1. Install the plugin: `/plugin install speckit-pro@racecraft-public-plugins`
 2. Install SpecKit CLI:
    `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`
 3. Initialize SpecKit: `specify init --ai claude`
