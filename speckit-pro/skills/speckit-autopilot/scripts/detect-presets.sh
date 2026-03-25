@@ -7,8 +7,8 @@
 
 set -euo pipefail
 
-# Detect presets
-presets="[]"
+# Detect presets — build a jq-safe JSON array
+presets_json="[]"
 if ls .specify/presets/*/preset.yml >/dev/null 2>&1; then
   preset_items=()
   for preset_file in .specify/presets/*/preset.yml; do
@@ -16,32 +16,30 @@ if ls .specify/presets/*/preset.yml >/dev/null 2>&1; then
     preset_name=$(basename "$preset_dir")
     # Extract key fields from YAML (basic parsing without yq)
     version=$(grep -m1 'version:' "$preset_file" 2>/dev/null | sed 's/.*version: *"\?\([^"]*\)"\?.*/\1/' || echo "unknown")
-    description=$(grep -m1 'description:' "$preset_file" 2>/dev/null | sed 's/.*description: *"\?\(.*\)"\?/\1/' | head -c 200 || echo "")
-    # Find template overrides
     templates=$(grep -A1 'replaces:' "$preset_file" 2>/dev/null | grep -v 'replaces:' | sed 's/.*"\([^"]*\)".*/\1/' | tr '\n' ',' | sed 's/,$//' || echo "")
-    preset_items+=("{\"name\":\"$preset_name\",\"version\":\"$version\",\"templates\":\"$templates\"}")
+    # Use jq to safely build each preset object (escapes all string values)
+    item=$(jq -cn \
+      --arg name "$preset_name" \
+      --arg version "$version" \
+      --arg templates "$templates" \
+      '{"name":$name,"version":$version,"templates":$templates}')
+    preset_items+=("$item")
   done
-  presets="[$(IFS=','; echo "${preset_items[*]}")]"
+  presets_json=$(printf '%s\n' "${preset_items[@]}" | jq -s '.')
 fi
 
 # Detect extensions from .registry (most authoritative)
-extensions="[]"
-if [ -f ".specify/extensions/.registry" ]; then
-  # Extract extension names and enabled status
-  ext_items=()
-  while IFS= read -r line; do
-    ext_name=$(echo "$line" | sed 's/.*"\([^"]*\)".*/\1/')
-    ext_items+=("$ext_name")
-  done < <(grep -o '"[a-z-]*":' .specify/extensions/.registry 2>/dev/null | grep -v '"extensions"' | grep -v '"version"' | grep -v '"source"' || true)
-
-  # Simpler: just report the raw registry content exists
-  extensions="\"see .specify/extensions/.registry\""
-elif ls .specify/extensions/*/extension.yml >/dev/null 2>&1; then
-  ext_names=()
-  for ext_file in .specify/extensions/*/extension.yml; do
-    ext_names+=("$(basename "$(dirname "$ext_file")")")
-  done
-  extensions="[$(printf '"%s",' "${ext_names[@]}" | sed 's/,$//')]"
+extensions_json='"see .specify/extensions/.registry"'
+if [ ! -f ".specify/extensions/.registry" ]; then
+  if ls .specify/extensions/*/extension.yml >/dev/null 2>&1; then
+    ext_names=()
+    for ext_file in .specify/extensions/*/extension.yml; do
+      ext_names+=("$(basename "$(dirname "$ext_file")")")
+    done
+    extensions_json=$(printf '%s\n' "${ext_names[@]}" | jq -R . | jq -s '.')
+  else
+    extensions_json='[]'
+  fi
 fi
 
 # Check hooks configuration
@@ -64,10 +62,27 @@ if command -v specify >/dev/null 2>&1; then
 fi
 
 has_presets="false"
-if [ "$presets" != "[]" ]; then
+if [ "$presets_json" != "[]" ]; then
   has_presets="true"
 fi
 
-printf '{"has_presets":%s,"presets":%s,"extensions":%s,"hooks":"%s","templates":{"tasks":"%s","spec":"%s","plan":"%s"}}\n' \
-  "$has_presets" "$presets" "$extensions" "$hooks" \
-  "$tasks_template" "$spec_template" "$plan_template"
+# Assemble final JSON safely via jq
+jq -cn \
+  --argjson has_presets "$has_presets" \
+  --argjson presets "$presets_json" \
+  --argjson extensions "$extensions_json" \
+  --arg hooks "$hooks" \
+  --arg tasks_template "$tasks_template" \
+  --arg spec_template "$spec_template" \
+  --arg plan_template "$plan_template" \
+  '{
+    "has_presets": $has_presets,
+    "presets": $presets,
+    "extensions": $extensions,
+    "hooks": $hooks,
+    "templates": {
+      "tasks": $tasks_template,
+      "spec": $spec_template,
+      "plan": $plan_template
+    }
+  }'

@@ -73,8 +73,8 @@ if [ -z "$FEATURE_DESCRIPTION" ]; then
     exit 1
 fi
 
-# Trim whitespace and validate description is not empty (e.g., user passed only whitespace)
-FEATURE_DESCRIPTION=$(echo "$FEATURE_DESCRIPTION" | xargs)
+# Trim leading/trailing whitespace safely (xargs fails on single quotes)
+FEATURE_DESCRIPTION=$(printf '%s' "$FEATURE_DESCRIPTION" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 if [ -z "$FEATURE_DESCRIPTION" ]; then
     echo "Error: Feature description cannot be empty or contain only whitespace" >&2
     exit 1

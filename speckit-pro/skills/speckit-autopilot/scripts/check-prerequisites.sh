@@ -9,11 +9,15 @@ set -euo pipefail
 
 WORKFLOW_FILE="${1:-}"
 
-# Helper: emit JSON result
+# Helper: emit a single JSON check object, safely escaping all string values
 json_result() {
   local check="$1" pass="$2" message="$3" detail="${4:-}"
-  printf '{"check":"%s","pass":%s,"message":"%s","detail":"%s"}\n' \
-    "$check" "$pass" "$message" "$detail"
+  jq -cn \
+    --arg check "$check" \
+    --argjson pass "$pass" \
+    --arg message "$message" \
+    --arg detail "$detail" \
+    '{"check":$check,"pass":$pass,"message":$message,"detail":$detail}'
 }
 
 results=()
@@ -96,14 +100,15 @@ else
   results+=("$(json_result "settings" "true" "No settings file — using defaults" "")")
 fi
 
-# Assemble final JSON
-printf '{"all_pass":%s,"branch":"%s","is_worktree":%s,"on_feature_branch":%s,"checks":[' \
-  "$all_pass" "$current_branch" "$is_worktree" "$on_feature_branch"
-for i in "${!results[@]}"; do
-  [ "$i" -gt 0 ] && printf ','
-  printf '%s' "${results[$i]}"
-done
-printf ']}\n'
+# Assemble final JSON — use jq to safely combine the pre-built check objects
+checks_array=$(printf '%s\n' "${results[@]}" | jq -s '.')
+jq -cn \
+  --argjson all_pass "$all_pass" \
+  --arg branch "$current_branch" \
+  --argjson is_worktree "$is_worktree" \
+  --argjson on_feature_branch "$on_feature_branch" \
+  --argjson checks "$checks_array" \
+  '{"all_pass":$all_pass,"branch":$branch,"is_worktree":$is_worktree,"on_feature_branch":$on_feature_branch,"checks":$checks}'
 
 if [ "$all_pass" = "true" ]; then
   exit 0

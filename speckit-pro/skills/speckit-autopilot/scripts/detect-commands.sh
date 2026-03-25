@@ -130,7 +130,30 @@ if [ ${#VERIFY_PARTS[@]} -gt 0 ]; then
   done
 fi
 
-printf '{"stack":"%s","package_manager":"%s","commands":{"BUILD":"%s","TYPECHECK":"%s","LINT":"%s","LINT_FIX":"%s","UNIT_TEST":"%s","INTEGRATION_TEST":"%s","SINGLE_FILE_TEST":"%s","SINGLE_FILE_INTEGRATION":"%s","FULL_VERIFY":"%s"}}\n' \
-  "$STACK" "$PKG" "$BUILD" "$TYPECHECK" "$LINT" "$LINT_FIX" \
-  "$UNIT_TEST" "$INTEGRATION_TEST" "$SINGLE_FILE_TEST" \
-  "$SINGLE_FILE_INTEGRATION" "$FULL_VERIFY"
+jq -cn \
+  --arg stack "$STACK" \
+  --arg pkg "$PKG" \
+  --arg build "$BUILD" \
+  --arg typecheck "$TYPECHECK" \
+  --arg lint "$LINT" \
+  --arg lint_fix "$LINT_FIX" \
+  --arg unit_test "$UNIT_TEST" \
+  --arg integration_test "$INTEGRATION_TEST" \
+  --arg single_file_test "$SINGLE_FILE_TEST" \
+  --arg single_file_integration "$SINGLE_FILE_INTEGRATION" \
+  --arg full_verify "$FULL_VERIFY" \
+  '{
+    "stack": $stack,
+    "package_manager": $pkg,
+    "commands": {
+      "BUILD": $build,
+      "TYPECHECK": $typecheck,
+      "LINT": $lint,
+      "LINT_FIX": $lint_fix,
+      "UNIT_TEST": $unit_test,
+      "INTEGRATION_TEST": $integration_test,
+      "SINGLE_FILE_TEST": $single_file_test,
+      "SINGLE_FILE_INTEGRATION": $single_file_integration,
+      "FULL_VERIFY": $full_verify
+    }
+  }'
