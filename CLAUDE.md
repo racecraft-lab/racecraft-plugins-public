@@ -86,3 +86,10 @@ The SessionStart hook warns if `specify` is not found.
 **Skills:**
 - `speckit-autopilot` — Autonomous 7-phase SDD workflow executor with multi-agent consensus. References in `references/` cover gate validation, consensus protocol, phase execution, TDD protocol, and post-implementation steps.
 - `speckit-coach` — SDD methodology coaching. References cover command guide, constitution guide, presets/extensions, checklist domains, best practices, and getting-started templates.
+
+## Active Technologies
+- Bash (POSIX-compatible, tested on macOS/Linux) + jq (JSON processing), release-please (Google, version automation) (001-repository-foundation)
+- N/A (file-based JSON configuration only) (001-repository-foundation)
+
+## Recent Changes
+- 001-repository-foundation: Added Bash (POSIX-compatible, tested on macOS/Linux) + jq (JSON processing), release-please (Google, version automation)
