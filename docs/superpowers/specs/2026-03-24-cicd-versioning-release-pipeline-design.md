@@ -32,7 +32,7 @@ Additionally, the repo currently sets `version` in both `plugin.json` and `marke
 
 **Conventional Commit scoping for multi-plugin:**
 
-```
+```text
 feat(speckit-pro): add new checklist domain
 fix(future-plugin): handle edge case in validation
 chore: update CI workflow
@@ -92,12 +92,12 @@ The `(scope)` maps to the plugin directory name. release-please uses this to det
    - Creates a git tag per plugin (e.g., `speckit-pro-v1.1.0`)
    - Post-release CI job runs `sync-marketplace-versions.sh`
    - Syncs bumped version into `.claude-plugin/marketplace.json`
-   - Commits and pushes the marketplace.json update (CI bot uses a GitHub App token or `GITHUB_TOKEN` with bypass permissions to push to protected `main`)
+   - Commits and pushes the marketplace.json update (CI bot uses `GITHUB_TOKEN` with branch protection bypass configured in repo rulesets)
 
 **Version bump rules:**
 
 | Commit type | Version bump | Example |
-|---|---|---|
+| --- | --- | --- |
 | `fix(plugin):` | Patch (1.0.0 → 1.0.1) | Bug fix |
 | `feat(plugin):` | Minor (1.0.0 → 1.1.0) | New feature |
 | `feat(plugin)!:` or `BREAKING CHANGE:` | Major (1.0.0 → 2.0.0) | Breaking change |
@@ -122,7 +122,7 @@ Changelogs are generated automatically from squashed commit messages on main. Th
 
 **Version flow:**
 
-```
+```text
 Conventional Commit on main
   → release-please bumps plugin.json
     → sync-marketplace-versions.sh reads plugin.json
@@ -154,7 +154,7 @@ Conventional Commit on main
 
 ### 5. Local Development Workflow
 
-```
+```text
 1. Create feature branch
    $ git checkout -b feat/new-feature
 
@@ -190,7 +190,7 @@ Conventional Commit on main
 
 **New files:**
 
-```
+```text
 racecraft-plugins-public/
 ├── .github/
 │   └── workflows/
@@ -255,15 +255,18 @@ Auto-update is off by default for third-party marketplaces. Users can enable it 
 ### 8. Recovery & Rollback
 
 **If the sync script fails after a release tag is created:**
+
 - Re-run the sync workflow manually via `gh workflow run release.yml`
 - Or run `bash scripts/sync-marketplace-versions.sh` locally and push
 
 **If a bad version is released:**
+
 - Revert the breaking commit on main via a new PR (`fix(plugin): revert ...`)
 - release-please will create a new patch release with the fix
 - Do NOT delete git tags — they serve as an audit trail
 
 **To force a specific version:**
+
 - Add `Release-As: 2.0.0` to a commit message or PR body
 - release-please will use that version instead of computing from conventional commits
 
