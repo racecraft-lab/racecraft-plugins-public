@@ -65,6 +65,7 @@ The `(scope)` maps to the plugin directory name. release-please uses this to det
    - Check PR title matches Conventional Commits format
    - Pattern: `(feat|fix|chore|docs|refactor|test)(\(.+\))?!?: .+`
    - Required for release-please to parse commits correctly
+   - **Note:** The regex does not validate that the scope matches an actual plugin directory. A typo like `feat(spekit-pro):` would pass but release-please would ignore it. Double-check scopes before merging.
 
 3. **copilot-review** (automatic)
    - GitHub Copilot reviews the diff
@@ -91,7 +92,7 @@ The `(scope)` maps to the plugin directory name. release-please uses this to det
    - Creates a git tag per plugin (e.g., `speckit-pro-v1.1.0`)
    - Post-release CI job runs `sync-marketplace-versions.sh`
    - Syncs bumped version into `.claude-plugin/marketplace.json`
-   - Commits and pushes the marketplace.json update
+   - Commits and pushes the marketplace.json update (CI bot uses a GitHub App token or `GITHUB_TOKEN` with bypass permissions to push to protected `main`)
 
 **Version bump rules:**
 
@@ -101,6 +102,8 @@ The `(scope)` maps to the plugin directory name. release-please uses this to det
 | `feat(plugin):` | Minor (1.0.0 → 1.1.0) | New feature |
 | `feat(plugin)!:` or `BREAKING CHANGE:` | Major (1.0.0 → 2.0.0) | Breaking change |
 | `chore:`, `docs:`, `refactor:` | No release | Maintenance |
+
+**Pre-1.0 behavior:** With `bump-minor-pre-major: true`, breaking changes on a `0.x.y` version bump minor (0.1.0 → 0.2.0) instead of major. This protects new plugins from jumping to 1.0.0 prematurely. Once a plugin reaches 1.0.0, this flag has no effect.
 
 **Multi-plugin behavior:**
 
@@ -203,18 +206,25 @@ racecraft-plugins-public/
 
 ```json
 {
+  "release-type": "simple",
   "packages": {
     "speckit-pro": {
       "component": "speckit-pro",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
       "extra-files": [
-        "speckit-pro/.claude-plugin/plugin.json"
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
       ]
     }
   }
 }
 ```
+
+Note: `extra-files` paths are relative to the package directory (e.g., `speckit-pro/`). The `type: "json"` with `jsonpath` tells release-please how to locate and update the version field inside `plugin.json`.
 
 **.release-please-manifest.json:**
 
@@ -241,6 +251,21 @@ When a release is cut, users update via:
 ```
 
 Auto-update is off by default for third-party marketplaces. Users can enable it per-marketplace in the Claude Code plugin manager.
+
+### 8. Recovery & Rollback
+
+**If the sync script fails after a release tag is created:**
+- Re-run the sync workflow manually via `gh workflow run release.yml`
+- Or run `bash scripts/sync-marketplace-versions.sh` locally and push
+
+**If a bad version is released:**
+- Revert the breaking commit on main via a new PR (`fix(plugin): revert ...`)
+- release-please will create a new patch release with the fix
+- Do NOT delete git tags — they serve as an audit trail
+
+**To force a specific version:**
+- Add `Release-As: 2.0.0` to a commit message or PR body
+- release-please will use that version instead of computing from conventional commits
 
 ## Out of Scope
 
