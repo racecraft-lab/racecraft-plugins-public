@@ -9,13 +9,13 @@
 ## Workflow Overview
 
 | Phase | Command | Status | Notes |
-|-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
-| Plan | `/speckit.plan` | ⏳ Pending | |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| ------- | --------- | -------- | ------- |
+| Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 4 US, 13 scenarios, G1 passed |
+| Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved, 3/3 consensus on path resolution, G2 passed |
+| Plan | `/speckit.plan` | ✅ Complete | 4 artifacts, 7 research topics, G3 passed |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 107 items, 41 gaps remediated, G4 passed |
+| Tasks | `/speckit.tasks` | ✅ Complete | 26 tasks, 4 phases, 14 parallel, G5 passed |
+| Analyze | `/speckit.analyze` | ✅ Complete | 8 findings (0C/1H/5M/2L), all remediated, G6 passed |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -25,7 +25,7 @@
 Each phase requires **human review and approval** before proceeding:
 
 | Gate | Checkpoint | Approval Criteria |
-|------|------------|-------------------|
+| ------ | ------------ | ------------------- |
 | G1 | After Specify | All user stories clear, no `[NEEDS CLARIFICATION]` markers remain |
 | G2 | After Clarify | Ambiguities resolved, decisions documented |
 | G3 | After Plan | Architecture approved, constitution gates pass, dependencies identified |
@@ -43,7 +43,7 @@ Each phase requires **human review and approval** before proceeding:
 **Before starting any workflow phase**, verify alignment with the project constitution (`.specify/memory/constitution.md`):
 
 | Principle | Requirement | Verification |
-|-----------|-------------|--------------|
+| ----------- | ------------- | -------------- |
 | I. Plugin Structure | kebab-case names, required manifest fields, standard directory layout | `bash tests/run-all.sh --layer 1` |
 | II. Script Safety | `#!/usr/bin/env bash`, `set -euo pipefail`, `chmod +x`, no unquoted vars | `validate-scripts.sh` |
 | III. Semantic Versioning | plugin.json source of truth, semver format, release-please managed | `validate-plugin.sh` |
@@ -60,7 +60,7 @@ Each phase requires **human review and approval** before proceeding:
 ### Basic Information
 
 | Field | Value |
-|-------|-------|
+| ------- | ------- |
 | **Spec ID** | SPEC-001 |
 | **Name** | Repository Foundation |
 | **Branch** | `001-repository-foundation` |
@@ -130,7 +130,7 @@ The racecraft-plugins-public marketplace repo has no automated versioning infras
 ### Specify Results
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | Functional Requirements | |
 | User Stories | |
 | Acceptance Criteria | |
@@ -163,8 +163,8 @@ The racecraft-plugins-public marketplace repo has no automated versioning infras
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
-| 2 | | | |
+| 1       |            |           |              |
+| 2       |            |           |              |
 
 ---
 
@@ -212,7 +212,7 @@ The racecraft-plugins-public marketplace repo has no automated versioning infras
 ### Plan Results
 
 | Artifact | Status | Notes |
-|----------|--------|-------|
+| ---------- | -------- | ------- |
 | `plan.md` | ⏳ | Technical context, execution flow |
 | `research.md` | ⏳ | Decision rationales (if needed) |
 | `data-model.md` | ⏳ | File format specifications |
@@ -276,7 +276,7 @@ Focus on Repository Foundation requirements:
 ### Checklist Results
 
 | Checklist | Items | Gaps | Spec References |
-|-----------|-------|------|-----------------|
+| ----------- | ------- | ------ | ----------------- |
 | script-safety | | | |
 | data-integrity | | | |
 | error-handling | | | |
@@ -316,7 +316,7 @@ Focus on Repository Foundation requirements:
 ### Tasks Results
 
 | Metric | Value |
-|--------|-------|
+| -------- | ------- |
 | **Total Tasks** | |
 | **Phases** | |
 | **Parallel Opportunities** | |
@@ -345,7 +345,7 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+|    |          |       |            |
 
 ---
 
@@ -385,7 +385,7 @@ Before starting any task:
 ### Implementation Progress
 
 | Phase | Tasks | Completed | Notes |
-|-------|-------|-----------|-------|
+| ------- | ------- | ----------- | ------- |
 | 1 - Config Files | | | |
 | 2 - Sync Script | | | |
 | 3 - Unit Tests | | | |
@@ -426,7 +426,7 @@ Before starting any task:
 
 ## Project Structure Reference
 
-```
+```text
 racecraft-plugins-public/
 ├── .claude-plugin/
 │   └── marketplace.json          # Registry — version managed by sync script
