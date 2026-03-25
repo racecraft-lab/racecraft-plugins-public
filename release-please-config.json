@@ -1,0 +1,17 @@
+{
+  "packages": {
+    "speckit-pro": {
+      "release-type": "simple",
+      "component": "speckit-pro",
+      "changelog-path": "CHANGELOG.md",
+      "bump-minor-pre-major": true,
+      "extra-files": [
+        {
+          "type": "json",
+          "path": ".claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        }
+      ]
+    }
+  }
+}
