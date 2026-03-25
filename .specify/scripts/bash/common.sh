@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Common functions and variables for all scripts
+set -euo pipefail
 
 # Find repository root by searching upward for .specify directory
 # This is the primary marker for spec-kit projects
