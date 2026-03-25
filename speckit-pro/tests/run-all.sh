@@ -184,6 +184,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-detect-commands.sh"
     "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
+    "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then
