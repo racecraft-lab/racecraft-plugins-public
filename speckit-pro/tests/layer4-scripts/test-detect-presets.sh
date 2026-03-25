@@ -2,7 +2,7 @@
 # test-detect-presets.sh — Unit tests for detect-presets.sh
 #
 # Tests preset/extension detection with synthetic fixtures.
-# Optional --live flag runs against omnifocus-mcp project.
+# Optional --live flag runs against a live SpecKit project (set PROJECT_ROOT).
 
 set -euo pipefail
 
@@ -103,13 +103,13 @@ assert_contains "$output" "hook events configured"
 # ─────────────────────────────────────────
 
 if [ "$LIVE" = "true" ]; then
-  section "Live: detect-presets on omnifocus-mcp"
+  section "Live: detect-presets on live project"
 
   PROJECT_ROOT="${PROJECT_ROOT:-$(git -C "$PLUGIN_ROOT" rev-parse --show-toplevel 2>/dev/null || echo "")}"
   if [ -n "$PROJECT_ROOT" ] && [ -d "$PROJECT_ROOT/.specify/presets" ]; then
     output=$(run_in "$PROJECT_ROOT")
 
-    set_test "Live — has_presets=true (omnifocus-mcp has preset)"
+    set_test "Live — has_presets=true (live project has preset)"
     assert_contains "$output" '"has_presets":true'
 
     set_test "Live — has presets array"

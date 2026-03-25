@@ -2,7 +2,7 @@
 # test-check-prerequisites.sh — Unit tests for check-prerequisites.sh
 #
 # Tests prerequisite checking with synthetic fixtures for failure modes.
-# Optional --live flag runs against omnifocus-mcp project.
+# Optional --live flag runs against a live SpecKit project (set PROJECT_ROOT).
 
 set -euo pipefail
 
@@ -110,7 +110,7 @@ assert_json_field_exists "$output" "branch"
 # ─────────────────────────────────────────
 
 if [ "$LIVE" = "true" ]; then
-  section "Live: check-prerequisites on omnifocus-mcp"
+  section "Live: check-prerequisites on live project"
 
   PROJECT_ROOT="${PROJECT_ROOT:-$(git -C "$PLUGIN_ROOT" rev-parse --show-toplevel 2>/dev/null || echo "")}"
   if [ -n "$PROJECT_ROOT" ]; then

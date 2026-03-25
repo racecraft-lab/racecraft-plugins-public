@@ -40,10 +40,6 @@
 
 set -euo pipefail
 
-# Enable strict error handling
-set -u
-set -o pipefail
-
 #==============================================================================
 # Configuration and Global Variables
 #==============================================================================

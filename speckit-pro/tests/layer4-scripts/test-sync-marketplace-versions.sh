@@ -409,4 +409,58 @@ assert_eq "1.0.0" "$result_version" "version should be synced from plugin.json"
 set_test "Marketplace entry without version — stdout reports the addition"
 assert_contains "$stdout_output" "1.0.0" "stdout should mention the version"
 
+# ─────────────────────────────────────────
+section "T023: Path traversal in source field"
+# ─────────────────────────────────────────
+
+set_test "Source with .. segment — exit 1"
+dir="$FIXTURE_DIR/t023-traversal"
+create_marketplace "$dir" '{
+  "name": "test-marketplace",
+  "plugins": [
+    { "name": "evil", "source": "./../etc/passwd", "description": "Path traversal attempt" }
+  ]
+}'
+run_sync "$dir"
+assert_eq "1" "$exit_code" "exit code"
+
+set_test "Path traversal source — stderr mentions illegal .. segments"
+assert_contains "$stderr_output" ".." "stderr should mention the illegal path"
+
+set_test "Source with nested .. segment — exit 1"
+dir="$FIXTURE_DIR/t023-nested"
+create_marketplace "$dir" '{
+  "name": "test-marketplace",
+  "plugins": [
+    { "name": "sneaky", "source": "./foo/../../../etc", "description": "Nested traversal" }
+  ]
+}'
+run_sync "$dir"
+assert_eq "1" "$exit_code" "exit code for nested traversal"
+
+# ─────────────────────────────────────────
+section "T024: Non-array plugins field"
+# ─────────────────────────────────────────
+
+set_test "plugins field is a string (not array) — exit 1"
+dir="$FIXTURE_DIR/t024-string"
+create_marketplace "$dir" '{
+  "name": "test-marketplace",
+  "plugins": "not-an-array"
+}'
+run_sync "$dir"
+assert_eq "1" "$exit_code" "exit code"
+
+set_test "plugins is string — stderr mentions not an array"
+assert_contains "$stderr_output" "not an array" "stderr should mention field is not an array"
+
+set_test "plugins field is an object (not array) — exit 1"
+dir="$FIXTURE_DIR/t024-object"
+create_marketplace "$dir" '{
+  "name": "test-marketplace",
+  "plugins": {"foo": "bar"}
+}'
+run_sync "$dir"
+assert_eq "1" "$exit_code" "exit code for object plugins"
+
 test_summary
