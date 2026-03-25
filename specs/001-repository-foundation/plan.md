@@ -28,7 +28,7 @@ Establish the repository foundation for automated CI/CD versioning by creating r
 | I. Plugin Structure Compliance | PASS | No new plugin directories created; existing structure preserved |
 | II. Script Safety | PASS | Sync script will use `#!/usr/bin/env bash` + `set -euo pipefail` + `chmod +x` + all variables quoted + all command results checked (FR-007) |
 | III. Semantic Versioning | PASS | `plugin.json` remains source of truth; release-please manages bumps; sync script reads from it (FR-005) |
-| IV. Test Coverage Before Merge | PASS | Layer 4 tests planned at `tests/layer4-scripts/test-sync-marketplace-versions.sh` (FR-010, FR-011, FR-012) |
+| IV. Test Coverage Before Merge | PASS | Layer 4 tests planned at `tests/layer4-scripts/test-sync-marketplace-versions.sh` (FR-010, FR-011, FR-012); test must be registered in `run-all.sh` `layer4_scripts` array |
 | V. Conventional Commits | PASS | All commits will follow `type(scope): description` format |
 | VI. KISS, Simplicity & YAGNI | PASS | Sync script uses `jq` for JSON (no sed/awk); flat sequential logic; no abstractions for one-time operations |
 

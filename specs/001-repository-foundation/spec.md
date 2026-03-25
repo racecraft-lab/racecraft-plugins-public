@@ -82,7 +82,7 @@ As a maintainer, I need Layer 4 unit tests for the sync script so that regressio
 
 1. **Given** the test suite exists at `tests/layer4-scripts/test-sync-marketplace-versions.sh`, **When** the tests run, **Then** they validate that the sync script correctly updates mismatched versions
 2. **Given** the test suite is run, **When** a test fixture has a plugin with no `plugin.json`, **Then** the test validates the sync script exits with a non-zero code
-3. **Given** the test suite uses the shared assertions library, **When** the tests are executed via `bash tests/run-all.sh --layer 4`, **Then** they integrate seamlessly with the existing test runner
+3. **Given** the test suite uses the shared assertions library and is registered in the `layer4_scripts` array of `tests/run-all.sh`, **When** the tests are executed via `bash tests/run-all.sh --layer 4`, **Then** they integrate with the existing test runner
 
 ---
 
@@ -123,7 +123,7 @@ Failure modes are classified into two categories:
 - **FR-009**: The sync script MUST be idempotent -- running it when versions already match MUST NOT modify `marketplace.json` (the file MUST NOT be written at all, not merely written with identical content, so that file timestamps and `git status` remain clean)
 - **FR-010**: Repository MUST contain Layer 4 unit tests for the sync script at `tests/layer4-scripts/test-sync-marketplace-versions.sh`
 - **FR-011**: Unit tests MUST use the shared assertions library at `tests/lib/assertions.sh`
-- **FR-012**: Unit tests MUST cover at minimum: version mismatch correction, already-matching versions (no-op), missing `plugin.json` error handling, multi-plugin sync scenarios, malformed JSON input (invalid `marketplace.json` and invalid `plugin.json`), missing `jq` dependency detection, wrong-working-directory detection, non-relative source skipping, missing `version` field in `plugin.json`, invalid semver format in `plugin.json` version field, verification that all error messages are written to stderr (not stdout), and verification that all error scenarios exit with code 1
+- **FR-012**: Unit tests MUST cover at minimum: version mismatch correction, already-matching versions (no-op), missing `plugin.json` error handling, multi-plugin sync scenarios, malformed JSON input (invalid `marketplace.json` and invalid `plugin.json`), missing `jq` dependency detection, wrong-working-directory detection, non-relative source skipping, missing `version` field in `plugin.json`, invalid semver format in `plugin.json` version field, missing `source` field in marketplace entry, empty plugins array (exit 0 with informational message), missing `version` field in marketplace entry (sync adds it), verification that all error messages are written to stderr (not stdout), and verification that all error scenarios exit with code 1
 
 ### Key Entities
 
@@ -149,7 +149,7 @@ Failure modes are classified into two categories:
 
 - The repository uses conventional commits on the main branch, which is a prerequisite for release-please to function
 - The `jq` command-line tool is available in the development and CI environments
-- The existing test runner at `tests/run-all.sh` supports discovering and executing new Layer 4 test files without modification
+- The existing test runner at `tests/run-all.sh` uses a hardcoded array for Layer 4 scripts; new test files must be explicitly added to the `layer4_scripts` array in `run-all.sh`
 - The `.claude-plugin/marketplace.json` structure uses a `plugins` array where each entry has a `name` field, a `source` field (relative path like `"./speckit-pro"` for local plugins), and a `version` field. The sync script uses the `source` field (not the `name` field) to locate each plugin's `plugin.json` on disk
 - The `extra-files` paths in release-please configuration are relative to the package directory, not the repository root (confirmed via release-please documentation and issue #2477 — repo-root-absolute paths use a `/` prefix, which is not needed here since `plugin.json` is inside the package directory)
 - The `simple` release type creates a `version.txt` file in each package directory as an output artifact; this file is not the version source of truth and should not be manually edited

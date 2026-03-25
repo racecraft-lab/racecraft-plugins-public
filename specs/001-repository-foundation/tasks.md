@@ -10,7 +10,7 @@
 
 **Independent Test**: Validate both config files are valid JSON with correct structure and values matching current plugin.json versions.
 
-- [ ] T001 [P] Create `release-please-config.json` at repository root with `speckit-pro` package entry using `release-type: "simple"`, `bump-minor-pre-major: true`, and `extra-files` GenericJson updater targeting `.claude-plugin/plugin.json` at `$.version` (FR-001, FR-002, FR-003)
+- [ ] T001 [P] Create `release-please-config.json` at repository root with `speckit-pro` package entry using `release-type: "simple"`, `component: "speckit-pro"`, `changelog-path: "CHANGELOG.md"`, `bump-minor-pre-major: true`, and `extra-files` GenericJson updater targeting `.claude-plugin/plugin.json` at `$.version` (FR-001, FR-002, FR-003)
 - [ ] T002 [P] Create `.release-please-manifest.json` at repository root pre-populated with `{"speckit-pro": "1.0.0"}` matching current `speckit-pro/.claude-plugin/plugin.json` version (FR-004)
 
 ## Phase 2: Sync Script (scripts/sync-marketplace-versions.sh)
@@ -38,6 +38,7 @@
 **Depends on**: Phase 2 (sync script must exist to test)
 
 - [ ] T010 Create `speckit-pro/tests/layer4-scripts/test-sync-marketplace-versions.sh` with shebang, `set -euo pipefail`, shared assertions library source, temp fixture directory with trap cleanup (FR-010, FR-011)
+- [ ] T010a Add `test-sync-marketplace-versions.sh` to the `layer4_scripts` array in `speckit-pro/tests/run-all.sh` so the test runner discovers and executes it (FR-010)
 - [ ] T011 [P] Implement test: version mismatch correction -- fixture with plugin.json at 0.6.0 and marketplace.json at 0.5.0, assert marketplace updated to 0.6.0 (FR-012)
 - [ ] T012 [P] Implement test: already-matching versions (no-op) -- fixture with matching versions, assert marketplace.json unchanged and no stdout output (FR-012)
 - [ ] T013 [P] Implement test: missing plugin.json error handling -- fixture with marketplace entry but no plugin.json file, assert non-zero exit and stderr error message (FR-012)
@@ -50,6 +51,9 @@
 - [ ] T020 [P] Implement test: invalid semver format in plugin.json -- fixture with version "1.0" or "abc", assert non-zero exit and stderr error message (FR-012)
 - [ ] T021 [P] Implement test: stderr-only error output -- for each error scenario, assert stdout is empty and stderr contains error message (FR-012)
 - [ ] T022 [P] Implement test: all error scenarios exit with code 1 -- verify each error test uses assert_eq for exit code 1 specifically (FR-012)
+- [ ] T022a [P] Implement test: missing source field in marketplace entry -- fixture with marketplace entry missing `source` field, assert non-zero exit and stderr error message (FR-012, Edge Case: Missing source field)
+- [ ] T022b [P] Implement test: empty plugins array -- fixture with marketplace.json containing zero plugin entries, assert exit 0 and informational stderr message (FR-012, Edge Case: Empty plugins array)
+- [ ] T022c [P] Implement test: missing version field in marketplace entry -- fixture with marketplace entry missing `version` field, assert sync script adds the `version` field from plugin.json (FR-012, Edge Case: Missing version field in marketplace entry)
 
 ## Phase 4: Validation (end-to-end verification)
 
@@ -72,7 +76,7 @@ Phase 1 (T001-T002) ──┐
 Phase 2 (T003-T009) ──┤
          │             │
          v             │
-Phase 3 (T010-T022) ──┘
+Phase 3 (T010-T022c) ─┘
 ```
 
 - Phase 1 and Phase 2 are independent and can execute in parallel
@@ -85,7 +89,7 @@ Phase 3 (T010-T022) ──┘
 |-------|---------------|-------|
 | Phase 1 | T001, T002 | Independent config files, no shared state |
 | Phase 2 | None | Sequential dependency chain (each step builds on previous) |
-| Phase 3 | T011-T022 | All test functions are independent after T010 scaffold |
+| Phase 3 | T011-T022c | All test functions are independent after T010/T010a scaffold |
 | Phase 4 | None | Sequential validation checks |
 | Cross-phase | Phase 1 + Phase 2 | Can execute simultaneously |
 
@@ -99,5 +103,5 @@ Phase 3 (T010-T022) ──┘
 3. Phase 3: Ship tests (automated regression protection)
 4. Phase 4: Final validation pass
 
-**Total Tasks**: 26
+**Total Tasks**: 30
 **Estimated Duration**: Phase 1 (~30 min), Phase 2 (~2 hours), Phase 3 (~2 hours), Phase 4 (~30 min)

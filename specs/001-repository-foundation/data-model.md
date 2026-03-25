@@ -11,9 +11,9 @@
 
 ```json
 {
-  "release-type": "simple",
   "packages": {
     "<plugin-name>": {
+      "release-type": "simple",
       "component": "<plugin-name>",
       "changelog-path": "CHANGELOG.md",
       "bump-minor-pre-major": true,
@@ -30,9 +30,9 @@
 ```
 
 **Fields**:
-- `release-type` (string, required): Must be `"simple"`. Defines the release strategy.
 - `packages` (object, required): Map of package directory name to package config.
   - Key: Plugin directory name (e.g., `"speckit-pro"`). No trailing slash.
+  - `release-type` (string, required): Must be `"simple"`. Defines the release strategy. Set per-package per FR-001.
   - `component` (string, required): Name used in git tags (e.g., `speckit-pro-v1.0.0`).
   - `changelog-path` (string, required): Path to changelog relative to package dir.
   - `bump-minor-pre-major` (boolean, required): Must be `true` per FR-002. Set per-package, not globally.
