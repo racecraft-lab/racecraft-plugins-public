@@ -1,0 +1,43 @@
+installed: []
+settings:
+  auto_execute_hooks: true
+hooks:
+  after_implement:
+  - extension: verify
+    command: speckit.verify.run
+    enabled: true
+    optional: true
+    prompt: Run verify to validate implementation against specification?
+    description: Post-implementation verification gate
+    condition: null
+  - extension: verify-tasks
+    command: speckit.verify-tasks.run
+    enabled: true
+    optional: true
+    prompt: Run verify-tasks in a fresh session to check for phantom completions
+    description: Post-implementation phantom completion detector
+    condition: null
+  - extension: retrospective
+    command: speckit.retrospective.analyze
+    enabled: true
+    optional: true
+    prompt: Run retrospective analysis now? (spec changes require explicit confirmation)
+    description: Offer a retrospective after implementation without modifying spec
+      unless approved.
+    condition: null
+  after_specify:
+  - extension: speckit-utils
+    command: speckit.speckit-utils.doctor
+    enabled: true
+    optional: true
+    prompt: Run project health check?
+    description: Validate project health after specification generation
+    condition: null
+  after_plan:
+  - extension: speckit-utils
+    command: speckit.speckit-utils.validate
+    enabled: true
+    optional: true
+    prompt: Validate spec-to-task traceability?
+    description: Verify requirements map to planned tasks after planning
+    condition: null
