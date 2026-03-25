@@ -9,7 +9,7 @@
 #   tests/run-all.sh --ci         # CI mode: layers 1, 4, 5 synthetic only
 #   tests/run-all.sh --all        # All 5 layers
 #
-# Run from the project directory (e.g., omnifocus-mcp/) so live tests
+# Run from the project directory (e.g., racecraft-plugins-public/) so live tests
 # can access .specify/, specs/, and other SpecKit artifacts.
 #
 # Environment:
