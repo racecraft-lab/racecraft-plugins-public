@@ -137,7 +137,7 @@ done
 # Idempotent write
 # ─────────────────────────────────────────
 
-existing_content=$(cat "$MARKETPLACE")
+existing_content=$(jq '.' "$MARKETPLACE")
 
 if [ "$updated_json" = "$existing_content" ]; then
   # No changes needed -- exit silently

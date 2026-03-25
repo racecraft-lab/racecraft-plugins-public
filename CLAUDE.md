@@ -89,7 +89,6 @@ The SessionStart hook warns if `specify` is not found.
 
 ## Active Technologies
 - Bash (macOS/Linux) + jq (JSON processing), release-please (Google, version automation) (001-repository-foundation)
-- N/A (file-based JSON configuration only) (001-repository-foundation)
 
 ## Recent Changes
 - 001-repository-foundation: Added Bash (macOS/Linux) + jq (JSON processing), release-please (Google, version automation)

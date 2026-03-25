@@ -286,7 +286,6 @@ create_marketplace "$dir" '{
   ]
 }'
 create_plugin "$dir" "twopart" "1.0"
-# Fix: write the version manually since create_plugin writes valid JSON with the literal string
 run_sync "$dir"
 assert_eq "1" "$exit_code" "exit code for version 1.0"
 
