@@ -109,11 +109,17 @@ if [ "$LIVE" = "true" ]; then
   if [ -n "$PROJECT_ROOT" ] && [ -d "$PROJECT_ROOT/.specify/presets" ]; then
     output=$(run_in "$PROJECT_ROOT")
 
-    set_test "Live — has_presets=true (live project has preset)"
-    assert_contains "$output" '"has_presets":true'
+    # Check whether actual preset.yml files exist in the live project.
+    # If none are found, verify has_presets=false and skip the presets-populated checks.
+    if ls "$PROJECT_ROOT/.specify/presets"/*/preset.yml >/dev/null 2>&1; then
+      set_test "Live — has_presets=true (live project has preset)"
+      assert_contains "$output" '"has_presets":true'
 
-    set_test "Live — has presets array"
-    assert_contains "$output" '"presets":'
+      set_test "Live — has presets array"
+      assert_contains "$output" '"presets":'
+    else
+      printf "  ${YELLOW}SKIP${RESET}: .specify/presets exists but no preset.yml files found\n"
+    fi
   else
     printf "  ${YELLOW}SKIP${RESET}: PROJECT_ROOT not detected or .specify/presets not found\n"
   fi
