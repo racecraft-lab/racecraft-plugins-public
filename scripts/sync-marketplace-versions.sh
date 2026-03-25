@@ -36,9 +36,19 @@ fi
 # Parse and validate marketplace.json
 # ─────────────────────────────────────────
 
-# Validate plugins array exists
-if ! jq -e '.plugins' "$MARKETPLACE" >/dev/null 2>&1; then
-  echo "Error: $MARKETPLACE does not contain a 'plugins' array." >&2
+# Validate marketplace.json is valid JSON first
+if ! jq -e '.' "$MARKETPLACE" >/dev/null 2>&1; then
+  echo "Error: $MARKETPLACE contains invalid JSON." >&2
+  exit 1
+fi
+
+# Validate plugins array exists and is an array
+if ! jq -e '.plugins | type == "array"' "$MARKETPLACE" >/dev/null 2>&1; then
+  if jq -e '.plugins' "$MARKETPLACE" >/dev/null 2>&1; then
+    echo "Error: $MARKETPLACE has a 'plugins' field but it is not an array." >&2
+  else
+    echo "Error: $MARKETPLACE does not contain a 'plugins' array." >&2
+  fi
   exit 1
 fi
 
@@ -56,7 +66,7 @@ fi
 updated_json=$(cat "$MARKETPLACE")
 changes=()
 
-for i in $(seq 0 $((plugin_count - 1))); do
+for ((i=0; i<plugin_count; i++)); do
   # Extract source field
   source_field=$(jq -r ".plugins[$i].source // empty" "$MARKETPLACE")
 
@@ -74,6 +84,13 @@ for i in $(seq 0 $((plugin_count - 1))); do
 
   # Resolve plugin.json path: strip leading ./ and append /.claude-plugin/plugin.json
   plugin_dir="${source_field#./}"
+
+  # Reject sources with path traversal segments to prevent reading outside the repo
+  if [[ "$plugin_dir" == *..* ]]; then
+    echo "Error: Source path '$source_field' (index $i) contains illegal '..' segments." >&2
+    exit 1
+  fi
+
   plugin_json="${plugin_dir}/.claude-plugin/plugin.json"
 
   # Validate plugin.json exists
@@ -82,11 +99,21 @@ for i in $(seq 0 $((plugin_count - 1))); do
     exit 1
   fi
 
+  # Validate plugin.json is valid JSON before reading fields
+  if ! jq -e '.' "$plugin_json" >/dev/null 2>&1; then
+    echo "Error: $plugin_json contains invalid JSON." >&2
+    exit 1
+  fi
+
   # Read version from plugin.json
-  version=$(jq -e -r '.version' "$plugin_json" 2>/dev/null) || {
-    echo "Error: No 'version' field in $plugin_json." >&2
+  version=$(jq -r '.version // empty' "$plugin_json") || {
+    echo "Error: Failed to read $plugin_json." >&2
     exit 1
   }
+  if [ -z "$version" ]; then
+    echo "Error: No 'version' field in $plugin_json." >&2
+    exit 1
+  fi
 
   # Validate semver format
   if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
