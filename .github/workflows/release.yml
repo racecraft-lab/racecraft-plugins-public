@@ -1,0 +1,39 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - id: release
+        uses: googleapis/release-please-action@v4
+
+      - uses: actions/checkout@v4
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+
+      - name: Sync marketplace versions
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        run: bash scripts/sync-marketplace-versions.sh
+
+      - name: Commit and push marketplace sync
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet .claude-plugin/marketplace.json; then
+            git add .claude-plugin/marketplace.json
+            git commit -m "chore: sync marketplace.json versions [skip ci]"
+            git push
+          fi

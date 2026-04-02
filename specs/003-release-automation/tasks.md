@@ -25,7 +25,7 @@
 
 **Purpose**: Create the workflow file with trigger, permissions, concurrency, and job scaffold
 
-- [ ] T001 Create `.github/workflows/` directory and workflow file `.github/workflows/release.yml` with workflow `name: Release`, trigger `on: push: branches: [main]`, permissions block (`contents: write`, `pull-requests: write` per FR-007/SEC-002), concurrency group (`release-${{ github.ref_name }}` with `cancel-in-progress: false` per FR-015), and job scaffold (`release` job with `runs-on: ubuntu-latest` and `timeout-minutes: 10` per FR-013)
+- [x] T001 Create `.github/workflows/` directory and workflow file `.github/workflows/release.yml` with workflow `name: Release`, trigger `on: push: branches: [main]`, permissions block (`contents: write`, `pull-requests: write` per FR-007/SEC-002), concurrency group (`release-${{ github.ref_name }}` with `cancel-in-progress: false` per FR-015), and job scaffold (`release` job with `runs-on: ubuntu-latest` and `timeout-minutes: 10` per FR-013)
 
 **Checkpoint**: Workflow file exists with valid YAML structure, correct trigger, permissions, concurrency, and empty steps array. Validate with `python -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"` or equivalent YAML linter.
 
@@ -39,7 +39,7 @@
 
 **Independent Test**: Push a `feat:` commit to main after merging the workflow -- verify a Release PR is opened with correct version bump and changelog.
 
-- [ ] T002 [US1] [US2] [US5] Add release-please action step to `.github/workflows/release.yml`: step with `id: release`, `uses: googleapis/release-please-action@v4` (FR-002/FR-008), no additional `with:` inputs needed (release-please reads `release-please-config.json` and `.release-please-manifest.json` automatically per FR-009). Verify the step ID is `release` for output references (FR-011). No user-controlled values are interpolated into shell commands (SEC-001).
+- [x] T002 [US1] [US2] [US5] Add release-please action step to `.github/workflows/release.yml`: step with `id: release`, `uses: googleapis/release-please-action@v4` (FR-002/FR-008), no additional `with:` inputs needed (release-please reads `release-please-config.json` and `.release-please-manifest.json` automatically per FR-009). Verify the step ID is `release` for output references (FR-011). No user-controlled values are interpolated into shell commands (SEC-001).
 
 **Checkpoint**: Workflow has release-please step with correct action version and step ID. YAML remains valid. The step references existing config files without modification.
 
@@ -62,11 +62,11 @@
 
 **Independent Test**: After a release is created, verify marketplace.json is updated. After a regular push (no release), verify the sync step is skipped.
 
-- [ ] T003 [US3] [US4] Add conditional checkout step to `.github/workflows/release.yml`: `actions/checkout@v4` (FR-008) with `if: steps.release.outputs['speckit-pro--release_created'] == 'true'` condition (FR-004/FR-006/FR-011). Default `persist-credentials: true` provides GITHUB_TOKEN for subsequent push (SEC-004). No `ref:` override needed -- checks out the commit that triggered the workflow.
+- [x] T003 [US3] [US4] Add conditional checkout step to `.github/workflows/release.yml`: `actions/checkout@v4` (FR-008) with `if: steps.release.outputs['speckit-pro--release_created'] == 'true'` condition (FR-004/FR-006/FR-011). Default `persist-credentials: true` provides GITHUB_TOKEN for subsequent push (SEC-004). No `ref:` override needed -- checks out the commit that triggered the workflow.
 
-- [ ] T004 [US3] Add sync script execution step to `.github/workflows/release.yml`: `run: bash scripts/sync-marketplace-versions.sh` with same `if` condition as T003 (FR-004). The script is registry-driven and handles all plugins (FR-004). No modifications to the script itself.
+- [x] T004 [US3] Add sync script execution step to `.github/workflows/release.yml`: `run: bash scripts/sync-marketplace-versions.sh` with same `if` condition as T003 (FR-004). The script is registry-driven and handles all plugins (FR-004). No modifications to the script itself.
 
-- [ ] T005 [US3] [US5] Add git identity configuration, diff check, commit, and push step to `.github/workflows/release.yml`: configure git user as `github-actions[bot]` with email `41898282+github-actions[bot]@users.noreply.github.com` (per research.md decision 5). Check `git diff --quiet .claude-plugin/marketplace.json` -- if changes exist, run `git add .claude-plugin/marketplace.json && git commit -m "chore: sync marketplace.json versions [skip ci]" && git push` (FR-005/FR-012). Same `if` condition as T003. Commit message is hardcoded string literal, not interpolated from user input (SEC-001/SEC-003). Uses GITHUB_TOKEN via persisted checkout credentials for push (FR-007/SEC-004).
+- [x] T005 [US3] [US5] Add git identity configuration, diff check, commit, and push step to `.github/workflows/release.yml`: configure git user as `github-actions[bot]` with email `41898282+github-actions[bot]@users.noreply.github.com` (per research.md decision 5). Check `git diff --quiet .claude-plugin/marketplace.json` -- if changes exist, run `git add .claude-plugin/marketplace.json && git commit -m "chore: sync marketplace.json versions [skip ci]" && git push` (FR-005/FR-012). Same `if` condition as T003. Commit message is hardcoded string literal, not interpolated from user input (SEC-001/SEC-003). Uses GITHUB_TOKEN via persisted checkout credentials for push (FR-007/SEC-004).
 
 **Checkpoint**: Workflow has complete sync pipeline: conditional checkout, sync script execution, and guarded commit/push. All sync steps share the same `if` condition. YAML remains valid. No existing files modified.
 
@@ -86,13 +86,13 @@
 
 **Purpose**: Verify the complete workflow is correct and existing tests still pass
 
-- [ ] T006 [P] Validate `.github/workflows/release.yml` YAML syntax using a YAML parser (e.g., `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"`) and verify all required fields are present: `name`, `on.push.branches`, `permissions.contents`, `permissions.pull-requests`, `concurrency.group`, `concurrency.cancel-in-progress`, `jobs.release.runs-on`, `jobs.release.timeout-minutes`, and all step IDs/conditions
+- [x] T006 [P] Validate `.github/workflows/release.yml` YAML syntax using a YAML parser (e.g., `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/release.yml'))"`) and verify all required fields are present: `name`, `on.push.branches`, `permissions.contents`, `permissions.pull-requests`, `concurrency.group`, `concurrency.cancel-in-progress`, `jobs.release.runs-on`, `jobs.release.timeout-minutes`, and all step IDs/conditions
 
-- [ ] T007 [P] Run existing test suite `bash speckit-pro/tests/run-all.sh` from the repository root to verify no regressions from the workflow file addition
+- [x] T007 [P] Run existing test suite `bash speckit-pro/tests/run-all.sh` from the repository root to verify no regressions from the workflow file addition
 
-- [ ] T008 Review `.github/workflows/release.yml` against all functional requirements (FR-001 through FR-015), security requirements (SEC-001 through SEC-004), and the workflow contract in `specs/003-release-automation/contracts/workflow-contract.md` -- verify every requirement is satisfied
+- [x] T008 Review `.github/workflows/release.yml` against all functional requirements (FR-001 through FR-015), security requirements (SEC-001 through SEC-004), and the workflow contract in `specs/003-release-automation/contracts/workflow-contract.md` -- verify every requirement is satisfied
 
-- [ ] T009 Verify the workflow does not modify any SPEC-001 files: `release-please-config.json`, `.release-please-manifest.json`, `scripts/sync-marketplace-versions.sh`, `.claude-plugin/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json` -- confirm these files are unchanged in the git diff
+- [x] T009 Verify the workflow does not modify any SPEC-001 files: `release-please-config.json`, `.release-please-manifest.json`, `scripts/sync-marketplace-versions.sh`, `.claude-plugin/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json` -- confirm these files are unchanged in the git diff
 
 ---
 
@@ -100,9 +100,9 @@
 
 **Purpose**: Documentation updates and final cleanup
 
-- [ ] T010 Update `CLAUDE.md` at repository root if any new CI-specific patterns need documentation (e.g., workflow file location, how to manually re-run the release workflow). Only add entries if genuinely needed per the constraint.
+- [x] T010 Update `CLAUDE.md` at repository root if any new CI-specific patterns need documentation (e.g., workflow file location, how to manually re-run the release workflow). Only add entries if genuinely needed per the constraint.
 
-- [ ] T011 Run quickstart verification: walk through each step in `specs/003-release-automation/quickstart.md` and confirm the implementation matches the documented steps and file inventory
+- [x] T011 Run quickstart verification: walk through each step in `specs/003-release-automation/quickstart.md` and confirm the implementation matches the documented steps and file inventory
 
 ---
 
