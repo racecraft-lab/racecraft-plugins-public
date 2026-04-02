@@ -19,8 +19,8 @@
 
 **Purpose**: Create the workflow file with triggers, permissions, and shell defaults (FR-001, FR-008, FR-009, FR-010)
 
-- [ ] T001 Create workflow file `.github/workflows/pr-checks.yml` with workflow `name: PR Checks`, trigger `on.pull_request.types: [opened, reopened, synchronize, edited, ready_for_review]`, top-level `permissions: {}`, and `defaults.run.shell: bash`
-- [ ] T002 Look up the latest stable SHA for `actions/checkout` and record it for use in FR-008 pinned action versions (determine current version at implementation time)
+- [x] T001 Create workflow file `.github/workflows/pr-checks.yml` with workflow `name: PR Checks`, trigger `on.pull_request.types: [opened, reopened, synchronize, edited, ready_for_review]`, top-level `permissions: {}`, and `defaults.run.shell: bash`
+- [x] T002 Look up the latest stable SHA for `actions/checkout` and record it for use in FR-008 pinned action versions (determine current version at implementation time)
 
 **Checkpoint**: Workflow file exists with correct triggers, permissions, and shell defaults. YAML is valid.
 
@@ -30,9 +30,9 @@
 
 **Purpose**: Add all three job stubs with draft-skip conditions and correct dependency wiring so the workflow structure is complete before implementing job logic
 
-- [ ] T003 Add `detect` job stub in `.github/workflows/pr-checks.yml` with `runs-on: ubuntu-latest`, `if: github.event.pull_request.draft == false`, `permissions: contents: read`, `outputs.plugins` declaration, and placeholder step
-- [ ] T004 Add `test` job stub in `.github/workflows/pr-checks.yml` with `name: test (${{ matrix.plugin }})`, `runs-on: ubuntu-latest`, `if: needs.detect.outputs.plugins != '[]'`, `needs: [detect]`, `permissions: contents: read`, `strategy.matrix.plugin: ${{ fromJSON(needs.detect.outputs.plugins) }}`, `strategy.fail-fast: false`, and placeholder step (FR-006, FR-018)
-- [ ] T005 Add `validate-pr-title` job stub in `.github/workflows/pr-checks.yml` with `runs-on: ubuntu-latest`, `if: github.event.pull_request.draft == false`, `permissions: {}`, and placeholder step (FR-005 -- no `needs:` dependency on detect/test pipeline)
+- [x] T003 Add `detect` job stub in `.github/workflows/pr-checks.yml` with `runs-on: ubuntu-latest`, `if: github.event.pull_request.draft == false`, `permissions: contents: read`, `outputs.plugins` declaration, and placeholder step
+- [x] T004 Add `test` job stub in `.github/workflows/pr-checks.yml` with `name: test (${{ matrix.plugin }})`, `runs-on: ubuntu-latest`, `if: needs.detect.outputs.plugins != '[]'`, `needs: [detect]`, `permissions: contents: read`, `strategy.matrix.plugin: ${{ fromJSON(needs.detect.outputs.plugins) }}`, `strategy.fail-fast: false`, and placeholder step (FR-006, FR-018)
+- [x] T005 Add `validate-pr-title` job stub in `.github/workflows/pr-checks.yml` with `runs-on: ubuntu-latest`, `if: github.event.pull_request.draft == false`, `permissions: {}`, and placeholder step (FR-005 -- no `needs:` dependency on detect/test pipeline)
 
 **Checkpoint**: All three jobs defined with correct conditions, dependencies, and permissions. YAML is valid. No job logic yet.
 
@@ -46,10 +46,10 @@
 
 ### Implementation for User Story 1
 
-- [ ] T006 [US1] Implement detect job plugin detection step in `.github/workflows/pr-checks.yml`: checkout with `fetch-depth: 0` using SHA-pinned `actions/checkout`, inline bash script with `set -euo pipefail` that runs `git diff --name-only origin/${{ github.base_ref }}...HEAD`, extracts unique top-level directories via `cut -d'/' -f1 | sort -u`, filters to directories containing `.claude-plugin/plugin.json`, and sets the `plugins` output as a JSON array using `jq` (FR-002, FR-010, FR-011, FR-014)
-- [ ] T007 [US1] Implement detect job logging in `.github/workflows/pr-checks.yml`: log `Changed plugin directories: ...` when plugins are found, or `No plugin directories changed in this PR. Test job will be skipped.` when none are found (FR-019)
-- [ ] T008 [US1] Implement test job steps in `.github/workflows/pr-checks.yml`: checkout with `fetch-depth: 0` using SHA-pinned `actions/checkout`, inline bash script with `set -euo pipefail` that validates `${{ matrix.plugin }}/tests/run-all.sh` exists with `::error::` annotation and human-readable error message on missing (exit 2, FR-012, FR-017, FR-020), then execute `bash tests/run-all.sh` from the plugin directory (FR-003, FR-010)
-- [ ] T009 [US1] Pass `github.base_ref` to the detect job script via `env: BASE_REF: ${{ github.base_ref }}` and reference as `"$BASE_REF"` in the script body for consistency with FR-013 script injection prevention pattern
+- [x] T006 [US1] Implement detect job plugin detection step in `.github/workflows/pr-checks.yml`: checkout with `fetch-depth: 0` using SHA-pinned `actions/checkout`, inline bash script with `set -euo pipefail` that runs `git diff --name-only origin/${{ github.base_ref }}...HEAD`, extracts unique top-level directories via `cut -d'/' -f1 | sort -u`, filters to directories containing `.claude-plugin/plugin.json`, and sets the `plugins` output as a JSON array using `jq` (FR-002, FR-010, FR-011, FR-014)
+- [x] T007 [US1] Implement detect job logging in `.github/workflows/pr-checks.yml`: log `Changed plugin directories: ...` when plugins are found, or `No plugin directories changed in this PR. Test job will be skipped.` when none are found (FR-019)
+- [x] T008 [US1] Implement test job steps in `.github/workflows/pr-checks.yml`: checkout with `fetch-depth: 0` using SHA-pinned `actions/checkout`, inline bash script with `set -euo pipefail` that validates `${{ matrix.plugin }}/tests/run-all.sh` exists with `::error::` annotation and human-readable error message on missing (exit 2, FR-012, FR-017, FR-020), then execute `bash tests/run-all.sh` from the plugin directory (FR-003, FR-010)
+- [x] T009 [US1] Pass `github.base_ref` to the detect job script via `env: BASE_REF: ${{ github.base_ref }}` and reference as `"$BASE_REF"` in the script body for consistency with FR-013 script injection prevention pattern
 
 **Checkpoint**: detect + test pipeline is complete. Plugin changes trigger scoped test execution. Empty plugin changes skip the test job.
 
@@ -63,7 +63,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T010 [P] [US2] Implement validate-pr-title job step in `.github/workflows/pr-checks.yml`: pass title via `env: TITLE: ${{ github.event.pull_request.title }}` (FR-013), inline bash script with `set -euo pipefail` that matches `"$TITLE"` against regex `^(feat|fix|chore|docs|refactor|test)(\(.+\))?!?: .+$` stored in a `PATTERN` variable, echo success message on match (FR-004, FR-010)
+- [x] T010 [P] [US2] Implement validate-pr-title job step in `.github/workflows/pr-checks.yml`: pass title via `env: TITLE: ${{ github.event.pull_request.title }}` (FR-013), inline bash script with `set -euo pipefail` that matches `"$TITLE"` against regex `^(feat|fix|chore|docs|refactor|test)(\(.+\))?!?: .+$` stored in a `PATTERN` variable, echo success message on match (FR-004, FR-010)
 
 **Checkpoint**: Title validation works for both valid and invalid titles. Script injection prevention is in place.
 
@@ -77,7 +77,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T011 [US3] Implement error message output in the validate-pr-title job failure branch in `.github/workflows/pr-checks.yml`: emit `::error::` annotation (FR-020), echo the rejected title with `Your title: "$TITLE"` (FR-016), show expected format pattern, list valid type prefixes, and provide concrete examples per the error template in contracts/workflow-contract.md (FR-007, SC-005)
+- [x] T011 [US3] Implement error message output in the validate-pr-title job failure branch in `.github/workflows/pr-checks.yml`: emit `::error::` annotation (FR-020), echo the rejected title with `Your title: "$TITLE"` (FR-016), show expected format pattern, list valid type prefixes, and provide concrete examples per the error template in contracts/workflow-contract.md (FR-007, SC-005)
 
 **Checkpoint**: Error messages contain all four required elements: rejected title, format pattern, valid types, examples.
 
@@ -91,7 +91,7 @@
 
 ### Implementation for User Story 4
 
-- [ ] T012 [US4] Verify the `if: needs.detect.outputs.plugins != '[]'` condition on the test job in `.github/workflows/pr-checks.yml` correctly causes the job to be skipped when the detect job outputs an empty array `[]` (FR-006). This should already work from T004 + T006; this task is explicit verification and any fix if needed
+- [x] T012 [US4] Verify the `if: needs.detect.outputs.plugins != '[]'` condition on the test job in `.github/workflows/pr-checks.yml` correctly causes the job to be skipped when the detect job outputs an empty array `[]` (FR-006). This should already work from T004 + T006; this task is explicit verification and any fix if needed
 
 **Checkpoint**: Docs-only PRs complete CI without running any plugin test suites.
 
@@ -101,10 +101,10 @@
 
 **Purpose**: End-to-end validation and cross-cutting concerns
 
-- [ ] T013 Validate workflow YAML syntax by running `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/pr-checks.yml'))"` or equivalent YAML linter
-- [ ] T014 Verify all existing tests still pass by running `bash speckit-pro/tests/run-all.sh` from the repository root
-- [ ] T015 Review `.github/workflows/pr-checks.yml` against the full FR list (FR-001 through FR-020) and SC list (SC-001 through SC-006) to confirm complete coverage
-- [ ] T016 Verify `actions/checkout` is SHA-pinned with a version comment in `.github/workflows/pr-checks.yml` (FR-008)
+- [x] T013 Validate workflow YAML syntax by running `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/pr-checks.yml'))"` or equivalent YAML linter
+- [x] T014 Verify all existing tests still pass by running `bash speckit-pro/tests/run-all.sh` from the repository root
+- [x] T015 Review `.github/workflows/pr-checks.yml` against the full FR list (FR-001 through FR-020) and SC list (SC-001 through SC-006) to confirm complete coverage
+- [x] T016 Verify `actions/checkout` is SHA-pinned with a version comment in `.github/workflows/pr-checks.yml` (FR-008)
 
 ---
 
