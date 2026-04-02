@@ -57,16 +57,18 @@ jobs:
           )
 
           # Filter to directories that contain a plugin manifest.
+          # Directory names are kebab-case (Constitution Principle I), safe for iteration.
           plugins=()
-          for dir in $changed_dirs; do
+          while IFS= read -r dir; do
+            [ -z "$dir" ] && continue
             if [ -f "${dir}/.claude-plugin/plugin.json" ]; then
-              plugins+=("\"${dir}\"")
+              plugins+=("$dir")
             fi
-          done
+          done <<< "$changed_dirs"
 
-          # Build a JSON array from the matched directories.
+          # Build a JSON array from the matched directories (jq handles escaping).
           if [ ${#plugins[@]} -gt 0 ]; then
-            json_array=$(printf '%s\n' "${plugins[@]}" | jq -s -c '.')
+            json_array=$(printf '%s\n' "${plugins[@]}" | jq -R -s -c 'split("\n") | map(select(. != ""))')
             echo "Changed plugin directories: ${json_array}"
           else
             json_array='[]'
@@ -81,7 +83,7 @@ jobs:
   test:
     name: "test (${{ matrix.plugin }})"
     runs-on: ubuntu-latest
-    if: needs.detect.outputs.plugins != '[]'
+    if: needs.detect.result == 'success' && needs.detect.outputs.plugins != '[]'
     needs: [detect]
     permissions:
       contents: read
@@ -93,8 +95,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-        with:
-          fetch-depth: 0
 
       - name: Run test suite
         working-directory: ${{ matrix.plugin }}
