@@ -12,7 +12,7 @@
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 5 stories, 0 markers |
 | Clarify | `/speckit.clarify` | ✅ Complete | 3 sessions, 15 questions, 0 markers |
-| Plan | `/speckit.plan` | ⏳ Pending | |
+| Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 6 research decisions, 6/6 constitution gates |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
@@ -235,10 +235,11 @@ The racecraft-plugins-public marketplace repo has no automated release process. 
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Workflow structure, step definitions, conditional logic |
-| `research.md` | ⏳ | release-please-action outputs, GITHUB_TOKEN permissions |
-| `data-model.md` | ⏳ | Workflow YAML schema, action outputs |
-| `quickstart.md` | ⏳ | Developer guide for release workflow |
+| `plan.md` | ✅ | Workflow structure, step definitions, conditional logic |
+| `research.md` | ✅ | 6 decisions resolved, release-please v4 outputs, GITHUB_TOKEN |
+| `data-model.md` | ✅ | 4 entities: workflow, steps, outputs, config files |
+| `quickstart.md` | ✅ | Developer guide for release workflow |
+| `contracts/workflow-contract.md` | ✅ | Workflow YAML contract |
 
 ---
 
