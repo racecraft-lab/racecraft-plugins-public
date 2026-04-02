@@ -72,7 +72,7 @@ jobs:
             echo "Changed plugin directories: ${json_array}"
           else
             json_array='[]'
-            echo "No plugin directories changed — test matrix will be skipped."
+            echo "No plugin directories changed in this PR. Test job will be skipped."
           fi
 
           echo "plugins=${json_array}" >> "$GITHUB_OUTPUT"
@@ -103,7 +103,7 @@ jobs:
 
           if [ ! -f "tests/run-all.sh" ]; then
             echo "::error::Missing test runner: ${{ matrix.plugin }}/tests/run-all.sh"
-            echo "Plugin '${{ matrix.plugin }}' does not have a test suite."
+            echo "Plugin '${{ matrix.plugin }}' is missing the required test runner at '${{ matrix.plugin }}/tests/run-all.sh'."
             echo "Every plugin must include tests/run-all.sh."
             exit 2
           fi
@@ -128,7 +128,7 @@ jobs:
           PATTERN='^(feat|fix|chore|docs|refactor|test)(\(.+\))?!?: .+$'
 
           if [[ "$TITLE" =~ $PATTERN ]]; then
-            echo "PR title matches Conventional Commits format."
+            echo "PR title is valid: \"${TITLE}\""
           else
             echo "::error::PR title does not match Conventional Commits format."
             echo ""

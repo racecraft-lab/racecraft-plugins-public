@@ -71,12 +71,12 @@ Each phase requires **human review and approval** before proceeding:
 ### Success Criteria Summary
 
 - [ ] `.github/workflows/pr-checks.yml` exists and is valid YAML
-- [ ] `validate-plugins` job detects changed plugin directories via `git diff` and runs scoped tests
-- [ ] `validate-plugins` job skips testing when no plugin directories changed (e.g., README-only PRs)
+- [ ] `detect` job computes changed plugin directories via `git diff` and exposes them as matrix input
+- [ ] `test` matrix job runs scoped tests for each changed plugin; skips when no plugins changed (e.g., README-only PRs)
 - [ ] `validate-pr-title` job validates PR title matches Conventional Commits pattern
 - [ ] `validate-pr-title` job provides clear error message with example format on failure
-- [ ] Both jobs run in parallel (no inter-job dependencies)
-- [ ] Workflow triggers on `pull_request` events: `opened`, `reopened`, `synchronize`
+- [ ] `detect`, `test`, and `validate-pr-title` run in parallel where possible (`test` depends on `detect` for its matrix)
+- [ ] Workflow triggers on `pull_request` events: `opened`, `reopened`, `synchronize`, `edited`, `ready_for_review`
 - [ ] All existing tests continue to pass (`bash tests/run-all.sh`)
 
 ---
