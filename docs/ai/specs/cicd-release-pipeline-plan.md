@@ -58,9 +58,9 @@ SPEC-001 (Repository Foundation)
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| SPEC-001 | Repository Foundation | 🔄 In Progress | [SPEC-001-workflow.md](SPEC-001-workflow.md) | Specify |
-| SPEC-002 | PR Checks Workflow | ⏳ Pending | [SPEC-002-workflow.md](SPEC-002-workflow.md) | Blocked by SPEC-001 |
-| SPEC-003 | Release Automation | ⏳ Pending | [SPEC-003-workflow.md](SPEC-003-workflow.md) | Blocked by SPEC-001 |
+| SPEC-001 | Repository Foundation | ✅ Complete | [SPEC-001-workflow.md](SPEC-001-workflow.md) | Done |
+| SPEC-002 | PR Checks Workflow | 🔄 In Progress | [SPEC-002-workflow.md](SPEC-002-workflow.md) | Specify |
+| SPEC-003 | Release Automation | 🔄 In Progress | [SPEC-003-workflow.md](SPEC-003-workflow.md) | Specify |
 | SPEC-004 | Integration & Verification | ⏳ Pending | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Blocked by SPEC-002, SPEC-003 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
