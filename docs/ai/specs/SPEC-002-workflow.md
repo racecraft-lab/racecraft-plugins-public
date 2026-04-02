@@ -12,7 +12,7 @@
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 4 US, 14 scenarios, G1 passed |
 | Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved, 2 sessions, G2 passed |
-| Plan | `/speckit.plan` | ⏳ Pending | |
+| Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 7 research topics, G3 passed |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
@@ -216,10 +216,10 @@ The racecraft-plugins-public marketplace repo has no CI validation on pull reque
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Workflow structure, job definitions |
-| `research.md` | ⏳ | GitHub Actions best practices, git diff strategies |
-| `data-model.md` | ⏳ | Workflow YAML schema, event payload structure |
-| `quickstart.md` | ⏳ | Developer guide for PR workflow |
+| `plan.md` | ✅ | Workflow structure, 3 jobs, execution flow |
+| `research.md` | ✅ | 7 research topics resolved |
+| `data-model.md` | ✅ | 3 job entities, event payload structure |
+| `quickstart.md` | ✅ | Developer guide for PR workflow |
 
 ---
 
