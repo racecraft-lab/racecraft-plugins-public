@@ -13,7 +13,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 5 stories, 0 markers |
 | Clarify | `/speckit.clarify` | ✅ Complete | 3 sessions, 15 questions, 0 markers |
 | Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 6 research decisions, 6/6 constitution gates |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 121 items, 33 gaps remediated |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -301,10 +301,10 @@ Focus on Release Automation requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | | | |
-| requirements | | | |
-| security | | | |
-| **Total** | | | |
+| error-handling | 32 | 14 remediated | FR-012, FR-013, FR-014, edge cases |
+| requirements | 56 | 4 remediated | FR-007 (permissions), FR-015 (concurrency), FR-001 scope |
+| security | 33 | 15 remediated | SEC-001–SEC-004, FR-008 (pinning threats) |
+| **Total** | **121** | **33 remediated** | 6 new FRs + 4 security requirements |
 
 ---
 

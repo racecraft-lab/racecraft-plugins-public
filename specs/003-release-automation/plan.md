@@ -64,6 +64,32 @@ speckit-pro/.claude-plugin/plugin.json   # Updated by release-please
 
 **Structure Decision**: Single file delivery. The workflow file at `.github/workflows/release.yml` is the only new file. All supporting infrastructure (config files, sync script) already exists from SPEC-001.
 
+## Error Handling Design
+
+**Failure isolation**: The release-please step and marketplace sync step fail independently. A release-please failure prevents the sync step from running (sequential dependency). A sync failure does not affect the already-created release and tag.
+
+**Visibility**: The sync step uses default `continue-on-error: false` (FR-012), so any sync failure marks the entire workflow run as failed. This ensures GitHub Actions UI shows a red X and configured notifications fire.
+
+**Job timeout**: The job sets `timeout-minutes: 10` (FR-013) to prevent hung runs. The target completion time is under 5 minutes.
+
+**Self-healing sync**: The sync script is registry-driven and idempotent -- it reads the current version from each plugin's `plugin.json` and writes it to `marketplace.json` regardless of prior state. A failed sync on release N is automatically corrected by a successful sync on release N+1. No manual version correction is needed.
+
+**No partial state persistence**: GitHub Actions runners are ephemeral. If the sync script writes to `marketplace.json` but the git commit/push fails, the workspace is discarded. The on-disk `marketplace.json` on main remains at its prior state.
+
+**Push independence**: Workflow runs are asynchronous post-push events (FR-014). A failed workflow never blocks `git push` to main. Release-please is resumable from its persisted manifest and tag state.
+
+## Security Design
+
+**Least-privilege permissions**: The workflow declares exactly two permission scopes (`contents: write`, `pull-requests: write`) via the `permissions:` block (SEC-002). All unspecified scopes default to `none`. No PAT or GitHub App token is used.
+
+**Script injection prevention**: The workflow YAML does not interpolate any user-controlled context values (`github.event.head_commit.message`, PR titles, branch names) into `run:` blocks via `${{ }}` expressions (SEC-001). The sync step's commit message is a hardcoded string. The release-please action handles commit message parsing internally without shell interpolation.
+
+**Supply chain pinning**: Both `googleapis/release-please-action` and `actions/checkout` are pinned to specific versions (FR-008). The plan targets major version tags (`@v4`) for both actions; SHA pinning is recommended for third-party actions in production but major version tags are acceptable for the initial implementation given the high reputation of both action maintainers (Google, GitHub).
+
+**Credential isolation**: The GITHUB_TOKEN is persisted by `actions/checkout` in `.git/config` for the sync push step (SEC-004). No untrusted third-party actions run after checkout. The sync script does not execute git commands or access credentials directly. Runner ephemerality ensures credentials are destroyed after each job.
+
+**Log safety**: The sync script uses `set -euo pipefail` without `set -x` and outputs only version change summaries to stdout (SEC-003). GitHub Actions automatically masks the GITHUB_TOKEN in all log output.
+
 ## Complexity Tracking
 
 > No constitution violations identified. Table intentionally empty.
