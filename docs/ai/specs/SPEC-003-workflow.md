@@ -10,7 +10,7 @@
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
+| Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 5 stories, 0 markers |
 | Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
@@ -139,13 +139,14 @@ The racecraft-plugins-public marketplace repo has no automated release process. 
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | FR-001 through FR-010 (10 total) |
+| User Stories | 5 (P1: 3, P2: 2) |
+| Acceptance Criteria | 14 scenarios + 6 success criteria |
 
 ### Files Generated
 
-- [ ] `specs/003-release-automation/spec.md`
+- [x] `specs/003-release-automation/spec.md`
+- [x] `specs/003-release-automation/checklists/requirements.md`
 
 ---
 
