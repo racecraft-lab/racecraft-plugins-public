@@ -13,7 +13,7 @@
 | Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 4 US, 14 scenarios, G1 passed |
 | Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved, 2 sessions, G2 passed |
 | Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 7 research topics, G3 passed |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 143 items, 42 gaps remediated, G4 passed |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
@@ -280,10 +280,10 @@ Focus on PR Checks Workflow requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| script-safety | | | |
-| error-handling | | | |
-| requirements | | | |
-| **Total** | | | |
+| script-safety | 33 | 13 | FR-013 (injection), FR-014 (diff safety), FR-015 (ReDoS) |
+| error-handling | 34 | 22 | FR-016 (error display), FR-017-018 (test errors), FR-019-020 (logging/annotations) |
+| requirements | 76 | 7 | FR-001 (events), FR-005 (parallelism), SC-005 (measurability) |
+| **Total** | 143 | 42 | |
 
 ---
 

@@ -25,9 +25,16 @@ All jobs include: `if: github.event.pull_request.draft == false`
 - Three-dot diff: `git diff --name-only origin/${{ github.base_ref }}...HEAD`
 - Extract unique top-level directories
 - Filter to directories containing `.claude-plugin/plugin.json`
+- Log detected plugins or "no plugins changed" message (FR-019)
 - Output as JSON array
 
+**Log Output** (FR-019):
+- When plugins found: `Changed plugin directories: speckit-pro my-other-plugin`
+- When no plugins found: `No plugin directories changed in this PR. Test job will be skipped.`
+
 ## Job Contract: test
+
+**Display Name**: `test (${{ matrix.plugin }})` (FR-018 -- plugin name visible in Checks UI)
 
 **Inputs**:
 
@@ -45,19 +52,21 @@ All jobs include: `if: github.event.pull_request.draft == false`
 
 **Exit Codes**:
 
-| Code | Meaning |
-|------|---------|
-| 0 | All tests passed |
-| 1 | Test failures detected |
-| 2 | Test runner (`tests/run-all.sh`) not found |
+| Code | Meaning | Error Output |
+|------|---------|--------------|
+| 0 | All tests passed | (test runner output) |
+| 1 | Test failures detected | (test runner output -- already actionable) |
+| 2 | Test runner (`tests/run-all.sh`) not found | `::error::` annotation + human-readable message with plugin name and expected path (FR-017) |
 
 ## Job Contract: validate-pr-title
 
 **Inputs**:
 
-| Name | Type | Source |
-|------|------|--------|
-| PR title | string | `${{ github.event.pull_request.title }}` |
+| Name | Type | Source | Delivery |
+|------|------|--------|----------|
+| PR title | string | `${{ github.event.pull_request.title }}` | Via `env: TITLE:` (FR-013, script injection prevention) |
+
+**Script Injection Prevention**: The PR title MUST be passed to the inline script via an intermediate environment variable (`env: TITLE: ${{ github.event.pull_request.title }}`), never by direct `${{ }}` interpolation in the script body. The `$TITLE` variable MUST be double-quoted in all uses. See [GitHub Docs - Script Injections](https://docs.github.com/en/actions/concepts/security/script-injections).
 
 **Behavior**:
 - Match title against regex: `^(feat|fix|chore|docs|refactor|test)(\(.+\))?!?: .+$`
@@ -70,7 +79,11 @@ All jobs include: `if: github.event.pull_request.draft == false`
 **Error Output Format** (on failure):
 
 ```text
+::error::PR title does not match Conventional Commits format. See job log for details.
+
 ERROR: PR title does not match Conventional Commits format.
+
+  Your title: "<actual PR title echoed here>"
 
 Expected format: type(scope): description
   - type must be one of: feat, fix, chore, docs, refactor, test
@@ -82,6 +95,12 @@ Examples:
   fix: resolve session timeout
   docs: update README
   feat!: breaking API change
+```
+
+**Success Output Format** (on pass):
+
+```text
+PR title is valid: <actual PR title echoed here>
 ```
 
 ## Permissions Contract
