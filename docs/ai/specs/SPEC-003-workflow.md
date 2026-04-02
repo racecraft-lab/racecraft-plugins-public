@@ -11,7 +11,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 10 FRs, 5 stories, 0 markers |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit.clarify` | ✅ Complete | 3 sessions, 15 questions, 0 markers |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -178,9 +178,9 @@ The racecraft-plugins-public marketplace repo has no automated release process. 
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1       |            |           |              |
-| 2       |            |           |              |
-| 3       |            |           |              |
+| 1 | Release-Please Configuration | 5 | Output variable format (path-prefixed), version.txt auto-creation, dual+skip-ci loop protection, tag format from component field |
+| 2 | Marketplace Sync Lifecycle | 5 | Same-job sequential step, registry-driven multi-plugin sync, fail-visible no-rollback, GITHUB_TOKEN via persisted credentials, branch protection deferred to SPEC-004 |
+| 3 | Edge Cases & Failure Modes | 5 | No-op when no releasable commits, closed PR label recovery, idempotent sync, breaking changes bump major at v1.0.0+, bump-minor-pre-major only applies pre-1.0 |
 
 ---
 
