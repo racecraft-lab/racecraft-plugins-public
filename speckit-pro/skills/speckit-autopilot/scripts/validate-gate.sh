@@ -49,9 +49,13 @@ case "$GATE" in
       printf '{"gate":"G1","pass":true,"reason":"spec.md exists with 0 markers","markers":0,"details":[]}\n'
       exit 0
     else
-      details=$(list_markers "$SPEC" "\\[NEEDS CLARIFICATION\\]" | sed 's/"/\\"/g' | head -10)
-      printf '{"gate":"G1","pass":false,"reason":"%d [NEEDS CLARIFICATION] markers remain","markers":%d,"details":["%s"]}\n' \
-        "$count" "$count" "$details"
+      details_json=$(list_markers "$SPEC" "\\[NEEDS CLARIFICATION\\]" | head -10 | jq -R . | jq -s '.')
+      jq -cn \
+        --arg gate "G1" \
+        --arg reason "${count} [NEEDS CLARIFICATION] markers remain" \
+        --argjson markers "$count" \
+        --argjson details "$details_json" \
+        '{"gate":$gate,"pass":false,"reason":$reason,"markers":$markers,"details":$details}'
       exit 1
     fi
     ;;
@@ -67,9 +71,13 @@ case "$GATE" in
       printf '{"gate":"G2","pass":true,"reason":"0 [NEEDS CLARIFICATION] markers","markers":0,"details":[]}\n'
       exit 0
     else
-      details=$(list_markers "$SPEC" "\\[NEEDS CLARIFICATION\\]" | sed 's/"/\\"/g' | head -10)
-      printf '{"gate":"G2","pass":false,"reason":"%d markers remain","markers":%d,"details":["%s"]}\n' \
-        "$count" "$count" "$details"
+      details_json=$(list_markers "$SPEC" "\\[NEEDS CLARIFICATION\\]" | head -10 | jq -R . | jq -s '.')
+      jq -cn \
+        --arg gate "G2" \
+        --arg reason "${count} markers remain" \
+        --argjson markers "$count" \
+        --argjson details "$details_json" \
+        '{"gate":$gate,"pass":false,"reason":$reason,"markers":$markers,"details":$details}'
       exit 1
     fi
     ;;

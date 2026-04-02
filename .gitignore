@@ -1,3 +1,6 @@
 .DS_Store
 *.log
 .env
+
+# SpecKit generated cache artifacts
+.specify/presets/.cache/

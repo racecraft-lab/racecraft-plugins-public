@@ -2,7 +2,7 @@
 # test-check-prerequisites.sh — Unit tests for check-prerequisites.sh
 #
 # Tests prerequisite checking with synthetic fixtures for failure modes.
-# Optional --live flag runs against omnifocus-mcp project.
+# Optional --live flag runs against a live SpecKit project (set PROJECT_ROOT).
 
 set -euo pipefail
 
@@ -110,12 +110,14 @@ assert_json_field_exists "$output" "branch"
 # ─────────────────────────────────────────
 
 if [ "$LIVE" = "true" ]; then
-  section "Live: check-prerequisites on omnifocus-mcp"
+  section "Live: check-prerequisites on live project"
 
   PROJECT_ROOT="${PROJECT_ROOT:-$(git -C "$PLUGIN_ROOT" rev-parse --show-toplevel 2>/dev/null || echo "")}"
   if [ -n "$PROJECT_ROOT" ]; then
     # Use a real workflow file
-    WORKFLOW=$(find "$PROJECT_ROOT/docs/ai/specs" -name "*-workflow.md" -type f 2>/dev/null | head -1)
+    # Guard with || true: find exits 1 on missing directory; with pipefail the pipeline
+    # would abort the script before test_summary is reached.
+    WORKFLOW=$(find "$PROJECT_ROOT/docs/ai/specs" -name "*-workflow.md" -type f 2>/dev/null | head -1) || true
     if [ -n "$WORKFLOW" ]; then
       set_test "Live project — output is valid JSON"
       output=$(cd "$PROJECT_ROOT" && bash "$SCRIPT" "$WORKFLOW" 2>/dev/null) || true

@@ -9,7 +9,7 @@
 #   tests/run-all.sh --ci         # CI mode: layers 1, 4, 5 synthetic only
 #   tests/run-all.sh --all        # All 5 layers
 #
-# Run from the project directory (e.g., omnifocus-mcp/) so live tests
+# Run from the project directory (e.g., racecraft-plugins-public/) so live tests
 # can access .specify/, specs/, and other SpecKit artifacts.
 #
 # Environment:
@@ -184,12 +184,14 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-detect-commands.sh"
     "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
+    "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then
     # Run with --live flag by wrapping each script
     printf "\n${BOLD}${CYAN}Layer 4: Script Unit Tests (+ live)${RESET}\n"
     printf "%s\n" "────────────────────────────────────────"
+    layer4_pass=0 layer4_fail=0
     for script in "${layer4_scripts[@]}"; do
       if [ ! -f "$script" ]; then continue; fi
       local_output=$(bash "$script" "$LIVE_FLAG" 2>&1) || true
@@ -198,16 +200,31 @@ if should_run 4; then
         passed=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f1)
         total=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f2)
         failed=$((total - passed))
+        layer4_pass=$((layer4_pass + passed))
+        layer4_fail=$((layer4_fail + failed))
         TOTAL_PASS=$((TOTAL_PASS + passed))
         TOTAL_FAIL=$((TOTAL_FAIL + failed))
         if [ "$failed" -eq 0 ]; then
           printf "  ${GREEN}PASS${RESET} %s (%d/%d)\n" "$(basename "$script" .sh)" "$passed" "$total"
         else
-          printf "  ${RED}FAIL${RESET} %s (%d/%d)\n" "$(basename "$script" .sh)" "$passed" "$total"
+          printf "  ${RED}FAIL${RESET} %s (%d/%d, %d failed)\n" \
+            "$(basename "$script" .sh)" "$passed" "$total" "$failed"
+          echo "$local_output" | grep -E 'FAIL' | head -5 | while read -r line; do
+            printf "       %s\n" "$line"
+          done
         fi
+      else
+        # No summary — script may have crashed before test_summary was reached
+        printf "  ${RED}FAIL${RESET} %s (no summary — script may have crashed)\n" \
+          "$(basename "$script" .sh)"
+        echo "$local_output" | tail -3 | while read -r line; do
+          printf "       %s\n" "$line"
+        done
+        ((layer4_fail++))
+        ((TOTAL_FAIL++))
       fi
     done
-    LAYER_RESULTS+=("L4: done")
+    LAYER_RESULTS+=("L4: ${layer4_pass}/$((layer4_pass + layer4_fail))")
   else
     run_layer 4 "Script Unit Tests" "${layer4_scripts[@]}"
   fi

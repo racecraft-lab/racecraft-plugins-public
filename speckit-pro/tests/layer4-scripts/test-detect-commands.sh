@@ -3,7 +3,7 @@
 #
 # Tests command detection for Node.js/pnpm, Node.js/npm, Rust, Go,
 # Python, Makefile, empty directory, and full verify chain.
-# Optional --live flag runs against omnifocus-mcp project.
+# Optional --live flag runs against a live SpecKit project (set PROJECT_ROOT).
 
 set -euo pipefail
 
@@ -173,7 +173,7 @@ assert_json_field "$output" "commands.UNIT_TEST" "N/A"
 # ─────────────────────────────────────────
 
 if [ "$LIVE" = "true" ]; then
-  section "Live: detect-commands on omnifocus-mcp"
+  section "Live: detect-commands on live project"
 
   PROJECT_ROOT="${PROJECT_ROOT:-$(git -C "$PLUGIN_ROOT" rev-parse --show-toplevel 2>/dev/null || echo "")}"
   if [ -n "$PROJECT_ROOT" ] && [ -f "$PROJECT_ROOT/pnpm-lock.yaml" ]; then

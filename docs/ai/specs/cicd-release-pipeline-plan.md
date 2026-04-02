@@ -58,7 +58,7 @@ SPEC-001 (Repository Foundation)
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| SPEC-001 | Repository Foundation | ⏳ Pending | [SPEC-001-workflow.md](SPEC-001-workflow.md) | Specify |
+| SPEC-001 | Repository Foundation | 🔄 In Progress | [SPEC-001-workflow.md](SPEC-001-workflow.md) | Specify |
 | SPEC-002 | PR Checks Workflow | ⏳ Pending | [SPEC-002-workflow.md](SPEC-002-workflow.md) | Blocked by SPEC-001 |
 | SPEC-003 | Release Automation | ⏳ Pending | [SPEC-003-workflow.md](SPEC-003-workflow.md) | Blocked by SPEC-001 |
 | SPEC-004 | Integration & Verification | ⏳ Pending | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Blocked by SPEC-002, SPEC-003 |
@@ -193,8 +193,9 @@ Alternatives considered: including marketplace.json in the Release PR (risk of c
   8. Verify GitHub Release created with correct tag
   9. Verify marketplace.json synced with updated version
   10. Verify `/plugin marketplace update racecraft-public-plugins` sees the new version
-- Update `CLAUDE.md` to document the new workflow: branching strategy, PR requirements, release process, and how to add new plugins to the release-please config
+- Update `CLAUDE.md` to document the new workflow: branching strategy, PR requirements, release process, how to add new plugins to the release-please config, and the user update path (`/plugin marketplace update racecraft-public-plugins`)
 - Update `AGENTS.md` if needed to reflect the new CI/CD conventions
+- Document recovery & rollback procedures in `CLAUDE.md`: re-running the sync workflow (`gh workflow run release.yml`), reverting a bad release via a `fix()` commit, and using `Release-As: X.Y.Z` to force a specific version
 
 **Out of Scope:**
 - Stable/latest release channels (out of scope per design decision — can be added later)
