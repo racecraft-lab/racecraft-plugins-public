@@ -90,7 +90,7 @@ The SessionStart hook warns if `specify` is not found.
 ## Active Technologies
 - Bash (macOS/Linux) + jq (JSON processing), release-please (Google, version automation) (001-repository-foundation)
 - YAML (GitHub Actions workflow) + Bash (inline scripts) + GitHub Actions (`actions/checkout`), no external dependencies (002-pr-checks-workflow)
-- N/A (stateless CI workflow) (002-pr-checks-workflow)
+- YAML (GitHub Actions workflow syntax) + Bash (inline sync step) + `googleapis/release-please-action@v4`, `actions/checkout@v4`, `jq` (pre-installed on `ubuntu-latest`) (003-release-automation)
 
 ## Recent Changes
 - 001-repository-foundation: Added Bash (macOS/Linux) + jq (JSON processing), release-please (Google, version automation)
