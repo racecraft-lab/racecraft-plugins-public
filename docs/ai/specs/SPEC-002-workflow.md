@@ -11,7 +11,7 @@
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 4 US, 14 scenarios, G1 passed |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
+| Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved, 2 sessions, G2 passed |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit.tasks` | ⏳ Pending | |
@@ -165,8 +165,8 @@ The racecraft-plugins-public marketplace repo has no CI validation on pull reque
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1       |            |           |              |
-| 2       |            |           |              |
+| 1       | Plugin Detection Logic | 5 | plugin.json as sole signal, fetch-depth 0, three-dot diff, dynamic matrix, empty matrix handling |
+| 2       | PR Title Validation Edge Cases | 5 | skip drafts, no bot exemptions, ! placement confirmed, multi-line not a concern, ci type out of scope |
 
 ---
 
