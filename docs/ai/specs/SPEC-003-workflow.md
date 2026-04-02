@@ -14,7 +14,7 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 3 sessions, 15 questions, 0 markers |
 | Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 6 research decisions, 6/6 constitution gates |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 121 items, 33 gaps remediated |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 11 tasks, 5 phases, 15 FRs + 4 SECs covered |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
@@ -343,10 +343,10 @@ Focus on Release Automation requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | |
+| **Total Tasks** | 11 (T001-T011) |
+| **Phases** | 5 (Foundation, Release-Please, Sync, Validation, Polish) |
+| **Parallel Opportunities** | 2 (T006+T007, T010+T011) |
+| **User Stories Covered** | 5/5 |
 
 ---
 
