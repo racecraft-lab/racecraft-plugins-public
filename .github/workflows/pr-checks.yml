@@ -1,0 +1,153 @@
+# PR Checks — runs plugin test suites and validates PR metadata.
+#
+# Triggers on pull requests targeting any branch. Draft PRs are skipped.
+# Only plugins whose files changed (relative to the base branch) are tested.
+# PR titles must follow Conventional Commits format.
+#
+# Security notes:
+# - TITLE and BASE_REF are passed via env vars, never directly interpolated
+#   in run: blocks, preventing script injection (FR-013 pattern).
+# - matrix.plugin is safe for direct interpolation because plugin directory
+#   names are constrained to kebab-case by Constitution Principle I.
+
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, edited, ready_for_review]
+
+# Top-level: no permissions granted by default.
+# Each job declares only what it needs (principle of least privilege).
+permissions: {}
+
+defaults:
+  run:
+    shell: bash
+
+# ─────────────────────────────────────────────────────────────────────
+# Job 1: Detect which plugin directories have changed
+# ─────────────────────────────────────────────────────────────────────
+jobs:
+  detect:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+    outputs:
+      plugins: ${{ steps.changed.outputs.plugins }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed plugin directories
+        id: changed
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          # Find all top-level directories that changed relative to the base branch.
+          changed_dirs=$(
+            git diff --name-only "origin/${BASE_REF}...HEAD" \
+              | cut -d'/' -f1 \
+              | sort -u
+          )
+
+          # Filter to directories that contain a plugin manifest.
+          # Directory names are kebab-case (Constitution Principle I), safe for iteration.
+          plugins=()
+          while IFS= read -r dir; do
+            [ -z "$dir" ] && continue
+            if [ -f "${dir}/.claude-plugin/plugin.json" ]; then
+              plugins+=("$dir")
+            fi
+          done <<< "$changed_dirs"
+
+          # Build a JSON array from the matched directories (jq handles escaping).
+          if [ ${#plugins[@]} -gt 0 ]; then
+            json_array=$(printf '%s\n' "${plugins[@]}" | jq -R -s -c 'split("\n") | map(select(. != ""))')
+            echo "Changed plugin directories: ${json_array}"
+          else
+            json_array='[]'
+            echo "No plugin directories changed in this PR. Test job will be skipped."
+          fi
+
+          echo "plugins=${json_array}" >> "$GITHUB_OUTPUT"
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 2: Run plugin test suites (matrix over changed plugins)
+  # ───────────────────────────────────────────────────────────────────
+  test:
+    name: "test (${{ matrix.plugin }})"
+    runs-on: ubuntu-latest
+    if: needs.detect.result == 'success' && needs.detect.outputs.plugins != '[]'
+    needs: [detect]
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        plugin: ${{ fromJSON(needs.detect.outputs.plugins) }}
+      fail-fast: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+
+      - name: Run test suite
+        working-directory: ${{ matrix.plugin }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -f "tests/run-all.sh" ]; then
+            echo "::error::Missing test runner: ${{ matrix.plugin }}/tests/run-all.sh"
+            echo "Plugin '${{ matrix.plugin }}' is missing the required test runner at '${{ matrix.plugin }}/tests/run-all.sh'."
+            echo "Every plugin must include tests/run-all.sh."
+            exit 2
+          fi
+
+          bash tests/run-all.sh
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 3: Validate PR title against Conventional Commits format
+  # ───────────────────────────────────────────────────────────────────
+  validate-pr-title:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    permissions: {}
+
+    steps:
+      - name: Check Conventional Commits format
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+
+          PATTERN='^(feat|fix|chore|docs|refactor|test)(\(.+\))?!?: .+$'
+
+          if [[ "$TITLE" =~ $PATTERN ]]; then
+            echo "PR title is valid: \"${TITLE}\""
+          else
+            echo "::error::PR title does not match Conventional Commits format."
+            echo ""
+            echo "Your title: \"${TITLE}\""
+            echo ""
+            echo "Expected format: <type>(<optional scope>): <description>"
+            echo "Pattern: ${PATTERN}"
+            echo ""
+            echo "Valid type prefixes:"
+            echo "  feat     — a new feature"
+            echo "  fix      — a bug fix"
+            echo "  chore    — maintenance or tooling changes"
+            echo "  docs     — documentation only"
+            echo "  refactor — code restructuring without behavior change"
+            echo "  test     — adding or updating tests"
+            echo ""
+            echo "Examples:"
+            echo "  feat(speckit-pro): add new coaching command"
+            echo "  fix: resolve session timeout"
+            echo "  docs: update README"
+            exit 1
+          fi

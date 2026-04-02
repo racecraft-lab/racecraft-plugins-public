@@ -74,9 +74,9 @@ Each phase requires **human review and approval** before proceeding:
 - [ ] release-please action reads `release-please-config.json` and `.release-please-manifest.json` from SPEC-001
 - [ ] release-please opens/updates Release PRs with bumped versions and generated changelogs on conventional commits to `main`
 - [ ] On Release PR merge, release-please creates GitHub Releases and git tags (e.g., `speckit-pro-v1.1.0`)
-- [ ] Marketplace sync step runs conditionally — only when `releases_created` is true
+- [ ] Marketplace sync step runs conditionally — only when the per-component `speckit-pro--release_created` output is true
 - [ ] `scripts/sync-marketplace-versions.sh` runs to sync plugin.json versions into marketplace.json
-- [ ] Marketplace sync commit uses `chore: sync marketplace.json versions` message
+- [ ] Marketplace sync commit uses `chore: sync marketplace.json versions [skip ci]` message
 - [ ] Marketplace sync commit does NOT re-trigger release-please (verified by `chore:` scope)
 - [ ] Workflow has `contents: write` permission for pushing the sync commit
 - [ ] All existing tests continue to pass (`bash tests/run-all.sh`)
@@ -206,7 +206,7 @@ The racecraft-plugins-public marketplace repo has no automated release process. 
 - Workflow must be a single `.github/workflows/release.yml` file
 - Two sequential steps: release-please action, then conditional marketplace sync
 - release-please reads `release-please-config.json` (per-plugin package config) and `.release-please-manifest.json` (version tracker) — both created by SPEC-001
-- Marketplace sync is conditional on `releases_created` output from release-please
+- Marketplace sync is conditional on `speckit-pro--release_created` output from release-please
 - Sync commit must use `chore: sync marketplace.json versions` to avoid re-triggering release-please
 - GITHUB_TOKEN needs `contents: write` permission
 - The sync script (`scripts/sync-marketplace-versions.sh`) already exists from SPEC-001 — do not modify it
@@ -214,7 +214,7 @@ The racecraft-plugins-public marketplace repo has no automated release process. 
 ## Architecture Notes
 - Trigger: `push` to `main` (catches both regular merges and squash merges)
 - Step 1 (release-please): Runs on every push to main. Either opens/updates a Release PR, or creates a release if a Release PR was just merged
-- Step 2 (marketplace sync): Only runs when `releases_created == 'true'`. Checks out main, runs sync script, commits, and pushes
+- Step 2 (marketplace sync): Only runs when `speckit-pro--release_created == 'true'`. Checks out main, runs sync script, commits, and pushes
 - The sync push goes directly to main — branch protection exemption for the GitHub Actions bot is configured in SPEC-004
 - release-please automatically ignores its own commits and `chore:` commits — no infinite loop risk
 
@@ -268,14 +268,14 @@ Focus on Release Automation requirements:
 
 #### 2. Requirements Checklist
 
-Why this domain: The workflow must correctly implement the two-step release process with proper conditional logic. Missing the `releases_created` gate or misconfiguring permissions would cause silent failures.
+Why this domain: The workflow must correctly implement the two-step release process with proper conditional logic. Missing the `speckit-pro--release_created` gate or misconfiguring permissions would cause silent failures.
 
 ```bash
 /speckit.checklist requirements
 
 Focus on Release Automation requirements:
 - All five user stories must have corresponding workflow logic
-- The `releases_created` output must be correctly referenced to gate the sync step
+- The `speckit-pro--release_created` output must be correctly referenced to gate the sync step
 - GITHUB_TOKEN permissions must include `contents: write`
 - The sync commit message must be exactly `chore: sync marketplace.json versions`
 - release-please-config.json and .release-please-manifest.json must be correctly referenced
@@ -364,7 +364,7 @@ Focus on:
 2. Coverage gaps — ensure all FRs and user stories have tasks
 3. Consistency between task file paths and actual project structure
 4. Verify release-please-action configuration matches SPEC-001's release-please-config.json
-5. Verify the sync step correctly gates on releases_created output
+5. Verify the sync step correctly gates on speckit-pro--release_created output
 6. Verify the sync commit message is exactly `chore: sync marketplace.json versions`
 ```
 
@@ -409,7 +409,7 @@ Before starting any task:
 ### Implementation Notes
 - GitHub Actions YAML: use 2-space indentation consistently
 - Pin release-please-action to a specific version (e.g., `googleapis/release-please-action@v4`)
-- Use `${{ steps.release.outputs.releases_created }}` to gate the sync step
+- Use `${{ steps.release.outputs['speckit-pro--release_created'] }}` to gate the sync step
 - The sync step must: checkout main, run sync script, git add/commit/push
 - Git config for the sync commit: use GitHub Actions bot identity (`github-actions[bot]`)
 - Test the workflow by pushing a conventional commit to main after implementation
@@ -432,8 +432,8 @@ Before starting any task:
 - [ ] All tasks marked complete in tasks.md
 - [ ] `.github/workflows/release.yml` is valid YAML
 - [ ] release-please-action correctly references config and manifest files
-- [ ] Sync step is gated on `releases_created == 'true'`
-- [ ] Sync commit uses `chore: sync marketplace.json versions` message
+- [ ] Sync step is gated on `steps.release.outputs['speckit-pro--release_created'] == 'true'`
+- [ ] Sync commit uses `chore: sync marketplace.json versions [skip ci]` message
 - [ ] GITHUB_TOKEN has `contents: write` permission
 - [ ] No modification to SPEC-001 artifacts (sync script, release-please configs)
 - [ ] All existing tests pass: `bash speckit-pro/tests/run-all.sh`
