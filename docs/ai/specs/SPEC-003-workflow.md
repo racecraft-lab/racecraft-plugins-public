@@ -70,16 +70,16 @@ Each phase requires **human review and approval** before proceeding:
 
 ### Success Criteria Summary
 
-- [ ] `.github/workflows/release.yml` exists and is valid YAML
-- [ ] release-please action reads `release-please-config.json` and `.release-please-manifest.json` from SPEC-001
-- [ ] release-please opens/updates Release PRs with bumped versions and generated changelogs on conventional commits to `main`
-- [ ] On Release PR merge, release-please creates GitHub Releases and git tags (e.g., `speckit-pro-v1.1.0`)
-- [ ] Marketplace sync step runs conditionally — only when the per-component `speckit-pro--release_created` output is true
-- [ ] `scripts/sync-marketplace-versions.sh` runs to sync plugin.json versions into marketplace.json
-- [ ] Marketplace sync commit uses `chore: sync marketplace.json versions [skip ci]` message
-- [ ] Marketplace sync commit does NOT re-trigger release-please (verified by `chore:` scope)
-- [ ] Workflow has `contents: write` permission for pushing the sync commit
-- [ ] All existing tests continue to pass (`bash tests/run-all.sh`)
+- [x] `.github/workflows/release.yml` exists and is valid YAML
+- [x] release-please action reads `release-please-config.json` and `.release-please-manifest.json` from SPEC-001
+- [x] release-please opens/updates Release PRs with bumped versions and generated changelogs on conventional commits to `main`
+- [x] On Release PR merge, release-please creates GitHub Releases and git tags (e.g., `speckit-pro-v1.1.0`)
+- [x] Marketplace sync step runs conditionally — only when the per-component `speckit-pro--release_created` output is true
+- [x] `scripts/sync-marketplace-versions.sh` runs to sync plugin.json versions into marketplace.json
+- [x] Marketplace sync commit uses `chore: sync marketplace.json versions [skip ci]` message
+- [x] Marketplace sync commit does NOT re-trigger release-please (verified by `chore:` scope)
+- [x] Workflow has `contents: write` permission for pushing the sync commit
+- [x] All existing tests continue to pass (`bash tests/run-all.sh`)
 
 ---
 
@@ -429,15 +429,15 @@ Before starting any task:
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] `.github/workflows/release.yml` is valid YAML
-- [ ] release-please-action correctly references config and manifest files
-- [ ] Sync step is gated on `steps.release.outputs['speckit-pro--release_created'] == 'true'`
-- [ ] Sync commit uses `chore: sync marketplace.json versions [skip ci]` message
-- [ ] GITHUB_TOKEN has `contents: write` permission
-- [ ] No modification to SPEC-001 artifacts (sync script, release-please configs)
-- [ ] All existing tests pass: `bash speckit-pro/tests/run-all.sh`
-- [ ] PR created with conventional commit title
+- [x] All tasks marked complete in tasks.md
+- [x] `.github/workflows/release.yml` is valid YAML
+- [x] release-please-action correctly references config and manifest files
+- [x] Sync step is gated on `steps.release.outputs['speckit-pro--release_created'] == 'true'`
+- [x] Sync commit uses `chore: sync marketplace.json versions [skip ci]` message
+- [x] GITHUB_TOKEN has `contents: write` permission
+- [x] No modification to SPEC-001 artifacts (sync script, release-please configs)
+- [x] All existing tests pass: `bash speckit-pro/tests/run-all.sh`
+- [x] PR created with conventional commit title
 - [ ] PR reviewed and merged
 
 ---
