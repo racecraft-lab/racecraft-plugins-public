@@ -15,7 +15,7 @@
 | Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 6 research decisions, 6/6 constitution gates |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 121 items, 33 gaps remediated |
 | Tasks | `/speckit.tasks` | ✅ Complete | 11 tasks, 5 phases, 15 FRs + 4 SECs covered |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| Analyze | `/speckit.analyze` | ✅ Complete | 4 findings remediated (permissions consistency) |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -372,7 +372,12 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-|    |          |       |            |
+| C1 | HIGH | Contract missing `pull-requests: write` | Added to workflow-contract.md |
+| C2 | HIGH | Quickstart missing `pull-requests: write` | Added to quickstart.md |
+| C3 | MEDIUM | Data-model entity table missing permission row | Added to data-model.md |
+| C4 | MEDIUM | Data-model validation rule incomplete | Updated in data-model.md |
+| C5 | LOW | FR-014 has no task (inherent platform behavior) | Informational — T008 covers verification |
+| C6 | LOW | T010 has subjective description | Acceptable for polish task |
 
 ---
 

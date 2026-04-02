@@ -13,6 +13,7 @@ The primary deliverable. A GitHub Actions workflow file.
 | `name` | string | Workflow display name: `"Release"` |
 | `on.push.branches` | string[] | Trigger branches: `["main"]` |
 | `permissions.contents` | string | Token permission: `"write"` |
+| `permissions.pull-requests` | string | Token permission: `"write"` (Release PR management) |
 | `jobs.release.runs-on` | string | Runner: `"ubuntu-latest"` |
 | `jobs.release.steps` | Step[] | Sequential steps (see below) |
 
@@ -74,7 +75,7 @@ release-please runs
 ## Validation Rules
 
 - Workflow YAML must be valid GitHub Actions syntax
-- Permissions block must specify `contents: write` (not `write-all`)
+- Permissions block must specify `contents: write` and `pull-requests: write` (not `write-all`)
 - release-please step must have `id: release` for output references
 - Sync condition must use `speckit-pro--release_created` (singular, path-prefixed)
 - Sync commit message must be exactly `chore: sync marketplace.json versions [skip ci]`

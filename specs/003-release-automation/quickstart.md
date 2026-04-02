@@ -20,7 +20,7 @@ Adds a single GitHub Actions workflow file (`.github/workflows/release.yml`) tha
 
 1. Create `.github/workflows/release.yml` with:
    - Trigger: `push` to `main`
-   - Permissions: `contents: write`
+   - Permissions: `contents: write`, `pull-requests: write`
    - Step 1: `googleapis/release-please-action@v4` (id: `release`)
    - Step 2: Conditional checkout + sync + commit (when `speckit-pro--release_created == 'true'`)
 

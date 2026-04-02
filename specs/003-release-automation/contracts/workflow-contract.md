@@ -15,6 +15,7 @@ on:
 ```yaml
 permissions:
   contents: write
+  pull-requests: write
 ```
 
 ## Job: release
