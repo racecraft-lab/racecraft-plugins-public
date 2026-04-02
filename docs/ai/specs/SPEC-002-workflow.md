@@ -10,7 +10,7 @@
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
+| Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 4 US, 14 scenarios, G1 passed |
 | Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
 | Plan | `/speckit.plan` | ⏳ Pending | |
 | Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
@@ -133,13 +133,13 @@ The racecraft-plugins-public marketplace repo has no CI validation on pull reque
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
+| Functional Requirements | FR-001 through FR-012 |
+| User Stories | 4 (2x P1, 2x P2) |
+| Acceptance Criteria | 14 scenarios, 5 edge cases, 6 success criteria |
 
 ### Files Generated
 
-- [ ] `specs/002-pr-checks-workflow/spec.md`
+- [x] `specs/002-pr-checks-workflow/spec.md`
 
 ---
 
