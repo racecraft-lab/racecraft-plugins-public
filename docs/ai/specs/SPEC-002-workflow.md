@@ -390,25 +390,28 @@ Before starting any task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Workflow Skeleton | | | |
-| 2 - validate-plugins | | | |
-| 3 - validate-pr-title | | | |
-| 4 - Validation | | | |
+| 1 - Setup | 2 | 2 | Workflow skeleton with triggers, permissions |
+| 2 - Foundational | 3 | 3 | Job stubs with draft-skip and matrix wiring |
+| 3 - US1 (detect+test) | 4 | 4 | Plugin detection and scoped test execution |
+| 4 - US2 (title validation) | 1 | 1 | Conventional commit regex with env var injection prevention |
+| 5 - US3 (error messages) | 1 | 1 | Clear error output with examples |
+| 6 - US4 (skip non-plugin) | 1 | 1 | Empty matrix skip verification |
+| 7 - Validation | 4 | 4 | YAML valid, 369/369 tests, FR/SC coverage confirmed |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] `.github/workflows/pr-checks.yml` is valid YAML
-- [ ] Inline bash scripts pass `bash -n` syntax check
-- [ ] validate-plugins job correctly detects changed plugins
-- [ ] validate-plugins job skips when no plugins changed
-- [ ] validate-pr-title job validates conventional commit format
-- [ ] validate-pr-title job shows clear error with example on failure
-- [ ] Both jobs run independently in parallel
-- [ ] All existing tests pass: `bash speckit-pro/tests/run-all.sh`
-- [ ] PR created with conventional commit title
+- [x] All tasks marked complete in tasks.md (16/16)
+- [x] `.github/workflows/pr-checks.yml` is valid YAML
+- [x] Inline bash scripts use `set -euo pipefail`
+- [x] validate-plugins job correctly detects changed plugins
+- [x] validate-plugins job skips when no plugins changed
+- [x] validate-pr-title job validates conventional commit format
+- [x] validate-pr-title job shows clear error with example on failure
+- [x] Both jobs run independently in parallel
+- [x] All existing tests pass: `bash speckit-pro/tests/run-all.sh` (369/369)
+- [x] PR created with conventional commit title (PR #2)
 - [ ] PR reviewed and merged
 
 ---
@@ -417,15 +420,21 @@ Before starting any task:
 
 ### What Worked Well
 
--
+- Single-file deliverable discipline — entire feature is one YAML file with zero test file additions
+- Security-first implementation — FR-013 script injection prevention via env var intermediation
+- Checklist-driven gap remediation — 3 checklists identified 42 gaps that would have been missed
+- Spec exhaustiveness — 20 FRs left virtually no ambiguity for implementation
 
 ### Challenges Encountered
 
--
+- Error message templates treated as illustrative rather than exact — led to 3 cosmetic deviations
+- actions/checkout SHA pin frozen at implementation time — no automated update mechanism
 
 ### Patterns to Reuse
 
--
+- Dynamic matrix with empty-guard pattern for monorepo CI
+- Two-job detect+test pattern for scoped plugin testing
+- env var intermediation for all user-controlled GitHub Actions context expressions
 
 ---
 
