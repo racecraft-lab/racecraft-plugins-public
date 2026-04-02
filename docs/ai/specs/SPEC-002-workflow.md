@@ -14,7 +14,7 @@
 | Clarify | `/speckit.clarify` | ✅ Complete | 10 questions resolved, 2 sessions, G2 passed |
 | Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 7 research topics, G3 passed |
 | Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 143 items, 42 gaps remediated, G4 passed |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
+| Tasks | `/speckit.tasks` | ✅ Complete | 16 tasks, 7 phases, parallel opportunities, G5 passed |
 | Analyze | `/speckit.analyze` | ⏳ Pending | |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
