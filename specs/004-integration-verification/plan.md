@@ -5,7 +5,7 @@
 
 ## Summary
 
-Configure GitHub branch protection on `main` via the legacy REST API (requiring `validate-plugins` and `validate-pr-title` status checks, squash-only merges, and admin-bypass for GITHUB_TOKEN), add a `validate-plugins` sentinel aggregator job to pr-checks.yml, configure Copilot code review via UI (documented steps only), and produce three documentation artifacts: an end-to-end verification checklist, five new CLAUDE.md sections, and copy-pasteable recovery procedures. No new test files are created — the spec is purely configuration + documentation.
+Configure GitHub branch protection on `main` via the legacy REST API (requiring `validate-plugins` and `validate-pr-title` status checks, squash-only merges, and admin-bypass for GITHUB_TOKEN), add a `validate-plugins` sentinel aggregator job to pr-checks.yml, configure Copilot code review via UI (documented steps only), and produce three documentation artifacts: an end-to-end verification checklist, five new CLAUDE.md sections, and copy-pasteable recovery procedures. One structural test file is added to validate the sentinel job configuration (a justified deviation from FR-012, which was scoped to prevent plugin logic changes — not to prevent CI validation of CI changes).
 
 ## Technical Context
 

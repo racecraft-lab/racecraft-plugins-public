@@ -8,10 +8,10 @@ This guide describes the implementation sequence for SPEC-004. All steps must be
 
 ## Prerequisites
 
-- `gh` CLI authenticated as `racecraft-lab` account with admin access to `racecraft-labs/racecraft-plugins-public`
+- `gh` CLI authenticated as `racecraft-lab` account with admin access to `racecraft-lab/racecraft-plugins-public`
 - Copilot Pro or Copilot Pro+ subscription active on the maintainer's GitHub account
 - Working directory: `.worktrees/004-integration-verification/` (the feature branch worktree)
-- Existing tests passing: `bash speckit-pro/tests/run-all.sh` (369 tests, must remain green)
+- Existing tests passing: `bash speckit-pro/tests/run-all.sh` (all tests must remain green)
 
 ---
 

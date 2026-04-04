@@ -85,11 +85,11 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/branches/main/protection \
 **Action**: Create a test feature branch with a releasable conventional commit, push it, and open a PR against `main`. Observe that all CI checks run and pass.
 
 ```bash
-git checkout -b test/verify-pipeline
+git checkout -b 004-verify-pipeline
 echo "# Verification test" >> speckit-pro/CHANGELOG.md
 git add speckit-pro/CHANGELOG.md
 git commit -m "fix: verify pipeline end-to-end"
-git push origin test/verify-pipeline
+git push origin 004-verify-pipeline
 gh pr create \
   --title "fix: verify pipeline end-to-end" \
   --body "Verification run per cicd-release-pipeline-verification.md" \

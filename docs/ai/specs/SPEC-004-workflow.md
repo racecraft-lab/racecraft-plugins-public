@@ -205,7 +205,7 @@ The racecraft-plugins-public marketplace repo now has CI workflows (SPEC-002: PR
 - GitHub Actions bot exemption must not weaken protection for human users
 - CLAUDE.md updates must integrate with existing document structure (not a separate document)
 - Verification checklist must reference actual CI job names and workflow files from SPEC-001, SPEC-002, SPEC-003
-- No new test files — this spec creates configuration and documentation only
+- One structural test added to validate the sentinel job (justified deviation from FR-012 — prevents CI regression)
 
 ## Architecture Notes
 - This spec is primarily configuration (GitHub settings) and documentation (CLAUDE.md, verification checklist)

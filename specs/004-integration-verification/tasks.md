@@ -3,7 +3,7 @@
 **Input**: Design documents from `/specs/004-integration-verification/`
 **Prerequisites**: plan.md, spec.md, research.md, data-model.md, quickstart.md
 
-**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story. No test tasks are included — the spec is configuration + documentation only (no automated tests added per FR-012).
+**Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story. This work is primarily configuration + documentation, with minimal automated test coverage added to validate the new sentinel workflow (Layer 1 structural validation for the sentinel job and corresponding test runner registration).
 
 ## Format: `[ID] [P?] [Story] Description`
 

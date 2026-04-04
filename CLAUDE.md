@@ -224,7 +224,7 @@ Note: CI will test the new plugin on PRs (if files changed), but release-please 
 
 ## Recovery & Rollback Procedures
 
-All commands below require only `<owner>/<repo>` substitution and GitHub CLI v2+.
+All commands below are written for this repository (`racecraft-lab/racecraft-plugins-public`) and require GitHub CLI v2+.
 
 ---
 
