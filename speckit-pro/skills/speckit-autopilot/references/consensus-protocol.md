@@ -39,7 +39,7 @@ industry best practices.
 | Agent | Perspective | Primary Tools | Strength |
 |-------|------------|---------------|----------|
 | `codebase-analyst` | What does the existing code show? | RepoPrompt (preferred) or Grep/Glob/Read (fallback) | Finding established patterns, types, naming conventions, error handling |
-| `spec-context-analyst` | What do project decisions say? | Read (constitution, master plan, prior specs, CLAUDE.md) | Grounding answers in established principles and prior decisions |
+| `spec-context-analyst` | What do project decisions say? | Read (constitution, technical roadmap, prior specs, CLAUDE.md) | Grounding answers in established principles and prior decisions |
 | `domain-researcher` | What do best practices recommend? | Tavily/Context7 (preferred) or WebSearch/WebFetch (fallback) | External evidence — API docs, standards, community patterns |
 
 ## Consensus Rules

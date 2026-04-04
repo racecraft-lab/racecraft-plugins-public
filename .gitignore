@@ -4,3 +4,4 @@
 
 # SpecKit generated cache artifacts
 .specify/presets/.cache/
+/.worktrees

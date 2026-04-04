@@ -244,7 +244,22 @@ frontmatter for: `consensus-mode` (default: `moderate`),
 `per-phase`), `security-keywords` (default: standard list).
 If the file doesn't exist, use all defaults.
 
-### 0.8 Constitution Validation
+### 0.8 MCP Server & Plugin Limitation Check
+
+The prerequisite script now reports MCP server availability.
+This is **informational, not blocking** — all agents include
+built-in fallbacks. Parse the `mcp_servers` check from the
+JSON output and report which servers are available vs. missing.
+
+**Plugin agent limitations:** Because these agents run from a
+plugin, Claude Code silently ignores `permissionMode`, `hooks`,
+and `mcpServers` frontmatter fields. All agents inherit the
+parent session's permission mode. Ensure the parent session
+runs in `acceptEdits` or `bypassPermissions` mode for smooth
+autopilot execution. See `references/plugin-limitations.md`
+for details and workarounds.
+
+### 0.9 Constitution Validation
 
 Read the workflow file's Prerequisites table. If already
 `Verified`, skip (resuming a workflow). Otherwise:
@@ -257,7 +272,7 @@ Read the workflow file's Prerequisites table. If already
 3. Update the workflow file's table with results and baselines
 4. If any check fails, STOP — do not proceed to Phase 1
 
-### 0.9 Implementation Agent Detection
+### 0.10 Implementation Agent Detection
 
 Detect whether the project has a specialized implementation
 agent for the Implement phase. This avoids hardcoding agent
@@ -283,7 +298,7 @@ implementation agent (e.g., "my-project-developer" or
 
 **Record the result** for use in Step 2's Implement phase.
 
-### 0.10 Project Command Discovery
+### 0.11 Project Command Discovery
 
 ```text
 Bash("bash scripts/detect-commands.sh")
@@ -302,7 +317,7 @@ the most authoritative source and may override script results.
 Record PROJECT_COMMANDS in the workflow file so they persist
 across context compactions. Pass them to every subagent.
 
-### 0.11 Preset and Extension Detection
+### 0.12 Preset and Extension Detection
 
 ```text
 Bash("bash scripts/detect-presets.sh")
@@ -418,7 +433,7 @@ POST-IMPLEMENTATION (after all 7 phases complete):
     in .claude/commands/ (or equivalent for other agents). These
     commands then appear as invocable skills.
 
-    If Step 0.11 detected the extension in .registry as enabled,
+    If Step 0.12 detected the extension in .registry as enabled,
     its commands ARE available — run the task.
     If an extension is NOT in .registry and NOT in Glob results,
     log a warning and skip that specific task (do NOT fail the
@@ -468,14 +483,14 @@ Agent(
   prompt: """
     <phase-specific prefix if needed>
 
-    [IF presets detected in Step 0.11]
+    [IF presets detected in Step 0.12]
     PRESET_CONVENTIONS:
       Preset: <name> (priority <N>)
       Overrides: <templates this preset replaces>
       Enforces: <conventions from preset templates>
     [/IF]
 
-    [IF PROJECT_COMMANDS discovered in Step 0.10]
+    [IF PROJECT_COMMANDS discovered in Step 0.11]
     PROJECT_COMMANDS:
       BUILD: <cmd>  TYPECHECK: <cmd>  LINT: <cmd>
       UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
@@ -722,6 +737,9 @@ Mitigations:
   Integration suite, PR creation, review remediation loop
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor
   rules injected into implementation agent prompts
+- [Plugin Limitations](./references/plugin-limitations.md) —
+  permissionMode, hooks, mcpServers restrictions for plugin agents;
+  MCP server prerequisites and fallback behavior
 
 ## Scripts
 
@@ -735,3 +753,6 @@ Deterministic bash scripts for prerequisite checks and validation:
   commands for Node.js, Rust, Go, Python, Makefile (JSON)
 - `scripts/detect-presets.sh` — Find installed presets,
   extensions, hooks, template resolution (JSON)
+- `scripts/count-markers.sh <type> <feature_dir>` — Deterministic
+  marker counting (gaps, findings, clarifications, all) for agent
+  validation. Used by analyze-executor and checklist-executor (JSON)

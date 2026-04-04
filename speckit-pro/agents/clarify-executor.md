@@ -9,6 +9,7 @@ description: >
   the best-supported answer. Use for every clarify session in
   the autopilot workflow.
 model: opus
+color: pink
 tools:
   - Skill
   - Read

@@ -49,13 +49,13 @@
     },
     {
       "id": 5,
-      "prompt": "I'm building a large e-commerce platform feature that covers product catalog, inventory management, order processing, and payment integration. This is way too big for a single spec. Help me decompose it into a master plan with proper dependency ordering.",
+      "prompt": "I'm building a large e-commerce platform feature that covers product catalog, inventory management, order processing, and payment integration. This is way too big for a single spec. Help me decompose it into a technical roadmap with proper dependency ordering.",
       "expected_output": "Breaks the feature into 3+ focused specs with clear boundaries, identifies dependencies between them, and suggests an implementation order.",
       "expectations": [
         "Decomposes into at least 3 separate specs with clear single-responsibility boundaries",
         "Identifies dependency relationships between specs (e.g., catalog before inventory, inventory before orders)",
         "Suggests a sequential or partially-parallel implementation order based on dependencies",
-        "Recommends using the master plan template to track cross-spec progress"
+        "Recommends using the technical roadmap template to track cross-spec progress"
       ]
     },
     {
@@ -98,7 +98,7 @@
       "expectations": [
         "Describes the workflow overview table showing all 7 phases with status columns",
         "Mentions the SPEC-ID and feature branch fields",
-        "Explains that /speckit-pro:setup auto-populates the file from the master plan",
+        "Explains that /speckit-pro:setup auto-populates the file from the technical roadmap",
         "References the workflow file location pattern (docs/ai/specs/SPEC-NNN-workflow.md)"
       ]
     }

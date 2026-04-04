@@ -2,10 +2,12 @@
 name: phase-executor
 description: >
   Executes a single SpecKit phase by running the /speckit.* command
-  via the Skill tool. Used for simple phases: Specify, Plan, Tasks.
-  Returns a concise summary of results — files created, metrics,
-  markers found, and errors. Does not recommend next steps.
-model: opus
+  via the Skill tool. Use when the autopilot needs to run Specify,
+  Plan, or Tasks phases — simple phases that don't require research,
+  consensus, or iterative remediation. Returns a concise summary of
+  files created, metrics, markers found, and errors.
+model: sonnet
+color: cyan
 tools:
   - Skill
   - Read

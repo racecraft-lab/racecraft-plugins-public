@@ -51,15 +51,15 @@ file's Prerequisites → Constitution Validation table. If any
 check fails, the autopilot stops — the codebase must be healthy
 before starting a new spec.
 
-### 4. Master Plan Exists (Recommended)
+### 4. Technical Roadmap Exists (Recommended)
 
-For multi-spec projects, create a master plan first:
+For multi-spec projects, create a technical roadmap first:
 
 ```text
-/speckit-pro:coach help me create a master plan
+/speckit-pro:coach help me create a technical roadmap
 ```
 
-The master plan provides scope descriptions that drive the
+The technical roadmap provides scope descriptions that drive the
 Specify phase.
 
 ### 5. Workflow File Populated
@@ -172,7 +172,7 @@ questions, gaps, and findings.
 | Agent | Perspective | What It Does |
 | ----- | ----------- | ------------ |
 | **codebase-analyst** | What does the code show? | Searches existing code (via RepoPrompt or Grep/Glob/Read) for established patterns, types, naming conventions |
-| **spec-context-analyst** | What do decisions say? | Reads constitution, master plan, prior specs for established principles and precedent |
+| **spec-context-analyst** | What do decisions say? | Reads constitution, technical roadmap, prior specs for established principles and precedent |
 | **domain-researcher** | What do best practices say? | Searches web (via Tavily/Context7 or WebSearch/WebFetch) for official docs, standards, community patterns |
 
 ### Consensus Modes
@@ -454,8 +454,8 @@ specify init --ai claude
 # Create constitution (if not already)
 /speckit.constitution
 
-# Create master plan (for multi-spec projects)
-/speckit-pro:coach help me create a master plan
+# Create technical roadmap (for multi-spec projects)
+/speckit-pro:coach help me create a technical roadmap
 
 # Create and populate workflow file
 cp skills/speckit-coach/templates/workflow-template.md docs/ai/specs/SPEC-XXX-workflow.md

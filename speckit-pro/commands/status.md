@@ -1,5 +1,5 @@
 ---
-description: Check the progress of SpecKit workflows and the full project roadmap. Shows phase completion for active specs, plus all remaining specs from the master plan. Recommends the next spec to implement based on priority and dependencies.
+description: Check the progress of SpecKit workflows and the full project roadmap. Shows phase completion for active specs, plus all remaining specs from the technical roadmap. Recommends the next spec to implement based on priority and dependencies.
 allowed-tools:
   - Read
   - Glob
@@ -25,18 +25,18 @@ what to work on next.
 
 ### 1. Find All Data Sources
 
-Search for **both** workflow files and master plan files:
+Search for **both** workflow files and technical roadmap files:
 
 ```text
 Workflow files:  **/*-workflow.md  (active/completed specs with phase detail)
-Master plans:    **/*master-plan*.md  OR  **/*-plan.md  (full roadmap with all specs)
+Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md  (full roadmap with all specs)
 Also check:      docs/ai/specs/*-workflow.md
-                 docs/ai/*master*.md
+                 docs/ai/*roadmap*.md
 ```
 
-### 2. Parse the Master Plan (Full Roadmap)
+### 2. Parse the Technical Roadmap (Full Roadmap)
 
-If a master plan file exists, extract the **Progress Tracking**
+If a technical roadmap file exists, extract the **Progress Tracking**
 table. This contains ALL specs in the project — including those
 that haven't started the SpecKit workflow yet.
 
@@ -53,7 +53,7 @@ Also extract:
 - The **Dependency Graph** or tier information to show which
   specs can run in parallel and which are blocked
 - Each spec's **Priority** (P1/P2/P3) from its section in the
-  master plan (line format:
+  technical roadmap (line format:
   `**Priority:** P1 | **Depends On:** ...`)
 
 ### 3. Parse Workflow Files (Phase Detail)
@@ -68,7 +68,7 @@ For each workflow file found, extract:
 
 ### 4. Present Unified Dashboard
 
-Combine master plan and workflow data into a single report:
+Combine technical roadmap and workflow data into a single report:
 
 ```markdown
 # SpecKit Project Status
@@ -126,12 +126,12 @@ that proposes the next spec to implement.
 
 **Algorithm:**
 
-1. From the master plan, collect all unblocked specs with status
+1. From the technical roadmap, collect all unblocked specs with status
    `⏳ Pending` (not `✅ Complete`, not `🔄 In Progress`, not
    blocked by incomplete specs).
 2. For each, read its **Priority** (P1/P2/P3) from the spec's
-   section in the master plan.
-3. Sort by: Priority (P1 first) → then master plan order
+   section in the technical roadmap.
+3. Sort by: Priority (P1 first) → then technical roadmap order
    (preserves tier sequencing).
 4. The **top recommendation** is the first spec in the sorted
    list.
@@ -179,14 +179,14 @@ Then run `/speckit-pro:autopilot` to execute it.
 Show detailed information for that spec:
 
 - All phase statuses with notes (from workflow file, if exists)
-- Master plan scope description
+- Technical roadmap scope description
 - Dependencies and what it enables
 - Gate results and key artifacts produced
 - Current blockers (if any)
 - Files generated
 
 If no workflow file exists for the requested spec, show the
-master plan scope and suggest creating a workflow file:
+technical roadmap scope and suggest creating a workflow file:
 
 ```text
 SPEC-008 (Perspectives) — ⏳ Not Started
@@ -194,12 +194,12 @@ No workflow file found. To begin:
 /speckit-pro:setup SPEC-008
 ```
 
-### 7. If No Master Plan or Workflow Files Found
+### 7. If No Technical Roadmap or Workflow Files Found
 
 Tell the user:
 
-- No master plan or workflow files found in the project
-- Guide them to create a master plan:
-  `/speckit-pro:coach help me create a master plan`
+- No technical roadmap or workflow files found in the project
+- Guide them to create a technical roadmap:
+  `/speckit-pro:coach help me create a technical roadmap`
 - Or create a single workflow: copy
   `skills/speckit-coach/templates/workflow-template.md`

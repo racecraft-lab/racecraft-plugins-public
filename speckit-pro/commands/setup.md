@@ -1,12 +1,12 @@
 ---
-description: Set up a new spec for autopilot execution. Reads the master plan, creates a git worktree, pushes the branch to origin, and generates a populated workflow file. Point it at a SPEC-ID from your master plan and it does the rest.
+description: Set up a new spec for autopilot execution. Reads the technical roadmap, creates a git worktree, pushes the branch to origin, and generates a populated workflow file. Point it at a SPEC-ID from your technical roadmap and it does the rest.
 allowed-tools: "*"
 argument-hint: "SPEC-ID (e.g., SPEC-009)"
 ---
 
 # SpecKit Setup
 
-Prepare a spec from the master plan for autonomous execution.
+Prepare a spec from the technical roadmap for autonomous execution.
 Creates the worktree, branch, and workflow file — ready for
 `/speckit-pro:autopilot`.
 
@@ -19,19 +19,19 @@ Creates the worktree, branch, and workflow file — ready for
 
 ## What to Do
 
-### 1. Find the Master Plan
+### 1. Find the Technical Roadmap
 
 ```text
-Glob("**/*master*plan*" or "**/*master-plan*")
-Also check: docs/ai/*master*.md, docs/ai/specs/*plan*.md
+Glob("**/*technical*roadmap*" or "**/*technical-roadmap*")
+Also check: docs/ai/*roadmap*.md, docs/ai/specs/*roadmap*.md
 ```
 
-If no master plan found, STOP: "No master plan found. Create
-one with `/speckit-pro:coach help me create a master plan`."
+If no technical roadmap found, STOP: "No technical roadmap found. Create
+one with `/speckit-pro:coach help me create a technical roadmap`."
 
-### 2. Find the Spec in the Master Plan
+### 2. Find the Spec in the Technical Roadmap
 
-Read the master plan and find the section for the requested
+Read the technical roadmap and find the section for the requested
 SPEC-ID (e.g., `### SPEC-009: Search & Database`).
 
 Extract:
@@ -43,12 +43,12 @@ Extract:
 - **Priority** (P1/P2/P3)
 - **Dependencies** (what it depends on, what depends on it)
 - **Scope description** (the full scope text from the
-  master plan — this drives the workflow prompts)
+  technical roadmap — this drives the workflow prompts)
 - **Status** (must be ⏳ Pending — if already In Progress
   or Complete, warn the user)
 
 If the SPEC-ID is not found, STOP: "SPEC-ID not found in
-master plan. Available specs: <list pending specs>."
+technical roadmap. Available specs: <list pending specs>."
 
 ### 3. Create Git Worktree
 
@@ -114,12 +114,12 @@ plan:
 | `TOOL_COUNT` | e.g., `10` |
 | `TOOL_NAMES` | e.g., `search_tasks, search_projects, ...` |
 
-**Populate the phase prompts** using the master plan's scope
+**Populate the phase prompts** using the technical roadmap's scope
 description. Each phase prompt should include:
 
 - **Specify Prompt:** The full scope description from the
-  master plan, plus any constraints, dependencies, and
-  prior art referenced in the master plan section
+  technical roadmap, plus any constraints, dependencies, and
+  prior art referenced in the technical roadmap section
 
 - **Clarify Prompts:** Generate clarify session focuses
   based on the tool types (e.g., "Session 1: Search API
@@ -179,14 +179,14 @@ have enough context for autonomous execution. The more detail
 in the prompts, the better the autopilot's output.
 ```
 
-### 7. Update Master Plan Status (IN the Worktree)
+### 7. Update Technical Roadmap Status (IN the Worktree)
 
-Update the master plan's Progress Tracking table IN THE
+Update the technical roadmap's Progress Tracking table IN THE
 WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
 
 ```text
-1. Edit the master plan found in Step 1, using the WORKTREE path:
-   Edit(".worktrees/<number>-<short-name>/<master-plan-path-from-step-1>")
+1. Edit the technical roadmap found in Step 1, using the WORKTREE path:
+   Edit(".worktrees/<number>-<short-name>/<roadmap-path-from-step-1>")
 
 2. Commit IN THE WORKTREE:
    Bash("cd .worktrees/<number>-<short-name> && \
@@ -195,5 +195,5 @@ WORKTREE (not on main) to mark the spec as `🔄 In Progress`:
      git push")
 ```
 
-**NEVER push to main.** The master plan update will reach
+**NEVER push to main.** The technical roadmap update will reach
 main when the spec's PR is merged.

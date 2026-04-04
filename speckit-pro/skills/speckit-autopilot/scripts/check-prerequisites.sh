@@ -100,6 +100,36 @@ else
   results+=("$(json_result "settings" "true" "No settings file — using defaults" "")")
 fi
 
+# 0.8 MCP Server Connectivity (informational — not blocking)
+# Plugin agents cannot declare their own MCP connections, so
+# they depend on the parent session having these servers.
+# These are informational: all agents have built-in fallbacks.
+mcp_servers=("tavily-mcp" "context7" "RepoPrompt")
+mcp_available=()
+mcp_missing=()
+for server in "${mcp_servers[@]}"; do
+  # Check if any MCP tools from this server are available
+  # by looking for the server name in the MCP config files
+  if [ -f ".mcp.json" ] && jq -e ".mcpServers.\"$server\" // .mcpServers.\"${server}\"" .mcp.json >/dev/null 2>&1; then
+    mcp_available+=("$server")
+  elif [ -f "$HOME/.claude/.mcp.json" ] && jq -e ".mcpServers.\"$server\" // .mcpServers.\"${server}\"" "$HOME/.claude/.mcp.json" >/dev/null 2>&1; then
+    mcp_available+=("$server")
+  else
+    mcp_missing+=("$server")
+  fi
+done
+
+if [ ${#mcp_missing[@]} -eq 0 ]; then
+  results+=("$(json_result "mcp_servers" "true" "All MCP servers configured: ${mcp_available[*]}" "")")
+else
+  detail=""
+  if [ ${#mcp_available[@]} -gt 0 ]; then
+    detail="Available: ${mcp_available[*]}. "
+  fi
+  detail="${detail}Missing: ${mcp_missing[*]} (agents will use built-in fallbacks)"
+  results+=("$(json_result "mcp_servers" "true" "Some MCP servers not configured — agents will use fallbacks" "$detail")")
+fi
+
 # Assemble final JSON — use jq to safely combine the pre-built check objects
 checks_array=$(printf '%s\n' "${results[@]}" | jq -s '.')
 jq -cn \

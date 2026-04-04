@@ -8,7 +8,7 @@ powered by GitHub SpecKit.
 Two skills packaged as a single plugin:
 
 - **speckit-coach** — SDD methodology coaching, per-command
-  guidance, multi-spec master plan creation, workflow tracking,
+  guidance, multi-spec technical roadmap creation, workflow tracking,
   and plugin usage guidance
 - **speckit-autopilot** — Autonomous workflow executor that reads
   a populated workflow file and runs all 7 SDD phases with
@@ -22,8 +22,8 @@ Two skills packaged as a single plugin:
    `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`
 3. Initialize SpecKit: `specify init --ai claude`
 4. Create constitution: `/speckit.constitution`
-5. Create master plan: `/speckit-pro:coach` →
-   "help me create a master plan"
+5. Create technical roadmap: `/speckit-pro:coach` →
+   "help me create a technical roadmap"
 6. Populate workflow file from template:
    `skills/speckit-coach/templates/workflow-template.md`
 7. Run autopilot: `claude --dangerously-skip-permissions`
@@ -60,7 +60,7 @@ Three perspective agents provide multi-viewpoint resolution:
 | Agent | Perspective | Primary Tools |
 | ----- | ---------- | ------------- |
 | **codebase-analyst** | Existing code patterns | RepoPrompt |
-| **spec-context-analyst** | Constitution, master plan, prior specs | Read, Glob, Grep |
+| **spec-context-analyst** | Constitution, technical roadmap, prior specs | Read, Glob, Grep |
 | **domain-researcher** | Best practices, official docs | Tavily, Context7 |
 
 ### Consensus Rules (Moderate Mode — Default)
@@ -88,7 +88,7 @@ auto-commit: per-phase      # per-phase | batch | none
 
 Coaching skill for SDD methodology. Covers getting started,
 per-command coaching, troubleshooting, constitution design,
-checklist domain selection, multi-spec master plans, workflow
+checklist domain selection, multi-spec technical roadmaps, workflow
 tracking, and autopilot usage.
 
 ### speckit-autopilot
@@ -115,7 +115,7 @@ implementation, a PR is auto-created via `gh` CLI.
   `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`
 - SpecKit initialized: `specify init --ai claude`
 - Constitution created: `/speckit.constitution`
-- Master plan + populated workflow file (for autopilot)
+- Technical roadmap + populated workflow file (for autopilot)
 
 ## License
 

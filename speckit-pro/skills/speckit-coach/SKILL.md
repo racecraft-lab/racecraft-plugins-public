@@ -1,6 +1,6 @@
 ---
 name: speckit-coach
-description: "Coaches developers through Spec-Driven Development using the official SpecKit CLI and the speckit-pro plugin. Provides SDD methodology guidance, per-command coaching, phase gate validation, multi-spec master plan creation, and workflow tracking. Use when user asks about SDD methodology, SpecKit commands, spec writing, feature decomposition, gate failures, master plans, autopilot workflows, or consensus protocol."
+description: "Coaches developers through Spec-Driven Development using the official SpecKit CLI and the speckit-pro plugin. Provides SDD methodology guidance, per-command coaching, phase gate validation, multi-spec technical roadmap creation, and workflow tracking. Use when user asks about SDD methodology, SpecKit commands, spec writing, feature decomposition, gate failures, technical roadmaps, autopilot workflows, or consensus protocol."
 argument-hint: "e.g. 'walk me through SDD', 'write testable requirements', 'decompose feature into specs', 'which checklist domains for this spec', 'simplicity gate is failing', 'how does autopilot work', 'consensus protocol'"
 user-invokable: true
 license: MIT
@@ -68,7 +68,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "upgrade speckit", "update templates" | Provide upgrade guidance from [command guide](./references/command-guide.md) — see "Upgrade Guidance" |
 | **Plugin Usage** | |
 | "run autopilot", "execute workflow", "autonomous" | Guide to `/speckit-pro:autopilot` — prerequisites, workflow file setup, `--dangerously-skip-permissions`. See [autopilot guide](./references/autopilot-guide.md) |
-| "check status", "where am I", "workflow progress", "what's next", "roadmap", "project health" | Guide to `/speckit-pro:status` for master plan progress (completed, ready, blocked specs), or `/speckit.doctor` for project health diagnostics |
+| "check status", "where am I", "workflow progress", "what's next", "roadmap", "project health" | Guide to `/speckit-pro:status` for technical roadmap progress (completed, ready, blocked specs), or `/speckit.doctor` for project health diagnostics |
 | "configure autopilot", "settings", "consensus mode" | Guide to `.claude/speckit-pro.local.md` settings — consensus mode, auto-commit, gate failure behavior. See [autopilot guide](./references/autopilot-guide.md) |
 | "how does consensus work", "clarify automation" | Explain the 3-agent consensus protocol — codebase-analyst, spec-context-analyst, domain-researcher. See [autopilot guide](./references/autopilot-guide.md) |
 | "gap remediation", "checklist automation" | Explain checklist gap remediation loop — consensus agents propose fixes, auto-edit, re-verify. See [autopilot guide](./references/autopilot-guide.md) |
@@ -96,10 +96,10 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "is my plan good", "review my plan" | Check plan quality signals: gates, research, data model, contracts |
 | "are my tasks good", "review tasks" | Check task quality: story organization, granularity, traceability, parallelism |
 | **Enhancement Commands (speckit-pro plugin)** | |
-| "master plan", "decompose feature", "multi-spec", "too large for one spec" | Guide master plan creation — decompose large features into sequential specs. See Enhancement section below |
+| "technical roadmap", "decompose feature", "multi-spec", "too large for one spec" | Guide technical roadmap creation — decompose large features into sequential specs. See Enhancement section below |
 | "workflow tracking", "track phases", "workflow file" | Guide workflow file creation — per-spec 7-phase tracking. See Enhancement section below |
 | "recommend checklists", "which checklists", "what domains to check" | Run spec-driven domain recommendation — analyze spec to suggest enriched checklist prompts. See Enhancement section below |
-| "decompose", "create spec directories", "break into specs" | Guide spec decomposition — generate individual spec directories from master plan. See Enhancement section below |
+| "decompose", "create spec directories", "break into specs" | Guide spec decomposition — generate individual spec directories from technical roadmap. See Enhancement section below |
 | "setup spec", "create worktree", "prepare for autopilot" | Guide to `/speckit-pro:setup <SPEC-ID>` — creates worktree, branch, workflow file |
 | "resolve PR", "fix review comments", "address copilot comments" | Guide to `/speckit-pro:resolve-pr <PR>` — addresses review comments, fixes code, resolves threads |
 | **Team Workflow** | |
@@ -109,15 +109,15 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 
 These are NEW capabilities that the official SpecKit CLI does not provide:
 
-#### `/speckit master-plan` — Multi-Spec Project Decomposition
+#### `/speckit technical-roadmap` — Multi-Spec Project Decomposition
 
-When a feature is too large for a single spec, create a **master plan** that decomposes it into discrete, sequential specifications with dependency graphs.
+When a feature is too large for a single spec, create a **technical roadmap** that decomposes it into discrete, sequential specifications with dependency graphs.
 
 **When to use:** The feature involves multiple tiers (e.g., backend + frontend), multiple independent deliverables, or will take more than one `/speckit.specify` → `/speckit.implement` cycle.
 
-**How to create the master plan:**
+**How to create the technical roadmap:**
 
-1. Copy the [master plan template](./templates/master-plan-template.md) to `docs/ai/specs/<feature-name>-plan.md`
+1. Copy the [technical roadmap template](./templates/technical-roadmap-template.md) to `docs/ai/specs/<feature-name>-technical-roadmap.md`
 2. Analyze the feature using the decomposition algorithm below
 3. Populate each spec section with scope descriptions detailed enough to drive `/speckit.specify`
 4. Review the dependency graph with the developer before proceeding
@@ -189,7 +189,7 @@ Alternatives considered: [Brief list of alternatives that were rejected and why.
 
 Create workflow tracking files that document the progress of each spec through all 7 SpecKit phases with human review gates.
 
-**When to use:** After creating a master plan or when starting any spec that benefits from phase-by-phase documentation.
+**When to use:** After creating a technical roadmap or when starting any spec that benefits from phase-by-phase documentation.
 
 **How to create:**
 
@@ -215,14 +215,14 @@ Analyze the current spec and plan to recommend the most impactful checklist doma
 
 See [Checklist Domains Guide](./references/checklist-domains-guide.md) for the full signal extraction algorithm and enriched prompt patterns.
 
-#### `/speckit decompose` — Break Master Plan into Spec Directories
+#### `/speckit decompose` — Break Technical Roadmap into Spec Directories
 
-After creating a master plan, generate the individual spec directories:
+After creating a technical roadmap, generate the individual spec directories:
 
-1. Read the master plan to identify all specs
+1. Read the technical roadmap to identify all specs
 2. For each spec, create `specs/<number>-<name>/` directory
-3. Run `/speckit.specify` for each spec using the master plan's scope description
-4. Update the master plan's progress tracking table
+3. Run `/speckit.specify` for each spec using the technical roadmap's scope description
+4. Update the technical roadmap's progress tracking table
 
 ### Autonomous Execution
 
@@ -295,5 +295,5 @@ specs/<number>-<feature-name>/
 - [Best Practices](./references/best-practices.md) — Lessons learned, anti-patterns, tips
 - [Presets & Extensions Guide](./references/presets-extensions-guide.md) — Presets, extensions, hooks, catalogs, custom presets
 - [Autopilot Guide](./references/autopilot-guide.md) — Autonomous execution, consensus protocol, configuration
-- [Master Plan Template](./templates/master-plan-template.md) — Multi-spec project decomposition
+- [Technical Roadmap Template](./templates/technical-roadmap-template.md) — Multi-spec project decomposition
 - [Workflow Template](./templates/workflow-template.md) — Per-spec 7-phase tracking

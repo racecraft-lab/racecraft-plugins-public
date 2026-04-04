@@ -6,7 +6,8 @@ description: >
   Clarify, Checklist, and Analyze consensus phases. Spawned with a
   specific question, gap, or finding — returns an answer backed by
   external documentation and community best practices.
-model: opus
+model: sonnet
+color: green
 tools:
   - mcp__tavily-mcp__tavily-search
   - mcp__tavily-mcp__tavily-extract

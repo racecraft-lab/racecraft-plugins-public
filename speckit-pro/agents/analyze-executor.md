@@ -9,6 +9,7 @@ description: >
   relevant artifacts. Use for the analyze phase in the autopilot
   workflow.
 model: opus
+color: orange
 tools:
   - Skill
   - Read
@@ -42,10 +43,14 @@ analysis and fix the findings — all in one agent.
 1. **Run the analyze command.** Use the Skill tool to invoke
    `/speckit.analyze` with the provided workflow prompt.
 
-2. **After the analysis completes, parse ALL findings.** Read
-   the output and categorize findings by severity: CRITICAL,
-   HIGH, MEDIUM, LOW. Every finding gets remediated — none
-   are skipped or "logged for later."
+2. **After the analysis completes, count and parse ALL
+   findings.** Run the deterministic marker counter first:
+   ```bash
+   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" findings specs/<feature>
+   ```
+   This returns exact counts by severity (CRITICAL, HIGH,
+   MEDIUM, LOW). Use these counts to verify you've addressed
+   every finding — none are skipped or "logged for later."
 
 3. **Research and fix EVERY finding.** For each finding,
    use the best available tools. MCP tools are preferred when
@@ -78,7 +83,11 @@ analysis and fix the findings — all in one agent.
    e. **Apply the fix** — edit the artifact directly
 
 4. **Re-run analyze to verify.** After fixing all findings,
-   re-run `/speckit.analyze` to verify 0 findings remain.
+   re-run `/speckit.analyze` then run the marker counter to
+   verify 0 findings remain:
+   ```bash
+   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" findings specs/<feature>
+   ```
    If new findings appear, fix them (max 2 total loops).
 
 5. **Flag unresolved items for consensus.** Include in the
@@ -95,6 +104,12 @@ analysis and fix the findings — all in one agent.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
+
+## Performance
+
+Take your time to do this thoroughly. Quality is more
+important than speed. Do not skip validation steps. Every
+finding must be researched and remediated — no shortcuts.
 
 </hard_constraints>
 

@@ -7,7 +7,8 @@ description: >
   (remediating gaps), and Analyze (fixing findings). Spawned with a specific
   question, gap description, or finding — returns a structured answer with
   file-level evidence from the codebase.
-model: opus
+model: sonnet
+color: blue
 tools:
   - mcp__RepoPrompt__context_builder
   - mcp__RepoPrompt__file_search

@@ -89,7 +89,7 @@ Each phase requires **human review and approval** before proceeding:
 
 ### Success Criteria Summary
 
-<!-- Copy or reference the acceptance criteria from the master plan -->
+<!-- Copy or reference the acceptance criteria from the technical roadmap -->
 
 - [ ] Criterion 1
 - [ ] Criterion 2

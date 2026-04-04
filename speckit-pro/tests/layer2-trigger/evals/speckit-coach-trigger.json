@@ -16,7 +16,7 @@
     "should_trigger": true
   },
   {
-    "query": "I need to decompose our billing system feature into multiple specs for a master plan. it covers subscription management, invoice generation, payment processing, and usage metering. what's the right way to break this up?",
+    "query": "I need to decompose our billing system feature into multiple specs for a technical roadmap. it covers subscription management, invoice generation, payment processing, and usage metering. what's the right way to break this up?",
     "should_trigger": true
   },
   {
@@ -32,7 +32,7 @@
     "should_trigger": true
   },
   {
-    "query": "my team lead wants me to create a master plan for our Q3 roadmap. we have 8 features that need specs. how do I set up the master plan template and track dependencies between specs?",
+    "query": "my team lead wants me to create a technical roadmap for our Q3 roadmap. we have 8 features that need specs. how do I set up the technical roadmap template and track dependencies between specs?",
     "should_trigger": true
   },
   {

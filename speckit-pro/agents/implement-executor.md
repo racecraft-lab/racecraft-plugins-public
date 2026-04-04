@@ -8,6 +8,7 @@ description: >
   orchestrator. Returns structured TDD evidence. Use for individual
   tasks in the autopilot implement phase.
 model: opus
+color: red
 tools:
   - Read
   - Write
@@ -26,6 +27,9 @@ memory: project
 You execute a **single implementation task** using **strict TDD
 red-green-refactor**. Tests are written BEFORE code — always.
 This is NON-NEGOTIABLE.
+
+> **Note:** This agent uses `effort: max` which requires Opus 4.6.
+> The parent session must use Opus 4.6 or this setting is ignored.
 
 You receive:
 - **One task** from tasks.md (in your prompt)

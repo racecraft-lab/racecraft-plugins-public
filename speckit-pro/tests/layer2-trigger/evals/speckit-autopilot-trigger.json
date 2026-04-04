@@ -72,7 +72,7 @@
     "should_trigger": false
   },
   {
-    "query": "I need to create a master plan for the omnifocus-mcp project. we have 5 specs that need to be sequenced based on their dependencies",
+    "query": "I need to create a technical roadmap for the omnifocus-mcp project. we have 5 specs that need to be sequenced based on their dependencies",
     "should_trigger": false
   },
   {

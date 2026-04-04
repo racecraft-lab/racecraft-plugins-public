@@ -1,5 +1,5 @@
 ---
-description: Get SDD coaching and SpecKit guidance. Ask about methodology, commands, troubleshooting, master plans, workflow tracking, or the speckit-pro plugin itself.
+description: Get SDD coaching and SpecKit guidance. Ask about methodology, commands, troubleshooting, technical roadmaps, workflow tracking, or the speckit-pro plugin itself.
 allowed-tools:
   - Read
   - Glob
