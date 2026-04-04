@@ -23,25 +23,25 @@
 
 ### Current Configuration (10 components)
 
-| Component | Type | Model | Effort | Role |
-|-----------|------|-------|--------|------|
-| `analyze-executor` | Agent | opus | *none* | Run /speckit.analyze, remediate ALL findings |
-| `checklist-executor` | Agent | opus | *none* | Run /speckit.checklist domain, remediate gaps |
-| `clarify-executor` | Agent | opus | *none* | Research + answer clarification questions |
-| `implement-executor` | Agent | opus | *none* | TDD implementation of a single task |
-| `codebase-analyst` | Agent | sonnet | *none* | Read-only codebase pattern analysis (consensus) |
-| `domain-researcher` | Agent | sonnet | *none* | Web research for consensus resolution |
-| `spec-context-analyst` | Agent | sonnet | medium | Read-only spec/constitution analysis (consensus) |
-| `phase-executor` | Agent | sonnet | *none* | Run simple SpecKit phases via Skill tool |
-| `speckit-autopilot` | Skill | *inherited* | *inherited* | Orchestrate 7-phase workflow, gate validation, consensus synthesis |
-| `speckit-coach` | Skill | *inherited* | *inherited* | SDD methodology coaching, interactive Q&A |
+| Component | Type | Model | Effort | Other | Role |
+|-----------|------|-------|--------|-------|------|
+| `analyze-executor` | Agent | opus | high | maxTurns: 100 | Run /speckit.analyze, remediate ALL findings |
+| `checklist-executor` | Agent | opus | high | maxTurns: 100 | Run /speckit.checklist domain, remediate gaps |
+| `clarify-executor` | Agent | opus | high | maxTurns: 75 | Research + answer clarification questions |
+| `implement-executor` | Agent | opus | max | maxTurns: 50, memory: project | TDD implementation of a single task |
+| `codebase-analyst` | Agent | sonnet | medium | maxTurns: 25, background: true | Read-only codebase pattern analysis (consensus) |
+| `domain-researcher` | Agent | sonnet | medium | maxTurns: 25, background: true | Web research for consensus resolution |
+| `spec-context-analyst` | Agent | sonnet | medium | maxTurns: 25, background: true | Read-only spec/constitution analysis (consensus) |
+| `phase-executor` | Agent | sonnet | medium | maxTurns: 50 | Run simple SpecKit phases via Skill tool |
+| `speckit-autopilot` | Skill | *inherited* | *inherited* | — | Orchestrate 7-phase workflow, gate validation, consensus synthesis |
+| `speckit-coach` | Skill | *inherited* | *inherited* | — | SDD methodology coaching, interactive Q&A |
 
 ### Problems Identified
 
-1. **7 of 8 agents have no `effort` setting** — they run at the platform default, wasting tokens on agents that don't need deep thinking and potentially under-thinking on agents that do.
-2. **Skills inherit user's model** — if a user runs autopilot on haiku, the orchestrator makes gate/consensus decisions on haiku while spawning opus subagents. The orchestrator is arguably the *most* important component to get right.
-3. **No cost signal** — without effort tuning, every opus agent burns the same token budget regardless of whether it's writing production code or running a mechanical phase command.
-4. **Consensus analysts are uneven** — `spec-context-analyst` has `effort: medium` but the other two consensus agents (`codebase-analyst`, `domain-researcher`) don't, creating inconsistent quality across the consensus triad.
+1. **`phase-executor` effort too high** — it runs at `effort: medium` but its task is mechanical (run a Skill command, summarize output). Should be `low` to save tokens across 5+ phase runs per autopilot.
+2. **Autopilot skill inherits user's model** — if a user runs autopilot on haiku or sonnet, the orchestrator makes gate/consensus decisions on a weaker model while spawning opus subagents. The orchestrator is arguably the *most* important component to get right. Skills cannot set `model`/`effort` in frontmatter (they run in the caller's context), so a runtime guard is needed.
+3. **No cost delegation** — gate validation and consensus synthesis are done inline by the opus orchestrator. Gate validation is purely mechanical (run a bash script, parse JSON output) and could be delegated to a haiku agent. Consensus synthesis is structured comparison that sonnet handles well.
+4. **No efficiency benchmarks** — there is no automated way to measure whether the current model/effort assignments are optimal or to detect regressions after changes.
 
 ---
 
@@ -59,27 +59,33 @@
 - **medium** — Structured research/analysis with synthesis
 - **low** — Mechanical execution, running commands, parsing output
 
-### Recommended Assignments
+### Recommended Changes
 
-| Component | Model | Effort | Change | Rationale |
-|-----------|-------|--------|--------|-----------|
-| `analyze-executor` | opus | high | +effort | Remediates findings across multiple artifacts — needs deep reasoning |
-| `checklist-executor` | opus | high | +effort | Gap remediation requires understanding spec intent + writing fixes |
-| `clarify-executor` | opus | high | +effort | Synthesizes research from multiple sources into coherent answers |
-| `implement-executor` | opus | high | +effort | TDD code generation is the highest-stakes agent — opus/high justified |
-| `codebase-analyst` | sonnet | medium | +effort | Read-only but needs quality analysis for consensus. Aligns with spec-context-analyst |
-| `domain-researcher` | sonnet | medium | +effort | Same tier as other consensus analysts. Structured web research |
-| `spec-context-analyst` | sonnet | medium | *no change* | Already correctly configured |
-| `phase-executor` | sonnet | low | +effort | Mechanical — runs a Skill command and summarizes output. Low thinking needed |
-| `speckit-autopilot` | opus | high | +model, +effort | **Critical fix.** Orchestrator makes gate decisions, synthesizes consensus, manages 7-phase flow. Must not inherit a weak model from the user's session |
-| `speckit-coach` | *inherited* | *inherited* | *no change* | Conversational — should match user's session. Forcing opus on a quick question wastes money |
+| Component | Current | Target | Change | Rationale |
+|-----------|---------|--------|--------|-----------|
+| `phase-executor` | sonnet/medium | sonnet/low | effort: medium → low | Mechanical — runs a Skill command and summarizes output. Low thinking needed |
+| `speckit-autopilot` | *inherited* | opus/high (guarded) | +runtime model guard | Skills can't set model in frontmatter. Add a prerequisite check that stops execution if model < opus |
+| All other agents | — | — | *no change* | Already correctly configured (verified against decision criteria) |
+
+### Validated Assignments (no changes needed)
+
+| Component | Model | Effort | Rationale |
+|-----------|-------|--------|-----------|
+| `analyze-executor` | opus | high | Remediates findings across multiple artifacts — correct |
+| `checklist-executor` | opus | high | Gap remediation requires understanding spec intent — correct |
+| `clarify-executor` | opus | high | Synthesizes research from multiple sources — correct |
+| `implement-executor` | opus | max | TDD code generation is the highest-stakes agent — `max` exceeds the `high` baseline, correctly so |
+| `codebase-analyst` | sonnet | medium | Read-only analysis for consensus — correct |
+| `domain-researcher` | sonnet | medium | Structured web research for consensus — correct |
+| `spec-context-analyst` | sonnet | medium | Read-only spec analysis for consensus — correct |
+| `speckit-coach` | *inherited* | *inherited* | Conversational — should match user's session — correct |
 
 ### Cost Impact Estimate
 
-- **Savings:** `phase-executor` drops from default to low effort — ~30-40% fewer thinking tokens per phase run (5 phases per autopilot = meaningful)
-- **Neutral:** The 4 opus agents get explicit `high` effort, which is likely close to what they were doing by default, but now intentional
-- **New cost:** `speckit-autopilot` now forces opus even if user is on sonnet. This is the right trade-off — a bad orchestration decision costs far more than the model difference
-- **Net:** Slight cost reduction from phase-executor + consensus agent tuning, with reliability improvement from pinning the orchestrator
+- **Savings (effort tuning):** `phase-executor` drops from medium to low effort — ~30-40% fewer thinking tokens per phase run (5 phases per autopilot = meaningful)
+- **Savings (delegation):** Gate validation moves from opus orchestrator inline to haiku/low agent. Consensus synthesis moves from opus inline to sonnet/high agent. See Roster Restructuring section.
+- **New cost:** Autopilot model guard may require users to switch to opus before running — documented as a prerequisite, not a hidden cost
+- **Net:** Meaningful cost reduction from delegation + phase-executor tuning, with no quality regression
 
 ---
 
@@ -118,17 +124,17 @@ They have different tool sets (RepoPrompt vs basic file tools) and are spawned i
 
 | Agent | Status | Model | Effort |
 |-------|--------|-------|--------|
-| `analyze-executor` | Existing (tuned) | opus | high |
-| `checklist-executor` | Existing (tuned) | opus | high |
-| `clarify-executor` | Existing (tuned) | opus | high |
-| `implement-executor` | Existing (tuned) | opus | high |
-| `codebase-analyst` | Existing (tuned) | sonnet | medium |
-| `domain-researcher` | Existing (tuned) | sonnet | medium |
-| `spec-context-analyst` | Existing (no change) | sonnet | medium |
+| `analyze-executor` | Existing (verified) | opus | high |
+| `checklist-executor` | Existing (verified) | opus | high |
+| `clarify-executor` | Existing (verified) | opus | high |
+| `implement-executor` | Existing (verified) | opus | max |
+| `codebase-analyst` | Existing (verified) | sonnet | medium |
+| `domain-researcher` | Existing (verified) | sonnet | medium |
+| `spec-context-analyst` | Existing (verified) | sonnet | medium |
 | `phase-executor` | Existing (tuned) | sonnet | low |
 | `gate-validator` | **New** | haiku | low |
 | `consensus-synthesizer` | **New** | sonnet | high |
-| `speckit-autopilot` (skill) | Existing (tuned) | opus | high |
+| `speckit-autopilot` (skill) | Existing (guarded) | opus | high |
 | `speckit-coach` (skill) | Existing (no change) | *inherited* | *inherited* |
 
 ---
@@ -224,11 +230,11 @@ Layer 6 is **never** run in CI — it's a developer-local benchmarking tool, sam
 
 Three phases, ordered by risk:
 
-### Phase 1: Model/Effort Tuning (low risk)
-Add `effort` fields to the 7 agents missing them. Add `model` and `effort` to `speckit-autopilot` SKILL.md frontmatter. No behavioral changes — just making existing implicit defaults explicit.
+### Phase 1: Effort Tuning + Model Guard (low risk)
+Change `phase-executor` effort from medium to low. Add a runtime model guard to `speckit-autopilot` SKILL.md that checks the current model and stops with a clear message if the orchestrator is running on anything weaker than opus. Most agents are already correctly configured — this phase is small.
 
-### Phase 2: New Agents (medium risk)
-Create `gate-validator` and `consensus-synthesizer` agent definitions. Update the autopilot skill's orchestration logic to delegate gate checks and consensus synthesis to these new agents instead of doing them inline.
+### Phase 2: New Agents + Orchestration Delegation (medium risk)
+Create `gate-validator` (haiku/low) and `consensus-synthesizer` (sonnet/high) agent definitions. Update the autopilot skill's orchestration logic to delegate gate validation checks and consensus synthesis to these new agents instead of performing them inline. Add Layer 1 structural tests and Layer 5 tool-scoping tests for both new agents.
 
 ### Phase 3: Layer 6 Framework (independent)
 Build the eval framework, create fixtures for all 12 components (10 existing + 2 new), establish quality baselines at current config, then validate the Phase 1-2 changes produce equal-or-better quality at lower cost.
@@ -248,14 +254,11 @@ Build the eval framework, create fixtures for all 12 components (10 existing + 2
 ## Key Files
 
 ### Modified
-- `speckit-pro/agents/analyze-executor.md` — Add effort: high
-- `speckit-pro/agents/checklist-executor.md` — Add effort: high
-- `speckit-pro/agents/clarify-executor.md` — Add effort: high
-- `speckit-pro/agents/implement-executor.md` — Add effort: high
-- `speckit-pro/agents/codebase-analyst.md` — Add effort: medium
-- `speckit-pro/agents/domain-researcher.md` — Add effort: medium
-- `speckit-pro/agents/phase-executor.md` — Add effort: low
-- `speckit-pro/skills/speckit-autopilot/SKILL.md` — Add model: opus, effort: high
+- `speckit-pro/agents/phase-executor.md` — Change effort: medium → low
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — Add runtime model guard (prerequisite check)
+- `speckit-pro/tests/layer1-structural/validate-agents.sh` — Add structural tests for new agents
+- `speckit-pro/tests/layer5-tool-scoping/validate-tool-scoping.sh` — Add tool scoping tests for new agents
+- `speckit-pro/tests/run-all.sh` — Add Layer 6 integration
 
 ### New
 - `speckit-pro/agents/gate-validator.md` — New agent (haiku/low)
@@ -265,6 +268,12 @@ Build the eval framework, create fixtures for all 12 components (10 existing + 2
 - `speckit-pro/tests/layer6-efficiency/lib/token-counter.sh` — Token usage parser
 - `speckit-pro/tests/layer6-efficiency/lib/quality-scorer.sh` — Output quality scorer
 
-### Unchanged
-- `speckit-pro/agents/spec-context-analyst.md` — Already configured correctly
-- `speckit-pro/skills/speckit-coach/SKILL.md` — Inherits user session (by design)
+### Verified (no changes needed)
+- `speckit-pro/agents/analyze-executor.md` — opus/high ✓
+- `speckit-pro/agents/checklist-executor.md` — opus/high ✓
+- `speckit-pro/agents/clarify-executor.md` — opus/high ✓
+- `speckit-pro/agents/implement-executor.md` — opus/max ✓
+- `speckit-pro/agents/codebase-analyst.md` — sonnet/medium ✓
+- `speckit-pro/agents/domain-researcher.md` — sonnet/medium ✓
+- `speckit-pro/agents/spec-context-analyst.md` — sonnet/medium ✓
+- `speckit-pro/skills/speckit-coach/SKILL.md` — Inherits user session (by design) ✓
