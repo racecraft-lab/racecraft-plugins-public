@@ -10,12 +10,12 @@
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
-| Plan | `/speckit.plan` | ⏳ Pending | |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
+| Specify | `/speckit.specify` | ✅ Complete | 12 FRs, 5 US, 14 scenarios, G1 passed |
+| Clarify | `/speckit.clarify` | ✅ Complete | 13 questions, 3 sessions, consensus on bypass mechanism, G2 passed |
+| Plan | `/speckit.plan` | ✅ Complete | 5 artifacts, 8 research topics, 6/6 constitution gates, G3 passed |
+| Checklist | `/speckit.checklist` | ✅ Complete | 3 domains, 124 items, 43 gaps remediated, G4 passed |
+| Tasks | `/speckit.tasks` | ✅ Complete | 30 tasks, 7 phases, 5 US covered, G5 passed |
+| Analyze | `/speckit.analyze` | ✅ Complete | 11 findings (0C/4H/4M/3L), all remediated, G6 passed |
 | Implement | `/speckit.implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked

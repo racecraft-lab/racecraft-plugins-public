@@ -138,7 +138,8 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-agents.sh" \
     "$TESTS_DIR/layer1-structural/validate-skills.sh" \
     "$TESTS_DIR/layer1-structural/validate-hooks.sh" \
-    "$TESTS_DIR/layer1-structural/validate-scripts.sh"
+    "$TESTS_DIR/layer1-structural/validate-scripts.sh" \
+    "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh"
 fi
 
 # ─────────────────────────────────────────
