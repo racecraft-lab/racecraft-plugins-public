@@ -169,9 +169,9 @@ jobs:
           set -euo pipefail
           detect_result="${{ needs.detect.result }}"
           test_result="${{ needs.test.result }}"
-          # detect failure means the workflow itself is broken — fail the sentinel
-          if [[ "$detect_result" == "failure" ]]; then
-            echo "::error::Detect job failed (result: ${detect_result}). Workflow is broken."
+          # detect failure or cancellation means the workflow itself is broken — fail the sentinel
+          if [[ "$detect_result" == "failure" || "$detect_result" == "cancelled" ]]; then
+            echo "::error::Detect job did not succeed (result: ${detect_result}). Workflow is broken."
             exit 1
           fi
           if [[ "$test_result" == "success" || "$test_result" == "skipped" ]]; then

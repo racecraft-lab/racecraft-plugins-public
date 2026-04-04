@@ -221,7 +221,7 @@ The racecraft-plugins-public marketplace repo now has CI workflows (SPEC-002: PR
 - `.release-please-manifest.json` — Version tracker (SPEC-001)
 - `CLAUDE.md` — Project instructions (needs CI/CD section added)
 - `AGENTS.md` — Agent instructions (may need CI/CD conventions added)
-- `speckit-pro/tests/run-all.sh` — Test suite (369 tests passing, must remain passing)
+- `speckit-pro/tests/run-all.sh` — Test suite (380 tests passing, must remain passing)
 
 ## Prior Art
 - SPEC-001 workflow: docs/ai/specs/SPEC-001-workflow.md (completed — config + sync script)

@@ -127,7 +127,7 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 | Job | Description |
 |-----|-------------|
 | `detect` | Detects which plugin directories changed relative to the base branch. Outputs a JSON array of plugin names. |
-| `test (${{ matrix.plugin }})` | Runs `bash tests/run-all.sh` for each changed plugin. Skipped entirely when no plugin files changed (docs-only PRs). |
+| `test (<plugin>)` | Runs `bash tests/run-all.sh` for each changed plugin (e.g. `test (speckit-pro)`). The name is dynamic — one job per plugin in the matrix. Skipped entirely when no plugin files changed (docs-only PRs). |
 | `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when all `test` matrix jobs passed or were skipped; fails when any matrix job failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
 

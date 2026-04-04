@@ -48,6 +48,9 @@ assert_contains "$CONTENT" '"success" || "$test_result" == "skipped"'
 set_test "sentinel exits 1 on detect failure"
 assert_contains "$CONTENT" '"failure"'
 
+set_test "sentinel exits 1 on detect cancellation"
+assert_contains "$CONTENT" '"cancelled"'
+
 section "pr-checks.yml — YAML Syntax"
 
 set_test "pr-checks.yml is valid YAML"

@@ -103,7 +103,7 @@ The pr-checks.yml workflow runs four jobs:
 | Job | Trigger condition | Expected result |
 |-----|-------------------|-----------------|
 | `detect` | Always runs | Detects `speckit-pro` as changed plugin; outputs non-empty `plugins` array |
-| `test (speckit-pro)` | Runs when `detect.outputs.plugins != '[]'` | Runs `bash tests/run-all.sh`; all 369 tests pass |
+| `test (speckit-pro)` | Runs when `detect.outputs.plugins != '[]'` | Runs `bash tests/run-all.sh`; all 380 tests pass |
 | `validate-plugins` | `if: always()`, depends on `detect` and `test` | Passes because `test` result is `success` |
 | `validate-pr-title` | Always runs | Passes because PR title follows conventional commit format (`fix: ...`) |
 
