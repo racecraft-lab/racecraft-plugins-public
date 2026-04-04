@@ -22,11 +22,19 @@ usage = data.get('usage', {})
 if not usage and 'result' in data:
     usage = data['result'].get('usage', {})
 
+input_t = usage.get('input_tokens', 0)
+output_t = usage.get('output_tokens', 0)
+cache_read = usage.get('cache_read_input_tokens', 0)
+cache_write = usage.get('cache_creation_input_tokens', 0)
+total_input = input_t + cache_read + cache_write
+
 print(json.dumps({
-    'input_tokens': usage.get('input_tokens', 0),
-    'output_tokens': usage.get('output_tokens', 0),
-    'cache_read': usage.get('cache_read_input_tokens', 0),
-    'cache_write': usage.get('cache_creation_input_tokens', 0)
+    'input_tokens': input_t,
+    'output_tokens': output_t,
+    'cache_read': cache_read,
+    'cache_write': cache_write,
+    'total_input': total_input,
+    'total_tokens': total_input + output_t
 }))
 " <<< "$input"
 else
