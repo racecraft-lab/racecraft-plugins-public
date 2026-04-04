@@ -678,12 +678,28 @@ For each unresolved item from executor summary:
     prompt: "...<same item, your perspective>..."
   )                                        ← TOOL CALL
 
-  Wait for all 3 to complete
-  Compare answers using consensus rules:
-    - 2/3 agree → Edit artifact with majority answer
-    - 3/3 agree → Edit artifact with high confidence
-    - All disagree → flag [HUMAN REVIEW NEEDED], STOP
-    - Security keyword → present all 3 to human, STOP
+  Wait for all 3 to complete, then delegate synthesis:
+  Agent(
+    subagent_type: "consensus-synthesizer",
+    description: "SPEC-XXX consensus synthesis: <item summary>",
+    prompt: """
+      ## Consensus Resolution
+
+      **Unresolved Item:** <question/gap/finding text>
+
+      **Codebase Analyst Response:**
+      <full response from codebase-analyst>
+
+      **Spec Context Analyst Response:**
+      <full response from spec-context-analyst>
+
+      **Domain Researcher Response:**
+      <full response from domain-researcher>
+    """
+  )
+  Parse the Consensus Result:
+    - If Flags contain [HUMAN REVIEW NEEDED] → STOP
+    - Otherwise → apply Artifact Edit to the specified file
   Log result to Consensus Resolution Log in workflow file
 
 TaskUpdate: "<Phase> - <Prompt> Consensus" → completed
