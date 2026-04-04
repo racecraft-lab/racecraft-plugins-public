@@ -67,8 +67,11 @@ bash tests/layer2-trigger/run-trigger-evals.sh speckit-autopilot
 | 3 – Functional | End-to-end skill behavior evals | Slow (AI) |
 | 4 – Script unit | Shell script logic (validate-gate, detect-commands, etc.) | Fast |
 | 5 – Tool scoping | Agent tool list restrictions | Fast |
+| 6 – Efficiency | Agent model/effort cost-quality benchmarks | Slow (AI) |
 
-Layer 2/3 evals require `skill-creator` plugin at `$SKILL_CREATOR_ROOT` (default: `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator`).
+Layer 2/3 evals require `skill-creator` plugin at `$SKILL_CREATOR_ROOT` (default: `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator`). Layers 2, 3, and 6 all require `claude -p` and are developer-local only.
+
+Layer 6 evals use `speckit-pro/tests/layer6-efficiency/run-efficiency-benchmarks.sh` and require `claude -p`.
 
 ## speckit-pro Plugin
 
