@@ -15,6 +15,7 @@ AGENTS=(
   codebase-analyst
   spec-context-analyst
   domain-researcher
+  gate-validator
 )
 
 for agent in "${AGENTS[@]}"; do
