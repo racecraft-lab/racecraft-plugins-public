@@ -142,7 +142,10 @@ run_benchmark() {
     return
   fi
 
-  # Load agent definition body (after frontmatter) to include as system context
+  # Load agent definition body (after frontmatter) to include as system context.
+  # Prepending the agent definition ensures the benchmark tests the actual agent
+  # behavior, not just prompt-only responses. The '---' separator visually
+  # delimits the agent system context from the user-facing input prompt.
   local agent_file="$PLUGIN_ROOT/agents/${agent}.md"
   local prompt
   if [ -f "$agent_file" ]; then
