@@ -6,6 +6,7 @@
 #   tests/run-all.sh --live       # Layers 1, 4, 5 + live project tests
 #   tests/run-all.sh --layer 2    # Layer 2 only (trigger evals, requires claude -p)
 #   tests/run-all.sh --layer 3    # Layer 3 only (functional evals, requires claude -p)
+#   tests/run-all.sh --layer 6    # Layer 6 only (efficiency benchmarks, requires claude -p)
 #   tests/run-all.sh --ci         # CI mode: layers 1, 4, 5 synthetic only
 #   tests/run-all.sh --all        # All 5 layers
 #
@@ -120,7 +121,7 @@ should_run() {
     [ "$RUN_LAYER" = "$layer" ]
   elif [ "$RUN_ALL" = "true" ]; then
     return 0
-  elif [ "$layer" = "2" ] || [ "$layer" = "3" ]; then
+  elif [ "$layer" = "2" ] || [ "$layer" = "3" ] || [ "$layer" = "6" ]; then
     return 1  # Skip expensive layers by default
   else
     return 0
@@ -238,6 +239,24 @@ fi
 if should_run 5; then
   run_layer 5 "Agent Tool Scoping" \
     "$TESTS_DIR/layer5-tool-scoping/validate-tool-scoping.sh"
+fi
+
+# ─────────────────────────────────────────
+# Layer 6: Agent Efficiency Benchmarks
+# ─────────────────────────────────────────
+
+if should_run 6; then
+  L6_SCRIPT="$TESTS_DIR/layer6-efficiency/run-efficiency-benchmarks.sh"
+  if [ -f "$L6_SCRIPT" ]; then
+    printf "\n${BOLD}${CYAN}Layer 6: Agent Efficiency Benchmarks${RESET}\n"
+    printf "%s\n" "────────────────────────────────────────"
+    printf "  Run manually:\n"
+    printf "    ${BOLD}bash %s${RESET}\n" "$L6_SCRIPT"
+    printf "    ${BOLD}bash %s --agent gate-validator${RESET}\n" "$L6_SCRIPT"
+    printf "    ${BOLD}bash %s --agent gate-validator --sweep${RESET}\n" "$L6_SCRIPT"
+  else
+    printf "\n${YELLOW}Layer 6: SKIP — run-efficiency-benchmarks.sh not found${RESET}\n"
+  fi
 fi
 
 # ─────────────────────────────────────────
