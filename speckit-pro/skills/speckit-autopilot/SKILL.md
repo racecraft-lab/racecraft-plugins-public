@@ -31,6 +31,31 @@ prompts from the workflow file and delegate each phase to a
 the commands yourself — you spawn, collect results, validate
 gates, and advance.
 
+## Prerequisites — Model & Effort
+
+The autopilot orchestrator makes gate decisions, synthesizes consensus, and
+manages a 7-phase workflow. Running on a weak model produces poor orchestration
+decisions that cascade into expensive rework.
+
+**Before executing any step**, verify:
+
+1. **Model check:** You MUST be running on **Opus 4.6** or better. If your
+   current model is Sonnet, Haiku, or an older Opus version, STOP immediately
+   and instruct the user:
+
+   > "Autopilot requires Opus 4.6 for reliable orchestration. Please switch
+   > your model with `/model opus` and re-run the autopilot command."
+
+2. **Effort check:** Verify your effort level is set to `high` or `max`.
+   If running at `low` or `medium`, instruct the user:
+
+   > "Autopilot performs best at high effort. Please set `/effort max` and
+   > re-run the autopilot command."
+
+These checks are non-negotiable. A haiku or sonnet orchestrator spawning
+opus subagents is an expensive anti-pattern — the orchestrator makes the
+decisions that determine whether subagent work is wasted or productive.
+
 ## Critical: Execution Rules
 
 These rules are non-negotiable. Follow them exactly.
