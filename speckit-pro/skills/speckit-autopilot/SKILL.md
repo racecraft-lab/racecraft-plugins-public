@@ -31,6 +31,31 @@ prompts from the workflow file and delegate each phase to a
 the commands yourself — you spawn, collect results, validate
 gates, and advance.
 
+## Prerequisites — Model & Effort
+
+The autopilot orchestrator makes gate decisions, synthesizes consensus, and
+manages a 7-phase workflow. Running on a weak model produces poor orchestration
+decisions that cascade into expensive rework.
+
+**Before executing any step**, verify:
+
+1. **Model check:** You MUST be running on **Opus 4.6** or better. If your
+   current model is Sonnet, Haiku, or an older Opus version, STOP immediately
+   and instruct the user:
+
+   > "Autopilot requires Opus 4.6 for reliable orchestration. Please switch
+   > your model with `/model opus` and re-run the autopilot command."
+
+2. **Effort check:** Verify your effort level is set to `high` or `max`.
+   If running at `low` or `medium`, instruct the user:
+
+   > "Autopilot performs best at high effort. Please set `/effort max` and
+   > re-run the autopilot command."
+
+These checks are non-negotiable. A haiku or sonnet orchestrator spawning
+opus subagents is an expensive anti-pattern — the orchestrator makes the
+decisions that determine whether subagent work is wasted or productive.
+
 ## Critical: Execution Rules
 
 These rules are non-negotiable. Follow them exactly.
@@ -454,7 +479,16 @@ for phase in PHASES starting from first_pending:
        → apply consensus rules → edit artifacts
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
-    7. Validate gate (see gate-validation.md)
+    7. Validate gate via gate-validator agent:
+       Agent(
+         subagent_type: "gate-validator",
+         description: "SPEC-XXX: Validate G<N>",
+         prompt: """
+           Validate gate G<N> for feature at <feature_dir>
+           Script path: <SKILL_SCRIPTS>/validate-gate.sh
+         """
+       )
+       Parse the agent's Gate Result for PASS/FAIL status.
     8. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
        b. If still failing and gate-failure == "stop": STOP
@@ -644,12 +678,28 @@ For each unresolved item from executor summary:
     prompt: "...<same item, your perspective>..."
   )                                        ← TOOL CALL
 
-  Wait for all 3 to complete
-  Compare answers using consensus rules:
-    - 2/3 agree → Edit artifact with majority answer
-    - 3/3 agree → Edit artifact with high confidence
-    - All disagree → flag [HUMAN REVIEW NEEDED], STOP
-    - Security keyword → present all 3 to human, STOP
+  Wait for all 3 to complete, then delegate synthesis:
+  Agent(
+    subagent_type: "consensus-synthesizer",
+    description: "SPEC-XXX consensus synthesis: <item summary>",
+    prompt: """
+      ## Consensus Resolution
+
+      **Unresolved Item:** <question/gap/finding text>
+
+      **Codebase Analyst Response:**
+      <full response from codebase-analyst>
+
+      **Spec Context Analyst Response:**
+      <full response from spec-context-analyst>
+
+      **Domain Researcher Response:**
+      <full response from domain-researcher>
+    """
+  )
+  Parse the Consensus Result:
+    - If Flags contain [HUMAN REVIEW NEEDED] → STOP
+    - Otherwise → apply Artifact Edit to the specified file
   Log result to Consensus Resolution Log in workflow file
 
 TaskUpdate: "<Phase> - <Prompt> Consensus" → completed

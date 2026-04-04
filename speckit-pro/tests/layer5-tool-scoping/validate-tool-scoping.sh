@@ -132,6 +132,10 @@ set_test "phase-executor effort field exists"
 effort=$(extract_field "$AGENT_FILE" "effort")
 assert_not_contains "" "$effort" "effort must not be empty"
 
+set_test "phase-executor effort is low"
+effort=$(extract_field "$AGENT_FILE" "effort")
+assert_eq "low" "$effort"
+
 # ===========================================================================
 # clarify-executor
 # ===========================================================================
@@ -336,6 +340,88 @@ assert_gt "$max_turns" 0
 set_test "domain-researcher effort field exists"
 effort=$(extract_field "$AGENT_FILE" "effort")
 assert_not_contains "" "$effort" "effort must not be empty"
+
+# ===========================================================================
+# gate-validator
+# ===========================================================================
+section "gate-validator"
+
+AGENT_FILE="$AGENTS_DIR/gate-validator.md"
+TOOLS=$(extract_tools "$AGENT_FILE")
+
+for tool in Bash Read Grep; do
+  set_test "gate-validator has $tool"
+  assert_tool_present "$TOOLS" "$tool" "gate-validator"
+done
+
+for tool in Write Edit Skill; do
+  set_test "gate-validator does NOT have $tool"
+  assert_tool_absent "$TOOLS" "$tool" "gate-validator"
+done
+
+set_test "gate-validator has no mcp__ tools"
+assert_no_mcp_tools "$TOOLS" "gate-validator"
+
+set_test "gate-validator permissionMode is NOT acceptEdits"
+mode=$(extract_field "$AGENT_FILE" "permissionMode")
+if [ "$mode" != "acceptEdits" ]; then
+  _pass
+else
+  _fail "gate-validator permissionMode should not be acceptEdits, got '$mode'"
+fi
+
+set_test "gate-validator model is haiku"
+model=$(extract_field "$AGENT_FILE" "model")
+assert_eq "haiku" "$model"
+
+set_test "gate-validator effort is low"
+effort=$(extract_field "$AGENT_FILE" "effort")
+assert_eq "low" "$effort"
+
+set_test "gate-validator maxTurns exists and is positive"
+max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
+assert_gt "$max_turns" 0
+
+# ===========================================================================
+# consensus-synthesizer
+# ===========================================================================
+section "consensus-synthesizer"
+
+AGENT_FILE="$AGENTS_DIR/consensus-synthesizer.md"
+TOOLS=$(extract_tools "$AGENT_FILE")
+
+for tool in Read Grep Glob; do
+  set_test "consensus-synthesizer has $tool"
+  assert_tool_present "$TOOLS" "$tool" "consensus-synthesizer"
+done
+
+for tool in Write Edit Bash Skill; do
+  set_test "consensus-synthesizer does NOT have $tool"
+  assert_tool_absent "$TOOLS" "$tool" "consensus-synthesizer"
+done
+
+set_test "consensus-synthesizer has no mcp__ tools"
+assert_no_mcp_tools "$TOOLS" "consensus-synthesizer"
+
+set_test "consensus-synthesizer permissionMode is NOT acceptEdits"
+mode=$(extract_field "$AGENT_FILE" "permissionMode")
+if [ "$mode" != "acceptEdits" ]; then
+  _pass
+else
+  _fail "consensus-synthesizer permissionMode should not be acceptEdits, got '$mode'"
+fi
+
+set_test "consensus-synthesizer model is sonnet"
+model=$(extract_field "$AGENT_FILE" "model")
+assert_eq "sonnet" "$model"
+
+set_test "consensus-synthesizer effort is high"
+effort=$(extract_field "$AGENT_FILE" "effort")
+assert_eq "high" "$effort"
+
+set_test "consensus-synthesizer maxTurns exists and is positive"
+max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
+assert_gt "$max_turns" 0
 
 # ===========================================================================
 test_summary
