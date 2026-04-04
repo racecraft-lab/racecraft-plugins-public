@@ -28,12 +28,18 @@ This MUST be done before applying branch protection. The check must exist in a m
       - name: Check test matrix result
         run: |
           set -euo pipefail
-          result="${{ needs.test.result }}"
-          if [[ "$result" == "success" || "$result" == "skipped" ]]; then
-            echo "Plugin tests passed or were skipped (result: ${result})."
+          detect_result="${{ needs.detect.result }}"
+          test_result="${{ needs.test.result }}"
+          # detect failure means the workflow itself is broken — fail the sentinel
+          if [[ "$detect_result" == "failure" ]]; then
+            echo "::error::Detect job failed (result: ${detect_result}). Workflow is broken."
+            exit 1
+          fi
+          if [[ "$test_result" == "success" || "$test_result" == "skipped" ]]; then
+            echo "Plugin tests passed or were skipped (result: ${test_result})."
             exit 0
           else
-            echo "::error::Plugin tests failed or were cancelled (result: ${result})."
+            echo "::error::Plugin tests failed or were cancelled (result: ${test_result})."
             exit 1
           fi
 ```
@@ -66,7 +72,9 @@ gh api \
   --field 'required_status_checks[contexts][]=validate-pr-title' \
   --field 'enforce_admins=false' \
   --field 'required_pull_request_reviews=null' \
-  --field 'restrictions=null'
+  --field 'restrictions=null' \
+  --field 'allow_force_pushes=false' \
+  --field 'allow_deletions=false'
 ```
 
 **Expected response**: HTTP 200 with branch protection object. Confirm:

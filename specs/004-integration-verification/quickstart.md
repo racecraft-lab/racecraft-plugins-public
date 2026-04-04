@@ -52,10 +52,10 @@ Create `docs/ai/specs/cicd-release-pipeline-verification.md` as a manual walkthr
 Pipeline stages to cover:
 1. Feature branch creation
 2. PR submission and CI check execution
-3. PR merge (squash)
-4. Release-please PR creation
-5. Release-please PR merge
-6. GitHub Release publication
+3. Copilot review trigger confirmation
+4. PR merge (squash)
+5. Release-please PR creation
+6. Release-please PR merge and GitHub Release publication
 7. Marketplace sync commit
 8. End-user `/plugin marketplace update`
 
@@ -85,7 +85,9 @@ gh api \
   --field 'required_status_checks[contexts][]=validate-pr-title' \
   --field 'enforce_admins=false' \
   --field 'required_pull_request_reviews=null' \
-  --field 'restrictions=null'
+  --field 'restrictions=null' \
+  --field 'allow_force_pushes=false' \
+  --field 'allow_deletions=false'
 ```
 
 **Verify**:

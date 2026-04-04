@@ -217,7 +217,7 @@ A "diagnostic note" in FR-008 means a human-readable note that includes: (a) the
 
 ### FR-009 — CLAUDE.md Sync Convention
 
-When any future PR modifies `.github/workflows/pr-checks.yml` or `.github/workflows/release-please.yml`, the PR description MUST include a note confirming whether CLAUDE.md's CI/CD sections require updates. This is a process convention, not an automated check. It is documented in the "CI/CD Workflow" section of CLAUDE.md (FR-009) as a maintenance reminder. SC-005 (a contributor reading only CLAUDE.md understands the workflow) defines the bar: if CLAUDE.md becomes inaccurate after a workflow change, SC-005 is violated.
+When any future PR modifies `.github/workflows/pr-checks.yml` or `.github/workflows/release.yml`, the PR description MUST include a note confirming whether CLAUDE.md's CI/CD sections require updates. This is a process convention, not an automated check. It is documented in the "CI/CD Workflow" section of CLAUDE.md (FR-009) as a maintenance reminder. SC-005 (a contributor reading only CLAUDE.md understands the workflow) defines the bar: if CLAUDE.md becomes inaccurate after a workflow change, SC-005 is violated.
 
 ### FR-011 — Accuracy Before End-to-End Run
 
