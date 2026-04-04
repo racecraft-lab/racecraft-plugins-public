@@ -217,10 +217,53 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 Run the prerequisite scripts to verify the environment. If any
 check fails, STOP with the error message from the JSON output.
 
+### 0.0 Resolve Script Paths
+
+The autopilot's bash scripts ship with the **plugin**, not the
+project. Before running any script, resolve the absolute path
+to the scripts directory from the skill's base directory.
+
+When this skill is loaded, Claude Code prints:
+`Base directory for this skill: /path/to/.../skills/speckit-autopilot`
+
+Extract that path and append `/scripts` to get the scripts dir.
+Store the result as `SKILL_SCRIPTS` for all subsequent commands:
+
+```text
+SKILL_SCRIPTS="<base directory from skill header>/scripts"
+```
+
+For example, if the header says:
+`Base directory for this skill: /Users/me/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/1.1.0/skills/speckit-autopilot`
+
+Then:
+```text
+SKILL_SCRIPTS="/Users/me/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/1.1.0/skills/speckit-autopilot/scripts"
+```
+
+Verify the directory exists:
+
+```text
+Bash("ls '<SKILL_SCRIPTS>/'")
+```
+
+If it doesn't exist, STOP: "Plugin scripts not found. Reinstall
+the speckit-pro plugin."
+
+**All script invocations below use the resolved `SKILL_SCRIPTS`
+path as prefix.** Never run these scripts from
+`.specify/scripts/bash/` — that directory contains project-level
+SpecKit scripts (create-new-feature, setup-plan, etc.), which are
+different from the autopilot scripts.
+
+**WARNING:** `CLAUDE_PLUGIN_ROOT` is NOT available in Bash tool
+invocations — it only exists inside agent subprocesses. Always use
+the literal path extracted from the skill header.
+
 ### 0.1-0.7 Environment Checks
 
 ```text
-Bash("bash scripts/check-prerequisites.sh <workflow_file_path>")
+Bash("bash '<SKILL_SCRIPTS>/check-prerequisites.sh' <workflow_file_path>")
 ```
 
 Parse the JSON result:
@@ -301,7 +344,7 @@ implementation agent (e.g., "my-project-developer" or
 ### 0.11 Project Command Discovery
 
 ```text
-Bash("bash scripts/detect-commands.sh")
+Bash("bash '<SKILL_SCRIPTS>/detect-commands.sh'")
 ```
 
 Parse the JSON result for `commands` object containing:
@@ -320,7 +363,7 @@ across context compactions. Pass them to every subagent.
 ### 0.12 Preset and Extension Detection
 
 ```text
-Bash("bash scripts/detect-presets.sh")
+Bash("bash '<SKILL_SCRIPTS>/detect-presets.sh'")
 ```
 
 Parse the JSON result for: `has_presets`, `presets` (names +
@@ -743,16 +786,19 @@ Mitigations:
 
 ## Scripts
 
-Deterministic bash scripts for prerequisite checks and validation:
+Deterministic bash scripts for prerequisite checks and validation.
+These ship with the **plugin** at `<SKILL_SCRIPTS>/` (resolved in
+Step 0.0 from the skill header's base directory path).
+Always invoke via the full resolved path — never from `.specify/scripts/bash/`.
 
-- `scripts/check-prerequisites.sh <workflow_file>` — Verify CLI,
+- `check-prerequisites.sh <workflow_file>` — Verify CLI,
   project init, constitution, commands, branch detection (JSON)
-- `scripts/validate-gate.sh <G1-G7> <feature_dir>` — Validate
+- `validate-gate.sh <G1-G7> <feature_dir>` — Validate
   any gate with marker counts and details (JSON)
-- `scripts/detect-commands.sh` — Auto-detect build/test/lint
+- `detect-commands.sh` — Auto-detect build/test/lint
   commands for Node.js, Rust, Go, Python, Makefile (JSON)
-- `scripts/detect-presets.sh` — Find installed presets,
+- `detect-presets.sh` — Find installed presets,
   extensions, hooks, template resolution (JSON)
-- `scripts/count-markers.sh <type> <feature_dir>` — Deterministic
+- `count-markers.sh <type> <feature_dir>` — Deterministic
   marker counting (gaps, findings, clarifications, all) for agent
   validation. Used by analyze-executor and checklist-executor (JSON)
