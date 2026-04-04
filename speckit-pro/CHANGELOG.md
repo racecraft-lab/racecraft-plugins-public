@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.1.0...speckit-pro-v1.2.0) (2026-04-04)
+
+
+### Features
+
+* **SPEC-004:** implement sentinel job, verification checklist, CLAUDE.md CI/CD docs ([98faa10](https://github.com/racecraft-lab/racecraft-plugins-public/commit/98faa102a4e83a25c4fe39c761a4b1a5fc8be6a4))
+* **SPEC-004:** Integration & Verification — branch protection, Copilot review, CI/CD docs ([f710ffb](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f710ffbbb09a6bbb7b1e2f2d78004b4b3055d93a))
+* **SPEC-005:** add skill trigger quality spec to technical roadmap ([66b7251](https://github.com/racecraft-lab/racecraft-plugins-public/commit/66b725168b43820d7776da3c47f52c1d9e0a7648))
+
+
+### Bug Fixes
+
+* **SPEC-004:** configure git user in test fixtures for CI ([bf4f10d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bf4f10d78e1467e3fa331da1fdcea389fc481bb5))
+* **SPEC-004:** remediate code review findings for PR [#5](https://github.com/racecraft-lab/racecraft-plugins-public/issues/5) ([3f76fab](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3f76fab72c98203708b3f2d20ad72e83ea283152))
+* **speckit-pro:** resolve plugin script paths in autopilot SKILL.md ([1bf3d01](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1bf3d01a04d98783448174233cfa600b76e0f236))
+* **speckit-pro:** resolve plugin script paths in autopilot SKILL.md ([27ce64e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/27ce64e684ea0e6524100ffc36ad348b46111517))
+
 ## [1.1.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.0.0...speckit-pro-v1.1.0) (2026-04-04)
 
 
