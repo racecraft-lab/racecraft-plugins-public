@@ -479,7 +479,16 @@ for phase in PHASES starting from first_pending:
        → apply consensus rules → edit artifacts
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
-    7. Validate gate (see gate-validation.md)
+    7. Validate gate via gate-validator agent:
+       Agent(
+         subagent_type: "gate-validator",
+         description: "SPEC-XXX: Validate G<N>",
+         prompt: """
+           Validate gate G<N> for feature at <feature_dir>
+           Script path: <SKILL_SCRIPTS>/validate-gate.sh
+         """
+       )
+       Parse the agent's Gate Result for PASS/FAIL status.
     8. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
        b. If still failing and gate-failure == "stop": STOP
