@@ -13,6 +13,29 @@ SKILL_CREATOR="${SKILL_CREATOR_ROOT:-$HOME/.claude/plugins/marketplaces/claude-p
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SKILL="${1:-speckit-coach}"
 
+# Create a wrapper around `claude` that adds --bare to prevent installed
+# plugin skills from shadowing the test command file during evaluation.
+# Without this, Claude picks the real `speckit-pro:coach` (or autopilot)
+# plugin skill instead of the test command, causing all true-positive
+# evals to fail.
+WRAPPER_DIR=$(mktemp -d)
+trap 'rm -rf "$WRAPPER_DIR"' EXIT
+cat > "$WRAPPER_DIR/claude" << 'WRAPPER'
+#!/usr/bin/env bash
+real_claude=""
+IFS=: read -ra dirs <<< "$PATH"
+for d in "${dirs[@]}"; do
+  [[ "$d" == "$(dirname "$0")" ]] && continue
+  if [[ -x "$d/claude" ]]; then
+    real_claude="$d/claude"
+    break
+  fi
+done
+exec "$real_claude" "$@" --bare
+WRAPPER
+chmod +x "$WRAPPER_DIR/claude"
+export PATH="$WRAPPER_DIR:$PATH"
+
 EVAL_FILE="$PLUGIN_ROOT/tests/layer2-trigger/evals/${SKILL}-trigger.json"
 SKILL_PATH="$PLUGIN_ROOT/skills/${SKILL}"
 

@@ -26,8 +26,8 @@ make_project() {
   done
   # Create a dummy workflow file
   printf '# Workflow\n' > "$dir/workflow.md"
-  # Init git
-  (cd "$dir" && git init -q && git add -A && git commit -q -m "init" 2>/dev/null) || true
+  # Init git (configure user for CI where no global git config exists)
+  (cd "$dir" && git init -q && git config user.email "test@test" && git config user.name "test" && git add -A && git commit -q -m "init" 2>/dev/null) || true
   echo "$dir"
 }
 

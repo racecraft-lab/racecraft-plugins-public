@@ -20,21 +20,23 @@ This document defines the specification roadmap for the CI/CD & Release Pipeline
 
 ## Roadmap Overview
 
-The feature is decomposed into **4 specifications** across **3 dependency tiers**:
+The feature is decomposed into **5 specifications** across **4 dependency tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
 |------|-------|---------|-----------------|
 | **1** | SPEC-001 | Repository foundation — config files, sync script, version dedup fix | Sequential |
 | **2** | SPEC-002, SPEC-003 | PR checks workflow, Release automation workflow | Parallel possible |
 | **3** | SPEC-004 | Branch protection, Copilot review, end-to-end integration verification | Sequential (depends on all above) |
+| **4** | SPEC-005 | Skill trigger optimization, eval framework fixes, description quality | Sequential (depends on SPEC-004) |
 
-**Execution Order:** SPEC-001 → (SPEC-002 ‖ SPEC-003) → SPEC-004
+**Execution Order:** SPEC-001 → (SPEC-002 ‖ SPEC-003) → SPEC-004 → SPEC-005
 
 **Dependency Constraints:**
 - SPEC-002 requires SPEC-001 (PR checks need the config files and test runner to exist)
 - SPEC-003 requires SPEC-001 (release workflow needs release-please config and sync script)
 - SPEC-002 and SPEC-003 can run in parallel (independent GitHub Actions workflows)
 - SPEC-004 requires SPEC-002 and SPEC-003 (branch protection rules reference CI check names; end-to-end verification needs all workflows operational)
+- SPEC-005 requires SPEC-004 (trigger evals depend on the `--bare` wrapper added in SPEC-004; also discovered during SPEC-004 verification)
 
 ---
 
@@ -49,6 +51,9 @@ SPEC-001 (Repository Foundation)
                                                   ▼
                                    SPEC-004 (Integration & Verification)
                                                   │
+                                                  ▼
+                                   SPEC-005 (Skill Trigger Quality)
+                                                  │
                                        ─── FEATURE COMPLETE ───
 ```
 
@@ -59,9 +64,10 @@ SPEC-001 (Repository Foundation)
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
 | SPEC-001 | Repository Foundation | ✅ Complete | [SPEC-001-workflow.md](SPEC-001-workflow.md) | PR #1 merged |
-| SPEC-002 | PR Checks Workflow | 🔄 In Progress | [SPEC-002-workflow.md](SPEC-002-workflow.md) | Specify |
-| SPEC-003 | Release Automation | ✅ Complete | [SPEC-003-workflow.md](SPEC-003-workflow.md) | PR #3 |
-| SPEC-004 | Integration & Verification | ⏳ Pending | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Blocked by SPEC-002, SPEC-003 |
+| SPEC-002 | PR Checks Workflow | ✅ Complete | [SPEC-002-workflow.md](SPEC-002-workflow.md) | PR #2 merged |
+| SPEC-003 | Release Automation | ✅ Complete | [SPEC-003-workflow.md](SPEC-003-workflow.md) | PR #3 merged |
+| SPEC-004 | Integration & Verification | 🔄 In Progress | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Specify |
+| SPEC-005 | Skill Trigger Quality | ⏳ Pending | — | — |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -211,6 +217,66 @@ Alternatives considered: opening a follow-up PR for the sync (adds noise and man
 - `CLAUDE.md` — Modified: add CI/CD workflow documentation
 - `AGENTS.md` — Modified: add CI/CD conventions if needed
 - `docs/ai/specs/cicd-verification-checklist.md` — New: end-to-end verification steps
+
+---
+
+### SPEC-005: Skill Trigger Quality
+
+**Priority:** P1 | **Depends On:** SPEC-004 | **Enables:** Complete feature
+
+**Goal:** Fix the pre-existing 10/20 Layer 2 trigger eval failure for both skills (`speckit-coach` and `speckit-autopilot`) by optimizing skill descriptions following Anthropic's official guide and fixing the eval framework's plugin-shadowing limitation.
+
+**Background:**
+During SPEC-004 verification, Layer 2 trigger evals were run for the first time in this environment. Both skills scored 10/20: perfect specificity (0 false positives) but 0% sensitivity (0/10 true positives each). Two independent root causes were identified:
+
+1. **Plugin skill shadowing in eval framework:** The `run_eval.py` script (from Anthropic's skill-creator plugin) creates a temporary command file in `.claude/commands/` and runs `claude -p`. When the real plugin is installed, Claude sees both the test command AND the real plugin skill (`speckit-pro:coach`, `speckit-pro:autopilot`). Claude picks the real skill, but the eval checks for the test command name — registering a miss. A `--bare` wrapper was prototyped in `run-trigger-evals.sh` but `--bare` mode also skips command file auto-discovery, so it doesn't fully solve the problem.
+
+2. **Undertriggering descriptions:** Per Anthropic's "Complete Guide to Building Skills for Claude" (p. 11, 17), the description field must follow the pattern `[What it does] + [When to use it] + [Key capabilities]` and should be "pushy" to combat undertriggering. The current descriptions list capabilities abstractly but lack specific user phrases and assertive trigger conditions. Queries like "walk me through SDD" and "run autopilot on my workflow" fail to trigger because the descriptions don't include enough concrete task language.
+
+**Scope:**
+
+- **Rewrite `speckit-coach` SKILL.md description** following Anthropic's guide:
+  - Include specific trigger phrases users actually type ("walk me through SDD", "gate is failing", "which checklist domains", "decompose feature into specs", "technical roadmap", "specify plan vs specify tasks", "testable acceptance criteria", "preset changes")
+  - Follow the `[What it does] + [When to use it] + [Key capabilities]` structure
+  - Be assertive: "Use this skill whenever the user mentions..." pattern
+  - Keep under 1024 characters (field limit per guide p. 10)
+
+- **Rewrite `speckit-autopilot` SKILL.md description** following Anthropic's guide:
+  - Include specific trigger phrases ("run autopilot", "kick off autonomous execution", "execute workflow", "full end-to-end speckit run", "run all 7 phases", "workflow file is ready/populated")
+  - Include file path patterns users reference ("workflow.md", "SPEC-XXX-workflow.md")
+  - Same structure and assertiveness requirements as coach
+
+- **Fix `run-trigger-evals.sh` eval isolation:**
+  - Research whether `claude -p --bare --add-dir .claude` enables command discovery while disabling plugin sync
+  - If not, implement an alternative isolation strategy: temporarily move/rename the plugin cache directory during eval execution, or create a test-specific `--plugin-dir` pointing to an empty directory
+  - Goal: the eval framework must test description quality in isolation, without installed plugin skills interfering
+
+- **Update eval queries if needed:**
+  - Review `speckit-coach-trigger.json` and `speckit-autopilot-trigger.json` for query quality per skill-creator guide (queries should be "substantive enough that Claude would actually benefit from consulting a skill")
+  - Ensure negative cases are near-misses, not obviously irrelevant
+
+- **Target: both skills pass 18/20 or higher** (90% threshold — allows 1-2 edge cases to remain flaky given the stochastic nature of trigger evaluation)
+
+**Out of Scope:**
+- Layer 3 functional evals (behavior quality, not trigger quality)
+- Changes to SKILL.md body content (only the description frontmatter field)
+- Changes to the skill-creator plugin's `run_eval.py` (upstream dependency)
+- Adding Layer 2/3 to CI (these require Claude API calls and are developer-local only)
+
+**Key Decisions:**
+
+**[Description Optimization Approach] Decision (2026-04-04):** Manual rewrite following Anthropic's guide rather than automated `run_loop.py` optimization. The automated approach creates dozens of duplicate command files in `.claude/commands/` that pollute the skills list and worsen the shadowing problem. Manual iteration with targeted eval runs is more effective in this environment.
+Alternatives considered: `run_loop.py` automated loop (counterproductive due to command file pollution); leaving descriptions as-is and only fixing eval isolation (addresses measurement but not the actual undertriggering problem).
+
+**[Eval Isolation Strategy] Decision (2026-04-04):** Investigate `--bare --add-dir` combination first. If that fails, use a temporary `$HOME/.claude/plugins` rename during eval execution (simple, reversible, no external dependencies).
+Alternatives considered: `--bare` alone (skips command discovery); `--disallowed-tools` (too broad — blocks the Skill tool entirely); patching `run_eval.py` (upstream dependency, not maintainable).
+
+**Key Files:**
+- `speckit-pro/skills/speckit-coach/SKILL.md` — Modified: description field rewrite
+- `speckit-pro/skills/speckit-autopilot/SKILL.md` — Modified: description field rewrite
+- `speckit-pro/tests/layer2-trigger/run-trigger-evals.sh` — Modified: eval isolation fix
+- `speckit-pro/tests/layer2-trigger/evals/speckit-coach-trigger.json` — Potentially modified: query quality review
+- `speckit-pro/tests/layer2-trigger/evals/speckit-autopilot-trigger.json` — Potentially modified: query quality review
 
 ---
 

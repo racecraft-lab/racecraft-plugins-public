@@ -151,3 +151,33 @@ jobs:
             echo "  docs: update README"
             exit 1
           fi
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 4: Sentinel aggregator — provides stable check name for branch
+  #         protection. Passes if test matrix passed or was skipped.
+  # ───────────────────────────────────────────────────────────────────
+  validate-plugins:
+    name: validate-plugins
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [detect, test]
+    permissions: {}
+
+    steps:
+      - name: Check test matrix result
+        run: |
+          set -euo pipefail
+          detect_result="${{ needs.detect.result }}"
+          test_result="${{ needs.test.result }}"
+          # detect failure or cancellation means the workflow itself is broken — fail the sentinel
+          if [[ "$detect_result" == "failure" || "$detect_result" == "cancelled" ]]; then
+            echo "::error::Detect job did not succeed (result: ${detect_result}). Workflow is broken."
+            exit 1
+          fi
+          if [[ "$test_result" == "success" || "$test_result" == "skipped" ]]; then
+            echo "Plugin tests passed or were skipped (result: ${test_result})."
+            exit 0
+          else
+            echo "::error::Plugin tests failed or were cancelled (result: ${test_result})."
+            exit 1
+          fi
