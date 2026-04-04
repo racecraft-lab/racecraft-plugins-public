@@ -132,6 +132,10 @@ set_test "phase-executor effort field exists"
 effort=$(extract_field "$AGENT_FILE" "effort")
 assert_not_contains "" "$effort" "effort must not be empty"
 
+set_test "phase-executor effort is low"
+effort=$(extract_field "$AGENT_FILE" "effort")
+assert_eq "low" "$effort"
+
 # ===========================================================================
 # clarify-executor
 # ===========================================================================

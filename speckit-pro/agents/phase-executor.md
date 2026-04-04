@@ -18,7 +18,7 @@ tools:
   - Glob
 permissionMode: acceptEdits
 maxTurns: 50
-effort: medium
+effort: low
 ---
 
 # Phase Executor
