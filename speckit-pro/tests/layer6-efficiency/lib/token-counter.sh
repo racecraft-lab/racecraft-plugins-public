@@ -20,7 +20,9 @@ data = json.load(sys.stdin)
 # Handle both direct usage and nested result formats
 usage = data.get('usage', {})
 if not usage and 'result' in data:
-    usage = data['result'].get('usage', {})
+    result = data.get('result')
+    if isinstance(result, dict):
+        usage = result.get('usage', {})
 
 input_t = usage.get('input_tokens', 0)
 output_t = usage.get('output_tokens', 0)
