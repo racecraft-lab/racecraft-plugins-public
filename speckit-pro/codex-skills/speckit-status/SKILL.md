@@ -34,14 +34,17 @@ provided, show the targeted detail view for that spec first.
 
 ## What to Read
 
-Search the repository for both of the following before answering:
+Search the repository and any attached git worktrees for both of the following
+before answering:
 
 - technical roadmap files, typically matching `*technical-roadmap*` or
   `*roadmap*`
 - workflow files, typically matching `*-workflow.md`
 
-Do not assume the user keeps everything under one directory. Search the repo,
-then narrow to the files that actually describe the SpecKit project. If a file
+Do not assume the user keeps everything under one directory. Search the current
+checkout first, then inspect `git worktree list --porcelain` so workflows in
+attached worktrees are included even when setup used a nonstandard worktree
+root. Narrow to the files that actually describe the SpecKit project. If a file
 looks unrelated, ignore it rather than polluting the dashboard.
 
 ## Overall Dashboard Procedure
@@ -67,7 +70,8 @@ uses a multi-roadmap setup.
 ### 2. Parse workflow files for phase detail
 
 Workflow files add the fine-grained execution state the roadmap usually lacks.
-For each workflow file:
+Collect them from the main checkout and any attached worktree paths. For each
+workflow file:
 
 - identify the `SPEC-ID`
 - read the workflow overview table

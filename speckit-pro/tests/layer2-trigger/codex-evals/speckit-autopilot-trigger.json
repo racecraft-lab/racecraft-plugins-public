@@ -1,0 +1,82 @@
+[
+  {
+    "query": "ok so I've got the workflow file populated for SPEC-013 at docs/ai/specs/SPEC-013-workflow.md and all the prompts look good. can you kick off the autonomous execution? I want all 7 phases with auto-commits",
+    "should_trigger": true
+  },
+  {
+    "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+    "should_trigger": true
+  },
+  {
+    "query": "I need you to execute the full speckit workflow autonomously. here's the workflow file: /Users/fred/projects/acme-api/docs/ai/specs/SPEC-004-workflow.md — go through specify, clarify, plan, checklist, tasks, analyze, and implement with gate validation between each phase",
+    "should_trigger": true
+  },
+  {
+    "query": "the workflow is ready at specs/SPEC-019-workflow.md for the notification system feature. please start autonomous execution and commit after each phase passes its gate. I've already reviewed all the prompts",
+    "should_trigger": true
+  },
+  {
+    "query": "can you do the full end-to-end speckit run for me? I've got SPEC-008 workflow populated and I want it to go through all phases automatically. if a gate fails, do the consensus protocol and keep going",
+    "should_trigger": true
+  },
+  {
+    "query": "hey I just finished populating the workflow template for our auth refactor spec. it's at docs/ai/specs/SPEC-031-auth-refactor/SPEC-031-workflow.md. ready for you to take over and drive it through all the SDD phases",
+    "should_trigger": true
+  },
+  {
+    "query": "start the autonomous speckit pipeline on my spec. workflow is docs/ai/specs/SPEC-015-workflow.md. run each phase as a subagent, validate gates, resolve any disagreements with consensus, and auto-commit passing artifacts",
+    "should_trigger": true
+  },
+  {
+    "query": "I've been doing the SDD phases manually and it's taking forever. can you just run the whole thing autonomously? the workflow file for SPEC-022 is populated and sitting at specs/022-search/SPEC-022-workflow.md",
+    "should_trigger": true
+  },
+  {
+    "query": "execute workflow for the database migration spec. file: docs/ai/specs/SPEC-041-db-migration/SPEC-041-workflow.md. I want full autonomous mode — all 7 phases, gate checks, consensus if needed, commits after each pass",
+    "should_trigger": true
+  },
+  {
+    "query": "alright everything is set up for the payment integration spec. workflow template is populated at SPEC-009-workflow.md. kick off autopilot and let it run through specify to implement. I'll review the PR when it's done",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm confused about how the consensus protocol works. when does it trigger during a phase and how many agents need to agree? can you explain the voting mechanism?",
+    "should_trigger": false
+  },
+  {
+    "query": "the simplicity gate keeps failing on my spec. it says I have too many acceptance criteria. how do I fix this without losing important requirements?",
+    "should_trigger": false
+  },
+  {
+    "query": "help me set up speckit for a new project. I need to run specify init and configure the constitution for our team's coding standards",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the status of SPEC-014? I want to see which phases have passed their gates and which are still pending",
+    "should_trigger": false
+  },
+  {
+    "query": "can you review the PR for SPEC-008 and resolve the review threads? the PR number is #42 on the racecraft/omnifocus-mcp repo",
+    "should_trigger": false
+  },
+  {
+    "query": "how should I decompose this large feature into multiple specs? I've got a user management system that needs auth, profiles, roles, and audit logging",
+    "should_trigger": false
+  },
+  {
+    "query": "which checklist domains should I select for a REST API spec? I'm building an endpoint for task creation with validation and error handling",
+    "should_trigger": false
+  },
+  {
+    "query": "write a unit test for the createTask primitive. it should mock executeOmniJS and verify the script template is correct",
+    "should_trigger": false
+  },
+  {
+    "query": "I need to create a technical roadmap for the omnifocus-mcp project. we have 5 specs that need to be sequenced based on their dependencies",
+    "should_trigger": false
+  },
+  {
+    "query": "can you walk me through how to write good testable requirements for the spec phase? I want to make sure my acceptance criteria are specific enough",
+    "should_trigger": false
+  }
+]

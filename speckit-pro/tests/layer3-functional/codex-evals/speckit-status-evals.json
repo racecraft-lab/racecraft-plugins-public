@@ -32,6 +32,16 @@
         "Explains that workflow files can still provide phase detail",
         "Notes that the full backlog or recommendation quality is limited without the roadmap"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "Setup created SPEC-021 in a git worktree outside the repo root. How should the status skill find that workflow before telling me there is nothing in progress?",
+      "expected_output": "Searches attached git worktrees, not just the current checkout, so active workflow files in external worktree roots still appear in the dashboard.",
+      "expectations": [
+        "Mentions inspecting git worktrees in addition to the current repository",
+        "States that workflow files may live outside the repo root",
+        "Avoids telling the user to rerun setup when an attached worktree already has the workflow"
+      ]
     }
   ]
 }
