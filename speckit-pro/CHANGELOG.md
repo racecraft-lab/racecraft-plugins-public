@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.5.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.4.0...speckit-pro-v1.5.0) (2026-04-08)
+
+
+### Features
+
+* **codex:** align speckit plugin entrypoints ([9a6b619](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9a6b619584d89316310639effb52a7d39581099f))
+
+
+### Bug Fixes
+
+* address PR review comments for actionable errors and safety checks ([1d72b2d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1d72b2de609ec17974d23f01bc1a3af0ecbab6cc))
+* **codex:** split platform-specific eval runners ([64decd1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/64decd1cd246759780c591fcf4e242f9db182a6f))
+* remediate PR review findings — dead code, docs, and test gaps ([72bd2af](https://github.com/racecraft-lab/racecraft-plugins-public/commit/72bd2afe7452a08d2d8ac731bc406c08c093dda2))
+* remediate PR review findings across evals, docs, and dead code ([3f8c665](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3f8c66581ea78bd89e31b211ef17d6827b127827))
+* **speckit-pro:** align Codex entrypoints with skills ([b46ff83](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b46ff83de03cce20f21ce519ce88d03a158a44da))
+
 ## [1.4.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.3.0...speckit-pro-v1.4.0) (2026-04-08)
 
 
