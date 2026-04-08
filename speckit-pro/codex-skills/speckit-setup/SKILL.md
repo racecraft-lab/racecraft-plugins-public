@@ -93,6 +93,11 @@ Use a deterministic branch naming scheme based on the spec number and short
 slug, for example `009-search-database`. Verify the active branch inside the
 worktree before continuing.
 
+Place worktrees under `.worktrees/` at the repository root by default. The
+full worktree path should follow the pattern `.worktrees/<number>-<short-slug>`,
+for example `.worktrees/009-search-database`. Use a different root only if the
+user provides an explicit override.
+
 ### 4. Copy the workflow template into the worktree
 
 Create the destination directory inside the worktree, typically

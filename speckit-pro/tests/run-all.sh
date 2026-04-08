@@ -7,7 +7,6 @@
 #   tests/run-all.sh --layer 2    # Layer 2 only (prints Claude + Codex trigger eval commands)
 #   tests/run-all.sh --layer 3    # Layer 3 only (prints Claude + Codex functional eval commands)
 #   tests/run-all.sh --layer 6    # Layer 6 only (efficiency benchmarks, requires claude -p)
-#   tests/run-all.sh --ci         # CI mode: layers 1, 4, 5 synthetic only
 #   tests/run-all.sh --all        # All 6 layers + live project tests
 #
 # Run from the project directory (e.g., racecraft-plugins-public/) so live tests
@@ -30,16 +29,12 @@ export PLUGIN_ROOT PROJECT_ROOT
 RUN_LIVE=false
 RUN_LAYER=""
 RUN_ALL=false
-CI_MODE=false
-
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --live) RUN_LIVE=true; shift ;;
     --layer) RUN_LAYER="$2"; shift 2 ;;
     --all) RUN_ALL=true; RUN_LIVE=true; shift ;;
-    --ci) CI_MODE=true; shift ;;
-
     --verbose) export VERBOSE=true; shift ;;
     *) echo "Unknown flag: $1"; exit 2 ;;
   esac

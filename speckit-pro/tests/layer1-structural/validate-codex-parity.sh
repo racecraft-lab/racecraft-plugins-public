@@ -177,6 +177,21 @@ if [ -d "$CODEX_SKILLS_DIR" ]; then
     else
       _fail "skills/${skill_name}/references/ exists but contains no files"
     fi
+
+    # Per-file check: every ../../skills/*/references/*.md path linked from the
+    # Codex SKILL.md must resolve to an actual file under skills/.
+    codex_skill_file="$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
+    if [ -f "$codex_skill_file" ]; then
+      ref_paths=$(grep -oE '\.\./\.\./skills/[^)]+\.md' "$codex_skill_file" | sort -u)
+      while IFS= read -r rel_path; do
+        [ -z "$rel_path" ] && continue
+        # Strip the leading ../../ — paths are relative to the Codex skill dir,
+        # which is two levels below the plugin root.
+        resolved="$PLUGIN_ROOT/${rel_path#../../}"
+        set_test "${skill_name}: referenced file exists (${rel_path#../../})"
+        assert_file_exists "$resolved"
+      done <<< "$ref_paths"
+    fi
   done
 fi
 

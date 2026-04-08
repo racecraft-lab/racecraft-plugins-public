@@ -73,6 +73,32 @@ for skill in "${SKILLS[@]}"; do
     _fail "body is $word_count words (need 500-8000)"
   fi
 
+  set_test "${skill}: agents/openai.yaml allow_implicit_invocation policy"
+  if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
+    yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
+    case "$skill" in
+      speckit-setup|speckit-autopilot|speckit-resolve-pr)
+        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
+          _pass
+        else
+          _fail "mutation-heavy skill must have allow_implicit_invocation: false"
+        fi
+        ;;
+      speckit-coach|speckit-status)
+        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: true'; then
+          _pass
+        else
+          _fail "read-only skill must have allow_implicit_invocation: true"
+        fi
+        ;;
+      *)
+        _fail "no implicit-invocation policy expectation defined for '$skill'; update validate-codex-skills.sh"
+        ;;
+    esac
+  else
+    _fail "agents/openai.yaml not found; skipping policy check"
+  fi
+
   # Map each Codex skill to its Claude Code source artifact.
   # When adding a new skill to the SKILLS array above, add a case branch here.
   set_test "${skill}: corresponding source artifact exists"
@@ -109,6 +135,13 @@ for skill in "${SKILLS[@]}"; do
       _fail "no corresponding source artifact mapping defined for skill '$skill'; update validate-codex-skills.sh"
       ;;
   esac
+
+  # speckit-setup hard-codes a reference to the shared workflow template —
+  # verify the file it points to actually exists.
+  if [ "$skill" = "speckit-setup" ]; then
+    set_test "speckit-setup: referenced workflow template exists (skills/speckit-coach/templates/workflow-template.md)"
+    assert_file_exists "$PLUGIN_ROOT/skills/speckit-coach/templates/workflow-template.md"
+  fi
 done
 
 test_summary
