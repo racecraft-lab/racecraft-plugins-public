@@ -263,7 +263,7 @@ workflow file's `Branch` field. Warn if they don't match.
 
 ### 0.6 Load Settings
 
-Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
+Read the project-level settings file if it exists (`.claude/speckit-pro.local.md` for Claude Code, or the equivalent Codex project config). Parse YAML
 frontmatter for: `consensus-mode` (default: `moderate`),
 `gate-failure` (default: `stop`), `auto-commit` (default:
 `per-phase`), `security-keywords` (default: standard list).
@@ -295,7 +295,7 @@ Detect whether the project has a specialized implementation
 agent for the Implement phase:
 
 ```text
-1. Search for all agent files in .claude/agents/
+1. Search for all agent files in the project's agent directory (`.codex/agents/` for Codex CLI, `.claude/agents/` for Claude Code)
 2. For each agent file, read the YAML frontmatter
 3. Check the description for implementation keywords:
    "implement", "TDD", "development", "developer",
@@ -449,7 +449,7 @@ POST-IMPLEMENTATION (after all 7 phases complete):
     Commands like $speckit-verify, $speckit-review, $speckit-cleanup,
     $speckit-doctor, $speckit-retrospective-analyze are INSTALLED by
     `specify extension add <name>`. The CLI creates command files
-    in .claude/commands/ (or equivalent for other agents). These
+    in the project's commands directory (`.codex/commands/` for Codex CLI, `.claude/commands/` for Claude Code). These
     commands then appear as invocable skills.
 
     If Step 0.12 detected the extension in .registry as enabled,

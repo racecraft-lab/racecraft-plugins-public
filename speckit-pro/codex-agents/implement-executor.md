@@ -8,7 +8,7 @@ description: >
   orchestrator. Returns structured TDD evidence. Use for individual
   tasks in the autopilot implement phase.
 model: gpt-5.4-pro
-model_reasoning_effort: x_high
+model_reasoning_effort: high
 sandbox_mode: workspace-write
 ---
 
