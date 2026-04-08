@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecKit Coach"
+  short_description: "SDD methodology coaching and SpecKit guidance"
+  default_prompt: "Coach me through Spec-Driven Development, help with a SpecKit command, or explain SDD methodology"
+
+policy:
+  allow_implicit_invocation: true

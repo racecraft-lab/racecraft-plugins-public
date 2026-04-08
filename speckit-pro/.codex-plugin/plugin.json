@@ -1,0 +1,24 @@
+{
+  "name": "speckit-pro",
+  "version": "1.2.0",
+  "description": "Autonomous Spec-Driven Development powered by GitHub SpecKit. Includes SDD coaching, multi-spec project management, and a fully autonomous workflow executor with multi-agent clarification consensus.",
+  "author": {
+    "name": "Fredrick Gabelmann",
+    "url": "https://github.com/racecraft-lab"
+  },
+  "repository": "https://github.com/racecraft-lab/racecraft-plugins-public",
+  "license": "MIT",
+  "keywords": ["speckit", "sdd", "spec-driven-development", "specification", "planning", "autopilot", "autonomous", "workflow"],
+  "skills": "./codex-skills/",
+  "interface": {
+    "displayName": "SpecKit Pro",
+    "shortDescription": "Spec-Driven Development with autonomous workflow execution",
+    "longDescription": "Autonomous SDD powered by GitHub SpecKit. Includes methodology coaching, multi-spec project management, and a fully autonomous 7-phase workflow executor with multi-agent clarification consensus.",
+    "developerName": "Racecraft Lab",
+    "category": "Coding",
+    "capabilities": ["Interactive", "Read", "Write"],
+    "websiteURL": "https://github.com/racecraft-lab/racecraft-plugins-public",
+    "defaultPrompt": "Use SpecKit Pro to coach me through Spec-Driven Development, set up a new spec, or run an autonomous SDD workflow",
+    "brandColor": "#6366F1"
+  }
+}

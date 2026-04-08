@@ -1,0 +1,16 @@
+interface:
+  display_name: "SpecKit Autopilot"
+  short_description: "Autonomous 7-phase SDD workflow executor"
+  default_prompt: "Run a SpecKit autopilot workflow from a populated workflow file"
+
+policy:
+  allow_implicit_invocation: false
+
+dependencies:
+  tools:
+    - type: mcp
+      value: tavily
+      description: "Web search for consensus research"
+    - type: mcp
+      value: context7
+      description: "Library documentation lookup"

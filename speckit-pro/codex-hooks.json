@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v specify >/dev/null 2>&1 || echo 'speckit-pro: WARNING — SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git'",
+            "statusMessage": "Checking SpecKit CLI availability"
+          }
+        ]
+      }
+    ]
+  }
+}

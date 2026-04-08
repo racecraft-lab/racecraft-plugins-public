@@ -423,5 +423,37 @@ set_test "consensus-synthesizer maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
 
+# ─────────────────────────────────────────
+# Codex Agent Sandbox Mode Validation
+# ─────────────────────────────────────────
+
+CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
+
+if [ -d "$CODEX_AGENTS_DIR" ]; then
+
+  section "Codex Agent Sandbox Mode Scoping"
+
+  # Read-only analysts must have sandbox_mode: read-only
+  for agent in codebase-analyst spec-context-analyst domain-researcher; do
+    AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.md"
+    if [ -f "$AGENT_FILE" ]; then
+      sandbox=$(extract_field "$AGENT_FILE" "sandbox_mode")
+      set_test "codex ${agent}: sandbox_mode is read-only"
+      assert_eq "read-only" "$sandbox" "${agent} must be read-only"
+    fi
+  done
+
+  # Write agents must have sandbox_mode: workspace-write
+  for agent in clarify-executor checklist-executor analyze-executor implement-executor phase-executor; do
+    AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.md"
+    if [ -f "$AGENT_FILE" ]; then
+      sandbox=$(extract_field "$AGENT_FILE" "sandbox_mode")
+      set_test "codex ${agent}: sandbox_mode is workspace-write"
+      assert_eq "workspace-write" "$sandbox" "${agent} must be workspace-write"
+    fi
+  done
+
+fi
+
 # ===========================================================================
 test_summary
