@@ -108,7 +108,7 @@ jobs:
             exit 2
           fi
 
-          bash tests/run-all.sh
+          bash tests/run-all.sh --codex
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate PR title against Conventional Commits format
