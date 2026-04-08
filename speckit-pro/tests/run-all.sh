@@ -31,6 +31,7 @@ RUN_LIVE=false
 RUN_LAYER=""
 RUN_ALL=false
 CI_MODE=false
+RUN_CODEX=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -38,6 +39,7 @@ while [ $# -gt 0 ]; do
     --layer) RUN_LAYER="$2"; shift 2 ;;
     --all) RUN_ALL=true; RUN_LIVE=true; shift ;;
     --ci) CI_MODE=true; shift ;;
+    --codex) RUN_CODEX=true; shift ;;
     --verbose) export VERBOSE=true; shift ;;
     *) echo "Unknown flag: $1"; exit 2 ;;
   esac
@@ -141,6 +143,17 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-hooks.sh" \
     "$TESTS_DIR/layer1-structural/validate-scripts.sh" \
     "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh"
+
+  # Codex structural tests (run with --codex or --all)
+  if [ "$RUN_CODEX" = "true" ] || [ "$RUN_ALL" = "true" ]; then
+    run_layer 1 "Codex Structural Validation" \
+      "$TESTS_DIR/layer1-structural/validate-codex-plugin.sh" \
+      "$TESTS_DIR/layer1-structural/validate-codex-marketplace.sh" \
+      "$TESTS_DIR/layer1-structural/validate-codex-agents.sh" \
+      "$TESTS_DIR/layer1-structural/validate-codex-skills.sh" \
+      "$TESTS_DIR/layer1-structural/validate-codex-hooks.sh" \
+      "$TESTS_DIR/layer1-structural/validate-codex-parity.sh"
+  fi
 fi
 
 # ─────────────────────────────────────────
