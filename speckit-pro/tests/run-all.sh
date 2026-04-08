@@ -152,6 +152,7 @@ if should_run 1; then
       "$TESTS_DIR/layer1-structural/validate-codex-agents.sh" \
       "$TESTS_DIR/layer1-structural/validate-codex-skills.sh" \
       "$TESTS_DIR/layer1-structural/validate-codex-hooks.sh" \
+      "$TESTS_DIR/layer1-structural/validate-codex-commands.sh" \
       "$TESTS_DIR/layer1-structural/validate-codex-parity.sh"
   fi
 fi

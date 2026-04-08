@@ -104,6 +104,40 @@ else
 fi
 
 # ===========================================================================
+# Command Parity — CC commands → Codex commands
+# ===========================================================================
+section "Command Parity (CC → Codex)"
+
+COMMANDS_DIR="$PLUGIN_ROOT/commands"
+CODEX_COMMANDS_DIR="$PLUGIN_ROOT/codex-commands"
+
+if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_COMMANDS_DIR" ]; then
+  for cc_cmd_file in "$COMMANDS_DIR"/*.md; do
+    [ -f "$cc_cmd_file" ] || continue
+    cmd_name=$(basename "$cc_cmd_file" .md)
+    set_test "codex-commands/${cmd_name}.md exists for CC command"
+    assert_file_exists "$CODEX_COMMANDS_DIR/${cmd_name}.md"
+  done
+else
+  set_test "commands/ and codex-commands/ directories exist"
+  _fail "one or both command directories missing (CC: $COMMANDS_DIR, Codex: $CODEX_COMMANDS_DIR)"
+fi
+
+# ===========================================================================
+# Command Parity — Codex commands → CC commands
+# ===========================================================================
+section "Command Parity (Codex → CC)"
+
+if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_COMMANDS_DIR" ]; then
+  for codex_cmd_file in "$CODEX_COMMANDS_DIR"/*.md; do
+    [ -f "$codex_cmd_file" ] || continue
+    cmd_name=$(basename "$codex_cmd_file" .md)
+    set_test "commands/${cmd_name}.md exists for Codex command"
+    assert_file_exists "$COMMANDS_DIR/${cmd_name}.md"
+  done
+fi
+
+# ===========================================================================
 # Shared Reference Integrity — Codex skills reference CC references/
 # ===========================================================================
 section "Shared Reference Integrity"
