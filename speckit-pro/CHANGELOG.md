@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.3.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.2.0...speckit-pro-v1.3.0) (2026-04-08)
+
+
+### Features
+
+* **speckit-pro:** add Codex CLI agent definitions with model mapping ([9545bd0](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9545bd050d0f6217fc8330a8e7083aa83b8eb9fb))
+* **speckit-pro:** add Codex CLI autopilot skill with shared references and scripts ([2caf3eb](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2caf3ebddb7f51e8a1f4daf18944433701bc367d))
+* **speckit-pro:** add Codex CLI coach skill with shared references ([7e6ee96](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7e6ee96cc33a8709590d2e02dbf79b3ba1d981e3))
+* **speckit-pro:** add Codex CLI plugin manifest and marketplace registry ([2a1bac2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2a1bac271c29c2d8d032ca403d02be1e17e316b3))
+* **speckit-pro:** add Codex CLI SessionStart hook ([57c1f08](https://github.com/racecraft-lab/racecraft-plugins-public/commit/57c1f08401fa54d5ff261cc79408f01f09d93ed0))
+* **speckit-pro:** add OpenAI Codex CLI compatibility ([14cba27](https://github.com/racecraft-lab/racecraft-plugins-public/commit/14cba270ff5652b2759a20890fd259c5b441abb2))
+
+
+### Bug Fixes
+
+* **speckit-pro:** address PR review — set -e safety, CLAUDE_PLUGIN_ROOT, CC-only agents ([b3c6a03](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b3c6a033148cebeb27515a540609cccd2bd80bc8))
+* **speckit-pro:** address PR review — x_high reasoning effort, CC-only paths, CC-only flags ([225876b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/225876b410dd1d30e31e60f85ecebf2ef00dae09))
+
 ## [1.2.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.1.0...speckit-pro-v1.2.0) (2026-04-04)
 
 
