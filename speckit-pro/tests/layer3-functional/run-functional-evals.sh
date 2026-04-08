@@ -36,7 +36,13 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SKILL="${1:-speckit-coach}"
 
 EVAL_FILE="$PLUGIN_ROOT/tests/layer3-functional/evals/${SKILL}-evals.json"
-SKILL_PATH="$PLUGIN_ROOT/skills/${SKILL}"
+if [ -d "$PLUGIN_ROOT/skills/${SKILL}" ]; then
+  SKILL_PATH="$PLUGIN_ROOT/skills/${SKILL}"
+elif [ -d "$PLUGIN_ROOT/codex-skills/${SKILL}" ]; then
+  SKILL_PATH="$PLUGIN_ROOT/codex-skills/${SKILL}"
+else
+  SKILL_PATH=""
+fi
 
 if [ ! -f "$EVAL_FILE" ]; then
   echo "ERROR: Eval file not found: $EVAL_FILE" >&2
@@ -47,8 +53,11 @@ if [ ! -f "$EVAL_FILE" ]; then
   exit 1
 fi
 
-if [ ! -d "$SKILL_PATH" ]; then
-  echo "ERROR: Skill not found: $SKILL_PATH" >&2
+if [ -z "$SKILL_PATH" ] || [ ! -d "$SKILL_PATH" ]; then
+  echo "ERROR: Skill not found for requested skill '$SKILL'." >&2
+  echo "Searched locations:" >&2
+  echo "  - $PLUGIN_ROOT/skills/${SKILL}" >&2
+  echo "  - $PLUGIN_ROOT/codex-skills/${SKILL}" >&2
   exit 1
 fi
 

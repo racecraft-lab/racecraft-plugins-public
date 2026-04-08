@@ -101,6 +101,9 @@ for skill in "${SKILLS[@]}"; do
         _fail "corresponding Claude command not found at commands/resolve-pr.md"
       fi
       ;;
+    *)
+      _fail "no corresponding source artifact mapping defined for skill '$skill'; update validate-codex-skills.sh"
+      ;;
   esac
 done
 

@@ -125,6 +125,9 @@ if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
     set_test "codex-skills/${skill_name}/SKILL.md exists for CC command ${cmd_name}"
     assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
   done
+else
+  set_test "commands/ and codex-skills/ directories exist for command coverage"
+  _fail "one or both directories missing (commands: $COMMANDS_DIR, codex-skills: $CODEX_SKILLS_DIR)"
 fi
 
 # ===========================================================================
@@ -145,6 +148,9 @@ if [ -d "$CODEX_SKILLS_DIR" ]; then
       assert_file_exists "$COMMANDS_DIR/${cmd_name}.md"
     fi
   done
+else
+  set_test "codex-skills/ directory exists for source coverage"
+  _fail "codex-skills directory missing: $CODEX_SKILLS_DIR"
 fi
 
 # ===========================================================================
