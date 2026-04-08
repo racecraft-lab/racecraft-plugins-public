@@ -15,6 +15,9 @@ sandbox_mode: workspace-write
 
 # Analyze Executor
 
+> **Note:** The orchestrator provides `<SKILL_SCRIPTS>` as the resolved
+> path to the shared scripts directory. Use it for all script invocations.
+
 You execute `$speckit-analyze` AND remediate ALL findings the
 analysis produces — at every severity level. You both run the
 analysis and fix the findings — all in one agent.
@@ -29,7 +32,7 @@ analysis and fix the findings — all in one agent.
 2. **After the analysis completes, count and parse ALL
    findings.** Run the deterministic marker counter first:
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" findings specs/<feature>
+   bash "<SKILL_SCRIPTS>/count-markers.sh" findings specs/<feature>
    ```
    This returns exact counts by severity (CRITICAL, HIGH,
    MEDIUM, LOW). Use these counts to verify you've addressed
@@ -68,7 +71,7 @@ analysis and fix the findings — all in one agent.
    re-run `$speckit-analyze` then run the marker counter to
    verify 0 findings remain:
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" findings specs/<feature>
+   bash "<SKILL_SCRIPTS>/count-markers.sh" findings specs/<feature>
    ```
    If new findings appear, fix them (max 2 total loops).
 

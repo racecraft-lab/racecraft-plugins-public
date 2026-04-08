@@ -30,13 +30,12 @@ set_test "name field exists"
 assert_json_field_exists "$CONTENT" "name"
 
 set_test "plugins array exists"
-printf '%s' "$CONTENT" | python3 -c "
+if printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 plugins = data['plugins']
 assert isinstance(plugins, list), 'plugins must be an array'
-" 2>/dev/null
-if [ $? -eq 0 ]; then
+" 2>/dev/null; then
   _pass
 else
   _fail "plugins field is missing or not an array"
@@ -77,13 +76,12 @@ fi
 section ".agents/plugins/marketplace.json — Policy"
 
 set_test "policy.installation field exists"
-printf '%s' "$CONTENT" | python3 -c "
+if printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 val = data['plugins'][0]['policy']['installation']
 assert val, 'policy.installation must not be empty'
-" 2>/dev/null
-if [ $? -eq 0 ]; then
+" 2>/dev/null; then
   _pass
 else
   _fail "policy.installation field is missing or empty"

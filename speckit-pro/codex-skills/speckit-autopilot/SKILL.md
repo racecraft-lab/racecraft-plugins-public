@@ -426,11 +426,11 @@ for phase in PHASES starting from first_pending:
        → apply consensus rules → edit artifacts
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
-    7. Validate gate via gate-validator agent:
-       Spawn the gate-validator agent with instructions to
-       validate gate G<N> for the feature at <feature_dir>
-       using the script at '<SKILL_SCRIPTS>/validate-gate.sh'.
-       Parse the agent's Gate Result for PASS/FAIL status.
+    7. Validate gate directly in the main session:
+       Run '<SKILL_SCRIPTS>/validate-gate.sh' for gate G<N>
+       against <feature_dir> from the orchestrator using the
+       resolved scripts path for this skill.
+       Parse the script output for PASS/FAIL status.
     8. If gate fails:
        a. Attempt auto-fix (max 2 attempts)
        b. If still failing and gate-failure == "stop": STOP
@@ -576,10 +576,10 @@ If no unresolved items → skip to next prompt/gate.
 For each unresolved item, spawn these three agents in parallel:
 codebase-analyst, spec-context-analyst, and domain-researcher.
 Each receives the same unresolved item with their perspective-specific
-framing. Wait for all three to complete, then spawn the
-consensus-synthesizer agent to combine their responses. Parse
-the Consensus Result — if it flags `[HUMAN REVIEW NEEDED]`, STOP.
-Otherwise apply the artifact edit and log the result in the
+framing. Wait for all three to complete, then synthesize their
+responses in the main orchestrator session into a single Consensus
+Result. If the synthesized result flags `[HUMAN REVIEW NEEDED]`,
+STOP. Otherwise apply the artifact edit and log the result in the
 Consensus Resolution Log in the workflow file.
 
 Mark the consensus progress item completed when done.

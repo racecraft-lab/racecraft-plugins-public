@@ -14,6 +14,9 @@ sandbox_mode: workspace-write
 
 # Checklist Executor
 
+> **Note:** The orchestrator provides `<SKILL_SCRIPTS>` as the resolved
+> path to the shared scripts directory. Use it for all script invocations.
+
 You execute a single `$speckit-checklist` domain AND remediate
 any `[Gap]` markers the checklist produces. You both run the
 checklist and fix the gaps — all in one agent.
@@ -28,7 +31,7 @@ checklist and fix the gaps — all in one agent.
 2. **After the checklist completes, count [Gap] markers
    deterministically.** Run the marker counter:
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" gaps specs/<feature>
+   bash "<SKILL_SCRIPTS>/count-markers.sh" gaps specs/<feature>
    ```
    This returns exact counts across spec.md, plan.md, and
    checklist files. Use these counts to verify you've
@@ -64,7 +67,7 @@ checklist and fix the gaps — all in one agent.
    re-run the same `$speckit-checklist` domain then run the
    marker counter to verify gaps are closed:
    ```bash
-   bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" gaps specs/<feature>
+   bash "<SKILL_SCRIPTS>/count-markers.sh" gaps specs/<feature>
    ```
    If new gaps appear, fix them (max 2 total loops).
 
