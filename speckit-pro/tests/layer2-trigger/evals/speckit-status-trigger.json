@@ -1,0 +1,30 @@
+[
+  {
+    "query": "show roadmap status for the project and tell me which spec is unblocked next",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the current SpecKit progress? I want the active workflows, blockers, and next recommendation",
+    "should_trigger": true
+  },
+  {
+    "query": "status of SPEC-013 please. I need to know which phases are complete and what the next phase is",
+    "should_trigger": true
+  },
+  {
+    "query": "set up SPEC-009 from the technical roadmap for autopilot",
+    "should_trigger": false
+  },
+  {
+    "query": "run the workflow at docs/ai/specs/SPEC-013-workflow.md through all 7 phases",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the review comments on PR #42 and resolve the threads",
+    "should_trigger": false
+  },
+  {
+    "query": "explain the consensus protocol and how the voting works",
+    "should_trigger": false
+  }
+]

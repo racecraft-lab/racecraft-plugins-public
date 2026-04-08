@@ -1,0 +1,38 @@
+{
+  "skill_name": "speckit-setup",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Set up SPEC-009 from the technical roadmap so it is ready for the autopilot. I want the worktree branch created, the workflow template copied, and the prompts populated from the roadmap.",
+      "expected_output": "Explains or performs the setup flow by locating the roadmap entry, creating or reusing the worktree branch, generating the workflow file from the shared template, and stopping after the workflow is committed and pushed.",
+      "expectations": [
+        "Mentions locating the technical roadmap and the requested SPEC-ID entry",
+        "Mentions creating or reusing a dedicated worktree branch",
+        "Mentions copying the shared workflow template into docs/ai/specs/",
+        "Mentions populating the workflow prompts from roadmap scope and constraints",
+        "Mentions that the next step is to run $speckit-autopilot rather than executing it immediately"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to prepare SPEC-014, but the branch may already exist remotely because someone started it earlier. How should the setup flow handle that safely?",
+      "expected_output": "Reuses an existing branch or worktree when possible, verifies the active branch, and avoids creating duplicate worktrees or pushing to main.",
+      "expectations": [
+        "Mentions checking whether the branch already exists locally or remotely",
+        "Mentions reusing an existing worktree if it is already present",
+        "Mentions verifying the active branch inside the worktree",
+        "States that setup must never commit or push main"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "SPEC-031 is not in the roadmap file I found. What should the setup skill do instead of guessing the missing prompts?",
+      "expected_output": "Stops and reports that the SPEC-ID is missing from the roadmap instead of inventing scope, prompts, or workflow content.",
+      "expectations": [
+        "States that the missing SPEC-ID is a blocking issue",
+        "Does not invent roadmap details or workflow prompts",
+        "Suggests fixing the roadmap or using $speckit-coach for roadmap guidance"
+      ]
+    }
+  ]
+}

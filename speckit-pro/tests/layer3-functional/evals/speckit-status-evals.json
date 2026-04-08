@@ -1,0 +1,37 @@
+{
+  "skill_name": "speckit-status",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Show me the current SpecKit project status. I want the roadmap totals, any active workflow phases, blockers, and which spec is the best next candidate.",
+      "expected_output": "Builds a unified dashboard from roadmap and workflow files, then recommends the highest-priority unblocked next spec.",
+      "expectations": [
+        "Mentions both technical roadmaps and workflow files as data sources",
+        "Summarizes complete, active, pending, or blocked work",
+        "Mentions phase-level detail for active workflows",
+        "Includes a recommended next spec based on blockers and priority"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Status of SPEC-013 please. I need the current phase, blockers, and the next action if the workflow file already exists.",
+      "expected_output": "Provides a spec-specific status view with roadmap context, workflow phase detail if present, and the next concrete action.",
+      "expectations": [
+        "Mentions the spec-specific view for the requested SPEC-ID",
+        "Mentions current phase or workflow phase detail if a workflow exists",
+        "Mentions blockers or dependency state",
+        "Includes the next concrete action"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "What should the status skill do if there is no technical roadmap but there are a few workflow files in the repo?",
+      "expected_output": "Reports workflow-based phase detail while noting that backlog visibility is incomplete without a roadmap.",
+      "expectations": [
+        "States that the roadmap is missing",
+        "Explains that workflow files can still provide phase detail",
+        "Notes that the full backlog or recommendation quality is limited without the roadmap"
+      ]
+    }
+  ]
+}

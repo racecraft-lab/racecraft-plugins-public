@@ -1,7 +1,7 @@
 {
   "name": "speckit-pro",
   "version": "1.3.0",
-  "description": "Autonomous Spec-Driven Development powered by GitHub SpecKit. Includes SDD coaching, multi-spec project management, and a fully autonomous workflow executor with multi-agent clarification consensus.",
+  "description": "Skill-backed Spec-Driven Development workflows for Codex, including coaching, setup, autopilot execution, status dashboards, and PR review resolution.",
   "author": {
     "name": "Fredrick Gabelmann",
     "url": "https://github.com/racecraft-lab"
@@ -21,8 +21,8 @@
   "skills": "./codex-skills/",
   "interface": {
     "displayName": "SpecKit Pro",
-    "shortDescription": "Spec-Driven Development with autonomous workflow execution",
-    "longDescription": "Autonomous SDD powered by GitHub SpecKit. Includes methodology coaching, multi-spec project management, and a fully autonomous 7-phase workflow executor with multi-agent clarification consensus.",
+    "shortDescription": "Skill-backed SDD workflows for Codex",
+    "longDescription": "Skill-backed Spec-Driven Development for Codex. Install explicit slash-command entrypoints for coaching, setup, autopilot execution, status dashboards, and PR review remediation.",
     "developerName": "Racecraft Lab",
     "category": "Coding",
     "capabilities": [
@@ -31,7 +31,7 @@
       "Write"
     ],
     "websiteURL": "https://github.com/racecraft-lab/racecraft-plugins-public",
-    "defaultPrompt": "Use SpecKit Pro to coach me through Spec-Driven Development, set up a new spec, or run an autonomous SDD workflow",
+    "defaultPrompt": "Use SpecKit Pro to coach SDD, set up a spec, run autopilot, check status, or resolve PR feedback",
     "brandColor": "#6366F1"
   }
 }

@@ -72,11 +72,11 @@
     {
       "id": 7,
       "prompt": "Can you just run the full autopilot for me right now on SPEC-025? I have the workflow file ready at docs/ai/specs/SPEC-025-workflow.md.",
-      "expected_output": "Redirects to /speckit-pro:autopilot as the correct command. The coach does not execute the autopilot itself.",
+      "expected_output": "Redirects to $speckit-autopilot as the correct Codex entrypoint. The coach does not execute the autopilot itself.",
       "expectations": [
         "Does NOT attempt to execute the autopilot workflow itself",
-        "Redirects the user to /speckit-pro:autopilot as the correct command",
-        "Mentions /speckit-pro:setup OR correctly assumes the workflow file exists since the user stated they have it",
+        "Redirects the user to $speckit-autopilot as the correct entrypoint",
+        "Mentions $speckit-setup OR correctly assumes the workflow file exists since the user stated they have it",
         "Provides brief guidance on what to expect when running the autopilot"
       ]
     },
@@ -93,13 +93,35 @@
     },
     {
       "id": 9,
-      "prompt": "I want to understand the workflow file that /speckit-pro:setup creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
+      "prompt": "I want to understand the workflow file that $speckit-setup creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
       "expected_output": "Describes the workflow file structure: overview table with 7 phases, status tracking, SPEC-ID, feature branch, and configuration.",
       "expectations": [
         "Describes the workflow overview table showing all 7 phases with status columns",
         "Mentions the SPEC-ID and feature branch fields",
-        "Explains that /speckit-pro:setup auto-populates the file from the technical roadmap",
+        "Explains that $speckit-setup auto-populates the file from the technical roadmap",
         "References the workflow file location pattern (docs/ai/specs/SPEC-NNN-workflow.md)"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "I want to see the current roadmap progress and which spec is unblocked next. Which SpecKit entrypoint should I use in Codex and what will it show me?",
+      "expected_output": "Redirects to $speckit-status as the correct Codex skill and explains that it summarizes roadmap progress, active workflows, blockers, and the next recommendation.",
+      "expectations": [
+        "Redirects the user to $speckit-status",
+        "Mentions roadmap progress, active workflows, or phase status",
+        "Mentions blockers or dependency status",
+        "Mentions that the skill recommends the next unblocked spec"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "I need to address review comments on PR #42 and resolve the open threads after the fixes are pushed. Which SpecKit entrypoint should I use in Codex?",
+      "expected_output": "Redirects to $speckit-resolve-pr as the correct Codex skill and explains that it fixes code, verifies the branch, replies to review comments, and resolves threads.",
+      "expectations": [
+        "Redirects the user to $speckit-resolve-pr",
+        "Mentions that the skill addresses review comments on a PR",
+        "Mentions verification such as tests, typecheck, or build",
+        "Mentions resolving review threads after the fixes"
       ]
     }
   ]

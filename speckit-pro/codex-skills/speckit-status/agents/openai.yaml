@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecKit Status"
+  short_description: "Show roadmap progress and the next recommended spec"
+  default_prompt: "Show the current SpecKit roadmap status and recommend the next spec to start"
+
+policy:
+  allow_implicit_invocation: true

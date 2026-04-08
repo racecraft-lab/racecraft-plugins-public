@@ -1,6 +1,6 @@
 # speckit-pro
 
-Autonomous Spec-Driven Development plugin for Claude Code, powered by [GitHub SpecKit](https://github.com/github/spec-kit).
+Autonomous Spec-Driven Development plugin for Claude Code and Codex, powered by [GitHub SpecKit](https://github.com/github/spec-kit).
 
 ## Overview
 
@@ -8,12 +8,26 @@ speckit-pro turns feature descriptions into production code through a structured
 
 The plugin runs autonomously. You provide a feature description, and it handles the rest — spawning specialized agents for research, running multi-agent consensus to resolve ambiguities, validating gates between phases, and implementing with strict TDD. The result is a PR with tests, implementation, and a full paper trail of design decisions.
 
-Two skills are packaged in this plugin:
+This plugin ships different entrypoint surfaces for the two platforms:
 
-- **speckit-coach** — SDD methodology coaching, per-command guidance, technical roadmap creation, workflow tracking, and plugin usage guidance
-- **speckit-autopilot** — Autonomous workflow executor with programmatic gate validation, multi-agent consensus resolution, and auto-commits
+- **Claude Code** — 2 bundled skills plus 5 `/speckit-pro:*` commands
+- **Codex** — 5 bundled skills that surface as slash commands and explicit skill invocations
 
-## Commands
+## Codex Entry Points
+
+Codex does not load the Anthropic `commands/` files from this repository. In Codex, use the skill-backed entrypoints below:
+
+| Capability | Claude Code | Codex |
+| ---------- | ----------- | ----- |
+| Coaching | `/speckit-pro:coach` | `/speckit-coach` or `$speckit-coach` |
+| Setup | `/speckit-pro:setup` | `/speckit-setup` or `$speckit-setup` |
+| Autopilot | `/speckit-pro:autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
+| Status | `/speckit-pro:status` | `/speckit-status` or `$speckit-status` |
+| Review remediation | `/speckit-pro:resolve-pr` | `/speckit-resolve-pr` or `$speckit-resolve-pr` |
+
+You can also type `@SpecKit Pro` in Codex and then choose the bundled skill you want.
+
+## Claude Code Commands
 
 ### `/speckit-pro:coach`
 
@@ -227,7 +241,7 @@ auto-commit: per-phase      # per-phase | batch | none
 
 - **Write a constitution first**: The constitution defines your project principles — every spec is validated against it
 - **Review workflow prompts before autopilot**: More context in the prompts = better output
-- **Start with `/speckit-pro:coach`**: Ask questions before running the autopilot
+- **Start with the coaching entrypoint**: Use `/speckit-pro:coach` in Claude Code or `/speckit-coach` in Codex before running the autopilot
 - **Use technical roadmaps for multi-spec projects**: Decompose large features into sequential specs with dependency graphs
 - **Trust the gates**: If a gate fails, the spec has a real gap — fix it rather than skipping
 - **Run in `acceptEdits` mode**: Plugin agents inherit the parent session's permission mode (see Troubleshooting)
@@ -299,7 +313,7 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 **Issue:** The autopilot fails because workflow prompts still contain `<!-- ... -->` placeholders.
 
-**Solution:** Run `/speckit-pro:setup <SPEC-ID>` to auto-populate the workflow file from your technical roadmap. If you're creating the workflow manually, fill in all phase prompts before running the autopilot.
+**Solution:** Run the setup entrypoint for your platform to auto-populate the workflow file from your technical roadmap: `/speckit-pro:setup <SPEC-ID>` in Claude Code or `/speckit-setup <SPEC-ID>` in Codex. If you're creating the workflow manually, fill in all phase prompts before running the autopilot.
 
 ## Installation
 

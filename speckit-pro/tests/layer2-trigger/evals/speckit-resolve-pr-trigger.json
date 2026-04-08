@@ -1,0 +1,30 @@
+[
+  {
+    "query": "resolve the review comments on PR #42, push the fixes, and close the open threads",
+    "should_trigger": true
+  },
+  {
+    "query": "address all unresolved feedback on https://github.com/owner/repo/pull/46 and mark the review threads resolved after verification",
+    "should_trigger": true
+  },
+  {
+    "query": "I need you to fix the code review comments on the current pull request branch and reply to each thread with what changed",
+    "should_trigger": true
+  },
+  {
+    "query": "show me the current roadmap progress and tell me which spec to start next",
+    "should_trigger": false
+  },
+  {
+    "query": "set up SPEC-009 so it's ready for autopilot",
+    "should_trigger": false
+  },
+  {
+    "query": "run the autopilot workflow at docs/ai/specs/SPEC-009-workflow.md",
+    "should_trigger": false
+  },
+  {
+    "query": "walk me through how SpecKit clarify works",
+    "should_trigger": false
+  }
+]

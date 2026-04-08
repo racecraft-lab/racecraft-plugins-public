@@ -2,7 +2,7 @@
 # run-all.sh — speckit-pro plugin test suite orchestrator
 #
 # Usage:
-#   tests/run-all.sh              # Layers 1, 4, 5 (deterministic, synthetic)
+#   tests/run-all.sh              # Layers 1, 4, 5 (Claude + Codex structural coverage)
 #   tests/run-all.sh --live       # Layers 1, 4, 5 + live project tests
 #   tests/run-all.sh --layer 2    # Layer 2 only (trigger evals, requires claude -p)
 #   tests/run-all.sh --layer 3    # Layer 3 only (functional evals, requires claude -p)
@@ -144,17 +144,14 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-scripts.sh" \
     "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh"
 
-  # Codex structural tests (run with --codex or --all)
-  if [ "$RUN_CODEX" = "true" ] || [ "$RUN_ALL" = "true" ]; then
-    run_layer 1 "Codex Structural Validation" \
-      "$TESTS_DIR/layer1-structural/validate-codex-plugin.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-marketplace.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-agents.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-skills.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-hooks.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-commands.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-parity.sh"
-  fi
+  # Codex structural tests are part of the default layer 1 run.
+  run_layer 1 "Codex Structural Validation" \
+    "$TESTS_DIR/layer1-structural/validate-codex-plugin.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-marketplace.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-agents.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-skills.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-hooks.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-parity.sh"
 fi
 
 # ─────────────────────────────────────────
@@ -166,9 +163,11 @@ if should_run 2; then
   if [ -f "$SKILL_CREATOR/scripts/run_eval.py" ]; then
     printf "\n${BOLD}${CYAN}Layer 2: Trigger Evaluation${RESET}\n"
     printf "%s\n" "────────────────────────────────────────"
-    printf "  Run manually:\n"
-    printf "    ${BOLD}bash %s/tests/layer2-trigger/run-trigger-evals.sh speckit-coach${RESET}\n" "$PLUGIN_ROOT"
-    printf "    ${BOLD}bash %s/tests/layer2-trigger/run-trigger-evals.sh speckit-autopilot${RESET}\n" "$PLUGIN_ROOT"
+    printf "  Run manually for any trigger eval set in tests/layer2-trigger/evals/:\n"
+    find "$PLUGIN_ROOT/tests/layer2-trigger/evals" -maxdepth 1 -name '*-trigger.json' | sort | while read -r eval_file; do
+      skill_name=$(basename "$eval_file" -trigger.json)
+      printf "    ${BOLD}bash %s/tests/layer2-trigger/run-trigger-evals.sh %s${RESET}\n" "$PLUGIN_ROOT" "$skill_name"
+    done
   else
     printf "\n${YELLOW}Layer 2: SKIP — skill-creator not found at %s${RESET}\n" "$SKILL_CREATOR"
   fi
@@ -182,8 +181,9 @@ if should_run 3; then
   printf "\n${BOLD}${CYAN}Layer 3: Functional Evaluation${RESET}\n"
   printf "%s\n" "────────────────────────────────────────"
   printf "  Eval files:\n"
-  printf "    %s/tests/layer3-functional/evals/speckit-coach-evals.json\n" "$PLUGIN_ROOT"
-  printf "    %s/tests/layer3-functional/evals/speckit-autopilot-evals.json\n" "$PLUGIN_ROOT"
+  find "$PLUGIN_ROOT/tests/layer3-functional/evals" -maxdepth 1 -name '*-evals.json' | sort | while read -r eval_file; do
+    printf "    %s\n" "$eval_file"
+  done
   printf "  Run via skill-creator eval workflow or manually.\n"
 fi
 

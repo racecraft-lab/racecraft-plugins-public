@@ -2,7 +2,7 @@
 # run-functional-evals.sh — Run Layer 3 functional evals for speckit-pro skills
 #
 # Usage: run-functional-evals.sh [skill-name]
-#   skill-name: speckit-autopilot | speckit-coach (default: speckit-coach)
+#   skill-name: any skill with a matching tests/layer3-functional/evals/<skill>-evals.json
 #
 # Functional evals test whether the skill produces correct, complete responses
 # when invoked with realistic prompts. Unlike trigger evals (Layer 2), these
@@ -33,7 +33,13 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SKILL="${1:-speckit-coach}"
 
 EVAL_FILE="$PLUGIN_ROOT/tests/layer3-functional/evals/${SKILL}-evals.json"
-SKILL_PATH="$PLUGIN_ROOT/skills/${SKILL}"
+if [ -d "$PLUGIN_ROOT/skills/${SKILL}" ]; then
+  SKILL_PATH="$PLUGIN_ROOT/skills/${SKILL}"
+elif [ -d "$PLUGIN_ROOT/codex-skills/${SKILL}" ]; then
+  SKILL_PATH="$PLUGIN_ROOT/codex-skills/${SKILL}"
+else
+  SKILL_PATH=""
+fi
 
 if [ ! -f "$EVAL_FILE" ]; then
   echo "ERROR: Eval file not found: $EVAL_FILE" >&2
@@ -44,7 +50,7 @@ if [ ! -f "$EVAL_FILE" ]; then
   exit 1
 fi
 
-if [ ! -d "$SKILL_PATH" ]; then
+if [ -z "$SKILL_PATH" ] || [ ! -d "$SKILL_PATH" ]; then
   echo "ERROR: Skill not found: $SKILL_PATH" >&2
   exit 1
 fi
@@ -64,8 +70,8 @@ echo "Skill path: $SKILL_PATH"
 echo "Eval count: $EVAL_COUNT"
 echo ""
 echo "To run manually:"
-echo "  1. Start a Claude session"
-echo "  2. Invoke /$SKILL"
+echo "  1. Start a session that can load the target skill"
+echo "  2. Invoke /$SKILL or explicitly load \$$SKILL"
 echo "  3. Send each prompt from the evals JSON"
 echo "  4. Verify responses match the expectations"
 echo ""

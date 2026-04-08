@@ -6,8 +6,7 @@ source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
-CC_SKILLS_DIR="$PLUGIN_ROOT/skills"
-SKILLS=(speckit-autopilot speckit-coach)
+SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
 CC_ONLY_KEYS=(user-invokable license argument-hint)
@@ -72,12 +71,37 @@ for skill in "${SKILLS[@]}"; do
     _fail "body is $word_count words (need 500-8000)"
   fi
 
-  set_test "${skill}: corresponding CC skill exists in skills/"
-  if [ -f "$CC_SKILLS_DIR/$skill/SKILL.md" ]; then
-    _pass
-  else
-    _fail "corresponding CC skill not found at skills/$skill/SKILL.md"
-  fi
+  set_test "${skill}: corresponding source artifact exists"
+  case "$skill" in
+    speckit-autopilot|speckit-coach)
+      if [ -f "$PLUGIN_ROOT/skills/$skill/SKILL.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude skill not found at skills/$skill/SKILL.md"
+      fi
+      ;;
+    speckit-setup)
+      if [ -f "$PLUGIN_ROOT/commands/setup.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude command not found at commands/setup.md"
+      fi
+      ;;
+    speckit-status)
+      if [ -f "$PLUGIN_ROOT/commands/status.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude command not found at commands/status.md"
+      fi
+      ;;
+    speckit-resolve-pr)
+      if [ -f "$PLUGIN_ROOT/commands/resolve-pr.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude command not found at commands/resolve-pr.md"
+      fi
+      ;;
+  esac
 done
 
 test_summary

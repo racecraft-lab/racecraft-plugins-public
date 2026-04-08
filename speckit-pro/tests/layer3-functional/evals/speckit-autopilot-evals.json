@@ -112,10 +112,10 @@
     {
       "id": 10,
       "prompt": "I'm new to SDD. Can you explain the philosophy behind Spec-Driven Development and why each of the 7 phases matters? I want a deep dive into the methodology before I start using the autopilot.",
-      "expected_output": "Briefly answers or redirects to /speckit-pro:coach for methodology questions. The autopilot is an executor, not a methodology teacher.",
+      "expected_output": "Briefly answers or redirects to $speckit-coach for methodology questions. The autopilot is an executor, not a methodology teacher.",
       "expectations": [
         "Does NOT provide an extensive multi-page methodology lecture",
-        "Either briefly answers and redirects to /speckit-pro:coach for deeper guidance",
+        "Either briefly answers and redirects to $speckit-coach for deeper guidance",
         "Or provides a concise practical answer rather than philosophical deep-dive",
         "Acknowledges that the coach skill is the appropriate resource for methodology learning"
       ]

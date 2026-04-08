@@ -1,0 +1,37 @@
+{
+  "skill_name": "speckit-resolve-pr",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Resolve review comments on PR #42. Fix the code, verify the branch, reply to the reviewers, and resolve the open threads after pushing.",
+      "expected_output": "Processes unresolved review threads, applies the required fixes, runs verification, pushes the branch, replies to the comments, and resolves the threads.",
+      "expectations": [
+        "Mentions collecting unresolved review threads and their thread IDs",
+        "Mentions reading the referenced code before changing it",
+        "Mentions running verification such as build, typecheck, lint, or tests",
+        "Mentions replying to the review comments and resolving the threads",
+        "Mentions pushing the branch after the fixes are verified"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I only gave you PR number 46. How should the resolve-pr skill figure out which repository that belongs to and avoid making assumptions?",
+      "expected_output": "Detects the repository from git remotes instead of assuming origin or a hardcoded owner/repo pair.",
+      "expectations": [
+        "Mentions inspecting git remotes",
+        "States that the remote name must be detected rather than assumed",
+        "Mentions deriving owner/repo from the actual configured remote URL"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "One review comment is just asking why we kept the existing implementation. What should the resolve-pr skill do if no code change is needed?",
+      "expected_output": "Replies with a grounded explanation and resolves the thread only after confirming that no code change is required.",
+      "expectations": [
+        "States that a code change is not always required",
+        "Mentions replying with rationale when the implementation is already correct",
+        "Does not suggest changing code just to silence the comment"
+      ]
+    }
+  ]
+}

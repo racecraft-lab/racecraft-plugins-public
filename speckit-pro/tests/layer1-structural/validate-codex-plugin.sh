@@ -22,6 +22,7 @@ else
 fi
 
 CONTENT=$(cat "$CODEX_JSON")
+REQUIRED_SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr)
 
 section ".codex-plugin/plugin.json — Required Fields"
 
@@ -60,6 +61,18 @@ if [ -d "$PLUGIN_ROOT/codex-skills" ]; then
 else
   _fail "codex-skills/ directory not found at $PLUGIN_ROOT/codex-skills"
 fi
+
+for skill in "${REQUIRED_SKILLS[@]}"; do
+  set_test "codex-skills/$skill/ directory exists"
+  if [ -d "$PLUGIN_ROOT/codex-skills/$skill" ]; then
+    _pass
+  else
+    _fail "codex-skills/$skill/ directory not found"
+  fi
+
+  set_test "codex-skills/$skill/SKILL.md exists"
+  assert_file_exists "$PLUGIN_ROOT/codex-skills/$skill/SKILL.md"
+done
 
 section ".codex-plugin/plugin.json — Version Consistency"
 
