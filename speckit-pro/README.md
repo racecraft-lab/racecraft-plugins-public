@@ -334,7 +334,7 @@ Fredrick Gabelmann — [Racecraft Lab](https://github.com/racecraft-lab)
 
 ## Version
 
-1.1.0
+1.4.0
 
 ## License
 

@@ -12,6 +12,26 @@
     "should_trigger": true
   },
   {
+    "query": "the PR got review feedback — fix each comment and resolve the threads",
+    "should_trigger": true
+  },
+  {
+    "query": "go through every unresolved review thread on PR #88, make the code changes, and mark them resolved",
+    "should_trigger": true
+  },
+  {
+    "query": "handle the Copilot review suggestions on my pull request and push the updated code",
+    "should_trigger": true
+  },
+  {
+    "query": "I submitted a PR and got 5 review comments — address them all and close the threads",
+    "should_trigger": true
+  },
+  {
+    "query": "take care of the outstanding code review feedback on this branch's PR",
+    "should_trigger": true
+  },
+  {
     "query": "show me the current roadmap progress and tell me which spec to start next",
     "should_trigger": false
   },
@@ -25,6 +45,22 @@
   },
   {
     "query": "walk me through how SpecKit clarify works",
+    "should_trigger": false
+  },
+  {
+    "query": "show me roadmap progress and which spec is next",
+    "should_trigger": false
+  },
+  {
+    "query": "bootstrap SPEC-015 with a worktree and workflow template",
+    "should_trigger": false
+  },
+  {
+    "query": "explain how the autopilot consensus protocol works",
+    "should_trigger": false
+  },
+  {
+    "query": "what phase is SPEC-009 on right now?",
     "should_trigger": false
   }
 ]

@@ -33,6 +33,38 @@
         "Does not invent roadmap details or workflow prompts",
         "Suggests fixing the roadmap or using $speckit-coach for roadmap guidance"
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "SPEC-007 is already marked as In Progress in the roadmap and the worktree branch exists. Should the setup skill create a second worktree or reuse the existing one?",
+      "expected_output": "Reuses the existing worktree and branch instead of creating duplicates, and warns that the spec is already in progress.",
+      "expectations": [
+        "Mentions detecting that the spec is already in progress",
+        "States that the existing worktree or branch should be reused",
+        "Does not create a duplicate branch or worktree",
+        "Warns the user about the existing in-progress state"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Setup created the workflow file and committed it, but git push failed because the remote rejected the push. What should the setup skill report?",
+      "expected_output": "Reports exactly what succeeded and what failed so the user can resume without duplicating work.",
+      "expectations": [
+        "States that the push failed",
+        "Reports what was successfully created locally (branch, worktree, workflow file, commit)",
+        "Does not silently continue as if everything succeeded",
+        "Provides enough context for the user to manually push or retry"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "After the workflow template was populated, I notice it still has a SPEC_NAME placeholder left over. How should setup handle that?",
+      "expected_output": "Stops and reports that unresolved placeholders remain, rather than committing a partially populated workflow.",
+      "expectations": [
+        "Mentions checking for leftover placeholder tokens after population",
+        "States that the workflow must not be committed with unresolved placeholders",
+        "Reports which specific placeholders remain unresolved"
+      ]
     }
   ]
 }

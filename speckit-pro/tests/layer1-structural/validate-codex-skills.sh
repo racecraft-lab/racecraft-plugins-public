@@ -6,6 +6,8 @@ source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
+# Canonical skill list — keep in sync with the case block in the
+# "corresponding source artifact exists" test below.
 SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
@@ -71,6 +73,8 @@ for skill in "${SKILLS[@]}"; do
     _fail "body is $word_count words (need 500-8000)"
   fi
 
+  # Map each Codex skill to its Claude Code source artifact.
+  # When adding a new skill to the SKILLS array above, add a case branch here.
   set_test "${skill}: corresponding source artifact exists"
   case "$skill" in
     speckit-autopilot|speckit-coach)

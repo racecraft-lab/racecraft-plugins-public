@@ -41,8 +41,9 @@ else should be derived from the repository.
 - Create or reuse a dedicated worktree branch for the spec.
 - After the worktree exists, perform all file edits inside the worktree, not in
   the main checkout.
-- Use the shared workflow template at
-  `../../skills/speckit-coach/templates/workflow-template.md`.
+- Use the shared workflow template shipped with this plugin. Locate it at
+  `skills/speckit-coach/templates/workflow-template.md` relative to the
+  speckit-pro plugin root directory.
 - Do not leave placeholder tokens such as `SPEC_ID`, `SPEC_NAME`, or empty
   phase prompts in the generated workflow.
 - Do not run the autopilot at the end. Setup stops once the workflow is ready,

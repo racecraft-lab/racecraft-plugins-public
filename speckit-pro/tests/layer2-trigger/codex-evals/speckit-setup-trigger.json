@@ -12,6 +12,26 @@
     "should_trigger": true
   },
   {
+    "query": "bootstrap SPEC-022 for development — create the branch, worktree, and pre-fill the workflow template",
+    "should_trigger": true
+  },
+  {
+    "query": "initialize the workspace for SPEC-005 so I can run autopilot on it",
+    "should_trigger": true
+  },
+  {
+    "query": "create a new spec branch and workflow for SPEC-018 based on the technical roadmap entry",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to start working on SPEC-042. Set up the worktree and generate the workflow file from the roadmap",
+    "should_trigger": true
+  },
+  {
+    "query": "prep SPEC-011 — I need the branch created, workflow template filled out, and everything committed",
+    "should_trigger": true
+  },
+  {
     "query": "show me the current roadmap status and which spec is unblocked next",
     "should_trigger": false
   },
@@ -25,6 +45,22 @@
   },
   {
     "query": "walk me through Spec-Driven Development from scratch",
+    "should_trigger": false
+  },
+  {
+    "query": "how do I structure my technical roadmap for a multi-spec project?",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the progress on SPEC-009? which phases are done?",
+    "should_trigger": false
+  },
+  {
+    "query": "I want to understand how spec-driven development works before I start anything",
+    "should_trigger": false
+  },
+  {
+    "query": "check the review comments on PR #15 and fix what's needed",
     "should_trigger": false
   }
 ]

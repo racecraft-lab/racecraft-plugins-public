@@ -31,7 +31,7 @@ RUN_LIVE=false
 RUN_LAYER=""
 RUN_ALL=false
 CI_MODE=false
-RUN_CODEX=false
+
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -39,7 +39,7 @@ while [ $# -gt 0 ]; do
     --layer) RUN_LAYER="$2"; shift 2 ;;
     --all) RUN_ALL=true; RUN_LIVE=true; shift ;;
     --ci) CI_MODE=true; shift ;;
-    --codex) RUN_CODEX=true; shift ;;
+
     --verbose) export VERBOSE=true; shift ;;
     *) echo "Unknown flag: $1"; exit 2 ;;
   esac

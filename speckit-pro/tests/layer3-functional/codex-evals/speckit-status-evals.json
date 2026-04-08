@@ -42,6 +42,37 @@
         "States that workflow files may live outside the repo root",
         "Avoids telling the user to rerun setup when an attached worktree already has the workflow"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "I have two technical roadmap files in the repo: one under docs/ai/ for the current quarter and an older one from last quarter. Which one should the status skill use?",
+      "expected_output": "Picks the most relevant current roadmap and states which file it used, rather than merging unrelated roadmaps.",
+      "expectations": [
+        "Acknowledges that multiple roadmap files were found",
+        "Selects the most current or relevant one",
+        "States which roadmap file it used for the dashboard",
+        "Does not silently merge data from unrelated roadmaps"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Every remaining spec in the roadmap is blocked by an incomplete dependency. What should the status dashboard show for the next recommendation?",
+      "expected_output": "States plainly that all remaining specs are blocked and does not recommend a spec that cannot be started.",
+      "expectations": [
+        "Reports that no unblocked specs are available",
+        "Does not recommend a blocked spec as the next candidate",
+        "Lists the specific blockers preventing progress"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "There is no roadmap and no workflow files anywhere in the repo. What should the status skill output?",
+      "expected_output": "Reports that no SpecKit tracking artifacts were found and directs the user to $speckit-coach for setup guidance.",
+      "expectations": [
+        "States that no roadmap or workflow files were found",
+        "Does not fabricate a dashboard from nonexistent data",
+        "Recommends $speckit-coach or creating a technical roadmap as the next step"
+      ]
     }
   ]
 }
