@@ -1,0 +1,67 @@
+{
+  "skill_name": "speckit-resolve-pr",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Resolve review comments on PR #42. Fix the code, verify the branch, reply to the reviewers, and resolve the open threads after pushing.",
+      "expected_output": "Processes unresolved review threads, applies the required fixes, runs verification, pushes the branch, replies to the comments, and resolves the threads.",
+      "expectations": [
+        "Mentions collecting unresolved review threads and their thread IDs",
+        "Mentions reading the referenced code before changing it",
+        "Mentions running verification such as build, typecheck, lint, or tests",
+        "Mentions replying to the review comments and resolving the threads",
+        "Mentions pushing the branch after the fixes are verified"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I only gave you PR number 46. How should the resolve-pr skill figure out which repository that belongs to and avoid making assumptions?",
+      "expected_output": "Detects the repository from git remotes instead of assuming origin or a hardcoded owner/repo pair.",
+      "expectations": [
+        "Mentions inspecting git remotes",
+        "States that the remote name must be detected rather than assumed",
+        "Mentions deriving owner/repo from the actual configured remote URL"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "One review comment is just asking why we kept the existing implementation. What should the resolve-pr skill do if no code change is needed?",
+      "expected_output": "Replies with a grounded explanation and resolves the thread only after confirming that no code change is required.",
+      "expectations": [
+        "States that a code change is not always required",
+        "Mentions replying with rationale when the implementation is already correct",
+        "Does not suggest changing code just to silence the comment"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "I fixed a review comment but the project tests are now failing. Should the resolve-pr skill mark the thread as resolved anyway so we can move on?",
+      "expected_output": "Does not resolve the thread while verification is failing. Continues working on the fix or reports the failure clearly.",
+      "expectations": [
+        "States that threads must not be resolved while the branch is broken",
+        "Mentions running verification before resolving any thread",
+        "Does not suggest marking a thread resolved to unblock progress"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "The PR branch has uncommitted changes from unrelated work I was doing. How should the resolve-pr skill handle that before starting to fix review comments?",
+      "expected_output": "Inspects the worktree state and avoids overwriting or discarding unrelated uncommitted changes.",
+      "expectations": [
+        "Mentions checking git status before editing files",
+        "States that unrelated dirty worktree changes must not be overwritten",
+        "Suggests working around the existing changes rather than reverting them"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "The gh CLI is not installed in this environment. Can the resolve-pr skill still fix the code and push, even if it cannot resolve the GitHub threads?",
+      "expected_output": "Proceeds with code fixes and push but reports that thread resolution could not be completed without gh.",
+      "expectations": [
+        "States that code fixes and verification can proceed without gh",
+        "Mentions that thread resolution requires gh or GitHub API access",
+        "Reports the limitation clearly instead of silently skipping resolution"
+      ]
+    }
+  ]
+}

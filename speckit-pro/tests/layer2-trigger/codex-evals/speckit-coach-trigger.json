@@ -1,0 +1,82 @@
+[
+  {
+    "query": "I'm starting a new project and want to use SDD. can you walk me through the methodology from scratch? I've never used speckit before but I installed the CLI already",
+    "should_trigger": true
+  },
+  {
+    "query": "which checklist domains should I pick for SPEC-012? it's a REST API that handles webhook delivery with retry logic and signature verification. I'm thinking maybe api, resilience, and security?",
+    "should_trigger": true
+  },
+  {
+    "query": "the simplicity gate is failing on my spec for the notification service. it says the acceptance criteria count exceeds the threshold. how do I reduce complexity without cutting important requirements?",
+    "should_trigger": true
+  },
+  {
+    "query": "can you explain the consensus protocol to me? I see it mentioned in the autopilot docs but I don't understand when the 3 agents vote and what happens if they disagree on a gate result",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to decompose our billing system feature into multiple specs for a technical roadmap. it covers subscription management, invoice generation, payment processing, and usage metering. what's the right way to break this up?",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the difference between specify plan and specify tasks? I ran plan and got a plan.md but now I'm not sure if I should run tasks next or if there's something else in between",
+    "should_trigger": true
+  },
+  {
+    "query": "how do I write testable acceptance criteria for my spec? I keep getting vague requirements like 'the system should be fast' and the gate validator is rejecting them",
+    "should_trigger": true
+  },
+  {
+    "query": "I installed the tdd-mandate preset but I'm not sure how it changes the workflow. does it add extra gates? do I need to write tests before implementation now?",
+    "should_trigger": true
+  },
+  {
+    "query": "my team lead wants me to create a technical roadmap for our Q3 roadmap. we have 8 features that need specs. how do I set up the technical roadmap template and track dependencies between specs?",
+    "should_trigger": true
+  },
+  {
+    "query": "I just ran specify checklist and got a bunch of domains I don't recognize — like 'observability' and 'data-integrity'. can you explain what each domain covers and help me pick the right ones for a CRUD API?",
+    "should_trigger": true
+  },
+  {
+    "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+    "should_trigger": false
+  },
+  {
+    "query": "execute the full speckit workflow autonomously for SPEC-013. workflow file is populated at docs/ai/specs/SPEC-013-workflow.md. go through all 7 phases with auto-commits",
+    "should_trigger": false
+  },
+  {
+    "query": "can you add a new MCP tool for listing OmniFocus perspectives? I need it to return the name, ID, and icon for each built-in and custom perspective",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts. the Zod schema is failing because I'm using z.union instead of z.discriminatedUnion",
+    "should_trigger": false
+  },
+  {
+    "query": "review PR #42 on the omnifocus-mcp repo and leave inline comments on any issues you find. focus on the OmniJS script correctness",
+    "should_trigger": false
+  },
+  {
+    "query": "run pnpm test and tell me which test suites are failing. I think the review-tools contracts have a regression",
+    "should_trigger": false
+  },
+  {
+    "query": "set up biome linting for the project. I need to configure the rules for TypeScript strict mode and add a pre-commit hook",
+    "should_trigger": false
+  },
+  {
+    "query": "can you resolve the review threads on PR #38? the reviewer approved but the threads are still open and I can't merge",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the current git status? I want to see if there are any uncommitted changes before I start the next feature",
+    "should_trigger": false
+  },
+  {
+    "query": "kick off the autonomous pipeline for SPEC-019. the workflow is at specs/SPEC-019-workflow.md. run all phases as subagents with gate validation and consensus",
+    "should_trigger": false
+  }
+]

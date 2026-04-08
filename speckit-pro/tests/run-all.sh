@@ -2,12 +2,11 @@
 # run-all.sh — speckit-pro plugin test suite orchestrator
 #
 # Usage:
-#   tests/run-all.sh              # Layers 1, 4, 5 (deterministic, synthetic)
+#   tests/run-all.sh              # Layers 1, 4, 5 (Claude + Codex structural coverage)
 #   tests/run-all.sh --live       # Layers 1, 4, 5 + live project tests
-#   tests/run-all.sh --layer 2    # Layer 2 only (trigger evals, requires claude -p)
-#   tests/run-all.sh --layer 3    # Layer 3 only (functional evals, requires claude -p)
+#   tests/run-all.sh --layer 2    # Layer 2 only (prints Claude + Codex trigger eval commands)
+#   tests/run-all.sh --layer 3    # Layer 3 only (prints Claude + Codex functional eval commands)
 #   tests/run-all.sh --layer 6    # Layer 6 only (efficiency benchmarks, requires claude -p)
-#   tests/run-all.sh --ci         # CI mode: layers 1, 4, 5 synthetic only
 #   tests/run-all.sh --all        # All 6 layers + live project tests
 #
 # Run from the project directory (e.g., racecraft-plugins-public/) so live tests
@@ -30,16 +29,12 @@ export PLUGIN_ROOT PROJECT_ROOT
 RUN_LIVE=false
 RUN_LAYER=""
 RUN_ALL=false
-CI_MODE=false
-RUN_CODEX=false
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --live) RUN_LIVE=true; shift ;;
     --layer) RUN_LAYER="$2"; shift 2 ;;
     --all) RUN_ALL=true; RUN_LIVE=true; shift ;;
-    --ci) CI_MODE=true; shift ;;
-    --codex) RUN_CODEX=true; shift ;;
     --verbose) export VERBOSE=true; shift ;;
     *) echo "Unknown flag: $1"; exit 2 ;;
   esac
@@ -144,17 +139,14 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-scripts.sh" \
     "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh"
 
-  # Codex structural tests (run with --codex or --all)
-  if [ "$RUN_CODEX" = "true" ] || [ "$RUN_ALL" = "true" ]; then
-    run_layer 1 "Codex Structural Validation" \
-      "$TESTS_DIR/layer1-structural/validate-codex-plugin.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-marketplace.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-agents.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-skills.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-hooks.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-commands.sh" \
-      "$TESTS_DIR/layer1-structural/validate-codex-parity.sh"
-  fi
+  # Codex structural tests are part of the default layer 1 run.
+  run_layer 1 "Codex Structural Validation" \
+    "$TESTS_DIR/layer1-structural/validate-codex-plugin.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-marketplace.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-agents.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-skills.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-hooks.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-parity.sh"
 fi
 
 # ─────────────────────────────────────────
@@ -163,15 +155,22 @@ fi
 
 if should_run 2; then
   SKILL_CREATOR="${SKILL_CREATOR_ROOT:-$HOME/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator}"
+  printf "\n${BOLD}${CYAN}Layer 2: Trigger Evaluation${RESET}\n"
+  printf "%s\n" "────────────────────────────────────────"
   if [ -f "$SKILL_CREATOR/scripts/run_eval.py" ]; then
-    printf "\n${BOLD}${CYAN}Layer 2: Trigger Evaluation${RESET}\n"
-    printf "%s\n" "────────────────────────────────────────"
-    printf "  Run manually:\n"
-    printf "    ${BOLD}bash %s/tests/layer2-trigger/run-trigger-evals.sh speckit-coach${RESET}\n" "$PLUGIN_ROOT"
-    printf "    ${BOLD}bash %s/tests/layer2-trigger/run-trigger-evals.sh speckit-autopilot${RESET}\n" "$PLUGIN_ROOT"
+    printf "  Claude runners (skill-creator / claude):\n"
+    find "$PLUGIN_ROOT/tests/layer2-trigger/evals" -maxdepth 1 -name '*-trigger.json' | sort | while read -r eval_file; do
+      skill_name=$(basename "$eval_file" -trigger.json)
+      printf "    ${BOLD}bash %s/tests/layer2-trigger/run-trigger-evals.sh %s${RESET}\n" "$PLUGIN_ROOT" "$skill_name"
+    done
   else
-    printf "\n${YELLOW}Layer 2: SKIP — skill-creator not found at %s${RESET}\n" "$SKILL_CREATOR"
+    printf "  ${YELLOW}SKIP${RESET} Claude runner — skill-creator not found at %s\n" "$SKILL_CREATOR"
   fi
+  printf "  Codex runners (manual helper):\n"
+  find "$PLUGIN_ROOT/tests/layer2-trigger/codex-evals" -maxdepth 1 -name '*-trigger.json' | sort | while read -r eval_file; do
+    skill_name=$(basename "$eval_file" -trigger.json)
+    printf "    ${BOLD}bash %s/tests/layer2-trigger/run-trigger-evals-codex.sh %s${RESET}\n" "$PLUGIN_ROOT" "$skill_name"
+  done
 fi
 
 # ─────────────────────────────────────────
@@ -181,10 +180,16 @@ fi
 if should_run 3; then
   printf "\n${BOLD}${CYAN}Layer 3: Functional Evaluation${RESET}\n"
   printf "%s\n" "────────────────────────────────────────"
-  printf "  Eval files:\n"
-  printf "    %s/tests/layer3-functional/evals/speckit-coach-evals.json\n" "$PLUGIN_ROOT"
-  printf "    %s/tests/layer3-functional/evals/speckit-autopilot-evals.json\n" "$PLUGIN_ROOT"
-  printf "  Run via skill-creator eval workflow or manually.\n"
+  printf "  Claude eval files:\n"
+  find "$PLUGIN_ROOT/tests/layer3-functional/evals" -maxdepth 1 -name '*-evals.json' | sort | while read -r eval_file; do
+    printf "    %s\n" "$eval_file"
+  done
+  printf "  Codex eval files:\n"
+  find "$PLUGIN_ROOT/tests/layer3-functional/codex-evals" -maxdepth 1 -name '*-evals.json' | sort | while read -r eval_file; do
+    printf "    %s\n" "$eval_file"
+  done
+  printf "  Claude helper: bash %s/tests/layer3-functional/run-functional-evals.sh <skill>\n" "$PLUGIN_ROOT"
+  printf "  Codex helper: bash %s/tests/layer3-functional/run-functional-evals-codex.sh <skill>\n" "$PLUGIN_ROOT"
 fi
 
 # ─────────────────────────────────────────
@@ -200,6 +205,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-detect-commands.sh"
     "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
+    "$TESTS_DIR/layer4-scripts/test-eval-runner-skill-selection.sh"
     "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
   )
 

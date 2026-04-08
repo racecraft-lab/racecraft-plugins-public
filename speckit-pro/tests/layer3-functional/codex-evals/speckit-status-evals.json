@@ -1,0 +1,78 @@
+{
+  "skill_name": "speckit-status",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Show me the current SpecKit project status. I want the roadmap totals, any active workflow phases, blockers, and which spec is the best next candidate.",
+      "expected_output": "Builds a unified dashboard from roadmap and workflow files, then recommends the highest-priority unblocked next spec.",
+      "expectations": [
+        "Mentions both technical roadmaps and workflow files as data sources",
+        "Summarizes complete, active, pending, or blocked work",
+        "Mentions phase-level detail for active workflows",
+        "Includes a recommended next spec based on blockers and priority"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Status of SPEC-013 please. I need the current phase, blockers, and the next action if the workflow file already exists.",
+      "expected_output": "Provides a spec-specific status view with roadmap context, workflow phase detail if present, and the next concrete action.",
+      "expectations": [
+        "Mentions the spec-specific view for the requested SPEC-ID",
+        "Mentions current phase or workflow phase detail if a workflow exists",
+        "Mentions blockers or dependency state",
+        "Includes the next concrete action"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "What should the status skill do if there is no technical roadmap but there are a few workflow files in the repo?",
+      "expected_output": "Reports workflow-based phase detail while noting that backlog visibility is incomplete without a roadmap.",
+      "expectations": [
+        "States that the roadmap is missing",
+        "Explains that workflow files can still provide phase detail",
+        "Notes that the full backlog or recommendation quality is limited without the roadmap"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Setup created SPEC-021 in a git worktree outside the repo root. How should the status skill find that workflow before telling me there is nothing in progress?",
+      "expected_output": "Searches attached git worktrees, not just the current checkout, so active workflow files in external worktree roots still appear in the dashboard.",
+      "expectations": [
+        "Mentions inspecting git worktrees in addition to the current repository",
+        "States that workflow files may live outside the repo root",
+        "Avoids telling the user to rerun setup when an attached worktree already has the workflow"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I have two technical roadmap files in the repo: one under docs/ai/ for the current quarter and an older one from last quarter. Which one should the status skill use?",
+      "expected_output": "Picks the most relevant current roadmap and states which file it used, rather than merging unrelated roadmaps.",
+      "expectations": [
+        "Acknowledges that multiple roadmap files were found",
+        "Selects the most current or relevant one",
+        "States which roadmap file it used for the dashboard",
+        "Does not silently merge data from unrelated roadmaps"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Every remaining spec in the roadmap is blocked by an incomplete dependency. What should the status dashboard show for the next recommendation?",
+      "expected_output": "States plainly that all remaining specs are blocked and does not recommend a spec that cannot be started.",
+      "expectations": [
+        "Reports that no unblocked specs are available",
+        "Does not recommend a blocked spec as the next candidate",
+        "Lists the specific blockers preventing progress"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "There is no roadmap and no workflow files anywhere in the repo. What should the status skill output?",
+      "expected_output": "Reports that no SpecKit tracking artifacts were found and directs the user to $speckit-coach for setup guidance.",
+      "expectations": [
+        "States that no roadmap or workflow files were found",
+        "Does not fabricate a dashboard from nonexistent data",
+        "Recommends $speckit-coach or creating a technical roadmap as the next step"
+      ]
+    }
+  ]
+}

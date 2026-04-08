@@ -12,6 +12,15 @@ AGENTS_DIR="$PLUGIN_ROOT/agents"
 CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
 SKILLS_DIR="$PLUGIN_ROOT/skills"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
+COMMANDS_DIR="$PLUGIN_ROOT/commands"
+SHARED_SKILLS=(speckit-autopilot speckit-coach)
+COMMAND_SKILL_MAP=(
+  "autopilot:speckit-autopilot"
+  "coach:speckit-coach"
+  "setup:speckit-setup"
+  "status:speckit-status"
+  "resolve-pr:speckit-resolve-pr"
+)
 
 # ===========================================================================
 # Version Parity
@@ -80,14 +89,12 @@ if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
 fi
 
 # ===========================================================================
-# Skill Parity — CC skills → Codex skills
+# Shared Skill Parity — CC skills → Codex skills
 # ===========================================================================
-section "Skill Parity (CC → Codex)"
+section "Shared Skill Parity (CC → Codex)"
 
 if [ -d "$SKILLS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
-  for cc_skill_dir in "$SKILLS_DIR"/*/; do
-    [ -d "$cc_skill_dir" ] || continue
-    skill_name=$(basename "$cc_skill_dir")
+  for skill_name in "${SHARED_SKILLS[@]}"; do
     set_test "codex-skills/${skill_name}/ directory exists"
     if [ -d "$CODEX_SKILLS_DIR/${skill_name}" ]; then
       _pass
@@ -104,48 +111,55 @@ else
 fi
 
 # ===========================================================================
-# Command Parity — CC commands → Codex commands
+# Claude Command Coverage — CC commands → Codex skills
 # ===========================================================================
-section "Command Parity (CC → Codex)"
+section "Claude Command Coverage (CC → Codex skills)"
 
-COMMANDS_DIR="$PLUGIN_ROOT/commands"
-CODEX_COMMANDS_DIR="$PLUGIN_ROOT/codex-commands"
+if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
+  for mapping in "${COMMAND_SKILL_MAP[@]}"; do
+    cmd_name="${mapping%%:*}"
+    skill_name="${mapping##*:}"
+    set_test "commands/${cmd_name}.md exists"
+    assert_file_exists "$COMMANDS_DIR/${cmd_name}.md"
 
-if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_COMMANDS_DIR" ]; then
-  for cc_cmd_file in "$COMMANDS_DIR"/*.md; do
-    [ -f "$cc_cmd_file" ] || continue
-    cmd_name=$(basename "$cc_cmd_file" .md)
-    set_test "codex-commands/${cmd_name}.md exists for CC command"
-    assert_file_exists "$CODEX_COMMANDS_DIR/${cmd_name}.md"
+    set_test "codex-skills/${skill_name}/SKILL.md exists for CC command ${cmd_name}"
+    assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
   done
 else
-  set_test "commands/ and codex-commands/ directories exist"
-  _fail "one or both command directories missing (CC: $COMMANDS_DIR, Codex: $CODEX_COMMANDS_DIR)"
+  set_test "commands/ and codex-skills/ directories exist for command coverage"
+  _fail "one or both directories missing (commands: $COMMANDS_DIR, codex-skills: $CODEX_SKILLS_DIR)"
 fi
 
 # ===========================================================================
-# Command Parity — Codex commands → CC commands
+# Codex Skill Source Coverage
 # ===========================================================================
-section "Command Parity (Codex → CC)"
+section "Codex Skill Source Coverage"
 
-if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_COMMANDS_DIR" ]; then
-  for codex_cmd_file in "$CODEX_COMMANDS_DIR"/*.md; do
-    [ -f "$codex_cmd_file" ] || continue
-    cmd_name=$(basename "$codex_cmd_file" .md)
-    set_test "commands/${cmd_name}.md exists for Codex command"
-    assert_file_exists "$COMMANDS_DIR/${cmd_name}.md"
+if [ -d "$CODEX_SKILLS_DIR" ]; then
+  for mapping in "${COMMAND_SKILL_MAP[@]}"; do
+    cmd_name="${mapping%%:*}"
+    skill_name="${mapping##*:}"
+
+    if [ "$skill_name" = "speckit-autopilot" ] || [ "$skill_name" = "speckit-coach" ]; then
+      set_test "${skill_name}: corresponding CC skill exists"
+      assert_file_exists "$SKILLS_DIR/${skill_name}/SKILL.md"
+    else
+      set_test "${skill_name}: corresponding CC command exists"
+      assert_file_exists "$COMMANDS_DIR/${cmd_name}.md"
+    fi
   done
+else
+  set_test "codex-skills/ directory exists for source coverage"
+  _fail "codex-skills directory missing: $CODEX_SKILLS_DIR"
 fi
 
 # ===========================================================================
-# Shared Reference Integrity — Codex skills reference CC references/
+# Shared Reference Integrity — shared Codex skills reference CC references/
 # ===========================================================================
 section "Shared Reference Integrity"
 
 if [ -d "$CODEX_SKILLS_DIR" ]; then
-  for codex_skill_dir in "$CODEX_SKILLS_DIR"/*/; do
-    [ -d "$codex_skill_dir" ] || continue
-    skill_name=$(basename "$codex_skill_dir")
+  for skill_name in "${SHARED_SKILLS[@]}"; do
     cc_refs="$SKILLS_DIR/${skill_name}/references"
 
     set_test "${skill_name}: CC skill references/ directory exists"
@@ -162,6 +176,21 @@ if [ -d "$CODEX_SKILLS_DIR" ]; then
       _pass
     else
       _fail "skills/${skill_name}/references/ exists but contains no files"
+    fi
+
+    # Per-file check: every ../../skills/*/references/*.md path linked from the
+    # Codex SKILL.md must resolve to an actual file under skills/.
+    codex_skill_file="$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
+    if [ -f "$codex_skill_file" ]; then
+      ref_paths=$(grep -oE '\.\./\.\./skills/[^)]+\.md' "$codex_skill_file" | sort -u)
+      while IFS= read -r rel_path; do
+        [ -z "$rel_path" ] && continue
+        # Strip the leading ../../ — paths are relative to the Codex skill dir,
+        # which is two levels below the plugin root.
+        resolved="$PLUGIN_ROOT/${rel_path#../../}"
+        set_test "${skill_name}: referenced file exists (${rel_path#../../})"
+        assert_file_exists "$resolved"
+      done <<< "$ref_paths"
     fi
   done
 fi

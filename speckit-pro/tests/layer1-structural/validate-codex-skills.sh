@@ -6,8 +6,9 @@ source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
-CC_SKILLS_DIR="$PLUGIN_ROOT/skills"
-SKILLS=(speckit-autopilot speckit-coach)
+# Canonical skill list — keep in sync with the case block in the
+# "corresponding source artifact exists" test below.
+SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
 CC_ONLY_KEYS=(user-invokable license argument-hint)
@@ -72,11 +73,74 @@ for skill in "${SKILLS[@]}"; do
     _fail "body is $word_count words (need 500-8000)"
   fi
 
-  set_test "${skill}: corresponding CC skill exists in skills/"
-  if [ -f "$CC_SKILLS_DIR/$skill/SKILL.md" ]; then
-    _pass
+  set_test "${skill}: agents/openai.yaml allow_implicit_invocation policy"
+  if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
+    yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
+    case "$skill" in
+      speckit-setup|speckit-autopilot|speckit-resolve-pr)
+        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
+          _pass
+        else
+          _fail "mutation-heavy skill must have allow_implicit_invocation: false"
+        fi
+        ;;
+      speckit-coach|speckit-status)
+        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: true'; then
+          _pass
+        else
+          _fail "read-only skill must have allow_implicit_invocation: true"
+        fi
+        ;;
+      *)
+        _fail "no implicit-invocation policy expectation defined for '$skill'; update validate-codex-skills.sh"
+        ;;
+    esac
   else
-    _fail "corresponding CC skill not found at skills/$skill/SKILL.md"
+    _fail "agents/openai.yaml not found; skipping policy check"
+  fi
+
+  # Map each Codex skill to its Claude Code source artifact.
+  # When adding a new skill to the SKILLS array above, add a case branch here.
+  set_test "${skill}: corresponding source artifact exists"
+  case "$skill" in
+    speckit-autopilot|speckit-coach)
+      if [ -f "$PLUGIN_ROOT/skills/$skill/SKILL.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude skill not found at skills/$skill/SKILL.md"
+      fi
+      ;;
+    speckit-setup)
+      if [ -f "$PLUGIN_ROOT/commands/setup.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude command not found at commands/setup.md"
+      fi
+      ;;
+    speckit-status)
+      if [ -f "$PLUGIN_ROOT/commands/status.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude command not found at commands/status.md"
+      fi
+      ;;
+    speckit-resolve-pr)
+      if [ -f "$PLUGIN_ROOT/commands/resolve-pr.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude command not found at commands/resolve-pr.md"
+      fi
+      ;;
+    *)
+      _fail "no corresponding source artifact mapping defined for skill '$skill'; update validate-codex-skills.sh"
+      ;;
+  esac
+
+  # speckit-setup hard-codes a reference to the shared workflow template —
+  # verify the file it points to actually exists.
+  if [ "$skill" = "speckit-setup" ]; then
+    set_test "speckit-setup: referenced workflow template exists (skills/speckit-coach/templates/workflow-template.md)"
+    assert_file_exists "$PLUGIN_ROOT/skills/speckit-coach/templates/workflow-template.md"
   fi
 done
 

@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecKit Resolve PR"
+  short_description: "Address review feedback and resolve PR threads"
+  default_prompt: "Resolve review comments on a pull request and push the verified fixes"
+
+policy:
+  allow_implicit_invocation: false

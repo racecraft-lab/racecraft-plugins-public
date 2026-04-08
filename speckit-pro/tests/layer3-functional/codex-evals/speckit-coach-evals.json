@@ -1,0 +1,128 @@
+{
+  "skill_name": "speckit-coach",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I'm starting a brand new TypeScript project and want to use Spec-Driven Development from the beginning. I have nothing set up yet — no speckit, no specs directory, nothing. Walk me through getting started from zero.",
+      "expected_output": "Step-by-step onboarding: install SpecKit CLI via uv, run specify init with the --ai flag for the user's AI tool, create a constitution file, and explain the 7 SDD phases.",
+      "expectations": [
+        "Mentions installing SpecKit CLI with 'uv tool install specify-cli' from the git repo",
+        "Includes 'specify init' command with --ai flag",
+        "Explains constitution creation and its purpose",
+        "Lists or references the 7 SDD phases in order: specify, clarify, plan, checklist, tasks, analyze, implement"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I'm writing a spec for a REST API that handles webhook delivery with retry logic and payload signature verification. Which checklist domains should I select when I run specify checklist? I want to make sure I don't miss anything important.",
+      "expected_output": "Recommends 2-4 relevant checklist domains from the available set, with justification for each based on the webhook delivery use case.",
+      "expectations": [
+        "Recommends at least 2 and no more than 4 checklist domains",
+        "Includes 'api' or 'http' related domain for the REST API surface",
+        "Includes 'resilience', 'reliability', or 'error-handling' domain for retry logic",
+        "Includes 'security' domain for signature verification",
+        "Explains why each recommended domain is relevant to the webhook delivery feature"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I keep hearing about 'gates' G1 through G7 in the SpecKit autopilot. What does each gate specifically validate? I want to understand what artifacts need to exist and what markers need to be absent before each phase transition succeeds.",
+      "expected_output": "Lists all 7 gates with their specific validation criteria — what files they check, what markers they scan for, and what conditions cause pass/fail.",
+      "expectations": [
+        "Lists all 7 gates G1 through G7 by name or number",
+        "Explains that G1 validates the specify phase output (spec.md exists, no [TBD] markers)",
+        "Explains that G4 validates checklist completion (no [Gap] markers in spec.md or plan.md)",
+        "Explains that G7 validates task completion (all tasks marked [x] in tasks.md)",
+        "Mentions how gate validation is performed (validate-gate.sh script, programmatic checks, or marker scanning)"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "How does the consensus protocol work in the autopilot workflow? I heard there are 3 agents that vote on something but I don't understand when it kicks in or what happens when they disagree.",
+      "expected_output": "Explains the multi-agent consensus mechanism: 3 named agent roles, 2/3 majority voting, when consensus is triggered, and what happens on disagreement.",
+      "expectations": [
+        "Names the 3 agent roles involved in consensus voting",
+        "States the 2/3 majority requirement for a gate to pass via consensus",
+        "Explains that consensus triggers when the primary gate validation fails or produces ambiguous results",
+        "Describes what happens on disagreement: the failing agent's reasoning is logged and the majority decision stands"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I'm building a large e-commerce platform feature that covers product catalog, inventory management, order processing, and payment integration. This is way too big for a single spec. Help me decompose it into a technical roadmap with proper dependency ordering.",
+      "expected_output": "Breaks the feature into 3+ focused specs with clear boundaries, identifies dependencies between them, and suggests an implementation order.",
+      "expectations": [
+        "Decomposes into at least 3 separate specs with clear single-responsibility boundaries",
+        "Identifies dependency relationships between specs (e.g., catalog before inventory, inventory before orders)",
+        "Suggests a sequential or partially-parallel implementation order based on dependencies",
+        "Recommends using the technical roadmap template to track cross-spec progress"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "What MCP servers does speckit-pro need? I'm setting up a new machine and want to know what's required vs optional for the full autopilot experience.",
+      "expected_output": "Lists Tavily, Context7, and RepoPrompt as optional MCP server enhancements. Explains they improve research quality but the plugin works without them using built-in Claude Code tools.",
+      "expectations": [
+        "Lists Tavily, Context7, and RepoPrompt as the three relevant MCP servers",
+        "States clearly that NONE are required — all are optional enhancements",
+        "Explains what each MCP server adds (better search, library docs, codebase exploration)",
+        "Mentions that built-in tools (WebSearch, WebFetch, Grep, Glob, Read) serve as automatic fallbacks"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Can you just run the full autopilot for me right now on SPEC-025? I have the workflow file ready at docs/ai/specs/SPEC-025-workflow.md.",
+      "expected_output": "Redirects to $speckit-autopilot as the correct Codex entrypoint. The coach does not execute the autopilot itself.",
+      "expectations": [
+        "Does NOT attempt to execute the autopilot workflow itself",
+        "Redirects the user to $speckit-autopilot as the correct entrypoint",
+        "Mentions $speckit-setup OR correctly assumes the workflow file exists since the user stated they have it",
+        "Provides brief guidance on what to expect when running the autopilot"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "What are SpecKit extensions? I see references to 'verify', 'review', 'cleanup', and 'retrospective' extensions in the autopilot workflow. How do I install them and what do they do?",
+      "expected_output": "Explains the extension system: extensions are optional post-implementation workflow steps. Lists available extensions and what each does.",
+      "expectations": [
+        "Explains that extensions are optional post-implementation workflow steps",
+        "Lists at least 4 extensions: verify, review, cleanup, retrospective",
+        "Explains that extensions are configured in .specify/extensions.yml",
+        "Describes what at least 2 extensions do (e.g., verify checks implementation against spec, review runs code review)"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "I want to understand the workflow file that $speckit-setup creates. What sections does it have? What gets populated automatically vs what do I need to fill in?",
+      "expected_output": "Describes the workflow file structure: overview table with 7 phases, status tracking, SPEC-ID, feature branch, and configuration.",
+      "expectations": [
+        "Describes the workflow overview table showing all 7 phases with status columns",
+        "Mentions the SPEC-ID and feature branch fields",
+        "Explains that $speckit-setup auto-populates the file from the technical roadmap",
+        "References the workflow file location pattern (docs/ai/specs/SPEC-NNN-workflow.md)"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "I want to see the current roadmap progress and which spec is unblocked next. Which SpecKit entrypoint should I use in Codex and what will it show me?",
+      "expected_output": "Redirects to $speckit-status as the correct Codex skill and explains that it summarizes roadmap progress, active workflows, blockers, and the next recommendation.",
+      "expectations": [
+        "Redirects the user to $speckit-status",
+        "Mentions roadmap progress, active workflows, or phase status",
+        "Mentions blockers or dependency status",
+        "Mentions that the skill recommends the next unblocked spec"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "I need to address review comments on PR #42 and resolve the open threads after the fixes are pushed. Which SpecKit entrypoint should I use in Codex?",
+      "expected_output": "Redirects to $speckit-resolve-pr as the correct Codex skill and explains that it fixes code, verifies the branch, replies to review comments, and resolves threads.",
+      "expectations": [
+        "Redirects the user to $speckit-resolve-pr",
+        "Mentions that the skill addresses review comments on a PR",
+        "Mentions verification such as tests, typecheck, or build",
+        "Mentions resolving review threads after the fixes"
+      ]
+    }
+  ]
+}

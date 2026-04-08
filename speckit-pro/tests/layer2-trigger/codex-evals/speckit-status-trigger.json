@@ -1,0 +1,66 @@
+[
+  {
+    "query": "show roadmap status for the project and tell me which spec is unblocked next",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the current SpecKit progress? I want the active workflows, blockers, and next recommendation",
+    "should_trigger": true
+  },
+  {
+    "query": "status of SPEC-013 please. I need to know which phases are complete and what the next phase is",
+    "should_trigger": true
+  },
+  {
+    "query": "give me the dashboard — all specs, their phases, and blockers",
+    "should_trigger": true
+  },
+  {
+    "query": "is SPEC-022 done or still in progress? what phase is it on?",
+    "should_trigger": true
+  },
+  {
+    "query": "list all active worktrees and which specs they belong to",
+    "should_trigger": true
+  },
+  {
+    "query": "which specs are blocked and what's blocking them?",
+    "should_trigger": true
+  },
+  {
+    "query": "summarize the overall SpecKit project health and next steps",
+    "should_trigger": true
+  },
+  {
+    "query": "set up SPEC-009 from the technical roadmap for autopilot",
+    "should_trigger": false
+  },
+  {
+    "query": "run the workflow at docs/ai/specs/SPEC-013-workflow.md through all 7 phases",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the review comments on PR #42 and resolve the threads",
+    "should_trigger": false
+  },
+  {
+    "query": "explain the consensus protocol and how the voting works",
+    "should_trigger": false
+  },
+  {
+    "query": "how do I structure my technical roadmap?",
+    "should_trigger": false
+  },
+  {
+    "query": "prepare SPEC-009 for autopilot execution with a worktree and workflow",
+    "should_trigger": false
+  },
+  {
+    "query": "I want to learn about the SDD methodology and best practices",
+    "should_trigger": false
+  },
+  {
+    "query": "address the PR review comments on the current branch and resolve threads",
+    "should_trigger": false
+  }
+]

@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# run-trigger-evals.sh — Run Layer 2 trigger evals via skill-creator's run_eval.py
+# run-trigger-evals.sh — Run Claude Layer 2 trigger evals via skill-creator
 #
 # Usage: run-trigger-evals.sh [skill-name]
-#   skill-name: speckit-autopilot | speckit-coach (default: speckit-coach)
+#   skill-name: any Claude skill with a matching
+#               tests/layer2-trigger/evals/<skill>-trigger.json
 #
 # Requires: skill-creator plugin installed at $SKILL_CREATOR_ROOT or default path
 # Output:   JSON results to stdout, summary to stderr
+#
+# For Codex-specific trigger evals, use run-trigger-evals-codex.sh instead.
 
 set -euo pipefail
 
@@ -37,7 +40,13 @@ chmod +x "$WRAPPER_DIR/claude"
 export PATH="$WRAPPER_DIR:$PATH"
 
 EVAL_FILE="$PLUGIN_ROOT/tests/layer2-trigger/evals/${SKILL}-trigger.json"
-SKILL_PATH="$PLUGIN_ROOT/skills/${SKILL}"
+if [ -d "$PLUGIN_ROOT/skills/${SKILL}" ]; then
+  SKILL_PATH="$PLUGIN_ROOT/skills/${SKILL}"
+elif [ -d "$PLUGIN_ROOT/codex-skills/${SKILL}" ]; then
+  SKILL_PATH="$PLUGIN_ROOT/codex-skills/${SKILL}"
+else
+  SKILL_PATH=""
+fi
 
 if [ ! -f "$EVAL_FILE" ]; then
   echo "ERROR: Eval file not found: $EVAL_FILE" >&2
@@ -48,8 +57,11 @@ if [ ! -f "$EVAL_FILE" ]; then
   exit 1
 fi
 
-if [ ! -d "$SKILL_PATH" ]; then
-  echo "ERROR: Skill not found: $SKILL_PATH" >&2
+if [ -z "$SKILL_PATH" ] || [ ! -d "$SKILL_PATH" ]; then
+  echo "ERROR: Skill not found for requested skill '$SKILL'." >&2
+  echo "Searched locations:" >&2
+  echo "  - $PLUGIN_ROOT/skills/${SKILL}" >&2
+  echo "  - $PLUGIN_ROOT/codex-skills/${SKILL}" >&2
   exit 1
 fi
 

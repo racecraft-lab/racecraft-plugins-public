@@ -1,0 +1,9 @@
+interface:
+  display_name: "SpecKit Status"
+  short_description: "Show roadmap progress and the next recommended spec"
+  default_prompt: "Show the current SpecKit roadmap status and recommend the next spec to start"
+
+# Read-only dashboard skill — safe for implicit invocation (like speckit-coach).
+# Mutation-heavy skills (setup, autopilot, resolve-pr) use false.
+policy:
+  allow_implicit_invocation: true

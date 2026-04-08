@@ -1,0 +1,70 @@
+{
+  "skill_name": "speckit-setup",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Set up SPEC-009 from the technical roadmap so it is ready for the autopilot. I want the worktree branch created, the workflow template copied, and the prompts populated from the roadmap.",
+      "expected_output": "Explains or performs the setup flow by locating the roadmap entry, creating or reusing the worktree branch, generating the workflow file from the shared template, and stopping after the workflow is committed and pushed.",
+      "expectations": [
+        "Mentions locating the technical roadmap and the requested SPEC-ID entry",
+        "Mentions creating or reusing a dedicated worktree branch",
+        "Mentions copying the shared workflow template into docs/ai/specs/",
+        "Mentions populating the workflow prompts from roadmap scope and constraints",
+        "Mentions that the next step is to run $speckit-autopilot rather than executing it immediately"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I need to prepare SPEC-014, but the branch may already exist remotely because someone started it earlier. How should the setup flow handle that safely?",
+      "expected_output": "Reuses an existing branch or worktree when possible, verifies the active branch, and avoids creating duplicate worktrees or pushing to main.",
+      "expectations": [
+        "Mentions checking whether the branch already exists locally or remotely",
+        "Mentions reusing an existing worktree if it is already present",
+        "Mentions verifying the active branch inside the worktree",
+        "States that setup must never commit or push main"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "SPEC-031 is not in the roadmap file I found. What should the setup skill do instead of guessing the missing prompts?",
+      "expected_output": "Stops and reports that the SPEC-ID is missing from the roadmap instead of inventing scope, prompts, or workflow content.",
+      "expectations": [
+        "States that the missing SPEC-ID is a blocking issue",
+        "Does not invent roadmap details or workflow prompts",
+        "Suggests fixing the roadmap or using $speckit-coach for roadmap guidance"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "SPEC-007 is already marked as In Progress in the roadmap and the worktree branch exists. Should the setup skill create a second worktree or reuse the existing one?",
+      "expected_output": "Reuses the existing worktree and branch instead of creating duplicates, and warns that the spec is already in progress.",
+      "expectations": [
+        "Mentions detecting that the spec is already in progress",
+        "States that the existing worktree or branch should be reused",
+        "Does not create a duplicate branch or worktree",
+        "Warns the user about the existing in-progress state"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Setup created the workflow file and committed it, but git push failed because the remote rejected the push. What should the setup skill report?",
+      "expected_output": "Reports exactly what succeeded and what failed so the user can resume without duplicating work.",
+      "expectations": [
+        "States that the push failed",
+        "Reports what was successfully created locally (branch, worktree, workflow file, commit)",
+        "Does not silently continue as if everything succeeded",
+        "Provides enough context for the user to manually push or retry"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "After the workflow template was populated, I notice it still has a SPEC_NAME placeholder left over. How should setup handle that?",
+      "expected_output": "Stops and reports that unresolved placeholders remain, rather than committing a partially populated workflow.",
+      "expectations": [
+        "Mentions checking for leftover placeholder tokens after population",
+        "States that the workflow must not be committed with unresolved placeholders",
+        "Reports which specific placeholders remain unresolved"
+      ]
+    }
+  ]
+}
