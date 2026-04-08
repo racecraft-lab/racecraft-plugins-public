@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.3.0...speckit-pro-v1.4.0) (2026-04-08)
+
+
+### Features
+
+* **speckit-pro:** add Codex CLI commands for all 5 entry points ([9ecaee5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9ecaee5df49b5e34073000048bbef58bf0aa2efd))
+
 ## [1.3.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.2.0...speckit-pro-v1.3.0) (2026-04-08)
 
 
