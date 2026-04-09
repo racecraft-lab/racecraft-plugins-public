@@ -4,6 +4,8 @@
 
 This document defines the specification roadmap for the CI/CD & Release Pipeline. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next.
 
+**Current Status:** SPEC-001 through SPEC-004 are complete. SPEC-005 is the next pending spec.
+
 **Branch:** `feat/cicd-release-pipeline`
 **Design Spec:** [2026-03-24-cicd-versioning-release-pipeline-design.md](../superpowers/specs/2026-03-24-cicd-versioning-release-pipeline-design.md)
 
@@ -66,8 +68,8 @@ SPEC-001 (Repository Foundation)
 | SPEC-001 | Repository Foundation | ✅ Complete | [SPEC-001-workflow.md](SPEC-001-workflow.md) | PR #1 merged |
 | SPEC-002 | PR Checks Workflow | ✅ Complete | [SPEC-002-workflow.md](SPEC-002-workflow.md) | PR #2 merged |
 | SPEC-003 | Release Automation | ✅ Complete | [SPEC-003-workflow.md](SPEC-003-workflow.md) | PR #3 merged |
-| SPEC-004 | Integration & Verification | 🔄 In Progress | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Specify |
-| SPEC-005 | Skill Trigger Quality | ⏳ Pending | — | — |
+| SPEC-004 | Integration & Verification | ✅ Complete | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Complete; SPEC-005 unblocked |
+| SPEC-005 | Skill Trigger Quality | ⏳ Pending | — | Ready to start |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -178,6 +180,7 @@ Alternatives considered: including marketplace.json in the Release PR (risk of c
 ### SPEC-004: Integration & Verification
 
 **Priority:** P1 | **Depends On:** SPEC-001, SPEC-002, SPEC-003 | **Enables:** Complete feature
+**Status:** ✅ Complete | **Outcome:** CI/CD pipeline controls and verification docs are in place; SPEC-005 is now unblocked.
 
 **Goal:** Configure GitHub branch protection rules, enable Copilot code review, and verify the complete end-to-end workflow from feature branch to user-visible release.
 
@@ -187,7 +190,7 @@ Alternatives considered: including marketplace.json in the Release PR (risk of c
   - Require status checks to pass: `validate-plugins` and `validate-pr-title` (the job names from SPEC-002)
   - Require Copilot code review (enable in repository settings → Code review → Copilot)
   - Allow only squash merges (disable merge commits and rebase merges)
-  - Exempt the GitHub Actions bot from branch protection (needed for SPEC-003's marketplace sync push)
+  - Configure branch protection for this personal repository with `enforce_admins: false` so owner-context `GITHUB_TOKEN` pushes can complete SPEC-003's marketplace sync commit without a PR
 - Create a verification checklist script or document that walks through the complete workflow end-to-end:
   1. Create a feature branch with a test change
   2. Open a PR with a conventional commit title
@@ -210,19 +213,20 @@ Alternatives considered: including marketplace.json in the Release PR (risk of c
 
 **Key Decisions:**
 
-**[Branch Protection Bypass] Decision (2026-03-24):** The GitHub Actions bot is exempted from branch protection to allow the marketplace sync commit to push directly to `main`. This is a standard pattern for CI-generated commits. The bot's commits are `chore:` scoped, which release-please ignores (no infinite loop risk).
-Alternatives considered: opening a follow-up PR for the sync (adds noise and manual merge step); using a GitHub App token (more complex setup for same result).
+**[Branch Protection Bypass] Decision (2026-03-24):** On this personal repository, use classic branch protection with `enforce_admins: false` rather than an explicit bypass actor list. That allows owner-context `GITHUB_TOKEN` pushes from the release workflow to complete the marketplace sync commit while still requiring PR-based merges for normal development.
+Alternatives considered: opening a follow-up PR for the sync (adds noise and manual merge step); using org-only bypass actors or a GitHub App token (more complex and not applicable to the current personal-repo setup).
 
 **Key Files:**
 - `CLAUDE.md` — Modified: add CI/CD workflow documentation
 - `AGENTS.md` — Modified: add CI/CD conventions if needed
-- `docs/ai/specs/cicd-verification-checklist.md` — New: end-to-end verification steps
+- `docs/ai/specs/cicd-release-pipeline-verification.md` — New: end-to-end verification steps
 
 ---
 
 ### SPEC-005: Skill Trigger Quality
 
 **Priority:** P1 | **Depends On:** SPEC-004 | **Enables:** Complete feature
+**Status:** ⏳ Pending | **Readiness:** Unblocked and ready to start.
 
 **Goal:** Fix the pre-existing 10/20 Layer 2 trigger eval failure for both skills (`speckit-coach` and `speckit-autopilot`) by optimizing skill descriptions following Anthropic's official guide and fixing the eval framework's plugin-shadowing limitation.
 
