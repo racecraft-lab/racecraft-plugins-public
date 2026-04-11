@@ -167,6 +167,8 @@ Address all GitHub review comments, fix the code, and resolve threads.
 
 The autopilot skill runs in the main session so it can spawn subagents directly — no nesting needed.
 
+- **Codex runtime contract**: orchestration is bound to `spawn_agent` / `wait_agent`, progress is required in `update_plan`, and the same ordered plan is mirrored into `autopilot-state.json` next to the workflow file for resume safety.
+- **Claude Code runtime contract**: orchestration stays on the existing Agent/task primitives for Claude sessions.
 - **Simple phases** (specify, plan, tasks): Delegate to `phase-executor` (Sonnet)
 - **Consensus phases** (clarify, checklist, analyze): Specialized executor agent (Opus) + 3 consensus agents in parallel (Sonnet)
 - **Implementation**: `implement-executor` (Opus) with strict TDD, one agent per task
@@ -271,7 +273,13 @@ These enhance research quality but are not required — all agents include built
 
 **Issue:** The agent loop terminates after running one phase.
 
-**Solution:** The autopilot must delegate each phase to a subagent via the Agent tool. If it runs a Skill directly, the command's completion report kills the agent loop. This is handled automatically — if you see this, re-run the autopilot.
+**Solution:** The autopilot must delegate each phase to a subagent instead of invoking the phase skill in the parent session. In Codex that means `spawn_agent` / `wait_agent`; in Claude Code that means the Agent tool. If it runs a Skill directly, the command's completion report kills the agent loop. This is handled automatically — if you see this, re-run the autopilot.
+
+### Progress plan disappears mid-run
+
+**Issue:** The autopilot loses track of which phase or consensus step is active.
+
+**Solution:** In Codex, the autopilot must recreate the full checklist with `update_plan` before Phase 1, keep exactly one item `in_progress`, and mirror the same ordered plan into `autopilot-state.json` beside the workflow file after every transition. If either store is missing, stop and rebuild both before continuing.
 
 ### Permission prompts on every edit
 

@@ -50,14 +50,17 @@
     },
     {
       "id": 5,
-      "prompt": "I need to generate a task list for a new spec. According to the autopilot workflow, what mandatory task entries must appear in the task list? Specifically, I want to know about consensus tasks — when are they required and what's the naming convention?",
-      "expected_output": "Lists the mandatory consensus tasks that must appear after each Clarify session, Checklist domain, and Analyze phase, with the correct naming convention.",
+      "prompt": "Before Phase 1 starts in Codex, what exact progress state must the autopilot create? I want the mandatory tool calls, the naming convention for the plan items, how consensus items are represented, and how the plan survives a resume.",
+      "expected_output": "Explains that the Codex autopilot must call update_plan before phase execution, create deterministic phase/session/consensus items, ensure exactly one item is in_progress, and mirror the same state into autopilot-state.json next to the workflow file.",
       "expectations": [
+        "States that update_plan is REQUIRED before the first phase runs",
+        "States that the plan is mirrored to autopilot-state.json for durable resume state",
+        "States that exactly one plan item must be in_progress before Phase 1",
         "States that consensus tasks are MANDATORY after each Clarify session",
         "States that consensus tasks are MANDATORY after each Checklist domain",
         "States that consensus tasks are MANDATORY after the Analyze phase",
-        "Shows the naming convention including 'Consensus' in the task name",
-        "Explains that consensus spawns 3 agents: codebase-analyst, spec-context-analyst, domain-researcher"
+        "Shows the naming convention including 'Phase N:' and 'Consensus' in the plan item name",
+        "Explains that resume reconstructs update_plan from autopilot-state.json before continuing"
       ]
     },
     {

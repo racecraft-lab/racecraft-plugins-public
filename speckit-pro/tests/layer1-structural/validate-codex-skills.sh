@@ -73,6 +73,31 @@ for skill in "${SKILLS[@]}"; do
     _fail "body is $word_count words (need 500-8000)"
   fi
 
+  if [ "$skill" = "speckit-autopilot" ]; then
+    set_test "speckit-autopilot: requires update_plan as the progress contract"
+    assert_contains "$body" "update_plan"
+
+    set_test "speckit-autopilot: requires durable autopilot-state.json persistence"
+    assert_contains "$body" "autopilot-state.json"
+
+    set_test "speckit-autopilot: names Codex-native delegation tools"
+    if [[ "$body" == *"spawn_agent"* && "$body" == *"wait_agent"* ]]; then
+      _pass
+    else
+      _fail "expected both spawn_agent and wait_agent in the Codex autopilot skill"
+    fi
+
+    set_test "speckit-autopilot: validates a single in_progress item before phase execution"
+    assert_contains "$body" 'Exactly one plan item is `in_progress`'
+
+    set_test "speckit-autopilot: excludes Claude-only runtime primitives"
+    if echo "$body" | grep -qE 'TaskCreate|TaskUpdate|Agent\(|Bash\(|Opus-class|Opus 4\.6|/model opus|/effort max'; then
+      _fail "found Claude-only primitive or runtime guidance in Codex autopilot skill"
+    else
+      _pass
+    fi
+  fi
+
   set_test "${skill}: agents/openai.yaml allow_implicit_invocation policy"
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
