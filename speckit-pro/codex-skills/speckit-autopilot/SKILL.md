@@ -28,6 +28,28 @@ prompts from the workflow file and delegate each phase to a
 run the commands yourself — you spawn, collect results, validate
 gates, and advance.
 
+## Codex Runtime Contract
+
+This Codex variant is a concrete tool contract, not advisory prose.
+Bind the workflow to actual Codex primitives:
+
+- `update_plan` is REQUIRED before Phase 1 and after every phase transition.
+  If the call fails or is skipped, STOP.
+- `spawn_agent` and `wait_agent` are the REQUIRED orchestration primitives
+  for phase execution. Use `send_input` only for follow-up instructions to an
+  already-running agent.
+- `read_file`, `file_search`, `exec_command`, and `apply_patch` are the
+  concrete Codex tools for workflow parsing, shell validation, and artifact
+  mutation.
+- Persist orchestration state to `autopilot-state.json` in the same directory
+  as the workflow file. Resume reads that file first, then reconciles with the
+  workflow file.
+
+Do not translate this skill into Claude-only primitives such as legacy
+task-list tools or legacy Claude agent/shell placeholders. For executor instructions,
+read the matching files under `../../codex-agents/` and pass the relevant
+instructions into `spawn_agent`.
+
 ## Prerequisites — Model & Effort
 
 The autopilot orchestrator makes gate decisions, synthesizes consensus, and
@@ -36,14 +58,14 @@ decisions that cascade into expensive rework.
 
 **Before executing any step**, verify:
 
-1. **Model check:** You MUST be running on the most capable available model
-   (equivalent to Opus-class). If your current model is a lightweight or
-   fast-tier model, STOP immediately and instruct the user to switch to the
-   highest available model tier and re-run the autopilot.
+1. **Model check:** You MUST be running on the highest-capability Codex model
+   tier available in this environment. If the session is explicitly on a mini,
+   fast, or otherwise reduced-capability tier, STOP and instruct the user to
+   relaunch the autopilot on a stronger model.
 
-2. **Effort check:** Verify your effort level is set to high or max. If running
-   at low or medium effort, instruct the user to set effort to max and re-run
-   the autopilot.
+2. **Effort check:** Verify reasoning effort is set to `high` or `max` when
+   configurable for the session. If the session is locked to low or medium
+   effort, STOP and instruct the user to relaunch with higher effort.
 
 These checks are non-negotiable. A lightweight orchestrator spawning
 capable subagents is an expensive anti-pattern — the orchestrator makes
@@ -55,9 +77,9 @@ These rules are non-negotiable. Follow them exactly.
 
 ### 1. Subagent per phase
 
-For each phase, spawn a **foreground subagent** using agent delegation.
-The subagent runs the SpecKit command and returns a summary. You (the
-parent) receive the result, which keeps your agent loop alive.
+For each phase, spawn a **foreground subagent** with `spawn_agent`,
+wait for it with `wait_agent`, and keep orchestration in the parent.
+The subagent runs the SpecKit command and returns a summary.
 
 **Why:** If you invoke a skill directly in your own context, the command's
 completion behavior causes your loop to output plain text and terminate.
@@ -69,12 +91,14 @@ is harmless — the result returns to you and your loop continues.
 ```text
 CORRECT:
   1. Read workflow file's "### Specify Prompt" section
-  2. Spawn the phase-executor agent: "Run $speckit-specify with: <prompt>"
-  3. Subagent runs command, returns summary
-  4. Update progress: Specify → completed
-  5. Search spec.md for [NEEDS CLARIFICATION] markers
-  6. Spawn the clarify-executor agent: "Run $speckit-clarify with: ..."
-  ...every step produces a result — loop never dies...
+  2. Read ../../codex-agents/phase-executor.md
+  3. spawn_agent(... "Run $speckit-specify with: <prompt>")
+  4. wait_agent(...)
+  5. update_plan(...) and write autopilot-state.json
+  6. Search spec.md for [NEEDS CLARIFICATION] markers
+  7. Read ../../codex-agents/clarify-executor.md
+  8. spawn_agent(... "Run $speckit-clarify with: ...")
+  ...every step produces durable state and the loop never dies...
 
 WRONG:
   1. Invoke $speckit-specify directly in your context
@@ -95,6 +119,14 @@ Each phase type has its own specialized executor agent:
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
 | Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
 
+Concrete Codex mapping:
+
+- Read the executor definition from `../../codex-agents/<agent>.md`
+- Build the phase prompt in the parent session
+- Call `spawn_agent` with the executor instructions plus the workflow prompt
+- Call `wait_agent` for completion
+- Persist the returned summary into the workflow file and `autopilot-state.json`
+
 Spawn each agent with phase-specific prefix where needed, followed by:
 
 ```text
@@ -107,11 +139,13 @@ Workflow prompt:
 Each agent runs the command (and any post-execution work like gap
 remediation) in isolation and returns a structured summary.
 
-### 3. Track progress
+### 3. Progress state is mandatory
 
-Before executing any phase, create a granular progress checklist.
+Before executing any phase, call `update_plan` with the full granular
+checklist and mirror the same state into `autopilot-state.json`.
 For multi-prompt phases (Clarify, Checklist), create one item per
-prompt/session so you know exactly what to execute next. See Step 1.1.
+prompt/session so you know exactly what to execute next. Missing
+`update_plan` is a hard stop. See Step 1.1.
 
 ### 4. Multi-prompt phases
 
@@ -122,19 +156,21 @@ Spawn a **separate subagent for each prompt**.
 
 ```text
 CORRECT (Clarify with 2 sessions):
-  1. Mark "Clarify - Session 1" as in progress
-  2. Spawn the clarify-executor agent: "<session 1 prompt>"
+  1. update_plan: "Phase 2: Clarify - Session 1" -> in_progress
+  2. Write the same status to autopilot-state.json
+  3. Spawn the clarify-executor agent: "<session 1 prompt>"
      The clarify-executor researches and answers all questions
-  3. Search spec.md for [NEEDS CLARIFICATION] markers
-  4. If markers remain → use context research to resolve
-  5. Mark "Clarify - Session 1" as completed
-  6. Mark "Clarify - Session 2" as in progress
-  7. Spawn the clarify-executor agent: "<session 2 prompt>"
-  8. Search spec.md for [NEEDS CLARIFICATION] markers
-  9. If markers remain → use context research to resolve
-  10. Mark "Clarify - Session 2" as completed
-  11. Validate G2 gate (0 markers remaining)
-  12. Advance to Plan
+  4. Search spec.md for [NEEDS CLARIFICATION] markers
+  5. If markers remain -> use context research to resolve
+  6. update_plan: "Phase 2: Clarify - Session 1" -> completed
+  7. update_plan: "Phase 2: Clarify - Session 2" -> in_progress
+  8. Write both transitions to autopilot-state.json
+  9. Spawn the clarify-executor agent: "<session 2 prompt>"
+  10. Search spec.md for [NEEDS CLARIFICATION] markers
+  11. If markers remain -> use context research to resolve
+  12. update_plan: "Phase 2: Clarify - Session 2" -> completed
+  13. Validate G2 gate (0 markers remaining)
+  14. Advance to Plan
 
 WRONG:
   1. Run all sessions, then check for markers at the end
@@ -363,11 +399,16 @@ of the status table.
 
 If all phases are complete, report "All phases complete" and stop.
 
-### 1.1 Create Progress Checklist
+### 1.1 Create Durable Progress Plan
 
 After parsing the workflow state, create a **granular** progress
-checklist. For multi-prompt phases (Clarify, Checklist), create
-one item per prompt/session.
+plan and immediately materialize it in TWO places:
+
+1. `update_plan` with the full checklist
+2. `<workflow directory>/autopilot-state.json` with the same items
+
+Do both before Phase 1 or STOP. For multi-prompt phases (Clarify,
+Checklist), create one item per prompt/session.
 
 **Checklist naming pattern** (parse from workflow file):
 
@@ -400,7 +441,35 @@ items. **Never omit consensus items.**
 - Extension items (doctor, verify-tasks, verify, review,
   cleanup, retrospective): add if extension is in .registry
   with enabled: true, or if extension directory exists
-- Mark completed phases immediately; first pending as in progress
+- Mark completed phases immediately; first pending as `in_progress`
+- Use EXACTLY the same item names in `update_plan` and `autopilot-state.json`
+- Immediately print a checklist summary after writing both copies
+
+**Required `autopilot-state.json` schema:**
+
+```json
+{
+  "workflow_file": "docs/ai/specs/SPEC-013-workflow.md",
+  "updated_at": "2026-04-10T18:00:00Z",
+  "active_step": "Phase 1: Specify",
+  "plan": [
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - UX Focus", "status": "pending"}
+  ]
+}
+```
+
+### 1.2 Validate Plan State Before Phase 1
+
+Before Phase 1 starts, validate all of the following or STOP:
+
+- `update_plan` succeeded and the active plan matches the workflow-derived checklist
+- `autopilot-state.json` exists and contains the same ordered step list
+- Exactly one plan item is `in_progress`
+- Every Clarify session, Checklist domain, and Analyze phase has its
+  mandatory Consensus item
+- The checklist summary was printed so progress is visible to the user
 
 ## Step 2: Main Execution Loop
 
@@ -411,19 +480,23 @@ validate the gate, and advance.
 PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
-    1. Mark phase item as "in progress"
+    1. update_plan: mark the current phase item as "in_progress"
+       and mirror the same status change into autopilot-state.json
     2. Check .specify/extensions.yml for before_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     3. Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
-       a. Spawn the appropriate executor agent: "Run $speckit-<phase> with: <prompt>"
-       b. Receive subagent summary
-       c. Mark this prompt's item as "completed"
+       a. Read ../../codex-agents/<executor>.md
+       b. spawn_agent: "Run $speckit-<phase> with: <prompt>"
+       c. wait_agent for the summary
+       d. update_plan: mark this prompt's item as "completed"
+       e. Write the same transition to autopilot-state.json
     5. Run consensus in main session if needed:
        Parse executor's "Unresolved for consensus" section.
        For each item → spawn 3 consensus agents in parallel
        (codebase-analyst, spec-context-analyst, domain-researcher)
-       → apply consensus rules → edit artifacts
+       → wait_agent on all 3 → apply consensus rules → edit artifacts
+       → mark the corresponding Consensus item complete in both stores
     6. Check .specify/extensions.yml for after_<phase> hooks
        → run accepted hooks (non-destructive), skip duplicates
     7. Validate gate directly in the main session:
@@ -435,12 +508,13 @@ for phase in PHASES starting from first_pending:
        a. Attempt auto-fix (max 2 attempts)
        b. If still failing and gate-failure == "stop": STOP
        c. If gate-failure == "skip-and-log": log, continue
-    9. Update workflow file with results
+    9. Update workflow file with results and print the current checklist summary
    10. If auto-commit == "per-phase":
        For phases 1–6: run: git add specs/ && git commit
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
-   11. Advance to next phase (next iteration of loop)
+   11. Advance to next phase (next iteration of loop) and write the new
+       `in_progress` item to both update_plan and autopilot-state.json
 
 POST-IMPLEMENTATION (after all 7 phases complete):
     These are items in your checklist — execute them in order.
@@ -661,14 +735,20 @@ Consensus Resolution Log.
 
 ### Resuming After Interruption
 
-The workflow file persists all state. To resume:
+The workflow file persists phase artifacts. `autopilot-state.json`
+persists orchestration state. To resume:
 
 ```text
 $speckit-autopilot workflow.md --from-phase <next-pending-phase>
 ```
 
-The autopilot reads prior artifacts from disk and continues from
-the specified phase.
+Resume protocol:
+
+1. Read `autopilot-state.json` next to the workflow file
+2. Rebuild `update_plan` from its `plan` array
+3. Re-read the workflow file to verify artifact status and prompt content
+4. If the state file is missing, reconstruct it from the workflow file,
+   immediately call `update_plan`, then continue from the requested phase
 
 ### Common Issues
 
