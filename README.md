@@ -48,10 +48,15 @@ For personal installs, follow the official Codex plugin docs: copy the plugin to
 - [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
 - [Marketplace metadata](https://developers.openai.com/codex/plugins/build#marketplace-metadata)
 
-SpecKit Pro also ships bundled Codex custom subagent templates. After the
-plugin is installed in Codex, run `@SpecKit Pro → Install` or
-`$speckit-pro:install` to copy those TOML files into `~/.codex/agents/`,
-then restart Codex.
+SpecKit Pro ships its Codex orchestration guidance as skill packages. The
+Codex skills own their local `agents/openai.yaml` metadata sidecars, matching
+the official skills layout. Default Codex execution does not require a
+separate install skill; the autopilot uses built-in `worker`, `explorer`, and
+`default` roles unless the repo or user already has custom agents registered
+under `.codex/agents/` or `~/.codex/agents/`. For advanced custom-agent setup,
+follow the official
+[Codex skills](https://developers.openai.com/codex/skills) and
+[Codex subagents](https://developers.openai.com/codex/subagents) docs.
 
 ## Contributing
 
@@ -77,8 +82,8 @@ plugin-name/
 ├── .claude-plugin/
 │   └── plugin.json      # Claude Code plugin metadata (required for Claude Code)
 ├── commands/            # Slash commands (optional)
-├── codex-agents/        # Bundled Codex custom subagent templates (optional)
-├── codex-skills/        # Codex skill entrypoints (optional)
+├── codex-skills/        # Codex skill entrypoints plus skill-owned sidecars (optional)
+│   └── */agents/        # `openai.yaml` skill metadata sidecars
 ├── agents/              # Agent definitions (optional)
 ├── skills/              # Skill definitions (optional)
 ├── hooks/               # Event hooks (optional)

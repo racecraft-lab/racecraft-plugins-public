@@ -53,7 +53,7 @@ output=$(bash "$CODEX_TRIGGER_SCRIPT" speckit-coach)
 assert_contains "$output" "Skill path: $PLUGIN_ROOT/codex-skills/speckit-coach"
 
 # Codex-only skills (no skills/ counterpart) must also resolve correctly
-for codex_only_skill in speckit-setup speckit-status speckit-resolve-pr install; do
+for codex_only_skill in speckit-setup speckit-status speckit-resolve-pr; do
   set_test "Codex functional runner uses codex skill for ${codex_only_skill}"
   output=$(bash "$CODEX_FUNCTIONAL_SCRIPT" "$codex_only_skill")
   assert_contains "$output" "Skill path: $PLUGIN_ROOT/codex-skills/${codex_only_skill}"

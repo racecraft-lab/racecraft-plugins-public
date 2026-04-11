@@ -48,14 +48,6 @@ extract_field() {
 }
 
 # ---------------------------------------------------------------------------
-# Helper: extract a scalar TOML string field
-# ---------------------------------------------------------------------------
-extract_toml_field() {
-  local file="$1" field="$2"
-  sed -n "s/^${field} = \"\\([^\"]*\\)\"$/\\1/p" "$file" | head -1
-}
-
-# ---------------------------------------------------------------------------
 # Helper: assert a tool IS present in the tools list
 # ---------------------------------------------------------------------------
 assert_tool_present() {
@@ -430,72 +422,6 @@ assert_eq "high" "$effort"
 set_test "consensus-synthesizer maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
-
-# ─────────────────────────────────────────
-# Codex Agent Sandbox Mode Validation
-# ─────────────────────────────────────────
-
-CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
-
-if [ -d "$CODEX_AGENTS_DIR" ]; then
-
-  section "Codex Agent Sandbox Mode Scoping"
-
-  # Read-only analysts must have sandbox_mode: read-only
-  for agent in codebase-analyst spec-context-analyst domain-researcher; do
-    AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
-    if [ -f "$AGENT_FILE" ]; then
-      sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")
-      set_test "codex ${agent}: sandbox_mode is read-only"
-      assert_eq "read-only" "$sandbox" "${agent} must be read-only"
-
-      model=$(extract_toml_field "$AGENT_FILE" "model")
-      set_test "codex ${agent}: model is gpt-5.4-mini"
-      assert_eq "gpt-5.4-mini" "$model" "${agent} must use gpt-5.4-mini"
-
-      effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
-      set_test "codex ${agent}: reasoning is medium"
-      assert_eq "medium" "$effort" "${agent} must use medium reasoning"
-    fi
-  done
-
-  # Write agents must have sandbox_mode: workspace-write
-  for agent in clarify-executor checklist-executor analyze-executor implement-executor phase-executor; do
-    AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
-    if [ -f "$AGENT_FILE" ]; then
-      sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")
-      set_test "codex ${agent}: sandbox_mode is workspace-write"
-      assert_eq "workspace-write" "$sandbox" "${agent} must be workspace-write"
-
-      model=$(extract_toml_field "$AGENT_FILE" "model")
-      effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
-      case "$agent" in
-        phase-executor)
-          set_test "codex ${agent}: model is gpt-5.4-mini"
-          assert_eq "gpt-5.4-mini" "$model" "${agent} must use gpt-5.4-mini"
-
-          set_test "codex ${agent}: reasoning is low"
-          assert_eq "low" "$effort" "${agent} must use low reasoning"
-          ;;
-        implement-executor)
-          set_test "codex ${agent}: model is gpt-5.4"
-          assert_eq "gpt-5.4" "$model" "${agent} must use gpt-5.4"
-
-          set_test "codex ${agent}: reasoning is medium"
-          assert_eq "medium" "$effort" "${agent} must use medium reasoning"
-          ;;
-        *)
-          set_test "codex ${agent}: model is gpt-5.4"
-          assert_eq "gpt-5.4" "$model" "${agent} must use gpt-5.4"
-
-          set_test "codex ${agent}: reasoning is high"
-          assert_eq "high" "$effort" "${agent} must use high reasoning"
-          ;;
-      esac
-    fi
-  done
-
-fi
 
 # ===========================================================================
 test_summary

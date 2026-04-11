@@ -47,17 +47,22 @@ Bind the workflow to actual Codex primitives:
 - Persist orchestration state to `autopilot-state.json` in the same directory
   as the workflow file. Resume reads that file first, then reconciles with the
   workflow file.
-- Custom executor and consensus agents must be installed as real Codex
-  subagents under `.codex/agents/` (project scope) or `~/.codex/agents/`
-  (user scope). The plugin bundles templates under `../../codex-agents/`, but
-  those bundled templates are not the runtime source of truth.
+- This skill owns `./agents/openai.yaml` as Codex skill metadata for UI
+  appearance, invocation policy, and tool dependencies. Do not treat that
+  sidecar as a custom-agent manifest.
+- Default Codex execution must NOT depend on a separate install skill or a
+  user-global copy step. The zero-setup path uses built-in Codex subagent
+  roles directly: `worker` for execution/editing, `explorer` for read-heavy
+  analysis, and `default` only when neither fits cleanly.
+- If the current session already exposes matching custom agents from
+  `.codex/agents/` or `~/.codex/agents/`, you may use them by name. Treat
+  those registered custom agents as an optimization, not a prerequisite.
 
 Do not translate this skill into Claude-only primitives such as legacy
-task-list tools or legacy Claude agent/shell placeholders. Do not read the
-bundled TOML templates and inline them as ad hoc prompts. Validate that the
-required custom subagents are installed, then spawn them by agent name. If any
-required SpecKit Pro subagent is missing, STOP and instruct the user to run
-`$speckit-pro:install`, then restart Codex.
+task-list tools or legacy Claude agent/shell placeholders. Do not bounce the
+user to a separate install skill. If the optional SpecKit custom agents are not
+available in the current session, continue with the built-in fallback mapping
+defined below.
 
 ## Prerequisites — Model & Effort
 
@@ -100,14 +105,16 @@ is harmless — the result returns to you and your loop continues.
 ```text
 CORRECT:
   1. Read workflow file's "### Specify Prompt" section
-  2. Verify `phase-executor` exists in `.codex/agents/` or `~/.codex/agents/`
-  3. spawn_agent the installed `phase-executor` agent with:
+  2. Resolve the phase runner:
+     prefer `phase-executor` if already registered, otherwise `worker`
+  3. spawn_agent the resolved phase runner with:
      "Run $speckit-specify with: <prompt>"
   4. wait_agent(...)
   5. update_plan(...) and write autopilot-state.json
   6. Search spec.md for [NEEDS CLARIFICATION] markers
-  7. Verify `clarify-executor` exists in `.codex/agents/` or `~/.codex/agents/`
-  8. spawn_agent the installed `clarify-executor` agent with:
+  7. Resolve the clarify runner:
+     prefer `clarify-executor` if already registered, otherwise `worker`
+  8. spawn_agent the resolved clarify runner with:
      "Run $speckit-clarify with: ..."
   ...every step produces durable state and the loop never dies...
 
@@ -120,25 +127,31 @@ WRONG:
 
 ### 2. Use phase-specific executor agents
 
-Each phase type has its own specialized executor agent:
+Each phase type has a preferred registered SpecKit agent name and a zero-setup
+Codex fallback:
 
-| Phase | Agent | Why specialized |
-| ----- | ----- | --------------- |
-| Specify, Plan, Tasks | `phase-executor` | Simple: run command, return summary |
-| Clarify | `clarify-executor` | Interactive: must research and answer questions |
-| Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
-| Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
-| Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
+| Phase | Preferred Registered Agent | Zero-Setup Fallback | Why specialized |
+| ----- | ------------------ | ------------------ | --------------- |
+| Specify, Plan, Tasks | `phase-executor` | `worker` | Simple: run command, return summary |
+| Clarify | `clarify-executor` | `worker` | Interactive: must research and answer questions |
+| Checklist | `checklist-executor` | `worker` | Must run checklist AND remediate gaps with research |
+| Analyze | `analyze-executor` | `worker` | Must run analysis AND remediate ALL findings with research |
+| Implement | `implement-executor` | `worker` | Task-level dispatch with strict TDD |
+| Read-only consensus | analyst agents | `explorer` | Read-heavy code/spec/domain analysis |
 
 Concrete Codex mapping:
 
-- Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
-  `~/.codex/agents/<agent>.toml`
-- If the installed agent is missing, STOP and tell the user to run
-  `$speckit-pro:install`, then restart Codex
+- `./agents/openai.yaml` is skill metadata only. It does not register custom
+  agents for Codex.
+- If a matching custom agent name is already available in the current session,
+  use it by name.
+- Otherwise map the work onto built-in agents:
+  - execution, edits, and CLI-driving work → `worker`
+  - read-only codebase/spec investigation → `explorer`
+  - synthesis or odd one-off routing work → `default`
 - Build the phase prompt in the parent session
-- Call `spawn_agent` using the installed custom agent by its `name`
-  plus the workflow prompt
+- Call `spawn_agent` using either the available custom agent name or the
+  built-in fallback role plus the workflow prompt
 - Call `wait_agent` for completion
 - Persist the returned summary into the workflow file and `autopilot-state.json`
 
@@ -361,14 +374,16 @@ Read the workflow file's Prerequisites table. If already
 3. Update the workflow file's table with results and baselines
 4. If any check fails, STOP — do not proceed to Phase 1
 
-### 0.10 Codex Subagent Installation Check
+### 0.10 Codex Agent Availability Check
 
 Before phase execution, validate that the required SpecKit Pro
-custom subagents are installed on a Codex-only path. Check the
-project path first, then the user path:
+agent responsibilities are available one way or another.
+Check for registered custom agents first, then fall back to
+the built-in Codex roles:
 
 1. `.codex/agents/<agent>.toml`
 2. `~/.codex/agents/<agent>.toml`
+3. Built-in `worker`, `explorer`, and `default`
 
 Required agents:
 
@@ -385,10 +400,9 @@ Optional helper agent:
 
 - `autopilot-fast-helper`
 
-If any required file is missing from both locations, STOP and
-tell the user to run `$speckit-pro:install`, then restart Codex.
-Do not fall back to the bundled `../../codex-agents/*.toml`
-templates at runtime. Those are packaging assets only.
+If the custom agent files are missing from both locations, continue with the
+built-in fallback mapping described above. Only STOP if neither the custom
+agent nor the required built-in fallback role is available.
 If the optional helper is missing, continue without it.
 
 ### 0.11 Implementation Agent Detection
@@ -552,8 +566,10 @@ for phase in PHASES starting from first_pending:
        → run accepted hooks (non-destructive), skip duplicates
     3. Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
-       a. Validate the installed `<executor>` agent exists on a Codex agent path
-       b. spawn_agent the installed `<executor>` agent:
+       a. Resolve `<executor>`:
+          prefer the matching registered SpecKit custom agent,
+          otherwise use the built-in fallback role for that phase
+       b. spawn_agent the resolved `<executor>`:
           "Run $speckit-<phase> with: <prompt>"
        c. wait_agent for the summary
        d. update_plan: mark this prompt's item as "completed"

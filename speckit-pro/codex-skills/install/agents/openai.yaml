@@ -1,7 +1,0 @@
-interface:
-  display_name: "SpecKit Install"
-  short_description: "Install bundled Codex subagents into ~/.codex/agents"
-  default_prompt: "Install or refresh the bundled SpecKit Pro Codex subagents into ~/.codex/agents and tell me if I need to restart Codex"
-
-policy:
-  allow_implicit_invocation: false
