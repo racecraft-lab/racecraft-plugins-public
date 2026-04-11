@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.6.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.5.1...speckit-pro-v1.6.0) (2026-04-11)
+
+
+### Features
+
+* **codex:** install official custom subagents ([230586b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/230586b0c99a9be7913077fd4cbf6837a27327d0))
+
+
+### Bug Fixes
+
+* **codex:** align marketplace contract with official docs ([6b56879](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6b56879fbd41aead04ce1863014791bf450b6c89))
+
 ## [1.5.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.5.0...speckit-pro-v1.5.1) (2026-04-11)
 
 

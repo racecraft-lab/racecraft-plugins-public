@@ -1,6 +1,6 @@
 {
   "name": "speckit-pro",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "description": "Skill-backed Spec-Driven Development workflows for Codex, including coaching, setup, Codex subagent installation, autopilot execution, status dashboards, and PR review resolution.",
   "author": {
     "name": "Fredrick Gabelmann",
