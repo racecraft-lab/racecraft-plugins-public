@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.6.0...speckit-pro-v1.7.0) (2026-04-11)
+
+
+### Features
+
+* **codex:** add optional spark autopilot helper ([a696327](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a6963279711a4a79160c7bb9dec27a2d342268f8))
+
 ## [1.6.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.5.1...speckit-pro-v1.6.0) (2026-04-11)
 
 

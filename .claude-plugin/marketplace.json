@@ -8,7 +8,7 @@
       "name": "speckit-pro",
       "source": "./speckit-pro",
       "description": "Autonomous Spec-Driven Development powered by GitHub SpecKit. Includes SDD coaching, multi-spec project management, and a fully autonomous workflow executor with multi-agent clarification consensus.",
-      "version": "1.6.0"
+      "version": "1.7.0"
     }
   ]
 }
