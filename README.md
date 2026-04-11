@@ -50,13 +50,14 @@ For personal installs, follow the official Codex plugin docs: copy the plugin to
 
 SpecKit Pro ships its Codex orchestration guidance as skill packages. The
 Codex skills own their local `agents/openai.yaml` metadata sidecars, matching
-the official skills layout. Default Codex execution does not require a
-separate install skill; the autopilot uses built-in `worker`, `explorer`, and
-`default` roles unless the repo or user already has custom agents registered
-under `.codex/agents/` or `~/.codex/agents/`. For advanced custom-agent setup,
-follow the official
-[Codex skills](https://developers.openai.com/codex/skills) and
-[Codex subagents](https://developers.openai.com/codex/subagents) docs.
+the official skills layout. Those sidecars are not custom-agent manifests. The
+official
+[Codex plugins](https://developers.openai.com/codex/plugins/build) docs support
+bundled skills, apps, and MCP server config, while the official
+[Codex subagents](https://developers.openai.com/codex/subagents) docs still
+register custom agents from `.codex/agents/` or `~/.codex/agents/`. SpecKit Pro
+therefore keeps a Codex-only `install` skill that copies its bundled
+`codex-agents/*.toml` templates into those runtime paths.
 
 ## Contributing
 
@@ -84,7 +85,8 @@ plugin-name/
 ├── commands/            # Slash commands (optional)
 ├── codex-skills/        # Codex skill entrypoints plus skill-owned sidecars (optional)
 │   └── */agents/        # `openai.yaml` skill metadata sidecars
-├── agents/              # Agent definitions (optional)
+├── codex-agents/        # Bundled Codex custom-agent TOML templates (optional)
+├── agents/              # Claude Code agent definitions (optional)
 ├── skills/              # Skill definitions (optional)
 ├── hooks/               # Event hooks (optional)
 ├── tests/               # Plugin test suite (optional)

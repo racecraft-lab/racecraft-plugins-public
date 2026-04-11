@@ -10,6 +10,8 @@ CC_PLUGIN="$PLUGIN_ROOT/.claude-plugin/plugin.json"
 CODEX_PLUGIN="$PLUGIN_ROOT/.codex-plugin/plugin.json"
 CC_MARKETPLACE="$PLUGIN_ROOT/../.claude-plugin/marketplace.json"
 CODEX_MARKETPLACE="$PLUGIN_ROOT/../.agents/plugins/marketplace.json"
+AGENTS_DIR="$PLUGIN_ROOT/agents"
+CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
 SKILLS_DIR="$PLUGIN_ROOT/skills"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 COMMANDS_DIR="$PLUGIN_ROOT/commands"
@@ -61,6 +63,62 @@ if [ -f "$CC_MARKETPLACE" ] && [ -f "$CODEX_MARKETPLACE" ]; then
   set_test "CC and Codex marketplace names match ($cc_marketplace_name)"
   assert_eq "$cc_marketplace_name" "$codex_marketplace_name" \
     "marketplace names must match: CC=$cc_marketplace_name, Codex=$codex_marketplace_name"
+fi
+
+# ===========================================================================
+# Agent Parity — CC agents → Codex agents
+# ===========================================================================
+section "Agent Parity (CC → Codex)"
+
+CC_ONLY_AGENTS=(gate-validator consensus-synthesizer)
+CODEX_ONLY_AGENTS=(autopilot-fast-helper)
+
+is_cc_only() {
+  local name="$1"
+  for cc_only in "${CC_ONLY_AGENTS[@]}"; do
+    [ "$name" = "$cc_only" ] && return 0
+  done
+  return 1
+}
+
+is_codex_only() {
+  local name="$1"
+  for codex_only in "${CODEX_ONLY_AGENTS[@]}"; do
+    [ "$name" = "$codex_only" ] && return 0
+  done
+  return 1
+}
+
+if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
+  for cc_agent_file in "$AGENTS_DIR"/*.md; do
+    [ -f "$cc_agent_file" ] || continue
+    agent_name=$(basename "$cc_agent_file" .md)
+    if is_cc_only "$agent_name"; then
+      continue
+    fi
+    set_test "codex-agents/${agent_name}.toml exists for CC agent"
+    assert_file_exists "$CODEX_AGENTS_DIR/${agent_name}.toml"
+  done
+else
+  set_test "agents/ and codex-agents/ directories exist"
+  _fail "one or both agent directories missing (CC: $AGENTS_DIR, Codex: $CODEX_AGENTS_DIR)"
+fi
+
+# ===========================================================================
+# Agent Parity — Codex agents → CC agents
+# ===========================================================================
+section "Agent Parity (Codex → CC)"
+
+if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
+  for codex_agent_file in "$CODEX_AGENTS_DIR"/*.toml; do
+    [ -f "$codex_agent_file" ] || continue
+    agent_name=$(basename "$codex_agent_file" .toml)
+    if is_codex_only "$agent_name"; then
+      continue
+    fi
+    set_test "agents/${agent_name}.md exists for Codex agent"
+    assert_file_exists "$AGENTS_DIR/${agent_name}.md"
+  done
 fi
 
 # ===========================================================================

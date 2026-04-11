@@ -1,0 +1,36 @@
+{
+  "skill_name": "install",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Install the bundled SpecKit Pro Codex subagents into ~/.codex/agents and tell me exactly what to do next.",
+      "expected_output": "Copies the bundled TOML files into the user-scope Codex agents directory, verifies the install, and tells the user to restart Codex.",
+      "expectations": [
+        "Mentions the bundled source directory under codex-agents/",
+        "Mentions ~/.codex/agents as the default destination",
+        "States which TOML files were copied or refreshed",
+        "Explicitly tells the user to restart Codex"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Autopilot says phase-executor is missing. Use the install skill to repair the bundled SpecKit Codex subagents without touching any Claude files.",
+      "expected_output": "Repairs the Codex subagent install on Codex-only paths and avoids mutating Claude plugin or marketplace files.",
+      "expectations": [
+        "States that Claude files or Claude marketplace metadata are out of scope",
+        "Uses Codex-only paths such as codex-agents/ and ~/.codex/agents/",
+        "Avoids suggesting changes to .claude/agents or .claude-plugin"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Install the SpecKit Pro Codex subagents into a custom project path at .codex/agents instead of my home directory.",
+      "expected_output": "Honors the explicit Codex agent-directory override and still verifies the copied TOML files before finishing.",
+      "expectations": [
+        "Honors the explicit destination override",
+        "Keeps the source of truth as the bundled codex-agents TOML files",
+        "Still instructs the user to restart Codex after installation"
+      ]
+    }
+  ]
+}

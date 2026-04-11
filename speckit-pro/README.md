@@ -11,7 +11,7 @@ The plugin runs autonomously. You provide a feature description, and it handles 
 This plugin ships different entrypoint surfaces for the two platforms:
 
 - **Claude Code** — 2 bundled skills plus 5 `/speckit-pro:*` commands
-- **Codex** — 5 bundled skills plus skill-local `agents/openai.yaml` metadata sidecars
+- **Codex** — 6 bundled skills plus skill-local `agents/openai.yaml` metadata sidecars
 
 ## Codex Entry Points
 
@@ -21,6 +21,7 @@ Codex does not load the Anthropic `commands/` files from this repository. In Cod
 | ---------- | ----------- | ----- |
 | Coaching | `/speckit-pro:coach` | `/speckit-coach` or `$speckit-coach` |
 | Setup | `/speckit-pro:setup` | `/speckit-setup` or `$speckit-setup` |
+| Codex agent install / repair | — | `@SpecKit Pro` → `install` or `$install` |
 | Autopilot | `/speckit-pro:autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
 | Status | `/speckit-pro:status` | `/speckit-status` or `$speckit-status` |
 | Review remediation | `/speckit-pro:resolve-pr` | `/speckit-resolve-pr` or `$speckit-resolve-pr` |
@@ -31,12 +32,15 @@ To browse or install plugins in Codex CLI, use `/plugins`, not `/plugin`.
 
 The Codex skills own their local
 [`agents/openai.yaml`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml)
-metadata sidecars, which is the official Codex skills packaging model. Default
-execution does not require a separate install skill; the zero-setup path uses
-Codex-native `worker`, `explorer`, and `default` roles directly. If you want
-persistent repo-scoped custom agents, define them separately via the official
-[Codex subagents](https://developers.openai.com/codex/subagents) flow under
-`.codex/agents/`.
+metadata sidecars, which is the official Codex skills packaging model. Those
+sidecars are metadata only. The official
+[Codex subagents](https://developers.openai.com/codex/subagents) docs still
+register real custom agents from `.codex/agents/` or `~/.codex/agents/`, so
+SpecKit Pro keeps a separate Codex-only `install` skill that copies the bundled
+`codex-agents/*.toml` templates into those runtime paths. The built-in
+`worker`, `explorer`, and `default` roles remain a degraded fallback, but the
+preferred SpecKit Pro path is to run the install skill after plugin install and
+restart Codex.
 
 ## Claude Code Commands
 
@@ -181,8 +185,10 @@ The autopilot skill runs in the main session so it can spawn subagents directly 
 - **Codex runtime contract**: orchestration is bound to `spawn_agent` / `wait_agent`, progress is required in `update_plan`, and the same ordered plan is mirrored into `autopilot-state.json` next to the workflow file for resume safety.
 - **Claude Code runtime contract**: orchestration stays on the existing Agent/task primitives for Claude sessions.
 - **Skill-local Codex metadata**: each Codex skill owns `agents/openai.yaml` for display metadata, invocation policy, and tool dependencies.
-- **Zero-setup Codex fallback**: the autopilot maps work onto the built-in `worker`, `explorer`, and `default` agent roles instead of depending on an install step.
-- **Optional registered custom agents**: if matching project or user agents already exist under `.codex/agents/` or `~/.codex/agents/`, the autopilot may use them by name.
+- **Bundled Codex custom-agent templates**: SpecKit Pro ships `codex-agents/*.toml` in the plugin bundle, but Codex still needs them copied into `.codex/agents/` or `~/.codex/agents/` before they are real spawnable agents.
+- **Codex install skill**: use `install` to copy or refresh those bundled templates without touching any Claude-only files.
+- **Preferred Codex runtime**: the autopilot uses the installed `phase-executor`, `clarify-executor`, `checklist-executor`, `analyze-executor`, `implement-executor`, `codebase-analyst`, `spec-context-analyst`, and `domain-researcher` agents by name.
+- **Fallback roles**: the built-in `worker`, `explorer`, and `default` roles remain available as a degraded fallback when a matching custom agent is unavailable.
 - **Simple phases** (specify, plan, tasks): prefer a registered `phase-executor`, otherwise delegate to `worker`
 - **Consensus executors** (clarify, checklist, analyze): prefer registered `clarify-executor`, `checklist-executor`, or `analyze-executor` agents, otherwise delegate to `worker`
 - **Consensus analysts**: prefer registered `codebase-analyst`, `spec-context-analyst`, and `domain-researcher` agents, otherwise use `explorer` for read-heavy work

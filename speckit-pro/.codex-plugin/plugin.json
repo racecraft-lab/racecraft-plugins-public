@@ -1,7 +1,7 @@
 {
   "name": "speckit-pro",
   "version": "1.6.0",
-  "description": "Skill-backed Spec-Driven Development workflows for Codex, including coaching, setup, autopilot execution, status dashboards, and PR review resolution.",
+  "description": "Skill-backed Spec-Driven Development workflows for Codex, including coaching, setup, custom-agent installation, autopilot execution, status dashboards, and PR review resolution.",
   "author": {
     "name": "Fredrick Gabelmann",
     "url": "https://github.com/racecraft-lab"
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "SpecKit Pro",
     "shortDescription": "Spec-driven workflows for Codex",
-    "longDescription": "Skill-backed Spec-Driven Development for Codex. Each Codex skill ships its own `agents/openai.yaml` metadata sidecar, and the autopilot uses Codex-native multi-agent orchestration for coaching, setup, execution, status dashboards, and PR review remediation.",
+    "longDescription": "Skill-backed Spec-Driven Development for Codex. Each Codex skill ships its own `agents/openai.yaml` metadata sidecar, and SpecKit Pro also bundles Codex custom-agent TOML templates plus an install skill because Codex still registers custom agents from `.codex/agents/` or `~/.codex/agents/` rather than directly from the plugin bundle.",
     "developerName": "Racecraft Lab",
     "category": "Coding",
     "capabilities": [
@@ -33,9 +33,10 @@
     ],
     "websiteURL": "https://github.com/racecraft-lab/racecraft-plugins-public",
     "defaultPrompt": [
+      "Use SpecKit Pro to install or refresh the bundled custom Codex agents.",
       "Use SpecKit Pro to coach Spec-Driven Development and explain the next step for my current spec.",
       "Use SpecKit Pro to set up a spec worktree and prepare the workflow for autopilot.",
-      "Use SpecKit Pro to run a populated workflow file with Codex-native built-in or registered agents."
+      "Use SpecKit Pro to run a populated workflow file with the installed SpecKit Codex agents."
     ],
     "brandColor": "#6366F1"
   }

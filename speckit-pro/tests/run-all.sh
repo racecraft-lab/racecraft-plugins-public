@@ -143,6 +143,7 @@ if should_run 1; then
   run_layer 1 "Codex Structural Validation" \
     "$TESTS_DIR/layer1-structural/validate-codex-plugin.sh" \
     "$TESTS_DIR/layer1-structural/validate-codex-marketplace.sh" \
+    "$TESTS_DIR/layer1-structural/validate-codex-agents.sh" \
     "$TESTS_DIR/layer1-structural/validate-codex-skills.sh" \
     "$TESTS_DIR/layer1-structural/validate-codex-hooks.sh" \
     "$TESTS_DIR/layer1-structural/validate-codex-parity.sh"
@@ -205,6 +206,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
     "$TESTS_DIR/layer4-scripts/test-eval-runner-skill-selection.sh"
+    "$TESTS_DIR/layer4-scripts/test-install-codex-agents.sh"
     "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
   )
 

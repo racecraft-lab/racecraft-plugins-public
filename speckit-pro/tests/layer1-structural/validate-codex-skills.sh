@@ -8,7 +8,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 # Canonical skill list — keep in sync with the case block in the
 # "corresponding source artifact exists" test below.
-SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr)
+SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr install)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
 CC_ONLY_KEYS=(user-invokable license argument-hint)
@@ -93,19 +93,15 @@ for skill in "${SKILLS[@]}"; do
     set_test "speckit-autopilot: documents skill-local agents/openai.yaml metadata"
     assert_contains "$body" 'agents/openai.yaml'
 
-    set_test "speckit-autopilot: documents the zero-setup built-in fallback"
-    if [[ "$body" == *"`worker`"* && "$body" == *"`explorer`"* ]]; then
+    set_test "speckit-autopilot: validates installed Codex subagent paths"
+    if [[ "$body" == *".codex/agents/"* && "$body" == *"~/.codex/agents/"* ]]; then
       _pass
     else
-      _fail "expected worker and explorer fallback guidance in the Codex autopilot skill"
+      _fail "expected both project and user Codex subagent paths in the autopilot skill"
     fi
 
-    set_test "speckit-autopilot: does not depend on a separate install skill"
-    if echo "$body" | grep -q '\$speckit-pro:install'; then
-      _fail "autopilot should not redirect to a standalone install skill"
-    else
-      _pass
-    fi
+    set_test "speckit-autopilot: fails closed to the install skill when subagents are missing"
+    assert_contains "$body" '$install'
 
     set_test "speckit-autopilot: documents the optional Spark helper"
     assert_contains "$body" 'autopilot-fast-helper'
@@ -133,7 +129,7 @@ for skill in "${SKILLS[@]}"; do
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
     case "$skill" in
-      speckit-setup|speckit-autopilot|speckit-resolve-pr)
+      speckit-setup|speckit-autopilot|speckit-resolve-pr|install)
         if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
           _pass
         else
@@ -187,6 +183,9 @@ for skill in "${SKILLS[@]}"; do
         _fail "corresponding Claude command not found at commands/resolve-pr.md"
       fi
       ;;
+    install)
+      _pass
+      ;;
     *)
       _fail "no corresponding source artifact mapping defined for skill '$skill'; update validate-codex-skills.sh"
       ;;
@@ -199,15 +198,11 @@ for skill in "${SKILLS[@]}"; do
     assert_file_exists "$PLUGIN_ROOT/skills/speckit-coach/templates/workflow-template.md"
   fi
 
+  if [ "$skill" = "install" ]; then
+    set_test "install: installer script exists"
+    assert_file_exists "$SKILL_DIR/scripts/install-codex-agents.sh"
+  fi
+
 done
-
-section "legacy Codex agent packaging"
-
-set_test "legacy top-level codex-agents directory removed"
-if [ -d "$PLUGIN_ROOT/codex-agents" ]; then
-  _fail "legacy codex-agents directory should not exist"
-else
-  _pass
-fi
 
 test_summary
