@@ -12,8 +12,8 @@ A curated directory of open-source plugins from [Racecraft Lab](https://github.c
 
 This repository ships both plugin surfaces:
 
-- Claude Code marketplace metadata in [`.claude-plugin/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.claude-plugin/marketplace.json)
-- Codex marketplace metadata in [`.agents/plugins/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.agents/plugins/marketplace.json)
+- Claude Code marketplace metadata in [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
+- Codex marketplace metadata in [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json)
 
 ### Claude Code
 
@@ -40,18 +40,26 @@ codex
 /plugins
 ```
 
-Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.agents/plugins/marketplace.json).
+Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json).
 
-For personal installs, follow the official Codex plugin docs: copy the plugin to `~/.codex/plugins/<plugin-name>`, point `~/.agents/plugins/marketplace.json` at that directory with a `./`-prefixed relative path, then restart Codex. Official references:
+After the plugin is installed in Codex, run `@SpecKit Pro` -> `install` or `$install` to copy the bundled custom-agent templates into `.codex/agents/` or `~/.codex/agents/`, then restart Codex again so those installed agents are registered.
+
+For personal installs, follow the official Codex plugin docs: copy the plugin to `~/.codex/plugins/<plugin-name>`, point `~/.agents/plugins/marketplace.json` at that directory with a `./`-prefixed relative path, restart Codex so the plugin appears, then run the install skill and restart Codex again to load the installed agents. Official references:
 
 - [Codex plugins](https://developers.openai.com/codex/plugins)
 - [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
 - [Marketplace metadata](https://developers.openai.com/codex/plugins/build#marketplace-metadata)
 
-SpecKit Pro also ships bundled Codex custom subagent templates. After the
-plugin is installed in Codex, run `@SpecKit Pro → Install` or
-`$speckit-pro:install` to copy those TOML files into `~/.codex/agents/`,
-then restart Codex.
+SpecKit Pro ships its Codex orchestration guidance as skill packages. The
+Codex skills own their local `agents/openai.yaml` metadata sidecars, matching
+the official skills layout. Those sidecars are not custom-agent manifests. The
+official
+[Codex plugins](https://developers.openai.com/codex/plugins/build) docs support
+bundled skills, apps, and MCP server config, while the official
+[Codex subagents](https://developers.openai.com/codex/subagents) docs still
+register custom agents from `.codex/agents/` or `~/.codex/agents/`. SpecKit Pro
+therefore keeps a Codex-only `install` skill that copies its bundled
+`codex-agents/*.toml` templates into those runtime paths.
 
 ## Contributing
 
@@ -77,9 +85,10 @@ plugin-name/
 ├── .claude-plugin/
 │   └── plugin.json      # Claude Code plugin metadata (required for Claude Code)
 ├── commands/            # Slash commands (optional)
-├── codex-agents/        # Bundled Codex custom subagent templates (optional)
-├── codex-skills/        # Codex skill entrypoints (optional)
-├── agents/              # Agent definitions (optional)
+├── codex-skills/        # Codex skill entrypoints plus skill-owned sidecars (optional)
+│   └── */agents/        # `openai.yaml` skill metadata sidecars
+├── codex-agents/        # Bundled Codex custom-agent TOML templates (optional)
+├── agents/              # Claude Code agent definitions (optional)
 ├── skills/              # Skill definitions (optional)
 ├── hooks/               # Event hooks (optional)
 ├── tests/               # Plugin test suite (optional)

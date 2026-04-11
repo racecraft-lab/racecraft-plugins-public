@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "SpecKit Pro",
     "shortDescription": "Spec-driven workflows and Codex subagent install support",
-    "longDescription": "Skill-backed Spec-Driven Development for Codex. Includes a Codex-only install skill for bundled custom subagents plus entrypoints for coaching, setup, autopilot execution, status dashboards, and PR review remediation.",
+    "longDescription": "Skill-backed Spec-Driven Development for Codex. Each Codex skill ships its own `agents/openai.yaml` metadata sidecar, and SpecKit Pro also bundles Codex custom-agent TOML templates plus a Codex-only install skill because Codex still registers custom agents from `.codex/agents/` or `~/.codex/agents/` rather than directly from the plugin bundle.",
     "developerName": "Racecraft Lab",
     "category": "Coding",
     "capabilities": [
@@ -35,7 +35,8 @@
     "defaultPrompt": [
       "Use SpecKit Pro to install the bundled Codex subagents and tell me if I need to restart Codex.",
       "Use SpecKit Pro to coach Spec-Driven Development and explain the next step for my current spec.",
-      "Use SpecKit Pro to set up a spec worktree and prepare the workflow for autopilot."
+      "Use SpecKit Pro to set up a spec worktree and prepare the workflow for autopilot.",
+      "Use SpecKit Pro to run a populated workflow file with the installed SpecKit Codex agents."
     ],
     "brandColor": "#6366F1"
   }

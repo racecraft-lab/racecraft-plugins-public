@@ -90,6 +90,9 @@ for skill in "${SKILLS[@]}"; do
     set_test "speckit-autopilot: validates a single in_progress item before phase execution"
     assert_contains "$body" 'Exactly one plan item is `in_progress`'
 
+    set_test "speckit-autopilot: documents skill-local agents/openai.yaml metadata"
+    assert_contains "$body" 'agents/openai.yaml'
+
     set_test "speckit-autopilot: validates installed Codex subagent paths"
     if [[ "$body" == *".codex/agents/"* && "$body" == *"~/.codex/agents/"* ]]; then
       _pass
@@ -98,7 +101,7 @@ for skill in "${SKILLS[@]}"; do
     fi
 
     set_test "speckit-autopilot: fails closed to the install skill when subagents are missing"
-    assert_contains "$body" '$speckit-pro:install'
+    assert_contains "$body" '$install'
 
     set_test "speckit-autopilot: documents the optional Spark helper"
     assert_contains "$body" 'autopilot-fast-helper'
@@ -109,6 +112,10 @@ for skill in "${SKILLS[@]}"; do
     else
       _fail "expected parent-only and optional guardrails for autopilot-fast-helper"
     fi
+
+    set_test "speckit-autopilot: does not bundle skill-local TOML subagents"
+    bundled_count=$(find "$SKILL_DIR/agents" -maxdepth 1 -type f -name '*.toml' | wc -l | tr -d ' ')
+    assert_eq "0" "$bundled_count" "expected no bundled custom-agent templates in speckit-autopilot/agents"
 
     set_test "speckit-autopilot: excludes Claude-only runtime primitives"
     if echo "$body" | grep -qE 'TaskCreate|TaskUpdate|Agent\(|Bash\(|Opus-class|Opus 4\.6|/model opus|/effort max'; then
@@ -195,6 +202,7 @@ for skill in "${SKILLS[@]}"; do
     set_test "install: installer script exists"
     assert_file_exists "$SKILL_DIR/scripts/install-codex-agents.sh"
   fi
+
 done
 
 test_summary

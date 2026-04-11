@@ -70,8 +70,6 @@ fi
 # ===========================================================================
 section "Agent Parity (CC → Codex)"
 
-# Agents that are intentionally CC-only (use CC-specific capabilities like
-# shell-based gate validation or multi-agent consensus synthesis).
 CC_ONLY_AGENTS=(gate-validator consensus-synthesizer)
 CODEX_ONLY_AGENTS=(autopilot-fast-helper)
 
@@ -163,6 +161,21 @@ if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
 else
   set_test "commands/ and codex-skills/ directories exist for command coverage"
   _fail "one or both directories missing (commands: $COMMANDS_DIR, codex-skills: $CODEX_SKILLS_DIR)"
+fi
+
+# ===========================================================================
+# Codex Skill Metadata Sidecars
+# ===========================================================================
+section "Codex Skill Metadata Sidecars"
+
+if [ -d "$CODEX_SKILLS_DIR" ]; then
+  for skill_name in "${SHARED_SKILLS[@]}" speckit-setup speckit-status speckit-resolve-pr; do
+    set_test "codex-skills/${skill_name}/agents/openai.yaml exists"
+    assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/agents/openai.yaml"
+  done
+else
+  set_test "codex-skills/ directory exists for metadata sidecars"
+  _fail "codex-skills directory missing: $CODEX_SKILLS_DIR"
 fi
 
 # ===========================================================================

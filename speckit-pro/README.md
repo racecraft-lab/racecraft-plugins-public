@@ -11,7 +11,7 @@ The plugin runs autonomously. You provide a feature description, and it handles 
 This plugin ships different entrypoint surfaces for the two platforms:
 
 - **Claude Code** — 2 bundled skills plus 5 `/speckit-pro:*` commands
-- **Codex** — 6 bundled skills, including a Codex-only install flow for custom subagents
+- **Codex** — 6 bundled skills plus skill-local `agents/openai.yaml` metadata sidecars
 
 ## Codex Entry Points
 
@@ -21,18 +21,26 @@ Codex does not load the Anthropic `commands/` files from this repository. In Cod
 | ---------- | ----------- | ----- |
 | Coaching | `/speckit-pro:coach` | `/speckit-coach` or `$speckit-coach` |
 | Setup | `/speckit-pro:setup` | `/speckit-setup` or `$speckit-setup` |
+| Codex agent install / repair | — | `@SpecKit Pro` → `install` or `$install` |
 | Autopilot | `/speckit-pro:autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
 | Status | `/speckit-pro:status` | `/speckit-status` or `$speckit-status` |
 | Review remediation | `/speckit-pro:resolve-pr` | `/speckit-resolve-pr` or `$speckit-resolve-pr` |
-| Codex subagent install | N/A | `@SpecKit Pro → Install` or `$speckit-pro:install` |
 
 You can also type `@SpecKit Pro` in Codex and then choose the bundled skill you want.
 
 To browse or install plugins in Codex CLI, use `/plugins`, not `/plugin`.
 
-After installing the plugin in Codex, run the install skill once to copy the
-bundled Codex custom subagents from `codex-agents/` into `~/.codex/agents/`,
-then restart Codex so those subagents load.
+The Codex skills own their local
+[`agents/openai.yaml`](./codex-skills/speckit-autopilot/agents/openai.yaml)
+metadata sidecars, which is the official Codex skills packaging model. Those
+sidecars are metadata only. The official
+[Codex subagents](https://developers.openai.com/codex/subagents) docs still
+register real custom agents from `.codex/agents/` or `~/.codex/agents/`, so
+SpecKit Pro keeps a separate Codex-only `install` skill that copies the bundled
+`codex-agents/*.toml` templates into those runtime paths. The built-in
+`worker`, `explorer`, and `default` roles remain a degraded fallback, but the
+preferred SpecKit Pro path is to run the install skill after plugin install and
+restart Codex. See [Installation](#installation) for the exact sequence.
 
 ## Claude Code Commands
 
@@ -176,12 +184,16 @@ The autopilot skill runs in the main session so it can spawn subagents directly 
 
 - **Codex runtime contract**: orchestration is bound to `spawn_agent` / `wait_agent`, progress is required in `update_plan`, and the same ordered plan is mirrored into `autopilot-state.json` next to the workflow file for resume safety.
 - **Claude Code runtime contract**: orchestration stays on the existing Agent/task primitives for Claude sessions.
-- **Codex-only custom agent paths**: bundled templates live under `codex-agents/`, then install to `.codex/agents/` or `~/.codex/agents/`. Claude agents remain separate under `agents/`.
-- **Simple phases** (specify, plan, tasks): delegate to `phase-executor` (`gpt-5.4-mini`, low reasoning)
-- **Consensus executors** (clarify, checklist, analyze): delegate to `clarify-executor`, `checklist-executor`, or `analyze-executor` (`gpt-5.4`, high reasoning)
-- **Consensus analysts**: `codebase-analyst`, `spec-context-analyst`, and `domain-researcher` (`gpt-5.4-mini`, medium reasoning, read-only)
-- **Optional fast helper**: `autopilot-fast-helper` (`gpt-5.3-codex-spark`, low reasoning, read-only) for near-instant text-only compression, triage, or query drafting. Advisory only; only the top-level autopilot may call it.
-- **Implementation**: `implement-executor` (`gpt-5.4`, medium reasoning) with strict TDD, one agent per task
+- **Skill-local Codex metadata**: each Codex skill owns `agents/openai.yaml` for display metadata, invocation policy, and tool dependencies.
+- **Bundled Codex custom-agent templates**: SpecKit Pro ships `codex-agents/*.toml` in the plugin bundle, but Codex still needs them copied into `.codex/agents/` or `~/.codex/agents/` before they are real spawnable agents.
+- **Codex install skill**: use `install` to copy or refresh those bundled templates without touching any Claude-only files.
+- **Preferred Codex runtime**: the autopilot uses the installed `phase-executor`, `clarify-executor`, `checklist-executor`, `analyze-executor`, `implement-executor`, `codebase-analyst`, `spec-context-analyst`, and `domain-researcher` agents by name.
+- **Fallback roles**: the built-in `worker`, `explorer`, and `default` roles remain available as a degraded fallback when a matching custom agent is unavailable.
+- **Simple phases** (specify, plan, tasks): prefer a registered `phase-executor`, otherwise delegate to `worker`
+- **Consensus executors** (clarify, checklist, analyze): prefer registered `clarify-executor`, `checklist-executor`, or `analyze-executor` agents, otherwise delegate to `worker`
+- **Consensus analysts**: prefer registered `codebase-analyst`, `spec-context-analyst`, and `domain-researcher` agents, otherwise use `explorer` for read-heavy work
+- **Optional fast helper**: `autopilot-fast-helper` (`gpt-5.3-codex-spark`, low reasoning, read-only) for near-instant text-only compression, triage, or query drafting. Advisory only; only the top-level autopilot may call it when available.
+- **Implementation**: prefer a registered `implement-executor`, otherwise use `worker` with strict TDD, one agent per task
 
 ### Consensus Agents
 
@@ -351,23 +363,33 @@ codex
 /plugins
 ```
 
-Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.agents/plugins/marketplace.json).
+Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](../.agents/plugins/marketplace.json).
+
+After the plugin is installed in Codex, run `@SpecKit Pro` → `install` or
+`$install` to copy the bundled `codex-agents/*.toml` templates into
+`.codex/agents/` or `~/.codex/agents/`, then restart Codex again so the custom
+agents are registered.
 
 For user-scope installs, use the official Codex local-plugin layout:
 
-1. Copy [speckit-pro](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/speckit-pro) to `~/.codex/plugins/speckit-pro`
+1. Copy the `speckit-pro/` plugin directory to `~/.codex/plugins/speckit-pro`
 2. Point `~/.agents/plugins/marketplace.json` at `./.codex/plugins/speckit-pro`
-3. Restart Codex
-4. Run `@SpecKit Pro → Install` or `$speckit-pro:install`
-5. Restart Codex again so the installed custom subagents from `~/.codex/agents/` load
+3. Restart Codex so the plugin appears in the plugin directory
+4. Run `@SpecKit Pro` → `install` or `$install`
+5. Restart Codex again so the installed custom agents are loaded
 
-After updating the plugin, update the plugin directory that the Codex marketplace points to and restart Codex so the installed cache refreshes.
+After updating the plugin, update the plugin directory that the Codex
+marketplace points to, rerun the install skill if the bundled
+`codex-agents/*.toml` templates changed, and restart Codex so the installed
+cache and custom-agent registry refresh.
 
 Official references:
 
 - [Codex plugins](https://developers.openai.com/codex/plugins)
 - [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
 - [Marketplace metadata](https://developers.openai.com/codex/plugins/build#marketplace-metadata)
+- [Codex skills](https://developers.openai.com/codex/skills)
+- [Codex subagents](https://developers.openai.com/codex/subagents)
 
 ### Claude Code Marketplace Shortcut
 
