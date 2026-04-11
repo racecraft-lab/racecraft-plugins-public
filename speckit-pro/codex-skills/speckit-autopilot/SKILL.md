@@ -38,6 +38,9 @@ Bind the workflow to actual Codex primitives:
 - `spawn_agent` and `wait_agent` are the REQUIRED orchestration primitives
   for phase execution. Use `send_input` only for follow-up instructions to an
   already-running agent.
+- `autopilot-fast-helper` is OPTIONAL. Only the main autopilot may invoke it,
+  and only for tiny text-only compression, triage, or query-drafting work.
+  Never route edits, gate decisions, or consensus votes through it.
 - `read_file`, `file_search`, `exec_command`, and `apply_patch` are the
   concrete Codex tools for workflow parsing, shell validation, and artifact
   mutation.
@@ -252,6 +255,27 @@ resolved questions/gaps.
 failed consensus (all disagree), security keyword, or missing
 prerequisite.
 
+### 7. Optional Spark helper is advisory only
+
+The main autopilot may optionally spawn `autopilot-fast-helper`
+for one of these narrow tasks:
+
+- compress a long executor result into a compact brief
+- triage an unresolved item into `codebase`, `spec-context`,
+  `domain-research`, or `mixed`
+- draft short search queries for a stronger agent to execute
+
+Guardrails:
+
+- Only the parent orchestrator may call this helper
+- Executor or consensus subagents must never spawn it
+- Use it only for text-only prep work before a real decision
+- Never use it to edit artifacts, vote in consensus, or decide gates
+- If the helper spawn fails because `gpt-5.3-codex-spark` is unavailable,
+  log the failure briefly and continue without it
+
+This helper is a latency optimization, not a dependency.
+
 You run in the **main session** (not as a subagent) so you can
 spawn subagents directly. Subagents cannot nest — this is the
 Orchestrator-Direct pattern.
@@ -357,10 +381,15 @@ Required agents:
 - `spec-context-analyst`
 - `domain-researcher`
 
+Optional helper agent:
+
+- `autopilot-fast-helper`
+
 If any required file is missing from both locations, STOP and
 tell the user to run `$speckit-pro:install`, then restart Codex.
 Do not fall back to the bundled `../../codex-agents/*.toml`
 templates at runtime. Those are packaging assets only.
+If the optional helper is missing, continue without it.
 
 ### 0.11 Implementation Agent Detection
 
@@ -684,6 +713,12 @@ Parse the executor's summary for:
 If no unresolved items → skip to next prompt/gate.
 
 **Layer 2 — Spawn consensus agents:**
+
+Optional pre-step: if the executor returned a very long unresolved
+item summary, the parent may call `autopilot-fast-helper` once to
+compress or triage that item before building the consensus prompts.
+This is advisory only. The parent must still decide what context to
+send to the real consensus agents.
 
 For each unresolved item, spawn these three agents in parallel:
 codebase-analyst, spec-context-analyst, and domain-researcher.

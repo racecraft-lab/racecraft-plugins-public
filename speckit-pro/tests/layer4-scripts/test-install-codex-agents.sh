@@ -8,6 +8,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPT="$PLUGIN_ROOT/codex-skills/install/scripts/install-codex-agents.sh"
 
 EXPECTED_AGENTS=(
+  autopilot-fast-helper.toml
   phase-executor.toml
   clarify-executor.toml
   checklist-executor.toml

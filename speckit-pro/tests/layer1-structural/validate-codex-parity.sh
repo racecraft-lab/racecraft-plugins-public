@@ -73,11 +73,20 @@ section "Agent Parity (CC → Codex)"
 # Agents that are intentionally CC-only (use CC-specific capabilities like
 # shell-based gate validation or multi-agent consensus synthesis).
 CC_ONLY_AGENTS=(gate-validator consensus-synthesizer)
+CODEX_ONLY_AGENTS=(autopilot-fast-helper)
 
 is_cc_only() {
   local name="$1"
   for cc_only in "${CC_ONLY_AGENTS[@]}"; do
     [ "$name" = "$cc_only" ] && return 0
+  done
+  return 1
+}
+
+is_codex_only() {
+  local name="$1"
+  for codex_only in "${CODEX_ONLY_AGENTS[@]}"; do
+    [ "$name" = "$codex_only" ] && return 0
   done
   return 1
 }
@@ -106,6 +115,9 @@ if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
   for codex_agent_file in "$CODEX_AGENTS_DIR"/*.toml; do
     [ -f "$codex_agent_file" ] || continue
     agent_name=$(basename "$codex_agent_file" .toml)
+    if is_codex_only "$agent_name"; then
+      continue
+    fi
     set_test "agents/${agent_name}.md exists for Codex agent"
     assert_file_exists "$AGENTS_DIR/${agent_name}.md"
   done

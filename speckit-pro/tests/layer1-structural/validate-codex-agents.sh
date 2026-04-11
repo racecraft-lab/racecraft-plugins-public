@@ -11,6 +11,7 @@ CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
 CC_AGENTS_DIR="$PLUGIN_ROOT/agents"
 
 AGENTS=(
+  autopilot-fast-helper
   clarify-executor
   checklist-executor
   analyze-executor
@@ -69,8 +70,8 @@ for agent in "${AGENTS[@]}"; do
 
   model_val=$(extract_toml_string "$AGENT_FILE" "model")
   set_test "${agent}: model is an officially documented Codex GPT model"
-  assert_match "$model_val" '^(gpt-5\.4|gpt-5\.4-mini)$' \
-    "model must be gpt-5.4 or gpt-5.4-mini"
+  assert_match "$model_val" '^(gpt-5\.4|gpt-5\.4-mini|gpt-5\.3-codex|gpt-5\.3-codex-spark)$' \
+    "model must be an officially documented Codex GPT model"
 
   set_test "${agent}: has model_reasoning_effort field"
   assert_contains "$content" 'model_reasoning_effort = "'
@@ -112,10 +113,27 @@ for agent in "${AGENTS[@]}"; do
     _fail "Claude Code-only fields found:$bad_fields"
   fi
 
-  set_test "${agent}: corresponding Claude agent exists in agents/"
-  assert_file_exists "$CC_AGENTS_DIR/${agent}.md"
+  if [ "$agent" != "autopilot-fast-helper" ]; then
+    set_test "${agent}: corresponding Claude agent exists in agents/"
+    assert_file_exists "$CC_AGENTS_DIR/${agent}.md"
+  else
+    set_test "autopilot-fast-helper: intentionally Codex-only"
+    if [ -f "$CC_AGENTS_DIR/${agent}.md" ]; then
+      _fail "autopilot-fast-helper should remain Codex-only; do not add a Claude twin"
+    else
+      _pass
+    fi
+  fi
 
   case "$agent" in
+    autopilot-fast-helper)
+      set_test "autopilot-fast-helper: uses Spark latency-first advisory profile"
+      if [ "$model_val" = "gpt-5.3-codex-spark" ] && [ "$effort_val" = "low" ] && [ "$sandbox_val" = "read-only" ]; then
+        _pass
+      else
+        _fail "expected gpt-5.3-codex-spark / low / read-only, got $model_val / $effort_val / $sandbox_val"
+      fi
+      ;;
     phase-executor)
       set_test "phase-executor: uses fast Codex worker profile"
       if [ "$model_val" = "gpt-5.4-mini" ] && [ "$effort_val" = "low" ] && [ "$sandbox_val" = "workspace-write" ]; then

@@ -33,6 +33,7 @@ user-scope path above.
 This skill installs the bundled TOML subagent templates that the
 Codex autopilot expects to exist as real custom subagents:
 
+- `autopilot-fast-helper.toml`
 - `phase-executor.toml`
 - `clarify-executor.toml`
 - `checklist-executor.toml`
@@ -41,6 +42,12 @@ Codex autopilot expects to exist as real custom subagents:
 - `codebase-analyst.toml`
 - `spec-context-analyst.toml`
 - `domain-researcher.toml`
+
+`autopilot-fast-helper.toml` is optional at runtime. The main
+autopilot may use it for tiny advisory text-only prep work when
+`gpt-5.3-codex-spark` is available, but autopilot must continue
+without it if that model is unavailable in the current Codex
+environment.
 
 These files follow the official Codex subagent format: one standalone
 TOML file per custom agent, with required `name`, `description`, and
@@ -134,6 +141,7 @@ Return a concise installation report like:
 **Destination:** /Users/<user>/.codex/agents
 
 **Installed files:**
+- autopilot-fast-helper.toml
 - phase-executor.toml
 - clarify-executor.toml
 - checklist-executor.toml

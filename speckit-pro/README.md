@@ -180,6 +180,7 @@ The autopilot skill runs in the main session so it can spawn subagents directly 
 - **Simple phases** (specify, plan, tasks): delegate to `phase-executor` (`gpt-5.4-mini`, low reasoning)
 - **Consensus executors** (clarify, checklist, analyze): delegate to `clarify-executor`, `checklist-executor`, or `analyze-executor` (`gpt-5.4`, high reasoning)
 - **Consensus analysts**: `codebase-analyst`, `spec-context-analyst`, and `domain-researcher` (`gpt-5.4-mini`, medium reasoning, read-only)
+- **Optional fast helper**: `autopilot-fast-helper` (`gpt-5.3-codex-spark`, low reasoning, read-only) for near-instant text-only compression, triage, or query drafting. Advisory only; only the top-level autopilot may call it.
 - **Implementation**: `implement-executor` (`gpt-5.4`, medium reasoning) with strict TDD, one agent per task
 
 ### Consensus Agents

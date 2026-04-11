@@ -100,6 +100,16 @@ for skill in "${SKILLS[@]}"; do
     set_test "speckit-autopilot: fails closed to the install skill when subagents are missing"
     assert_contains "$body" '$speckit-pro:install'
 
+    set_test "speckit-autopilot: documents the optional Spark helper"
+    assert_contains "$body" 'autopilot-fast-helper'
+
+    set_test "speckit-autopilot: keeps the Spark helper advisory and parent-only"
+    if [[ "$body" == *"Only the parent orchestrator may call this helper"* && "$body" == *"latency optimization, not a dependency"* ]]; then
+      _pass
+    else
+      _fail "expected parent-only and optional guardrails for autopilot-fast-helper"
+    fi
+
     set_test "speckit-autopilot: excludes Claude-only runtime primitives"
     if echo "$body" | grep -qE 'TaskCreate|TaskUpdate|Agent\(|Bash\(|Opus-class|Opus 4\.6|/model opus|/effort max'; then
       _fail "found Claude-only primitive or runtime guidance in Codex autopilot skill"

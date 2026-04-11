@@ -8,6 +8,7 @@ SOURCE_DIR="$PLUGIN_ROOT/codex-agents"
 DEST_DIR="${1:-${CODEX_AGENTS_DEST:-$HOME/.codex/agents}}"
 
 EXPECTED_AGENTS=(
+  autopilot-fast-helper.toml
   phase-executor.toml
   clarify-executor.toml
   checklist-executor.toml

@@ -122,6 +122,21 @@
         "Or provides a concise practical answer rather than philosophical deep-dive",
         "Acknowledges that the coach skill is the appropriate resource for methodology learning"
       ]
+    },
+    {
+      "id": 11,
+      "prompt": "When is the Codex autopilot allowed to use the optional autopilot-fast-helper? I want the exact guardrails, the model it runs on, and what it must never be allowed to decide.",
+      "expected_output": "Explains that autopilot-fast-helper is an optional Codex-only Spark helper used only by the parent orchestrator for tiny text-only compression, triage, or query-drafting tasks, and that it may not edit artifacts, decide gates, or participate as a consensus vote.",
+      "expectations": [
+        "Names autopilot-fast-helper explicitly",
+        "States that only the parent orchestrator may invoke it",
+        "States that it uses gpt-5.3-codex-spark",
+        "States that it is optional and not a dependency",
+        "States that it is for text-only compression, triage, or query drafting",
+        "States that it must not edit artifacts",
+        "States that it must not decide gate outcomes",
+        "States that it must not act as a consensus vote or final decision-maker"
+      ]
     }
   ]
 }
