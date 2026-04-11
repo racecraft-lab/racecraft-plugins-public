@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.5.0...speckit-pro-v1.5.1) (2026-04-11)
+
+
+### Bug Fixes
+
+* harden Codex autopilot progress contract ([c9fa2c5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c9fa2c502ae8aba05ea5fa3db504923076139bd0))
+* **skills:** harden codex autopilot progress contract ([8b69738](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8b6973870c1790e8e49a5027dbf0829b7d20af40))
+
 ## [1.5.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.4.0...speckit-pro-v1.5.0) (2026-04-08)
 
 
