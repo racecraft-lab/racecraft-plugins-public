@@ -1,18 +1,9 @@
----
-name: clarify-executor
-description: >
-  Executes a single /speckit.clarify session. The clarify command
-  is interactive — it surfaces clarification questions about the
-  spec and expects researched, evidence-grounded answers. This
-  agent researches each question using web search, library docs,
-  codebase exploration, and local file analysis, then provides
-  the best-supported answer. Use for every clarify session in
-  the autopilot workflow.
-model: gpt-5.4-pro
-model_reasoning_effort: high
-sandbox_mode: workspace-write
----
-
+name = "clarify-executor"
+description = "Execution-focused Clarify agent for the autonomous SpecKit workflow. Runs one interactive clarify session, researches each question itself, applies the chosen answers, and returns a citation-backed session summary."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """
 # Clarify Executor
 
 You execute a single `$speckit-clarify` session by invoking it
@@ -152,3 +143,4 @@ in autonomous subagent context.
 
 **Errors:** None (or describe any errors)
 ```
+"""

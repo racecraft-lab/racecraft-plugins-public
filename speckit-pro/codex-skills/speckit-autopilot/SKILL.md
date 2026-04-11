@@ -44,11 +44,17 @@ Bind the workflow to actual Codex primitives:
 - Persist orchestration state to `autopilot-state.json` in the same directory
   as the workflow file. Resume reads that file first, then reconciles with the
   workflow file.
+- Custom executor and consensus agents must be installed as real Codex
+  subagents under `.codex/agents/` (project scope) or `~/.codex/agents/`
+  (user scope). The plugin bundles templates under `../../codex-agents/`, but
+  those bundled templates are not the runtime source of truth.
 
 Do not translate this skill into Claude-only primitives such as legacy
-task-list tools or legacy Claude agent/shell placeholders. For executor instructions,
-read the matching files under `../../codex-agents/` and pass the relevant
-instructions into `spawn_agent`.
+task-list tools or legacy Claude agent/shell placeholders. Do not read the
+bundled TOML templates and inline them as ad hoc prompts. Validate that the
+required custom subagents are installed, then spawn them by agent name. If any
+required SpecKit Pro subagent is missing, STOP and instruct the user to run
+`$speckit-pro:install`, then restart Codex.
 
 ## Prerequisites — Model & Effort
 
@@ -91,13 +97,15 @@ is harmless — the result returns to you and your loop continues.
 ```text
 CORRECT:
   1. Read workflow file's "### Specify Prompt" section
-  2. Read ../../codex-agents/phase-executor.md
-  3. spawn_agent(... "Run $speckit-specify with: <prompt>")
+  2. Verify `phase-executor` exists in `.codex/agents/` or `~/.codex/agents/`
+  3. spawn_agent the installed `phase-executor` agent with:
+     "Run $speckit-specify with: <prompt>"
   4. wait_agent(...)
   5. update_plan(...) and write autopilot-state.json
   6. Search spec.md for [NEEDS CLARIFICATION] markers
-  7. Read ../../codex-agents/clarify-executor.md
-  8. spawn_agent(... "Run $speckit-clarify with: ...")
+  7. Verify `clarify-executor` exists in `.codex/agents/` or `~/.codex/agents/`
+  8. spawn_agent the installed `clarify-executor` agent with:
+     "Run $speckit-clarify with: ..."
   ...every step produces durable state and the loop never dies...
 
 WRONG:
@@ -121,9 +129,13 @@ Each phase type has its own specialized executor agent:
 
 Concrete Codex mapping:
 
-- Read the executor definition from `../../codex-agents/<agent>.md`
+- Resolve the installed agent from `.codex/agents/<agent>.toml` first, then
+  `~/.codex/agents/<agent>.toml`
+- If the installed agent is missing, STOP and tell the user to run
+  `$speckit-pro:install`, then restart Codex
 - Build the phase prompt in the parent session
-- Call `spawn_agent` with the executor instructions plus the workflow prompt
+- Call `spawn_agent` using the installed custom agent by its `name`
+  plus the workflow prompt
 - Call `wait_agent` for completion
 - Persist the returned summary into the workflow file and `autopilot-state.json`
 
@@ -325,14 +337,39 @@ Read the workflow file's Prerequisites table. If already
 3. Update the workflow file's table with results and baselines
 4. If any check fails, STOP — do not proceed to Phase 1
 
-### 0.10 Implementation Agent Detection
+### 0.10 Codex Subagent Installation Check
+
+Before phase execution, validate that the required SpecKit Pro
+custom subagents are installed on a Codex-only path. Check the
+project path first, then the user path:
+
+1. `.codex/agents/<agent>.toml`
+2. `~/.codex/agents/<agent>.toml`
+
+Required agents:
+
+- `phase-executor`
+- `clarify-executor`
+- `checklist-executor`
+- `analyze-executor`
+- `implement-executor`
+- `codebase-analyst`
+- `spec-context-analyst`
+- `domain-researcher`
+
+If any required file is missing from both locations, STOP and
+tell the user to run `$speckit-pro:install`, then restart Codex.
+Do not fall back to the bundled `../../codex-agents/*.toml`
+templates at runtime. Those are packaging assets only.
+
+### 0.11 Implementation Agent Detection
 
 Detect whether the project has a specialized implementation
 agent for the Implement phase:
 
 ```text
 1. Search for all agent files in the project's agent directory (`.codex/agents/` for Codex CLI, `.claude/agents/` for Claude Code)
-2. For each agent file, read the YAML frontmatter
+2. For Codex TOML agents, read `name`, `description`, and any model fields. For Claude agents, read the YAML frontmatter.
 3. Check the description for implementation keywords:
    "implement", "TDD", "development", "developer",
    "coding", "build", "test-first"
@@ -486,8 +523,9 @@ for phase in PHASES starting from first_pending:
        → run accepted hooks (non-destructive), skip duplicates
     3. Read the workflow file's prompt(s) for this phase
     4. For EACH prompt in the phase:
-       a. Read ../../codex-agents/<executor>.md
-       b. spawn_agent: "Run $speckit-<phase> with: <prompt>"
+       a. Validate the installed `<executor>` agent exists on a Codex agent path
+       b. spawn_agent the installed `<executor>` agent:
+          "Run $speckit-<phase> with: <prompt>"
        c. wait_agent for the summary
        d. update_plan: mark this prompt's item as "completed"
        e. Write the same transition to autopilot-state.json

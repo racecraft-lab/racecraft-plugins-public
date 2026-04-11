@@ -1,17 +1,9 @@
----
-name: checklist-executor
-description: >
-  Executes a single /speckit.checklist domain and remediates any
-  [Gap] markers found. After running the checklist, this agent
-  researches each gap using web search, library docs, codebase
-  exploration, and local file analysis to determine evidence-grounded
-  fixes, then applies them to spec.md or plan.md. Use for every
-  checklist domain in the autopilot workflow.
-model: gpt-5.4-pro
-model_reasoning_effort: high
-sandbox_mode: workspace-write
----
-
+name = "checklist-executor"
+description = "Execution-focused remediation agent for a single Checklist domain. Runs the SpecKit checklist workflow, researches every [Gap], applies evidence-grounded fixes, and returns a structured summary for the autopilot."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """
 # Checklist Executor
 
 > **Note:** The orchestrator provides `<SKILL_SCRIPTS>` as the resolved
@@ -130,3 +122,4 @@ gap must be researched and remediated — no shortcuts.
 
 **Errors:** None (or describe any errors)
 ```
+"""

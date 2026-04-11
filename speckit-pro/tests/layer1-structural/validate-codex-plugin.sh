@@ -22,7 +22,7 @@ else
 fi
 
 CONTENT=$(cat "$CODEX_JSON")
-REQUIRED_SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr)
+REQUIRED_SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr install)
 
 section ".codex-plugin/plugin.json — Required Fields"
 
@@ -44,6 +44,9 @@ else
   _fail "description is empty"
 fi
 
+set_test "homepage field exists"
+assert_json_field_exists "$CONTENT" "homepage"
+
 set_test "skills field equals ./codex-skills/"
 assert_json_field "$CONTENT" "skills" "./codex-skills/"
 
@@ -52,6 +55,9 @@ assert_json_field_exists "$CONTENT" "interface.displayName"
 
 set_test "interface.category exists"
 assert_json_field_exists "$CONTENT" "interface.category"
+
+set_test "interface.defaultPrompt exists"
+assert_json_field_exists "$CONTENT" "interface.defaultPrompt"
 
 section ".codex-plugin — Directory Structure"
 

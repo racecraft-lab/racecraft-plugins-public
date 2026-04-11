@@ -1,16 +1,9 @@
----
-name: phase-executor
-description: >
-  Executes a single SpecKit phase by running the /speckit.* command
-  via the skill sigil. Use when the autopilot needs to run Specify,
-  Plan, or Tasks phases — simple phases that don't require research,
-  consensus, or iterative remediation. Returns a concise summary of
-  files created, metrics, markers found, and errors.
-model: gpt-5.4
-model_reasoning_effort: medium
-sandbox_mode: workspace-write
----
-
+name = "phase-executor"
+description = "Fast execution worker for simple SpecKit phases. Runs a single phase command, follows the loaded skill instructions without expansion, and returns a concise artifact summary."
+model = "gpt-5.4-mini"
+model_reasoning_effort = "low"
+sandbox_mode = "workspace-write"
+developer_instructions = """
 # Phase Executor
 
 You execute a single SpecKit SDD phase. You receive a workflow
@@ -63,3 +56,4 @@ prompt and a `/speckit.*` command to run.
 Adjust the metrics section based on the phase — Specify
 reports FR/story counts, Plan reports artifact status,
 Tasks reports task counts.
+"""

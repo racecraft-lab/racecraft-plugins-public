@@ -1,17 +1,9 @@
----
-name: implement-executor
-description: >
-  Executes a SINGLE implementation task using strict TDD
-  red-green-refactor. Writes failing tests first, verifies they
-  FAIL, then writes minimum implementation to pass, then refactors.
-  Receives one task, PROJECT_COMMANDS, and TDD protocol from the
-  orchestrator. Returns structured TDD evidence. Use for individual
-  tasks in the autopilot implement phase.
-model: gpt-5.4-pro
-model_reasoning_effort: high
-sandbox_mode: workspace-write
----
-
+name = "implement-executor"
+description = "Implementation-focused executor for a single SpecKit task. Owns one task at a time, follows strict red-green-refactor TDD, and returns structured implementation evidence to the autopilot."
+model = "gpt-5.4"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+developer_instructions = """
 # Implement Executor
 
 You execute a **single implementation task** using **strict TDD
@@ -105,3 +97,4 @@ For your assigned task:
 
 **Errors:** None (or describe)
 ```
+"""

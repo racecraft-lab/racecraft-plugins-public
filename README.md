@@ -48,6 +48,11 @@ For personal installs, follow the official Codex plugin docs: copy the plugin to
 - [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
 - [Marketplace metadata](https://developers.openai.com/codex/plugins/build#marketplace-metadata)
 
+SpecKit Pro also ships bundled Codex custom subagent templates. After the
+plugin is installed in Codex, run `@SpecKit Pro → Install` or
+`$speckit-pro:install` to copy those TOML files into `~/.codex/agents/`,
+then restart Codex.
+
 ## Contributing
 
 We welcome contributions from the community. See each plugin's README for details on its structure and requirements.
@@ -72,6 +77,7 @@ plugin-name/
 ├── .claude-plugin/
 │   └── plugin.json      # Claude Code plugin metadata (required for Claude Code)
 ├── commands/            # Slash commands (optional)
+├── codex-agents/        # Bundled Codex custom subagent templates (optional)
 ├── codex-skills/        # Codex skill entrypoints (optional)
 ├── agents/              # Agent definitions (optional)
 ├── skills/              # Skill definitions (optional)

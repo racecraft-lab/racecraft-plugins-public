@@ -11,7 +11,7 @@ The plugin runs autonomously. You provide a feature description, and it handles 
 This plugin ships different entrypoint surfaces for the two platforms:
 
 - **Claude Code** — 2 bundled skills plus 5 `/speckit-pro:*` commands
-- **Codex** — 5 bundled skills that surface as slash commands and explicit skill invocations
+- **Codex** — 6 bundled skills, including a Codex-only install flow for custom subagents
 
 ## Codex Entry Points
 
@@ -24,10 +24,15 @@ Codex does not load the Anthropic `commands/` files from this repository. In Cod
 | Autopilot | `/speckit-pro:autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
 | Status | `/speckit-pro:status` | `/speckit-status` or `$speckit-status` |
 | Review remediation | `/speckit-pro:resolve-pr` | `/speckit-resolve-pr` or `$speckit-resolve-pr` |
+| Codex subagent install | N/A | `@SpecKit Pro → Install` or `$speckit-pro:install` |
 
 You can also type `@SpecKit Pro` in Codex and then choose the bundled skill you want.
 
 To browse or install plugins in Codex CLI, use `/plugins`, not `/plugin`.
+
+After installing the plugin in Codex, run the install skill once to copy the
+bundled Codex custom subagents from `codex-agents/` into `~/.codex/agents/`,
+then restart Codex so those subagents load.
 
 ## Claude Code Commands
 
@@ -171,9 +176,11 @@ The autopilot skill runs in the main session so it can spawn subagents directly 
 
 - **Codex runtime contract**: orchestration is bound to `spawn_agent` / `wait_agent`, progress is required in `update_plan`, and the same ordered plan is mirrored into `autopilot-state.json` next to the workflow file for resume safety.
 - **Claude Code runtime contract**: orchestration stays on the existing Agent/task primitives for Claude sessions.
-- **Simple phases** (specify, plan, tasks): Delegate to `phase-executor` (Sonnet)
-- **Consensus phases** (clarify, checklist, analyze): Specialized executor agent (Opus) + 3 consensus agents in parallel (Sonnet)
-- **Implementation**: `implement-executor` (Opus) with strict TDD, one agent per task
+- **Codex-only custom agent paths**: bundled templates live under `codex-agents/`, then install to `.codex/agents/` or `~/.codex/agents/`. Claude agents remain separate under `agents/`.
+- **Simple phases** (specify, plan, tasks): delegate to `phase-executor` (`gpt-5.4-mini`, low reasoning)
+- **Consensus executors** (clarify, checklist, analyze): delegate to `clarify-executor`, `checklist-executor`, or `analyze-executor` (`gpt-5.4`, high reasoning)
+- **Consensus analysts**: `codebase-analyst`, `spec-context-analyst`, and `domain-researcher` (`gpt-5.4-mini`, medium reasoning, read-only)
+- **Implementation**: `implement-executor` (`gpt-5.4`, medium reasoning) with strict TDD, one agent per task
 
 ### Consensus Agents
 
@@ -350,6 +357,8 @@ For user-scope installs, use the official Codex local-plugin layout:
 1. Copy [speckit-pro](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/speckit-pro) to `~/.codex/plugins/speckit-pro`
 2. Point `~/.agents/plugins/marketplace.json` at `./.codex/plugins/speckit-pro`
 3. Restart Codex
+4. Run `@SpecKit Pro → Install` or `$speckit-pro:install`
+5. Restart Codex again so the installed custom subagents from `~/.codex/agents/` load
 
 After updating the plugin, update the plugin directory that the Codex marketplace points to and restart Codex so the installed cache refreshes.
 

@@ -1,18 +1,9 @@
----
-name: analyze-executor
-description: >
-  Executes /speckit.analyze and remediates ALL findings at every
-  severity level (CRITICAL, HIGH, MEDIUM, LOW). After running the
-  analysis, this agent researches each finding using web search,
-  library docs, codebase exploration, and local file analysis to
-  determine evidence-grounded fixes, then applies them to the
-  relevant artifacts. Use for the analyze phase in the autopilot
-  workflow.
-model: gpt-5.4-pro
-model_reasoning_effort: high
-sandbox_mode: workspace-write
----
-
+name = "analyze-executor"
+description = "Execution-focused remediation agent for the Analyze phase. Runs the SpecKit analysis workflow, researches every finding, applies evidence-grounded fixes, and returns a structured summary for the autopilot."
+model = "gpt-5.4"
+model_reasoning_effort = "high"
+sandbox_mode = "workspace-write"
+developer_instructions = """
 # Analyze Executor
 
 > **Note:** The orchestrator provides `<SKILL_SCRIPTS>` as the resolved
@@ -132,3 +123,4 @@ finding must be researched and remediated — no shortcuts.
 
 **Errors:** None (or describe any errors)
 ```
+"""

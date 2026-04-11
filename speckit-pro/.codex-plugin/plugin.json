@@ -1,11 +1,12 @@
 {
   "name": "speckit-pro",
   "version": "1.5.1",
-  "description": "Skill-backed Spec-Driven Development workflows for Codex, including coaching, setup, autopilot execution, status dashboards, and PR review resolution.",
+  "description": "Skill-backed Spec-Driven Development workflows for Codex, including coaching, setup, Codex subagent installation, autopilot execution, status dashboards, and PR review resolution.",
   "author": {
     "name": "Fredrick Gabelmann",
     "url": "https://github.com/racecraft-lab"
   },
+  "homepage": "https://github.com/racecraft-lab/racecraft-plugins-public/tree/main/speckit-pro",
   "repository": "https://github.com/racecraft-lab/racecraft-plugins-public",
   "license": "MIT",
   "keywords": [
@@ -21,8 +22,8 @@
   "skills": "./codex-skills/",
   "interface": {
     "displayName": "SpecKit Pro",
-    "shortDescription": "Skill-backed SDD workflows for Codex",
-    "longDescription": "Skill-backed Spec-Driven Development for Codex. Install explicit slash-command entrypoints for coaching, setup, autopilot execution, status dashboards, and PR review remediation.",
+    "shortDescription": "Spec-driven workflows and Codex subagent install support",
+    "longDescription": "Skill-backed Spec-Driven Development for Codex. Includes a Codex-only install skill for bundled custom subagents plus entrypoints for coaching, setup, autopilot execution, status dashboards, and PR review remediation.",
     "developerName": "Racecraft Lab",
     "category": "Coding",
     "capabilities": [
@@ -31,7 +32,11 @@
       "Write"
     ],
     "websiteURL": "https://github.com/racecraft-lab/racecraft-plugins-public",
-    "defaultPrompt": "Use SpecKit Pro to coach SDD, set up a spec, run autopilot, check status, or resolve PR feedback",
+    "defaultPrompt": [
+      "Use SpecKit Pro to install the bundled Codex subagents and tell me if I need to restart Codex.",
+      "Use SpecKit Pro to coach Spec-Driven Development and explain the next step for my current spec.",
+      "Use SpecKit Pro to set up a spec worktree and prepare the workflow for autopilot."
+    ],
     "brandColor": "#6366F1"
   }
 }

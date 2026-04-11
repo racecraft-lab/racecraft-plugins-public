@@ -89,8 +89,8 @@ if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
     if is_cc_only "$agent_name"; then
       continue
     fi
-    set_test "codex-agents/${agent_name}.md exists for CC agent"
-    assert_file_exists "$CODEX_AGENTS_DIR/${agent_name}.md"
+    set_test "codex-agents/${agent_name}.toml exists for CC agent"
+    assert_file_exists "$CODEX_AGENTS_DIR/${agent_name}.toml"
   done
 else
   set_test "agents/ and codex-agents/ directories exist"
@@ -103,9 +103,9 @@ fi
 section "Agent Parity (Codex → CC)"
 
 if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
-  for codex_agent_file in "$CODEX_AGENTS_DIR"/*.md; do
+  for codex_agent_file in "$CODEX_AGENTS_DIR"/*.toml; do
     [ -f "$codex_agent_file" ] || continue
-    agent_name=$(basename "$codex_agent_file" .md)
+    agent_name=$(basename "$codex_agent_file" .toml)
     set_test "agents/${agent_name}.md exists for Codex agent"
     assert_file_exists "$AGENTS_DIR/${agent_name}.md"
   done

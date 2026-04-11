@@ -8,7 +8,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 # Canonical skill list — keep in sync with the case block in the
 # "corresponding source artifact exists" test below.
-SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr)
+SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr install)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
 CC_ONLY_KEYS=(user-invokable license argument-hint)
@@ -90,6 +90,16 @@ for skill in "${SKILLS[@]}"; do
     set_test "speckit-autopilot: validates a single in_progress item before phase execution"
     assert_contains "$body" 'Exactly one plan item is `in_progress`'
 
+    set_test "speckit-autopilot: validates installed Codex subagent paths"
+    if [[ "$body" == *".codex/agents/"* && "$body" == *"~/.codex/agents/"* ]]; then
+      _pass
+    else
+      _fail "expected both project and user Codex subagent paths in the autopilot skill"
+    fi
+
+    set_test "speckit-autopilot: fails closed to the install skill when subagents are missing"
+    assert_contains "$body" '$speckit-pro:install'
+
     set_test "speckit-autopilot: excludes Claude-only runtime primitives"
     if echo "$body" | grep -qE 'TaskCreate|TaskUpdate|Agent\(|Bash\(|Opus-class|Opus 4\.6|/model opus|/effort max'; then
       _fail "found Claude-only primitive or runtime guidance in Codex autopilot skill"
@@ -102,7 +112,7 @@ for skill in "${SKILLS[@]}"; do
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
     case "$skill" in
-      speckit-setup|speckit-autopilot|speckit-resolve-pr)
+      speckit-setup|speckit-autopilot|speckit-resolve-pr|install)
         if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
           _pass
         else
@@ -156,6 +166,9 @@ for skill in "${SKILLS[@]}"; do
         _fail "corresponding Claude command not found at commands/resolve-pr.md"
       fi
       ;;
+    install)
+      _pass
+      ;;
     *)
       _fail "no corresponding source artifact mapping defined for skill '$skill'; update validate-codex-skills.sh"
       ;;
@@ -166,6 +179,11 @@ for skill in "${SKILLS[@]}"; do
   if [ "$skill" = "speckit-setup" ]; then
     set_test "speckit-setup: referenced workflow template exists (skills/speckit-coach/templates/workflow-template.md)"
     assert_file_exists "$PLUGIN_ROOT/skills/speckit-coach/templates/workflow-template.md"
+  fi
+
+  if [ "$skill" = "install" ]; then
+    set_test "install: installer script exists"
+    assert_file_exists "$SKILL_DIR/scripts/install-codex-agents.sh"
   fi
 done
 
