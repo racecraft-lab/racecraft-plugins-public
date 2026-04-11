@@ -21,7 +21,7 @@ There is no compiled build step. Work is validated through shell scripts and rep
 - `cd speckit-pro && bash tests/run-all.sh --layer 4` runs script unit tests.
 - `cd speckit-pro && bash tests/run-all.sh --all` includes AI-eval layers when prerequisites are installed.
 
-For marketplace updates, commit and push changes, then refresh the marketplace in Claude Code with `/plugin marketplace update racecraft-public-plugins`.
+For marketplace updates, commit and push changes, then refresh the marketplace in Claude Code with `/plugin marketplace update racecraft-plugins-public`.
 
 ## Coding Style & Naming Conventions
 

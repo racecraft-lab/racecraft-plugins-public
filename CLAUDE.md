@@ -7,14 +7,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A **Claude Code plugin marketplace** containing public plugins for spec-driven development. Plugins are installed via:
 ```bash
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
-/plugin install speckit-pro@racecraft-public-plugins
+/plugin install speckit-pro@racecraft-plugins-public
 ```
 
 After making changes, publish with:
 ```bash
 git add . && git commit -m "Description" && git push
 # Then in Claude Code:
-/plugin marketplace update racecraft-public-plugins
+/plugin marketplace update racecraft-plugins-public
 ```
 
 ## Plugin Architecture
@@ -166,7 +166,7 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 
 5. **End-user update:** Plugin consumers run the following to receive the updated version:
    ```
-   /plugin marketplace update racecraft-public-plugins
+   /plugin marketplace update racecraft-plugins-public
    ```
 
 **Why the bot can push directly to `main`:** Branch protection is configured with `enforce_admins: false` (the default). On a personal repository, `GITHUB_TOKEN` has admin-equivalent permissions and bypasses the direct-push restriction when admin enforcement is disabled. The `permissions: contents: write` declaration in `release.yml` is also required — without it, `GITHUB_TOKEN` defaults to read-only and the push fails with 403. These are two independent controls: `enforce_admins: false` determines whether the push is permitted past branch protection; `permissions: contents: write` determines whether the token has write scope at all.

@@ -27,6 +27,8 @@ Codex does not load the Anthropic `commands/` files from this repository. In Cod
 
 You can also type `@SpecKit Pro` in Codex and then choose the bundled skill you want.
 
+To browse or install plugins in Codex CLI, use `/plugins`, not `/plugin`.
+
 ## Claude Code Commands
 
 ### `/speckit-pro:coach`
@@ -250,7 +252,7 @@ auto-commit: per-phase      # per-phase | batch | none
 
 ## Prerequisites
 
-- **Claude Code CLI** — the plugin runs inside Claude Code
+- **Claude Code or Codex** — this plugin ships separate entrypoint surfaces for both runtimes
 - **SpecKit CLI** — install with: `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`
 - **SpecKit initialized** — run: `specify init --ai claude`
 - **Constitution created** — run: `/speckit.constitution`
@@ -325,24 +327,54 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 ## Installation
 
-```
-/plugin install speckit-pro@racecraft-public-plugins
+### Claude Code
+
+```text
+/plugin marketplace add racecraft-lab/racecraft-plugins-public
+/plugin install speckit-pro@racecraft-plugins-public
 ```
 
-Or from the marketplace:
+### Codex
+
+For repo-scoped installs, open the repository in Codex and use:
+
+```text
+codex
+/plugins
+```
+
+Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.agents/plugins/marketplace.json).
+
+For user-scope installs, use the official Codex local-plugin layout:
+
+1. Copy [speckit-pro](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/speckit-pro) to `~/.codex/plugins/speckit-pro`
+2. Point `~/.agents/plugins/marketplace.json` at `./.codex/plugins/speckit-pro`
+3. Restart Codex
+
+After updating the plugin, update the plugin directory that the Codex marketplace points to and restart Codex so the installed cache refreshes.
+
+Official references:
+
+- [Codex plugins](https://developers.openai.com/codex/plugins)
+- [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
+- [Marketplace metadata](https://developers.openai.com/codex/plugins/build#marketplace-metadata)
+
+### Claude Code Marketplace Shortcut
+
+```
+/plugin install speckit-pro@racecraft-plugins-public
+```
+
+Or add the marketplace first:
 
 ```
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
-/plugin install speckit-pro@racecraft-public-plugins
+/plugin install speckit-pro@racecraft-plugins-public
 ```
 
 ## Author
 
 Fredrick Gabelmann — [Racecraft Lab](https://github.com/racecraft-lab)
-
-## Version
-
-1.4.0
 
 ## License
 

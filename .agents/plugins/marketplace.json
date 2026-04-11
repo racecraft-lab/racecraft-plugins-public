@@ -1,5 +1,5 @@
 {
-  "name": "racecraft-public-plugins",
+  "name": "racecraft-plugins-public",
   "interface": {
     "displayName": "Racecraft Public Plugins"
   },

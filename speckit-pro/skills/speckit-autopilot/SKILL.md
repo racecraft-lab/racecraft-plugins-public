@@ -259,11 +259,11 @@ SKILL_SCRIPTS="<base directory from skill header>/scripts"
 ```
 
 For example, if the header says:
-`Base directory for this skill: /Users/me/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/1.1.0/skills/speckit-autopilot`
+`Base directory for this skill: /Users/me/.claude/plugins/cache/racecraft-plugins-public/speckit-pro/1.1.0/skills/speckit-autopilot`
 
 Then:
 ```text
-SKILL_SCRIPTS="/Users/me/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/1.1.0/skills/speckit-autopilot/scripts"
+SKILL_SCRIPTS="/Users/me/.claude/plugins/cache/racecraft-plugins-public/speckit-pro/1.1.0/skills/speckit-autopilot/scripts"
 ```
 
 Verify the directory exists:

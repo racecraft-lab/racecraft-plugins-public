@@ -8,6 +8,8 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 CC_PLUGIN="$PLUGIN_ROOT/.claude-plugin/plugin.json"
 CODEX_PLUGIN="$PLUGIN_ROOT/.codex-plugin/plugin.json"
+CC_MARKETPLACE="$PLUGIN_ROOT/../.claude-plugin/marketplace.json"
+CODEX_MARKETPLACE="$PLUGIN_ROOT/../.agents/plugins/marketplace.json"
 AGENTS_DIR="$PLUGIN_ROOT/agents"
 CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
 SKILLS_DIR="$PLUGIN_ROOT/skills"
@@ -40,6 +42,27 @@ if [ -f "$CC_PLUGIN" ] && [ -f "$CODEX_PLUGIN" ]; then
 
   set_test "CC and Codex plugin.json versions match ($cc_version)"
   assert_eq "$cc_version" "$codex_version" "versions must match: CC=$cc_version, Codex=$codex_version"
+fi
+
+# ===========================================================================
+# Marketplace Parity
+# ===========================================================================
+section "Marketplace Parity"
+
+set_test "both marketplace.json files exist"
+if [ -f "$CC_MARKETPLACE" ] && [ -f "$CODEX_MARKETPLACE" ]; then
+  _pass
+else
+  _fail "missing one or both marketplace.json files (CC: $CC_MARKETPLACE, Codex: $CODEX_MARKETPLACE)"
+fi
+
+if [ -f "$CC_MARKETPLACE" ] && [ -f "$CODEX_MARKETPLACE" ]; then
+  cc_marketplace_name=$(jq -r '.name' "$CC_MARKETPLACE")
+  codex_marketplace_name=$(jq -r '.name' "$CODEX_MARKETPLACE")
+
+  set_test "CC and Codex marketplace names match ($cc_marketplace_name)"
+  assert_eq "$cc_marketplace_name" "$codex_marketplace_name" \
+    "marketplace names must match: CC=$cc_marketplace_name, Codex=$codex_marketplace_name"
 fi
 
 # ===========================================================================

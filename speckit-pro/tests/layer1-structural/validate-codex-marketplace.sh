@@ -29,6 +29,9 @@ section ".agents/plugins/marketplace.json — Required Fields"
 set_test "name field exists"
 assert_json_field_exists "$CONTENT" "name"
 
+set_test "interface.displayName field exists"
+assert_json_field_exists "$CONTENT" "interface.displayName"
+
 set_test "plugins array exists"
 if printf '%s' "$CONTENT" | python3 -c "
 import sys, json
@@ -55,12 +58,31 @@ fi
 
 section ".agents/plugins/marketplace.json — Source Path"
 
-set_test "source.path resolves to existing directory"
+set_test "source.source is local"
+source_kind=$(printf '%s' "$CONTENT" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+print(data['plugins'][0]['source']['source'])
+" 2>/dev/null)
+if [ "$source_kind" = "local" ]; then
+  _pass
+else
+  _fail "expected source.source 'local', got '$source_kind'"
+fi
+
+set_test "source.path is ./-prefixed and relative"
 source_path=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 print(data['plugins'][0]['source']['path'])
 " 2>/dev/null)
+if printf '%s' "$source_path" | grep -Eq '^\./'; then
+  _pass
+else
+  _fail "source.path must start with ./, got '$source_path'"
+fi
+
+set_test "source.path resolves to existing directory"
 resolved_path="$REPO_ROOT/$source_path"
 # Strip leading ./ if present so path resolution works correctly
 resolved_path=$(python3 -c "
@@ -71,6 +93,18 @@ if [ -d "$resolved_path" ]; then
   _pass
 else
   _fail "source.path '$source_path' does not resolve to an existing directory (checked: $resolved_path)"
+fi
+
+set_test "source.path stays inside repo root"
+if python3 -c "
+import os, sys
+repo = os.path.realpath('$REPO_ROOT')
+target = os.path.realpath('$resolved_path')
+sys.exit(0 if os.path.commonpath([repo, target]) == repo else 1)
+" 2>/dev/null; then
+  _pass
+else
+  _fail "source.path '$source_path' resolves outside repo root"
 fi
 
 section ".agents/plugins/marketplace.json — Policy"
@@ -85,6 +119,30 @@ assert val, 'policy.installation must not be empty'
   _pass
 else
   _fail "policy.installation field is missing or empty"
+fi
+
+set_test "policy.authentication field exists"
+if printf '%s' "$CONTENT" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+val = data['plugins'][0]['policy']['authentication']
+assert val, 'policy.authentication must not be empty'
+" 2>/dev/null; then
+  _pass
+else
+  _fail "policy.authentication field is missing or empty"
+fi
+
+set_test "category field exists"
+if printf '%s' "$CONTENT" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+val = data['plugins'][0]['category']
+assert val, 'category must not be empty'
+" 2>/dev/null; then
+  _pass
+else
+  _fail "category field is missing or empty"
 fi
 
 test_summary
