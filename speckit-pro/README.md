@@ -31,7 +31,7 @@ You can also type `@SpecKit Pro` in Codex and then choose the bundled skill you 
 To browse or install plugins in Codex CLI, use `/plugins`, not `/plugin`.
 
 The Codex skills own their local
-[`agents/openai.yaml`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml)
+[`agents/openai.yaml`](./codex-skills/speckit-autopilot/agents/openai.yaml)
 metadata sidecars, which is the official Codex skills packaging model. Those
 sidecars are metadata only. The official
 [Codex subagents](https://developers.openai.com/codex/subagents) docs still
@@ -40,7 +40,7 @@ SpecKit Pro keeps a separate Codex-only `install` skill that copies the bundled
 `codex-agents/*.toml` templates into those runtime paths. The built-in
 `worker`, `explorer`, and `default` roles remain a degraded fallback, but the
 preferred SpecKit Pro path is to run the install skill after plugin install and
-restart Codex.
+restart Codex. See [Installation](#installation) for the exact sequence.
 
 ## Claude Code Commands
 
@@ -363,15 +363,25 @@ codex
 /plugins
 ```
 
-Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.agents/plugins/marketplace.json).
+Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](../.agents/plugins/marketplace.json).
+
+After the plugin is installed in Codex, run `@SpecKit Pro` → `install` or
+`$install` to copy the bundled `codex-agents/*.toml` templates into
+`.codex/agents/` or `~/.codex/agents/`, then restart Codex again so the custom
+agents are registered.
 
 For user-scope installs, use the official Codex local-plugin layout:
 
-1. Copy [speckit-pro](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/speckit-pro) to `~/.codex/plugins/speckit-pro`
+1. Copy the `speckit-pro/` plugin directory to `~/.codex/plugins/speckit-pro`
 2. Point `~/.agents/plugins/marketplace.json` at `./.codex/plugins/speckit-pro`
-3. Restart Codex
+3. Restart Codex so the plugin appears in the plugin directory
+4. Run `@SpecKit Pro` → `install` or `$install`
+5. Restart Codex again so the installed custom agents are loaded
 
-After updating the plugin, update the plugin directory that the Codex marketplace points to and restart Codex so the installed cache refreshes.
+After updating the plugin, update the plugin directory that the Codex
+marketplace points to, rerun the install skill if the bundled
+`codex-agents/*.toml` templates changed, and restart Codex so the installed
+cache and custom-agent registry refresh.
 
 Official references:
 

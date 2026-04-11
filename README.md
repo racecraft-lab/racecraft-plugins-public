@@ -12,8 +12,8 @@ A curated directory of open-source plugins from [Racecraft Lab](https://github.c
 
 This repository ships both plugin surfaces:
 
-- Claude Code marketplace metadata in [`.claude-plugin/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.claude-plugin/marketplace.json)
-- Codex marketplace metadata in [`.agents/plugins/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.agents/plugins/marketplace.json)
+- Claude Code marketplace metadata in [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
+- Codex marketplace metadata in [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json)
 
 ### Claude Code
 
@@ -40,9 +40,11 @@ codex
 /plugins
 ```
 
-Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.agents/plugins/marketplace.json).
+Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json).
 
-For personal installs, follow the official Codex plugin docs: copy the plugin to `~/.codex/plugins/<plugin-name>`, point `~/.agents/plugins/marketplace.json` at that directory with a `./`-prefixed relative path, then restart Codex. Official references:
+After the plugin is installed in Codex, run `@SpecKit Pro` -> `install` or `$install` to copy the bundled custom-agent templates into `.codex/agents/` or `~/.codex/agents/`, then restart Codex again so those installed agents are registered.
+
+For personal installs, follow the official Codex plugin docs: copy the plugin to `~/.codex/plugins/<plugin-name>`, point `~/.agents/plugins/marketplace.json` at that directory with a `./`-prefixed relative path, restart Codex so the plugin appears, then run the install skill and restart Codex again to load the installed agents. Official references:
 
 - [Codex plugins](https://developers.openai.com/codex/plugins)
 - [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
