@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.7.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.7.0...speckit-pro-v1.7.1) (2026-04-11)
+
+
+### Bug Fixes
+
+* **codex:** align skill packaging with official docs ([5e4f502](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5e4f50227660b8e5b3aaef8de5d80fc991aece34))
+* **codex:** restore bundled agent install flow ([be7a500](https://github.com/racecraft-lab/racecraft-plugins-public/commit/be7a5008f1b21f52c71aa1ab59c3b08f0f465181))
+* **codex:** restore bundled agent install flow ([f02a025](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f02a0252909c855646d841ee38e75232793602ba))
+
 ## [1.7.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.6.0...speckit-pro-v1.7.0) (2026-04-11)
 
 
