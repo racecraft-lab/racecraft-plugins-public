@@ -1,6 +1,6 @@
 name = "analyze-executor"
 description = "Execution-focused remediation agent for the Analyze phase. Runs the SpecKit analysis workflow, researches every finding, applies evidence-grounded fixes, and returns a structured summary for the autopilot."
-model = "gpt-5.4"
+model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """

@@ -56,6 +56,8 @@ section "pr-checks.yml — YAML Syntax"
 set_test "pr-checks.yml is valid YAML"
 if python3 -c "import yaml, sys; yaml.safe_load(sys.stdin)" < "$WORKFLOW_FILE" 2>/dev/null; then
   _pass
+elif ruby -e "require 'yaml'; YAML.load_file(ARGV.fetch(0))" "$WORKFLOW_FILE" >/dev/null 2>&1; then
+  _pass
 else
   _fail "pr-checks.yml failed YAML syntax validation"
 fi

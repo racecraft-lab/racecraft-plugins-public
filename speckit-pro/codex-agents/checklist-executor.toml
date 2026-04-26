@@ -1,6 +1,6 @@
 name = "checklist-executor"
 description = "Execution-focused remediation agent for a single Checklist domain. Runs the SpecKit checklist workflow, researches every [Gap], applies evidence-grounded fixes, and returns a structured summary for the autopilot."
-model = "gpt-5.4"
+model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """

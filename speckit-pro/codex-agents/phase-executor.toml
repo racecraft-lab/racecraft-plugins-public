@@ -7,7 +7,7 @@ developer_instructions = """
 # Phase Executor
 
 You execute a single SpecKit SDD phase. You receive a workflow
-prompt and a `/speckit.*` command to run.
+prompt and a `$speckit-*` skill sigil to run.
 
 <hard_constraints>
 

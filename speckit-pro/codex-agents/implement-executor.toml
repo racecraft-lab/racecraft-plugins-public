@@ -1,6 +1,6 @@
 name = "implement-executor"
 description = "Implementation-focused executor for a single SpecKit task. Owns one task at a time, follows strict red-green-refactor TDD, and returns structured implementation evidence to the autopilot."
-model = "gpt-5.4"
+model = "gpt-5.5"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """

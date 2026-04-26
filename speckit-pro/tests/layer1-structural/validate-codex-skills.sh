@@ -90,6 +90,21 @@ for skill in "${SKILLS[@]}"; do
     set_test "speckit-autopilot: validates a single in_progress item before phase execution"
     assert_contains "$body" 'Exactly one plan item is `in_progress`'
 
+    set_test "speckit-autopilot: requires all canonical phase families before execution"
+    if [[ "$body" == *"phase family coverage is mandatory"* \
+      && "$body" == *"Phase 7: Implement - Pending task decomposition"* \
+      && "$body" == *"Post: Verification and Status Sync"* ]]; then
+      _pass
+    else
+      _fail "expected all-phase coverage and Phase 7/Post placeholders in the Codex autopilot skill"
+    fi
+
+    set_test "speckit-autopilot: documents canonical PHASES order"
+    assert_contains "$body" 'PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]'
+
+    set_test "speckit-autopilot: prevents from-phase from dropping later phases"
+    assert_contains "$body" '`--from-phase` changes only the starting index'
+
     set_test "speckit-autopilot: documents skill-local agents/openai.yaml metadata"
     assert_contains "$body" 'agents/openai.yaml'
 
@@ -123,6 +138,12 @@ for skill in "${SKILLS[@]}"; do
     else
       _pass
     fi
+
+    set_test "speckit-autopilot: Codex-specific references exist"
+    assert_file_exists "$SKILL_DIR/references/phase-execution-codex.md"
+
+    set_test "speckit-autopilot: Codex post-implementation reference exists"
+    assert_file_exists "$SKILL_DIR/references/post-implementation-codex.md"
   fi
 
   set_test "${skill}: agents/openai.yaml allow_implicit_invocation policy"

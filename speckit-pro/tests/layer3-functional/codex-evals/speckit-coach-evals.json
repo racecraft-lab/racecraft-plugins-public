@@ -61,7 +61,7 @@
     {
       "id": 6,
       "prompt": "What MCP servers does speckit-pro need? I'm setting up a new machine and want to know what's required vs optional for the full autopilot experience.",
-      "expected_output": "Lists Tavily, Context7, and RepoPrompt as optional MCP server enhancements. Explains they improve research quality but the plugin works without them using built-in Claude Code tools.",
+      "expected_output": "Lists Tavily, Context7, and RepoPrompt as optional MCP server enhancements. Explains they improve research quality but the plugin works without them using built-in Codex tools.",
       "expectations": [
         "Lists Tavily, Context7, and RepoPrompt as the three relevant MCP servers",
         "States clearly that NONE are required — all are optional enhancements",

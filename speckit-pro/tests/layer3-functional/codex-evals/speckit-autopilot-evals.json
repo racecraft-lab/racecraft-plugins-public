@@ -51,11 +51,13 @@
     {
       "id": 5,
       "prompt": "Before Phase 1 starts in Codex, what exact progress state must the autopilot create? I want the mandatory tool calls, the naming convention for the plan items, how consensus items are represented, and how the plan survives a resume.",
-      "expected_output": "Explains that the Codex autopilot must call update_plan before phase execution, create deterministic phase/session/consensus items, ensure exactly one item is in_progress, and mirror the same state into autopilot-state.json next to the workflow file.",
+      "expected_output": "Explains that the Codex autopilot must call update_plan before phase execution, create deterministic phase/session/consensus items for all canonical phase families, ensure exactly one item is in_progress, and mirror the same state into autopilot-state.json next to the workflow file.",
       "expectations": [
         "States that update_plan is REQUIRED before the first phase runs",
         "States that the plan is mirrored to autopilot-state.json for durable resume state",
         "States that exactly one plan item must be in_progress before Phase 1",
+        "States that Phase 0 through Phase 7 and Post must all be represented before Phase 1",
+        "Mentions placeholders for later-discovered Phase 7 implementation task groups",
         "States that consensus tasks are MANDATORY after each Clarify session",
         "States that consensus tasks are MANDATORY after each Checklist domain",
         "States that consensus tasks are MANDATORY after the Analyze phase",
@@ -84,7 +86,7 @@
         "Lists code review as a post-implementation step",
         "Lists integration test suite verification",
         "Lists PR creation with the gh CLI",
-        "Lists review remediation loop using /loop command",
+        "Lists the parent-session review remediation loop",
         "Distinguishes which steps require extensions (verify, review, cleanup, retrospective) vs built-in (integration tests, PR creation, review loop)"
       ]
     },
@@ -103,10 +105,10 @@
     {
       "id": 9,
       "prompt": "I want to use the speckit-pro autopilot but I don't have Tavily, Context7, or RepoPrompt MCP servers installed. Will the autopilot still work? What am I missing without them?",
-      "expected_output": "Explains that MCP servers are optional enhancements. The autopilot works with built-in Claude Code tools as fallbacks. Tavily provides better search, Context7 gives library-specific docs, RepoPrompt enables deeper codebase exploration — but none are required.",
+      "expected_output": "Explains that MCP servers are optional enhancements. The autopilot works with built-in Codex tools as fallbacks. Tavily provides better search, Context7 gives library-specific docs, RepoPrompt enables deeper codebase exploration — but none are required.",
       "expectations": [
         "States that Tavily, Context7, and RepoPrompt are NOT required for the autopilot to function",
-        "Explains graceful degradation to built-in Claude Code tools",
+        "Explains graceful degradation to built-in Codex tools",
         "Mentions WebSearch and WebFetch as fallbacks for web research",
         "Mentions Grep, Glob, and Read as fallbacks for codebase exploration",
         "Describes what quality improvements the MCP servers provide when available"
@@ -136,6 +138,20 @@
         "States that it must not edit artifacts",
         "States that it must not decide gate outcomes",
         "States that it must not act as a consensus vote or final decision-maker"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "I want to save time: the workflow file already has good specify and plan prompts, so when the Codex autopilot starts can it just plan Specify, Plan, and Tasks first and decide later whether Analyze and Implement are necessary?",
+      "expected_output": "Rejects partial planning. Explains that before Phase 1 starts, Codex autopilot must create update_plan and autopilot-state.json entries for Phase 0, all seven SDD phases, and Post, including placeholders for later-discovered Clarify, Checklist, and Implement details.",
+      "expectations": [
+        "Rejects planning only Specify, Plan, and Tasks",
+        "States that all seven SDD phases must be represented before Phase 1 starts",
+        "States that update_plan must contain every phase family",
+        "States that autopilot-state.json must mirror the same complete plan",
+        "Mentions Phase 7: Implement - Pending task decomposition or equivalent Phase 7 placeholder",
+        "Mentions Post: Verification and Status Sync or equivalent post-implementation placeholder",
+        "States that --from-phase does not remove later phases from the plan"
       ]
     }
   ]

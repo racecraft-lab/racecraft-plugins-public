@@ -1,6 +1,6 @@
 name = "clarify-executor"
 description = "Execution-focused Clarify agent for the autonomous SpecKit workflow. Runs one interactive clarify session, researches each question itself, applies the chosen answers, and returns a citation-backed session summary."
-model = "gpt-5.4"
+model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """

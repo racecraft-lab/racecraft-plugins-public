@@ -52,4 +52,5 @@ printf 'Files:\n'
 for agent in "${EXPECTED_AGENTS[@]}"; do
   printf '  - %s\n' "$agent"
 done
+printf 'Model policy: GPT-5.5 for executor/consensus agents, gpt-5.4-mini for phase-executor, Spark helper optional.\n'
 printf 'Restart Codex now so the custom subagents reload.\n'

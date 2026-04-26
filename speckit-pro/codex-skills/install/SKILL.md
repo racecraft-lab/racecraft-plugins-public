@@ -54,6 +54,13 @@ TOML file per custom agent, with required `name`, `description`, and
 `developer_instructions` fields plus Codex config such as `model`,
 `model_reasoning_effort`, and `sandbox_mode`.
 
+The bundled model policy is tiered: execution-critical and consensus
+agents use `gpt-5.5`, `phase-executor` stays on the fast
+`gpt-5.4-mini` profile, and `autopilot-fast-helper` remains optional
+on `gpt-5.3-codex-spark`. If `gpt-5.5` is not available in the
+current Codex environment, install still succeeds; the user must choose
+an available fallback model before running autopilot.
+
 ## Hard Constraints
 
 - Never touch `.claude/agents/`, `.claude-plugin/`, `commands/`, or any

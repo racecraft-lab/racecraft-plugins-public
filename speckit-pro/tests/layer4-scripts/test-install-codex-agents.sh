@@ -45,6 +45,9 @@ assert_contains "$output" "Destination: $DEST_DIR"
 set_test "installer output requests Codex restart"
 assert_contains "$output" "Restart Codex now"
 
+set_test "installer output reports GPT-5.5 tiered model policy"
+assert_contains "$output" "Model policy: GPT-5.5"
+
 for agent in "${EXPECTED_AGENTS[@]}"; do
   set_test "fresh install copied ${agent}"
   assert_file_exists "$DEST_DIR/$agent"

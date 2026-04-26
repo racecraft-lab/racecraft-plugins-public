@@ -70,7 +70,7 @@ for agent in "${AGENTS[@]}"; do
 
   model_val=$(extract_toml_string "$AGENT_FILE" "model")
   set_test "${agent}: model is an officially documented Codex GPT model"
-  assert_match "$model_val" '^(gpt-5\.4|gpt-5\.4-mini|gpt-5\.3-codex|gpt-5\.3-codex-spark)$' \
+  assert_match "$model_val" '^(gpt-5\.5|gpt-5\.4|gpt-5\.4-mini|gpt-5\.3-codex|gpt-5\.3-codex-spark)$' \
     "model must be an officially documented Codex GPT model"
 
   set_test "${agent}: has model_reasoning_effort field"
@@ -78,8 +78,8 @@ for agent in "${AGENTS[@]}"; do
 
   effort_val=$(extract_toml_string "$AGENT_FILE" "model_reasoning_effort")
   set_test "${agent}: reasoning effort uses supported values"
-  assert_match "$effort_val" '^(low|medium|high)$' \
-    "reasoning effort must be low, medium, or high"
+  assert_match "$effort_val" '^(minimal|low|medium|high|xhigh)$' \
+    "reasoning effort must be minimal, low, medium, high, or xhigh"
 
   set_test "${agent}: has sandbox_mode field"
   assert_contains "$content" 'sandbox_mode = "'
@@ -143,27 +143,27 @@ for agent in "${AGENTS[@]}"; do
       fi
       ;;
     clarify-executor|checklist-executor|analyze-executor)
-      set_test "${agent}: uses high-effort flagship profile"
-      if [ "$model_val" = "gpt-5.4" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "workspace-write" ]; then
+      set_test "${agent}: uses high-effort GPT-5.5 executor profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "workspace-write" ]; then
         _pass
       else
-        _fail "expected gpt-5.4 / high / workspace-write, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / high / workspace-write, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
     implement-executor)
-      set_test "implement-executor: uses coding-focused flagship profile"
-      if [ "$model_val" = "gpt-5.4" ] && [ "$effort_val" = "medium" ] && [ "$sandbox_val" = "workspace-write" ]; then
+      set_test "implement-executor: uses coding-focused GPT-5.5 profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "medium" ] && [ "$sandbox_val" = "workspace-write" ]; then
         _pass
       else
-        _fail "expected gpt-5.4 / medium / workspace-write, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / medium / workspace-write, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
     codebase-analyst|spec-context-analyst|domain-researcher)
-      set_test "${agent}: uses read-only mini analysis profile"
-      if [ "$model_val" = "gpt-5.4-mini" ] && [ "$effort_val" = "medium" ] && [ "$sandbox_val" = "read-only" ]; then
+      set_test "${agent}: uses read-only GPT-5.5 consensus profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "medium" ] && [ "$sandbox_val" = "read-only" ]; then
         _pass
       else
-        _fail "expected gpt-5.4-mini / medium / read-only, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / medium / read-only, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
   esac

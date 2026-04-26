@@ -74,11 +74,14 @@ decisions that cascade into expensive rework.
 **Before executing any step**, verify:
 
 1. **Model check:** You MUST be running on the highest-capability Codex model
-   tier available in this environment. If the session is explicitly on a mini,
-   fast, or otherwise reduced-capability tier, STOP and instruct the user to
-   relaunch the autopilot on a stronger model.
+   tier available in this environment. Prefer `gpt-5.5` when it is available
+   in the Codex model picker. `gpt-5.4` is an acceptable documented fallback
+   during rollout or when the environment uses API-key authentication. If the
+   session is explicitly on a mini, fast, Spark, or otherwise reduced-capability
+   tier, STOP and instruct the user to relaunch the autopilot on a stronger
+   model.
 
-2. **Effort check:** Verify reasoning effort is set to `high` or `max` when
+2. **Effort check:** Verify reasoning effort is set to `high` or `xhigh` when
    configurable for the session. If the session is locked to low or medium
    effort, STOP and instruct the user to relaunch with higher effort.
 
@@ -89,6 +92,32 @@ the decisions that determine whether subagent work is wasted or productive.
 ## Critical: Execution Rules
 
 These rules are non-negotiable. Follow them exactly.
+
+### 0. All phases are mandatory
+
+The canonical execution order is:
+
+```text
+PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
+```
+
+Before any phase work starts, the parent session MUST create a durable
+progress plan that accounts for every phase in that list plus prerequisites
+and post-implementation verification. Do not collapse phases, drop later
+phases from the plan, or stop after a planning artifact is produced.
+
+`--from-phase` changes only the starting index for execution. It does not
+remove earlier completed phases or later pending phases from `update_plan`
+or `autopilot-state.json`.
+
+Forbidden shortcuts:
+
+- Ending after Specify because `spec.md` exists
+- Ending after Plan because implementation details are available
+- Ending after Tasks because `tasks.md` looks complete
+- Skipping Analyze because no findings are expected
+- Skipping Implement because tasks appear already marked complete
+- Combining Specify, Plan, and Tasks into one execution item
 
 ### 1. Subagent per phase
 
@@ -481,8 +510,11 @@ plan and immediately materialize it in TWO places:
 1. `update_plan` with the full checklist
 2. `<workflow directory>/autopilot-state.json` with the same items
 
-Do both before Phase 1 or STOP. For multi-prompt phases (Clarify,
-Checklist), create one item per prompt/session.
+Do both before Phase 1 or STOP. The initial plan must include every
+canonical phase family even when its detailed items will be discovered
+later. For multi-prompt phases (Clarify, Checklist), create one item
+per prompt/session when known; otherwise create the phase discovery
+placeholder shown below.
 
 **Checklist naming pattern** (parse from workflow file):
 
@@ -491,15 +523,41 @@ Checklist), create one item per prompt/session.
   "Phase 1: Specify"
   "Phase 2: Clarify - <Session Name>"           ← one per session
   "Phase 2: Clarify - <Session Name> Consensus" ← MANDATORY after each session
+  "Phase 2: Clarify - Pending session discovery" ← only if no sessions parsed yet
   "Phase 3: Plan"
   "Phase 4: Checklist - <Domain>"               ← one per domain
   "Phase 4: Checklist - <Domain> Consensus"     ← MANDATORY after each domain
+  "Phase 4: Checklist - Pending domain discovery" ← only if no domains parsed yet
   "Phase 5: Tasks"
   "Phase 6: Analyze"
   "Phase 6: Analyze - Consensus"                ← MANDATORY after analyze
+  "Phase 7: Implement - Pending task decomposition" ← before tasks.md exists
   "Phase 7: <Group> (<task IDs>)"               ← parsed from tasks.md
+  "Post: Verification and Status Sync"
   "Post: <task name>"                           ← from post-impl table
 ```
+
+**CRITICAL — phase family coverage is mandatory:**
+
+Before any subagent is spawned, verify that the plan includes at least
+one item whose name starts with each of these exact prefixes:
+
+```text
+Phase 0:
+Phase 1:
+Phase 2:
+Phase 3:
+Phase 4:
+Phase 5:
+Phase 6:
+Phase 7:
+Post:
+```
+
+If any prefix is missing from `update_plan` or `autopilot-state.json`,
+STOP, repair both stores, print the corrected checklist summary, and
+repeat this coverage audit. A complete workflow plan is required even
+when `--from-phase` starts execution in the middle of the workflow.
 
 **CRITICAL — Consensus items are MANDATORY:**
 
@@ -510,13 +568,18 @@ it. The consensus item runs the two-layer resolution process
 items. **Never omit consensus items.**
 
 **Other rules:**
+- Replace "Phase 7: Implement - Pending task decomposition" with concrete
+  task-group items immediately after tasks.md is created. Do not leave Phase 7
+  as a single placeholder once tasks can be parsed.
 - Phase 7 decomposed into groups after tasks.md is created
-  (test/impl/verify per phase, see [phase-execution.md](../../skills/speckit-autopilot/references/phase-execution.md))
+  (test/impl/verify per phase, see [phase-execution-codex.md](./references/phase-execution-codex.md))
 - Extension items (doctor, verify-tasks, verify, review,
   cleanup, retrospective): add if extension is in .registry
   with enabled: true, or if extension directory exists
 - Mark completed phases immediately; first pending as `in_progress`
 - Use EXACTLY the same item names in `update_plan` and `autopilot-state.json`
+- Preserve one or more pending items for every later canonical phase when
+  resuming from a middle phase
 - Immediately print a checklist summary after writing both copies
 
 **Required `autopilot-state.json` schema:**
@@ -529,7 +592,15 @@ items. **Never omit consensus items.**
   "plan": [
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - UX Focus", "status": "pending"}
+    {"step": "Phase 2: Clarify - UX Focus", "status": "pending"},
+    {"step": "Phase 2: Clarify - UX Focus Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - Pending domain discovery", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Verification and Status Sync", "status": "pending"}
   ]
 }
 ```
@@ -541,6 +612,8 @@ Before Phase 1 starts, validate all of the following or STOP:
 - `update_plan` succeeded and the active plan matches the workflow-derived checklist
 - `autopilot-state.json` exists and contains the same ordered step list
 - Exactly one plan item is `in_progress`
+- Every canonical phase family prefix from Phase 0 through Phase 7 plus Post
+  appears in both `update_plan` and `autopilot-state.json`
 - Every Clarify session, Checklist domain, and Analyze phase has its
   mandatory Consensus item
 - The checklist summary was printed so progress is visible to the user
@@ -554,6 +627,9 @@ validate the gate, and advance.
 PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
+    0. Re-run the all-phase coverage audit against update_plan and
+       autopilot-state.json. If any canonical phase family is missing,
+       STOP and repair the plan before executing this phase.
     1. update_plan: mark the current phase item as "in_progress"
        and mirror the same status change into autopilot-state.json
     2. Check .specify/extensions.yml for before_<phase> hooks
@@ -590,7 +666,9 @@ for phase in PHASES starting from first_pending:
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
    11. Advance to next phase (next iteration of loop) and write the new
-       `in_progress` item to both update_plan and autopilot-state.json
+       `in_progress` item to both update_plan and autopilot-state.json.
+       Never mark the run complete while a later phase family still has
+       pending items.
 
 POST-IMPLEMENTATION (after all 7 phases complete):
     These are items in your checklist — execute them in order.
@@ -624,11 +702,11 @@ POST-IMPLEMENTATION (after all 7 phases complete):
     | 15 | Review Remediation | (none) | Step 3.3 loop |
     | 16 | Retrospective | retrospective ext | $speckit-retrospective-analyze |
 
-    Extension items: Spawn a general-purpose agent with instructions
-    to run /<command> for SPEC-XXX and return a summary.
+    Extension items: Spawn `phase-executor` with instructions
+    to run the `$speckit-*` extension skill for SPEC-XXX and return a summary.
     Non-extension items (12, 14, 15): execute directly per Step 3.
     Missing extension: log warning and skip (don't fail).
-    See [post-implementation.md](../../skills/speckit-autopilot/references/post-implementation.md) for detailed prompts.
+    See [post-implementation-codex.md](./references/post-implementation-codex.md) for detailed prompts.
     Item 16 is the FINAL STEP.
 ```
 
@@ -776,13 +854,13 @@ Agent selection is about domain expertise — all follow identical
 RED-GREEN-REFACTOR discipline.
 
 **Full algorithm** (parse tasks, route, dispatch, accumulate
-context, verify): see [phase-execution.md](../../skills/speckit-autopilot/references/phase-execution.md) —
+context, verify): see [phase-execution-codex.md](./references/phase-execution-codex.md) —
 "Phase 7: Implement (Task-Level Dispatch)".
 
 ## Step 3: Post-Implementation
 
 After all 7 phases complete and G7 passes, follow the detailed
-procedures in [post-implementation.md](../../skills/speckit-autopilot/references/post-implementation.md):
+procedures in [post-implementation-codex.md](./references/post-implementation-codex.md):
 
 1. **3.1 Integration Suite** — verify spec-specific tests exist,
    run FULL suite to catch regressions, fix failures
@@ -858,13 +936,13 @@ Mitigations:
 
 ## References
 
-- [Phase Execution](../../skills/speckit-autopilot/references/phase-execution.md) — Per-phase
-  prompt construction and execution details
+- [Phase Execution for Codex](./references/phase-execution-codex.md) — Per-phase
+  prompt construction and execution details with Codex subagents
 - [Consensus Protocol](../../skills/speckit-autopilot/references/consensus-protocol.md) —
   Multi-agent resolution rules and flows
 - [Gate Validation](../../skills/speckit-autopilot/references/gate-validation.md) — Programmatic
   gate checks and remediation loops
-- [Post-Implementation](../../skills/speckit-autopilot/references/post-implementation.md) —
+- [Post-Implementation for Codex](./references/post-implementation-codex.md) —
   Integration suite, PR creation, review remediation loop
 - [TDD Protocol](../../skills/speckit-autopilot/references/tdd-protocol.md) — Red-green-refactor
   rules injected into implementation agent prompts

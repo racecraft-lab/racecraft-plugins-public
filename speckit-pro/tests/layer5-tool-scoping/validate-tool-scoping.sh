@@ -450,8 +450,8 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
       assert_eq "read-only" "$sandbox" "${agent} must be read-only"
 
       model=$(extract_toml_field "$AGENT_FILE" "model")
-      set_test "codex ${agent}: model is gpt-5.4-mini"
-      assert_eq "gpt-5.4-mini" "$model" "${agent} must use gpt-5.4-mini"
+      set_test "codex ${agent}: model is gpt-5.5"
+      assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
       effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
       set_test "codex ${agent}: reasoning is medium"
@@ -478,15 +478,15 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
           assert_eq "low" "$effort" "${agent} must use low reasoning"
           ;;
         implement-executor)
-          set_test "codex ${agent}: model is gpt-5.4"
-          assert_eq "gpt-5.4" "$model" "${agent} must use gpt-5.4"
+          set_test "codex ${agent}: model is gpt-5.5"
+          assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
           set_test "codex ${agent}: reasoning is medium"
           assert_eq "medium" "$effort" "${agent} must use medium reasoning"
           ;;
         *)
-          set_test "codex ${agent}: model is gpt-5.4"
-          assert_eq "gpt-5.4" "$model" "${agent} must use gpt-5.4"
+          set_test "codex ${agent}: model is gpt-5.5"
+          assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
           set_test "codex ${agent}: reasoning is high"
           assert_eq "high" "$effort" "${agent} must use high reasoning"
