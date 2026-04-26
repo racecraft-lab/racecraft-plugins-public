@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.8.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.7.1...speckit-pro-v1.8.0) (2026-04-26)
+
+
+### Features
+
+* **codex:** support GPT-5.5 subagents ([e5a363a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e5a363a3023c587a0800175fc3f7b766d6bf516e))
+
+
+### Bug Fixes
+
+* **codex:** harden autopilot fallback guards ([c68d5a4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c68d5a405841af9ce8d6e3c72c95bb740ee5b4f1))
+
 ## [1.7.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.7.0...speckit-pro-v1.7.1) (2026-04-11)
 
 
