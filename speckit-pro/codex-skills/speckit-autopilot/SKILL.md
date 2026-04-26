@@ -79,7 +79,10 @@ decisions that cascade into expensive rework.
    during rollout or when the environment uses API-key authentication. If the
    session is explicitly on a mini, fast, Spark, or otherwise reduced-capability
    tier, STOP and instruct the user to relaunch the autopilot on a stronger
-   model.
+   model. If `gpt-5.5` is unavailable, also verify the installed SpecKit Pro
+   executor and consensus subagents were installed with `--model gpt-5.4`
+   or `SPECKIT_CODEX_MODEL=gpt-5.4`; changing only the parent session model
+   does not rewrite hard-pinned custom-agent TOML files.
 
 2. **Effort check:** Verify reasoning effort is set to `high` or `xhigh` when
    configurable for the session. If the session is locked to low or medium
@@ -434,8 +437,9 @@ Detect whether the project has a specialized implementation
 agent for the Implement phase:
 
 ```text
-1. Search for all agent files in the project's agent directory (`.codex/agents/` for Codex CLI, `.claude/agents/` for Claude Code)
-2. For Codex TOML agents, read `name`, `description`, and any model fields. For Claude agents, read the YAML frontmatter.
+1. Search for all Codex custom-agent TOML files in the project's `.codex/agents/`
+   directory and the user's `~/.codex/agents/` directory.
+2. Read `name`, `description`, and any model fields from those TOML files.
 3. Check the description for implementation keywords:
    "implement", "TDD", "development", "developer",
    "coding", "build", "test-first"
@@ -448,7 +452,10 @@ agent for the Implement phase:
 ```
 
 Also check CLAUDE.md for references to a specific implementation
-agent. Record the result for use in Step 2's Implement phase.
+agent as advisory context only. Do not set PROJECT_IMPLEMENTATION_AGENT
+from CLAUDE.md or `.claude/agents/` unless a same-named installed Codex
+TOML agent exists in `.codex/agents/` or `~/.codex/agents/`. A Claude
+Markdown/YAML agent is not spawnable by Codex.
 
 ### 0.11 Project Command Discovery
 
@@ -500,7 +507,11 @@ table. Find the first phase with status `Pending` or `In Progress`.
 If `--from-phase` is specified, start from that phase regardless
 of the status table.
 
-If all phases are complete, report "All phases complete" and stop.
+If all seven SDD phases are complete, check Post state before stopping.
+If every required Post item is complete or explicitly skipped, report
+"All phases and post-implementation items complete" and stop. If Post
+items are missing, pending, or in progress, continue into Step 1.1 to create
+or rebuild the Post plan items, then execute Step 3.
 
 ### 1.1 Create Durable Progress Plan
 
@@ -665,6 +676,15 @@ for phase in PHASES starting from first_pending:
        For phases 1–6: run: git add specs/ && git commit
        For phase 7 (implement): run: git add -A && git commit
        (implementation changes include src/, tests/, etc.)
+      After the Tasks phase and G5 pass, parse tasks.md and replace
+      "Phase 7: Implement - Pending task decomposition" with one or more
+      concrete Phase 7 task-group items in both update_plan and
+      autopilot-state.json. Before advancing, validate that:
+        - the placeholder no longer exists in either state store
+        - at least one concrete Phase 7 item exists
+        - each concrete Phase 7 item names task IDs from tasks.md
+      If any check fails, STOP and repair the plan/state before Analyze
+      or Implement can run.
    11. Advance to next phase (next iteration of loop) and write the new
        `in_progress` item to both update_plan and autopilot-state.json.
        Never mark the run complete while a later phase family still has

@@ -4,6 +4,10 @@ Run these items only after all seven SDD phases complete and G7 passes. They
 remain part of the same durable plan and must be mirrored in
 `autopilot-state.json`.
 
+On resume, all seven SDD phases being complete is not sufficient to stop.
+If any Post item is missing, pending, or in progress, rebuild the durable plan
+and continue with the first incomplete Post item.
+
 ## Ordered Items
 
 | Item | Runtime | Command |

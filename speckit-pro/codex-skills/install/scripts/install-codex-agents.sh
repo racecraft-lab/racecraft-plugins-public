@@ -5,7 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PLUGIN_ROOT="$(cd "$SKILL_DIR/../.." && pwd)"
 SOURCE_DIR="$PLUGIN_ROOT/codex-agents"
-DEST_DIR="${1:-${CODEX_AGENTS_DEST:-$HOME/.codex/agents}}"
+DEST_DIR="${CODEX_AGENTS_DEST:-$HOME/.codex/agents}"
+TARGET_MODEL="${SPECKIT_CODEX_MODEL:-gpt-5.5}"
 
 EXPECTED_AGENTS=(
   autopilot-fast-helper.toml
@@ -18,6 +19,50 @@ EXPECTED_AGENTS=(
   spec-context-analyst.toml
   domain-researcher.toml
 )
+
+GPT55_AGENTS=(
+  clarify-executor.toml
+  checklist-executor.toml
+  analyze-executor.toml
+  implement-executor.toml
+  codebase-analyst.toml
+  spec-context-analyst.toml
+  domain-researcher.toml
+)
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --model)
+      if [ "$#" -lt 2 ]; then
+        printf 'ERROR: --model requires a value\n' >&2
+        exit 2
+      fi
+      TARGET_MODEL="$2"
+      shift 2
+      ;;
+    --model=*)
+      TARGET_MODEL="${1#--model=}"
+      shift
+      ;;
+    -*)
+      printf 'ERROR: unknown option: %s\n' "$1" >&2
+      exit 2
+      ;;
+    *)
+      DEST_DIR="$1"
+      shift
+      ;;
+  esac
+done
+
+case "$TARGET_MODEL" in
+  gpt-5.5|gpt-5.4) ;;
+  *)
+    printf 'ERROR: unsupported SpecKit Codex model: %s\n' "$TARGET_MODEL" >&2
+    printf 'Supported values: gpt-5.5, gpt-5.4\n' >&2
+    exit 2
+    ;;
+esac
 
 if [ ! -d "$SOURCE_DIR" ]; then
   printf 'ERROR: source directory not found: %s\n' "$SOURCE_DIR" >&2
@@ -45,12 +90,22 @@ for agent in "${EXPECTED_AGENTS[@]}"; do
   cp -f "$SOURCE_DIR/$agent" "$DEST_DIR/$agent"
 done
 
+if [ "$TARGET_MODEL" != "gpt-5.5" ]; then
+  for agent in "${GPT55_AGENTS[@]}"; do
+    perl -0pi -e 's/^model = "gpt-5\.5"$/model = "'"$TARGET_MODEL"'"/m' "$DEST_DIR/$agent"
+  done
+fi
+
 printf 'Installed %d SpecKit Pro Codex subagents.\n' "${#EXPECTED_AGENTS[@]}"
 printf 'Source: %s\n' "$SOURCE_DIR"
 printf 'Destination: %s\n' "$DEST_DIR"
+printf 'Executor/consensus model: %s\n' "$TARGET_MODEL"
 printf 'Files:\n'
 for agent in "${EXPECTED_AGENTS[@]}"; do
   printf '  - %s\n' "$agent"
 done
-printf 'Model policy: GPT-5.5 for executor/consensus agents, gpt-5.4-mini for phase-executor, Spark helper optional.\n'
+printf 'Model policy: %s for executor/consensus agents, gpt-5.4-mini for phase-executor, Spark helper optional.\n' "$TARGET_MODEL"
+if [ "$TARGET_MODEL" = "gpt-5.4" ]; then
+  printf 'Fallback mode: installed templates were rewritten for GPT-5.4 compatibility.\n'
+fi
 printf 'Restart Codex now so the custom subagents reload.\n'

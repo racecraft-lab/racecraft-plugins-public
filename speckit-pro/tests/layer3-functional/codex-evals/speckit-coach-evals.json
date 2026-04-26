@@ -66,7 +66,7 @@
         "Lists Tavily, Context7, and RepoPrompt as the three relevant MCP servers",
         "States clearly that NONE are required — all are optional enhancements",
         "Explains what each MCP server adds (better search, library docs, codebase exploration)",
-        "Mentions that built-in tools (WebSearch, WebFetch, Grep, Glob, Read) serve as automatic fallbacks"
+        "Mentions that built-in Codex web, file, and shell/search tools serve as automatic fallbacks"
       ]
     },
     {

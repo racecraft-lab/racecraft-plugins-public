@@ -74,14 +74,24 @@ for skill in "${SKILLS[@]}"; do
   fi
 
   if [ "$skill" = "speckit-autopilot" ]; then
+    runtime_doc="$body"
+    for ref_file in \
+      "$SKILL_DIR/references/phase-execution-codex.md" \
+      "$SKILL_DIR/references/post-implementation-codex.md"; do
+      if [ -f "$ref_file" ]; then
+        runtime_doc="${runtime_doc}
+$(cat "$ref_file")"
+      fi
+    done
+
     set_test "speckit-autopilot: requires update_plan as the progress contract"
-    assert_contains "$body" "update_plan"
+    assert_contains "$runtime_doc" "update_plan"
 
     set_test "speckit-autopilot: requires durable autopilot-state.json persistence"
-    assert_contains "$body" "autopilot-state.json"
+    assert_contains "$runtime_doc" "autopilot-state.json"
 
     set_test "speckit-autopilot: names Codex-native delegation tools"
-    if [[ "$body" == *"spawn_agent"* && "$body" == *"wait_agent"* ]]; then
+    if [[ "$runtime_doc" == *"spawn_agent"* && "$runtime_doc" == *"wait_agent"* ]]; then
       _pass
     else
       _fail "expected both spawn_agent and wait_agent in the Codex autopilot skill"
@@ -91,19 +101,37 @@ for skill in "${SKILLS[@]}"; do
     assert_contains "$body" 'Exactly one plan item is `in_progress`'
 
     set_test "speckit-autopilot: requires all canonical phase families before execution"
-    if [[ "$body" == *"phase family coverage is mandatory"* \
-      && "$body" == *"Phase 7: Implement - Pending task decomposition"* \
-      && "$body" == *"Post: Verification and Status Sync"* ]]; then
+    if [[ "$runtime_doc" == *"phase family coverage is mandatory"* \
+      && "$runtime_doc" == *"Phase 7: Implement - Pending task decomposition"* \
+      && "$runtime_doc" == *"Post: Verification and Status Sync"* ]]; then
       _pass
     else
       _fail "expected all-phase coverage and Phase 7/Post placeholders in the Codex autopilot skill"
     fi
 
     set_test "speckit-autopilot: documents canonical PHASES order"
-    assert_contains "$body" 'PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]'
+    assert_contains "$runtime_doc" 'PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]'
 
     set_test "speckit-autopilot: prevents from-phase from dropping later phases"
-    assert_contains "$body" '`--from-phase` changes only the starting index'
+    assert_contains "$runtime_doc" '`--from-phase` changes only the starting index'
+
+    set_test "speckit-autopilot: requires concrete Phase 7 tasks after G5"
+    if [[ "$runtime_doc" == *"After the Tasks phase and G5 pass"* \
+      && "$runtime_doc" == *"the placeholder no longer exists"* \
+      && "$runtime_doc" == *"each concrete Phase 7 item names task IDs"* ]]; then
+      _pass
+    else
+      _fail "expected G5 Phase 7 placeholder replacement guardrails"
+    fi
+
+    set_test "speckit-autopilot: resumes into Post before reporting complete"
+    if [[ "$runtime_doc" == *"all seven SDD phases are complete"* \
+      && "$runtime_doc" == *"items are missing, pending, or in progress"* \
+      && "$runtime_doc" == *"execute Step 3"* ]]; then
+      _pass
+    else
+      _fail "expected all-phases-complete resume to continue into Post"
+    fi
 
     set_test "speckit-autopilot: documents skill-local agents/openai.yaml metadata"
     assert_contains "$body" 'agents/openai.yaml'
@@ -133,7 +161,7 @@ for skill in "${SKILLS[@]}"; do
     assert_eq "0" "$bundled_count" "expected no bundled custom-agent templates in speckit-autopilot/agents"
 
     set_test "speckit-autopilot: excludes Claude-only runtime primitives"
-    if echo "$body" | grep -qE 'TaskCreate|TaskUpdate|Agent\(|Bash\(|Opus-class|Opus 4\.6|/model opus|/effort max'; then
+    if echo "$runtime_doc" | grep -qE 'TaskCreate|TaskUpdate|Agent\(|Bash\(|Opus-class|Opus 4\.6|/model opus|/effort max|/speckit[.:]|run /<command>|general-purpose agent'; then
       _fail "found Claude-only primitive or runtime guidance in Codex autopilot skill"
     else
       _pass

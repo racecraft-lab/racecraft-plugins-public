@@ -58,8 +58,9 @@ The bundled model policy is tiered: execution-critical and consensus
 agents use `gpt-5.5`, `phase-executor` stays on the fast
 `gpt-5.4-mini` profile, and `autopilot-fast-helper` remains optional
 on `gpt-5.3-codex-spark`. If `gpt-5.5` is not available in the
-current Codex environment, install still succeeds; the user must choose
-an available fallback model before running autopilot.
+current Codex environment, install with `--model gpt-5.4` or set
+`SPECKIT_CODEX_MODEL=gpt-5.4`; the installer rewrites only the
+executor and consensus agent copies in the destination directory.
 
 ## Hard Constraints
 
@@ -88,6 +89,10 @@ Resolve all paths before mutating anything:
 3. Resolve the destination directory:
    - default: `~/.codex/agents/`
    - override: a user-provided Codex agent directory path
+4. Resolve the executor/consensus model:
+   - default: `gpt-5.5`
+   - fallback: `gpt-5.4` via `--model gpt-5.4` or
+     `SPECKIT_CODEX_MODEL=gpt-5.4`
 
 Do not infer a Claude path from a vague request. If the user says only
 "install the agents", use `~/.codex/agents/`.
@@ -108,11 +113,17 @@ Use the deterministic installer script that ships with this skill:
 
 ```bash
 bash "<skill-dir>/scripts/install-codex-agents.sh" "<destination>"
+bash "<skill-dir>/scripts/install-codex-agents.sh" "<destination>" --model gpt-5.4
 ```
 
 The script must be the only mechanism used for copying files. Do not
 re-implement the copy loop inline unless the script itself is broken and
 you have already reported that failure.
+
+When fallback mode is requested, verify the destination copies of
+`clarify-executor`, `checklist-executor`, `analyze-executor`,
+`implement-executor`, and the three consensus analysts use
+`model = "gpt-5.4"`. The bundled source templates stay on `gpt-5.5`.
 
 ### 4. Verify the installed destination
 
@@ -131,6 +142,7 @@ Your closing output must explicitly tell the user:
 
 - where the files were installed
 - which files were copied or refreshed
+- the effective executor/consensus model
 - that they must restart Codex now
 
 Do not continue into autopilot setup or workflow execution in the same skill.

@@ -109,8 +109,8 @@
       "expectations": [
         "States that Tavily, Context7, and RepoPrompt are NOT required for the autopilot to function",
         "Explains graceful degradation to built-in Codex tools",
-        "Mentions WebSearch and WebFetch as fallbacks for web research",
-        "Mentions Grep, Glob, and Read as fallbacks for codebase exploration",
+        "Mentions built-in web search and web fetch as fallbacks for web research",
+        "Mentions built-in file search, file reading, or shell search as fallbacks for codebase exploration",
         "Describes what quality improvements the MCP servers provide when available"
       ]
     },
@@ -152,6 +152,31 @@
         "Mentions Phase 7: Implement - Pending task decomposition or equivalent Phase 7 placeholder",
         "Mentions Post: Verification and Status Sync or equivalent post-implementation placeholder",
         "States that --from-phase does not remove later phases from the plan"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "Tasks just passed G5 and tasks.md now exists, but my current Codex plan still only has 'Phase 7: Implement - Pending task decomposition'. Can autopilot continue to Analyze and decide task groups later?",
+      "expected_output": "Rejects continuing with only the Phase 7 placeholder after G5. Explains that the placeholder must be replaced in both update_plan and autopilot-state.json with concrete Phase 7 task-group items parsed from tasks.md before Analyze or Implement can continue.",
+      "expectations": [
+        "States that the Phase 7 placeholder is invalid after Tasks/G5 passes",
+        "Requires parsing tasks.md before continuing",
+        "Requires replacing the placeholder in update_plan",
+        "Requires replacing the placeholder in autopilot-state.json",
+        "Requires one or more concrete Phase 7 task-group items with task IDs",
+        "States that Analyze or Implement must not continue until the plan/state are repaired"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "I'm resuming an autopilot workflow where Specify through Implement are complete, but I don't see any Post items in autopilot-state.json. Should the Codex autopilot report all phases complete and stop?",
+      "expected_output": "Rejects stopping. Explains that all seven SDD phases being complete is not sufficient if Post items are missing or pending; the autopilot must rebuild update_plan and autopilot-state.json with Post entries and continue post-implementation.",
+      "expectations": [
+        "States that all seven SDD phases complete is not enough to stop",
+        "Checks whether Post items are missing, pending, or in progress",
+        "Requires rebuilding update_plan when Post items are missing",
+        "Requires rebuilding autopilot-state.json when Post items are missing",
+        "Continues into post-implementation instead of reporting complete"
       ]
     }
   ]

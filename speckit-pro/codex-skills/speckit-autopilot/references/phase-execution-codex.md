@@ -41,6 +41,16 @@ from `tasks.md`. Each implement item must include the task IDs, dependencies,
 TDD protocol, `PROJECT_COMMANDS`, and `COMPLETED_TASKS` context accumulated from
 earlier work.
 
+After G5 passes, the placeholder is invalid. Before Analyze or Implement can
+run, audit `update_plan` and `autopilot-state.json`:
+
+- no `Phase 7: Implement - Pending task decomposition` item remains
+- one or more concrete `Phase 7:` items exist
+- each concrete item names one or more task IDs parsed from `tasks.md`
+
+If any check fails, repair both state stores and print the corrected checklist
+summary before continuing.
+
 Use `implement-executor` for test and implementation tasks unless Step 0.11
 found a more specific project implementation agent. The parent session dispatches
 all workers directly; subagents do not spawn nested agents.
