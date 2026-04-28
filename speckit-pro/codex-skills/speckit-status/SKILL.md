@@ -40,6 +40,10 @@ before answering:
 - technical roadmap files, typically matching `*technical-roadmap*` or
   `*roadmap*`
 - workflow files, typically matching `*-workflow.md`
+- archive extension state files when present:
+  `.specify/extensions.yml`, `.specify/extensions/.registry`,
+  `.specify/extensions/archive/extension.yml`, and
+  `.specify/extensions/archive/RACECRAFT-PIN.md`
 
 Do not assume the user keeps everything under one directory. Search the current
 checkout first, then inspect `git worktree list --porcelain` so workflows in
@@ -92,9 +96,28 @@ should clearly separate:
 - active specs with phase detail
 - ready-to-start specs with no blockers
 - blocked specs with the specific dependency or missing prerequisite
+- archive extension installation state, excluded current spec, cleanup mode,
+  and whether `safeToApplyCleanup` is true or false when the data is available
 
 When there are active workflows, show a phase table so the user can see whether
 the spec is stuck in clarify, checklist, analyze, or implementation.
+
+### 3.1 Archive Extension Status
+
+When archive state files exist, include an `Archive` or `Archive Sweep` row in
+the dashboard:
+
+- installed: true when `.specify/extensions.yml` lists `archive` or
+  `.specify/extensions/.registry` has an enabled `archive` entry
+- source: registry `source_url`/`source_ref`/`source_commit`, or the vendored
+  `.specify/extensions/archive/extension.yml` repository and version
+- safe cleanup state: use `autopilot-state.json.archive_sweep.safe_to_apply_cleanup`
+  or the latest Archive Sweep report if available
+- excluded current spec: use `archive_sweep.excluded_current_spec` when present
+- recommendation: if missing, install or vendor `racecraft-lab/spec-kit-archive`;
+  if installed but unsafe, recommend dry-run evidence or a clean safe apply-mode
+  cleanup branch; if safe, recommend reviewed cleanup only after archive success
+  and recovery commands are recorded
 
 ### 4. Recommend the next spec
 

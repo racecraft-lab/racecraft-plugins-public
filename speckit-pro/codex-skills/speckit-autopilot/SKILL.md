@@ -331,6 +331,39 @@ You receive a workflow file path and optional arguments:
 path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID]
 ```
 
+## Step -1: Archive Sweep Startup
+
+Before Step 0 and before any requested spec phase work, run Archive Sweep
+discovery for previously merged specs.
+
+1. Determine the current target spec from the workflow file's `Spec Directory`
+   field, the `--spec` override, or the active `specs/**` path in the workflow.
+2. Detect archive extension state from `.specify/extensions.yml`,
+   `.specify/extensions/.registry`, and `.specify/extensions/archive/extension.yml`.
+3. If the archive extension is installed, run or simulate the installed command
+   contract before Phase 0:
+
+   ```text
+   archive command: --sweep --current-target <current-spec-dir> --dry-run
+   ```
+
+4. If the checkout is on an unsafe branch or the worktree is dirty, the sweep
+   MUST remain dry-run-only or stop with clear instructions. Do not mix prior
+   spec cleanup into the requested spec branch.
+5. Archive Sweep may archive/clean up only previously merged specs. It MUST
+   exclude the current target spec until a later run sees that spec as merged.
+6. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
+   including eligible previous specs, excluded current spec, archive extension
+   installed state, cleanup mode, `dryRunProvenanceOnly`, and
+   `safeToApplyCleanup`.
+7. Add/update an `Archive Sweep: previously merged specs dry-run/apply
+   eligibility` plan item before Phase 0 in both `update_plan` and
+   `autopilot-state.json`.
+
+If the archive extension is missing, record `archive_extension_installed=false`,
+keep cleanup disabled, and continue only after warning that the project should
+install or vendor `racecraft-lab/spec-kit-archive` for archive-aware cleanup.
+
 ## Step 0: Prerequisites
 
 Run the prerequisite scripts to verify the environment. If any
@@ -530,6 +563,7 @@ placeholder shown below.
 **Checklist naming pattern** (parse from workflow file):
 
 ```text
+  "Archive Sweep: previously merged specs dry-run/apply eligibility"
   "Phase 0: Prerequisites"
   "Phase 1: Specify"
   "Phase 2: Clarify - <Session Name>"           ← one per session
@@ -554,6 +588,7 @@ Before any subagent is spawned, verify that the plan includes at least
 one item whose name starts with each of these exact prefixes:
 
 ```text
+Archive Sweep:
 Phase 0:
 Phase 1:
 Phase 2:
@@ -601,6 +636,7 @@ items. **Never omit consensus items.**
   "updated_at": "2026-04-10T18:00:00Z",
   "active_step": "Phase 1: Specify",
   "plan": [
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "in_progress"},
     {"step": "Phase 2: Clarify - UX Focus", "status": "pending"},
@@ -624,7 +660,8 @@ Before Phase 1 starts, validate all of the following or STOP:
 - `autopilot-state.json` exists and contains the same ordered step list
 - Exactly one plan item is `in_progress`
 - Every canonical phase family prefix from Phase 0 through Phase 7 plus Post
-  appears in both `update_plan` and `autopilot-state.json`
+  appears in both `update_plan` and `autopilot-state.json`, with the Archive
+  Sweep item recorded before Phase 0
 - Every Clarify session, Checklist domain, and Analyze phase has its
   mandatory Consensus item
 - The checklist summary was printed so progress is visible to the user
@@ -639,8 +676,8 @@ PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
     0. Re-run the all-phase coverage audit against update_plan and
-       autopilot-state.json. If any canonical phase family is missing,
-       STOP and repair the plan before executing this phase.
+       autopilot-state.json. If Archive Sweep or any canonical phase family
+       is missing, STOP and repair the plan before executing this phase.
     1. update_plan: mark the current phase item as "in_progress"
        and mirror the same status change into autopilot-state.json
     2. Check .specify/extensions.yml for before_<phase> hooks

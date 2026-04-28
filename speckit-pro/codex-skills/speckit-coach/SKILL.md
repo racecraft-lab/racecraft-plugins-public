@@ -80,6 +80,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | **Presets & Extensions (v0.3.2)** | |
 | "preset", "customize templates", "override templates", "methodology" | Explain presets — stackable template overrides, resolution order, commands. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "extension", "add extension", "install extension", "community catalog" | Explain extensions — 26 community extensions, hook events, commands. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
+| "archive extension", "Archive Sweep", "archive cleanup", "spec graveyard", "remove merged specs", "provenance" | Explain the Racecraft archive extension path: install or vendor `racecraft-lab/spec-kit-archive` from a pinned tag/commit, run Archive Sweep at autopilot startup, exclude the current target spec, keep unsafe checkouts dry-run-only, and clean active `specs/**` only after archive success plus recovery commands. |
 | "hook events", "after_implement", "before_specify" | Explain the 8 hook events and how extensions use them. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "template resolution", "which template", "preset resolve" | Explain 4-tier resolution: overrides > presets > extensions > core. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "catalog", "custom catalog", "extension catalog", "preset catalog" | Explain multi-catalog stacks, custom catalogs, env vars. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
@@ -200,6 +201,27 @@ Create workflow tracking files that document the progress of each spec through a
 3. Update the workflow status table as you complete each phase
 4. Document key decisions, artifacts produced, and gate checkpoint results
 5. Capture lessons learned after implementation
+
+#### Archive Extension And Archive Sweep
+
+For projects that want to avoid an active `specs/**` graveyard while retaining
+provenance, coach the user toward the Racecraft archive extension:
+
+1. Install or vendor `racecraft-lab/spec-kit-archive` from a pinned tag or
+   commit, and record the source URL, ref, commit, and manifest hash.
+2. Treat the archive command as provenance-first: record PR URL, merge/tree
+   reference, CI/Argos URLs, metadata gates, artifact manifests, and recovery
+   commands such as `git show <merge-sha>:specs/<feature>/spec.md`.
+3. Run Archive Sweep at the start of autopilot before the requested spec's
+   Phase 0. The sweep considers previously merged specs only.
+4. Always exclude the current target spec. It becomes eligible only in a later
+   autopilot run after its PR has merged.
+5. Keep dirty worktrees or unsafe branches dry-run-only or stopped. Do not mix
+   prior-spec cleanup into an unrelated feature branch.
+6. Remove active `specs/**` folders only as an explicit reviewed forward change
+   after archive success, merge/tree references, recovery commands, and
+   `safeToApplyCleanup=true` are recorded. Never rewrite history and never rely
+   on post-merge CI mutating `main`.
 
 #### `/speckit recommend-checklists` — Spec-Driven Domain Recommendations
 
