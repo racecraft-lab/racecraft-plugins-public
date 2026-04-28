@@ -4,6 +4,7 @@
 
 ### Features
 
+* **speckit-pro:** add archive sweep support ([e489dac](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e489dac719081c577c7131dc49f8287ceb633f7b))
 * **autopilot:** start archive-aware runs with Archive Sweep before Phase 0
 * **coach:** add guidance for installing or vendoring the Racecraft archive extension
 * **status:** surface archive extension state, excluded current spec, and cleanup safety
