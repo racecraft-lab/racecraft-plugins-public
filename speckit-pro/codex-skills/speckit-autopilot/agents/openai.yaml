@@ -1,7 +1,7 @@
 interface:
   display_name: "SpecKit Autopilot"
-  short_description: "Autonomous 7-phase SDD workflow executor"
-  default_prompt: "Run a SpecKit autopilot workflow from a populated workflow file"
+  short_description: "Archive-aware autonomous SDD workflow executor"
+  default_prompt: "Run a SpecKit autopilot workflow, starting with Archive Sweep when available"
 
 policy:
   allow_implicit_invocation: false

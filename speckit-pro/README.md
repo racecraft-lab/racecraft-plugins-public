@@ -4,9 +4,14 @@ Autonomous Spec-Driven Development plugin for Claude Code and Codex, powered by 
 
 ## Overview
 
-speckit-pro turns feature descriptions into production code through a structured 7-phase workflow: specify, clarify, plan, checklist, tasks, analyze, implement. Instead of writing code directly from a prompt, it builds a complete specification first — catching gaps, validating requirements, and planning implementation before any code is written.
+speckit-pro turns feature descriptions into production code through a structured workflow: Archive Sweep, then specify, clarify, plan, checklist, tasks, analyze, implement. Instead of writing code directly from a prompt, it builds a complete specification first — catching gaps, validating requirements, and planning implementation before any code is written.
 
 The plugin runs autonomously. You provide a feature description, and it handles the rest — spawning specialized agents for research, running multi-agent consensus to resolve ambiguities, validating gates between phases, and implementing with strict TDD. The result is a PR with tests, implementation, and a full paper trail of design decisions.
+
+Archive-aware runs start by checking for the `archive` extension. When installed
+or vendored, autopilot runs Archive Sweep for previously merged specs before the
+requested spec's Phase 0, excludes the current target spec, and keeps cleanup
+dry-run-only on dirty or unsafe branches.
 
 This plugin ships different entrypoint surfaces for the two platforms:
 
@@ -104,12 +109,13 @@ Execute the SpecKit workflow autonomously — all 7 phases from spec to PR.
 ```
 
 **What it does:**
-1. Validates prerequisites (SpecKit CLI, constitution, workflow file, MCP servers)
-2. Executes all 7 phases sequentially, each delegated to a specialized agent
-3. Validates gates programmatically between phases (max 2 auto-fix attempts)
-4. Runs multi-agent consensus for ambiguous questions, gaps, and findings
-5. Implements with strict TDD red-green-refactor
-6. Creates a PR via `gh` CLI when complete
+1. Runs Archive Sweep for previously merged specs and excludes the current target spec
+2. Validates prerequisites (SpecKit CLI, constitution, workflow file, MCP servers)
+3. Executes all 7 SDD phases sequentially, each delegated to a specialized agent
+4. Validates gates programmatically between phases (max 2 auto-fix attempts)
+5. Runs multi-agent consensus for ambiguous questions, gaps, and findings
+6. Implements with strict TDD red-green-refactor
+7. Creates a PR via `gh` CLI when complete
 
 **Example workflow:**
 ```
@@ -121,6 +127,7 @@ Execute the SpecKit workflow autonomously — all 7 phases from spec to PR.
 /speckit-pro:autopilot docs/ai/specs/SPEC-009-workflow.md
 
 # Claude will:
+# - Run Archive Sweep for previously merged specs before Phase 0
 # - Run specify → clarify → plan → checklist → tasks → analyze → implement
 # - Validate gates between each phase
 # - Spawn consensus agents for unresolved items
@@ -142,8 +149,10 @@ Full project roadmap, phase detail, and next-spec recommendation.
 **What it does:**
 1. Finds all workflow files and the technical roadmap
 2. Parses phase completion from workflow files
-3. Builds a unified dashboard with completed, in-progress, and pending specs
-4. Recommends the next spec to implement based on priority and dependencies
+3. Reads archive extension state when `.specify/extensions/archive` or registry data exists
+4. Builds a unified dashboard with completed, in-progress, and pending specs
+5. Shows Archive Sweep installation, cleanup safety, and excluded current-spec state when available
+6. Recommends the next spec to implement based on priority and dependencies
 
 **Output format:**
 ```
@@ -184,6 +193,7 @@ The autopilot skill runs in the main session so it can spawn subagents directly 
 
 - **Codex runtime contract**: orchestration is bound to `spawn_agent` / `wait_agent`, progress is required in `update_plan`, and the same ordered plan is mirrored into `autopilot-state.json` next to the workflow file for resume safety.
 - **Claude Code runtime contract**: orchestration stays on the existing Agent/task primitives for Claude sessions.
+- **Archive Sweep startup**: before Phase 0, autopilot checks archive extension state, records eligible prior merged specs, excludes the current target, and stays dry-run-only unless cleanup is explicitly safe.
 - **Skill-local Codex metadata**: each Codex skill owns `agents/openai.yaml` for display metadata, invocation policy, and tool dependencies.
 - **Bundled Codex custom-agent templates**: SpecKit Pro ships `codex-agents/*.toml` in the plugin bundle, but Codex still needs them copied into `.codex/agents/` or `~/.codex/agents/` before they are real spawnable agents.
 - **Codex install skill**: use `install` to copy or refresh those bundled templates without touching any Claude-only files.

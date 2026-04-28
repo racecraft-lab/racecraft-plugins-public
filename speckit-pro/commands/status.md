@@ -11,7 +11,8 @@ argument-hint: "[SPEC-ID or 'all']"
 
 Show the full project roadmap: completed specs, in-progress
 specs, specs that haven't started yet, and a recommendation for
-what to work on next.
+what to work on next. Also surface archive extension installation and
+Archive Sweep cleanup safety when the project has archive state.
 
 ## Invocation
 
@@ -32,6 +33,10 @@ Workflow files:  **/*-workflow.md  (active/completed specs with phase detail)
 Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md  (full roadmap with all specs)
 Also check:      docs/ai/specs/*-workflow.md
                  docs/ai/*roadmap*.md
+Archive state:   .specify/extensions.yml
+                 .specify/extensions/.registry
+                 .specify/extensions/archive/extension.yml
+                 .specify/extensions/archive/RACECRAFT-PIN.md
 ```
 
 ### 2. Parse the Technical Roadmap (Full Roadmap)
@@ -118,6 +123,15 @@ table:
 |------|------|---------|---------|------|-------|-------|---------|------|------|
 | SPEC-XXX | Feature | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
 ```
+
+Include an Archive Sweep summary when archive state exists:
+
+- whether the archive extension is installed/enabled
+- pinned source URL/ref/commit when available
+- excluded current spec from `autopilot-state.json.archive_sweep`
+- cleanup mode and `safeToApplyCleanup`
+- next step: install/vendor archive, keep dry-run-only, or perform reviewed
+  cleanup after archive success and recovery commands
 
 ### 5. Recommend Next Spec
 

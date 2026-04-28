@@ -1,10 +1,10 @@
 ---
-description: Get SDD coaching and SpecKit guidance. Ask about methodology, commands, troubleshooting, technical roadmaps, workflow tracking, or the speckit-pro plugin itself.
+description: Get SDD coaching and SpecKit guidance. Ask about methodology, commands, troubleshooting, technical roadmaps, workflow tracking, archive extension support, or the speckit-pro plugin itself.
 allowed-tools:
   - Read
   - Glob
   - Grep
-argument-hint: "e.g. 'walk me through SDD', 'help with clarify', 'which checklists', 'how does autopilot work', 'consensus protocol'"
+argument-hint: "e.g. 'walk me through SDD', 'help with clarify', 'which checklists', 'how does autopilot work', 'archive extension cleanup safety'"
 ---
 
 # SpecKit Coach

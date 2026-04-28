@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.9.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.8.0...speckit-pro-v1.9.0) (2026-04-28)
+
+### Features
+
+* **autopilot:** start archive-aware runs with Archive Sweep before Phase 0
+* **coach:** add guidance for installing or vendoring the Racecraft archive extension
+* **status:** surface archive extension state, excluded current spec, and cleanup safety
+
 ## [1.8.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.7.1...speckit-pro-v1.8.0) (2026-04-26)
 
 
