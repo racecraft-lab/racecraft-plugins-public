@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.9.0...speckit-pro-v1.10.0) (2026-04-28)
+
+### Bug Fixes
+
+* **autopilot:** archive sweep now runs actual cleanup on feature/spec branches instead of always dry-running; dry-run is reserved for main and protected integration branches only
+
 ## [1.9.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.8.0...speckit-pro-v1.9.0) (2026-04-28)
 
 ### Features
