@@ -5,14 +5,7 @@
 
 ### Bug Fixes
 
-* **autopilot:** archive sweep runs actual cleanup on feature branches ([c614fab](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c614fab09f19c877a4c0b69ea0a9fb02d2fc11b4))
-* **autopilot:** archive sweep runs actual cleanup on feature branches ([b97fde1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b97fde123846477759ba7ec36d6b1019779e7b5b))
-
-## [1.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.9.0...speckit-pro-v1.10.0) (2026-04-28)
-
-### Bug Fixes
-
-* **autopilot:** archive sweep now runs actual cleanup on feature/spec branches instead of always dry-running; dry-run is reserved for main and protected integration branches only
+* **autopilot:** archive sweep runs actual cleanup on feature branches instead of always dry-running; dry-run is reserved for main and protected integration branches ([c614fab](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c614fab09f19c877a4c0b69ea0a9fb02d2fc11b4))
 
 ## [1.9.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.8.0...speckit-pro-v1.9.0) (2026-04-28)
 
