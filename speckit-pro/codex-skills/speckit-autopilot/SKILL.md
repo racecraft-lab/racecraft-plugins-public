@@ -334,31 +334,34 @@ path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|anal
 ## Step -1: Archive Sweep Startup
 
 Before Step 0 and before any requested spec phase work, run Archive Sweep
-discovery for previously merged specs.
+to archive previously merged specs.
 
 1. Determine the current target spec from the workflow file's `Spec Directory`
    field, the `--spec` override, or the active `specs/**` path in the workflow.
 2. Detect archive extension state from `.specify/extensions.yml`,
    `.specify/extensions/.registry`, and `.specify/extensions/archive/extension.yml`.
-3. If the archive extension is installed, run or simulate the installed command
-   contract before Phase 0:
+3. If the archive extension is installed, determine the sweep mode from the
+   current branch:
 
+   **Feature / spec worktree branch** (normal autopilot case — run with actual
+   cleanup):
+   ```text
+   archive command: --sweep --current-target <current-spec-dir>
+   ```
+
+   **`main`, a release branch, or any protected integration branch** (dry-run
+   only — do not delete spec folders on the integration branch):
    ```text
    archive command: --sweep --current-target <current-spec-dir> --dry-run
    ```
 
-4. If the checkout is on an unsafe branch or the worktree is dirty, the sweep
-   MUST remain dry-run-only or stop with clear instructions. Do not mix prior
-   spec cleanup into the requested spec branch.
-5. Archive Sweep may archive/clean up only previously merged specs. It MUST
+4. Archive Sweep may archive/clean up only previously merged specs. It MUST
    exclude the current target spec until a later run sees that spec as merged.
-6. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
+5. Persist sweep output into `autopilot-state.json` under `archive_sweep`,
    including eligible previous specs, excluded current spec, archive extension
-   installed state, cleanup mode, `dryRunProvenanceOnly`, and
-   `safeToApplyCleanup`.
-7. Add/update an `Archive Sweep: previously merged specs dry-run/apply
-   eligibility` plan item before Phase 0 in both `update_plan` and
-   `autopilot-state.json`.
+   installed state, cleanup mode, and `safeToApplyCleanup`.
+6. Add/update an `Archive Sweep: previously merged specs archived` plan item
+   before Phase 0 in both `update_plan` and `autopilot-state.json`.
 
 If the archive extension is missing, record `archive_extension_installed=false`,
 keep cleanup disabled, and continue only after warning that the project should
