@@ -1,42 +1,42 @@
 [
   {
-    "query": "interview me about this client brief — I have a raw idea and I want to walk every branch of the design tree before I write any spec",
+    "query": "interview me about this client brief before I run /speckit.specify — I have a raw idea and I want to walk every branch of the design tree before writing the SpecKit spec",
     "should_trigger": true
   },
   {
-    "query": "grill me on the gamification overhaul. I want you to ask one question at a time with your recommended answer first so I can agree or course-correct",
+    "query": "grill me on the gamification overhaul SpecKit spec. I want you to ask one question at a time with your recommended answer first so I can agree or course-correct before I run $speckit-setup",
     "should_trigger": true
   },
   {
-    "query": "I have a meeting transcript from yesterday's stakeholder call at notes/stakeholder-call.txt — pull a design concept out of it. ask me to fill the gaps as you go",
+    "query": "I have a meeting transcript from yesterday's stakeholder call at notes/stakeholder-call.txt — pull a SpecKit Design Concept doc out of it before we run /speckit.specify. ask me to fill the gaps as you go",
     "should_trigger": true
   },
   {
-    "query": "help me scope this raw idea before I commit to a design. I want a relentless interviewer who provides recommended answers for every question",
+    "query": "help me scope this raw idea into a SpecKit spec before I commit to a design. I want a relentless interviewer who provides recommended answers for every question before /speckit.specify",
     "should_trigger": true
   },
   {
-    "query": "let's do iterative project scoping for the new search feature. I haven't written anything yet — just have a vague idea",
+    "query": "let's do pre-spec scoping for the new search feature before we run $speckit-setup. I haven't written the SpecKit spec yet — just have a vague idea",
     "should_trigger": true
   },
   {
-    "query": "walk me through every dependency in this design. one question at a time, you suggest the answer, I agree or push back. like pair programming",
+    "query": "I'm scoping a SpecKit feature — walk me through every dependency in the design tree, one question at a time, you suggest the answer, I agree or push back. produce a design concept doc at the end",
     "should_trigger": true
   },
   {
-    "query": "I want to align with you on the data model for the billing rewrite before we even start writing requirements. interview me",
+    "query": "I want to align with you on the data model for the billing rewrite SpecKit spec before we run /speckit.specify. interview me design-tree style and produce a design concept doc",
     "should_trigger": true
   },
   {
-    "query": "run the grill me skill against this brief. start with the highest-uncertainty branches and provide your recommendation for each question",
+    "query": "run the grill-me skill against this brief before I kick off $speckit-setup. start with the highest-uncertainty branches and provide your recommendation for each question",
     "should_trigger": true
   },
   {
-    "query": "before I run $speckit-setup I want to do a deep scoping session on the workflow tracking feature. ask me everything one at a time",
+    "query": "before I run $speckit-setup SPEC-019 I want to do a deep pre-spec scoping session on the workflow tracking feature. ask me everything one at a time with your recommended answer first",
     "should_trigger": true
   },
   {
-    "query": "I'm about to brief the team on a major refactor and I haven't thought through every edge case yet. play the role of a relentless interviewer and grill me on every assumption",
+    "query": "I'm about to write a SpecKit spec for a major auth refactor and I haven't thought through every edge case yet. play the role of a relentless interviewer and grill me on every assumption before /speckit.specify",
     "should_trigger": true
   },
   {
