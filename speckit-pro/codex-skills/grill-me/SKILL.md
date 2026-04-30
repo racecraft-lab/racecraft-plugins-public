@@ -6,12 +6,13 @@ description: >
   tree, asks single questions with its own recommended answer first, and
   produces a Design Concept Markdown doc capturing the shared
   understanding. Use when the user says "grill me", "interview me",
-  "scope this idea", "iterative scoping", or wants to align on a raw
-  client brief, meeting transcript, or vague feature idea before any
-  spec is written. Strictly human-in-the-loop — DO NOT use inside
-  $speckit-autopilot or any of its phase subagents (clarify-executor,
-  phase-executor, etc.); autopilot's Clarify phase uses /speckit.clarify
-  with the consensus protocol instead.
+  "scope this idea", "iterative scoping", "walk me through this design
+  before I commit", or wants to align on a raw client brief, meeting
+  transcript, or vague feature idea before any spec is written. Also use
+  when the user wants to pre-scope a feature before running
+  $speckit-setup, or asks for a relentless interviewer with recommended
+  answers for each question. Accepts .md, .txt files or a free-text
+  topic.
 ---
 
 # Grill Me — Iterative Project Scoping Interview (Codex)
