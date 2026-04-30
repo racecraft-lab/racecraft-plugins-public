@@ -1,7 +1,7 @@
 # Codex Parity Research — 2026-04-30
 
 Author: Claude Code research agent
-Audience: speckit-pro maintainer (Fredrick Gabelmann)
+Audience: speckit-pro maintainers
 Scope: Validate every speckit-pro Codex-side assumption against primary OpenAI sources before shipping the new `grill-me` skill on the Codex side.
 
 ## Summary

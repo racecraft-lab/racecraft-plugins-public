@@ -8,7 +8,7 @@
     "should_trigger": true
   },
   {
-    "query": "I need you to execute the full speckit workflow autonomously. here's the workflow file: /Users/fred/projects/acme-api/docs/ai/specs/SPEC-004-workflow.md — go through specify, clarify, plan, checklist, tasks, analyze, and implement with gate validation between each phase",
+    "query": "I need you to execute the full speckit workflow autonomously. here's the workflow file: /path/to/project/docs/ai/specs/SPEC-004-workflow.md — go through specify, clarify, plan, checklist, tasks, analyze, and implement with gate validation between each phase",
     "should_trigger": true
   },
   {
