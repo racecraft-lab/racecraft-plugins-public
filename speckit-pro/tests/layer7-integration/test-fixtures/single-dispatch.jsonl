@@ -1,0 +1,6 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"text","text":"Dispatching codebase analyst."}]}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01ABC","name":"Agent","input":{"description":"Codebase analysis","name":"cba-1","prompt":"Analyze the auth module","subagent_type":"speckit-pro:codebase-analyst"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01ABC","content":"## Codebase findings\nFound auth in src/auth.ts"}]}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"text","text":"Done."}]}}
+{"type":"result","subtype":"success"}

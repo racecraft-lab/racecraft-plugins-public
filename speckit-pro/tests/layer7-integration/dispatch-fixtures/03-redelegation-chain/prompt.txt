@@ -1,0 +1,26 @@
+You are running speckit-autopilot. The Clarify phase is starting for
+SPEC-FIXTURE-003.
+
+Workflow:
+
+1. Dispatch `clarify-executor` with this prompt: "Run /speckit.clarify on
+   the spec at .specify/fixtures/spec-fixture-003/spec.md and report
+   unresolved items with category tags."
+
+2. WAIT for `clarify-executor` to return.
+
+3. Read its response. It will contain unresolved items tagged like
+   `[codebase, domain]`. For each unresolved item, dispatch the
+   matching analyst(s) in Round 1.
+
+4. WAIT for analysts to return.
+
+5. Dispatch `consensus-synthesizer` with the analyst outputs.
+
+This exercises the redelegation chain: orchestrator → clarify-executor →
+back to orchestrator → analysts → back to orchestrator → synthesizer.
+The key behavior under test is that the orchestrator REGAINS control
+between subagent calls and routes the next dispatch based on what
+the previous subagent returned.
+
+Stop after the synthesizer returns. Do not write to disk.

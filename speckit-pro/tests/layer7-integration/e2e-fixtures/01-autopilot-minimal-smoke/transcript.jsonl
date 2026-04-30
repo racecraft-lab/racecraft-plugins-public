@@ -1,0 +1,9 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"text","text":"Starting autopilot for SPEC-MINIMAL. Phase G0/G1: Specify."}]}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_phase_specify","name":"Agent","input":{"description":"Run Specify phase","name":"phase-specify","prompt":"Run /speckit.specify on .specify/fixtures/spec-minimal/spec.md","subagent_type":"speckit-pro:phase-executor"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_phase_specify","content":"Specify phase complete. Spec saved."}]}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_clarify","name":"Agent","input":{"description":"Run Clarify phase","name":"clarify","prompt":"Run /speckit.clarify","subagent_type":"speckit-pro:clarify-executor"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_clarify","content":"Clarify complete. No unresolved items requiring consensus."}]}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_phase_plan","name":"Agent","input":{"description":"Run Plan phase","name":"phase-plan","prompt":"Run /speckit.plan","subagent_type":"speckit-pro:phase-executor"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_phase_plan","content":"Plan phase complete. plan.md generated."}]}}
+{"type":"result","subtype":"success"}

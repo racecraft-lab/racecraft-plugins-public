@@ -1,0 +1,15 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item:
+
+```
+[codebase] Q1: Should we follow the existing repository pattern in src/storage/ or
+introduce a new abstraction for the new resource type?
+```
+
+Per the consensus protocol, dispatch the appropriate analyst(s) for the
+[codebase] tag. Use the Agent tool with subagent_type set to the analyst
+name. Do not summarize or simulate — actually invoke the Agent tool.
+
+Stop after the dispatch round completes (do not synthesize or write to
+disk). This is a routing-only test.

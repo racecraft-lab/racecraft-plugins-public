@@ -1,0 +1,25 @@
+{
+  "fixture_id": "03-redelegation-chain",
+  "purpose": "Verify the orchestrator regains control between subagent calls (multi-hop redelegation chain).",
+  "must_dispatch_to": [
+    "speckit-pro:clarify-executor",
+    "speckit-pro:consensus-synthesizer"
+  ],
+  "must_dispatch_to_at_least_one_of": [
+    "speckit-pro:codebase-analyst",
+    "speckit-pro:domain-researcher",
+    "speckit-pro:spec-context-analyst"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "dispatch_order_constraints": [
+    {
+      "before": "speckit-pro:clarify-executor",
+      "after": "speckit-pro:consensus-synthesizer",
+      "reason": "Clarify must precede synthesis — synthesizer needs analyst outputs"
+    }
+  ],
+  "min_dispatch_count": 3
+}
