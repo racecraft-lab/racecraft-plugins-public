@@ -124,6 +124,22 @@ than authoritative. The threshold is documented here; the
 metric is tracked via the Consensus Resolution Log
 (see "Logging" below — the `Round` column is the data source).
 
+### Deterministic helpers
+
+Two scripts under `skills/speckit-autopilot/scripts/` are the
+single source of truth for the rules above. The orchestrator
+prose mirrors them; if the prose drifts the Layer 4 tests catch
+it.
+
+| Script | Purpose |
+|--------|---------|
+| `parse-consensus-categories.sh "<line>"` | Parses the leading `[<categories>]` prefix, returns JSON listing the analysts to spawn and the dispatch reason. Implements every routing rule in the table above (security override, ambiguous safe default, unknown-tag safe default, multi-tag union, untagged → all 3). |
+| `aggregate-crl.sh <workflow_file>` | Parses the Consensus Resolution Log table, computes total items / Round 1 / Round 2 / escape-hatch counts, returns escape-rate percent and `exceeds_threshold` boolean against `THRESHOLD_PERCENT` (default 10). |
+
+The orchestrator MAY call these scripts directly during dispatch
+or use them out-of-band for the 30-day review. Either way, they
+define what "Tier A routing works" means in code, not prose.
+
 ## Three-Analyst Consensus Rules (Round 2 / N=3)
 
 ### Moderate Mode (Default)
