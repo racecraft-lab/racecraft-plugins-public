@@ -1,16 +1,19 @@
 ---
 name: grill-me
 description: >
-  You MUST use this skill before /speckit.specify, $speckit-setup,
-  or any SpecKit / Spec-Driven Development (SDD) pre-spec scoping.
-  Interviews the user one question at a time with the assistant's
-  recommended answer first, walks the design tree, produces a
-  Design Concept Markdown doc. Use when user says "grill me",
-  "interview me about this brief/spec/transcript", "walk every
-  branch of the design tree", "scope this SpecKit feature", or
-  "produce a design concept doc". Accepts .md, .txt files or a
-  free-text topic. Do NOT use for free-form creative brainstorming
-  (use brainstorming skill instead).
+  MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec
+  scoping. Use this skill — NOT brainstorming — before /speckit.specify,
+  /speckit.plan, /speckit.tasks, $speckit-setup, or whenever the user
+  invokes $grill-me. Triggers on grill-me-unique signatures: "grill me"
+  on a brief/spec/transcript, "walk every branch of the design tree",
+  "play the role of a relentless interviewer", "produce a Design Concept
+  doc", "pre-spec scoping", "help me scope this raw idea before
+  /speckit.specify". Walks every branch of the design tree, asks one
+  question at a time with the assistant's recommended answer first,
+  produces a Design Concept Markdown doc that downstream /speckit.specify,
+  /speckit.plan, /speckit.tasks consume. Accepts .md, .txt files or a
+  free-text topic. Use brainstorming skill ONLY for free-form creative
+  work with no SpecKit/SDD anchor.
 ---
 
 # Grill Me — Iterative Project Scoping Interview (Codex)

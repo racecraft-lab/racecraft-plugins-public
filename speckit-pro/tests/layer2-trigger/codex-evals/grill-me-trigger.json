@@ -1,42 +1,42 @@
 [
   {
-    "query": "interview me about this client brief before I run /speckit.specify — I have a raw idea and I want to walk every branch of the design tree before writing the SpecKit spec",
+    "query": "grill me on this client brief at docs/idea.md before /speckit.specify — produce a Design Concept doc with the full design tree walked",
     "should_trigger": true
   },
   {
-    "query": "grill me on the gamification overhaul SpecKit spec. I want you to ask one question at a time with your recommended answer first so I can agree or course-correct before I run $speckit-setup",
+    "query": "use the grill-me skill on the gamification overhaul SpecKit spec. walk every branch of the design tree, recommended answer first, produce a Design Concept doc",
     "should_trigger": true
   },
   {
-    "query": "I have a meeting transcript from yesterday's stakeholder call at notes/stakeholder-call.txt — pull a SpecKit Design Concept doc out of it before we run /speckit.specify. ask me to fill the gaps as you go",
+    "query": "$grill-me notes/stakeholder-call.txt — pull a Design Concept doc out of this transcript before /speckit.specify",
     "should_trigger": true
   },
   {
-    "query": "help me scope this raw idea into a SpecKit spec before I commit to a design. I want a relentless interviewer who provides recommended answers for every question before /speckit.specify",
+    "query": "run grill-me on this raw idea: a leaderboard for the learning platform. produce a Design Concept doc before /speckit.specify, recommended answer first",
     "should_trigger": true
   },
   {
-    "query": "let's do pre-spec scoping for the new search feature before we run $speckit-setup. I haven't written the SpecKit spec yet — just have a vague idea",
+    "query": "play the role of a relentless interviewer for the billing rewrite SpecKit spec — walk every branch of the design tree, produce a Design Concept doc before /speckit.specify",
     "should_trigger": true
   },
   {
-    "query": "I'm scoping a SpecKit feature — walk me through every dependency in the design tree, one question at a time, you suggest the answer, I agree or push back. produce a design concept doc at the end",
+    "query": "grill me on the auth refactor before /speckit.specify. recommended answer first, design tree walk, Design Concept doc at the end",
     "should_trigger": true
   },
   {
-    "query": "I want to align with you on the data model for the billing rewrite SpecKit spec before we run /speckit.specify. interview me design-tree style and produce a design concept doc",
+    "query": "I need a Design Concept doc for SPEC-019 workflow tracking — grill-me on each design tree branch before $speckit-setup",
     "should_trigger": true
   },
   {
-    "query": "run the grill-me skill against this brief before I kick off $speckit-setup. start with the highest-uncertainty branches and provide your recommendation for each question",
+    "query": "grill me relentlessly on this stakeholder transcript. produce a Design Concept doc at docs/ai/specs/<slug>-design-concept.md before /speckit.specify",
     "should_trigger": true
   },
   {
-    "query": "before I run $speckit-setup SPEC-019 I want to do a deep pre-spec scoping session on the workflow tracking feature. ask me everything one at a time with your recommended answer first",
+    "query": "$grill-me — pre-spec scoping for the calendar sync feature. design tree walk, recommended answer first, Design Concept doc",
     "should_trigger": true
   },
   {
-    "query": "I'm about to write a SpecKit spec for a major auth refactor and I haven't thought through every edge case yet. play the role of a relentless interviewer and grill me on every assumption before /speckit.specify",
+    "query": "use grill-me to produce a Design Concept doc from this raw idea before I write the SpecKit spec via /speckit.specify. relentless interviewer mode, design tree walk",
     "should_trigger": true
   },
   {

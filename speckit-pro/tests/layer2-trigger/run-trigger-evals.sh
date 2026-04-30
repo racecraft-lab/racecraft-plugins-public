@@ -9,12 +9,41 @@
 # Output:   JSON results to stdout, summary to stderr
 #
 # For Codex-specific trigger evals, use run-trigger-evals-codex.sh instead.
+#
+# Optional environment variables:
+#   EVAL_FORCE_BARE=1
+#     Force --bare mode (disables ALL plugins; requires ANTHROPIC_API_KEY).
+#
+#   EVAL_DISABLE_PLUGINS="plugin1@market,plugin2@market"
+#     Comma-separated list of plugins to disable for this eval run via
+#     --settings. Use this to suppress competing skills whose descriptions
+#     outrank the skill under test (e.g., superpowers' brainstorming skill
+#     beats grill-me on natural-language pre-spec scoping prompts). Unlike
+#     --bare, this keeps OAuth / keychain auth working.
+#
+# Per-skill defaults are baked in for known plugin competitors (see
+# DISABLE_PLUGINS_DEFAULT block below).
 
 set -euo pipefail
 
 SKILL_CREATOR="${SKILL_CREATOR_ROOT:-$HOME/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator}"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SKILL="${1:-speckit-coach}"
+
+# Per-skill defaults for plugin competitors. Overridable via EVAL_DISABLE_PLUGINS.
+# grill-me is structurally outranked by superpowers:brainstorming on natural
+# -language SDD pre-spec scoping prompts (brainstorming's "MUST use this before
+# any creative work" claim wins description-based skill selection). Disabling
+# superpowers for the eval reflects the standalone production install
+# (speckit-pro without superpowers) and lets the eval measure grill-me's
+# trigger behavior on its own merits.
+DISABLE_PLUGINS_DEFAULT=""
+case "$SKILL" in
+  grill-me)
+    DISABLE_PLUGINS_DEFAULT="superpowers@claude-plugins-official"
+    ;;
+esac
+DISABLE_PLUGINS="${EVAL_DISABLE_PLUGINS:-$DISABLE_PLUGINS_DEFAULT}"
 
 # Detect whether the test skill collides with an installed speckit-pro plugin
 # skill. The eval works by writing a test command file at .claude/commands/
@@ -37,24 +66,47 @@ if [ -z "$NEED_BARE" ] && [ -d "$INSTALLED_PLUGIN_DIR" ]; then
 fi
 
 WRAPPER_DIR=$(mktemp -d)
-trap 'rm -rf "$WRAPPER_DIR"' EXIT
-if [ "$NEED_BARE" = "1" ]; then
-  cat > "$WRAPPER_DIR/claude" << 'WRAPPER'
+SETTINGS_FILE=""
+trap 'rm -rf "$WRAPPER_DIR"; [ -n "$SETTINGS_FILE" ] && rm -f "$SETTINGS_FILE"' EXIT
+
+# Build optional --settings JSON if EVAL_DISABLE_PLUGINS is set.
+WRAPPER_EXTRA_ARGS=""
+if [ -n "$DISABLE_PLUGINS" ]; then
+  SETTINGS_FILE=$(mktemp -t eval-disable-plugins-XXXXXX.json)
+  DISABLE_PLUGINS="$DISABLE_PLUGINS" python3 -c '
+import json, os, sys
+plugins_csv = os.environ["DISABLE_PLUGINS"]
+disabled = {p.strip(): False for p in plugins_csv.split(",") if p.strip()}
+print(json.dumps({"enabledPlugins": disabled}))
+' > "$SETTINGS_FILE"
+  WRAPPER_EXTRA_ARGS="--settings $SETTINGS_FILE"
+  echo "Disabling competing plugins for eval: $DISABLE_PLUGINS" >&2
+fi
+
+if [ "$NEED_BARE" = "1" ] || [ -n "$WRAPPER_EXTRA_ARGS" ]; then
+  # Wrapper script: prepend WRAPPER_EXTRA_ARGS, optionally append --bare.
+  WRAPPER_BARE_FLAG=""
+  if [ "$NEED_BARE" = "1" ]; then
+    WRAPPER_BARE_FLAG="--bare"
+    echo "Using --bare mode (installed plugin skill '${SKILL}' detected)" >&2
+  else
+    echo "Skipping --bare mode (no installed plugin skill collision for '${SKILL}')" >&2
+  fi
+  cat > "$WRAPPER_DIR/claude" << WRAPPER
 #!/usr/bin/env bash
 real_claude=""
-IFS=: read -ra dirs <<< "$PATH"
-for d in "${dirs[@]}"; do
-  [[ "$d" == "$(dirname "$0")" ]] && continue
-  if [[ -x "$d/claude" ]]; then
-    real_claude="$d/claude"
+IFS=: read -ra dirs <<< "\$PATH"
+for d in "\${dirs[@]}"; do
+  [[ "\$d" == "\$(dirname "\$0")" ]] && continue
+  if [[ -x "\$d/claude" ]]; then
+    real_claude="\$d/claude"
     break
   fi
 done
-exec "$real_claude" "$@" --bare
+exec "\$real_claude" $WRAPPER_EXTRA_ARGS "\$@" $WRAPPER_BARE_FLAG
 WRAPPER
   chmod +x "$WRAPPER_DIR/claude"
   export PATH="$WRAPPER_DIR:$PATH"
-  echo "Using --bare mode (installed plugin skill '${SKILL}' detected)" >&2
 else
   echo "Skipping --bare mode (no installed plugin skill collision for '${SKILL}')" >&2
 fi
@@ -98,9 +150,23 @@ echo "" >&2
 
 cd "$SKILL_CREATOR"
 
+# When plugins are disabled via --settings, force sequential execution.
+# The skill-creator harness defaults to ProcessPoolExecutor(max_workers=10),
+# and parallel claude --settings invocations are racy: roughly half the
+# workers fail to apply the enabledPlugins override, so the disabled plugin
+# (e.g. superpowers:brainstorming) outranks the skill under test on those
+# runs and the skill never fires. Sequential execution is the only reliable
+# fix; without it, this wrapper regresses to ~10/20 on grill-me.
+EXTRA_RUN_ARGS=""
+if [ -n "$DISABLE_PLUGINS" ]; then
+  EXTRA_RUN_ARGS="--num-workers 1"
+  echo "Forcing --num-workers 1 (parallelism + --settings is racy)" >&2
+fi
+
 python3 -m scripts.run_eval \
   --eval-set "$EVAL_FILE" \
   --skill-path "$SKILL_PATH" \
   --runs-per-query 3 \
   --trigger-threshold 0.5 \
-  --verbose
+  --verbose \
+  $EXTRA_RUN_ARGS
