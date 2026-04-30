@@ -544,3 +544,141 @@ These uncertainties are flagged for future investigation; none block the Tier 1 
 
 **Codex source (loader constants):**
 - https://github.com/openai/codex/blob/main/codex-rs/core-plugins/src/loader.rs
+
+---
+
+## 11. Routing Intelligence — Gap and Tier A Fix
+
+### 11.1 The gap the original audit didn't address
+
+Sections 1–10 above audit the *structural* correctness of the orchestration: subagents don't nest, effort levels are sane, tools are scoped, HITL guards are in place. They do not audit the **routing intelligence** layered on top — *how* the orchestrator picks the right agent for each piece of work.
+
+Two distinct concerns surface under that heading:
+
+1. **"Right agent at the right time."** When the autopilot encounters an unresolved item flagged by an executor, today it always fans out to all three consensus analysts (`codebase-analyst` + `spec-context-analyst` + `domain-researcher`). For a question whose nature is obviously codebase-specific (*"do we already have a `BatchResult` type and where?"*), spawning the spec-context and domain analysts is wasted work — they have nothing to contribute beyond what `codebase-analyst` will say.
+
+2. **Subagent return → orchestrator → redelegation.** The pattern *exists* — executor returns "Unresolved for consensus" → orchestrator parses → spawns analysts → synthesizer applies edit — but the second hop is hard-coded, not driven by the executor's return value. The executor knows *why* an item is unresolved (codebase pattern unclear / spec doesn't say / external API unfamiliar) but that knowledge is discarded at the orchestrator boundary.
+
+Phase 7 Implement is the existing positive example: per-task dispatch routes tests, domain code, research, and verification to different agents based on task type. That model — executor-tagged signal driving orchestrator-side routing — should generalize to consensus phases (Clarify, Checklist, Analyze).
+
+### 11.2 Why Agent Teams isn't the answer (yet)
+
+[Claude Code Agent Teams](https://code.claude.com/docs/en/agent-teams) is a real, opt-in experimental feature (`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`). It introduces shared task lists + peer-to-peer `SendMessage` between teammates. For Phase 7 Implement specifically, Teams could enable cross-cutting communication (e.g., a backend-impl teammate alerting a frontend-impl teammate about an API contract change). But:
+
+- Experimental flag required; tooling and lifecycle bugs documented in [#31788](https://github.com/anthropics/claude-code/issues/31788), [#32730](https://github.com/anthropics/claude-code/issues/32730), [#32731](https://github.com/anthropics/claude-code/issues/32731), [#33764](https://github.com/anthropics/claude-code/issues/33764).
+- Teammates have **fewer** spawning tools than classic subagents (`Agent`, `TeamCreate`, `TeamDelete`, `CronCreate/Delete/List` are stripped).
+- OpenAI Codex has **no equivalent primitive** as of 2026-04-30. The closest is the open feature request [openai/codex#12047](https://github.com/openai/codex/issues/12047) proposing a `team.toml` manifest; not implemented. Adopting Teams on Claude side creates a permanent parity divergence on whatever phase uses them.
+- The current Phase 7 per-task dispatch already routes correctly; Teams adds peer messaging on top, not routing itself.
+
+Tier B (Agent Teams adoption for Phase 7) is **deferred until Agent Teams exits experimental status**. See §12.
+
+### 11.3 Tier A fix — category-routed consensus dispatch
+
+**Mechanism.** Each phase executor (`clarify-executor`, `checklist-executor`, `analyze-executor`) tags every item in its "Unresolved for consensus" section with one or more category prefixes:
+
+| Tag | Meaning | Routes to |
+| :-- | :------ | :-------- |
+| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `codebase-analyst` only |
+| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `spec-context-analyst` only |
+| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `domain-researcher` only |
+| `[security]` | Item touches auth, tokens, encryption, PII, credentials, sessions, etc. | All 3 (defense-in-depth, never single-routed) |
+| `[ambiguous]` *or untagged* | Executor uncertain which perspective applies | All 3 (safe default) |
+
+**Multi-category tags** (e.g., `[codebase, domain]`) are valid and dispatch the union of named analysts. Common case: *"Should we use bcrypt or argon2?"* → both `[codebase]` (what do we already use?) and `[domain]` (what does NIST recommend?).
+
+**Two-round protocol with escape hatch:**
+
+```text
+ROUND 1 — category-routed
+  Parse tag, spawn N analysts (1 ≤ N ≤ 3)
+  consensus-synthesizer always runs (becomes "edit-applier" in 1-analyst case)
+
+  IF synthesizer says high-confidence AND no analyst flagged
+     "insufficient context" / "no precedent" / "outside my scope":
+       APPLY edit, log, done
+
+  ELSE (low confidence OR escape-hatch keyword detected):
+       fall through to ROUND 2
+
+ROUND 2 — full fan-out (existing path)
+  Spawn the remaining (3 - N) analysts
+  Re-synthesize with all 3 responses
+  Apply 2-of-3 majority rule
+  APPLY edit OR flag [HUMAN REVIEW NEEDED]
+```
+
+The escape hatch is keyword-detectable in analyst responses: a single `codebase-analyst` returning *"no precedent in this repo"* triggers Round 2 because the absence of a precedent doesn't answer the question — it just relocates the question to spec/domain perspectives.
+
+**Single-analyst confidence rule.** When only one analyst ran in Round 1, `consensus-synthesizer`'s output flags it as `confidence: high | low`. High → apply edit. Low or escape-hatch keyword → Round 2. This replaces the 2-of-3 majority rule (which is undefined for N=1) without changing the established multi-analyst flow.
+
+**Synthesizer's role unchanged in 3-analyst case.** Existing 2/3 majority + dissent-logging + artifact-edit-emission rules continue to apply. The synthesizer always runs (advisor option (a)), keeping the audit-trail format uniform across single-analyst, two-analyst, and three-analyst rounds.
+
+**Codex parity.** Identical mechanism on the Codex side. Both variants tag, parse, dispatch, escape-hatch the same way. Agent Teams' absence on Codex is irrelevant because we are not using teams — only per-item routing of existing agents. No parity divergence.
+
+### 11.4 Trade-off and re-evaluation trigger
+
+The change trades the "always 3" defensive margin for efficiency. If executors mis-tag items often, two failure modes appear:
+
+- **Silent under-coverage.** A `[codebase]`-tagged item that actually needed domain research ships a low-quality answer because Round 1 returned high-confidence-but-wrong from the only analyst that ran.
+- **Round 2 churn.** If the escape hatch fires on >10% of items, we're paying Round 1's cost AND Round 2's cost on a meaningful fraction of items — the routing is then strictly worse than always-3.
+
+**Pre-committed re-evaluation trigger:** if Round 2 escape-hatch rate exceeds **10%** of consensus items across any 30-day window of autopilot runs, revert to always-3 dispatch and treat category tags as advisory rather than authoritative. The threshold is documented in `consensus-protocol.md`.
+
+### 11.5 Files changed in Tier A
+
+| File | Change |
+| :--- | :----- |
+| `agents/{clarify,checklist,analyze}-executor.md` (×3) | Rule 5: require `[<category>]` prefixes in Unresolved items |
+| `codex-agents/{clarify,checklist,analyze}-executor.toml` (×3) | Same rule 5 change |
+| `agents/consensus-synthesizer.md` | Accept variable analyst-count input; emit `confidence` field; escape-hatch keyword surfacing |
+| `skills/speckit-autopilot/SKILL.md` (Claude) | Rule 6 two-layer resolution → category-driven dispatch + Round 2 escape hatch |
+| `codex-skills/speckit-autopilot/SKILL.md` | Rule 7 same dispatch logic |
+| `skills/speckit-autopilot/references/consensus-protocol.md` | Document routing table, single-analyst confidence rule, escape-hatch protocol, 10% re-evaluation trigger |
+| `tests/layer3-functional/{evals,codex-evals}/speckit-autopilot-evals.json` | New cases: codebase-only routing, domain-only routing, security → all 3, untagged → all 3, escape-hatch fallback |
+
+### 11.6 Verification
+
+- **Layer 1, 4, 5** deterministic tests must remain at 100% pass. No tool-scoping or structural changes — purely prose/orchestration logic.
+- **Layer 3 functional evals** are the behavior contract for the routing logic. They're developer-local (`claude -p`) and document expected dispatch behavior; they don't gate the implementation in CI. The commit message states this honestly.
+- **No new Layer 6 benchmarks required** because no model/effort changes ship; only dispatch topology changes.
+
+---
+
+## 12. Tier B (Deferred) — Agent Teams Adoption
+
+### 12.1 What it would do
+
+Phase 7 Implement is the candidate use case. Today, multiple parallel implement-executor instances run as classic subagents — they cannot coordinate directly. With Agent Teams, a `backend-impl` teammate and `frontend-impl` teammate could `SendMessage` each other when an API contract changes (e.g., backend renames a response field → frontend learns about it from the message rather than from a stale tasks.md interpretation).
+
+### 12.2 Why we're not doing it now
+
+| Concern | Status |
+| :------ | :----- |
+| Experimental flag required | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`; not stable |
+| Lifecycle bugs documented | [#31788](https://github.com/anthropics/claude-code/issues/31788), [#32730](https://github.com/anthropics/claude-code/issues/32730), [#33764](https://github.com/anthropics/claude-code/issues/33764) |
+| Codex parity | No team primitive; closest is open RFE [#12047](https://github.com/openai/codex/issues/12047). Permanent divergence if adopted. |
+| Existing routing | Phase 7 per-task dispatch already routes correctly. Teams adds messaging, not routing. |
+| Net value-vs-cost | Real but unmeasured. No data showing that lack of peer messaging is causing cross-cutting bugs in current Phase 7 runs. |
+
+### 12.3 Re-evaluation triggers
+
+Adopt Agent Teams on Claude side when **all** of the following are true:
+
+1. Agent Teams exits experimental (no `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` flag required).
+2. Lifecycle bugs above are closed or have documented stable workarounds.
+3. We have measured evidence — from Phase 7 retrospectives or post-impl code reviews — that ≥2 of the last 10 specs would have benefited from peer messaging between implement-executor teammates (e.g., contract drift, redundant work, missed cross-cutting concerns).
+4. Either Codex ships a team primitive (per [openai/codex#12047](https://github.com/openai/codex/issues/12047)) **or** maintainers explicitly accept Phase 7 parity divergence with a documented rationale.
+
+Until then, the Tier A category-routing fix above addresses the practical "right agent at the right time" question without committing to an experimental, parity-divergent primitive.
+
+### 12.4 What changes when we adopt it (sketch)
+
+| File | Change |
+| :--- | :----- |
+| `skills/speckit-autopilot/SKILL.md` | Rule 1 (subagent per phase) → optional team mode for Phase 7; team named `<spec-id>-impl-team`; lead = orchestrator |
+| `agents/implement-executor.md` | Add `team_name: "{spec-id}-impl-team"` parameter handling; `SendMessage` tool added to allowlist |
+| New: `agents/backend-impl-executor.md`, `agents/frontend-impl-executor.md` (etc., as task-type taxonomy emerges) | Domain-specialized implement-executor variants, team members |
+| `references/team-protocol.md` (new) | Lifecycle, messaging conventions, escape-to-classic-subagents on team failure |
+| `tests/layer{2,3,5,6}-*/` | Trigger evals: team-mode invocation; functional evals: cross-task messaging; tool-scoping: team_name allowlist; efficiency: team-mode vs classic-mode benchmark |
+
+This sketch is **non-binding** and intentionally leaves Codex side blank — the Codex variant stays on classic subagents until Codex ships a team primitive.

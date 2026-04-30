@@ -90,17 +90,35 @@ analysis and fix the findings — all in one agent.
    ```
    If new findings appear, fix them (max 2 total loops).
 
-5. **Flag unresolved items for consensus.** Include in the
-   "Unresolved for consensus" section of your summary:
+5. **Flag unresolved items for consensus, with a category
+   prefix.** Include in the "Unresolved for consensus" section
+   of your summary:
    - Findings that remain after 2 remediation loops
    - Findings where your fix has low confidence (conflicting
      research, no clear precedent, multiple valid approaches)
    - Findings containing security keywords (auth, token,
      secret, encryption, PII, credential, permission,
-     password)
-   The main session will spawn 3 consensus agents
-   (codebase-analyst, spec-context-analyst,
-   domain-researcher) to provide distinct perspectives.
+     password, session, cookie, jwt, api-key, access-control)
+
+   **Tag every unresolved finding with a category prefix in
+   square brackets** so the orchestrator can route consensus
+   to only the relevant analyst(s):
+
+   - `[codebase]` — resolution depends on existing repo patterns
+   - `[spec]` — depends on project decisions (constitution,
+     technical roadmap, prior specs, CLAUDE.md)
+   - `[domain]` — depends on external standards, RFCs, library
+     docs, or community best practice
+   - `[security]` — finding contains a security keyword (always
+     routes to all 3 analysts)
+   - `[ambiguous]` — you genuinely don't know which perspective
+     applies (routes to all 3)
+
+   Multi-category tags are allowed: `[spec, domain]` spawns
+   both `spec-context-analyst` and `domain-researcher`. Untagged
+   items default to `[ambiguous]` but explicit tagging is the
+   discipline. See `../skills/speckit-autopilot/references/consensus-protocol.md`
+   for full routing rules.
 
 6. **Return a summary with research citations.** Do not
    recommend next steps.
@@ -147,9 +165,10 @@ finding must be researched and remediated — no shortcuts.
 (or "N findings remain after 2 loops — escalate to consensus")
 
 **Unresolved for consensus:**
-- Finding 4 [SEVERITY]: <description>
+- [<categories>] Finding 4 [SEVERITY]: <description>
   Attempted fix: <what you tried, if anything>
   Why unresolved: <remained after 2 loops / low confidence / security keyword>
+  (Example: `[domain] Finding 4 [HIGH]: cookie SameSite policy not specified`)
 (or "None — all findings resolved with high confidence")
 
 **Errors:** None (or describe any errors)

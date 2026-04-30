@@ -202,6 +202,68 @@
         "Consensus analysts (codebase-analyst, spec-context-analyst, domain-researcher) never call grill-me",
         "Gate failures result in stopping or surfacing the issue, never an escalation to grill-me"
       ]
+    },
+    {
+      "id": 17,
+      "prompt": "The clarify-executor returned its summary with one item under 'Unresolved for consensus': '[codebase] Q4: Which existing error-handling pattern should the new payment retry logic follow?' Walk me through how the Codex autopilot dispatches consensus for this single item. Which analyst(s) get spawn_agent? Does the synthesizer step still run?",
+      "expected_output": "Explains category-routed Round 1 dispatch: only codebase-analyst is spawned via spawn_agent (because the [codebase] tag specifies it). The synthesizer step still runs in the main orchestrator session as edit-applier with N=1. If codebase-analyst returns a high-confidence answer with no escape-hatch keyword, the orchestrator applies the artifact edit. Otherwise Round 2 spawns the remaining 2 analysts.",
+      "expectations": [
+        "States that ONLY codebase-analyst is spawned in Round 1 because the item is tagged [codebase]",
+        "Explicitly does NOT spawn spec-context-analyst or domain-researcher in Round 1",
+        "Confirms that the consensus-synthesizer step still runs even when only 1 analyst ran",
+        "Mentions the single-analyst confidence rule (high → apply, low → escape to Round 2)",
+        "Mentions the escape-hatch keywords (insufficient context / no precedent / outside my scope) trigger Round 2",
+        "References the consensus-protocol.md reference document for full routing rules"
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "The analyze-executor flagged: '[domain] Finding 3 [HIGH]: cookie SameSite policy is not specified in plan.md.' Which consensus analyst(s) does the Codex autopilot spawn for this finding? Why?",
+      "expected_output": "Spawns only domain-researcher via spawn_agent because [domain] indicates resolution depends on external standards (RFC 6265bis, browser behavior). codebase-analyst and spec-context-analyst are NOT spawned in Round 1.",
+      "expectations": [
+        "States that ONLY domain-researcher is spawned in Round 1",
+        "Justifies the single-analyst dispatch by referencing the [domain] tag's meaning (external standards / RFCs / library docs)",
+        "Does NOT spawn codebase-analyst or spec-context-analyst in Round 1",
+        "Mentions that the consensus-synthesizer step still runs to apply the artifact edit",
+        "Mentions Round 2 fallback if domain-researcher returns low confidence or escape-hatch keywords"
+      ]
+    },
+    {
+      "id": 19,
+      "prompt": "The clarify-executor flagged: '[security] Q5: How should we hash and rotate API keys in the new admin endpoints?' How does the Codex autopilot route this consensus? Can it ever be single-analyst routed?",
+      "expected_output": "[security] tag forces all 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) regardless of any other tag. Defense-in-depth: security items are NEVER single-routed. The orchestrator skips Round 1 single-routing and dispatches all 3 via spawn_agent in parallel directly. The synthesizer-emitted [HUMAN REVIEW NEEDED] flag also fires automatically for security items per the override rule.",
+      "expectations": [
+        "States that ALL 3 analysts (codebase-analyst, spec-context-analyst, domain-researcher) are spawned",
+        "Explicitly states that [security] is NEVER single-routed — defense-in-depth",
+        "References the security keyword override in consensus-synthesizer rules",
+        "Mentions that the synthesizer flags [HUMAN REVIEW NEEDED] for security items regardless of agreement level",
+        "Does NOT route this item to a single analyst"
+      ]
+    },
+    {
+      "id": 20,
+      "prompt": "The checklist-executor returned an unresolved gap with no category prefix: 'Gap 7: error budget for the rate limiter is not defined.' How does the Codex autopilot handle the missing prefix? Does it fail, default, or warn?",
+      "expected_output": "Untagged or unparseable items default to [ambiguous], which routes to all 3 analysts (safe default). The orchestrator does NOT fail — it falls back to legacy 3-analyst behavior. The Consensus Resolution Log records the item as [ambiguous]. Executors are expected to tag explicitly, but missing tags do not block consensus.",
+      "expectations": [
+        "States that untagged items default to [ambiguous] routing (all 3 analysts)",
+        "Confirms the orchestrator does NOT fail or stop on missing prefix",
+        "Mentions that explicit tagging is the discipline but not enforced as a hard error",
+        "References the safe-default behavior (legacy 3-analyst path)",
+        "Mentions that the Consensus Resolution Log captures the [ambiguous] routing for the 10% Round-2 escape-rate metric"
+      ]
+    },
+    {
+      "id": 21,
+      "prompt": "The clarify-executor flagged '[codebase] Q6: Which session-store TTL should we use?' and the Codex orchestrator spawned codebase-analyst alone. The analyst's response says 'no precedent in this repo for session storage — this is a domain question.' What does the autopilot do next?",
+      "expected_output": "The escape-hatch keywords ('no precedent in this repo', 'this is a domain question') trigger Round 2. consensus-synthesizer emits Flags=[ESCAPE_TO_ROUND_2]. The orchestrator spawns the remaining 2 analysts (spec-context-analyst and domain-researcher) via spawn_agent, waits via wait_agent, and re-synthesizes with all 3 responses using 2-of-3 majority rule. Logs Outcome=escape-hatch in the Consensus Resolution Log so the 10% re-evaluation trigger is computable.",
+      "expectations": [
+        "Detects the escape-hatch keywords in codebase-analyst's response (no precedent / outside my scope / not in this codebase)",
+        "States that Round 2 is triggered automatically",
+        "Spawns spec-context-analyst AND domain-researcher in Round 2 (the analysts NOT run in Round 1)",
+        "Re-invokes the consensus-synthesizer step with all 3 responses for Round 2",
+        "Applies 2-of-3 majority rule for the final answer",
+        "Records Outcome=escape-hatch in the Consensus Resolution Log (counts toward the 10% Round-2 rate metric)"
+      ]
     }
   ]
 }

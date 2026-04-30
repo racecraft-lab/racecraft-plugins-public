@@ -14,25 +14,119 @@ library docs, and codebase exploration (MCP tools when available,
 built-in fallbacks otherwise). The executor
 resolves most items directly (~80%) and applies fixes to
 artifacts. Items it can't resolve with high confidence are
-flagged in its "Unresolved for consensus" summary section.
+flagged in its "Unresolved for consensus" summary section,
+with a category prefix (see "Category-Routed Dispatch" below).
 
 **Layer 2 — Consensus agents (second pass):** The main
-session (not the executor) spawns 3 consensus agents in
-parallel for each unresolved item. Each agent provides a
-distinct perspective. The main session compares answers and
-applies consensus rules.
+session (not the executor) routes each unresolved item to the
+relevant analyst(s) based on the executor's category prefix.
+Single-analyst paths apply when one perspective is sufficient;
+all-three paths apply for security keywords, untagged items,
+multi-perspective tags spanning all categories, or when the
+single-analyst path returns low confidence.
 
 **Why two layers:** Single-agent research handles
-straightforward items efficiently. Multi-agent consensus
-provides the distinct perspectives needed for genuinely
-ambiguous items — codebase patterns vs. project decisions vs.
-industry best practices.
+straightforward items efficiently. Category-routed consensus
+spends model effort only on the perspective(s) the executor
+identified as relevant, with a defense-in-depth fallback to
+all-three for ambiguous, security-sensitive, or low-confidence
+items.
 
 **When consensus is triggered:**
 - Executor flagged the item as low-confidence
 - Executor's research sources disagreed
 - Item remained unresolved after 2 remediation loops
-- Item contains security keywords (always goes to consensus)
+- Item contains security keywords (always goes to all-three consensus)
+
+## Category-Routed Dispatch (Tier A, 2026-04-30)
+
+Each item in the executor's "Unresolved for consensus" section
+MUST carry a category prefix. The orchestrator parses the prefix
+and dispatches to only the relevant analyst(s). This replaces
+the legacy "always 3 analysts" rule.
+
+### Category tags
+
+| Tag | Meaning | Routes to |
+|-----|---------|-----------|
+| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `codebase-analyst` only |
+| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `spec-context-analyst` only |
+| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `domain-researcher` only |
+| `[security]` | Item contains security keywords (auth, token, secret, encryption, PII, credential, permission, password, session, cookie, jwt, api-key, access-control) | All 3 (defense-in-depth, never single-routed) |
+| `[ambiguous]` | Executor uncertain which perspective applies | All 3 (safe default) |
+| *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
+
+**Multi-category tags** are valid: `[codebase, domain]` dispatches
+both `codebase-analyst` and `domain-researcher`. The orchestrator
+parses comma-separated category lists inside the bracket and
+spawns the union.
+
+### Two-round protocol with escape hatch
+
+```text
+ROUND 1 — category-routed
+  Parse the category prefix on the unresolved item.
+  Spawn N analysts (1 ≤ N ≤ 3) per the routing table.
+  consensus-synthesizer always runs (becomes "edit-applier" in 1-analyst case).
+
+  IF synthesizer flags confidence: high
+     AND no analyst response contains escape-hatch keywords
+     ("insufficient context", "not in this codebase", "no precedent",
+      "outside my scope", "cannot answer from this perspective"):
+       APPLY edit, log result, done.
+
+  ELSE (low confidence OR escape-hatch keyword detected):
+       fall through to ROUND 2.
+
+ROUND 2 — full fan-out (legacy path)
+  Spawn the remaining (3 - N) analysts.
+  Re-invoke consensus-synthesizer with all 3 responses.
+  Apply the multi-analyst rules below.
+  APPLY edit OR flag [HUMAN REVIEW NEEDED].
+```
+
+The escape hatch is the asymmetry that keeps routing cheap when
+right and safe when wrong. A `[codebase]` tag that should have
+been `[domain]` triggers Round 2 the moment `codebase-analyst`
+admits "no precedent in this repo" — no silently-shipped
+low-confidence answers.
+
+### Single-analyst confidence rule (N=1)
+
+When only one analyst ran in Round 1, the synthesizer's output
+includes a `confidence: high | low` field instead of an
+agreement count.
+
+| Synthesizer output | Action |
+|--------------------|--------|
+| `confidence: high` AND no escape-hatch keyword | Apply edit, log, done |
+| `confidence: low` | Fall through to Round 2 |
+| Escape-hatch keyword in analyst response | Fall through to Round 2 |
+
+### Two-analyst rule (N=2)
+
+| Analysts | Action |
+|----------|--------|
+| Both agree | Apply edit, log, done |
+| Disagree | Fall through to Round 2 (spawn the missing analyst, re-synthesize) |
+| Either flagged escape-hatch | Fall through to Round 2 |
+
+### Three-analyst rules (N=3)
+
+These are the legacy multi-analyst rules, unchanged.
+
+### Re-evaluation trigger
+
+If the Round-2 escape-hatch rate exceeds **10%** of consensus
+items across any 30-day window of autopilot runs, revert to
+always-3 dispatch and treat category tags as advisory rather
+than authoritative. The threshold is documented here; the
+metric is tracked via the Consensus Resolution Log
+(see "Logging" below — the `Round` column is the data source).
+
+## Three-Analyst Consensus Rules (Round 2 / N=3)
+
+### Moderate Mode (Default)
 
 ## The 3 Perspective Agents
 
@@ -86,6 +180,15 @@ When a security keyword is detected:
 
 Each flow follows the same pattern: executor handles Layer 1,
 main session handles Layer 2 (consensus) for unresolved items.
+
+> **Note on the diagrams below.** They depict the **Round 2**
+> (full fan-out) path that fires after a Round 1 escape, or
+> directly when an item is tagged `[security]`, `[ambiguous]`,
+> or untagged. Round 1 follows the same shape but spawns only
+> the analyst(s) named by the category prefix (1 ≤ N ≤ 3).
+> Both rounds invoke `consensus-synthesizer` with whichever
+> analyst responses ran — see "Category-Routed Dispatch" above
+> for the routing rules.
 
 ### Clarify Consensus
 
@@ -288,14 +391,26 @@ When evaluating agreement, consider the **substance** of the answer, not the exa
 
 ## Logging
 
-After each consensus resolution, log the result in the workflow file:
+After each consensus resolution, log the result in the workflow
+file. The `Round` and `Categories` columns are required so the
+re-evaluation trigger (10% Round-2 escape rate) is computable
+from the log alone.
 
 ```markdown
 ### Consensus Resolution Log
 
-| # | Type | Question/Gap/Finding | Agents Agree | Resolution | Agent Used |
-|---|------|---------------------|--------------|------------|------------|
-| 1 | Clarify | Session token format? | 3/3 | JWT with 24h expiry | domain-researcher |
-| 2 | Gap | Rate limit thresholds | 2/3 | Added to spec §4.2 | codebase-analyst, domain-researcher |
-| 3 | Finding | Missing integration tests | 3/3 | Added task T050 | All |
+| # | Type    | Question/Gap/Finding         | Categories         | Round | Outcome        | Resolution                 | Analysts Used                          |
+|---|---------|------------------------------|--------------------|-------|----------------|----------------------------|----------------------------------------|
+| 1 | Clarify | Session token format?        | [domain]           | 1     | high-confidence| JWT with 24h expiry        | domain-researcher                      |
+| 2 | Gap     | Rate limit thresholds        | [codebase, domain] | 1     | both-agree     | Added to spec §4.2         | codebase-analyst, domain-researcher    |
+| 3 | Finding | Missing integration tests    | [ambiguous]        | 2     | 3/3            | Added task T050            | codebase-analyst, spec-context-analyst, domain-researcher |
+| 4 | Clarify | Bcrypt vs argon2?            | [codebase]         | 1→2   | escape-hatch   | Argon2 (NIST SP 800-63B)   | codebase-analyst (Round 1) + spec-context-analyst, domain-researcher (Round 2) |
+| 5 | Finding | OAuth callback URL handling  | [security]         | 2     | [HUMAN REVIEW] | Surfaced to user           | All (security tag → all-3 mandatory)   |
 ```
+
+**Outcome values:**
+- `high-confidence` — Round 1, single-analyst, synthesizer flagged high
+- `both-agree` — Round 1, two-analyst, agreement
+- `3/3`, `2/3` — Round 2, classic agreement counts
+- `escape-hatch` — Round 1 escaped to Round 2 (count this in the 10% trigger metric)
+- `[HUMAN REVIEW]` — Round 2 all-disagree or security flag, autopilot stopped

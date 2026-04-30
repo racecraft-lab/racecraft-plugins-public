@@ -287,7 +287,7 @@ web search, file reading, and search). After it returns, check for
 remaining `[NEEDS CLARIFICATION]` markers and resolve via consensus
 if needed (see Rule 6).
 
-### 7. Two-layer resolution with consensus agents
+### 7. Two-layer resolution with category-routed consensus
 
 After EACH executor subagent returns for a consensus phase
 (Clarify, Checklist, Analyze), run a two-layer resolution process
@@ -297,48 +297,73 @@ BEFORE spawning the next subagent.
 (clarify-executor, checklist-executor, analyze-executor) researches
 using web search, library docs, and codebase exploration. It resolves
 most items directly and applies fixes to artifacts. Items it cannot
-resolve are flagged in its "Unresolved for consensus" summary section.
+resolve are flagged in its "Unresolved for consensus" summary
+section, **each prefixed with one or more category tags**
+(`[codebase]`, `[spec]`, `[domain]`, `[security]`, `[ambiguous]`).
 
-**Layer 2 — Consensus agents for unresolved items:** For EACH
-unresolved item from the executor's summary, spawn 3 consensus agents
-IN PARALLEL:
+**Layer 2 — Category-routed consensus** (Tier A, see
+[consensus-protocol.md](../../skills/speckit-autopilot/references/consensus-protocol.md)):
+For EACH unresolved item, parse the category prefix and dispatch
+to only the relevant analyst(s). Two rounds:
 
 ```text
-For each unresolved item:
-  Spawn the codebase-analyst agent in background:
-    "You are participating in consensus resolution.
-     Context: <spec/plan/tasks excerpts relevant to item>
-     Item: <unresolved question/gap/finding text>
-     Executor's attempt: <what the executor tried>
-     Your task: Propose the best answer from the perspective
-     of existing codebase patterns."
+ROUND 1 — Category-routed
+  Parse the [<categories>] prefix on the unresolved item.
+  Spawn N analysts (1 ≤ N ≤ 3) per the routing table:
+    [codebase]            → codebase-analyst only
+    [spec]                → spec-context-analyst only
+    [domain]              → domain-researcher only
+    [security]            → ALL 3 (defense-in-depth)
+    [ambiguous] or empty  → ALL 3 (safe default)
+    [a, b]                → union of named analysts
+  Spawn each via spawn_agent in parallel, wait_agent on all N.
 
-  Spawn the spec-context-analyst agent in background:
-    "<same item, your perspective as spec context analyst>"
+  Synthesize in the main orchestrator session using the
+  consensus-synthesizer rules (single-analyst confidence rule
+  for N=1, both-agree for N=2, 2/3 majority for N=3).
 
-  Spawn the domain-researcher agent in background:
-    "<same item, your perspective as domain researcher>"
+  IF synthesizer output: Flags = None AND Confidence = high:
+    Apply artifact edit, log result, done.
+  ELSE (Flags includes [ESCAPE_TO_ROUND_2]):
+    fall through to Round 2.
 
-  Wait for all 3 to complete
-  Apply consensus rules
-  Edit the artifact with the consensus answer
+ROUND 2 — Full fan-out (legacy 3-analyst path)
+  Spawn the (3 - N) analysts that did not run in Round 1
+  via spawn_agent in parallel; wait_agent on the new analysts.
+  Re-synthesize with all 3 responses using 2-of-3 majority rule.
+  Apply edit OR flag [HUMAN REVIEW NEEDED] and STOP.
 ```
 
-**Consensus rules (see [consensus-protocol.md](../../skills/speckit-autopilot/references/consensus-protocol.md)):**
-- 2/3 agree → use majority answer
-- 3/3 agree → use with high confidence
-- All disagree → flag `[HUMAN REVIEW NEEDED]`, STOP
-- Security keyword → always flag for human
+The escape-hatch keeps routing cheap when right and safe when
+wrong: a `[codebase]`-tagged item where codebase-analyst returns
+"no precedent in this repo" triggers Round 2 the same turn —
+no silently-shipped low-confidence answers.
 
-**Why two layers:** Executor handles ~80% directly. Consensus
-provides distinct perspectives for genuinely ambiguous items.
+**Logging requirement:** Every resolution writes a row to the
+Consensus Resolution Log in the workflow file with `Round`,
+`Routed Categories`, `Outcome`, and `Analysts Used` columns.
+The 10% Round-2 escape-rate re-evaluation trigger is computed
+from this log (see consensus-protocol.md §"Re-evaluation trigger").
+
+**Consensus rules summary** (full rules in
+[consensus-protocol.md](../../skills/speckit-autopilot/references/consensus-protocol.md)):
+- N=1 high-confidence → use answer
+- N=2 both-agree → use answer
+- N=3 2/3 or 3/3 agree → use majority/unanimous
+- Any escape-hatch keyword OR low confidence → fall through to Round 2
+- All disagree (Round 2) → flag `[HUMAN REVIEW NEEDED]`, STOP
+- Security keyword → always Round 2 with all 3, never single-routed
+
+**Why two layers:** Executor handles ~80% directly. Category-routed
+consensus spends model effort on the perspective(s) the executor
+identified as relevant.
 
 **Why after each prompt:** Later sessions may depend on earlier
 resolved questions/gaps.
 
 **Stop conditions:** Gate failure after 2 auto-fix attempts,
-failed consensus (all disagree), security keyword, or missing
-prerequisite.
+failed consensus (all disagree at Round 2), security keyword
+flagged for human, or missing prerequisite.
 
 ### 8. Optional Spark helper is advisory only
 
@@ -901,7 +926,7 @@ Parse the executor's summary for:
 
 If no unresolved items → skip to next prompt/gate.
 
-**Layer 2 — Spawn consensus agents:**
+**Layer 2 — Category-routed consensus dispatch:**
 
 Optional pre-step: if the executor returned a very long unresolved
 item summary, the parent may call `autopilot-fast-helper` once to
@@ -909,16 +934,41 @@ compress or triage that item before building the consensus prompts.
 This is advisory only. The parent must still decide what context to
 send to the real consensus agents.
 
-For each unresolved item, spawn these three agents in parallel:
-codebase-analyst, spec-context-analyst, and domain-researcher.
-Each receives the same unresolved item with their perspective-specific
-framing. Wait for all three to complete, then synthesize their
-responses in the main orchestrator session into a single Consensus
-Result. If the synthesized result flags `[HUMAN REVIEW NEEDED]`,
-STOP. Otherwise apply the artifact edit and log the result in the
-Consensus Resolution Log in the workflow file.
+For each unresolved item, parse its `[<categories>]` prefix and
+dispatch only the relevant analyst(s) per the routing table in
+Rule 7. The synthesizer always runs (becomes "edit-applier" in
+single-analyst case).
 
-Mark the consensus progress item completed when done.
+```text
+ROUND 1 — Category-routed
+  Parse the [<categories>] prefix into a set:
+    {codebase, spec, domain}    if [security] (force all 3)
+    {codebase, spec, domain}    if [ambiguous] or missing/unparseable
+    union of named tags         otherwise
+  ANALYSTS_RUN = []
+  For each tag in the set, spawn the matching analyst in parallel
+    via spawn_agent: codebase-analyst | spec-context-analyst |
+    domain-researcher. Track which agents were spawned.
+  wait_agent on all spawned analysts.
+  Synthesize in the main session using consensus-synthesizer rules
+    (Round=1, mark non-routed analysts as "NOT SPAWNED").
+  IF Confidence=high AND no escape-hatch keyword: apply edit, log,
+    continue to next item.
+  IF [ESCAPE_TO_ROUND_2]: fall through.
+  IF [HUMAN REVIEW NEEDED]: log, STOP.
+
+ROUND 2 — Full fan-out (escape path)
+  REMAINING = {all 3 analysts} − ANALYSTS_RUN
+  For each agent in REMAINING: spawn_agent in parallel.
+  wait_agent on the new analysts.
+  Re-synthesize with all 3 responses (Round=2).
+  Apply 2-of-3 majority OR flag [HUMAN REVIEW NEEDED] and STOP.
+```
+
+Log every resolution to the Consensus Resolution Log in the
+workflow file with `Round`, `Routed Categories`, `Outcome`, and
+`Analysts Used` columns. Mark the consensus progress item completed
+when done.
 
 **Per-phase specifics:**
 
