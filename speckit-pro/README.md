@@ -13,6 +13,46 @@ or vendored, autopilot runs Archive Sweep for previously merged specs before the
 requested spec's Phase 0, excludes the current target spec, and keeps cleanup
 dry-run-only on dirty or unsafe branches.
 
+## How the Artifacts Flow
+
+```text
+[raw idea / brief / transcript]
+        │
+        │  (optional standalone) /speckit-pro:grill-me <input>
+        │  → docs/ai/specs/<slug>-design-concept.md
+        ▼
+[PRD]   informal — outside this plugin's scope
+        │
+        │  /speckit-pro:coach help me create a technical roadmap
+        ▼
+[Technical Roadmap]   docs/ai/<feature>-technical-roadmap.md
+   - Per-spec: Goal, Scope, Out-of-scope, Acceptance Criteria,
+     Dependencies, Priority, Status
+        │
+        │  /speckit-pro:status   (reads roadmap; recommends next ⏳ Pending spec)
+        ▼
+[/speckit-pro:setup SPEC-NNN]
+   ├─ creates worktree + branch
+   ├─ runs Grill Me on the roadmap entry  ← human-in-the-loop
+   │     → SPEC-NNN-design-concept.md (Goals, Non-goals, Q&A log, Open Questions)
+   └─ writes SPEC-NNN-workflow.md, populated from BOTH roadmap scope
+      AND design concept doc (Specify, Clarify, Plan, Checklist, Tasks,
+      Analyze, Implement prompts all enriched from the design concept)
+        │
+        ▼
+[/speckit-pro:autopilot SPEC-NNN-workflow.md]
+   - 7 SDD phases: Specify → Clarify → Plan → Checklist → Tasks
+                   → Analyze → Implement
+   - Multi-agent consensus when ambiguity arises
+   - spec-context-analyst reads the design concept doc as authoritative
+     for any decision the user resolved during grill-me
+        │
+        ▼
+[PR]   /speckit-pro:resolve-pr  for Copilot review-comment remediation
+```
+
+The design concept doc is the **source of truth for scoping decisions captured during grill-me** — it informs the workflow file's phase prompts at setup time and is re-read by autopilot's consensus analysts when intra-workflow ambiguity arises. Workflow files generated *without* a corresponding design concept doc are flagged in `/speckit-pro:status` (the **DC** column).
+
 This plugin ships different entrypoint surfaces for the two platforms:
 
 - **Claude Code** — 2 bundled skills plus 5 `/speckit-pro:*` commands

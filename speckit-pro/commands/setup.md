@@ -170,19 +170,38 @@ the decisions the roadmap left ambiguous.
   and any unresolved branches (e.g., "Session 1: Search API Behavior",
   "Session 2: Database Operations").
 
-- **Plan Prompt:** Reference the tech stack from CLAUDE.md, the
-  constitution, the scope description, and the design concept doc
-  path so the autopilot can re-read it during planning.
+- **Plan Prompt:** Combine the tech stack from CLAUDE.md, the
+  constitution, the roadmap scope description, AND the
+  architecture / data-model / constraint decisions extracted from
+  the design concept doc's Q&A log. Quote the user's chosen answer
+  for any decision that drives a planning choice. Also reference
+  the design concept doc path so the autopilot can re-read it
+  during planning if it needs context the prompt didn't capture.
 
 - **Checklist Prompts:** Recommend checklist domains based on the
   spec's scope and the design tree branches the grill-me session
   walked (use the signal extraction from `checklist-domains-guide.md`).
 
-- **Tasks Prompt:** Reference the spec and plan artifacts.
+- **Tasks Prompt:** Reference the spec, plan, AND design concept
+  doc. Use the design concept's Non-goals to bound task generation —
+  flag any task that would cross those boundaries. Use the Q&A
+  log's "why" context to inform task ordering and TDD test
+  specifications.
 
-- **Analyze Prompt:** Standard cross-artifact analysis.
+- **Analyze Prompt:** Cross-artifact consistency check across
+  spec.md, plan.md, tasks.md, AND the design concept doc. Flag any
+  drift between the design concept's Goals / Non-goals / decisions
+  and what the downstream artifacts say. The design concept is the
+  source of truth for scoping decisions captured during grill-me;
+  if a downstream artifact contradicts it, the downstream artifact
+  is wrong unless there is an explicit revision note.
 
-- **Implement Prompt:** Reference tasks.md and plan.md.
+- **Implement Prompt:** Reference tasks.md, plan.md, AND the
+  design concept doc. When implementing, consult the Q&A log for
+  the "why" behind decisions — this informs test specifications,
+  edge-case handling, and refactor choices. Decisions captured in
+  the design concept that aren't reflected in tasks.md should be
+  surfaced as gaps before coding, not silently dropped.
 
 ### 7. Commit and Verify (IN the Worktree)
 

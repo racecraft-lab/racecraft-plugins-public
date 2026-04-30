@@ -12,6 +12,10 @@
         "Mentions producing a Design Concept doc at docs/ai/specs/SPEC-<ID>-design-concept.md",
         "Mentions copying the shared workflow template into docs/ai/specs/",
         "Mentions populating the workflow prompts from BOTH the roadmap scope AND the Design Concept doc",
+        "States that ALL phase prompts (Specify, Clarify, Plan, Checklist, Tasks, Analyze, Implement) are enriched from the Design Concept doc — not just the early phases",
+        "States that the Tasks prompt uses the Design Concept's Non-goals to bound task generation",
+        "States that the Analyze prompt does cross-artifact consistency check against the Design Concept doc",
+        "States that the Implement prompt references the Q&A log for the 'why' behind decisions",
         "Mentions committing both the design concept doc and the workflow file together",
         "Mentions that the next step is to run $speckit-autopilot rather than executing it immediately"
       ]

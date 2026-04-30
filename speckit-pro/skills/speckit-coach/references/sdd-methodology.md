@@ -39,6 +39,14 @@ Three converging trends make SDD practical:
 
 6. **Branching for Exploration** — Generate multiple implementation approaches from the same specification to explore different optimization targets (e.g., Rust vs. Go implementations).
 
+## Pre-Spec Scoping (Grill Me)
+
+Before `/speckit.specify` runs, grill-me is the SDD pre-scoping ritual. It walks every branch of the design tree, asks one question at a time with the AI's recommended answer first, and produces a Design Concept doc (Goals, Non-goals, Q&A log, Open Questions). This is the antidote to "specs to code" / vibe-coding handoffs — the human stays in the loop on every consequential design decision before the spec is written.
+
+In speckit-pro, grill-me runs **automatically inside `/speckit-pro:setup`** before the workflow file is written, and its output enriches every phase prompt downstream. It is also available standalone via `/speckit-pro:grill-me <input>` for raw briefs, transcripts, or PRD-level scoping before the technical roadmap is created.
+
+Grill-me is strictly human-in-the-loop. It is **never** invoked from autopilot or any of its phase agents — that's a hard architectural boundary. Autopilot's clarification mechanism is `/speckit.clarify` plus the multi-agent consensus protocol; grill-me is a separate, pre-workflow alignment system.
+
 ## The Two-Phase Workflow
 
 ### Phase 1: Foundation
