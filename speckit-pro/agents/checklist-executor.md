@@ -100,6 +100,13 @@ checklist and fix the gaps — all in one agent.
 6. **Return a summary with research citations.** Do not
    recommend next steps.
 
+7. **Never invoke `grill-me`.** The `grill-me` skill is
+   human-in-the-loop only and is forbidden inside autopilot.
+   Use research, consensus, and codebase exploration to
+   remediate gaps — not user interviews. If a gap cannot be
+   resolved without human input, mark it as such and let the
+   orchestrator escalate.
+
 ## Performance
 
 Take your time to do this thoroughly. Quality is more

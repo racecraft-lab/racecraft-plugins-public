@@ -44,6 +44,13 @@ prompt and a `/speckit.*` command to run.
    a concise summary to the parent. Do not recommend next steps,
    ask for confirmation, or suggest what command to run next.
 
+4. **Never invoke `grill-me`.** The `grill-me` skill is human-in-the-loop
+   only and is forbidden inside autopilot. Autopilot's Clarify phase
+   uses `/speckit.clarify` with the consensus protocol — that's the
+   only sanctioned clarification mechanism. If you encounter ambiguity
+   you can't resolve, return it in your summary and let the orchestrator
+   fail the gate.
+
 </hard_constraints>
 
 ## Summary Format

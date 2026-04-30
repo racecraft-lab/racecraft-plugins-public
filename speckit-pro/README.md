@@ -69,9 +69,32 @@ Get SDD methodology coaching and guidance on any aspect of the workflow.
 
 **Covers:** Getting started, per-command coaching, constitution design, checklist domain selection, technical roadmap creation, gate failure troubleshooting, autopilot usage, and consensus protocol.
 
+### `/speckit-pro:grill-me [input]`
+
+Run an iterative scoping interview before any spec or design work. The AI walks down each branch of the design tree, asks one question at a time, and **provides its own recommended answer for every question**. Strictly human-in-the-loop — never invoked from autopilot.
+
+**Usage:**
+```
+/speckit-pro:grill-me docs/raw-idea.md
+/speckit-pro:grill-me notes/stakeholder-meeting-transcript.txt
+/speckit-pro:grill-me "gamification overhaul for the user dashboard"
+/speckit-pro:grill-me                       # asks for input first
+```
+
+**What it does:**
+1. Reads the input (file, topic string, or asks the user for context)
+2. Identifies the design-tree branches relevant to the input
+3. Loops on `AskUserQuestion`, one question at a time, with the AI's recommendation marked `(Recommended)` and 1–2 plausible alternatives
+4. Stops at a natural endpoint, on user request, or at a soft cap (30 questions) checkpoint
+5. Synthesizes a Design Concept doc at `docs/ai/specs/<slug>-design-concept.md` capturing Goals, Non-goals, full Q&A log, and Open Questions
+
+**Use it for:** raw client briefs, meeting transcripts, vague feature ideas — anything where you want shared understanding before committing to a spec. The doc this command produces feeds cleanly into `/speckit-pro:coach` (for roadmap authoring) or `/speckit-pro:setup` (for spec execution).
+
+> **Hard constraint:** Grill Me is human-in-the-loop only. It is never invoked from `/speckit-pro:autopilot` or any of its phase agents. Autopilot's Clarify phase uses `/speckit.clarify` with the consensus protocol — those are deliberately different systems.
+
 ### `/speckit-pro:setup <SPEC-ID>`
 
-Prepare a spec for autopilot execution — creates the worktree, branch, and populated workflow file.
+Prepare a spec for autopilot execution — creates the worktree, branch, runs a Grill Me interview, and produces a populated workflow file plus a Design Concept doc.
 
 **Usage:**
 ```
@@ -82,18 +105,20 @@ Prepare a spec for autopilot execution — creates the worktree, branch, and pop
 1. Finds the technical roadmap in your project
 2. Extracts scope, dependencies, and priority for the requested spec
 3. Creates a git worktree and pushes the branch to origin
-4. Copies the workflow template and populates all phase prompts
-5. Commits and pushes — ready for autopilot
+4. **Runs a Grill Me interview** using the spec scope as input — interactive, one question at a time. Always runs; there is no skip flag.
+5. Copies the workflow template and populates all phase prompts using BOTH the roadmap scope and the Design Concept doc the interview produced
+6. Commits both the design concept doc and the workflow file, pushes — ready for autopilot
 
 **Output:**
 ```
 ## Setup Complete
 
-Spec:      SPEC-009 Search & Database
-Branch:    009-search-database
-Worktree:  .worktrees/009-search-database/
-Workflow:  .worktrees/009-search-database/docs/ai/specs/SPEC-009-workflow.md
-Remote:    Pushed to origin/009-search-database
+Spec:           SPEC-009 Search & Database
+Branch:         009-search-database
+Worktree:       .worktrees/009-search-database/
+Design Concept: .worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md
+Workflow:       .worktrees/009-search-database/docs/ai/specs/SPEC-009-workflow.md
+Remote:         Pushed to origin/009-search-database
 
 Ready to run:
 /speckit-pro:autopilot docs/ai/specs/SPEC-009-workflow.md

@@ -81,6 +81,12 @@ You receive:
    Do not recommend next steps — the orchestrator handles
    sequencing.
 
+7. **Never invoke `grill-me`.** The `grill-me` skill is human-in-the-loop
+   only and is forbidden inside autopilot. If your task is ambiguous and
+   you can't resolve it from tasks.md, plan.md, the design concept doc,
+   or codebase patterns, fail the task with a clear blocker note and let
+   the orchestrator surface it. Do not interview the user.
+
 </hard_constraints>
 
 ## Task Execution

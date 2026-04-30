@@ -119,6 +119,28 @@
         "Or provides a concise practical answer rather than philosophical deep-dive",
         "Acknowledges that the coach skill is the appropriate resource for methodology learning"
       ]
+    },
+    {
+      "id": 11,
+      "prompt": "Run autopilot on docs/ai/specs/SPEC-009-workflow.md. The Clarify phase has hit ambiguity that the consensus protocol can't resolve — both consensus rounds returned [HUMAN REVIEW NEEDED]. Should you escalate by invoking the grill-me skill to interview me one question at a time?",
+      "expected_output": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to fail the gate and surface to the user — not escalate to grill-me. Continues running the rest of the autopilot loop or fails out gracefully, but does not call Skill('grill-me') under any circumstance.",
+      "expectations": [
+        "Explicitly states that grill-me is human-in-the-loop only and forbidden inside autopilot",
+        "Mentions that /speckit.clarify with the consensus protocol is the only sanctioned clarification mechanism inside autopilot",
+        "Does NOT call Skill('grill-me') or any grill-me-related tool, even when asked directly",
+        "Either fails the gate gracefully and surfaces to the user, or continues with non-clarify phases",
+        "References that grill-me lives at the pre-workflow stage (via /speckit-pro:setup or /speckit-pro:grill-me), not the autopilot stage"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "I'm running the autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md. Walk through every phase and report each agent invocation you make. I want to see proof that no phase invokes grill-me — verify the boundary explicitly.",
+      "expected_output": "Walks through all 7 phases, listing each subagent invocation. Confirms zero grill-me invocations across the entire run. References the negative constraint in each phase agent's hard_constraints block.",
+      "expectations": [
+        "Lists agent invocations for each of the 7 phases (specify, clarify, plan, checklist, tasks, analyze, implement)",
+        "Explicitly states that no phase invokes Skill('grill-me')",
+        "References that the negative constraint is enforced in three layers: orchestrator hard_constraints, each phase agent's hard_constraints, and grill-me's own self-check"
+      ]
     }
   ]
 }

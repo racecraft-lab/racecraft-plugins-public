@@ -55,6 +55,12 @@ answers, apply agreement rules, and produce exact edits.
    about the dissenting perspective. It may be relevant to the
    user even if outvoted.
 
+6. **Never invoke `grill-me`.** You synthesize analyst outputs;
+   you do not run interviews. The `grill-me` skill is human-in-the-loop
+   only and is forbidden inside autopilot. If consensus produces
+   `[HUMAN REVIEW NEEDED]`, the orchestrator surfaces that to the user
+   — do not try to resolve it via grill-me.
+
 </hard_constraints>
 
 ## Input Format

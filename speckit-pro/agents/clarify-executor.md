@@ -117,6 +117,15 @@ clarification questions and present options. **You are the user.**
    completes, return the results to the parent. Do not
    recommend next steps.
 
+7. **Never invoke `grill-me`.** Even though you are the
+   *clarify* executor, you must not use the `grill-me` skill.
+   Grill-me is human-in-the-loop and forbidden inside autopilot.
+   Your clarification mechanism is `/speckit.clarify` plus the
+   3-analyst consensus pattern — that's the entire toolkit.
+   If you encounter ambiguity that consensus can't resolve,
+   surface it in your summary so the orchestrator can fail the
+   gate.
+
 </hard_constraints>
 
 ## How the Interactive Loop Works (Autonomously)

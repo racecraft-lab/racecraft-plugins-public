@@ -28,6 +28,28 @@
 
 ---
 
+## Design Concept
+
+This workflow file was enriched from a Grill Me interview run during
+`/speckit-pro:setup`. The full Q&A log, Goals, Non-goals, and Open
+Questions live at:
+
+```text
+docs/ai/specs/{{SPEC_ID}}-design-concept.md
+```
+
+Re-read it before each phase if you need to disambiguate a prompt. The
+Specify and Clarify Prompts below were populated from that interview,
+so the design concept doc is the source of truth for any decision
+captured during scoping.
+
+> **Note:** Grill Me is human-in-the-loop only. It is **not** part of
+> the autopilot loop. Once the workflow file is populated and autopilot
+> begins, clarifications happen via `/speckit.clarify` and the
+> consensus protocol — never via grill-me.
+
+---
+
 ## Workflow Overview
 
 | Phase | Command | Status | Notes |

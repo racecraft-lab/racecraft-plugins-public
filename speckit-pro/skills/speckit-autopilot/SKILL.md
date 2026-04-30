@@ -60,6 +60,40 @@ decisions that determine whether subagent work is wasted or productive.
 
 These rules are non-negotiable. Follow them exactly.
 
+### 0. Forbidden skill invocations
+
+<hard_constraints>
+
+**Do not invoke `grill-me` from any autopilot phase or agent — ever.**
+
+The `grill-me` skill is human-in-the-loop only. It uses `AskUserQuestion`
+to interview a real user one question at a time. Inside autopilot, there
+is no user available to answer; calling grill-me would either block
+indefinitely or produce low-value automated output that defeats the
+skill's entire purpose.
+
+Autopilot's Clarify phase uses `/speckit.clarify` with the multi-agent
+consensus protocol — that is the **only** sanctioned clarification
+mechanism inside autopilot. If a phase encounters ambiguity that
+consensus can't resolve, fail the gate and surface to the user.
+**Never escalate to grill-me.**
+
+This constraint applies to:
+
+- This skill (the orchestrator)
+- All phase-executor agents (`phase-executor`, `clarify-executor`,
+  `checklist-executor`, `analyze-executor`, `implement-executor`)
+- The consensus analysts (`codebase-analyst`, `spec-context-analyst`,
+  `domain-researcher`)
+- `consensus-synthesizer` and `gate-validator`
+- Any other agent spawned during autopilot execution
+
+Grill-me is for **pre-workflow** human alignment via `/speckit-pro:setup`
+or `/speckit-pro:grill-me`. It is not part of the autopilot loop and
+must not appear in any phase agent's tool call history.
+
+</hard_constraints>
+
 ### 1. Subagent per phase
 
 For each phase, spawn a **foreground subagent** via the Agent
