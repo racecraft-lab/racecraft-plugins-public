@@ -31,6 +31,25 @@ prompts from the workflow file and delegate each phase to a
 the commands yourself — you spawn, collect results, validate
 gates, and advance.
 
+## Architectural Constraint — Main Agent Is The Orchestrator
+
+This skill loads into the **main session agent** when the user invokes
+`/speckit-pro:autopilot`. Only the main agent can spawn subagents — per
+[Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents),
+**subagents cannot spawn other subagents.** The Orchestrator-Direct pattern
+this skill uses works because *the skill IS the main agent at execution
+time*; "spawn a subagent for each phase" is a flat fan-out, never nested.
+
+**If this skill is ever loaded inside a subagent context** (for example a
+phase-executor mistakenly calls `Skill('speckit-autopilot')`), it MUST
+refuse and surface the violation rather than attempt to orchestrate. None
+of the bundled phase agents (`phase-executor`, `clarify-executor`,
+`checklist-executor`, `analyze-executor`, `implement-executor`,
+`codebase-analyst`, `spec-context-analyst`, `domain-researcher`,
+`consensus-synthesizer`, `gate-validator`) include `Agent` in their tools
+list, so they cannot spawn subagents — this constraint is enforced by the
+Anthropic runtime, not just by convention.
+
 ## Prerequisites — Model & Effort
 
 The autopilot orchestrator makes gate decisions, synthesizes consensus, and
@@ -59,6 +78,40 @@ decisions that determine whether subagent work is wasted or productive.
 ## Critical: Execution Rules
 
 These rules are non-negotiable. Follow them exactly.
+
+### 0. Forbidden skill invocations
+
+<hard_constraints>
+
+**Do not invoke `grill-me` from any autopilot phase or agent — ever.**
+
+The `grill-me` skill is human-in-the-loop only. It uses `AskUserQuestion`
+to interview a real user one question at a time. Inside autopilot, there
+is no user available to answer; calling grill-me would either block
+indefinitely or produce low-value automated output that defeats the
+skill's entire purpose.
+
+Autopilot's Clarify phase uses `/speckit.clarify` with the multi-agent
+consensus protocol — that is the **only** sanctioned clarification
+mechanism inside autopilot. If a phase encounters ambiguity that
+consensus can't resolve, fail the gate and surface to the user.
+**Never escalate to grill-me.**
+
+This constraint applies to:
+
+- This skill (the orchestrator)
+- All phase-executor agents (`phase-executor`, `clarify-executor`,
+  `checklist-executor`, `analyze-executor`, `implement-executor`)
+- The consensus analysts (`codebase-analyst`, `spec-context-analyst`,
+  `domain-researcher`)
+- `consensus-synthesizer` and `gate-validator`
+- Any other agent spawned during autopilot execution
+
+Grill-me is for **pre-workflow** human alignment via `/speckit-pro:setup`
+or `/speckit-pro:grill-me`. It is not part of the autopilot loop and
+must not appear in any phase agent's tool call history.
+
+</hard_constraints>
 
 ### 1. Subagent per phase
 
@@ -173,7 +226,7 @@ After it returns, check for
 remaining `[NEEDS CLARIFICATION]` markers and resolve via
 consensus if needed (see Rule 6).
 
-### 6. Two-layer resolution with consensus agents
+### 6. Two-layer resolution with category-routed consensus
 
 After EACH executor subagent returns for a consensus phase
 (Clarify, Checklist, Analyze), run a two-layer resolution
@@ -184,46 +237,78 @@ agent (clarify-executor, checklist-executor,
 analyze-executor) researches using web search, library docs,
 and codebase exploration (Tavily, Context7, RepoPrompt when
 available, built-in WebSearch, WebFetch, Grep/Glob/Read
-otherwise). It resolves most items
-directly and applies fixes to artifacts. Items it can't
-resolve are flagged in its "Unresolved for consensus"
-summary section.
+otherwise). It resolves most items directly and applies fixes
+to artifacts. Items it can't resolve are flagged in its
+"Unresolved for consensus" summary section, **each prefixed
+with one or more category tags** (`[codebase]`, `[spec]`,
+`[domain]`, `[security]`, `[ambiguous]`).
 
-**Layer 2 — Consensus agents for unresolved items:** For
-EACH unresolved item from the executor's summary, spawn 3
-consensus agents IN PARALLEL:
+**Layer 2 — Category-routed consensus** (Tier A, see
+`references/consensus-protocol.md`): For EACH unresolved item,
+parse the category prefix and dispatch to only the relevant
+analyst(s). Two rounds:
 
 ```text
-For each unresolved item:
-  Agent(subagent_type: "codebase-analyst",
-        run_in_background: true,
-        prompt: "<consensus prompt>")     ← TOOL CALL
-  Agent(subagent_type: "spec-context-analyst",
-        run_in_background: true,
-        prompt: "<consensus prompt>")     ← TOOL CALL
-  Agent(subagent_type: "domain-researcher",
-        run_in_background: true,
-        prompt: "<consensus prompt>")     ← TOOL CALL
-  Wait for all 3 to complete              ← TOOL CALLS
-  Apply consensus rules                   ← decision
-  Edit artifact with consensus answer     ← TOOL CALL
+ROUND 1 — Category-routed
+  Parse the [<categories>] prefix on the unresolved item.
+  Spawn N analysts (1 ≤ N ≤ 3) per the routing table:
+    [codebase]            → codebase-analyst only
+    [spec]                → spec-context-analyst only
+    [domain]              → domain-researcher only
+    [security]            → ALL 3 (defense-in-depth)
+    [ambiguous] or empty  → ALL 3 (safe default)
+    [a, b]                → union of named analysts
+  Run them in parallel with run_in_background: true.
+  Wait for all N to complete.
+
+  Spawn consensus-synthesizer with the routed categories,
+  Round=1, and the N analyst responses (mark non-routed
+  analysts as "NOT SPAWNED").
+
+  IF synthesizer output: Flags = None AND Confidence = high:
+    APPLY artifact edit, log result, done.
+  ELSE (Flags includes [ESCAPE_TO_ROUND_2]):
+    fall through to Round 2.
+
+ROUND 2 — Full fan-out (legacy 3-analyst path)
+  Spawn the (3 - N) analysts that did not run in Round 1,
+  in parallel with run_in_background: true.
+  Wait for them to complete.
+  Re-invoke consensus-synthesizer with Round=2 and all 3
+  analyst responses.
+  Apply 2-of-3 majority rule per consensus-protocol.md.
+  APPLY edit OR flag [HUMAN REVIEW NEEDED] and STOP.
 ```
 
-**Consensus rules (see consensus-protocol.md):**
-- 2/3 agree → use majority answer
-- 3/3 agree → use with high confidence
-- All disagree → flag `[HUMAN REVIEW NEEDED]`, STOP
-- Security keyword → always flag for human
+The escape-hatch keeps routing cheap when right and safe when
+wrong: a `[codebase]`-tagged item where `codebase-analyst`
+returns "no precedent in this repo" triggers Round 2 the same
+turn — no silently-shipped low-confidence answers.
 
-**Why two layers:** Executor handles ~80% directly. Consensus
-provides distinct perspectives for genuinely ambiguous items.
+**Logging requirement:** Every resolution writes a row to the
+Consensus Resolution Log in the workflow file with `Round`,
+`Routed Categories`, `Outcome`, and `Analysts Used` columns.
+The 10% Round-2 escape-rate re-evaluation trigger is computed
+from this log (see consensus-protocol.md §"Re-evaluation trigger").
 
-**Why after each prompt:** Later sessions may depend on
-earlier resolved questions/gaps.
+**Consensus rules summary (see consensus-protocol.md for full):**
+- N=1 high-confidence → use answer
+- N=2 both-agree → use answer
+- N=3 2/3 or 3/3 agree → use majority/unanimous
+- Any escape-hatch keyword OR low confidence → fall through to Round 2
+- All disagree (Round 2) → flag `[HUMAN REVIEW NEEDED]`, STOP
+- Security keyword → always Round 2 with all 3, never single-routed
+
+**Why two layers:** Executor handles ~80% directly. Category-routed
+consensus spends model effort on the perspective(s) the executor
+identified as relevant.
+
+**Why after each prompt:** Later sessions may depend on earlier
+resolved questions/gaps.
 
 **Stop conditions:** Gate failure after 2 auto-fix attempts,
-failed consensus (all disagree), security keyword, or
-missing prerequisite.
+failed consensus (all disagree at Round 2), security keyword
+flagged for human, or missing prerequisite.
 
 You run in the **main session** (not as a sub-agent) so you can
 spawn sub-agents directly. Sub-agents cannot nest — this is the
@@ -680,67 +765,92 @@ Parse the executor's summary for:
 
 If no unresolved items → skip to next prompt/gate.
 
-**Layer 2 — Spawn consensus agents:**
+**Layer 2 — Category-routed consensus dispatch:**
 
-For each unresolved item, spawn 3 consensus agents in
-parallel:
+For each unresolved item, parse its `[<categories>]` prefix
+and dispatch only the relevant analyst(s). The synthesizer
+always runs (becomes "edit-applier" in single-analyst case).
 
 ```text
 TaskUpdate: "<Phase> - <Prompt> Consensus" → in_progress
 
 For each unresolved item from executor summary:
-  Agent(
-    subagent_type: "codebase-analyst",
-    run_in_background: true,
-    description: "SPEC-XXX consensus: <item summary>",
-    prompt: """
-      You are participating in consensus resolution.
-      Context: <spec/plan/tasks excerpts relevant to item>
-      Item: <unresolved question/gap/finding text>
-      Executor's attempt: <what the executor tried>
-      Your task: Propose the best answer from your
-      perspective (existing codebase patterns).
-    """
-  )                                        ← TOOL CALL
-  Agent(
-    subagent_type: "spec-context-analyst",
-    run_in_background: true,
-    description: "SPEC-XXX consensus: <item summary>",
-    prompt: "...<same item, your perspective>..."
-  )                                        ← TOOL CALL
-  Agent(
-    subagent_type: "domain-researcher",
-    run_in_background: true,
-    description: "SPEC-XXX consensus: <item summary>",
-    prompt: "...<same item, your perspective>..."
-  )                                        ← TOOL CALL
+  # ─── Round 1: Category-routed ───────────────────────────────
+  Parse the leading `[<categories>]` prefix into a set:
+    {codebase, spec, domain}    if explicitly tagged
+    {codebase, spec, domain}    if [security] (force all 3)
+    {codebase, spec, domain}    if [ambiguous] or missing/unparseable
+    union of named tags         if multi-tag, e.g. [codebase, domain]
 
-  Wait for all 3 to complete, then delegate synthesis:
+  ANALYSTS_RUN = []
+  For each tag in the parsed set, spawn the analyst in parallel:
+    [codebase] → Agent(subagent_type: "codebase-analyst",
+                       run_in_background: true,
+                       description: "SPEC-XXX consensus R1: <item>",
+                       prompt: "<consensus prompt, your perspective>")
+    [spec]     → Agent(subagent_type: "spec-context-analyst", ...)
+    [domain]   → Agent(subagent_type: "domain-researcher", ...)
+    Track which analysts were spawned in ANALYSTS_RUN.
+
+  Wait for all spawned analysts to complete.
+
+  # ─── Synthesis (always runs) ────────────────────────────────
   Agent(
     subagent_type: "consensus-synthesizer",
-    description: "SPEC-XXX consensus synthesis: <item summary>",
+    description: "SPEC-XXX consensus synthesis (R1): <item>",
     prompt: """
       ## Consensus Resolution
 
       **Unresolved Item:** <question/gap/finding text>
+      **Routed Categories:** [<categories from prefix>]
+      **Round:** 1
 
       **Codebase Analyst Response:**
-      <full response from codebase-analyst>
+      <full response> | NOT SPAWNED (reason: not routed in this round)
 
       **Spec Context Analyst Response:**
-      <full response from spec-context-analyst>
+      <full response> | NOT SPAWNED (reason: not routed in this round)
 
       **Domain Researcher Response:**
-      <full response from domain-researcher>
+      <full response> | NOT SPAWNED (reason: not routed in this round)
     """
   )
+
   Parse the Consensus Result:
-    - If Flags contain [HUMAN REVIEW NEEDED] → STOP
-    - Otherwise → apply Artifact Edit to the specified file
-  Log result to Consensus Resolution Log in workflow file
+    IF Flags = None AND Confidence = high:
+      Apply Artifact Edit to specified file
+      Log Round=1, Outcome=high-confidence|both-agree, ANALYSTS_RUN
+      continue to next item
+
+    IF Flags includes [ESCAPE_TO_ROUND_2]:
+      proceed to Round 2 below.
+
+    IF Flags includes [HUMAN REVIEW NEEDED]:
+      Log to workflow file, STOP autopilot.
+
+  # ─── Round 2: Full fan-out (escape path) ────────────────────
+  REMAINING = {codebase-analyst, spec-context-analyst, domain-researcher} − ANALYSTS_RUN
+  For each agent in REMAINING:
+    Agent(subagent_type: "<agent>",
+          run_in_background: true,
+          description: "SPEC-XXX consensus R2: <item>",
+          prompt: "<consensus prompt, your perspective>")
+  Wait for the new analysts to complete.
+
+  Re-invoke consensus-synthesizer with Round=2 and all 3 responses.
+  Parse the Consensus Result:
+    IF Flags = None: apply Artifact Edit, log Round=1→2,
+                     Outcome=2/3|3/3|escape-hatch
+    IF Flags = [HUMAN REVIEW NEEDED]: log, STOP
 
 TaskUpdate: "<Phase> - <Prompt> Consensus" → completed
 ```
+
+**Logging:** Every resolution writes to the Consensus Resolution
+Log in the workflow file (see consensus-protocol.md §"Logging"
+for the canonical column set). The `Round` and `Routed Categories`
+columns are mandatory — the 10% Round-2 escape-rate re-evaluation
+trigger is computed from them.
 
 **Per-phase specifics:**
 

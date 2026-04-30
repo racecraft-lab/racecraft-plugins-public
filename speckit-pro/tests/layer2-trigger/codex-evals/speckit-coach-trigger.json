@@ -78,5 +78,13 @@
   {
     "query": "kick off the autonomous pipeline for SPEC-019. the workflow is at specs/SPEC-019-workflow.md. run all phases as subagents with gate validation and consensus",
     "should_trigger": false
+  },
+  {
+    "query": "where does Grill Me fit into the SDD process? I see $grill-me in the plugin and I'm trying to understand when to use it vs $speckit-clarify inside autopilot",
+    "should_trigger": true
+  },
+  {
+    "query": "interview me about the new search feature one question at a time with your recommended answer for each",
+    "should_trigger": false
   }
 ]

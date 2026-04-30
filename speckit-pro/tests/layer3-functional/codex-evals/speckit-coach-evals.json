@@ -123,6 +123,18 @@
         "Mentions verification such as tests, typecheck, or build",
         "Mentions resolving review threads after the fixes"
       ]
+    },
+    {
+      "id": 12,
+      "prompt": "Where does Grill Me fit into the SpecKit workflow? I see $grill-me in the plugin and I'm not sure when to use it vs $speckit-clarify inside autopilot.",
+      "expected_output": "Explains that $grill-me is a pre-workflow, human-in-the-loop scoping interview used standalone or inside $speckit-setup before any spec or workflow file is written, while $speckit-clarify (inside $speckit-autopilot) is the autonomous, agent-driven clarification mechanism that runs during the workflow with the multi-agent consensus protocol. Notes that grill-me MUST NEVER be invoked from autopilot or any of its phase subagents.",
+      "expectations": [
+        "Mentions that $grill-me is human-in-the-loop and runs before any spec/workflow file is written",
+        "Mentions that $speckit-setup always runs $grill-me before generating the workflow file",
+        "Mentions that $speckit-clarify (inside autopilot) is autonomous and uses the consensus protocol",
+        "States that $grill-me must never be invoked from autopilot or any of its phase subagents",
+        "Distinguishes pre-workflow scoping (grill-me) from in-workflow disambiguation (clarify)"
+      ]
     }
   ]
 }

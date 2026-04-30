@@ -48,6 +48,9 @@ else should be derived from the repository.
   phase prompts in the generated workflow.
 - Do not run the autopilot at the end. Setup stops once the workflow is ready,
   committed, and pushed.
+- Always run the `$grill-me` interview before writing the workflow file. The
+  Design Concept doc is a required setup output, not optional. Setup must not
+  attempt to fabricate design-concept content if grill-me aborts.
 
 ## Procedure
 
@@ -98,14 +101,38 @@ full worktree path should follow the pattern `.worktrees/<number>-<short-slug>`,
 for example `.worktrees/009-search-database`. Use a different root only if the
 user provides an explicit override.
 
-### 4. Copy the workflow template into the worktree
+### 4. Run the Grill Me interview (in the worktree)
+
+Before writing the workflow file, run an iterative scoping interview so the
+Specify and Clarify prompts can be enriched from human-validated answers. Use
+the spec scope description from the technical roadmap (and any constraints,
+dependencies, or stated tools) as the input.
+
+Invoke `$grill-me` from inside the worktree with a setup-mode marker so it
+knows to:
+
+- Write its Design Concept doc to
+  `docs/ai/specs/SPEC-<ID>-design-concept.md` inside the worktree
+- Surface the key answers (Goals, Non-goals, major design decisions) back to
+  this skill so step 6 can fold them into the workflow prompts
+
+Codex grill-me uses a probe-then-fallback HITL guard: it tries
+`request_user_input` first (Plan mode + collaboration_modes), then a TTY check
+(`tty -s`), and aborts if neither confirms an interactive session. Do not try
+to drive grill-me from `codex exec` or any non-interactive runner — it will
+refuse and write nothing.
+
+If grill-me aborts (no interactive runtime), stop setup and report the
+condition. Do not synthesize design-concept content yourself.
+
+### 5. Copy the workflow template into the worktree
 
 Create the destination directory inside the worktree, typically
 `docs/ai/specs/`, then load the shared workflow template from the plugin. Do
 not author a new template from scratch. The generated file should live at a
 path like `docs/ai/specs/SPEC-009-workflow.md` inside the worktree.
 
-### 5. Populate the workflow file
+### 6. Populate the workflow file
 
 Replace all placeholders using the roadmap data. At minimum populate:
 
@@ -115,33 +142,56 @@ Replace all placeholders using the roadmap data. At minimum populate:
 - tool count and tool names if the roadmap provides them
 
 Then seed each phase prompt with concrete, spec-specific context rather than a
-generic placeholder. Use the roadmap scope and dependencies to fill:
+generic placeholder. Use **both** the roadmap scope/dependencies and the
+Design Concept doc produced in step 4 (`SPEC-<ID>-design-concept.md`) to fill:
 
-- Specify prompt
-- Clarify session focus areas
-- Plan prompt
-- Checklist domain suggestions
-- Tasks prompt
-- Analyze prompt
-- Implement prompt
+- Specify prompt — fold in Goals, Non-goals, and the user-validated design
+  decisions from the Q&A log
+- Clarify session focus areas — pull from the Open Questions section of the
+  design concept
+- Plan prompt — combine CLAUDE.md tech stack, constitution, roadmap scope,
+  AND architecture/data-model/constraint decisions extracted from the design
+  concept Q&A log. Quote the chosen answer for any decision driving a
+  planning choice. Reference the design concept doc path as well.
+- Checklist domain suggestions — based on roadmap scope plus the design tree
+  branches the grill-me interview walked
+- Tasks prompt — reference spec.md, plan.md, AND the design concept doc.
+  Use Non-goals to bound task generation; use Q&A "why" context to inform
+  task ordering and TDD test specifications.
+- Analyze prompt — cross-artifact consistency check across spec.md, plan.md,
+  tasks.md, AND the design concept doc. Flag drift between Goals / Non-goals /
+  decisions and downstream artifacts. The design concept is the source of
+  truth for scoping decisions captured during grill-me.
+- Implement prompt — reference tasks.md, plan.md, AND the design concept
+  doc. Consult the Q&A log for the "why" behind decisions; this informs
+  test specifications, edge-case handling, and refactor choices.
 
 The prompts should be strong enough that `$speckit-autopilot` can execute
-without the user hand-editing obvious missing context. If some detail is not in
-the roadmap but can be inferred from the repo, use that repo context. If a
-critical detail cannot be derived, stop and report the gap rather than filling
-it with fiction.
+without the user hand-editing obvious missing context. The design concept is
+the primary enrichment layer; the roadmap scope is the seed. If a critical
+detail cannot be derived from either, stop and report the gap rather than
+filling it with fiction.
 
-### 6. Commit and push from the worktree
+### 7. Commit and push from the worktree
 
-Stage the workflow file in the worktree branch, create a focused setup commit,
-and push that branch to the detected remote. Then verify:
+Stage **both** the design concept doc and the workflow file in the worktree
+branch, create a focused setup commit, and push that branch to the detected
+remote:
 
-- the workflow file exists in the worktree
-- placeholders are gone
+```
+git add docs/ai/specs/SPEC-<ID>-design-concept.md \
+        docs/ai/specs/SPEC-<ID>-workflow.md
+git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
+```
+
+Then verify:
+
+- both files exist in the worktree
+- placeholders are gone from the workflow file
 - `git rev-parse --abbrev-ref HEAD` shows the spec branch
 - `git log --oneline -1` shows the setup commit
 
-### 7. Update roadmap status in the worktree
+### 8. Update roadmap status in the worktree
 
 Update the technical roadmap copy inside the worktree to mark the spec as in
 progress. Commit and push that roadmap status change on the same spec branch.
@@ -155,10 +205,12 @@ Finish with a concise setup report that includes:
 - the spec name and ID
 - branch name
 - worktree path
+- design concept path
 - workflow path
 - remote branch that was pushed
-- the exact next step: run `$speckit-autopilot` or `/speckit-autopilot` with
-  the generated workflow file
+- the exact next step: run `$speckit-autopilot` with the generated
+  workflow file (Codex skills are invoked via `$skill-name`, not via
+  any `/<plugin>:<skill>` slash command — see openai/codex#7480)
 
 ## Failure Handling
 
@@ -169,6 +221,8 @@ Stop instead of improvising when any of the following are true:
 - the branch or worktree state is ambiguous and cannot be safely reused
 - git push fails
 - the workflow still contains unresolved placeholders after population
+- `$grill-me` aborts because no interactive runtime is available (e.g.,
+  invoked from `codex exec` or a CI runner). Setup is HITL-gated by design.
 
 If setup partially succeeds before a failure, report exactly what was created
 and what remains unfinished so the user can resume without duplicating work.

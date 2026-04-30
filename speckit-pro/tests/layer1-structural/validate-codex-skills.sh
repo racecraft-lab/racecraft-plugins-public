@@ -8,7 +8,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 # Canonical skill list — keep in sync with the case block in the
 # "corresponding source artifact exists" test below.
-SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr install)
+SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr install grill-me)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
 CC_ONLY_KEYS=(user-invokable license argument-hint)
@@ -178,7 +178,7 @@ $(cat "$ref_file")"
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
     case "$skill" in
-      speckit-setup|speckit-autopilot|speckit-resolve-pr|install)
+      speckit-setup|speckit-autopilot|speckit-resolve-pr|install|grill-me)
         if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
           _pass
         else
@@ -204,7 +204,7 @@ $(cat "$ref_file")"
   # When adding a new skill to the SKILLS array above, add a case branch here.
   set_test "${skill}: corresponding source artifact exists"
   case "$skill" in
-    speckit-autopilot|speckit-coach)
+    speckit-autopilot|speckit-coach|grill-me)
       if [ -f "$PLUGIN_ROOT/skills/$skill/SKILL.md" ]; then
         _pass
       else

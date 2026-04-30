@@ -232,6 +232,19 @@ for tool in Read Write Edit Bash Grep Glob; do
   assert_tool_present "$TOOLS" "$tool" "implement-executor"
 done
 
+# Research tools — added 2026-04-30 per agent-architecture-audit.md Tier 1.
+# Tasks that reference external APIs, RFCs, or library versions need a way
+# to look them up; prior allowlist excluded these and forced inference-only.
+for tool in WebSearch WebFetch \
+            mcp__tavily-mcp__tavily-search \
+            mcp__context7__resolve-library-id \
+            mcp__context7__get-library-docs \
+            mcp__RepoPrompt__file_search \
+            mcp__RepoPrompt__context_builder; do
+  set_test "implement-executor has $tool (research capability)"
+  assert_tool_present "$TOOLS" "$tool" "implement-executor"
+done
+
 set_test "implement-executor does NOT have Skill"
 assert_tool_absent "$TOOLS" "Skill" "implement-executor"
 
@@ -481,8 +494,8 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
           set_test "codex ${agent}: model is gpt-5.5"
           assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
-          set_test "codex ${agent}: reasoning is medium"
-          assert_eq "medium" "$effort" "${agent} must use medium reasoning"
+          set_test "codex ${agent}: reasoning is high"
+          assert_eq "high" "$effort" "${agent} must use high reasoning"
           ;;
         *)
           set_test "codex ${agent}: model is gpt-5.5"

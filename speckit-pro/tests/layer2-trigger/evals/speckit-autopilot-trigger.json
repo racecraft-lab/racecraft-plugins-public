@@ -8,7 +8,7 @@
     "should_trigger": true
   },
   {
-    "query": "I need you to execute the full speckit workflow autonomously. here's the workflow file: /Users/fred/projects/acme-api/docs/ai/specs/SPEC-004-workflow.md — go through specify, clarify, plan, checklist, tasks, analyze, and implement with gate validation between each phase",
+    "query": "I need you to execute the full speckit workflow autonomously. here's the workflow file: /path/to/project/docs/ai/specs/SPEC-004-workflow.md — go through specify, clarify, plan, checklist, tasks, analyze, and implement with gate validation between each phase",
     "should_trigger": true
   },
   {
@@ -77,6 +77,14 @@
   },
   {
     "query": "can you walk me through how to write good testable requirements for the spec phase? I want to make sure my acceptance criteria are specific enough",
+    "should_trigger": false
+  },
+  {
+    "query": "interview me about the spec for SPEC-009. ask one question at a time with your recommended answer so I can agree or push back",
+    "should_trigger": false
+  },
+  {
+    "query": "grill me on the design for the new search feature before I commit to anything. walk every branch of the design tree",
     "should_trigger": false
   }
 ]

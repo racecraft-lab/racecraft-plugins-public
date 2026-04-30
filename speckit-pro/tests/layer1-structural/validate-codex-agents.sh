@@ -151,11 +151,11 @@ for agent in "${AGENTS[@]}"; do
       fi
       ;;
     implement-executor)
-      set_test "implement-executor: uses coding-focused GPT-5.5 profile"
-      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "medium" ] && [ "$sandbox_val" = "workspace-write" ]; then
+      set_test "implement-executor: uses high-effort GPT-5.5 TDD profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "workspace-write" ]; then
         _pass
       else
-        _fail "expected gpt-5.5 / medium / workspace-write, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / high / workspace-write, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
     codebase-analyst|spec-context-analyst|domain-researcher)

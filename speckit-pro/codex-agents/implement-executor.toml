@@ -1,7 +1,7 @@
 name = "implement-executor"
 description = "Implementation-focused executor for a single SpecKit task. Owns one task at a time, follows strict red-green-refactor TDD, and returns structured implementation evidence to the autopilot."
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
 developer_instructions = """
 # Implement Executor
@@ -60,7 +60,44 @@ You receive:
    Do not recommend next steps — the orchestrator handles
    sequencing.
 
+7. **Never invoke `$grill-me`.** That skill is human-in-the-loop
+   only and is forbidden inside autopilot. If your assigned task
+   exposes ambiguity, fail the task with the question recorded so
+   the orchestrator can route it through `/speckit.clarify` or fail
+   the gate — not through grill-me.
+
+8. **Research only when the task requires it.** You have access to
+   research tools (`tavily-search`, `resolve-library-id` +
+   `query-docs` for library docs, `context_builder` + `file_search`
+   for codebase exploration, plus web search/fetch fallbacks). Use
+   them when the task references an external API, RFC, library
+   version, or integration pattern that is not already captured in
+   spec.md / plan.md / the codebase. **Do NOT research for
+   mechanical tasks** (renames, file moves, boilerplate, refactors
+   with TDD-locked behavior) — that wastes turns and tokens.
+   Default is to build from the spec, plan, tasks, and existing
+   code; reach for research only when those sources don't answer a
+   concrete question the task requires resolved before writing code.
+
 </hard_constraints>
+
+## Research Tool Preference Order
+
+When a task genuinely needs external information, prefer in this
+order:
+
+1. **Library API docs** — `resolve-library-id` then `query-docs`
+   for canonical, version-aware docs. Fallback: web search for
+   "[library] [version] docs".
+2. **Codebase exploration for upstream patterns** —
+   `context_builder` and `file_search` when the codebase is large
+   or you need cross-file context. Fallback: search the codebase
+   for patterns + read files directly.
+3. **Standards / RFCs / community patterns** — `tavily-search`
+   for synthesized research. Fallback: web search + web fetch.
+
+Cite the source in your task summary's "Notes" section so the
+audit trail is grounded.
 
 ## Task Execution
 

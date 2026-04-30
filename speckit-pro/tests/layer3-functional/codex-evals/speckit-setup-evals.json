@@ -4,12 +4,19 @@
     {
       "id": 1,
       "prompt": "Set up SPEC-009 from the technical roadmap so it is ready for the autopilot. I want the worktree branch created, the workflow template copied, and the prompts populated from the roadmap.",
-      "expected_output": "Explains or performs the setup flow by locating the roadmap entry, creating or reusing the worktree branch, generating the workflow file from the shared template, and stopping after the workflow is committed and pushed.",
+      "expected_output": "Explains or performs the setup flow by locating the roadmap entry, creating or reusing the worktree branch, running the $grill-me interview before writing the workflow file, generating the workflow file from the shared template enriched by the design concept, and stopping after both files are committed and pushed.",
       "expectations": [
         "Mentions locating the technical roadmap and the requested SPEC-ID entry",
         "Mentions creating or reusing a dedicated worktree branch",
+        "Mentions running the $grill-me interview before writing the workflow file",
+        "Mentions producing a Design Concept doc at docs/ai/specs/SPEC-<ID>-design-concept.md",
         "Mentions copying the shared workflow template into docs/ai/specs/",
-        "Mentions populating the workflow prompts from roadmap scope and constraints",
+        "Mentions populating the workflow prompts from BOTH the roadmap scope AND the Design Concept doc",
+        "States that ALL phase prompts (Specify, Clarify, Plan, Checklist, Tasks, Analyze, Implement) are enriched from the Design Concept doc — not just the early phases",
+        "States that the Tasks prompt uses the Design Concept's Non-goals to bound task generation",
+        "States that the Analyze prompt does cross-artifact consistency check against the Design Concept doc",
+        "States that the Implement prompt references the Q&A log for the 'why' behind decisions",
+        "Mentions committing both the design concept doc and the workflow file together",
         "Mentions that the next step is to run $speckit-autopilot rather than executing it immediately"
       ]
     },
@@ -64,6 +71,17 @@
         "Mentions checking for leftover placeholder tokens after population",
         "States that the workflow must not be committed with unresolved placeholders",
         "Reports which specific placeholders remain unresolved"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "I'm trying to run $speckit-setup SPEC-009 inside a `codex exec` automation that has no TTY. The grill-me interview step is failing. Why, and what should setup do?",
+      "expected_output": "Reports that grill-me's HITL probe (request_user_input → tty -s → abort) failed because no interactive runtime was available, and stops the setup flow rather than fabricating design-concept content. Surfaces the condition to the user so they can re-run interactively.",
+      "expectations": [
+        "States that grill-me requires an interactive runtime and aborts when none is detected",
+        "States that setup is HITL-gated by design and must not synthesize design-concept content itself",
+        "Reports exactly what was created locally (e.g., worktree, branch) before the abort, so the user can resume",
+        "Suggests re-running setup in an interactive Codex session rather than `codex exec`"
       ]
     }
   ]
