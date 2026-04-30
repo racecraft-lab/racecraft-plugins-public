@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "Iterative project-scoping interview that turns Claude into a relentless one-question-at-a-time interviewer. Walks each branch of the design tree, asks single questions with its own recommended answer as the first option, and produces a Design Concept Markdown doc capturing the shared understanding. Use when the user says 'grill me', 'interview me', 'scope this idea', 'iterative scoping', 'walk me through this design before I commit', or wants to align on a raw client brief, meeting transcript, or vague feature idea before any spec is written. Also use when the user wants to pre-scope a feature before running /speckit-pro:setup, or asks for a relentless interviewer with recommended answers for each question. Accepts .md, .txt files or a free-text topic."
+description: "Runs a structured one-question-at-a-time scoping interview that proposes the assistant's own recommended answer first for every question and walks each branch of the design tree, then writes a Design Concept Markdown doc (frontmatter, Goals, Non-goals, Q&A log, Open Questions, Recommended Next Step). Use this skill when the user says 'grill me', 'interview me', 'scope this idea', 'iterative scoping', 'walk every branch of the design tree', 'one question at a time, you suggest the answer', or asks for a relentless interviewer with recommended answers. Specifically for pre-scoping a raw client brief, meeting transcript, or vague feature idea before any spec is written, and for the human-in-the-loop step inside /speckit-pro:setup. Narrower and more structured than free-form brainstorming or ideation: this skill always produces a Design Concept file on disk, always presents the assistant's recommendation as the first option for every question so the user can agree, course-correct, or pick an alternative, and always walks the design tree by uncertainty × impact rather than free association. Accepts .md, .txt files or a free-text topic."
 argument-hint: "e.g. 'interview me about this brief', 'grill me on the gamification overhaul', 'scope this transcript'"
 user-invokable: true
 license: MIT
@@ -215,6 +215,12 @@ Cause: The skill is being invoked from a runtime that doesn't expose
 Solution: Abort. Grill-me requires real-time human interaction. If you
 need scoping in a non-interactive context, use `/speckit-pro:coach` for
 methodology guidance or fail the gate and surface to the user.
+
+### Natural-language prompts route to `superpowers:brainstorming` instead of grill-me
+
+Cause: If you have the `superpowers` plugin installed, its `brainstorming` skill description starts with "You MUST use this before any creative work — creating features, building components, adding functionality, or modifying behavior." That high-imperative framing reliably outranks descriptive scoping skills on any prompt that smells like creative work, including "interview me about this brief", "scope this idea", or "walk me through this design before I commit."
+
+Solution: Invoke grill-me directly via the slash command `/speckit-pro:grill-me` (description-based triggering is bypassed for explicit invocation). Inside `/speckit-pro:setup` this is already wired — the setup command calls `Skill('grill-me')` explicitly, so the brainstorming competition does not apply. If you prefer natural-language invocation, "run grill-me on this" or "use the grill me skill on this brief" name-anchors more reliably than "interview me about this".
 
 ### Skill triggers when user wanted /speckit-pro:setup
 

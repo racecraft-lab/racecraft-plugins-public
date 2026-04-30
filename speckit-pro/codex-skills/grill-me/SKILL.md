@@ -1,17 +1,23 @@
 ---
 name: grill-me
 description: >
-  Iterative project-scoping interview that turns Codex into a relentless
-  one-question-at-a-time interviewer. Walks each branch of the design
-  tree, asks single questions with its own recommended answer first, and
-  produces a Design Concept Markdown doc capturing the shared
-  understanding. Use when the user says "grill me", "interview me",
-  "scope this idea", "iterative scoping", "walk me through this design
-  before I commit", or wants to align on a raw client brief, meeting
-  transcript, or vague feature idea before any spec is written. Also use
-  when the user wants to pre-scope a feature before running
-  $speckit-setup, or asks for a relentless interviewer with recommended
-  answers for each question. Accepts .md, .txt files or a free-text
+  Runs a structured one-question-at-a-time scoping interview that
+  proposes the assistant's own recommended answer first for every
+  question and walks each branch of the design tree, then writes a
+  Design Concept Markdown doc (frontmatter, Goals, Non-goals, Q&A log,
+  Open Questions, Recommended Next Step). Use this skill when the user
+  says "grill me", "interview me", "scope this idea", "iterative
+  scoping", "walk every branch of the design tree", "one question at a
+  time, you suggest the answer", or asks for a relentless interviewer
+  with recommended answers. Specifically for pre-scoping a raw client
+  brief, meeting transcript, or vague feature idea before any spec is
+  written, and for the human-in-the-loop step inside $speckit-setup.
+  Narrower and more structured than free-form brainstorming or
+  ideation: this skill always produces a Design Concept file on disk,
+  always presents the assistant's recommendation as the first option
+  for every question so the user can agree, course-correct, or pick an
+  alternative, and always walks the design tree by uncertainty × impact
+  rather than free association. Accepts .md, .txt files or a free-text
   topic.
 ---
 
@@ -258,6 +264,25 @@ Solution: At the soft-cap checkpoint, the user can wrap up. If this
 happens repeatedly on simple inputs, revisit `references/interview-protocol.md`
 heuristics — *"ask the question that, if answered, eliminates the
 most uncertainty"*.
+
+### Natural-language prompts route to `superpowers:brainstorming` instead of grill-me
+
+Cause: If you have the `superpowers` plugin installed alongside
+speckit-pro, its `brainstorming` skill description begins with "You
+MUST use this before any creative work — creating features, building
+components, adding functionality, or modifying behavior." That
+high-imperative framing reliably outranks descriptive scoping skills
+on any prompt that smells like creative work, including "interview me
+about this brief", "scope this idea", or "walk me through this design
+before I commit."
+
+Solution: Invoke grill-me explicitly via `$grill-me` (skill-name
+invocation bypasses description-based competition). Inside
+`$speckit-setup` this is already wired — the setup skill invokes
+grill-me by name, so the brainstorming competition does not apply. If
+you prefer natural-language invocation, "run grill-me on this" or
+"use the grill-me skill on this brief" name-anchors more reliably than
+"interview me about this".
 
 ## Performance Notes
 
