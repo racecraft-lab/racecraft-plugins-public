@@ -3,9 +3,11 @@ SPEC-FIXTURE-003.
 
 Workflow:
 
-1. Dispatch `clarify-executor` with this prompt: "Run /speckit.clarify on
-   the spec at .specify/fixtures/spec-fixture-003/spec.md and report
-   unresolved items with category tags."
+1. Dispatch `clarify-executor` with this prompt: "Treat
+   `speckit-pro/tests/layer7-integration/dispatch-fixtures/03-redelegation-chain/sample-spec.md`
+   as the target feature spec. Identify ambiguities that need
+   clarification, and report unresolved items with category tags
+   following the consensus protocol."
 
 2. WAIT for `clarify-executor` to return.
 

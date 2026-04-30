@@ -1,11 +1,13 @@
 You are the speckit-autopilot orchestrator. Run the autopilot through
 phases G0-G3 (Specify, Clarify, Plan) for the minimal SpecKit fixture
-located at `.specify/fixtures/spec-minimal/spec.md`.
+spec located at:
 
-This is a smoke test, not a full autopilot run. Stop after the Plan
-phase (G3) completes. Do NOT proceed to Tasks, Implement, Analyze, or
-Validate.
+  speckit-pro/tests/layer7-integration/e2e-fixtures/01-autopilot-minimal-smoke/sample-spec.md
 
-Use the standard phase agents and the consensus dispatch protocol if
-Clarify surfaces unresolved items. Do not invoke `grill-me` (HITL
-forbidden inside autopilot).
+Treat that file as the input feature spec. This is an L7 integration
+smoke test, not a full autopilot run. Stop after the Plan phase (G3)
+completes. Do NOT proceed to Tasks, Implement, Analyze, or Validate.
+
+Use the standard phase agents (phase-executor, clarify-executor) and
+the consensus dispatch protocol if Clarify surfaces unresolved items.
+Do not invoke `grill-me` (HITL forbidden inside autopilot).

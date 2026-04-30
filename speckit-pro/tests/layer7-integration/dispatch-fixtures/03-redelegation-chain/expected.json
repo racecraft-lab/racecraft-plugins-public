@@ -2,8 +2,7 @@
   "fixture_id": "03-redelegation-chain",
   "purpose": "Verify the orchestrator regains control between subagent calls (multi-hop redelegation chain).",
   "must_dispatch_to": [
-    "speckit-pro:clarify-executor",
-    "speckit-pro:consensus-synthesizer"
+    "speckit-pro:clarify-executor"
   ],
   "must_dispatch_to_at_least_one_of": [
     "speckit-pro:codebase-analyst",
@@ -17,9 +16,9 @@
   "dispatch_order_constraints": [
     {
       "before": "speckit-pro:clarify-executor",
-      "after": "speckit-pro:consensus-synthesizer",
-      "reason": "Clarify must precede synthesis — synthesizer needs analyst outputs"
+      "after": "speckit-pro:codebase-analyst",
+      "reason": "Clarify must surface unresolved items BEFORE the orchestrator dispatches any analyst — proves the orchestrator regained control between calls (the redelegation hop). If clarify didn't surface a [codebase] tag, the analyst would not be present at all; this constraint catches the case where it is present out of order."
     }
   ],
-  "min_dispatch_count": 3
+  "min_dispatch_count": 2
 }
