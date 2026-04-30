@@ -16,14 +16,30 @@ SKILL_CREATOR="${SKILL_CREATOR_ROOT:-$HOME/.claude/plugins/marketplaces/claude-p
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SKILL="${1:-speckit-coach}"
 
-# Create a wrapper around `claude` that adds --bare to prevent installed
-# plugin skills from shadowing the test command file during evaluation.
-# Without this, Claude picks the real `speckit-pro:coach` (or autopilot)
-# plugin skill instead of the test command, causing all true-positive
-# evals to fail.
+# Detect whether the test skill collides with an installed speckit-pro plugin
+# skill. The eval works by writing a test command file at .claude/commands/
+# `<skill>-skill-<uuid>.md`; if the same `<skill>` name is also exposed as
+# `speckit-pro:<skill>` from the installed plugin, the matcher prefers the
+# installed plugin skill and the test variant never fires (all true-positive
+# triggers report 0/3). The historical fix was to wrap `claude` with `--bare`,
+# which disables plugin loading. But `--bare` requires `ANTHROPIC_API_KEY`
+# (OAuth + keychain are explicitly disabled in --bare mode), so it auth-fails
+# on developer machines that authenticate via Claude Max / claude.ai.
+#
+# The fix: only enable --bare when there is a real installed-plugin name
+# collision. For new skills (like `grill-me` before v1.10.0), no installed
+# skill conflicts, so --bare is unnecessary and just blocks auth. Set
+# `EVAL_FORCE_BARE=1` to opt back into --bare regardless of collision.
+INSTALLED_PLUGIN_DIR="$HOME/.claude/plugins/marketplaces/racecraft-plugins-public/speckit-pro/skills/${SKILL}"
+NEED_BARE="${EVAL_FORCE_BARE:-}"
+if [ -z "$NEED_BARE" ] && [ -d "$INSTALLED_PLUGIN_DIR" ]; then
+  NEED_BARE="1"
+fi
+
 WRAPPER_DIR=$(mktemp -d)
 trap 'rm -rf "$WRAPPER_DIR"' EXIT
-cat > "$WRAPPER_DIR/claude" << 'WRAPPER'
+if [ "$NEED_BARE" = "1" ]; then
+  cat > "$WRAPPER_DIR/claude" << 'WRAPPER'
 #!/usr/bin/env bash
 real_claude=""
 IFS=: read -ra dirs <<< "$PATH"
@@ -36,8 +52,12 @@ for d in "${dirs[@]}"; do
 done
 exec "$real_claude" "$@" --bare
 WRAPPER
-chmod +x "$WRAPPER_DIR/claude"
-export PATH="$WRAPPER_DIR:$PATH"
+  chmod +x "$WRAPPER_DIR/claude"
+  export PATH="$WRAPPER_DIR:$PATH"
+  echo "Using --bare mode (installed plugin skill '${SKILL}' detected)" >&2
+else
+  echo "Skipping --bare mode (no installed plugin skill collision for '${SKILL}')" >&2
+fi
 
 EVAL_FILE="$PLUGIN_ROOT/tests/layer2-trigger/evals/${SKILL}-trigger.json"
 if [ -d "$PLUGIN_ROOT/skills/${SKILL}" ]; then
