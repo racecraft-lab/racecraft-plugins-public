@@ -31,6 +31,25 @@ prompts from the workflow file and delegate each phase to a
 the commands yourself — you spawn, collect results, validate
 gates, and advance.
 
+## Architectural Constraint — Main Agent Is The Orchestrator
+
+This skill loads into the **main session agent** when the user invokes
+`/speckit-pro:autopilot`. Only the main agent can spawn subagents — per
+[Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents),
+**subagents cannot spawn other subagents.** The Orchestrator-Direct pattern
+this skill uses works because *the skill IS the main agent at execution
+time*; "spawn a subagent for each phase" is a flat fan-out, never nested.
+
+**If this skill is ever loaded inside a subagent context** (for example a
+phase-executor mistakenly calls `Skill('speckit-autopilot')`), it MUST
+refuse and surface the violation rather than attempt to orchestrate. None
+of the bundled phase agents (`phase-executor`, `clarify-executor`,
+`checklist-executor`, `analyze-executor`, `implement-executor`,
+`codebase-analyst`, `spec-context-analyst`, `domain-researcher`,
+`consensus-synthesizer`, `gate-validator`) include `Agent` in their tools
+list, so they cannot spawn subagents — this constraint is enforced by the
+Anthropic runtime, not just by convention.
+
 ## Prerequisites — Model & Effort
 
 The autopilot orchestrator makes gate decisions, synthesizes consensus, and

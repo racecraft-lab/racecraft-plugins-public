@@ -481,8 +481,8 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
           set_test "codex ${agent}: model is gpt-5.5"
           assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
-          set_test "codex ${agent}: reasoning is medium"
-          assert_eq "medium" "$effort" "${agent} must use medium reasoning"
+          set_test "codex ${agent}: reasoning is high"
+          assert_eq "high" "$effort" "${agent} must use high reasoning"
           ;;
         *)
           set_test "codex ${agent}: model is gpt-5.5"

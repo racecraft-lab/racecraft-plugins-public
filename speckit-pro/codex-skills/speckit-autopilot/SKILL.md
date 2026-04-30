@@ -28,6 +28,26 @@ prompts from the workflow file and delegate each phase to a
 run the commands yourself — you spawn, collect results, validate
 gates, and advance.
 
+## Architectural Constraint — Main Agent Is The Orchestrator
+
+This skill loads into the **main Codex session agent** when the user
+invokes `$speckit-autopilot`. Only the main agent can spawn subagents
+through `spawn_agent` — Codex enforces this at the runtime level via
+`agents.max_depth = 1` in `config.toml`. The Orchestrator-Direct pattern
+this skill uses works because *the skill IS the main agent at execution
+time*; "spawn_agent for each phase" is a flat fan-out, never nested.
+
+**If this skill is ever loaded inside a subagent context** (for example a
+phase-executor mistakenly tries to invoke `$speckit-autopilot`), it MUST
+refuse and surface the violation rather than attempt to orchestrate. None
+of the bundled custom-agent TOML files (`phase-executor`, `clarify-executor`,
+`checklist-executor`, `analyze-executor`, `implement-executor`,
+`codebase-analyst`, `spec-context-analyst`, `domain-researcher`,
+`autopilot-fast-helper`) instruct their agents to call `spawn_agent` —
+this constraint is enforced by the Codex runtime depth limit, not just by
+convention. Consensus synthesis and gate validation are intentionally
+handled in this orchestrator session rather than in dedicated subagents.
+
 ## Codex Runtime Contract
 
 This Codex variant is a concrete tool contract, not advisory prose.
