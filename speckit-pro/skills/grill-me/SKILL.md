@@ -1,9 +1,10 @@
 ---
 name: grill-me
-description: "Iterative project-scoping interview that turns the AI into a relentless one-question-at-a-time interviewer. The AI walks down each branch of the design tree, asks single questions with its own recommended answers as starting points, and produces a Design Concept doc capturing the shared understanding. Use when the user says 'interview me', 'grill me', 'scope this idea', 'walk me through this design before I commit to anything', or wants to align on a raw idea / transcript / brief before producing a spec. Strictly human-in-the-loop. NEVER invoke this skill from inside autopilot or any of its phase agents."
+description: "Iterative project-scoping interview that turns Claude into a relentless one-question-at-a-time interviewer. Walks each branch of the design tree, asks single questions with its own recommended answer as the first option, and produces a Design Concept Markdown doc capturing the shared understanding. Use when the user says 'grill me', 'interview me', 'scope this idea', 'iterative scoping', 'walk me through this design before I commit', or wants to align on a raw client brief, meeting transcript, or vague feature idea before any spec is written. Accepts .md, .txt files or a free-text topic. Strictly human-in-the-loop — DO NOT use inside /speckit-pro:autopilot or any of its phase agents (autopilot's Clarify phase uses /speckit.clarify with the consensus protocol instead)."
 argument-hint: "e.g. 'interview me about this brief', 'grill me on the gamification overhaul', 'scope this transcript'"
 user-invokable: true
 license: MIT
+compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex variant in codex-skills/grill-me/ uses a free-text Q&A loop instead."
 ---
 
 # Grill Me — Iterative Project Scoping Interview
@@ -165,9 +166,111 @@ sections (full schema in `references/output-formats.md`):
   job.
 - It does not run autonomously. See the Hard Constraints block above.
 
+## Examples
+
+### Example 1: Standalone scoping from a raw idea
+
+User says: *"Grill me on this idea: add a leaderboard to our learning platform that ranks users by points earned from completed lessons."*
+
+Actions:
+1. Build initial mental model (read CLAUDE.md, .specify/memory/constitution.md if present)
+2. Identify branches: data model, scoring rules, retroactivity, UX surface, performance, privacy, rollout
+3. Loop on `AskUserQuestion`, one question per branch, recommendation always first
+4. Stop at natural endpoint (no critical opens remain) or user wraps up
+5. Write `docs/ai/specs/leaderboard-design-concept.md`
+
+Result: Design Concept Markdown file with frontmatter, Goals, Non-goals, Q&A log, Open Questions, Recommended Next Step.
+
+### Example 2: Setup-mode invocation from /speckit-pro:setup
+
+`/speckit-pro:setup` invokes this skill with `mode: "setup"`, the spec scope from the technical roadmap, and an output path inside the worktree.
+
+Actions:
+1. Detect setup mode from invocation context
+2. Use the supplied scope as the input (don't ask the user for context again)
+3. Run the interview loop as in Example 1
+4. Write the Design Concept to the worktree path the caller supplied
+5. Return Goals, Non-goals, and major decisions to the caller so it can enrich the workflow file's Specify and Clarify Prompts
+
+Result: Design Concept doc lives in the worktree alongside the workflow file; both get committed in one commit.
+
+### Example 3: Refusing an autonomous invocation
+
+A subagent inside `/speckit-pro:autopilot` (e.g., the clarify-executor) tries to call `Skill('grill-me')` to resolve ambiguity.
+
+Actions:
+1. Self-check at activation detects agent context (or AskUserQuestion unavailable)
+2. Abort immediately — do NOT call AskUserQuestion, do NOT write any file
+3. Emit: *"grill-me is human-in-the-loop only. The autopilot's Clarify phase uses /speckit.clarify, not grill-me. Aborting."*
+
+Result: Nothing written. Caller surfaces the ambiguity to the orchestrator, which fails the gate.
+
+## Troubleshooting
+
+### Error: "AskUserQuestion is not available in this context"
+
+Cause: The skill is being invoked from a runtime that doesn't expose
+`AskUserQuestion` (subagent context, automation, or non-Claude-Code surface).
+
+Solution: Abort. Grill-me requires real-time human interaction. If you
+need scoping in a non-interactive context, use `/speckit-pro:coach` for
+methodology guidance or fail the gate and surface to the user.
+
+### Skill triggers when user wanted /speckit-pro:setup
+
+Cause: The user said "set up SPEC-009" — that's `/setup`'s territory,
+not grill-me's. Setup itself runs grill-me, so the user gets the
+interview either way, but starting from setup ensures the worktree
+gets created.
+
+Solution: If the user mentions a SPEC-ID and "set up" / "prepare",
+defer to `/speckit-pro:setup`. Grill-me triggers on "interview me",
+"grill me", "scope this", or when the input is a raw idea / transcript
+/ brief without a SPEC-ID.
+
+### Interview hits the soft cap (30 questions) on every run
+
+Cause: Either the input is genuinely complex (large feature, lots of
+unknowns) or the question generation is asking cosmetic / low-value
+questions instead of the highest-uncertainty branches first.
+
+Solution: At the soft-cap checkpoint, the user can wrap up immediately.
+If this happens repeatedly on simple inputs, revisit the question-generation
+heuristic in `references/interview-protocol.md` — the rule is *"ask the
+question that, if answered, eliminates the most uncertainty"*. Cosmetic
+questions get filtered out.
+
+### Design concept doc has no "Open Questions" section / it's empty
+
+Cause: The interview converged with no outstanding ambiguity, OR the
+synthesis step missed deferred items.
+
+Solution: If the user answered every question with confidence, an empty
+Open Questions section is correct (and a good sign). If you flagged
+items as deferred during the loop ("user said 'I don't know' or 'you
+decide'"), make sure those land in Open Questions during synthesis —
+that's where they belong, not the Q&A log.
+
+## Performance Notes
+
+- **Take your time.** The interview is supposed to feel slow and
+  deliberate. A 30-question session over 30 minutes produces better
+  alignment than a 10-question session over 5 minutes.
+- **Quality > speed.** A poorly-grounded recommendation is worse than
+  no recommendation. If you don't have a basis for a recommended
+  answer, mark it low-confidence in the option's description and lean
+  on the alternatives.
+- **Don't skip the design-tree-branch identification step.** Walking
+  branches in priority order (uncertainty × impact) is what makes the
+  output valuable. Going in random order produces noise.
+
 ## References
 
-- **`references/interview-protocol.md`** — the detailed interview loop,
-  question generation, stop conditions, and recovery from edge cases.
-- **`references/output-formats.md`** — the Design Concept doc schema and
-  formatting rules.
+For detailed operational guidance, consult these files only as needed:
+
+- **`references/interview-protocol.md`** — full interview loop, question
+  generation heuristics, stop conditions, recovery from edge cases (read
+  before activating).
+- **`references/output-formats.md`** — Design Concept doc schema, file
+  paths for standalone vs setup mode, body structure, and style rules
+  (read before synthesis).
