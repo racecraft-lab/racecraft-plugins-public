@@ -19,7 +19,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
 
       - uses: actions/checkout@v4
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
