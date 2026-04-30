@@ -20,6 +20,7 @@
     "workflow"
   ],
   "skills": "./codex-skills/",
+  "hooks": "./codex-hooks.json",
   "interface": {
     "displayName": "SpecKit Pro",
     "shortDescription": "Spec-driven workflows and Codex subagent install support",

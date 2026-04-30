@@ -99,23 +99,49 @@ clarification questions and present options. **You are the user.**
    - If the command recommends an option and your research
      supports it, use it
 
-5. **Flag unresolved items for consensus.** If a question
-   meets ANY of these criteria, include it in the
-   "Unresolved for consensus" section of your summary:
+5. **Flag unresolved items for consensus, with a category
+   prefix.** If a question meets ANY of these criteria, include
+   it in the "Unresolved for consensus" section of your summary:
    - Your research sources disagree (conflicting answers)
    - You have low confidence in the answer you gave
    - The question contains security keywords (auth, token,
      secret, encryption, PII, credential, permission,
-     password)
-   The main session will spawn 3 consensus agents
-   (codebase-analyst, spec-context-analyst,
-   domain-researcher) to provide distinct perspectives.
-   Still answer the question with your best guess — the
-   consensus may confirm or override your answer.
+     password, session, cookie, jwt, api-key, access-control)
+
+   **Tag every unresolved item with a category prefix in square
+   brackets** so the orchestrator can route consensus to only the
+   relevant analyst(s):
+
+   - `[codebase]` — resolution depends on existing repo patterns
+   - `[spec]` — depends on project decisions (constitution,
+     technical roadmap, prior specs, CLAUDE.md)
+   - `[domain]` — depends on external standards, RFCs, library
+     docs, or community best practice
+   - `[security]` — item contains a security keyword (always
+     routes to all 3 analysts)
+   - `[ambiguous]` — you genuinely don't know which perspective
+     applies (routes to all 3)
+
+   Multi-category tags are allowed: `[codebase, domain]` spawns
+   both `codebase-analyst` and `domain-researcher`. Untagged items
+   default to `[ambiguous]` but explicit tagging is the discipline.
+   See `references/consensus-protocol.md` for full routing rules.
+
+   Still answer the question with your best guess — the consensus
+   may confirm or override your answer.
 
 6. **Return a summary with citations.** After the session
    completes, return the results to the parent. Do not
    recommend next steps.
+
+7. **Never invoke `grill-me`.** Even though you are the
+   *clarify* executor, you must not use the `grill-me` skill.
+   Grill-me is human-in-the-loop and forbidden inside autopilot.
+   Your clarification mechanism is `/speckit.clarify` plus the
+   3-analyst consensus pattern — that's the entire toolkit.
+   If you encounter ambiguity that consensus can't resolve,
+   surface it in your summary so the orchestrator can fail the
+   gate.
 
 </hard_constraints>
 
@@ -165,9 +191,10 @@ in autonomous subagent context.
 (or "None — all resolved")
 
 **Unresolved for consensus:**
-- Q3: <question text>
+- [<categories>] Q3: <question text>
   Answer given: <your best-guess answer>
   Why unresolved: <conflicting sources / low confidence / security keyword>
+  (Example: `[codebase, domain] Q3: Should we use bcrypt or argon2?`)
 (or "None — all resolved with high confidence")
 
 **Errors:** None (or describe any errors)

@@ -1,0 +1,82 @@
+[
+  {
+    "query": "grill me on this client brief at docs/idea.md before /speckit.specify — produce a Design Concept doc with the full design tree walked",
+    "should_trigger": true
+  },
+  {
+    "query": "use the grill-me skill on the gamification overhaul SpecKit spec. walk every branch of the design tree, recommended answer first, produce a Design Concept doc",
+    "should_trigger": true
+  },
+  {
+    "query": "$grill-me notes/stakeholder-call.txt — pull a Design Concept doc out of this transcript before /speckit.specify",
+    "should_trigger": true
+  },
+  {
+    "query": "run grill-me on this raw idea: a leaderboard for the learning platform. produce a Design Concept doc before /speckit.specify, recommended answer first",
+    "should_trigger": true
+  },
+  {
+    "query": "play the role of a relentless interviewer for the billing rewrite SpecKit spec — walk every branch of the design tree, produce a Design Concept doc before /speckit.specify",
+    "should_trigger": true
+  },
+  {
+    "query": "grill me on the auth refactor before /speckit.specify. recommended answer first, design tree walk, Design Concept doc at the end",
+    "should_trigger": true
+  },
+  {
+    "query": "I need a Design Concept doc for SPEC-019 workflow tracking — grill-me on each design tree branch before $speckit-setup",
+    "should_trigger": true
+  },
+  {
+    "query": "grill me relentlessly on this stakeholder transcript. produce a Design Concept doc at docs/ai/specs/<slug>-design-concept.md before /speckit.specify",
+    "should_trigger": true
+  },
+  {
+    "query": "$grill-me — pre-spec scoping for the calendar sync feature. design tree walk, recommended answer first, Design Concept doc",
+    "should_trigger": true
+  },
+  {
+    "query": "use grill-me to produce a Design Concept doc from this raw idea before I write the SpecKit spec via /speckit.specify. relentless interviewer mode, design tree walk",
+    "should_trigger": true
+  },
+  {
+    "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+    "should_trigger": false
+  },
+  {
+    "query": "execute the full speckit workflow autonomously for SPEC-013. workflow file is populated at docs/ai/specs/SPEC-013-workflow.md. go through all 7 phases with auto-commits",
+    "should_trigger": false
+  },
+  {
+    "query": "which checklist domains should I pick for SPEC-012? it's a REST API that handles webhook delivery with retry logic",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the difference between specify plan and specify tasks? I ran plan and got a plan.md but now I'm not sure what's next",
+    "should_trigger": false
+  },
+  {
+    "query": "the simplicity gate is failing on my spec. acceptance criteria count is too high. how do I reduce complexity?",
+    "should_trigger": false
+  },
+  {
+    "query": "set up SPEC-018 for me — read the technical roadmap, create a worktree, populate the workflow file. you know the drill",
+    "should_trigger": false
+  },
+  {
+    "query": "review PR #42 on the omnifocus-mcp repo and leave inline comments on any issues you find. focus on the OmniJS script correctness",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts. the Zod schema is failing because I'm using z.union instead of z.discriminatedUnion",
+    "should_trigger": false
+  },
+  {
+    "query": "can you add a new MCP tool for listing OmniFocus perspectives? I need it to return the name, ID, and icon for each built-in and custom perspective",
+    "should_trigger": false
+  },
+  {
+    "query": "explain the consensus protocol — when do the 3 agents vote, and what happens if they disagree on a gate result?",
+    "should_trigger": false
+  }
+]

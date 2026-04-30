@@ -84,3 +84,25 @@ Before running the autopilot, verify connected MCP servers:
 If a required server is not connected, the agent will
 automatically fall back to built-in tools. Functionality
 is preserved but research quality may be reduced.
+
+## Skills the autopilot must not invoke
+
+Some skills in this plugin are deliberately scoped to interactive,
+human-in-the-loop usage and **must never be invoked from inside
+autopilot or any of its phase agents**. Calling them would either
+block the autonomous loop waiting on user input or produce
+low-quality automated output that defeats the skill's purpose.
+
+| Skill | Why it's forbidden inside autopilot |
+|-------|------------------------------------|
+| `grill-me` | Uses `AskUserQuestion` to interview a real human one question at a time. Inside autopilot there is no user to answer. Autopilot's Clarify phase uses `/speckit.clarify` with the consensus protocol instead — that is the only sanctioned clarification mechanism in the autonomous loop. If a phase hits ambiguity that consensus can't resolve, fail the gate and surface to the user; never escalate to grill-me. |
+
+The hard constraint is enforced in three independent layers:
+
+1. The autopilot orchestrator's `<hard_constraints>` block (in
+   `../SKILL.md` under "Critical: Execution Rules → 0. Forbidden
+   skill invocations").
+2. A negative constraint in each phase-executor agent's system
+   prompt under `agents/` and `codex-agents/`.
+3. A self-check inside the `grill-me` skill that aborts if it
+   detects a non-interactive or agent context.

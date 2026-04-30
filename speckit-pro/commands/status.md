@@ -26,18 +26,25 @@ Archive Sweep cleanup safety when the project has archive state.
 
 ### 1. Find All Data Sources
 
-Search for **both** workflow files and technical roadmap files:
+Search for workflow files, technical roadmap files, and design concept docs:
 
 ```text
-Workflow files:  **/*-workflow.md  (active/completed specs with phase detail)
-Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md  (full roadmap with all specs)
-Also check:      docs/ai/specs/*-workflow.md
-                 docs/ai/*roadmap*.md
-Archive state:   .specify/extensions.yml
-                 .specify/extensions/.registry
-                 .specify/extensions/archive/extension.yml
-                 .specify/extensions/archive/RACECRAFT-PIN.md
+Workflow files:    **/*-workflow.md  (active/completed specs with phase detail)
+Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md
+Design concepts:   **/*-design-concept.md  (grill-me output per spec)
+Also check:        docs/ai/specs/*-workflow.md
+                   docs/ai/specs/*-design-concept.md
+                   docs/ai/*roadmap*.md
+Archive state:     .specify/extensions.yml
+                   .specify/extensions/.registry
+                   .specify/extensions/archive/extension.yml
+                   .specify/extensions/archive/RACECRAFT-PIN.md
 ```
+
+For each design concept doc found, record the SPEC-ID it corresponds to
+(parsed from the filename `SPEC-<ID>-design-concept.md` or from the doc's
+frontmatter). This drives the **DC** (Design Concept) column in the
+phase-detail dashboard and the per-spec detail view.
 
 ### 2. Parse the Technical Roadmap (Full Roadmap)
 
@@ -117,11 +124,15 @@ These specs have no dependencies beyond the completed foundation and can start n
 ## Active Workflows (Phase Detail)
 
 If any spec has a workflow file with phases in progress, show the phase-level
-table:
+table. The **DC** column (Design Concept) shows ✅ if a `SPEC-<ID>-design-concept.md`
+exists for the spec, ⏳ otherwise. A workflow file without a corresponding design
+concept doc is a yellow flag — the phase prompts may be undercooked relative to
+what `/speckit-pro:setup` produces today:
 
-| Spec | Name | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
-|------|------|---------|---------|------|-------|-------|---------|------|------|
-| SPEC-XXX | Feature | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
+| Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
+|------|------|----|---------|---------|------|-------|-------|---------|------|------|
+| SPEC-XXX | Feature | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
+| SPEC-YYY | Feature | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:setup` or grill manually) |
 ```
 
 Include an Archive Sweep summary when archive state exists:
@@ -194,6 +205,9 @@ Show detailed information for that spec:
 
 - All phase statuses with notes (from workflow file, if exists)
 - Technical roadmap scope description
+- Design Concept doc path (if `SPEC-<ID>-design-concept.md` exists) — also
+  surface its frontmatter `question_count` and Open Questions count for a
+  quick read on how thoroughly the spec was scoped
 - Dependencies and what it enables
 - Gate results and key artifacts produced
 - Current blockers (if any)

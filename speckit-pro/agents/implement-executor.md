@@ -16,6 +16,13 @@ tools:
   - Bash
   - Grep
   - Glob
+  - WebSearch
+  - WebFetch
+  - mcp__tavily-mcp__tavily-search
+  - mcp__context7__resolve-library-id
+  - mcp__context7__get-library-docs
+  - mcp__RepoPrompt__file_search
+  - mcp__RepoPrompt__context_builder
 permissionMode: acceptEdits
 maxTurns: 50
 effort: max
@@ -28,8 +35,13 @@ You execute a **single implementation task** using **strict TDD
 red-green-refactor**. Tests are written BEFORE code — always.
 This is NON-NEGOTIABLE.
 
-> **Note:** This agent uses `effort: max` which requires Opus 4.6.
-> The parent session must use Opus 4.6 or this setting is ignored.
+> **Note:** This agent uses `effort: max`, supported on Opus 4.6 and
+> Opus 4.7. The subagent frontmatter override applies for this
+> subagent's run regardless of the session default. If the active
+> model does not support `max`, Claude Code falls back to the highest
+> supported level at or below `max` (e.g., `xhigh` on Opus 4.6
+> would resolve to `high`, but `max` resolves to `max` on both
+> 4.6 and 4.7).
 
 You receive:
 - **One task** from tasks.md (in your prompt)
@@ -81,7 +93,42 @@ You receive:
    Do not recommend next steps — the orchestrator handles
    sequencing.
 
+7. **Never invoke `grill-me`.** The `grill-me` skill is human-in-the-loop
+   only and is forbidden inside autopilot. If your task is ambiguous and
+   you can't resolve it from tasks.md, plan.md, the design concept doc,
+   or codebase patterns, fail the task with a clear blocker note and let
+   the orchestrator surface it. Do not interview the user.
+
+8. **Research only when the task requires it.** You have research tools
+   (`WebSearch`, `WebFetch`, `mcp__tavily-mcp__tavily-search`,
+   `mcp__context7__*`, `mcp__RepoPrompt__*`) for tasks that reference an
+   external API, RFC, library version, or integration pattern not already
+   captured in spec.md / plan.md / the codebase. **Do NOT research for
+   mechanical tasks** (renames, file moves, boilerplate, refactors with
+   TDD-locked behavior) — that wastes turns and tokens. Default is to
+   build from the spec, plan, tasks, and existing code; reach for
+   research only when those sources don't answer a concrete question
+   the task requires resolved before writing code.
+
 </hard_constraints>
+
+## Research Tool Preference Order
+
+When a task genuinely needs external information, prefer in this order:
+
+1. **Library API docs** — `mcp__context7__resolve-library-id` then
+   `mcp__context7__get-library-docs` for canonical, version-aware docs.
+   Fallback: `WebSearch` for "[library] [version] docs".
+2. **Codebase exploration for upstream patterns** —
+   `mcp__RepoPrompt__file_search` and `mcp__RepoPrompt__context_builder`
+   when the codebase is large or you need cross-file context.
+   Fallback: `Grep` + `Glob` + `Read`.
+3. **Standards / RFCs / community patterns** —
+   `mcp__tavily-mcp__tavily-search` for synthesized research.
+   Fallback: `WebSearch` + `WebFetch` for direct page fetches.
+
+Cite the source in your task summary's "Notes" section so the audit
+trail is grounded.
 
 ## Task Execution
 

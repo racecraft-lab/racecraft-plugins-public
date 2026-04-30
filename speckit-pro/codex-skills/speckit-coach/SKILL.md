@@ -20,7 +20,9 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify init --ai claude     # 25+ agents: copilot, cursor-agent, gemini, codex, etc.
 ```
 
-After installation, Codex exposes the bundled skill entrypoints `/speckit-coach`, `/speckit-setup`, `/speckit-autopilot`, `/speckit-status`, and `/speckit-resolve-pr`. This skill provides **coaching, guidance, and enhancement** on top of those entrypoints, and users can also invoke them explicitly as `$speckit-*` skills or through `@SpecKit Pro`.
+After installation, Codex exposes the bundled skill entrypoints `$speckit-coach`, `$speckit-setup`, `$speckit-autopilot`, `$speckit-status`, `$speckit-resolve-pr`, and `$grill-me`. This skill provides **coaching, guidance, and enhancement** on top of those entrypoints. Users invoke them via the `$skill-name` syntax, implicit description-match, or `@SpecKit Pro`.
+
+> **Note:** Codex does NOT support `/<plugin>:<skill>` or `/<skill>` slash-command syntax for custom plugins. Custom slash commands were [deprecated](https://github.com/openai/codex/issues/7480) in favor of skills. If you see older docs referencing `/speckit-coach`, `/speckit-setup`, etc. as Codex commands, those instructions are stale — use `$skill-name` or natural language instead. (The `/speckit.specify`, `/speckit.implement` etc. references throughout this skill are SpecKit CLI commands, not Codex slash commands — those are correct.)
 
 ## What This Skill Does
 
@@ -99,7 +101,8 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "is my plan good", "review my plan" | Check plan quality signals: gates, research, data model, contracts |
 | "are my tasks good", "review tasks" | Check task quality: story organization, granularity, traceability, parallelism |
 | **Enhancement Commands (speckit-pro plugin)** | |
-| "technical roadmap", "decompose feature", "multi-spec", "too large for one spec" | Guide technical roadmap creation — decompose large features into sequential specs. See Enhancement section below |
+| "scope this idea", "pre-spec scoping", "interview me on this brief", "walk every branch of the design tree", "produce a Design Concept doc", "before /speckit.specify", "before I write the spec" | Guide to `$grill-me` — relentless one-question-at-a-time interview that produces a Design Concept doc (Goals, Non-goals, Q&A log, Open Questions). Strictly human-in-the-loop. The output enriches `$speckit-setup`'s workflow file phase prompts. Use it standalone for raw briefs / transcripts, or rely on `$speckit-setup` to invoke it automatically per spec. |
+| "technical roadmap", "decompose feature", "multi-spec", "too large for one spec" | Guide technical roadmap creation — decompose large features into sequential specs. See Enhancement section below. **Tip:** for higher-quality roadmaps, run `$grill-me docs/prd.md` first to lock in the scope envelope before decomposing. |
 | "workflow tracking", "track phases", "workflow file" | Guide workflow file creation — per-spec 7-phase tracking. See Enhancement section below |
 | "recommend checklists", "which checklists", "what domains to check" | Run spec-driven domain recommendation — analyze spec to suggest enriched checklist prompts. See Enhancement section below |
 | "decompose", "create spec directories", "break into specs" | Guide spec decomposition — generate individual spec directories from technical roadmap. See Enhancement section below |

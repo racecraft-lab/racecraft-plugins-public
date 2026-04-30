@@ -208,6 +208,8 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-eval-runner-skill-selection.sh"
     "$TESTS_DIR/layer4-scripts/test-install-codex-agents.sh"
     "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
+    "$TESTS_DIR/layer4-scripts/test-parse-consensus-categories.sh"
+    "$TESTS_DIR/layer4-scripts/test-aggregate-crl.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then

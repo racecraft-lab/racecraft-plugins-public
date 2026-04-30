@@ -40,6 +40,14 @@
     "should_trigger": true
   },
   {
+    "query": "where does grill me fit into the SDD workflow? does it replace /speckit.clarify or is it something different?",
+    "should_trigger": true
+  },
+  {
+    "query": "interview me about this raw client brief and walk every branch of the design tree before I commit to a spec. ask one question at a time with your recommended answer first",
+    "should_trigger": false
+  },
+  {
     "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
     "should_trigger": false
   },

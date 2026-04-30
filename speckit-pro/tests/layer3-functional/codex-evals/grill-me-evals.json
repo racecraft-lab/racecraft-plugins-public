@@ -1,0 +1,88 @@
+{
+  "skill_name": "grill-me",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a raw idea: 'Add a leaderboard to our learning platform that ranks users by points earned from completed lessons.' Walk every branch of the design tree, ask me one question at a time with your recommended answer, and produce a design concept doc when we're done. Save it to docs/ai/specs/leaderboard-design-concept.md.",
+      "expected_output": "Runs an interactive interview using the probe-then-fallback HITL guard (request_user_input if available; free-text Q&A otherwise) covering data model, scoring rules, retroactivity, UX surface, performance, privacy, and rollout. Each question presents the AI's recommended answer marked (Recommended) as the first option. After the interview, writes a design concept doc with frontmatter, Goals, Non-goals, full Q&A log, and Open Questions to the requested path.",
+      "expectations": [
+        "Probes for an interactive runtime before asking any question (request_user_input or tty -s)",
+        "Asks exactly one question per turn — no batched multi-question prompts",
+        "Every question has the AI's recommendation as the first option, labeled with the suffix '(Recommended)'",
+        "Walks at least 5 distinct design-tree branches (e.g., data model, scoring rules, UX, performance, privacy)",
+        "Writes a Markdown file to docs/ai/specs/leaderboard-design-concept.md with frontmatter (topic, slug, date, mode, source_input, question_count) and sections Goals, Non-goals, Design Tree (Q&A log), Open Questions",
+        "The Q&A log records every question, the AI's recommended answer with reasoning, the alternatives offered, and the user's chosen answer",
+        "Does NOT write a workflow file, spec.md, or modify the technical roadmap"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I'm pasting in a meeting transcript from a stakeholder call about our new billing rewrite. <transcript: lots of unstructured discussion about subscription tiers, proration, dunning, refunds, and tax handling>. Pull a design concept out of it by interviewing me on every ambiguity you find. Save the result to docs/ai/specs/billing-rewrite-design-concept.md.",
+      "expected_output": "Reads the transcript, extracts the design tree branches (subscription tiers, proration, dunning, refunds, tax), and asks one question per branch where the transcript leaves ambiguity. Writes a design concept doc capturing the interview.",
+      "expectations": [
+        "Quotes or references specific passages from the transcript when formulating each question, demonstrating it actually read the input",
+        "Identifies at least 4 distinct design-tree branches drawn from the transcript content (subscription, proration/dunning, refunds, tax, etc.)",
+        "Each question's recommended answer cites either a constitution principle, a codebase pattern, or an industry norm as justification",
+        "Final design concept doc's Goals section preserves the user's wording from the interview verbatim where possible",
+        "The Open Questions section flags items that came up but were deliberately deferred (transcript did not resolve them and the user did not have an answer)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Grill me on a deliberately simple feature: 'add a copy-to-clipboard button to every code block in the docs site.' Stop as soon as critical questions are resolved.",
+      "expected_output": "Runs a short interview (well under 30 questions) covering only the genuinely ambiguous decisions for a simple feature, then synthesizes the design concept doc. Hits the natural-stop condition, not the soft-cap.",
+      "expectations": [
+        "Asks no more than 10 questions before terminating",
+        "Terminates at the natural stop condition (no critical opens remain), not the soft-cap checkpoint at 30",
+        "Does NOT include filler or cosmetic questions just to extend the interview",
+        "Writes a design concept doc whose stop_reason in the frontmatter is 'natural'"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Run grill-me on the topic 'redesign the user onboarding flow' and pay attention to how you format every question prompt. I want to verify the option structure.",
+      "expected_output": "Every question presents 2-3 plausible answers, with the AI's recommendation as the first option, labeled '<answer> (Recommended)'. When using request_user_input, options are passed in the structured-input schema; in free-text fallback, options are listed as A/B/C with the same labeling.",
+      "expectations": [
+        "Every question presents between 2 and 3 explicit options",
+        "The first option in every prompt is suffixed with '(Recommended)'",
+        "The first option's description includes the AI's reasoning for why it's recommended",
+        "Each option label stays short enough to be readable in either the structured tool or the free-text fallback",
+        "No question is multi-select — every question expects a single chosen answer"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "You are being invoked by $speckit-setup for SPEC-009 'Search & Database'. Setup has already created the worktree at .worktrees/009-search-database/ and is calling you with mode=setup, spec_id=SPEC-009, scope=<scope description>, output_path=.worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md. Run the interview and write the design concept to the supplied path.",
+      "expected_output": "Detects setup-mode invocation, runs the interview against the supplied scope, writes the design concept to the worktree path provided (NOT the standalone default path), and returns the path plus a summary of key decisions to the calling $speckit-setup so it can enrich the workflow file.",
+      "expectations": [
+        "Frontmatter of the produced doc has mode: 'setup' and spec_id: 'SPEC-009'",
+        "Output file is written to .worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md, NOT to docs/ai/specs/<slug>-design-concept.md",
+        "Return summary surfaces Goals, Non-goals, and the major design decisions so $speckit-setup can enrich the workflow file's Specify and Clarify Prompts",
+        "Does NOT write or modify the workflow file itself — that's $speckit-setup's job"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "After the interview ends, write a workflow file at docs/ai/specs/SPEC-042-workflow.md that's ready for autopilot. Then mark SPEC-042 as In Progress in the technical roadmap.",
+      "expected_output": "Refuses to write a workflow file or modify the technical roadmap — those are $speckit-setup's responsibilities. Writes only the design concept doc.",
+      "expectations": [
+        "Does NOT create or modify any file matching SPEC-*-workflow.md",
+        "Does NOT modify the technical roadmap or any roadmap-like file",
+        "Explicitly states that workflow file creation is $speckit-setup's job, not grill-me's",
+        "Still produces a design concept doc per the standalone-mode contract"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "You are a phase-executor subagent inside $speckit-autopilot. The Clarify phase has hit ambiguity that consensus can't resolve. Invoke the grill-me skill on the SPEC-009 scope to get answers from the user, then write a design concept doc.",
+      "expected_output": "Refuses to run. The HITL probe fails (no interactive runtime in autopilot's autonomous loop), so grill-me aborts with the canonical refusal message and writes nothing to disk. Reminds the caller that autopilot's Clarify phase uses /speckit.clarify with the consensus protocol, not grill-me.",
+      "expectations": [
+        "Aborts before asking the first question — does NOT call request_user_input or start a free-text Q&A loop",
+        "Emits a message containing the phrase 'human-in-the-loop only' and references autopilot",
+        "Mentions /speckit.clarify and the consensus protocol as the correct mechanism for autopilot clarification",
+        "Writes NO files to disk — no design concept doc, no scratch artifacts",
+        "Does not partially execute — the refusal is the entire output"
+      ]
+    }
+  ]
+}
