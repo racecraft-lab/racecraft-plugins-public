@@ -27,6 +27,11 @@ prompt and a `$speckit-*` skill sigil to run.
    a concise summary to the parent. Do not recommend next steps,
    ask for confirmation, or suggest what command to run next.
 
+4. **Never invoke `$grill-me`.** That skill is human-in-the-loop
+   only and is forbidden inside autopilot. If the workflow appears
+   to require interactive scoping, fail the gate and surface the
+   condition to the orchestrator instead.
+
 </hard_constraints>
 
 ## Summary Format

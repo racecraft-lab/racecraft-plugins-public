@@ -96,7 +96,29 @@ the decisions that determine whether subagent work is wasted or productive.
 
 These rules are non-negotiable. Follow them exactly.
 
-### 0. All phases are mandatory
+### 0. Forbidden skill invocations
+
+**Never invoke `$grill-me` from any phase, subagent, or consensus step.**
+Grill-me is a strictly human-in-the-loop, pre-workflow scoping interview. Its
+runtime guard probes for `request_user_input` then a TTY before asking any
+question; if invoked from autopilot's autonomous loop it will refuse and write
+nothing — but the autopilot must not even attempt the call.
+
+If a phase encounters ambiguity that feels like it needs grill-me, the correct
+response is one of:
+
+- Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
+  protocol — that is autopilot's only clarification mechanism.
+- Fail the gate, surface the ambiguity, and stop. Pre-workflow interviews
+  belong in `$speckit-setup`, not autopilot.
+
+This rule applies to: the orchestrator, every phase subagent
+(`phase-executor`, `clarify-executor`, `checklist-executor`,
+`analyze-executor`, `implement-executor`), every consensus analyst
+(`codebase-analyst`, `spec-context-analyst`, `domain-researcher`), and
+`consensus-synthesizer`.
+
+### 1. All phases are mandatory
 
 The canonical execution order is:
 
@@ -122,7 +144,7 @@ Forbidden shortcuts:
 - Skipping Implement because tasks appear already marked complete
 - Combining Specify, Plan, and Tasks into one execution item
 
-### 1. Subagent per phase
+### 2. Subagent per phase
 
 For each phase, spawn a **foreground subagent** with `spawn_agent`,
 wait for it with `wait_agent`, and keep orchestration in the parent.
@@ -158,7 +180,7 @@ WRONG:
      → loop terminates
 ```
 
-### 2. Use phase-specific executor agents
+### 3. Use phase-specific executor agents
 
 Each phase type has its own specialized executor agent:
 
@@ -197,7 +219,7 @@ Workflow prompt:
 Each agent runs the command (and any post-execution work like gap
 remediation) in isolation and returns a structured summary.
 
-### 3. Progress state is mandatory
+### 4. Progress state is mandatory
 
 Before executing any phase, call `update_plan` with the full granular
 checklist and mirror the same state into `autopilot-state.json`.
@@ -205,7 +227,7 @@ For multi-prompt phases (Clarify, Checklist), create one item per
 prompt/session so you know exactly what to execute next. Missing
 `update_plan` is a hard stop. See Step 1.1.
 
-### 4. Multi-prompt phases
+### 5. Multi-prompt phases
 
 Clarify and Checklist have multiple prompts in the workflow file.
 Spawn a **separate subagent for each prompt**.
@@ -235,7 +257,7 @@ WRONG:
   2. Or skip sessions and do your own analysis
 ```
 
-### 5. Clarify — executor answers autonomously
+### 6. Clarify — executor answers autonomously
 
 The `clarify-executor` invokes `$speckit-clarify` and answers
 all questions itself using research tools (web search, library docs,
@@ -245,7 +267,7 @@ web search, file reading, and search). After it returns, check for
 remaining `[NEEDS CLARIFICATION]` markers and resolve via consensus
 if needed (see Rule 6).
 
-### 6. Two-layer resolution with consensus agents
+### 7. Two-layer resolution with consensus agents
 
 After EACH executor subagent returns for a consensus phase
 (Clarify, Checklist, Analyze), run a two-layer resolution process
@@ -298,7 +320,7 @@ resolved questions/gaps.
 failed consensus (all disagree), security keyword, or missing
 prerequisite.
 
-### 7. Optional Spark helper is advisory only
+### 8. Optional Spark helper is advisory only
 
 The main autopilot may optionally spawn `autopilot-fast-helper`
 for one of these narrow tasks:

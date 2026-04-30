@@ -178,6 +178,30 @@
         "Requires rebuilding autopilot-state.json when Post items are missing",
         "Continues into post-implementation instead of reporting complete"
       ]
+    },
+    {
+      "id": 15,
+      "prompt": "The Clarify phase has hit ambiguity that the consensus protocol can't resolve. Should I invoke $grill-me from the clarify-executor subagent so the user can answer interactively?",
+      "expected_output": "Refuses. Explains that $grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response is to flag the question under 'Unresolved for consensus', let the orchestrator decide whether to fail the gate or continue with the best-guess answer, and never escalate to grill-me.",
+      "expectations": [
+        "States that $grill-me must never be invoked from any autopilot phase or subagent",
+        "Mentions that grill-me is human-in-the-loop only and would refuse in autopilot's autonomous loop anyway",
+        "Names $speckit-clarify with the consensus protocol as the only clarification mechanism inside autopilot",
+        "Suggests flagging the question under 'Unresolved for consensus' or failing the gate, not escalating to grill-me",
+        "Does NOT call Skill('grill-me') or any grill-me-related tool in the response"
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "Run autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md and report each phase's actions. I want to verify autopilot never accidentally invokes grill-me during any phase.",
+      "expected_output": "Runs all 7 phases (specify, clarify, plan, checklist, tasks, analyze, implement) without invoking $grill-me at any point. The clarify phase uses the consensus protocol; gate failures are reported, not escalated to grill-me.",
+      "expectations": [
+        "Executes all 7 phases without invoking $grill-me",
+        "The clarify phase uses $speckit-clarify with the multi-agent consensus protocol",
+        "Phase subagents (phase-executor, clarify-executor, checklist-executor, analyze-executor, implement-executor) never call grill-me",
+        "Consensus analysts (codebase-analyst, spec-context-analyst, domain-researcher) never call grill-me",
+        "Gate failures result in stopping or surfacing the issue, never an escalation to grill-me"
+      ]
     }
   ]
 }

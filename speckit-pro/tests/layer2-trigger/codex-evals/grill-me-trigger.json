@@ -1,0 +1,82 @@
+[
+  {
+    "query": "interview me about this client brief — I have a raw idea and I want to walk every branch of the design tree before I write any spec",
+    "should_trigger": true
+  },
+  {
+    "query": "grill me on the gamification overhaul. I want you to ask one question at a time with your recommended answer first so I can agree or course-correct",
+    "should_trigger": true
+  },
+  {
+    "query": "I have a meeting transcript from yesterday's stakeholder call at notes/stakeholder-call.txt — pull a design concept out of it. ask me to fill the gaps as you go",
+    "should_trigger": true
+  },
+  {
+    "query": "help me scope this raw idea before I commit to a design. I want a relentless interviewer who provides recommended answers for every question",
+    "should_trigger": true
+  },
+  {
+    "query": "let's do iterative project scoping for the new search feature. I haven't written anything yet — just have a vague idea",
+    "should_trigger": true
+  },
+  {
+    "query": "walk me through every dependency in this design. one question at a time, you suggest the answer, I agree or push back. like pair programming",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to align with you on the data model for the billing rewrite before we even start writing requirements. interview me",
+    "should_trigger": true
+  },
+  {
+    "query": "run the grill me skill against this brief. start with the highest-uncertainty branches and provide your recommendation for each question",
+    "should_trigger": true
+  },
+  {
+    "query": "before I run $speckit-setup I want to do a deep scoping session on the workflow tracking feature. ask me everything one at a time",
+    "should_trigger": true
+  },
+  {
+    "query": "I'm about to brief the team on a major refactor and I haven't thought through every edge case yet. play the role of a relentless interviewer and grill me on every assumption",
+    "should_trigger": true
+  },
+  {
+    "query": "run autopilot on the SPEC-027 workflow. the file is at docs/ai/specs/027-calendar-sync/SPEC-027-workflow.md. I already filled in all the phase prompts and the constitution is set up",
+    "should_trigger": false
+  },
+  {
+    "query": "execute the full speckit workflow autonomously for SPEC-013. workflow file is populated at docs/ai/specs/SPEC-013-workflow.md. go through all 7 phases with auto-commits",
+    "should_trigger": false
+  },
+  {
+    "query": "which checklist domains should I pick for SPEC-012? it's a REST API that handles webhook delivery with retry logic",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the difference between specify plan and specify tasks? I ran plan and got a plan.md but now I'm not sure what's next",
+    "should_trigger": false
+  },
+  {
+    "query": "the simplicity gate is failing on my spec. acceptance criteria count is too high. how do I reduce complexity?",
+    "should_trigger": false
+  },
+  {
+    "query": "set up SPEC-018 for me — read the technical roadmap, create a worktree, populate the workflow file. you know the drill",
+    "should_trigger": false
+  },
+  {
+    "query": "review PR #42 on the omnifocus-mcp repo and leave inline comments on any issues you find. focus on the OmniJS script correctness",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts. the Zod schema is failing because I'm using z.union instead of z.discriminatedUnion",
+    "should_trigger": false
+  },
+  {
+    "query": "can you add a new MCP tool for listing OmniFocus perspectives? I need it to return the name, ID, and icon for each built-in and custom perspective",
+    "should_trigger": false
+  },
+  {
+    "query": "explain the consensus protocol — when do the 3 agents vote, and what happens if they disagree on a gate result?",
+    "should_trigger": false
+  }
+]

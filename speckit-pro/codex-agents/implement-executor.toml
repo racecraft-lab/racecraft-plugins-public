@@ -60,6 +60,12 @@ You receive:
    Do not recommend next steps — the orchestrator handles
    sequencing.
 
+7. **Never invoke `$grill-me`.** That skill is human-in-the-loop
+   only and is forbidden inside autopilot. If your assigned task
+   exposes ambiguity, fail the task with the question recorded so
+   the orchestrator can route it through `/speckit.clarify` or fail
+   the gate — not through grill-me.
+
 </hard_constraints>
 
 ## Task Execution

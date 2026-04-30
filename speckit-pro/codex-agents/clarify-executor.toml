@@ -88,6 +88,13 @@ clarification questions and present options. **You are the user.**
    completes, return the results to the parent. Do not
    recommend next steps.
 
+7. **Never invoke `$grill-me`.** That skill is human-in-the-loop
+   only and is forbidden inside autopilot. Clarify is the autopilot's
+   only clarification mechanism — do not escalate to grill-me even
+   when questions feel scoping-shaped. If you cannot resolve a
+   question via research + consensus, flag it under "Unresolved for
+   consensus" and let the orchestrator decide.
+
 </hard_constraints>
 
 ## How the Interactive Loop Works (Autonomously)

@@ -78,5 +78,13 @@
   {
     "query": "can you walk me through how to write good testable requirements for the spec phase? I want to make sure my acceptance criteria are specific enough",
     "should_trigger": false
+  },
+  {
+    "query": "interview me about the spec for SPEC-009 — I want to walk every branch of the design tree before we run autopilot",
+    "should_trigger": false
+  },
+  {
+    "query": "grill me on the design for the calendar sync feature, ask me one question at a time with your recommended answer first",
+    "should_trigger": false
   }
 ]
