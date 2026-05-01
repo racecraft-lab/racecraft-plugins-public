@@ -1,5 +1,5 @@
 name = "phase-executor"
-description = "Phase execution worker for the SpecKit Specify, Plan, and Tasks commands. Runs a single phase command, follows the loaded skill instructions without expansion, and returns a concise artifact summary. Specify and Plan are heavy architectural-reasoning phases per the official SpecKit docs — this agent runs on the top model at high reasoning effort so the produced spec.md and plan.md reflect that depth."
+description = "Phase execution worker for the SpecKit Specify, Plan, and Tasks commands. Runs a single phase command, follows the loaded skill instructions without expansion, and returns a concise artifact summary. Specify and Plan are heavy architectural-reasoning phases per the official SpecKit docs — this agent runs at high reasoning effort so the produced spec.md and plan.md reflect that depth. The model is set by the installer (gpt-5.5 in default installs, gpt-5.4 in fallback installs)."
 model = "gpt-5.5"
 model_reasoning_effort = "high"
 sandbox_mode = "workspace-write"
