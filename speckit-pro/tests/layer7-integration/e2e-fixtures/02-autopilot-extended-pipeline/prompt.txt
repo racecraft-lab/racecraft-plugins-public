@@ -19,8 +19,9 @@ Standard phase order to dispatch:
    summary."
 
 2. **Clarify** → `speckit-pro:clarify-executor`
-   Prompt: "Are there any [NEEDS CLARIFICATION] markers in the
-   spec? Return a one-line answer."
+   Prompt: "Prepare a read-only Clarify Question Set for the input
+   spec. If there are no material questions, return that there are no
+   critical ambiguities. Do not write files."
 
 3. **Plan** → `speckit-pro:phase-executor`
    Prompt: "Produce a 3-bullet implementation plan. Return only the

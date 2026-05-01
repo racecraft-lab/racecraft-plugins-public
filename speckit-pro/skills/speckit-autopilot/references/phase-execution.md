@@ -194,18 +194,21 @@ prefix: "Already on feature branch `<branch>`. Do NOT run
 Only runs if G1 detected `[NEEDS CLARIFICATION]` markers.
 
 Spawn a **separate subagent for each clarify session**.
-The clarify-executor invokes `/speckit.clarify` and answers
-questions autonomously using its research tools.
+The clarify-executor is read-only. It returns a `Clarify Question Set`
+with prioritized questions, recommended answers, evidence, and
+suggested artifact updates. The parent orchestrator answers returned
+questions and applies accepted edits in the main session.
 
 ```text
 For each clarify session in the workflow file:
   1. TaskUpdate: session task → in_progress
   2. Agent(subagent_type: "clarify-executor",
           prompt: """
-            Run /speckit.clarify with: <session prompt>
+            Prepare a Clarify Question Set for: <session prompt>
           """)
-  3. Parse executor's "Unresolved for consensus" section
-  4. If unresolved items exist:
+  3. Parent answers returned questions and edits spec/workflow/state
+  4. Parse executor's "Unresolved for consensus" section
+  5. If unresolved items exist:
      a. TaskUpdate: "<session> Consensus" → in_progress
      b. For each item → spawn 3 consensus agents in parallel:
         - Agent(subagent_type: "codebase-analyst", run_in_background: true, ...)
@@ -214,15 +217,14 @@ For each clarify session in the workflow file:
      c. Wait for all 3 → apply consensus rules
      d. Edit spec.md with consensus answer, remove markers
      e. TaskUpdate: "<session> Consensus" → completed
-  5. TaskUpdate: session task → completed
-  6. Proceed to next session
+  6. TaskUpdate: session task → completed
+  7. Proceed to next session
 ```
 
-**Layer 1 (executor):** The clarify-executor researches
-each question using web search, library docs, codebase
-exploration, and local file analysis (MCP tools preferred
-when available). It resolves most questions
-directly.
+**Layer 1 (executor):** The clarify-executor researches possible
+questions using web search, library docs, codebase exploration, and
+local file analysis (MCP tools preferred when available). It does not
+edit artifacts. It returns questions and recommendations to the parent.
 
 **Layer 2 (consensus):** For items the executor flagged
 (low confidence, conflicting sources, security keywords),

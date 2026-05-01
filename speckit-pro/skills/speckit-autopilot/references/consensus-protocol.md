@@ -209,14 +209,16 @@ main session handles Layer 2 (consensus) for unresolved items.
 ### Clarify Consensus
 
 ```
-clarify-executor runs /speckit.clarify session
+clarify-executor prepares read-only Clarify Question Set
     │
-    ├── Layer 1: Executor researches and answers all questions
+    ├── Layer 1: Executor researches questions and recommendations
     │   using available research tools (MCP preferred, built-in fallbacks)
     │
     ├── Executor returns summary with:
-    │   ├── Questions answered (with citations)
+    │   ├── Questions for parent (with recommendations and citations)
     │   └── "Unresolved for consensus" section
+    │
+    ├── Parent orchestrator answers questions and applies accepted edits
     │
     └── Main session Layer 2 (for each unresolved item):
         │
