@@ -117,4 +117,75 @@ result=0
 output=$("$SCRIPT" "$TMP_ROOT/bad-model" --model gpt-5.5-pro 2>&1) || result=$?
 assert_eq "2" "$result" "exit code"
 
+section "Marketplace tmp-root sync (Codex 0.125.x quirk workaround)"
+
+# Build a fake "active install" by copying the real plugin and stamping
+# an old version on it. Build a fake "marketplace tmp root" by copying
+# the real plugin and stamping a newer version. Run the installer from
+# the active install and verify it pulls the newer version on top.
+ACTIVE_INSTALL="$TMP_ROOT/active-install"
+TMP_MARKETPLACE_ROOT="$TMP_ROOT/tmp-marketplace"
+SYNC_DEST_DIR="$TMP_ROOT/codex-agents-sync"
+
+cp -R "$PLUGIN_ROOT/." "$ACTIVE_INSTALL/"
+mkdir -p "$ACTIVE_INSTALL/.codex-plugin"
+printf '{"version":"0.0.1"}\n' > "$ACTIVE_INSTALL/.codex-plugin/plugin.json"
+
+cp -R "$PLUGIN_ROOT/." "$TMP_MARKETPLACE_ROOT/"
+mkdir -p "$TMP_MARKETPLACE_ROOT/.codex-plugin"
+printf '{"version":"99.0.0"}\n' > "$TMP_MARKETPLACE_ROOT/.codex-plugin/plugin.json"
+
+set_test "tmp-root sync triggers when marketplace version differs"
+result=0
+output=$( \
+  SPECKIT_MARKETPLACE_TMP_ROOT="$TMP_MARKETPLACE_ROOT" \
+  "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
+    "$SYNC_DEST_DIR" 2>&1 \
+) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "tmp-root sync output reports stale install"
+assert_contains "$output" "Plugin install is stale"
+
+set_test "tmp-root sync output reports new version"
+assert_contains "$output" "Synced active plugin install to 99.0.0"
+
+set_test "tmp-root sync output flags refresh in trailer"
+assert_contains "$output" "Active plugin install was refreshed"
+
+set_test "tmp-root sync overwrites active install version"
+synced_version=$(jq -r '.version' "$ACTIVE_INSTALL/.codex-plugin/plugin.json")
+assert_eq "99.0.0" "$synced_version" "active install version after sync"
+
+# Now versions match — running again should be a no-op for the sync step.
+set_test "tmp-root sync skips when versions match"
+output=$( \
+  SPECKIT_MARKETPLACE_TMP_ROOT="$TMP_MARKETPLACE_ROOT" \
+  "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
+    "$SYNC_DEST_DIR" 2>&1 \
+)
+assert_not_contains "Plugin install is stale" "$output" "no stale-install message"
+
+set_test "tmp-root sync skips with SPECKIT_SKIP_PLUGIN_SYNC=1"
+# Bump active install BACK to old version so a sync would trigger if not skipped.
+printf '{"version":"0.0.1"}\n' > "$ACTIVE_INSTALL/.codex-plugin/plugin.json"
+output=$( \
+  SPECKIT_MARKETPLACE_TMP_ROOT="$TMP_MARKETPLACE_ROOT" \
+  SPECKIT_SKIP_PLUGIN_SYNC=1 \
+  "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
+    "$SYNC_DEST_DIR" 2>&1 \
+)
+assert_not_contains "Plugin install is stale" "$output" "no stale-install message when skipped"
+unsynced_version=$(jq -r '.version' "$ACTIVE_INSTALL/.codex-plugin/plugin.json")
+set_test "active install is not modified when sync is skipped"
+assert_eq "0.0.1" "$unsynced_version" "active install version preserved"
+
+set_test "tmp-root sync skips when tmp root is absent"
+NO_ROOT="$TMP_ROOT/does-not-exist"
+output=$( \
+  SPECKIT_MARKETPLACE_TMP_ROOT="$NO_ROOT" \
+  "$SCRIPT" "$TMP_ROOT/codex-agents-norott" 2>&1 \
+)
+assert_not_contains "Plugin install is stale" "$output" "no stale-install message when tmp root missing"
+
 test_summary

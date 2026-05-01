@@ -69,6 +69,32 @@ install with `--model gpt-5.4` or set `SPECKIT_CODEX_MODEL=gpt-5.4`;
 the installer rewrites only the executor and consensus agent copies
 in the destination directory.
 
+## Marketplace Sync (Codex 0.125.x quirk)
+
+`codex plugin marketplace upgrade` refreshes the marketplace tmp
+root at `~/.codex/.tmp/marketplaces/<name>/` but does **not**
+re-sync the active plugin install at `~/.codex/plugins/<name>/`.
+That meant after every release, users had to manually
+`rsync -a` the tmp root over the active install before running
+this skill, or the skill would copy stale agent templates.
+
+As of v1.10.x this skill does the sync itself: when the active
+install version is older than the marketplace tmp root, the
+installer rsyncs the tmp root onto the active install before
+copying agent templates. This makes the standard refresh flow:
+
+```
+codex plugin marketplace upgrade racecraft-plugins-public
+@SpecKit Pro -> install     (or `$install`)
+# Restart Codex
+```
+
+Override with `SPECKIT_SKIP_PLUGIN_SYNC=1` if you are developing
+against a local plugin checkout you don't want overwritten, or set
+`SPECKIT_MARKETPLACE_TMP_ROOT=/path/to/source` to point at a
+different source. The sync is also skipped when `jq` or `rsync`
+are unavailable (a `cp -Rf` fallback is used if rsync is missing).
+
 ## Hard Constraints
 
 - Never touch `.claude/agents/`, `.claude-plugin/`, `commands/`, or any
