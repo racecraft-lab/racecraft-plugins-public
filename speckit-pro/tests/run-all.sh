@@ -313,11 +313,17 @@ if should_run 7; then
       layer7_fail=$((layer7_fail + failed))
     done < <(echo "$l7_output" | grep -E '^run-(dispatch|return-format|e2e)-fixtures: ')
 
-    # Failsafe: if no summaries were parsed but the runner failed, count
-    # it as a failure so the suite cannot report green on a crashed L7.
-    if [ "$layer7_pass" -eq 0 ] && [ "$layer7_fail" -eq 0 ] && [ "$l7_exit" -ne 0 ]; then
+    # Failsafes: if the runner crashed OR if no summaries were parsed
+    # for any reason (zero fixtures matched, summary-line format
+    # changed, etc.), count L7 as failed so the suite cannot report
+    # green without actually running assertions.
+    if [ "$layer7_pass" -eq 0 ] && [ "$layer7_fail" -eq 0 ]; then
       layer7_fail=1
-      printf "  ${RED}FAIL${RESET} L7 runner crashed (exit %d, no summaries parsed)\n" "$l7_exit"
+      if [ "$l7_exit" -ne 0 ]; then
+        printf "  ${RED}FAIL${RESET} L7 runner crashed (exit %d, no summaries parsed)\n" "$l7_exit"
+      else
+        printf "  ${RED}FAIL${RESET} L7 produced no fixture summaries (zero pass + zero fail) — refusing to report green\n"
+      fi
       echo "$l7_output" | tail -5 | while read -r line; do
         printf "       %s\n" "$line"
       done

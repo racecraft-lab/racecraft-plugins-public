@@ -20,5 +20,8 @@
       "reason": "Clarify must surface unresolved items BEFORE the orchestrator dispatches any analyst — proves the orchestrator regained control between calls (the redelegation hop). If clarify didn't surface a [codebase] tag, the analyst would not be present at all; this constraint catches the case where it is present out of order."
     }
   ],
-  "min_dispatch_count": 2
+  "min_dispatch_count": 2,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
 }

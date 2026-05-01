@@ -76,10 +76,14 @@ exercise:
 
 ### End-to-end (Class 3, fixtures 01–02)
 
-| Fixture | Phases covered | Default budget |
-|---|---|---|
-| 01 | G0–G3 (Specify → Clarify → Plan) | $5 |
-| 02 | G0–G6 (Specify → Clarify → Plan → Tasks → Implement → Analyze) | $10 |
+Both Class 3 fixtures share the same `E2E_FIXTURE_BUDGET_USD` default
+of $10.00. Fixture 01 typically uses ~$1; fixture 02 typically uses
+~$1.30; the cap exists for runs that take longer paths.
+
+| Fixture | Phases covered |
+|---|---|
+| 01 | G1–G3 (Specify → Clarify → Plan) |
+| 02 | G1–G7 (Specify → Clarify → Plan → Checklist → Tasks → Analyze → Implement) |
 
 ### Subagents reached
 
@@ -98,8 +102,19 @@ Every named subagent appears in at least one fixture:
 
 ### What is asserted negative on every fixture
 
-- `grill-me` is never dispatched (HITL boundary)
-- No subagent spawns another `Agent()` (Anthropic constraint)
+- **`grill-me` is never invoked** (HITL boundary). Asserted two ways:
+  1. `must_not_dispatch_to: ["speckit-pro:grill-me"]` — catches the
+     unlikely-but-possible case where an orchestrator tries to
+     dispatch grill-me as if it were an `Agent` subagent_type. The
+     plugin does not register grill-me as an agent, so this should
+     never match — but the assertion is cheap insurance.
+  2. `must_not_invoke_skill: ["grill-me"]` — the **canonical** check.
+     `grill-me` is a Skill, not an Agent. It is invoked via the
+     `Skill` tool (`Skill('speckit-pro:grill-me')`) or by typing
+     `/speckit-pro:grill-me` in chat. The parser scans every
+     `Skill` `tool_use` block in the transcript (orchestrator and
+     sidechain scope) and asserts none match the `grill-me` regex.
+- No subagent spawns another `Agent()` (Anthropic constraint).
 
 ## Two execution modes
 
@@ -189,6 +204,42 @@ If you find yourself wanting an exact match, ask whether L3 functional
 evals would catch it instead. L7 is for the dispatch graph; L3 is for
 agent behavior.
 
+## Transcript PII scrubbing
+
+Raw `claude -p --output-format stream-json` transcripts contain
+machine-specific metadata: `cwd` under `/Users/<username>/...`,
+session UUIDs, request IDs, git branch names, and full plugin/tool
+inventories. None of that is needed for the L7 parser, and committing
+it leaks developer-machine information.
+
+Every committed transcript in this directory has been scrubbed via
+`scrub-transcript.sh`. The runners now invoke the scrubber
+**automatically** after every `--live` capture, so a live re-run
+produces a scrubbed transcript on disk in one step.
+
+What the scrubber preserves (parser-essential):
+
+- `type`, `subtype`, `isSidechain`
+- `message.role`, `message.content` (`tool_use` and `tool_result` blocks)
+- `input.subagent_type`, `input.skill`, `input.prompt`, `input.description`,
+  `input.args`
+- `tool_use_id` and tool_use `id` (for joining dispatch → response)
+
+What the scrubber strips/replaces:
+
+| Field | Replacement |
+|---|---|
+| `cwd`, `sessionId`/`session_id`, `gitBranch`, `requestId`, `userType`, `origin`, `entrypoint`, `inference_geo` | `"<scrubbed>"` |
+| Any `/Users/<x>/...` or `/home/<x>/...` substring inside any string | `<HOME>` |
+| `system` events (which carry plugin/tool inventories) | reduced to `{type, subtype}` |
+
+To manually scrub a transcript:
+
+```bash
+bash tests/layer7-integration/scrub-transcript.sh path/to/transcript.jsonl
+# in-place; or pass nothing to read stdin → stdout
+```
+
 ## Live-mode side effects (read this before running `--live`)
 
 `--live` invocations spawn real subagents that may produce real
@@ -226,7 +277,7 @@ Defaults:
 |-------|-------------|------------------|
 | 1 | $1.00 | `DISPATCH_FIXTURE_BUDGET_USD` |
 | 2 | $1.00 | `RETURN_FORMAT_FIXTURE_BUDGET_USD` |
-| 3 | $5.00 | `E2E_FIXTURE_BUDGET_USD` |
+| 3 | $10.00 | `E2E_FIXTURE_BUDGET_USD` |
 
 ## How this fits with the other layers
 

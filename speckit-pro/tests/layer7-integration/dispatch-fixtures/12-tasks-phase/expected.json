@@ -1,7 +1,9 @@
 {
   "fixture_id": "12-tasks-phase",
   "purpose": "Verify the Tasks phase dispatches phase-executor (per the autopilot phase mapping: Specify, Plan, Tasks all use phase-executor).",
-  "must_dispatch_to": ["speckit-pro:phase-executor"],
+  "must_dispatch_to": [
+    "speckit-pro:phase-executor"
+  ],
   "must_not_dispatch_to": [
     "speckit-pro:clarify-executor",
     "speckit-pro:checklist-executor",
@@ -11,5 +13,8 @@
   ],
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 1,
-  "max_dispatch_count": 2
+  "max_dispatch_count": 2,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
 }

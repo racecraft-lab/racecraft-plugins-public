@@ -1,7 +1,9 @@
 {
   "fixture_id": "15-checklist-phase",
   "purpose": "Verify the Checklist phase dispatches checklist-executor (not phase-executor — Checklist is a gap-remediation phase).",
-  "must_dispatch_to": ["speckit-pro:checklist-executor"],
+  "must_dispatch_to": [
+    "speckit-pro:checklist-executor"
+  ],
   "must_not_dispatch_to": [
     "speckit-pro:phase-executor",
     "speckit-pro:implement-executor",
@@ -10,5 +12,8 @@
   ],
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 1,
-  "max_dispatch_count": 2
+  "max_dispatch_count": 2,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
 }

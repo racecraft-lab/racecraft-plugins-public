@@ -63,7 +63,7 @@ collect_fixtures() {
   fi
 }
 
-# Run claude -p for one fixture, capture transcript.
+# Run claude -p for one fixture, capture transcript, then scrub PII.
 capture_live() {
   local fixture_dir="$1"
   local prompt_file="$fixture_dir/prompt.txt"
@@ -84,7 +84,12 @@ capture_live() {
     < "$prompt_file" > "$transcript_file" 2>/dev/null; then
     printf "  WARN: claude -p exited non-zero — partial transcript may have been captured\n"
   fi
-  printf "  Saved transcript to %s\n" "$transcript_file"
+  # Strip PII (cwd paths, sessionId, plugin inventories) before the
+  # transcript ever sits in a state where it could be committed.
+  if [ -s "$transcript_file" ]; then
+    bash "$SCRIPT_DIR/scrub-transcript.sh" "$transcript_file" >/dev/null
+  fi
+  printf "  Saved scrubbed transcript to %s\n" "$transcript_file"
 }
 
 # Run all assertions in expected.json against transcript.jsonl.
@@ -158,6 +163,20 @@ assert_fixture() {
       _fail "found subagent that spawned another Agent — forbidden"
     fi
   fi
+
+  # must_not_invoke_skill: array of regex patterns (case-insensitive).
+  # This is the canonical HITL boundary check — grill-me is a SKILL,
+  # not an Agent subagent_type, so must_not_dispatch_to alone cannot
+  # catch a Skill('grill-me') invocation.
+  while read -r pattern; do
+    [ -z "$pattern" ] && continue
+    set_test "$fixture_id: skill never invoked: $pattern (any scope)"
+    if assert_skill_not_invoked "$transcript" "$pattern"; then
+      _pass
+    else
+      _fail "skill matching '$pattern' was invoked at orchestrator or sidechain scope"
+    fi
+  done < <(jq -r '.must_not_invoke_skill[]? // empty' "$expected")
 
   # min/max dispatch count
   local total

@@ -45,6 +45,7 @@ collect_fixtures() {
 
 capture_live() {
   local fixture_dir="$1"
+  local transcript_file="$fixture_dir/transcript.jsonl"
   if ! command -v claude >/dev/null 2>&1; then
     printf "  SKIP (claude CLI not found)\n"; return 2
   fi
@@ -55,8 +56,12 @@ capture_live() {
       --verbose \
       --max-budget-usd "$BUDGET_USD" \
       --no-session-persistence \
-      < "$fixture_dir/prompt.txt" > "$fixture_dir/transcript.jsonl" 2>/dev/null; then
+      < "$fixture_dir/prompt.txt" > "$transcript_file" 2>/dev/null; then
     printf "  WARN: claude -p exited non-zero — partial transcript may have been captured\n"
+  fi
+  # Scrub PII (cwd paths, sessionId, plugin inventories) immediately.
+  if [ -s "$transcript_file" ]; then
+    bash "$SCRIPT_DIR/scrub-transcript.sh" "$transcript_file" >/dev/null
   fi
 }
 
@@ -110,6 +115,17 @@ assert_fixture() {
       _fail "found subagent spawning Agent"
     fi
   fi
+
+  # must_not_invoke_skill — HITL boundary check (grill-me is a Skill).
+  while read -r pattern; do
+    [ -z "$pattern" ] && continue
+    set_test "$fixture_id: skill never invoked: $pattern (any scope)"
+    if assert_skill_not_invoked "$transcript" "$pattern"; then
+      _pass
+    else
+      _fail "skill matching '$pattern' was invoked"
+    fi
+  done < <(jq -r '.must_not_invoke_skill[]? // empty' "$expected")
 
   # response_assertions: each is {subagent_type, must_contain_any?, must_contain_section_keywords?}
   local len

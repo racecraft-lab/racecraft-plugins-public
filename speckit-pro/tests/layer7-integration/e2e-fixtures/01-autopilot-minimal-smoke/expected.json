@@ -15,5 +15,8 @@
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 2,
   "max_dispatch_count": 12,
-  "dispatch_order_constraints": []
+  "dispatch_order_constraints": [],
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
 }

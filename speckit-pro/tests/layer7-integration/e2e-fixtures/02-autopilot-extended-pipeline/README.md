@@ -1,10 +1,10 @@
-# Fixture E2E-02 — Extended autopilot pipeline (G0–G6)
+# Fixture E2E-02 — Extended autopilot pipeline (G1–G7)
 
 ## What this fixture proves
 
 Where fixture E2E-01 covers G0–G3 (the "easy half"), this fixture
 exercises the **entire phase-agent set** in the canonical SpecKit
-order:
+order (G1 → G7):
 
   Specify → Clarify → Plan → Checklist → Tasks → Analyze → Implement
 
@@ -28,10 +28,19 @@ the easy-to-mistake **Analyze before Implement** boundary (G6 → G7).
 
 ## Cost
 
-`--live` mode runs a full mid-pipeline autopilot session including
-real test writes via implement-executor's TDD cycle. Default budget
-cap: **$10.00** (override via `E2E_FIXTURE_BUDGET_USD`). This is the
-most expensive fixture in the suite — run sparingly.
+`--live` mode dispatches all five phase agents in sequence. Each
+subagent is asked for a brief, non-binding summary; the prompt
+explicitly instructs **"Do NOT write artifacts to disk."** Real LLM
+behavior may still produce side effects (e.g., implement-executor
+sometimes writes a TDD test file even when asked not to — see the
+"Live-mode side effects" section in the parent L7 README). The
+`--max-budget-usd` cost guard caps total spend regardless.
+
+Default budget cap: **$10.00** (`E2E_FIXTURE_BUDGET_USD`). This is
+the most expensive fixture in the suite — run sparingly. The
+captured transcript on disk shows the actual cost was ~$1.27 in the
+canonical run, so the $10 default leaves substantial headroom for
+the LLM to take a longer path on rerun.
 
 ## Required setup
 

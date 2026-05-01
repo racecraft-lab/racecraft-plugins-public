@@ -1,7 +1,9 @@
 {
   "fixture_id": "05-clarify-spec-only",
   "purpose": "Verify [spec] tag routes Round 1 dispatch to spec-context-analyst only.",
-  "must_dispatch_to": ["speckit-pro:spec-context-analyst"],
+  "must_dispatch_to": [
+    "speckit-pro:spec-context-analyst"
+  ],
   "must_not_dispatch_to": [
     "speckit-pro:codebase-analyst",
     "speckit-pro:domain-researcher",
@@ -9,5 +11,8 @@
   ],
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 1,
-  "max_dispatch_count": 2
+  "max_dispatch_count": 2,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
 }

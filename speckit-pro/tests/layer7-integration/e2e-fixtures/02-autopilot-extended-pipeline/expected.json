@@ -8,7 +8,9 @@
     "speckit-pro:analyze-executor",
     "speckit-pro:implement-executor"
   ],
-  "must_not_dispatch_to": ["speckit-pro:grill-me"],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me"
+  ],
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 7,
   "max_dispatch_count": 14,
@@ -33,5 +35,8 @@
       "after": "speckit-pro:implement-executor",
       "reason": "Analyze precedes Implement (G6 → G7) — this is the order the workflow template canonicalizes"
     }
+  ],
+  "must_not_invoke_skill": [
+    "grill-me"
   ]
 }

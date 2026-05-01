@@ -173,3 +173,65 @@ assert_response_contains() {
   content=$(get_response_content "$transcript" "$target")
   [[ "$content" == *"$needle"* ]]
 }
+
+# extract_skill_invocations <transcript.jsonl> [scope]
+#   scope: "orchestrator" (only top-level) or "all" (default).
+#   stdout: JSON array of {skill, args, isSidechain} for every Skill tool_use.
+#
+#   Skills are invoked via the `Skill` tool — distinct from Agent
+#   dispatches. `grill-me` is a SKILL, not an Agent subagent, so the
+#   HITL boundary check needs to look here, not in extract_orchestrator_dispatches.
+extract_skill_invocations() {
+  local transcript="$1"
+  local scope="${2:-all}"
+  jq -cs --arg scope "$scope" '
+    [
+      .[]
+      | select(.type == "assistant")
+      | (if $scope == "orchestrator"
+         then select((.isSidechain // false) == false)
+         else .
+         end)
+      | . as $event
+      | (.message.content // [])[]
+      | select(.type == "tool_use" and .name == "Skill")
+      | {
+          skill: (.input.skill // ""),
+          args:  (.input.args // ""),
+          isSidechain: ($event.isSidechain // false)
+        }
+    ]
+  ' "$transcript"
+}
+
+# count_skill_invocations <transcript.jsonl> <skill_pattern> [scope]
+#   stdout: count of Skill invocations matching the regex.
+#   skill_pattern is a regex (case-insensitive) applied to the skill field.
+#   Examples:
+#     count_skill_invocations transcript.jsonl "grill-me"     # any namespace
+#     count_skill_invocations transcript.jsonl "^speckit\."   # only speckit.* skills
+count_skill_invocations() {
+  local transcript="$1" skill_pattern="$2" scope="${3:-all}"
+  extract_skill_invocations "$transcript" "$scope" \
+    | jq --arg p "$skill_pattern" \
+        '[.[] | select(.skill | test($p; "i"))] | length'
+}
+
+# assert_skill_not_invoked <transcript.jsonl> <skill_pattern> [scope]
+#   exit 0 if no Skill invocation matches the pattern, else exit 1.
+#   This is the canonical HITL boundary check for grill-me.
+assert_skill_not_invoked() {
+  local transcript="$1" skill_pattern="$2" scope="${3:-all}"
+  local n
+  n=$(count_skill_invocations "$transcript" "$skill_pattern" "$scope")
+  [ "$n" -eq 0 ]
+}
+
+# assert_skill_invoked <transcript.jsonl> <skill_pattern> [scope]
+#   exit 0 if at least one Skill invocation matches.
+assert_skill_invoked() {
+  local transcript="$1" skill_pattern="$2" scope="${3:-all}"
+  local n
+  n=$(count_skill_invocations "$transcript" "$skill_pattern" "$scope")
+  [ "$n" -gt 0 ]
+}

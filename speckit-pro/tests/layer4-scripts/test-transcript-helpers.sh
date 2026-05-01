@@ -152,4 +152,46 @@ assert_exit_code 1 assert_response_contains "$FIX/redelegation-chain.jsonl" "spe
 set_test "no response from never-dispatched subagent"
 assert_exit_code 1 assert_response_contains "$FIX/single-dispatch.jsonl" "speckit-pro:domain-researcher" "anything"
 
+section "extract_skill_invocations + assert_skill_not_invoked"
+
+set_test "skill-invocations fixture: 2 total Skill invocations (default scope=all)"
+n=$(extract_skill_invocations "$FIX/skill-invocations.jsonl" | jq 'length')
+assert_eq "2" "$n"
+
+set_test "skill-invocations fixture: 1 orchestrator-level Skill invocation"
+n=$(extract_skill_invocations "$FIX/skill-invocations.jsonl" "orchestrator" | jq 'length')
+assert_eq "1" "$n"
+
+set_test "skill-invocations fixture: orchestrator skill is speckit.specify"
+s=$(extract_skill_invocations "$FIX/skill-invocations.jsonl" "orchestrator" | jq -r '.[0].skill')
+assert_eq "speckit.specify" "$s"
+
+set_test "count_skill_invocations grill-me at all scope: 1 match (sidechain only)"
+n=$(count_skill_invocations "$FIX/skill-invocations.jsonl" "grill-me")
+assert_eq "1" "$n"
+
+set_test "count_skill_invocations grill-me at orchestrator scope: 0 (sidechain doesn't count)"
+n=$(count_skill_invocations "$FIX/skill-invocations.jsonl" "grill-me" "orchestrator")
+assert_eq "0" "$n"
+
+set_test "count_skill_invocations matches namespaced form via regex"
+n=$(count_skill_invocations "$FIX/skill-invocations.jsonl" "speckit-pro:grill-me")
+assert_eq "1" "$n"
+
+set_test "assert_skill_not_invoked grill-me at all scope FAILS (sidechain has it)"
+assert_exit_code 1 assert_skill_not_invoked "$FIX/skill-invocations.jsonl" "grill-me"
+
+set_test "assert_skill_not_invoked grill-me at orchestrator scope PASSES"
+assert_exit_code 0 assert_skill_not_invoked "$FIX/skill-invocations.jsonl" "grill-me" "orchestrator"
+
+set_test "assert_skill_invoked speckit.specify at orchestrator scope PASSES"
+assert_exit_code 0 assert_skill_invoked "$FIX/skill-invocations.jsonl" "speckit\\.specify" "orchestrator"
+
+set_test "single-dispatch fixture has 0 Skill invocations"
+n=$(extract_skill_invocations "$FIX/single-dispatch.jsonl" | jq 'length')
+assert_eq "0" "$n"
+
+set_test "assert_skill_not_invoked grill-me on single-dispatch PASSES (no Skill calls)"
+assert_exit_code 0 assert_skill_not_invoked "$FIX/single-dispatch.jsonl" "grill-me"
+
 test_summary
