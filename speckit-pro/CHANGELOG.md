@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.1...speckit-pro-v1.10.2) (2026-05-01)
+
+
+### Bug Fixes
+
+* address review — drop "top model" claim from phase-executor descriptions ([eb232a6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/eb232a665dc3a1cfed8f8593cc6a711e4adc7ec2))
+* **speckit-pro:** genericize phase-executor description for fallback installs ([#35](https://github.com/racecraft-lab/racecraft-plugins-public/issues/35)) ([eb232a6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/eb232a665dc3a1cfed8f8593cc6a711e4adc7ec2))
+
 ## [1.10.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.0...speckit-pro-v1.10.1) (2026-05-01)
 
 
