@@ -164,7 +164,7 @@ output=$( \
   "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
     "$SYNC_DEST_DIR" 2>&1 \
 )
-assert_not_contains "Plugin install is stale" "$output" "no stale-install message"
+assert_not_contains "$output" "Plugin install is stale" "no stale-install message"
 
 set_test "tmp-root sync skips with SPECKIT_SKIP_PLUGIN_SYNC=1"
 # Bump active install BACK to old version so a sync would trigger if not skipped.
@@ -175,7 +175,7 @@ output=$( \
   "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
     "$SYNC_DEST_DIR" 2>&1 \
 )
-assert_not_contains "Plugin install is stale" "$output" "no stale-install message when skipped"
+assert_not_contains "$output" "Plugin install is stale" "no stale-install message when skipped"
 unsynced_version=$(jq -r '.version' "$ACTIVE_INSTALL/.codex-plugin/plugin.json")
 set_test "active install is not modified when sync is skipped"
 assert_eq "0.0.1" "$unsynced_version" "active install version preserved"
@@ -184,8 +184,36 @@ set_test "tmp-root sync skips when tmp root is absent"
 NO_ROOT="$TMP_ROOT/does-not-exist"
 output=$( \
   SPECKIT_MARKETPLACE_TMP_ROOT="$NO_ROOT" \
-  "$SCRIPT" "$TMP_ROOT/codex-agents-norott" 2>&1 \
+  "$SCRIPT" "$TMP_ROOT/codex-agents-noroot" 2>&1 \
 )
-assert_not_contains "Plugin install is stale" "$output" "no stale-install message when tmp root missing"
+assert_not_contains "$output" "Plugin install is stale" "no stale-install message when tmp root missing"
+
+# Active install at v99.0.0, marketplace at v1.10.2 — sync must NOT run
+# (would be a downgrade). Reuses ACTIVE_INSTALL/TMP_MARKETPLACE_ROOT
+# from earlier in the section.
+set_test "tmp-root sync refuses to downgrade when active is newer than marketplace"
+printf '{"version":"99.0.0"}\n' > "$ACTIVE_INSTALL/.codex-plugin/plugin.json"
+printf '{"version":"1.10.2"}\n' > "$TMP_MARKETPLACE_ROOT/.codex-plugin/plugin.json"
+output=$( \
+  SPECKIT_MARKETPLACE_TMP_ROOT="$TMP_MARKETPLACE_ROOT" \
+  "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
+    "$SYNC_DEST_DIR" 2>&1 \
+)
+assert_not_contains "$output" "Plugin install is stale" "no stale-install message on downgrade attempt"
+
+set_test "active install version preserved when downgrade refused"
+preserved=$(jq -r '.version' "$ACTIVE_INSTALL/.codex-plugin/plugin.json")
+assert_eq "99.0.0" "$preserved" "active install version preserved against downgrade"
+
+# Use sort -V semver semantics: 1.10.2 > 1.9.10 (NOT lex-sort 1.10.2 < 1.9.10).
+set_test "tmp-root sync uses sort -V semver semantics (1.10.2 > 1.9.10)"
+printf '{"version":"1.9.10"}\n' > "$ACTIVE_INSTALL/.codex-plugin/plugin.json"
+printf '{"version":"1.10.2"}\n' > "$TMP_MARKETPLACE_ROOT/.codex-plugin/plugin.json"
+output=$( \
+  SPECKIT_MARKETPLACE_TMP_ROOT="$TMP_MARKETPLACE_ROOT" \
+  "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
+    "$SYNC_DEST_DIR" 2>&1 \
+)
+assert_contains "$output" "Synced active plugin install to 1.10.2"
 
 test_summary

@@ -78,10 +78,15 @@ That meant after every release, users had to manually
 `rsync -a` the tmp root over the active install before running
 this skill, or the skill would copy stale agent templates.
 
-As of v1.10.x this skill does the sync itself: when the active
-install version is older than the marketplace tmp root, the
-installer rsyncs the tmp root onto the active install before
-copying agent templates. This makes the standard refresh flow:
+As of v1.10.x this skill does the sync itself: when the
+marketplace tmp root carries a **strictly newer version** (per
+`sort -V`, which orders semver-style versions correctly so
+`1.10.2 > 1.9.10`) than the active install, the installer rsyncs
+the tmp root onto the active install before copying agent
+templates. The check is one-directional — if the active install
+happens to be newer than the tmp root (e.g., a local hot-fix), no
+sync runs and no downgrade happens. This makes the standard
+refresh flow:
 
 ```
 codex plugin marketplace upgrade racecraft-plugins-public
@@ -89,11 +94,22 @@ codex plugin marketplace upgrade racecraft-plugins-public
 # Restart Codex
 ```
 
-Override with `SPECKIT_SKIP_PLUGIN_SYNC=1` if you are developing
-against a local plugin checkout you don't want overwritten, or set
-`SPECKIT_MARKETPLACE_TMP_ROOT=/path/to/source` to point at a
-different source. The sync is also skipped when `jq` or `rsync`
-are unavailable (a `cp -Rf` fallback is used if rsync is missing).
+Sync is **skipped** when:
+
+- `SPECKIT_SKIP_PLUGIN_SYNC=1` is set (escape hatch for plugin
+  developers working against a local checkout they don't want
+  overwritten).
+- `jq` is not on `PATH` (no version comparison possible).
+- The marketplace tmp root is absent (plugin installed via a
+  non-marketplace path).
+- The marketplace tmp root is not strictly newer than the active
+  install.
+
+`SPECKIT_MARKETPLACE_TMP_ROOT=/path/to/source` overrides the
+default marketplace tmp path for testing or non-default layouts.
+
+If `rsync` is missing, the installer **falls back** to `cp -Rf`
+rather than skipping the sync.
 
 ## Hard Constraints
 

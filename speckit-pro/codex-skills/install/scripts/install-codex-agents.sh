@@ -89,18 +89,25 @@ if [ "$SKIP_PLUGIN_SYNC" != "1" ] \
    && command -v jq >/dev/null 2>&1; then
   TMP_VERSION=$(jq -r '.version // empty' "$MARKETPLACE_TMP_ROOT/.codex-plugin/plugin.json" 2>/dev/null || true)
   ACTIVE_VERSION=$(jq -r '.version // empty' "$PLUGIN_ROOT/.codex-plugin/plugin.json" 2>/dev/null || true)
+  # Only sync when the marketplace carries a STRICTLY NEWER version (per
+  # `sort -V`, which handles semver-style 1.10.2 > 1.9.10 correctly). A
+  # naive `!=` check would let an older marketplace ref clobber a newer
+  # active install — never what the user wants.
   if [ -n "$TMP_VERSION" ] && [ -n "$ACTIVE_VERSION" ] && [ "$TMP_VERSION" != "$ACTIVE_VERSION" ]; then
-    printf 'Plugin install is stale (active=%s, marketplace=%s). Syncing...\n' \
-      "$ACTIVE_VERSION" "$TMP_VERSION"
-    if command -v rsync >/dev/null 2>&1; then
-      # No --delete: orphan files in the active install are harmless,
-      # accidental data loss from --delete is not.
-      rsync -a "$MARKETPLACE_TMP_ROOT/" "$PLUGIN_ROOT/"
-    else
-      cp -Rf "$MARKETPLACE_TMP_ROOT/." "$PLUGIN_ROOT/"
+    NEWER=$(printf '%s\n%s\n' "$TMP_VERSION" "$ACTIVE_VERSION" | sort -V | tail -n1)
+    if [ "$NEWER" = "$TMP_VERSION" ]; then
+      printf 'Plugin install is stale (active=%s, marketplace=%s). Syncing...\n' \
+        "$ACTIVE_VERSION" "$TMP_VERSION"
+      if command -v rsync >/dev/null 2>&1; then
+        # No --delete: orphan files in the active install are harmless,
+        # accidental data loss from --delete is not.
+        rsync -a "$MARKETPLACE_TMP_ROOT/" "$PLUGIN_ROOT/"
+      else
+        cp -Rf "$MARKETPLACE_TMP_ROOT/." "$PLUGIN_ROOT/"
+      fi
+      PLUGIN_SYNCED=1
+      printf 'Synced active plugin install to %s.\n' "$TMP_VERSION"
     fi
-    PLUGIN_SYNCED=1
-    printf 'Synced active plugin install to %s.\n' "$TMP_VERSION"
   fi
 fi
 
