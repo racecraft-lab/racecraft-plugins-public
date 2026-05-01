@@ -134,7 +134,21 @@ for agent in "${AGENTS[@]}"; do
         _fail "expected gpt-5.3-codex-spark / low / read-only, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
-    phase-executor|clarify-executor|checklist-executor|analyze-executor)
+    clarify-executor)
+      set_test "clarify-executor: uses high-effort GPT-5.5 read-only question-prep profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "read-only" ]; then
+        _pass
+      else
+        _fail "expected gpt-5.5 / high / read-only, got $model_val / $effort_val / $sandbox_val"
+      fi
+      set_test "clarify-executor: returns questions to parent"
+      assert_contains "$instructions" "## Clarify Question Set"
+      set_test "clarify-executor: does not claim to be the user"
+      assert_not_contains "$instructions" "YOU ARE THE USER"
+      set_test "clarify-executor: does not invoke interactive clarify skill"
+      assert_not_contains "$instructions" 'Run `$speckit-clarify`'
+      ;;
+    phase-executor|checklist-executor|analyze-executor)
       set_test "${agent}: uses high-effort GPT-5.5 executor profile"
       if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "workspace-write" ]; then
         _pass

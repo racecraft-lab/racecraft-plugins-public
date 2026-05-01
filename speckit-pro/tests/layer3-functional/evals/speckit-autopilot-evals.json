@@ -123,12 +123,13 @@
     {
       "id": 11,
       "prompt": "Run autopilot on docs/ai/specs/SPEC-009-workflow.md. The Clarify phase has hit ambiguity that the consensus protocol can't resolve — both consensus rounds returned [HUMAN REVIEW NEEDED]. Should you escalate by invoking the grill-me skill to interview me one question at a time?",
-      "expected_output": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to fail the gate and surface to the user — not escalate to grill-me. Continues running the rest of the autopilot loop or fails out gracefully, but does not call Skill('grill-me') under any circumstance.",
+      "expected_output": "Refuses to invoke grill-me. Explains that grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response to unresolvable ambiguity is to use the Clarify Question Set plus consensus flow, then fail the gate or surface the issue to the user if consensus cannot resolve it. It does not call Skill('grill-me') under any circumstance.",
       "expectations": [
         "Explicitly states that grill-me is human-in-the-loop only and forbidden inside autopilot",
-        "Mentions that /speckit.clarify with the consensus protocol is the only sanctioned clarification mechanism inside autopilot",
+        "Mentions that the clarify-executor returns questions to the parent orchestrator for answering and artifact edits",
+        "Mentions that consensus handles questions the parent cannot resolve confidently",
         "Does NOT call Skill('grill-me') or any grill-me-related tool, even when asked directly",
-        "Either fails the gate gracefully and surfaces to the user, or continues with non-clarify phases",
+        "Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications",
         "References that grill-me lives at the pre-workflow stage (via /speckit-pro:setup or /speckit-pro:grill-me), not the autopilot stage"
       ]
     },
@@ -202,6 +203,20 @@
         "Re-invokes consensus-synthesizer with all 3 responses for Round 2",
         "Applies 2-of-3 majority rule for the final answer",
         "Records Outcome=escape-hatch in the Consensus Resolution Log (counts toward the 10% Round-2 rate metric)"
+      ]
+    },
+    {
+      "id": 18,
+      "prompt": "The clarify-executor just returned a 'Clarify Question Set' with three questions, recommended answers, evidence, suggested artifact updates, and one '[codebase]' item under 'Unresolved for consensus'. Who answers those questions and who edits spec.md? Should the clarify-executor continue running /speckit.clarify until it has applied the answers?",
+      "expected_output": "Explains the parent-answering Clarify contract: clarify-executor is read-only and returns questions plus recommendations to the parent orchestrator. The parent answers the questions, applies accepted edits to spec/workflow/state artifacts, checks markers, and routes unresolved tagged items through consensus. The clarify-executor must not keep running an interactive clarify command or edit spec.md.",
+      "expectations": [
+        "States that clarify-executor is read-only question preparation",
+        "States that the parent orchestrator answers returned questions in the main session",
+        "States that the parent orchestrator applies accepted edits to spec.md and workflow/state artifacts",
+        "States that clarify-executor must not invoke the interactive /speckit.clarify command",
+        "States that clarify-executor must not edit spec.md",
+        "Routes the [codebase] unresolved item through the consensus protocol",
+        "Mentions marker checks after accepted clarifications are applied"
       ]
     }
   ]

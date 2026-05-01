@@ -5,22 +5,25 @@ Workflow:
 
 1. Dispatch `clarify-executor` with this prompt: "Treat
    `speckit-pro/tests/layer7-integration/dispatch-fixtures/03-redelegation-chain/sample-spec.md`
-   as the target feature spec. Identify ambiguities that need
-   clarification, and report unresolved items with category tags
-   following the consensus protocol."
+   as the target feature spec. Prepare a Clarify Question Set:
+   identify ambiguities that need clarification, recommend answers
+   with evidence, and report unresolved items with category tags
+   following the consensus protocol. Do not edit files."
 
 2. WAIT for `clarify-executor` to return.
 
-3. Read its response. It will contain unresolved items tagged like
-   `[codebase, domain]`. For each unresolved item, dispatch the
-   matching analyst(s) in Round 1.
+3. Read its response. The parent orchestrator answers returned
+   questions and applies accepted clarifications. If the response
+   contains unresolved items tagged like `[codebase, domain]`, dispatch
+   the matching analyst(s) in Round 1.
 
 4. WAIT for analysts to return.
 
 5. Dispatch `consensus-synthesizer` with the analyst outputs.
 
 This exercises the redelegation chain: orchestrator → clarify-executor →
-back to orchestrator → analysts → back to orchestrator → synthesizer.
+back to orchestrator for answering/applying → analysts → back to
+orchestrator → synthesizer.
 The key behavior under test is that the orchestrator REGAINS control
 between subagent calls and routes the next dispatch based on what
 the previous subagent returned.

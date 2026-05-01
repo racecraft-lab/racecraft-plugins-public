@@ -91,7 +91,7 @@ pattern:
 
    > "grill-me is human-in-the-loop only and could not confirm an
    > interactive runtime. The autopilot's Clarify phase uses
-   > /speckit.clarify, not grill-me. Aborting."
+   > the Clarify Question Set plus consensus, not grill-me. Aborting."
 
    Do not run any interview. Do not write any file.
 
