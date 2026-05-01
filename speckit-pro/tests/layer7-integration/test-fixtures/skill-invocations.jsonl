@@ -1,0 +1,5 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_skill_orch","name":"Skill","input":{"skill":"speckit.specify","args":"target.md"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_skill_orch","content":"specify done"}]}}
+{"type":"assistant","isSidechain":true,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_skill_inner","name":"Skill","input":{"skill":"speckit-pro:grill-me","args":"interview"}}]}}
+{"type":"result","subtype":"success"}

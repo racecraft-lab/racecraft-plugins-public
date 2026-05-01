@@ -1,0 +1,22 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item, originally
+tagged `[codebase]`. Round 1 has just completed and the
+codebase-analyst's response contained an escape-hatch keyword:
+
+```
+Round 1 result for "Should we extend the existing rate-limiter
+middleware or write a new one for the new endpoint?":
+
+  codebase-analyst response:
+  "**No precedent** found in the codebase. There is no existing
+   rate-limiter middleware to extend. I cannot give a confident
+   recommendation from codebase patterns alone."
+```
+
+Per the consensus protocol, the escape-hatch keyword "no precedent"
+triggers Round 2: dispatch the remaining analysts (domain-researcher
+and spec-context-analyst) to obtain a broader view.
+
+Use the Agent tool to dispatch domain-researcher and
+spec-context-analyst. Do not synthesize. Do not write files.

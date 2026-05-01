@@ -1,0 +1,22 @@
+{
+  "fixture_id": "01-autopilot-minimal-smoke",
+  "purpose": "Verify the autopilot's full dispatch graph for phases G0-G3 has the right shape: phase-executor dispatched per phase, optional clarify-executor and consensus path, no grill-me, no forbidden subagent-spawning.",
+  "must_dispatch_to": [
+    "speckit-pro:phase-executor"
+  ],
+  "must_dispatch_to_at_least_one_of": [
+    "speckit-pro:phase-executor"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me",
+    "speckit-pro:implement-executor",
+    "speckit-pro:analyze-executor"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 2,
+  "max_dispatch_count": 12,
+  "dispatch_order_constraints": [],
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

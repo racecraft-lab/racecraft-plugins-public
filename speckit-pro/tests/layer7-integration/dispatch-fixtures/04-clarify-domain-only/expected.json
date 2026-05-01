@@ -1,0 +1,18 @@
+{
+  "fixture_id": "04-clarify-domain-only",
+  "purpose": "Verify [domain] tag routes Round 1 dispatch to domain-researcher only.",
+  "must_dispatch_to": [
+    "speckit-pro:domain-researcher"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:codebase-analyst",
+    "speckit-pro:spec-context-analyst",
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 1,
+  "max_dispatch_count": 2,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

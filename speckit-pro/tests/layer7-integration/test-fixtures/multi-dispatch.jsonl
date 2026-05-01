@@ -1,0 +1,6 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01A","name":"Agent","input":{"description":"Codebase","name":"cba","prompt":"Look at patterns","subagent_type":"speckit-pro:codebase-analyst"}},{"type":"tool_use","id":"toolu_01B","name":"Agent","input":{"description":"Domain","name":"dr","prompt":"Look at standards","subagent_type":"speckit-pro:domain-researcher"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01A","content":"## Codebase findings"},{"type":"tool_result","tool_use_id":"toolu_01B","content":"## Domain findings"}]}}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_01C","name":"Agent","input":{"description":"Synth","name":"syn","prompt":"Synthesize","subagent_type":"speckit-pro:consensus-synthesizer"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_01C","content":"## Decision: bcrypt"}]}}
+{"type":"result","subtype":"success"}

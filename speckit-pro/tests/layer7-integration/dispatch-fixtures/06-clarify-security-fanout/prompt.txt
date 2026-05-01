@@ -1,0 +1,14 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item:
+
+```
+[security] Q1: Should session tokens be stored in HttpOnly cookies or
+in localStorage with a 15-minute TTL?
+```
+
+Per the consensus protocol's defense-in-depth rule, `[security]` tags
+ALWAYS dispatch to all three analysts (codebase-analyst,
+domain-researcher, spec-context-analyst) regardless of which other
+categories appear. Use the Agent tool to dispatch all three. Do not
+synthesize. Do not write files.

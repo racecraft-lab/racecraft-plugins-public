@@ -1,0 +1,29 @@
+{
+  "fixture_id": "01-synthesizer-reads-analysts",
+  "purpose": "Verify the consensus-synthesizer can parse analyst markdown and emit a structured decision artifact.",
+  "must_dispatch_to": [
+    "speckit-pro:consensus-synthesizer"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "response_assertions": [
+    {
+      "subagent_type": "speckit-pro:consensus-synthesizer",
+      "must_contain_any": [
+        "bcrypt",
+        "argon2"
+      ],
+      "rationale": "Synthesizer must reference at least one of the analyst-cited options"
+    },
+    {
+      "subagent_type": "speckit-pro:consensus-synthesizer",
+      "must_contain_section_keywords": [
+        "agreement",
+        "confidence"
+      ],
+      "rationale": "Synthesizer's standard format includes Agreement (the 2-of-3 status) and Confidence sections per the consensus protocol — these are stable across all decision/no-decision branches."
+    }
+  ],
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}
