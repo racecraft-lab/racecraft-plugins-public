@@ -81,7 +81,7 @@ real-time human interaction:
 If either check fails, **abort immediately** with this message:
 
 > "grill-me is human-in-the-loop only. The autopilot's Clarify phase
-> uses /speckit.clarify, not grill-me. Aborting."
+> uses the Clarify Question Set plus consensus, not grill-me. Aborting."
 
 Do not write any file. Do not call `AskUserQuestion`. Just abort.
 
@@ -201,7 +201,7 @@ A subagent inside `/speckit-pro:autopilot` (e.g., the clarify-executor) tries to
 Actions:
 1. Self-check at activation detects agent context (or AskUserQuestion unavailable)
 2. Abort immediately — do NOT call AskUserQuestion, do NOT write any file
-3. Emit: *"grill-me is human-in-the-loop only. The autopilot's Clarify phase uses /speckit.clarify, not grill-me. Aborting."*
+3. Emit: *"grill-me is human-in-the-loop only. The autopilot's Clarify phase uses the Clarify Question Set plus consensus, not grill-me. Aborting."*
 
 Result: Nothing written. Caller surfaces the ambiguity to the orchestrator, which fails the gate.
 
