@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.0...speckit-pro-v1.10.1) (2026-05-01)
+
+
+### Bug Fixes
+
+* **speckit-pro:** bump phase-executor to top model + high effort for Specify/Plan reasoning ([#33](https://github.com/racecraft-lab/racecraft-plugins-public/issues/33)) ([60f1409](https://github.com/racecraft-lab/racecraft-plugins-public/commit/60f1409ae6b9390f544d80590cf8938c9566eaa7))
+* **speckit-pro:** trim Codex grill-me description to fit context budget ([#32](https://github.com/racecraft-lab/racecraft-plugins-public/issues/32)) ([0ac226e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0ac226e8bcc34acade37e39f9a409eb88d9977b6))
+
 ## [1.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.9.1...speckit-pro-v1.10.0) (2026-05-01)
 
 
