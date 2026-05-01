@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.2...speckit-pro-v1.10.3) (2026-05-01)
+
+
+### Bug Fixes
+
+* **speckit-pro:** install skill auto-syncs active plugin from marketplace tmp root ([#37](https://github.com/racecraft-lab/racecraft-plugins-public/issues/37)) ([e11226c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e11226c932d89119e9abdb2f4b63747a3a3cbdb9))
+
 ## [1.10.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.1...speckit-pro-v1.10.2) (2026-05-01)
 
 
