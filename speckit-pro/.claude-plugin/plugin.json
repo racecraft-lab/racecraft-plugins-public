@@ -1,7 +1,7 @@
 {
   "name": "speckit-pro",
   "description": "Autonomous Spec-Driven Development powered by GitHub SpecKit. Includes archive-aware autopilot startup, SDD coaching, multi-spec project management, and a fully autonomous workflow executor with multi-agent clarification consensus.",
-  "version": "1.10.1",
+  "version": "1.10.2",
   "author": {
     "name": "Fredrick Gabelmann"
   },
