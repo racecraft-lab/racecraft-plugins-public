@@ -206,7 +206,7 @@ Each phase type has its own specialized executor agent:
 
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
-| Specify, Plan, Tasks | `phase-executor` | Simple: run command, return summary |
+| Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
 | Clarify | `clarify-executor` | Interactive: must research and answer questions |
 | Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |

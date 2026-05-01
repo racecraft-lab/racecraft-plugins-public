@@ -21,6 +21,7 @@ EXPECTED_AGENTS=(
 )
 
 GPT55_AGENTS=(
+  phase-executor.toml
   clarify-executor.toml
   checklist-executor.toml
   analyze-executor.toml
@@ -104,7 +105,7 @@ printf 'Files:\n'
 for agent in "${EXPECTED_AGENTS[@]}"; do
   printf '  - %s\n' "$agent"
 done
-printf 'Model policy: %s for executor/consensus agents, gpt-5.4-mini for phase-executor, Spark helper optional.\n' "$TARGET_MODEL"
+printf 'Model policy: %s for every executor and consensus agent (phase-executor included); Spark helper optional on gpt-5.3-codex-spark.\n' "$TARGET_MODEL"
 if [ "$TARGET_MODEL" = "gpt-5.4" ]; then
   printf 'Fallback mode: installed templates were rewritten for GPT-5.4 compatibility.\n'
 fi
