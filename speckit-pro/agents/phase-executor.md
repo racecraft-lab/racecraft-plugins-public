@@ -3,10 +3,15 @@ name: phase-executor
 description: >
   Executes a single SpecKit phase by running the /speckit.* command
   via the Skill tool. Use when the autopilot needs to run Specify,
-  Plan, or Tasks phases — simple phases that don't require research,
-  consensus, or iterative remediation. Returns a concise summary of
-  files created, metrics, markers found, and errors.
-model: sonnet
+  Plan, or Tasks. Specify and Plan are heavy architectural-reasoning
+  phases per the official SpecKit docs — this agent runs on the top
+  model at high reasoning effort so the produced spec.md and plan.md
+  reflect that depth. Tasks is mechanical decomposition and runs on
+  the same configuration for consistency. No iterative remediation
+  or consensus — those patterns live in clarify/checklist/analyze
+  executors. Returns a concise summary of files created, metrics,
+  markers found, and errors.
+model: opus
 color: cyan
 tools:
   - Skill
@@ -18,7 +23,7 @@ tools:
   - Glob
 permissionMode: acceptEdits
 maxTurns: 50
-effort: low
+effort: high
 ---
 
 # Phase Executor

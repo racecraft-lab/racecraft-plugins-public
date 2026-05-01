@@ -140,9 +140,9 @@ set_test "phase-executor effort field exists"
 effort=$(extract_field "$AGENT_FILE" "effort")
 assert_not_contains "" "$effort" "effort must not be empty"
 
-set_test "phase-executor effort is low"
+set_test "phase-executor effort is high"
 effort=$(extract_field "$AGENT_FILE" "effort")
-assert_eq "low" "$effort"
+assert_eq "high" "$effort"
 
 # ===========================================================================
 # clarify-executor
@@ -482,29 +482,11 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
 
       model=$(extract_toml_field "$AGENT_FILE" "model")
       effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
-      case "$agent" in
-        phase-executor)
-          set_test "codex ${agent}: model is gpt-5.4-mini"
-          assert_eq "gpt-5.4-mini" "$model" "${agent} must use gpt-5.4-mini"
+      set_test "codex ${agent}: model is gpt-5.5"
+      assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
-          set_test "codex ${agent}: reasoning is low"
-          assert_eq "low" "$effort" "${agent} must use low reasoning"
-          ;;
-        implement-executor)
-          set_test "codex ${agent}: model is gpt-5.5"
-          assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
-
-          set_test "codex ${agent}: reasoning is high"
-          assert_eq "high" "$effort" "${agent} must use high reasoning"
-          ;;
-        *)
-          set_test "codex ${agent}: model is gpt-5.5"
-          assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
-
-          set_test "codex ${agent}: reasoning is high"
-          assert_eq "high" "$effort" "${agent} must use high reasoning"
-          ;;
-      esac
+      set_test "codex ${agent}: reasoning is high"
+      assert_eq "high" "$effort" "${agent} must use high reasoning"
     fi
   done
 

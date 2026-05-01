@@ -105,8 +105,8 @@ for agent in "${GPT55_AGENTS[@]}"; do
 done
 
 phase_content=$(cat "$FALLBACK_DEST_DIR/phase-executor.toml")
-set_test "fallback install preserves phase-executor mini model"
-assert_contains "$phase_content" 'model = "gpt-5.4-mini"'
+set_test "fallback install rewrites phase-executor to gpt-5.4"
+assert_contains "$phase_content" 'model = "gpt-5.4"'
 
 spark_content=$(cat "$FALLBACK_DEST_DIR/autopilot-fast-helper.toml")
 set_test "fallback install preserves Spark helper model"

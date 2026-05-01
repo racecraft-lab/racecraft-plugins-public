@@ -54,13 +54,20 @@ TOML file per custom agent, with required `name`, `description`, and
 `developer_instructions` fields plus Codex config such as `model`,
 `model_reasoning_effort`, and `sandbox_mode`.
 
-The bundled model policy is tiered: execution-critical and consensus
-agents use `gpt-5.5`, `phase-executor` stays on the fast
-`gpt-5.4-mini` profile, and `autopilot-fast-helper` remains optional
-on `gpt-5.3-codex-spark`. If `gpt-5.5` is not available in the
-current Codex environment, install with `--model gpt-5.4` or set
-`SPECKIT_CODEX_MODEL=gpt-5.4`; the installer rewrites only the
-executor and consensus agent copies in the destination directory.
+The bundled model policy: every execution and consensus agent runs
+on `gpt-5.5`. Reasoning effort is tuned per role — `high` for the
+phases the official GitHub SpecKit docs flag as heavy (Specify, Plan,
+Clarify, Checklist remediation, Analyze, Implement) and `medium` for
+the read-heavy consensus analysts. `phase-executor` runs at `high`
+effort because it owns Specify and Plan, which the SpecKit docs
+describe as heavy architectural reasoning. `autopilot-fast-helper`
+is the only exception: it stays on `gpt-5.3-codex-spark` at `low`
+effort for tiny advisory text-only prep, never for SDD reasoning.
+
+If `gpt-5.5` is not available in the current Codex environment,
+install with `--model gpt-5.4` or set `SPECKIT_CODEX_MODEL=gpt-5.4`;
+the installer rewrites only the executor and consensus agent copies
+in the destination directory.
 
 ## Hard Constraints
 
