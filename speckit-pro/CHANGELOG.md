@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.9.1...speckit-pro-v1.10.0) (2026-05-01)
+
+
+### Features
+
+* **speckit-pro:** add Layer 7 integration tests for multi-agent dispatch graph ([#30](https://github.com/racecraft-lab/racecraft-plugins-public/issues/30)) ([85a6d6e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/85a6d6ea391e9d58671fab263be1a092e1acb31b))
+* **speckit-pro:** integrate Grill Me skill into /setup with Codex parity ([#26](https://github.com/racecraft-lab/racecraft-plugins-public/issues/26)) ([39836be](https://github.com/racecraft-lab/racecraft-plugins-public/commit/39836beac9ae548ca8c5b21e385ac16609d6dfe3))
+
 ## [1.9.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.9.0...speckit-pro-v1.9.1) (2026-04-29)
 
 
