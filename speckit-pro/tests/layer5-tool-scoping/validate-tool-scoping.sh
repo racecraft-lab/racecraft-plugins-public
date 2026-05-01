@@ -152,14 +152,19 @@ section "clarify-executor"
 AGENT_FILE="$AGENTS_DIR/clarify-executor.md"
 TOOLS=$(extract_tools "$AGENT_FILE")
 
-for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
+for tool in Read Bash Grep Glob WebSearch WebFetch; do
   set_test "clarify-executor has $tool"
   assert_tool_present "$TOOLS" "$tool" "clarify-executor"
 done
 
-set_test "clarify-executor permissionMode is acceptEdits"
+for tool in Skill Write Edit; do
+  set_test "clarify-executor does NOT have $tool"
+  assert_tool_absent "$TOOLS" "$tool" "clarify-executor"
+done
+
+set_test "clarify-executor permissionMode is plan"
 mode=$(extract_field "$AGENT_FILE" "permissionMode")
-assert_eq "acceptEdits" "$mode"
+assert_eq "plan" "$mode"
 
 set_test "clarify-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
@@ -454,8 +459,8 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
 
   section "Codex Agent Sandbox Mode Scoping"
 
-  # Read-only analysts must have sandbox_mode: read-only
-  for agent in codebase-analyst spec-context-analyst domain-researcher; do
+  # Read-only analysts and question-prep agents must have sandbox_mode: read-only
+  for agent in codebase-analyst spec-context-analyst domain-researcher clarify-executor; do
     AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
     if [ -f "$AGENT_FILE" ]; then
       sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")
@@ -467,13 +472,18 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
       assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
       effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
-      set_test "codex ${agent}: reasoning is medium"
-      assert_eq "medium" "$effort" "${agent} must use medium reasoning"
+      if [ "$agent" = "clarify-executor" ]; then
+        set_test "codex ${agent}: reasoning is high"
+        assert_eq "high" "$effort" "${agent} must use high reasoning"
+      else
+        set_test "codex ${agent}: reasoning is medium"
+        assert_eq "medium" "$effort" "${agent} must use medium reasoning"
+      fi
     fi
   done
 
   # Write agents must have sandbox_mode: workspace-write
-  for agent in clarify-executor checklist-executor analyze-executor implement-executor phase-executor; do
+  for agent in checklist-executor analyze-executor implement-executor phase-executor; do
     AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
     if [ -f "$AGENT_FILE" ]; then
       sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")

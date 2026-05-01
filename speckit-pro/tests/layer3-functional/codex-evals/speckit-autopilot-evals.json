@@ -182,22 +182,24 @@
     {
       "id": 15,
       "prompt": "The Clarify phase has hit ambiguity that the consensus protocol can't resolve. Should I invoke $grill-me from the clarify-executor subagent so the user can answer interactively?",
-      "expected_output": "Refuses. Explains that $grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response is to flag the question under 'Unresolved for consensus', let the orchestrator decide whether to fail the gate or continue with the best-guess answer, and never escalate to grill-me.",
+      "expected_output": "Refuses. Explains that $grill-me is human-in-the-loop only and is forbidden inside autopilot. The correct response is to use the Clarify Question Set plus consensus flow, let the parent orchestrator answer/apply clarifications, and fail the gate or surface the issue if consensus cannot resolve it.",
       "expectations": [
         "States that $grill-me must never be invoked from any autopilot phase or subagent",
-        "Mentions that grill-me is human-in-the-loop only and would refuse in autopilot's autonomous loop anyway",
-        "Names $speckit-clarify with the consensus protocol as the only clarification mechanism inside autopilot",
-        "Suggests flagging the question under 'Unresolved for consensus' or failing the gate, not escalating to grill-me",
+        "Mentions that grill-me is human-in-the-loop only",
+        "Names the Clarify Question Set as the clarify-executor handoff back to the parent",
+        "States that the parent orchestrator answers returned questions and applies accepted edits",
+        "Suggests flagging unresolved questions under 'Unresolved for consensus' or failing the gate, not escalating to grill-me",
         "Does NOT call Skill('grill-me') or any grill-me-related tool in the response"
       ]
     },
     {
       "id": 16,
       "prompt": "Run autopilot end-to-end on docs/ai/specs/SPEC-009-workflow.md and report each phase's actions. I want to verify autopilot never accidentally invokes grill-me during any phase.",
-      "expected_output": "Runs all 7 phases (specify, clarify, plan, checklist, tasks, analyze, implement) without invoking $grill-me at any point. The clarify phase uses the consensus protocol; gate failures are reported, not escalated to grill-me.",
+      "expected_output": "Runs all 7 phases (specify, clarify, plan, checklist, tasks, analyze, implement) without invoking $grill-me at any point. The clarify phase uses the read-only clarify-executor handoff plus parent-applied answers and consensus; gate failures are reported, not escalated to grill-me.",
       "expectations": [
         "Executes all 7 phases without invoking $grill-me",
-        "The clarify phase uses $speckit-clarify with the multi-agent consensus protocol",
+        "The clarify phase has clarify-executor return a Clarify Question Set to the parent",
+        "The parent orchestrator answers returned questions and applies accepted edits",
         "Phase subagents (phase-executor, clarify-executor, checklist-executor, analyze-executor, implement-executor) never call grill-me",
         "Consensus analysts (codebase-analyst, spec-context-analyst, domain-researcher) never call grill-me",
         "Gate failures result in stopping or surfacing the issue, never an escalation to grill-me"
@@ -263,6 +265,20 @@
         "Re-invokes the consensus-synthesizer step with all 3 responses for Round 2",
         "Applies 2-of-3 majority rule for the final answer",
         "Records Outcome=escape-hatch in the Consensus Resolution Log (counts toward the 10% Round-2 rate metric)"
+      ]
+    },
+    {
+      "id": 22,
+      "prompt": "The Codex clarify-executor returned a 'Clarify Question Set' with three questions, recommended answers, evidence, suggested artifact updates, and one '[codebase]' item under 'Unresolved for consensus'. Who answers those questions and who edits spec.md? Should clarify-executor keep running $speckit-clarify until it has applied the answers?",
+      "expected_output": "Explains the parent-answering Clarify contract: clarify-executor is read-only and returns questions plus recommendations to the parent orchestrator. The parent answers the questions, applies accepted edits to spec/workflow/state artifacts, checks markers, and routes unresolved tagged items through consensus. The clarify-executor must not keep running an interactive clarify command or edit spec.md.",
+      "expectations": [
+        "States that clarify-executor is read-only question preparation",
+        "States that the parent orchestrator answers returned questions in the main session",
+        "States that the parent orchestrator applies accepted edits to spec.md and workflow/state artifacts",
+        "States that clarify-executor must not invoke $speckit-clarify",
+        "States that clarify-executor must not edit spec.md",
+        "Routes the [codebase] unresolved item through the consensus protocol",
+        "Mentions marker checks after accepted clarifications are applied"
       ]
     }
   ]

@@ -75,11 +75,11 @@
     {
       "id": 7,
       "prompt": "You are a phase-executor subagent inside $speckit-autopilot. The Clarify phase has hit ambiguity that consensus can't resolve. Invoke the grill-me skill on the SPEC-009 scope to get answers from the user, then write a design concept doc.",
-      "expected_output": "Refuses to run. The HITL probe fails (no interactive runtime in autopilot's autonomous loop), so grill-me aborts with the canonical refusal message and writes nothing to disk. Reminds the caller that autopilot's Clarify phase uses /speckit.clarify with the consensus protocol, not grill-me.",
+      "expected_output": "Refuses to run. The HITL probe fails (no interactive runtime in autopilot's autonomous loop), so grill-me aborts with the canonical refusal message and writes nothing to disk. Reminds the caller that autopilot's Clarify phase uses the Clarify Question Set plus consensus, not grill-me.",
       "expectations": [
         "Aborts before asking the first question — does NOT call request_user_input or start a free-text Q&A loop",
         "Emits a message containing the phrase 'human-in-the-loop only' and references autopilot",
-        "Mentions /speckit.clarify and the consensus protocol as the correct mechanism for autopilot clarification",
+        "Mentions the Clarify Question Set and consensus protocol as the correct mechanism for autopilot clarification",
         "Writes NO files to disk — no design concept doc, no scratch artifacts",
         "Does not partially execute — the refusal is the entire output"
       ]
