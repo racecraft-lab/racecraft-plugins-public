@@ -8,6 +8,9 @@ Treat that file as the input feature spec. This is an L7 integration
 smoke test, not a full autopilot run. Stop after the Plan phase (G3)
 completes. Do NOT proceed to Tasks, Implement, Analyze, or Validate.
 
-Use the standard phase agents (phase-executor, clarify-executor) and
-the consensus dispatch protocol if Clarify surfaces unresolved items.
+Use the standard phase agents (phase-executor, clarify-executor). The
+Clarify phase should have clarify-executor return a Clarify Question Set
+to the parent orchestrator, then the parent applies accepted answers and
+uses the consensus dispatch protocol if Clarify surfaces unresolved
+items.
 Do not invoke `grill-me` (HITL forbidden inside autopilot).

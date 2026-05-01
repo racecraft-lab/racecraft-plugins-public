@@ -89,6 +89,20 @@ for agent in "${AGENTS[@]}"; do
   else
     _fail "system prompt is only $body_len chars (need > 20)"
   fi
+
+  if [ "$agent" = "clarify-executor" ]; then
+    set_test "clarify-executor: returns questions to parent"
+    assert_contains "$body" "## Clarify Question Set"
+
+    set_test "clarify-executor: does not claim to be the user"
+    assert_not_contains "$body" "YOU ARE THE USER"
+
+    set_test "clarify-executor: does not forbid returning questions"
+    assert_not_contains "$body" "Do NOT present questions back"
+
+    set_test "clarify-executor: does not invoke interactive clarify skill"
+    assert_not_contains "$body" "Use the Skill tool to run"
+  fi
 done
 
 test_summary

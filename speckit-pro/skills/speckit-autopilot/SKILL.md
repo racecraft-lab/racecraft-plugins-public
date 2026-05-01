@@ -154,7 +154,7 @@ Each phase type has its own specialized executor agent:
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
 | Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
-| Clarify | `clarify-executor` | Interactive: must research and answer questions |
+| Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
 | Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
 | Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
@@ -198,33 +198,39 @@ CORRECT (Clarify with 2 sessions):
   1. TaskUpdate: "Clarify - Session 1" → in_progress
   2. Agent(subagent_type: "clarify-executor",
           prompt: "<session 1 prompt>")
-     The clarify-executor researches and answers all questions
-  3. Grep spec.md for [NEEDS CLARIFICATION] markers
-  4. If markers remain → use context_builder to resolve
-  5. TaskUpdate: "Clarify - Session 1" → completed
-  6. TaskUpdate: "Clarify - Session 2" → in_progress
-  7. Agent(subagent_type: "clarify-executor",
+     The clarify-executor returns questions and recommendations
+  3. Parent answers returned questions and applies accepted edits
+  4. Grep spec.md for [NEEDS CLARIFICATION] markers
+  5. If markers remain → use consensus routing to resolve
+  6. TaskUpdate: "Clarify - Session 1" → completed
+  7. TaskUpdate: "Clarify - Session 2" → in_progress
+  8. Agent(subagent_type: "clarify-executor",
           prompt: "<session 2 prompt>")
-  8. Grep spec.md for [NEEDS CLARIFICATION] markers
-  9. If markers remain → use context_builder to resolve
-  10. TaskUpdate: "Clarify - Session 2" → completed
-  11. Validate G2 gate (0 markers remaining)
-  12. Advance to Plan
+  9. Parent answers returned questions and applies accepted edits
+  10. Grep spec.md for [NEEDS CLARIFICATION] markers
+  11. If markers remain → use consensus routing to resolve
+  12. TaskUpdate: "Clarify - Session 2" → completed
+  13. Validate G2 gate (0 markers remaining)
+  14. Advance to Plan
 
 WRONG:
   1. Run all sessions, then check for markers at the end
   2. Or skip sessions and do your own analysis
 ```
 
-### 5. Clarify — executor answers autonomously
+### 5. Clarify — executor returns questions to parent
 
-The `clarify-executor` invokes `/speckit.clarify` and answers
-all questions itself using research tools (web search, library docs,
-codebase exploration — uses Tavily, Context7, RepoPrompt when
-available, falls back to built-in WebSearch, WebFetch, Grep/Glob/Read).
-After it returns, check for
-remaining `[NEEDS CLARIFICATION]` markers and resolve via
-consensus if needed (see Rule 6).
+The `clarify-executor` is read-only. It does not invoke
+`/speckit.clarify`, does not wait on a user, and does not edit
+artifacts. It inspects the workflow prompt, feature spec, and repo
+evidence, then returns a `Clarify Question Set` containing up to 5
+prioritized questions, recommended answers, evidence, and suggested
+artifact updates.
+
+The parent orchestrator answers the returned questions in the main
+session, applies the spec/workflow/state edits, then checks for
+remaining `[NEEDS CLARIFICATION]` markers and resolves unresolved
+items via consensus if needed (see Rule 6).
 
 ### 6. Two-layer resolution with category-routed consensus
 
@@ -232,16 +238,15 @@ After EACH executor subagent returns for a consensus phase
 (Clarify, Checklist, Analyze), run a two-layer resolution
 process BEFORE spawning the next subagent.
 
-**Layer 1 — Executor does direct research:** The executor
-agent (clarify-executor, checklist-executor,
-analyze-executor) researches using web search, library docs,
-and codebase exploration (Tavily, Context7, RepoPrompt when
-available, built-in WebSearch, WebFetch, Grep/Glob/Read
-otherwise). It resolves most items directly and applies fixes
-to artifacts. Items it can't resolve are flagged in its
-"Unresolved for consensus" summary section, **each prefixed
-with one or more category tags** (`[codebase]`, `[spec]`,
-`[domain]`, `[security]`, `[ambiguous]`).
+**Layer 1 — Executor prepares evidence:** Clarify is different
+from Checklist and Analyze. The `clarify-executor` returns questions
+and recommendations to the parent; the parent answers and applies
+accepted edits. `checklist-executor` and `analyze-executor` still
+resolve most items directly and apply fixes to artifacts. Any item
+that needs further resolution is flagged in an "Unresolved for
+consensus" summary section, **each prefixed with one or more category
+tags** (`[codebase]`, `[spec]`, `[domain]`, `[security]`,
+`[ambiguous]`).
 
 **Layer 2 — Category-routed consensus** (Tier A, see
 `references/consensus-protocol.md`): For EACH unresolved item,
@@ -708,7 +713,7 @@ Agent(
 | Phase | subagent_type | Prefix |
 | ----- | ------------- | ------ |
 | Specify | `phase-executor` | Branch-aware (if ON_FEATURE_BRANCH) |
-| Clarify | `clarify-executor` | Interactive (ALWAYS) |
+| Clarify | `clarify-executor` | Parent answers question set |
 | Plan | `phase-executor` | None |
 | Checklist | `checklist-executor` | None |
 | Tasks | `phase-executor` | None |
@@ -731,15 +736,16 @@ All other phases use `check-prerequisites.sh` →
 `get_current_branch()` which detects the worktree branch
 automatically. No prefix needed.
 
-#### Clarify — Autonomous Answering Prefix
+#### Clarify — Parent Answering Prefix
 
-The `/speckit.clarify` command is interactive — it surfaces
-questions and expects answers. The clarify-executor invokes
-the command and answers autonomously. Its agent definition
-contains strong override instructions telling it to research
-and answer every question immediately without waiting for
-human input. No additional prefix needed in the prompt —
-just pass the session prompt from the workflow file.
+The `clarify-executor` is a read-only question-preparation agent.
+It returns a `Clarify Question Set` to the parent instead of invoking
+the interactive `/speckit.clarify` command or editing artifacts. The
+parent orchestrator answers each returned question in the main session,
+applies the accepted clarifications to the spec/workflow/state files,
+then runs marker checks and consensus routing for unresolved items.
+No additional prefix is needed in the prompt — just pass the session
+prompt from the workflow file.
 
 #### Multi-Prompt Phases
 
