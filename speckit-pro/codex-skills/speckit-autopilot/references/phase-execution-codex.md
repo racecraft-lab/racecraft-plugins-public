@@ -18,7 +18,7 @@ all seven SDD phases, and Post before any subagent is spawned.
 | Phase | Agent | Prompt prefix |
 | ----- | ----- | ------------- |
 | Specify | `phase-executor` | `Run $speckit-specify with:` |
-| Clarify | `clarify-executor` | `Run $speckit-clarify with:` |
+| Clarify | `clarify-executor` | `Prepare a Clarify Question Set for:` |
 | Plan | `phase-executor` | `Run $speckit-plan with:` |
 | Checklist | `checklist-executor` | `Run $speckit-checklist with:` |
 | Tasks | `phase-executor` | `Run $speckit-tasks with:` |
