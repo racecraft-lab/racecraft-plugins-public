@@ -134,15 +134,7 @@ for agent in "${AGENTS[@]}"; do
         _fail "expected gpt-5.3-codex-spark / low / read-only, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
-    phase-executor)
-      set_test "phase-executor: uses fast Codex worker profile"
-      if [ "$model_val" = "gpt-5.4-mini" ] && [ "$effort_val" = "low" ] && [ "$sandbox_val" = "workspace-write" ]; then
-        _pass
-      else
-        _fail "expected gpt-5.4-mini / low / workspace-write, got $model_val / $effort_val / $sandbox_val"
-      fi
-      ;;
-    clarify-executor|checklist-executor|analyze-executor)
+    phase-executor|clarify-executor|checklist-executor|analyze-executor)
       set_test "${agent}: uses high-effort GPT-5.5 executor profile"
       if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "workspace-write" ]; then
         _pass
