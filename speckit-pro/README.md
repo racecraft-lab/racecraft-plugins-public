@@ -72,7 +72,7 @@ Then in Claude Code or Codex:
 | Capability | Claude Code | Codex |
 |---|---|---|
 | SDD coaching | `/speckit-pro:coach` | `/speckit-coach` or `$speckit-coach` |
-| Iterative scoping interview | `/speckit-pro:grill-me` | `$grill-me` (or natural-language trigger like "grill me on this brief") |
+| Iterative scoping interview | `/speckit-pro:grill-me` | `$grill-me` or select `Grill Me` from `@SpecKit Pro` |
 | Spec setup (worktree + workflow file) | `/speckit-pro:setup` | `/speckit-setup` or `$speckit-setup` |
 | Autopilot (7 SDD phases → PR) | `/speckit-pro:autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
 | Project status + next-spec recommendation | `/speckit-pro:status` | `/speckit-status` or `$speckit-status` |
