@@ -1,0 +1,18 @@
+{
+  "fixture_id": "02-clarify-multi-category",
+  "purpose": "Verify that a [codebase, domain] tag routes Round 1 dispatch to BOTH codebase-analyst and domain-researcher.",
+  "must_dispatch_to": [
+    "speckit-pro:codebase-analyst",
+    "speckit-pro:domain-researcher"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:spec-context-analyst",
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 2,
+  "max_dispatch_count": 3,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

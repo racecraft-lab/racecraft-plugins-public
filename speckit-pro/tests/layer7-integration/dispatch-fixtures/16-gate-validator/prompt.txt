@@ -1,0 +1,10 @@
+You are speckit-autopilot. The Specify phase has just completed for
+SPEC-FIXTURE-GATE. Per the autopilot architecture, gate validation
+runs between phases via the `gate-validator` agent.
+
+Dispatch gate-validator with the prompt: "Validate gate G1 for
+SPEC-FIXTURE-GATE: confirm spec.md exists, has the required sections,
+and is free of [NEEDS CLARIFICATION] markers."
+
+Use the Agent tool with subagent_type "speckit-pro:gate-validator".
+Stop after the subagent returns. Do not run any other phase.

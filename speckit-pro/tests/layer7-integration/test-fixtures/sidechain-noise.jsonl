@@ -1,0 +1,6 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_orch","name":"Agent","input":{"description":"Phase","name":"p","prompt":"x","subagent_type":"speckit-pro:phase-executor"}}]}}
+{"type":"assistant","isSidechain":true,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_inner_bash","name":"Bash","input":{"command":"ls"}}]}}
+{"type":"assistant","isSidechain":true,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_inner_read","name":"Read","input":{"file_path":"/x"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_orch","content":"done"}]}}
+{"type":"result","subtype":"success"}

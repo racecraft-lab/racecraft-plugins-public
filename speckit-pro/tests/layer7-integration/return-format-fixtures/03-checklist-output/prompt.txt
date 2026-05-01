@@ -1,0 +1,15 @@
+You are speckit-autopilot. After the Plan phase, you need to run the
+"completeness" checklist domain. Dispatch `checklist-executor` with
+this prompt:
+
+"Run /speckit.checklist completeness against this plan summary, then
+remediate any [Gap] markers found. Plan summary:
+
+  Feature: --quiet flag for the CLI
+  Approach: add flag, wrap output in quiet-mode guard, write 2 tests.
+
+Return a structured summary with: domain, run-status, gaps-found,
+gaps-remediated, remaining-gaps, and citations for each remediation."
+
+Use the Agent tool with subagent_type "speckit-pro:checklist-executor".
+Stop after the subagent returns. Do not run any other phase.

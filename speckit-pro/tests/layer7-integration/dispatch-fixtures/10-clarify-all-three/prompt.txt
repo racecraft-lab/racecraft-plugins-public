@@ -1,0 +1,15 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item:
+
+```
+[codebase, domain, spec] Q1: Should we serialize timestamps as Unix
+epoch milliseconds (existing codebase convention), RFC 3339 strings
+(industry default), or whatever the constitution specifies (if
+anything)?
+```
+
+Per the consensus protocol, this is an explicit all-three fan-out.
+Dispatch codebase-analyst, domain-researcher, and spec-context-analyst
+in Round 1. Use the Agent tool, once per analyst. Do not synthesize.
+Do not write files.

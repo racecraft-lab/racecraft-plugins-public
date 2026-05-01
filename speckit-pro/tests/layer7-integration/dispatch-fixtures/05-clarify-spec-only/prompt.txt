@@ -1,0 +1,18 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item:
+
+```
+[spec] Q1: Should the new feature follow the project constitution's
+"reversible writes" principle, or is the constitution silent on this
+case? (No external best-practice signal applies; this is purely a
+project-decision question.)
+```
+
+Per the consensus protocol, dispatch the appropriate analyst(s) for
+the [spec] tag. Use the Agent tool with subagent_type set to the
+analyst name. Do not summarize or simulate — actually invoke the
+Agent tool.
+
+Stop after the dispatch round completes. Do not synthesize. Do not
+write files.

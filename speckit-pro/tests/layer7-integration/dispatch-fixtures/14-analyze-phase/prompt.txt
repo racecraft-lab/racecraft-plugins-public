@@ -1,0 +1,10 @@
+You are speckit-autopilot. The Implement phase has completed for
+SPEC-FIXTURE-ANALYZE. The next phase is Analyze.
+
+Per the autopilot phase mapping, Analyze uses `analyze-executor`
+which "must run analysis AND remediate ALL findings with research."
+
+Dispatch analyze-executor with the prompt: "Run /speckit.analyze for
+SPEC-FIXTURE-ANALYZE and remediate findings at every severity level."
+Use the Agent tool with subagent_type "speckit-pro:analyze-executor".
+Stop after the subagent returns. Do not run any other phase.

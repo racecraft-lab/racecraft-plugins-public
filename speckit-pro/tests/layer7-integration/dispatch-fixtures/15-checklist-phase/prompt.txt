@@ -1,0 +1,13 @@
+You are speckit-autopilot. After the Plan phase, autopilot runs a
+Checklist phase per domain (testability, completeness, etc.).
+
+Per the autopilot phase mapping, Checklist uses `checklist-executor`
+which "must run checklist AND remediate gaps with research."
+
+For SPEC-FIXTURE-CHECKLIST, dispatch checklist-executor for the
+"testability" domain. Use the Agent tool with subagent_type
+"speckit-pro:checklist-executor" and a prompt that says: "Run
+/speckit.checklist testability for SPEC-FIXTURE-CHECKLIST and
+remediate any [Gap] markers found."
+
+Stop after the subagent returns. Do not run any other phase.

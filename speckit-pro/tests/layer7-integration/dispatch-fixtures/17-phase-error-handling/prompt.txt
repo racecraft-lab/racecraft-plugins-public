@@ -1,0 +1,23 @@
+You are speckit-autopilot. You just dispatched phase-executor for
+the Plan phase of SPEC-FIXTURE-ERROR. The phase-executor returned this:
+
+```
+**Phase result: FAIL**
+
+Errors encountered:
+- /speckit.plan command failed: spec.md is missing the "Goals"
+  section, which the Plan command requires as input.
+- The plan.md file was NOT created.
+
+Recommended next action: re-run Specify or have the user complete
+the spec, then retry Plan.
+```
+
+Per the autopilot error-handling protocol, you MUST NOT blindly
+retry the same phase. Surface the error and either:
+(a) dispatch the appropriate remediation phase (e.g., re-run Specify
+    via phase-executor with a corrective prompt), OR
+(b) stop and report the blocking issue.
+
+Pick (a) or (b) and execute it. Use the Agent tool only if option (a).
+Do not call grill-me. Do not write files outside dispatching agents.
