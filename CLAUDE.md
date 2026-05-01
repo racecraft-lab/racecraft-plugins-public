@@ -57,6 +57,10 @@ bash tests/run-all.sh --layer 5   # Agent tool scoping
 # Layers 2 & 3 (AI evals — require skill-creator plugin and claude -p)
 bash tests/layer2-trigger/run-trigger-evals.sh speckit-coach
 bash tests/layer2-trigger/run-trigger-evals.sh speckit-autopilot
+
+# Layer 7 — multi-agent dispatch graph (replay = free, live = $$)
+bash tests/run-all.sh --integration         # all 3 classes, replay
+bash tests/run-all.sh --integration --live  # all 3 classes, live
 ```
 
 ### Test Layers
@@ -68,10 +72,13 @@ bash tests/layer2-trigger/run-trigger-evals.sh speckit-autopilot
 | 4 – Script unit | Shell script logic (validate-gate, detect-commands, etc.) | Fast |
 | 5 – Tool scoping | Agent tool list restrictions | Fast |
 | 6 – Efficiency | Agent model/effort cost-quality benchmarks | Slow (AI) |
+| 7 – Integration | Multi-agent dispatch graph (Class 1 dispatch / Class 2 return-format / Class 3 e2e). Replay mode is free; live mode runs `claude -p` and costs LLM tokens. | Fast (replay) / Slow (live) |
 
 Layer 2/3 evals require `skill-creator` plugin at `$SKILL_CREATOR_ROOT` (default: `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator`). Layers 2, 3, and 6 all require `claude -p` and are developer-local only.
 
 Layer 6 evals use `speckit-pro/tests/layer6-efficiency/run-efficiency-benchmarks.sh` and require `claude -p`.
+
+Layer 7 fixtures live under `speckit-pro/tests/layer7-integration/`. Replay mode parses committed `transcript.jsonl` files (parser regression test); `--live` mode invokes `claude -p` and captures fresh transcripts (real routing test). See `tests/layer7-integration/README.md` for fixture format and assertion philosophy.
 
 ## speckit-pro Plugin
 

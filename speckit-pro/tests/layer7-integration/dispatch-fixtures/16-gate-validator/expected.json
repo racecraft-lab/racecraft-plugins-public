@@ -1,0 +1,18 @@
+{
+  "fixture_id": "16-gate-validator",
+  "purpose": "Verify gate-validator is dispatchable as its own subagent (not absorbed into a phase agent).",
+  "must_dispatch_to": [
+    "speckit-pro:gate-validator"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:phase-executor",
+    "speckit-pro:clarify-executor",
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 1,
+  "max_dispatch_count": 2,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

@@ -1,0 +1,13 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item:
+
+```
+[ambiguous] Q1: Should the new metrics emitter use Prometheus
+exposition format or OpenTelemetry OTLP?
+```
+
+Per the consensus protocol, `[ambiguous]` tags ALWAYS fan out to all
+three analysts because the routing perspective is uncertain. Use the
+Agent tool to dispatch codebase-analyst, domain-researcher, and
+spec-context-analyst. Do not synthesize. Do not write files.

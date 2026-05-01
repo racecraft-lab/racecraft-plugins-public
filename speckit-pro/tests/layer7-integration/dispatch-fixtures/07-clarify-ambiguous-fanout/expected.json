@@ -1,0 +1,18 @@
+{
+  "fixture_id": "07-clarify-ambiguous-fanout",
+  "purpose": "Verify [ambiguous] tag triggers full fan-out to all 3 analysts.",
+  "must_dispatch_to": [
+    "speckit-pro:codebase-analyst",
+    "speckit-pro:domain-researcher",
+    "speckit-pro:spec-context-analyst"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 3,
+  "max_dispatch_count": 4,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

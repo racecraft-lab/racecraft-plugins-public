@@ -1,0 +1,16 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item:
+
+```
+[codebase, domain] Q1: Should we hash passwords with bcrypt (matching the
+existing pattern in src/auth/) or migrate to argon2id (industry-current
+recommendation)?
+```
+
+Per the consensus protocol, dispatch ALL analysts whose category appears
+in the tag. Use the Agent tool with subagent_type for each. Do not
+summarize or simulate — actually invoke the Agent tool, once per analyst.
+
+Stop after Round 1 dispatch completes. Do not synthesize. Do not write
+files. This is a routing-only test.
