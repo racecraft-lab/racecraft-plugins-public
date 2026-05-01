@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.10.4](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.3...speckit-pro-v1.10.4) (2026-05-01)
+
+
+### Bug Fixes
+
+* **agents:** return clarify questions to orchestrator ([#40](https://github.com/racecraft-lab/racecraft-plugins-public/issues/40)) ([a474701](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a4747010cc7a53af1e9e8bf01a95d312e8b97af5))
+* **speckit-pro:** make codex clarify parent-owned ([52ac32c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/52ac32cb96f650c94a59f508cf4f7aa571969bed))
+
 ## [1.10.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.2...speckit-pro-v1.10.3) (2026-05-01)
 
 
