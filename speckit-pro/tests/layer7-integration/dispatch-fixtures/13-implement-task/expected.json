@@ -1,0 +1,15 @@
+{
+  "fixture_id": "13-implement-task",
+  "purpose": "Verify the Implement phase dispatches implement-executor (per-task TDD routing).",
+  "must_dispatch_to": ["speckit-pro:implement-executor"],
+  "must_not_dispatch_to": [
+    "speckit-pro:phase-executor",
+    "speckit-pro:clarify-executor",
+    "speckit-pro:checklist-executor",
+    "speckit-pro:analyze-executor",
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 1,
+  "max_dispatch_count": 2
+}

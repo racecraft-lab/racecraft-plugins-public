@@ -1,0 +1,37 @@
+{
+  "fixture_id": "02-autopilot-extended-pipeline",
+  "purpose": "Verify the full dispatch graph for the standard SpecKit phase order: every phase agent type is dispatched at least once, in the canonical order (Specify → Clarify → Plan → Checklist → Tasks → Analyze → Implement).",
+  "must_dispatch_to": [
+    "speckit-pro:phase-executor",
+    "speckit-pro:clarify-executor",
+    "speckit-pro:checklist-executor",
+    "speckit-pro:analyze-executor",
+    "speckit-pro:implement-executor"
+  ],
+  "must_not_dispatch_to": ["speckit-pro:grill-me"],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 7,
+  "max_dispatch_count": 14,
+  "dispatch_order_constraints": [
+    {
+      "before": "speckit-pro:phase-executor",
+      "after": "speckit-pro:clarify-executor",
+      "reason": "Specify (phase-executor) precedes Clarify"
+    },
+    {
+      "before": "speckit-pro:clarify-executor",
+      "after": "speckit-pro:checklist-executor",
+      "reason": "Clarify precedes Checklist"
+    },
+    {
+      "before": "speckit-pro:checklist-executor",
+      "after": "speckit-pro:analyze-executor",
+      "reason": "Checklist precedes Analyze (G4 → G6)"
+    },
+    {
+      "before": "speckit-pro:analyze-executor",
+      "after": "speckit-pro:implement-executor",
+      "reason": "Analyze precedes Implement (G6 → G7) — this is the order the workflow template canonicalizes"
+    }
+  ]
+}

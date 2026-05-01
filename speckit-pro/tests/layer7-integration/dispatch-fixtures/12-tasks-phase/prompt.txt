@@ -1,0 +1,12 @@
+You are speckit-autopilot. The Plan phase has completed and produced
+a populated plan.md for SPEC-FIXTURE-TASKS at:
+
+  speckit-pro/tests/layer7-integration/dispatch-fixtures/12-tasks-phase/sample-spec.md
+
+Per the autopilot phase mapping, the Tasks phase is dispatched to
+`phase-executor` (it's a "simple: run command, return summary"
+phase). Dispatch phase-executor with the prompt to run /speckit.tasks
+on the provided spec.
+
+Use the Agent tool with subagent_type "speckit-pro:phase-executor".
+Stop after the subagent returns. Do not invoke any other phase.

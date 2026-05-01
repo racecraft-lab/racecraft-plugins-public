@@ -1,0 +1,45 @@
+You are running speckit-autopilot's consensus synthesis stage.
+
+Round 1 has completed with three analyst outputs that AGREE on the
+recommendation. Dispatch `consensus-synthesizer` with these inputs and
+have it produce its standard decision artifact in the 2-of-3 majority
+case.
+
+---
+ANALYST OUTPUT 1 — codebase-analyst:
+
+## Codebase findings (codebase-analyst)
+- Existing pattern: `JSON.stringify` is the universal serializer in
+  `src/api/serializer.ts:8` for outbound payloads.
+- No alternative serializer is referenced in the codebase.
+
+**Recommendation:** use JSON for the new endpoint.
+**Confidence:** high.
+
+---
+ANALYST OUTPUT 2 — domain-researcher:
+
+## Domain findings (domain-researcher)
+- JSON is the de-facto industry standard for HTTP APIs in 2025.
+- MessagePack and Protobuf exist but require explicit content
+  negotiation; neither is the default for first-party REST APIs.
+
+**Recommendation:** use JSON for the new endpoint.
+**Confidence:** high.
+
+---
+ANALYST OUTPUT 3 — spec-context-analyst:
+
+## Spec findings (spec-context-analyst)
+- The project constitution mandates JSON for all public APIs (section
+  3.2: "Wire formats").
+
+**Recommendation:** use JSON.
+**Confidence:** high.
+
+---
+
+All three analysts agree (3/3 majority). Dispatch
+`consensus-synthesizer` so it can emit its decision artifact for the
+agreement case. Stop after the synthesizer returns. Do not write
+files.

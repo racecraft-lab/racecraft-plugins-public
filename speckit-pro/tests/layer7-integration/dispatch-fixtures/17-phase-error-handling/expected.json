@@ -1,0 +1,8 @@
+{
+  "fixture_id": "17-phase-error-handling",
+  "purpose": "Verify the orchestrator handles phase-executor errors per protocol: never retries blindly, never escalates to grill-me, either re-dispatches with a corrective prompt or stops cleanly.",
+  "must_not_dispatch_to": ["speckit-pro:grill-me"],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 0,
+  "max_dispatch_count": 2
+}

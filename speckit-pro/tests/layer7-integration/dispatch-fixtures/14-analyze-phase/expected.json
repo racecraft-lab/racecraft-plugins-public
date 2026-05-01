@@ -1,0 +1,14 @@
+{
+  "fixture_id": "14-analyze-phase",
+  "purpose": "Verify the Analyze phase dispatches analyze-executor (not phase-executor — Analyze is a remediation-loop phase, not a simple-command phase).",
+  "must_dispatch_to": ["speckit-pro:analyze-executor"],
+  "must_not_dispatch_to": [
+    "speckit-pro:phase-executor",
+    "speckit-pro:implement-executor",
+    "speckit-pro:checklist-executor",
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 1,
+  "max_dispatch_count": 2
+}

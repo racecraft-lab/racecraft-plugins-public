@@ -28,6 +28,79 @@ These are all **dispatch graph** failures. Layer 7 exists to catch them.
 | **2 — Return-format fixtures** | Verify cross-agent parsing — one agent's output is parseable by its consumer | `run-return-format-fixtures.sh` |
 | **3 — End-to-end fixtures** | Verify the dispatch graph for a real autopilot run has the expected shape | `run-e2e-fixtures.sh` |
 
+## Coverage matrix
+
+L7 covers every named subagent and every routing branch in
+`/speckit-pro:autopilot`. The fixtures are organized by what they
+exercise:
+
+### Consensus routing (Class 1, fixtures 01–11)
+
+| Fixture | Routing tag | Expected dispatch |
+|---|---|---|
+| 01 | `[codebase]` | codebase-analyst |
+| 02 | `[codebase, domain]` | codebase-analyst + domain-researcher |
+| 03 | `[codebase, domain]` (in clarify→analyst chain) | redelegation chain |
+| 04 | `[domain]` | domain-researcher |
+| 05 | `[spec]` | spec-context-analyst |
+| 06 | `[security]` | all 3 (defense-in-depth) |
+| 07 | `[ambiguous]` | all 3 (uncertainty fan-out) |
+| 08 | `[codebase, spec]` | codebase-analyst + spec-context-analyst |
+| 09 | `[domain, spec]` | domain-researcher + spec-context-analyst |
+| 10 | `[codebase, domain, spec]` | all 3 (explicit fan-out) |
+| 11 | Round 1 escape-hatch | Round 2 fans out remaining analysts |
+
+### Phase agents (Class 1, fixtures 12–16)
+
+| Fixture | Phase | Expected agent |
+|---|---|---|
+| 12 | Tasks | phase-executor |
+| 13 | Implement (per task) | implement-executor |
+| 14 | Analyze | analyze-executor |
+| 15 | Checklist (per domain) | checklist-executor |
+| 16 | Gate validation | gate-validator |
+
+### Failure paths (Class 1, fixture 17)
+
+| Fixture | Scenario |
+|---|---|
+| 17 | Phase-executor returns error → orchestrator does not retry blindly, does not escalate to grill-me |
+
+### Cross-agent parsing (Class 2, fixtures 01–03)
+
+| Fixture | Cross-agent flow |
+|---|---|
+| 01 | analysts disagree → synthesizer emits no-majority result |
+| 02 | analysts agree → synthesizer emits majority decision |
+| 03 | checklist-executor output → orchestrator parses gaps + remediations |
+
+### End-to-end (Class 3, fixtures 01–02)
+
+| Fixture | Phases covered | Default budget |
+|---|---|---|
+| 01 | G0–G3 (Specify → Clarify → Plan) | $5 |
+| 02 | G0–G6 (Specify → Clarify → Plan → Tasks → Implement → Analyze) | $10 |
+
+### Subagents reached
+
+Every named subagent appears in at least one fixture:
+
+- ✅ `phase-executor` — fixtures 12, 16 (gate); E2E 01, 02
+- ✅ `clarify-executor` — fixture 03 (redelegation); E2E 01, 02
+- ✅ `checklist-executor` — fixture 15; Class 2 fixture 03
+- ✅ `analyze-executor` — fixture 14; E2E 02
+- ✅ `implement-executor` — fixture 13; E2E 02
+- ✅ `codebase-analyst` — fixtures 01, 02, 03, 06, 07, 08, 10
+- ✅ `domain-researcher` — fixtures 02, 03, 04, 06, 07, 09, 10, 11
+- ✅ `spec-context-analyst` — fixtures 05, 06, 07, 08, 09, 10, 11
+- ✅ `consensus-synthesizer` — Class 2 fixtures 01, 02
+- ✅ `gate-validator` — fixture 16
+
+### What is asserted negative on every fixture
+
+- `grill-me` is never dispatched (HITL boundary)
+- No subagent spawns another `Agent()` (Anthropic constraint)
+
 ## Two execution modes
 
 Each runner supports two modes:
@@ -115,6 +188,34 @@ is in the dispatch set") survive that variance.
 If you find yourself wanting an exact match, ask whether L3 functional
 evals would catch it instead. L7 is for the dispatch graph; L3 is for
 agent behavior.
+
+## Live-mode side effects (read this before running `--live`)
+
+`--live` invocations spawn real subagents that may produce real
+artifacts in the working directory. Observed examples:
+
+- `phase-executor` running the Tasks phase has been observed writing
+  a real `tasks.md` next to the fixture's `sample-spec.md`.
+- `implement-executor` doing a TDD cycle has been observed writing
+  test files into the project's actual test directory.
+- `phase-executor` invoked with a "re-run Specify with corrective
+  prompt" instruction (fixture 17 error-handling path) has been
+  observed creating a real `specs/00X-...` directory.
+
+These artifacts are not part of the committed fixture set. Before
+running `--live`:
+
+1. Commit or stash any unrelated work.
+2. After the run, review `git status` for unexpected new files and
+   `git clean -fd` (or selectively delete) the side-effect artifacts.
+3. Or run from an isolated git worktree (recommended for the
+   `02-autopilot-extended-pipeline` fixture, which dispatches
+   implement-executor).
+
+The committed fixture transcripts capture only the dispatch graph
+(stream-json events) — not the side-effect files. So these artifacts
+have no influence on `--replay` results; they are purely working-tree
+litter from the live capture process.
 
 ## Cost guards
 

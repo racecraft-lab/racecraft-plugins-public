@@ -1,0 +1,16 @@
+You are speckit-autopilot in the Implement phase. The Tasks phase
+generated a tasks.md with this single task:
+
+```
+T001: Add --quiet flag to CLI parser. Write a failing test first
+(quiet mode suppresses output), then implement, then refactor.
+```
+
+Per the autopilot phase mapping, Implement uses **task-level
+dispatch** with TDD protocol — each task routes to `implement-executor`
+which performs red-green-refactor.
+
+Dispatch `implement-executor` for task T001 with the standard TDD
+prompt. Use the Agent tool with subagent_type
+"speckit-pro:implement-executor". Stop after the subagent returns.
+Do not run any other phase.
