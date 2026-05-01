@@ -190,7 +190,7 @@ CORRECT:
   7. Resolve the clarify runner:
      verify `clarify-executor` exists in `.codex/agents/` or `~/.codex/agents/`
   8. spawn_agent the resolved clarify runner with:
-     "Run $speckit-clarify with: ..."
+     "Prepare a Clarify Question Set for: ..."
   ...every step produces durable state and the loop never dies...
 
 WRONG:

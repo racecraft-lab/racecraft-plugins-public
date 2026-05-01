@@ -46,7 +46,7 @@ section "Fresh install"
 
 set_test "installer succeeds on empty destination"
 result=0
-output=$("$SCRIPT" "$DEST_DIR" 2>&1) || result=$?
+output=$(SPECKIT_SKIP_PLUGIN_SYNC=1 "$SCRIPT" "$DEST_DIR" 2>&1) || result=$?
 assert_eq "0" "$result" "exit code"
 
 set_test "installer output reports destination"
@@ -73,7 +73,7 @@ printf 'unrelated\n' > "$DEST_DIR/custom-user-agent.toml"
 
 set_test "refresh install succeeds on existing destination"
 result=0
-output=$("$SCRIPT" "$DEST_DIR" 2>&1) || result=$?
+output=$(SPECKIT_SKIP_PLUGIN_SYNC=1 "$SCRIPT" "$DEST_DIR" 2>&1) || result=$?
 assert_eq "0" "$result" "exit code"
 
 refreshed_content=$(cat "$DEST_DIR/analyze-executor.toml")
@@ -89,7 +89,7 @@ FALLBACK_DEST_DIR="$TMP_ROOT/codex-agents-fallback"
 
 set_test "fallback install succeeds with --model gpt-5.4"
 result=0
-output=$("$SCRIPT" "$FALLBACK_DEST_DIR" --model gpt-5.4 2>&1) || result=$?
+output=$(SPECKIT_SKIP_PLUGIN_SYNC=1 "$SCRIPT" "$FALLBACK_DEST_DIR" --model gpt-5.4 2>&1) || result=$?
 assert_eq "0" "$result" "exit code"
 
 set_test "fallback install reports gpt-5.4 model"
@@ -114,7 +114,7 @@ assert_contains "$spark_content" 'model = "gpt-5.3-codex-spark"'
 
 set_test "installer rejects unsupported model"
 result=0
-output=$("$SCRIPT" "$TMP_ROOT/bad-model" --model gpt-5.5-pro 2>&1) || result=$?
+output=$(SPECKIT_SKIP_PLUGIN_SYNC=1 "$SCRIPT" "$TMP_ROOT/bad-model" --model gpt-5.5-pro 2>&1) || result=$?
 assert_eq "2" "$result" "exit code"
 
 section "Marketplace tmp-root sync (Codex 0.125.x quirk workaround)"

@@ -482,6 +482,24 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
     fi
   done
 
+  # Read-only executor agents may still use high reasoning, but must not write.
+  for agent in clarify-executor; do
+    AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
+    if [ -f "$AGENT_FILE" ]; then
+      sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")
+      set_test "codex ${agent}: sandbox_mode is read-only"
+      assert_eq "read-only" "$sandbox" "${agent} must be read-only"
+
+      model=$(extract_toml_field "$AGENT_FILE" "model")
+      effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
+      set_test "codex ${agent}: model is gpt-5.5"
+      assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
+
+      set_test "codex ${agent}: reasoning is high"
+      assert_eq "high" "$effort" "${agent} must use high reasoning"
+    fi
+  done
+
   # Write agents must have sandbox_mode: workspace-write
   for agent in checklist-executor analyze-executor implement-executor phase-executor; do
     AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
