@@ -1,0 +1,4 @@
+{"type":"system","subtype":"init"}
+{"type":"assistant","isSidechain":false,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_a","name":"Agent","input":{"description":"x","name":"a","prompt":"x","subagent_type":"speckit-pro:phase-executor"}}]}}
+{"type":"assistant","isSidechain":true,"message":{"type":"message","role":"assistant","content":[{"type":"tool_use","id":"toolu_inner_agent","name":"Agent","input":{"description":"forbidden","name":"f","prompt":"x","subagent_type":"speckit-pro:codebase-analyst"}}]}}
+{"type":"result","subtype":"success"}

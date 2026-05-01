@@ -1,0 +1,35 @@
+You are running speckit-autopilot's consensus synthesis stage.
+
+Round 1 has completed. The analyst outputs below need synthesis into a
+single decision. Dispatch `consensus-synthesizer` with these inputs and
+have it produce its standard decision artifact.
+
+---
+ANALYST OUTPUT 1 — codebase-analyst:
+
+## Codebase findings (codebase-analyst)
+- Existing pattern: `bcrypt` is used in `src/auth/password.ts:14`
+  (cost factor 12) for legacy compatibility.
+- No reference to `argon2` anywhere in the codebase.
+
+**Recommendation:** stay on bcrypt for consistency.
+**Confidence:** medium.
+
+---
+ANALYST OUTPUT 2 — domain-researcher:
+
+## Domain findings (domain-researcher)
+- OWASP Password Storage Cheat Sheet (2024) recommends argon2id as
+  the default for new applications.
+- bcrypt remains acceptable but is no longer the OWASP-preferred default.
+
+**Recommendation:** prefer argon2id for new code paths.
+**Confidence:** high.
+
+---
+
+Dispatch `consensus-synthesizer` with both analyst outputs. The
+synthesizer must produce a structured decision in its standard format
+(decision, rationale, citations, confidence).
+
+Stop after the synthesizer returns. Do not write to disk.

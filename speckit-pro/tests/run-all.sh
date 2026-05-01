@@ -7,7 +7,9 @@
 #   tests/run-all.sh --layer 2    # Layer 2 only (prints Claude + Codex trigger eval commands)
 #   tests/run-all.sh --layer 3    # Layer 3 only (prints Claude + Codex functional eval commands)
 #   tests/run-all.sh --layer 6    # Layer 6 only (efficiency benchmarks, requires claude -p)
-#   tests/run-all.sh --all        # All 6 layers + live project tests
+#   tests/run-all.sh --integration         # Layer 7 only (replay; dispatch-graph fixtures)
+#   tests/run-all.sh --integration --live  # Layer 7 live (real LLM, costs $$)
+#   tests/run-all.sh --all        # All layers + live project tests
 #
 # Run from the project directory (e.g., racecraft-plugins-public/) so live tests
 # can access .specify/, specs/, and other SpecKit artifacts.
@@ -34,6 +36,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --live) RUN_LIVE=true; shift ;;
     --layer) RUN_LAYER="$2"; shift 2 ;;
+    --integration) RUN_LAYER="7"; shift ;;
     --all) RUN_ALL=true; RUN_LIVE=true; shift ;;
     --verbose) export VERBOSE=true; shift ;;
     *) echo "Unknown flag: $1"; exit 2 ;;
@@ -118,7 +121,7 @@ should_run() {
     [ "$RUN_LAYER" = "$layer" ]
   elif [ "$RUN_ALL" = "true" ]; then
     return 0
-  elif [ "$layer" = "2" ] || [ "$layer" = "3" ] || [ "$layer" = "6" ]; then
+  elif [ "$layer" = "2" ] || [ "$layer" = "3" ] || [ "$layer" = "6" ] || [ "$layer" = "7" ]; then
     return 1  # Skip expensive layers by default
   else
     return 0
@@ -210,6 +213,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-sync-marketplace-versions.sh"
     "$TESTS_DIR/layer4-scripts/test-parse-consensus-categories.sh"
     "$TESTS_DIR/layer4-scripts/test-aggregate-crl.sh"
+    "$TESTS_DIR/layer4-scripts/test-transcript-helpers.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then
@@ -279,6 +283,64 @@ if should_run 6; then
     printf "    ${BOLD}bash %s --agent gate-validator --sweep${RESET}\n" "$L6_SCRIPT"
   else
     printf "\n${YELLOW}Layer 6: SKIP — run-efficiency-benchmarks.sh not found${RESET}\n"
+  fi
+fi
+
+# ─────────────────────────────────────────
+# Layer 7: Integration Fixtures (dispatch graph)
+# ─────────────────────────────────────────
+
+if should_run 7; then
+  L7_RUNNER="$TESTS_DIR/layer7-integration/run-all-fixtures.sh"
+  if [ -f "$L7_RUNNER" ]; then
+    L7_FLAG=""
+    [ "$RUN_LIVE" = "true" ] && L7_FLAG="--live"
+
+    printf "\n${BOLD}${CYAN}Layer 7: Integration Fixtures${RESET}"
+    [ -n "$L7_FLAG" ] && printf " (live)"
+    printf "\n%s\n" "────────────────────────────────────────"
+
+    layer7_pass=0 layer7_fail=0
+    l7_exit=0
+    l7_output=$(bash "$L7_RUNNER" $L7_FLAG 2>&1) || l7_exit=$?
+    # Aggregate per-class summaries (each runner emits "name: X/Y passed")
+    while read -r summary; do
+      [ -z "$summary" ] && continue
+      passed=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f1)
+      total=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f2)
+      failed=$((total - passed))
+      layer7_pass=$((layer7_pass + passed))
+      layer7_fail=$((layer7_fail + failed))
+    done < <(echo "$l7_output" | grep -E '^run-(dispatch|return-format|e2e)-fixtures: ')
+
+    # Failsafes: if the runner crashed OR if no summaries were parsed
+    # for any reason (zero fixtures matched, summary-line format
+    # changed, etc.), count L7 as failed so the suite cannot report
+    # green without actually running assertions.
+    if [ "$layer7_pass" -eq 0 ] && [ "$layer7_fail" -eq 0 ]; then
+      layer7_fail=1
+      if [ "$l7_exit" -ne 0 ]; then
+        printf "  ${RED}FAIL${RESET} L7 runner crashed (exit %d, no summaries parsed)\n" "$l7_exit"
+      else
+        printf "  ${RED}FAIL${RESET} L7 produced no fixture summaries (zero pass + zero fail) — refusing to report green\n"
+      fi
+      echo "$l7_output" | tail -5 | while read -r line; do
+        printf "       %s\n" "$line"
+      done
+    elif [ "$layer7_fail" -eq 0 ] && [ "$layer7_pass" -gt 0 ]; then
+      printf "  ${GREEN}PASS${RESET} L7 (%d/%d)\n" "$layer7_pass" "$((layer7_pass + layer7_fail))"
+    else
+      printf "  ${RED}FAIL${RESET} L7 (%d/%d, %d failed)\n" \
+        "$layer7_pass" "$((layer7_pass + layer7_fail))" "$layer7_fail"
+      echo "$l7_output" | grep -E 'FAIL' | head -10 | while read -r line; do
+        printf "       %s\n" "$line"
+      done
+    fi
+    TOTAL_PASS=$((TOTAL_PASS + layer7_pass))
+    TOTAL_FAIL=$((TOTAL_FAIL + layer7_fail))
+    LAYER_RESULTS+=("L7: ${layer7_pass}/$((layer7_pass + layer7_fail))")
+  else
+    printf "\n${YELLOW}Layer 7: SKIP — run-all-fixtures.sh not found${RESET}\n"
   fi
 fi
 

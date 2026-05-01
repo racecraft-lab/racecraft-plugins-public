@@ -1,0 +1,14 @@
+You are running speckit-autopilot's consensus dispatch logic.
+
+A clarify-executor has returned this unresolved item:
+
+```
+[domain, spec] Q1: Should we adopt OpenAPI 3.1 (industry-current) or
+OpenAPI 3.0.3 (matching what the constitution standardized on for our
+existing services)?
+```
+
+Per the consensus protocol, dispatch ALL analysts whose category
+appears in the tag — domain-researcher (for [domain]) and
+spec-context-analyst (for [spec]). Use the Agent tool, once per
+analyst. Do not synthesize. Do not write files.

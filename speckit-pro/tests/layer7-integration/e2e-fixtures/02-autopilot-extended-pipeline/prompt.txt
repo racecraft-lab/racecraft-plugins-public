@@ -1,0 +1,47 @@
+You are the speckit-autopilot orchestrator playing back the standard
+phase pipeline for a tiny feature. Treat this file as the input feature
+spec (do not look elsewhere for it):
+
+  speckit-pro/tests/layer7-integration/e2e-fixtures/02-autopilot-extended-pipeline/sample-spec.md
+
+For this fixture run, manually dispatch each phase agent in the
+standard SpecKit order from the autopilot phase mapping. Each agent
+should produce a brief summary suitable as input for the next phase.
+Do NOT write artifacts to disk. Do NOT invoke grill-me. Do NOT run
+`/speckit-pro:autopilot` end-to-end (it does extensive preflight that
+is out of scope for this dispatch-graph test).
+
+Standard phase order to dispatch:
+
+1. **Specify** → `speckit-pro:phase-executor`
+   Prompt: "Produce a one-paragraph spec summary for the
+   is_palindrome feature based on the input spec. Return only the
+   summary."
+
+2. **Clarify** → `speckit-pro:clarify-executor`
+   Prompt: "Are there any [NEEDS CLARIFICATION] markers in the
+   spec? Return a one-line answer."
+
+3. **Plan** → `speckit-pro:phase-executor`
+   Prompt: "Produce a 3-bullet implementation plan. Return only the
+   bullets."
+
+4. **Checklist** → `speckit-pro:checklist-executor`
+   Prompt: "Run the testability checklist domain mentally and
+   return a one-line gap status."
+
+5. **Tasks** → `speckit-pro:phase-executor`
+   Prompt: "Produce a one-line task list (T001, T002, ...). Return
+   only the list."
+
+6. **Analyze** → `speckit-pro:analyze-executor`
+   Prompt: "Briefly assess whether the plan and tasks have
+   inconsistencies. Return a one-line answer."
+
+7. **Implement** → `speckit-pro:implement-executor`
+   Prompt: "For task T001, describe the failing test you would
+   write first under TDD. Return only the test name and one-line
+   description. Do not write code."
+
+Stop after the Implement dispatch returns. Each subagent should run
+once. Use the Agent tool for each dispatch.
