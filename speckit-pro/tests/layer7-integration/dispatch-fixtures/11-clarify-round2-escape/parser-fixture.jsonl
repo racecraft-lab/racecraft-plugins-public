@@ -1,0 +1,4 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-001","name":"Agent","input":{"subagent_type":"speckit-pro:domain-researcher","description":"Round 2 domain research","prompt":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-001","content":"Reduced parser fixture response for speckit-pro:domain-researcher"}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-002","name":"Agent","input":{"subagent_type":"speckit-pro:spec-context-analyst","description":"Round 2 spec-context analysis","prompt":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-002","content":"Reduced parser fixture response for speckit-pro:spec-context-analyst"}]}}

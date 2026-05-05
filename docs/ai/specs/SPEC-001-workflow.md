@@ -96,7 +96,7 @@ Each phase requires **human review and approval** before proceeding:
 The racecraft-plugins-public marketplace repo has no automated versioning infrastructure. Versions are hardcoded in both plugin.json and marketplace.json, which Anthropic warns against — plugin.json always wins silently, making the marketplace version misleading. As the marketplace grows from 1 to 2-4 plugins, manual version management will not scale for a solo maintainer.
 
 ### Users
-- Solo maintainer (maintainer) who needs automated version management
+- Solo maintainer who needs automated version management
 - Future plugin consumers who need accurate version information in marketplace.json
 
 ### User Stories

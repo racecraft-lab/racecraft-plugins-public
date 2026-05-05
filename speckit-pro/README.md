@@ -526,7 +526,7 @@ The built-in `worker`, `explorer`, and `default` roles remain as a degraded fall
 
 ## Author
 
-Racecraft Lab — [Racecraft Lab](https://github.com/racecraft-lab)
+[Racecraft Lab](https://github.com/racecraft-lab)
 
 ## License
 

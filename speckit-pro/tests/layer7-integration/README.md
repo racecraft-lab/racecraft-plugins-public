@@ -122,13 +122,15 @@ Each runner supports two modes:
 
 | Mode | What it tests | Cost |
 |------|---------------|------|
-| `--replay` (default) | The **parser**: extracts dispatch info from a committed `transcript.jsonl`. Catches "the parser stopped finding `subagent_type`" or "the JSONL schema changed." Does **not** verify routing — the routing decision was made and frozen at capture time. | Free, fast, deterministic |
+| `--replay` (default) | The **parser**: extracts dispatch info from a committed reduced `parser-fixture.jsonl`. Catches "the parser stopped finding `subagent_type`" or "the JSONL schema changed." Does **not** verify routing — the routing decision was made and frozen at capture time. | Free, fast, deterministic |
 | `--live` | The **routing**: invokes `claude -p`, captures a fresh transcript, then asserts. Catches "the orchestrator stopped routing `[codebase]` to codebase-analyst." | Real LLM tokens (capped per fixture via `--max-budget-usd`) |
 
-The committed `transcript.jsonl` files are seed transcripts that may be
-synthetic. They prove the parser+assertions work. Running `--live`
-overwrites them with real captures and **then** the same assertions
-become true routing tests.
+The committed `parser-fixture.jsonl` files are reduced seed transcripts.
+They prove the parser+assertions work without committing full captured
+LLM transcripts. Running `--live` writes an ignored transient
+`transcript.jsonl`, scrubs it immediately, and asserts against that live
+capture. Set `L7_UPDATE_PARSER_FIXTURE=true` with `--live` only when you
+intend to refresh the committed reduced replay fixture.
 
 ## Quick start
 
@@ -155,7 +157,8 @@ bash tests/layer7-integration/run-all-fixtures.sh --live
 <class>-fixtures/<NN-name>/
 ├── prompt.txt          # input given to claude -p (or to the orchestrator under test)
 ├── expected.json       # structural assertions about the dispatch graph
-├── transcript.jsonl    # captured stream-json output (seed or real)
+├── parser-fixture.jsonl # reduced replay JSONL committed to the repo
+├── transcript.jsonl    # ignored transient live capture, if --live was run
 └── README.md           # what this fixture proves and why
 ```
 
@@ -207,15 +210,19 @@ agent behavior.
 ## Transcript PII scrubbing
 
 Raw `claude -p --output-format stream-json` transcripts contain
-machine-specific metadata: `cwd` under `<HOME>
-session UUIDs, request IDs, git branch names, and full plugin/tool
-inventories. None of that is needed for the L7 parser, and committing
-it leaks developer-machine information.
+machine-specific metadata: local home/tmp paths, session UUIDs,
+request IDs, git branch names, token/cost telemetry, and full
+plugin/tool inventories. Stream deltas also contain fragmented paths,
+timestamps, model signatures, and other run-level telemetry. None of
+that is needed for the L7 parser, and committing it leaks
+developer-machine information.
 
-Every committed transcript in this directory has been scrubbed via
-`scrub-transcript.sh`. The runners now invoke the scrubber
-**automatically** after every `--live` capture, so a live re-run
-produces a scrubbed transcript on disk in one step.
+No full captured transcript should be committed. The committed replay
+artifact is `parser-fixture.jsonl`, generated from a scrubbed transcript
+with `reduce-transcript-fixture.sh`. The runners invoke the scrubber
+**automatically** after every `--live` capture, so a live run only leaves
+an ignored scrubbed `transcript.jsonl` on disk unless you explicitly opt
+in to refreshing the reduced fixture.
 
 What the scrubber preserves (parser-essential):
 
@@ -229,15 +236,27 @@ What the scrubber strips/replaces:
 
 | Field | Replacement |
 |---|---|
-| `cwd`, `sessionId`/`session_id`, `gitBranch`, `requestId`, `userType`, `origin`, `entrypoint`, `inference_geo` | `"<scrubbed>"` |
-| Any `<HOME> or `<HOME> substring inside any string | `<HOME>` |
+| `cwd`, `sessionId`/`session_id`, `gitBranch`, `requestId`, `uuid`, `userType`, `origin`, `entrypoint`, `inference_geo` | `"<scrubbed>"` |
+| usage/cost/quota fields and async-agent output paths | `"<scrubbed>"` |
+| timestamps, timing fields, model signatures, hook IDs, and streamed `partial_json` chunks | `"<scrubbed>"` |
+| Local home, repo, and temp path substrings inside any string | `<HOME>`, `<REPO>`, or `<TMP>` |
 | `system` events (which carry plugin/tool inventories) | reduced to `{type, subtype}` |
+| `stream_event` events (redundant for parser assertions) | reduced to `{type, subtype}` |
 
 To manually scrub a transcript:
 
 ```bash
 bash tests/layer7-integration/scrub-transcript.sh path/to/transcript.jsonl
 # in-place; or pass nothing to read stdin → stdout
+```
+
+To manually regenerate a reduced replay fixture:
+
+```bash
+bash tests/layer7-integration/reduce-transcript-fixture.sh \
+  path/to/transcript.jsonl \
+  path/to/expected.json \
+  > path/to/parser-fixture.jsonl
 ```
 
 ## Live-mode side effects (read this before running `--live`)

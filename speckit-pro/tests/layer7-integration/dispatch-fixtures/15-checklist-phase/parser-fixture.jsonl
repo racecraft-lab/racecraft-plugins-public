@@ -1,0 +1,2 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-001","name":"Agent","input":{"subagent_type":"speckit-pro:checklist-executor","description":"Run testability checklist","prompt":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-001","content":"Reduced parser fixture response for speckit-pro:checklist-executor"}]}}

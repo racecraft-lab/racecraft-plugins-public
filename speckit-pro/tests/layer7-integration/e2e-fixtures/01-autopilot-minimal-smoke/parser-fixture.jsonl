@@ -1,0 +1,8 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-001","name":"Skill","input":{"skill":"speckit-pro:speckit-autopilot","args":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-001","content":"Reduced parser fixture response for "}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-002","name":"Agent","input":{"subagent_type":"speckit-pro:phase-executor","description":"SPEC-FIXTURE Specify","prompt":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-002","content":"Reduced parser fixture response for speckit-pro:phase-executor"}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-003","name":"Agent","input":{"subagent_type":"speckit-pro:clarify-executor","description":"SPEC-FIXTURE Clarify","prompt":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-003","content":"Reduced parser fixture response for speckit-pro:clarify-executor"}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-004","name":"Agent","input":{"subagent_type":"speckit-pro:phase-executor","description":"SPEC-FIXTURE Plan","prompt":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-004","content":"Reduced parser fixture response for speckit-pro:phase-executor"}]}}

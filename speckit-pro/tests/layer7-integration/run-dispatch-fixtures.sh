@@ -2,7 +2,7 @@
 # run-dispatch-fixtures.sh — Layer 7 Class 1 fixture runner
 #
 # Two modes:
-#   --replay (default): parses committed transcript.jsonl and asserts.
+#   --replay (default): parses committed parser-fixture.jsonl and asserts.
 #                       Free, fast, deterministic. Catches PARSER drift,
 #                       NOT routing drift.
 #   --live:             invokes claude -p, captures transcript, then
@@ -17,6 +17,8 @@
 #
 # Cost guard: --live wraps each invocation with --max-budget-usd 1.00 by
 # default. Override with DISPATCH_FIXTURE_BUDGET_USD env var.
+# Set L7_UPDATE_PARSER_FIXTURE=true with --live to regenerate the reduced
+# replay fixture from the scrubbed transient transcript.
 
 set -euo pipefail
 
@@ -68,6 +70,7 @@ capture_live() {
   local fixture_dir="$1"
   local prompt_file="$fixture_dir/prompt.txt"
   local transcript_file="$fixture_dir/transcript.jsonl"
+  local parser_fixture="$fixture_dir/parser-fixture.jsonl"
 
   if ! command -v claude >/dev/null 2>&1; then
     printf "  SKIP (claude CLI not found)\n"
@@ -89,16 +92,24 @@ capture_live() {
   if [ -s "$transcript_file" ]; then
     bash "$SCRIPT_DIR/scrub-transcript.sh" "$transcript_file" >/dev/null
   fi
-  printf "  Saved scrubbed transcript to %s\n" "$transcript_file"
+  printf "  Saved scrubbed transient transcript to %s\n" "$transcript_file"
+
+  if [ "${L7_UPDATE_PARSER_FIXTURE:-false}" = "true" ] && [ -s "$transcript_file" ]; then
+    bash "$SCRIPT_DIR/reduce-transcript-fixture.sh" "$transcript_file" "$fixture_dir/expected.json" > "$parser_fixture"
+    printf "  Updated reduced parser fixture at %s\n" "$parser_fixture"
+  fi
 }
 
-# Run all assertions in expected.json against transcript.jsonl.
+# Run all assertions in expected.json against the replay or live transcript.
 assert_fixture() {
   local fixture_dir="$1"
   local fixture_id
   fixture_id=$(basename "$fixture_dir")
   local expected="$fixture_dir/expected.json"
-  local transcript="$fixture_dir/transcript.jsonl"
+  local transcript="$fixture_dir/parser-fixture.jsonl"
+  if [ "$MODE" = "live" ]; then
+    transcript="$fixture_dir/transcript.jsonl"
+  fi
 
   if [ ! -f "$expected" ]; then
     set_test "$fixture_id: expected.json present"
@@ -107,10 +118,10 @@ assert_fixture() {
   fi
   if [ ! -f "$transcript" ]; then
     if [ "$MODE" = "replay" ]; then
-      printf "  ${YELLOW}SKIP${RESET} %s: no transcript.jsonl committed (run with --live to capture)\n" "$fixture_id"
+      printf "  ${YELLOW}SKIP${RESET} %s: no parser-fixture.jsonl committed (run --live with L7_UPDATE_PARSER_FIXTURE=true to refresh)\n" "$fixture_id"
       return
     else
-      set_test "$fixture_id: transcript.jsonl produced by --live"
+      set_test "$fixture_id: transient transcript.jsonl produced by --live"
       _fail "no transcript captured"
       return
     fi

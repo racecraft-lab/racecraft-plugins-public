@@ -6,8 +6,9 @@
 # canonical case is the synthesizer reading analyst markdown and
 # emitting a decision artifact.
 #
-# Modes match Class 1: --replay (default, parser regression) and
-# --live (real cross-agent execution, costs LLM tokens).
+# Modes match Class 1: --replay (default, reduced parser fixture) and
+# --live (real cross-agent execution, costs LLM tokens). Set
+# L7_UPDATE_PARSER_FIXTURE=true with --live to regenerate parser-fixture.jsonl.
 
 set -euo pipefail
 
@@ -46,6 +47,7 @@ collect_fixtures() {
 capture_live() {
   local fixture_dir="$1"
   local transcript_file="$fixture_dir/transcript.jsonl"
+  local parser_fixture="$fixture_dir/parser-fixture.jsonl"
   if ! command -v claude >/dev/null 2>&1; then
     printf "  SKIP (claude CLI not found)\n"; return 2
   fi
@@ -62,6 +64,11 @@ capture_live() {
   # Scrub PII (cwd paths, sessionId, plugin inventories) immediately.
   if [ -s "$transcript_file" ]; then
     bash "$SCRIPT_DIR/scrub-transcript.sh" "$transcript_file" >/dev/null
+  fi
+
+  if [ "${L7_UPDATE_PARSER_FIXTURE:-false}" = "true" ] && [ -s "$transcript_file" ]; then
+    bash "$SCRIPT_DIR/reduce-transcript-fixture.sh" "$transcript_file" "$fixture_dir/expected.json" > "$parser_fixture"
+    printf "  Updated reduced parser fixture at %s\n" "$parser_fixture"
   fi
 }
 
@@ -89,15 +96,18 @@ assert_fixture() {
   local fixture_dir="$1"
   local fixture_id; fixture_id=$(basename "$fixture_dir")
   local expected="$fixture_dir/expected.json"
-  local transcript="$fixture_dir/transcript.jsonl"
+  local transcript="$fixture_dir/parser-fixture.jsonl"
+  if [ "$MODE" = "live" ]; then
+    transcript="$fixture_dir/transcript.jsonl"
+  fi
 
   [ -f "$expected" ] || { set_test "$fixture_id: expected.json"; _fail "missing"; return; }
   if [ ! -f "$transcript" ]; then
     if [ "$MODE" = "replay" ]; then
-      printf "  ${YELLOW}SKIP${RESET} %s: no transcript.jsonl committed\n" "$fixture_id"
+      printf "  ${YELLOW}SKIP${RESET} %s: no parser-fixture.jsonl committed\n" "$fixture_id"
       return
     else
-      set_test "$fixture_id: transcript captured"; _fail "no transcript"; return
+      set_test "$fixture_id: transient transcript captured"; _fail "no transcript"; return
     fi
   fi
 

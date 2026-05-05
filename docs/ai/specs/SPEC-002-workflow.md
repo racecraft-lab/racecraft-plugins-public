@@ -96,7 +96,7 @@ Each phase requires **human review and approval** before proceeding:
 The racecraft-plugins-public marketplace repo has no CI validation on pull requests. PRs can be merged without running the test suite or verifying conventional commit formatting. This means broken plugins can reach main, and non-conventional commit messages can break the release-please automation (SPEC-003). As the marketplace grows from 1 to 2-4 plugins, manual PR review alone will not catch test regressions across all plugins.
 
 ### Users
-- Solo maintainer (maintainer) who needs automated quality gates on PRs
+- Solo maintainer who needs automated quality gates on PRs
 - Future contributors who need clear feedback on PR requirements
 - release-please automation (SPEC-003) which depends on conventional commit titles
 

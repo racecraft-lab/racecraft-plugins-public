@@ -96,7 +96,7 @@ Each phase requires **human review and approval** before proceeding:
 The racecraft-plugins-public marketplace repo now has CI workflows (SPEC-002: PR checks, SPEC-003: release automation) and versioning infrastructure (SPEC-001: release-please config, sync script), but there are no GitHub branch protection rules to enforce these workflows. PRs can still be merged without passing CI checks, without Copilot review, and via non-squash merges that would break release-please's commit parsing. Additionally, the CI/CD pipeline has never been verified end-to-end — from feature branch creation through to a user running `/plugin marketplace update` and seeing the new version. Finally, the project documentation (CLAUDE.md, AGENTS.md) does not describe the new workflow, leaving future contributors (or the solo maintainer after a break) without guidance on how to use the pipeline.
 
 ### Users
-- Solo maintainer (maintainer) who needs branch protection to enforce CI quality gates
+- Solo maintainer who needs branch protection to enforce CI quality gates
 - Solo maintainer who needs documentation of the workflow for future reference
 - Future contributors who need to understand PR requirements and the release process
 - Plugin consumers who benefit from the verified end-to-end pipeline ensuring marketplace.json accuracy

@@ -1,0 +1,4 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-001","name":"Agent","input":{"subagent_type":"speckit-pro:phase-executor","description":"Re-run Specify to add Goals section","prompt":""}}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-002","name":"Skill","input":{"skill":"speckit.specify","args":""}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-002","content":"Reduced parser fixture response for "}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-001","content":"Reduced parser fixture response for speckit-pro:phase-executor"}]}}

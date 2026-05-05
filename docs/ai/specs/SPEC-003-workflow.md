@@ -98,7 +98,7 @@ Each phase requires **human review and approval** before proceeding:
 The racecraft-plugins-public marketplace repo has no automated release process. Version bumps, changelog generation, GitHub Releases, and git tags are all manual operations. When a conventional commit lands on main (via squash merge), there is no automated system to detect the commit type, bump the version in plugin.json, generate a changelog entry, create a GitHub Release, or sync the updated version into marketplace.json. This means users running `/plugin marketplace update racecraft-public-plugins` may not see new versions until manual steps are completed.
 
 ### Users
-- Solo maintainer (maintainer) who needs automated versioning and release creation after merging PRs
+- Solo maintainer who needs automated versioning and release creation after merging PRs
 - Plugin consumers who need marketplace.json to reflect the latest published versions
 - SPEC-004 (Integration & Verification) which depends on this workflow being operational to verify the end-to-end pipeline
 
