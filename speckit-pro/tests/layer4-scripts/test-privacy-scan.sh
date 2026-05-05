@@ -53,7 +53,7 @@ scan_for() {
   local pattern="$1"
   (
     cd "$REPO_ROOT"
-    rg -n --hidden -S -i "$pattern" -g '!/.git/**' .
+    rg -n --hidden -S -i "$pattern" -g '!/.git' -g '!/.git/**' .
   )
 }
 
