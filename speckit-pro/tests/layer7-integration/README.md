@@ -207,10 +207,12 @@ agent behavior.
 ## Transcript PII scrubbing
 
 Raw `claude -p --output-format stream-json` transcripts contain
-machine-specific metadata: `cwd` under `<HOME>
-session UUIDs, request IDs, git branch names, and full plugin/tool
-inventories. None of that is needed for the L7 parser, and committing
-it leaks developer-machine information.
+machine-specific metadata: local home/tmp paths, session UUIDs,
+request IDs, git branch names, token/cost telemetry, and full
+plugin/tool inventories. Stream deltas also contain fragmented paths,
+timestamps, model signatures, and other run-level telemetry. None of
+that is needed for the L7 parser, and committing it leaks
+developer-machine information.
 
 Every committed transcript in this directory has been scrubbed via
 `scrub-transcript.sh`. The runners now invoke the scrubber
@@ -229,9 +231,12 @@ What the scrubber strips/replaces:
 
 | Field | Replacement |
 |---|---|
-| `cwd`, `sessionId`/`session_id`, `gitBranch`, `requestId`, `userType`, `origin`, `entrypoint`, `inference_geo` | `"<scrubbed>"` |
-| Any `<HOME> or `<HOME> substring inside any string | `<HOME>` |
+| `cwd`, `sessionId`/`session_id`, `gitBranch`, `requestId`, `uuid`, `userType`, `origin`, `entrypoint`, `inference_geo` | `"<scrubbed>"` |
+| usage/cost/quota fields and async-agent output paths | `"<scrubbed>"` |
+| timestamps, timing fields, model signatures, hook IDs, and streamed `partial_json` chunks | `"<scrubbed>"` |
+| Local home, repo, and temp path substrings inside any string | `<HOME>`, `<REPO>`, or `<TMP>` |
 | `system` events (which carry plugin/tool inventories) | reduced to `{type, subtype}` |
+| `stream_event` events (redundant for parser assertions) | reduced to `{type, subtype}` |
 
 To manually scrub a transcript:
 

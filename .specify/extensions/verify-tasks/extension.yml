@@ -5,7 +5,7 @@ extension:
   name: "Verify Tasks Extension"
   version: "1.0.0"
   description: "Detects phantom completions — tasks marked [X] in tasks.md with no real implementation."
-  author: "privacy@datastone.invalid"
+  author: "DataStone Inc."
   repository: "https://github.com/datastone-inc/spec-kit-verify-tasks"
   license: "MIT"
   homepage: "https://github.com/datastone-inc/spec-kit-verify-tasks"

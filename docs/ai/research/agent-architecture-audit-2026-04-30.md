@@ -1,6 +1,6 @@
 # speckit-pro Agent & Skill Orchestration Audit
 
-**Author:** Maintainer (Racecraft Lab) + Claude Code research agents
+**Author:** Maintainer + Claude Code research agents
 **Date:** 2026-04-30
 **Branch:** `racecraft/grill-me-skill` (PR #26)
 **Scope:** End-to-end audit of the speckit-pro plugin's orchestration architecture across both Claude Code and OpenAI Codex ecosystems — every skill, every subagent, every model/effort decision — grounded in primary-source documentation.
@@ -41,7 +41,7 @@ All quotes are verbatim from the URL listed; access date 2026-04-30 throughout.
 | https://developers.openai.com/codex/subagents | Codex TOML format, `developer_instructions` semantics |
 | `docs/ai/research/codex-parity-research-2026-04-30.md` (this repo) | Pre-existing Codex parity research; reused, not redone |
 
-The full primary-source pull is at `<TMP_NOTE>` (this session) and the orchestration inventory is at `<TMP_NOTE>`. Both were authored by research subagents during this audit.
+The full primary-source pull and orchestration inventory were temporary research notes authored by research subagents during this audit.
 
 ### 1.2 What we audited
 
@@ -523,9 +523,9 @@ These uncertainties are flagged for future investigation; none block the Tier 1 
 
 ## References
 
-**Primary-source pulls (this session):**
-- `<TMP_NOTE>` — full Anthropic + OpenAI Codex doc quotes
-- `<TMP_NOTE>` — full orchestration inventory across all 10 skills
+**Primary-source pulls:**
+- Temporary research notes — full Anthropic + OpenAI Codex doc quotes
+- Temporary orchestration inventory — full orchestration inventory across all 10 skills
 
 **Companion repo docs:**
 - `docs/ai/research/codex-parity-research-2026-04-30.md` — pre-existing Codex parity research
