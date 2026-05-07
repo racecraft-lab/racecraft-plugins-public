@@ -219,16 +219,20 @@ rerunning `specify init --force`:
 skills/speckit-coach/scripts/project-fixup.sh audit "$PWD"
 ```
 
-If reviewability or PR packet content was added directly to
-`.specify/templates/*.md`, migrate it into a project-local preset first:
+First install the generic speckit-pro reviewability preset. The installer
+generates the preset from the project's current core templates, so project
+conventions are preserved instead of replaced by a static plugin template:
 
 ```bash
-skills/speckit-coach/scripts/project-fixup.sh apply "$PWD" speckit-pro-reviewability
+skills/speckit-coach/scripts/ensure-reviewability-preset.sh "$PWD"
 specify preset resolve spec-template
 specify preset resolve plan-template
 specify preset resolve tasks-template
 ```
 
+If reviewability or PR packet content was also added directly to
+`.specify/templates/*.md`, preserve any extra project-specific customizations in
+a repo-specific preset or reviewed override before restoring core templates.
 Then restore core `.specify/templates/*.md` from version control or a reviewed
 Spec Kit default. Do not hand-edit core defaults as the durable solution.
 

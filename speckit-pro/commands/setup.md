@@ -19,6 +19,25 @@ Creates the worktree, branch, and workflow file — ready for
 
 ## What to Do
 
+### 0. Ensure SpecKit CLI
+
+Check for the official SpecKit CLI before parsing or mutating the repository:
+
+```text
+Bash("command -v specify")
+```
+
+If missing and `uv` exists, install it:
+
+```text
+Bash("uv tool install specify-cli --from git+https://github.com/github/spec-kit.git")
+```
+
+If `uv` is unavailable or install fails, STOP and tell the operator to install
+SpecKit with that command. Do not run `specify init --here --force`
+automatically; recommend it only when `.specify/` is absent and the operator
+explicitly approves project initialization.
+
 ### 1. Find the Technical Roadmap
 
 ```text
@@ -140,6 +159,17 @@ workflow prompts. Pass the doc path forward.
 All file operations happen in the worktree directory.
 
 ```text
+0. Install or refresh the generic speckit-pro reviewability preset:
+   Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/ensure-reviewability-preset.sh .worktrees/<number>-<short-name> ${CLAUDE_PLUGIN_ROOT} speckit-pro-reviewability")
+
+   If status is installed, commit .specify/presets/speckit-pro-reviewability
+   and .specify/presets/.registry with the setup artifacts.
+
+   Verify resolution from the worktree:
+   Bash("cd .worktrees/<number>-<short-name> && specify preset resolve spec-template")
+   Bash("cd .worktrees/<number>-<short-name> && specify preset resolve plan-template")
+   Bash("cd .worktrees/<number>-<short-name> && specify preset resolve tasks-template")
+
 1. Read the workflow template from the plugin:
    Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md")
 

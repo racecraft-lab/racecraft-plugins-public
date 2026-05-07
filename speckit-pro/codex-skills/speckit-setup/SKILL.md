@@ -54,6 +54,30 @@ else should be derived from the repository.
 
 ## Procedure
 
+### 0. Ensure SpecKit CLI
+
+Before parsing or mutating the repository, verify the official SpecKit CLI is
+available:
+
+```text
+command -v specify
+```
+
+If it is missing and `uv` is available, install it:
+
+```text
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
+```
+
+If `uv` is unavailable or installation fails, stop and report the exact install
+command for the operator to run. Do not continue with setup without the
+`specify` command.
+
+Do not run `specify init --here --force` automatically. Project initialization
+and forced refreshes can overwrite managed files; setup may recommend the
+command when `.specify/` is missing, but it must not run it without explicit
+operator approval.
+
 ### 1. Locate the technical roadmap
 
 Search for the roadmap before asking the user where it lives. Check likely
@@ -138,6 +162,30 @@ condition. Do not synthesize design-concept content yourself.
 
 ### 5. Copy the workflow template into the worktree
 
+Before copying the workflow template, install or refresh the generic
+speckit-pro reviewability preset inside the worktree:
+
+```text
+skills/speckit-coach/scripts/ensure-reviewability-preset.sh <worktree-path> <plugin-root> speckit-pro-reviewability
+```
+
+This script generates `.specify/presets/speckit-pro-reviewability/` from the
+host project's current core templates and then adds reviewability budget and PR
+review packet requirements. Commit the resulting preset files on the spec
+branch when the script reports `status: installed`.
+
+After installation, verify template resolution from the worktree:
+
+```text
+specify preset resolve spec-template
+specify preset resolve plan-template
+specify preset resolve tasks-template
+```
+
+Each command should resolve to `.specify/presets/speckit-pro-reviewability/`
+or to a project-specific higher-priority override that intentionally includes
+the reviewability sections.
+
 Create the destination directory inside the worktree, typically
 `docs/ai/specs/`, then load the shared workflow template from the plugin. Do
 not author a new template from scratch. The generated file should live at a
@@ -185,9 +233,20 @@ filling it with fiction.
 
 ### 7. Commit and push from the worktree
 
-Stage **both** the design concept doc and the workflow file in the worktree
-branch, create a focused setup commit, and push that branch to the detected
-remote:
+Stage the generated/updated preset files when present, plus **both** the
+design concept doc and the workflow file in the worktree branch. Create a
+focused setup commit and push that branch to the detected remote:
+
+```
+git add .specify/presets/speckit-pro-reviewability \
+        .specify/presets/.registry \
+        docs/ai/specs/SPEC-<ID>-design-concept.md \
+        docs/ai/specs/SPEC-<ID>-workflow.md
+git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
+```
+
+If the preset was already present and unchanged, the add command may include
+only the design concept and workflow:
 
 ```
 git add docs/ai/specs/SPEC-<ID>-design-concept.md \

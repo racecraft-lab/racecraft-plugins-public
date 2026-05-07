@@ -132,22 +132,28 @@ CLI upgrades.
 
 1. Confirm you are in the intended repository root and inspect `git status`
    before edits. Do not overwrite unrelated user changes.
-2. Run the audit helper:
+2. Ensure the generic speckit-pro reviewability preset exists:
+   `../../skills/speckit-coach/scripts/ensure-reviewability-preset.sh "$PWD"`
+   This generates `.specify/presets/speckit-pro-reviewability/` from the
+   project's current core templates, then adds reviewability budget and PR
+   review packet sections.
+3. Run the audit helper:
    `../../skills/speckit-coach/scripts/project-fixup.sh audit "$PWD"`
-3. If the audit reports reviewability-related direct core template edits, run:
-   `../../skills/speckit-coach/scripts/project-fixup.sh apply "$PWD" speckit-pro-reviewability`
-   or use a repo-specific preset id if the project has one.
-4. Verify template resolution:
+4. If the audit reports reviewability-related direct core template edits that
+   are not covered by the generic preset, preserve those project-specific
+   customizations in a repo-specific preset id instead of overwriting the
+   generic `speckit-pro-reviewability` preset.
+5. Verify template resolution:
    `specify preset resolve spec-template`,
    `specify preset resolve plan-template`, and
    `specify preset resolve tasks-template` must point at the preset or an
    intentional project override, not core `.specify/templates/*.md`.
-5. Restore affected core `.specify/templates/*.md` only from a reviewed source:
+6. Restore affected core `.specify/templates/*.md` only from a reviewed source:
    version control, a known-good Spec Kit re-init/upgrade backup, or an
    official core template. Do not guess at core content.
-6. Ensure generated PR bodies preserve the host repository PR template if one
+7. Ensure generated PR bodies preserve the host repository PR template if one
    exists. If absent, recommend adding `.github/pull_request_template.md`.
-7. Run the project/unit checks that match the changed files, then report:
+8. Run the project/unit checks that match the changed files, then report:
    preset path, resolved templates, core-template restore status, PR template
    status, and any manual follow-up.
 
