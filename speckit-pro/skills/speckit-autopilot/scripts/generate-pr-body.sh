@@ -46,14 +46,36 @@ extract_heading_section() {
   local file="$1" heading="$2"
   if [ ! -f "$file" ]; then return; fi
   awk -v heading="$heading" '
-    BEGIN { in_section=0 }
-    /^# / {
-      current=substr($0, 3)
-      if (tolower(current) == tolower(heading)) { in_section=1; next }
-      if (in_section) exit
+    BEGIN { in_section=0; section_level=0 }
+    /^#{1,6}[[:space:]]+/ {
+      marker=$1
+      level=length(marker)
+      current=$0
+      sub(/^#{1,6}[[:space:]]+/, "", current)
+      sub(/[[:space:]]+#+[[:space:]]*$/, "", current)
+      if (tolower(current) == tolower(heading)) {
+        in_section=1
+        section_level=level
+        next
+      }
+      if (in_section && level <= section_level) exit
     }
     in_section { print }
   ' "$file" | sed '/^[[:space:]]*$/d' | head -40
+}
+
+has_heading() {
+  local file="$1" heading="$2"
+  if [ ! -f "$file" ]; then return 1; fi
+  awk -v heading="$heading" '
+    /^#{1,6}[[:space:]]+/ {
+      current=$0
+      sub(/^#{1,6}[[:space:]]+/, "", current)
+      sub(/[[:space:]]+#+[[:space:]]*$/, "", current)
+      if (tolower(current) == tolower(heading)) found=1
+    }
+    END { exit found ? 0 : 1 }
+  ' "$file"
 }
 
 spec_value() {
@@ -137,7 +159,7 @@ cp "$template" "$OUTPUT_FILE"
 
 append_missing_section() {
   local heading="$1"
-  if ! grep -Eiq "^# ${heading}$" "$OUTPUT_FILE"; then
+  if ! has_heading "$OUTPUT_FILE" "$heading"; then
     {
       printf '\n# %s\n' "$heading"
       extract_heading_section "$review_packet" "$heading"

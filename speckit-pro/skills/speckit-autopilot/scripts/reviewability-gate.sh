@@ -48,7 +48,7 @@ surface_for_path() {
 is_excluded_generated() {
   local path="$1"
   case "$path" in
-    *lock*|pnpm-lock.yaml|package-lock.json|yarn.lock|bun.lockb) return 0 ;;
+    pnpm-lock.yaml|*/pnpm-lock.yaml|package-lock.json|*/package-lock.json|npm-shrinkwrap.json|*/npm-shrinkwrap.json|yarn.lock|*/yarn.lock|bun.lock|*/bun.lock|bun.lockb|*/bun.lockb|Cargo.lock|*/Cargo.lock|Gemfile.lock|*/Gemfile.lock|Pipfile.lock|*/Pipfile.lock|poetry.lock|*/poetry.lock|composer.lock|*/composer.lock) return 0 ;;
     *.snap|*.snapshot|__snapshots__/*|snapshots/*) return 0 ;;
     vendor/*|vendors/*|third_party/*|generated/*|dist/*|build/*) return 0 ;;
     docs/ai/workflows/*/exports/*) return 0 ;;
@@ -62,6 +62,19 @@ is_production_file() {
     src/*|app/*|lib/*|scripts/*|*.ts|*.tsx|*.js|*.jsx|*.mjs|*.cjs|*.sql) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+reviewable_loc_from_numstat() {
+  local sum=0 additions deletions path
+  while IFS=$'\t' read -r additions deletions path; do
+    [ -n "${path:-}" ] || continue
+    [ "$additions" != "-" ] || continue
+    [[ "$additions" =~ ^[0-9]+$ ]] || continue
+    if ! is_excluded_generated "$path"; then
+      sum=$((sum + additions))
+    fi
+  done
+  printf '%s\n' "$sum"
 }
 
 emit_result() {
@@ -160,9 +173,23 @@ measure_feature_dir() {
 
   local tasks="$dir/tasks.md"
   local plan="$dir/plan.md"
+  if [ ! -f "$tasks" ] || [ ! -r "$tasks" ]; then
+    printf '{"error":"required tasks file not readable: %s"}\n' "$tasks"
+    exit 2
+  fi
+  if [ -e "$plan" ] && { [ ! -f "$plan" ] || [ ! -r "$plan" ]; }; then
+    printf '{"error":"optional plan file not readable: %s"}\n' "$plan"
+    exit 2
+  fi
+
+  local input_files=("$tasks")
+  if [ -f "$plan" ]; then
+    input_files+=("$plan")
+  fi
+
   local files_text surfaces_text loc prod total exception
-  files_text=$(grep -Eo '([A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+' "$tasks" "$plan" 2>/dev/null | cut -d: -f2- | sort -u || true)
-  surfaces_text=$(printf '%s\n' "$files_text" | while read -r file; do [ -n "$file" ] && surface_for_path "$file"; done)
+  files_text=$(grep -hEo '([A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+' "${input_files[@]}" 2>/dev/null | sort -u || true)
+  surfaces_text=$(printf '%s\n' "$files_text" | while read -r file; do [ -n "$file" ] && surface_for_path "$file"; done || true)
   total=$(printf '%s\n' "$files_text" | sed '/^$/d' | wc -l | tr -d ' ')
   prod=$(printf '%s\n' "$files_text" | while read -r file; do
     [ -n "$file" ] || continue
@@ -171,7 +198,7 @@ measure_feature_dir() {
   loc=$(grep -E '^\- \[[ x]\] T[0-9]' "$tasks" 2>/dev/null | wc -l | tr -d ' ')
   loc=$((loc * 40))
   exception=false
-  if grep -Eiq 'transition exception|split exception|ratified exception' "$tasks" "$plan" 2>/dev/null; then
+  if grep -Eiq 'transition exception|split exception|ratified exception' "${input_files[@]}" 2>/dev/null; then
     exception=true
   fi
 
@@ -185,16 +212,21 @@ measure_diff() {
     exit 2
   fi
 
+  if ! git diff --name-only "$range" -- >/dev/null 2>&1; then
+    printf '{"error":"git diff range could not be resolved: %s"}\n' "$range"
+    exit 2
+  fi
+
   local files_text surfaces_text numstat loc prod total exception
-  files_text=$(git diff --name-only "$range" -- 2>/dev/null || true)
-  numstat=$(git diff --numstat "$range" -- 2>/dev/null || true)
-  loc=$(printf '%s\n' "$numstat" | awk 'BEGIN{sum=0} /^[0-9-]+\t[0-9-]+\t/ { if ($1 != "-" && $3 !~ /lock|vendor|generated|exports/) sum += $1 } END{print sum+0}')
+  files_text=$(git diff --name-only "$range" --)
+  numstat=$(git diff --numstat "$range" --)
+  loc=$(printf '%s\n' "$numstat" | reviewable_loc_from_numstat)
   total=$(printf '%s\n' "$files_text" | sed '/^$/d' | wc -l | tr -d ' ')
   prod=$(printf '%s\n' "$files_text" | while read -r file; do
     [ -n "$file" ] || continue
     if is_production_file "$file" && ! is_excluded_generated "$file"; then echo "$file"; fi
   done | wc -l | tr -d ' ')
-  surfaces_text=$(printf '%s\n' "$files_text" | while read -r file; do [ -n "$file" ] && surface_for_path "$file"; done)
+  surfaces_text=$(printf '%s\n' "$files_text" | while read -r file; do [ -n "$file" ] && surface_for_path "$file"; done || true)
   exception=false
   if git diff "$range" -- '*.md' 2>/dev/null | grep -Eiq 'transition exception|split exception|ratified exception'; then
     exception=true

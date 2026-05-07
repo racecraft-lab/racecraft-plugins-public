@@ -18,6 +18,15 @@ result=0
 output=$("$SCRIPT" nope "$FIXTURE_DIR" 2>/dev/null) || result=$?
 assert_eq "2" "$result" "exit code"
 
+set_test "Missing project root exits 2 with JSON"
+missing_root="$FIXTURE_DIR/missing-project"
+result=0
+output=$("$SCRIPT" audit "$missing_root") || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "Missing project root reports structured error"
+assert_json_field "$output" "error" "project root not accessible"
+
 section "audit mode"
 
 repo="$FIXTURE_DIR/repo"

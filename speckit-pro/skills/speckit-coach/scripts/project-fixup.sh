@@ -24,7 +24,14 @@ case "$MODE" in
     ;;
 esac
 
-PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
+if ! PROJECT_ROOT_RESOLVED="$(cd "$PROJECT_ROOT" 2>/dev/null && pwd)"; then
+  jq -cn \
+    --arg error "project root not accessible" \
+    --arg project_root "$PROJECT_ROOT" \
+    '{error:$error,project_root:$project_root}'
+  exit 2
+fi
+PROJECT_ROOT="$PROJECT_ROOT_RESOLVED"
 SPECIFY_DIR="$PROJECT_ROOT/.specify"
 TEMPLATES_DIR="$SPECIFY_DIR/templates"
 PRESETS_DIR="$SPECIFY_DIR/presets"

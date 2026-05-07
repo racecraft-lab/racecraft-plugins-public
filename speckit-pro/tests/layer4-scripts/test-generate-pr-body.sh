@@ -33,6 +33,9 @@ cat > "$feature/spec.md" <<'EOF'
 ## Summary
 Implement a focused demo capability.
 
+### Details
+Keep nested details with the summary section.
+
 ## Non-goals
 Do not add unrelated runtime behavior.
 EOF
@@ -63,6 +66,9 @@ assert_contains "$body" "# Host Required"
 set_test "Appends Non-goals section"
 assert_contains "$body" "# Non-goals"
 
+set_test "Extracts section content from level-two spec headings"
+assert_contains "$body" "Do not add unrelated runtime behavior."
+
 set_test "Appends Scope Budget section"
 assert_contains "$body" "# Scope Budget"
 
@@ -85,5 +91,24 @@ assert_contains "$fallback_body" "# Review Order"
 
 set_test "Fallback body includes review packet source marker"
 assert_contains "$fallback_body" "speckit-pro-review-packet-source"
+
+section "host headings at alternate levels"
+
+cat > "$repo/.github/pull_request_template.md" <<'EOF'
+## What
+Host-required what section.
+EOF
+
+set_test "Generator recognizes existing level-two host heading"
+level_two_file="$FIXTURE_DIR/pr-body-level-two.md"
+result=0
+(cd "$repo" && "$SCRIPT" "$repo" "$feature" "$level_two_file" HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+level_two_body=$(cat "$level_two_file")
+
+set_test "Does not duplicate host What section"
+what_count=$(grep -Ec '^#{1,6}[[:space:]]+What$' "$level_two_file")
+assert_eq "1" "$what_count" "What heading count"
 
 test_summary

@@ -70,6 +70,15 @@ section "tasks mode"
 
 feature="$FIXTURE_DIR/specs/001-demo"
 mkdir -p "$feature"
+
+set_test "Tasks mode requires tasks.md"
+result=0
+output=$("$SCRIPT" tasks "$feature") || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "Missing tasks.md emits JSON error"
+assert_json_field "$output" "error" "required tasks file not readable: $feature/tasks.md"
+
 cat > "$feature/tasks.md" <<'EOF'
 # Tasks
 - [ ] T001 Update docs/guide.md
@@ -84,6 +93,36 @@ assert_eq "1" "$result" "exit code"
 
 set_test "Tasks reports multiple surfaces"
 assert_json_field "$output" "primary_surface_count" "3"
+
+clock_feature="$FIXTURE_DIR/specs/002-clock"
+mkdir -p "$clock_feature"
+cat > "$clock_feature/tasks.md" <<'EOF'
+# Tasks
+- [ ] T001 Update src/clock.ts
+EOF
+
+set_test "Tasks mode counts clock source as production"
+result=0
+output=$("$SCRIPT" tasks "$clock_feature") || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "Clock source is not excluded as a lockfile"
+assert_json_field "$output" "production_files" "1"
+
+lock_feature="$FIXTURE_DIR/specs/003-lockfile"
+mkdir -p "$lock_feature"
+cat > "$lock_feature/tasks.md" <<'EOF'
+# Tasks
+- [ ] T001 Update pnpm-lock.yaml
+EOF
+
+set_test "Tasks mode excludes explicit lockfile basename"
+result=0
+output=$("$SCRIPT" tasks "$lock_feature") || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "Lockfile is excluded from production count"
+assert_json_field "$output" "production_files" "0"
 
 section "diff mode"
 
@@ -105,5 +144,13 @@ assert_eq "0" "$result" "exit code"
 
 set_test "Diff mode field"
 assert_json_field "$output" "mode" "diff"
+
+set_test "Diff invalid range exits 2"
+result=0
+output=$(cd "$repo" && "$SCRIPT" diff does-not-exist...HEAD) || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "Diff invalid range emits JSON error"
+assert_json_field "$output" "error" "git diff range could not be resolved: does-not-exist...HEAD"
 
 test_summary
