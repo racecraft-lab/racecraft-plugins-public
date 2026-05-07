@@ -9,11 +9,6 @@ REPO_ROOT="$(cd "$TESTS_ROOT/../.." && pwd)"
 
 source "$TESTS_ROOT/lib/assertions.sh"
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "test-privacy-scan: rg is required" >&2
-  exit 2
-fi
-
 if ! command -v git >/dev/null 2>&1; then
   echo "test-privacy-scan: git is required" >&2
   exit 2
@@ -33,10 +28,17 @@ TOOLING_SOURCE_PATHS=(
 
 scan_for() {
   local pattern="$1"
-  (
-    cd "$REPO_ROOT"
-    rg -n --hidden -S -i -g '!/.git' -g '!/.git/**' -- "$pattern" .
-  )
+  if command -v rg >/dev/null 2>&1; then
+    (
+      cd "$REPO_ROOT"
+      rg -n --hidden -S -i -g '!/.git' -g '!/.git/**' -- "$pattern" .
+    )
+  else
+    (
+      cd "$REPO_ROOT"
+      grep -RInE -i --exclude-dir=.git -- "$pattern" .
+    )
+  fi
 }
 
 assert_no_match() {
@@ -148,7 +150,11 @@ assert_no_tooling_source_match() {
 
   if hits=$(
     cd "$REPO_ROOT"
-    rg -n --hidden -S -i -- "$pattern" "${TOOLING_SOURCE_PATHS[@]}"
+    if command -v rg >/dev/null 2>&1; then
+      rg -n --hidden -S -i -- "$pattern" "${TOOLING_SOURCE_PATHS[@]}"
+    else
+      grep -nE -i -- "$pattern" "${TOOLING_SOURCE_PATHS[@]}"
+    fi
   ); then
     _fail "$label leaked into privacy tooling: $(printf '%s\n' "$hits" | head -3 | tr '\n' '; ')"
   else
