@@ -80,6 +80,17 @@ spec is already complete, warn the user and stop. If the roadmap says the spec
 is already in progress, prefer reusing the existing worktree branch rather than
 creating a second setup.
 
+Before creating the worktree, run the reviewability setup gate against the
+roadmap or extracted spec entry:
+
+```text
+skills/speckit-autopilot/scripts/reviewability-gate.sh setup <technical-roadmap-path>
+```
+
+If the gate returns `block` without a ratified split exception, stop setup and
+tell the user which threshold requires decomposition. Warnings may proceed only
+when the generated workflow records the budget result and split decision.
+
 ### 3. Prepare the branch and worktree
 
 Before any git mutation, inspect the actual remotes with `git remote -v`.

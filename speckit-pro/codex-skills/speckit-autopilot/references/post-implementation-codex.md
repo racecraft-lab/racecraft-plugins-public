@@ -16,7 +16,9 @@ and continue with the first incomplete Post item.
 | Code Review | `phase-executor` if review extension is installed | `$speckit-review` |
 | Integration Suite | parent session | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
 | Cleanup | `phase-executor` if cleanup extension is installed | `$speckit-cleanup` |
-| PR Creation | parent session | `git`, verified remote, `gh` where available |
+| Reviewability Diff Gate | parent session | `reviewability-gate.sh diff origin/main...HEAD` |
+| PR Body Generation | parent session | `generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
+| PR Creation | parent session | `git`, verified remote, `gh pr create --body-file` where available |
 | Review Remediation | parent session loop | inspect PR feedback, dispatch fixes as needed |
 | Retrospective | `phase-executor` if retrospective extension is installed | `$speckit-retrospective-analyze` |
 
@@ -26,6 +28,9 @@ and continue with the first incomplete Post item.
   skill sigil and SPEC context.
 - Built-in verification, git, push, PR creation, and review polling stay in the
   parent session so the orchestrator owns durable state and final reporting.
+- PR body generation MUST use the host repository's pull request template when
+  one exists. Preserve unknown host-required sections and append any missing
+  review-packet sections. If no host template exists, use the bundled fallback.
 - Missing optional extensions are logged and skipped. Do not fail the entire
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or

@@ -1,7 +1,7 @@
 ---
 name: speckit-coach
-description: "Coaches developers through Spec-Driven Development using the official SpecKit CLI and the speckit-pro plugin. Provides SDD methodology guidance, per-command coaching, phase gate validation, multi-spec technical roadmap creation, and workflow tracking. Use when user asks about SDD methodology, SpecKit commands, spec writing, feature decomposition, gate failures, technical roadmaps, autopilot workflows, or consensus protocol."
-argument-hint: "e.g. 'walk me through SDD', 'write testable requirements', 'decompose feature into specs', 'which checklist domains for this spec', 'simplicity gate is failing', 'how does autopilot work', 'consensus protocol'"
+description: "Coaches developers through Spec-Driven Development using the official SpecKit CLI and the speckit-pro plugin. Provides SDD methodology guidance, per-command coaching, phase gate validation, multi-spec technical roadmap creation, workflow tracking, and existing-project fixup. Use when user asks about SDD methodology, SpecKit commands, spec writing, feature decomposition, gate failures, technical roadmaps, autopilot workflows, project repair, template durability, or consensus protocol."
+argument-hint: "e.g. 'walk me through SDD', 'write testable requirements', 'decompose feature into specs', 'fix up this speckit-pro project', 'make template edits upgrade-safe', 'which checklist domains for this spec', 'simplicity gate is failing', 'how does autopilot work', 'consensus protocol'"
 user-invokable: true
 license: MIT
 ---
@@ -69,6 +69,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | **Plugin Usage** | |
 | "run autopilot", "execute workflow", "autonomous" | Guide to `/speckit-pro:autopilot` — prerequisites, workflow file setup, `--dangerously-skip-permissions`. See [autopilot guide](./references/autopilot-guide.md) |
 | "check status", "where am I", "workflow progress", "what's next", "roadmap", "project health" | Guide to `/speckit-pro:status` for technical roadmap progress (completed, ready, blocked specs), or `/speckit.doctor` for project health diagnostics |
+| "fix up this speckit-pro project", "repair existing SpecKit project", "make template edits durable", "template customizations got overwritten", "upgrade-safe templates", "reviewability preset repair" | Run the Project Fixup workflow below. Audit `.specify`, migrate reviewability-related direct core template edits into a project-local preset, verify `specify preset resolve`, preserve host PR templates, and restore core templates only from a reviewed source. |
 | "configure autopilot", "settings", "consensus mode" | Guide to `.claude/speckit-pro.local.md` settings — consensus mode, auto-commit, gate failure behavior. See [autopilot guide](./references/autopilot-guide.md) |
 | "how does consensus work", "clarify automation" | Explain the 3-agent consensus protocol — codebase-analyst, spec-context-analyst, domain-researcher. See [autopilot guide](./references/autopilot-guide.md) |
 | "gap remediation", "checklist automation" | Explain checklist gap remediation loop — consensus agents propose fixes, auto-edit, re-verify. See [autopilot guide](./references/autopilot-guide.md) |
@@ -110,6 +111,40 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 ### Enhancement (capabilities beyond official SpecKit)
 
 These are NEW capabilities that the official SpecKit CLI does not provide:
+
+#### Project Fixup — Repair an Existing SpecKit Pro Project
+
+When the developer asks the coach to fix or harden an existing SpecKit Pro
+project, operate on the current project root unless they name another path.
+This is a repair workflow, not just advice.
+
+**When to use:** Existing `.specify` projects with fragile direct edits to
+`.specify/templates/*.md`, missing or stale preset registration, missing PR
+template integration, or reviewability gates that should survive Spec Kit
+CLI upgrades.
+
+**Workflow:**
+
+1. Confirm you are in the intended repository root and inspect `git status`
+   before edits. Do not overwrite unrelated user changes.
+2. Run the audit helper:
+   `skills/speckit-coach/scripts/project-fixup.sh audit "$PWD"`
+3. If the audit reports reviewability-related direct core template edits, run:
+   `skills/speckit-coach/scripts/project-fixup.sh apply "$PWD" speckit-pro-reviewability`
+   or use a repo-specific preset id if the project has one.
+4. Verify template resolution:
+   `specify preset resolve spec-template`,
+   `specify preset resolve plan-template`, and
+   `specify preset resolve tasks-template` must point at the preset or an
+   intentional project override, not core `.specify/templates/*.md`.
+5. Restore affected core `.specify/templates/*.md` only from a reviewed source:
+   version control, a known-good Spec Kit re-init/upgrade backup, or an
+   official core template. Do not guess at core content.
+6. Ensure generated PR bodies preserve the host repository PR template if one
+   exists. If absent, recommend adding `.github/pull_request_template.md`.
+7. Run the project/unit checks that match the changed files, then report:
+   preset path, resolved templates, core-template restore status, PR template
+   status, and any manual follow-up.
 
 #### `/speckit technical-roadmap` — Multi-Spec Project Decomposition
 

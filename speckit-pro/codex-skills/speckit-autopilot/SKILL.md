@@ -797,6 +797,8 @@ for phase in PHASES starting from first_pending:
         - the placeholder no longer exists in either state store
         - at least one concrete Phase 7 item exists
         - each concrete Phase 7 item names task IDs from tasks.md
+        - `<SKILL_SCRIPTS>/reviewability-gate.sh tasks <feature_dir>`
+          does not return an unexcepted `block`
       If any check fails, STOP and repair the plan/state before Analyze
       or Implement can run.
    11. Advance to next phase (next iteration of loop) and write the new
@@ -832,16 +834,18 @@ POST-IMPLEMENTATION (after all 7 phases complete):
     | 11 | Code Review | review ext | $speckit-review |
     | 12 | Integration Suite | (none) | Step 3.1 direct |
     | 13 | Cleanup | cleanup ext | $speckit-cleanup |
-    | 14 | PR Creation | (none) | Step 3.2 direct |
-    | 15 | Review Remediation | (none) | Step 3.3 loop |
-    | 16 | Retrospective | retrospective ext | $speckit-retrospective-analyze |
+    | 14 | Reviewability Diff Gate | (none) | reviewability-gate.sh diff |
+    | 15 | PR Body Generation | (none) | generate-pr-body.sh |
+    | 16 | PR Creation | (none) | Step 3.2 direct |
+    | 17 | Review Remediation | (none) | Step 3.3 loop |
+    | 18 | Retrospective | retrospective ext | $speckit-retrospective-analyze |
 
     Extension items: Spawn `phase-executor` with instructions
     to run the `$speckit-*` extension skill for SPEC-XXX and return a summary.
-    Non-extension items (12, 14, 15): execute directly per Step 3.
+    Non-extension items (12, 14, 15, 16, 17): execute directly per Step 3.
     Missing extension: log warning and skip (don't fail).
     See [post-implementation-codex.md](./references/post-implementation-codex.md) for detailed prompts.
-    Item 16 is the FINAL STEP.
+    Item 18 is the FINAL STEP.
 ```
 
 **Dynamic updates:** If consensus reveals new questions or
@@ -1024,8 +1028,9 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
 
 1. **3.1 Integration Suite** — verify spec-specific tests exist,
    run FULL suite to catch regressions, fix failures
-2. **3.2 PR Creation** — final verification, push, create PR
-   with auto-generated summary, update workflow file
+2. **3.2 PR Creation** — final verification, reviewability diff gate,
+   host-template-aware PR body generation, push, create PR with
+   `--body-file`, update workflow file
 3. **3.3 Review Remediation** — schedule a polling loop to monitor
    and resolve Copilot/human review comments every 5 minutes
 
@@ -1122,6 +1127,11 @@ never from `.specify/scripts/bash/`.
   init, constitution, commands, branch detection (JSON)
 - `validate-gate.sh <G1-G7> <feature_dir>` — Validate any gate
   with marker counts and details (JSON)
+- `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` — Enforce
+  setup, tasks, and pre-PR reviewability budgets (JSON)
+- `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —
+  Generate a PR review packet from the host repository PR template when present,
+  or from the bundled fallback template
 - `detect-commands.sh` — Auto-detect build/test/lint commands for
   Node.js, Rust, Go, Python, and Makefile projects (JSON)
 - `detect-presets.sh` — Find installed presets, extensions, hooks,

@@ -42,7 +42,15 @@ TDD protocol, `PROJECT_COMMANDS`, and `COMPLETED_TASKS` context accumulated from
 earlier work.
 
 After G5 passes, the placeholder is invalid. Before Analyze or Implement can
-run, audit `update_plan` and `autopilot-state.json`:
+run, audit `update_plan` and `autopilot-state.json`, then run the
+reviewability task gate:
+
+```text
+skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/<feature>
+```
+
+If the gate returns `block` without a ratified split exception, stop before
+implementation and split the spec.
 
 - no `Phase 7: Implement - Pending task decomposition` item remains
 - one or more concrete `Phase 7:` items exist
@@ -54,6 +62,20 @@ summary before continuing.
 Use `implement-executor` for test and implementation tasks unless Step 0.11
 found a more specific project implementation agent. The parent session dispatches
 all workers directly; subagents do not spawn nested agents.
+
+## PR Body Generation
+
+Before creating or updating a PR after G7, the parent session runs:
+
+```text
+skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD
+skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
+```
+
+`generate-pr-body.sh` uses the host repository's pull request template if it
+exists, preserves unknown host-required sections, appends missing review-packet
+sections, and falls back to the bundled template when the host has none. Use
+`gh pr create --body-file .git/speckit-pr-body.md`, not an inline placeholder.
 
 ## Coverage Audit
 

@@ -50,6 +50,15 @@ Extract:
 If the SPEC-ID is not found, STOP: "SPEC-ID not found in
 technical roadmap. Available specs: <list pending specs>."
 
+Run the reviewability setup gate before creating the worktree:
+
+```text
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/reviewability-gate.sh setup <technical-roadmap-path>")
+```
+
+If it returns an unexcepted `block`, STOP and split the spec first. Warnings
+may proceed only when the workflow records the scope budget and split decision.
+
 ### 3. Create Git Worktree
 
 <hard_constraints>

@@ -210,6 +210,28 @@ This enables rapid exploration without rewriting requirements.
 - Debug resolution issues with `specify preset resolve <template-name>`
 - Keep custom presets in `.specify/presets/` and install with `--dev` for local development
 
+### Existing Project Fixup
+
+When a project already has local template edits, audit before upgrading or
+rerunning `specify init --force`:
+
+```bash
+skills/speckit-coach/scripts/project-fixup.sh audit "$PWD"
+```
+
+If reviewability or PR packet content was added directly to
+`.specify/templates/*.md`, migrate it into a project-local preset first:
+
+```bash
+skills/speckit-coach/scripts/project-fixup.sh apply "$PWD" speckit-pro-reviewability
+specify preset resolve spec-template
+specify preset resolve plan-template
+specify preset resolve tasks-template
+```
+
+Then restore core `.specify/templates/*.md` from version control or a reviewed
+Spec Kit default. Do not hand-edit core defaults as the durable solution.
+
 ### Extension Selection Guide
 
 | Project Needs | Recommended Extensions |

@@ -36,6 +36,22 @@ The feature is decomposed into **{{N}} specifications** across **{{M}} dependenc
 - SPEC-003 can start in parallel with SPEC-002 (uses mock data)
 - SPEC-004 requires ALL previous specs (integration spec)
 
+## Reviewability Contract
+
+Every spec must fit a human review budget before setup and again before PR
+creation.
+
+- Warn above 400 reviewable LOC, 6 production files, 15 total files, or more
+  than one primary surface.
+- Block above 800 reviewable LOC, 8 production files, 25 total files, or more
+  than one primary surface unless this roadmap records a ratified split
+  exception.
+- Primary surfaces are schema/migration, API, UI, scheduler/runtime,
+  harness/adapter, seed/config, and docs/process.
+- PR descriptions are review packets. They must include what changed, why,
+  non-goals, review order, scope budget, traceability, verification evidence,
+  known gaps, and rollback/flag notes.
+
 ---
 
 ## Dependency Graph
@@ -80,6 +96,12 @@ SPEC-003 ({{SPEC_003_NAME}}) ───────────►│
 
 **Goal:** <!-- One sentence describing what this spec achieves -->
 
+**Reviewability Budget:** Primary surface: <!-- e.g., API --> |
+Projected reviewable LOC: <!-- e.g., 320 --> |
+Production files: <!-- e.g., 4 --> |
+Total files: <!-- e.g., 9 --> |
+Budget result: <!-- within budget / warning accepted / split exception -->
+
 **Scope:**
 <!--
   Write scope descriptions detailed enough to drive /speckit.specify.
@@ -116,6 +138,12 @@ Alternatives considered: [What was rejected and why.]
 
 **Goal:** <!-- One sentence -->
 
+**Reviewability Budget:** Primary surface: <!-- e.g., UI --> |
+Projected reviewable LOC: <!-- e.g., 300 --> |
+Production files: <!-- e.g., 3 --> |
+Total files: <!-- e.g., 8 --> |
+Budget result: <!-- within budget / warning accepted / split exception -->
+
 **Scope:**
 - <!-- Specific deliverable with technology and approach -->
 - <!-- Another specific deliverable -->
@@ -137,6 +165,12 @@ Alternatives considered: [What was rejected and why.]
 
 **Goal:** <!-- One sentence -->
 
+**Reviewability Budget:** Primary surface: <!-- e.g., docs/process --> |
+Projected reviewable LOC: <!-- e.g., 200 --> |
+Production files: <!-- e.g., 0 --> |
+Total files: <!-- e.g., 5 --> |
+Budget result: <!-- within budget / warning accepted / split exception -->
+
 **Scope:**
 - <!-- Specific deliverable with technology and approach -->
 - <!-- Another specific deliverable -->
@@ -157,6 +191,12 @@ Alternatives considered: [What was rejected and why.]
 **Priority:** P1 | **Depends On:** SPEC-001, SPEC-002, SPEC-003 | **Enables:** Complete feature
 
 **Goal:** <!-- One sentence -->
+
+**Reviewability Budget:** Primary surface: <!-- e.g., scheduler/runtime --> |
+Projected reviewable LOC: <!-- e.g., 450 --> |
+Production files: <!-- e.g., 5 --> |
+Total files: <!-- e.g., 12 --> |
+Budget result: <!-- within budget / warning accepted / split exception -->
 
 **Scope:**
 - <!-- Specific deliverable with technology and approach -->

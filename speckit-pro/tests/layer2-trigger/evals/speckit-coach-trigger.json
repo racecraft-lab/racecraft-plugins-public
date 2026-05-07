@@ -32,6 +32,10 @@
     "should_trigger": true
   },
   {
+    "query": "can you run the coach and fix up this existing speckit-pro project so our template customizations survive specify cli upgrades?",
+    "should_trigger": true
+  },
+  {
     "query": "my team lead wants me to create a technical roadmap for our Q3 roadmap. we have 8 features that need specs. how do I set up the technical roadmap template and track dependencies between specs?",
     "should_trigger": true
   },

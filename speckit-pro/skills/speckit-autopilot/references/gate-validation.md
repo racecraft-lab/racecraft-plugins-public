@@ -17,6 +17,10 @@ Programmatic gate checks performed after each SDD phase. The autopilot validates
 5. Architecture patterns verified (e.g., patterns documented in CLAUDE.md)
 6. Workflow file's Prerequisites table filled with baselines
 7. Constitution Check summary line set to "✅ Verified"
+8. Reviewability setup gate passes:
+   `skills/speckit-autopilot/scripts/reviewability-gate.sh setup <workflow-or-roadmap>`
+   must be `pass`, `warn`, or a recorded `exception`; `block` stops before
+   Specify and requires spec decomposition.
 ```
 
 **Auto-Fix:** Not applicable — if the codebase doesn't pass typecheck/test/build, the user must fix it before starting a new spec workflow. These are foundational health checks.
@@ -131,6 +135,9 @@ time) to prevent conflicting spec edits.
 2. For each FR-XXX, verify it appears in tasks.md
 3. Verify task dependency ordering makes sense (no forward references)
 4. Verify [P] markers are only on genuinely parallel-safe tasks
+5. Run `reviewability-gate.sh tasks specs/<feature>` and block implementation
+   if generated tasks exceed the reviewability block threshold without a
+   ratified split exception.
 ```
 
 **Auto-Fix:** For each unmapped FR:
@@ -253,7 +260,10 @@ before G7 can pass.
 - Missing integration tests: Spawn implement-executor
 
 **After G7 passes:** Run full integration suite (Step 3.1),
-then push branch and create PR via `gh pr create`.
+then run `reviewability-gate.sh diff origin/main...HEAD`. If the final diff
+exceeds the block threshold without a ratified split exception, split before
+opening/updating the PR. Otherwise generate the PR review packet with
+`generate-pr-body.sh`, push branch, and create PR via `gh pr create --body-file`.
 
 **Failure Escalation:** If verification suite fails after 2 fix attempts, STOP. Present the specific failures to human.
 

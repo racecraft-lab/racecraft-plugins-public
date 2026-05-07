@@ -5,13 +5,20 @@ set -euo pipefail
 source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
-SCRIPTS_DIR="$PLUGIN_ROOT/skills/speckit-autopilot/scripts"
-SCRIPTS=(check-prerequisites.sh validate-gate.sh detect-commands.sh detect-presets.sh)
+SCRIPT_FILES=(
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/check-prerequisites.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/validate-gate.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/detect-commands.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/detect-presets.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/reviewability-gate.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-pr-body.sh"
+  "$PLUGIN_ROOT/skills/speckit-coach/scripts/project-fixup.sh"
+)
 
-for script in "${SCRIPTS[@]}"; do
-  SCRIPT_FILE="$SCRIPTS_DIR/$script"
+for SCRIPT_FILE in "${SCRIPT_FILES[@]}"; do
+  script="${SCRIPT_FILE#$PLUGIN_ROOT/skills/}"
 
-  section "scripts/${script}"
+  section "$script"
 
   set_test "${script}: file exists"
   assert_file_exists "$SCRIPT_FILE"
