@@ -56,8 +56,9 @@ Bind the workflow to actual Codex primitives:
 - `update_plan` is REQUIRED before Phase 1 and after every phase transition.
   If the call fails or is skipped, STOP.
 - `spawn_agent` and `wait_agent` are the REQUIRED orchestration primitives
-  for phase execution. Use `send_input` only for follow-up instructions to an
-  already-running agent.
+  for phase execution. Use `followup_task` when a follow-up should trigger
+  the already-running agent's next turn; use `send_message` only for queued
+  context that does not need to trigger a turn.
 - `autopilot-fast-helper` is OPTIONAL. Only the main autopilot may invoke it,
   and only for tiny text-only compression, triage, or query-drafting work.
   Never route edits, gate decisions, or consensus votes through it.

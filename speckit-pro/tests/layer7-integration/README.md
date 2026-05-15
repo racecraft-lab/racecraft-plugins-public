@@ -316,13 +316,24 @@ is developer-local and runs only when explicitly requested via
 
 ## Codex side
 
-Layer 7 covers Claude Code dispatch only. Per the parity research at
-`docs/ai/research/codex-parity-research-*.md`, OpenAI Codex has no
-multi-agent / subagent primitive analogous to Claude Code's `Agent` tool
-with `subagent_type`, so there is no dispatch graph to assert on. Codex
-dispatch behavior, when it lands, will need a separate Layer 7 mirror
-(or this directory will need to grow Codex fixtures next to the Claude
-ones).
+Layer 7 replay fixtures still cover Claude Code dispatch transcripts only.
+Codex now has explicit orchestration primitives (`spawn_agent`,
+`wait_agent`, `send_message`, and `followup_task`), so the older assumption
+that there is no Codex subagent graph is no longer valid.
+
+Until a Codex transcript fixture format exists, Codex coverage lives in the
+structural layer:
+
+1. `validate-codex-skills.sh` asserts the Codex autopilot skill names the
+   real Codex tools and excludes obsolete tool names.
+2. `validate-codex-skills.sh` asserts every shared skill-name collision
+   (`speckit-autopilot`, `speckit-coach`, `grill-me`) has a guard that
+   redirects Codex back to `codex-skills/`.
+3. `validate-codex-agents.sh` asserts the installed Codex subagent templates
+   do not include nested `spawn_agent` orchestration.
+
+Add a Codex Layer 7 mirror when Codex exposes a stable replayable transcript
+schema for `spawn_agent`/`wait_agent` runs.
 
 ## When to add a new fixture
 

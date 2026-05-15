@@ -9,9 +9,36 @@ CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 # Canonical skill list — keep in sync with the case block in the
 # "corresponding source artifact exists" test below.
 SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr install grill-me)
+COLLISION_GUARD_SKILLS=(speckit-autopilot speckit-coach grill-me)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
 CC_ONLY_KEYS=(user-invokable license argument-hint)
+
+section "Codex skill-selection collision guards"
+
+for skill in "${COLLISION_GUARD_SKILLS[@]}"; do
+  SHARED_SKILL_FILE="$PLUGIN_ROOT/skills/$skill/SKILL.md"
+  CODEX_SKILL_FILE="$CODEX_SKILLS_DIR/$skill/SKILL.md"
+
+  set_test "${skill}: shared and Codex variants both exist"
+  if [ -f "$SHARED_SKILL_FILE" ] && [ -f "$CODEX_SKILL_FILE" ]; then
+    _pass
+  else
+    _fail "expected both $SHARED_SKILL_FILE and $CODEX_SKILL_FILE"
+    continue
+  fi
+
+  shared_content=$(cat "$SHARED_SKILL_FILE")
+
+  set_test "${skill}: shared variant redirects when selected by Codex"
+  assert_contains "$shared_content" "Codex Skill-Selection Guard"
+
+  set_test "${skill}: shared guard names the Codex variant path"
+  assert_contains "$shared_content" "../../codex-skills/$skill/SKILL.md"
+
+  set_test "${skill}: shared guard forbids Claude instructions in Codex"
+  assert_contains "$shared_content" "Do not follow the Claude-oriented instructions below in Codex"
+done
 
 for skill in "${SKILLS[@]}"; do
   SKILL_DIR="$CODEX_SKILLS_DIR/$skill"
@@ -95,6 +122,15 @@ $(cat "$ref_file")"
       _pass
     else
       _fail "expected both spawn_agent and wait_agent in the Codex autopilot skill"
+    fi
+
+    set_test "speckit-autopilot: names real Codex follow-up tools"
+    if [[ "$runtime_doc" == *"followup_task"* \
+      && "$runtime_doc" == *"send_message"* \
+      && "$runtime_doc" != *"send_input"* ]]; then
+      _pass
+    else
+      _fail "expected followup_task/send_message and no obsolete send_input reference"
     fi
 
     set_test "speckit-autopilot: validates a single in_progress item before phase execution"

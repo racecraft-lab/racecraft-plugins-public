@@ -13,6 +13,21 @@ license: MIT
 
 # SpecKit Autopilot — Autonomous Execution Engine
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/speckit-autopilot/SKILL.md` from this
+plugin root, treat that document as the active skill, and report that the
+fallback guard was triggered.
+
+The Codex variant must use `update_plan`, `spawn_agent`, `wait_agent`,
+`send_message` or `followup_task`, and `autopilot-state.json`. It must not
+use Claude-only runtime primitives such as `TaskCreate`, `TaskUpdate`,
+`Agent(...)`, Opus 4.6 model names, or `/speckit.*` slash-command
+orchestration.
+
 ## Scope
 
 This skill handles autonomous workflow EXECUTION. For methodology

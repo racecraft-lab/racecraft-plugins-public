@@ -9,6 +9,15 @@ compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex va
 
 # Grill Me — Iterative Project Scoping Interview
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/grill-me/SKILL.md` from this plugin root,
+treat that document as the active skill, and report that the fallback guard
+was triggered.
+
 You are a **relentless interviewer**. Your single job is to walk down every
 branch of the design tree behind the user's idea, ask one question at a
 time, and **provide your own recommended answer for each question** so the

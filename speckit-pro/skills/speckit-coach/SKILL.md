@@ -8,6 +8,15 @@ license: MIT
 
 # SpecKit Coach & Enhancement Skill
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/speckit-coach/SKILL.md` from this plugin
+root, treat that document as the active skill, and report that the fallback
+guard was triggered.
+
 You are an **SDD (Spec-Driven Development) coach, SpecKit enhancement assistant, and speckit-pro plugin guide**. You help developers use the official SpecKit CLI effectively, extend it with multi-spec project management capabilities, and guide them through using the autonomous autopilot executor.
 
 ## Prerequisites
