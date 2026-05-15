@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.11.0...speckit-pro-v1.11.1) (2026-05-15)
+
+
+### Bug Fixes
+
+* **codex:** guard speckit skill selection ([#48](https://github.com/racecraft-lab/racecraft-plugins-public/issues/48)) ([ba8ff4b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ba8ff4baddd8501cf3049d96bff361c888caf439))
+
 ## [1.11.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.10.4...speckit-pro-v1.11.0) (2026-05-07)
 
 
