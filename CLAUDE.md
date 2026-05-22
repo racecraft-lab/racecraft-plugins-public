@@ -2,6 +2,41 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Working in This Repo
+
+Four rules, in priority order. These exist because plugin/marketplace edits have high blast radius (every install consumer gets the change on `/plugin marketplace update`) and most defects here come from doing too much, not too little.
+
+### 1. Surface assumptions before editing
+- State them in chat before touching files. If a plugin manifest, release config, or CI workflow change is ambiguous, ask — don't infer.
+- If a request has multiple reasonable interpretations (e.g., "fix the release" could mean bump version, re-trigger workflow, or patch the script), list them and let the user pick.
+- If a simpler approach exists (e.g., a `chore:` empty commit vs. a code change), say so before implementing the larger one.
+
+### 2. Simplest change that solves it
+- No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
+- No flags/options "for future flexibility" — add them when a second caller actually appears.
+- For shell scripts under `speckit-pro/scripts/` and `speckit-pro/tests/`, prefer plain `bash` + `jq` over introducing a new dependency.
+
+### 3. Surgical edits
+- Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
+- When editing one plugin's files, don't drift into another plugin's files unless the task explicitly spans them.
+- Remove only the imports/blocks your change orphans — leave pre-existing dead code alone (mention it, don't delete it).
+- Match existing style in shell scripts, YAML, and Markdown even if you'd write it differently.
+
+### 4. Verifiable success criteria
+- Translate every task into a check before coding: "edit X" → "after edit, `bash tests/run-all.sh --layer 1` passes" or "`gh pr view <N>` shows green".
+- For workflow / release changes, the success check is "the next release PR from release-please reflects this" — say that out loud before editing.
+- For multi-step work, list the steps + their verification commands up front, then loop on them.
+
+Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, use judgment.
+
+## Start Here
+
+- **Marketplace registry:** `.claude-plugin/marketplace.json` (must be updated when adding a plugin)
+- **Release config:** `release-please-config.json` + `.release-please-manifest.json` (kept in sync; see "Adding a New Plugin to Release Automation" below)
+- **Pipeline verification runbook:** `docs/ai/specs/cicd-release-pipeline-verification.md` (authoritative for branch-protection + release-please setup)
+- **Per-plugin entry:** `<plugin>/.claude-plugin/plugin.json` (name, version, description)
+- **Test runner:** `<plugin>/tests/run-all.sh` (see "Running Tests")
+
 ## What This Repo Is
 
 A **Claude Code plugin marketplace** containing public plugins for spec-driven development. Plugins are installed via:
@@ -97,14 +132,22 @@ The SessionStart hook warns if `specify` is not found.
 - `speckit-autopilot` — Autonomous 7-phase SDD workflow executor with multi-agent consensus. References in `references/` cover gate validation, consensus protocol, phase execution, TDD protocol, and post-implementation steps.
 - `speckit-coach` — SDD methodology coaching. References cover command guide, constitution guide, presets/extensions, checklist domains, best practices, and getting-started templates.
 
-## Active Technologies
-- Bash (macOS/Linux) + jq (JSON processing), release-please (Google, version automation) (001-repository-foundation)
-- YAML (GitHub Actions workflow) + Bash (inline scripts) + GitHub Actions (`actions/checkout`), no external dependencies (002-pr-checks-workflow)
-- YAML (GitHub Actions workflow syntax) + Bash (inline sync step) + `googleapis/release-please-action@v4`, `actions/checkout@v4`, `jq` (pre-installed on `ubuntu-latest`) (003-release-automation)
-- Bash (gh CLI v2+), Markdown (GitHub-Flavored) + GitHub CLI (`gh`), GitHub Actions (existing YAML workflows) (004-integration-verification)
+### Adding a Skill to speckit-pro
 
-## Recent Changes
-- 001-repository-foundation: Added Bash (macOS/Linux) + jq (JSON processing), release-please (Google, version automation)
+1. Create `speckit-pro/skills/<skill-name>/SKILL.md` with YAML frontmatter (`name`, `description`, `license`). Add `references/` and `scripts/` only if needed.
+2. If the skill has a Codex counterpart, mirror it under `speckit-pro/codex-skills/<skill-name>/SKILL.md` and ensure `tests/layer1-structural/validate-codex-skills.sh` still passes.
+3. Run `bash tests/run-all.sh --layer 1` to confirm structural validation passes.
+4. No `marketplace.json` or `release-please-config.json` edits are required for a new skill within an existing plugin — those files track plugins, not skills.
+5. Commit as `feat(speckit-pro): add <skill-name> skill` so release-please promotes it on the next release PR.
+
+## Tooling
+
+- **Runtime:** Bash (macOS/Linux), `jq` for JSON
+- **Release automation:** `googleapis/release-please-action@v4`
+- **CI:** GitHub Actions (`actions/checkout@v4`, inline Bash)
+- **PR / repo ops:** GitHub CLI (`gh`) v2+
+
+For per-feature history, see `git log` and `CHANGELOG.md` — don't maintain a duplicate list here.
 
 ## Contributing & Branching Strategy
 
