@@ -1,11 +1,6 @@
 ---
 name: speckit-coach
-description: >
-  Coaches developers through Spec-Driven Development using the
-  official SpecKit CLI and the speckit-pro plugin. Provides SDD
-  methodology guidance, per-command coaching, phase gate validation,
-  multi-spec technical roadmap creation, workflow tracking, and
-  existing-project fixup.
+description: "Helps with SpecKit / Spec-Driven Development problems. Use when the user is stuck on: a failing simplicity gate or gate-validator rejecting acceptance criteria, deciding which checklist domains apply (api, security, observability, data-integrity, resilience), writing testable acceptance criteria the gate accepts, decomposing a large feature into multiple specs, creating a multi-spec technical roadmap, understanding the consensus protocol or how phase gates work, the difference between specify plan and specify tasks, what each /speckit-<command> does, how the tdd-mandate preset changes the workflow, where grill-me or clarify fit in the SDD process, repairing an existing speckit-pro project, or making template customizations upgrade-safe. Not for actually running autopilot ($speckit-autopilot), conducting the pre-spec interview ($grill-me), or unrelated coding tasks (linting, MCP tools, PR review, git status, build errors)."
 ---
 
 # SpecKit Coach & Enhancement Skill
@@ -24,6 +19,8 @@ specify init --ai claude     # 25+ agents: copilot, cursor-agent, gemini, codex,
 After installation, Codex exposes the bundled skill entrypoints `$speckit-coach`, `$speckit-setup`, `$speckit-autopilot`, `$speckit-status`, `$speckit-resolve-pr`, and `$grill-me`. This skill provides **coaching, guidance, and enhancement** on top of those entrypoints. Users invoke them via the `$skill-name` syntax, implicit description-match, or `@SpecKit Pro`.
 
 > **Note:** Codex does NOT support `/<plugin>:<skill>` or `/<skill>` slash-command syntax for custom plugins. Custom slash commands were [deprecated](https://github.com/openai/codex/issues/7480) in favor of skills. If you see older docs referencing `/speckit-coach`, `/speckit-setup`, etc. as Codex commands, those instructions are stale — use `$skill-name` or natural language instead. (The `/speckit-specify`, `/speckit-implement` etc. references throughout this skill are SpecKit CLI commands, not Codex slash commands — those are correct.)
+
+> **Codex implicit-trigger limitation (Q&A queries):** Layer 2 trigger evals show that Codex auto-invokes this coach reliably on **problem-statement** queries ("the simplicity gate is failing", "which checklist domains should I pick", "gate validator is rejecting my acceptance criteria") and **explicit invocations** ("$speckit-coach", "run the coach"), but **does not consistently auto-fire on pure Q&A phrasings** ("explain X", "walk me through Y", "what's the difference between X and Y", "where does X fit"). Codex typically responds to those by *mentioning* `$speckit-coach` in the answer rather than auto-invoking it. This is a Codex selector behavior (skills are biased toward action/imperative intents) and is not solvable by tuning this description alone — Claude Code uses the `argument-hint` YAML field for these example phrasings, which Codex does not yet support ([openai/codex#10585](https://github.com/openai/codex/issues/10585)). **Recommendation for Codex users:** when asking a methodology question, prefix it with `$speckit-coach` to force-invoke, or phrase the question as a problem you're stuck on ("I'm stuck understanding the consensus protocol" rather than "explain the consensus protocol"). Measured pass rates: Codex 15/23 (65%) vs Claude 19/23 (83%) on the same eval set.
 
 ## What This Skill Does
 

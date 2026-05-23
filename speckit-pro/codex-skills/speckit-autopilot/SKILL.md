@@ -2,10 +2,25 @@
 name: speckit-autopilot
 description: >
   Autonomous SpecKit workflow executor. Reads a populated workflow
-  file and runs all 7 SDD phases with programmatic gate validation,
-  multi-agent consensus resolution, and auto-commits. Requires
-  SpecKit CLI installed, constitution created, and a populated
-  workflow file.
+  file and runs all 7 SDD phases (specify → clarify → plan →
+  checklist → tasks → analyze → implement) with programmatic gate
+  validation, multi-agent consensus resolution, and auto-commits.
+  Use when the user says "run autopilot", "execute workflow",
+  "autonomous speckit", "autonomous execution", "kick off autopilot",
+  "start the autonomous pipeline", "drive it through all the SDD
+  phases", "run the whole thing autonomously", "full end-to-end
+  speckit run", or hands over a populated SPEC-NNN-workflow.md file
+  ready for end-to-end execution with gate validation between phases.
+  Requires SpecKit CLI installed, constitution created, and a
+  populated workflow file. Do NOT fire for methodology questions
+  about the consensus protocol, simplicity-gate troubleshooting,
+  spec-writing coaching, technical-roadmap creation, status checks
+  on existing specs, PR-review thread resolution, feature
+  decomposition, checklist domain selection, project setup ("specify
+  init"), interview-style pre-spec scoping ("grill me", "interview
+  me"), or unrelated coding tasks (unit tests, MCP tools, linting,
+  build errors) — those route to $speckit-coach, $speckit-setup,
+  $speckit-status, $speckit-resolve-pr, $grill-me, or no skill at all.
 ---
 
 # SpecKit Autopilot — Autonomous Execution Engine

@@ -1,12 +1,13 @@
 ---
 name: grill-me
 description: >
-  MANDATORY for SpecKit / SDD pre-spec scoping — NOT brainstorming.
-  Triggers on "grill me", "$grill-me", "walk the design tree",
-  "Design Concept doc", "relentless interviewer", or before
-  /speckit-specify, /speckit-plan, /speckit-tasks, $speckit-setup.
-  Walks the design tree one question at a time with the recommended
-  answer first; accepts .md, .txt, or a free-text topic.
+  Pre-spec design tree interview — walks one question at a time
+  before /speckit-specify with the recommended answer first. Use when
+  the user says: "grill me", "$grill-me", "grill me on this",
+  "interview me about", "walk the design tree", "relentless
+  interviewer", "produce a Design Concept doc", "Design Concept
+  document for", "pre-spec scoping for". Accepts .md, .txt, or a
+  free-text topic as input.
 ---
 
 # Grill Me — Iterative Project Scoping Interview (Codex)
