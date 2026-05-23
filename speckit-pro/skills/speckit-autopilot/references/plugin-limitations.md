@@ -95,7 +95,7 @@ low-quality automated output that defeats the skill's purpose.
 
 | Skill | Why it's forbidden inside autopilot |
 |-------|------------------------------------|
-| `grill-me` | Uses `AskUserQuestion` to interview a real human one question at a time. Inside autopilot there is no user to answer. Autopilot's Clarify phase uses `/speckit.clarify` with the consensus protocol instead — that is the only sanctioned clarification mechanism in the autonomous loop. If a phase hits ambiguity that consensus can't resolve, fail the gate and surface to the user; never escalate to grill-me. |
+| `grill-me` | Uses `AskUserQuestion` to interview a real human one question at a time. Inside autopilot there is no user to answer. Autopilot's Clarify phase uses `/speckit-clarify` with the consensus protocol instead — that is the only sanctioned clarification mechanism in the autonomous loop. If a phase hits ambiguity that consensus can't resolve, fail the gate and surface to the user; never escalate to grill-me. |
 
 The hard constraint is enforced in three independent layers:
 

@@ -45,7 +45,7 @@ captured during scoping.
 
 > **Note:** Grill Me is human-in-the-loop only. It is **not** part of
 > the autopilot loop. Once the workflow file is populated and autopilot
-> begins, clarifications happen via `/speckit.clarify` and the
+> begins, clarifications happen via `/speckit-clarify` and the
 > consensus protocol — never via grill-me.
 
 ---
@@ -54,13 +54,13 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit.specify` | ⏳ Pending | |
-| Clarify | `/speckit.clarify` | ⏳ Pending | Optional but recommended |
-| Plan | `/speckit.plan` | ⏳ Pending | |
-| Checklist | `/speckit.checklist` | ⏳ Pending | Run for each domain |
-| Tasks | `/speckit.tasks` | ⏳ Pending | |
-| Analyze | `/speckit.analyze` | ⏳ Pending | |
-| Implement | `/speckit.implement` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Plan | `/speckit-plan` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -126,13 +126,13 @@ Each phase requires **human review and approval** before proceeding:
 ### Specify Prompt
 
 ```bash
-/speckit.specify {{SPEC_DESCRIPTION}}
+/speckit-specify {{SPEC_DESCRIPTION}}
 ```
 
 #### Detailed Prompt (for complex specs)
 
 ```bash
-/speckit.specify
+/speckit-specify
 
 ## Feature: {{SPEC_NAME}}
 
@@ -191,19 +191,19 @@ Use these markers in spec.md for traceability through later phases:
 #### Session 1: UX Focus
 
 ```bash
-/speckit.clarify Focus on UX: user flows, interactions, loading states, error states
+/speckit-clarify Focus on UX: user flows, interactions, loading states, error states
 ```
 
 #### Session 2: API Focus
 
 ```bash
-/speckit.clarify Focus on API: endpoint contracts, error responses, streaming behavior, rate limiting
+/speckit-clarify Focus on API: endpoint contracts, error responses, streaming behavior, rate limiting
 ```
 
 #### Session 3: Integration Focus
 
 ```bash
-/speckit.clarify Focus on integration: external services, data dependencies, authentication
+/speckit-clarify Focus on integration: external services, data dependencies, authentication
 ```
 
 <!-- Add or modify sessions based on your project's domains -->
@@ -225,7 +225,7 @@ Use these markers in spec.md for traceability through later phases:
 ### Plan Prompt
 
 ```bash
-/speckit.plan
+/speckit-plan
 
 ## Tech Stack
 <!-- Populate with your project's tech stack from the constitution or project docs -->
@@ -257,7 +257,7 @@ Use these markers in spec.md for traceability through later phases:
 
 ## Phase 4: Domain Checklists
 
-**When to run:** After `/speckit.plan` — validates both spec AND plan together. Run multiple times for different domains.
+**When to run:** After `/speckit-plan` — validates both spec AND plan together. Run multiple times for different domains.
 
 **Best Practice:** Don't guess which domains to check. Analyze the spec first, then generate enriched prompts with spec-specific focus areas.
 
@@ -291,7 +291,7 @@ For each domain, include spec-specific focus areas in the prompt — not just th
 <!-- Why this domain: [1-2 sentence justification from spec analysis] -->
 
 ```bash
-/speckit.checklist <!-- DOMAIN_1 -->
+/speckit-checklist <!-- DOMAIN_1 -->
 
 Focus on {{SPEC_NAME}} requirements:
 - <!-- Specific area from your spec this domain should validate -->
@@ -305,7 +305,7 @@ Focus on {{SPEC_NAME}} requirements:
 <!-- Why this domain: [1-2 sentence justification from spec analysis] -->
 
 ```bash
-/speckit.checklist <!-- DOMAIN_2 -->
+/speckit-checklist <!-- DOMAIN_2 -->
 
 Focus on {{SPEC_NAME}} requirements:
 - <!-- Specific area from your spec this domain should validate -->
@@ -319,7 +319,7 @@ Focus on {{SPEC_NAME}} requirements:
 <!-- Why this domain: [1-2 sentence justification from spec analysis] -->
 
 ```bash
-/speckit.checklist <!-- DOMAIN_3 -->
+/speckit-checklist <!-- DOMAIN_3 -->
 
 Focus on {{SPEC_NAME}} requirements:
 - <!-- Specific area from your spec this domain should validate -->
@@ -354,7 +354,7 @@ When checklist identifies `[Gap]` items:
 ### Tasks Prompt
 
 ```bash
-/speckit.tasks
+/speckit-tasks
 
 ## Task Structure
 - Small, testable chunks (1-2 hours each)
@@ -392,7 +392,7 @@ When checklist identifies `[Gap]` items:
 ### Analyze Prompt
 
 ```bash
-/speckit.analyze
+/speckit-analyze
 
 Focus on:
 1. Constitution alignment — verify coding standards compliance
@@ -425,7 +425,7 @@ Focus on:
 ### Implement Prompt
 
 ```bash
-/speckit.implement
+/speckit-implement
 
 ## Approach: TDD-First
 

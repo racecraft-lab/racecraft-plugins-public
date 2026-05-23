@@ -108,7 +108,7 @@ Items that came up but were deliberately deferred. Each item has:
 - **Why deferred:** <user said "I don't know yet" / out of scope for
   this session / blocked on input from someone else>
 - **Suggested next step:** <how to resolve, e.g., "Ask <stakeholder>
-  before /setup runs", "Defer to /speckit.clarify during autopilot">
+  before /setup runs", "Defer to /speckit-clarify during autopilot">
 
 ## Recommended Next Step
 

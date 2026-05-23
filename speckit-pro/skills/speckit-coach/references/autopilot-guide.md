@@ -35,7 +35,7 @@ This creates `.specify/`, templates, and slash commands.
 ### 3. Constitution Created
 
 ```bash
-/speckit.constitution
+/speckit-constitution
 ```
 
 The constitution must exist at
@@ -272,7 +272,7 @@ file's `Branch` field.
 
 ### Why Specify Needs Special Handling
 
-The `/speckit.specify` command normally calls
+The `/speckit-specify` command normally calls
 `create-new-feature.sh` to create a branch. On a worktree or
 existing feature branch, this must be skipped.
 
@@ -452,7 +452,7 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify init --ai claude
 
 # Create constitution (if not already)
-/speckit.constitution
+/speckit-constitution
 
 # Create technical roadmap (for multi-spec projects)
 /speckit-pro:coach help me create a technical roadmap
@@ -517,7 +517,7 @@ startup (Step 0.11). This matters because:
 
 **Presets** may modify template content. If a preset overrides
 `tasks-template.md` (e.g., to enforce TDD or add extra
-sections), the `/speckit.tasks` command will generate tasks
+sections), the `/speckit-tasks` command will generate tasks
 with different structure. The autopilot's task parsing should
 handle any template variant.
 

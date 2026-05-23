@@ -8,7 +8,7 @@ Lessons learned from real-world multi-spec projects, official SpecKit guidance, 
 
 "Having a very detailed first prompt will produce a much better specification." — [Microsoft Developer Blog](https://developer.microsoft.com/blog/spec-driven-development-spec-kit)
 
-Before running `/speckit.specify`, spend 5-10 minutes thinking through:
+Before running `/speckit-specify`, spend 5-10 minutes thinking through:
 - What problem does this solve and for whom?
 - What are the key user stories?
 - What is explicitly OUT of scope?
@@ -18,7 +18,7 @@ A vague prompt produces a vague spec, which cascades quality issues through all 
 
 ### Constitution First
 
-Run `/speckit.constitution` before any `/speckit.specify` calls. Without a constitution:
+Run `/speckit-constitution` before any `/speckit-specify` calls. Without a constitution:
 - AI agents have no guardrails for generated code
 - Plan phase has no gates to validate against
 - Each spec may adopt different architectural patterns
@@ -46,10 +46,10 @@ The Clarify phase is cheap. Rework is expensive.
 
 | Scenario | Action |
 |----------|--------|
-| Spec has `[NEEDS CLARIFICATION]` markers | Run `/speckit.clarify` |
-| Multiple valid interpretations of a requirement | Run `/speckit.clarify` |
-| You're unsure about acceptance criteria | Run `/speckit.clarify` |
-| Spec has 0 markers and all requirements are clear | Skip — go to `/speckit.plan` |
+| Spec has `[NEEDS CLARIFICATION]` markers | Run `/speckit-clarify` |
+| Multiple valid interpretations of a requirement | Run `/speckit-clarify` |
+| You're unsure about acceptance criteria | Run `/speckit-clarify` |
+| Spec has 0 markers and all requirements are clear | Skip — go to `/speckit-plan` |
 | Trivial feature with obvious requirements | Skip |
 
 ## Constitution as Guardrail
@@ -108,10 +108,10 @@ The foundational phase (Phase 2) is special:
 ### Commit Between Phases
 
 Every SpecKit phase produces artifacts worth preserving:
-- After `/speckit.specify` → commit spec.md
-- After `/speckit.clarify` → commit updated spec.md
-- After `/speckit.plan` → commit plan.md, research.md, data-model.md, contracts/
-- After `/speckit.tasks` → commit tasks.md
+- After `/speckit-specify` → commit spec.md
+- After `/speckit-clarify` → commit updated spec.md
+- After `/speckit-plan` → commit plan.md, research.md, data-model.md, contracts/
+- After `/speckit-tasks` → commit tasks.md
 - After each implementation phase → commit working code
 
 ### Why This Matters
@@ -154,7 +154,7 @@ Tasks without `[P]` must be executed sequentially.
 | Checklist | Trivial feature, well-understood domain | New domain, multiple stakeholders, compliance requirements |
 | Analyze | **Never skip** | Always — it catches coverage gaps cheaply |
 
-**Always run `/speckit.analyze` before `/speckit.implement`**. It's the cheapest quality gate in the workflow.
+**Always run `/speckit-analyze` before `/speckit-implement`**. It's the cheapest quality gate in the workflow.
 
 ## Evolving Specs Over Time
 
@@ -177,7 +177,7 @@ Implementation rarely matches the original spec exactly. Follow-up changes, bug 
 From [Issue #328](https://github.com/github/spec-kit/issues/328):
 
 When new requirements emerge after planning:
-- Use `/speckit.specify` on a feature branch for the new requirements
+- Use `/speckit-specify` on a feature branch for the new requirements
 - Merge spec branches to integrate with existing work
 - New specs are contextually informed by previous specs and the constitution
 
@@ -274,9 +274,9 @@ SpecKit phases are **safe to re-run**. Re-running a phase
 overwrites its artifacts with freshly generated versions but
 doesn't corrupt upstream or downstream state:
 
-- Re-running `/speckit.specify` regenerates `spec.md`
-- Re-running `/speckit.plan` regenerates `plan.md`, `research.md`, etc.
-- Re-running `/speckit.tasks` regenerates `tasks.md`
+- Re-running `/speckit-specify` regenerates `spec.md`
+- Re-running `/speckit-plan` regenerates `plan.md`, `research.md`, etc.
+- Re-running `/speckit-tasks` regenerates `tasks.md`
 
 **When to re-run:**
 - After fixing a spec issue discovered during plan or tasks
@@ -295,9 +295,9 @@ doesn't corrupt upstream or downstream state:
 | Anti-Pattern | Why It's Bad | Fix |
 |---|---|---|
 | Implementing before planning | Misaligned assumptions waste sprints | Always run constitution → specify → plan first |
-| Skipping constitution | No guardrails for AI-generated code | Run `/speckit.constitution` before first spec |
+| Skipping constitution | No guardrails for AI-generated code | Run `/speckit-constitution` before first spec |
 | Implementation details in specs | Premature technology lock-in | Focus on WHAT/WHY, not HOW |
-| Ignoring CRITICAL analyze findings | Broken implementation, missed requirements | Fix all CRITICAL issues before `/speckit.implement` |
+| Ignoring CRITICAL analyze findings | Broken implementation, missed requirements | Fix all CRITICAL issues before `/speckit-implement` |
 | Too vague initial prompt | Cascading quality issues through all phases | Invest 5-10 minutes in a detailed first prompt |
 | Not committing between phases | No rollback capability | Commit after each phase |
 | Spec-code drift | Specs become outdated documentation | Update specs after implementation changes |

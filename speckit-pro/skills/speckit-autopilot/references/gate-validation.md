@@ -152,7 +152,7 @@ time) to prevent conflicting spec edits.
 **Check:** All findings remediated at every severity level.
 
 ```
-1. Run /speckit.analyze and capture output
+1. Run /speckit-analyze and capture output
 2. Count findings by severity (CRITICAL, HIGH, MEDIUM, LOW)
 3. ALL findings must be remediated — none left unresolved
 ```
@@ -162,7 +162,7 @@ the same research + consensus workflow as Checklist Gap
 Remediation.
 
 ```text
-Step 1: Run /speckit.analyze (via phase-executor subagent)
+Step 1: Run /speckit-analyze (via phase-executor subagent)
 Step 2: Parse ALL findings by severity
 
 Step 3: For EACH finding (CRITICAL, HIGH, MEDIUM, LOW):

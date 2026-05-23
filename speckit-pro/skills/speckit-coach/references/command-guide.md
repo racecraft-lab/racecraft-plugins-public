@@ -16,7 +16,7 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 
 ---
 
-## `/speckit.constitution` — Project Governance
+## `/speckit-constitution` — Project Governance
 
 ### When to Run
 - **First** — before any specs. Run this when initializing a new project or when project principles need updating.
@@ -38,11 +38,11 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - `.specify/memory/constitution.md` — the project's governing principles
 
 ### Next Command
-→ `/speckit.specify` to start creating feature specifications
+→ `/speckit-specify` to start creating feature specifications
 
 ---
 
-## `/speckit.specify` — Create Feature Specification
+## `/speckit-specify` — Create Feature Specification
 
 ### When to Run
 - When starting a new feature. Focus on WHAT and WHY, never HOW.
@@ -77,11 +77,11 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - `specs/<number>-<feature-name>/checklists/requirements.md`
 
 ### Next Command
-→ `/speckit.clarify` (if spec has `[NEEDS CLARIFICATION]` markers) or `/speckit.plan` (if spec is clean)
+→ `/speckit-clarify` (if spec has `[NEEDS CLARIFICATION]` markers) or `/speckit-plan` (if spec is clean)
 
 ---
 
-## `/speckit.clarify` — Resolve Ambiguities
+## `/speckit-clarify` — Resolve Ambiguities
 
 ### When to Run
 - When spec has `[NEEDS CLARIFICATION]` markers
@@ -120,11 +120,11 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - `## Clarifications` section with dated session logs
 
 ### Next Command
-→ `/speckit.plan`
+→ `/speckit-plan`
 
 ---
 
-## `/speckit.plan` — Implementation Planning
+## `/speckit-plan` — Implementation Planning
 
 ### When to Run
 - After spec is finalized (G1/G2 gates passed). Now you define HOW.
@@ -157,11 +157,11 @@ Each command depends on artifacts from previous commands. You cannot skip requir
 - `quickstart.md` — developer onboarding (Phase 1)
 
 ### Next Command
-→ `/speckit.checklist` (recommended) or `/speckit.tasks`
+→ `/speckit-checklist` (recommended) or `/speckit-tasks`
 
 ---
 
-## `/speckit.checklist` — Validate Requirement Quality
+## `/speckit-checklist` — Validate Requirement Quality
 
 ### When to Run
 - After plan is complete. Validates both spec AND plan together.
@@ -175,7 +175,7 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 
 ### How to Get the Best Results
 - **Analyze the spec first** — don't pick domains from a generic list. Read `spec.md` and `plan.md` to identify which domains have the highest risk and most ambiguity.
-- **Use enriched prompts** — don't just run `/speckit.checklist security`. Add spec-specific focus areas: "Focus on JWT validation for the auth middleware, input sanitization for the search field, and Bedrock API key management."
+- **Use enriched prompts** — don't just run `/speckit-checklist security`. Add spec-specific focus areas: "Focus on JWT validation for the auth middleware, input sanitization for the search field, and Bedrock API key management."
 - Each run creates a NEW checklist file (never overwrites previous)
 - Items should include traceability references: `[Spec §X.Y]`, `[Gap]`, `[Ambiguity]`
 - Minimum 80% of items should include traceability to spec sections
@@ -183,7 +183,7 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - See [Checklist Domains Guide](./checklist-domains-guide.md) for the full signal extraction algorithm and enriched prompt patterns
 
 ### Common Mistakes
-- **Running bare domain prompts** — `/speckit.checklist security` without focus areas produces generic items that don't test YOUR spec's specific requirements
+- **Running bare domain prompts** — `/speckit-checklist security` without focus areas produces generic items that don't test YOUR spec's specific requirements
 - Writing checklist items that test implementation instead of requirements
 - Using generic checklists instead of domain-specific ones
 - Not addressing `[Gap]` items — they represent missing requirements
@@ -198,11 +198,11 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - `checklists/<domain>.md` — per-domain validation checklists
 
 ### Next Command
-→ `/speckit.tasks`
+→ `/speckit-tasks`
 
 ---
 
-## `/speckit.tasks` — Generate Task Breakdown
+## `/speckit-tasks` — Generate Task Breakdown
 
 ### When to Run
 - After checklist gaps are resolved. Generates atomic, ordered implementation tasks.
@@ -238,11 +238,11 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - `tasks.md` — dependency-ordered task list
 
 ### Next Command
-→ `/speckit.analyze` (recommended — always run before implement)
+→ `/speckit-analyze` (recommended — always run before implement)
 
 ---
 
-## `/speckit.analyze` — Cross-Artifact Consistency
+## `/speckit-analyze` — Cross-Artifact Consistency
 
 ### When to Run
 - **Always** run after generating tasks, before implementing. It catches issues cheaply.
@@ -276,11 +276,11 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 - Analysis report with findings table, coverage summary, and recommendations
 
 ### Next Command
-→ `/speckit.implement`
+→ `/speckit-implement`
 
 ---
 
-## `/speckit.implement` — Execute Tasks
+## `/speckit-implement` — Execute Tasks
 
 ### When to Run
 - After all gates passed. This is the code generation phase.
@@ -309,7 +309,7 @@ Checklists validate **requirement quality**, NOT implementation correctness.
 
 ---
 
-## `/speckit.taskstoissues` — Export to GitHub Issues
+## `/speckit-taskstoissues` — Export to GitHub Issues
 
 ### When to Run
 - After tasks.md is finalized and you want to track tasks as GitHub Issues.
@@ -335,7 +335,7 @@ gates, code review, and project diagnostics.
 that the implementation matches spec.md, plan.md, tasks.md,
 and constitution.md.
 
-**When to run:** After `/speckit.implement`, before PR creation.
+**When to run:** After `/speckit-implement`, before PR creation.
 Non-destructive (read-only report).
 
 **What it checks:** Spec adherence, plan conformance, task
@@ -610,14 +610,14 @@ commands. Available hook events:
 
 | Event | Fires | Example Use |
 |-------|-------|-------------|
-| `before_specify` | Before `/speckit.specify` | Pre-flight checks |
-| `after_specify` | After `/speckit.specify` | Auto-sync to external tools |
-| `before_plan` | Before `/speckit.plan` | Validate prerequisites |
-| `after_plan` | After `/speckit.plan` | Generate additional artifacts |
-| `before_tasks` | Before `/speckit.tasks` | Verify plan completeness |
-| `after_tasks` | After `/speckit.tasks` | Verify tasks, create issues |
-| `before_implement` | Before `/speckit.implement` | Checklist pre-check |
-| `after_implement` | After `/speckit.implement` | Code review, retrospective |
+| `before_specify` | Before `/speckit-specify` | Pre-flight checks |
+| `after_specify` | After `/speckit-specify` | Auto-sync to external tools |
+| `before_plan` | Before `/speckit-plan` | Validate prerequisites |
+| `after_plan` | After `/speckit-plan` | Generate additional artifacts |
+| `before_tasks` | Before `/speckit-tasks` | Verify plan completeness |
+| `after_tasks` | After `/speckit-tasks` | Verify tasks, create issues |
+| `before_implement` | Before `/speckit-implement` | Checklist pre-check |
+| `after_implement` | After `/speckit-implement` | Code review, retrospective |
 
 Configure hooks in `.specify/extensions.yml`:
 

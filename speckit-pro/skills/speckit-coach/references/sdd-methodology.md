@@ -41,11 +41,11 @@ Three converging trends make SDD practical:
 
 ## Pre-Spec Scoping (Grill Me)
 
-Before `/speckit.specify` runs, grill-me is the SDD pre-scoping ritual. It walks every branch of the design tree, asks one question at a time with the AI's recommended answer first, and produces a Design Concept doc (Goals, Non-goals, Q&A log, Open Questions). This is the antidote to "specs to code" / vibe-coding handoffs — the human stays in the loop on every consequential design decision before the spec is written.
+Before `/speckit-specify` runs, grill-me is the SDD pre-scoping ritual. It walks every branch of the design tree, asks one question at a time with the AI's recommended answer first, and produces a Design Concept doc (Goals, Non-goals, Q&A log, Open Questions). This is the antidote to "specs to code" / vibe-coding handoffs — the human stays in the loop on every consequential design decision before the spec is written.
 
 In speckit-pro, grill-me runs **automatically inside `/speckit-pro:setup`** before the workflow file is written, and its output enriches every phase prompt downstream. It is also available standalone via `/speckit-pro:grill-me <input>` for raw briefs, transcripts, or PRD-level scoping before the technical roadmap is created.
 
-Grill-me is strictly human-in-the-loop. It is **never** invoked from autopilot or any of its phase agents — that's a hard architectural boundary. Autopilot's clarification mechanism is `/speckit.clarify` plus the multi-agent consensus protocol; grill-me is a separate, pre-workflow alignment system.
+Grill-me is strictly human-in-the-loop. It is **never** invoked from autopilot or any of its phase agents — that's a hard architectural boundary. Autopilot's clarification mechanism is `/speckit-clarify` plus the multi-agent consensus protocol; grill-me is a separate, pre-workflow alignment system.
 
 ## The Two-Phase Workflow
 
@@ -53,19 +53,19 @@ Grill-me is strictly human-in-the-loop. It is **never** invoked from autopilot o
 
 | Step | Command | Focus |
 |------|---------|-------|
-| Constitution | `/speckit.constitution` | Establish immutable project principles |
-| Specification | `/speckit.specify` | Define WHAT and WHY (user stories, requirements) |
-| Clarification | `/speckit.clarify` | Resolve ambiguities through structured questioning |
+| Constitution | `/speckit-constitution` | Establish immutable project principles |
+| Specification | `/speckit-specify` | Define WHAT and WHY (user stories, requirements) |
+| Clarification | `/speckit-clarify` | Resolve ambiguities through structured questioning |
 
 ### Phase 2: Implementation
 
 | Step | Command | Focus |
 |------|---------|-------|
-| Planning | `/speckit.plan` | Define HOW (tech stack, architecture, contracts) |
-| Validation | `/speckit.checklist` | Validate requirement quality across domains |
-| Tasks | `/speckit.tasks` | Break plan into atomic, ordered implementation chunks |
-| Analysis | `/speckit.analyze` | Cross-artifact consistency check |
-| Implementation | `/speckit.implement` | Execute tasks with TDD approach |
+| Planning | `/speckit-plan` | Define HOW (tech stack, architecture, contracts) |
+| Validation | `/speckit-checklist` | Validate requirement quality across domains |
+| Tasks | `/speckit-tasks` | Break plan into atomic, ordered implementation chunks |
+| Analysis | `/speckit-analyze` | Cross-artifact consistency check |
+| Implementation | `/speckit-implement` | Execute tasks with TDD approach |
 
 ## The 7 Template Quality Mechanisms
 

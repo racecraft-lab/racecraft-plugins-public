@@ -1,6 +1,6 @@
 # Checklist Domains Guide
 
-How to identify and create effective domain checklists using `/speckit.checklist`. Checklists are "unit tests for English" — they validate the quality of your requirements, not the quality of your implementation.
+How to identify and create effective domain checklists using `/speckit-checklist`. Checklists are "unit tests for English" — they validate the quality of your requirements, not the quality of your implementation.
 
 ## The Core Concept: Unit Tests for Requirements
 
@@ -51,12 +51,12 @@ After extracting signals, rank the candidate domains:
 
 ### Step 3: Generate Enriched Checklist Prompts
 
-For each recommended domain, generate a `/speckit.checklist` prompt that includes **spec-specific focus areas** — not just the bare domain name. The enriched prompt tells the checklist agent exactly what to scrutinize.
+For each recommended domain, generate a `/speckit-checklist` prompt that includes **spec-specific focus areas** — not just the bare domain name. The enriched prompt tells the checklist agent exactly what to scrutinize.
 
 **Pattern:**
 
 ```
-/speckit.checklist <domain-name>
+/speckit-checklist <domain-name>
 
 Focus on <spec-name> requirements:
 - <specific area 1 from the spec that this domain should validate>
@@ -68,7 +68,7 @@ Focus on <spec-name> requirements:
 **Example — for a spec that defines a streaming chat API with LLM integration:**
 
 ```
-/speckit.checklist api-contracts
+/speckit-checklist api-contracts
 
 Focus on POST /chat endpoint requirements:
 - Request model validation (message length, conversation_id format)
@@ -79,7 +79,7 @@ Focus on POST /chat endpoint requirements:
 ```
 
 ```
-/speckit.checklist llm-integration
+/speckit-checklist llm-integration
 
 Focus on Claude Agent SDK integration requirements:
 - Prompt/system instruction specification (is routing logic documented?)
@@ -90,7 +90,7 @@ Focus on Claude Agent SDK integration requirements:
 ```
 
 ```
-/speckit.checklist streaming-protocol
+/speckit-checklist streaming-protocol
 
 Focus on Vercel AI SDK UIMessage Stream Protocol requirements:
 - Complete event type catalog (text-delta, tool-call, tool-result, finish, error)
@@ -286,7 +286,7 @@ When a checklist identifies `[Gap]` items:
 
 - Run checklists **after plan** (not after specify) — you need both spec and plan context
 - Run **2-4 domain checklists** per feature — more than 4 is diminishing returns
-- Each `/speckit.checklist` run creates a NEW file — you can iterate safely
+- Each `/speckit-checklist` run creates a NEW file — you can iterate safely
 - Short descriptive file names: `ux.md`, `api.md`, `security.md`, `performance.md`
 - Focus on domains where your project has the most risk or complexity
-- **Always generate enriched prompts** — a bare `/speckit.checklist security` is far less effective than one that lists the specific security-relevant areas from the spec
+- **Always generate enriched prompts** — a bare `/speckit-checklist security` is far less effective than one that lists the specific security-relevant areas from the spec

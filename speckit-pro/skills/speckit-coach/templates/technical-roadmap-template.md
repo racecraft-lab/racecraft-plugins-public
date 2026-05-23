@@ -104,7 +104,7 @@ Budget result: <!-- within budget / warning accepted / split exception -->
 
 **Scope:**
 <!--
-  Write scope descriptions detailed enough to drive /speckit.specify.
+  Write scope descriptions detailed enough to drive /speckit-specify.
   BAD:  "Backend API endpoint"
   GOOD: "FastAPI POST /chat endpoint with SSE streaming, Pydantic v2
          request/response models, conversation state management (in-memory for MVP)"

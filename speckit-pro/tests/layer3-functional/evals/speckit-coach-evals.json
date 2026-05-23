@@ -105,12 +105,12 @@
     },
     {
       "id": 10,
-      "prompt": "Where does the Grill Me skill fit into the SDD workflow? Does it replace /speckit.clarify? Can I use it inside the autopilot, or only before? What's the relationship between Grill Me, /speckit-pro:setup, and the autopilot's Clarify phase?",
-      "expected_output": "Explains that Grill Me is a pre-workflow human-in-the-loop scoping tool, distinct from autopilot's Clarify phase. /setup always runs Grill Me before writing the workflow file. Inside autopilot, Grill Me is forbidden — clarification happens via /speckit.clarify and the consensus protocol.",
+      "prompt": "Where does the Grill Me skill fit into the SDD workflow? Does it replace /speckit-clarify? Can I use it inside the autopilot, or only before? What's the relationship between Grill Me, /speckit-pro:setup, and the autopilot's Clarify phase?",
+      "expected_output": "Explains that Grill Me is a pre-workflow human-in-the-loop scoping tool, distinct from autopilot's Clarify phase. /setup always runs Grill Me before writing the workflow file. Inside autopilot, Grill Me is forbidden — clarification happens via /speckit-clarify and the consensus protocol.",
       "expectations": [
         "States that Grill Me is human-in-the-loop only and runs BEFORE the workflow file is created",
         "Explains that /speckit-pro:setup always runs Grill Me as part of its flow (no skip flag)",
-        "Explains that the autopilot's Clarify phase is a SEPARATE mechanism using /speckit.clarify and the multi-agent consensus protocol",
+        "Explains that the autopilot's Clarify phase is a SEPARATE mechanism using /speckit-clarify and the multi-agent consensus protocol",
         "States explicitly that Grill Me is FORBIDDEN inside autopilot (cannot be invoked from any phase agent)",
         "Mentions that Grill Me can also be invoked standalone via /speckit-pro:grill-me on any input (raw idea, transcript, brief)"
       ]

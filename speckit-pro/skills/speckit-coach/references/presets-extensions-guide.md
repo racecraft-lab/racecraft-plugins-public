@@ -311,14 +311,14 @@ hooks:
 
 | Event | When It Fires |
 |-------|---------------|
-| `before_specify` | Before `/speckit.specify` runs |
-| `after_specify` | After `/speckit.specify` completes |
-| `before_plan` | Before `/speckit.plan` runs |
-| `after_plan` | After `/speckit.plan` completes |
-| `before_tasks` | Before `/speckit.tasks` runs |
-| `after_tasks` | After `/speckit.tasks` completes |
-| `before_implement` | Before `/speckit.implement` runs |
-| `after_implement` | After `/speckit.implement` completes |
+| `before_specify` | Before `/speckit-specify` runs |
+| `after_specify` | After `/speckit-specify` completes |
+| `before_plan` | Before `/speckit-plan` runs |
+| `after_plan` | After `/speckit-plan` completes |
+| `before_tasks` | Before `/speckit-tasks` runs |
+| `after_tasks` | After `/speckit-tasks` completes |
+| `before_implement` | Before `/speckit-implement` runs |
+| `after_implement` | After `/speckit-implement` completes |
 
 When `optional: true`, the hook prompts before running. When
 `optional: false`, it runs automatically.

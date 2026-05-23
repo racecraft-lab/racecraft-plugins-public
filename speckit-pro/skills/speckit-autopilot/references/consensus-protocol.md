@@ -272,7 +272,7 @@ Follow your agent instructions for output format
 ### Checklist Gap Consensus
 
 ```
-checklist-executor runs /speckit.checklist domain
+checklist-executor runs /speckit-checklist domain
     │
     ├── Layer 1: Executor runs checklist, researches each gap,
     │   applies fixes, re-runs to verify (max 2 loops)
@@ -333,7 +333,7 @@ Follow your agent instructions for output format.
 ### Analyze Finding Consensus
 
 ```
-analyze-executor runs /speckit.analyze
+analyze-executor runs /speckit-analyze
     │
     ├── Layer 1: Executor runs analysis, researches each finding,
     │   applies fixes, re-runs to verify (max 2 loops)

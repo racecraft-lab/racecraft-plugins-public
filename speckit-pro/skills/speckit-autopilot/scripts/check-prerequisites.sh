@@ -44,7 +44,7 @@ fi
 if [ -f ".specify/memory/constitution.md" ]; then
   results+=("$(json_result "constitution" "true" "Constitution exists" "")")
 else
-  results+=("$(json_result "constitution" "false" "No constitution found. Run: /speckit.constitution" "")")
+  results+=("$(json_result "constitution" "false" "No constitution found. Run: /speckit-constitution" "")")
   all_pass=false
 fi
 

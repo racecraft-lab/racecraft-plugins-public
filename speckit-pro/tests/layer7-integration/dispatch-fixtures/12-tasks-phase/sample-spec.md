@@ -8,7 +8,7 @@
 Add a `--quiet` flag to a hypothetical CLI tool. When set, the tool
 suppresses non-error output.
 
-## Plan summary (provided as if /speckit.plan had run)
+## Plan summary (provided as if /speckit-plan had run)
 
 - Add CLI flag parsing entry for `--quiet`.
 - Wrap the tool's standard print path in a quiet-mode guard.

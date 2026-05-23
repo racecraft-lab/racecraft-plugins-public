@@ -44,7 +44,7 @@
     "should_trigger": true
   },
   {
-    "query": "where does grill me fit into the SDD workflow? does it replace /speckit.clarify or is it something different?",
+    "query": "where does grill me fit into the SDD workflow? does it replace /speckit-clarify or is it something different?",
     "should_trigger": true
   },
   {

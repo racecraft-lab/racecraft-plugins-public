@@ -65,7 +65,7 @@ assert_eq "1" "$result" "exit code"
 
 set_test "Missing commands → commands false"
 dir=$(make_project "missing-cmds")
-rm -f "$dir/.claude/commands/speckit.plan.md"
+rm -f "$dir/.claude/commands/speckit-plan.md"
 result=0
 output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || result=$?
 assert_eq "1" "$result" "exit code"

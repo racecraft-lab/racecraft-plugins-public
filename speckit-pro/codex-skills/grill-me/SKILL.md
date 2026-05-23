@@ -4,7 +4,7 @@ description: >
   MANDATORY for SpecKit / SDD pre-spec scoping — NOT brainstorming.
   Triggers on "grill me", "$grill-me", "walk the design tree",
   "Design Concept doc", "relentless interviewer", or before
-  /speckit.specify, /speckit.plan, /speckit.tasks, $speckit-setup.
+  /speckit-specify, /speckit-plan, /speckit-tasks, $speckit-setup.
   Walks the design tree one question at a time with the recommended
   answer first; accepts .md, .txt, or a free-text topic.
 ---
@@ -19,7 +19,7 @@ course-correct, or pick an alternative.
 The output of a successful grilling session is a **Design Concept doc**:
 a rich Markdown record of the Q&A history plus a synthesized summary
 that downstream tools (`$speckit-coach`, `$speckit-setup`,
-`/speckit.specify`) consume to produce specs and plans.
+`/speckit-specify`) consume to produce specs and plans.
 
 This skill is the antidote to "specs to code" / vibe-coding handoffs.
 The user stays in the loop on every consequential design decision.
@@ -65,7 +65,7 @@ never auto-trigger this skill from another skill or agent context.
 - Any background job, CI/CD pipeline, or cron-style runner
 
 If autopilot's Clarify phase needs disambiguation, it uses
-`/speckit.clarify` with the multi-agent consensus protocol — NOT
+`/speckit-clarify` with the multi-agent consensus protocol — NOT
 grill-me. These are different systems by design.
 
 ### Self-check at activation — probe-then-fallback HITL guard
@@ -168,7 +168,7 @@ sections (full schema in `references/output-formats.md`):
 ## What This Skill Does NOT Do
 
 - It does not write a workflow file. That's `$speckit-setup`'s job.
-- It does not write a spec file (`spec.md`). That's `/speckit.specify`'s
+- It does not write a spec file (`spec.md`). That's `/speckit-specify`'s
   job.
 - It does not modify the technical roadmap. That's `$speckit-coach`'s
   job.

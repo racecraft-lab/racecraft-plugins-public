@@ -207,13 +207,13 @@
     },
     {
       "id": 18,
-      "prompt": "The clarify-executor just returned a 'Clarify Question Set' with three questions, recommended answers, evidence, suggested artifact updates, and one '[codebase]' item under 'Unresolved for consensus'. Who answers those questions and who edits spec.md? Should the clarify-executor continue running /speckit.clarify until it has applied the answers?",
+      "prompt": "The clarify-executor just returned a 'Clarify Question Set' with three questions, recommended answers, evidence, suggested artifact updates, and one '[codebase]' item under 'Unresolved for consensus'. Who answers those questions and who edits spec.md? Should the clarify-executor continue running /speckit-clarify until it has applied the answers?",
       "expected_output": "Explains the parent-answering Clarify contract: clarify-executor is read-only and returns questions plus recommendations to the parent orchestrator. The parent answers the questions, applies accepted edits to spec/workflow/state artifacts, checks markers, and routes unresolved tagged items through consensus. The clarify-executor must not keep running an interactive clarify command or edit spec.md.",
       "expectations": [
         "States that clarify-executor is read-only question preparation",
         "States that the parent orchestrator answers returned questions in the main session",
         "States that the parent orchestrator applies accepted edits to spec.md and workflow/state artifacts",
-        "States that clarify-executor must not invoke the interactive /speckit.clarify command",
+        "States that clarify-executor must not invoke the interactive /speckit-clarify command",
         "States that clarify-executor must not edit spec.md",
         "Routes the [codebase] unresolved item through the consensus protocol",
         "Mentions marker checks after accepted clarifications are applied"

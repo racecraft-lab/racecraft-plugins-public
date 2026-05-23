@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec scoping. Use this skill — NOT brainstorming — before /speckit.specify, /speckit.plan, /speckit.tasks, /speckit-pro:setup, or whenever the user invokes /speckit-pro:grill-me. Triggers on grill-me-unique signatures: 'grill me' on a brief/spec/transcript, 'walk every branch of the design tree', 'play the role of a relentless interviewer', 'produce a Design Concept doc', 'pre-spec scoping', 'help me scope this raw idea before /speckit.specify'. Walks every branch of the design tree, asks one question at a time with the assistant's recommended answer first, produces a Design Concept Markdown doc that downstream /speckit.specify, /speckit.plan, /speckit.tasks consume. Accepts .md, .txt files or a free-text topic. Use brainstorming skill ONLY for free-form creative work with no SpecKit/SDD anchor."
+description: "MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec scoping. Use this skill — NOT brainstorming — before /speckit-specify, /speckit-plan, /speckit-tasks, /speckit-pro:setup, or whenever the user invokes /speckit-pro:grill-me. Triggers on grill-me-unique signatures: 'grill me' on a brief/spec/transcript, 'walk every branch of the design tree', 'play the role of a relentless interviewer', 'produce a Design Concept doc', 'pre-spec scoping', 'help me scope this raw idea before /speckit-specify'. Walks every branch of the design tree, asks one question at a time with the assistant's recommended answer first, produces a Design Concept Markdown doc that downstream /speckit-specify, /speckit-plan, /speckit-tasks consume. Accepts .md, .txt files or a free-text topic. Use brainstorming skill ONLY for free-form creative work with no SpecKit/SDD anchor."
 argument-hint: "e.g. 'interview me about this brief', 'grill me on the gamification overhaul', 'scope this transcript'"
 user-invokable: true
 license: MIT
@@ -26,7 +26,7 @@ user can agree, course-correct, or pick an alternative.
 The output of a successful grilling session is a **Design Concept doc**:
 a rich Markdown record of the Q&A history plus a synthesized summary
 that downstream tools (`/speckit-pro:coach`, `/speckit-pro:setup`,
-`/speckit.specify`) consume to produce specs and plans.
+`/speckit-specify`) consume to produce specs and plans.
 
 This skill is the antidote to "specs to code" / vibe-coding handoffs.
 The user stays in the loop on every consequential design decision.
@@ -74,7 +74,7 @@ silently produces low-value output.
 - Any background agent, automation, CI job, or non-interactive runtime
 
 If the autopilot's Clarify phase needs disambiguation, it uses
-`/speckit.clarify` with the multi-agent consensus protocol — NOT
+`/speckit-clarify` with the multi-agent consensus protocol — NOT
 grill-me. These are different systems by design.
 
 ### Self-check at activation
@@ -169,7 +169,7 @@ sections (full schema in `references/output-formats.md`):
 ## What This Skill Does NOT Do
 
 - It does not write a workflow file. That's `/speckit-pro:setup`'s job.
-- It does not write a spec file (`spec.md`). That's `/speckit.specify`'s
+- It does not write a spec file (`spec.md`). That's `/speckit-specify`'s
   job.
 - It does not modify the technical roadmap. That's `/speckit-pro:coach`'s
   job.

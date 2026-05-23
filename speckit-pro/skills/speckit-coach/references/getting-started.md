@@ -99,7 +99,7 @@ The branch name becomes the feature identifier. All spec artifacts go to `specs/
 Before writing any specs, establish your project's principles:
 
 ```bash
-/speckit.constitution
+/speckit-constitution
 ```
 
 Tell the agent about your project: tech stack, testing philosophy, code style preferences, and architectural constraints. The agent will help you craft testable principles.
@@ -186,7 +186,7 @@ The skill walks every branch of the design tree, asks one question at a time wit
 - **Standalone (`/speckit-pro:grill-me <input>`)** — for raw briefs, transcripts, or PRD-level scoping *before* you've decided on a technical roadmap. The output guides PRD or roadmap authoring.
 - **Inside `/speckit-pro:setup SPEC-NNN`** — automatic and mandatory; grills against the roadmap's scope description for the requested spec, produces `SPEC-NNN-design-concept.md`, and uses it to enrich the workflow file's phase prompts.
 
-Grill-me is strictly human-in-the-loop. It cannot be invoked autonomously, and it never runs from inside `/speckit-pro:autopilot` — autopilot's clarification mechanism is `/speckit.clarify` plus multi-agent consensus, which is a deliberately different system.
+Grill-me is strictly human-in-the-loop. It cannot be invoked autonomously, and it never runs from inside `/speckit-pro:autopilot` — autopilot's clarification mechanism is `/speckit-clarify` plus multi-agent consensus, which is a deliberately different system.
 
 ## Your First Complete Workflow
 
@@ -195,7 +195,7 @@ Here's what the full process looks like for a single feature, from idea to worki
 ### Phase 1: Specify — Define WHAT and WHY
 
 ```bash
-/speckit.specify
+/speckit-specify
 
 I need a user authentication system. Users should be able to:
 - Register with email and password
@@ -241,7 +241,7 @@ Before moving on, verify:
 Only run this if the spec has `[NEEDS CLARIFICATION]` markers or areas you're unsure about.
 
 ```bash
-/speckit.clarify Focus on API: session token format, rate limiting thresholds, password reset flow
+/speckit-clarify Focus on API: session token format, rate limiting thresholds, password reset flow
 ```
 
 **What happens:** The agent asks up to 5 targeted questions. Your answers are integrated directly into `spec.md`.
@@ -253,7 +253,7 @@ Only run this if the spec has `[NEEDS CLARIFICATION]` markers or areas you're un
 ### Phase 3: Plan — Define HOW
 
 ```bash
-/speckit.plan
+/speckit-plan
 
 Tech Stack:
 - Backend: Express.js with TypeScript
@@ -299,7 +299,7 @@ Don't guess which domains to check. Analyze what's in your spec:
 Run enriched prompts for each domain:
 
 ```bash
-/speckit.checklist security
+/speckit-checklist security
 
 Focus on user authentication requirements:
 - Password strength validation rules (OWASP compliance)
@@ -310,7 +310,7 @@ Focus on user authentication requirements:
 ```
 
 ```bash
-/speckit.checklist api-contracts
+/speckit-checklist api-contracts
 
 Focus on auth endpoint requirements:
 - Request/response schemas for register, login, reset, profile
@@ -328,7 +328,7 @@ Focus on auth endpoint requirements:
 ### Phase 5: Tasks — Break Into Implementable Chunks
 
 ```bash
-/speckit.tasks
+/speckit-tasks
 
 Task structure:
 - Small, testable chunks (1-2 hours each)
@@ -361,7 +361,7 @@ Task structure:
 ### Phase 6: Analyze — Catch Issues Before Coding
 
 ```bash
-/speckit.analyze
+/speckit-analyze
 
 Focus on:
 1. Constitution alignment
@@ -385,7 +385,7 @@ Focus on:
 ### Phase 7: Implement — Write the Code
 
 ```bash
-/speckit.implement
+/speckit-implement
 ```
 
 **What happens:** The agent executes tasks phase-by-phase, following TDD:
@@ -448,7 +448,7 @@ Tasks are marked `[X]` in `tasks.md` as they complete.
 | **Tests requirements, not implementation** | "Are rate limiting thresholds specified per endpoint?" | "Verify rate limiting works" |
 | **Traceability** | `[Spec §4.1]` or `[Gap]` markers on 80%+ items | No spec references |
 | **Actionable gaps** | `[Gap]` items lead to spec/plan updates | Gaps ignored |
-| **Domain-specific** | Enriched prompts with spec-specific focus areas | Bare `/speckit.checklist security` |
+| **Domain-specific** | Enriched prompts with spec-specific focus areas | Bare `/speckit-checklist security` |
 
 ---
 
@@ -459,9 +459,9 @@ Tasks are marked `[X]` in `tasks.md` as they complete.
 **Go back.** SpecKit is iterative — you can always return to an earlier phase.
 
 1. Identify which requirements are vague (check for unmeasurable criteria, missing acceptance scenarios)
-2. Run `/speckit.clarify` focused on the vague areas
+2. Run `/speckit-clarify` focused on the vague areas
 3. Update `spec.md` with the clarifications
-4. Re-run `/speckit.plan` — the plan will be better with a better spec
+4. Re-run `/speckit-plan` — the plan will be better with a better spec
 
 **Key insight:** A bad spec cascades into a bad plan, bad tasks, and bad code. It's always cheaper to fix the spec than to fix the implementation.
 
@@ -491,7 +491,7 @@ CRITICAL means "this will break implementation." Common causes and fixes:
 | Inconsistent file paths | Task references files that conflict with plan | Align task paths with plan's project structure |
 | Missing dependencies | Task A needs Task B but B isn't listed first | Reorder tasks or add dependency markers |
 
-After fixing: **re-run `/speckit.analyze`** to verify the fixes resolved the issues.
+After fixing: **re-run `/speckit-analyze`** to verify the fixes resolved the issues.
 
 ### "Implementation diverges from the plan"
 
@@ -501,7 +501,7 @@ This is normal — implementation always reveals things the plan didn't anticipa
 |---|---|
 | **Minor** (different variable names, slightly different API) | Note it but keep going. Update spec after implementation. |
 | **Moderate** (new endpoint needed, changed data model) | Update `plan.md` and `data-model.md` during implementation. |
-| **Major** (fundamental architecture change) | Stop. Update `spec.md` and `plan.md`. Re-run `/speckit.tasks` and `/speckit.analyze`. |
+| **Major** (fundamental architecture change) | Stop. Update `spec.md` and `plan.md`. Re-run `/speckit-tasks` and `/speckit-analyze`. |
 
 **After implementation completes**, always update specs to match what was actually built. Specs are living documents — they should reflect reality, not just the original plan.
 
@@ -510,11 +510,11 @@ This is normal — implementation always reveals things the plan didn't anticipa
 Don't shoehorn them into the current spec. Instead:
 
 1. **Finish the current spec's implementation** if possible
-2. **Create a new spec** for the new requirements: run `/speckit.specify` on a new branch or append to the current feature
+2. **Create a new spec** for the new requirements: run `/speckit-specify` on a new branch or append to the current feature
 3. The new spec is contextually informed by the existing spec and constitution
 4. If the new requirements fundamentally change the current spec, stop and re-plan
 
-From [SpecKit Issue #328](https://github.com/github/spec-kit/issues/328): "Use `/speckit.specify` on a feature branch for the new requirements. Merge spec branches to integrate with existing work."
+From [SpecKit Issue #328](https://github.com/github/spec-kit/issues/328): "Use `/speckit-specify` on a feature branch for the new requirements. Merge spec branches to integrate with existing work."
 
 ### "I need to redo a phase"
 
@@ -541,13 +541,13 @@ constitution → specify → clarify (opt) → plan → checklist (opt) → task
 1. **What artifacts exist?** Check `specs/<feature>/` for spec.md, plan.md, tasks.md
 2. **What's the last completed gate?** Look at git history for phase commits
 3. **What's blocking you?**
-   - No spec yet → Run `/speckit.specify` with a detailed prompt
-   - Spec has ambiguities → Run `/speckit.clarify`
-   - No plan yet → Run `/speckit.plan` with your tech stack
+   - No spec yet → Run `/speckit-specify` with a detailed prompt
+   - Spec has ambiguities → Run `/speckit-clarify`
+   - No plan yet → Run `/speckit-plan` with your tech stack
    - Plan looks wrong → Fix the spec first, then re-plan
-   - Tasks don't make sense → Re-run `/speckit.tasks`
-   - Not sure if tasks are complete → Run `/speckit.analyze`
-   - Ready to code → Run `/speckit.implement`
+   - Tasks don't make sense → Re-run `/speckit-tasks`
+   - Not sure if tasks are complete → Run `/speckit-analyze`
+   - Ready to code → Run `/speckit-implement`
 
 ---
 

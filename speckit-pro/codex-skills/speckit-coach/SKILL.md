@@ -23,7 +23,7 @@ specify init --ai claude     # 25+ agents: copilot, cursor-agent, gemini, codex,
 
 After installation, Codex exposes the bundled skill entrypoints `$speckit-coach`, `$speckit-setup`, `$speckit-autopilot`, `$speckit-status`, `$speckit-resolve-pr`, and `$grill-me`. This skill provides **coaching, guidance, and enhancement** on top of those entrypoints. Users invoke them via the `$skill-name` syntax, implicit description-match, or `@SpecKit Pro`.
 
-> **Note:** Codex does NOT support `/<plugin>:<skill>` or `/<skill>` slash-command syntax for custom plugins. Custom slash commands were [deprecated](https://github.com/openai/codex/issues/7480) in favor of skills. If you see older docs referencing `/speckit-coach`, `/speckit-setup`, etc. as Codex commands, those instructions are stale — use `$skill-name` or natural language instead. (The `/speckit.specify`, `/speckit.implement` etc. references throughout this skill are SpecKit CLI commands, not Codex slash commands — those are correct.)
+> **Note:** Codex does NOT support `/<plugin>:<skill>` or `/<skill>` slash-command syntax for custom plugins. Custom slash commands were [deprecated](https://github.com/openai/codex/issues/7480) in favor of skills. If you see older docs referencing `/speckit-coach`, `/speckit-setup`, etc. as Codex commands, those instructions are stale — use `$skill-name` or natural language instead. (The `/speckit-specify`, `/speckit-implement` etc. references throughout this skill are SpecKit CLI commands, not Codex slash commands — those are correct.)
 
 ## What This Skill Does
 
@@ -42,7 +42,7 @@ that affect this project's workflow:
 
 This ensures coaching reflects the project's actual configuration,
 not just generic SpecKit defaults. For example, if a preset
-mandates TDD, coaching on `/speckit.implement` should emphasize
+mandates TDD, coaching on `/speckit-implement` should emphasize
 the red-green-refactor cycle that the preset enforces.
 
 ### Coaching (guidance for official SpecKit commands)
@@ -57,15 +57,15 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "walk me through", "show me the workflow", "end to end" | Guide through the worked example in [getting started](../../skills/speckit-coach/references/getting-started.md) — see "Your First Complete Workflow" |
 | "best practices", "tips", "common mistakes", "anti-patterns" | Share guidance from [best practices](../../skills/speckit-coach/references/best-practices.md) |
 | **Per-Command Coaching** | |
-| "help with specify", "how to write a spec", "specification tips" | Coach on `/speckit.specify` — detailed first prompt, user stories, P1/P2/P3 |
-| "help with clarify", "when to clarify", "resolve ambiguities" | Coach on `/speckit.clarify` — when to run vs skip, evaluating recommendations |
-| "help with plan", "planning", "implementation plan" | Coach on `/speckit.plan` — constitution gates, Phase 0 research, artifacts |
-| "help with checklist", "validate requirements", "quality check" | Coach on `/speckit.checklist` — "unit tests for English", domain selection |
+| "help with specify", "how to write a spec", "specification tips" | Coach on `/speckit-specify` — detailed first prompt, user stories, P1/P2/P3 |
+| "help with clarify", "when to clarify", "resolve ambiguities" | Coach on `/speckit-clarify` — when to run vs skip, evaluating recommendations |
+| "help with plan", "planning", "implementation plan" | Coach on `/speckit-plan` — constitution gates, Phase 0 research, artifacts |
+| "help with checklist", "validate requirements", "quality check" | Coach on `/speckit-checklist` — "unit tests for English", domain selection |
 | "which checklists", "recommend checklists", "what domains" | Run `/speckit recommend-checklists` — analyze spec to recommend domains with enriched prompts |
-| "help with tasks", "generate tasks", "task breakdown" | Coach on `/speckit.tasks` — user-story-first, `[P]` markers, independent testability |
-| "help with analyze", "consistency check", "cross-artifact" | Coach on `/speckit.analyze` — severity levels, CRITICAL blocks, coverage gaps |
-| "help with implement", "execute tasks", "start building" | Coach on `/speckit.implement` — checklist pre-check, TDD, phase execution |
-| "help with constitution", "project principles", "governance" | Coach on `/speckit.constitution` — principle design, versioning, enforcement |
+| "help with tasks", "generate tasks", "task breakdown" | Coach on `/speckit-tasks` — user-story-first, `[P]` markers, independent testability |
+| "help with analyze", "consistency check", "cross-artifact" | Coach on `/speckit-analyze` — severity levels, CRITICAL blocks, coverage gaps |
+| "help with implement", "execute tasks", "start building" | Coach on `/speckit-implement` — checklist pre-check, TDD, phase execution |
+| "help with constitution", "project principles", "governance" | Coach on `/speckit-constitution` — principle design, versioning, enforcement |
 | **Deep-Dive References** | |
 | "checklist domains", "what checklists", "which domains" | Guide domain selection from [checklist guide](../../skills/speckit-coach/references/checklist-domains-guide.md) |
 | "constitution design", "good principles", "constitution tips" | Guide constitution design from [constitution guide](../../skills/speckit-coach/references/constitution-guide.md) |
@@ -103,7 +103,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "is my plan good", "review my plan" | Check plan quality signals: gates, research, data model, contracts |
 | "are my tasks good", "review tasks" | Check task quality: story organization, granularity, traceability, parallelism |
 | **Enhancement Commands (speckit-pro plugin)** | |
-| "scope this idea", "pre-spec scoping", "interview me on this brief", "walk every branch of the design tree", "produce a Design Concept doc", "before /speckit.specify", "before I write the spec" | Guide to `$grill-me` — relentless one-question-at-a-time interview that produces a Design Concept doc (Goals, Non-goals, Q&A log, Open Questions). Strictly human-in-the-loop. The output enriches `$speckit-setup`'s workflow file phase prompts. Use it standalone for raw briefs / transcripts, or rely on `$speckit-setup` to invoke it automatically per spec. |
+| "scope this idea", "pre-spec scoping", "interview me on this brief", "walk every branch of the design tree", "produce a Design Concept doc", "before /speckit-specify", "before I write the spec" | Guide to `$grill-me` — relentless one-question-at-a-time interview that produces a Design Concept doc (Goals, Non-goals, Q&A log, Open Questions). Strictly human-in-the-loop. The output enriches `$speckit-setup`'s workflow file phase prompts. Use it standalone for raw briefs / transcripts, or rely on `$speckit-setup` to invoke it automatically per spec. |
 | "technical roadmap", "decompose feature", "multi-spec", "too large for one spec" | Guide technical roadmap creation — decompose large features into sequential specs. See Enhancement section below. **Tip:** for higher-quality roadmaps, run `$grill-me docs/prd.md` first to lock in the scope envelope before decomposing. |
 | "workflow tracking", "track phases", "workflow file" | Guide workflow file creation — per-spec 7-phase tracking. See Enhancement section below |
 | "recommend checklists", "which checklists", "what domains to check" | Run spec-driven domain recommendation — analyze spec to suggest enriched checklist prompts. See Enhancement section below |
@@ -161,13 +161,13 @@ CLI upgrades.
 
 When a feature is too large for a single spec, create a **technical roadmap** that decomposes it into discrete, sequential specifications with dependency graphs.
 
-**When to use:** The feature involves multiple tiers (e.g., backend + frontend), multiple independent deliverables, or will take more than one `/speckit.specify` → `/speckit.implement` cycle.
+**When to use:** The feature involves multiple tiers (e.g., backend + frontend), multiple independent deliverables, or will take more than one `/speckit-specify` → `/speckit-implement` cycle.
 
 **How to create the technical roadmap:**
 
 1. Copy the [technical roadmap template](../../skills/speckit-coach/templates/technical-roadmap-template.md) to `docs/ai/specs/<feature-name>-technical-roadmap.md`
 2. Analyze the feature using the decomposition algorithm below
-3. Populate each spec section with scope descriptions detailed enough to drive `/speckit.specify`
+3. Populate each spec section with scope descriptions detailed enough to drive `/speckit-specify`
 4. Review the dependency graph with the developer before proceeding
 
 **Step 1: Analyze the Feature Request**
@@ -207,7 +207,7 @@ For each candidate spec, ask:
 
 **Step 4: Write Rich Scope Descriptions**
 
-Each spec's Scope section must be **detailed enough to serve as the input for `/speckit.specify`**. Compare:
+Each spec's Scope section must be **detailed enough to serve as the input for `/speckit-specify`**. Compare:
 
 | Too Vague (useless for /specify) | Detailed Enough (drives /specify) |
 |---|---|
@@ -231,7 +231,7 @@ Alternatives considered: [Brief list of alternatives that were rejected and why.
 - Mock data for specs that depend on unfinished backend work
 - Integration spec last — wire everything together as the final spec
 - Each spec gets its own `specs/<number>-<name>/` directory
-- Scope descriptions must be detailed enough to directly drive `/speckit.specify`
+- Scope descriptions must be detailed enough to directly drive `/speckit-specify`
 
 #### `/speckit workflow` — Per-Spec Phase Tracking
 
@@ -270,9 +270,9 @@ provenance, coach the user toward the Racecraft archive extension:
 
 #### `/speckit recommend-checklists` — Spec-Driven Domain Recommendations
 
-Analyze the current spec and plan to recommend the most impactful checklist domains, then generate enriched `/speckit.checklist` prompts with spec-specific focus areas.
+Analyze the current spec and plan to recommend the most impactful checklist domains, then generate enriched `/speckit-checklist` prompts with spec-specific focus areas.
 
-**When to use:** After `/speckit.plan` completes — before running any `/speckit.checklist` commands. This replaces guesswork about which domains to check.
+**When to use:** After `/speckit-plan` completes — before running any `/speckit-checklist` commands. This replaces guesswork about which domains to check.
 
 **How it works:**
 
@@ -290,7 +290,7 @@ After creating a technical roadmap, generate the individual spec directories:
 
 1. Read the technical roadmap to identify all specs
 2. For each spec, create `specs/<number>-<name>/` directory
-3. Run `/speckit.specify` for each spec using the technical roadmap's scope description
+3. Run `/speckit-specify` for each spec using the technical roadmap's scope description
 4. Update the technical roadmap's progress tracking table
 
 ### Autonomous Execution
@@ -348,10 +348,10 @@ specs/<number>-<feature-name>/
 
 ### Command Chaining Tips
 
-- **Always start with `/speckit.constitution`** if the project doesn't have one yet
+- **Always start with `/speckit-constitution`** if the project doesn't have one yet
 - **Invest in the first prompt** — "Having a very detailed first prompt will produce a much better specification"
 - **Commit between phases** — each phase produces artifacts worth preserving
-- **Run `/speckit.analyze` before implement** — it catches coverage gaps and constitution violations cheaply
+- **Run `/speckit-analyze` before implement** — it catches coverage gaps and constitution violations cheaply
 - **Back up constitution.md before upgrading** — `specify init --here --force` overwrites it
 
 ## References

@@ -19,7 +19,7 @@
 #   Text mode: FEATURE_DIR:... \n AVAILABLE_DOCS: \n ✓/✗ file.md
 #   Paths only: REPO_ROOT: ... \n BRANCH: ... \n FEATURE_DIR: ... etc.
 
-set -euo pipefail
+set -e
 
 # Parse command line arguments
 JSON_MODE=false

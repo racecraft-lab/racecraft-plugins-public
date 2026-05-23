@@ -106,7 +106,7 @@ is no user available to answer; calling grill-me would either block
 indefinitely or produce low-value automated output that defeats the
 skill's entire purpose.
 
-Autopilot's Clarify phase uses `/speckit.clarify` with the multi-agent
+Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent
 consensus protocol — that is the **only** sanctioned clarification
 mechanism inside autopilot. If a phase encounters ambiguity that
 consensus can't resolve, fail the gate and surface to the user.
@@ -148,17 +148,17 @@ continues.
 ```text
 CORRECT:
   1. Read workflow file's "### Specify Prompt" section
-  2. Agent(prompt: "Run /speckit.specify with: <prompt>")
+  2. Agent(prompt: "Run /speckit-specify with: <prompt>")
   3. Subagent runs command, returns summary   ← TOOL RESULT
   4. TaskUpdate: Specify → completed          ← TOOL CALL
   5. Grep for [NEEDS CLARIFICATION] markers   ← TOOL CALL
-  6. Agent(prompt: "Run /speckit.clarify...") ← TOOL CALL
+  6. Agent(prompt: "Run /speckit-clarify...") ← TOOL CALL
   ...every step is a tool call — loop never dies...
 
 WRONG:
   1. Skill("speckit.specify", args: "<prompt>")
   2. Command loads into YOUR context
-  3. You output: "The spec is ready for /speckit.plan"
+  3. You output: "The spec is ready for /speckit-plan"
      ↑ plain text, no tool call → loop terminates
 ```
 
@@ -236,7 +236,7 @@ WRONG:
 ### 5. Clarify — executor returns questions to parent
 
 The `clarify-executor` is read-only. It does not invoke
-`/speckit.clarify`, does not wait on a user, and does not edit
+`/speckit-clarify`, does not wait on a user, and does not edit
 artifacts. It inspects the workflow prompt, feature spec, and repo
 evidence, then returns a `Clarify Question Set` containing up to 5
 prioritized questions, recommended answers, evidence, and suggested
@@ -761,7 +761,7 @@ automatically. No prefix needed.
 
 The `clarify-executor` is a read-only question-preparation agent.
 It returns a `Clarify Question Set` to the parent instead of invoking
-the interactive `/speckit.clarify` command or editing artifacts. The
+the interactive `/speckit-clarify` command or editing artifacts. The
 parent orchestrator answers each returned question in the main session,
 applies the accepted clarifications to the spec/workflow/state files,
 then runs marker checks and consensus routing for unresolved items.

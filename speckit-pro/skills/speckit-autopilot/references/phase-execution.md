@@ -43,10 +43,10 @@ commands and scripts:
 | Script | Used By | What It Does |
 | -------- | --------- | ----------- |
 | `common.sh` | All scripts | Branch detection (`get_current_branch`), feature path resolution (`get_feature_paths`, `find_feature_dir_by_prefix`) |
-| `create-new-feature.sh` | `/speckit.specify` | Creates git branch, `specs/` dir, copies spec template. Supports `--json`, `--short-name`, `--number` |
-| `setup-plan.sh` | `/speckit.plan` | Copies plan template to feature dir. Outputs `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH` |
-| `check-prerequisites.sh` | `/speckit.clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
-| `update-agent-context.sh` | `/speckit.plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
+| `create-new-feature.sh` | `/speckit-specify` | Creates git branch, `specs/` dir, copies spec template. Supports `--json`, `--short-name`, `--number` |
+| `setup-plan.sh` | `/speckit-plan` | Copies plan template to feature dir. Outputs `FEATURE_SPEC`, `IMPL_PLAN`, `SPECS_DIR`, `BRANCH` |
+| `check-prerequisites.sh` | `/speckit-clarify`, `.checklist`, `.tasks`, `.analyze`, `.implement` | Validates feature dir + required files exist. Supports `--json`, `--require-tasks`, `--include-tasks`, `--paths-only` |
+| `update-agent-context.sh` | `/speckit-plan` | Updates CLAUDE.md with tech stack extracted from plan.md |
 
 ## Subagent Delegation
 
@@ -260,7 +260,7 @@ with two-layer resolution **after each domain**:
 For each checklist domain in the workflow file:
   1. TaskUpdate: domain task → in_progress
   2. Agent(subagent_type: "checklist-executor",
-          prompt: "Run /speckit.checklist with: <domain prompt>")
+          prompt: "Run /speckit-checklist with: <domain prompt>")
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
   3. Parse executor's "Unresolved for consensus" section
@@ -333,7 +333,7 @@ TaskUpdate: "Phase 5: Tasks to Issues" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX tasks to issues",
-  prompt: "Run /speckit.taskstoissues for SPEC-XXX."
+  prompt: "Run /speckit-taskstoissues for SPEC-XXX."
 )
 TaskUpdate: → completed
 ```
@@ -358,7 +358,7 @@ verify (Layer 1). Items it can't resolve are flagged in its
 ```text
 1. TaskUpdate: "Analyze" → in_progress
 2. Agent(subagent_type: "analyze-executor",
-        prompt: "Run /speckit.analyze with: <prompt>")
+        prompt: "Run /speckit-analyze with: <prompt>")
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:

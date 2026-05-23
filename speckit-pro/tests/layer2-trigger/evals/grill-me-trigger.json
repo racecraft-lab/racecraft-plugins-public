@@ -1,6 +1,6 @@
 [
   {
-    "query": "grill me on this client brief at docs/idea.md before /speckit.specify — produce a Design Concept doc with the full design tree walked",
+    "query": "grill me on this client brief at docs/idea.md before /speckit-specify — produce a Design Concept doc with the full design tree walked",
     "should_trigger": true
   },
   {
@@ -8,19 +8,19 @@
     "should_trigger": true
   },
   {
-    "query": "run the grill-me skill on notes/stakeholder-call.txt — pull a Design Concept doc out of this transcript before /speckit.specify",
+    "query": "run the grill-me skill on notes/stakeholder-call.txt — pull a Design Concept doc out of this transcript before /speckit-specify",
     "should_trigger": true
   },
   {
-    "query": "run grill-me on this raw idea: a leaderboard for the learning platform. produce a Design Concept doc before /speckit.specify, recommended answer first",
+    "query": "run grill-me on this raw idea: a leaderboard for the learning platform. produce a Design Concept doc before /speckit-specify, recommended answer first",
     "should_trigger": true
   },
   {
-    "query": "play the role of a relentless interviewer for the billing rewrite SpecKit spec — walk every branch of the design tree, produce a Design Concept doc before /speckit.specify",
+    "query": "play the role of a relentless interviewer for the billing rewrite SpecKit spec — walk every branch of the design tree, produce a Design Concept doc before /speckit-specify",
     "should_trigger": true
   },
   {
-    "query": "grill me on the auth refactor before /speckit.specify. recommended answer first, design tree walk, Design Concept doc at the end",
+    "query": "grill me on the auth refactor before /speckit-specify. recommended answer first, design tree walk, Design Concept doc at the end",
     "should_trigger": true
   },
   {
@@ -28,7 +28,7 @@
     "should_trigger": true
   },
   {
-    "query": "grill me relentlessly on this stakeholder transcript. produce a Design Concept doc at docs/ai/specs/<slug>-design-concept.md before /speckit.specify",
+    "query": "grill me relentlessly on this stakeholder transcript. produce a Design Concept doc at docs/ai/specs/<slug>-design-concept.md before /speckit-specify",
     "should_trigger": true
   },
   {
@@ -36,7 +36,7 @@
     "should_trigger": true
   },
   {
-    "query": "use grill-me to produce a Design Concept doc from this raw idea before I write the SpecKit spec via /speckit.specify. relentless interviewer mode, design tree walk",
+    "query": "use grill-me to produce a Design Concept doc from this raw idea before I write the SpecKit spec via /speckit-specify. relentless interviewer mode, design tree walk",
     "should_trigger": true
   },
   {

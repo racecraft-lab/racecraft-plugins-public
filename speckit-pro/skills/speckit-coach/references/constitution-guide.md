@@ -1,6 +1,6 @@
 # Constitution Design Guide
 
-How to create effective project constitutions using `/speckit.constitution`. A constitution establishes the architectural DNA that ensures consistency across all AI-generated implementations.
+How to create effective project constitutions using `/speckit-constitution`. A constitution establishes the architectural DNA that ensures consistency across all AI-generated implementations.
 
 ## What Makes a Good Constitution
 
