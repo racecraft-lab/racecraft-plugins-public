@@ -99,11 +99,24 @@ if [ "$SKIP_PLUGIN_SYNC" != "1" ] \
       printf 'Plugin install is stale (active=%s, marketplace=%s). Syncing...\n' \
         "$ACTIVE_VERSION" "$TMP_VERSION"
       if command -v rsync >/dev/null 2>&1; then
-        # No --delete: orphan files in the active install are harmless,
-        # accidental data loss from --delete is not.
-        rsync -a "$MARKETPLACE_TMP_ROOT/" "$PLUGIN_ROOT/"
+        # --delete: the active install must MIRROR the marketplace
+        # snapshot. Without it, files removed upstream (e.g., a renamed
+        # skill directory) linger in the active install and Codex loads
+        # both the old and new skill ids on restart, producing
+        # duplicate-skill collisions. The active plugin install is
+        # plugin-owned territory; user files do not belong here. Use the
+        # SPECKIT_SKIP_PLUGIN_SYNC=1 escape hatch for plugin-developer
+        # workflows against a local checkout.
+        rsync -a --delete "$MARKETPLACE_TMP_ROOT/" "$PLUGIN_ROOT/"
       else
-        cp -Rf "$MARKETPLACE_TMP_ROOT/." "$PLUGIN_ROOT/"
+        # cp -R cannot delete orphan files, so wipe the active install
+        # first and then copy. Removing $PLUGIN_ROOT here is safe even
+        # though this script lives inside it: bash already has the
+        # script open, so the kernel keeps the inode alive until the
+        # script exits even after the directory entry is unlinked.
+        rm -rf "$PLUGIN_ROOT"
+        mkdir -p "$PLUGIN_ROOT"
+        cp -R "$MARKETPLACE_TMP_ROOT/." "$PLUGIN_ROOT/"
       fi
       PLUGIN_SYNCED=1
       printf 'Synced active plugin install to %s.\n' "$TMP_VERSION"

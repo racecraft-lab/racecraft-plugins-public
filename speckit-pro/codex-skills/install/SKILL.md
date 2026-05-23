@@ -83,7 +83,13 @@ marketplace tmp root carries a **strictly newer version** (per
 `sort -V`, which orders semver-style versions correctly so
 `1.10.2 > 1.9.10`) than the active install, the installer rsyncs
 the tmp root onto the active install before copying agent
-templates. The check is one-directional — if the active install
+templates. The sync is **mirror-style** (`rsync -a --delete`):
+files removed upstream — for example, when a release renames a
+skill directory — are also removed from the active install, so
+Codex does not load both the old and new skill ids on restart and
+trigger duplicate-skill collisions. The active plugin install
+directory is plugin-owned territory; do not place user files
+there. The check is one-directional — if the active install
 happens to be newer than the tmp root (e.g., a local hot-fix), no
 sync runs and no downgrade happens. This makes the standard
 refresh flow:
@@ -108,8 +114,11 @@ Sync is **skipped** when:
 `SPECKIT_MARKETPLACE_TMP_ROOT=/path/to/source` overrides the
 default marketplace tmp path for testing or non-default layouts.
 
-If `rsync` is missing, the installer **falls back** to `cp -Rf`
-rather than skipping the sync.
+If `rsync` is missing, the installer **falls back** to a
+wipe-and-copy (`rm -rf` of the active install followed by
+`cp -R` of the marketplace tmp root). The fallback preserves the
+mirror semantics so renamed or removed upstream files do not
+linger after a refresh.
 
 ## Hard Constraints
 

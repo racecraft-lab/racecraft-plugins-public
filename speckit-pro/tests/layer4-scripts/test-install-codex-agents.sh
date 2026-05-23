@@ -216,4 +216,32 @@ output=$( \
 )
 assert_contains "$output" "Synced active plugin install to 1.10.2"
 
+section "Marketplace tmp-root sync mirrors deletions (orphan-file removal)"
+
+# Regression test for v1.11.1 → v2.0.0 upgrade where rsync without
+# --delete left renamed/removed upstream files behind in the active
+# install, producing duplicate-skill collisions in Codex (e.g.,
+# codex-skills/speckit-setup/ stuck around after the directory was
+# renamed to codex-skills/speckit-scaffold-spec/ upstream).
+# Active install at v1.0.0 contains keep-orphan.txt; marketplace tmp
+# root at v2.0.0 omits it and adds new-file.txt. After sync the active
+# install must MIRROR the tmp root: new-file.txt present, orphan gone.
+printf '{"version":"1.0.0"}\n' > "$ACTIVE_INSTALL/.codex-plugin/plugin.json"
+printf '{"version":"2.0.0"}\n' > "$TMP_MARKETPLACE_ROOT/.codex-plugin/plugin.json"
+printf 'orphan\n' > "$ACTIVE_INSTALL/keep-orphan.txt"
+rm -f "$TMP_MARKETPLACE_ROOT/keep-orphan.txt"
+printf 'fresh\n' > "$TMP_MARKETPLACE_ROOT/new-file.txt"
+
+output=$( \
+  SPECKIT_MARKETPLACE_TMP_ROOT="$TMP_MARKETPLACE_ROOT" \
+  "$ACTIVE_INSTALL/codex-skills/install/scripts/install-codex-agents.sh" \
+    "$SYNC_DEST_DIR" 2>&1 \
+)
+
+set_test "mirror sync adds files present in marketplace tmp root"
+assert_file_exists "$ACTIVE_INSTALL/new-file.txt"
+
+set_test "mirror sync deletes orphan files absent from marketplace tmp root"
+assert_file_not_exists "$ACTIVE_INSTALL/keep-orphan.txt"
+
 test_summary
