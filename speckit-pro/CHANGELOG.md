@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.0.0...speckit-pro-v2.0.1) (2026-05-23)
+
+
+### Bug Fixes
+
+* **speckit-pro:** mirror marketplace tmp root with --delete to drop orphan files ([#54](https://github.com/racecraft-lab/racecraft-plugins-public/issues/54)) ([7649f69](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7649f699361db2611f537dc5428707553894d999))
+
 ## [2.0.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.11.1...speckit-pro-v2.0.0) (2026-05-23)
 
 
