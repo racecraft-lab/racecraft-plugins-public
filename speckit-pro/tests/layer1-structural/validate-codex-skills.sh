@@ -139,10 +139,11 @@ $(cat "$ref_file")"
     set_test "speckit-autopilot: requires all canonical phase families before execution"
     if [[ "$runtime_doc" == *"phase family coverage is mandatory"* \
       && "$runtime_doc" == *"Phase 7: Implement - Pending task decomposition"* \
-      && "$runtime_doc" == *"Post: Verification and Status Sync"* ]]; then
+      && "$runtime_doc" == *"Post: Doctor Extension Check"* \
+      && "$runtime_doc" == *"Post: Retrospective"* ]]; then
       _pass
     else
-      _fail "expected all-phase coverage and Phase 7/Post placeholders in the Codex autopilot skill"
+      _fail "expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check → Retrospective) in the Codex autopilot skill"
     fi
 
     set_test "speckit-autopilot: documents canonical PHASES order"

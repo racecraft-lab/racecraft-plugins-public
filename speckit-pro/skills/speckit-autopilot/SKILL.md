@@ -578,8 +578,37 @@ prompt/session so the autopilot knows exactly what to execute next.
   "Phase 6: Analyze"
   "Phase 6: Analyze - Consensus"                ← MANDATORY after analyze
   "Phase 7: <Group> (<task IDs>)"               ← parsed from tasks.md
-  "Post: <task name>"                           ← from post-impl table
+  "Post: <task name>"                           ← from post-impl table (full list below)
 ```
+
+### Canonical Post-Implementation Task List — ENUMERATE ALL OF THESE
+
+The autopilot has a complete, prescribed set of post-implementation
+tasks. Every task below MUST appear in your task list unless its
+required extension is provably absent. **Do NOT omit any of these,
+do NOT collapse them, do NOT defer them — the user expects to see
+all of them in the progress panel before Phase 1 starts.** When an
+extension is missing, still create the task but mark it skipped with
+a one-line reason ("skipped: <extension> not installed").
+
+```text
+  "Post: Doctor Extension Check"        ← doctor / speckit-utils ext
+  "Post: Verify Implementation"         ← verify ext
+  "Post: Verify Tasks Phantom Check"    ← verify-tasks ext
+  "Post: Code Review"                   ← review ext
+  "Post: Integration Suite"             ← always required (no ext)
+  "Post: Cleanup"                       ← cleanup ext
+  "Post: Reviewability Diff Gate"       ← always required (no ext)
+  "Post: PR Body Generation"            ← always required (no ext)
+  "Post: PR Creation"                   ← always required (no ext)
+  "Post: Review Remediation"            ← always required (no ext)
+  "Post: Retrospective"                 ← retrospective ext (FINAL STEP)
+```
+
+Detection rule per extension task: check `.specify/extensions.yml`
+(or `.registry`) for the extension's `enabled: true` flag, OR confirm
+the extension directory exists via Glob. If neither, the task still
+appears in the task list with status "skipped: <ext-name> not installed".
 
 **CRITICAL — Consensus tasks are MANDATORY:**
 
@@ -592,10 +621,11 @@ items. **Never omit consensus tasks from the task list.**
 **Other rules:**
 - Phase 7 decomposed into groups after tasks.md is created
   (test/impl/verify per phase, see `references/phase-execution.md`)
-- Extension tasks (doctor, verify-tasks, verify, review,
-  cleanup, retrospective): add if extension is in .registry
-  with enabled: true, or if extension directory exists via Glob
 - Mark completed phases immediately; first pending as in_progress
+- **Verify task-list completeness before starting Phase 1**: count
+  the prescribed entries above and confirm every Phase, every
+  Consensus, and every Post: task is present. If the count differs,
+  ADD the missing entries before advancing.
 
 ## Step 2: Main Execution Loop
 
@@ -668,26 +698,32 @@ POST-IMPLEMENTATION (after all 7 phases complete):
     command's completion text can kill the agent loop, preventing
     subsequent tasks from running.
 
-    Post-implementation tasks (execute in order):
+    Post-implementation tasks (execute in order — every row below
+    is a task that MUST appear in the task list per Step 1.1's
+    Canonical Post-Implementation Task List):
 
     | # | Task | Requires | Command |
     |---|------|----------|---------|
-    | 10 | Verify Implementation | verify ext | /speckit.verify |
-    | 11 | Code Review | review ext | /speckit.review |
-    | 12 | Integration Suite | (none) | Step 3.1 direct |
-    | 13 | Cleanup | cleanup ext | /speckit.cleanup |
-    | 14 | Reviewability Diff Gate | (none) | reviewability-gate.sh diff |
-    | 15 | PR Body Generation | (none) | generate-pr-body.sh |
-    | 16 | PR Creation | (none) | Step 3.2 direct |
-    | 17 | Review Remediation | (none) | Step 3.3 /loop |
-    | 18 | Retrospective | retrospective ext | /speckit.retrospective.analyze |
+    | 10 | Doctor Extension Check | doctor / speckit-utils ext | /speckit.speckit-utils.doctor (or /speckit.doctor) |
+    | 11 | Verify Implementation | verify ext | /speckit.verify |
+    | 12 | Verify Tasks Phantom Check | verify-tasks ext | /speckit.verify-tasks |
+    | 13 | Code Review | review ext | /speckit.review |
+    | 14 | Integration Suite | (none) | Step 3.1 direct |
+    | 15 | Cleanup | cleanup ext | /speckit.cleanup |
+    | 16 | Reviewability Diff Gate | (none) | reviewability-gate.sh diff |
+    | 17 | PR Body Generation | (none) | generate-pr-body.sh |
+    | 18 | PR Creation | (none) | Step 3.2 direct |
+    | 19 | Review Remediation | (none) | Step 3.3 /loop |
+    | 20 | Retrospective | retrospective ext | /speckit.retrospective.analyze |
 
     Extension tasks: Agent(subagent_type: "general-purpose",
       prompt: "Run /<command> for SPEC-XXX. Return summary.")
-    Non-extension tasks (12, 14, 15, 16, 17): execute directly per Step 3.
-    Missing extension: log warning and skip (don't fail).
+    Non-extension tasks (14, 16, 17, 18, 19): execute directly per Step 3.
+    Missing extension: log warning and mark the task "skipped: <ext> not
+    installed". The task MUST still appear in the task list — never drop
+    it silently.
     See references/post-implementation.md for detailed prompts.
-    Task 18 is the FINAL STEP.
+    Task 20 (Retrospective) is the FINAL STEP.
 ```
 
 **Dynamic task updates:** If consensus reveals new questions or
