@@ -59,7 +59,7 @@ Then in Claude Code or Codex:
 /speckit-pro:status
 
 # Set up a spec (creates worktree, runs Grill Me, populates workflow)
-/speckit-pro:setup SPEC-001
+/speckit-pro:scaffold-spec SPEC-001
 
 # Run autopilot — handles spec → PR
 /speckit-pro:autopilot docs/ai/specs/SPEC-001-workflow.md
@@ -73,7 +73,7 @@ Then in Claude Code or Codex:
 |---|---|---|
 | SDD coaching | `/speckit-pro:coach` | `/speckit-coach` or `$speckit-coach` |
 | Iterative scoping interview | `/speckit-pro:grill-me` | `$grill-me` (explicit invocation only) |
-| Spec setup (worktree + workflow file) | `/speckit-pro:setup` | `/speckit-setup` or `$speckit-setup` |
+| Spec setup (worktree + workflow file) | `/speckit-pro:scaffold-spec` | `/speckit-scaffold-spec` or `$speckit-scaffold-spec` |
 | Autopilot (7 SDD phases → PR) | `/speckit-pro:autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
 | Project status + next-spec recommendation | `/speckit-pro:status` | `/speckit-status` or `$speckit-status` |
 | PR review-comment remediation | `/speckit-pro:resolve-pr` | `/speckit-resolve-pr` or `$speckit-resolve-pr` |
@@ -92,7 +92,7 @@ flowchart TD
     A -.-> PRD([PRD — outside this plugin])
     PRD -->|/speckit-pro:coach| TR[(Technical Roadmap<br/>Goal, Scope, Acceptance,<br/>Dependencies, Priority, Status)]
     TR -->|/speckit-pro:status| ST{Recommends next<br/>Pending spec}
-    ST -->|/speckit-pro:setup SPEC-NNN| SU[Worktree + Branch]
+    ST -->|/speckit-pro:scaffold-spec SPEC-NNN| SU[Worktree + Branch]
     SU --> GM["Grill Me<br/>(human-in-the-loop)"]
     GM --> DC2[SPEC-NNN-design-concept.md]
     SU --> WF[SPEC-NNN-workflow.md]
@@ -194,17 +194,17 @@ Walks down each branch of the design tree, asks one question at a time, and prov
 4. Stops at a natural endpoint, on user request, or at the soft cap (30 questions)
 5. Synthesizes a Design Concept doc at `docs/ai/specs/<slug>-design-concept.md` with Goals, Non-goals, full Q&A log, and Open Questions
 
-**Use it for:** raw client briefs, meeting transcripts, vague feature ideas — anything where you want shared understanding before committing to a spec. Output feeds directly into `/speckit-pro:coach` (for roadmap authoring) or `/speckit-pro:setup` (for spec execution).
+**Use it for:** raw client briefs, meeting transcripts, vague feature ideas — anything where you want shared understanding before committing to a spec. Output feeds directly into `/speckit-pro:coach` (for roadmap authoring) or `/speckit-pro:scaffold-spec` (for spec execution).
 
 > **Hard constraint:** Grill Me is human-in-the-loop only. Never invoked from `/speckit-pro:autopilot` or any phase agent. Autopilot's Clarify phase uses `/speckit.clarify` with the consensus protocol — those are deliberately different systems.
 
 </details>
 
 <details>
-<summary><strong><code>/speckit-pro:setup &lt;SPEC-ID&gt;</code> — prepare a spec for autopilot</strong></summary>
+<summary><strong><code>/speckit-pro:scaffold-spec &lt;SPEC-ID&gt;</code> — prepare a spec for autopilot</strong></summary>
 
 ```text
-/speckit-pro:setup SPEC-009
+/speckit-pro:scaffold-spec SPEC-009
 ```
 
 **What it does:**
@@ -283,7 +283,7 @@ Ready to run:
 
 ## Recommended Next
 SPEC-009: Search & Database (10 tools, P1, Tier 2)
-/speckit-pro:setup SPEC-009
+/speckit-pro:scaffold-spec SPEC-009
 ```
 
 </details>
@@ -475,7 +475,7 @@ This usually means the question is genuinely ambiguous. The agents are working c
 <details>
 <summary><strong>Workflow file has unfilled placeholders</strong></summary>
 
-The autopilot fails when workflow prompts still contain `<!-- ... -->` placeholders. Run `/speckit-pro:setup <SPEC-ID>` (or `/speckit-setup <SPEC-ID>` in Codex) to auto-populate from the technical roadmap. If you're authoring the workflow manually, fill in all phase prompts before running autopilot.
+The autopilot fails when workflow prompts still contain `<!-- ... -->` placeholders. Run `/speckit-pro:scaffold-spec <SPEC-ID>` (or `/speckit-scaffold-spec <SPEC-ID>` in Codex) to auto-populate from the technical roadmap. If you're authoring the workflow manually, fill in all phase prompts before running autopilot.
 
 </details>
 

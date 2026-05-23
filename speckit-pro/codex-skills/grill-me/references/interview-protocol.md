@@ -199,10 +199,10 @@ After the loop ends, write the Design Concept doc per
 
 - **Standalone mode**: report the file path back to the user with a
   one-line summary and a "next step" suggestion (`$speckit-coach` to
-  feed it into a roadmap, or `$speckit-setup SPEC-XXX` if a roadmap
+  feed it into a roadmap, or `$speckit-scaffold-spec SPEC-XXX` if a roadmap
   entry exists).
 - **Setup mode**: report the file path back to the calling
-  `$speckit-setup` skill and surface the key answers (especially
+  `$speckit-scaffold-spec` skill and surface the key answers (especially
   Goals, Non-goals, and the major design decisions) so setup can
   enrich the Specify Prompt and Clarify Prompts in the workflow file.
 

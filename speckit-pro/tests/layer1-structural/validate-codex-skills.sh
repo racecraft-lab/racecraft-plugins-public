@@ -8,7 +8,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 # Canonical skill list — keep in sync with the case block in the
 # "corresponding source artifact exists" test below.
-SKILLS=(speckit-autopilot speckit-coach speckit-setup speckit-status speckit-resolve-pr install grill-me)
+SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install grill-me)
 COLLISION_GUARD_SKILLS=(speckit-autopilot speckit-coach grill-me)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
@@ -215,7 +215,7 @@ $(cat "$ref_file")"
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
     case "$skill" in
-      speckit-setup|speckit-autopilot|speckit-resolve-pr|install|grill-me)
+      speckit-scaffold-spec|speckit-autopilot|speckit-resolve-pr|install|grill-me)
         if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
           _pass
         else
@@ -248,11 +248,11 @@ $(cat "$ref_file")"
         _fail "corresponding Claude skill not found at skills/$skill/SKILL.md"
       fi
       ;;
-    speckit-setup)
-      if [ -f "$PLUGIN_ROOT/commands/setup.md" ]; then
+    speckit-scaffold-spec)
+      if [ -f "$PLUGIN_ROOT/commands/scaffold-spec.md" ]; then
         _pass
       else
-        _fail "corresponding Claude command not found at commands/setup.md"
+        _fail "corresponding Claude command not found at commands/scaffold-spec.md"
       fi
       ;;
     speckit-status)
@@ -277,10 +277,10 @@ $(cat "$ref_file")"
       ;;
   esac
 
-  # speckit-setup hard-codes a reference to the shared workflow template —
+  # speckit-scaffold-spec hard-codes a reference to the shared workflow template —
   # verify the file it points to actually exists.
-  if [ "$skill" = "speckit-setup" ]; then
-    set_test "speckit-setup: referenced workflow template exists (skills/speckit-coach/templates/workflow-template.md)"
+  if [ "$skill" = "speckit-scaffold-spec" ]; then
+    set_test "speckit-scaffold-spec: referenced workflow template exists (skills/speckit-coach/templates/workflow-template.md)"
     assert_file_exists "$PLUGIN_ROOT/skills/speckit-coach/templates/workflow-template.md"
   fi
 

@@ -1,5 +1,5 @@
 ---
-name: speckit-setup
+name: speckit-scaffold-spec
 description: >
   Prepare a SPEC-ID from the technical roadmap for autonomous
   execution in Codex. Creates or reuses the spec branch and

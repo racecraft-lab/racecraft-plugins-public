@@ -28,7 +28,7 @@ Append a `-2`, `-3` suffix, or ask the user via `AskUserQuestion`.
 .worktrees/<NNN>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md
 ```
 
-The calling `/speckit-pro:setup` command supplies `<NNN>`, `<short-name>`,
+The calling `/speckit-pro:scaffold-spec` command supplies `<NNN>`, `<short-name>`,
 and `<ID>` via its invocation context. Always write inside the worktree —
 never at the repo root.
 
@@ -108,7 +108,7 @@ Items that came up but were deliberately deferred. Each item has:
 - **Why deferred:** <user said "I don't know yet" / out of scope for
   this session / blocked on input from someone else>
 - **Suggested next step:** <how to resolve, e.g., "Ask <stakeholder>
-  before /setup runs", "Defer to /speckit-clarify during autopilot">
+  before /scaffold-spec runs", "Defer to /speckit-clarify during autopilot">
 
 ## Recommended Next Step
 
@@ -119,7 +119,7 @@ One of:
   `/speckit-pro:coach help me add this to the technical roadmap` and
   reference this doc.
 - **Run setup.** If a SPEC-XXX entry already exists in the roadmap,
-  run `/speckit-pro:setup SPEC-XXX`. (Note: in setup mode, this section
+  run `/speckit-pro:scaffold-spec SPEC-XXX`. (Note: in setup mode, this section
   is informational only — setup has already happened.)
 - **Re-grill on a sub-topic.** If a specific branch (e.g., the data
   model) deserves its own deeper session, run `/speckit-pro:grill-me

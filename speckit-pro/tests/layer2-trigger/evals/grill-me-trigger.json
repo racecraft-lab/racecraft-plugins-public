@@ -24,7 +24,7 @@
     "should_trigger": true
   },
   {
-    "query": "I need a Design Concept doc for SPEC-019 workflow tracking — grill-me on each design tree branch before /speckit-pro:setup",
+    "query": "I need a Design Concept doc for SPEC-019 workflow tracking — grill-me on each design tree branch before /speckit-pro:scaffold-spec",
     "should_trigger": true
   },
   {

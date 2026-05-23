@@ -122,7 +122,7 @@ This constraint applies to:
 - `consensus-synthesizer` and `gate-validator`
 - Any other agent spawned during autopilot execution
 
-Grill-me is for **pre-workflow** human alignment via `/speckit-pro:setup`
+Grill-me is for **pre-workflow** human alignment via `/speckit-pro:scaffold-spec`
 or `/speckit-pro:grill-me`. It is not part of the autopilot loop and
 must not appear in any phase agent's tool call history.
 

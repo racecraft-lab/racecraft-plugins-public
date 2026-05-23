@@ -194,11 +194,11 @@ After the loop ends, write the Design Concept doc per
 
 - **Standalone mode**: report the file path back to the user with a
   one-line summary and a "next step" suggestion (`/speckit-pro:coach`
-  to feed it into a roadmap, or `/speckit-pro:setup SPEC-XXX` if
+  to feed it into a roadmap, or `/speckit-pro:scaffold-spec SPEC-XXX` if
   a roadmap entry exists).
-- **Setup mode**: report the file path back to the calling /setup
+- **Setup mode**: report the file path back to the calling /scaffold-spec
   command and surface the key answers (especially Goals, Non-goals,
-  and the major design decisions) so /setup can enrich the Specify
+  and the major design decisions) so /scaffold-spec can enrich the Specify
   Prompt and Clarify Prompts in the workflow file.
 
 The synthesis itself is a single pass — don't loop back into more

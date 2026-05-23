@@ -144,7 +144,7 @@ When the user requests a single `SPEC-ID`, show:
 - the next concrete command
 
 If no workflow file exists for the requested spec, say that directly and
-recommend `$speckit-setup <SPEC-ID>` rather than pretending there is execution
+recommend `$speckit-scaffold-spec <SPEC-ID>` rather than pretending there is execution
 state.
 
 ## Output Format
@@ -170,7 +170,7 @@ Handle these explicitly:
 - No roadmap and no workflow files: report that no SpecKit tracking artifacts
   were found.
 - Roadmap exists but no workflow files: show the roadmap view and recommend
-  `$speckit-setup` for pending specs.
+  `$speckit-scaffold-spec` for pending specs.
 - Workflow files exist without a roadmap: report phase detail from workflows,
   but note that backlog visibility is incomplete.
 - Multiple workflow files for the same spec: prefer the one that matches the
@@ -182,7 +182,7 @@ This skill does not mutate the repo. Do not create branches, edit workflow
 files, or mark roadmap rows complete from inside the status skill. If the user
 wants to act on the recommendation, direct them to the corresponding entrypoint:
 
-- `$speckit-setup` to prepare a spec
+- `$speckit-scaffold-spec` to prepare a spec
 - `$speckit-autopilot` to execute a workflow
 - `$speckit-resolve-pr` to address review feedback
 - `$speckit-coach` for process guidance

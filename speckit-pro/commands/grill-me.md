@@ -11,7 +11,7 @@ Iterative project scoping through relentless one-question-at-a-time interview.
 The AI walks every branch of the design tree, asks a single question per
 turn, and **provides its own recommended answer** so you can agree or
 course-correct. Output: a rich, shared-understanding Design Concept doc
-you can feed into `/speckit-pro:coach`, `/speckit-pro:setup`, or any other
+you can feed into `/speckit-pro:coach`, `/speckit-pro:scaffold-spec`, or any other
 spec workflow.
 
 ## Invocation

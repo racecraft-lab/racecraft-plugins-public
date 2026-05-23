@@ -19,7 +19,7 @@ description: >
   decomposition, checklist domain selection, project setup ("specify
   init"), interview-style pre-spec scoping ("grill me", "interview
   me"), or unrelated coding tasks (unit tests, MCP tools, linting,
-  build errors) — those route to $speckit-coach, $speckit-setup,
+  build errors) — those route to $speckit-coach, $speckit-scaffold-spec,
   $speckit-status, $speckit-resolve-pr, $grill-me, or no skill at all.
 ---
 
@@ -146,7 +146,7 @@ response is one of:
 - Run the `$speckit-clarify` skill (Phase 2) with the multi-agent consensus
   protocol — that is autopilot's only clarification mechanism.
 - Fail the gate, surface the ambiguity, and stop. Pre-workflow interviews
-  belong in `$speckit-setup`, not autopilot.
+  belong in `$speckit-scaffold-spec`, not autopilot.
 
 This rule applies to: the orchestrator, every phase subagent
 (`phase-executor`, `clarify-executor`, `checklist-executor`,

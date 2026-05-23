@@ -52,23 +52,23 @@
     },
     {
       "id": 5,
-      "prompt": "You are being invoked by /speckit-pro:setup for SPEC-009 'Search & Database'. Setup has already created the worktree at .worktrees/009-search-database/ and is calling you with mode=setup, spec_id=SPEC-009, scope=<scope description>, output_path=.worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md. Run the interview and write the design concept to the supplied path.",
-      "expected_output": "Detects setup-mode invocation, runs the interview against the supplied scope, writes the design concept to the worktree path provided (NOT the standalone default path), and returns the path plus a summary of key decisions to the calling /setup command so it can enrich the workflow file.",
+      "prompt": "You are being invoked by /speckit-pro:scaffold-spec for SPEC-009 'Search & Database'. Setup has already created the worktree at .worktrees/009-search-database/ and is calling you with mode=setup, spec_id=SPEC-009, scope=<scope description>, output_path=.worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md. Run the interview and write the design concept to the supplied path.",
+      "expected_output": "Detects setup-mode invocation, runs the interview against the supplied scope, writes the design concept to the worktree path provided (NOT the standalone default path), and returns the path plus a summary of key decisions to the calling /scaffold-spec command so it can enrich the workflow file.",
       "expectations": [
         "Frontmatter of the produced doc has mode: 'setup' and spec_id: 'SPEC-009'",
         "Output file is written to .worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md, NOT to docs/ai/specs/<slug>-design-concept.md",
-        "Return summary surfaces Goals, Non-goals, and the major design decisions so /setup can enrich the workflow file's Specify and Clarify Prompts",
-        "Does NOT write or modify the workflow file itself — that's /setup's job"
+        "Return summary surfaces Goals, Non-goals, and the major design decisions so /scaffold-spec can enrich the workflow file's Specify and Clarify Prompts",
+        "Does NOT write or modify the workflow file itself — that's /scaffold-spec's job"
       ]
     },
     {
       "id": 6,
       "prompt": "After the interview ends, write a workflow file at docs/ai/specs/SPEC-042-workflow.md that's ready for autopilot. Then mark SPEC-042 as In Progress in the technical roadmap.",
-      "expected_output": "Refuses to write a workflow file or modify the technical roadmap — those are /setup's responsibilities. Writes only the design concept doc.",
+      "expected_output": "Refuses to write a workflow file or modify the technical roadmap — those are /scaffold-spec's responsibilities. Writes only the design concept doc.",
       "expectations": [
         "Does NOT create or modify any file matching SPEC-*-workflow.md",
         "Does NOT modify the technical roadmap or any roadmap-like file",
-        "Explicitly states that workflow file creation is /speckit-pro:setup's job, not grill-me's",
+        "Explicitly states that workflow file creation is /speckit-pro:scaffold-spec's job, not grill-me's",
         "Still produces a design concept doc per the standalone-mode contract"
       ]
     },

@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec scoping. Use this skill — NOT brainstorming — before /speckit-specify, /speckit-plan, /speckit-tasks, /speckit-pro:setup, or whenever the user invokes /speckit-pro:grill-me. Triggers on grill-me-unique signatures: 'grill me' on a brief/spec/transcript, 'walk every branch of the design tree', 'play the role of a relentless interviewer', 'produce a Design Concept doc', 'pre-spec scoping', 'help me scope this raw idea before /speckit-specify'. Walks every branch of the design tree, asks one question at a time with the assistant's recommended answer first, produces a Design Concept Markdown doc that downstream /speckit-specify, /speckit-plan, /speckit-tasks consume. Accepts .md, .txt files or a free-text topic. Use brainstorming skill ONLY for free-form creative work with no SpecKit/SDD anchor."
+description: "MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec scoping. Use this skill — NOT brainstorming — before /speckit-specify, /speckit-plan, /speckit-tasks, /speckit-pro:scaffold-spec, or whenever the user invokes /speckit-pro:grill-me. Triggers on grill-me-unique signatures: 'grill me' on a brief/spec/transcript, 'walk every branch of the design tree', 'play the role of a relentless interviewer', 'produce a Design Concept doc', 'pre-spec scoping', 'help me scope this raw idea before /speckit-specify'. Walks every branch of the design tree, asks one question at a time with the assistant's recommended answer first, produces a Design Concept Markdown doc that downstream /speckit-specify, /speckit-plan, /speckit-tasks consume. Accepts .md, .txt files or a free-text topic. Use brainstorming skill ONLY for free-form creative work with no SpecKit/SDD anchor."
 argument-hint: "e.g. 'interview me about this brief', 'grill me on the gamification overhaul', 'scope this transcript'"
 user-invokable: true
 license: MIT
@@ -25,7 +25,7 @@ user can agree, course-correct, or pick an alternative.
 
 The output of a successful grilling session is a **Design Concept doc**:
 a rich Markdown record of the Q&A history plus a synthesized summary
-that downstream tools (`/speckit-pro:coach`, `/speckit-pro:setup`,
+that downstream tools (`/speckit-pro:coach`, `/speckit-pro:scaffold-spec`,
 `/speckit-specify`) consume to produce specs and plans.
 
 This skill is the antidote to "specs to code" / vibe-coding handoffs.
@@ -57,7 +57,7 @@ silently produces low-value output.
 
 1. The user typing `/speckit-pro:grill-me` directly in an interactive
    Claude Code session.
-2. The `/speckit-pro:setup` command running interactively (it always
+2. The `/speckit-pro:scaffold-spec` command running interactively (it always
    invokes grill-me before writing the workflow file).
 
 **No other entry point is permitted.**
@@ -84,7 +84,7 @@ real-time human interaction:
 
 1. Confirm `AskUserQuestion` is available in your tool list. (It is
    the only sanctioned interview mechanism in the Claude Code variant.)
-2. Confirm you were invoked via the slash command or by `/setup`,
+2. Confirm you were invoked via the slash command or by `/scaffold-spec`,
    not by a phase-executor or other agent context.
 
 If either check fails, **abort immediately** with this message:
@@ -112,7 +112,7 @@ context:
 
 ### Setup mode
 
-- Triggered when invoked from `/speckit-pro:setup` (the calling command
+- Triggered when invoked from `/speckit-pro:scaffold-spec` (the calling command
   passes a marker / context indicating it's the setup flow).
 - Input: the spec scope description from the technical roadmap.
 - Output path: `.worktrees/<NNN>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md`
@@ -163,12 +163,12 @@ sections (full schema in `references/output-formats.md`):
 - **Open Questions** — anything you flagged as worth follow-up but
   the user deferred.
 - **Recommended Next Step** — usually `/speckit-pro:coach` for roadmap
-  authoring or `/speckit-pro:setup SPEC-XXX` if a roadmap entry already
+  authoring or `/speckit-pro:scaffold-spec SPEC-XXX` if a roadmap entry already
   exists.
 
 ## What This Skill Does NOT Do
 
-- It does not write a workflow file. That's `/speckit-pro:setup`'s job.
+- It does not write a workflow file. That's `/speckit-pro:scaffold-spec`'s job.
 - It does not write a spec file (`spec.md`). That's `/speckit-specify`'s
   job.
 - It does not modify the technical roadmap. That's `/speckit-pro:coach`'s
@@ -190,9 +190,9 @@ Actions:
 
 Result: Design Concept Markdown file with frontmatter, Goals, Non-goals, Q&A log, Open Questions, Recommended Next Step.
 
-### Example 2: Setup-mode invocation from /speckit-pro:setup
+### Example 2: Setup-mode invocation from /speckit-pro:scaffold-spec
 
-`/speckit-pro:setup` invokes this skill with `mode: "setup"`, the spec scope from the technical roadmap, and an output path inside the worktree.
+`/speckit-pro:scaffold-spec` invokes this skill with `mode: "setup"`, the spec scope from the technical roadmap, and an output path inside the worktree.
 
 Actions:
 1. Detect setup mode from invocation context
@@ -229,17 +229,17 @@ methodology guidance or fail the gate and surface to the user.
 
 Cause: If you have the `superpowers` plugin installed, its `brainstorming` skill description starts with "You MUST use this before any creative work — creating features, building components, adding functionality, or modifying behavior." That high-imperative framing reliably outranks descriptive scoping skills on any prompt that smells like creative work, including "interview me about this brief", "scope this idea", or "walk me through this design before I commit."
 
-Solution: Invoke grill-me directly via the slash command `/speckit-pro:grill-me` (description-based triggering is bypassed for explicit invocation). Inside `/speckit-pro:setup` this is already wired — the setup command calls `Skill('grill-me')` explicitly, so the brainstorming competition does not apply. If you prefer natural-language invocation, "run grill-me on this" or "use the grill me skill on this brief" name-anchors more reliably than "interview me about this".
+Solution: Invoke grill-me directly via the slash command `/speckit-pro:grill-me` (description-based triggering is bypassed for explicit invocation). Inside `/speckit-pro:scaffold-spec` this is already wired — the setup command calls `Skill('grill-me')` explicitly, so the brainstorming competition does not apply. If you prefer natural-language invocation, "run grill-me on this" or "use the grill me skill on this brief" name-anchors more reliably than "interview me about this".
 
-### Skill triggers when user wanted /speckit-pro:setup
+### Skill triggers when user wanted /speckit-pro:scaffold-spec
 
-Cause: The user said "set up SPEC-009" — that's `/setup`'s territory,
+Cause: The user said "set up SPEC-009" — that's `/scaffold-spec`'s territory,
 not grill-me's. Setup itself runs grill-me, so the user gets the
 interview either way, but starting from setup ensures the worktree
 gets created.
 
 Solution: If the user mentions a SPEC-ID and "set up" / "prepare",
-defer to `/speckit-pro:setup`. Grill-me triggers on "interview me",
+defer to `/speckit-pro:scaffold-spec`. Grill-me triggers on "interview me",
 "grill me", "scope this", or when the input is a raw idea / transcript
 / brief without a SPEC-ID.
 

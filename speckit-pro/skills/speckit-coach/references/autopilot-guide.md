@@ -5,7 +5,7 @@ executor. Use this when coaching developers on how to set up,
 configure, run, and troubleshoot the autopilot.
 
 **Related commands:**
-- `/speckit-pro:setup <SPEC-ID>` — create worktree + workflow file
+- `/speckit-pro:scaffold-spec <SPEC-ID>` — create worktree + workflow file
 - `/speckit-pro:autopilot <workflow.md>` — run the autopilot
 - `/speckit-pro:status` — check progress across all specs
 - `/speckit-pro:resolve-pr <PR>` — fix review comments post-PR

@@ -19,7 +19,7 @@ course-correct, or pick an alternative.
 
 The output of a successful grilling session is a **Design Concept doc**:
 a rich Markdown record of the Q&A history plus a synthesized summary
-that downstream tools (`$speckit-coach`, `$speckit-setup`,
+that downstream tools (`$speckit-coach`, `$speckit-scaffold-spec`,
 `/speckit-specify`) consume to produce specs and plans.
 
 This skill is the antidote to "specs to code" / vibe-coding handoffs.
@@ -47,7 +47,7 @@ silently produces low-value output.
 1. The user typing `$grill-me` directly in an interactive Codex session.
 2. The user invoking via natural language matching the description
    (e.g., "grill me on this brief").
-3. The `$speckit-setup` skill running interactively (it always invokes
+3. The `$speckit-scaffold-spec` skill running interactively (it always invokes
    grill-me before writing the workflow file).
 
 **No other entry point is permitted.** The `agents/openai.yaml`
@@ -112,7 +112,7 @@ context:
 
 ### Setup mode
 
-- Triggered when invoked from `$speckit-setup` (the calling skill
+- Triggered when invoked from `$speckit-scaffold-spec` (the calling skill
   passes a marker / context indicating it's the setup flow).
 - Input: the spec scope description from the technical roadmap.
 - Output path: `.worktrees/<NNN>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md`
@@ -164,11 +164,11 @@ sections (full schema in `references/output-formats.md`):
 - **Open Questions** — anything you flagged as worth follow-up but
   the user deferred.
 - **Recommended Next Step** — usually `$speckit-coach` for roadmap
-  authoring or `$speckit-setup SPEC-XXX` if a roadmap entry exists.
+  authoring or `$speckit-scaffold-spec SPEC-XXX` if a roadmap entry exists.
 
 ## What This Skill Does NOT Do
 
-- It does not write a workflow file. That's `$speckit-setup`'s job.
+- It does not write a workflow file. That's `$speckit-scaffold-spec`'s job.
 - It does not write a spec file (`spec.md`). That's `/speckit-specify`'s
   job.
 - It does not modify the technical roadmap. That's `$speckit-coach`'s
@@ -267,7 +267,7 @@ before I commit."
 
 Solution: Invoke grill-me explicitly via `$grill-me` (skill-name
 invocation bypasses description-based competition). Inside
-`$speckit-setup` this is already wired — the setup skill invokes
+`$speckit-scaffold-spec` this is already wired — the setup skill invokes
 grill-me by name, so the brainstorming competition does not apply. If
 you prefer natural-language invocation, "run grill-me on this" or
 "use the grill-me skill on this brief" name-anchors more reliably than

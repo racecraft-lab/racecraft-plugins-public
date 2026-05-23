@@ -13,8 +13,8 @@ Creates the worktree, branch, and workflow file — ready for
 ## Invocation
 
 ```text
-/speckit-pro:setup SPEC-009
-/speckit-pro:setup SPEC-008
+/speckit-pro:scaffold-spec SPEC-009
+/speckit-pro:scaffold-spec SPEC-008
 ```
 
 ## What to Do
@@ -116,14 +116,14 @@ out in the worktree instead of creating a new one.
 
 <hard_constraints>
 
-**This step is mandatory.** Every `/setup` invocation runs grill-me before
+**This step is mandatory.** Every `/scaffold-spec` invocation runs grill-me before
 the workflow file is written. There is no `--no-grill` flag and no skip
 path — the interview is what makes the workflow prompts good enough for
 autonomous execution.
 
 **Grill-me is human-in-the-loop only.** It uses `AskUserQuestion` to
 interview the user. If you are running this command in a non-interactive
-context (CI, background agent, automation), abort the entire `/setup`
+context (CI, background agent, automation), abort the entire `/scaffold-spec`
 invocation — do not attempt to skip grilling.
 
 </hard_constraints>

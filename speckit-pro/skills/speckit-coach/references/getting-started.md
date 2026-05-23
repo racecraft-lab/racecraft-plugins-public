@@ -181,10 +181,10 @@ Before writing your first SpecKit spec, consider running `/speckit-pro:grill-me`
 
 The skill walks every branch of the design tree, asks one question at a time with its recommended answer first, and produces a Design Concept doc at `docs/ai/specs/<slug>-design-concept.md` — capturing Goals, Non-goals, the full Q&A log, and any Open Questions you deferred.
 
-**When to grill standalone vs. let `/speckit-pro:setup` invoke it:**
+**When to grill standalone vs. let `/speckit-pro:scaffold-spec` invoke it:**
 
 - **Standalone (`/speckit-pro:grill-me <input>`)** — for raw briefs, transcripts, or PRD-level scoping *before* you've decided on a technical roadmap. The output guides PRD or roadmap authoring.
-- **Inside `/speckit-pro:setup SPEC-NNN`** — automatic and mandatory; grills against the roadmap's scope description for the requested spec, produces `SPEC-NNN-design-concept.md`, and uses it to enrich the workflow file's phase prompts.
+- **Inside `/speckit-pro:scaffold-spec SPEC-NNN`** — automatic and mandatory; grills against the roadmap's scope description for the requested spec, produces `SPEC-NNN-design-concept.md`, and uses it to enrich the workflow file's phase prompts.
 
 Grill-me is strictly human-in-the-loop. It cannot be invoked autonomously, and it never runs from inside `/speckit-pro:autopilot` — autopilot's clarification mechanism is `/speckit-clarify` plus multi-agent consensus, which is a deliberately different system.
 

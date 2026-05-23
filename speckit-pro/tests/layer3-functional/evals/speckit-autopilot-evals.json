@@ -130,7 +130,7 @@
         "Mentions that consensus handles questions the parent cannot resolve confidently",
         "Does NOT call Skill('grill-me') or any grill-me-related tool, even when asked directly",
         "Either fails the gate gracefully and surfaces to the user, or continues only after the parent has resolved/applied clarifications",
-        "References that grill-me lives at the pre-workflow stage (via /speckit-pro:setup or /speckit-pro:grill-me), not the autopilot stage"
+        "References that grill-me lives at the pre-workflow stage (via /speckit-pro:scaffold-spec or /speckit-pro:grill-me), not the autopilot stage"
       ]
     },
     {

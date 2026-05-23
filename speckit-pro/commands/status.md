@@ -127,12 +127,12 @@ If any spec has a workflow file with phases in progress, show the phase-level
 table. The **DC** column (Design Concept) shows ✅ if a `SPEC-<ID>-design-concept.md`
 exists for the spec, ⏳ otherwise. A workflow file without a corresponding design
 concept doc is a yellow flag — the phase prompts may be undercooked relative to
-what `/speckit-pro:setup` produces today:
+what `/speckit-pro:scaffold-spec` produces today:
 
 | Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
 |------|------|----|---------|---------|------|-------|-------|---------|------|------|
 | SPEC-XXX | Feature | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
-| SPEC-YYY | Feature | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:setup` or grill manually) |
+| SPEC-YYY | Feature | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:scaffold-spec` or grill manually) |
 ```
 
 Include an Archive Sweep summary when archive state exists:
@@ -177,7 +177,7 @@ queries, and database access — the most-requested capabilities for GTD workflo
 To get started:
 
 ```text
-/speckit-pro:setup SPEC-009
+/speckit-pro:scaffold-spec SPEC-009
 ```
 
 This creates the worktree, branch, and populated workflow file.
@@ -219,7 +219,7 @@ technical roadmap scope and suggest creating a workflow file:
 ```text
 SPEC-008 (Perspectives) — ⏳ Not Started
 No workflow file found. To begin:
-/speckit-pro:setup SPEC-008
+/speckit-pro:scaffold-spec SPEC-008
 ```
 
 ### 7. If No Technical Roadmap or Workflow Files Found
