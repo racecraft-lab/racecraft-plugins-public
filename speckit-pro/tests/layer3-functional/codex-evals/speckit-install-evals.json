@@ -1,0 +1,41 @@
+{
+  "skill_name": "speckit-install",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Install SpecKit in this empty repository for both Claude and Codex integrations.",
+      "expected_output": "Bootstraps the SpecKit CLI if missing, detects no existing .specify/ directory, asks (or honors) the dual-integration choice, runs specify init for the first integration and specify integration install for the second, and reports the install summary with a restart reminder.",
+      "expectations": [
+        "Checks for the specify CLI via `command -v specify` before mutating anything",
+        "If the CLI is missing, recommends `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`",
+        "Detects .specify/ presence and confirms it is ABSENT before proceeding",
+        "Runs `specify init --here --integration claude` (or similar) as the bootstrap call",
+        "Runs `specify integration install codex` (or `--integration-options=\"--skills\"`) for the second integration",
+        "Reports the installed integrations and their artifact paths",
+        "Tells the user to restart the coding-agent process so new skills load"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Install SpecKit in this repo — but I already have .specify/ from a previous install.",
+      "expected_output": "Detects the existing install, refuses to overwrite, and hands off to $speckit-upgrade (or offers to add a new integration alongside the existing ones via specify integration install).",
+      "expectations": [
+        "Runs `specify integration list` to show what is already installed",
+        "States that the right tool for an existing install is $speckit-upgrade, not $speckit-install",
+        "Does NOT run `specify init --here --force` (force is reserved for the upgrade skill with backup/restore)",
+        "Either hands off to $speckit-upgrade OR offers to add a new integration alongside via `specify integration install <key>` — both are acceptable; the operator chooses"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Install speckit for codex only with skills mode in this empty repo.",
+      "expected_output": "Initializes the repo with `specify init --here --integration codex --integration-options=\"--skills\"` so the Codex install uses the v0.8.13 skills-mode layout (.codex/skills/speckit-*/) rather than legacy slash commands.",
+      "expectations": [
+        "Uses `--integration codex` (not the deprecated `--ai codex`)",
+        "Includes `--integration-options=\"--skills\"` to opt into skills mode for Codex",
+        "Does not install Claude integration when the operator scoped to codex only",
+        "Confirms post-install that .codex/skills/speckit-*/ exists and not .codex/prompts/speckit.*.md"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "skill_name": "speckit-upgrade",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Upgrade SpecKit in this repo from 0.6.1 to the latest. I haven't customized anything; just want the new templates.",
+      "expected_output": "Snapshots the repo, runs the safe (no --force) `specify integration upgrade` for each installed integration, and reports the new manifest hashes. No restore step needed because nothing was modified.",
+      "expectations": [
+        "Snapshots .specify/ (and .claude/, .codex/, .github/ as applicable) to /tmp/specify-upgrade-backup-<STAMP>/ BEFORE running any upgrade",
+        "Runs `specify integration upgrade <key>` without --force on the first attempt for each installed integration",
+        "Surfaces the new CLI version and manifest hash deltas",
+        "Surfaces the backup path explicitly so the operator knows where to roll back from"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Upgrade SpecKit but I've heavily customized .specify/memory/constitution.md and a few template files — don't lose my customizations.",
+      "expected_output": "Snapshots before any mutation. First-pass safe upgrade gets blocked by the CLI on the modified files. Skill surfaces the blocked-files list, asks the operator to choose force-and-restore / keep-mine / manual-merge. On force-and-restore: runs --force, then restores constitution.md from the backup verbatim and offers file-by-file diff review for the other modified files.",
+      "expectations": [
+        "Always snapshots first to /tmp/specify-upgrade-backup-<STAMP>/",
+        "Tries `specify integration upgrade <key>` WITHOUT --force first",
+        "Detects the diff-aware block, surfaces the modified-files list to the operator",
+        "Asks for explicit choice between force-and-restore, keep-mine, or manual-merge",
+        "On force-and-restore: runs `specify integration upgrade <key> --force`, then restores constitution.md from the backup verbatim",
+        "For non-constitution modified files: shows the diff and asks the operator whether to restore the backup or keep the upgrade's new version"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I'm upgrading from spec-kit 0.5 (slash-command mode) to 0.8.13 (skills mode). Both .claude/commands/speckit.*.md and the new .claude/skills/speckit-*/ exist now — clean up the duplicates.",
+      "expected_output": "Detects both legacy slash-command files and new skills directories. Offers to dedupe the legacy speckit.*.md files. Hard-guarantees to preserve extension commands (speckit.speckit-utils.*.md) and any non-speckit-prefixed commands. Shows the exact deletion list before running rm.",
+      "expectations": [
+        "Lists both `.claude/commands/speckit.*.md` and `.claude/skills/speckit-*/SKILL.md` to detect the duplicate state",
+        "Repeats the check for the Codex side (`.codex/prompts/speckit.*.md` vs `.codex/skills/speckit-*/SKILL.md`)",
+        "Offers the operator a dedupe choice with `keep-both` as an option",
+        "When deduping: only deletes files matching `speckit.<single-word>.md` (e.g., speckit.constitution.md, speckit.specify.md)",
+        "Explicitly preserves `speckit.speckit-utils.*.md` files (these are extension commands, not SpecKit-managed)",
+        "Explicitly preserves any non-`speckit.`-prefixed commands",
+        "Shows the exact deletion list to the operator before running rm"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Upgrade SpecKit in this repo — but there is no .specify/ directory.",
+      "expected_output": "Detects the ABSENT state and hands off to $speckit-install rather than attempting an upgrade that has nothing to upgrade.",
+      "expectations": [
+        "Checks `test -d .specify` and detects ABSENT",
+        "Does NOT attempt to run `specify integration upgrade` (would fail)",
+        "Hands off to `$speckit-install` with a clear explanation that upgrade only operates on existing installs"
+      ]
+    }
+  ]
+}
