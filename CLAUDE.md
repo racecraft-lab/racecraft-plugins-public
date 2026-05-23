@@ -126,7 +126,12 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 The SessionStart hook warns if `specify` is not found.
 
-**Commands:** `setup`, `autopilot`, `coach`, `status`, `resolve-pr`
+**Commands:** `install`, `upgrade`, `scaffold-spec`, `autopilot`, `coach`, `status`, `resolve-pr`
+
+- `install` — first-time SpecKit setup in a repo. Bootstraps the `specify` CLI via `uv tool install` if missing, then runs `specify init` / `specify integration install` for the operator's chosen integration(s) (claude, codex, or both). Hands off to `upgrade` if `.specify/` already exists.
+- `upgrade` — safely upgrade an existing SpecKit install. Snapshots the repo to `/tmp/specify-upgrade-backup-<STAMP>/`, runs `specify integration upgrade` (diff-aware), and handles `--force`-with-restore when local files are modified. Also handles the v0.8.13 slash-command → skills migration.
+- `scaffold-spec` — scaffold a new spec from the technical roadmap for autopilot execution. (Renamed from `setup` to free that name for the install/upgrade workflow.)
+- `autopilot` / `coach` / `status` / `resolve-pr` — the daily-use commands documented in their respective skill bodies.
 
 **Skills:**
 - `speckit-autopilot` — Autonomous 7-phase SDD workflow executor with multi-agent consensus. References in `references/` cover gate validation, consensus protocol, phase execution, TDD protocol, and post-implementation steps.
