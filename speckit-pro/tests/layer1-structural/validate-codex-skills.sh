@@ -8,7 +8,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 # Canonical skill list — keep in sync with the case block in the
 # "corresponding source artifact exists" test below.
-SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install speckit-install grill-me)
+SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install speckit-install speckit-upgrade grill-me)
 COLLISION_GUARD_SKILLS=(speckit-autopilot speckit-coach grill-me)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
@@ -215,7 +215,7 @@ $(cat "$ref_file")"
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
     case "$skill" in
-      speckit-scaffold-spec|speckit-autopilot|speckit-resolve-pr|install|speckit-install|grill-me)
+      speckit-scaffold-spec|speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me)
         if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
           _pass
         else
@@ -274,6 +274,13 @@ $(cat "$ref_file")"
         _pass
       else
         _fail "corresponding Claude command not found at commands/install.md"
+      fi
+      ;;
+    speckit-upgrade)
+      if [ -f "$PLUGIN_ROOT/commands/upgrade.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude command not found at commands/upgrade.md"
       fi
       ;;
     install)

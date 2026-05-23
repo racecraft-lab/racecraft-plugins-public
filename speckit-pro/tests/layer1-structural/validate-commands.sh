@@ -6,7 +6,7 @@ source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 COMMANDS_DIR="$PLUGIN_ROOT/commands"
-COMMANDS=(autopilot coach scaffold-spec status resolve-pr install)
+COMMANDS=(autopilot coach scaffold-spec status resolve-pr install upgrade)
 
 for cmd in "${COMMANDS[@]}"; do
   CMD_FILE="$COMMANDS_DIR/${cmd}.md"
