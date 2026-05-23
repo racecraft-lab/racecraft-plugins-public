@@ -30,40 +30,63 @@ SKILL_CREATOR="${SKILL_CREATOR_ROOT:-$HOME/.claude/plugins/marketplaces/claude-p
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SKILL="${1:-speckit-coach}"
 
+# ── Installed-plugin collision detection ────────────────────────────────────
+# The eval works by writing a test command file at
+# `.claude/commands/<skill>-skill-<uuid>.md`. If the user also has speckit-pro
+# installed as a plugin (typical case for plugin authors), Claude sees both:
+# the test variant AND `speckit-pro:<skill>`. Because they share the same
+# description verbatim, the plugin variant routinely wins the selector and
+# every true-positive query scores 0/3.
+#
+# We solve this by detecting which marketplace publishes speckit-pro from
+# ~/.claude/settings.json (the marketplace name can vary per user — e.g.,
+# `racecraft-public-plugins`, `racecraft-plugins-public`, etc.) and adding
+# `speckit-pro@<marketplace>` to the --settings disable list. This works
+# with OAuth/keychain auth, unlike `--bare` which requires ANTHROPIC_API_KEY.
+INSTALLED_MARKETPLACE=""
+if command -v jq >/dev/null 2>&1 && [ -f "$HOME/.claude/settings.json" ]; then
+  INSTALLED_MARKETPLACE=$(
+    jq -r '
+      (.enabledPlugins // {})
+      | to_entries[]
+      | select(.key | startswith("speckit-pro@"))
+      | .key | sub("^speckit-pro@"; "")
+    ' "$HOME/.claude/settings.json" 2>/dev/null | head -1
+  )
+fi
+
 # Per-skill defaults for plugin competitors. Overridable via EVAL_DISABLE_PLUGINS.
-# grill-me is structurally outranked by superpowers:brainstorming on natural
-# -language SDD pre-spec scoping prompts (brainstorming's "MUST use this before
-# any creative work" claim wins description-based skill selection). Disabling
-# superpowers for the eval reflects the standalone production install
-# (speckit-pro without superpowers) and lets the eval measure grill-me's
-# trigger behavior on its own merits.
+# - grill-me: outranked by superpowers:brainstorming on natural-language SDD
+#   pre-spec scoping prompts. Disabling superpowers reflects the standalone
+#   production install and measures grill-me on its own merits.
+# - All speckit-pro skills collide with their installed counterpart when the
+#   plugin is enabled; auto-add `speckit-pro@<detected-marketplace>` so the
+#   test variant has no rival.
 DISABLE_PLUGINS_DEFAULT=""
 case "$SKILL" in
   grill-me)
     DISABLE_PLUGINS_DEFAULT="superpowers@claude-plugins-official"
     ;;
 esac
+if [ -n "$INSTALLED_MARKETPLACE" ]; then
+  INSTALLED_PLUGIN_DIR="$HOME/.claude/plugins/marketplaces/${INSTALLED_MARKETPLACE}/speckit-pro/skills/${SKILL}"
+  if [ -d "$INSTALLED_PLUGIN_DIR" ]; then
+    if [ -n "$DISABLE_PLUGINS_DEFAULT" ]; then
+      DISABLE_PLUGINS_DEFAULT="${DISABLE_PLUGINS_DEFAULT},speckit-pro@${INSTALLED_MARKETPLACE}"
+    else
+      DISABLE_PLUGINS_DEFAULT="speckit-pro@${INSTALLED_MARKETPLACE}"
+    fi
+  fi
+fi
 DISABLE_PLUGINS="${EVAL_DISABLE_PLUGINS:-$DISABLE_PLUGINS_DEFAULT}"
 
-# Detect whether the test skill collides with an installed speckit-pro plugin
-# skill. The eval works by writing a test command file at .claude/commands/
-# `<skill>-skill-<uuid>.md`; if the same `<skill>` name is also exposed as
-# `speckit-pro:<skill>` from the installed plugin, the matcher prefers the
-# installed plugin skill and the test variant never fires (all true-positive
-# triggers report 0/3). The historical fix was to wrap `claude` with `--bare`,
-# which disables plugin loading. But `--bare` requires `ANTHROPIC_API_KEY`
-# (OAuth + keychain are explicitly disabled in --bare mode), so it auth-fails
-# on developer machines that authenticate via Claude Max / claude.ai.
-#
-# The fix: only enable --bare when there is a real installed-plugin name
-# collision. For new skills (like `grill-me` before v1.10.0), no installed
-# skill conflicts, so --bare is unnecessary and just blocks auth. Set
-# `EVAL_FORCE_BARE=1` to opt back into --bare regardless of collision.
-INSTALLED_PLUGIN_DIR="$HOME/.claude/plugins/marketplaces/racecraft-plugins-public/speckit-pro/skills/${SKILL}"
+# `--bare` is the strongest isolation (disables ALL plugins) but requires
+# ANTHROPIC_API_KEY (OAuth + keychain are disabled in --bare mode), so it
+# auth-fails on developer machines authenticated via Claude Max / claude.ai.
+# By default we prefer --settings (works with OAuth). Set EVAL_FORCE_BARE=1
+# to opt back into --bare regardless of collision state.
+INSTALLED_PLUGIN_DIR="${INSTALLED_PLUGIN_DIR:-}"
 NEED_BARE="${EVAL_FORCE_BARE:-}"
-if [ -z "$NEED_BARE" ] && [ -d "$INSTALLED_PLUGIN_DIR" ]; then
-  NEED_BARE="1"
-fi
 
 WRAPPER_DIR=$(mktemp -d)
 SETTINGS_FILE=""
