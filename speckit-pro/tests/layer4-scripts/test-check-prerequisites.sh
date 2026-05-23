@@ -21,7 +21,7 @@ make_project() {
   local dir="$FIXTURE_DIR/$1"
   mkdir -p "$dir/.specify/memory" "$dir/.claude/commands"
   printf '# Constitution\n' > "$dir/.specify/memory/constitution.md"
-  for cmd in speckit.specify speckit.plan speckit.tasks speckit.implement; do
+  for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
     printf -- '---\ndescription: test\n---\n# Test\n' > "$dir/.claude/commands/${cmd}.md"
   done
   # Create a dummy workflow file
@@ -69,7 +69,7 @@ rm -f "$dir/.claude/commands/speckit-plan.md"
 result=0
 output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || result=$?
 assert_eq "1" "$result" "exit code"
-assert_contains "$output" "speckit.plan"
+assert_contains "$output" "speckit-plan"
 
 # ─────────────────────────────────────────
 section "Branch detection"

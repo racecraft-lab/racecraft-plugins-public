@@ -103,16 +103,16 @@ prerequisite validation via `.specify/scripts/bash/`).
 Main session (speckit-autopilot skill loaded)
     │
     ├── Simple phases → pass workflow prompt to /speckit.* via Skill
-    │   ├── Specify → Skill("speckit.specify", args: "<workflow prompt>")
-    │   ├── Plan    → Skill("speckit.plan", args: "<workflow prompt>")
-    │   └── Tasks   → Skill("speckit.tasks", args: "<workflow prompt>")
+    │   ├── Specify → Skill("speckit-specify", args: "<workflow prompt>")
+    │   ├── Plan    → Skill("speckit-plan", args: "<workflow prompt>")
+    │   └── Tasks   → Skill("speckit-tasks", args: "<workflow prompt>")
     │
     ├── Multi-prompt phases → one Skill() per session/domain
-    │   ├── Clarify   → Skill("speckit.clarify") per session + consensus
-    │   ├── Checklist  → Skill("speckit.checklist") per domain + consensus
-    │   └── Analyze    → Skill("speckit.analyze") + consensus per finding
+    │   ├── Clarify   → Skill("speckit-clarify") per session + consensus
+    │   ├── Checklist  → Skill("speckit-checklist") per domain + consensus
+    │   └── Analyze    → Skill("speckit-analyze") + consensus per finding
     │
-    └── Implement → Skill("speckit.implement") or project-specific agent
+    └── Implement → Skill("speckit-implement") or project-specific agent
         └── Parallel sub-agents with worktree isolation for [P] tasks
 ```
 
@@ -278,7 +278,7 @@ existing feature branch, this must be skipped.
 
 When `ON_FEATURE_BRANCH` is `true`, the autopilot prefixes
 the workflow prompt with an instruction telling the command to
-skip branch creation, then invokes `Skill("speckit.specify")`
+skip branch creation, then invokes `Skill("speckit-specify")`
 normally. The command's LLM reads the prefix and proceeds
 directly to spec content generation.
 

@@ -156,7 +156,7 @@ CORRECT:
   ...every step is a tool call — loop never dies...
 
 WRONG:
-  1. Skill("speckit.specify", args: "<prompt>")
+  1. Skill("speckit-specify", args: "<prompt>")
   2. Command loads into YOUR context
   3. You output: "The spec is ready for /speckit-plan"
      ↑ plain text, no tool call → loop terminates

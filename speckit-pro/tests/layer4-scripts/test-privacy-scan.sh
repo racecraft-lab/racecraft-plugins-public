@@ -58,7 +58,7 @@ assert_no_non_allowlisted_email() {
   local hits=""
 
   hits=$(scan_for "$EMAIL_PATTERN" || true)
-  hits=$(printf '%s\n' "$hits" | grep -Eiv 'support@openai[.]com' || true)
+  hits=$(printf '%s\n' "$hits" | grep -Eiv 'support@openai[.]com|git@github[.]com' || true)
   if [ -n "$hits" ]; then
     _fail "$label leaked into current tree: $(printf '%s\n' "$hits" | head -3 | tr '\n' '; ')"
   else

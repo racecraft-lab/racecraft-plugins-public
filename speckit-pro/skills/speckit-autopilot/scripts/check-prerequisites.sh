@@ -50,7 +50,7 @@ fi
 
 # 0.4 SpecKit Commands Installed
 missing_cmds=()
-for cmd in speckit.specify speckit.plan speckit.tasks speckit.implement; do
+for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
   if [ ! -f ".claude/commands/${cmd}.md" ]; then
     missing_cmds+=("$cmd")
   fi
