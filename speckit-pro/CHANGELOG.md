@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.11.1...speckit-pro-v2.0.0) (2026-05-23)
+
+
+### ⚠ BREAKING CHANGES
+
+* **speckit-pro:** spec-kit v0.4.5+ changed the default for `--integration claude` from slash commands to skills. The 9 core commands users used to invoke as `/speckit.constitution`, `/speckit.specify`, `/speckit.plan`, `/speckit.tasks`, `/speckit.implement`, `/speckit.clarify`, `/speckit.analyze`, `/speckit.checklist`, and `/speckit.taskstoissues` are now invoked as `/speckit-<name>` (dash, not period). Muscle-memory invocations will fail. Extension commands (`/speckit.verify`, `/speckit.verify-tasks`, `/speckit.retrospective.analyze`, `/speckit.checkpoint.commit`, `/speckit.speckit-utils.*`) still use the slash- command form because their upstream extensions have not migrated.
+
+### Features
+
+* **speckit-pro:** add install and upgrade skills with safe customization preservation ([#53](https://github.com/racecraft-lab/racecraft-plugins-public/issues/53)) ([4a95116](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4a951168d88961d8cc892a0f4fd7c912015b7905))
+* **speckit-pro:** align with spec-kit v0.8.13 skills format ([#51](https://github.com/racecraft-lab/racecraft-plugins-public/issues/51)) ([55f27f1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/55f27f17460546067eede04b0f745db572f79b15))
+
 ## [1.11.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v1.11.0...speckit-pro-v1.11.1) (2026-05-15)
 
 
