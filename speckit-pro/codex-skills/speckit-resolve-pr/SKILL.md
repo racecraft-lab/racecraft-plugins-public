@@ -80,21 +80,40 @@ The important data for each unresolved thread is:
 
 If there are no unresolved threads, report that clearly and stop.
 
-## Process Threads One by One
+## Process Threads — Partition by File, Parallel Across Files
 
-For each unresolved thread:
+**Partition the unresolved threads by file path first**, then dispatch
+parallel-per-partition. Within a partition (same file), process
+serially — concurrent `apply_patch` calls to the same file race. Across
+partitions (different files), spawn one `spawn_agent` per partition in
+ONE tool turn, then `wait_agent` on all handles.
 
-1. Read the referenced file and surrounding code.
-2. Understand whether the reviewer is asking for a real code change, a naming
-   cleanup, a test addition, or only an explanation.
-3. Make the smallest correct fix that addresses the actual concern.
-4. Re-run the relevant verification for that change.
-5. If the comment points to a broader correctness problem, expand the fix far
-   enough to make the branch safe, but stay scoped to the review request.
+Before partitioning, scan each thread's comment body for cross-file
+hints (e.g., "rename and update all callers", references to other
+paths). Cross-file threads are NOT partitioned — they are processed
+serially in the lead session after parallel partitions return.
 
-When a reviewer is simply asking a question and the existing code is correct,
-do not churn the code just to make the thread go away. Reply with a grounded
-explanation instead.
+For each partition:
+
+1. `spawn_agent` (background) a worker that addresses ALL threads on
+   that file in order:
+   - Read the referenced file and surrounding code
+   - Make the smallest correct fix per thread; reply-only for questions
+   - Run the targeted tests / typecheck / lint-fix
+   - Commit all fixes for that file in one intentional commit
+   - Return: thread IDs handled, per-thread action taken, commit SHA,
+     verification result, per-thread reply text
+   - Do NOT push, post replies, or resolve threads — the lead handles
+     those serially after all partitions return
+2. Use `general-purpose` (or `phase-executor` as fallback) as the
+   worker agent type. Use Sonnet for the worker — focused execution.
+
+After all `wait_agent` calls return, process `CROSS_FILE` threads
+serially in the lead session.
+
+When a reviewer is simply asking a question and the existing code is
+correct, do not churn the code just to make the thread go away. Reply
+with a grounded explanation instead.
 
 ## Verification Standard
 

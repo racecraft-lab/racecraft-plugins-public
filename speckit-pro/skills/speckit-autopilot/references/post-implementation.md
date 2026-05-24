@@ -380,29 +380,65 @@ Skill("loop", args: "5m
   Step 2 -- If 0 unresolved comments, report 'No unresolved
   comments on PR #42' and stop.
 
-  Step 3 -- For each unresolved comment:
-  a. Read the comment body and the file it references
-  b. If code fix needed:
-     - Edit the file
-     - Bash('<BUILD_CMD> && <TYPECHECK_CMD> && <TEST_CMD> && <INT_TEST_CMD>')
-     - Bash('git add <file> && git commit -m
-       \"fix(SPEC-XXX): address review - <summary>\"')
-     - Bash('git push')
-     - Reply: Bash('gh api
-       repos/owner/repo/pulls/42/comments
-       -f body=\"Fixed in $(git rev-parse --short HEAD).
-       <explanation>\"
-       -f in_reply_to=<comment_id>')
-     - Resolve: Bash('gh api graphql -f query=\"mutation {
-       resolveReviewThread(input:{threadId:\"<thread_id>\"})
-       { thread { isResolved } }}\"')
-  c. If style/format:
-     - Bash('<LINT_FIX_CMD>')
-     - Commit, push, reply, resolve
-  d. If question or false positive:
-     - Reply with explanation via gh api, then resolve
+  Step 3 -- Partition by file, parallel across files (WS-F1 / Use site 6):
 
-  Step 4 -- After addressing all comments, report summary.
+  a. Scan each thread.body for cross-file hints (rename, "update all
+     callers", references to other paths). Mark cross_file = true if so.
+  b. Build PARTITIONS = {file_path -> [threads]} for non-cross-file
+     threads. CROSS_FILE = [serialized threads].
+  c. If PARTITIONS has >=2 entries, dispatch ALL partitions in ONE
+     assistant message via background subagents:
+
+       For each (file_path, threads) in PARTITIONS:
+         Agent(
+           subagent_type: \"general-purpose\",
+           run_in_background: true,
+           description: \"Resolve PR #42 comments on <file_path>\",
+           prompt: \"\"\"
+             Fix the following review threads on <file_path>. Threads
+             ordered by line number; address them in order.
+
+             PROJECT_COMMANDS:
+               BUILD: <BUILD_CMD>
+               TYPECHECK: <TYPECHECK_CMD>
+               TEST: <TEST_CMD>
+               INT_TEST: <INT_TEST_CMD>
+               LINT_FIX: <LINT_FIX_CMD>
+
+             Threads (thread_id, line, comment_id, comment_body):
+             <list>
+
+             For each thread: code fix (Edit + verify), style (LINT_FIX),
+             question/false-positive (prepare reply). Commit all fixes
+             for THIS file in ONE commit:
+               git add <file_path>
+               git commit -m \"fix(SPEC-XXX): address review - <summary>\"
+             Do NOT push, post replies, or resolve threads.
+             Return: per-thread action, commit SHA, verification result,
+             per-thread reply text for the lead to post.
+           \"\"\")
+
+     If PARTITIONS has 1 entry, process directly in the orchestrator
+     (no parallelism win).
+
+  d. After all partition subagents return, process CROSS_FILE threads
+     serially in the lead (each touches multiple files; serial prevents
+     race).
+
+  Step 4 -- Push, reply, resolve (lead, serial):
+
+  a. Bash('git push')  -- single push for all partition commits
+  b. For each thread (parallel partitions + serial cross-file), in
+     deterministic thread.id order:
+       Reply: Bash('gh api repos/owner/repo/pulls/42/comments
+         -X POST
+         -f body=\"<reply text from subagent>\"
+         -f in_reply_to=<comment_id>')
+       Resolve: Bash('gh api graphql -f query=\"mutation {
+         resolveReviewThread(input:{threadId:\"<thread_id>\"})
+         { thread { isResolved } }}\"')
+
+  Step 5 -- After all comments addressed, report summary.
 ")
 ```
 

@@ -1,0 +1,22 @@
+You are running the speckit-pro:resolve-pr command on PR #46 in
+owner/repo. You have already fetched 6 unresolved review threads via
+gh GraphQL. The threads partition by file path as:
+
+  src/auth.ts:      thread T1 (line 42), thread T2 (line 87)
+  src/api/users.ts: thread T3 (line 15), thread T4 (line 99)
+  tests/auth.test.ts: thread T5 (line 12), thread T6 (line 30)
+
+None of the comment bodies mention cross-file effects (no "rename and
+update all callers" or similar). So all 6 threads are non-cross-file
+and partition into 3 file-groups.
+
+Per `commands/resolve-pr.md` §4c, dispatch ALL 3 partitions in ONE
+assistant message via background subagents (one general-purpose
+worker per file). Each worker:
+- subagent_type: general-purpose
+- run_in_background: true
+- description: "Resolve PR #46 comments on <file_path>"
+
+Do NOT process threads serially. Do NOT spawn one subagent per
+thread. Do NOT invoke grill-me. Stop after all 3 background
+subagents return.
