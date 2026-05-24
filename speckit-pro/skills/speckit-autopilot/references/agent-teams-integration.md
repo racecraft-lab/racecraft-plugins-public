@@ -119,6 +119,65 @@ Every Agent Teams use site in speckit-pro MUST:
 7. **Be documented in this map's use-site table** before merging the
    implementation. Forward design is acceptable; silent additions are
    not.
+8. **Route models for cost.** Per [Anthropic's "Specify teammates and models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models):
+   *"Teammates don't inherit the lead's /model selection by default."*
+   The lead is opus (autopilot prereq); teammates default to whatever
+   "Default teammate model" is set in `/config`, OR what the spawn
+   prompt explicitly requests. Every speckit-pro team spawn prompt
+   MUST request **Sonnet** for teammates unless the work demands opus
+   reasoning. Per the [rody decomposition](https://x.com/0x_rody/status/2058475548242784649):
+   *"Running 5 Opus agents in parallel burns tokens 5x faster. Same
+   quality for focused tasks, fraction of the spend."* Focused
+   teammate work (running a `/speckit.*` command and reporting) does
+   not need opus.
+
+## When to use what — Anthropic decision framework
+
+Per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#compare-with-subagents) and [the subagent-vs-team comparison](https://code.claude.com/docs/en/features-overview#subagent-vs-agent-team), the canonical decision tree:
+
+| Situation | Pattern | Why | Speckit-pro example |
+|-----------|---------|-----|---------------------|
+| Single prompt, single file fix | **Regular session** (no agents) | Tool-call overhead outweighs the work | grill-me Q&A loop, coach response, status read |
+| 3 independent tasks, no dependencies | **Parallel subagents** (`run_in_background: true` × N in one tool turn) | Fast fan-out, results merge in lead context | Within-item consensus (3 analysts), post-impl Path B (3 tracks) |
+| Repeatable workflow with consistent contract | **Subagents with YAML config** | YAML pins tools allowlist + model; same behavior every time | All phase executors (phase-executor, clarify-executor, etc.) |
+| Multi-file work that needs cross-teammate coordination | **Agent Teams** | Shared task list + mailbox for inter-teammate messaging | Post-impl Path A (Use site 1); planned Use sites 2/3 |
+| Overnight backlog drain | **Headless mode + `--max-budget-usd`** | Budget cap prevents runaway spend on long-running runs | Recommended for autopilot runs scheduled via cron or `/loop` |
+
+**Anti-patterns** (from rody): *"The wrong orchestration mode wastes
+both time and tokens. Independent tasks don't need Agent Teams
+coordination. Dependent tasks shouldn't run in isolated Agent View
+sessions."* Speckit-pro avoids both by branching dispatch by phase
+type — Specify/Plan/Tasks are independent enough for serial subagents,
+post-impl's 3 tracks are independent enough for parallel-subagents-or-team,
+and Phase 7 `[P]` tasks are explicitly annotated for parallel safety
+by `/speckit-tasks`.
+
+## Headless / budget-capped operation
+
+For autopilot runs invoked from cron, GitHub Actions, or the
+`/loop` review-remediation flow, set a budget ceiling at invocation:
+
+```bash
+claude -p --max-budget-usd 25 \
+  /speckit-pro:autopilot path/to/workflow.md
+```
+
+Anthropic's `--max-budget-usd` flag caps total LLM spend across the
+parent session AND all its subagents/teammates. A 7-phase autopilot
+run with consensus + parallel post-impl typically spends $5-15;
+$25 is a comfortable ceiling that surfaces a clean stop if the run
+goes haywire (e.g., infinite gate-fail loop).
+
+For team-using runs (`AGENT_TEAMS_AVAILABLE=true`), the budget cap
+applies to ALL teammates collectively — Anthropic's runtime
+enforces the limit across the team mailbox. Combined with the
+model-routing principle above (Sonnet teammates), this keeps
+team-mode runs at a comparable price point to subagents-mode despite
+the per-teammate context-window cost.
+
+**Coach trigger:** users asking *"how do I run autopilot overnight"*
+or *"set a budget"* should be routed to this section per the
+[coach SKILL.md](../../speckit-coach/SKILL.md) trigger table.
 
 ## Use-site details
 

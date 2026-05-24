@@ -68,7 +68,10 @@ verifier can ask the reviewer "did you see the regression in
 
 ```text
 Create an agent team for SPEC-XXX post-implementation validation.
-Spawn 3 teammates, all using the phase-executor subagent type:
+Spawn 3 teammates, all using the phase-executor subagent type.
+**Use Sonnet for each teammate** — these are focused execution
+tasks (run a slash command, report results), no opus reasoning
+needed. The lead stays on opus for synthesis.
 
 - Name: "doctor"   — Task: Run /<doctor-cmd> for SPEC-XXX. Report
                      extension health and any blocking issues.
@@ -88,6 +91,16 @@ Require all three teammates to complete before I synthesize findings.
 Do not let any teammate edit src/, tests/, or specs/ files — they
 should only run commands and report results.
 ```
+
+**Why Sonnet teammates:** Per [Anthropic's "Specify teammates and
+models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models),
+teammates don't inherit the lead's model selection. Per the
+[rody decomposition](https://x.com/0x_rody/status/2058475548242784649):
+*"Running 5 Opus agents in parallel burns tokens 5x faster... Same
+quality for focused tasks, fraction of the spend."* The teammates'
+work here is mechanical (run a command, parse output, report) —
+sonnet is plenty. See [`agent-teams-integration.md`](./agent-teams-integration.md)
+§Design principles #8 for the cross-cutting routing rule.
 
 Substitute the actual extension command names (e.g., `/speckit.doctor`
 vs `/speckit.speckit-utils.doctor`) based on Step 0.12 extension
