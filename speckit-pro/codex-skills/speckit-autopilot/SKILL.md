@@ -887,6 +887,14 @@ POST-IMPLEMENTATION (after all 7 phases complete):
     NEVER invoke skills directly in your context. Rule 1 applies
     here too.
 
+    NOTE — `post-impl-mode: teams` is Claude-Code-only. The Claude
+    Code variant of this skill supports an opt-in mode that delegates
+    tasks 10-14 to an Agent Team. Codex CLI does not have Agent Teams
+    primitives — Codex always uses the sequential spawn_agent /
+    wait_agent pattern below. If a user has `post-impl-mode: teams`
+    set in `.claude/speckit-pro.local.md`, ignore it in Codex and
+    proceed with the canonical sequence.
+
     Post-implementation items (execute in order — every row below
     is an item that MUST appear in the plan per Step 1.1's Canonical
     Post-Implementation Item List):

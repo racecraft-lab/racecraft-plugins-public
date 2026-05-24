@@ -1,0 +1,17 @@
+You are speckit-autopilot. All 7 phases of SPEC-FIXTURE-POSTIMPL have
+completed and G7 passed. The workflow file's Post-Implementation
+Checklist is empty.
+
+`post-impl-mode` is unset (default `subagents`). Per
+`references/post-implementation.md` §Mode Selection, dispatch tasks
+10-14 sequentially via `Agent()` calls to the `phase-executor`
+subagent. Each task runs the corresponding /speckit.* extension
+command and returns a summary.
+
+For this fixture, dispatch ONLY tasks 10 (Doctor) and 11 (Verify) to
+keep the transcript small. Use:
+- subagent_type "speckit-pro:phase-executor" for both
+- description "SPEC-FIXTURE-POSTIMPL Doctor" and "SPEC-FIXTURE-POSTIMPL Verify"
+
+Do NOT spawn any Agent Team. Do NOT invoke grill-me. Stop after both
+subagents return.

@@ -1,6 +1,169 @@
 # Post-Implementation Reference
 
-Detailed procedures for Steps 3.1-3.3 of the autopilot workflow.
+Detailed procedures for Steps 3.0-3.3 of the autopilot workflow.
+
+## Contents
+
+- [Mode Selection](#mode-selection) — `post-impl-mode` setting: `subagents` (default) vs `teams` (opt-in)
+- [3.1 Full Integration / E2E Suite Verification](#31-full-integration--e2e-suite-verification)
+- [3.2 PR Creation](#32-pr-creation)
+- [3.3 Copilot Review Remediation Loop](#33-copilot-review-remediation-loop)
+
+## Mode Selection
+
+The `post-impl-mode` setting from Step 0.6 controls how tasks
+10/11/12/13/14 dispatch. **15-20 are unaffected** — they remain
+strictly sequential because of hard dependencies (Cleanup edits
+code, PR Body needs Cleanup done, PR Creation needs PR Body,
+Review Remediation needs PR URL, Retrospective needs all of the
+above).
+
+### Dependency graph for the post-impl parallel group
+
+```text
+10 Doctor Extension Check        — reads project state, no deps
+11 Verify Implementation         ─┐
+12 Verify Tasks Phantom Check    ─┼── may share test fixtures
+14 Integration Suite             ─┘   (chain serially within this group)
+13 Code Review                    — reads diff, no deps
+
+→ all 5 complete before 15 Cleanup begins
+```
+
+The conservative grouping is **three parallel tracks**:
+
+- Track A: `10 Doctor` (singleton, read-only)
+- Track B: `13 Code Review` (singleton, reads diff)
+- Track C: `11 Verify` → `12 Verify-Tasks` → `14 Integration Suite` (chain — shared test fixtures, serialize within track)
+
+This avoids the test-fixture race condition between Verify/Verify-Tasks
+and Integration Suite while still parallelizing 3 tracks worth of work.
+
+### subagents mode (default — current behavior)
+
+```text
+For each post-impl task in [10, 11, 12, 13, 14, 15, ...]:
+  Agent(subagent_type: "phase-executor",
+        description: "SPEC-XXX <task>",
+        prompt: "Run /<command> for SPEC-XXX. Return summary.")
+  Wait for result.
+  Update workflow file.
+```
+
+Sequential dispatch. Wall-clock = sum(task times). No environment
+prerequisites beyond the usual autopilot baseline.
+
+### teams mode (opt-in)
+
+**Requires:** `post-impl-mode: teams` in `.claude/speckit-pro.local.md`,
+`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` env var, Claude Code ≥ 2.1.32.
+Step 0.6 probe verifies both — falls back to `subagents` mode if either
+check fails (warning logged, autopilot continues).
+
+The lead spawns ONE Agent Team for tasks 10-14, waits for all teammates
+to complete, synthesizes findings into the workflow file's
+Post-Implementation Checklist, runs `Clean up the team`, then continues
+serially from task 15.
+
+**Team spawn (natural-language prompt to the lead):**
+
+```text
+Create an agent team for SPEC-XXX post-implementation validation.
+Spawn 3 teammates, all using the phase-executor subagent type:
+
+- Name: "doctor"   — Task: Run /<doctor-cmd> for SPEC-XXX. Report
+                     extension health and any blocking issues.
+- Name: "reviewer" — Task: Run /<review-cmd> for SPEC-XXX. Report
+                     code-review findings by severity.
+- Name: "verifier" — Tasks (chain in order):
+                     1. Run /<verify-cmd> for SPEC-XXX
+                     2. Run /<verify-tasks-cmd> for SPEC-XXX
+                     3. Run <INTEGRATION_TEST command from PROJECT_COMMANDS>
+                     Report each step's pass/fail and any regressions.
+
+Task dependencies (set on the shared task list):
+  - "verifier-verify-tasks" blockedBy "verifier-verify"
+  - "verifier-integration"  blockedBy "verifier-verify-tasks"
+
+Require all three teammates to complete before I synthesize findings.
+Do not let any teammate edit src/, tests/, or specs/ files — they
+should only run commands and report results.
+```
+
+Substitute the actual extension command names (e.g., `/speckit.doctor`
+vs `/speckit.speckit-utils.doctor`) based on Step 0.12 extension
+detection. Use the host project's `PROJECT_IMPLEMENTATION_AGENT`
+subagent type for any teammate where one is registered — `phase-executor`
+is the safe fallback.
+
+**Reusing existing subagent definitions:** per Anthropic's "Use
+subagent definitions for teammates," the teammate types here reference
+plugin-scoped subagent definitions. `tools` and `model` carry over from
+the definition. `skills` and `mcpServers` do NOT — teammates load
+skills/MCP from project + user settings same as a regular session, so
+the `/speckit.*` extension commands remain invocable.
+
+**Lead synthesis after team completes:**
+
+```text
+1. Wait for all 3 teammates to mark their tasks completed
+2. Collect each teammate's final report (read via team mailbox or
+   ask the lead to summarize each teammate's findings)
+3. Write a consolidated Post-Implementation Checklist entry to the
+   workflow file with one row per task (10/11/12/13/14):
+     | Task | Status | Findings | Action Needed |
+4. Ask the lead: "Clean up the team"
+5. Continue to Task 15 (Cleanup) in subagents mode (serial)
+```
+
+**Quality gate via `TaskCompleted` hook (optional but recommended):**
+
+Place this in `.claude/hooks/hooks.json` (project-level) to block any
+teammate from marking its task complete if Integration Suite reported a
+regression:
+
+```json
+{
+  "hooks": {
+    "TaskCompleted": [
+      {
+        "matcher": "verifier-integration",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -q 'PASS' /tmp/speckit-integration-result || exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Exit code 2 sends feedback to the teammate and prevents the task from
+being marked complete. The teammate must re-run the integration suite
+or surface the regression to the lead.
+
+**Failure modes:**
+
+- **A teammate stops on error:** message the teammate directly to
+  recover, or spawn a replacement (per Agent Teams troubleshooting
+  guidance). If unrecoverable, fall back to `subagents` mode for
+  this run and log the failure.
+- **Lead shuts down team early:** tell the lead "wait for your
+  teammates to complete their tasks before proceeding."
+- **Task status lags** (known Agent Teams limitation): if a teammate
+  has clearly finished but its task is still `in_progress`, nudge the
+  teammate or manually mark complete.
+- **Team cleanup fails** (active teammates remain): shut down any
+  remaining teammates first, then retry cleanup.
+
+**When to disable teams mode:**
+
+If integration tests share mutable working directories with verify or
+verify-tasks (rare but possible — e.g., the verify extension writes
+to the same `target/` Rust directory), set `post-impl-mode: subagents`
+to serialize and avoid the race condition.
 
 ## 3.1 Full Integration / E2E Suite Verification
 

@@ -117,8 +117,44 @@ adjusting how it invokes each phase (see Phase Dispatch).
 Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
 frontmatter for: `consensus-mode` (default: `moderate`),
 `gate-failure` (default: `stop`), `auto-commit` (default:
-`per-phase`), `security-keywords` (default: standard list).
+`per-phase`), `security-keywords` (default: standard list),
+`post-impl-mode` (default: `subagents`).
 If the file doesn't exist, use all defaults.
+
+### `post-impl-mode` probe — teams-mode opt-in
+
+`post-impl-mode` controls how the post-implementation parallel
+group (tasks 10/11/12/13/14) dispatches:
+
+- `subagents` (default) — sequential `Agent()` calls, current behavior
+- `teams` (opt-in) — one Agent Team spawned with 3 teammates
+
+When `post-impl-mode: teams` is requested, probe before committing
+to the mode:
+
+```text
+Bash("test \"${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS}\" = \"1\" && claude --version | awk '{print $1}' | sort -V -C")
+```
+
+The probe checks two conditions:
+
+1. **Env var:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set
+2. **Version:** `claude --version` returns a value ≥ `2.1.32`
+
+If either check fails, fall back to `subagents` mode and log a
+warning to the workflow file's Notes section:
+
+> `post-impl-mode: teams` requested but Agent Teams unavailable
+> (env var unset OR Claude Code < 2.1.32). Falling back to
+> `subagents` mode. Re-run with the env var set and a current
+> Claude Code build to enable teams mode.
+
+**Do not STOP** — teams mode is a latency optimization, not a
+dependency. The autopilot must always complete in `subagents`
+mode if teams isn't available.
+
+Teams-mode dispatch details live in
+[`post-implementation.md`](./post-implementation.md) §Mode Selection.
 
 ## Step 0.8: MCP Server & Plugin Limitation Check
 
