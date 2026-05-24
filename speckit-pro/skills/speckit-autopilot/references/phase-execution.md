@@ -9,11 +9,12 @@
    loop alive.
 2. **MULTI-PROMPT** — Clarify and Checklist have multiple
    prompts. Spawn a separate subagent for each prompt.
-3. **TWO-LAYER RESOLUTION** — After executor subagents
-   return, the main session parses "Unresolved for
-   consensus" items and spawns 3 consensus agents in
-   parallel (codebase-analyst, spec-context-analyst,
-   domain-researcher) for each unresolved item.
+3. **TWO-LAYER RESOLUTION (BATCHED)** — After executor subagents
+   return, the main session parses "Unresolved for consensus"
+   items and BATCHES dispatch: all routed analysts for all items
+   spawned in ONE assistant message (per-item category routing),
+   then all synthesizers in ONE message, then serial Artifact
+   Edit application. See consensus-protocol.md §Batched Dispatch.
 4. **TASK LIST DRIVES EXECUTION** — Check the task list
    after each subagent returns to know what's next.
 
@@ -230,13 +231,15 @@ For each clarify session in the workflow file:
   4. Parse executor's "Unresolved for consensus" section
   5. If unresolved items exist:
      a. TaskUpdate: "<session> Consensus" → in_progress
-     b. For each item → spawn 3 consensus agents in parallel:
-        - Agent(subagent_type: "codebase-analyst", run_in_background: true, ...)
-        - Agent(subagent_type: "spec-context-analyst", run_in_background: true, ...)
-        - Agent(subagent_type: "domain-researcher", run_in_background: true, ...)
-     c. Wait for all 3 → apply consensus rules
-     d. Edit spec.md with consensus answer, remove markers
-     e. TaskUpdate: "<session> Consensus" → completed
+     b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
+        Stage 1: spawn ALL routed analysts for ALL items in ONE
+                 assistant message via run_in_background: true.
+                 Per-item routing parses the [<categories>] prefix.
+        Stage 2: await all → spawn ALL synthesizers in ONE message.
+        Stage 3: apply each synthesizer's Artifact Edit SERIALLY
+                 to spec.md (preserves write contention safety).
+        Round 2 escape-hatch: also batched across all queued items.
+     c. TaskUpdate: "<session> Consensus" → completed
   6. TaskUpdate: session task → completed
   7. Proceed to next session
 ```
@@ -286,14 +289,15 @@ For each checklist domain in the workflow file:
   3. Parse executor's "Unresolved for consensus" section
   4. If unresolved gaps exist:
      a. TaskUpdate: "<domain> Consensus" → in_progress
-     b. For each gap → spawn 3 consensus agents in parallel:
-        - Agent(subagent_type: "codebase-analyst", run_in_background: true, ...)
-        - Agent(subagent_type: "spec-context-analyst", run_in_background: true, ...)
-        - Agent(subagent_type: "domain-researcher", run_in_background: true, ...)
-     c. Wait for all 3 → apply consensus rules
-     d. Edit spec.md or plan.md with consensus fix
-     e. Re-run domain checklist to verify gap closed
-     f. TaskUpdate: "<domain> Consensus" → completed
+     b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
+        Stage 1: spawn ALL routed analysts for ALL gaps in ONE
+                 assistant message via run_in_background: true.
+        Stage 2: await all → spawn ALL synthesizers in ONE message.
+        Stage 3: apply each synthesizer's Artifact Edit SERIALLY
+                 to spec.md or plan.md.
+        Round 2 escape-hatch: also batched across all queued gaps.
+     c. Re-run domain checklist to verify gaps closed
+     d. TaskUpdate: "<domain> Consensus" → completed
   5. TaskUpdate: domain task → completed
   6. Proceed to next domain
 ```
@@ -383,14 +387,15 @@ verify (Layer 1). Items it can't resolve are flagged in its
 3. Parse executor's "Unresolved for consensus" section
 4. If unresolved findings exist:
    a. TaskUpdate: "Analyze - Consensus" → in_progress
-   b. For each finding → spawn 3 consensus agents in parallel:
-      - Agent(subagent_type: "codebase-analyst", run_in_background: true, ...)
-      - Agent(subagent_type: "spec-context-analyst", run_in_background: true, ...)
-      - Agent(subagent_type: "domain-researcher", run_in_background: true, ...)
-   c. Wait for all 3 → apply consensus rules
-   d. Edit tasks.md, spec.md, or plan.md with consensus fix
-   e. Re-run analyze to verify finding resolved
-   f. TaskUpdate: "Analyze - Consensus" → completed
+   b. BATCHED dispatch (see consensus-protocol.md §Batched Dispatch):
+      Stage 1: spawn ALL routed analysts for ALL findings in ONE
+               assistant message via run_in_background: true.
+      Stage 2: await all → spawn ALL synthesizers in ONE message.
+      Stage 3: apply each synthesizer's Artifact Edit SERIALLY to
+               tasks.md, spec.md, or plan.md.
+      Round 2 escape-hatch: also batched across all queued findings.
+   c. Re-run analyze to verify findings resolved
+   d. TaskUpdate: "Analyze - Consensus" → completed
 5. TaskUpdate: "Analyze" → completed
 ```
 

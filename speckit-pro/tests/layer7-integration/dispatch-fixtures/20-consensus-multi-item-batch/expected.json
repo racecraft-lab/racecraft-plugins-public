@@ -1,0 +1,19 @@
+{
+  "fixture_id": "20-consensus-multi-item-batch",
+  "purpose": "Verify multi-item consensus dispatches all routed analysts for all unresolved items in ONE assistant message (Stage 1 of Batched Dispatch). 3 items × 3 [ambiguous]-routed analysts = 9 background dispatches in one tool turn. Regression net for Use site 5 / WS-D1.",
+  "must_dispatch_to": [
+    "speckit-pro:codebase-analyst",
+    "speckit-pro:spec-context-analyst",
+    "speckit-pro:domain-researcher"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me",
+    "speckit-pro:phase-executor"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 9,
+  "max_dispatch_count": 9,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

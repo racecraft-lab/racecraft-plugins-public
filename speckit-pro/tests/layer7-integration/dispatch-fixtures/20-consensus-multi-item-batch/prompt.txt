@@ -1,0 +1,36 @@
+You are speckit-autopilot. A Clarify session for SPEC-FIXTURE-D1 has
+just completed. The clarify-executor returned its summary with 3
+unresolved items in the "Unresolved for consensus" section, each
+tagged `[ambiguous]` (meaning all 3 analysts should be routed per
+item):
+
+  Item A: [ambiguous] Should the rate-limit window be per-user or
+          per-IP?
+  Item B: [ambiguous] What's the retry strategy on partial-success
+          uploads?
+  Item C: [ambiguous] Should we expose the export API publicly or
+          gate it behind an auth header?
+
+Per `references/consensus-protocol.md` §Batched Dispatch (Stage 1),
+dispatch ALL routed analysts for ALL 3 items in ONE assistant
+message via `run_in_background: true`. For each item, the
+`[ambiguous]` tag routes to all 3 analysts (codebase-analyst,
+spec-context-analyst, domain-researcher) — so the single message
+should contain 9 Agent calls.
+
+Use these subagent types (each with `run_in_background: true`):
+- speckit-pro:codebase-analyst
+- speckit-pro:spec-context-analyst
+- speckit-pro:domain-researcher
+
+Descriptions should encode the item identifier so the synthesizer
+can route responses back, e.g.:
+  "SPEC-FIXTURE-D1 consensus R1 [Item A]: rate-limit window"
+
+Do NOT dispatch them in 3 separate messages (that would be the
+per-item-serial regression this fixture catches). Do NOT spawn
+synthesizers in the same turn — Stage 2 happens AFTER Stage 1's
+await. Do NOT invoke grill-me.
+
+Stop after all 9 background analysts are dispatched in one
+message and their results return.
