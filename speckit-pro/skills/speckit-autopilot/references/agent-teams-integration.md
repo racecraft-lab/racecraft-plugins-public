@@ -50,6 +50,8 @@ wherever the use case applies.
 | 2 | **Consensus debate** (Clarify/Checklist/Analyze unresolved items) | 📐 Designed; impl pending WS-D1 | [Investigate with competing hypotheses](https://code.claude.com/docs/en/agent-teams#use-case-examples) | This doc §Use site 2 (forward design) |
 | 3 | **Phase 7 `[P]` task team** (parallel-safe implementation tasks) | 📐 Designed; impl pending WS-D2 | [Cross-layer coordination](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) + [New modules or features](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) | This doc §Use site 3 (forward design) |
 | 4 | **Parallel checklist/analyze** (per-domain or per-finding teammates) | ⏳ Blocked on executor refactor (WS-E2/E3) | [Avoid file conflicts](https://code.claude.com/docs/en/agent-teams#best-practices) — needs propose-then-apply first | This doc §Use site 4 (blocked) |
+| 5 | **Cross-item consensus batching** (Clarify/Checklist/Analyze across N unresolved items) | 🚨 Identified as suboptimal — pull forward from WS-D1 | [Subagent → team transition point](https://code.claude.com/docs/en/features-overview#subagent-vs-agent-team) — high concurrency | This doc §Use site 5 (audit B2) |
+| 6 | **Parallel PR review remediation** (resolve-pr threads grouped by file) | 🚨 Designed via audit; new workstream WS-F1 proposed | [Run a parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples) inverse — parallel code FIX | This doc §Use site 6 (audit B3) |
 
 Every use site below has a **subagents fallback** that achieves the same
 wall-clock parallelism via `Agent(..., run_in_background: true)` in one
@@ -260,6 +262,121 @@ serial dispatch.
 **Implementation references (when shipped):** dedicated
 `references/parallel-checklist.md` and `references/parallel-analyze.md`
 (to be created in WS-E2/E3).
+
+### Use site 5: Cross-item consensus batching 🚨
+
+**Status:** Identified as suboptimal by the dispatch audit. Designed for
+the WS-D1 subagents-fallback half — pull forward independent of the
+teams-debate work.
+
+**Anthropic pattern:** [Subagent → team transition point](https://code.claude.com/docs/en/features-overview#subagent-vs-agent-team) — *"If you're running parallel subagents but hitting context limits, or if your subagents need to communicate with each other, agent teams are the natural next step."* Today within-item is correctly parallel (3 analysts via `run_in_background: true`); across N items is serially looped.
+
+**Forward design:**
+
+```text
+Parse all "Unresolved for consensus" items from the executor summary.
+For each item: parse [<categories>] prefix → routed analyst set Nx.
+TOTAL_ANALYSTS = Σ Nx (across all items).
+
+Stage 1 (one assistant message):
+  Spawn ALL TOTAL_ANALYSTS Agent(..., run_in_background: true) calls
+  for the routed analyst per item.
+
+Stage 2 (one assistant message): await all → spawn N synthesizers
+  (one per item, also background since they don't write).
+
+Stage 3 (sequential): apply each synthesizer's Artifact Edit to
+  spec.md/plan.md/tasks.md in order. Serial application is mandatory
+  to avoid Edit-tool write contention on the same files.
+```
+
+**Why this is independent of Use site 2:** Use site 2 (consensus debate
+via teams mailbox) is the upgrade path when `AGENT_TEAMS_AVAILABLE`.
+Use site 5 is the subagents fallback that delivers parallelism even
+without teams. Both should land — site 5 is the cheaper win that
+doesn't depend on Anthropic's mailbox API stabilizing.
+
+**Risk:** Concurrent agent count rises (5 items × 2-3 analysts = 10-15
+background subagents in one turn). Anthropic's platform handles this,
+but worth measuring on long Clarify sessions.
+
+**Implementation reference (when shipped):** [`consensus-protocol.md`](./consensus-protocol.md)
+§Phase-Specific Consensus Flows (rewrite outer "for each item" loop as
+a batched stage-1/stage-2/stage-3 fan-out).
+
+### Use site 6: Parallel PR review remediation 🚨
+
+**Status:** Designed via the dispatch audit; new workstream WS-F1
+proposed. Not blocked on any prior work.
+
+**Anthropic pattern:** [Run a parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples) inverse — parallel code FIX. Reviewers
+look at the same PR through different lenses; remediators FIX the same
+PR through partitioned file ownership.
+
+**Forward design:**
+
+```text
+After fetching N unresolved PR review threads (via gh GraphQL):
+  PARTITION threads by file path.
+  Within a partition (same file): remediate threads SERIALLY (avoids
+    Edit-tool conflicts on the same file).
+  Across partitions (different files): dispatch as parallel
+    background subagents in ONE assistant message.
+
+For each partition (parallel-safe):
+  Agent(subagent_type: "general-purpose",
+        run_in_background: true,
+        description: "Resolve PR #N comments on <file>",
+        prompt: "Fix the following threads on <file>. After all
+                 fixes, run BUILD + TYPECHECK + UNIT_TEST. Commit
+                 with message ... Reply to each thread via gh API.
+                 Threads: ...")
+
+Lead collects results, then for each result serially calls
+gh GraphQL resolveReviewThread (writes are cheap/ordered).
+
+When AGENT_TEAMS_AVAILABLE=true:
+  Spawn a review-remediation team with one teammate per file
+  partition. Mailbox lets teammates coordinate cross-file changes
+  ("I'm changing the auth interface; please update your callers").
+```
+
+**Caveat:** Some review comments cross files ("rename function and
+update all callers"). Detect via comment body — if cross-file hints
+present, serialize that comment; default-parallel for thread-local
+fixes.
+
+**Implementation reference (when shipped):**
+- `commands/resolve-pr.md` Step 4 ("Process Each Comment") — partition logic
+- `codex-skills/speckit-resolve-pr/SKILL.md` — parity
+- `references/post-implementation.md` §3.3 `/loop` body — same pattern inside the recurring remediation loop
+- Layer 7 fixture `21-resolve-pr-parallel-files`
+
+## Dispatch audit summary — documented vs shipped
+
+A full dispatch-point audit (24 entry points across all skills) was
+performed against the design principles above. Headline findings:
+
+| Finding | Type | Status |
+|---------|------|--------|
+| Phase 7 `[P]` parallel reads as live in phase-execution.md but is NOT shipped (use-site map admits, no fixture exists) | Documented ≠ shipped contradiction | Surface in WS-D2 PR |
+| Consensus across-items serial (within-item correct) | B finding (audit) | Use site 5 above |
+| resolve-pr per-comment serial (parallel-safe partitions exist) | B finding (audit) | Use site 6 above |
+| Layer 7 fixtures 13/14/15 cap `max_dispatch_count: 1-2`, would FALSE-PASS regressions in B1/B2/B3 | Test coverage gap | Add companion fixtures 13b/19/20/21 |
+
+**24 dispatch points classified as "already optimal"** including
+per-phase executors, within-item consensus parallel, post-impl Path B
+parallel group, post-impl serial tail (real dependency chain),
+gate-validator, grill-me HITL, and all the no-dispatch skills
+(coach/install/upgrade/status). The subagent-nesting prevention via
+tools-list omission is runtime-enforced, not just convention.
+
+**Recommended sequencing** (from highest-value, lowest-effort first):
+1. Use site 5 (consensus batching) — fires multiple times per phase
+2. Use site 6 (resolve-pr parallel) — direct user benefit, new workstream
+3. Use site 3 (Phase 7 `[P]`) — biggest single-spec wall-clock win, larger code change
+4. Use site 2 (consensus debate) — gated on Anthropic mailbox stabilization
+5. Use site 4 (parallel checklist/analyze) — gated on executor refactor (WS-E2/E3)
 
 ## Source-of-truth references
 
