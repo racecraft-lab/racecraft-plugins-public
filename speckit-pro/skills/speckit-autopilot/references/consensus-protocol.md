@@ -4,6 +4,17 @@ The consensus protocol is the second layer of the autopilot's
 two-layer resolution system, used by 3 phases: Clarify,
 Checklist, and Analyze.
 
+**Future direction:** Consensus is **Use site 2** in the
+[Agent Teams use-site map](./agent-teams-integration.md). The 3-analyst
++ synthesizer pattern is Anthropic's
+[Investigate with competing hypotheses](https://code.claude.com/docs/en/agent-teams#use-case-examples)
+use case verbatim. The current implementation produces isolated reports
++ vote; the planned WS-D1 implementation adds a long-lived consensus
+team (analysts debate via mailbox before the synthesizer judges) when
+`AGENT_TEAMS_AVAILABLE`, with a batched-parallel-subagents fallback
+otherwise. See `agent-teams-integration.md` §Use site 2 for the
+forward design.
+
 ## Contents
 
 - [Two-Layer Resolution Architecture](#two-layer-resolution-architecture) — executor first-pass then consensus second-pass

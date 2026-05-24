@@ -11,6 +11,13 @@ Detailed procedures for Steps 3.0-3.3 of the autopilot workflow.
 
 ## Post-Implementation Parallel Group
 
+This is **Use site 1** of the [Agent Teams use-site map](./agent-teams-integration.md)
+in speckit-pro — the first place the autopilot leverages Anthropic's
+Agent Teams when available. See that doc for the full map (current +
+planned), capability detection, and lifecycle policy across other use
+sites (consensus debate, Phase 7 `[P]` tasks, parallel
+checklist/analyze).
+
 Tasks 10/11/12/13/14 are independent post-implementation work that
 benefits from parallel dispatch. Tasks **15-20 are unaffected** — they
 remain strictly sequential because of hard dependencies (Cleanup edits

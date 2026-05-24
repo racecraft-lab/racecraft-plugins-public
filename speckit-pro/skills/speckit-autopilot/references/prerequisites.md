@@ -160,6 +160,9 @@ dispatch in one tool call) so wall-clock is comparable.
 
 Dispatch details for both code paths live in
 [`post-implementation.md`](./post-implementation.md) §Post-Implementation Parallel Group.
+The full **use-site map** (post-impl, consensus, Phase 7 `[P]` tasks,
+parallel checklist/analyze) and lifecycle policy live in
+[`agent-teams-integration.md`](./agent-teams-integration.md).
 
 ## Step 0.8: MCP Server & Plugin Limitation Check
 

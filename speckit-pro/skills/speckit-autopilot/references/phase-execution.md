@@ -26,6 +26,14 @@ operates in its own context — the command's noise (template
 reads, file exploration, completion reports) stays there and
 never touches the parent. The parent receives only a summary.
 
+**Future direction (Phase 7 `[P]` tasks):** Phase 7 is **Use site 3**
+in the [Agent Teams use-site map](./agent-teams-integration.md). Tasks
+marked `[P]` by `/speckit-tasks` are parallel-safe; the planned WS-D2
+implementation dispatches `[P]` runs as either an Agent Team (cross-task
+coordination via mailbox) when `AGENT_TEAMS_AVAILABLE`, or as batched
+background subagents otherwise. See `agent-teams-integration.md` §Use
+site 3 for the forward design.
+
 ## Contents
 
 - [SpecKit Infrastructure](#speckit-infrastructure) — commands, scripts, templates, constitution

@@ -474,6 +474,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
 - [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats, MCP fallback behavior
+- [Agent Teams Integration](./references/agent-teams-integration.md) — Use-site map (current + planned), capability detection, lifecycle policy
 
 ## Scripts
 
