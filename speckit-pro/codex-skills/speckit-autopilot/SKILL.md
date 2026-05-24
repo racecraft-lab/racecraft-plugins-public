@@ -690,16 +690,32 @@ summary with PR URL.
 
 ## References
 
-- [Phase Execution for Codex](./references/phase-execution-codex.md) — Per-phase
-  prompt construction and execution details with Codex subagents
+**Codex-specific (lifted from this SKILL.md body):**
+- [Prerequisites for Codex](./references/prerequisites-codex.md) — Step -1
+  Archive Sweep + Step 0.0-0.12 (scripts path, env checks, settings,
+  MCP, constitution, Codex agent availability, implementation agent
+  detection, command discovery, preset detection)
+- [Canonical Task List for Codex](./references/task-list-canonical-codex.md) —
+  Step 1.1 checklist naming pattern, 11 mandatory Post items, item-naming
+  rules, reference `autopilot-state.json` schema
+- [Phase Execution for Codex](./references/phase-execution-codex.md) —
+  PHASES order, agent mapping, main execution loop (11-step per-phase
+  pseudocode), Phase 7 implement detail, PR body generation, coverage audit
+- [Post-Implementation for Codex](./references/post-implementation-codex.md) —
+  Items 10-20 table, parallel group dispatch (Doctor/Code Review/Verify-chain),
+  extension availability rules
+- [Workflow File Update Protocol for Codex](./references/workflow-file-protocol-codex.md) —
+  Per-phase section updates + Constitution + Consensus Log
+- [Error Recovery for Codex](./references/error-recovery-codex.md) — Resume
+  protocol, common issues, context window management
+
+**Shared CC references (still applicable to Codex):**
 - [Consensus Protocol](../../skills/speckit-autopilot/references/consensus-protocol.md) —
   Multi-agent resolution rules and flows
-- [Gate Validation](../../skills/speckit-autopilot/references/gate-validation.md) — Programmatic
-  gate checks and remediation loops
-- [Post-Implementation for Codex](./references/post-implementation-codex.md) —
-  Integration suite, PR creation, review remediation loop
-- [TDD Protocol](../../skills/speckit-autopilot/references/tdd-protocol.md) — Red-green-refactor
-  rules injected into implementation agent prompts
+- [Gate Validation](../../skills/speckit-autopilot/references/gate-validation.md) —
+  Programmatic gate checks and remediation loops
+- [TDD Protocol](../../skills/speckit-autopilot/references/tdd-protocol.md) —
+  Red-green-refactor rules injected into implementation agent prompts
 - [Plugin Limitations](../../skills/speckit-autopilot/references/plugin-limitations.md) —
   permissionMode, hooks, mcpServers restrictions for plugin agents;
   MCP server prerequisites and fallback behavior
