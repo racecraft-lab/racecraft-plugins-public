@@ -783,67 +783,20 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
 After scheduling the loop, the autopilot is DONE. Report the final
 summary with PR URL.
 
-## Workflow File Update Protocol
+## Workflow File Update Protocol + Error Recovery
 
-After EVERY phase, update these sections in the workflow file:
-
-| Phase | Sections to Update |
-| --- | --- |
-| **All** | Status table: Pending → Complete with summary notes |
-| **Specify** | Specify Results table, Files Generated checkboxes |
-| **Clarify** | Clarify Results table (session focus, questions, outcomes) |
-| **Plan** | Plan Results table (artifact status) |
-| **Checklist** | Checklist Results table, Addressing Gaps section |
-| **Tasks** | Tasks Results table (total, phases, parallel, coverage) |
-| **Analyze** | Analysis Results table (ID, severity, issue, resolution) |
-| **Implement** | Implementation Progress, Post-Implementation Checklist, Success Criteria |
-
-Also update the Constitution Validation table after Specify (initial)
-and Implement (final). If consensus was used, add entries to the
-Consensus Resolution Log.
-
-## Error Recovery
-
-### Resuming After Interruption
-
-The workflow file persists phase artifacts. `autopilot-state.json`
-persists orchestration state. To resume:
-
-```text
-$speckit-autopilot workflow.md --from-phase <next-pending-phase>
-```
-
-Resume protocol:
-
-1. Read `autopilot-state.json` next to the workflow file
-2. Rebuild `update_plan` from its `plan` array
-3. Re-read the workflow file to verify artifact status and prompt content
-4. If the state file is missing, reconstruct it from the workflow file,
-   immediately call `update_plan`, then continue from the requested phase
-
-### Common Issues
-
-- **Subagent returns empty/incomplete summary:** Re-spawn with the
-  same prompt. If it fails again, run the command directly via
-  shell and parse the output.
-- **Gate fails after 2 auto-fix attempts:** If `gate-failure`
-  setting is `stop`, STOP and report. Show the gate script output
-  so the user can diagnose.
-- **Consensus agents all disagree:** Flag `[HUMAN REVIEW NEEDED]`
-  and STOP. Present all 3 perspectives to the user.
-- **MCP tool unavailable:** Skip research that depends on it. Use
-  file search and read fallbacks for codebase analysis. Log warning.
-
-### Context Window Management
-
-For large specs, the context window may fill across 7 phases.
-Mitigations:
-
-- Keep subagent results concise (summaries, not full artifacts)
-- The workflow file is the persistent record — read it rather than
-  relying on conversation memory
-- Auto-compaction preserves CLAUDE.md and system instructions
-- If compacted, re-read the workflow file to restore state
+- **Per-phase workflow-file section updates** (Specify Results table,
+  Clarify Results, Plan Results, Checklist Results + Addressing Gaps,
+  Tasks Results, Analysis Results, Implementation Progress + Post-Impl
+  Checklist + Success Criteria) — see
+  [workflow-file-protocol-codex.md](./references/workflow-file-protocol-codex.md).
+  Also: Constitution Validation table after Specify (initial) + Implement
+  (final), and Consensus Resolution Log entries when consensus was used.
+- **Resume protocol** (`autopilot-state.json` reconciliation, missing-state
+  reconstruction, `--from-phase` semantics), **common issues** (subagent
+  retry, gate failure, consensus all-disagree, MCP unavailable), and
+  **context window management** — see
+  [error-recovery-codex.md](./references/error-recovery-codex.md).
 
 ## References
 
