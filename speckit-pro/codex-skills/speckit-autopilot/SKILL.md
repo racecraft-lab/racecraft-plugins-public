@@ -226,7 +226,7 @@ Each phase type has its own specialized executor agent:
 | Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
 | Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
-| Implement | `implement-executor` | Task-level dispatch with strict TDD |
+| Implement | `implement-executor` | Task-level dispatch with strict TDD. **Honor `[P]` markers** — consecutive `[P]`-tagged tasks of the same agent type dispatch via batched `spawn_agent` in ONE turn (background), then `wait_agent` on all handles. Non-`[P]` tasks dispatch one at a time. After each parallel batch, run TYPECHECK + UNIT_TEST in the lead; on regression, fall back to serial re-run. |
 | Read-only consensus | analyst agents | Read-heavy code/spec/domain analysis |
 
 Concrete Codex mapping:

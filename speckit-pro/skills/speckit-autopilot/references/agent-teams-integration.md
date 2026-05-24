@@ -256,7 +256,7 @@ contains conditional dispatch logic. That is the orchestrator's job.
 |---|----------|--------|--------------------------|--------------------------|
 | 1 | **Post-implementation parallel group** (tasks 10/11/12/13/14) | ✅ Shipped | [Run a parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples) | [`post-implementation.md`](./post-implementation.md) §Path A |
 | 2 | **Consensus debate** (Clarify/Checklist/Analyze unresolved items) | 📐 Designed; impl pending WS-D1 | [Investigate with competing hypotheses](https://code.claude.com/docs/en/agent-teams#use-case-examples) | This doc §Use site 2 (forward design) |
-| 3 | **Phase 7 `[P]` task team** (parallel-safe implementation tasks) | 📐 Designed; impl pending WS-D2 | [Cross-layer coordination](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) + [New modules or features](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) | This doc §Use site 3 (forward design) |
+| 3 | **Phase 7 `[P]` task team** (parallel-safe implementation tasks) | ✅ Shipped (WS-D2, 2026-05-24) | [Cross-layer coordination](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) + [New modules or features](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) | `phase-execution.md` §Phase 7 Step 3 + Layer 7 fixture 19 |
 | 4 | **Parallel checklist/analyze** (per-domain or per-finding teammates) | ⏳ Blocked on executor refactor (WS-E2/E3) | [Avoid file conflicts](https://code.claude.com/docs/en/agent-teams#best-practices) — needs propose-then-apply first | This doc §Use site 4 (blocked) |
 | 5 | **Cross-item consensus batching** (Clarify/Checklist/Analyze across N unresolved items) | 🚨 Identified as suboptimal — pull forward from WS-D1 | [Subagent → team transition point](https://code.claude.com/docs/en/features-overview#subagent-vs-agent-team) — high concurrency | This doc §Use site 5 (audit B2) |
 | 6 | **Parallel PR review remediation** (resolve-pr threads grouped by file) | 🚨 Designed via audit; new workstream WS-F1 proposed | [Run a parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples) inverse — parallel code FIX | This doc §Use site 6 (audit B3) |
@@ -454,10 +454,14 @@ dispatch.
 **Implementation reference (when shipped):** [`consensus-protocol.md`](./consensus-protocol.md)
 §Path A (teams debate) and §Path B (batched parallel subagents).
 
-### Use site 3: Phase 7 `[P]` task team 📐
+### Use site 3: Phase 7 `[P]` task team ✅
 
-**Status:** Designed; implementation pending **WS-D2** (honor `[P]`
-markers in tasks.md).
+**Status:** Shipped 2026-05-24 via WS-D2. Implementation reference:
+[`phase-execution.md`](./phase-execution.md) §Phase 7 Step 3.
+Layer 7 fixture 19 (`19-implement-parallel-p-tasks`) enforces the
+"3 parallel `[P]` tasks in ONE assistant message with `isolation:
+worktree`" shape. Closed the documented-vs-shipped gap that the
+audit B1 finding originally surfaced.
 
 **Anthropic pattern:** [Cross-layer coordination](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams):
 *"changes that span frontend, backend, and tests, each owned by a

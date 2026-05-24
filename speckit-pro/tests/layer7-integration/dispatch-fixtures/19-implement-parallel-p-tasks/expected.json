@@ -1,0 +1,19 @@
+{
+  "fixture_id": "19-implement-parallel-p-tasks",
+  "purpose": "Verify Phase 7 [P]-tagged tasks dispatch as a parallel RUN in ONE assistant message via background implement-executor subagents. 3 [P] tasks → 3 parallel dispatches in one turn. Regression net for Use site 3 / WS-D2 (closes the documented-vs-shipped gap).",
+  "must_dispatch_to": [
+    "speckit-pro:implement-executor"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me",
+    "speckit-pro:clarify-executor",
+    "speckit-pro:phase-executor",
+    "speckit-pro:domain-researcher"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 3,
+  "max_dispatch_count": 3,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}
