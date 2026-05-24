@@ -1,6 +1,6 @@
 ---
 description: Execute a SpecKit workflow autonomously. Reads a populated workflow file and runs all 7 SDD phases with programmatic gate validation, multi-agent consensus resolution, and auto-commits. Requires SpecKit CLI installed, constitution created, and a populated workflow file.
-allowed-tools: "*"
+allowed-tools: Skill Bash
 argument-hint: "path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID]"
 ---
 

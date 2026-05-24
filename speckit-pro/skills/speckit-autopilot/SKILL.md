@@ -7,7 +7,9 @@ description: >
   multi-agent consensus resolution, and auto-commits. Use when the user
   says "run autopilot", "execute workflow", "autonomous speckit",
   or has a workflow file ready for execution.
-user-invokable: false
+user-invocable: false
+disable-model-invocation: true
+allowed-tools: Bash Read Edit Write Glob Grep Skill Agent WebFetch WebSearch
 license: MIT
 ---
 

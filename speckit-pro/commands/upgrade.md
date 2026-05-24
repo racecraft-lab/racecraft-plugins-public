@@ -1,6 +1,6 @@
 ---
 description: Upgrade an existing SpecKit installation in this repo safely — preserves customizations (constitution.md, template overrides) via backup-and-restore, handles the v0.8.13 slash-command → skills migration, and supports upgrading one or both integrations (Claude Code, Codex CLI). Hands off to /speckit-pro:install if .specify/ is missing.
-allowed-tools: "*"
+allowed-tools: Bash Read Edit Write
 argument-hint: "(optional) integration keys to upgrade, e.g. 'claude', 'codex', or omit for all"
 ---
 

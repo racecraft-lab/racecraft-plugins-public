@@ -1,6 +1,6 @@
 ---
 description: Install the SpecKit CLI and initialize this repository for one or both coding-agent integrations (Claude Code, Codex CLI). If SpecKit is already installed in this repo, hands off to /speckit-pro:upgrade. Asks which integrations you want before mutating anything.
-allowed-tools: "*"
+allowed-tools: Bash Read Edit Write
 argument-hint: "(optional) integration keys, e.g. 'claude', 'codex', or 'claude codex'"
 ---
 

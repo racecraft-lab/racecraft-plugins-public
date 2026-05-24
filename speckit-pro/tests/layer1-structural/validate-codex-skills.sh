@@ -12,7 +12,7 @@ SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status spe
 COLLISION_GUARD_SKILLS=(speckit-autopilot speckit-coach grill-me)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
-CC_ONLY_KEYS=(user-invokable license argument-hint)
+CC_ONLY_KEYS=(user-invocable disable-model-invocation license argument-hint)
 
 section "Codex skill-selection collision guards"
 

@@ -7,7 +7,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 SKILLS_DIR="$PLUGIN_ROOT/skills"
 SKILLS=(speckit-autopilot speckit-coach)
-ALLOWED_KEYS="name description license allowed-tools metadata compatibility user-invokable argument-hint"
+ALLOWED_KEYS="name description license allowed-tools metadata compatibility user-invocable disable-model-invocation argument-hint"
 
 for skill in "${SKILLS[@]}"; do
   SKILL_DIR="$SKILLS_DIR/$skill"

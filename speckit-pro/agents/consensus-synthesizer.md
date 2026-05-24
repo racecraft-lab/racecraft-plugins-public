@@ -8,7 +8,7 @@ description: >
   for the orchestrator to apply. Used after every consensus round in the
   autopilot workflow.
 model: sonnet
-color: white
+color: purple
 tools:
   - Read
   - Grep

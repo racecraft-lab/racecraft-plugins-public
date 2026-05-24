@@ -73,13 +73,23 @@ for agent in "${AGENTS[@]}"; do
   assert_match "$model_val" '^(gpt-5\.5|gpt-5\.4|gpt-5\.4-mini|gpt-5\.3-codex|gpt-5\.3-codex-spark)$' \
     "model must be an officially documented Codex GPT model"
 
-  set_test "${agent}: has model_reasoning_effort field"
-  assert_contains "$content" 'model_reasoning_effort = "'
+  # gpt-5.3-codex-spark does NOT support reasoning fields per OpenAI docs
+  # (xhigh is "model-dependent"; Spark is positioned as a text-only,
+  # near-instant model with no reasoning capability). For Spark-backed
+  # agents, the model_reasoning_effort field must be ABSENT.
+  if [ "$model_val" = "gpt-5.3-codex-spark" ]; then
+    set_test "${agent}: model_reasoning_effort field is absent (Spark does not support reasoning fields)"
+    assert_not_contains "$content" 'model_reasoning_effort = "'
+    effort_val=""
+  else
+    set_test "${agent}: has model_reasoning_effort field"
+    assert_contains "$content" 'model_reasoning_effort = "'
 
-  effort_val=$(extract_toml_string "$AGENT_FILE" "model_reasoning_effort")
-  set_test "${agent}: reasoning effort uses supported values"
-  assert_match "$effort_val" '^(minimal|low|medium|high|xhigh)$' \
-    "reasoning effort must be minimal, low, medium, high, or xhigh"
+    effort_val=$(extract_toml_string "$AGENT_FILE" "model_reasoning_effort")
+    set_test "${agent}: reasoning effort uses supported values"
+    assert_match "$effort_val" '^(minimal|low|medium|high|xhigh)$' \
+      "reasoning effort must be minimal, low, medium, high, or xhigh"
+  fi
 
   set_test "${agent}: has sandbox_mode field"
   assert_contains "$content" 'sandbox_mode = "'
@@ -129,11 +139,11 @@ for agent in "${AGENTS[@]}"; do
   # model. Quality is the only optimization axis; cost is a non-goal.
   case "$agent" in
     autopilot-fast-helper)
-      set_test "autopilot-fast-helper: uses Spark with xhigh reasoning (max-thinking policy)"
-      if [ "$model_val" = "gpt-5.3-codex-spark" ] && [ "$effort_val" = "xhigh" ] && [ "$sandbox_val" = "read-only" ]; then
+      set_test "autopilot-fast-helper: uses Spark read-only (no reasoning effort — Spark does not support reasoning fields per OpenAI docs)"
+      if [ "$model_val" = "gpt-5.3-codex-spark" ] && [ -z "$effort_val" ] && [ "$sandbox_val" = "read-only" ]; then
         _pass
       else
-        _fail "expected gpt-5.3-codex-spark / xhigh / read-only, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.3-codex-spark / no-effort-field / read-only, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
     clarify-executor)

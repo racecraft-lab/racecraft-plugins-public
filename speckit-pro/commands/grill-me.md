@@ -1,6 +1,6 @@
 ---
 description: "Run an iterative project-scoping interview before any spec or design work. The AI walks down each branch of the design tree, asks one question at a time, and provides its own recommended answer for every question. Output is a Design Concept doc that captures shared understanding. Strictly human-in-the-loop — never invoked from autopilot."
-allowed-tools: "*"
+allowed-tools: Skill
 argument-hint: "<input-file or topic name (optional)>"
 ---
 

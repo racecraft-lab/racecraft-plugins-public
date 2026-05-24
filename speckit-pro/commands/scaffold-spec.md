@@ -1,6 +1,6 @@
 ---
 description: Set up a new spec for autopilot execution. Reads the technical roadmap, creates a git worktree, pushes the branch to origin, runs a Grill Me interview to align on design decisions, and generates a populated workflow file plus a Design Concept doc. Point it at a SPEC-ID from your technical roadmap and it does the rest. Interactive — requires a human user to answer the grill-me questions.
-allowed-tools: "*"
+allowed-tools: Bash Read Edit Write Skill Agent
 argument-hint: "SPEC-ID (e.g., SPEC-009)"
 ---
 

@@ -1,6 +1,6 @@
 ---
 description: Address all GitHub Copilot review comments on a PR, fix the code, and mark threads resolved using gh CLI.
-allowed-tools: "*"
+allowed-tools: Bash Read Edit Write Grep Agent
 argument-hint: "PR URL or number (e.g., https://github.com/owner/repo/pull/46 or 46)"
 ---
 

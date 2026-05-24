@@ -6,7 +6,7 @@ description: >
   orchestrator after each phase to validate gates G0-G7. Replaces inline
   gate checking to offload mechanical work from the opus orchestrator.
 model: sonnet
-color: gray
+color: cyan
 tools:
   - Bash
   - Read
