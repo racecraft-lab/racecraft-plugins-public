@@ -414,102 +414,48 @@ missing before advancing.
 
 ## Step 2: Main Execution Loop
 
-For each pending phase, spawn a subagent, collect the result,
-validate the gate, and advance. Every step is a tool call.
+For each pending phase, spawn a subagent, collect the result, validate
+the gate, advance. Every step is a tool call.
 
 ```text
 PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
 
 for phase in PHASES starting from first_pending:
-    1. TaskUpdate: set phase task to "in_progress"
-    2. Check .specify/extensions.yml for before_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
-    3. Read the workflow file's prompt(s) for this phase
-    4. For EACH prompt in the phase:
-       a. Agent(prompt: "Run /speckit.<phase> with: <prompt>")
-       b. Receive subagent summary (tool result)
-       c. TaskUpdate: set this prompt's task to "completed"
-    5. Run consensus in main session if needed:
-       Parse executor's "Unresolved for consensus" section.
-       For each item → spawn 3 consensus agents in parallel
-       (codebase-analyst, spec-context-analyst, domain-researcher)
-       → apply consensus rules → edit artifacts
-    6. Check .specify/extensions.yml for after_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
-    7. Validate gate via gate-validator agent:
-       Agent(
-         subagent_type: "gate-validator",
-         description: "SPEC-XXX: Validate G<N>",
-         prompt: """
-           Validate gate G<N> for feature at <feature_dir>
-           Script path: <SKILL_SCRIPTS>/validate-gate.sh
-         """
-       )
-       Parse the agent's Gate Result for PASS/FAIL status.
-    8. If gate fails:
-       a. Attempt auto-fix (max 2 attempts)
-       b. If still failing and gate-failure == "stop": STOP
-       c. If gate-failure == "skip-and-log": log, continue
-    9. Update workflow file with results
-   10. If auto-commit == "per-phase":
-       For phases 1-6: Bash: git add specs/ && git commit
-       For phase 7 (implement): Bash: git add -A && git commit
-       (implementation changes include src/, tests/, etc.)
-   11. After Tasks and G5 pass, run
-       `<SKILL_SCRIPTS>/reviewability-gate.sh tasks <feature_dir>`.
-       If it returns an unexcepted `block`, STOP before Analyze or
-       Implement and split the spec.
-   12. Advance to next phase (next iteration of loop)
-
-POST-IMPLEMENTATION (after all 7 phases complete):
-    These are tasks in your task list — execute them in order.
-
-    ⚠️ HOW EXTENSION COMMANDS BECOME AVAILABLE:
-    Commands like speckit.verify, speckit.review, speckit.cleanup,
-    speckit.doctor, speckit.retrospective.analyze are INSTALLED by
-    `specify extension add <name>`. The CLI creates command files
-    in .claude/commands/ (or equivalent for other agents). These
-    commands then appear as invocable skills.
-
-    If Step 0.12 detected the extension in .registry as enabled,
-    its commands ARE available — run the task.
-    If an extension is NOT in .registry and NOT in Glob results,
-    log a warning and skip that specific task (do NOT fail the
-    entire autopilot). Recommend: `specify extension add <name>`.
-
-    ⚠️ CRITICAL: Use Agent() subagents for ALL post-implementation
-    tasks — NEVER use Skill() directly. Rule #1 applies here too:
-    a Skill() call loads the command into YOUR context, and the
-    command's completion text can kill the agent loop, preventing
-    subsequent tasks from running.
-
-    Post-implementation tasks (execute in order — every row below
-    is a task that MUST appear in the task list per Step 1.1's
-    Canonical Post-Implementation Task List):
-
-    | # | Task | Requires | Command |
-    |---|------|----------|---------|
-    | 10 | Doctor Extension Check | doctor / speckit-utils ext | /speckit.speckit-utils.doctor (or /speckit.doctor) |
-    | 11 | Verify Implementation | verify ext | /speckit.verify |
-    | 12 | Verify Tasks Phantom Check | verify-tasks ext | /speckit.verify-tasks |
-    | 13 | Code Review | review ext | /speckit.review |
-    | 14 | Integration Suite | (none) | Step 3.1 direct |
-    | 15 | Cleanup | cleanup ext | /speckit.cleanup |
-    | 16 | Reviewability Diff Gate | (none) | reviewability-gate.sh diff |
-    | 17 | PR Body Generation | (none) | generate-pr-body.sh |
-    | 18 | PR Creation | (none) | Step 3.2 direct |
-    | 19 | Review Remediation | (none) | Step 3.3 /loop |
-    | 20 | Retrospective | retrospective ext | /speckit.retrospective.analyze |
-
-    Extension tasks: Agent(subagent_type: "general-purpose",
-      prompt: "Run /<command> for SPEC-XXX. Return summary.")
-    Non-extension tasks (14, 16, 17, 18, 19): execute directly per Step 3.
-    Missing extension: log warning and mark the task "skipped: <ext> not
-    installed". The task MUST still appear in the task list — never drop
-    it silently.
-    See references/post-implementation.md for detailed prompts.
-    Task 20 (Retrospective) is the FINAL STEP.
+    1. TaskUpdate: phase task → in_progress
+    2. Run before_<phase> hooks from .specify/extensions.yml
+    3. For each workflow prompt in this phase:
+         Agent(subagent_type: <phase executor>, prompt: ...)
+    4. Run consensus (Clarify/Checklist/Analyze only) — see Rule 6
+    5. Run after_<phase> hooks
+    6. Validate gate via gate-validator agent → parse PASS/FAIL
+       On FAIL: auto-fix max 2 attempts; then honor gate-failure setting
+    7. Update workflow file; auto-commit if configured
+         phases 1-6: git add specs/ && git commit
+         phase 7:    git add -A && git commit
+    8. After Tasks (G5 pass), run reviewability-gate.sh tasks;
+       unexcepted `block` → STOP and split the spec
+    9. Advance
 ```
+
+**Full per-phase prompts, dispatch templates, gate validation
+details, hook events, and the dispatcher-agent table:**
+see [`references/phase-execution.md`](./references/phase-execution.md).
+
+After all 7 phases pass G7, execute the post-implementation task list.
+The 11 tasks, detailed prompts, and extension routing live in
+[`references/post-implementation.md`](./references/post-implementation.md);
+the canonical name list is in
+[`references/task-list-canonical.md`](./references/task-list-canonical.md).
+
+**⚠️ Use `Agent()` subagents for ALL post-implementation tasks — NEVER
+`Skill()` directly.** Rule 1 applies: a `Skill()` call loads the
+command into YOUR context and the command's completion text can kill
+the agent loop, preventing subsequent tasks from running.
+
+**Extension availability**: Step 0.12 records which extensions are
+installed in `.registry`. If an extension is missing, log a warning
+and mark its task `skipped: <ext> not installed` — do NOT fail the
+autopilot. Recommend `specify extension add <name>` in the warning.
 
 **Dynamic task updates:** If consensus reveals new questions or
 remediation adds loops, create additional tasks via TaskCreate.
