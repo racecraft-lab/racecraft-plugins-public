@@ -466,8 +466,8 @@ or rebuild the Post plan items, then execute Step 3.
 
 ### 1.1 Create Durable Progress Plan
 
-After parsing the workflow state, create a **granular** progress
-plan and immediately materialize it in TWO places:
+After parsing the workflow state, create a **granular** progress plan
+and immediately materialize it in TWO places:
 
 1. `update_plan` with the full checklist
 2. `<workflow directory>/autopilot-state.json` with the same items
@@ -476,82 +476,21 @@ Do both before Phase 1 or STOP. The initial plan must include every
 canonical phase family even when its detailed items will be discovered
 later. For multi-prompt phases (Clarify, Checklist), create one item
 per prompt/session when known; otherwise create the phase discovery
-placeholder shown below.
+placeholder.
 
-**Checklist naming pattern** (parse from workflow file):
-
-```text
-  "Archive Sweep: previously merged specs dry-run/apply eligibility"
-  "Phase 0: Prerequisites"
-  "Phase 1: Specify"
-  "Phase 2: Clarify - <Session Name>"           ← one per session
-  "Phase 2: Clarify - <Session Name> Consensus" ← MANDATORY after each session
-  "Phase 2: Clarify - Pending session discovery" ← only if no sessions parsed yet
-  "Phase 3: Plan"
-  "Phase 4: Checklist - <Domain>"               ← one per domain
-  "Phase 4: Checklist - <Domain> Consensus"     ← MANDATORY after each domain
-  "Phase 4: Checklist - Pending domain discovery" ← only if no domains parsed yet
-  "Phase 5: Tasks"
-  "Phase 6: Analyze"
-  "Phase 6: Analyze - Consensus"                ← MANDATORY after analyze
-  "Phase 7: Implement - Pending task decomposition" ← before tasks.md exists
-  "Phase 7: <Group> (<task IDs>)"               ← parsed from tasks.md
-  "Post: <item name>"                           ← from canonical list below
-```
-
-### Canonical Post-Implementation Item List — ENUMERATE ALL OF THESE
-
-The autopilot has a complete, prescribed set of post-implementation
-items. Every item below MUST appear in `update_plan` and
-`autopilot-state.json` unless its required extension is provably
-absent. **Do NOT omit any of these, do NOT collapse them, do NOT
-defer them — the user expects to see all of them in the plan
-panel before Phase 1 starts.** When an extension is missing, still
-create the item but mark it `skipped: <extension> not installed`.
-
-```text
-  "Post: Doctor Extension Check"        ← doctor / speckit-utils ext
-  "Post: Verify Implementation"         ← verify ext
-  "Post: Verify Tasks Phantom Check"    ← verify-tasks ext
-  "Post: Code Review"                   ← review ext
-  "Post: Integration Suite"             ← always required (no ext)
-  "Post: Cleanup"                       ← cleanup ext
-  "Post: Reviewability Diff Gate"       ← always required (no ext)
-  "Post: PR Body Generation"            ← always required (no ext)
-  "Post: PR Creation"                   ← always required (no ext)
-  "Post: Review Remediation"            ← always required (no ext)
-  "Post: Retrospective"                 ← retrospective ext (FINAL STEP)
-```
-
-Detection rule per extension item: check `.specify/extensions.yml`
-(or `.registry`) for the extension's `enabled: true` flag, OR confirm
-the extension directory exists. If neither, the item still appears
-in the plan with status `skipped: <ext-name> not installed`. Never
-silently drop it.
-
-**Verify item-list completeness before starting Phase 1**: count
-the 11 entries above and confirm every single one is present in
-both `update_plan` and `autopilot-state.json` (in addition to all
-Phase / Consensus items). If any are missing, ADD them before
-advancing.
+**Item naming + canonical post-impl list (11 mandatory items including
+`Post: Doctor Extension Check` ... `Post: Retrospective` as the FINAL
+STEP) + reference `autopilot-state.json` schema:** see
+[task-list-canonical-codex.md](./references/task-list-canonical-codex.md).
+Mark missing extensions as `skipped: <ext-name> not installed`; never
+silently drop the item.
 
 **CRITICAL — phase family coverage is mandatory:**
 
 Before any subagent is spawned, verify that the plan includes at least
 one item whose name starts with each of these exact prefixes:
-
-```text
-Archive Sweep:
-Phase 0:
-Phase 1:
-Phase 2:
-Phase 3:
-Phase 4:
-Phase 5:
-Phase 6:
-Phase 7:
-Post:
-```
+`Archive Sweep:`, `Phase 0:`, `Phase 1:`, `Phase 2:`, `Phase 3:`,
+`Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 7:`, `Post:`.
 
 If any prefix is missing from `update_plan` or `autopilot-state.json`,
 STOP, repair both stores, print the corrected checklist summary, and
@@ -565,55 +504,6 @@ phase MUST have a corresponding Consensus item immediately after
 it. The consensus item runs the two-layer resolution process
 (Rule 6) — skipped only if the executor reports zero unresolved
 items. **Never omit consensus items.**
-
-**Other rules:**
-- Replace "Phase 7: Implement - Pending task decomposition" with concrete
-  task-group items immediately after tasks.md is created. Do not leave Phase 7
-  as a single placeholder once tasks can be parsed.
-- Phase 7 decomposed into groups after tasks.md is created
-  (test/impl/verify per phase, see [phase-execution-codex.md](./references/phase-execution-codex.md))
-- Extension items (doctor, verify-tasks, verify, review,
-  cleanup, retrospective): add if extension is in .registry
-  with enabled: true, or if extension directory exists
-- Mark completed phases immediately; first pending as `in_progress`
-- Use EXACTLY the same item names in `update_plan` and `autopilot-state.json`
-- Preserve one or more pending items for every later canonical phase when
-  resuming from a middle phase
-- Immediately print a checklist summary after writing both copies
-
-**Required `autopilot-state.json` schema:**
-
-```json
-{
-  "workflow_file": "docs/ai/specs/SPEC-013-workflow.md",
-  "updated_at": "2026-04-10T18:00:00Z",
-  "active_step": "Phase 1: Specify",
-  "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - UX Focus", "status": "pending"},
-    {"step": "Phase 2: Clarify - UX Focus Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
-    {"step": "Phase 4: Checklist - Pending domain discovery", "status": "pending"},
-    {"step": "Phase 5: Tasks", "status": "pending"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Cleanup", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
-  ]
-}
-```
 
 ### 1.2 Validate Plan State Before Phase 1
 
