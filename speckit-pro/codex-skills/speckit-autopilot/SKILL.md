@@ -805,99 +805,21 @@ The branch and `specs/<CURRENT_BRANCH>/` directory already
 exist. Skip directly to spec content generation.
 ```
 
-#### Clarify — Parent Answering Prefix
+#### Multi-Prompt Phases + Resolution After Each Prompt
 
-The `clarify-executor` is a read-only question-preparation agent.
-It returns a `Clarify Question Set` to the parent instead of invoking
-the interactive `$speckit-clarify` command or editing artifacts. The
-parent orchestrator answers each returned question in the main session,
-applies the accepted clarifications to the spec/workflow/state files,
-then runs marker checks and consensus routing for unresolved items.
-No additional prefix is needed — just pass the session prompt from the
-workflow file.
+Clarify and Checklist have multiple prompts (one subagent per session
+or domain — see Rule 5). After EACH executor subagent returns, run
+the two-layer resolution process from Rule 7 BEFORE spawning the next
+subagent: parse the executor's "Unresolved for consensus" section,
+dispatch the category-routed analysts (Round 1) via `spawn_agent` in
+parallel, synthesize, escape to Round 2 if needed, apply edits, log to
+the Consensus Resolution Log. The Clarify executor is read-only —
+the parent answers returned questions and applies edits (Rule 6).
 
-#### Multi-Prompt Phases
-
-Clarify and Checklist have multiple prompts. Spawn a **separate
-subagent for each prompt**:
-
-- **Clarify:** One subagent per session (e.g., "Session 1: Search
-  Behavior", "Session 2: Database Operations")
-- **Checklist:** One subagent per domain (e.g., api-workaround,
-  type-safety, requirements)
-
-#### Resolution — After Each Prompt (Main Session)
-
-After EACH executor subagent returns, run the two-layer resolution
-process BEFORE spawning the next subagent.
-
-**Layer 1 — Check executor results:**
-
-Parse the executor's summary for:
-- Remaining markers (`[NEEDS CLARIFICATION]`, `[Gap]`)
-- Items in the "Unresolved for consensus" section
-- Security keyword items (always go to consensus)
-
-If no unresolved items → skip to next prompt/gate.
-
-**Layer 2 — Category-routed consensus dispatch:**
-
-Optional pre-step: if the executor returned a very long unresolved
-item summary, the parent may call `autopilot-fast-helper` once to
-compress or triage that item before building the consensus prompts.
-This is advisory only. The parent must still decide what context to
-send to the real consensus agents.
-
-For each unresolved item, parse its `[<categories>]` prefix and
-dispatch only the relevant analyst(s) per the routing table in
-Rule 7. The synthesizer always runs (becomes "edit-applier" in
-single-analyst case).
-
-```text
-ROUND 1 — Category-routed
-  Parse the [<categories>] prefix into a set:
-    {codebase, spec, domain}    if [security] (force all 3)
-    {codebase, spec, domain}    if [ambiguous] or missing/unparseable
-    union of named tags         otherwise
-  ANALYSTS_RUN = []
-  For each tag in the set, spawn the matching analyst in parallel
-    via spawn_agent: codebase-analyst | spec-context-analyst |
-    domain-researcher. Track which agents were spawned.
-  wait_agent on all spawned analysts.
-  Synthesize in the main session using consensus-synthesizer rules
-    (Round=1, mark non-routed analysts as "NOT SPAWNED").
-  IF Confidence=high AND no escape-hatch keyword: apply edit, log,
-    continue to next item.
-  IF [ESCAPE_TO_ROUND_2]: fall through.
-  IF [HUMAN REVIEW NEEDED]: log, STOP.
-
-ROUND 2 — Full fan-out (escape path)
-  REMAINING = {all 3 analysts} − ANALYSTS_RUN
-  For each agent in REMAINING: spawn_agent in parallel.
-  wait_agent on the new analysts.
-  Re-synthesize with all 3 responses (Round=2).
-  Apply 2-of-3 majority OR flag [HUMAN REVIEW NEEDED] and STOP.
-```
-
-Log every resolution to the Consensus Resolution Log in the
-workflow file with `Round`, `Routed Categories`, `Outcome`, and
-`Analysts Used` columns. Mark the consensus progress item completed
-when done.
-
-**Per-phase specifics:**
-
-- **Clarify:** After each session → search spec.md for
-  `[NEEDS CLARIFICATION]`. Parse executor's "Unresolved for
-  consensus" section. Run consensus for each. Apply consensus
-  answers to spec.md, remove markers. Proceed to next session.
-- **Checklist:** After each domain → parse executor's "Unresolved
-  for consensus" section. Run consensus for each unresolved gap.
-  Apply consensus fixes to spec.md or plan.md. Re-run domain
-  checklist to verify. Proceed to next domain.
-- **Analyze:** After analysis → parse executor's "Unresolved for
-  consensus" section. Run consensus for each unresolved finding.
-  Apply consensus fixes to tasks.md, spec.md, or plan.md. Re-run
-  analyze to verify.
+Per-phase artifact targets after consensus:
+- **Clarify:** Apply consensus answers to spec.md, remove `[NEEDS CLARIFICATION]` markers
+- **Checklist:** Apply consensus fixes to spec.md or plan.md, re-run domain checklist to verify
+- **Analyze:** Apply consensus fixes to tasks.md / spec.md / plan.md, re-run analyze to verify
 
 #### Implement — Task-Level Dispatch
 
