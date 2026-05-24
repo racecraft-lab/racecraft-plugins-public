@@ -28,6 +28,101 @@ multi-agent dispatch.
 - [Use-site details](#use-site-details) — one section per use site with
   current status and forward design
 
+## Blocking semantics — foreground vs background subagents
+
+A natural concern when first reading the autopilot architecture:
+*"If the orchestrator spawns a phase-executor as a foreground subagent,
+the orchestrator is blocked — so how does parallelism work at all?"*
+The answer is in the per-dispatch foreground/background choice, plus
+the distinction between subagents and Agent Teams.
+
+### The platform contract
+
+Per [Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents#run-subagents-in-foreground-or-background):
+
+> *"**Foreground subagents** block the main conversation until complete.
+> Permission prompts are passed through to you as they come up."*
+>
+> *"**Background subagents** run concurrently while you continue working.
+> They run with the permissions already granted in the session and
+> auto-deny any tool call that would otherwise prompt."*
+
+The orchestrator picks per dispatch by passing `run_in_background: true`
+(or not). The agent's frontmatter `background: true` field would force
+background always — none of speckit-pro's agents set this; the
+orchestrator decides per call.
+
+### How speckit-pro uses each mode
+
+| Dispatch site | Mode | Rationale |
+|---------------|------|-----------|
+| Phase executors (Specify → Clarify → … → Implement, one phase at a time) | **Foreground** | Phases are data-dependent — Clarify reads spec.md (Specify), Plan reads both, etc. The orchestrator can't usefully parallelize across phases. Blocking is correct. |
+| Consensus analysts (3 routed per unresolved item) | **Background** (`run_in_background: true` × N in one message) | Independent perspectives on the same item; isolated subagent contexts; merge via the synthesizer. |
+| Post-impl Path B (Doctor / Code Review / Verify-chain tracks) | **Background** (3 in one message) | Independent work, isolated contexts, merge in the lead. Layer 7 fixture 18 enforces. |
+| Phase 7 `[P]` tasks (WS-D2 forward design) | **Background** | Per-task parallelism for `[P]`-tagged tasks; serial for non-`[P]`. |
+| Post-impl serial tail (15 Cleanup → 16 Reviewability → 17 PR Body → 18 PR Creation → 19 Loop → 20 Retrospective) | **Foreground** | Hard dependency chain — Cleanup mutates code; Reviewability reads the resulting diff; PR Body needs both; etc. |
+| Gate validators | **Foreground** | One gate per phase, sequenced explicitly. |
+
+The architecture intentionally uses foreground for sequentially-dependent
+work and background for independent parallel work. The orchestrator
+spawning a phase-executor as foreground is not a flaw; it's the right
+choice for inter-phase dependencies.
+
+### Within-message parallelism — the key pattern
+
+When the orchestrator needs to fan out N parallel subagents (consensus,
+post-impl tracks, `[P]` tasks), it spawns all N **in a single assistant
+message**, each with `run_in_background: true`. The next user message
+returns all N results together. This is the canonical Anthropic pattern
+for parallel subagent dispatch — and it's why all our parallel sites
+spawn within one tool turn rather than serially.
+
+### Agent Teams have different blocking semantics
+
+Per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams#context-and-communication):
+
+> *"Each teammate is a full, independent Claude Code session... Automatic
+> message delivery: when teammates send messages, they're delivered
+> automatically to recipients."*
+
+Teams are **persistent structures**, not blocking calls. Once created
+by the lead, teammates run in their own independent sessions. The lead
+is not "blocked on the team" — it can continue dispatching work,
+foreground-block on a phase executor, or await teammate results at
+synchronization points.
+
+This means a team spanning phases 2-6 (Use site 2 forward design) can
+coexist with foreground phase-executor dispatches: the team is alive
+in the background; teammates self-coordinate on the shared task list
+while the lead works through phase executors. The team is checked in
+on between phases.
+
+**Open research question** (to be answered during WS-D1/WS-D2
+implementation): does spawning a foreground subagent from a team-lead
+session truly leave teammates running, or is there a serialization
+constraint we haven't found in the docs? Test before designing on this
+assumption. The post-impl team (Use site 1) sidesteps the question
+entirely — it's created AFTER all phases complete, so no phase
+executor is active concurrently with the team.
+
+### Why this isn't a fundamental architectural problem
+
+Three orthogonal axes of parallelism the orchestrator already uses or
+will use:
+
+1. **Sequential phases, parallel within-phase** — phase executors run
+   foreground (sequential); within each phase, consensus or task fan-out
+   uses background batching.
+2. **Within-message batching** — N background subagents in one tool
+   turn → N parallel concurrent contexts → all results in next message.
+3. **Persistent teams** — created by the lead, live independently of
+   the lead's foreground/background subagent state, sync at task
+   completion boundaries.
+
+These three patterns compose. The phase-executor-blocks-orchestrator
+constraint applies only to axis 1, where blocking is the correct
+behavior because phases are sequential anyway.
+
 ## Capability detection
 
 `AGENT_TEAMS_AVAILABLE` is set at Step 0.6 of the autopilot pre-flight
