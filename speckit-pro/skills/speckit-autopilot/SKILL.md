@@ -547,122 +547,34 @@ Clarify and Checklist have multiple prompts. Spawn a
 
 #### Resolution — After Each Prompt (Main Session)
 
-After EACH executor subagent returns, run the two-layer
-resolution process BEFORE spawning the next subagent.
+After EACH executor subagent returns for a consensus phase (Clarify,
+Checklist, Analyze), run the two-layer category-routed protocol from
+[`references/consensus-protocol.md`](./references/consensus-protocol.md).
 
-**Layer 1 — Check executor results:**
+**Layer 1** — parse the executor summary for remaining markers
+(`[NEEDS CLARIFICATION]`, `[Gap]`), items in the "Unresolved for
+consensus" section, and any security-keyword items. If none, advance
+to the next prompt/gate.
 
-Parse the executor's summary for:
-- Remaining markers (`[NEEDS CLARIFICATION]`, `[Gap]`)
-- Items in the "Unresolved for consensus" section
-- Security keyword items (always go to consensus)
+**Layer 2** — for each unresolved item, parse the `[<categories>]`
+prefix and dispatch the routed analysts in Round 1 (parallel via
+`run_in_background: true`), then the synthesizer. Escape-hatch to
+Round 2 (remaining analysts) on `[ESCAPE_TO_ROUND_2]`. Apply the
+synthesizer's Artifact Edit and continue.
 
-If no unresolved items → skip to next prompt/gate.
+**Per-phase verification** (post-resolution): Clarify re-greps for
+`[NEEDS CLARIFICATION]`; Checklist re-runs the domain checklist;
+Analyze re-runs `/speckit-analyze`. Full per-phase prompts and
+verification steps live in
+[`references/consensus-protocol.md`](./references/consensus-protocol.md)
+§Phase-Specific Consensus Flows.
 
-**Layer 2 — Category-routed consensus dispatch:**
-
-For each unresolved item, parse its `[<categories>]` prefix
-and dispatch only the relevant analyst(s). The synthesizer
-always runs (becomes "edit-applier" in single-analyst case).
-
-```text
-TaskUpdate: "<Phase> - <Prompt> Consensus" → in_progress
-
-For each unresolved item from executor summary:
-  # ─── Round 1: Category-routed ───────────────────────────────
-  Parse the leading `[<categories>]` prefix into a set:
-    {codebase, spec, domain}    if explicitly tagged
-    {codebase, spec, domain}    if [security] (force all 3)
-    {codebase, spec, domain}    if [ambiguous] or missing/unparseable
-    union of named tags         if multi-tag, e.g. [codebase, domain]
-
-  ANALYSTS_RUN = []
-  For each tag in the parsed set, spawn the analyst in parallel:
-    [codebase] → Agent(subagent_type: "codebase-analyst",
-                       run_in_background: true,
-                       description: "SPEC-XXX consensus R1: <item>",
-                       prompt: "<consensus prompt, your perspective>")
-    [spec]     → Agent(subagent_type: "spec-context-analyst", ...)
-    [domain]   → Agent(subagent_type: "domain-researcher", ...)
-    Track which analysts were spawned in ANALYSTS_RUN.
-
-  Wait for all spawned analysts to complete.
-
-  # ─── Synthesis (always runs) ────────────────────────────────
-  Agent(
-    subagent_type: "consensus-synthesizer",
-    description: "SPEC-XXX consensus synthesis (R1): <item>",
-    prompt: """
-      ## Consensus Resolution
-
-      **Unresolved Item:** <question/gap/finding text>
-      **Routed Categories:** [<categories from prefix>]
-      **Round:** 1
-
-      **Codebase Analyst Response:**
-      <full response> | NOT SPAWNED (reason: not routed in this round)
-
-      **Spec Context Analyst Response:**
-      <full response> | NOT SPAWNED (reason: not routed in this round)
-
-      **Domain Researcher Response:**
-      <full response> | NOT SPAWNED (reason: not routed in this round)
-    """
-  )
-
-  Parse the Consensus Result:
-    IF Flags = None AND Confidence = high:
-      Apply Artifact Edit to specified file
-      Log Round=1, Outcome=high-confidence|both-agree, ANALYSTS_RUN
-      continue to next item
-
-    IF Flags includes [ESCAPE_TO_ROUND_2]:
-      proceed to Round 2 below.
-
-    IF Flags includes [HUMAN REVIEW NEEDED]:
-      Log to workflow file, STOP autopilot.
-
-  # ─── Round 2: Full fan-out (escape path) ────────────────────
-  REMAINING = {codebase-analyst, spec-context-analyst, domain-researcher} − ANALYSTS_RUN
-  For each agent in REMAINING:
-    Agent(subagent_type: "<agent>",
-          run_in_background: true,
-          description: "SPEC-XXX consensus R2: <item>",
-          prompt: "<consensus prompt, your perspective>")
-  Wait for the new analysts to complete.
-
-  Re-invoke consensus-synthesizer with Round=2 and all 3 responses.
-  Parse the Consensus Result:
-    IF Flags = None: apply Artifact Edit, log Round=1→2,
-                     Outcome=2/3|3/3|escape-hatch
-    IF Flags = [HUMAN REVIEW NEEDED]: log, STOP
-
-TaskUpdate: "<Phase> - <Prompt> Consensus" → completed
-```
-
-**Logging:** Every resolution writes to the Consensus Resolution
-Log in the workflow file (see consensus-protocol.md §"Logging"
-for the canonical column set). The `Round` and `Routed Categories`
-columns are mandatory — the 10% Round-2 escape-rate re-evaluation
-trigger is computed from them.
-
-**Per-phase specifics:**
-
-- **Clarify:** After each session → grep spec.md for
-  `[NEEDS CLARIFICATION]`. Parse executor's "Unresolved
-  for consensus" section. Run consensus for each. Apply
-  consensus answers to spec.md, remove markers. Proceed
-  to next session.
-- **Checklist:** After each domain → parse executor's
-  "Unresolved for consensus" section. Run consensus for
-  each unresolved gap. Apply consensus fixes to spec.md
-  or plan.md. Re-run domain checklist to verify if any
-  gaps were fixed by consensus. Proceed to next domain.
-- **Analyze:** After analysis → parse executor's
-  "Unresolved for consensus" section. Run consensus for
-  each unresolved finding. Apply consensus fixes to
-  tasks.md, spec.md, or plan.md. Re-run analyze to verify
-  if findings were fixed by consensus.
+**Logging requirement:** Every resolution writes a row to the
+Consensus Resolution Log in the workflow file. The `Round` and
+`Routed Categories` columns are mandatory — the 10% Round-2
+escape-rate re-evaluation trigger is computed from them. See
+[`references/consensus-protocol.md`](./references/consensus-protocol.md)
+§Logging for the canonical column set.
 
 #### Implement — Task-Level Dispatch
 
