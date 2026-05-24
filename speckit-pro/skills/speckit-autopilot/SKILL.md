@@ -395,73 +395,22 @@ stop.
 
 ### 1.1 Create Progress Task List
 
-After parsing the workflow state, create a **granular** task list.
-For multi-prompt phases (Clarify, Checklist), create one task per
-prompt/session so the autopilot knows exactly what to execute next.
+After parsing the workflow state, create a **granular** task list. For
+multi-prompt phases (Clarify, Checklist), create one task per
+prompt/session. **Every Clarify session, every Checklist domain, and
+the Analyze phase MUST have a paired Consensus task** immediately
+after (skipped only if the executor reports zero unresolved items).
 
-**Task naming pattern** (parse from workflow file):
+The full **11-entry Post-Implementation task list** and the task
+naming pattern live in
+[`references/task-list-canonical.md`](./references/task-list-canonical.md).
+Every entry there MUST appear in the visible progress panel before
+Phase 1 starts — when an extension is absent, the task still appears
+marked `skipped: <ext-name> not installed`.
 
-```text
-  "Archive Sweep: previously merged specs dry-run/apply eligibility"
-  "Phase 0: Prerequisites"
-  "Phase 1: Specify"
-  "Phase 2: Clarify - <Session Name>"           ← one per session
-  "Phase 2: Clarify - <Session Name> Consensus" ← MANDATORY after each session
-  "Phase 3: Plan"
-  "Phase 4: Checklist - <Domain>"               ← one per domain
-  "Phase 4: Checklist - <Domain> Consensus"     ← MANDATORY after each domain
-  "Phase 5: Tasks"
-  "Phase 6: Analyze"
-  "Phase 6: Analyze - Consensus"                ← MANDATORY after analyze
-  "Phase 7: <Group> (<task IDs>)"               ← parsed from tasks.md
-  "Post: <task name>"                           ← from post-impl table (full list below)
-```
-
-### Canonical Post-Implementation Task List — ENUMERATE ALL OF THESE
-
-The autopilot has a complete, prescribed set of post-implementation
-tasks. Every task below MUST appear in your task list unless its
-required extension is provably absent. **Do NOT omit any of these,
-do NOT collapse them, do NOT defer them — the user expects to see
-all of them in the progress panel before Phase 1 starts.** When an
-extension is missing, still create the task but mark it skipped with
-a one-line reason ("skipped: <extension> not installed").
-
-```text
-  "Post: Doctor Extension Check"        ← doctor / speckit-utils ext
-  "Post: Verify Implementation"         ← verify ext
-  "Post: Verify Tasks Phantom Check"    ← verify-tasks ext
-  "Post: Code Review"                   ← review ext
-  "Post: Integration Suite"             ← always required (no ext)
-  "Post: Cleanup"                       ← cleanup ext
-  "Post: Reviewability Diff Gate"       ← always required (no ext)
-  "Post: PR Body Generation"            ← always required (no ext)
-  "Post: PR Creation"                   ← always required (no ext)
-  "Post: Review Remediation"            ← always required (no ext)
-  "Post: Retrospective"                 ← retrospective ext (FINAL STEP)
-```
-
-Detection rule per extension task: check `.specify/extensions.yml`
-(or `.registry`) for the extension's `enabled: true` flag, OR confirm
-the extension directory exists via Glob. If neither, the task still
-appears in the task list with status "skipped: <ext-name> not installed".
-
-**CRITICAL — Consensus tasks are MANDATORY:**
-
-Every Clarify session, every Checklist domain, and the Analyze
-phase MUST have a corresponding Consensus task immediately after
-it. The consensus task runs the two-layer resolution process
-(Rule 6) — skipped only if the executor reports zero unresolved
-items. **Never omit consensus tasks from the task list.**
-
-**Other rules:**
-- Phase 7 decomposed into groups after tasks.md is created
-  (test/impl/verify per phase, see `references/phase-execution.md`)
-- Mark completed phases immediately; first pending as in_progress
-- **Verify task-list completeness before starting Phase 1**: count
-  the prescribed entries above and confirm every Phase, every
-  Consensus, and every Post: task is present. If the count differs,
-  ADD the missing entries before advancing.
+**Verify completeness before starting Phase 1**: count the prescribed
+entries (every Phase, every Consensus, every `Post:`) and ADD any
+missing before advancing.
 
 ## Step 2: Main Execution Loop
 
