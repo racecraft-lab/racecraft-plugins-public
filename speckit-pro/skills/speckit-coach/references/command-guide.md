@@ -2,6 +2,27 @@
 
 Per-command coaching for the official SpecKit slash commands. This is NOT the command logic itself (that's installed by `specify init` in `.specify/` and your agent's command directory). This guide covers **when to use each command, how to get the best results, common mistakes, and phase gates**.
 
+## Contents
+
+**SDD workflow commands** (in canonical order):
+- [Command Chaining (The Official Workflow)](#command-chaining-the-official-workflow) — full sequence + when each is optional
+- [`/speckit-constitution`](#speckit-constitution--project-governance) — project governance, principles, gates
+- [`/speckit-specify`](#speckit-specify--create-feature-specification) — spec creation, user stories, FRs
+- [`/speckit-clarify`](#speckit-clarify--resolve-ambiguities) — `[NEEDS CLARIFICATION]` resolution
+- [`/speckit-plan`](#speckit-plan--implementation-planning) — Phase 0 research, gates, data model
+- [`/speckit-checklist`](#speckit-checklist--validate-requirement-quality) — domain selection, `[Gap]` markers
+- [`/speckit-tasks`](#speckit-tasks--generate-task-breakdown) — `[P]` parallel markers, user-story-first
+- [`/speckit-analyze`](#speckit-analyze--cross-artifact-consistency) — severity levels, CRITICAL blocks
+- [`/speckit-implement`](#speckit-implement--execute-tasks) — TDD, phase execution
+- [`/speckit-taskstoissues`](#speckit-taskstoissues--export-to-github-issues) — GH issue export
+
+**Beyond per-command coverage:**
+- [Extension Commands (Installed)](#extension-commands-installed) — verify / verify-tasks / review / cleanup / doctor / retrospective / archive
+- [CLI Commands (v0.3.2)](#cli-commands-v032) — `specify init`, presets, extensions
+- [Presets — Customizing Workflows](#presets--customizing-workflows) — stackable template overrides
+- [Extensions — Adding Capabilities](#extensions--adding-capabilities) — 26 community extensions + hook events
+- [Upgrade Guidance](#upgrade-guidance) — back up constitution, `specify init --here --force`, restore
+
 ## Command Chaining (The Official Workflow)
 
 ```

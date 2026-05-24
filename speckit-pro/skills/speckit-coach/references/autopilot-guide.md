@@ -11,6 +11,24 @@ configure, run, and troubleshoot the autopilot.
 - `/speckit-pro:resolve-pr <PR>` — fix review comments post-PR
 - `/speckit-pro:coach` — get help with any of the above
 
+## Contents
+
+**Setup + mechanics**:
+- [Prerequisites](#prerequisites) — CLI, constitution, workflow file, branch
+- [How Autopilot Works](#how-autopilot-works) — orchestrator-direct pattern, phase-by-phase, gate validation
+- [Running Autopilot — Step by Step](#running-autopilot--step-by-step) — concrete invocation walkthrough
+
+**Multi-agent consensus + configuration**:
+- [Consensus Protocol](#consensus-protocol) — 3-perspective resolution for Clarify/Checklist/Analyze, security keywords, modes
+- [Workflow File as Checklist](#workflow-file-as-checklist) — durable state across context compactions
+- [Branch/Worktree Support](#branchworktree-support) — feature branches, isolation
+- [Configuration](#configuration) — `.claude/speckit-pro.local.md` settings
+
+**Operational + troubleshooting**:
+- [PR Creation & Review Loop](#pr-creation--review-loop) — final verification, push, /loop for Copilot remediation
+- [Troubleshooting](#troubleshooting) — common failure modes + recovery
+- [v0.3.2 Capabilities](#v032-capabilities) — preset and extension awareness
+
 ---
 
 ## Prerequisites
