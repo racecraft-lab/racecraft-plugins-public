@@ -259,7 +259,7 @@ contains conditional dispatch logic. That is the orchestrator's job.
 | 3 | **Phase 7 `[P]` task team** (parallel-safe implementation tasks) | 📐 Designed; impl pending WS-D2 | [Cross-layer coordination](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) + [New modules or features](https://code.claude.com/docs/en/agent-teams#when-to-use-agent-teams) | This doc §Use site 3 (forward design) |
 | 4 | **Parallel checklist/analyze** (per-domain or per-finding teammates) | ⏳ Blocked on executor refactor (WS-E2/E3) | [Avoid file conflicts](https://code.claude.com/docs/en/agent-teams#best-practices) — needs propose-then-apply first | This doc §Use site 4 (blocked) |
 | 5 | **Cross-item consensus batching** (Clarify/Checklist/Analyze across N unresolved items) | ✅ Shipped (WS-D1, 2026-05-24) | [Subagent → team transition point](https://code.claude.com/docs/en/features-overview#subagent-vs-agent-team) — batched fan-out captures the parallelism win | [`consensus-protocol.md`](./consensus-protocol.md) §Batched Dispatch + Layer 7 fixture 20 |
-| 6 | **Parallel PR review remediation** (resolve-pr threads grouped by file) | 🚨 Designed via audit; new workstream WS-F1 proposed | [Run a parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples) inverse — parallel code FIX | This doc §Use site 6 (audit B3) |
+| 6 | **Parallel PR review remediation** (resolve-pr threads grouped by file) | ✅ Shipped (WS-F1, 2026-05-24) | [Run a parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples) inverse — parallel code FIX | `commands/resolve-pr.md` §4 + Codex variant + `post-implementation.md` §3.3 + Layer 7 fixture 21 |
 
 Every use site below has a **subagents fallback** that achieves the same
 wall-clock parallelism via `Agent(..., run_in_background: true)` in one
@@ -573,10 +573,21 @@ but worth measuring on long Clarify sessions.
 §Phase-Specific Consensus Flows (rewrite outer "for each item" loop as
 a batched stage-1/stage-2/stage-3 fan-out).
 
-### Use site 6: Parallel PR review remediation 🚨
+### Use site 6: Parallel PR review remediation ✅
 
-**Status:** Designed via the dispatch audit; new workstream WS-F1
-proposed. Not blocked on any prior work.
+**Status:** Shipped 2026-05-24 via WS-F1.
+
+**Implementation references:**
+- `commands/resolve-pr.md` §4 (Process Comments — Partition by File, Parallel Across Files)
+- `codex-skills/speckit-resolve-pr/SKILL.md` (Codex variant)
+- `references/post-implementation.md` §3.3 /loop body (same pattern inside the recurring remediation loop)
+- Layer 7 fixture 21 (`21-resolve-pr-parallel-files`) — enforces parallel dispatch across file partitions
+
+**Shipped algorithm:** scan threads for cross-file hints; partition
+non-cross-file threads by file path; dispatch ALL partitions in one
+assistant message via background subagents; serial cross-file tail;
+lead posts replies + resolves threads via gh API serially (cheap,
+ordered).
 
 **Anthropic pattern:** [Run a parallel code review](https://code.claude.com/docs/en/agent-teams#use-case-examples) inverse — parallel code FIX. Reviewers
 look at the same PR through different lenses; remediators FIX the same

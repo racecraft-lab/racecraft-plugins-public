@@ -1,0 +1,18 @@
+{
+  "fixture_id": "21-resolve-pr-parallel-files",
+  "purpose": "Verify resolve-pr partitions unresolved threads by file and dispatches all partitions in ONE assistant message via background subagents. 6 threads × 3 files (2 threads each) = 3 file-partition dispatches in one turn. Regression net for Use site 6 / WS-F1.",
+  "must_dispatch_to": [
+    "general-purpose"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me",
+    "speckit-pro:phase-executor",
+    "speckit-pro:clarify-executor"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 3,
+  "max_dispatch_count": 6,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}
