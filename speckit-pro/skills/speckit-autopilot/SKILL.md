@@ -563,23 +563,16 @@ the final summary with PR URL.
 
 ## Workflow File Update Protocol
 
-After EVERY phase, update these sections in the workflow file:
+After EVERY phase, update the workflow file so it remains the
+durable source of truth across context compactions and resumes:
+status table `⏳` → `✅` with summary notes; per-phase Results
+tables; Constitution Validation table after Specify (initial) and
+Implement (final); Consensus Resolution Log row per resolution
+(when consensus was used).
 
-| Phase | Sections to Update |
-| --- | --- |
-| **All** | Status table: `⏳` → `✅` with summary notes |
-| **Specify** | Specify Results table, Files Generated checkboxes |
-| **Clarify** | Clarify Results table (session focus, questions, outcomes) |
-| **Plan** | Plan Results table (artifact status) |
-| **Checklist** | Checklist Results table, Addressing Gaps section |
-| **Tasks** | Tasks Results table (total, phases, parallel, coverage) |
-| **Analyze** | Analysis Results table (ID, severity, issue, resolution) |
-| **Implement** | Implementation Progress, Post-Implementation Checklist, Success Criteria |
-
-Also update the Constitution Validation table after Specify (initial)
-and Implement (final).
-
-If consensus was used, add entries to the Consensus Resolution Log.
+Full per-phase update table and Consensus Resolution Log column
+schema live in
+[`references/workflow-file-protocol.md`](./references/workflow-file-protocol.md).
 
 ## Error Recovery
 
