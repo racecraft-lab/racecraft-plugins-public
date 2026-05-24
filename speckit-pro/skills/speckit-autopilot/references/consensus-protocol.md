@@ -4,6 +4,18 @@ The consensus protocol is the second layer of the autopilot's
 two-layer resolution system, used by 3 phases: Clarify,
 Checklist, and Analyze.
 
+## Contents
+
+- [Two-Layer Resolution Architecture](#two-layer-resolution-architecture) — executor first-pass then consensus second-pass
+- [Category-Routed Dispatch (Tier A)](#category-routed-dispatch-tier-a-2026-04-30) — `[codebase|spec|domain|security|ambiguous]` routing rules + escape-hatch
+- [Three-Analyst Consensus Rules (Round 2 / N=3)](#three-analyst-consensus-rules-round-2--n3) — full fan-out behavior
+- [The 3 Perspective Agents](#the-3-perspective-agents) — codebase-analyst / spec-context-analyst / domain-researcher
+- [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
+- [Security Keywords](#security-keywords) — always-all-3 trigger words
+- [Phase-Specific Consensus Flows](#phase-specific-consensus-flows) — Clarify, Checklist, Analyze patterns + per-phase prompt templates ("Specification Context" / "Question" / "Your Task" sub-sections appear inside each flow)
+- [Determining Agreement](#determining-agreement) — how the synthesizer scores responses
+- [Logging](#logging) — Consensus Resolution Log row schema + Re-evaluation trigger (referenced from SKILL.md)
+
 ## Two-Layer Resolution Architecture
 
 **Layer 1 — Executor agent (first pass):** Each phase has a

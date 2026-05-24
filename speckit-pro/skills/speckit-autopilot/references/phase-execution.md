@@ -26,6 +26,18 @@ operates in its own context — the command's noise (template
 reads, file exploration, completion reports) stays there and
 never touches the parent. The parent receives only a summary.
 
+## Contents
+
+- [SpecKit Infrastructure](#speckit-infrastructure) — commands, scripts, templates, constitution
+- [Subagent Delegation](#subagent-delegation) — prompt template for phase executors
+- [Branch/Worktree Detection](#branchworktree-detection) — context detection before dispatch
+- [Phase-by-Phase Execution](#phase-by-phase-execution) — per-phase prompts, agents, gates, file updates (Phases 1–7)
+- [Full Integration / E2E Suite Verification](#full-integration--e2e-suite-verification) — post-Implement test gate
+- [Extension Hook Events](#extension-hook-events) — `.specify/extensions.yml` `before_*` / `after_*` hooks
+- [PR Creation Protocol](#pr-creation-protocol) — generate body, push, open PR
+- [Copilot Review Remediation Loop](#copilot-review-remediation-loop) — `/loop` scheduling for review comments
+- [Workflow File Update Protocol](#workflow-file-update-protocol) — what to write after each phase
+
 ## SpecKit Infrastructure
 
 The autopilot relies on the project's installed SpecKit
