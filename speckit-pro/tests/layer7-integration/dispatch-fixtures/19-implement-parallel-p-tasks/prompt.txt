@@ -1,0 +1,24 @@
+You are speckit-autopilot in Phase 7 for SPEC-FIXTURE-D2. The tasks.md
+file has a Phase 7 group containing 3 consecutive `[P]`-tagged tasks,
+all classified as test-only (routes to implement-executor):
+
+  T001 [P] Contract test: POST /users endpoint
+  T002 [P] Contract test: GET /users/{id} endpoint
+  T003 [P] Contract test: DELETE /users/{id} endpoint
+
+Per `references/phase-execution.md` §Phase 7 Step 3 (partition into
+RUNS, then batched dispatch for [P] parallel runs):
+
+- Partition: all 3 tasks form a single parallel RUN (consecutive [P],
+  same agent type → implement-executor)
+- AGENT_TEAMS_AVAILABLE is false for this fixture (no env var probe
+  happens in parser-replay) — take Path B (background subagents)
+- Dispatch ALL 3 tasks in ONE assistant message via:
+    subagent_type: speckit-pro:implement-executor
+    isolation: "worktree"
+    run_in_background: true
+    description: "SPEC-FIXTURE-D2 T00X [P] <brief>"
+
+Do NOT dispatch them serially (that's the pre-WS-D2 regression this
+fixture catches). Do NOT spawn synthesizers or any other agent type.
+Do NOT invoke grill-me. Stop after all 3 background subagents return.

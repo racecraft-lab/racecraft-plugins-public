@@ -441,7 +441,15 @@ This protocol is injected into every implementation agent's
 prompt, ensuring identical RED→GREEN→REFACTOR discipline
 regardless of which agent executes the task.
 
-#### Step 3: Task-Level Execution Loop
+#### Step 3: Task-Level Execution Loop (with `[P]` parallel partitioning)
+
+This is **Use site 3** in the [Agent Teams use-site map](./agent-teams-integration.md).
+Partition each phase group's tasks into RUNS (parallel for consecutive
+`[P]`-tagged tasks; singleton for non-`[P]`). Dispatch each parallel
+run in ONE assistant message via background subagents (or as an Agent
+Team when `AGENT_TEAMS_AVAILABLE=true`). Sequential runs dispatch one
+foreground agent at a time. Safety net: after every parallel run, run
+TYPECHECK + UNIT_TEST; on regression, fall back to serial re-run.
 
 ```text
 Initialize COMPLETED_TASKS = {}
@@ -449,62 +457,110 @@ Initialize COMPLETED_TASKS = {}
 For each phase group in tasks.md:
   TaskUpdate: "<Phase 7: group name>" → in_progress
 
-  For each task in the group:
-    1. ROUTE to agent:
-       a. PROJECT_IMPLEMENTATION_AGENT — if task description
-          matches keywords from the detected agent (Step 0.9)
-       b. implement-executor — if test-only task (keywords:
-          "test", "contract test", "unit test", "integration")
-       c. domain-researcher — if research task (keywords:
-          "research", "investigate", "explore API")
-       d. orchestrator-direct — if verification-only (keywords:
-          "verify", "run", "check", "build", "lint")
-       e. implement-executor — default fallback
+  # Step 3a: Partition tasks into RUNS
+  RUNS = []
+  current_parallel_run = []
+  For each task in the group (in order):
+    if task has [P] marker AND routes to the same agent type as the
+       previous [P] task in current_parallel_run:
+      current_parallel_run.append(task)
+    else:
+      if current_parallel_run is non-empty:
+        RUNS.append(("parallel", current_parallel_run))
+        current_parallel_run = []
+      RUNS.append(("singleton", task))
+  if current_parallel_run is non-empty:
+    RUNS.append(("parallel", current_parallel_run))
 
-    2. BUILD prompt and DISPATCH:
-       Agent(
-         subagent_type: "<routed agent>",
-         isolation: "worktree" (if [P] task in parallel group),
-         description: "SPEC-XXX <task-id> <brief>",
-         prompt: """
-           <tdd_protocol>
-           <TDD_PROTOCOL contents>
-           </tdd_protocol>
+  # Step 3b: Execute each RUN
+  For each (kind, tasks_in_run) in RUNS:
+    if kind == "parallel" and len(tasks_in_run) >= 2:
+      if AGENT_TEAMS_AVAILABLE:
+        # Path A: spawn an Agent Team for this parallel run
+        Create an agent team with len(tasks_in_run) teammates
+        (max 5 per Anthropic's 3-5 sweet spot — partition into
+        multiple teams if the run is larger). Use Sonnet teammates.
+        Each teammate claims one [P] task and runs it with the
+        Agent prompt template below. The team's shared mailbox
+        lets teammates coordinate ("I'm changing the auth
+        interface, heads up"). Wait for all teammates to complete.
+        Clean up the team before the next run.
+      else:
+        # Path B: spawn all [P] tasks in ONE message, background
+        For each task in tasks_in_run:
+          Agent(
+            subagent_type: <routed agent>,
+            run_in_background: true,
+            isolation: "worktree",
+            description: "SPEC-XXX <task-id> [P] <brief>",
+            prompt: <task prompt — see Step 3c>
+          )
+        # All N tasks dispatched in ONE assistant message
+        Wait for ALL to complete.
 
-           PROJECT_COMMANDS:
-             BUILD: <cmd>  TYPECHECK: <cmd>  LINT: <cmd>
-             UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
-             SINGLE_FILE_TEST: <cmd>
-             SINGLE_FILE_INTEGRATION: <cmd>
+      # Safety net for either path: verify no regression
+      Run Bash("<TYPECHECK> && <UNIT_TEST>") in the orchestrator.
+      If FAIL:
+        Log regression to workflow file.
+        Re-run the tasks SERIALLY (one foreground agent each):
+        for task in tasks_in_run:
+          Agent(subagent_type: <routed agent>, ..., prompt: ...)
+        After serial re-run, run TYPECHECK + UNIT_TEST again.
+        If still failing, surface to user.
 
-           <if PRESET_CONVENTIONS>
-           PRESET_CONVENTIONS: ...
-           </if>
+    else:
+      # Singleton run or single-task "parallel" run
+      ROUTE to agent for tasks_in_run[0]:
+        a. PROJECT_IMPLEMENTATION_AGENT — task description matches
+           keywords from the detected agent (Step 0.9)
+        b. implement-executor — if test-only task (keywords:
+           "test", "contract test", "unit test", "integration")
+        c. domain-researcher — if research task (keywords:
+           "research", "investigate", "explore API")
+        d. orchestrator-direct — if verification-only (keywords:
+           "verify", "run", "check", "build", "lint")
+        e. implement-executor — default fallback
 
-           COMPLETED_TASKS:
-             <structured list of prior task results>
+      Foreground dispatch: Agent(..., prompt: ...)
+      Wait for result.
 
-           Your task:
-           ---
-           <exact task description from tasks.md>
-           ---
-         """
-       )
+  # Step 3c: Agent prompt template (used for parallel + singleton)
+  Agent(
+    subagent_type: "<routed agent>",
+    isolation: "worktree" if part of a [P] parallel run else omitted,
+    run_in_background: true if part of a [P] parallel run else omitted,
+    description: "SPEC-XXX <task-id> <brief>",
+    prompt: """
+      <tdd_protocol>
+      <TDD_PROTOCOL contents>
+      </tdd_protocol>
 
-    3. PARALLEL dispatch for [P] groups:
-       Spawn ALL [P] tasks simultaneously — each with
-       isolation: "worktree". Collect all results.
-       If merge conflicts → fall back to sequential.
+      PROJECT_COMMANDS:
+        BUILD: <cmd>  TYPECHECK: <cmd>  LINT: <cmd>
+        UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
+        SINGLE_FILE_TEST: <cmd>
+        SINGLE_FILE_INTEGRATION: <cmd>
 
-    4. SEQUENTIAL dispatch:
-       Spawn one agent, await result, pass context to next.
+      <if PRESET_CONVENTIONS>
+      PRESET_CONVENTIONS: ...
+      </if>
 
-    5. ACCUMULATE context:
-       COMPLETED_TASKS[T00X] = {
-         files: [paths created/modified],
-         tests: N,
-         status: "GREEN" | "RED" | "error"
-       }
+      COMPLETED_TASKS:
+        <structured list of prior task results>
+
+      Your task:
+      ---
+      <exact task description from tasks.md>
+      ---
+    """
+  )
+
+  # Step 3d: ACCUMULATE context
+  COMPLETED_TASKS[T00X] = {
+    files: [paths created/modified],
+    tests: N,
+    status: "GREEN" | "RED" | "error"
+  }
 
   Phase-group verification (orchestrator-direct):
     Bash(BUILD) && Bash(TYPECHECK) && Bash(LINT) &&

@@ -80,39 +80,106 @@ comment with the reviewer's feedback.
 If 0 unresolved threads, report "No unresolved comments
 on PR #<PR_NUMBER>" and stop.
 
-### 4. Process Each Comment
+### 4. Process Comments — Partition by File, Parallel Across Files
 
-For EACH unresolved comment:
+**Partition the unresolved threads by file path.** Within a partition
+(same file), process serially — concurrent edits to the same file race
+on the `Edit` tool. Across partitions (different files), dispatch
+parallel background subagents in ONE assistant message. This is
+**Use site 6** of the [Agent Teams integration map](../skills/speckit-autopilot/references/agent-teams-integration.md)
+— the WS-F1 pattern.
+
+#### 4a. Detect cross-file comments
+
+Before partitioning, scan each thread's comment body for cross-file
+hints (e.g., "rename `foo` and update all callers", "this affects
+`bar.ts` too", references to other paths). Cross-file comments are
+**serialized** — they touch multiple files and cannot run in parallel
+with siblings without race risk.
 
 ```text
-1. Read the comment body and the file it references
-2. Read the referenced file at the specified line
-3. Understand what the reviewer is asking for
-4. Determine the action:
-
-   a. CODE FIX needed:
-      - Edit the file to address the comment
-      - Run verification: Bash("<BUILD> && <TYPECHECK> && <UNIT_TEST>")
-      - If verification fails, fix until it passes
-      - Stage and commit:
-        Bash("git add <file> && git commit -m \
-          'fix: address review - <brief summary>'")
-
-   b. STYLE / FORMAT issue:
-      - Run LINT_FIX command
-      - Stage and commit
-
-   c. QUESTION from reviewer:
-      - Prepare a reply explaining the design rationale
-      - Read relevant code context to ground the answer
-
-   d. FALSE POSITIVE:
-      - Prepare a reply explaining why no change is needed
+For each thread:
+  cross_file = false
+  if comment body mentions other paths/files/symbols that imply
+     edits beyond thread.path:
+    cross_file = true
+  thread.cross_file = cross_file
 ```
 
-### 5. Reply and Resolve Each Comment
+#### 4b. Build partitions
 
-After addressing each comment, reply AND resolve:
+```text
+PARTITIONS = {}            # file_path -> [threads]
+CROSS_FILE = []            # serialized, processed last
+
+For each thread:
+  if thread.cross_file:
+    CROSS_FILE.append(thread)
+  else:
+    PARTITIONS[thread.path].append(thread)
+```
+
+#### 4c. Dispatch parallel subagents per partition
+
+If `PARTITIONS` has ≥2 entries, dispatch ALL partitions in ONE
+assistant message via background subagents:
+
+```text
+For each (file_path, threads) in PARTITIONS:
+  Agent(
+    subagent_type: "general-purpose",
+    run_in_background: true,
+    description: "Resolve PR #<N> comments on <file_path>",
+    prompt: """
+      Fix the following review threads on `<file_path>`. Threads are
+      ordered by line number; address them in order.
+
+      ## Project commands (from Step 2)
+      BUILD: <BUILD>
+      TYPECHECK: <TYPECHECK>
+      UNIT_TEST: <UNIT_TEST>
+      LINT_FIX: <LINT_FIX>
+
+      ## Threads
+      <list of {thread_id, line, comment_body, comment_id}>
+
+      ## What to do for each thread
+      (a) CODE FIX → Edit the file; run BUILD+TYPECHECK+UNIT_TEST; fix
+          until clean.
+      (b) STYLE → run LINT_FIX.
+      (c) QUESTION → prepare a reply (no code change).
+      (d) FALSE POSITIVE → prepare a reply explaining why no change.
+
+      ## When done
+      Commit ALL fixes for this file in one commit:
+        git add <file_path>
+        git commit -m "fix: address review - <brief summary>"
+      Return a structured summary:
+        - Threads handled (count, IDs, action taken per ID)
+        - Commit SHA (if any fix committed; null otherwise)
+        - Verification result (pass/fail; if fail, surface error)
+        - Per-thread reply text (for the orchestrator to post)
+      Do NOT push. Do NOT post replies. Do NOT resolve threads.
+      The orchestrator handles git push and gh API calls serially.
+    """
+  )
+```
+
+If `PARTITIONS` has 1 entry (all threads on one file), do NOT spawn a
+subagent — process directly in the orchestrator (no parallelism win,
+extra tool-call latency).
+
+#### 4d. Process cross-file comments serially
+
+After all partition subagents return, process `CROSS_FILE` threads
+one at a time in the orchestrator (each touches multiple files; serial
+prevents inter-thread race).
+
+### 5. Reply and Resolve Each Thread (orchestrator, serial)
+
+The orchestrator collects partition-subagent results, then for each
+thread (parallel partitions + serial cross-file) posts the reply and
+resolves the thread via gh API. Writes to GitHub are cheap and ordered:
 
 ```text
 Reply to the comment:

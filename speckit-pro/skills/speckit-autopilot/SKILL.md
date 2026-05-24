@@ -402,11 +402,16 @@ escape-rate re-evaluation trigger is computed from them. See
 [`references/consensus-protocol.md`](./references/consensus-protocol.md)
 §Logging for the canonical column set.
 
-#### Implement — Task-Level Dispatch
+#### Implement — Task-Level Dispatch (honors `[P]` markers)
 
-Phase 7 dispatches each task to the best-fit agent instead of
-one monolithic executor. Subagents can't nest — task-level
-routing solves this with flat orchestrator-worker.
+Phase 7 dispatches each task to the best-fit agent and **honors `[P]`
+parallel-safe markers from `/speckit-tasks`** for batched parallel
+execution. Within a phase group, partition tasks into runs:
+**consecutive `[P]` tasks form a parallel run; non-`[P]` tasks are
+singletons.** Dispatch each parallel run in ONE assistant message via
+background subagents. Sequential runs spawn one foreground agent, await,
+advance. After every parallel run, run TYPECHECK + UNIT_TEST as a
+safety net; on regression, fall back to serial re-run for that group.
 
 **Agent routing:**
 
@@ -421,9 +426,15 @@ Every implementation agent receives the TDD protocol from
 `references/tdd-protocol.md`. Agent selection is about domain
 expertise — all follow identical RED-GREEN-REFACTOR discipline.
 
-**Full algorithm** (parse tasks, route, dispatch, accumulate
-context, verify): see `references/phase-execution.md` —
-"Phase 7: Implement (Task-Level Dispatch)".
+**Full algorithm** (parse tasks, partition into runs, route, batched
+dispatch for `[P]` runs, accumulate context, verify): see
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Phase 7 Step 3.
+
+This is **Use site 3** of the [Agent Teams integration map](./references/agent-teams-integration.md)
+— when `AGENT_TEAMS_AVAILABLE=true`, parallel runs spawn as a team
+(cross-task mailbox coordination); otherwise batched background
+subagents in one message (same wall-clock, no team coordination).
 
 ## Step 3: Post-Implementation
 
