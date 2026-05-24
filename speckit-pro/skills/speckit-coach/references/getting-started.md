@@ -2,6 +2,23 @@
 
 A guided walkthrough for developers new to Spec-Driven Development. This covers first-time setup, your first complete workflow, how to evaluate quality at each gate, and what to do when things go wrong.
 
+## Contents
+
+**Setup track** — install + init + project bootstrapping:
+- [First-Time Setup](#first-time-setup) — CLI install, init, integration flags
+
+**Walkthrough track** — drive a real spec through phases 1-7:
+- [Pre-Spec Scoping with Grill Me (Optional but Recommended)](#pre-spec-scoping-with-grill-me-optional-but-recommended) — interview-style scoping before /specify
+- [Your First Complete Workflow](#your-first-complete-workflow) — overview of all 7 phases
+- [Phase 1: Foundation](#phase-1-foundation)
+- [Phase 2: [US1] Registration (P1)](#phase-2-us1-registration-p1) — full P1 user-story walkthrough
+
+**Evaluation + troubleshooting + team track**:
+- [How to Evaluate Quality at Each Gate](#how-to-evaluate-quality-at-each-gate) — what good looks like per phase
+- [Troubleshooting & Recovery](#troubleshooting--recovery) — common failure modes + rollback
+- [Working with a Team](#working-with-a-team) — PR workflow, review, merge
+- [Quick Reference Card](#quick-reference-card) — phase + gate cheat sheet
+
 ---
 
 ## First-Time Setup
