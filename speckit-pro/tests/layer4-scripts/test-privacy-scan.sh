@@ -76,7 +76,7 @@ is_sensitive_local_term() {
   [ "${#term}" -ge 5 ] || return 1
 
   case "$term" in
-    actions|admin|build|cache|claude|codex|documents|downloads|github|home|integration|layer4|layer7|local|main|openai|plugins|private|project|projects|public|racecraft|repo|root|runner|speckit|staff|support|tests|users|work)
+    actions|admin|build|cache|claude|codex|documents|downloads|github|home|integration|layer4|layer7|local|main|openai|plugins|private|project|projects|public|racecraft|repo|root|runner|speckit|staff|support|tests|users|work|worktrees)
       return 1
       ;;
   esac
@@ -96,6 +96,7 @@ emit_sensitive_terms_from_value() {
 
   while IFS= read -r part; do
     lower=$(printf '%s' "$part" | tr '[:upper:]' '[:lower:]')
+    lower="${lower#.}"
     if is_sensitive_local_term "$lower"; then
       printf '%s\n' "$lower"
     fi
