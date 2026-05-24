@@ -31,64 +31,48 @@ orchestration.
 ## Scope
 
 This skill handles autonomous workflow EXECUTION. For methodology
-questions, SDD philosophy, or learning how SpecKit works, redirect
-the user to `/speckit-pro:coach` — the coaching skill is the right
-resource for methodology guidance.
+questions, SDD philosophy, or learning how SpecKit works, redirect to
+`/speckit-pro:coach`.
 
-Your context window will be automatically compacted as it
-approaches its limit, allowing you to continue working
-indefinitely. Do not stop tasks early. Always be as persistent
-and autonomous as possible and complete all 7 phases fully.
-
-You are an **orchestrator** for SpecKit workflows. You read
-prompts from the workflow file and delegate each phase to a
-**subagent** that runs the `/speckit.*` command. You never run
-the commands yourself — you spawn, collect results, validate
-gates, and advance.
+You are an **orchestrator** for SpecKit workflows: read prompts from
+the workflow file and delegate each phase to a **subagent** that runs
+the `/speckit.*` command. You never run the commands yourself — you
+spawn, collect results, validate gates, and advance. Your context
+window auto-compacts; do not stop early, complete all 7 phases.
 
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main session agent** when the user invokes
 `/speckit-pro:autopilot`. Only the main agent can spawn subagents — per
 [Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents),
-**subagents cannot spawn other subagents.** The Orchestrator-Direct pattern
-this skill uses works because *the skill IS the main agent at execution
-time*; "spawn a subagent for each phase" is a flat fan-out, never nested.
+**subagents cannot spawn other subagents.** The Orchestrator-Direct
+pattern works because the skill IS the main agent at execution time;
+phase-spawning is flat fan-out, never nested.
 
-**If this skill is ever loaded inside a subagent context** (for example a
+**If this skill is ever loaded inside a subagent context** (e.g. a
 phase-executor mistakenly calls `Skill('speckit-autopilot')`), it MUST
-refuse and surface the violation rather than attempt to orchestrate. None
-of the bundled phase agents (`phase-executor`, `clarify-executor`,
-`checklist-executor`, `analyze-executor`, `implement-executor`,
-`codebase-analyst`, `spec-context-analyst`, `domain-researcher`,
-`consensus-synthesizer`, `gate-validator`) include `Agent` in their tools
-list, so they cannot spawn subagents — this constraint is enforced by the
-Anthropic runtime, not just by convention.
+refuse and surface the violation rather than orchestrate. None of the
+bundled phase agents include `Agent` in their tools list, so the
+runtime enforces this — not just convention.
 
 ## Prerequisites — Model & Effort
 
-The autopilot orchestrator makes gate decisions, synthesizes consensus, and
-manages a 7-phase workflow. Running on a weak model produces poor orchestration
-decisions that cascade into expensive rework.
+The orchestrator makes gate decisions, synthesizes consensus, and
+manages a 7-phase workflow. Weak-model orchestration cascades into
+expensive rework.
 
 **Before executing any step**, verify:
 
-1. **Model check:** You MUST be running on **Opus 4.6** or better. If your
-   current model is Sonnet, Haiku, or an older Opus version, STOP immediately
-   and instruct the user:
+1. **Model:** Opus 4.6 or better. On Sonnet/Haiku/older Opus, STOP and
+   instruct: *"Autopilot requires Opus 4.6 for reliable orchestration.
+   Please `/model opus` and re-run."*
+2. **Effort:** `high` or `max`. On `low`/`medium`, STOP and instruct:
+   *"Autopilot performs best at high effort. Please `/effort max` and
+   re-run."*
 
-   > "Autopilot requires Opus 4.6 for reliable orchestration. Please switch
-   > your model with `/model opus` and re-run the autopilot command."
-
-2. **Effort check:** Verify your effort level is set to `high` or `max`.
-   If running at `low` or `medium`, instruct the user:
-
-   > "Autopilot performs best at high effort. Please set `/effort max` and
-   > re-run the autopilot command."
-
-These checks are non-negotiable. A haiku or sonnet orchestrator spawning
-opus subagents is an expensive anti-pattern — the orchestrator makes the
-decisions that determine whether subagent work is wasted or productive.
+Non-negotiable. A haiku/sonnet orchestrator spawning opus subagents is
+an expensive anti-pattern — the orchestrator's decisions determine
+whether subagent work is wasted or productive.
 
 ## Critical: Execution Rules
 
@@ -100,31 +84,23 @@ These rules are non-negotiable. Follow them exactly.
 
 **Do not invoke `grill-me` from any autopilot phase or agent — ever.**
 
-The `grill-me` skill is human-in-the-loop only. It uses `AskUserQuestion`
-to interview a real user one question at a time. Inside autopilot, there
-is no user available to answer; calling grill-me would either block
-indefinitely or produce low-value automated output that defeats the
-skill's entire purpose.
+`grill-me` is human-in-the-loop only — it uses `AskUserQuestion` to
+interview a real user one question at a time. Inside autopilot there
+is no user available; calling it would block indefinitely or produce
+low-value automated output that defeats its purpose.
 
 Autopilot's Clarify phase uses `/speckit-clarify` with the multi-agent
-consensus protocol — that is the **only** sanctioned clarification
-mechanism inside autopilot. If a phase encounters ambiguity that
-consensus can't resolve, fail the gate and surface to the user.
-**Never escalate to grill-me.**
+consensus protocol — the **only** sanctioned clarification mechanism
+inside autopilot. If a phase encounters ambiguity consensus can't
+resolve, fail the gate and surface to the user. **Never escalate to
+grill-me.**
 
-This constraint applies to:
-
-- This skill (the orchestrator)
-- All phase-executor agents (`phase-executor`, `clarify-executor`,
-  `checklist-executor`, `analyze-executor`, `implement-executor`)
-- The consensus analysts (`codebase-analyst`, `spec-context-analyst`,
-  `domain-researcher`)
-- `consensus-synthesizer` and `gate-validator`
-- Any other agent spawned during autopilot execution
-
-Grill-me is for **pre-workflow** human alignment via `/speckit-pro:scaffold-spec`
-or `/speckit-pro:grill-me`. It is not part of the autopilot loop and
-must not appear in any phase agent's tool call history.
+Applies to this skill (the orchestrator), every phase-executor agent,
+every consensus analyst, the synthesizer, the gate-validator, and any
+other agent spawned during autopilot execution. `grill-me` is for
+**pre-workflow** human alignment via `/speckit-pro:scaffold-spec` or
+`/speckit-pro:grill-me` only; it must not appear in any phase agent's
+tool call history.
 
 </hard_constraints>
 
@@ -209,76 +185,29 @@ consensus" summary section, **each prefixed with one or more category
 tags** (`[codebase]`, `[spec]`, `[domain]`, `[security]`,
 `[ambiguous]`).
 
-**Layer 2 — Category-routed consensus** (Tier A, see
-`references/consensus-protocol.md`): For EACH unresolved item,
-parse the category prefix and dispatch to only the relevant
-analyst(s). Two rounds:
+**Layer 2 — Category-routed consensus** (Tier A): for EACH unresolved
+item, parse the `[<categories>]` prefix and dispatch only the routed
+analyst(s) (parallel via `run_in_background: true`); then the
+synthesizer. Escape-hatch to Round 2 (remaining analysts, full
+fan-out + 2-of-3 majority) on `[ESCAPE_TO_ROUND_2]` or low confidence.
+`[security]` always uses all 3 in Round 1. Full routing table, Round-2
+algorithm, and the "no silently-shipped low-confidence answers"
+escape-hatch rationale live in
+[`references/consensus-protocol.md`](./references/consensus-protocol.md)
+§Category-Routed Dispatch.
 
-```text
-ROUND 1 — Category-routed
-  Parse the [<categories>] prefix on the unresolved item.
-  Spawn N analysts (1 ≤ N ≤ 3) per the routing table:
-    [codebase]            → codebase-analyst only
-    [spec]                → spec-context-analyst only
-    [domain]              → domain-researcher only
-    [security]            → ALL 3 (defense-in-depth)
-    [ambiguous] or empty  → ALL 3 (safe default)
-    [a, b]                → union of named analysts
-  Run them in parallel with run_in_background: true.
-  Wait for all N to complete.
+**Consensus rules summary:** N=1 high-confidence → use answer;
+N=2 both-agree → use answer; N=3 2-of-3 or 3-of-3 agree → use
+majority/unanimous; escape-hatch keyword OR low confidence → Round 2;
+all-disagree at Round 2 → `[HUMAN REVIEW NEEDED]` + STOP;
+`[security]` → always Round 2 with all 3, never single-routed.
+Full rules + Logging schema + Re-evaluation trigger live in
+[`references/consensus-protocol.md`](./references/consensus-protocol.md).
 
-  Spawn consensus-synthesizer with the routed categories,
-  Round=1, and the N analyst responses (mark non-routed
-  analysts as "NOT SPAWNED").
-
-  IF synthesizer output: Flags = None AND Confidence = high:
-    APPLY artifact edit, log result, done.
-  ELSE (Flags includes [ESCAPE_TO_ROUND_2]):
-    fall through to Round 2.
-
-ROUND 2 — Full fan-out (legacy 3-analyst path)
-  Spawn the (3 - N) analysts that did not run in Round 1,
-  in parallel with run_in_background: true.
-  Wait for them to complete.
-  Re-invoke consensus-synthesizer with Round=2 and all 3
-  analyst responses.
-  Apply 2-of-3 majority rule per consensus-protocol.md.
-  APPLY edit OR flag [HUMAN REVIEW NEEDED] and STOP.
-```
-
-The escape-hatch keeps routing cheap when right and safe when
-wrong: a `[codebase]`-tagged item where `codebase-analyst`
-returns "no precedent in this repo" triggers Round 2 the same
-turn — no silently-shipped low-confidence answers.
-
-**Logging requirement:** Every resolution writes a row to the
-Consensus Resolution Log in the workflow file with `Round`,
-`Routed Categories`, `Outcome`, and `Analysts Used` columns.
-The 10% Round-2 escape-rate re-evaluation trigger is computed
-from this log (see consensus-protocol.md §"Re-evaluation trigger").
-
-**Consensus rules summary (see consensus-protocol.md for full):**
-- N=1 high-confidence → use answer
-- N=2 both-agree → use answer
-- N=3 2/3 or 3/3 agree → use majority/unanimous
-- Any escape-hatch keyword OR low confidence → fall through to Round 2
-- All disagree (Round 2) → flag `[HUMAN REVIEW NEEDED]`, STOP
-- Security keyword → always Round 2 with all 3, never single-routed
-
-**Why two layers:** Executor handles ~80% directly. Category-routed
-consensus spends model effort on the perspective(s) the executor
-identified as relevant.
-
-**Why after each prompt:** Later sessions may depend on earlier
-resolved questions/gaps.
-
-**Stop conditions:** Gate failure after 2 auto-fix attempts,
-failed consensus (all disagree at Round 2), security keyword
-flagged for human, or missing prerequisite.
-
-You run in the **main session** (not as a sub-agent) so you can
-spawn sub-agents directly. Sub-agents cannot nest — this is the
-Orchestrator-Direct pattern.
+**Why two layers:** Executor handles ~80% directly; category-routed
+consensus spends model effort only on the perspective(s) the executor
+identified as relevant. Run after each prompt — later sessions may
+depend on earlier resolved items.
 
 ## Input
 
@@ -408,88 +337,29 @@ remediation adds loops, create additional tasks via TaskCreate.
 
 ### Phase Dispatch
 
-For each phase: read the prompt, spawn a subagent, validate.
-
-#### Subagent Prompt Construction
-
-Use the phase-specific executor agent:
-
-```text
-Agent(
-  subagent_type: "<agent for this phase>",
-  description: "SPEC-XXX <phase>",
-  prompt: """
-    <phase-specific prefix if needed>
-
-    [IF presets detected in Step 0.12]
-    PRESET_CONVENTIONS:
-      Preset: <name> (priority <N>)
-      Overrides: <templates this preset replaces>
-      Enforces: <conventions from preset templates>
-    [/IF]
-
-    [IF PROJECT_COMMANDS discovered in Step 0.11]
-    PROJECT_COMMANDS:
-      BUILD: <cmd>  TYPECHECK: <cmd>  LINT: <cmd>
-      UNIT_TEST: <cmd>  INTEGRATION_TEST: <cmd>
-    [/IF]
-
-    Workflow prompt:
-    ---
-    <paste the exact prompt from the workflow file>
-    ---
-  """
-)
-```
+Every subagent prompt includes the workflow-file prompt plus, when
+present, `PRESET_CONVENTIONS` (from Step 0.12) and `PROJECT_COMMANDS`
+(from Step 0.11). The full `Agent(...)` template lives in
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Subagent Delegation.
 
 **Agent selection:**
 
 | Phase | subagent_type | Prefix |
 | ----- | ------------- | ------ |
-| Specify | `phase-executor` | Branch-aware (if ON_FEATURE_BRANCH) |
-| Clarify | `clarify-executor` | Parent answers question set |
+| Specify | `phase-executor` | Branch-aware when `ON_FEATURE_BRANCH` (skip `create-new-feature.sh`) |
+| Clarify | `clarify-executor` | Read-only — returns a Clarify Question Set; parent answers + applies edits |
 | Plan | `phase-executor` | None |
-| Checklist | `checklist-executor` | None |
+| Checklist | `checklist-executor` | One subagent per domain |
 | Tasks | `phase-executor` | None |
 | Analyze | `analyze-executor` | None |
-| Implement | per-task routing | TDD protocol + COMPLETED_TASKS context (see "Implement — Task-Level Dispatch") |
+| Implement | per-task routing | TDD protocol + COMPLETED_TASKS — see Implement — Task-Level Dispatch below |
 
-#### Specify — Branch-Aware Prefix
-
-When `ON_FEATURE_BRANCH` is true (Step 0.7), add this prefix
-to the subagent prompt before the workflow prompt:
-
-```text
-IMPORTANT: Already on feature branch `<CURRENT_BRANCH>`.
-Do NOT run `create-new-feature.sh` or create a new branch.
-The branch and `specs/<CURRENT_BRANCH>/` directory already
-exist. Skip directly to spec content generation.
-```
-
-All other phases use `check-prerequisites.sh` →
-`get_current_branch()` which detects the worktree branch
-automatically. No prefix needed.
-
-#### Clarify — Parent Answering Prefix
-
-The `clarify-executor` is a read-only question-preparation agent.
-It returns a `Clarify Question Set` to the parent instead of invoking
-the interactive `/speckit-clarify` command or editing artifacts. The
-parent orchestrator answers each returned question in the main session,
-applies the accepted clarifications to the spec/workflow/state files,
-then runs marker checks and consensus routing for unresolved items.
-No additional prefix is needed in the prompt — just pass the session
-prompt from the workflow file.
-
-#### Multi-Prompt Phases
-
-Clarify and Checklist have multiple prompts. Spawn a
-**separate subagent for each prompt**:
-
-- **Clarify:** One subagent per session (e.g., "Session 1:
-  Search Behavior", "Session 2: Database Operations")
-- **Checklist:** One subagent per domain (e.g.,
-  api-workaround, type-safety, requirements)
+Per-phase prefix templates (branch-aware Specify prefix, Clarify
+question-set contract, multi-prompt fan-out for Clarify sessions and
+Checklist domains) live in
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Phase-by-Phase Execution.
 
 #### Resolution — After Each Prompt (Main Session)
 
@@ -592,19 +462,16 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 
 ## References
 
-- [Phase Execution](./references/phase-execution.md) — Per-phase
-  prompt construction and execution details
-- [Consensus Protocol](./references/consensus-protocol.md) —
-  Multi-agent resolution rules and flows
-- [Gate Validation](./references/gate-validation.md) — Programmatic
-  gate checks and remediation loops
-- [Post-Implementation](./references/post-implementation.md) —
-  Integration suite, PR creation, review remediation loop
-- [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor
-  rules injected into implementation agent prompts
-- [Plugin Limitations](./references/plugin-limitations.md) —
-  permissionMode, hooks, mcpServers restrictions for plugin agents;
-  MCP server prerequisites and fallback behavior
+- [Prerequisites](./references/prerequisites.md) — Archive Sweep + Step 0.x environment, settings, constitution, agent detection, command/preset discovery
+- [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
+- [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema
+- [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
+- [Post-Implementation](./references/post-implementation.md) — 11-task post-impl sequence, integration suite, PR creation, review loop
+- [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
+- [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + Consensus Resolution Log column schema
+- [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
+- [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
+- [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats, MCP fallback behavior
 
 ## Scripts
 
