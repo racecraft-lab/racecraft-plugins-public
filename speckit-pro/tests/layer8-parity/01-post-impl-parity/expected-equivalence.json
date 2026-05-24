@@ -1,0 +1,63 @@
+{
+  "fixture_id": "01-post-impl-parity",
+  "description": "Fields that MUST match between Path A (Agent Teams) and Path B (parallel subagents fallback) runs. Tolerances per field defined in tolerance.json.",
+  "compare": [
+    {
+      "field": "artifacts.spec_md",
+      "source": "specs/parity-01-post-impl/spec.md",
+      "tolerance_key": "artifacts.spec_md"
+    },
+    {
+      "field": "artifacts.plan_md",
+      "source": "specs/parity-01-post-impl/plan.md",
+      "tolerance_key": "artifacts.plan_md"
+    },
+    {
+      "field": "artifacts.tasks_md",
+      "source": "specs/parity-01-post-impl/tasks.md",
+      "tolerance_key": "artifacts.tasks_md"
+    },
+    {
+      "field": "workflow.post_impl_checklist.row_count",
+      "source": "workflow.md",
+      "section_selector": "## Post-Implementation Checklist",
+      "extractor": "table_row_count",
+      "tolerance_key": "workflow.post_impl_checklist.row_count"
+    },
+    {
+      "field": "workflow.post_impl_checklist.statuses",
+      "source": "workflow.md",
+      "section_selector": "## Post-Implementation Checklist",
+      "extractor": "table_column:Status",
+      "tolerance_key": "workflow.post_impl_checklist.statuses"
+    },
+    {
+      "field": "workflow.post_impl_checklist.findings_text",
+      "source": "workflow.md",
+      "section_selector": "## Post-Implementation Checklist",
+      "extractor": "table_column:Findings",
+      "tolerance_key": "workflow.post_impl_checklist.findings_text"
+    },
+    {
+      "field": "gate_results",
+      "source": "workflow.md",
+      "section_selector": "## Workflow Overview",
+      "extractor": "table_column:Status",
+      "tolerance_key": "gate_results.G0_through_G7"
+    },
+    {
+      "field": "pr_body",
+      "source": ".git/speckit-pr-body.md",
+      "tolerance_key": "pr_body"
+    },
+    {
+      "field": "consensus_resolution_log.row_count",
+      "source": "workflow.md",
+      "section_selector": "## Consensus Resolution Log",
+      "extractor": "table_row_count",
+      "tolerance_key": "consensus_resolution_log.row_count"
+    }
+  ],
+  "fail_fast": false,
+  "report_format": "field-level-diff"
+}

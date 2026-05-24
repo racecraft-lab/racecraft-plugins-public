@@ -1,0 +1,42 @@
+{
+  "fixture_id": "01-post-impl-parity",
+  "description": "Tolerances for comparing Path A (Agent Teams) vs Path B (parallel subagents fallback) outcomes on the post-implementation parallel group.",
+  "fields": {
+    "artifacts.spec_md": {
+      "tolerance": "byte-identical",
+      "rationale": "Post-impl does not modify spec.md; bytes must match exactly across paths."
+    },
+    "artifacts.plan_md": {
+      "tolerance": "byte-identical",
+      "rationale": "Post-impl does not modify plan.md; bytes must match exactly."
+    },
+    "artifacts.tasks_md": {
+      "tolerance": "byte-identical",
+      "rationale": "Post-impl does not modify tasks.md; bytes must match exactly."
+    },
+    "workflow.post_impl_checklist.row_count": {
+      "tolerance": "exact",
+      "rationale": "Both paths produce exactly one row per task (10/11/12/13/14)."
+    },
+    "workflow.post_impl_checklist.statuses": {
+      "tolerance": "exact",
+      "rationale": "PASS/FAIL/SKIPPED per task must match across paths — equivalent inputs produce equivalent gate outcomes."
+    },
+    "workflow.post_impl_checklist.findings_text": {
+      "tolerance": "semantic-equivalent",
+      "rationale": "LLM-driven prose; allow paraphrase but require semantic equivalence (no contradictory findings)."
+    },
+    "gate_results.G0_through_G7": {
+      "tolerance": "exact",
+      "rationale": "All 8 gates must return identical PASS/FAIL across paths."
+    },
+    "pr_body": {
+      "tolerance": "byte-identical",
+      "rationale": "PR body generation is deterministic post-implementation; bytes must match."
+    },
+    "consensus_resolution_log.row_count": {
+      "tolerance": "tolerance-1",
+      "rationale": "LLM non-determinism may produce ±1 row across runs due to consensus mode escape-hatch firing differently."
+    }
+  }
+}
