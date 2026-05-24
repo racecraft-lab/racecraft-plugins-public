@@ -125,21 +125,23 @@ for agent in "${AGENTS[@]}"; do
     fi
   fi
 
+  # Plugin policy: every Codex agent runs at xhigh reasoning regardless of
+  # model. Quality is the only optimization axis; cost is a non-goal.
   case "$agent" in
     autopilot-fast-helper)
-      set_test "autopilot-fast-helper: uses Spark latency-first advisory profile"
-      if [ "$model_val" = "gpt-5.3-codex-spark" ] && [ "$effort_val" = "low" ] && [ "$sandbox_val" = "read-only" ]; then
+      set_test "autopilot-fast-helper: uses Spark with xhigh reasoning (max-thinking policy)"
+      if [ "$model_val" = "gpt-5.3-codex-spark" ] && [ "$effort_val" = "xhigh" ] && [ "$sandbox_val" = "read-only" ]; then
         _pass
       else
-        _fail "expected gpt-5.3-codex-spark / low / read-only, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.3-codex-spark / xhigh / read-only, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
     clarify-executor)
-      set_test "clarify-executor: uses high-effort GPT-5.5 read-only question-prep profile"
-      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "read-only" ]; then
+      set_test "clarify-executor: uses xhigh GPT-5.5 read-only question-prep profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "xhigh" ] && [ "$sandbox_val" = "read-only" ]; then
         _pass
       else
-        _fail "expected gpt-5.5 / high / read-only, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / xhigh / read-only, got $model_val / $effort_val / $sandbox_val"
       fi
       set_test "clarify-executor: returns questions to parent"
       assert_contains "$instructions" "## Clarify Question Set"
@@ -149,27 +151,27 @@ for agent in "${AGENTS[@]}"; do
       assert_not_contains "$instructions" 'Run `$speckit-clarify`'
       ;;
     phase-executor|checklist-executor|analyze-executor)
-      set_test "${agent}: uses high-effort GPT-5.5 executor profile"
-      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "workspace-write" ]; then
+      set_test "${agent}: uses xhigh GPT-5.5 executor profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "xhigh" ] && [ "$sandbox_val" = "workspace-write" ]; then
         _pass
       else
-        _fail "expected gpt-5.5 / high / workspace-write, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / xhigh / workspace-write, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
     implement-executor)
-      set_test "implement-executor: uses high-effort GPT-5.5 TDD profile"
-      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "high" ] && [ "$sandbox_val" = "workspace-write" ]; then
+      set_test "implement-executor: uses xhigh GPT-5.5 TDD profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "xhigh" ] && [ "$sandbox_val" = "workspace-write" ]; then
         _pass
       else
-        _fail "expected gpt-5.5 / high / workspace-write, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / xhigh / workspace-write, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
     codebase-analyst|spec-context-analyst|domain-researcher)
-      set_test "${agent}: uses read-only GPT-5.5 consensus profile"
-      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "medium" ] && [ "$sandbox_val" = "read-only" ]; then
+      set_test "${agent}: uses xhigh read-only GPT-5.5 consensus profile"
+      if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "xhigh" ] && [ "$sandbox_val" = "read-only" ]; then
         _pass
       else
-        _fail "expected gpt-5.5 / medium / read-only, got $model_val / $effort_val / $sandbox_val"
+        _fail "expected gpt-5.5 / xhigh / read-only, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
   esac

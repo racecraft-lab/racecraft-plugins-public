@@ -72,13 +72,15 @@ expensive rework.
 1. **Model:** Opus 4.6 or better. On Sonnet/Haiku/older Opus, STOP and
    instruct: *"Autopilot requires Opus 4.6 for reliable orchestration.
    Please `/model opus` and re-run."*
-2. **Effort:** `high` or `max`. On `low`/`medium`, STOP and instruct:
-   *"Autopilot performs best at high effort. Please `/effort max` and
-   re-run."*
+2. **Effort:** `max` (required). On anything less, STOP and instruct:
+   *"Autopilot requires max thinking. Please `/effort max` and re-run."*
 
-Non-negotiable. A haiku/sonnet orchestrator spawning opus subagents is
-an expensive anti-pattern — the orchestrator's decisions determine
-whether subagent work is wasted or productive.
+Non-negotiable. The plugin's policy is **max thinking on every agent,
+regardless of model** — quality is the only optimization axis. Every
+bundled subagent runs at `effort: max` (or `xhigh` on Codex). A
+sub-max orchestrator spawning max subagents wastes the subagents'
+reasoning — the orchestrator's decisions determine whether subagent
+work is productive or wasted.
 
 ## Critical: Execution Rules
 

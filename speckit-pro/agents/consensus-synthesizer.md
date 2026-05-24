@@ -15,7 +15,7 @@ tools:
   - Glob
 permissionMode: plan
 maxTurns: 15
-effort: high
+effort: max
 ---
 
 # Consensus Synthesizer

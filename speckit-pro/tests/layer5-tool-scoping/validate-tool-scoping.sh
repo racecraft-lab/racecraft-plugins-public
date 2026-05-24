@@ -140,9 +140,9 @@ set_test "phase-executor effort field exists"
 effort=$(extract_field "$AGENT_FILE" "effort")
 assert_not_contains "" "$effort" "effort must not be empty"
 
-set_test "phase-executor effort is high"
+set_test "phase-executor effort is max (max-thinking policy)"
 effort=$(extract_field "$AGENT_FILE" "effort")
-assert_eq "high" "$effort"
+assert_eq "max" "$effort"
 
 # ===========================================================================
 # clarify-executor
@@ -396,13 +396,13 @@ else
   _fail "gate-validator permissionMode should not be acceptEdits, got '$mode'"
 fi
 
-set_test "gate-validator model is haiku"
+set_test "gate-validator model is sonnet (max-thinking policy: haiku does not support max)"
 model=$(extract_field "$AGENT_FILE" "model")
-assert_eq "haiku" "$model"
+assert_eq "sonnet" "$model"
 
-set_test "gate-validator effort is low"
+set_test "gate-validator effort is max (max-thinking policy)"
 effort=$(extract_field "$AGENT_FILE" "effort")
-assert_eq "low" "$effort"
+assert_eq "max" "$effort"
 
 set_test "gate-validator maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
@@ -441,9 +441,9 @@ set_test "consensus-synthesizer model is sonnet"
 model=$(extract_field "$AGENT_FILE" "model")
 assert_eq "sonnet" "$model"
 
-set_test "consensus-synthesizer effort is high"
+set_test "consensus-synthesizer effort is max (max-thinking policy)"
 effort=$(extract_field "$AGENT_FILE" "effort")
-assert_eq "high" "$effort"
+assert_eq "max" "$effort"
 
 set_test "consensus-synthesizer maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
@@ -500,32 +500,21 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
       set_test "codex ${agent}: model is gpt-5.5"
       assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
+      # Plugin policy: every Codex agent runs at xhigh regardless of model.
       effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
-      if [ "$agent" = "clarify-executor" ]; then
-        set_test "codex ${agent}: reasoning is high"
-        assert_eq "high" "$effort" "${agent} must use high reasoning"
-      else
-        set_test "codex ${agent}: reasoning is medium"
-        assert_eq "medium" "$effort" "${agent} must use medium reasoning"
-      fi
+      set_test "codex ${agent}: reasoning is xhigh (max-thinking policy)"
+      assert_eq "xhigh" "$effort" "${agent} must use xhigh reasoning per plugin policy"
     fi
   done
 
-  # Read-only executor agents may still use high reasoning, but must not write.
+  # clarify-executor read-only sandbox check (effort + model already verified
+  # in the read-only-analysts loop above)
   for agent in clarify-executor; do
     AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
     if [ -f "$AGENT_FILE" ]; then
       sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")
       set_test "codex ${agent}: sandbox_mode is read-only"
       assert_eq "read-only" "$sandbox" "${agent} must be read-only"
-
-      model=$(extract_toml_field "$AGENT_FILE" "model")
-      effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
-      set_test "codex ${agent}: model is gpt-5.5"
-      assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
-
-      set_test "codex ${agent}: reasoning is high"
-      assert_eq "high" "$effort" "${agent} must use high reasoning"
     fi
   done
 
@@ -542,8 +531,8 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
       set_test "codex ${agent}: model is gpt-5.5"
       assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
-      set_test "codex ${agent}: reasoning is high"
-      assert_eq "high" "$effort" "${agent} must use high reasoning"
+      set_test "codex ${agent}: reasoning is xhigh (max-thinking policy)"
+      assert_eq "xhigh" "$effort" "${agent} must use xhigh reasoning per plugin policy"
     fi
   done
 

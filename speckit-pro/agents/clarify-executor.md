@@ -23,7 +23,7 @@ tools:
   - mcp__RepoPrompt__file_search
 permissionMode: plan
 maxTurns: 35
-effort: high
+effort: max
 ---
 
 # Clarify Executor

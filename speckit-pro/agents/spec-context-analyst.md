@@ -15,7 +15,7 @@ tools:
 permissionMode: plan
 maxTurns: 25
 background: true
-effort: medium
+effort: max
 ---
 
 # Spec Context Analyst — Consensus Agent

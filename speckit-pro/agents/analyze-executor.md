@@ -27,7 +27,7 @@ tools:
   - mcp__RepoPrompt__file_search
 permissionMode: acceptEdits
 maxTurns: 100
-effort: high
+effort: max
 ---
 
 # Analyze Executor

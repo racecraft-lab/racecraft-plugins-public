@@ -120,13 +120,18 @@ decisions that cascade into expensive rework.
    or `SPECKIT_CODEX_MODEL=gpt-5.4`; changing only the parent session model
    does not rewrite hard-pinned custom-agent TOML files.
 
-2. **Effort check:** Verify reasoning effort is set to `high` or `xhigh` when
-   configurable for the session. If the session is locked to low or medium
-   effort, STOP and instruct the user to relaunch with higher effort.
+2. **Effort check:** Verify `model_reasoning_effort` is set to `xhigh`
+   for the session. If the session is locked to a lower tier
+   (`low`, `medium`, `high`), STOP and instruct the user to relaunch
+   with `xhigh` reasoning. The plugin's policy is **xhigh thinking on
+   every Codex agent, regardless of model tier** — every bundled
+   custom subagent ships with `model_reasoning_effort = "xhigh"`
+   (including `autopilot-fast-helper` on gpt-5.3-codex-spark). Quality
+   is the only optimization axis.
 
-These checks are non-negotiable. A lightweight orchestrator spawning
-capable subagents is an expensive anti-pattern — the orchestrator makes
-the decisions that determine whether subagent work is wasted or productive.
+These checks are non-negotiable. A sub-xhigh orchestrator spawning
+xhigh subagents wastes the subagents' reasoning — the orchestrator's
+decisions determine whether subagent work is productive or wasted.
 
 ## Critical: Execution Rules
 

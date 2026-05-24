@@ -1,7 +1,7 @@
 name = "codebase-analyst"
 description = "Read-only consensus agent that answers from the perspective of existing code patterns, file-level evidence, and established repository conventions."
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Codebase Analyst — Consensus Agent

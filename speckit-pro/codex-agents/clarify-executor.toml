@@ -1,7 +1,7 @@
 name = "clarify-executor"
 description = "Read-only Clarify question-preparation agent for the autonomous SpecKit workflow. Inspects the workflow/spec, researches likely answers, and returns questions plus recommendations to the parent orchestrator."
 model = "gpt-5.5"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Clarify Executor

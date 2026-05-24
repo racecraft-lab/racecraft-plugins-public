@@ -19,7 +19,7 @@ tools:
 permissionMode: plan
 maxTurns: 25
 background: true
-effort: medium
+effort: max
 ---
 
 # Domain Researcher — Consensus Agent

@@ -184,7 +184,7 @@ never in a subagent:
 | Which executor agent for each phase (specify/plan/tasks → phase-executor; clarify → clarify-executor; etc.) | `SKILL.md` §Phase Dispatch table + Rule 2 |
 | Parallel vs sequential dispatch (3 analysts in parallel for consensus; 3 tracks in parallel for post-impl) | `SKILL.md` Rule 6 + `phase-execution.md` Phase-by-Phase Execution |
 | Agent Team vs parallel-subagents fallback (Path A vs Path B routing on `AGENT_TEAMS_AVAILABLE`) | `post-implementation.md` §Post-Implementation Parallel Group |
-| Model routing for teammates (lead = opus, teammates = sonnet) | Design principle #8 above; encoded in spawn prompts |
+| Model routing for teammates — fit-based (opus for heavy reasoning, sonnet for read-and-report), `effort: max` mandatory on every teammate | Design principle #8 above; encoded in subagent definitions |
 | Team lifecycle sequencing (consensus team → `[P]` team → post-impl team, never overlapping) | [Lifecycle policy](#one-team-at-a-time-lifecycle-policy) |
 | Consensus dispatch routing (`[codebase]` → codebase-analyst only, `[security]` → all 3, etc.) | `consensus-protocol.md` §Category-Routed Dispatch |
 | Gate validation invocation between phases | `SKILL.md` Step 2 + `gate-validation.md` |
@@ -327,17 +327,18 @@ Every Agent Teams use site in speckit-pro MUST:
 7. **Be documented in this map's use-site table** before merging the
    implementation. Forward design is acceptable; silent additions are
    not.
-8. **Route models for cost.** Per [Anthropic's "Specify teammates and models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models):
+8. **Route models for fit, not for cost — and always pin max thinking.**
+   Per [Anthropic's "Specify teammates and models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models):
    *"Teammates don't inherit the lead's /model selection by default."*
-   The lead is opus (autopilot prereq); teammates default to whatever
-   "Default teammate model" is set in `/config`, OR what the spawn
-   prompt explicitly requests. Every speckit-pro team spawn prompt
-   MUST request **Sonnet** for teammates unless the work demands opus
-   reasoning. Per the [rody decomposition](https://x.com/0x_rody/status/2058475548242784649):
-   *"Running 5 Opus agents in parallel burns tokens 5x faster. Same
-   quality for focused tasks, fraction of the spend."* Focused
-   teammate work (running a `/speckit.*` command and reporting) does
-   not need opus.
+   The lead is opus at `effort: max` (autopilot prereq); each teammate
+   inherits the model + effort from its underlying subagent definition
+   (see [Anthropic's "Use subagent definitions for teammates"](https://code.claude.com/docs/en/agent-teams#use-subagent-definitions-for-teammates)).
+   Every bundled speckit-pro subagent ships with `effort: max` per the
+   plugin's policy of **max thinking on every agent, regardless of
+   model**. Model choice is per-agent fit (opus for heavy reasoning,
+   sonnet for focused read-and-report work, gpt-5.5 + xhigh on Codex)
+   — but the thinking budget is never lowered. Quality is the only
+   optimization axis; cost is a non-goal.
 
 ## When to use what — Anthropic decision framework
 
@@ -378,10 +379,11 @@ goes haywire (e.g., infinite gate-fail loop).
 
 For team-using runs (`AGENT_TEAMS_AVAILABLE=true`), the budget cap
 applies to ALL teammates collectively — Anthropic's runtime
-enforces the limit across the team mailbox. Combined with the
-model-routing principle above (Sonnet teammates), this keeps
-team-mode runs at a comparable price point to subagents-mode despite
-the per-teammate context-window cost.
+enforces the limit across the team mailbox. Note that every teammate
+runs at `effort: max` per Design Principle #8, so a single run is
+more expensive than a cost-optimized configuration would be; the
+budget cap is sized to that policy. The user has explicitly accepted
+this tradeoff (quality > cost).
 
 **Coach trigger:** users asking *"how do I run autopilot overnight"*
 or *"set a budget"* should be routed to this section per the

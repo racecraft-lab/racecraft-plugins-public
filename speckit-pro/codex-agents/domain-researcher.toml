@@ -1,7 +1,7 @@
 name = "domain-researcher"
 description = "Read-only consensus agent that answers from official documentation, standards, and industry best practices with explicit citations."
 model = "gpt-5.5"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "xhigh"
 sandbox_mode = "read-only"
 developer_instructions = """
 # Domain Researcher — Consensus Agent

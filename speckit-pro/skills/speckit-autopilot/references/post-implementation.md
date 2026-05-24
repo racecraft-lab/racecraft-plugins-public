@@ -92,15 +92,18 @@ Do not let any teammate edit src/, tests/, or specs/ files — they
 should only run commands and report results.
 ```
 
-**Why Sonnet teammates:** Per [Anthropic's "Specify teammates and
-models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models),
-teammates don't inherit the lead's model selection. Per the
-[rody decomposition](https://x.com/0x_rody/status/2058475548242784649):
-*"Running 5 Opus agents in parallel burns tokens 5x faster... Same
-quality for focused tasks, fraction of the spend."* The teammates'
-work here is mechanical (run a command, parse output, report) —
-sonnet is plenty. See [`agent-teams-integration.md`](./agent-teams-integration.md)
-§Design principles #8 for the cross-cutting routing rule.
+**Why sonnet teammates here (not for cost):** Per
+[Anthropic's "Specify teammates and models"](https://code.claude.com/docs/en/agent-teams#specify-teammates-and-models),
+teammates don't inherit the lead's model selection. Each teammate
+reuses a bundled subagent definition — gate-validator-style sonnet
+for these read-and-report tasks, opus for heavy-reasoning executors.
+**Every teammate runs at `effort: max` per the plugin's
+max-thinking-on-every-agent policy** (see
+[agent-teams-integration.md](./agent-teams-integration.md)
+§Design principles #8). The post-impl tasks here are mechanical
+(run a command, parse output, report) so sonnet is the right
+*model fit* — but the thinking budget is never lowered. Quality
+is the only optimization axis; cost is a non-goal.
 
 Substitute the actual extension command names (e.g., `/speckit.doctor`
 vs `/speckit.speckit-utils.doctor`) based on Step 0.12 extension

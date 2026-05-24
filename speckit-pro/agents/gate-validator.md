@@ -5,7 +5,7 @@ description: >
   returns pass/fail with structured JSON evidence. Used by the autopilot
   orchestrator after each phase to validate gates G0-G7. Replaces inline
   gate checking to offload mechanical work from the opus orchestrator.
-model: haiku
+model: sonnet
 color: gray
 tools:
   - Bash
@@ -13,7 +13,7 @@ tools:
   - Grep
 permissionMode: plan
 maxTurns: 10
-effort: low
+effort: max
 ---
 
 # Gate Validator
