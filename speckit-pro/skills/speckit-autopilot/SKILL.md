@@ -135,36 +135,17 @@ tool. The subagent runs the `/speckit.*` command and returns a
 summary. You (the parent) receive the result as a tool call
 response, which keeps your agent loop alive.
 
-**Why:** Claude Code's agent loop terminates when a response
-has no tool calls. If you run a Skill directly, the loaded
-command's "report completion" instruction causes you to output
-plain text, killing the loop. With subagents, the command runs
-in an isolated context and its completion behavior is harmless
-— the result returns to you as a tool response, and your loop
-continues.
-
-**What this looks like:**
-
-```text
-CORRECT:
-  1. Read workflow file's "### Specify Prompt" section
-  2. Agent(prompt: "Run /speckit-specify with: <prompt>")
-  3. Subagent runs command, returns summary   ← TOOL RESULT
-  4. TaskUpdate: Specify → completed          ← TOOL CALL
-  5. Grep for [NEEDS CLARIFICATION] markers   ← TOOL CALL
-  6. Agent(prompt: "Run /speckit-clarify...") ← TOOL CALL
-  ...every step is a tool call — loop never dies...
-
-WRONG:
-  1. Skill("speckit-specify", args: "<prompt>")
-  2. Command loads into YOUR context
-  3. You output: "The spec is ready for /speckit-plan"
-     ↑ plain text, no tool call → loop terminates
-```
+**Why:** Claude Code's agent loop terminates when a response has no
+tool calls. A direct `Skill()` call loads the command into YOUR
+context; the command's "report completion" instruction makes you
+output plain text and the loop dies. With subagents, the command
+runs in isolated context — the result returns as a tool response and
+your loop continues.
 
 ### 2. Use phase-specific executor agents
 
-Each phase type has its own specialized executor agent:
+Each phase type has its own specialized executor agent. All noise
+stays in the subagent's context; the parent receives only a summary.
 
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
@@ -174,25 +155,9 @@ Each phase type has its own specialized executor agent:
 | Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
 | Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
 
-```text
-Agent(
-  subagent_type: "<agent for this phase>",
-  description: "SPEC-XXX <phase>",
-  prompt: """
-    <phase-specific prefix if needed>
-
-    Workflow prompt:
-    ---
-    <paste the prompt from the workflow file>
-    ---
-  """
-)
-```
-
-Each agent loads the Skill in its own context, runs the
-command (and any post-execution work like gap remediation),
-and returns a structured summary. All noise stays in the
-subagent's context.
+Full `Agent(...)` prompt template + per-phase prefixes live in
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Subagent Delegation.
 
 ### 3. Task list first
 
@@ -203,35 +168,16 @@ full naming pattern and rules.
 
 ### 4. Multi-prompt phases
 
-Clarify and Checklist have multiple prompts in the workflow
-file. Spawn a **separate subagent for each prompt**.
+Clarify and Checklist have multiple prompts in the workflow file.
+Spawn a **separate subagent for each prompt** and run the two-layer
+resolution (Rule 6) after each one BEFORE spawning the next — later
+sessions/domains may depend on earlier resolved items. Do not batch
+all sessions and check for markers only at the end.
 
-**What this looks like:**
-
-```text
-CORRECT (Clarify with 2 sessions):
-  1. TaskUpdate: "Clarify - Session 1" → in_progress
-  2. Agent(subagent_type: "clarify-executor",
-          prompt: "<session 1 prompt>")
-     The clarify-executor returns questions and recommendations
-  3. Parent answers returned questions and applies accepted edits
-  4. Grep spec.md for [NEEDS CLARIFICATION] markers
-  5. If markers remain → use consensus routing to resolve
-  6. TaskUpdate: "Clarify - Session 1" → completed
-  7. TaskUpdate: "Clarify - Session 2" → in_progress
-  8. Agent(subagent_type: "clarify-executor",
-          prompt: "<session 2 prompt>")
-  9. Parent answers returned questions and applies accepted edits
-  10. Grep spec.md for [NEEDS CLARIFICATION] markers
-  11. If markers remain → use consensus routing to resolve
-  12. TaskUpdate: "Clarify - Session 2" → completed
-  13. Validate G2 gate (0 markers remaining)
-  14. Advance to Plan
-
-WRONG:
-  1. Run all sessions, then check for markers at the end
-  2. Or skip sessions and do your own analysis
-```
+Per-phase flow templates (per-session for Clarify, per-domain for
+Checklist) live in
+[`references/phase-execution.md`](./references/phase-execution.md)
+§Phase-by-Phase Execution.
 
 ### 5. Clarify — executor returns questions to parent
 
