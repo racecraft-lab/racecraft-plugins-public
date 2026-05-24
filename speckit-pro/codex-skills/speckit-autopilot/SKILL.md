@@ -326,36 +326,48 @@ section, **each prefixed with one or more category tags**
 
 **Layer 2 — Category-routed consensus** (Tier A, see
 [consensus-protocol.md](../../skills/speckit-autopilot/references/consensus-protocol.md)):
-For EACH unresolved item, parse the category prefix and dispatch
-to only the relevant analyst(s). Two rounds:
+For ALL unresolved items in the phase, **batch-dispatch the union
+of routed analysts via `spawn_agent` in ONE tool turn**, then
+batch synthesizers, then apply Artifact Edits serially. Two rounds:
 
 ```text
-ROUND 1 — Category-routed
-  Parse the [<categories>] prefix on the unresolved item.
-  Spawn N analysts (1 ≤ N ≤ 3) per the routing table:
+ROUND 1 — Category-routed, BATCHED across items
+  For each unresolved item Ix, parse the [<categories>] prefix to
+  determine the routed analyst set Sx per the routing table:
     [codebase]            → codebase-analyst only
     [spec]                → spec-context-analyst only
     [domain]              → domain-researcher only
     [security]            → ALL 3 (defense-in-depth)
     [ambiguous] or empty  → ALL 3 (safe default)
     [a, b]                → union of named analysts
-  Spawn each via spawn_agent in parallel, wait_agent on all N.
 
-  Synthesize in the main orchestrator session using the
-  consensus-synthesizer rules (single-analyst confidence rule
-  for N=1, both-agree for N=2, 2/3 majority for N=3).
+  Stage 1: spawn_agent for every (item, analyst) pair in ONE turn
+           (Σ |Sx| total calls). wait_agent on ALL handles.
+  Stage 2: spawn_agent the consensus-synthesizer for every item in
+           ONE turn (N total calls). wait_agent on ALL handles.
+  Stage 3: apply each synthesizer's Artifact Edit SERIALLY via
+           apply_patch (avoids write contention on spec.md/plan.md/
+           tasks.md). Log a CRL row per item.
 
-  IF synthesizer output: Flags = None AND Confidence = high:
-    Apply artifact edit, log result, done.
-  ELSE (Flags includes [ESCAPE_TO_ROUND_2]):
-    fall through to Round 2.
+  IF any synthesizer flags [ESCAPE_TO_ROUND_2] or low confidence:
+    enqueue (Ix, Sx) for Round 2.
+  IF any synthesizer flags [HUMAN REVIEW NEEDED]:
+    log + STOP autopilot after applying remaining safe edits.
 
-ROUND 2 — Full fan-out (legacy 3-analyst path)
-  Spawn the (3 - N) analysts that did not run in Round 1
-  via spawn_agent in parallel; wait_agent on the new analysts.
-  Re-synthesize with all 3 responses using 2-of-3 majority rule.
-  Apply edit OR flag [HUMAN REVIEW NEEDED] and STOP.
+ROUND 2 — Full fan-out, BATCHED across queued items
+  Stage 4: spawn_agent the (3 - |Sx|) analysts that did not run in
+           Round 1, for EVERY queued item, in ONE turn.
+           wait_agent on all new handles.
+  Stage 5: spawn_agent all Round-2 synthesizers in ONE turn.
+  Stage 6: apply Round-2 Artifact Edits serially.
+           Apply edit OR flag [HUMAN REVIEW NEEDED] and STOP.
 ```
+
+**Why batched.** Per-item serial dispatch wastes wall-clock: 5
+items × 3 analysts = 15 sequential turns vs. one batched turn.
+Analysts have no cross-item race (they only read); synthesizers
+have no race (they propose patches); only Stage 3 edit application
+needs serial ordering (write contention).
 
 The escape-hatch keeps routing cheap when right and safe when
 wrong: a `[codebase]`-tagged item where codebase-analyst returns

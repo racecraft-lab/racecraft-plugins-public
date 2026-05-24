@@ -191,16 +191,19 @@ consensus" summary section, **each prefixed with one or more category
 tags** (`[codebase]`, `[spec]`, `[domain]`, `[security]`,
 `[ambiguous]`).
 
-**Layer 2 — Category-routed consensus** (Tier A): for EACH unresolved
-item, parse the `[<categories>]` prefix and dispatch only the routed
-analyst(s) (parallel via `run_in_background: true`); then the
-synthesizer. Escape-hatch to Round 2 (remaining analysts, full
-fan-out + 2-of-3 majority) on `[ESCAPE_TO_ROUND_2]` or low confidence.
+**Layer 2 — Category-routed consensus** (Tier A): for ALL unresolved
+items in the phase, **batch-dispatch the union of routed analysts in
+ONE assistant message** (`run_in_background: true`), wait for all,
+then batch-dispatch ALL synthesizers in ONE message, then apply each
+synthesizer's Artifact Edit **serially** (orchestrator's own `Edit`
+calls — avoids write contention on spec.md/plan.md/tasks.md).
+Escape-hatch to Round 2 (remaining analysts, full fan-out + 2-of-3
+majority) on `[ESCAPE_TO_ROUND_2]` or low confidence, also batched.
 `[security]` always uses all 3 in Round 1. Full routing table, Round-2
-algorithm, and the "no silently-shipped low-confidence answers"
-escape-hatch rationale live in
+algorithm, batched-dispatch pseudocode, and the "no silently-shipped
+low-confidence answers" escape-hatch rationale live in
 [`references/consensus-protocol.md`](./references/consensus-protocol.md)
-§Category-Routed Dispatch.
+§Category-Routed Dispatch + §Batched Dispatch.
 
 **Consensus rules summary:** N=1 high-confidence → use answer;
 N=2 both-agree → use answer; N=3 2-of-3 or 3-of-3 agree → use
