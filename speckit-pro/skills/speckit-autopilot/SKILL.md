@@ -43,17 +43,23 @@ window auto-compacts; do not stop early, complete all 7 phases.
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main session agent** when the user invokes
-`/speckit-pro:autopilot`. Only the main agent can spawn subagents — per
-[Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents),
-**subagents cannot spawn other subagents.** The Orchestrator-Direct
-pattern works because the skill IS the main agent at execution time;
-phase-spawning is flat fan-out, never nested.
+`/speckit-pro:autopilot`. Only the main agent can spawn subagents
+([sub-agent docs](https://code.claude.com/docs/en/sub-agents):
+subagents can't nest) AND create Agent Teams
+([Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture):
+team-lead = main session). The skill IS the orchestrator at execution
+time. EVERY dispatch decision — parallel subagents vs sequential vs
+Agent Team, model routing, lifecycle sequencing — happens HERE. Phase
+executors are terminal workers; they don't dispatch, don't branch on
+`AGENT_TEAMS_AVAILABLE`, don't create teams.
 
-**If this skill is ever loaded inside a subagent context** (e.g. a
-phase-executor mistakenly calls `Skill('speckit-autopilot')`), it MUST
-refuse and surface the violation rather than orchestrate. None of the
-bundled phase agents include `Agent` in their tools list, so the
-runtime enforces this — not just convention.
+Runtime enforcement: no phase agent has `Agent` or team-management
+tools (`TeamCreate`/`sendMessage`/`taskUpdate`) in its allowlist
+(Layer 5 verifies). **If this skill is ever loaded inside a subagent
+context**, it MUST refuse rather than orchestrate. Full invariant +
+implications for new workstreams in
+[`references/agent-teams-integration.md`](./references/agent-teams-integration.md)
+§Single orchestrator invariant.
 
 ## Prerequisites — Model & Effort
 

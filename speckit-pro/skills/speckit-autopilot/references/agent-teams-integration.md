@@ -42,6 +42,119 @@ for the probe command and fallback semantics. **Users do not opt-in** —
 if Anthropic has enabled Agent Teams on the machine, speckit-pro uses it
 wherever the use case applies.
 
+## Single orchestrator invariant
+
+**The autopilot main session is THE orchestrator for the entire
+workflow run.** All dispatch decisions, all subagent spawns, all
+Agent Team creation, all model-routing decisions, all lifecycle
+sequencing — happen in this one place.
+
+### Why this invariant exists
+
+Claude Code's platform imposes two hard architectural limits that
+together force a single-orchestrator design:
+
+1. **Subagents cannot spawn other subagents.** Per
+   [Anthropic's sub-agent docs](https://code.claude.com/docs/en/sub-agents):
+   *"Subagents work within a single session."* The `Agent` tool is
+   omitted from every speckit-pro phase agent's frontmatter — Layer 5
+   tool scoping verifies this on every test run. The runtime, not
+   just convention, prevents nesting.
+2. **Subagents cannot create Agent Teams.** Per
+   [Anthropic's Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture):
+   *"Team lead: The main Claude Code session that creates the team,
+   spawns teammates, and coordinates work."* Team creation requires
+   team-management tools (`TeamCreate`, upgraded `Task`, `sendMessage`,
+   `taskUpdate`) which are not in any speckit-pro subagent's allowlist.
+
+Anthropic's own framing makes this a three-tier model that subagents
+can NOT collapse:
+
+> *"Subagents work within a single session. To run many independent
+> sessions in parallel and monitor them from one place, see
+> [background agents](https://code.claude.com/docs/en/agent-view).
+> For sessions that communicate with each other, see
+> [agent teams](https://code.claude.com/docs/en/agent-teams)."*
+
+A subagent cannot upgrade itself to either tier. Only the main session
+can.
+
+### What the orchestrator owns
+
+Every one of these decisions happens in the autopilot main session,
+never in a subagent:
+
+| Decision | Where it lives |
+|----------|---------------|
+| Which executor agent for each phase (specify/plan/tasks → phase-executor; clarify → clarify-executor; etc.) | `SKILL.md` §Phase Dispatch table + Rule 2 |
+| Parallel vs sequential dispatch (3 analysts in parallel for consensus; 3 tracks in parallel for post-impl) | `SKILL.md` Rule 6 + `phase-execution.md` Phase-by-Phase Execution |
+| Agent Team vs parallel-subagents fallback (Path A vs Path B routing on `AGENT_TEAMS_AVAILABLE`) | `post-implementation.md` §Post-Implementation Parallel Group |
+| Model routing for teammates (lead = opus, teammates = sonnet) | Design principle #8 above; encoded in spawn prompts |
+| Team lifecycle sequencing (consensus team → `[P]` team → post-impl team, never overlapping) | [Lifecycle policy](#one-team-at-a-time-lifecycle-policy) |
+| Consensus dispatch routing (`[codebase]` → codebase-analyst only, `[security]` → all 3, etc.) | `consensus-protocol.md` §Category-Routed Dispatch |
+| Gate validation invocation between phases | `SKILL.md` Step 2 + `gate-validation.md` |
+| Auto-fix retry vs stop on gate failure | Settings `gate-failure` from Step 0.6 |
+| Workflow file updates after every phase | `workflow-file-protocol.md` |
+| Error recovery (resume, fallback, escalate to user) | `error-recovery.md` |
+
+### What the orchestrator does NOT delegate
+
+The phase executors and analysts have rich tools (Read, Write, Edit,
+Bash, WebSearch, MCP tools) — but the **dispatch authority** does not
+leave the orchestrator. A `checklist-executor` runs `/speckit-checklist`,
+does its own research, applies its own patches to spec.md — but if
+unresolved items remain, it returns a summary; the **orchestrator**
+spawns the consensus analysts, not the executor.
+
+This is the flat orchestrator-worker pattern from Anthropic's
+[Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents)
+guide. Layered orchestration (sub-orchestrators that themselves
+dispatch) is not possible on Claude Code's runtime; the flat pattern
+isn't a design preference, it's the only valid topology.
+
+### Enforcement
+
+- **Layer 5 (tool scoping) — machine-verified:** every agent under
+  `agents/*.md` is universally checked for absence of:
+  - `Agent` (subagent-nesting prevention — runtime-enforced)
+  - `TeamCreate` (no team-lead capability)
+  - `SendMessage` (no team-mailbox participation)
+
+  See `tests/layer5-tool-scoping/validate-tool-scoping.sh` §"Single
+  orchestrator invariant — universal denial." Run via
+  `bash tests/run-all.sh --layer 5`. Any future agent added to
+  `agents/` that violates these denials fails the test.
+
+- **Code review:** any PR that adds an agent definition must keep
+  these three tools out of the allowlist. The Layer 5 universal
+  check catches it automatically, but reviewers should call this out
+  explicitly so the design intent is visible in the PR conversation.
+
+- **Runtime self-check:** SKILL.md's §Codex Skill-Selection Guard plus
+  the *"If this skill is ever loaded inside a subagent context"*
+  refusal in §Architectural Constraint catch the case where this
+  skill is mistakenly loaded into a non-main-session.
+
+- **Forward-looking:** if Anthropic adds new team-management tools
+  beyond `TeamCreate` and `SendMessage` (e.g., a `TaskClaim` or
+  `TeamShutdown` primitive), add them to the universal denylist in
+  Layer 5 within the same release window.
+
+### Implications for new workstreams
+
+Any new Agent Teams use site (B1/B2/B3 in the audit; future Use sites
+beyond) MUST add its dispatch logic to the **orchestrator** (SKILL.md
++ relevant reference doc), never to a phase executor. The pattern is:
+
+1. Orchestrator detects condition (e.g., `[P]`-tagged tasks in tasks.md)
+2. Orchestrator decides path (Agent Team if `AGENT_TEAMS_AVAILABLE`,
+   else parallel background subagents)
+3. Orchestrator dispatches per the chosen path
+4. Orchestrator collects results, applies edits, advances
+
+The phase executor's body NEVER reads `AGENT_TEAMS_AVAILABLE` or
+contains conditional dispatch logic. That is the orchestrator's job.
+
 ## Use-site map
 
 | # | Use site | Status | Anthropic-docs use case | Implementation reference |

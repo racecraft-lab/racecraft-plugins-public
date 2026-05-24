@@ -449,6 +449,35 @@ set_test "consensus-synthesizer maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
 
+# ===========================================================================
+# Universal: single orchestrator invariant — no subagent may dispatch
+# ===========================================================================
+# Enforces the architectural rule documented in
+# references/agent-teams-integration.md §Single orchestrator invariant:
+# only the main session (which loads the speckit-autopilot skill) may
+# spawn subagents or create Agent Teams. Phase agents are terminal
+# workers — they MUST NOT have the Agent tool (subagent nesting) or
+# any team-management tool (team creation).
+section "Single orchestrator invariant — universal denial"
+
+for agent_file in "$AGENTS_DIR"/*.md; do
+  agent_name=$(basename "$agent_file" .md)
+  TOOLS=$(extract_tools "$agent_file")
+
+  # Subagent-nesting prevention
+  set_test "$agent_name does NOT have Agent tool (subagents cannot nest)"
+  assert_tool_absent "$TOOLS" "Agent" "$agent_name"
+
+  # Team-creation prevention — denylist known team-management tools.
+  # Per Anthropic's Agent Teams docs, team-lead is the main session;
+  # only it can create teams. Any subagent with these tools could
+  # attempt to upgrade itself to a team-lead, violating the invariant.
+  for team_tool in TeamCreate SendMessage; do
+    set_test "$agent_name does NOT have $team_tool (team-lead is main session only)"
+    assert_tool_absent "$TOOLS" "$team_tool" "$agent_name"
+  done
+done
+
 # ─────────────────────────────────────────
 # Codex Agent Sandbox Mode Validation
 # ─────────────────────────────────────────
