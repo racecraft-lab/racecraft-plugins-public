@@ -631,124 +631,46 @@ Before Phase 1 starts, validate all of the following or STOP:
 
 ## Step 2: Main Execution Loop
 
-For each pending phase, spawn a subagent, collect the result,
-validate the gate, and advance.
+For each pending phase the parent orchestrator does six things in
+order: pre-phase hooks → spawn executor → consensus resolution →
+post-phase hooks → gate validation → auto-commit + advance. Full
+11-step pseudocode (including the `PHASES = [...]` canonical order
+and `--from-phase` semantics) lives in
+[phase-execution-codex.md §Main Execution Loop](./references/phase-execution-codex.md#main-execution-loop).
 
-```text
-PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]
+**Phase 7 task-list reconciliation (body-pinned invariants):**
+After the Tasks phase and G5 pass, parse `tasks.md` and replace
+the `Phase 7: Implement - Pending task decomposition` placeholder
+with concrete Phase 7 task-group items in both `update_plan` and
+`autopilot-state.json`. Before Analyze or Implement can run, validate:
 
-for phase in PHASES starting from first_pending:
-    0. Re-run the all-phase coverage audit against update_plan and
-       autopilot-state.json. If Archive Sweep or any canonical phase family
-       is missing, STOP and repair the plan before executing this phase.
-    1. update_plan: mark the current phase item as "in_progress"
-       and mirror the same status change into autopilot-state.json
-    2. Check .specify/extensions.yml for before_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
-    3. Read the workflow file's prompt(s) for this phase
-    4. For EACH prompt in the phase:
-       a. Resolve `<executor>`:
-          use the matching installed SpecKit custom agent
-       b. spawn_agent the resolved `<executor>`:
-          "Run $speckit-<phase> with: <prompt>"
-       c. wait_agent for the summary
-       d. update_plan: mark this prompt's item as "completed"
-       e. Write the same transition to autopilot-state.json
-    5. Run consensus in main session if needed:
-       Parse executor's "Unresolved for consensus" section.
-       For each item → spawn 3 consensus agents in parallel
-       (codebase-analyst, spec-context-analyst, domain-researcher)
-       → wait_agent on all 3 → apply consensus rules → edit artifacts
-       → mark the corresponding Consensus item complete in both stores
-    6. Check .specify/extensions.yml for after_<phase> hooks
-       → run accepted hooks (non-destructive), skip duplicates
-    7. Validate gate directly in the main session:
-       Run '<SKILL_SCRIPTS>/validate-gate.sh' for gate G<N>
-       against <feature_dir> from the orchestrator using the
-       resolved scripts path for this skill.
-       Parse the script output for PASS/FAIL status.
-    8. If gate fails:
-       a. Attempt auto-fix (max 2 attempts)
-       b. If still failing and gate-failure == "stop": STOP
-       c. If gate-failure == "skip-and-log": log, continue
-    9. Update workflow file with results and print the current checklist summary
-   10. If auto-commit == "per-phase":
-       For phases 1–6: run: git add specs/ && git commit
-       For phase 7 (implement): run: git add -A && git commit
-       (implementation changes include src/, tests/, etc.)
-      After the Tasks phase and G5 pass, parse tasks.md and replace
-      "Phase 7: Implement - Pending task decomposition" with one or more
-      concrete Phase 7 task-group items in both update_plan and
-      autopilot-state.json. Before advancing, validate that:
-        - the placeholder no longer exists in either state store
-        - at least one concrete Phase 7 item exists
-        - each concrete Phase 7 item names task IDs from tasks.md
-        - `<SKILL_SCRIPTS>/reviewability-gate.sh tasks <feature_dir>`
-          does not return an unexcepted `block`
-      If any check fails, STOP and repair the plan/state before Analyze
-      or Implement can run.
-   11. Advance to next phase (next iteration of loop) and write the new
-       `in_progress` item to both update_plan and autopilot-state.json.
-       Never mark the run complete while a later phase family still has
-       pending items.
+- the placeholder no longer exists in either state store
+- at least one concrete Phase 7 item exists
+- each concrete Phase 7 item names task IDs from tasks.md
+- `<SKILL_SCRIPTS>/reviewability-gate.sh tasks <feature_dir>` does
+  not return an unexcepted `block`
 
-POST-IMPLEMENTATION (after all 7 phases complete):
-    These are items in your checklist — execute them in order.
+If any check fails, STOP and repair the plan/state before advancing.
 
-    HOW EXTENSION COMMANDS BECOME AVAILABLE:
-    Commands like $speckit-verify, $speckit-review, $speckit-cleanup,
-    $speckit-doctor, $speckit-retrospective-analyze are INSTALLED by
-    `specify extension add <name>`. The CLI creates command files
-    in the project's commands directory (`.codex/commands/` for Codex CLI, `.claude/commands/` for Claude Code). These
-    commands then appear as invocable skills.
+**Post-implementation (after all 7 phases complete + G7 passes):**
+Items 10-20 are part of the same durable plan (Step 1.1's Canonical
+Post-Implementation Item List — `Post: Doctor Extension Check`
+through `Post: Retrospective` as the FINAL STEP). Items 10-14
+(Doctor / Verify / Verify-Tasks / Code Review / Integration) form
+a parallel group; the serial tail (15-20) handles Cleanup → PR
+creation → Review Remediation → Retrospective.
 
-    If Step 0.12 detected the extension in .registry as enabled,
-    its commands ARE available — run the item.
-    If an extension is NOT in .registry and NOT found via search,
-    log a warning and skip that specific item (do NOT fail the
-    entire autopilot). Recommend: `specify extension add <name>`.
+Codex CLI does not have Agent Teams primitives — Codex always uses
+the parallel `spawn_agent` pattern (3 tracks fanned out in one tool
+turn: Doctor / Code Review / Verify-chain where 11→12→14 chain due
+to shared fixtures, then `wait_agent` on all three). The Claude
+Code variant capability-detects Anthropic's Agent Teams and routes
+to a team when available; the 3-track structure is identical across
+all paths.
 
-    CRITICAL: Use subagents for ALL post-implementation items —
-    NEVER invoke skills directly in your context. Rule 1 applies
-    here too.
-
-    NOTE — Agent Teams is Claude-Code-only. The Claude Code variant
-    of this skill auto-detects Anthropic's Agent Teams capability
-    (env var + version) and delegates tasks 10-14 to a team when
-    available, or falls back to parallel background subagents. Codex
-    CLI does not have Agent Teams primitives — Codex always uses
-    the parallel spawn_agent pattern below (3 tracks fanned out in
-    one tool turn via spawn_agent, then wait_agent on all three).
-    The 3-track structure (Doctor / Code Review / Verify-chain) is
-    identical to both Claude Code paths.
-
-    Post-implementation items (execute in order — every row below
-    is an item that MUST appear in the plan per Step 1.1's Canonical
-    Post-Implementation Item List):
-
-    | # | Item | Requires | Command |
-    |---|------|----------|---------|
-    | 10 | Doctor Extension Check | doctor / speckit-utils ext | $speckit-speckit-utils-doctor (or $speckit-doctor) |
-    | 11 | Verify Implementation | verify ext | $speckit-verify |
-    | 12 | Verify Tasks Phantom Check | verify-tasks ext | $speckit-verify-tasks |
-    | 13 | Code Review | review ext | $speckit-review |
-    | 14 | Integration Suite | (none) | Step 3.1 direct |
-    | 15 | Cleanup | cleanup ext | $speckit-cleanup |
-    | 16 | Reviewability Diff Gate | (none) | reviewability-gate.sh diff |
-    | 17 | PR Body Generation | (none) | generate-pr-body.sh |
-    | 18 | PR Creation | (none) | Step 3.2 direct |
-    | 19 | Review Remediation | (none) | Step 3.3 loop |
-    | 20 | Retrospective | retrospective ext | $speckit-retrospective-analyze |
-
-    Extension items: Spawn `phase-executor` with instructions
-    to run the `$speckit-*` extension skill for SPEC-XXX and return a summary.
-    Non-extension items (14, 16, 17, 18, 19): execute directly per Step 3.
-    Missing extension: log warning and mark the item "skipped: <ext> not
-    installed". The item MUST still appear in the plan — never drop it
-    silently.
-    See [post-implementation-codex.md](./references/post-implementation-codex.md) for detailed prompts.
-    Item 20 (Retrospective) is the FINAL STEP.
-```
+Per-item runtime + command table, parallel-group dispatch detail,
+and extension-availability rules: see
+[post-implementation-codex.md](./references/post-implementation-codex.md).
 
 **Dynamic updates:** If consensus reveals new questions or
 remediation adds loops, add additional items to your checklist.
