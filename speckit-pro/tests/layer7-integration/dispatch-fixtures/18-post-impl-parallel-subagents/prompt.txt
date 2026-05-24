@@ -1,0 +1,21 @@
+You are speckit-autopilot. All 7 phases of SPEC-FIXTURE-POSTIMPL have
+completed and G7 passed. The workflow file's Post-Implementation
+Checklist is empty.
+
+The Step 0.6 capability probe set `AGENT_TEAMS_AVAILABLE=false` (env
+var unset OR Claude Code version < 2.1.32). Per
+`references/post-implementation.md` §Path B (Parallel subagents),
+dispatch the post-impl parallel group's 3 tracks as background
+subagents in ONE assistant message:
+
+- Track A: "SPEC-FIXTURE-POSTIMPL Doctor" — general-purpose
+- Track B: "SPEC-FIXTURE-POSTIMPL Code Review" — general-purpose
+- Track C: "SPEC-FIXTURE-POSTIMPL Verify Chain" — general-purpose
+          (this subagent runs verify -> verify-tasks -> integration
+           sequentially inside its own context)
+
+All three Agent calls go in the SAME assistant message with
+run_in_background: true. Do not dispatch them sequentially.
+
+Do NOT spawn any Agent Team. Do NOT invoke grill-me. Stop after all
+three subagents return.

@@ -112,49 +112,54 @@ workflow file's `Branch` field. Warn if they don't match.
 Skill tool invocations. The autopilot handles branch context by
 adjusting how it invokes each phase (see Phase Dispatch).
 
-## Step 0.6: Load Settings
+## Step 0.6: Load Settings + Detect Agent Teams Capability
+
+### Settings file
 
 Read `.claude/speckit-pro.local.md` if it exists. Parse YAML
 frontmatter for: `consensus-mode` (default: `moderate`),
 `gate-failure` (default: `stop`), `auto-commit` (default:
-`per-phase`), `security-keywords` (default: standard list),
-`post-impl-mode` (default: `subagents`).
+`per-phase`), `security-keywords` (default: standard list).
 If the file doesn't exist, use all defaults.
 
-### `post-impl-mode` probe — teams-mode opt-in
+### Agent Teams capability probe
 
-`post-impl-mode` controls how the post-implementation parallel
-group (tasks 10/11/12/13/14) dispatches:
+Agent Teams is a **capability**, not a user setting. The autopilot
+probes for it at startup and routes anywhere-it's-beneficial work to
+teams when available, otherwise falls back to highly-parallel
+subagent dispatch. Users do not opt-in — if Anthropic has enabled
+Agent Teams on this machine, speckit-pro uses it.
 
-- `subagents` (default) — sequential `Agent()` calls, current behavior
-- `teams` (opt-in) — one Agent Team spawned with 3 teammates
-
-When `post-impl-mode: teams` is requested, probe before committing
-to the mode:
+Probe two conditions:
 
 ```text
-Bash("test \"${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS}\" = \"1\" && claude --version | awk '{print $1}' | sort -V -C")
+Bash("test \"${CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS}\" = \"1\"")
+Bash("claude --version | awk '{print $1}' | sort -V -C 2.1.32")
 ```
 
-The probe checks two conditions:
-
 1. **Env var:** `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set
-2. **Version:** `claude --version` returns a value ≥ `2.1.32`
+   (per [Anthropic's Agent Teams docs](https://code.claude.com/docs/en/agent-teams))
+2. **Version:** `claude --version` returns ≥ `2.1.32`
 
-If either check fails, fall back to `subagents` mode and log a
-warning to the workflow file's Notes section:
+Record the result as `AGENT_TEAMS_AVAILABLE = true|false` in the
+workflow file's Notes section. Pass this flag to dispatch decisions
+downstream — it is not user-tunable.
 
-> `post-impl-mode: teams` requested but Agent Teams unavailable
-> (env var unset OR Claude Code < 2.1.32). Falling back to
-> `subagents` mode. Re-run with the env var set and a current
-> Claude Code build to enable teams mode.
+When `AGENT_TEAMS_AVAILABLE` is `false`, log to the workflow file:
 
-**Do not STOP** — teams mode is a latency optimization, not a
-dependency. The autopilot must always complete in `subagents`
-mode if teams isn't available.
+> Agent Teams not detected (env var unset OR Claude Code < 2.1.32).
+> Using parallel-subagents dispatch for post-impl. To enable Agent
+> Teams (which adds inter-teammate messaging and shared task lists),
+> set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` and upgrade Claude
+> Code to ≥ 2.1.32, then re-run.
 
-Teams-mode dispatch details live in
-[`post-implementation.md`](./post-implementation.md) §Mode Selection.
+**Do not STOP** — both code paths complete the autopilot correctly.
+Agent Teams is a quality-and-coordination enhancement, not a
+dependency. The subagents fallback is itself parallel (background
+dispatch in one tool call) so wall-clock is comparable.
+
+Dispatch details for both code paths live in
+[`post-implementation.md`](./post-implementation.md) §Post-Implementation Parallel Group.
 
 ## Step 0.8: MCP Server & Plugin Limitation Check
 

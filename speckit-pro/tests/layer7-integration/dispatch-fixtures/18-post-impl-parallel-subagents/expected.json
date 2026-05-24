@@ -1,0 +1,18 @@
+{
+  "fixture_id": "18-post-impl-parallel-subagents",
+  "purpose": "Verify post-impl tasks 10-14 dispatch as 3 parallel background subagents in ONE assistant message when AGENT_TEAMS_AVAILABLE=false. This is the capability-driven fallback path of the D3-with-Teams design.",
+  "must_dispatch_to_at_least_one_of": [
+    "general-purpose",
+    "speckit-pro:phase-executor"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me",
+    "speckit-pro:clarify-executor"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 3,
+  "max_dispatch_count": 5,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ]
+}

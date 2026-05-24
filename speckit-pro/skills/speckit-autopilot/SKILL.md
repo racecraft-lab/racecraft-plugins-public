@@ -245,9 +245,9 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    match descriptions against implementation keywords; set
    `PROJECT_IMPLEMENTATION_AGENT` (fallback: `phase-executor`). Also
    check CLAUDE.md for an explicit agent reference.
-6. **Load settings** from `.claude/speckit-pro.local.md` if present
-   (`consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`,
-   `post-impl-mode`). Teams-mode probe + fallback in `references/prerequisites.md`.
+6. **Load settings + Agent Teams probe** — read `.claude/speckit-pro.local.md`
+   (`consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`);
+   record `AGENT_TEAMS_AVAILABLE` from env+version probe (see prerequisites.md §Step 0.6).
 
 **Plugin agent caveat:** `permissionMode`, `hooks`, and `mcpServers`
 frontmatter are silently ignored on plugin agents. Run the parent
@@ -421,7 +421,7 @@ context, verify): see `references/phase-execution.md` —
 After all 7 phases complete and G7 passes, follow the
 detailed procedures in `references/post-implementation.md`:
 
-1. **3.0 Mode** — `post-impl-mode` setting (default `subagents`; `teams` opt-in)
+1. **3.0 Parallel group** — auto-routed by `AGENT_TEAMS_AVAILABLE` (teams vs parallel-subagents)
 2. **3.1 Integration Suite** — verify spec-specific tests
    exist, run FULL suite to catch regressions, fix failures
 3. **3.2 PR Creation** — final verification, reviewability diff gate,

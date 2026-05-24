@@ -1,4 +1,0 @@
-{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-001","name":"Agent","input":{"subagent_type":"speckit-pro:phase-executor","description":"SPEC-FIXTURE-POSTIMPL Doctor","prompt":""}}]}}
-{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-001","content":"Reduced parser fixture response for speckit-pro:phase-executor (Doctor)"}]}}
-{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"tool-002","name":"Agent","input":{"subagent_type":"speckit-pro:phase-executor","description":"SPEC-FIXTURE-POSTIMPL Verify","prompt":""}}]}}
-{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tool-002","content":"Reduced parser fixture response for speckit-pro:phase-executor (Verify)"}]}}
