@@ -135,8 +135,11 @@ for agent in "${AGENTS[@]}"; do
     fi
   fi
 
-  # Plugin policy: every Codex agent runs at xhigh reasoning regardless of
-  # model. Quality is the only optimization axis; cost is a non-goal.
+  # Plugin policy: every Codex agent defaults to xhigh reasoning. Quality is
+  # the paramount goal. Lower reasoning effort is only acceptable when a
+  # Layer 6 efficiency benchmark empirically proves the agent reaches
+  # quality=1.0 at that lower effort on its scored fixtures
+  # (tests/layer6-efficiency/results-codex/*.json).
   case "$agent" in
     autopilot-fast-helper)
       set_test "autopilot-fast-helper: uses Spark read-only (no reasoning effort — Spark does not support reasoning fields per OpenAI docs)"
@@ -176,8 +179,21 @@ for agent in "${AGENTS[@]}"; do
         _fail "expected gpt-5.5 / xhigh / workspace-write, got $model_val / $effort_val / $sandbox_val"
       fi
       ;;
-    codebase-analyst|spec-context-analyst|domain-researcher)
-      set_test "${agent}: uses xhigh read-only GPT-5.5 consensus profile"
+    codebase-analyst|spec-context-analyst)
+      # L6-validated quality=1.0 at low effort on the 2026-05-25 smoke fixtures.
+      # Accept either low (cost-optimized) or xhigh (default policy) so a future
+      # rollback or re-pin to xhigh does not fail this gate.
+      set_test "${agent}: uses GPT-5.5 read-only consensus profile (L6-validated effort)"
+      if [ "$model_val" = "gpt-5.5" ] && { [ "$effort_val" = "low" ] || [ "$effort_val" = "xhigh" ]; } && [ "$sandbox_val" = "read-only" ]; then
+        _pass
+      else
+        _fail "expected gpt-5.5 / low|xhigh / read-only, got $model_val / $effort_val / $sandbox_val"
+      fi
+      ;;
+    domain-researcher)
+      # No L6 effort level reaches quality=1.0 (range 0.62-0.69 on 2026-05-25).
+      # Must remain at xhigh until a future L6 run demonstrates 100% at a lower level.
+      set_test "domain-researcher: uses xhigh read-only GPT-5.5 consensus profile (L6 has not validated lower effort)"
       if [ "$model_val" = "gpt-5.5" ] && [ "$effort_val" = "xhigh" ] && [ "$sandbox_val" = "read-only" ]; then
         _pass
       else

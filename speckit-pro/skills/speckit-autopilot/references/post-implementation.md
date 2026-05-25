@@ -102,8 +102,11 @@ max-thinking-on-every-agent policy** (see
 [agent-teams-integration.md](./agent-teams-integration.md)
 §Design principles #8). The post-impl tasks here are mechanical
 (run a command, parse output, report) so sonnet is the right
-*model fit* — but the thinking budget is never lowered. Quality
-is the only optimization axis; cost is a non-goal.
+*model fit* — and the thinking budget is never lowered unless
+Layer 6 fixtures empirically prove quality=1.0 at a lower effort
+(see `tests/layer6-efficiency/results-codex/*.json`). Quality is
+paramount; cost is reduced only where quality is proven to be
+equivalent.
 
 Substitute the actual extension command names (e.g., `/speckit.doctor`
 vs `/speckit.speckit-utils.doctor`) based on Step 0.12 extension

@@ -500,10 +500,27 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
       set_test "codex ${agent}: model is gpt-5.5"
       assert_eq "gpt-5.5" "$model" "${agent} must use gpt-5.5"
 
-      # Plugin policy: every Codex agent runs at xhigh regardless of model.
+      # Plugin policy: every Codex agent defaults to xhigh reasoning. Lower
+      # effort is acceptable only when a Layer 6 efficiency benchmark proves
+      # quality=1.0 at the lower level on the agent's scored fixtures
+      # (tests/layer6-efficiency/results-codex/*.json).
       effort=$(extract_toml_field "$AGENT_FILE" "model_reasoning_effort")
-      set_test "codex ${agent}: reasoning is xhigh (max-thinking policy)"
-      assert_eq "xhigh" "$effort" "${agent} must use xhigh reasoning per plugin policy"
+      case "$agent" in
+        codebase-analyst|spec-context-analyst)
+          # L6-validated: quality=1.0 at low and xhigh on 2026-05-25 smoke.
+          set_test "codex ${agent}: reasoning is L6-validated (low or xhigh)"
+          if [ "$effort" = "low" ] || [ "$effort" = "xhigh" ]; then
+            _pass
+          else
+            _fail "${agent} reasoning must be low (L6-validated 100%) or xhigh (policy default), got '$effort'"
+          fi
+          ;;
+        *)
+          # No L6 evidence of quality=1.0 at lower effort — must remain xhigh.
+          set_test "codex ${agent}: reasoning is xhigh (max-thinking policy, no L6 carve-out)"
+          assert_eq "xhigh" "$effort" "${agent} must use xhigh reasoning per plugin policy"
+          ;;
+      esac
     fi
   done
 
