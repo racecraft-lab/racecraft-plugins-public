@@ -230,6 +230,35 @@
         "States explicitly that no autopilot code change is required when the user installs a previously-unknown preset or extension",
         "Distinguishes this dynamic path from the curated 6-extension auto-route contract (archive / doctor / review / verify / verify-tasks / retrospective) — the latter is an intentional opinionated routing, not a freshness gap"
       ]
+    },
+    {
+      "id": 20,
+      "prompt": "Pretend you just finished Phase 6 (Analyze) for a feature and the consensus-synthesizer wrote this block to the workflow log:\n\n```\n📊 Confidence: 0.85\n\n- Task understanding: 0.95\n- Approach clarity: 0.80\n- Requirements alignment: 0.90\n- Risk assessment: 0.75\n- Completeness: 0.85\n```\n\nThe project's `.claude/speckit-pro.local.md` has no `confidence_gate_mode` key. The user is about to start Phase 7 (Implement). Walk through what the autopilot does at gate G6.5: which script it runs, what exit code that script returns, what the autopilot does next, and what the alternate behavior would be if the operator passed `--strict` on the invocation. Be specific about the lowest-scoring criterion and how the autopilot uses it.",
+      "expected_output": "Explains the G6.5 confidence gate behavior end-to-end: runs scripts/confidence-gate.sh against the workflow file, parses the 📊 Confidence emit, compares 0.85 against the default 0.90 threshold, exits 2 (FAIL). In advisory mode (the resolved default since no flag was passed and no local config override), the autopilot logs the breakdown, identifies Risk Assessment as the lowest criterion at 0.75, dispatches a focused remediation round on open CRITICAL/HIGH findings, re-emits via the synthesizer, and re-runs the gate. Max 3 iterations. In strict mode, exit 2 means STOP before Phase 7 — the operator can resume with --from-phase implement if they accept the lower score. The mode is resolved once at Step 0.6b by resolve-confidence-mode.sh and cached in CONFIDENCE_GATE_MODE for the gate to read.",
+      "expectations": [
+        "Names scripts/confidence-gate.sh as the script that runs at G6.5",
+        "States the script exits 2 when composite (0.85) is below threshold (0.90 default)",
+        "Identifies Risk Assessment (0.75) as the lowest-scoring criterion in the example block",
+        "Explains advisory mode behavior: log + remediate the lowest criterion + re-emit + re-run (max 3 iterations), then continue to Phase 7",
+        "Explains strict mode behavior: STOP before Phase 7; operator can resume with --from-phase implement",
+        "States that mode resolution happens once at Step 0.6b via resolve-confidence-mode.sh and is cached as CONFIDENCE_GATE_MODE for G6.5 to read (not re-resolved at G6.5)",
+        "Mentions the iteration cap of 3 as the safety bound when /goal is not available (Codex codex exec)"
+      ]
+    },
+    {
+      "id": 21,
+      "prompt": "The autopilot just finished its Post: Integration Suite step and is about to start Post: PR Body Generation. Between those two, there's a new mandatory step called Post: Self-Review. Describe exactly what the autopilot does during Post: Self-Review — list each question the autopilot must answer, what the output block in the workflow log looks like, where the answers also end up, and whether the self-review can stop the PR from being created. Be specific about the block format.",
+      "expected_output": "Lists the 4 self-review questions in order (Tests executed? Edge cases? Requirements matched? Follow-up?), describes the block format with Self-Review heading and individual answer paragraphs, states answers are reproduced verbatim in the generated PR body's ## Self-Review Findings section, and clarifies that self-review is a reporting step — it does NOT gate PR creation. The PR opens regardless of what the review surfaces; gaps are tracked for human reviewer or post-PR remediation loop.",
+      "expectations": [
+        "Lists all 4 questions in order: Tests executed? / Edge cases? / Requirements matched? / Follow-up?",
+        "Tests executed? — requires citing the test run timestamp from the workflow log and confirming BUILD/TYPECHECK/LINT/UNIT_TEST/INTEGRATION_TEST each actually ran and exited zero",
+        "Edge cases? — requires naming the test (file:line) for each acceptance criterion's non-happy path; flags criteria with only happy-path tests as [edge-case-gap]",
+        "Requirements matched? — requires cross-walking spec.md FR-XXX list against tasks.md, with each FR tracing to at least one [X] task and each [X] task having implementation evidence (commit hash + passing test)",
+        "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
+        "States the answers are reproduced in the generated PR body under a ## Self-Review Findings section",
+        "States explicitly that self-review is a reporting step, NOT a gate — the PR opens regardless of what the review surfaces",
+        "Mentions that Post: Self-Review appears in the canonical post-implementation task list (12 entries total, between Post: Reviewability Diff Gate and Post: PR Body Generation)"
+      ]
     }
   ]
 }
