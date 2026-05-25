@@ -28,6 +28,7 @@ list, Codex-specific persistence primitives.
   "Phase 5: Tasks"
   "Phase 6: Analyze"
   "Phase 6: Analyze - Consensus"                ← MANDATORY after analyze
+  "Phase 6.5: Confidence Gate"                  ← MANDATORY after analyze consensus
   "Phase 7: Implement - Pending task decomposition" ← before tasks.md exists
   "Phase 7: <Group> (<task IDs>)"               ← parsed from tasks.md
   "Post: <item name>"                           ← from canonical list below
@@ -102,6 +103,7 @@ advancing.
     {"step": "Phase 5: Tasks", "status": "pending"},
     {"step": "Phase 6: Analyze", "status": "pending"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},

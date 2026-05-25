@@ -26,6 +26,7 @@ Parsed from the workflow file:
   "Phase 5: Tasks"
   "Phase 6: Analyze"
   "Phase 6: Analyze - Consensus"                ← MANDATORY after analyze
+  "Phase 6.5: Confidence Gate"                  ← MANDATORY after analyze consensus
   "Phase 7: <Group> (<task IDs>)"               ← parsed from tasks.md
   "Post: <task name>"                           ← from the canonical list below
 ```

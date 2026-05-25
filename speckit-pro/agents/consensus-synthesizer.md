@@ -156,3 +156,31 @@ routing. Treat that response as absent — do not synthesize against it.
 
 **Flags:** None | [ESCAPE_TO_ROUND_2] <reason> | [HUMAN REVIEW NEEDED] <reason>
 ```
+
+## Phase 6 Analyze — Pre-Implement Confidence Emit (required)
+
+In addition to the per-item `Consensus Result` blocks above, when
+the orchestrator dispatches you for **Phase 6 (Analyze) synthesis**
+— including the clean-pass case with zero unresolved findings —
+emit a final block in this exact format at the very end of your
+output, after all per-finding `Consensus Result` blocks:
+
+```text
+📊 Confidence: 0.XX
+
+- Task understanding: 0.XX
+- Approach clarity: 0.XX
+- Requirements alignment: 0.XX
+- Risk assessment: 0.XX
+- Completeness: 0.XX
+```
+
+The aggregate on the first line is the arithmetic mean of the
+five criterion scores, rounded to two decimals. Each criterion
+is independently scored 0.00–1.00 against the rubric in
+[consensus-protocol.md §Pre-Implement Confidence Emit](../skills/speckit-autopilot/references/consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze).
+Do not omit this block on Analyze synthesis — the downstream
+Pre-Implement Confidence Gate (G6.5) depends on it.
+
+**This block is Phase-6-only.** Do not emit it during Clarify or
+Checklist synthesis.
