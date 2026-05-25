@@ -337,8 +337,15 @@ Every Agent Teams use site in speckit-pro MUST:
    plugin's policy of **max thinking on every agent, regardless of
    model**. Model choice is per-agent fit (opus for heavy reasoning,
    sonnet for focused read-and-report work, gpt-5.5 + xhigh on Codex)
-   — but the thinking budget is never lowered. Quality is the only
-   optimization axis; cost is a non-goal.
+   — and the thinking budget is never lowered *unless* a Layer 6
+   efficiency benchmark empirically proves that the agent reaches
+   quality=1.0 at a lower effort on its scored fixtures (see
+   `tests/layer6-efficiency/results-codex/*.json`). In that case the
+   agent may be dialed down to the cheapest L6-validated 100%-quality
+   level. Verified quality always trumps reasoning headroom, but
+   unverified reasoning headroom never trumps verified quality.
+   Quality is paramount; cost is reduced only where quality is proven
+   to be equivalent.
 
 ## When to use what — Anthropic decision framework
 
