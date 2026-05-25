@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import re
 import shutil
@@ -36,6 +37,36 @@ import uuid
 
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[2]
+
+
+def setup_isolated_codex_home() -> pathlib.Path:
+    """Create a fresh CODEX_HOME directory with only auth.json copied in.
+
+    Why isolation: Codex discovers skills from `${CODEX_HOME:-$HOME/.codex}/skills/`
+    (user scope) and loads plugins registered under `$CODEX_HOME/plugins/`. If a
+    user has the speckit-pro plugin installed, its codex-skills compete with the
+    test-staged skill and routinely win the selector — causing 100% of
+    `should_trigger: true` eval queries to score 0/N. Setting CODEX_HOME to a
+    fresh temp dir hides both the user's personal skills and any installed
+    plugins, so the test skill has no rival.
+
+    Following OpenAI's own pattern from codex PR #22563
+    ("tests: isolate codex home for live cli").
+
+    Auth: copy auth.json from the real ~/.codex (or $CODEX_HOME if user has
+    set it). One-shot per eval run, so file copy is fine — no token-refresh
+    write-back concern.
+    """
+    real_codex_home = pathlib.Path(os.environ.get("CODEX_HOME", os.path.expanduser("~/.codex")))
+    real_auth = real_codex_home / "auth.json"
+    if not real_auth.exists():
+        sys.exit(
+            f"ERROR: cannot isolate CODEX_HOME — no auth.json at {real_auth}. "
+            f"Run `codex login` first, or set CODEX_HOME to a path that has one."
+        )
+    temp_codex_home = pathlib.Path(tempfile.mkdtemp(prefix="codex-eval-home-"))
+    shutil.copy2(real_auth, temp_codex_home / "auth.json")
+    return temp_codex_home
 
 
 def find_eval_file(skill: str) -> pathlib.Path:
@@ -82,18 +113,29 @@ def stage_skill_with_marker(src: pathlib.Path, dst_dir: pathlib.Path, new_name: 
     (dst_dir / "SKILL.md").write_text(f"---\n{fm}\n---\n\n{marker_block}{skill_body}")
 
 
-def run_codex_query(workspace: pathlib.Path, query: str, reasoning: str, model: str | None, timeout: int) -> tuple[int, str]:
+def run_codex_query(
+    workspace: pathlib.Path,
+    codex_home: pathlib.Path | None,
+    query: str,
+    reasoning: str,
+    model: str | None,
+    timeout: int,
+) -> tuple[int, str]:
     cmd = [
         "codex", "exec",
         "--cd", str(workspace),
         "--skip-git-repo-check",
         "--sandbox", "read-only",
         "--ephemeral",
+        "--ignore-user-config",
         "-c", f'model_reasoning_effort="{reasoning}"',
     ]
     if model:
         cmd += ["-c", f'model="{model}"']
     cmd.append(query)
+    env = os.environ.copy()
+    if codex_home is not None:
+        env["CODEX_HOME"] = str(codex_home)
     try:
         proc = subprocess.run(
             cmd,
@@ -102,6 +144,7 @@ def run_codex_query(workspace: pathlib.Path, query: str, reasoning: str, model: 
             stderr=subprocess.STDOUT,
             text=True,
             timeout=timeout,
+            env=env,
         )
         return proc.returncode, proc.stdout
     except subprocess.TimeoutExpired as e:
@@ -118,6 +161,11 @@ def main() -> int:
     ap.add_argument("--threshold", type=float, default=0.5, help="Trigger-rate threshold for pass (default 0.5)")
     ap.add_argument("--timeout", type=int, default=180, help="Per-query timeout seconds (default 180)")
     ap.add_argument("--out", help="Write detailed JSON results to this file")
+    ap.add_argument(
+        "--no-isolate-codex-home",
+        action="store_true",
+        help="Disable CODEX_HOME isolation (loads real user skills + plugins; for debugging only).",
+    )
     args = ap.parse_args()
 
     if shutil.which("codex") is None:
@@ -134,7 +182,15 @@ def main() -> int:
     marker = f"CODEX_SKILL_FIRED:{test_skill_name}"
 
     workspace = pathlib.Path(tempfile.mkdtemp(prefix=f"codex-eval-{args.skill}-"))
-    skill_dir = workspace / ".codex/skills" / test_skill_name
+    codex_home: pathlib.Path | None = None
+    if not args.no_isolate_codex_home:
+        codex_home = setup_isolated_codex_home()
+        # User-scope discovery path per Codex docs: $CODEX_HOME/skills/<name>/SKILL.md
+        skill_dir = codex_home / "skills" / test_skill_name
+    else:
+        # Legacy path — kept for debugging only. NOT a documented Codex discovery
+        # path; the test skill likely never loads here.
+        skill_dir = workspace / ".codex/skills" / test_skill_name
     try:
         stage_skill_with_marker(skill_src, skill_dir, test_skill_name, marker)
 
@@ -143,6 +199,10 @@ def main() -> int:
         print(f"  Skill src:  {skill_src}", file=sys.stderr)
         print(f"  Test skill: {test_skill_name}", file=sys.stderr)
         print(f"  Workspace:  {workspace}", file=sys.stderr)
+        if codex_home is not None:
+            print(f"  CODEX_HOME: {codex_home} (isolated)", file=sys.stderr)
+        else:
+            print(f"  CODEX_HOME: real (user skills + plugins active)", file=sys.stderr)
         print(f"  Queries:    {len(eval_data)} (x{args.runs} runs)", file=sys.stderr)
         print(f"  Reasoning:  {args.reasoning}", file=sys.stderr)
         if args.model:
@@ -156,7 +216,7 @@ def main() -> int:
             should_trigger = bool(entry["should_trigger"])
             triggers = 0
             for run in range(args.runs):
-                rc, output = run_codex_query(workspace, query, args.reasoning, args.model, args.timeout)
+                rc, output = run_codex_query(workspace, codex_home, query, args.reasoning, args.model, args.timeout)
                 if marker in output:
                     triggers += 1
             trigger_rate = triggers / args.runs
@@ -204,6 +264,8 @@ def main() -> int:
         return 0 if failed == 0 else 1
     finally:
         shutil.rmtree(workspace, ignore_errors=True)
+        if codex_home is not None:
+            shutil.rmtree(codex_home, ignore_errors=True)
 
 
 if __name__ == "__main__":
