@@ -2,6 +2,19 @@
 
 Lessons learned from real-world multi-spec projects, official SpecKit guidance, and community discussions. All examples are generic and project-agnostic.
 
+## Contents
+
+- [Getting Started Right](#getting-started-right)
+- [Early Ambiguity Resolution](#early-ambiguity-resolution)
+- [Constitution as Guardrail](#constitution-as-guardrail)
+- [User Story Organization](#user-story-organization)
+- [Incremental Commits](#incremental-commits)
+- [Cross-Artifact Traceability](#cross-artifact-traceability)
+- [When to Skip Optional Phases](#when-to-skip-optional-phases)
+- [Evolving Specs Over Time](#evolving-specs-over-time)
+- [Multi-Variant Implementations](#multi-variant-implementations)
+- [Presets & Extensions Best Practices](#presets--extensions-best-practices)
+
 ## Getting Started Right
 
 ### Invest in the First Prompt

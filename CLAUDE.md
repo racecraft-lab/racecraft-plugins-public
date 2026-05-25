@@ -148,7 +148,7 @@ The SessionStart hook warns if `specify` is not found.
 ## Tooling
 
 - **Runtime:** Bash (macOS/Linux), `jq` for JSON
-- **Release automation:** `googleapis/release-please-action@v4`
+- **Release automation:** `googleapis/release-please-action@v5`
 - **CI:** GitHub Actions (`actions/checkout@v4`, inline Bash)
 - **PR / repo ops:** GitHub CLI (`gh`) v2+
 
@@ -207,7 +207,7 @@ When modifying `.github/workflows/pr-checks.yml` or `.github/workflows/release.y
 
 ## Release Process
 
-Releases are fully automated via [release-please](https://github.com/googleapis/release-please) (`googleapis/release-please-action@v4`), triggered by every push to `main`.
+Releases are fully automated via [release-please](https://github.com/googleapis/release-please) (`googleapis/release-please-action@v5`), triggered by every push to `main`.
 
 **How it works:**
 

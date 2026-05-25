@@ -4,6 +4,16 @@ The detailed operational doc for running a Grill Me session. Read this
 before activating the skill. The high-level mission is in `../SKILL.md`;
 this file is the playbook.
 
+## Contents
+
+- [Activation Sequence](#activation-sequence)
+- [Interview Loop](#interview-loop)
+- [Stop Conditions](#stop-conditions)
+- [Question Generation — Heuristics](#question-generation--heuristics)
+- [Recommended Answer — How to Choose](#recommended-answer--how-to-choose)
+- [Recovery from Edge Cases](#recovery-from-edge-cases)
+- [Synthesis](#synthesis)
+
 ## Activation Sequence
 
 1. **Confirm human-in-the-loop preconditions** (from `../SKILL.md`'s

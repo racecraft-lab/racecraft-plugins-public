@@ -3,6 +3,18 @@
 Schema and formatting rules for the Design Concept doc the skill produces
 at the end of an interview.
 
+## Contents
+
+- [File Path](#file-path)
+- [Frontmatter](#frontmatter)
+- [Body Structure](#body-structure)
+- [Goals](#goals)
+- [Non-goals](#non-goals)
+- [Design Tree (Q&A log)](#design-tree-qa-log)
+- [Open Questions](#open-questions)
+- [Recommended Next Step](#recommended-next-step)
+- [Style Rules](#style-rules)
+
 ## File Path
 
 ### Standalone mode

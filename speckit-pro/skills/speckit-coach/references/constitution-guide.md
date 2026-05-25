@@ -2,6 +2,19 @@
 
 How to create effective project constitutions using `/speckit-constitution`. A constitution establishes the architectural DNA that ensures consistency across all AI-generated implementations.
 
+## Contents
+
+- [What Makes a Good Constitution](#what-makes-a-good-constitution)
+- [The 9-Article Pattern](#the-9-article-pattern)
+- [Semantic Versioning](#semantic-versioning)
+- [Amendment Workflow](#amendment-workflow)
+- [Constitutional Enforcement](#constitutional-enforcement)
+- [Anti-Patterns](#anti-patterns)
+- [Example: Minimal Effective Constitution](#example-minimal-effective-constitution)
+- [Core Principles](#core-principles)
+- [Governance](#governance)
+- [Protecting Your Constitution During Upgrades](#protecting-your-constitution-during-upgrades)
+
 ## What Makes a Good Constitution
 
 ### Testable, Not Aspirational

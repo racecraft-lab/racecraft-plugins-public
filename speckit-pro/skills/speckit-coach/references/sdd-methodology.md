@@ -2,6 +2,19 @@
 
 This reference covers the SDD methodology as defined by the official [SpecKit](https://speckit.org) project and the [spec-driven.md](https://github.com/github/spec-kit/blob/main/spec-driven.md) methodology document.
 
+## Contents
+
+- [The Core Idea](#the-core-idea)
+- [Why SDD Matters Now](#why-sdd-matters-now)
+- [The 6 Core Principles](#the-6-core-principles)
+- [Pre-Spec Scoping (Grill Me)](#pre-spec-scoping-grill-me)
+- [The Two-Phase Workflow](#the-two-phase-workflow)
+- [The 7 Template Quality Mechanisms](#the-7-template-quality-mechanisms)
+- [The Constitutional Foundation](#the-constitutional-foundation)
+- [Evolving Specs Over Time](#evolving-specs-over-time)
+- [Extensibility: Presets & Extensions (v0.3.2)](#extensibility-presets--extensions-v032)
+- [Key Takeaways for Developers](#key-takeaways-for-developers)
+
 ## The Core Idea
 
 SDD inverts the traditional relationship between specifications and code:

@@ -58,8 +58,9 @@ no Claude-only runtime primitives (`TaskCreate`, `TaskUpdate`, `Agent(`,
 
 The CC variant of `speckit-autopilot/SKILL.md` was aggressively trimmed
 in WS-A (1,070 → ~500 lines) by moving most content into
-`references/*.md`. The Codex variant is currently ~1,200 lines and
-**cannot** be trimmed the same way because:
+`references/*.md`. WS-G subsequently applied a similar progressive-disclosure
+pass to the Codex variant (1,230 → 751 lines). The Codex variant cannot be
+trimmed AS aggressively as the CC variant because:
 
 1. The 15 body-pinned strings above must remain in the **body** (the
    validator checks `$body`, not `$runtime_doc`, for 8 of them).

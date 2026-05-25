@@ -136,13 +136,19 @@ gap must be researched and remediated — no shortcuts.
 
 ## Summary Format
 
+Your response MUST use the following section headers verbatim — including
+the literal H2 markers `## Domain:` and `## Gaps:`. The orchestrator parses
+these headers to decide whether to advance the next gate; missing or renamed
+headers cause the L7 dispatch contract check to fail.
+
 ```text
 ## Checklist Domain Result
 
-**Domain:** <domain name>
+## Domain: <domain name>
 
 **Checklist items:** N total
-**Gaps found:** N
+
+## Gaps: N found, M remediated, K remaining
 
 **Gap remediation:**
 - Gap 1: <gap description>

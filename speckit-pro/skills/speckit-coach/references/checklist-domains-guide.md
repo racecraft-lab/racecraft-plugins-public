@@ -2,6 +2,16 @@
 
 How to identify and create effective domain checklists using `/speckit-checklist`. Checklists are "unit tests for English" — they validate the quality of your requirements, not the quality of your implementation.
 
+## Contents
+
+- [The Core Concept: Unit Tests for Requirements](#the-core-concept-unit-tests-for-requirements)
+- [Spec-Driven Domain Recommendation](#spec-driven-domain-recommendation)
+- [Domain Reference Catalog](#domain-reference-catalog)
+- [Quality Dimensions](#quality-dimensions)
+- [Traceability Requirements](#traceability-requirements)
+- [Addressing Gaps](#addressing-gaps)
+- [Tips](#tips)
+
 ## The Core Concept: Unit Tests for Requirements
 
 Checklists test whether your **specifications are complete, clear, and consistent** — not whether your code works.

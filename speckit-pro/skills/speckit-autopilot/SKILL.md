@@ -378,33 +378,13 @@ Checklist domains) live in
 #### Resolution — After Each Prompt (Main Session)
 
 After EACH executor subagent returns for a consensus phase (Clarify,
-Checklist, Analyze), run the two-layer category-routed protocol from
-[`references/consensus-protocol.md`](./references/consensus-protocol.md).
-
-**Layer 1** — parse the executor summary for remaining markers
-(`[NEEDS CLARIFICATION]`, `[Gap]`), items in the "Unresolved for
-consensus" section, and any security-keyword items. If none, advance
-to the next prompt/gate.
-
-**Layer 2** — for each unresolved item, parse the `[<categories>]`
-prefix and dispatch the routed analysts in Round 1 (parallel via
-`run_in_background: true`), then the synthesizer. Escape-hatch to
-Round 2 (remaining analysts) on `[ESCAPE_TO_ROUND_2]`. Apply the
-synthesizer's Artifact Edit and continue.
-
-**Per-phase verification** (post-resolution): Clarify re-greps for
-`[NEEDS CLARIFICATION]`; Checklist re-runs the domain checklist;
-Analyze re-runs `/speckit-analyze`. Full per-phase prompts and
-verification steps live in
+Checklist, Analyze), apply the two-layer category-routed protocol —
+Layer 1 marker scan, Layer 2 routed-analyst dispatch with Round 2
+escape-hatch, post-resolution per-phase verification, and mandatory
+Consensus Resolution Log rows. Full protocol, per-phase verification
+prompts, and canonical log columns live in
 [`references/consensus-protocol.md`](./references/consensus-protocol.md)
-§Phase-Specific Consensus Flows.
-
-**Logging requirement:** Every resolution writes a row to the
-Consensus Resolution Log in the workflow file. The `Round` and
-`Routed Categories` columns are mandatory — the 10% Round-2
-escape-rate re-evaluation trigger is computed from them. See
-[`references/consensus-protocol.md`](./references/consensus-protocol.md)
-§Logging for the canonical column set.
+§Phase-Specific Consensus Flows + §Logging.
 
 #### Implement — Task-Level Dispatch (honors `[P]` markers)
 

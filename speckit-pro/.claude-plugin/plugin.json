@@ -5,6 +5,8 @@
   "author": {
     "name": "Racecraft Lab"
   },
+  "homepage": "https://github.com/racecraft-lab/racecraft-plugins-public/tree/main/speckit-pro",
+  "license": "MIT",
   "keywords": [
     "speckit",
     "sdd",

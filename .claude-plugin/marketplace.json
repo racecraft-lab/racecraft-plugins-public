@@ -8,7 +8,22 @@
       "name": "speckit-pro",
       "source": "./speckit-pro",
       "description": "Autonomous Spec-Driven Development powered by GitHub SpecKit. Includes SDD coaching, multi-spec project management, and a fully autonomous workflow executor with multi-agent clarification consensus.",
-      "version": "2.1.0"
+      "version": "2.1.0",
+      "author": {
+        "name": "Racecraft Lab"
+      },
+      "homepage": "https://github.com/racecraft-lab/racecraft-plugins-public/tree/main/speckit-pro",
+      "license": "MIT",
+      "keywords": [
+        "speckit",
+        "sdd",
+        "spec-driven-development",
+        "specification",
+        "planning",
+        "autopilot",
+        "autonomous",
+        "workflow"
+      ]
     }
   ]
 }
