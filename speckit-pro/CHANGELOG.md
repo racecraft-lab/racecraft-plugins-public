@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.3.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.2.0...speckit-pro-v2.3.0) (2026-05-25)
+
+
+### Features
+
+* **speckit-pro:** teach the coach to browse and install extensions live ([#79](https://github.com/racecraft-lab/racecraft-plugins-public/issues/79)) ([6282311](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6282311823908833cbc15538933ad67c4aec45de))
+
 ## [2.2.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.1.2...speckit-pro-v2.2.0) (2026-05-25)
 
 
