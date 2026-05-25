@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.1.1...speckit-pro-v2.1.2) (2026-05-25)
+
+
+### Bug Fixes
+
+* **speckit-pro:** improve Codex autopilot triggering, disambiguate plugin display names, implement Layer 8 parity test runner ([#72](https://github.com/racecraft-lab/racecraft-plugins-public/issues/72)) ([f197368](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f1973686ed7c8991724237cfee7217c5a60e21fb))
+
 ## [2.1.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.1.0...speckit-pro-v2.1.1) (2026-05-25)
 
 
