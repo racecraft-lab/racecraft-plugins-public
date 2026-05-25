@@ -1,0 +1,98 @@
+[
+  {
+    "agent": "codebase-analyst",
+    "model": "effort=xhigh",
+    "tokens": 793373,
+    "wall_time": 150,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "codebase-analyst",
+    "model": "effort=high",
+    "tokens": 1031228,
+    "wall_time": 153,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "codebase-analyst",
+    "model": "effort=medium",
+    "tokens": 441580,
+    "wall_time": 55,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "codebase-analyst",
+    "model": "effort=low",
+    "tokens": 188366,
+    "wall_time": 40,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "spec-context-analyst",
+    "model": "effort=xhigh",
+    "tokens": 1517579,
+    "wall_time": 149,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "spec-context-analyst",
+    "model": "effort=high",
+    "tokens": 2271616,
+    "wall_time": 199,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "spec-context-analyst",
+    "model": "effort=medium",
+    "tokens": 1609300,
+    "wall_time": 103,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "spec-context-analyst",
+    "model": "effort=low",
+    "tokens": 824513,
+    "wall_time": 77,
+    "quality": 1.0,
+    "exit_code": 0
+  },
+  {
+    "agent": "domain-researcher",
+    "model": "effort=xhigh",
+    "tokens": 141018,
+    "wall_time": 119,
+    "quality": 0.62,
+    "exit_code": 0
+  },
+  {
+    "agent": "domain-researcher",
+    "model": "effort=high",
+    "tokens": 63103,
+    "wall_time": 58,
+    "quality": 0.69,
+    "exit_code": 0
+  },
+  {
+    "agent": "domain-researcher",
+    "model": "effort=medium",
+    "tokens": 74016,
+    "wall_time": 57,
+    "quality": 0.62,
+    "exit_code": 0
+  },
+  {
+    "agent": "domain-researcher",
+    "model": "effort=low",
+    "tokens": 53547,
+    "wall_time": 37,
+    "quality": 0.69,
+    "exit_code": 0
+  }
+]
