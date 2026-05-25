@@ -1,8 +1,8 @@
 {
   "hooks": {
-    "SessionStart": [
+    "UserPromptExpansion": [
       {
-        "matcher": "startup",
+        "matcher": "^(speckit-pro:|grill-me|speckit\\.|speckit-)",
         "hooks": [
           {
             "type": "command",

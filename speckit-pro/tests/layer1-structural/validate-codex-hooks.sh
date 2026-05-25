@@ -122,4 +122,24 @@ print('true' if 'statusMessage' in h and h['statusMessage'] else 'false')
 " 2>/dev/null)
 assert_eq "true" "$has_status" "hook must have a non-empty statusMessage field"
 
+section "codex-hooks.json — Scoping (.specify/ presence guard)"
+
+set_test "Command body contains .specify/ presence guard"
+# Codex's hook system has no UserPromptExpansion equivalent. The best
+# available scoping primitive is to make the SessionStart command a
+# silent no-op when .specify/ is absent. Without the guard, the warning
+# fires in every Codex session globally — exactly the behavior the
+# user asked us to remove. Catch regressions where the guard gets
+# dropped.
+cmd_val=$(printf '%s' "$CONTENT" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+print(data['hooks']['SessionStart'][0]['hooks'][0].get('command', ''))
+" 2>/dev/null)
+if [[ "$cmd_val" == *"[ -d .specify ]"* ]] || [[ "$cmd_val" == *"-d .specify"* ]]; then
+  _pass
+else
+  _fail "command must guard on .specify/ presence so non-SpecKit Codex sessions stay silent (was: '$cmd_val')"
+fi
+
 test_summary
