@@ -111,3 +111,51 @@ skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git
 exists, preserves unknown host-required sections, appends missing review-packet
 sections, and falls back to the bundled template when the host has none. Use
 `gh pr create --body-file .git/speckit-pr-body.md`, not an inline placeholder.
+
+## Self-Review Before Finalizing
+
+After G7 passes and before opening the PR (between `Post: Integration Suite`
+and `Post: PR Body Generation`), the orchestrator runs a four-question
+self-review and records the answers in the workflow log under a `Self-Review`
+block. This catches end-of-run failure modes that gate validation alone
+doesn't reach: tests that didn't actually run, edge cases the spec called
+out but the implementation skipped, requirements silently dropped, and TODOs
+the autopilot meant to leave behind.
+
+Questions (Codex orchestrator answers each in order):
+
+1. **Tests executed?** Did `BUILD`, `TYPECHECK`, `LINT`, `UNIT_TEST`, and
+   `INTEGRATION_TEST` each actually run this session and exit zero — or did
+   the autopilot infer "no errors reported" from a phase that never invoked
+   them? Cite the most recent test run with timestamp from the workflow log.
+
+2. **Edge cases?** Walk the acceptance-criteria list in `spec.md`. Name the
+   test (file:line) covering each criterion's non-happy path (error inputs,
+   empty inputs, concurrency, auth failure, schema mismatch). Criteria with
+   only happy-path tests → flag as `[edge-case-gap]`.
+
+3. **Requirements matched?** Cross-walk `spec.md`'s FR-XXX list against
+   `tasks.md`. Every FR must trace to at least one `[X]` task, and every
+   `[X]` task must have implementation evidence (commit hash + passing
+   test). List any orphans in either direction.
+
+4. **Follow-up?** Are there `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]`
+   markers in `spec.md`, `plan.md`, `tasks.md`, or commit messages? Each
+   one needs an explicit landing place — a roadmap entry, a tracked issue,
+   or a clearly-marked section in the PR body. Silent deferral is a defect.
+
+Block format in the workflow log mirrors
+[post-implementation.md §Self-Review Before Finalizing](../../skills/speckit-autopilot/references/post-implementation.md#self-review-before-finalizing)
+so a single review template serves both runtimes.
+
+**The self-review does not gate PR creation.** Gaps it surfaces
+(`[edge-case-gap]`, orphan FR, silent TODO) are written to the workflow
+log and reproduced in the generated PR body's `## Self-Review Findings`
+section. The PR opens regardless of what the review reports — the
+finding itself is the deliverable, surfaced so a human reviewer (or
+the post-PR review-remediation loop) can act on it.
+
+The self-review is mandatory and lives in the canonical
+post-implementation item list (`task-list-canonical-codex.md`). It
+runs whether the operator configured strict mode for G6.5 or not. It
+is a reporting step, not a gate.

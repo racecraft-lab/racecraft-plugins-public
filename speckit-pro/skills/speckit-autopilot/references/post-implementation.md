@@ -467,3 +467,76 @@ hardcoded in the prompt, not referenced as variables.
 **After scheduling the loop, the autopilot is DONE.** Report the
 final summary with PR URL and note that review remediation is
 running in the background via `/loop`.
+
+## Self-Review Before Finalizing
+
+Immediately after G7 passes and before opening the PR (between
+`Post: Integration Suite` and `Post: PR Body Generation`), the
+orchestrator answers four short questions and records the answers
+in the workflow log under a `Self-Review` block. This catches the
+common end-of-run failure modes that gate validation alone
+doesn't reach: tests that didn't actually run, edge cases the
+spec called out but the implementation skipped, requirements
+silently dropped, and TODOs the autopilot meant to leave behind.
+
+The four questions, in order:
+
+1. **Tests executed?** Did each of `BUILD`, `TYPECHECK`, `LINT`,
+   `UNIT_TEST`, and `INTEGRATION_TEST` actually run in this
+   session and exit zero, or did the autopilot infer "no errors
+   reported" from a phase that never invoked them? Cite the most
+   recent test run with timestamp from the workflow log.
+
+2. **Edge cases?** Walk the acceptance-criteria list in
+   `spec.md`. For each criterion, name the test (file:line) that
+   exercises its **non-happy** path — error inputs, empty inputs,
+   concurrency, auth failure, schema mismatch. If a criterion has
+   only a happy-path test, flag it as `[edge-case-gap]`.
+
+3. **Requirements matched?** Cross-walk `spec.md`'s FR-XXX list
+   against `tasks.md`. Every FR must trace to at least one
+   `[X]` task, and every `[X]` task must have implementation
+   evidence (commit hash + passing test). List any orphans in
+   either direction.
+
+4. **Follow-up?** Are there `[TODO]`, `[DEFERRED]`, or
+   `[OUT-OF-SCOPE]` markers in `spec.md`, `plan.md`, `tasks.md`,
+   or commit messages? Each one needs an explicit landing place
+   — a new spec entry on the technical roadmap, a tracked issue,
+   or a clearly-marked section in the PR body. Silent deferral
+   is a defect.
+
+**Block format in the workflow log:**
+
+```markdown
+### Self-Review (auto-generated)
+
+**Tests executed:** All five (BUILD, TYPECHECK, LINT, UNIT_TEST,
+INTEGRATION_TEST) ran at 2026-05-25T17:42:11Z and exited zero.
+Evidence: workflow log §G7 Verification.
+
+**Edge cases:** All 7 acceptance criteria have non-happy-path
+tests. No `[edge-case-gap]` markers.
+
+**Requirements matched:** FR-001 → T015, T022. FR-002 → T030.
+... [enumerate all]. No orphans.
+
+**Follow-up:** 1 deferred item — `[DEFERRED] Postgres connection
+pooling under load testing`. Landed in PR body §Out of scope.
+No silent deferrals.
+```
+
+**On gap detection:** the self-review **does not gate PR
+creation.** Any gaps it surfaces (`[edge-case-gap]`, orphan FR,
+silent TODO) are recorded in the workflow log and reproduced in
+the `## Self-Review Findings` section of the generated PR body,
+where a human reviewer (or the post-PR review-remediation loop)
+can act on them. Running the self-review is mandatory — the
+finding is the deliverable. The PR opens regardless of what the
+review surfaces.
+
+The self-review is part of the canonical post-implementation
+task list (see `task-list-canonical.md`) and runs whether the
+operator configured strict mode for G6.5 or not. It is a
+reporting step, not a gate — its value is putting the four
+answers in writing so anyone reviewing the PR sees them.

@@ -509,7 +509,7 @@ later. For multi-prompt phases (Clarify, Checklist), create one item
 per prompt/session when known; otherwise create the phase discovery
 placeholder.
 
-**Item naming + canonical post-impl list (11 mandatory items including
+**Item naming + canonical post-impl list (12 mandatory items including
 `Post: Doctor Extension Check` ... `Post: Retrospective` as the FINAL
 STEP) + reference `autopilot-state.json` schema:** see
 [task-list-canonical-codex.md](./references/task-list-canonical-codex.md).
@@ -727,7 +727,7 @@ summary with PR URL.
   MCP, constitution, Codex agent availability, implementation agent
   detection, command discovery, preset detection)
 - [Canonical Task List for Codex](./references/task-list-canonical-codex.md) —
-  Step 1.1 checklist naming pattern, 11 mandatory Post items, item-naming
+  Step 1.1 checklist naming pattern, 12 mandatory Post items, item-naming
   rules, reference `autopilot-state.json` schema
 - [Phase Execution for Codex](./references/phase-execution-codex.md) —
   PHASES order, agent mapping, main execution loop (11-step per-phase
@@ -750,6 +750,9 @@ summary with PR URL.
 - [Plugin Limitations](../../skills/speckit-autopilot/references/plugin-limitations.md) —
   permissionMode, hooks, mcpServers restrictions for plugin agents;
   MCP server prerequisites and fallback behavior
+- [Token Discipline](../../skills/speckit-autopilot/references/token-discipline.md) —
+  Opt-in compressed vocabulary for inter-agent transcripts
+  (off by default; never applied to PR bodies, logs, or artifacts)
 
 ## Scripts
 
