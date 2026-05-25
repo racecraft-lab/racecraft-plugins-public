@@ -78,7 +78,7 @@ When the developer asks about any SpecKit command, provide coaching from [the co
 | "analyze automation", "finding remediation" | Explain analyze remediation loop — CRITICAL/HIGH findings auto-fixed via consensus. See [autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md) |
 | "PR automation", "review loop", "copilot review" | Explain the post-PR review remediation loop — polling, auto-fix, comment resolution. See [autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md) |
 | "branching", "worktree", "SPECIFY_FEATURE" | Explain branch detection hierarchy — env var → git branch → specs/ scan. See [autopilot guide](../../skills/speckit-coach/references/autopilot-guide.md) |
-| **Presets & Extensions (v0.3.2)** | |
+| **Presets & Extensions (v0.8.x)** | |
 | "preset", "customize templates", "override templates", "methodology" | Explain presets — stackable template overrides, resolution order, commands. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "extension", "add extension", "install extension", "community catalog" | Explain extensions — 26 community extensions, hook events, commands. See [presets & extensions guide](../../skills/speckit-coach/references/presets-extensions-guide.md) |
 | "archive extension", "Archive Sweep", "archive cleanup", "spec graveyard", "remove merged specs", "provenance" | Explain the Racecraft archive extension path: install or vendor `racecraft-lab/spec-kit-archive` from a pinned tag/commit, run Archive Sweep at autopilot startup, exclude the current target spec, keep unsafe checkouts dry-run-only, and clean active `specs/**` only after archive success plus recovery commands. |

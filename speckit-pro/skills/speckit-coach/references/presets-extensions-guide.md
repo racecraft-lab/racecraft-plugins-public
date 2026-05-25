@@ -96,7 +96,7 @@ preset:
   license: "MIT"                         # Optional
 
 requires:
-  speckit_version: ">=0.3.0"             # Required
+  speckit_version: ">=0.5.1"             # Required (>=0.5.1 introduced the preset/extension system in its current shape)
 
 provides:
   templates:                             # Required, at least one entry
@@ -207,32 +207,49 @@ specify extension catalog add --name <n> --install-allowed <url>
 specify extension catalog remove <name>        # remove catalog
 ```
 
-### Community Extension Catalog (26 extensions)
+### Community Extension Catalog
+
+The community catalog (`extensions/catalog.community.json` upstream) has grown
+to **103+ extensions** as of SpecKit v0.8.13. Browse the full live list at
+<https://github.github.io/spec-kit/community/extensions.html> or
+<https://github.com/github/spec-kit/blob/main/extensions/catalog.community.json>.
+
+**Gotcha — the website's "ID" column shows the GitHub repo name, not the
+extension ID.** A row labeled `spec-kit-archive` is the repo
+`stn1slv/spec-kit-archive`, but the actual extension `id` (and the directory
+it installs into) is bare: `archive`. Trust the `id` field in the catalog
+JSON or the extension's own `extension.yml`, not the website's column header.
+
+The autopilot routes work to these extensions by their bare IDs when
+installed — they show up by name in `.specify/extensions/.registry`:
+
+| Extension | ID | Category | Used by autopilot for |
+|-----------|----|----------|------------------------|
+| Archive | `archive` | docs | Archive Sweep at startup |
+| Project Health Check | `doctor` | visibility | Track A — post-impl health check |
+| Review | `review` | code | Track B — post-impl code review |
+| Verify | `verify` | code | Track C step 1 — implementation-vs-spec |
+| Verify Tasks | `verify-tasks` | code | Track C step 2 — phantom task detector |
+| Retrospective | `retrospective` | docs | Sequential after Cleanup — post-impl reflection |
+
+Other commonly used community extensions (not auto-routed, but the coach
+discusses them):
 
 | Extension | ID | Category | Purpose |
 |-----------|----|----------|---------|
-| Archive | archive | docs | Archive merged features into project memory |
-| Cognitive Squad | cognitive-squad | docs | Multi-agent system with Triadic Model |
-| DocGuard | docguard | docs | Documentation validation and scoring |
-| Iterate | iterate | docs | Two-phase refine-and-apply for spec documents |
-| Learning | learning | docs | Generate educational guides from implementations |
-| Reconcile | reconcile | docs | Update artifacts to address implementation drift |
-| Retrospective | retrospective | docs | Post-implementation review with spec adherence scoring |
-| Spec Sync | spec-sync | docs | Detect and resolve drift between specs and code |
-| Understanding | understanding | docs | Quality analysis using 31 metrics (IEEE/ISO) |
-| V-Model | v-model | docs | Paired generation of dev and test specifications |
-| Cleanup | cleanup | code | Quality gate — fix small issues, create tasks for medium |
-| Ralph Loop | ralph-loop | code | Autonomous implementation using AI agent CLI |
-| Review | review | code | Comprehensive code review with 6 specialized agents |
-| Verify | verify | code | Post-implementation verification against spec artifacts |
-| Verify Tasks | verify-tasks | code | Detect phantom completions (tasks marked done but not implemented) |
-| Conduct | conduct | process | Orchestrate phases via sub-agent delegation |
-| Fleet Orchestrator | fleet-orchestrator | process | Full feature lifecycle with human-in-the-loop gates |
-| SDD Utilities | speckit-utils | process | Resume workflows, validate health, verify traceability |
-| Azure DevOps | azure-devops | integration | Sync user stories and tasks to Azure DevOps work items |
-| Jira | jira | integration | Create Epics, Stories, and Issues from specifications |
-| Project Health Check | doctor | visibility | Diagnose project across multiple dimensions |
-| Project Status | project-status | visibility | Show current SDD workflow progress |
+| Cleanup | `cleanup` | code | Post-impl quality gate — auto-fix small issues |
+| Conduct | `conduct` | process | Orchestrate phases via sub-agent delegation |
+| Fleet Orchestrator | `fleet` | process | Full lifecycle with human-in-the-loop gates |
+| SDD Utilities | `speckit-utils` | process | Resume workflows, validate health, verify traceability |
+| Azure DevOps | `azure-devops` | integration | Sync user stories and tasks to ADO work items |
+| Jira | `jira` | integration | Create Epics, Stories, and Issues from specs |
+| Project Status | `project-status` | visibility | Show current SDD workflow progress |
+| Iterate | `iterate` | docs | Two-phase refine-and-apply for spec documents |
+| Spec Sync | `spec-sync` | docs | Detect and resolve drift between specs and code |
+| V-Model | `v-model` | docs | Paired generation of dev and test specifications |
+
+For everything else (BDD, OWASP threat modeling, cost tracking, brownfield
+bootstrap, Confluence/M365 integrations, etc.), see the live catalog page.
 
 **Note:** Community extensions are "discovery only" by default.
 Install them using `--from <zip-url>`:
