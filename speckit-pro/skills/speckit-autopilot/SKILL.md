@@ -261,6 +261,16 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 6. **Load settings + Agent Teams probe** — read `.claude/speckit-pro.local.md`
    (`consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`);
    record `AGENT_TEAMS_AVAILABLE` from env+version probe (see prerequisites.md §Step 0.6).
+6b. **Resolve pre-Implement confidence gate mode** — run
+   `<SKILL_SCRIPTS>/resolve-confidence-mode.sh -- <argv>` to resolve
+   the mode for G6.5 (precedence: `--strict` / `--advisory` flag
+   in argv > `confidence_gate_mode` in local config > default
+   `advisory`). If the script exits 2 (both flags passed), STOP
+   the autopilot before Phase 0 with the conflict message — fail
+   fast on usage errors. Record the resolved value as
+   `CONFIDENCE_GATE_MODE` for use at G6.5. **Do not re-run the
+   script at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
+   See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
 
 **Plugin agent caveat:** `permissionMode`, `hooks`, and `mcpServers`
 frontmatter are silently ignored on plugin agents. Run the parent
@@ -495,6 +505,12 @@ Always invoke via the full resolved path — never from `.specify/scripts/bash/`
   Read the synthesizer's `📊 Confidence: X.XX` pre-Implement emit and decide
   whether Phase 7 may begin. Exit: 0 PASS, 1 NO_DATA (soft-skip), 2 FAIL.
   See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
+- `resolve-confidence-mode.sh [--config <path>] [--] <argv>` —
+  Resolve the pre-Implement confidence gate mode (advisory|strict) for
+  the current invocation. Precedence: `--strict`/`--advisory` flag in argv >
+  `confidence_gate_mode` in `.claude/speckit-pro.local.md` > default
+  `advisory`. Exit: 0 resolved, 2 flag conflict, 1 usage error. Used by
+  the orchestrator in Step 0.6b to set `CONFIDENCE_GATE_MODE` before G6.5.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` —
   Enforce setup, tasks, and pre-PR reviewability budgets (JSON)
 - `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —

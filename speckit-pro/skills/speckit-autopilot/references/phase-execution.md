@@ -417,11 +417,17 @@ provides the data; the gate script reads it and decides whether
 to proceed, surface a remediation hint, or stop.
 
 ```
-1. Resolve mode from .claude/speckit-pro.local.md
-   (`confidence_gate_mode: advisory|strict`). Default: advisory.
+1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b — see
+   [Prerequisites](./prerequisites.md) and the SKILL.md orchestration
+   summary). Do not re-run `resolve-confidence-mode.sh` here —
+   the resolver runs once at autopilot start so `--strict --advisory`
+   conflicts fail fast before any phase work happens, instead of
+   surfacing 6 phases in.
 
-2. Resolve threshold from the same file (`confidence_threshold: 0.90`).
-   Default: 0.90.
+2. Resolve threshold from .claude/speckit-pro.local.md
+   (`confidence_threshold: 0.90`). Default: 0.90. (Per-invocation
+   threshold override is out of scope for this gate; only the mode
+   flag is invocation-overridable.)
 
 3. On entry, print the /goal tip (Claude Code interactive only):
    "Tip: run `/goal achieve confidence ≥<threshold> on the
@@ -475,7 +481,8 @@ runs Clarify (G2) and Analyze (G6) gates before this point, so
 most pre-Implement shakiness is already filtered. Advisory mode
 surfaces the score and a remediation hint without blocking;
 operators who want a fail-closed posture opt into strict via
-`.claude/speckit-pro.local.md`.
+`.claude/speckit-pro.local.md` or pass `--strict` on a single
+invocation. Per-invocation flag wins over local config.
 
 **TaskCreate**: at autopilot start, after the G6 task, create a
 G6.5 task: `Confidence gate (pre-Implement)`. Mark it

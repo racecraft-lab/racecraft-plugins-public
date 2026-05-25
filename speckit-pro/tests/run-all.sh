@@ -207,6 +207,7 @@ if should_run 4; then
   layer4_scripts=(
     "$TESTS_DIR/layer4-scripts/test-validate-gate.sh"
     "$TESTS_DIR/layer4-scripts/test-confidence-gate.sh"
+    "$TESTS_DIR/layer4-scripts/test-resolve-confidence-mode.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-commands.sh"
     "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"

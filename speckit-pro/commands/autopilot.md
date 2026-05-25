@@ -1,7 +1,7 @@
 ---
 description: Execute a SpecKit workflow autonomously. Reads a populated workflow file and runs all 7 SDD phases with programmatic gate validation, multi-agent consensus resolution, and auto-commits. Requires SpecKit CLI installed, constitution created, and a populated workflow file.
 allowed-tools: Skill Bash
-argument-hint: "path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID]"
+argument-hint: "path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--strict | --advisory]"
 ---
 
 # SpecKit Autopilot
@@ -17,6 +17,8 @@ The user provides a path to a workflow file and optionally a starting phase:
 ```text
 /speckit-pro:autopilot docs/ai/specs/SPEC-013-workflow.md
 /speckit-pro:autopilot docs/ai/specs/SPEC-013-workflow.md --from-phase plan
+/speckit-pro:autopilot docs/ai/specs/SPEC-013-workflow.md --strict
+/speckit-pro:autopilot docs/ai/specs/SPEC-013-workflow.md --advisory
 ```
 
 ## What to Do
@@ -73,3 +75,5 @@ If any prerequisite fails, tell the user what's missing and how to fix it.
 | `path` (required) | Path to the populated workflow file |
 | `--from-phase` | Start from a specific phase (skip completed phases) |
 | `--spec` | Override spec ID detection |
+| `--strict` | Override the pre-Implement confidence gate (G6.5) to strict mode for this invocation. Phase 7 will not run if the synthesizer's composite score falls below the threshold. Overrides `confidence_gate_mode` in `.claude/speckit-pro.local.md`. Mutually exclusive with `--advisory`. |
+| `--advisory` | Override the pre-Implement confidence gate (G6.5) to advisory mode for this invocation. Surfaces the score and breakdown but proceeds to Phase 7. Overrides `confidence_gate_mode` in `.claude/speckit-pro.local.md`. Mutually exclusive with `--strict`. |

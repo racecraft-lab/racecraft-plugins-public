@@ -100,8 +100,11 @@ provides the data; the gate script reads it and decides whether to proceed,
 surface a remediation hint, or stop.
 
 ```text
-1. Resolve mode from .claude/speckit-pro.local.md or .codex/speckit-pro.local.md
-   (`confidence_gate_mode: advisory|strict`). Default: advisory.
+1. Read mode from `CONFIDENCE_GATE_MODE` (set at Step 0.6b in
+   the autopilot SKILL.md by `resolve-confidence-mode.sh`). The
+   resolver runs once at autopilot start so `--strict --advisory`
+   conflicts and unknown values fail fast before any phase work
+   begins, instead of surfacing 6 phases in.
 
 2. Resolve threshold (`confidence_threshold: 0.90`). Default: 0.90.
 

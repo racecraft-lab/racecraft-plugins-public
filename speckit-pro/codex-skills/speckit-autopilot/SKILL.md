@@ -444,8 +444,16 @@ Orchestrator-Direct pattern.
 You receive a workflow file path and optional arguments:
 
 ```text
-path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID]
+path/to/workflow-file.md [--from-phase specify|clarify|plan|checklist|tasks|analyze|implement] [--spec SPEC-ID] [--strict | --advisory]
 ```
+
+`--strict` and `--advisory` override the pre-Implement confidence
+gate (G6.5) mode for this invocation. They beat
+`confidence_gate_mode` in `.claude/speckit-pro.local.md` (or
+`.codex/speckit-pro.local.md`). Passing both is a usage error;
+STOP before Phase 0 with the conflict message from
+`resolve-confidence-mode.sh`. See [Gate Validation §G6.5](../../skills/speckit-autopilot/references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement)
+and the precedence rule documented there.
 
 ## Step -1 + Step 0: Pre-flight (Archive Sweep + Prerequisites)
 
@@ -455,6 +463,15 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
 - **Step 0.0: Resolve Script Paths** — locate `SKILL_SCRIPTS` (plugin path, not `.specify/scripts/`)
 - **Step 0.1–0.7: Environment Checks** — `check-prerequisites.sh` JSON parsing, branch detection
 - **Step 0.6: Load Settings** — `consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`
+- **Step 0.6b: Resolve Pre-Implement Confidence Gate Mode** — run
+  `<SKILL_SCRIPTS>/resolve-confidence-mode.sh -- <argv>` to resolve
+  `CONFIDENCE_GATE_MODE` for G6.5. Precedence: `--strict`/`--advisory`
+  flag > `confidence_gate_mode` in `.claude/speckit-pro.local.md`
+  (or `.codex/speckit-pro.local.md` — the script checks both
+  default paths, with `.claude/` winning when both exist) > default
+  `advisory`. If the script exits 2 (both flags passed), STOP
+  before Phase 0 with the conflict message. **Do not re-run the
+  script at G6.5; the gate reads `CONFIDENCE_GATE_MODE` directly.**
 - **Step 0.8: MCP Server Check** — informational MCP report (agents have fallbacks)
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — verify installed SpecKit Pro custom agents under `.codex/agents/<agent>.toml` or `~/.codex/agents/<agent>.toml`. If any required agent is missing from both locations, STOP and instruct the user to run `$install`, then restart Codex.
@@ -753,6 +770,13 @@ never from `.specify/scripts/bash/`.
   In `codex exec` headless mode, `/goal` is not first-class
   ([openai/codex#21764](https://github.com/openai/codex/discussions/21764));
   the 3-iteration cap is the safety bound.
+- `resolve-confidence-mode.sh [--config <path>] [--] <argv>` —
+  Resolve the pre-Implement confidence gate mode (advisory|strict) for
+  the current invocation. Precedence: `--strict`/`--advisory` flag in argv >
+  `confidence_gate_mode` in `.claude/speckit-pro.local.md` (or
+  `.codex/speckit-pro.local.md`) > default `advisory`. Exit: 0 resolved,
+  2 flag conflict, 1 usage error. Used by the orchestrator in Step 0.6b
+  to set `CONFIDENCE_GATE_MODE` before G6.5.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` — Enforce
   setup, tasks, and pre-PR reviewability budgets (JSON)
 - `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —

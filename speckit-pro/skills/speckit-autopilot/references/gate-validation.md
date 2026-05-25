@@ -220,9 +220,20 @@ clears a composite threshold of 0.90 (or the operator-configured
 threshold). Read by
 `speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh`.
 
-**Default mode:** advisory. Set `confidence_gate_mode: strict`
-in `.claude/speckit-pro.local.md` to require a passing score
-before Phase 7 begins.
+**Default mode:** advisory.
+
+**Mode precedence (highest wins):**
+
+1. **Per-invocation flag:** `--strict` or `--advisory` passed to
+   `/speckit-pro:autopilot` (or `$speckit-autopilot` in Codex)
+   overrides everything below. Passing both flags is a usage
+   error — the autopilot stops with a clear message before Phase
+   0 runs. Resolved by
+   `speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh`
+   (see [Script reference in SKILL.md](../SKILL.md)).
+2. **Local config:** `confidence_gate_mode: strict` (or
+   `advisory`) in `.claude/speckit-pro.local.md`.
+3. **Default:** `advisory`.
 
 ```
 1. Run confidence-gate.sh against the workflow file
