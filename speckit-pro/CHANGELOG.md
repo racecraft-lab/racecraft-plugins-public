@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.1.2...speckit-pro-v2.2.0) (2026-05-25)
+
+
+### Features
+
+* **speckit-pro:** finish the half-built parity test so it can compare specific table cells, not whole files ([#74](https://github.com/racecraft-lab/racecraft-plugins-public/issues/74)) ([36474ac](https://github.com/racecraft-lab/racecraft-plugins-public/commit/36474ac81c50045029a19942f46789201da7db70))
+* **speckit-pro:** implement Layer 8 section/table extractors ([36474ac](https://github.com/racecraft-lab/racecraft-plugins-public/commit/36474ac81c50045029a19942f46789201da7db70))
+* **speckit-pro:** measure how much OpenAI Codex's reasoning effort actually buys you on three plugin agents ([#76](https://github.com/racecraft-lab/racecraft-plugins-public/issues/76)) ([2ce9061](https://github.com/racecraft-lab/racecraft-plugins-public/commit/2ce9061e613f58e5543274d8e40f467f66ae218a))
+* **speckit-pro:** teach the parity test to judge whether two AI-written passages mean the same thing ([#75](https://github.com/racecraft-lab/racecraft-plugins-public/issues/75)) ([4da539d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4da539d3c0b49c5c0e0a1b1ce6c1ca5ea4d2c0dc))
+
 ## [2.1.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.1.1...speckit-pro-v2.1.2) (2026-05-25)
 
 
