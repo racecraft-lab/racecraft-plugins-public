@@ -8,6 +8,7 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 SCRIPT_FILES=(
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/check-prerequisites.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/validate-gate.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/confidence-gate.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/detect-commands.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/detect-presets.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/reviewability-gate.sh"

@@ -26,6 +26,7 @@ forward designs.
 - [Consensus Rules](#consensus-rules) — N=1, N=2, N=3 agreement rules + escape-hatch + STOP conditions
 - [Security Keywords](#security-keywords) — always-all-3 trigger words
 - [Phase-Specific Consensus Flows](#phase-specific-consensus-flows) — Clarify, Checklist, Analyze patterns + per-phase prompt templates ("Specification Context" / "Question" / "Your Task" sub-sections appear inside each flow)
+- [Pre-Implement Confidence Emit (end of Phase 6 Analyze)](#pre-implement-confidence-emit-end-of-phase-6-analyze) — synthesizer emits `📊 Confidence: X.XX` + 5-criterion breakdown for the optional Confidence Gate at G6.5
 - [Determining Agreement](#determining-agreement) — how the synthesizer scores responses
 - [Logging](#logging) — Consensus Resolution Log row schema + Re-evaluation trigger (referenced from SKILL.md)
 
@@ -518,6 +519,71 @@ Propose how to fix this finding. Specifically:
 
 Follow your agent instructions for output format.
 ```
+
+### Pre-Implement Confidence Emit (end of Phase 6 Analyze)
+
+After all finding-remediation consensus rounds for Phase 6 are
+applied (or immediately, on a clean Analyze pass with zero
+unresolved findings), the **consensus-synthesizer emits a final
+"Pre-Implement Confidence" block** to the workflow log. This is
+the data source for the optional Confidence Gate (G6.5) that runs
+between Phase 6 and Phase 7. The same emit fires whether the
+gate is configured advisory or strict — the gate is opt-in;
+the emit is not.
+
+**Format (canonical, regex-parseable):**
+
+```text
+📊 Confidence: 0.92
+
+- Task understanding: 0.95
+- Approach clarity: 0.90
+- Requirements alignment: 0.92
+- Risk assessment: 0.88
+- Completeness: 0.95
+```
+
+The first line is the canonical signal. `scripts/confidence-gate.sh`
+matches it with `^📊 Confidence: ([01]\.[0-9]{2})$` after
+trimming. The five subsequent lines are the per-criterion
+breakdown; the aggregate on the first line is their arithmetic
+mean, rounded to two decimals.
+
+**The five criteria (each 0.00–1.00):**
+
+| Criterion | What it scores |
+|-----------|----------------|
+| Task understanding | Does `spec.md` convey what's being built clearly enough that a competent engineer could begin implementing without further questions? Penalize ambiguity in user stories and acceptance criteria. |
+| Approach clarity | Does `plan.md` lay out a coherent implementation strategy — chosen libraries, data model, contract surface — without unresolved decisions? Penalize "TBD" markers and design holes. |
+| Requirements alignment | Do `tasks.md` items trace back to specific requirements in `spec.md`? Penalize tasks without a clear "this implements requirement X" mapping. |
+| Risk assessment | Are remaining `CRITICAL` or `HIGH` analyze findings still open in the workflow log? Each open `CRITICAL` deducts 0.30; each open `HIGH` deducts 0.10 from this criterion alone (floor 0.00). A clean Analyze pass with no findings scores 1.00. |
+| Completeness | Are all expected artifacts present and non-empty: `spec.md`, `plan.md`, `tasks.md`, `data-model.md` (if planned), `contracts/` (if planned)? Penalize missing or empty artifacts. |
+
+The synthesizer emits this block exactly once per Phase 6 invocation,
+on its own line(s) in the workflow log, immediately after the
+"Consensus Resolution Log" table (or after the "No findings"
+notice, if the executor's Analyze pass was clean). If multiple
+Analyze passes occur within a single autopilot run (e.g., the
+confidence gate triggered remediation and re-invoked Phase 6),
+each pass emits its own block; the gate script reads the most
+recent one.
+
+**Why one aggregate line:** the gate is meant to be cheap and
+deterministic. A single `0.92` is grep-friendly, copy-pastable
+into PR review comments, and version-stable across synthesizer
+prompt iterations. The five-criterion breakdown is for human
+reviewers and remediation prompts — it tells you *which*
+dimension is low so the iteration loop knows what to fix.
+
+**Synthesizer prompt addition:** the consensus-synthesizer's
+agent body must include this directive verbatim:
+
+> At the very end of every Phase 6 Analyze synthesis (whether
+> findings were resolved or the pass was clean), emit a block in
+> the exact format above. Score each criterion against the
+> rubric. The aggregate is the arithmetic mean of the five,
+> rounded to two decimals. Do not omit this block — the
+> downstream Confidence Gate depends on it.
 
 ## Determining Agreement
 

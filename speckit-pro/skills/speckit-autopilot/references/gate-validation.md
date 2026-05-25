@@ -211,6 +211,72 @@ never get fixed. Fixing all findings produces cleaner
 artifacts and prevents issues from compounding during
 implementation.
 
+### G6.5 — Pre-Implement Confidence Gate (between Analyze and Implement)
+
+**Check:** The synthesizer's final pre-Implement confidence
+emit (see
+[consensus-protocol.md §Pre-Implement Confidence Emit](./consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze))
+clears a composite threshold of 0.90 (or the operator-configured
+threshold). Read by
+`speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh`.
+
+**Default mode:** advisory. Set `confidence_gate_mode: strict`
+in `.claude/speckit-pro.local.md` to require a passing score
+before Phase 7 begins.
+
+```
+1. Run confidence-gate.sh against the workflow file
+2. Read exit code + JSON output:
+   - exit 0 (PASS, composite ≥ threshold) → proceed to G7 / Phase 7
+   - exit 1 (NO_DATA, no synthesizer emit found) → soft-skip:
+        log a warning and proceed. NO_DATA usually indicates a
+        synthesizer-prompt regression worth reporting to the
+        plugin author.
+   - exit 2 (FAIL, composite < threshold):
+        - advisory mode (default): log the breakdown, surface
+          the lowest-scoring criterion, proceed to Phase 7
+        - strict mode: STOP and surface to the operator
+
+3. Iteration loop (both modes, max 3 iterations):
+   - If exit 2 AND iteration_count < 3:
+     - Identify the lowest-scoring criterion from the JSON output
+     - Dispatch a focused consensus round on that criterion's
+       artifacts (e.g., "Task understanding" low → re-evaluate
+       spec.md ambiguity; "Risk assessment" low → re-evaluate
+       open CRITICAL/HIGH findings)
+     - Re-invoke the synthesizer's pre-Implement confidence
+       emit (consensus-synthesizer agent, single fan-out)
+     - Re-run confidence-gate.sh
+   - After 3 iterations OR exit 0: stop iterating
+```
+
+**The iteration cap (3) is the only safety bound in Codex
+headless mode.** Codex `codex exec` does not natively support
+the `/goal` slash command per
+[openai/codex#21764](https://github.com/openai/codex/discussions/21764)
+(maintainer's words: "not a first-class command for this"). The
+3-iteration cap protects against unbounded loops without
+depending on `/goal`.
+
+**`/goal` as optional UX (Claude Code only):** In an interactive
+Claude Code session, the operator may run
+`/goal achieve confidence ≥0.90 on the pre-Implement gate`
+before invoking the autopilot. The parent-session `/goal`
+evaluator (small fast model, runs after each turn) provides a
+live `◎ /goal active` indicator and an additional stopping
+condition layered on top of the iteration cap. The autopilot
+itself does not issue `/goal` programmatically — slash commands
+are recognized only at the start of a user message, so an LLM
+emitting `/goal X` mid-turn is just text. See
+[Claude Code /goal docs](https://code.claude.com/docs/en/goal)
+for the full behavior.
+
+**Why advisory by default:** the autopilot already runs Clarify
+(G2) and Analyze (G6) gates before this point, so most shakiness
+is already filtered. Advisory mode surfaces the score and a
+remediation hint without blocking — operators who want a
+fail-closed posture opt into strict mode via local config.
+
 ### G7 — After Implement
 
 **Check:** Full verification suite passes, TDD was followed,
@@ -284,6 +350,7 @@ opening/updating the PR. Otherwise generate the PR review packet with
 | G4 | Checklist | 0 [Gap] markers | context_builder remediation | 2 |
 | G5 | Tasks | All FRs mapped to tasks | Generate missing tasks | 2 |
 | G6 | Analyze | 0 findings (all severities) | context_builder remediation | 2 |
+| G6.5 | (between Analyze and Implement) | Pre-Implement confidence ≥ 0.90 (advisory default; strict opt-in via `.claude/speckit-pro.local.md`) | Re-route consensus on lowest-scoring criterion, re-emit confidence | 3 |
 | G7 | Implement | Build+type+lint+test pass, integration tests exist, 0 placeholders, TDD evidence | Fix errors, replace placeholders, create real tests | 2 |
 
 ## Additional Verification (Extension Commands)

@@ -732,6 +732,13 @@ never from `.specify/scripts/bash/`.
   init, constitution, commands, branch detection (JSON)
 - `validate-gate.sh <G1-G7> <feature_dir>` — Validate any gate
   with marker counts and details (JSON)
+- `confidence-gate.sh <workflow-file> [--threshold N.NN] [--mode advisory|strict]` —
+  Read the synthesizer's `📊 Confidence: X.XX` pre-Implement emit and decide
+  whether Phase 7 may begin. Exit: 0 PASS, 1 NO_DATA (soft-skip), 2 FAIL.
+  See [Gate Validation §G6.5](../../skills/speckit-autopilot/references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
+  In `codex exec` headless mode, `/goal` is not first-class
+  ([openai/codex#21764](https://github.com/openai/codex/discussions/21764));
+  the 3-iteration cap is the safety bound.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` — Enforce
   setup, tasks, and pre-PR reviewability budgets (JSON)
 - `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —

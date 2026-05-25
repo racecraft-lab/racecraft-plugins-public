@@ -91,6 +91,70 @@ for phase in PHASES starting from first_pending:
 After all 7 phases complete, proceed to the post-implementation parallel
 group (see [post-implementation-codex.md](./post-implementation-codex.md)).
 
+## Phase 6.5: Pre-Implement Confidence Gate
+
+After Phase 6 (Analyze) commits and before Phase 7 begins, run the optional
+Pre-Implement Confidence Gate (G6.5). The synthesizer's final emit on the
+workflow file (see [consensus-protocol.md §Pre-Implement Confidence Emit](../../skills/speckit-autopilot/references/consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze))
+provides the data; the gate script reads it and decides whether to proceed,
+surface a remediation hint, or stop.
+
+```text
+1. Resolve mode from .claude/speckit-pro.local.md or .codex/speckit-pro.local.md
+   (`confidence_gate_mode: advisory|strict`). Default: advisory.
+
+2. Resolve threshold (`confidence_threshold: 0.90`). Default: 0.90.
+
+3. On entry, print the /goal tip:
+   - Codex interactive mode: "Tip: run `/goal achieve confidence ≥<T> on
+     the pre-Implement gate` to get the goal-mode iteration."
+     (Requires `features.goals = true` in `~/.codex/config.toml`.)
+   - Codex `codex exec` headless: "/goal is not first-class in headless
+     mode per openai/codex#21764 — the 3-iteration cap is your safety
+     bound."
+
+4. Run the gate:
+     bash '<SKILL_SCRIPTS>/confidence-gate.sh' \
+       <workflow-file> --threshold <T> --mode <M>
+
+5. Parse exit code + JSON:
+   - exit 0 (PASS): update_plan G6.5 → completed. Advance to Phase 7.
+   - exit 1 (NO_DATA): log a warning, treat as plugin regression to
+     report. update_plan G6.5 → completed with `no_data: true`.
+     Advance to Phase 7.
+   - exit 2 (FAIL):
+       a. Read JSON `criteria` object; find the lowest-scoring criterion.
+       b. If iteration_count < 3:
+            - spawn_agent on the appropriate analyst for the lowest
+              criterion (e.g., "task_understanding" lowest →
+              clarify-executor re-pass on spec.md; "risk_assessment"
+              → analyze-executor re-pass on open findings;
+              "completeness" → verify artifact presence).
+            - spawn_agent consensus-synthesizer to re-emit the
+              pre-Implement Confidence block to the workflow file.
+            - Re-run confidence-gate.sh.
+            - Increment iteration_count.
+       c. After max iterations OR exit 0:
+            - mode=advisory: log + advance to Phase 7.
+            - mode=strict: STOP. Operator may resume with
+              --from-phase implement if they accept the lower score.
+```
+
+The iteration cap of 3 is the only safety bound in Codex `codex exec`
+headless mode. In Codex interactive TUI with `features.goals = true`,
+an operator-set `/goal` provides an additional turn-based check
+layered on top of the cap.
+
+**Why this gate is opt-in for blocking:** Clarify (G2) and Analyze
+(G6) already filter most pre-Implement shakiness. Advisory mode
+surfaces the score and a remediation hint without blocking; strict
+opt-in via local config for operators who want a fail-closed posture.
+
+**update_plan**: at autopilot start, after the G6 task, create a
+G6.5 task `Confidence gate (pre-Implement)`. Transition through
+`in_progress` → `completed` regardless of advisory vs strict outcome
+(strict only differs in whether Phase 7 runs).
+
 ## Phase 7: Implement
 
 Before `tasks.md` exists, the plan contains:

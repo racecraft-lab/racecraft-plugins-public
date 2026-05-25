@@ -407,6 +407,81 @@ advance immediately.
 **Commit:**
 `git add specs/ && git commit -m "feat(SPEC-XXX): complete analyze phase"`
 
+### Phase 6.5: Pre-Implement Confidence Gate
+
+After Phase 6 commits and before Phase 7 begins, run the optional
+Pre-Implement Confidence Gate (G6.5). The synthesizer's final
+emit on the workflow file (see
+[consensus-protocol.md §Pre-Implement Confidence Emit](./consensus-protocol.md#pre-implement-confidence-emit-end-of-phase-6-analyze))
+provides the data; the gate script reads it and decides whether
+to proceed, surface a remediation hint, or stop.
+
+```
+1. Resolve mode from .claude/speckit-pro.local.md
+   (`confidence_gate_mode: advisory|strict`). Default: advisory.
+
+2. Resolve threshold from the same file (`confidence_threshold: 0.90`).
+   Default: 0.90.
+
+3. On entry, print the /goal tip (Claude Code interactive only):
+   "Tip: run `/goal achieve confidence ≥<threshold> on the
+   pre-Implement gate` in a separate Claude Code message to get the
+   live ◎ /goal active indicator. In Codex `codex exec`, /goal is
+   not first-class — the 3-iteration cap is the safety bound."
+
+4. Run the gate:
+     bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh \
+       <workflow-file> --threshold <T> --mode <M>
+
+5. Parse exit code + JSON:
+   - exit 0 (PASS): TaskUpdate G6.5 → completed; advance to Phase 7.
+   - exit 1 (NO_DATA): log a warning, surface to operator that the
+     synthesizer skipped its confidence emit (treat as a plugin
+     regression report). TaskUpdate G6.5 → completed with a
+     `no_data: true` note. Advance to Phase 7.
+   - exit 2 (FAIL):
+       a. Read JSON `criteria` object; find the lowest-scoring
+          criterion (lowest numeric value among the 5 keys).
+       b. If iteration_count < 3:
+            - Dispatch a focused consensus round on that criterion's
+              underlying artifact (e.g., "task_understanding" lowest
+              → re-evaluate spec.md ambiguity via clarify-executor
+              re-pass; "risk_assessment" lowest → re-run analyze on
+              remaining open findings; "completeness" lowest →
+              re-verify artifact presence).
+            - After remediation completes, dispatch the
+              consensus-synthesizer agent (single fan-out) to
+              re-emit the pre-Implement Confidence block to the
+              workflow file.
+            - Re-run confidence-gate.sh.
+            - Increment iteration_count.
+       c. If iteration_count == 3 OR exit 0 reached: stop iterating.
+       d. After max iterations:
+            - mode=advisory: log the final score + breakdown,
+              surface the iteration history to the operator,
+              advance to Phase 7.
+            - mode=strict: STOP. Surface the breakdown + history.
+              Operator may resume with `--from-phase implement`
+              if they accept the lower confidence.
+```
+
+The iteration cap of 3 is the only safety bound when `/goal` is
+not available (Codex `codex exec` headless mode). In Claude Code
+interactive mode, an operator-set `/goal` provides an additional
+turn-based check layered on top.
+
+**Why this gate is opt-in for blocking:** the autopilot already
+runs Clarify (G2) and Analyze (G6) gates before this point, so
+most pre-Implement shakiness is already filtered. Advisory mode
+surfaces the score and a remediation hint without blocking;
+operators who want a fail-closed posture opt into strict via
+`.claude/speckit-pro.local.md`.
+
+**TaskCreate**: at autopilot start, after the G6 task, create a
+G6.5 task: `Confidence gate (pre-Implement)`. Mark it
+`in_progress` on entry to this phase and `completed` on exit
+regardless of advisory pass-with-warning vs strict pass.
+
 ### Phase 7: Implement (Task-Level Dispatch)
 
 Phase 7 uses **task-level dispatch**: the orchestrator parses
