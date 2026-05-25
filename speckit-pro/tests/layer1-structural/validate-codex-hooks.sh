@@ -8,6 +8,13 @@
 # `hooks` field overrides the default path. This validator asserts both
 # the file location AND the manifest pointer so a stale rename can't
 # silently disable Codex hook loading.
+#
+# The Codex hook is scoped via UserPromptSubmit + body-side prompt
+# matching (Codex has no UserPromptExpansion equivalent; UserPromptSubmit's
+# matcher field is ignored per the docs). The hook command reads stdin,
+# extracts the prompt, and only runs the specify check if the prompt
+# invokes a speckit-pro skill or SpecKit native command. This matches
+# the Claude Code scoping behavior — fires only on plugin invocation.
 set -euo pipefail
 
 source "$(dirname "$0")/../lib/assertions.sh"
@@ -56,37 +63,36 @@ fi
 
 CONTENT=$(cat "$HOOKS_FILE")
 
-section "codex-hooks.json — Structure"
+section "codex-hooks.json — Scoping (UserPromptSubmit + body-side prompt match)"
 
 set_test "has top-level hooks key"
 assert_json_field_exists "$CONTENT" "hooks"
 
-set_test "SessionStart event exists under hooks"
-assert_json_field_exists "$CONTENT" "hooks.SessionStart"
+set_test "UserPromptSubmit event exists under hooks"
+assert_json_field_exists "$CONTENT" "hooks.UserPromptSubmit"
 
-set_test "SessionStart has non-empty hooks array"
+set_test "NO SessionStart hook (would fire on every session — regression guard)"
+has_session_start=$(printf '%s' "$CONTENT" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+print('true' if 'SessionStart' in data.get('hooks', {}) else 'false')
+" 2>/dev/null)
+assert_eq "false" "$has_session_start" "Codex hook must not register SessionStart (always fires); use UserPromptSubmit with body-side prompt matching"
+
+set_test "UserPromptSubmit has non-empty hooks array"
 has_hooks_array=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-arr = data['hooks']['SessionStart']
+arr = data['hooks']['UserPromptSubmit']
 print('true' if isinstance(arr, list) and len(arr) > 0 else 'false')
 " 2>/dev/null)
-assert_eq "true" "$has_hooks_array" "SessionStart must have a non-empty array"
-
-set_test "Hook entry has matcher field"
-has_matcher=$(printf '%s' "$CONTENT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-entry = data['hooks']['SessionStart'][0]
-print('true' if 'matcher' in entry else 'false')
-" 2>/dev/null)
-assert_eq "true" "$has_matcher" "hook entry must have a matcher field"
+assert_eq "true" "$has_hooks_array" "UserPromptSubmit must have a non-empty array"
 
 set_test "Hook entry has hooks array"
 has_inner_hooks=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-entry = data['hooks']['SessionStart'][0]
+entry = data['hooks']['UserPromptSubmit'][0]
 print('true' if 'hooks' in entry and isinstance(entry['hooks'], list) else 'false')
 " 2>/dev/null)
 assert_eq "true" "$has_inner_hooks" "hook entry must have hooks array"
@@ -95,7 +101,7 @@ set_test "Hook type is command"
 hook_type=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-h = data['hooks']['SessionStart'][0]['hooks'][0]
+h = data['hooks']['UserPromptSubmit'][0]['hooks'][0]
 print(h.get('type', ''))
 " 2>/dev/null)
 assert_eq "command" "$hook_type"
@@ -104,7 +110,7 @@ set_test "command field is non-empty"
 cmd_val=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-h = data['hooks']['SessionStart'][0]['hooks'][0]
+h = data['hooks']['UserPromptSubmit'][0]['hooks'][0]
 print(h.get('command', ''))
 " 2>/dev/null)
 if [ -n "$cmd_val" ]; then
@@ -117,29 +123,29 @@ set_test "has statusMessage field"
 has_status=$(printf '%s' "$CONTENT" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
-h = data['hooks']['SessionStart'][0]['hooks'][0]
+h = data['hooks']['UserPromptSubmit'][0]['hooks'][0]
 print('true' if 'statusMessage' in h and h['statusMessage'] else 'false')
 " 2>/dev/null)
 assert_eq "true" "$has_status" "hook must have a non-empty statusMessage field"
 
-section "codex-hooks.json — Scoping (.specify/ presence guard)"
+section "codex-hooks.json — Body-side prompt-match scoping"
 
-set_test "Command body contains .specify/ presence guard"
-# Codex's hook system has no UserPromptExpansion equivalent. The best
-# available scoping primitive is to make the SessionStart command a
-# silent no-op when .specify/ is absent. Without the guard, the warning
-# fires in every Codex session globally — exactly the behavior the
-# user asked us to remove. Catch regressions where the guard gets
-# dropped.
-cmd_val=$(printf '%s' "$CONTENT" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-print(data['hooks']['SessionStart'][0]['hooks'][0].get('command', ''))
-" 2>/dev/null)
-if [[ "$cmd_val" == *"[ -d .specify ]"* ]] || [[ "$cmd_val" == *"-d .specify"* ]]; then
+set_test "Command body reads stdin and extracts the prompt via jq"
+# Codex UserPromptSubmit fires on every user prompt; the matcher field is
+# unused per the Codex docs. The hook must inspect the prompt content via
+# jq on stdin to scope to plugin invocation only. Without this, the
+# warning fires on every Codex prompt — exactly what we removed.
+if [[ "$cmd_val" == *"jq -r"* ]] && [[ "$cmd_val" == *".prompt"* ]]; then
   _pass
 else
-  _fail "command must guard on .specify/ presence so non-SpecKit Codex sessions stay silent (was: '$cmd_val')"
+  _fail "command must extract .prompt from stdin via jq for prompt-match scoping (was: '$cmd_val')"
+fi
+
+set_test "Command body greps for plugin-scoping invocation pattern"
+if [[ "$cmd_val" == *"speckit-"* ]] && [[ "$cmd_val" == *"grill-me"* ]] && [[ "$cmd_val" == *"/speckit"* ]]; then
+  _pass
+else
+  _fail "command must grep prompt for speckit-/grill-me/SpecKit invocation patterns (was: '$cmd_val')"
 fi
 
 test_summary
