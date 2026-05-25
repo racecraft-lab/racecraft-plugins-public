@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.1.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.0.1...speckit-pro-v2.1.0) (2026-05-25)
+
+
+### Features
+
+* **speckit-pro:** batch consensus dispatch across items (WS-D1 / Use site 5) ([#60](https://github.com/racecraft-lab/racecraft-plugins-public/issues/60)) ([0b211c0](https://github.com/racecraft-lab/racecraft-plugins-public/commit/0b211c0c2554f2ca0b2bea1967309eddb4f5d859))
+* **speckit-pro:** honor [P] markers in Phase 7 — ship parallel task dispatch (WS-D2) ([#62](https://github.com/racecraft-lab/racecraft-plugins-public/issues/62)) ([e8e1030](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e8e1030fd110c7a9cfe7467b51e7e91faec24393))
+* **speckit-pro:** max-thinking policy on every agent (WS-H) ([#67](https://github.com/racecraft-lab/racecraft-plugins-public/issues/67)) ([45147ad](https://github.com/racecraft-lab/racecraft-plugins-public/commit/45147ad15019c981f317f27375652afd10fbb493))
+* **speckit-pro:** partition resolve-pr by file, parallel across files (WS-F1) ([#61](https://github.com/racecraft-lab/racecraft-plugins-public/issues/61)) ([d1dcb8c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d1dcb8c9a7f407eb9c25564bfaade17584164c20))
+* **speckit-pro:** partition resolve-pr threads by file, parallel across files (WS-F1 / Use site 6) ([d1dcb8c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d1dcb8c9a7f407eb9c25564bfaade17584164c20))
+* **speckit-pro:** post-impl Agent Teams as capability detection (not opt-in) ([#58](https://github.com/racecraft-lab/racecraft-plugins-public/issues/58)) ([bef77d3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bef77d3e73383b0d2244a84dad85afe7880b09e5))
+
+
+### Bug Fixes
+
+* **speckit-pro:** isolate CODEX_HOME during Codex L2 evals to prevent plugin-variant collision ([#69](https://github.com/racecraft-lab/racecraft-plugins-public/issues/69)) ([dab0cff](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dab0cff5d3c4076d64864516d1fbe36f83faadd6))
+* **speckit-pro:** pre-release v2.1.0 spec-conformance audit fixes (B1 + H1–H4) ([#68](https://github.com/racecraft-lab/racecraft-plugins-public/issues/68)) ([73dcbcc](https://github.com/racecraft-lab/racecraft-plugins-public/commit/73dcbcc7ea2a53c7c68a200d82d80b381d622756))
+* **speckit-pro:** strip leading dots before privacy-scan sensitivity check ([#57](https://github.com/racecraft-lab/racecraft-plugins-public/issues/57)) ([d9a033b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d9a033b757df38412cd6704f07acd56e3a71a5ad))
+
 ## [2.0.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.0.0...speckit-pro-v2.0.1) (2026-05-23)
 
 
