@@ -25,6 +25,8 @@ PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # shellcheck source=lib/extractors.sh
 source "$SCRIPT_DIR/lib/extractors.sh"
+# shellcheck source=lib/judge.sh
+source "$SCRIPT_DIR/lib/judge.sh"
 
 # Defaults
 MODE="dry-run"
@@ -228,8 +230,70 @@ compare_field() {
       fi
       ;;
     semantic-equivalent)
-      # Semantic equivalence requires an LLM judge; skip with note.
-      _skip "$fixture_id:$field_name" "semantic-equivalent tolerance requires LLM judge — not yet implemented"
+      local section extractor
+      section=$(echo "$field_json" | jq -r '.section_selector // ""')
+      extractor=$(echo "$field_json" | jq -r '.extractor // ""')
+      section="${section##\#\# }"
+
+      if [ -z "$section" ] || [ -z "$extractor" ]; then
+        _fail "$fixture_id:$field_name" "semantic-equivalent requires section_selector + extractor in expected-equivalence.json"
+        return 1
+      fi
+
+      local value_a value_b extract_rc=0
+      case "$extractor" in
+        table_column:*)
+          local column="${extractor#table_column:}"
+          value_a=$(extract_table_column "$file_a" "$section" "$column") || extract_rc=$?
+          value_b=$(extract_table_column "$file_b" "$section" "$column") || extract_rc=$?
+          ;;
+        *)
+          _fail "$fixture_id:$field_name" "semantic-equivalent supports table_column:<Name> extractor; got '$extractor'"
+          return 1
+          ;;
+      esac
+      if [ "$extract_rc" -ne 0 ]; then
+        _fail "$fixture_id:$field_name" "extractor '$extractor' failed on one or both paths"
+        return 1
+      fi
+
+      # If the extracted values are byte-identical, skip the judge (cheap
+      # short-circuit; the judge is the expensive path).
+      if [ "$value_a" = "$value_b" ]; then
+        _pass "$fixture_id:$field_name (semantic-equivalent, bytes match — judge skipped)"
+        return 0
+      fi
+
+      local rationale
+      rationale=$(echo "$tolerance_json" | jq -r ".fields[\"$tolerance_key\"].rationale // \"Values must be semantically equivalent.\"")
+
+      local judge_json
+      if ! judge_json=$(semantic_equivalent_judge "$value_a" "$value_b" "$rationale"); then
+        _fail "$fixture_id:$field_name" "semantic-equivalent judge failed (subprocess error, timeout, or malformed JSON)"
+        printf '\n--- %s (judge subprocess failed) ---\nA=%s\nB=%s\n' \
+          "$field_name" "$value_a" "$value_b" >>"$pa/../diff-report.txt"
+        return 1
+      fi
+
+      local verdict reason
+      verdict=$(echo "$judge_json" | jq -r '.verdict')
+      reason=$(echo "$judge_json" | jq -r '.reason')
+
+      # Audit-log every verdict to the diff report — cheap insurance
+      # against flaky / surprising LLM judgments.
+      {
+        printf '\n--- %s (semantic-equivalent verdict) ---\n' "$field_name"
+        printf 'verdict: %s\nreason:  %s\n' "$verdict" "$reason"
+        printf 'VALUE A:\n%s\n' "$value_a"
+        printf 'VALUE B:\n%s\n' "$value_b"
+      } >>"$pa/../diff-report.txt"
+
+      if [ "$verdict" = "EQUIVALENT" ]; then
+        _pass "$fixture_id:$field_name (semantic-equivalent: $reason)"
+      else
+        _fail "$fixture_id:$field_name" "semantic-equivalent verdict NOT_EQUIVALENT: $reason"
+        return 1
+      fi
       ;;
     *)
       _fail "$fixture_id:$field_name" "unknown tolerance type '$tolerance_type'"
