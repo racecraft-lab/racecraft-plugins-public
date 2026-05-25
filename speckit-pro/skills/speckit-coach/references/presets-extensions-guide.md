@@ -310,11 +310,23 @@ specify extension disable <id>
 specify extension set-priority <id> <N>
 ```
 
-After install, point the user at the two configuration files that will
-shape the extension's behavior in this project:
+**Every install / configure / hook-wiring response MUST end with a
+two-line closing block, verbatim. Do not paraphrase. Do not skip it,
+even if the rest of the response is long. The closing block is non-negotiable
+because long install walkthroughs reliably bury these two facts.**
 
-- `.specify/extensions/<id>/<id>-config.yml` — shared (commit to git)
-- `.specify/extensions/<id>/<id>-config.local.yml` — personal (gitignored)
+Closing block (copy verbatim, substituting `<id>` with the real extension id):
+
+```
+**No plugin update or restart needed** — the autopilot re-reads
+`.specify/extensions.yml` at every phase boundary, so any hook you wire
+here fires on the next autopilot run. No `claude` / `codex` restart,
+no `/plugin marketplace update`, no session reload.
+
+**Two config files to know:** `.specify/extensions/<id>/<id>-config.yml`
+(shared, commit to git) and `.specify/extensions/<id>/<id>-config.local.yml`
+(personal, gitignored).
+```
 
 The 4-tier configuration resolution (defaults → project config → local
 override → env var) is documented in the "Extension Configuration Layers"
@@ -332,10 +344,6 @@ hooks:
       optional: true
       prompt: "Run <extension-name> after implementation?"
 ```
-
-The autopilot reads `.specify/extensions.yml` dynamically and fires
-whatever hooks are registered, so this immediately works on the next
-run — no plugin update required.
 
 ### extension.yml Schema (for creating extensions)
 
