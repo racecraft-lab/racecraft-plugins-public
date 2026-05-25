@@ -178,6 +178,20 @@ Examples:
 
 The `validate-pr-title` CI check enforces this format and will block the PR if the title does not match.
 
+**Audience: write titles and bodies for the public, not for yourself.** The PR page is the public face of this plugin — anyone evaluating it on the marketplace can read every title and body. Three rules ride alongside the conventional-commits format:
+
+1. **The text after the prefix must be plain English.** Drop internal codes (`B1`, `H4`, `WS-D1`), internal layer numbers (`L4`, `L8`), and internal jargon (`tolerance arm`, `mock-shim`, `consensus-synthesizer`). A reader who has never seen this repo should understand the title at a glance.
+2. **Plain English does NOT mean dropping the prefix.** `validate-pr-title` will fail in CI if the conventional-commits prefix is missing. The shape is always `<type>(<scope>): <plain-English description>` — keep the prefix, rewrite only what comes after the colon.
+3. **PR bodies follow the same rule.** Internal IDs and codes belong in the issue tracker or commit trailers, not in the body. Lead with what the change does and why anyone should care; put verification details below. If a body references prior internal work, link to it rather than naming it by code.
+
+```
+Good:  feat(speckit-pro): teach the parity test to compare specific table cells
+Bad:   feat(speckit-pro): WS-D1 / L8 — section-extractor implementation for tolerance arm
+Bad:   Teach the parity test to compare specific table cells   ← missing prefix, CI fails
+```
+
+If a PR ever lands on `main` with a non-public-readable title (squash merges use the PR title as the commit subject), the recovery is `gh pr edit` on the PR + a CHANGELOG follow-up — not a force-push. Avoid the recovery by writing it right the first time.
+
 **Merge policy:** The repository enforces squash-only merges. Merge commits and rebase merges are disabled. Every PR produces exactly one squash commit on `main`.
 
 **Verification checklist:** Before merging a feature that touches CI workflows or release configuration, follow the end-to-end verification checklist at `docs/ai/specs/cicd-release-pipeline-verification.md` to confirm the pipeline remains functional.
