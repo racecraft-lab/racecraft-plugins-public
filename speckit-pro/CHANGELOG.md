@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.1.0...speckit-pro-v2.1.1) (2026-05-25)
+
+
+### Bug Fixes
+
+* **speckit-pro:** post-v2.1.0 hardening — vocab pinning, hook matcher, doc/manifest hygiene ([#70](https://github.com/racecraft-lab/racecraft-plugins-public/issues/70)) ([5447ca2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5447ca22b37a4e9acd23d04f21639771d242a3e3))
+
 ## [2.1.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.0.1...speckit-pro-v2.1.0) (2026-05-25)
 
 
