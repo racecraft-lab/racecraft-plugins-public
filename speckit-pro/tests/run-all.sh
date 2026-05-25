@@ -219,6 +219,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-aggregate-crl.sh"
     "$TESTS_DIR/layer4-scripts/test-transcript-helpers.sh"
     "$TESTS_DIR/layer4-scripts/test-privacy-scan.sh"
+    "$TESTS_DIR/layer4-scripts/test-l8-extractors.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then

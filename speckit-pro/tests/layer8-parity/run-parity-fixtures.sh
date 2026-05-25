@@ -23,6 +23,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+# shellcheck source=lib/extractors.sh
+source "$SCRIPT_DIR/lib/extractors.sh"
+
 # Defaults
 MODE="dry-run"
 FIXTURE_FILTER=""
@@ -153,21 +156,75 @@ compare_field() {
       fi
       ;;
     exact|tolerance-1)
-      # Extractor handling deferred — for exact/tolerance-1 we currently
-      # diff the section verbatim; section extractor (table_row_count,
-      # table_column:N) is implemented in a follow-up.
-      if cmp -s "$file_a" "$file_b"; then
-        _pass "$fixture_id:$field_name ($tolerance_type)"
-      else
-        local section
-        section=$(echo "$field_json" | jq -r '.section_selector // ""')
-        if [ -n "$section" ]; then
-          _fail "$fixture_id:$field_name" "$tolerance_type tolerance — section extractor not yet implemented for '$section'; raw diff captured"
+      local section extractor
+      section=$(echo "$field_json" | jq -r '.section_selector // ""')
+      extractor=$(echo "$field_json" | jq -r '.extractor // ""')
+
+      # Strip leading "## " from section_selector if present, so callers can
+      # write either "## Foo" (matching the header line) or "Foo".
+      section="${section##\#\# }"
+
+      if [ -z "$section" ] || [ -z "$extractor" ]; then
+        # No extractor specified — fall back to whole-file equality.
+        if cmp -s "$file_a" "$file_b"; then
+          _pass "$fixture_id:$field_name ($tolerance_type, whole-file)"
         else
-          _fail "$fixture_id:$field_name" "$tolerance_type tolerance failed"
+          _fail "$fixture_id:$field_name" "$tolerance_type tolerance failed (no extractor configured, whole-file diff)"
+          diff -u "$file_a" "$file_b" | head -50 >>"$pa/../diff-report.txt"
+          return 1
         fi
-        diff -u "$file_a" "$file_b" | head -50 >>"$pa/../diff-report.txt"
+        return 0
+      fi
+
+      local value_a value_b extract_rc=0
+      case "$extractor" in
+        table_row_count)
+          value_a=$(extract_table_row_count "$file_a" "$section") || extract_rc=$?
+          value_b=$(extract_table_row_count "$file_b" "$section") || extract_rc=$?
+          ;;
+        table_column:*)
+          local column="${extractor#table_column:}"
+          value_a=$(extract_table_column "$file_a" "$section" "$column") || extract_rc=$?
+          value_b=$(extract_table_column "$file_b" "$section" "$column") || extract_rc=$?
+          ;;
+        *)
+          _fail "$fixture_id:$field_name" "unknown extractor '$extractor'"
+          return 1
+          ;;
+      esac
+
+      if [ "$extract_rc" -ne 0 ]; then
+        _fail "$fixture_id:$field_name" "extractor '$extractor' failed for section '## $section' on one or both paths"
         return 1
+      fi
+
+      if [ "$tolerance_type" = "tolerance-1" ]; then
+        # tolerance-1 is only meaningful for numeric extractors (row_count).
+        if ! [[ "$value_a" =~ ^[0-9]+$ ]] || ! [[ "$value_b" =~ ^[0-9]+$ ]]; then
+          _fail "$fixture_id:$field_name" "tolerance-1 requires numeric extractor; got A='$value_a' B='$value_b'"
+          return 1
+        fi
+        local diff_abs=$((value_a > value_b ? value_a - value_b : value_b - value_a))
+        if [ "$diff_abs" -le 1 ]; then
+          _pass "$fixture_id:$field_name (tolerance-1, |$value_a - $value_b|=$diff_abs)"
+        else
+          _fail "$fixture_id:$field_name" "tolerance-1 exceeded: |$value_a - $value_b|=$diff_abs"
+          printf 'Field %s: A=%s B=%s diff=%s (tolerance-1)\n' "$field_name" "$value_a" "$value_b" "$diff_abs" \
+            >>"$pa/../diff-report.txt"
+          return 1
+        fi
+      else
+        # exact
+        if [ "$value_a" = "$value_b" ]; then
+          _pass "$fixture_id:$field_name (exact, extractor=$extractor)"
+        else
+          _fail "$fixture_id:$field_name" "exact tolerance failed — extracted values differ"
+          {
+            printf '\n--- %s (extractor=%s) ---\n' "$field_name" "$extractor"
+            diff -u <(printf '%s\n' "$value_a") <(printf '%s\n' "$value_b") | head -50
+          } >>"$pa/../diff-report.txt"
+          return 1
+        fi
       fi
       ;;
     semantic-equivalent)
