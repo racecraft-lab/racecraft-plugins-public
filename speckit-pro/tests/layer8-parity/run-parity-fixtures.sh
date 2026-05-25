@@ -100,8 +100,87 @@ validate_fixture_structure() {
 }
 
 # ---------------------------------------------------------------------------
-# Live mode: run claude -p twice and compare outcomes
+# Live mode: run claude -p twice (Path A teams / Path B fallback) and
+# compare outcomes per expected-equivalence.json + tolerance.json.
+#
+# Output schema per fixture pair: results land in
+#   $L8_OUT/$fixture_id/{pathA,pathB}/  — full workdir snapshot per path
+#   $L8_OUT/$fixture_id/diff-report.txt — field-level diff summary
 # ---------------------------------------------------------------------------
+run_path() {
+  # Run a single autopilot path (A or B) and capture its workdir.
+  # Args: <fixture_dir> <env_script> <out_dir>
+  local fixture_dir="$1" env_script="$2" out_dir="$3"
+  mkdir -p "$out_dir"
+  cp "$fixture_dir/workflow.md" "$out_dir/workflow.md"
+  (
+    cd "$out_dir"
+    # shellcheck disable=SC1090
+    source "$env_script"
+    "$CLAUDE_BIN" -p --max-budget-usd "$L8_FIXTURE_BUDGET_USD" \
+      "/speckit-pro:autopilot workflow.md" \
+      >"$out_dir/.claude-stdout.log" 2>"$out_dir/.claude-stderr.log"
+    echo $? >"$out_dir/.claude-exit-code"
+  )
+}
+
+compare_field() {
+  # Compare one field across two path outputs per its tolerance rule.
+  # Args: <fixture_id> <pathA_dir> <pathB_dir> <field_json> <tolerance_json>
+  # Returns 0 on match, non-zero on mismatch (and prints diff).
+  local fixture_id="$1" pa="$2" pb="$3" field_json="$4" tolerance_json="$5"
+
+  local field_name source_path tolerance_key tolerance_type
+  field_name=$(echo "$field_json" | jq -r '.field')
+  source_path=$(echo "$field_json" | jq -r '.source')
+  tolerance_key=$(echo "$field_json" | jq -r '.tolerance_key')
+  tolerance_type=$(echo "$tolerance_json" | jq -r ".fields[\"$tolerance_key\"].tolerance // \"unknown\"")
+
+  local file_a="$pa/$source_path" file_b="$pb/$source_path"
+  if [ ! -f "$file_a" ] || [ ! -f "$file_b" ]; then
+    _fail "$fixture_id:$field_name" "missing artifact on one or both paths ($source_path)"
+    return 1
+  fi
+
+  case "$tolerance_type" in
+    byte-identical)
+      if cmp -s "$file_a" "$file_b"; then
+        _pass "$fixture_id:$field_name (byte-identical)"
+      else
+        _fail "$fixture_id:$field_name" "byte-identical tolerance failed — see diff in report"
+        diff -u "$file_a" "$file_b" | head -50 >>"$pa/../diff-report.txt"
+        return 1
+      fi
+      ;;
+    exact|tolerance-1)
+      # Extractor handling deferred — for exact/tolerance-1 we currently
+      # diff the section verbatim; section extractor (table_row_count,
+      # table_column:N) is implemented in a follow-up.
+      if cmp -s "$file_a" "$file_b"; then
+        _pass "$fixture_id:$field_name ($tolerance_type)"
+      else
+        local section
+        section=$(echo "$field_json" | jq -r '.section_selector // ""')
+        if [ -n "$section" ]; then
+          _fail "$fixture_id:$field_name" "$tolerance_type tolerance — section extractor not yet implemented for '$section'; raw diff captured"
+        else
+          _fail "$fixture_id:$field_name" "$tolerance_type tolerance failed"
+        fi
+        diff -u "$file_a" "$file_b" | head -50 >>"$pa/../diff-report.txt"
+        return 1
+      fi
+      ;;
+    semantic-equivalent)
+      # Semantic equivalence requires an LLM judge; skip with note.
+      _skip "$fixture_id:$field_name" "semantic-equivalent tolerance requires LLM judge — not yet implemented"
+      ;;
+    *)
+      _fail "$fixture_id:$field_name" "unknown tolerance type '$tolerance_type'"
+      return 1
+      ;;
+  esac
+}
+
 run_fixture_live() {
   local fixture_dir="$1"
   local fixture_id
@@ -112,22 +191,45 @@ run_fixture_live() {
     return
   fi
 
-  # NOTE: The full live execution is intentionally NOT implemented in this
-  # initial scaffold. It requires:
-  #
-  #   1. A tmpdir per run with the fixture's workflow.md copied in
-  #   2. Sourcing env-fallback.sh OR env-teams.sh to set/unset
-  #      CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS
-  #   3. Invoking claude -p --max-budget-usd "$L8_FIXTURE_BUDGET_USD" with
-  #      a prompt that loads the speckit-pro plugin and runs
-  #      /speckit-pro:autopilot path/to/workflow.md
-  #   4. Capturing the produced artifacts (spec.md, plan.md, tasks.md,
-  #      workflow.md final state)
-  #   5. Diffing per expected-equivalence.json with tolerance.json
-  #
-  # This is deferred until the runner has been reviewed and the LLM
-  # token budget is approved. Implementation belongs in a follow-up PR.
-  _skip "$fixture_id: live mode" "live execution not yet implemented — see TODO in script"
+  local out_root="${L8_OUT:-/tmp/l8-parity-$$}/$fixture_id"
+  local pa="$out_root/pathA" pb="$out_root/pathB"
+  mkdir -p "$out_root"
+  : >"$out_root/diff-report.txt"
+
+  printf "  ${YELLOW}LIVE${RESET} %s: running Path A (env-teams.sh)\n" "$fixture_id"
+  run_path "$fixture_dir" "$fixture_dir/env-teams.sh" "$pa"
+  local rcA
+  rcA=$(cat "$pa/.claude-exit-code")
+  printf "  ${YELLOW}LIVE${RESET} %s: running Path B (env-fallback.sh)\n" "$fixture_id"
+  run_path "$fixture_dir" "$fixture_dir/env-fallback.sh" "$pb"
+  local rcB
+  rcB=$(cat "$pb/.claude-exit-code")
+
+  if [ "$rcA" != "0" ] || [ "$rcB" != "0" ]; then
+    _fail "$fixture_id: claude -p" "Path A exit=$rcA / Path B exit=$rcB. See $out_root/{pathA,pathB}/.claude-stderr.log"
+    return
+  fi
+
+  # Run each compare field through the tolerance check.
+  local expected="$fixture_dir/expected-equivalence.json"
+  local tolerance="$fixture_dir/tolerance.json"
+  local fail_fast
+  fail_fast=$(jq -r '.fail_fast // false' "$expected")
+  local count
+  count=$(jq '.compare | length' "$expected")
+  local i=0
+  while [ "$i" -lt "$count" ]; do
+    local field_json
+    field_json=$(jq -c ".compare[$i]" "$expected")
+    if ! compare_field "$fixture_id" "$pa" "$pb" "$field_json" "$(cat "$tolerance")"; then
+      if [ "$fail_fast" = "true" ]; then
+        return
+      fi
+    fi
+    i=$((i + 1))
+  done
+
+  printf "  ${GREEN}LIVE${RESET} %s: results in %s\n" "$fixture_id" "$out_root"
 }
 
 # ---------------------------------------------------------------------------

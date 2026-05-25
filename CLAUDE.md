@@ -115,6 +115,10 @@ Layer 6 evals use `speckit-pro/tests/layer6-efficiency/run-efficiency-benchmarks
 
 Layer 7 fixtures live under `speckit-pro/tests/layer7-integration/`. Replay mode parses committed `transcript.jsonl` files (parser regression test); `--live` mode invokes `claude -p` and captures fresh transcripts (real routing test). See `tests/layer7-integration/README.md` for fixture format and assertion philosophy.
 
+Layer 8 parity fixtures (`tests/layer8-parity/`) verify Path A (Agent Teams) vs Path B (parallel-subagents fallback) produce equivalent outcomes. Run modes:
+- `bash tests/layer8-parity/run-parity-fixtures.sh --dry-run` — validates fixture structure only; free.
+- `bash tests/layer8-parity/run-parity-fixtures.sh --live --budget-usd 25` — invokes `claude -p` twice per fixture (once per env) with budget cap and runs tolerance comparison (`byte-identical`, `exact`, `tolerance-1`). `semantic-equivalent` tolerance currently skips with a warning (needs LLM judge in a follow-up). Cost: ~$10-30 per fixture pair.
+
 ## speckit-pro Plugin
 
 The only current plugin. It implements Spec-Driven Development (SDD) powered by [GitHub SpecKit](https://github.com/github/spec-kit).

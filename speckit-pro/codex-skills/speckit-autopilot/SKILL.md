@@ -10,17 +10,12 @@ description: >
   "start the autonomous pipeline", "drive it through all the SDD
   phases", "run the whole thing autonomously", "full end-to-end
   speckit run", or hands over a populated SPEC-NNN-workflow.md file
-  ready for end-to-end execution with gate validation between phases.
-  Requires SpecKit CLI installed, constitution created, and a
-  populated workflow file. Do NOT fire for methodology questions
-  about the consensus protocol, simplicity-gate troubleshooting,
-  spec-writing coaching, technical-roadmap creation, status checks
-  on existing specs, PR-review thread resolution, feature
-  decomposition, checklist domain selection, project setup ("specify
-  init"), interview-style pre-spec scoping ("grill me", "interview
-  me"), or unrelated coding tasks (unit tests, MCP tools, linting,
-  build errors) — those route to $speckit-coach, $speckit-scaffold-spec,
-  $speckit-status, $speckit-resolve-pr, $grill-me, or no skill at all.
+  for end-to-end execution. Requires SpecKit CLI installed,
+  constitution created, and a populated workflow file. Not for SDD
+  methodology questions ($speckit-coach), pre-spec scoping
+  ($grill-me), new-spec setup ($speckit-scaffold-spec), status
+  checks ($speckit-status), or PR comment resolution
+  ($speckit-resolve-pr).
 ---
 
 # SpecKit Autopilot — Autonomous Execution Engine
