@@ -207,21 +207,14 @@ specify extension catalog add --name <n> --install-allowed <url>
 specify extension catalog remove <name>        # remove catalog
 ```
 
-### Community Extension Catalog
+### Extensions speckit-pro's autopilot routes to by name
 
-The community catalog (`extensions/catalog.community.json` upstream) has grown
-to **103+ extensions** as of SpecKit v0.8.13. Browse the full live list at
-<https://github.github.io/spec-kit/community/extensions.html> or
-<https://github.com/github/spec-kit/blob/main/extensions/catalog.community.json>.
-
-**Gotcha — the website's "ID" column shows the GitHub repo name, not the
-extension ID.** A row labeled `spec-kit-archive` is the repo
-`stn1slv/spec-kit-archive`, but the actual extension `id` (and the directory
-it installs into) is bare: `archive`. Trust the `id` field in the catalog
-JSON or the extension's own `extension.yml`, not the website's column header.
-
-The autopilot routes work to these extensions by their bare IDs when
-installed — they show up by name in `.specify/extensions/.registry`:
+These are a stable contract between this plugin and a curated set of
+extension ids. The autopilot's post-implementation workflow auto-dispatches
+to them when they're present in `.specify/extensions/.registry`, and
+gracefully skips them when they're not. The ids are bare (no `spec-kit-`
+prefix) — they match what's published in the upstream
+`extensions/catalog.community.json`.
 
 | Extension | ID | Category | Used by autopilot for |
 |-----------|----|----------|------------------------|
@@ -232,31 +225,117 @@ installed — they show up by name in `.specify/extensions/.registry`:
 | Verify Tasks | `verify-tasks` | code | Track C step 2 — phantom task detector |
 | Retrospective | `retrospective` | docs | Sequential after Cleanup — post-impl reflection |
 
-Other commonly used community extensions (not auto-routed, but the coach
-discusses them):
+**Gotcha — the website's "ID" column shows the GitHub repo name, not the
+extension ID.** A row labeled `spec-kit-archive` on the
+[community extensions page](https://github.github.io/spec-kit/community/extensions.html)
+is the repo `stn1slv/spec-kit-archive`, but the actual extension `id` (and
+the directory it installs into) is bare: `archive`. Trust the `id` field in
+the catalog JSON or the extension's own `extension.yml`, not the website's
+column header.
 
-| Extension | ID | Category | Purpose |
-|-----------|----|----------|---------|
-| Cleanup | `cleanup` | code | Post-impl quality gate — auto-fix small issues |
-| Conduct | `conduct` | process | Orchestrate phases via sub-agent delegation |
-| Fleet Orchestrator | `fleet` | process | Full lifecycle with human-in-the-loop gates |
-| SDD Utilities | `speckit-utils` | process | Resume workflows, validate health, verify traceability |
-| Azure DevOps | `azure-devops` | integration | Sync user stories and tasks to ADO work items |
-| Jira | `jira` | integration | Create Epics, Stories, and Issues from specs |
-| Project Status | `project-status` | visibility | Show current SDD workflow progress |
-| Iterate | `iterate` | docs | Two-phase refine-and-apply for spec documents |
-| Spec Sync | `spec-sync` | docs | Detect and resolve drift between specs and code |
-| V-Model | `v-model` | docs | Paired generation of dev and test specifications |
+### Browsing the live catalog — three plays
 
-For everything else (BDD, OWASP threat modeling, cost tracking, brownfield
-bootstrap, Confluence/M365 integrations, etc.), see the live catalog page.
+The full community catalog has grown to 100+ extensions and changes
+frequently upstream. Rather than mirroring it here (and going stale on
+every upstream merge), the coach reaches the authoritative sources on
+demand. Three plays cover the common interactions.
 
-**Note:** Community extensions are "discovery only" by default.
-Install them using `--from <zip-url>`:
+#### Play 1 — Discovery ("what's available?", "find an extension for X")
+
+The user wants to browse or search the catalog. Run `specify extension
+search` against the user's local catalog stack (which respects custom
+catalogs and `SPECKIT_CATALOG_URL` env overrides):
 
 ```bash
-specify extension add verify --from https://github.com/author/spec-kit-verify/archive/refs/tags/v1.0.0.zip
+specify extension search                       # browse everything
+specify extension search <keyword>             # filter by keyword
+specify extension search --tag <tag>           # filter by tag
+specify extension search --author <author>     # filter by author
+specify extension search --verified            # verified extensions only
 ```
+
+Parse the output and render it as a markdown table grouped by category.
+
+If `specify` is unavailable, fall back to the GitHub API against the
+authoritative catalog file:
+
+```bash
+gh api /repos/github/spec-kit/contents/extensions/catalog.community.json \
+  --jq '.content' | base64 -d | \
+  jq '.extensions[] | select(.id | test("KEYWORD"; "i")) | {id, name, category, description}'
+```
+
+If neither CLI is available, WebFetch the raw URL:
+`https://raw.githubusercontent.com/github/spec-kit/main/extensions/catalog.community.json`
+
+#### Play 2 — Deep dive ("tell me about the X extension")
+
+The user wants details on one extension. Run `specify extension info <id>`
+to get the full manifest, then surface the salient fields (commands
+provided, hook events, `requires.speckit_version`, tags, repository URL):
+
+```bash
+specify extension info <id>
+```
+
+If `specify` doesn't know about the extension (e.g., the user is asking
+about something they read on a blog), fetch the extension's own
+`extension.yml` from its repository. The `repository` field in the catalog
+entry gives the URL; the manifest path is typically
+`<repo>/blob/main/extension.yml`:
+
+```bash
+gh api /repos/<owner>/<repo>/contents/extension.yml \
+  --jq '.content' | base64 -d
+```
+
+Read out: `provides.commands` (what slash commands the extension adds),
+`hooks` (which phase boundaries it fires on), `requires.speckit_version`
+(compatibility), and `tags`. Cross-reference against the user's installed
+SpecKit version (`specify --version`) before recommending install.
+
+#### Play 3 — Install, configure, remove
+
+The user wants to change extension state. **Always confirm with the user
+before running any mutation.** Once confirmed:
+
+```bash
+# Install (community extensions are "discovery only" — must use --from)
+specify extension add <id> --from https://github.com/<owner>/<repo>/archive/refs/tags/<tag>.zip
+
+# Lifecycle
+specify extension remove <id>
+specify extension enable <id>
+specify extension disable <id>
+specify extension set-priority <id> <N>
+```
+
+After install, point the user at the two configuration files that will
+shape the extension's behavior in this project:
+
+- `.specify/extensions/<id>/<id>-config.yml` — shared (commit to git)
+- `.specify/extensions/<id>/<id>-config.local.yml` — personal (gitignored)
+
+The 4-tier configuration resolution (defaults → project config → local
+override → env var) is documented in the "Extension Configuration Layers"
+section below.
+
+If the new extension should fire automatically at a phase boundary,
+register a hook in `.specify/extensions.yml`:
+
+```yaml
+hooks:
+  after_implement:
+    - extension: <id>
+      command: speckit.<id>.run
+      enabled: true
+      optional: true
+      prompt: "Run <extension-name> after implementation?"
+```
+
+The autopilot reads `.specify/extensions.yml` dynamically and fires
+whatever hooks are registered, so this immediately works on the next
+run — no plugin update required.
 
 ### extension.yml Schema (for creating extensions)
 

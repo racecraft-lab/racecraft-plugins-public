@@ -4,6 +4,8 @@ allowed-tools:
   - Read
   - Glob
   - Grep
+  - Bash
+  - WebFetch
 argument-hint: "e.g. 'walk me through SDD', 'help with clarify', 'which checklists', 'how does autopilot work', 'archive extension cleanup safety'"
 ---
 

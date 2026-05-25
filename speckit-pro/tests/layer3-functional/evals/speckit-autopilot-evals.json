@@ -218,6 +218,18 @@
         "Routes the [codebase] unresolved item through the consensus protocol",
         "Mentions marker checks after accepted clarifications are applied"
       ]
+    },
+    {
+      "id": 19,
+      "prompt": "Imagine a user has installed a brand-new preset called 'team-xyz-tdd' (never seen in any catalog) and a brand-new extension called 'team-xyz-bdd' that registers an 'after_tasks' hook in .specify/extensions.yml. When autopilot starts on a new feature, does it honor these without any code update to the autopilot or speckit-pro plugin? Walk me through how detection and honoring work for things the plugin has never heard of by name.",
+      "expected_output": "Explains that preset detection (detect-presets.sh) globs .specify/presets/*/preset.yml with no id filter and applies whatever conventions are found to every subagent prompt. Explains that extension hook execution reads .specify/extensions.yml at every phase boundary and fires whatever hooks are registered, regardless of which extension registered them. Concludes that yes, the autopilot honors arbitrary new presets and arbitrary new extension hooks with zero code changes.",
+      "expectations": [
+        "States that detect-presets.sh enumerates ALL presets by directory glob with no id filter",
+        "States that any preset's conventions get injected into every subagent prompt via PRESET_CONVENTIONS",
+        "States that .specify/extensions.yml hooks are read dynamically at each phase boundary and fired generically",
+        "States explicitly that no autopilot code change is required when the user installs a previously-unknown preset or extension",
+        "Distinguishes this dynamic path from the curated 6-extension auto-route contract (archive / doctor / review / verify / verify-tasks / retrospective) — the latter is an intentional opinionated routing, not a freshness gap"
+      ]
     }
   ]
 }

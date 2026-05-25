@@ -80,6 +80,80 @@ output=$(run_in "$dir")
 assert_contains "$output" "verify"
 
 # ─────────────────────────────────────────
+section "Arbitrary preset/extension names (dynamic honoring)"
+# ─────────────────────────────────────────
+
+# Proves detect-presets.sh enumerates by directory glob with no id filter —
+# the autopilot honors presets and extensions the plugin has never heard of.
+
+set_test "Arbitrary preset name 'team-xyz-tdd' is detected"
+dir="$FIXTURE_DIR/arbitrary-preset"
+mkdir -p "$dir/.specify/presets/team-xyz-tdd"
+cat > "$dir/.specify/presets/team-xyz-tdd/preset.yml" << 'YAML'
+preset:
+  name: "Team XYZ TDD"
+  version: "0.1.0"
+  description: "Arbitrary preset never seen in any catalog"
+provides:
+  overrides:
+    - type: "template"
+      name: "tasks-template"
+      replaces: "tasks-template"
+YAML
+output=$(run_in "$dir")
+assert_contains "$output" '"has_presets":true'
+
+set_test "Arbitrary preset — name appears in output"
+assert_contains "$output" "team-xyz-tdd"
+
+set_test "Arbitrary extension name 'team-xyz-bdd' is detected"
+dir="$FIXTURE_DIR/arbitrary-ext"
+mkdir -p "$dir/.specify/extensions/team-xyz-bdd"
+cat > "$dir/.specify/extensions/team-xyz-bdd/extension.yml" << 'YAML'
+extension:
+  id: "team-xyz-bdd"
+  name: "Team XYZ BDD"
+  version: "0.1.0"
+YAML
+output=$(run_in "$dir")
+assert_contains "$output" "team-xyz-bdd"
+
+set_test "Multiple arbitrary presets and extensions co-exist"
+dir="$FIXTURE_DIR/multi-arbitrary"
+mkdir -p "$dir/.specify/presets/team-alpha-preset" "$dir/.specify/presets/team-beta-preset"
+mkdir -p "$dir/.specify/extensions/never-heard-of-1" "$dir/.specify/extensions/never-heard-of-2"
+cat > "$dir/.specify/presets/team-alpha-preset/preset.yml" << 'YAML'
+preset:
+  name: "Alpha"
+  version: "1.0.0"
+YAML
+cat > "$dir/.specify/presets/team-beta-preset/preset.yml" << 'YAML'
+preset:
+  name: "Beta"
+  version: "1.0.0"
+YAML
+cat > "$dir/.specify/extensions/never-heard-of-1/extension.yml" << 'YAML'
+extension:
+  id: "never-heard-of-1"
+  name: "First"
+  version: "0.1.0"
+YAML
+cat > "$dir/.specify/extensions/never-heard-of-2/extension.yml" << 'YAML'
+extension:
+  id: "never-heard-of-2"
+  name: "Second"
+  version: "0.1.0"
+YAML
+output=$(run_in "$dir")
+assert_contains "$output" "team-alpha-preset"
+set_test "Multi-arbitrary — both presets enumerated"
+assert_contains "$output" "team-beta-preset"
+set_test "Multi-arbitrary — both extensions enumerated"
+assert_contains "$output" "never-heard-of-1"
+set_test "Multi-arbitrary — second extension enumerated"
+assert_contains "$output" "never-heard-of-2"
+
+# ─────────────────────────────────────────
 section "Hooks detection"
 # ─────────────────────────────────────────
 

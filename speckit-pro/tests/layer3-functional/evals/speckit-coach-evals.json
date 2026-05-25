@@ -114,6 +114,29 @@
         "States explicitly that Grill Me is FORBIDDEN inside autopilot (cannot be invoked from any phase agent)",
         "Mentions that Grill Me can also be invoked standalone via /speckit-pro:grill-me on any input (raw idea, transcript, brief)"
       ]
+    },
+    {
+      "id": 11,
+      "prompt": "What community extensions are available that help with code review? I want to see what the actual SpecKit community catalog has — not a stale list from documentation, the real current state. Find me 2-3 candidates and tell me which one looks most active.",
+      "expected_output": "Coach runs `specify extension search` (or a documented fallback against the upstream catalog.community.json), surfaces real catalog entries by their bare ids, and recommends candidates based on the live data — not a snapshotted table.",
+      "expectations": [
+        "References running `specify extension search` (or `gh api` / WebFetch against `catalog.community.json`) as the lookup mechanism — does NOT recite a hardcoded snapshot",
+        "Lists at least 2 candidate extensions by their bare id (e.g., `review`, `multi-model-review`, `staff-review`, `security-review`) — not by GitHub repo name",
+        "Avoids citing a stale catalog count (no '26 extensions', no fixed-row table from the reference doc)",
+        "Surfaces a category or tag for each candidate so the user understands the difference between them"
+      ]
+    },
+    {
+      "id": 12,
+      "prompt": "I want to install the archive extension into this project and have it fire automatically after each implement phase so merged specs get archived without me thinking about it. Walk me through the install + the hook wiring step by step.",
+      "expected_output": "Coach proposes the install command using `specify extension add archive --from <zip-url>`, confirms with the user before running anything, then describes the `.specify/extensions.yml` hook block that wires the archive command to fire after_implement.",
+      "expectations": [
+        "Proposes a concrete `specify extension add archive --from ...` command (community extensions are discovery-only, --from is required)",
+        "Asks for user confirmation before running any mutation — does not silently execute install/remove",
+        "Describes the `.specify/extensions.yml` hook block with `after_implement`, the extension id, the command (`speckit.archive.run`), and the `optional`/`prompt` keys",
+        "Mentions that the autopilot picks up `.specify/extensions.yml` hooks dynamically — no plugin update or restart needed",
+        "Points the user at `.specify/extensions/archive/archive-config.yml` (shared) and `archive-config.local.yml` (personal) for further configuration"
+      ]
     }
   ]
 }
