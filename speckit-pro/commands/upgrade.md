@@ -187,7 +187,49 @@ Confirm each upgraded integration shows `installed` and is on the
 new manifest. Report any verification mismatch — do not silently
 continue.
 
-### 8. Report
+### 8. Offer to upgrade the curated set of extensions and presets
+
+speckit-pro maintains a small curated set of community extensions
+and presets that power the autopilot's post-implementation parallel
+group and the AskUserQuestion picker. The upgrade command can pull
+their latest released versions in the same pass as the SpecKit
+integration upgrade. See
+[presets-extensions-guide.md → The curated set](../skills/speckit-coach/references/presets-extensions-guide.md)
+for the full list.
+
+Check what would change:
+
+```text
+Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=check")
+```
+
+The script prints one line per entry that is missing or out of date,
+exits 0 if everything is current, exits 2 if work is pending.
+
+- If exit code is **0**: report "Curated extensions and presets
+  already current." Continue to Step 9.
+
+- If exit code is **1** (typically `gh not on PATH` or another missing
+  prerequisite): surface the stderr message and **skip this step**.
+  Do not block the upgrade. Tell the operator: "Curated-set upgrade
+  skipped — install `gh` (https://cli.github.com/) and re-run
+  `/speckit-pro:upgrade` to pull the latest curated extensions and
+  presets." Continue to Step 9.
+
+- If exit code is **2**: tell the operator the check output and ask
+  which entries to install or upgrade. Recommended default is **all**.
+  Then invoke the script in upgrade mode:
+
+  - All: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=upgrade")`
+  - Subset: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=upgrade --accept=<csv>")`
+  - None: skip. The autopilot will continue to skip any missing
+    entries without failing, but the post-implementation parallel
+    group will run with reduced coverage.
+
+The provenance trail is appended to `.specify/curated-install.json`
+— commit this file so the upgrade history is reproducible.
+
+### 9. Report
 
 Return a concise upgrade summary:
 
@@ -242,6 +284,10 @@ STOP and report — do not improvise — when:
   upgrade. Their choice stands.
 - A restore step fails mid-flight. Report which files succeeded,
   which did not, and where the backup is.
+- `install-curated-set.sh --mode=check` reports that an extension
+  has neither a GitHub Release nor a git tag — surface the message
+  but do not block the upgrade over it. The operator can re-run
+  after the upstream extension publishes a tagged release.
 
 The backup at `/tmp/specify-upgrade-backup-<STAMP>/` is the
 operator's safety net. Tell them about it explicitly in the final

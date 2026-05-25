@@ -92,7 +92,48 @@ chose option (b)):
 
 Pass `--script sh` explicitly on macOS/Linux to avoid prompting.
 
-### 5. Verify and report
+### 5. Offer to install the curated set of extensions and presets
+
+speckit-pro recommends a small set of community extensions and presets
+that power the autopilot's post-implementation parallel group and the
+native AskUserQuestion picker on `/speckit.clarify` and `/speckit.checklist`.
+See [presets-extensions-guide.md → The curated set](../skills/speckit-coach/references/presets-extensions-guide.md)
+for the full list and rationale.
+
+Check what would change:
+
+```text
+Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=check")
+```
+
+The script prints one line per entry that would be installed or upgraded,
+exits 0 if everything is already current, exits 2 if work is pending.
+
+- If exit code is **0**: report "Curated extensions and presets already
+  current — nothing to install." Continue to Step 6.
+
+- If exit code is **1** (typically `gh not on PATH` or another missing
+  prerequisite): surface the stderr message and **skip this step**.
+  Do not block the install. Tell the operator: "Curated-set
+  auto-install skipped — install `gh` (https://cli.github.com/) and
+  re-run `/speckit-pro:upgrade` to pull the curated extensions and
+  presets." Continue to Step 6.
+
+- If exit code is **2**: tell the operator what the check output showed
+  and ask which entries to install. Recommended default is **all**.
+  Then invoke the script with the operator's selection:
+
+  - All: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=install")`
+  - Subset: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=install --accept=<csv>")`
+  - None: skip. Tell the operator they can run `/speckit-pro:upgrade`
+    later to install the curated set on demand.
+
+The script never installs without explicit `--accept` selection (or an
+empty `--accept` meaning all). A provenance trail is recorded in
+`.specify/curated-install.json` — commit this to git so the project's
+extension state is reproducible.
+
+### 6. Verify and report
 
 Run `Bash("specify check 2>&1")` and `Bash("specify integration list 2>&1")`.
 Report to the operator:
@@ -132,6 +173,10 @@ Stop and report — do not improvise — when:
 - The repo has detached HEAD or uncommitted changes that would
   conflict with the new files. Recommend committing or stashing
   first.
+- `install-curated-set.sh` reports that an extension has neither a
+  GitHub Release nor a git tag — surface the message but do not
+  block the install over it. The operator can re-run after the
+  upstream extension publishes a tagged release.
 
 ## Why This Skill
 
@@ -145,6 +190,11 @@ the user gets:
 - An explicit prompt for dual-integration setup, which the CLI
   supports natively (both `claude` and `codex` are marked
   "Multi-install Safe").
+- An interactive offer to install the curated set of community
+  extensions and presets that power the autopilot's
+  post-implementation parallel group and the AskUserQuestion
+  picker preset, with a provenance trail recorded in
+  `.specify/curated-install.json`.
 - A consistent post-install summary so the operator knows what to
   do next.
 

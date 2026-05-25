@@ -227,7 +227,54 @@ Confirm each upgraded integration shows `installed` and reports the
 new manifest. Report any verification mismatch — do not silently
 continue.
 
-### 8. Report
+### 8. Offer to upgrade the curated set of extensions and presets
+
+speckit-pro maintains a small curated set of community extensions and
+presets that power the autopilot's post-implementation parallel group
+and the AskUserQuestion picker preset. The upgrade can pull the
+latest released versions in the same pass as the SpecKit integration
+upgrade. The full list is in
+`speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
+(section: "The curated set").
+
+Check what would change. The script lives at
+`<skill-dir>/../../scripts/install-curated-set.sh`:
+
+```bash
+bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=check
+```
+
+The script prints one line per entry that is missing or out of date,
+exits 0 if everything is current, exits 2 if work is pending.
+
+- If exit code is **0**: report "Curated extensions and presets
+  already current." Continue to Step 9.
+
+- If exit code is **1** (typically `gh not on PATH` or another missing
+  prerequisite): surface the stderr message and **skip this step**.
+  Do not block the upgrade. Tell the operator: "Curated-set upgrade
+  skipped — install `gh` (https://cli.github.com/) and re-run
+  `$speckit-upgrade` to pull the latest curated extensions and
+  presets." Continue to Step 9.
+
+- If exit code is **2**: tell the operator the check output and ask
+  which entries to install or upgrade. Recommended default is **all**.
+  Then invoke the script in upgrade mode:
+
+  - All: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=upgrade`
+  - Subset: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=upgrade --accept=<csv>`
+  - None: skip. The autopilot will continue to skip any missing
+    entries without failing, but the post-implementation parallel
+    group will run with reduced coverage.
+
+The provenance trail is appended to `.specify/curated-install.json`
+— commit this file so the upgrade history is reproducible.
+
+If the script reports that an entry has neither a GitHub Release nor
+a git tag, surface the message but do not block the upgrade. The
+operator can re-run after the upstream extension publishes a tag.
+
+### 9. Report
 
 Return a structured summary:
 

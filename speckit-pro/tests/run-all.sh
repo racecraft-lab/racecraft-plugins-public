@@ -140,6 +140,7 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-skills.sh" \
     "$TESTS_DIR/layer1-structural/validate-hooks.sh" \
     "$TESTS_DIR/layer1-structural/validate-scripts.sh" \
+    "$TESTS_DIR/layer1-structural/validate-curated-set.sh" \
     "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh"
 
   # Codex structural tests are part of the default layer 1 run.
@@ -222,6 +223,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-l6-codex-runner.sh"
     "$TESTS_DIR/layer4-scripts/test-l8-extractors.sh"
     "$TESTS_DIR/layer4-scripts/test-l8-judge.sh"
+    "$TESTS_DIR/layer4-scripts/test-install-curated-set.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then

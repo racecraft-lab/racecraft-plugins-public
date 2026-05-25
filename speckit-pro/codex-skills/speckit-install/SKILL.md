@@ -179,7 +179,54 @@ option (b)):
 If any command returns non-zero, STOP. Do not retry or "fix" without
 operator input — the CLI's error message is the operator's signal.
 
-### 5. Verify
+### 5. Offer to install the curated set of extensions and presets
+
+speckit-pro recommends a small set of community extensions and presets
+that power the autopilot's post-implementation parallel group and the
+AskUserQuestion picker preset for `/speckit.clarify` and
+`/speckit.checklist`. The full list and rationale are in
+`speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md`
+(section: "The curated set").
+
+Check what would change. The script lives at
+`<skill-dir>/../../scripts/install-curated-set.sh`:
+
+```bash
+bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=check
+```
+
+The script prints one line per entry that would be installed, exits 0
+if everything is already current, exits 2 if work is pending.
+
+- If exit code is **0**: report "Curated extensions and presets
+  already current." Continue to Step 6.
+
+- If exit code is **1** (typically `gh not on PATH` or another missing
+  prerequisite): surface the stderr message and **skip this step**.
+  Do not block the install. Tell the operator: "Curated-set
+  auto-install skipped — install `gh` (https://cli.github.com/) and
+  re-run `$speckit-upgrade` to pull the curated extensions and
+  presets." Continue to Step 6.
+
+- If exit code is **2**: tell the operator the check output and ask
+  which entries to install. Recommended default is **all**. Then
+  invoke the script in install mode:
+
+  - All: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=install`
+  - Subset: `bash "<skill-dir>/../../scripts/install-curated-set.sh" --mode=install --accept=<csv>`
+  - None: skip. The operator can run `$speckit-upgrade` later to
+    install the curated set on demand.
+
+The script never installs without an explicit selection — empty
+`--accept` means all from the manifest; any other value scopes to that
+csv. A provenance trail is recorded in `.specify/curated-install.json`
+— commit this to git so the project's extension state is reproducible.
+
+If the script reports that an entry has neither a GitHub Release nor
+a git tag, surface the message but do not block the install. The
+operator can re-run after the upstream extension publishes a tag.
+
+### 6. Verify
 
 ```bash
 specify check 2>&1
@@ -195,7 +242,7 @@ Confirm:
 If verification fails, report the mismatch — do not silently
 continue.
 
-### 6. Report
+### 7. Report
 
 Return a concise install summary:
 
