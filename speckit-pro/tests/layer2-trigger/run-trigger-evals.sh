@@ -33,16 +33,23 @@ SKILL="${1:-speckit-coach}"
 # ── Installed-plugin collision detection ────────────────────────────────────
 # The eval works by writing a test command file at
 # `.claude/commands/<skill>-skill-<uuid>.md`. If the user also has speckit-pro
-# installed as a plugin (typical case for plugin authors), Claude sees both:
-# the test variant AND `speckit-pro:<skill>`. Because they share the same
-# description verbatim, the plugin variant routinely wins the selector and
-# every true-positive query scores 0/3.
+# installed as a plugin (typical case for plugin authors), Claude sees both
+# the test variant AND the production plugin's matching skill. Production
+# routinely wins the selector and the test variant fires 0/3.
 #
-# We solve this by detecting which marketplace publishes speckit-pro from
-# ~/.claude/settings.json (the marketplace name can vary per user — e.g.,
-# `racecraft-public-plugins`, `racecraft-plugins-public`, etc.) and adding
-# `speckit-pro@<marketplace>` to the --settings disable list. This works
-# with OAuth/keychain auth, unlike `--bare` which requires ANTHROPIC_API_KEY.
+# We tried `--settings enabledPlugins:false` first as a non-destructive fix.
+# An empirical mv-test (move the production skill aside, run eval, score
+# jumps from 11/20 to 19/20) proved the --settings flag is NOT honored by
+# the claude -p subprocess in current claude versions — disable was being
+# written but plugin skills still competed. Pre-fix: 10/20 → post-disable:
+# 11/20 → physical mv: 19/20. So we keep the --settings line as defense in
+# depth, and ALSO physically rename the production skill out of the way
+# below (with EXIT trap to restore robustly).
+#
+# Marketplace name varies per user (`racecraft-public-plugins`,
+# `racecraft-plugins-public`); we detect it from settings.json rather than
+# hardcoding. Works with OAuth/keychain auth, unlike `--bare` which
+# requires ANTHROPIC_API_KEY.
 INSTALLED_MARKETPLACE=""
 if command -v jq >/dev/null 2>&1 && [ -f "$HOME/.claude/settings.json" ]; then
   INSTALLED_MARKETPLACE=$(
@@ -50,32 +57,29 @@ if command -v jq >/dev/null 2>&1 && [ -f "$HOME/.claude/settings.json" ]; then
       (.enabledPlugins // {})
       | to_entries[]
       | select(.key | startswith("speckit-pro@"))
+      | select(.value == true)
       | .key | sub("^speckit-pro@"; "")
     ' "$HOME/.claude/settings.json" 2>/dev/null | head -1
   )
 fi
 
-# Per-skill defaults for plugin competitors. Overridable via EVAL_DISABLE_PLUGINS.
+# Per-skill defaults for OTHER plugin competitors (not speckit-pro itself).
+# Overridable via EVAL_DISABLE_PLUGINS.
 # - grill-me: outranked by superpowers:brainstorming on natural-language SDD
 #   pre-spec scoping prompts. Disabling superpowers reflects the standalone
 #   production install and measures grill-me on its own merits.
-# - All speckit-pro skills collide with their installed counterpart when the
-#   plugin is enabled; auto-add `speckit-pro@<detected-marketplace>` so the
-#   test variant has no rival.
 DISABLE_PLUGINS_DEFAULT=""
 case "$SKILL" in
   grill-me)
     DISABLE_PLUGINS_DEFAULT="superpowers@claude-plugins-official"
     ;;
 esac
+# Always disable production speckit-pro when it's enabled — see comment above.
 if [ -n "$INSTALLED_MARKETPLACE" ]; then
-  INSTALLED_PLUGIN_DIR="$HOME/.claude/plugins/marketplaces/${INSTALLED_MARKETPLACE}/speckit-pro/skills/${SKILL}"
-  if [ -d "$INSTALLED_PLUGIN_DIR" ]; then
-    if [ -n "$DISABLE_PLUGINS_DEFAULT" ]; then
-      DISABLE_PLUGINS_DEFAULT="${DISABLE_PLUGINS_DEFAULT},speckit-pro@${INSTALLED_MARKETPLACE}"
-    else
-      DISABLE_PLUGINS_DEFAULT="speckit-pro@${INSTALLED_MARKETPLACE}"
-    fi
+  if [ -n "$DISABLE_PLUGINS_DEFAULT" ]; then
+    DISABLE_PLUGINS_DEFAULT="${DISABLE_PLUGINS_DEFAULT},speckit-pro@${INSTALLED_MARKETPLACE}"
+  else
+    DISABLE_PLUGINS_DEFAULT="speckit-pro@${INSTALLED_MARKETPLACE}"
   fi
 fi
 DISABLE_PLUGINS="${EVAL_DISABLE_PLUGINS:-$DISABLE_PLUGINS_DEFAULT}"
@@ -85,12 +89,44 @@ DISABLE_PLUGINS="${EVAL_DISABLE_PLUGINS:-$DISABLE_PLUGINS_DEFAULT}"
 # auth-fails on developer machines authenticated via Claude Max / claude.ai.
 # By default we prefer --settings (works with OAuth). Set EVAL_FORCE_BARE=1
 # to opt back into --bare regardless of collision state.
-INSTALLED_PLUGIN_DIR="${INSTALLED_PLUGIN_DIR:-}"
 NEED_BARE="${EVAL_FORCE_BARE:-}"
 
 WRAPPER_DIR=$(mktemp -d)
 SETTINGS_FILE=""
-trap 'rm -rf "$WRAPPER_DIR"; [ -n "$SETTINGS_FILE" ] && rm -f "$SETTINGS_FILE"' EXIT
+RENAMED_SKILL_FROM=""
+RENAMED_SKILL_TO=""
+restore_renamed_skill() {
+  if [ -n "$RENAMED_SKILL_TO" ] && [ -e "$RENAMED_SKILL_TO" ]; then
+    mv "$RENAMED_SKILL_TO" "$RENAMED_SKILL_FROM" 2>/dev/null || true
+  fi
+}
+trap 'restore_renamed_skill; rm -rf "$WRAPPER_DIR"; [ -n "$SETTINGS_FILE" ] && rm -f "$SETTINGS_FILE"' EXIT
+
+# ── Physical-rename collision suppression ───────────────────────────────────
+# We discovered (verified by direct `mv` test) that `--settings enabledPlugins:
+# false` is NOT honored by the claude -p subprocess that the eval harness
+# spawns — the disable line gets written but the plugin's skills still
+# compete. Pre-fix: 10/20 → post-disable: 11/20 → physical mv: 19/20. The
+# only mechanism that actually removes the production skill from the
+# selector is filesystem invisibility.
+#
+# For each eval run we temporarily rename the production plugin's matching
+# skill directory by appending `.eval-disabled-<pid>` and restore it on EXIT
+# via trap. Robust against the script crashing or being killed.
+if [ -n "$INSTALLED_MARKETPLACE" ]; then
+  PRODUCTION_SKILL_DIR="$HOME/.claude/plugins/marketplaces/${INSTALLED_MARKETPLACE}/speckit-pro/skills/${SKILL}"
+  if [ -d "$PRODUCTION_SKILL_DIR" ]; then
+    RENAMED_SKILL_FROM="$PRODUCTION_SKILL_DIR"
+    RENAMED_SKILL_TO="${PRODUCTION_SKILL_DIR}.eval-disabled-$$"
+    if mv "$RENAMED_SKILL_FROM" "$RENAMED_SKILL_TO" 2>/dev/null; then
+      echo "Renamed production skill out of the way: $RENAMED_SKILL_FROM → $RENAMED_SKILL_TO" >&2
+    else
+      echo "WARNING: could not rename production skill at $RENAMED_SKILL_FROM — collision may suppress results" >&2
+      RENAMED_SKILL_FROM=""
+      RENAMED_SKILL_TO=""
+    fi
+  fi
+fi
 
 # Build optional --settings JSON if EVAL_DISABLE_PLUGINS is set.
 WRAPPER_EXTRA_ARGS=""
