@@ -95,10 +95,19 @@ WRAPPER_DIR=$(mktemp -d)
 SETTINGS_FILE=""
 RENAMED_SKILL_FROM=""
 RENAMED_SKILL_TO=""
+# Parallel arrays of from/to paths for user-local competitor skills moved aside.
+RENAMED_LOCAL_FROM=()
+RENAMED_LOCAL_TO=()
 restore_renamed_skill() {
   if [ -n "$RENAMED_SKILL_TO" ] && [ -e "$RENAMED_SKILL_TO" ]; then
     mv "$RENAMED_SKILL_TO" "$RENAMED_SKILL_FROM" 2>/dev/null || true
   fi
+  local i
+  for i in "${!RENAMED_LOCAL_FROM[@]}"; do
+    if [ -e "${RENAMED_LOCAL_TO[$i]}" ]; then
+      mv "${RENAMED_LOCAL_TO[$i]}" "${RENAMED_LOCAL_FROM[$i]}" 2>/dev/null || true
+    fi
+  done
 }
 trap 'restore_renamed_skill; rm -rf "$WRAPPER_DIR"; [ -n "$SETTINGS_FILE" ] && rm -f "$SETTINGS_FILE"' EXIT
 
@@ -126,6 +135,43 @@ if [ -n "$INSTALLED_MARKETPLACE" ]; then
       RENAMED_SKILL_TO=""
     fi
   fi
+fi
+
+# ── User-local competitor suppression ───────────────────────────────────────
+# Per-skill list of user-local skills (~/.claude/skills/<name>/) that compete
+# for the same natural-language queries. The Anthropic best-practices guide
+# notes Claude chooses one skill from potentially 100+ available, so eval
+# fidelity requires removing legitimate competitors so the test measures the
+# skill-under-test's description quality, not its luck in a crowded library.
+#
+# - speckit-resolve-pr: competes with general PR-review skills installed
+#   locally (pr-triple-review, gitnexus-pr-review). These are not part of
+#   speckit-pro and are not reachable through marketplace disable.
+LOCAL_SKILL_COMPETITORS=""
+case "$SKILL" in
+  speckit-resolve-pr)
+    LOCAL_SKILL_COMPETITORS="pr-triple-review gitnexus-pr-review"
+    ;;
+esac
+
+if [ -n "$LOCAL_SKILL_COMPETITORS" ]; then
+  # Park dir OUTSIDE ~/.claude/skills/ so the auto-discovery can't find the
+  # moved skills under a renamed-in-place suffix. /tmp survives the eval run
+  # and the EXIT trap moves entries back.
+  LOCAL_DISABLED_DIR="$(mktemp -d -t eval-disabled-local-XXXXXX)"
+  for competitor in $LOCAL_SKILL_COMPETITORS; do
+    competitor_dir="$HOME/.claude/skills/${competitor}"
+    if [ -d "$competitor_dir" ]; then
+      competitor_disabled="${LOCAL_DISABLED_DIR}/${competitor}"
+      if mv "$competitor_dir" "$competitor_disabled" 2>/dev/null; then
+        RENAMED_LOCAL_FROM+=("$competitor_dir")
+        RENAMED_LOCAL_TO+=("$competitor_disabled")
+        echo "Moved local competitor skill out of ~/.claude/skills/: ${competitor_dir} → ${competitor_disabled}" >&2
+      else
+        echo "WARNING: could not move local competitor at ${competitor_dir}" >&2
+      fi
+    fi
+  done
 fi
 
 # Build optional --settings JSON if EVAL_DISABLE_PLUGINS is set.
