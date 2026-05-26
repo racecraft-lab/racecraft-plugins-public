@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.4.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.3.0...speckit-pro-v2.4.0) (2026-05-26)
+
+
+### Features
+
+* **speckit-pro:** add Claude Code skills for install, upgrade, scaffold-spec, status, and resolve-pr ([#88](https://github.com/racecraft-lab/racecraft-plugins-public/issues/88)) ([477c668](https://github.com/racecraft-lab/racecraft-plugins-public/commit/477c668858defd44918825b51c7bfc3e0ba66c56))
+* **speckit-pro:** four-question self-review and opt-in token discipline ([#86](https://github.com/racecraft-lab/racecraft-plugins-public/issues/86)) ([c573ee2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c573ee27572d4a6ac9dd9db0feca9efce2b41bac))
+* **speckit-pro:** gate pre-Implement on consensus confidence threshold ([#83](https://github.com/racecraft-lab/racecraft-plugins-public/issues/83)) ([7c5dcbb](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7c5dcbbc7ca33fdf7ecee89fef2084196830230b))
+* **speckit-pro:** install curated community extensions and presets ([#81](https://github.com/racecraft-lab/racecraft-plugins-public/issues/81)) ([aae6caf](https://github.com/racecraft-lab/racecraft-plugins-public/commit/aae6cafc3a324e260ae96202ee41fecfa86788f0))
+* **speckit-pro:** per-invocation override for the pre-Implement confidence gate ([#85](https://github.com/racecraft-lab/racecraft-plugins-public/issues/85)) ([adebf40](https://github.com/racecraft-lab/racecraft-plugins-public/commit/adebf4046f563c2e271108aaa4e10e97147d422c))
+* **speckit-pro:** scope plugin hooks to plugin invocation ([#84](https://github.com/racecraft-lab/racecraft-plugins-public/issues/84)) ([efea8c2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/efea8c2ab12752662fee2952e9d04fa0b94b1c29))
+
 ## [2.3.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.2.0...speckit-pro-v2.3.0) (2026-05-25)
 
 
