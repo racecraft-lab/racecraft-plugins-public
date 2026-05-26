@@ -1,5 +1,14 @@
 # Changelog
 
+## [2.4.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.4.0...speckit-pro-v2.4.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **speckit-pro:** improve skill trigger descriptions across Claude Code and Codex ([#91](https://github.com/racecraft-lab/racecraft-plugins-public/issues/91)) ([195c802](https://github.com/racecraft-lab/racecraft-plugins-public/commit/195c80263c5894a43933b2ed0af695a21344dae4))
+* **speckit-pro:** improve skill trigger descriptions to reach ≥80% on Layer 2 evals ([195c802](https://github.com/racecraft-lab/racecraft-plugins-public/commit/195c80263c5894a43933b2ed0af695a21344dae4))
+* **speckit-pro:** make Layer 2 trigger evals immune to the installed-plugin collision ([#89](https://github.com/racecraft-lab/racecraft-plugins-public/issues/89)) ([3890a3f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3890a3f97c4a003c701c04cf37a41a07c0e68a96))
+
 ## [2.4.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.3.0...speckit-pro-v2.4.0) (2026-05-26)
 
 
