@@ -245,4 +245,53 @@ if [ -d "$CODEX_SKILLS_DIR" ]; then
   done
 fi
 
+# ===========================================================================
+# CC Slash Command ↔ CC Skill Parity
+# Every CC slash command in commands/ must have a matching CC skill in
+# skills/ so the same workflow is reachable by both slash invocation AND
+# natural-language invocation. Mirror skills (thin NL on-ramps) must keep
+# their body byte-identical to the slash command. Heritage skills with
+# their own independently-developed body (speckit-autopilot, speckit-coach)
+# are existence-only — they predate the mirror contract.
+# ===========================================================================
+section "CC Slash Command ↔ CC Skill Parity"
+
+# Skills whose body must remain byte-identical to the slash command body.
+# These are pure NL on-ramps to the slash command — one source of truth.
+CC_MIRROR_SKILLS="speckit-install speckit-upgrade speckit-scaffold-spec speckit-status speckit-resolve-pr"
+
+is_mirror_skill() {
+  local name="$1"
+  for mirror in $CC_MIRROR_SKILLS; do
+    [ "$name" = "$mirror" ] && return 0
+  done
+  return 1
+}
+
+if [ -d "$COMMANDS_DIR" ] && [ -d "$SKILLS_DIR" ]; then
+  for mapping in "${COMMAND_SKILL_MAP[@]}"; do
+    cmd_name="${mapping%%:*}"
+    skill_name="${mapping##*:}"
+    cmd_file="$COMMANDS_DIR/${cmd_name}.md"
+    skill_file="$SKILLS_DIR/${skill_name}/SKILL.md"
+
+    set_test "skills/${skill_name}/SKILL.md exists for CC command ${cmd_name}"
+    assert_file_exists "$skill_file"
+
+    if is_mirror_skill "$skill_name" && [ -f "$cmd_file" ] && [ -f "$skill_file" ]; then
+      set_test "skills/${skill_name}/SKILL.md body matches commands/${cmd_name}.md body"
+      cmd_body=$(awk 'BEGIN{n=0} /^---$/{n++; if(n==2){found=1; next}} found{print}' "$cmd_file")
+      skill_body=$(awk 'BEGIN{n=0} /^---$/{n++; if(n==2){found=1; next}} found{print}' "$skill_file")
+      if [ "$cmd_body" = "$skill_body" ]; then
+        _pass
+      else
+        _fail "body drift between commands/${cmd_name}.md and skills/${skill_name}/SKILL.md — regenerate skill from slash command body"
+      fi
+    fi
+  done
+else
+  set_test "commands/ and skills/ directories exist for CC parity"
+  _fail "one or both directories missing (commands: $COMMANDS_DIR, skills: $SKILLS_DIR)"
+fi
+
 test_summary

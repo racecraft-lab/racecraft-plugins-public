@@ -1,0 +1,82 @@
+[
+  {
+    "query": "install speckit in this repository, I want to start using spec-driven development",
+    "should_trigger": true
+  },
+  {
+    "query": "set up the SpecKit CLI and initialize this project for Claude Code integration",
+    "should_trigger": true
+  },
+  {
+    "query": "I want to add speckit to this project with both claude and codex integrations side-by-side",
+    "should_trigger": true
+  },
+  {
+    "query": "install speckit codex",
+    "should_trigger": true
+  },
+  {
+    "query": "initialize this repo for spec-kit, codex integration only with skills mode",
+    "should_trigger": true
+  },
+  {
+    "query": "I need to install spec-kit-cli \u2014 uv tool install hasn't been run yet on this machine",
+    "should_trigger": true
+  },
+  {
+    "query": "set up speckit in this empty repo and ask me which integrations to install",
+    "should_trigger": true
+  },
+  {
+    "query": "specify init for me \u2014 claude integration, skills mode default",
+    "should_trigger": true
+  },
+  {
+    "query": "install spec-kit and configure it for codex CLI in this directory",
+    "should_trigger": true
+  },
+  {
+    "query": "this is a fresh project \u2014 install speckit and initialize dual-integration so both claude and codex can use it",
+    "should_trigger": true
+  },
+  {
+    "query": "upgrade my existing speckit installation from 0.6.1 to the latest 0.8.13",
+    "should_trigger": false
+  },
+  {
+    "query": "scaffold spec SPEC-009 from the technical roadmap so it's ready for autopilot",
+    "should_trigger": false
+  },
+  {
+    "query": "install the bundled SpecKit Pro Codex subagents into ~/.codex/agents",
+    "should_trigger": false
+  },
+  {
+    "query": "walk me through SDD methodology from the beginning \u2014 I'm new to spec-driven development",
+    "should_trigger": false
+  },
+  {
+    "query": "run autopilot on the populated workflow at docs/ai/specs/SPEC-013-workflow.md, all 7 phases with gate validation",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the status of SPEC-014? which phases are done?",
+    "should_trigger": false
+  },
+  {
+    "query": "create a new spec branch and worktree for the auth refactor feature",
+    "should_trigger": false
+  },
+  {
+    "query": "grill me on this client brief before /speckit-specify \u2014 produce a Design Concept doc",
+    "should_trigger": false
+  },
+  {
+    "query": "resolve the GitHub Copilot review comments on PR #42 and push the fixes",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts \u2014 Zod schema discriminated-union issue",
+    "should_trigger": false
+  }
+]

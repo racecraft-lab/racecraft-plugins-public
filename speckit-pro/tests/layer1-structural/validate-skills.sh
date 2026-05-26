@@ -6,7 +6,9 @@ source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 SKILLS_DIR="$PLUGIN_ROOT/skills"
-SKILLS=(speckit-autopilot speckit-coach)
+SKILLS=(speckit-autopilot speckit-coach speckit-install speckit-upgrade speckit-scaffold-spec speckit-status speckit-resolve-pr)
+# Skills that require a populated references/ directory (heavy guidance skills with reference docs)
+SKILLS_REQUIRING_REFERENCES="speckit-autopilot speckit-coach"
 ALLOWED_KEYS="name description license allowed-tools metadata compatibility user-invocable disable-model-invocation argument-hint"
 
 for skill in "${SKILLS[@]}"; do
@@ -133,12 +135,23 @@ else:
     _fail "body is $word_count words (need 500-8000)"
   fi
 
-  set_test "${skill}: references directory exists if present"
-  if [ -d "$SKILL_DIR/references" ]; then
-    _pass
+  set_test "${skill}: references directory exists if required"
+  requires_refs=false
+  for required in $SKILLS_REQUIRING_REFERENCES; do
+    if [ "$skill" = "$required" ]; then
+      requires_refs=true
+      break
+    fi
+  done
+  if [ "$requires_refs" = "true" ]; then
+    if [ -d "$SKILL_DIR/references" ]; then
+      _pass
+    else
+      _fail "references directory not found at $SKILL_DIR/references"
+    fi
   else
-    # Check if skill likely needs references (both skills have them)
-    _fail "references directory not found at $SKILL_DIR/references"
+    # Mirror skills (NL on-ramps for slash commands) do not need references/
+    _pass
   fi
 done
 
