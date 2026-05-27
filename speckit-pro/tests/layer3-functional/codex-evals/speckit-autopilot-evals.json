@@ -323,6 +323,21 @@
         "Mentions that Post: Self-Review is item position #7 in the canonical 12-entry post-implementation list, between Post: Reviewability Diff Gate and Post: PR Body Generation",
         "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
       ]
+    },
+    {
+      "id": 26,
+      "prompt": "A Codex autopilot run has just committed and pushed after Phase 7. `autopilot-state.json` says `active_step` is `Phase 7: Implement Complete`; the workflow overview marks Implement complete; but the plan still has `Post: Doctor Extension Check`, `Post: PR Creation`, and `Post: Retrospective` as pending. The model is about to send the user a final summary. What must it do instead?",
+      "expected_output": "States that the autopilot must run the pre-final completion audit before any final response, re-read autopilot-state.json and the workflow file, reconcile update_plan with the state file, and MUST NOT send a final response while any Post item is pending, in_progress, or missing. It should set the first incomplete Post item, starting with Post: Doctor Extension Check, to in_progress in both update_plan and autopilot-state.json, continue through the full canonical Post sequence including PR body generation, PR creation, review remediation, and Post: Retrospective, and only report completion after the PR URL is known and every Post item is completed or explicitly skipped.",
+      "expectations": [
+        "Names the pre-final completion audit",
+        "States the model must re-read autopilot-state.json and the workflow file",
+        "States the model must reconcile update_plan with autopilot-state.json before continuing",
+        "States explicitly that it MUST NOT send a final response while any Post item is pending, in_progress, or missing",
+        "Sets Post: Doctor Extension Check as the first incomplete in_progress item",
+        "Continues through PR body generation and PR creation instead of stopping after Phase 7",
+        "Mentions review remediation and Post: Retrospective before completion",
+        "Reports completion only after the PR URL is known and every Post item is completed or explicitly skipped"
+      ]
     }
   ]
 }

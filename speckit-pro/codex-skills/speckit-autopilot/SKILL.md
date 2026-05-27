@@ -701,8 +701,28 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
 3. **3.3 Review Remediation** — schedule a polling loop to monitor
    and resolve Copilot/human review comments every 5 minutes
 
-After scheduling the loop, the autopilot is DONE. Report the final
-summary with PR URL.
+After scheduling the loop, run `Post: Retrospective` as the final
+canonical Post item, then perform the pre-final completion audit below.
+
+### 3.4 Pre-final completion audit
+
+Before sending any final user-facing response, re-read
+`autopilot-state.json` and the workflow file, reconcile them with
+`update_plan`, and audit the canonical Post list. You MUST NOT send a
+final response if any `Post:` item is `pending`, `in_progress`, or
+missing; equivalently, if any Post item is pending, in_progress, or
+missing. If the audit finds incomplete Post work, set the first
+incomplete item to `in_progress` in both state stores and continue the
+autopilot loop instead of summarizing. `Post: Retrospective` is the final
+Post item; it must be completed or explicitly skipped before the
+autopilot can report completion.
+
+Audit invariant: any Post item is pending, in_progress, or missing means
+the autopilot is not complete.
+
+Only after every Post item is completed or explicitly skipped, and the
+PR URL is known, the autopilot is DONE. Report the final summary with
+PR URL.
 
 ## Workflow File Update Protocol + Error Recovery
 

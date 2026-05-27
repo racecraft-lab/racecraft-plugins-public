@@ -97,6 +97,13 @@ background subagents as the fallback path. The 3-track structure
   autopilot because an optional extension command is unavailable.
 - Never mark the workflow complete until every planned Post item is completed or
   explicitly logged as skipped.
+- **Pre-final completion audit:** Before any final user-facing response,
+  re-read `autopilot-state.json`, reconcile it with `update_plan`, and verify
+  the canonical Post list. You MUST NOT send a final response while any `Post:`
+  item is `pending`, `in_progress`, or missing; equivalently, while any Post
+  item is pending, in_progress, or missing. Continue with the first
+  incomplete item instead. `Post: Retrospective` remains the final Post item and
+  must be completed or explicitly skipped before completion can be reported.
 
 ## PR Body Generation Workflow
 

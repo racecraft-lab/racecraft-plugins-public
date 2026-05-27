@@ -25,6 +25,10 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
 3. Re-read the workflow file to verify artifact status and prompt content
 4. If the state file is missing, reconstruct it from the workflow file,
    immediately call `update_plan`, then continue from the requested phase
+5. If all seven SDD phases are complete but any canonical `Post:` item is
+   missing, `pending`, or `in_progress`, resume at the first incomplete Post
+   item. Do not summarize completion from a `Phase 7: Implement Complete`
+   state.
 
 ## Common Issues
 

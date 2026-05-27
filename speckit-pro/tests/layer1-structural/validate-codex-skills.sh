@@ -170,6 +170,16 @@ $(cat "$ref_file")"
       _fail "expected all-phases-complete resume to continue into Post"
     fi
 
+    set_test "speckit-autopilot: blocks final answers while Post items remain incomplete"
+    if [[ "$runtime_doc" == *"Pre-final completion audit"* \
+      && "$runtime_doc" == *"MUST NOT send a final response"* \
+      && "$runtime_doc" == *"any Post item is pending, in_progress, or missing"* \
+      && "$runtime_doc" == *"Post: Retrospective"* ]]; then
+      _pass
+    else
+      _fail "expected a pre-final guard that prevents stopping after implementation while post items remain incomplete"
+    fi
+
     set_test "speckit-autopilot: documents skill-local agents/openai.yaml metadata"
     assert_contains "$body" 'agents/openai.yaml'
 
