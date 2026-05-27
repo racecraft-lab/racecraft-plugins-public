@@ -6,6 +6,15 @@ argument-hint: "(optional) integration keys, e.g. 'claude', 'codex', or 'claude 
 
 # SpecKit Install
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/speckit-install/SKILL.md` from this plugin
+root, treat that document as the active skill, and report that the fallback
+guard was triggered.
+
 Install the SpecKit CLI (if missing) and initialize this repository
 to use it with Claude Code, Codex CLI, or both. Safe to run on any
 repo — detects existing installs and hands off to

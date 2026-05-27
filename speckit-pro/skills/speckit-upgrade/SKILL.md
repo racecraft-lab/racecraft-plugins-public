@@ -9,6 +9,15 @@ license: MIT
 
 # SpecKit Upgrade
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/speckit-upgrade/SKILL.md` from this plugin
+root, treat that document as the active skill, and report that the fallback
+guard was triggered.
+
 Upgrade an existing SpecKit install safely. Preserves
 `.specify/memory/constitution.md` and any other locally-modified
 files via backup-then-force-then-restore. Handles the v0.8.13

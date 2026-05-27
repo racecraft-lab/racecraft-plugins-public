@@ -9,6 +9,15 @@ license: MIT
 
 # SpecKit Setup
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/speckit-scaffold-spec/SKILL.md` from this plugin
+root, treat that document as the active skill, and report that the fallback
+guard was triggered.
+
 Prepare a spec from the technical roadmap for autonomous execution.
 Creates the worktree, branch, and workflow file — ready for
 `/speckit-pro:autopilot`.

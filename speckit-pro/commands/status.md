@@ -9,6 +9,15 @@ argument-hint: "[SPEC-ID or 'all']"
 
 # SpecKit Status Dashboard
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/speckit-status/SKILL.md` from this plugin
+root, treat that document as the active skill, and report that the fallback
+guard was triggered.
+
 Show the full project roadmap: completed specs, in-progress
 specs, specs that haven't started yet, and a recommendation for
 what to work on next. Also surface archive extension installation and

@@ -9,6 +9,15 @@ license: MIT
 
 # Resolve PR Review Comments
 
+## Codex Skill-Selection Guard
+
+If this file is loaded in Codex, the runtime selected the Claude Code
+variant from `skills/` instead of the Codex variant from `codex-skills/`.
+Do not follow the Claude-oriented instructions below in Codex. Immediately
+read and follow `../../codex-skills/speckit-resolve-pr/SKILL.md` from this plugin
+root, treat that document as the active skill, and report that the fallback
+guard was triggered.
+
 Address ALL unresolved review comments on a pull request,
 fix the code, and mark each thread resolved.
 
