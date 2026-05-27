@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.4.1...speckit-pro-v2.5.0) (2026-05-27)
+
+
+### Features
+
+* **speckit-pro:** remove slash commands in favor of skills-only invocations ([#93](https://github.com/racecraft-lab/racecraft-plugins-public/issues/93)) ([fbabfe1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fbabfe16ff49ca78592c5bf8368fdb6d34c6c280))
+
 ## [2.4.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.4.0...speckit-pro-v2.4.1) (2026-05-26)
 
 
