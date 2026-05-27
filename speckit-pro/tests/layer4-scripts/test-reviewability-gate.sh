@@ -145,6 +145,31 @@ assert_eq "0" "$result" "exit code"
 set_test "Diff mode field"
 assert_json_field "$output" "mode" "diff"
 
+exception_repo="$FIXTURE_DIR/exception-repo"
+mkdir -p "$exception_repo/docs" "$exception_repo/src"
+git -C "$exception_repo" init >/dev/null
+git -C "$exception_repo" config user.email support@openai.com
+git -C "$exception_repo" config user.name Test
+git -C "$exception_repo" config commit.gpgsign false
+printf 'base\n' > "$exception_repo/docs/review.md"
+git -C "$exception_repo" add .
+git -C "$exception_repo" commit -m init >/dev/null
+{
+  printf 'Transition exception: accepted for this large review packet.\n'
+  seq 1 900
+} >> "$exception_repo/docs/review.md"
+for i in $(seq 1 9); do
+  printf 'export const value%s = %s;\n' "$i" "$i" > "$exception_repo/src/file$i.ts"
+done
+
+set_test "Diff block with transition exception exits 0"
+result=0
+output=$(cd "$exception_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "Diff block with transition exception reports exception"
+assert_json_field "$output" "status" "exception"
+
 set_test "Diff invalid range exits 2"
 result=0
 output=$(cd "$repo" && "$SCRIPT" diff does-not-exist...HEAD) || result=$?

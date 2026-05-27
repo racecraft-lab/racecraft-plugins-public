@@ -228,7 +228,7 @@ measure_diff() {
   done | wc -l | tr -d ' ')
   surfaces_text=$(printf '%s\n' "$files_text" | while read -r file; do [ -n "$file" ] && surface_for_path "$file"; done || true)
   exception=false
-  if git diff "$range" -- '*.md' 2>/dev/null | grep -Eiq 'transition exception|split exception|ratified exception'; then
+  if git diff "$range" -- '*.md' 2>/dev/null | grep -Ei 'transition exception|split exception|ratified exception' >/dev/null; then
     exception=true
   fi
 
