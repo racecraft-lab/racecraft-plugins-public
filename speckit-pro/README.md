@@ -6,7 +6,7 @@ Turn a feature description into a PR with tests, implementation, and a full pape
 
 ## What you get
 
-- **One command, end-to-end.** `/speckit-pro:autopilot` runs all 7 SDD phases — Specify → Clarify → Plan → Checklist → Tasks → Analyze → Implement — and opens a PR.
+- **One command, end-to-end.** `/speckit-pro:speckit-autopilot` runs all 7 SDD phases — Specify → Clarify → Plan → Checklist → Tasks → Analyze → Implement — and opens a PR.
 - **Multi-agent consensus on ambiguity.** Three perspective agents (codebase, project decisions, industry best practices) resolve gaps with a 2-of-3 vote; security-keyword questions always escalate to you.
 - **Programmatic gate validation between phases.** No silent drift — `[NEEDS CLARIFICATION]` markers, `[Gap]` markers, and HIGH/CRITICAL findings have to clear before the next phase runs.
 - **Strict TDD on implement.** Red → green → refactor, one task at a time.
@@ -53,16 +53,16 @@ Then in Claude Code or Codex:
 /speckit-pro:grill-me docs/raw-idea.md
 
 # Author or update a multi-spec roadmap
-/speckit-pro:coach help me create a technical roadmap
+/speckit-pro:speckit-coach help me create a technical roadmap
 
 # See what's pending
-/speckit-pro:status
+/speckit-pro:speckit-status
 
 # Set up a spec (creates worktree, runs Grill Me, populates workflow)
-/speckit-pro:scaffold-spec SPEC-001
+/speckit-pro:speckit-scaffold-spec SPEC-001
 
 # Run autopilot — handles spec → PR
-/speckit-pro:autopilot docs/ai/specs/SPEC-001-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-001-workflow.md
 ```
 
 > **Tip:** Run Claude Code with `claude --permission-mode acceptEdits` so the autopilot doesn't pause on every file edit. Plugin agents inherit the parent session's permission mode (see [Troubleshooting](#troubleshooting)).
@@ -71,12 +71,12 @@ Then in Claude Code or Codex:
 
 | Capability | Claude Code | Codex |
 |---|---|---|
-| SDD coaching | `/speckit-pro:coach` | `/speckit-coach` or `$speckit-coach` |
+| SDD coaching | `/speckit-pro:speckit-coach` | `/speckit-coach` or `$speckit-coach` |
 | Iterative scoping interview | `/speckit-pro:grill-me` | `$grill-me` (explicit invocation only) |
-| Spec setup (worktree + workflow file) | `/speckit-pro:scaffold-spec` | `/speckit-scaffold-spec` or `$speckit-scaffold-spec` |
-| Autopilot (7 SDD phases → PR) | `/speckit-pro:autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
-| Project status + next-spec recommendation | `/speckit-pro:status` | `/speckit-status` or `$speckit-status` |
-| PR review-comment remediation | `/speckit-pro:resolve-pr` | `/speckit-resolve-pr` or `$speckit-resolve-pr` |
+| Spec setup (worktree + workflow file) | `/speckit-pro:speckit-scaffold-spec` | `/speckit-scaffold-spec` or `$speckit-scaffold-spec` |
+| Autopilot (7 SDD phases → PR) | `/speckit-pro:speckit-autopilot` | `/speckit-autopilot` or `$speckit-autopilot` |
+| Project status + next-spec recommendation | `/speckit-pro:speckit-status` | `/speckit-status` or `$speckit-status` |
+| PR review-comment remediation | `/speckit-pro:speckit-resolve-pr` | `/speckit-resolve-pr` or `$speckit-resolve-pr` |
 | Codex agent install / repair | _(N/A)_ | `@SpecKit Pro` → `install` or `$install` |
 
 In Codex you can also type `@SpecKit Pro` and pick a skill from the menu. Codex CLI uses `/plugins` (plural) — Claude Code uses `/plugin`.
@@ -90,20 +90,20 @@ flowchart TD
     A([Raw idea / brief / transcript]) -->|optional standalone| GR["/speckit-pro:grill-me"]
     GR --> DC1[design-concept.md]
     A -.-> PRD([PRD — outside this plugin])
-    PRD -->|/speckit-pro:coach| TR[(Technical Roadmap<br/>Goal, Scope, Acceptance,<br/>Dependencies, Priority, Status)]
-    TR -->|/speckit-pro:status| ST{Recommends next<br/>Pending spec}
-    ST -->|/speckit-pro:scaffold-spec SPEC-NNN| SU[Worktree + Branch]
+    PRD -->|/speckit-pro:speckit-coach| TR[(Technical Roadmap<br/>Goal, Scope, Acceptance,<br/>Dependencies, Priority, Status)]
+    TR -->|/speckit-pro:speckit-status| ST{Recommends next<br/>Pending spec}
+    ST -->|/speckit-pro:speckit-scaffold-spec SPEC-NNN| SU[Worktree + Branch]
     SU --> GM["Grill Me<br/>(human-in-the-loop)"]
     GM --> DC2[SPEC-NNN-design-concept.md]
     SU --> WF[SPEC-NNN-workflow.md]
     DC2 -.->|enriches phase prompts| WF
     DC1 -.->|reused if available| WF
-    WF -->|/speckit-pro:autopilot| AP[7 SDD Phases<br/>+ Multi-agent Consensus<br/>+ Gate Validation<br/>+ Strict TDD]
+    WF -->|/speckit-pro:speckit-autopilot| AP[7 SDD Phases<br/>+ Multi-agent Consensus<br/>+ Gate Validation<br/>+ Strict TDD]
     AP --> PR([Pull Request])
-    PR -->|/speckit-pro:resolve-pr| FIX[Reviewer feedback<br/>resolved + re-pushed]
+    PR -->|/speckit-pro:speckit-resolve-pr| FIX[Reviewer feedback<br/>resolved + re-pushed]
 ```
 
-The **Design Concept doc** is the source of truth for scoping decisions captured during Grill Me. It informs the workflow file's phase prompts at setup time and is re-read by autopilot's consensus analysts when intra-workflow ambiguity arises. Workflow files generated *without* a corresponding design concept are flagged in `/speckit-pro:status` (the **DC** column).
+The **Design Concept doc** is the source of truth for scoping decisions captured during Grill Me. It informs the workflow file's phase prompts at setup time and is re-read by autopilot's consensus analysts when intra-workflow ambiguity arises. Workflow files generated *without* a corresponding design concept are flagged in `/speckit-pro:speckit-status` (the **DC** column).
 
 ### Inside the autopilot
 
@@ -158,16 +158,16 @@ Configure in `.claude/speckit-pro.local.md` (see [Configuration](#configuration)
 ## Command reference
 
 <details>
-<summary><strong><code>/speckit-pro:coach</code> — SDD methodology coaching</strong></summary>
+<summary><strong><code>/speckit-pro:speckit-coach</code> — SDD methodology coaching</strong></summary>
 
 Get coaching on any aspect of the workflow.
 
 ```text
-/speckit-pro:coach walk me through SDD
-/speckit-pro:coach help me create a technical roadmap
-/speckit-pro:coach which checklist domains for a REST API
-/speckit-pro:coach the simplicity gate is failing
-/speckit-pro:coach how does the consensus protocol work
+/speckit-pro:speckit-coach walk me through SDD
+/speckit-pro:speckit-coach help me create a technical roadmap
+/speckit-pro:speckit-coach which checklist domains for a REST API
+/speckit-pro:speckit-coach the simplicity gate is failing
+/speckit-pro:speckit-coach how does the consensus protocol work
 ```
 
 **Covers:** getting started, per-command coaching, constitution design, checklist domain selection, technical roadmap creation, gate failure troubleshooting, autopilot usage, and consensus protocol.
@@ -194,17 +194,17 @@ Walks down each branch of the design tree, asks one question at a time, and prov
 4. Stops at a natural endpoint, on user request, or at the soft cap (30 questions)
 5. Synthesizes a Design Concept doc at `docs/ai/specs/<slug>-design-concept.md` with Goals, Non-goals, full Q&A log, and Open Questions
 
-**Use it for:** raw client briefs, meeting transcripts, vague feature ideas — anything where you want shared understanding before committing to a spec. Output feeds directly into `/speckit-pro:coach` (for roadmap authoring) or `/speckit-pro:scaffold-spec` (for spec execution).
+**Use it for:** raw client briefs, meeting transcripts, vague feature ideas — anything where you want shared understanding before committing to a spec. Output feeds directly into `/speckit-pro:speckit-coach` (for roadmap authoring) or `/speckit-pro:speckit-scaffold-spec` (for spec execution).
 
-> **Hard constraint:** Grill Me is human-in-the-loop only. Never invoked from `/speckit-pro:autopilot` or any phase agent. Autopilot's Clarify phase uses `/speckit.clarify` with the consensus protocol — those are deliberately different systems.
+> **Hard constraint:** Grill Me is human-in-the-loop only. Never invoked from `/speckit-pro:speckit-autopilot` or any phase agent. Autopilot's Clarify phase uses `/speckit.clarify` with the consensus protocol — those are deliberately different systems.
 
 </details>
 
 <details>
-<summary><strong><code>/speckit-pro:scaffold-spec &lt;SPEC-ID&gt;</code> — prepare a spec for autopilot</strong></summary>
+<summary><strong><code>/speckit-pro:speckit-scaffold-spec &lt;SPEC-ID&gt;</code> — prepare a spec for autopilot</strong></summary>
 
 ```text
-/speckit-pro:scaffold-spec SPEC-009
+/speckit-pro:speckit-scaffold-spec SPEC-009
 ```
 
 **What it does:**
@@ -228,16 +228,16 @@ Workflow:       .worktrees/009-search-database/docs/ai/specs/SPEC-009-workflow.m
 Remote:         Pushed to origin/009-search-database
 
 Ready to run:
-/speckit-pro:autopilot docs/ai/specs/SPEC-009-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-009-workflow.md
 ```
 
 </details>
 
 <details>
-<summary><strong><code>/speckit-pro:autopilot &lt;workflow.md&gt;</code> — execute all 7 SDD phases</strong></summary>
+<summary><strong><code>/speckit-pro:speckit-autopilot &lt;workflow.md&gt;</code> — execute all 7 SDD phases</strong></summary>
 
 ```text
-/speckit-pro:autopilot docs/ai/specs/SPEC-009-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-009-workflow.md
 ```
 
 **What it does:**
@@ -253,12 +253,12 @@ Ready to run:
 </details>
 
 <details>
-<summary><strong><code>/speckit-pro:status [SPEC-ID]</code> — roadmap, phase detail, next-spec recommendation</strong></summary>
+<summary><strong><code>/speckit-pro:speckit-status [SPEC-ID]</code> — roadmap, phase detail, next-spec recommendation</strong></summary>
 
 ```text
-/speckit-pro:status              # full roadmap + active specs
-/speckit-pro:status all          # same as above
-/speckit-pro:status SPEC-009     # specific spec detail
+/speckit-pro:speckit-status              # full roadmap + active specs
+/speckit-pro:speckit-status all          # same as above
+/speckit-pro:speckit-status SPEC-009     # specific spec detail
 ```
 
 **What it does:**
@@ -283,16 +283,16 @@ Ready to run:
 
 ## Recommended Next
 SPEC-009: Search & Database (10 tools, P1, Tier 2)
-/speckit-pro:scaffold-spec SPEC-009
+/speckit-pro:speckit-scaffold-spec SPEC-009
 ```
 
 </details>
 
 <details>
-<summary><strong><code>/speckit-pro:resolve-pr &lt;PR&gt;</code> — address review comments end-to-end</strong></summary>
+<summary><strong><code>/speckit-pro:speckit-resolve-pr &lt;PR&gt;</code> — address review comments end-to-end</strong></summary>
 
 ```text
-/speckit-pro:resolve-pr 42
+/speckit-pro:speckit-resolve-pr 42
 ```
 
 **What it does:**
@@ -344,7 +344,7 @@ auto-commit: per-phase      # per-phase | batch | none
 
 - **Write a constitution first.** Every spec is validated against it.
 - **Review workflow prompts before autopilot.** More context in the prompts → better output.
-- **Start with coaching.** Use `/speckit-pro:coach` (Claude Code) or `/speckit-coach` (Codex) before running the autopilot.
+- **Start with coaching.** Use `/speckit-pro:speckit-coach` (Claude Code) or `/speckit-coach` (Codex) before running the autopilot.
 - **Use technical roadmaps for multi-spec projects.** Decompose large features into sequential specs with a dependency graph.
 - **Trust the gates.** If a gate fails, the spec has a real gap — fix it rather than skipping.
 - **Run in `acceptEdits` mode.** Plugin agents inherit the parent session's permission mode.
@@ -475,7 +475,7 @@ This usually means the question is genuinely ambiguous. The agents are working c
 <details>
 <summary><strong>Workflow file has unfilled placeholders</strong></summary>
 
-The autopilot fails when workflow prompts still contain `<!-- ... -->` placeholders. Run `/speckit-pro:scaffold-spec <SPEC-ID>` (or `/speckit-scaffold-spec <SPEC-ID>` in Codex) to auto-populate from the technical roadmap. If you're authoring the workflow manually, fill in all phase prompts before running autopilot.
+The autopilot fails when workflow prompts still contain `<!-- ... -->` placeholders. Run `/speckit-pro:speckit-scaffold-spec <SPEC-ID>` (or `/speckit-scaffold-spec <SPEC-ID>` in Codex) to auto-populate from the technical roadmap. If you're authoring the workflow manually, fill in all phase prompts before running autopilot.
 
 </details>
 

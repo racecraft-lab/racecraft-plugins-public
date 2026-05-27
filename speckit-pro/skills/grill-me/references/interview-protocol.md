@@ -203,8 +203,8 @@ After the loop ends, write the Design Concept doc per
 `./output-formats.md`. Then:
 
 - **Standalone mode**: report the file path back to the user with a
-  one-line summary and a "next step" suggestion (`/speckit-pro:coach`
-  to feed it into a roadmap, or `/speckit-pro:scaffold-spec SPEC-XXX` if
+  one-line summary and a "next step" suggestion (`/speckit-pro:speckit-coach`
+  to feed it into a roadmap, or `/speckit-pro:speckit-scaffold-spec SPEC-XXX` if
   a roadmap entry exists).
 - **Setup mode**: report the file path back to the calling /scaffold-spec
   command and surface the key answers (especially Goals, Non-goals,

@@ -1,7 +1,7 @@
 {
   "$schema": "./curated-set.schema.json",
   "version": 1,
-  "description": "Community extensions and presets that speckit-pro auto-installs on /speckit-pro:install and offers version bumps for on /speckit-pro:upgrade. Resolution: latest GitHub Release tag at install time, falling back to latest git tag if no Release exists. Never main. See speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md for the rationale.",
+  "description": "Community extensions and presets that speckit-pro auto-installs on /speckit-pro:speckit-install and offers version bumps for on /speckit-pro:speckit-upgrade. Resolution: latest GitHub Release tag at install time, falling back to latest git tag if no Release exists. Never main. See speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md for the rationale.",
   "entries": [
     {
       "id": "review",

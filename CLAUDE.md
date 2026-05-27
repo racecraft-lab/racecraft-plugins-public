@@ -130,16 +130,16 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 
 The SessionStart hook warns if `specify` is not found.
 
-**Commands:** `install`, `upgrade`, `scaffold-spec`, `autopilot`, `coach`, `status`, `resolve-pr`
+**Skills:** All invocations use the skill name directly (e.g., `skills/speckit-install/` → `/speckit-pro:speckit-install`). There are no `commands/` files.
 
-- `install` — first-time SpecKit setup in a repo. Bootstraps the `specify` CLI via `uv tool install` if missing, then runs `specify init` / `specify integration install` for the operator's chosen integration(s) (claude, codex, or both). Hands off to `upgrade` if `.specify/` already exists.
-- `upgrade` — safely upgrade an existing SpecKit install. Snapshots the repo to `/tmp/specify-upgrade-backup-<STAMP>/`, runs `specify integration upgrade` (diff-aware), and handles `--force`-with-restore when local files are modified. Also handles the v0.8.13 slash-command → skills migration.
-- `scaffold-spec` — scaffold a new spec from the technical roadmap for autopilot execution. (Renamed from `setup` to free that name for the install/upgrade workflow.)
-- `autopilot` / `coach` / `status` / `resolve-pr` — the daily-use commands documented in their respective skill bodies.
-
-**Skills:**
-- `speckit-autopilot` — Autonomous 7-phase SDD workflow executor with multi-agent consensus. References in `references/` cover gate validation, consensus protocol, phase execution, TDD protocol, and post-implementation steps.
+- `speckit-install` — first-time SpecKit setup. Bootstraps the `specify` CLI, runs `specify init` / `specify integration install`, and optionally installs the curated extension set.
+- `speckit-upgrade` — safely upgrade an existing install with backup-and-restore. Handles the v0.8.13 slash-command → skills migration.
+- `speckit-scaffold-spec` — scaffold a spec from the technical roadmap for autopilot execution.
+- `speckit-autopilot` — autonomous 7-phase SDD workflow executor with multi-agent consensus. `user-invocable: true`; references in `references/` cover gate validation, consensus protocol, phase execution, TDD, and post-implementation.
 - `speckit-coach` — SDD methodology coaching. References cover command guide, constitution guide, presets/extensions, checklist domains, best practices, and getting-started templates.
+- `speckit-status` — roadmap dashboard: completed, in-progress, blocked, and ready-to-start specs with phase-level detail.
+- `speckit-resolve-pr` — address all unresolved GitHub review comments, fix code, and mark threads resolved.
+- `grill-me` — relentless one-question-at-a-time design interview producing a Design Concept doc (invoked as `/speckit-pro:grill-me`).
 
 ### Adding a Skill to speckit-pro
 

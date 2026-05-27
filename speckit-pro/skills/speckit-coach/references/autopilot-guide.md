@@ -5,11 +5,11 @@ executor. Use this when coaching developers on how to set up,
 configure, run, and troubleshoot the autopilot.
 
 **Related commands:**
-- `/speckit-pro:scaffold-spec <SPEC-ID>` — create worktree + workflow file
-- `/speckit-pro:autopilot <workflow.md>` — run the autopilot
-- `/speckit-pro:status` — check progress across all specs
-- `/speckit-pro:resolve-pr <PR>` — fix review comments post-PR
-- `/speckit-pro:coach` — get help with any of the above
+- `/speckit-pro:speckit-scaffold-spec <SPEC-ID>` — create worktree + workflow file
+- `/speckit-pro:speckit-autopilot <workflow.md>` — run the autopilot
+- `/speckit-pro:speckit-status` — check progress across all specs
+- `/speckit-pro:speckit-resolve-pr <PR>` — fix review comments post-PR
+- `/speckit-pro:speckit-coach` — get help with any of the above
 
 ## Contents
 
@@ -74,7 +74,7 @@ before starting a new spec.
 For multi-spec projects, create a technical roadmap first:
 
 ```text
-/speckit-pro:coach help me create a technical roadmap
+/speckit-pro:speckit-coach help me create a technical roadmap
 ```
 
 The technical roadmap provides scope descriptions that drive the
@@ -419,11 +419,11 @@ question/gap/finding
 
 **Recovery:**
 
-1. Run `/speckit-pro:status` to see where the autopilot
+1. Run `/speckit-pro:speckit-status` to see where the autopilot
    stopped
 2. Fix the issue
 3. Re-run
-   `/speckit-pro:autopilot workflow.md --from-phase <failed-phase>`
+   `/speckit-pro:speckit-autopilot workflow.md --from-phase <failed-phase>`
 
 ### Context Window Limits
 
@@ -432,7 +432,7 @@ up. The autopilot uses the workflow file as persistent state,
 so it can be resumed:
 
 ```text
-/speckit-pro:autopilot workflow.md --from-phase checklist
+/speckit-pro:speckit-autopilot workflow.md --from-phase checklist
 ```
 
 This starts from the checklist phase, reading prior artifacts
@@ -444,13 +444,13 @@ The workflow file persists all state. To resume from any point:
 
 ```text
 # 1. Check where you left off
-/speckit-pro:status
+/speckit-pro:speckit-status
 
 # 2. Look at the workflow file for the last completed phase
 cat docs/ai/specs/SPEC-XXX-workflow.md | grep "✅\|⏳\|🔄"
 
 # 3. Resume from the next pending phase
-/speckit-pro:autopilot docs/ai/specs/SPEC-XXX-workflow.md --from-phase <next>
+/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-XXX-workflow.md --from-phase <next>
 ```
 
 **Safe to re-run:** Phases are idempotent — re-running a
@@ -473,7 +473,7 @@ specify init --ai claude
 /speckit-constitution
 
 # Create technical roadmap (for multi-spec projects)
-/speckit-pro:coach help me create a technical roadmap
+/speckit-pro:speckit-coach help me create a technical roadmap
 
 # Create and populate workflow file
 cp skills/speckit-coach/templates/workflow-template.md docs/ai/specs/SPEC-XXX-workflow.md
@@ -492,7 +492,7 @@ settings.
 claude --dangerously-skip-permissions
 
 # Launch autopilot
-/speckit-pro:autopilot docs/ai/specs/SPEC-XXX-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-XXX-workflow.md
 ```
 
 ### 4. Monitor

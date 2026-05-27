@@ -135,7 +135,6 @@ should_run() {
 if should_run 1; then
   run_layer 1 "Structural Validation" \
     "$TESTS_DIR/layer1-structural/validate-plugin.sh" \
-    "$TESTS_DIR/layer1-structural/validate-commands.sh" \
     "$TESTS_DIR/layer1-structural/validate-agents.sh" \
     "$TESTS_DIR/layer1-structural/validate-skills.sh" \
     "$TESTS_DIR/layer1-structural/validate-hooks.sh" \

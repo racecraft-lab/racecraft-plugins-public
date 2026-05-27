@@ -1,6 +1,6 @@
 ---
 name: speckit-scaffold-spec
-description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Creates the git worktree, spec branch, Design Concept doc, and populated workflow file ready for autopilot. Strictly interactive — requires a human to answer the grill-me questions. Not for checking roadmap status (use /speckit-pro:status), running a populated workflow (use /speckit-pro:autopilot), or SDD coaching (use /speckit-pro:coach)."
+description: "Use this skill when the user wants to set up, scaffold, bootstrap, prep, initialize, or prepare a SPEC-ID from the technical roadmap for autonomous execution. Triggers on: set up SPEC-XXX, scaffold SPEC-XXX, bootstrap SPEC-XXX for development, prep SPEC-XXX, initialize the workspace for SPEC-XXX, prepare SPEC-XXX for the autonomous run, create a spec branch and workflow for SPEC-XXX, generate the workflow file for SPEC-XXX, I need a workflow file generated for SPEC-XXX, fill the prompts from the roadmap, pre-fill the workflow template, start working on SPEC-XXX, populate the workflow file for SPEC-XXX. Creates the git worktree, spec branch, Design Concept doc, and populated workflow file ready for autopilot. Strictly interactive — requires a human to answer the grill-me questions. Not for checking roadmap status (use /speckit-pro:speckit-status), running a populated workflow (use /speckit-pro:speckit-autopilot), or SDD coaching (use /speckit-pro:speckit-coach)."
 argument-hint: "SPEC-ID (e.g., SPEC-009)"
 user-invocable: true
 allowed-tools: Bash Read Edit Write Skill Agent
@@ -20,13 +20,13 @@ guard was triggered.
 
 Prepare a spec from the technical roadmap for autonomous execution.
 Creates the worktree, branch, and workflow file — ready for
-`/speckit-pro:autopilot`.
+`/speckit-pro:speckit-autopilot`.
 
 ## Invocation
 
 ```text
-/speckit-pro:scaffold-spec SPEC-009
-/speckit-pro:scaffold-spec SPEC-008
+/speckit-pro:speckit-scaffold-spec SPEC-009
+/speckit-pro:speckit-scaffold-spec SPEC-008
 ```
 
 ## What to Do
@@ -58,7 +58,7 @@ Also check: docs/ai/*roadmap*.md, docs/ai/specs/*roadmap*.md
 ```
 
 If no technical roadmap found, STOP: "No technical roadmap found. Create
-one with `/speckit-pro:coach help me create a technical roadmap`."
+one with `/speckit-pro:speckit-coach help me create a technical roadmap`."
 
 ### 2. Find the Spec in the Technical Roadmap
 
@@ -294,7 +294,7 @@ Report:
 **Remote:** Pushed to <remote>/009-search-database
 
 **Ready to run:**
-/speckit-pro:autopilot docs/ai/specs/SPEC-009-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-009-workflow.md
 
 **Review both files first** — the design concept doc captures the
 decisions you made during grill-me; the workflow file is what the

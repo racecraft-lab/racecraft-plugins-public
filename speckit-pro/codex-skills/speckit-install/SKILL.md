@@ -259,7 +259,7 @@ Return a concise install summary:
 1. Restart your coding-agent process (Claude Code or Codex CLI) so
    the new skills load.
 2. Create your project constitution:
-   - Claude: `/speckit.constitution` or `/speckit-pro:coach create my project constitution`
+   - Claude: `/speckit.constitution` or `/speckit-pro:speckit-coach create my project constitution`
    - Codex:  `$speckit-constitution` or `$speckit-coach`
 3. When you're ready to spec a feature, use `$speckit-scaffold-spec
    SPEC-ID` to bootstrap from the technical roadmap.

@@ -1,6 +1,6 @@
 ---
 name: grill-me
-description: "MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec scoping. Use this skill — NOT brainstorming — before /speckit-specify, /speckit-plan, /speckit-tasks, /speckit-pro:scaffold-spec, or whenever the user invokes /speckit-pro:grill-me. Triggers on grill-me-unique signatures: 'grill me' on a brief/spec/transcript, 'walk every branch of the design tree', 'play the role of a relentless interviewer', 'produce a Design Concept doc', 'pre-spec scoping', 'help me scope this raw idea before /speckit-specify'. Walks every branch of the design tree, asks one question at a time with the assistant's recommended answer first, produces a Design Concept Markdown doc that downstream /speckit-specify, /speckit-plan, /speckit-tasks consume. Accepts .md, .txt files or a free-text topic. Use brainstorming skill ONLY for free-form creative work with no SpecKit/SDD anchor."
+description: "MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec scoping. Use this skill — NOT brainstorming — before /speckit-specify, /speckit-plan, /speckit-tasks, /speckit-pro:speckit-scaffold-spec, or whenever the user invokes /speckit-pro:grill-me. Triggers on grill-me-unique signatures: 'grill me' on a brief/spec/transcript, 'walk every branch of the design tree', 'play the role of a relentless interviewer', 'produce a Design Concept doc', 'pre-spec scoping', 'help me scope this raw idea before /speckit-specify'. Walks every branch of the design tree, asks one question at a time with the assistant's recommended answer first, produces a Design Concept Markdown doc that downstream /speckit-specify, /speckit-plan, /speckit-tasks consume. Accepts .md, .txt files or a free-text topic. Use brainstorming skill ONLY for free-form creative work with no SpecKit/SDD anchor."
 argument-hint: "e.g. 'interview me about this brief', 'grill me on the gamification overhaul', 'scope this transcript'"
 user-invocable: true
 license: MIT
@@ -25,7 +25,7 @@ user can agree, course-correct, or pick an alternative.
 
 The output of a successful grilling session is a **Design Concept doc**:
 a rich Markdown record of the Q&A history plus a synthesized summary
-that downstream tools (`/speckit-pro:coach`, `/speckit-pro:scaffold-spec`,
+that downstream tools (`/speckit-pro:speckit-coach`, `/speckit-pro:speckit-scaffold-spec`,
 `/speckit-specify`) consume to produce specs and plans.
 
 This skill is the antidote to "specs to code" / vibe-coding handoffs.
@@ -57,7 +57,7 @@ silently produces low-value output.
 
 1. The user typing `/speckit-pro:grill-me` directly in an interactive
    Claude Code session.
-2. The `/speckit-pro:scaffold-spec` command running interactively (it always
+2. The `/speckit-pro:speckit-scaffold-spec` command running interactively (it always
    invokes grill-me before writing the workflow file).
 
 **No other entry point is permitted.**
@@ -112,7 +112,7 @@ context:
 
 ### Setup mode
 
-- Triggered when invoked from `/speckit-pro:scaffold-spec` (the calling command
+- Triggered when invoked from `/speckit-pro:speckit-scaffold-spec` (the calling command
   passes a marker / context indicating it's the setup flow).
 - Input: the spec scope description from the technical roadmap.
 - Output path: `.worktrees/<NNN>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md`
@@ -162,16 +162,16 @@ sections (full schema in `references/output-formats.md`):
   answer + reasoning, the user's chosen answer, any free-text notes.
 - **Open Questions** — anything you flagged as worth follow-up but
   the user deferred.
-- **Recommended Next Step** — usually `/speckit-pro:coach` for roadmap
-  authoring or `/speckit-pro:scaffold-spec SPEC-XXX` if a roadmap entry already
+- **Recommended Next Step** — usually `/speckit-pro:speckit-coach` for roadmap
+  authoring or `/speckit-pro:speckit-scaffold-spec SPEC-XXX` if a roadmap entry already
   exists.
 
 ## What This Skill Does NOT Do
 
-- It does not write a workflow file. That's `/speckit-pro:scaffold-spec`'s job.
+- It does not write a workflow file. That's `/speckit-pro:speckit-scaffold-spec`'s job.
 - It does not write a spec file (`spec.md`). That's `/speckit-specify`'s
   job.
-- It does not modify the technical roadmap. That's `/speckit-pro:coach`'s
+- It does not modify the technical roadmap. That's `/speckit-pro:speckit-coach`'s
   job.
 - It does not run autonomously. See the Hard Constraints block above.
 
@@ -190,9 +190,9 @@ Actions:
 
 Result: Design Concept Markdown file with frontmatter, Goals, Non-goals, Q&A log, Open Questions, Recommended Next Step.
 
-### Example 2: Setup-mode invocation from /speckit-pro:scaffold-spec
+### Example 2: Setup-mode invocation from /speckit-pro:speckit-scaffold-spec
 
-`/speckit-pro:scaffold-spec` invokes this skill with `mode: "setup"`, the spec scope from the technical roadmap, and an output path inside the worktree.
+`/speckit-pro:speckit-scaffold-spec` invokes this skill with `mode: "setup"`, the spec scope from the technical roadmap, and an output path inside the worktree.
 
 Actions:
 1. Detect setup mode from invocation context
@@ -205,7 +205,7 @@ Result: Design Concept doc lives in the worktree alongside the workflow file; bo
 
 ### Example 3: Refusing an autonomous invocation
 
-A subagent inside `/speckit-pro:autopilot` (e.g., the clarify-executor) tries to call `Skill('grill-me')` to resolve ambiguity.
+A subagent inside `/speckit-pro:speckit-autopilot` (e.g., the clarify-executor) tries to call `Skill('grill-me')` to resolve ambiguity.
 
 Actions:
 1. Self-check at activation detects agent context (or AskUserQuestion unavailable)
@@ -222,16 +222,16 @@ Cause: The skill is being invoked from a runtime that doesn't expose
 `AskUserQuestion` (subagent context, automation, or non-Claude-Code surface).
 
 Solution: Abort. Grill-me requires real-time human interaction. If you
-need scoping in a non-interactive context, use `/speckit-pro:coach` for
+need scoping in a non-interactive context, use `/speckit-pro:speckit-coach` for
 methodology guidance or fail the gate and surface to the user.
 
 ### Natural-language prompts route to `superpowers:brainstorming` instead of grill-me
 
 Cause: If you have the `superpowers` plugin installed, its `brainstorming` skill description starts with "You MUST use this before any creative work — creating features, building components, adding functionality, or modifying behavior." That high-imperative framing reliably outranks descriptive scoping skills on any prompt that smells like creative work, including "interview me about this brief", "scope this idea", or "walk me through this design before I commit."
 
-Solution: Invoke grill-me directly via the slash command `/speckit-pro:grill-me` (description-based triggering is bypassed for explicit invocation). Inside `/speckit-pro:scaffold-spec` this is already wired — the setup command calls `Skill('grill-me')` explicitly, so the brainstorming competition does not apply. If you prefer natural-language invocation, "run grill-me on this" or "use the grill me skill on this brief" name-anchors more reliably than "interview me about this".
+Solution: Invoke grill-me directly via the slash command `/speckit-pro:grill-me` (description-based triggering is bypassed for explicit invocation). Inside `/speckit-pro:speckit-scaffold-spec` this is already wired — the setup command calls `Skill('grill-me')` explicitly, so the brainstorming competition does not apply. If you prefer natural-language invocation, "run grill-me on this" or "use the grill me skill on this brief" name-anchors more reliably than "interview me about this".
 
-### Skill triggers when user wanted /speckit-pro:scaffold-spec
+### Skill triggers when user wanted /speckit-pro:speckit-scaffold-spec
 
 Cause: The user said "set up SPEC-009" — that's `/scaffold-spec`'s territory,
 not grill-me's. Setup itself runs grill-me, so the user gets the
@@ -239,7 +239,7 @@ interview either way, but starting from setup ensures the worktree
 gets created.
 
 Solution: If the user mentions a SPEC-ID and "set up" / "prepare",
-defer to `/speckit-pro:scaffold-spec`. Grill-me triggers on "interview me",
+defer to `/speckit-pro:speckit-scaffold-spec`. Grill-me triggers on "interview me",
 "grill me", "scope this", or when the input is a raw idea / transcript
 / brief without a SPEC-ID.
 

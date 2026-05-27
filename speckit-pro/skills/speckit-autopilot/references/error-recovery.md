@@ -11,7 +11,7 @@
 The workflow file persists all state. To resume:
 
 ```text
-/speckit-pro:autopilot workflow.md --from-phase <next-pending-phase>
+/speckit-pro:speckit-autopilot workflow.md --from-phase <next-pending-phase>
 ```
 
 The autopilot reads prior artifacts from disk and continues from

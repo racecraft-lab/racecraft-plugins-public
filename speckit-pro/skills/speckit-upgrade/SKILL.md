@@ -1,6 +1,6 @@
 ---
 name: speckit-upgrade
-description: "Upgrades an existing SpecKit installation safely with backup-and-restore for locally-modified files. Preserves the project constitution and template overrides. Handles the v0.8.13 slash-command to skills migration. Supports upgrading one or both integrations (Claude Code, Codex CLI) and refreshing the curated set of community extensions and presets. Use when the user says "upgrade speckit", "update speckit", "refresh speckit", "new speckit version", "latest speckit", "upgrade specify cli", "safe speckit upgrade", "speckit migration to skills", "preserve my constitution during upgrade", or asks how to upgrade without losing template edits. Hands off to /speckit-pro:install if .specify/ is missing."
+description: "Upgrades an existing SpecKit installation safely with backup-and-restore for locally-modified files. Preserves the project constitution and template overrides. Handles the v0.8.13 slash-command to skills migration. Supports upgrading one or both integrations (Claude Code, Codex CLI) and refreshing the curated set of community extensions and presets. Use when the user says \"upgrade speckit\", \"update speckit\", \"refresh speckit\", \"new speckit version\", \"latest speckit\", \"upgrade specify cli\", \"safe speckit upgrade\", \"speckit migration to skills\", \"preserve my constitution during upgrade\", or asks how to upgrade without losing template edits. Hands off to /speckit-pro:speckit-install if .specify/ is missing."
 argument-hint: "(optional) integration keys to upgrade, e.g. 'claude', 'codex', or omit for all"
 user-invocable: true
 allowed-tools: Bash Read Edit Write
@@ -24,15 +24,15 @@ files via backup-then-force-then-restore. Handles the v0.8.13
 slash-command → skills migration. Supports upgrading one or both
 integrations.
 
-If `.specify/` is missing, hands off to `/speckit-pro:install`.
+If `.specify/` is missing, hands off to `/speckit-pro:speckit-install`.
 
 ## Invocation
 
 ```text
-/speckit-pro:upgrade                    # upgrade all installed integrations
-/speckit-pro:upgrade claude             # upgrade claude only
-/speckit-pro:upgrade codex              # upgrade codex only
-/speckit-pro:upgrade claude codex       # both, explicit
+/speckit-pro:speckit-upgrade                    # upgrade all installed integrations
+/speckit-pro:speckit-upgrade claude             # upgrade claude only
+/speckit-pro:speckit-upgrade codex              # upgrade codex only
+/speckit-pro:speckit-upgrade claude codex       # both, explicit
 ```
 
 ## What to Do
@@ -43,7 +43,7 @@ If `.specify/` is missing, hands off to `/speckit-pro:install`.
 Bash("test -d .specify && echo PRESENT || echo ABSENT")
 ```
 
-If `.specify/` is **ABSENT**: STOP and invoke `/speckit-pro:install`
+If `.specify/` is **ABSENT**: STOP and invoke `/speckit-pro:speckit-install`
 — upgrade only operates on existing installs.
 
 If **PRESENT**: continue.
@@ -225,7 +225,7 @@ exits 0 if everything is current, exits 2 if work is pending.
   prerequisite): surface the stderr message and **skip this step**.
   Do not block the upgrade. Tell the operator: "Curated-set upgrade
   skipped — install `gh` (https://cli.github.com/) and re-run
-  `/speckit-pro:upgrade` to pull the latest curated extensions and
+  `/speckit-pro:speckit-upgrade` to pull the latest curated extensions and
   presets." Continue to Step 9.
 
 - If exit code is **2**: tell the operator the check output and ask
@@ -289,7 +289,7 @@ Return a concise upgrade summary:
 
 STOP and report — do not improvise — when:
 
-- The CLI itself is missing (hand off to `/speckit-pro:install`).
+- The CLI itself is missing (hand off to `/speckit-pro:speckit-install`).
 - A `specify integration upgrade` call fails for non-diff reasons.
 - The backup directory could not be created (filesystem full, etc.).
 - The operator declines all three options in Step 5b for a blocked
@@ -323,5 +323,5 @@ wraps the CLI to provide:
   are installed (the consumer doesn't have to remember which
   invocation goes where).
 
-For an initial install, use `/speckit-pro:install`. The two skills
+For an initial install, use `/speckit-pro:speckit-install`. The two skills
 hand off to each other based on `.specify/` presence.

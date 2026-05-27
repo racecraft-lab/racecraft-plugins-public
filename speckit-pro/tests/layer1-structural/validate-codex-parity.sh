@@ -14,17 +14,6 @@ AGENTS_DIR="$PLUGIN_ROOT/agents"
 CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
 SKILLS_DIR="$PLUGIN_ROOT/skills"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
-COMMANDS_DIR="$PLUGIN_ROOT/commands"
-SHARED_SKILLS=(speckit-autopilot speckit-coach)
-COMMAND_SKILL_MAP=(
-  "autopilot:speckit-autopilot"
-  "coach:speckit-coach"
-  "scaffold-spec:speckit-scaffold-spec"
-  "status:speckit-status"
-  "resolve-pr:speckit-resolve-pr"
-  "install:speckit-install"
-  "upgrade:speckit-upgrade"
-)
 
 # ===========================================================================
 # Version Parity
@@ -124,20 +113,19 @@ if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
 fi
 
 # ===========================================================================
-# Shared Skill Parity — CC skills → Codex skills
+# CC Skill Coverage — every CC skill must have a matching Codex skill
 # ===========================================================================
-section "Shared Skill Parity (CC → Codex)"
+section "CC Skill Coverage (CC → Codex)"
 
 if [ -d "$SKILLS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
-  for skill_name in "${SHARED_SKILLS[@]}"; do
-    set_test "codex-skills/${skill_name}/ directory exists"
-    if [ -d "$CODEX_SKILLS_DIR/${skill_name}" ]; then
-      _pass
-    else
-      _fail "missing codex-skills/${skill_name}/"
-    fi
+  for skill_dir in "$SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
 
-    set_test "codex-skills/${skill_name}/SKILL.md exists"
+    set_test "skills/${skill_name}/SKILL.md exists"
+    assert_file_exists "$SKILLS_DIR/${skill_name}/SKILL.md"
+
+    set_test "codex-skills/${skill_name}/SKILL.md exists for CC skill"
     assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
   done
 else
@@ -146,32 +134,14 @@ else
 fi
 
 # ===========================================================================
-# Claude Command Coverage — CC commands → Codex skills
-# ===========================================================================
-section "Claude Command Coverage (CC → Codex skills)"
-
-if [ -d "$COMMANDS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
-  for mapping in "${COMMAND_SKILL_MAP[@]}"; do
-    cmd_name="${mapping%%:*}"
-    skill_name="${mapping##*:}"
-    set_test "commands/${cmd_name}.md exists"
-    assert_file_exists "$COMMANDS_DIR/${cmd_name}.md"
-
-    set_test "codex-skills/${skill_name}/SKILL.md exists for CC command ${cmd_name}"
-    assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
-  done
-else
-  set_test "commands/ and codex-skills/ directories exist for command coverage"
-  _fail "one or both directories missing (commands: $COMMANDS_DIR, codex-skills: $CODEX_SKILLS_DIR)"
-fi
-
-# ===========================================================================
 # Codex Skill Metadata Sidecars
 # ===========================================================================
 section "Codex Skill Metadata Sidecars"
 
 if [ -d "$CODEX_SKILLS_DIR" ]; then
-  for skill_name in "${SHARED_SKILLS[@]}" speckit-scaffold-spec speckit-status speckit-resolve-pr speckit-install speckit-upgrade; do
+  for skill_dir in "$CODEX_SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
     set_test "codex-skills/${skill_name}/agents/openai.yaml exists"
     assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/agents/openai.yaml"
   done
@@ -181,44 +151,17 @@ else
 fi
 
 # ===========================================================================
-# Codex Skill Source Coverage
-# ===========================================================================
-section "Codex Skill Source Coverage"
-
-if [ -d "$CODEX_SKILLS_DIR" ]; then
-  for mapping in "${COMMAND_SKILL_MAP[@]}"; do
-    cmd_name="${mapping%%:*}"
-    skill_name="${mapping##*:}"
-
-    if [ "$skill_name" = "speckit-autopilot" ] || [ "$skill_name" = "speckit-coach" ]; then
-      set_test "${skill_name}: corresponding CC skill exists"
-      assert_file_exists "$SKILLS_DIR/${skill_name}/SKILL.md"
-    else
-      set_test "${skill_name}: corresponding CC command exists"
-      assert_file_exists "$COMMANDS_DIR/${cmd_name}.md"
-    fi
-  done
-else
-  set_test "codex-skills/ directory exists for source coverage"
-  _fail "codex-skills directory missing: $CODEX_SKILLS_DIR"
-fi
-
-# ===========================================================================
-# Shared Reference Integrity — shared Codex skills reference CC references/
+# Shared Reference Integrity — CC skill references/ directories resolve
 # ===========================================================================
 section "Shared Reference Integrity"
 
-if [ -d "$CODEX_SKILLS_DIR" ]; then
-  for skill_name in "${SHARED_SKILLS[@]}"; do
+if [ -d "$SKILLS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
+  for skill_dir in "$SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
     cc_refs="$SKILLS_DIR/${skill_name}/references"
 
-    set_test "${skill_name}: CC skill references/ directory exists"
-    if [ -d "$cc_refs" ]; then
-      _pass
-    else
-      _fail "missing skills/${skill_name}/references/"
-      continue
-    fi
+    [ -d "$cc_refs" ] || continue  # skills without references/ are fine
 
     set_test "${skill_name}: CC skill references/ has at least one file"
     ref_count=$(find "$cc_refs" -maxdepth 1 -type f | wc -l | tr -d ' ')
@@ -243,55 +186,6 @@ if [ -d "$CODEX_SKILLS_DIR" ]; then
       done <<< "$ref_paths"
     fi
   done
-fi
-
-# ===========================================================================
-# CC Slash Command ↔ CC Skill Parity
-# Every CC slash command in commands/ must have a matching CC skill in
-# skills/ so the same workflow is reachable by both slash invocation AND
-# natural-language invocation. Mirror skills (thin NL on-ramps) must keep
-# their body byte-identical to the slash command. Heritage skills with
-# their own independently-developed body (speckit-autopilot, speckit-coach)
-# are existence-only — they predate the mirror contract.
-# ===========================================================================
-section "CC Slash Command ↔ CC Skill Parity"
-
-# Skills whose body must remain byte-identical to the slash command body.
-# These are pure NL on-ramps to the slash command — one source of truth.
-CC_MIRROR_SKILLS="speckit-install speckit-upgrade speckit-scaffold-spec speckit-status speckit-resolve-pr"
-
-is_mirror_skill() {
-  local name="$1"
-  for mirror in $CC_MIRROR_SKILLS; do
-    [ "$name" = "$mirror" ] && return 0
-  done
-  return 1
-}
-
-if [ -d "$COMMANDS_DIR" ] && [ -d "$SKILLS_DIR" ]; then
-  for mapping in "${COMMAND_SKILL_MAP[@]}"; do
-    cmd_name="${mapping%%:*}"
-    skill_name="${mapping##*:}"
-    cmd_file="$COMMANDS_DIR/${cmd_name}.md"
-    skill_file="$SKILLS_DIR/${skill_name}/SKILL.md"
-
-    set_test "skills/${skill_name}/SKILL.md exists for CC command ${cmd_name}"
-    assert_file_exists "$skill_file"
-
-    if is_mirror_skill "$skill_name" && [ -f "$cmd_file" ] && [ -f "$skill_file" ]; then
-      set_test "skills/${skill_name}/SKILL.md body matches commands/${cmd_name}.md body"
-      cmd_body=$(awk 'BEGIN{n=0} /^---$/{n++; if(n==2){found=1; next}} found{print}' "$cmd_file")
-      skill_body=$(awk 'BEGIN{n=0} /^---$/{n++; if(n==2){found=1; next}} found{print}' "$skill_file")
-      if [ "$cmd_body" = "$skill_body" ]; then
-        _pass
-      else
-        _fail "body drift between commands/${cmd_name}.md and skills/${skill_name}/SKILL.md — regenerate skill from slash command body"
-      fi
-    fi
-  done
-else
-  set_test "commands/ and skills/ directories exist for CC parity"
-  _fail "one or both directories missing (commands: $COMMANDS_DIR, skills: $SKILLS_DIR)"
 fi
 
 test_summary

@@ -31,7 +31,7 @@
 ## Design Concept
 
 This workflow file was enriched from a Grill Me interview run during
-`/speckit-pro:scaffold-spec`. The full Q&A log, Goals, Non-goals, and Open
+`/speckit-pro:speckit-scaffold-spec`. The full Q&A log, Goals, Non-goals, and Open
 Questions live at:
 
 ```text

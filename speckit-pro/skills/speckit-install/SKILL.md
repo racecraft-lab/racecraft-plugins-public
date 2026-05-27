@@ -1,6 +1,6 @@
 ---
 name: speckit-install
-description: "Installs the official SpecKit CLI and initializes one or both coding-agent integrations (Claude Code, Codex CLI). Detects existing installs and hands off to /speckit-pro:upgrade rather than overwriting. Optionally installs the curated set of community extensions and presets. Use when the user says "install speckit", "set up speckit", "initialize speckit", "add speckit to this repo", "install spec-kit", "bootstrap speckit", "first-time speckit setup", "install the specify cli", "set up specify", or wants to install for claude only, codex only, or both side-by-side. Not for upgrading an existing install (use /speckit-pro:upgrade) or running workflows (use /speckit-pro:autopilot)."
+description: "Installs the official SpecKit CLI and initializes one or both coding-agent integrations (Claude Code, Codex CLI). Detects existing installs and hands off to /speckit-pro:speckit-upgrade rather than overwriting. Optionally installs the curated set of community extensions and presets. Use when the user says \"install speckit\", \"set up speckit\", \"initialize speckit\", \"add speckit to this repo\", \"install spec-kit\", \"bootstrap speckit\", \"first-time speckit setup\", \"install the specify cli\", \"set up specify\", or wants to install for claude only, codex only, or both side-by-side. Not for upgrading an existing install (use /speckit-pro:speckit-upgrade) or running workflows (use /speckit-pro:speckit-autopilot)."
 argument-hint: "(optional) integration keys, e.g. 'claude', 'codex', or 'claude codex'"
 user-invocable: true
 allowed-tools: Bash Read Edit Write
@@ -21,15 +21,15 @@ guard was triggered.
 Install the SpecKit CLI (if missing) and initialize this repository
 to use it with Claude Code, Codex CLI, or both. Safe to run on any
 repo — detects existing installs and hands off to
-`/speckit-pro:upgrade` rather than overwriting them.
+`/speckit-pro:speckit-upgrade` rather than overwriting them.
 
 ## Invocation
 
 ```text
-/speckit-pro:install                    # interactive — asks which integrations
-/speckit-pro:install claude             # claude only
-/speckit-pro:install codex              # codex only
-/speckit-pro:install claude codex       # both (dual-integration)
+/speckit-pro:speckit-install                    # interactive — asks which integrations
+/speckit-pro:speckit-install claude             # claude only
+/speckit-pro:speckit-install codex              # codex only
+/speckit-pro:speckit-install claude codex       # both (dual-integration)
 ```
 
 ## What to Do
@@ -47,7 +47,7 @@ Bash("command -v specify >/dev/null 2>&1 && specify --version || echo MISSING")
   - If `uv` is present, install: `Bash("uv tool install specify-cli --from git+https://github.com/github/spec-kit.git")`.
   - If `uv` is missing, STOP and instruct the operator: "Install `uv`
     first — https://docs.astral.sh/uv/#installation. Then re-run
-    `/speckit-pro:install`."
+    `/speckit-pro:speckit-install`."
 
 ### 2. Detect existing-install state
 
@@ -59,12 +59,12 @@ If `.specify/` is **PRESENT**:
 - Run `Bash("specify integration list 2>&1 | head -40")` to see which
   integrations are already installed.
 - Tell the operator: "This repo already has SpecKit installed
-  (integrations: `<list>`). Use `/speckit-pro:upgrade` to upgrade
+  (integrations: `<list>`). Use `/speckit-pro:speckit-upgrade` to upgrade
   safely, or add a new integration alongside the existing ones with
   `specify integration install <key>`."
-- Ask whether to (a) hand off to `/speckit-pro:upgrade`, (b) add a
+- Ask whether to (a) hand off to `/speckit-pro:speckit-upgrade`, (b) add a
   new integration alongside the existing ones, or (c) abort.
-- If (a): STOP and invoke `/speckit-pro:upgrade`.
+- If (a): STOP and invoke `/speckit-pro:speckit-upgrade`.
 - If (b): skip Step 3's `specify init`, go straight to Step 4 with
   the operator's chosen integrations.
 - If (c): STOP.
@@ -74,7 +74,7 @@ If `.specify/` is **ABSENT**: continue to Step 3.
 ### 3. Ask which integrations to install
 
 If the operator passed integration keys as arguments (e.g.,
-`/speckit-pro:install claude codex`), use those. Otherwise ask:
+`/speckit-pro:speckit-install claude codex`), use those. Otherwise ask:
 
 > Which coding-agent integrations should this project support?
 > - `claude` — Claude Code (installs skills at `.claude/skills/speckit-*/`)
@@ -128,7 +128,7 @@ exits 0 if everything is already current, exits 2 if work is pending.
   prerequisite): surface the stderr message and **skip this step**.
   Do not block the install. Tell the operator: "Curated-set
   auto-install skipped — install `gh` (https://cli.github.com/) and
-  re-run `/speckit-pro:upgrade` to pull the curated extensions and
+  re-run `/speckit-pro:speckit-upgrade` to pull the curated extensions and
   presets." Continue to Step 6.
 
 - If exit code is **2**: tell the operator what the check output showed
@@ -137,7 +137,7 @@ exits 0 if everything is already current, exits 2 if work is pending.
 
   - All: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=install")`
   - Subset: `Bash("bash \"${CLAUDE_PLUGIN_ROOT}/scripts/install-curated-set.sh\" --mode=install --accept=<csv>")`
-  - None: skip. Tell the operator they can run `/speckit-pro:upgrade`
+  - None: skip. Tell the operator they can run `/speckit-pro:speckit-upgrade`
     later to install the curated set on demand.
 
 The script never installs without explicit `--accept` selection (or an
@@ -153,7 +153,7 @@ Report to the operator:
 - Installed SpecKit CLI version.
 - Each integration that was installed and its artifact path.
 - The constitution placeholder at `.specify/memory/constitution.md` —
-  next step is `/speckit-pro:coach create my project constitution`
+  next step is `/speckit-pro:speckit-coach create my project constitution`
   or `/speckit.constitution` (or `$speckit-coach` / `$speckit-constitution`
   in Codex).
 - A reminder to **restart the coding-agent process** (Claude Code or
@@ -197,7 +197,7 @@ commands are the canonical install path. This skill wraps them so
 the user gets:
 
 - A consistent up-front check for `uv` and the CLI.
-- A clean state-detection step that hands off to `/speckit-pro:upgrade`
+- A clean state-detection step that hands off to `/speckit-pro:speckit-upgrade`
   for already-installed repos (no accidental overwrites).
 - An explicit prompt for dual-integration setup, which the CLI
   supports natively (both `claude` and `codex` are marked
@@ -212,4 +212,4 @@ the user gets:
 
 For upgrading an existing install (including the v0.8.13 migration
 from slash commands to skills, or moving from single- to
-dual-integration), use `/speckit-pro:upgrade` instead.
+dual-integration), use `/speckit-pro:speckit-upgrade` instead.

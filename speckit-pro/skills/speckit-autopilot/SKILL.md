@@ -7,7 +7,7 @@ description: >
   multi-agent consensus resolution, and auto-commits. Use when the user
   says "run autopilot", "execute workflow", "autonomous speckit",
   or has a workflow file ready for execution.
-user-invocable: false
+user-invocable: true
 disable-model-invocation: true
 allowed-tools: Bash Read Edit Write Glob Grep Skill Agent WebFetch WebSearch
 license: MIT
@@ -34,7 +34,7 @@ orchestration.
 
 This skill handles autonomous workflow EXECUTION. For methodology
 questions, SDD philosophy, or learning how SpecKit works, redirect to
-`/speckit-pro:coach`.
+`/speckit-pro:speckit-coach`.
 
 You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
@@ -45,7 +45,7 @@ window auto-compacts; do not stop early, complete all 7 phases.
 ## Architectural Constraint — Main Agent Is The Orchestrator
 
 This skill loads into the **main session agent** when the user invokes
-`/speckit-pro:autopilot`. Only the main agent can spawn subagents
+`/speckit-pro:speckit-autopilot`. Only the main agent can spawn subagents
 ([sub-agent docs](https://code.claude.com/docs/en/sub-agents):
 subagents can't nest) AND create Agent Teams
 ([Agent Teams architecture](https://code.claude.com/docs/en/agent-teams#architecture):
@@ -108,7 +108,7 @@ grill-me.**
 Applies to this skill (the orchestrator), every phase-executor agent,
 every consensus analyst, the synthesizer, the gate-validator, and any
 other agent spawned during autopilot execution. `grill-me` is for
-**pre-workflow** human alignment via `/speckit-pro:scaffold-spec` or
+**pre-workflow** human alignment via `/speckit-pro:speckit-scaffold-spec` or
 `/speckit-pro:grill-me` only; it must not appear in any phase agent's
 tool call history.
 
@@ -462,7 +462,7 @@ schema live in
 
 ## Error Recovery
 
-- **Resume:** `/speckit-pro:autopilot workflow.md --from-phase
+- **Resume:** `/speckit-pro:speckit-autopilot workflow.md --from-phase
   <next-pending-phase>` — the workflow file persists all state.
 - **Gate fails after 2 auto-fix attempts:** honor `gate-failure`
   setting (default `stop`); on STOP, show gate script output.

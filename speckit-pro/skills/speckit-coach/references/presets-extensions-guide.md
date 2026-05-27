@@ -233,7 +233,7 @@ the directory it installs into) is bare: `archive`. Trust the `id` field in
 the catalog JSON or the extension's own `extension.yml`, not the website's
 column header.
 
-### The curated set — what `/speckit-pro:install` and `/speckit-pro:upgrade` auto-offer
+### The curated set — what `/speckit-pro:speckit-install` and `/speckit-pro:speckit-upgrade` auto-offer
 
 speckit-pro keeps a small **curated set** of community extensions and
 presets that the install and upgrade commands offer to install in the
@@ -307,8 +307,8 @@ Commit this file to git. It is the audit trail of what the curated-set
 installer did and when — useful for reproducing an exact extension
 state on another developer's clone or in CI.
 
-**Invoking the installer directly.** `/speckit-pro:install` and
-`/speckit-pro:upgrade` call the same script under the hood:
+**Invoking the installer directly.** `/speckit-pro:speckit-install` and
+`/speckit-pro:speckit-upgrade` call the same script under the hood:
 
 ```bash
 # Check what would change without mutating anything:

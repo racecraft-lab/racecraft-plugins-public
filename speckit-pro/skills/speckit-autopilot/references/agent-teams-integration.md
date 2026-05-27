@@ -375,7 +375,7 @@ For autopilot runs invoked from cron, GitHub Actions, or the
 
 ```bash
 claude -p --max-budget-usd 25 \
-  /speckit-pro:autopilot path/to/workflow.md
+  /speckit-pro:speckit-autopilot path/to/workflow.md
 ```
 
 Anthropic's `--max-budget-usd` flag caps total LLM spend across the
