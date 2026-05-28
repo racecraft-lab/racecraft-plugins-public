@@ -26,7 +26,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 4 US, 15 FR, 5 SC, 9 scenarios; G1 pass (0 markers); FR-013 excerpt marker → Clarify S2 |
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions; 6 spec edits; FR-013 marker resolved; G2 pass (0 markers) |
-| Plan | `/speckit-plan` | ⏳ Pending | Bash + jq, reuse `extract_heading_section()` |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass. FR-002=copy helper verbatim (no `BASH_SOURCE` guard in generate-pr-body.sh → sourcing has side effects); FR-013 full-content=`cat` (not the head-40 helper); helper pinned L45-65. **Codex correction:** new script+template are single-copy under `skills/`; Codex calls them by path — lockstep = SKILL.md + `-codex.md` reference twins only (no scripts/templates dir in codex-skills). 11 total files (under warn). |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Domains: api-contracts, error-handling, data-integrity |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD-first with Layer 4 unit tests |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec / plan / tasks / design concept |
@@ -262,11 +262,11 @@ This spec adds the deterministic infrastructure half of that artifact: a heading
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Only if needed (most decisions in design concept) |
-| `data-model.md` | ⏳ | N/A — no persistent data model |
-| `contracts/` | ⏳ | Script CLI contract (positional args + env vars + flags) |
-| `quickstart.md` | ⏳ | Standalone-run example for maintainers |
+| `plan.md` | ✅ | Technical context, execution flow, 4 decisions resolved |
+| `research.md` | N/A | Decisions captured in design concept + plan |
+| `data-model.md` | N/A | No persistent data model |
+| `contracts/` | ✅ | `generate-uat-skeleton-cli.md` — argv/env/flag/exit-code contract |
+| `quickstart.md` | ✅ | Standalone-run example for maintainers |
 
 ---
 
