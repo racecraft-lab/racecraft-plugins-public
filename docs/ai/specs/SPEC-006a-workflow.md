@@ -29,7 +29,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. FR-002=copy helper verbatim (no `BASH_SOURCE` guard in generate-pr-body.sh → sourcing has side effects); FR-013 full-content=`cat` (not the head-40 helper); helper pinned L45-65. **Codex correction:** new script+template are single-copy under `skills/`; Codex calls them by path — lockstep = SKILL.md + `-codex.md` reference twins only (no scripts/templates dir in codex-skills). 11 total files (under warn). |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 84 items, 7 gaps all remediated in spec/plan; G4 pass (0 gaps); 0 consensus. Note for Analyze: FR-008 env-key schema added → sync into CLI contract doc. |
 | Tasks | `/speckit-tasks` | ✅ Complete | 28 tasks, story-organized, TDD-first, 4 [P]; G5 pass; full FR/SC traceability. Reviewability tasks-gate = pass (ratified split exception; raw 1120 LOC/93 files is the path-token heuristic + vendored fixture data — authoritative check is diff-mode at PR). |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec / plan / tasks / design concept |
+| Analyze | `/speckit-analyze` | ✅ Complete | 3 findings (0 CRIT, 1 HIGH, 1 MED, 1 LOW) all remediated; re-run clean; G6 pass; FR/SC 100%; Layer-1/Codex parity clean. G6.5 soft-skip (NO_DATA, advisory). |
 | Implement | `/speckit-implement` | ⏳ Pending | One PR; reviewability budget ~670 LOC |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -431,7 +431,9 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | HIGH | spec FR-013 "add to heading list (line 171)" contradicts plan/tasks — that loop routes through the truncating `extract_heading_section` | Reworded FR-013 to mandate a dedicated `## UAT Runbook` H2 block (NOT via the heading loop / `append_missing_section` / `extract_heading_section`); spec owns *what*, plan owns *how*. Design-concept intent preserved. |
+| C1 | MEDIUM | `contracts/generate-uat-skeleton-cli.md` missing FR-008 env-key schema (Checklist-flagged) | Added 7-key schema (`BUILD/TYPECHECK/LINT/LINT_FIX/UNIT_TEST/INTEGRATION_TEST/SINGLE_FILE_INTEGRATION`) + `N/A` sentinel rule to contract |
+| L1 | LOW | total-file count 9 (spec) vs 11 (plan/tasks) | Reconciled spec to 11 at Reviewability Budget + Constraints |
 
 ---
 

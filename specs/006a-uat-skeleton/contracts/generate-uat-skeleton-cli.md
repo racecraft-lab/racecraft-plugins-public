@@ -50,8 +50,11 @@ generate-uat-skeleton.sh specs/004-integration-verification/spec.md /tmp/runbook
 |----------|------|----------|---------|
 | `UAT_PROJECT_COMMANDS` | JSON string | optional | The same JSON the autopilot discovers via `detect-commands.sh` in its setup step. The Env Setup section is a pure formatter over this JSON. |
 
+**Key schema (FR-008):** the formatter draws from the established key set `detect-commands.sh` produces — `BUILD`, `TYPECHECK`, `LINT`, `LINT_FIX`, `UNIT_TEST`, `INTEGRATION_TEST`, `SINGLE_FILE_INTEGRATION`. Which of these keys surface as Env Setup rows is a formatting detail left to Plan/implementation.
+
 - When **unset** (e.g., standalone invocation), the Env Setup section emits `<unknown — autopilot did not pass PROJECT_COMMANDS>` placeholders rather than failing.
 - When **set but malformed** (not parseable by `jq`), the script degrades to the same placeholders rather than crashing (fail-soft). It does not abort.
+- When a key is **present with the literal value `N/A`** (detect-commands.sh's sentinel for an undetected command), the Env Setup section renders that command as unavailable for this project — distinct from the unset-variable placeholder above.
 - The script does **NOT** re-run `detect-commands.sh` itself (keeps it a pure formatter; keeps Layer 4 tests trivial — a fixture JSON, no shelling out).
 
 ## Exit codes (FR-006, Clarify S1)
