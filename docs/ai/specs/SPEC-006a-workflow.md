@@ -25,7 +25,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 4 US, 15 FR, 5 SC, 9 scenarios; G1 pass (0 markers); FR-013 excerpt marker → Clarify S2 |
-| Clarify | `/speckit-clarify` | ⏳ Pending | 2 sessions: script contract + template rendering |
+| Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions; 6 spec edits; FR-013 marker resolved; G2 pass (0 markers) |
 | Plan | `/speckit-plan` | ⏳ Pending | Bash + jq, reuse `extract_heading_section()` |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Domains: api-contracts, error-handling, data-integrity |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD-first with Layer 4 unit tests |
@@ -216,8 +216,8 @@ This spec adds the deterministic infrastructure half of that artifact: a heading
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Script CLI Contract | | |
-| 2 | Template Rendering Edge Cases | | |
+| 1 | Script CLI Contract | 5 (3 spec edits, 2 confirmed) | argv = 2 positionals (spec, output); feature-dir via `dirname argv[1]` (FR-001). stdout silent on success (FR-006). stderr warning plain/unprefixed (FR-004). Confirmed: `--workflow-file` flag + `UAT_PROJECT_COMMANDS` env asymmetry is intentional (DC Q2/Q3); deterministic overwrite, no `--force` (FR-007). Q5 stderr-tag resolved [codebase]: no consumer greps a tag, no bracket-tag convention exists → plain message. |
+| 2 | Template Rendering Edge Cases | 5 (3 spec edits, 2 confirmed) | FR-013 marker resolved → over-threshold excerpt = `head -60` (blanks preserved); Plan note: under-threshold "full content" must NOT reuse `extract_heading_section` (head-40/blank-strip). Absent Edge Cases → header + stub line (FR-010). Nested bullets verbatim (FR-001). FR Coverage Matrix anchors resolve in committed runbook; mechanism = Plan decision (default explicit anchors) [Q1 codebase+domain → KISS/no-precedent]. Sign-off advisory-only confirmed. 0 markers; G1/G2 pass. |
 
 ---
 
