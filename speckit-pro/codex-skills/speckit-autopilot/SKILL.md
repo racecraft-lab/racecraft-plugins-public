@@ -509,7 +509,7 @@ later. For multi-prompt phases (Clarify, Checklist), create one item
 per prompt/session when known; otherwise create the phase discovery
 placeholder.
 
-**Item naming + canonical post-impl list (12 mandatory items including
+**Item naming + canonical post-impl list (13 mandatory items including
 `Post: Doctor Extension Check` ... `Post: Retrospective` as the FINAL
 STEP) + reference `autopilot-state.json` schema:** see
 [task-list-canonical-codex.md](./references/task-list-canonical-codex.md).
@@ -747,7 +747,7 @@ PR URL.
   MCP, constitution, Codex agent availability, implementation agent
   detection, command discovery, preset detection)
 - [Canonical Task List for Codex](./references/task-list-canonical-codex.md) —
-  Step 1.1 checklist naming pattern, 12 mandatory Post items, item-naming
+  Step 1.1 checklist naming pattern, 13 mandatory Post items, item-naming
   rules, reference `autopilot-state.json` schema
 - [Phase Execution for Codex](./references/phase-execution-codex.md) —
   PHASES order, agent mapping, main execution loop (11-step per-phase
@@ -805,6 +805,11 @@ never from `.specify/scripts/bash/`.
 - `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —
   Generate a PR review packet from the host repository PR template when present,
   or from the bundled fallback template
+- `generate-uat-skeleton.sh <spec-path> <output-path> [--workflow-file <path>]` —
+  Render a deterministic UAT runbook skeleton from `spec.md` (Env Setup formatted
+  from the `UAT_PROJECT_COMMANDS` env var). Exit 0/2/1; silent stdout. Run after
+  Self-Review and before PR-body generation (fail-open). See
+  [Post-Implementation for Codex §UAT Runbook Generation](./references/post-implementation-codex.md#uat-runbook-generation)
 - `detect-commands.sh` — Auto-detect build/test/lint commands for
   Node.js, Rust, Go, Python, and Makefile projects (JSON)
 - `detect-presets.sh` — Find installed presets, extensions, hooks,

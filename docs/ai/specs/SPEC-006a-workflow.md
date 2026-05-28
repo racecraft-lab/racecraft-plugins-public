@@ -30,7 +30,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 84 items, 7 gaps all remediated in spec/plan; G4 pass (0 gaps); 0 consensus. Note for Analyze: FR-008 env-key schema added → sync into CLI contract doc. |
 | Tasks | `/speckit-tasks` | ✅ Complete | 28 tasks, story-organized, TDD-first, 4 [P]; G5 pass; full FR/SC traceability. Reviewability tasks-gate = pass (ratified split exception; raw 1120 LOC/93 files is the path-token heuristic + vendored fixture data — authoritative check is diff-mode at PR). |
 | Analyze | `/speckit-analyze` | ✅ Complete | 3 findings (0 CRIT, 1 HIGH, 1 MED, 1 LOW) all remediated; re-run clean; G6 pass; FR/SC 100%; Layer-1/Codex parity clean. G6.5 soft-skip (NO_DATA, advisory). |
-| Implement | `/speckit-implement` | ⏳ Pending | One PR; reviewability budget ~670 LOC |
+| Implement | `/speckit-implement` | ✅ Complete | G7 pass (28/28 tasks). Full suite 1407/1407 (L1 parity green, L4 512, L5 172). shellcheck + `bash -n` clean. Smoke verified: 5 stories (traceability heading excluded via FR-001 precise-pattern fix caught at smoke review). Reviewable LOC 862 (production 389 under budget; 473 mandated test LOC over the 800 line — accepted under ratified split exception). |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -477,12 +477,12 @@ Before starting any task in the worktree (.worktrees/006a-uat-skeleton):
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 — Foundation | | | Vendor fixture + template scaffold |
-| 2 — US1 (P1) | | | Skeleton extractor + PR body integration |
-| 3 — US2 (P1) | | | Zero-stories fallback |
-| 4 — US3 (P2) | | | Deterministic overwrite |
-| 5 — US4 (P2) | | | Self-Review echo |
-| 6 — Polish | | | Codex parity + edge cases |
+| 1 — Foundation | T001-T006 | 6 | Vendored fixture, template scaffold, test harness, budget |
+| 2 — US1 (P1) | T007-T011 | 5 | Skeleton extractor + template bodies + dedicated `## UAT Runbook` H2 PR-body block |
+| 3 — US2 (P1) | T012-T013 | 2 | Zero-stories FR/SC fallback + header note |
+| 4 — US3 (P2) | T014-T015 | 2 | Deterministic overwrite (spec-mtime-stable, byte-identical reruns) |
+| 5 — US4 (P2) | T016-T017 | 2 | `--workflow-file` Self-Review echo + stub fallback |
+| 6 — Polish | T018-T028 | 11 | Env Setup formatter, Rollback, marker propagation, dup-ID/exit codes, 5 fixtures, CC+Codex lockstep docs, shellcheck, smoke |
 
 ---
 

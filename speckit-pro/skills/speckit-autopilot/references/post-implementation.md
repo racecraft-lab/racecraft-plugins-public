@@ -540,3 +540,48 @@ task list (see `task-list-canonical.md`) and runs whether the
 operator configured strict mode for G6.5 or not. It is a
 reporting step, not a gate — its value is putting the four
 answers in writing so anyone reviewing the PR sees them.
+
+## UAT Runbook Generation
+
+Immediately after Self-Review and before PR-body generation
+(between `Post: Self-Review` and `Post: PR Body Generation`), the
+orchestrator generates a deterministic UAT runbook from `spec.md` so
+the PR ships with a story-by-story acceptance artifact. Run the
+bundled skeleton script:
+
+```text
+Bash("UAT_PROJECT_COMMANDS='<PROJECT_COMMANDS as JSON>' \
+  bash '<SKILL_SCRIPTS>/generate-uat-skeleton.sh' \
+  <feature-dir>/spec.md <feature-dir>/uat-runbook.md \
+  --workflow-file <workflow-file>")
+```
+
+- `UAT_PROJECT_COMMANDS` is the discovered `PROJECT_COMMANDS`
+  (Step 0.11) serialized to JSON — the script formats the Env Setup
+  table from it and never re-runs `detect-commands.sh`.
+- `--workflow-file <workflow-file>` lets the script echo the
+  `## Self-Review` block written just above into the runbook's
+  Self-Review Findings section.
+- Output is written exactly once to `<feature-dir>/uat-runbook.md`
+  (deterministic overwrite, no merge); the script is silent on stdout.
+
+**This step is FAIL-OPEN.** A nonzero exit (e.g., exit 1 on an
+unreadable spec) or a missing output file NEVER blocks PR creation:
+log a warning to the workflow log and continue. The guarantee is
+compositional — on a nonzero exit the script writes no partial
+`uat-runbook.md` (FR-006), so the downstream `generate-pr-body.sh`
+absent-file path fires and still emits the `## UAT Runbook` heading
+with a one-line stub note. The heading is therefore always present in
+the PR body whether the generator succeeded, failed, or never ran;
+the failure detail lives in the workflow log, not the artifact.
+
+After the script runs, auto-commit the artifact:
+
+```text
+git add <feature-dir>/uat-runbook.md
+git commit -m "docs(SPEC-XXX): add UAT runbook"
+```
+
+**SPEC-006a scope:** this step runs the deterministic skeleton
+script ONLY. The LLM-authored narrative test prose and the UAT author
+agent are deferred to SPEC-006b — do not spawn an author agent here.
