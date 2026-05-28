@@ -1,0 +1,13 @@
+{
+  "presets": {
+    "speckit-pro-reviewability": {
+      "enabled": true,
+      "installed_at": "generated-by-speckit-pro-setup",
+      "manifest_hash": "project-local-generated",
+      "priority": 5,
+      "source": "project-local-generated",
+      "version": "1.0.0"
+    }
+  },
+  "schema_version": "1.0"
+}
