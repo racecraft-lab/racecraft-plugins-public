@@ -4,6 +4,7 @@
 
 # SpecKit generated cache artifacts
 .specify/presets/.cache/
+.specify/extensions/.cache/
 /.worktrees
 
 # Layer 7 live captures are transient; commit reduced parser-fixture.jsonl only.

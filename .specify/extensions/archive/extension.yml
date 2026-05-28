@@ -1,0 +1,25 @@
+schema_version: "1.0"
+extension:
+  id: "archive"
+  name: "Archive Extension"
+  version: "1.1.0"
+  description: "Archive merged features into project memory with provenance, sweep discovery, and gated cleanup."
+  author: "Racecraft Lab; based on work by Stanislav Deviatov"
+  repository: "https://github.com/racecraft-lab/spec-kit-archive"
+  license: "MIT"
+requires:
+  speckit_version: ">=0.1.0"
+  scripts:
+    - "check-prerequisites.sh"
+provides:
+  commands:
+    - name: "speckit.archive.run"
+      file: "commands/archive.md"
+      description: "Archive or sweep merged feature specs with provenance and safe cleanup gates"
+tags:
+  - "archive"
+  - "memory"
+  - "merge"
+  - "changelog"
+  - "provenance"
+  - "cleanup"

@@ -14,8 +14,11 @@ substitutes Codex's interactive primitives for `AskUserQuestion`.
    activation"). Choose the question-asking mechanism:
    - **`request_user_input`** if available (Plan mode +
      `collaboration_modes = true`).
-   - **Free-text Q&A in chat** if the TTY check passes.
-   - **Abort** if neither confirms an interactive runtime.
+   - **Free-text Q&A in chat** when `request_user_input` is unavailable
+     but the skill was invoked by the current user conversation or by
+     `$speckit-scaffold-spec` in that conversation.
+   - **Abort** only for autonomous/background invocations that cannot
+     receive a direct user reply in the same conversation.
 
 2. **Read the input.** Three cases:
    - File path argument → read it (`exec_command "cat <path>"` if

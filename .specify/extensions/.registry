@@ -90,6 +90,20 @@
       },
       "registered_skills": [],
       "installed_at": "2026-05-22T23:58:04.146251+00:00"
+    },
+    "archive": {
+      "version": "1.1.0",
+      "source": "local",
+      "manifest_hash": "sha256:fb4b68b85d69d6ed546965acc6a2a7157e215d894093230574fffc11c20d7893",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "claude": [
+          "speckit.archive.run"
+        ]
+      },
+      "registered_skills": [],
+      "installed_at": "2026-05-27T23:26:15.856921+00:00"
     }
   }
 }

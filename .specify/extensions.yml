@@ -1,4 +1,5 @@
 installed:
+- archive
 - git
 settings:
   auto_execute_hooks: true
@@ -78,6 +79,17 @@ hooks:
     optional: false
     prompt: Execute speckit.git.feature?
     description: Create feature branch before specification
+    condition: null
+  - extension: archive
+    command: speckit.archive.run
+    enabled: true
+    optional: true
+    prompt: Run Archive Sweep (dry-run) to discover previously merged specs that
+      can leave active specs/**? The current target spec is always excluded; cleanup
+      is gated and not applied here.
+    description: Dry-run Archive Sweep before specification — reports candidates
+      and provenance without mutating files. Use --apply-cleanup separately and
+      only after gates pass.
     condition: null
   before_clarify:
   - extension: git

@@ -150,10 +150,11 @@ knows to:
   this skill so step 6 can fold them into the workflow prompts
 
 Codex grill-me uses a probe-then-fallback HITL guard: it tries
-`request_user_input` first (Plan mode + collaboration_modes), then a TTY check
-(`tty -s`), and aborts if neither confirms an interactive session. Do not try
-to drive grill-me from `codex exec` or any non-interactive runner — it will
-refuse and write nothing.
+`request_user_input` first (Plan mode + collaboration_modes), then uses
+free-text Q&A in the current chat when structured input is unavailable. A
+nonzero shell `tty -s` result is not enough to stop a live Codex conversation.
+Do not try to drive grill-me from `codex exec` or any non-interactive runner —
+it will refuse and write nothing.
 
 If grill-me aborts (no interactive runtime), stop setup and report the
 condition. Do not synthesize design-concept content yourself.

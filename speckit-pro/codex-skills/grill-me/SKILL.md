@@ -78,21 +78,23 @@ pattern:
 
 1. **Probe `request_user_input`** (available only when
    `collaboration_modes = true` AND in Plan mode). Wrap the call in
-   try/catch. If it throws, fall through. If it succeeds, the human
-   is present — proceed with the interview using `request_user_input`
-   for each question.
+   try/catch. If it succeeds, the human is present — proceed with the
+   interview using `request_user_input` for each question.
 
-2. **If `request_user_input` is unavailable, check TTY** via
-   `exec_command` running `tty -s; echo $?`. Exit code `0` means a
-   TTY is attached → the user is likely present, fall back to a
-   free-text Q&A loop in the chat stream.
+2. **If `request_user_input` is unavailable in the current live Codex
+   chat, continue with a free-text Q&A loop in the chat stream.** The
+   user message that invoked `$grill-me` or `$speckit-scaffold-spec` is
+   sufficient HITL evidence for the current turn. Do not treat
+   `request_user_input is unavailable in Default mode` or a nonzero
+   shell `tty -s` result as proof that the chat is non-interactive.
 
-3. **If neither probe confirms an interactive runtime**, abort
-   immediately with this message:
+3. **Abort only for autonomous or background invocations**: `codex exec`,
+   CI, cron/automation, autopilot agents, or subagents that cannot receive
+   a direct user reply in the same conversation. Use this message:
 
-   > "grill-me is human-in-the-loop only and could not confirm an
-   > interactive runtime. The autopilot's Clarify phase uses
-   > the Clarify Question Set plus consensus, not grill-me. Aborting."
+   > "grill-me is human-in-the-loop only and could not confirm a live
+   > user conversation. The autopilot's Clarify phase uses the Clarify
+   > Question Set plus consensus, not grill-me. Aborting."
 
    Do not run any interview. Do not write any file.
 
