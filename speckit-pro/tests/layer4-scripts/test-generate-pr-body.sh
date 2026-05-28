@@ -111,4 +111,88 @@ set_test "Does not duplicate host What section"
 what_count=$(grep -Ec '^#{1,6}[[:space:]]+What$' "$level_two_file")
 assert_eq "1" "$what_count" "What heading count"
 
+section "UAT Runbook embed (FR-013)"
+
+# (a) runbook present and under 50,000 chars → full content embedded via cat,
+#     blank lines preserved (Decision 2).
+cat > "$feature/uat-runbook.md" <<'EOF'
+# UAT Runbook: 001-demo
+
+| Field | Value |
+|-------|-------|
+| Spec | 001-demo |
+
+## Per-Story Acceptance Tests
+
+- [ ] Walk story one end to end.
+
+UAT_SENTINEL_UNDER_THRESHOLD
+EOF
+
+set_test "Generator succeeds with a small runbook present"
+uat_small_file="$FIXTURE_DIR/pr-body-uat-small.md"
+result=0
+(cd "$repo" && "$SCRIPT" "$repo" "$feature" "$uat_small_file" HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+uat_small_body=$(cat "$uat_small_file")
+
+set_test "Embeds the literal H2 UAT Runbook heading"
+uat_heading_count=$(grep -Ec '^## UAT Runbook$' "$uat_small_file" || true)
+assert_eq "1" "$uat_heading_count" "## UAT Runbook heading count"
+
+set_test "Embeds full runbook content (cat, not truncated)"
+assert_contains "$uat_small_body" "UAT_SENTINEL_UNDER_THRESHOLD"
+
+set_test "Preserves blank lines from the runbook (Header table renders)"
+assert_contains "$uat_small_body" "| Spec | 001-demo |"
+
+set_test "Small-runbook embed omits the Full runbook link"
+assert_not_contains "$uat_small_body" "[Full runbook](./uat-runbook.md)"
+
+# (b) runbook at/over 50,000 chars → head -60 + relative link.
+{
+  printf '# UAT Runbook: 001-demo\n\n'
+  printf 'UAT_SENTINEL_FIRST_LINE\n'
+  # pad well past 60 lines and well past 50,000 chars
+  for i in $(seq 1 2000); do
+    printf 'Padding line %04d %s\n' "$i" "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+  done
+  printf 'UAT_SENTINEL_LAST_LINE_PAST_HEAD60\n'
+} > "$feature/uat-runbook.md"
+
+set_test "Generator succeeds with a large runbook present"
+uat_big_file="$FIXTURE_DIR/pr-body-uat-big.md"
+result=0
+(cd "$repo" && "$SCRIPT" "$repo" "$feature" "$uat_big_file" HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+uat_big_body=$(cat "$uat_big_file")
+
+set_test "Large-runbook embed includes the opening excerpt"
+assert_contains "$uat_big_body" "UAT_SENTINEL_FIRST_LINE"
+
+set_test "Large-runbook embed truncates at head -60 (last line absent)"
+assert_not_contains "$uat_big_body" "UAT_SENTINEL_LAST_LINE_PAST_HEAD60"
+
+set_test "Large-runbook embed appends the Full runbook link"
+assert_contains "$uat_big_body" "[Full runbook](./uat-runbook.md)"
+
+# (c) runbook absent → heading + one-line stub (fail-open).
+rm -f "$feature/uat-runbook.md"
+
+set_test "Generator succeeds with no runbook present (fail-open)"
+uat_absent_file="$FIXTURE_DIR/pr-body-uat-absent.md"
+result=0
+(cd "$repo" && "$SCRIPT" "$repo" "$feature" "$uat_absent_file" HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+uat_absent_body=$(cat "$uat_absent_file")
+
+set_test "Absent runbook still emits the H2 UAT Runbook heading"
+assert_contains "$uat_absent_body" "## UAT Runbook"
+
+set_test "Absent runbook emits a stub note instead of content"
+assert_contains "$uat_absent_body" "uat-runbook.md"
+
 test_summary

@@ -128,7 +128,7 @@ As a maintainer reading the runbook from a cloned working copy, I see the Self-R
 
 ### Measurable Outcomes
 
-- **SC-001**: A standalone run of `generate-uat-skeleton.sh` against `specs/004-integration-verification/spec.md` produces a runbook in which every user story is present (the story count matches `grep -c '^### User Story' spec.md`).
+- **SC-001**: A standalone run of `generate-uat-skeleton.sh` against `specs/004-integration-verification/spec.md` produces a runbook in which every user story is present (the story count matches `grep -cE '^### User Story [0-9]' spec.md` — the numbered-heading pattern of FR-001, which excludes non-story subsections such as a "User Story to Requirement Traceability" matrix).
 - **SC-002**: A standalone run against a synthetic zero-stories spec produces a runbook with the FR/SC fallback header note and at least one FR-keyed and one SC-keyed test section.
 - **SC-003**: `bash speckit-pro/tests/run-all.sh --layer 4` exits 0 with the new test included.
 - **SC-004**: `bash speckit-pro/tests/run-all.sh --layer 1` exits 0 after the change (Codex parity preserved — no new agent files).
