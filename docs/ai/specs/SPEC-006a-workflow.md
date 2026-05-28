@@ -27,7 +27,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 4 US, 15 FR, 5 SC, 9 scenarios; G1 pass (0 markers); FR-013 excerpt marker → Clarify S2 |
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions; 6 spec edits; FR-013 marker resolved; G2 pass (0 markers) |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. FR-002=copy helper verbatim (no `BASH_SOURCE` guard in generate-pr-body.sh → sourcing has side effects); FR-013 full-content=`cat` (not the head-40 helper); helper pinned L45-65. **Codex correction:** new script+template are single-copy under `skills/`; Codex calls them by path — lockstep = SKILL.md + `-codex.md` reference twins only (no scripts/templates dir in codex-skills). 11 total files (under warn). |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Domains: api-contracts, error-handling, data-integrity |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 84 items, 7 gaps all remediated in spec/plan; G4 pass (0 gaps); 0 consensus. Note for Analyze: FR-008 env-key schema added → sync into CLI contract doc. |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD-first with Layer 4 unit tests |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec / plan / tasks / design concept |
 | Implement | `/speckit-implement` | ⏳ Pending | One PR; reviewability budget ~670 LOC |
@@ -336,10 +336,10 @@ Focus on SPEC-006a requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
-| error-handling | | | |
-| data-integrity | | | |
-| **Total** | | | |
+| api-contracts | 30 | 0 | FR-001/006/008/009/013 |
+| error-handling | 27 | 0 | FR-005/006/008/009 + autopilot fail-open |
+| data-integrity | 27 | 0 | FR-007 + helper boundary semantics + worktree path resolution |
+| **Total** | 84 | 0 | 7 gaps remediated in-place (spec FR-008 + Edge Cases; plan FR-013 Wiring + Decision 1) |
 
 ---
 
