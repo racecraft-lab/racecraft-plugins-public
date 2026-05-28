@@ -501,6 +501,17 @@ Before starting any task in the worktree (.worktrees/006a-uat-skeleton):
 
 ---
 
+## Self-Review
+
+Post-implementation self-check (4 questions, mirroring the autopilot Self-Review pattern).
+
+1. **Did all tests run and pass?** Yes — full suite green at 1467/1467 (L1 parity 334+389, L4 572 including the newly-registered `test-generate-uat-skeleton` at 60/60, L5 172). `shellcheck` and `bash -n` clean on both scripts.
+2. **Are all requirements traced to code and tests?** Yes — FR-001..FR-015 each map to at least one task and assertion; SC-001..SC-005 map to verification commands (tasks.md traceability table). Smoke run against spec 004 confirms SC-001 (5 real user stories; the traceability sub-heading is correctly excluded).
+3. **Were the gates validated?** G1-G7 all pass via `validate-gate.sh`; G6.5 confidence gate soft-skipped (advisory, no consensus emit).
+4. **Known gaps / risks?** (a) Reviewable LOC 862 exceeds the 800 line — production code is 389 (under budget); the overage is constitution-mandated Layer 4 test coverage, accepted under the roadmap's ratified split exception. (b) FR-009 Self-Review echo caps at 40 lines (the reused helper's behavior — spec-conformant). (c) Matrix `<a id>` anchors rely on GitHub markdown rendering (not locally verifiable). (d) LLM-authored narrative test steps are deferred to SPEC-006b.
+
+---
+
 ## Lessons Learned
 
 ### What Worked Well
