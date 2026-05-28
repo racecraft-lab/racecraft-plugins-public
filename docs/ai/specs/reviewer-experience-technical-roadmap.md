@@ -82,7 +82,7 @@ SPEC-006a (Deterministic UAT Skeleton + Template + PR Body Wiring)
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| SPEC-006a | Deterministic UAT Skeleton + PR Body Integration | ⏳ Pending | `SPEC-006a-workflow.md` (not yet scaffolded) | `/speckit-pro:speckit-scaffold-spec SPEC-006a` (scope locked in — grill-me bypassed) |
+| SPEC-006a | Deterministic UAT Skeleton + PR Body Integration | 🔄 In Progress | `SPEC-006a-workflow.md` (scaffolded 2026-05-27 on `006a-uat-skeleton`) | Specify — autopilot-ready |
 | SPEC-006b | UAT Author Agent + Autopilot Integration | ⏳ Pending | `SPEC-006b-workflow.md` (not yet scaffolded) | Blocked by SPEC-006a |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
