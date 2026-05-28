@@ -213,7 +213,10 @@ fi
 #     file via the copied extract_heading_section helper; graceful stub otherwise. ---
 self_review='**Self-Review:** <not available — workflow file not provided>'
 if [ -n "$WORKFLOW_FILE" ] && [ -r "$WORKFLOW_FILE" ]; then
-  self_review_block="$(extract_heading_section "$WORKFLOW_FILE" "Self-Review")"
+  # `|| true`: extract_heading_section ends in `... | head -40`; a large section makes
+  # the upstream producer take SIGPIPE (pipeline exit 141), which would abort the whole
+  # script under `set -euo pipefail`. Fail open — empty result falls back to the stub.
+  self_review_block="$(extract_heading_section "$WORKFLOW_FILE" "Self-Review" || true)"
   if [ -n "$self_review_block" ]; then
     self_review="$self_review_block"
   fi
@@ -258,17 +261,28 @@ format_env_setup() {
 env_setup="$(format_env_setup)"
 
 # --- Rollback (FR-012): extract ## Rollback from spec.md, else plan.md, else a
-#     synthesized stanza. Uses the copied extract_heading_section helper. ---
-rollback="$(extract_heading_section "$SPEC_PATH" "Rollback")"
+#     synthesized stanza. Uses the copied extract_heading_section helper. The `|| true`
+#     guards against a SIGPIPE abort on a large Rollback section (same reason as the
+#     Self-Review echo above) — an empty result falls through to the synthesized stanza. ---
+rollback="$(extract_heading_section "$SPEC_PATH" "Rollback" || true)"
 if [ -z "$rollback" ]; then
-  rollback="$(extract_heading_section "$PLAN_PATH" "Rollback")"
+  rollback="$(extract_heading_section "$PLAN_PATH" "Rollback" || true)"
 fi
 if [ -z "$rollback" ]; then
   rollback="git revert <SHA>; see plan.md for data-migration considerations"
 fi
 
-# --- stubbed sections (filled by later tasks: clarification markers, etc.) ---
-negative_path="No edge cases identified in spec.md"
+# --- Negative-Path Tests (FR-001, FR-005, FR-010): parse the ### Edge Cases bullets
+#     with the non-truncating section extractor (full content, nested lines preserved)
+#     and annotate any NEEDS CLARIFICATION marker. The stub line is emitted ONLY when
+#     the ### Edge Cases section is absent or empty. ---
+edge_block="$(extract_section_block "$SPEC_PATH" '[Ee]dge [Cc]ases' | annotate_clarifications)"
+# Treat a block with no non-blank lines as empty.
+if printf '%s' "$edge_block" | grep -q '[^[:space:]]'; then
+  negative_path="$edge_block"
+else
+  negative_path="No edge cases identified in spec.md"
+fi
 
 # ---------------------------------------------------------------------------
 # Render the template by substituting {{TOKEN}} markers. Build in memory; write

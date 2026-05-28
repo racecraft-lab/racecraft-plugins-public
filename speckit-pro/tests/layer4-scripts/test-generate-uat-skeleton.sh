@@ -386,4 +386,85 @@ ok_out="$FIXTURE_DIR/silent-runbook.md"
 stdout_capture=$("$SCRIPT_UNDER_TEST" "$FULL_SPEC" "$ok_out" 2>/dev/null)
 assert_eq "" "$stdout_capture" "stdout must be empty"
 
+# ---------------------------------------------------------------------------
+# BUG-1 regression: a very large ## Self-Review section must NOT crash the script
+# via SIGPIPE through the head -40 pipeline (FR-006 + FR-009). The autopilot always
+# passes --workflow-file and Self-Review can be long.
+# ---------------------------------------------------------------------------
+section "BUG-1 — large Self-Review must not SIGPIPE-abort"
+
+big_wf="$FIXTURE_DIR/big-workflow.md"
+{
+  printf '# Workflow\n\n## Self-Review\n\n'
+  for i in $(seq 1 5000); do
+    printf -- '- finding %04d: reviewed and resolved.\n' "$i"
+  done
+  printf '\n## Next Section\n\nShould not be echoed.\n'
+} > "$big_wf"
+
+bug1_out="$FIXTURE_DIR/bug1-runbook.md"
+bug1_rc=0
+"$SCRIPT_UNDER_TEST" "$FULL_SPEC" "$bug1_out" --workflow-file "$big_wf" >/dev/null 2>&1 || bug1_rc=$?
+
+set_test "Large Self-Review still exits 0 (no SIGPIPE abort)"
+assert_eq "0" "$bug1_rc" "exit code"
+
+set_test "Large Self-Review still writes the runbook"
+assert_file_exists "$bug1_out"
+
+# ---------------------------------------------------------------------------
+# BUG-2 regression: a spec WITH a ### Edge Cases section must populate Negative-Path
+# Tests with those bullets (verbatim, nested lines preserved) and annotate any
+# NEEDS CLARIFICATION marker (FR-001, FR-005, FR-010). The stub is ABSENT-only.
+# ---------------------------------------------------------------------------
+section "BUG-2 — Edge Cases parsed into Negative-Path Tests"
+
+edge_spec="$FIXTURE_DIR/edge-cases-spec.md"
+cat > "$edge_spec" <<'EOF'
+# Feature Specification: Edge Demo
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - Core flow (Priority: P1)
+
+Walk the core flow.
+
+### Edge Cases
+
+- **Empty input**: the system rejects an empty payload with a 400.
+  - Nested: the error body names the missing field.
+- **Timeout boundary**: behavior at the exact timeout [NEEDS CLARIFICATION: which value?].
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-001**: System MUST validate input.
+EOF
+
+edge_out="$FIXTURE_DIR/edge-runbook.md"
+edge_rc=0
+"$SCRIPT_UNDER_TEST" "$edge_spec" "$edge_out" >/dev/null 2>&1 || edge_rc=$?
+
+set_test "Edge-cases spec exits 0"
+assert_eq "0" "$edge_rc" "exit code"
+
+edge_body=$(cat "$edge_out" 2>/dev/null || true)
+
+set_test "Negative-Path reproduces the first edge bullet"
+assert_contains "$edge_body" "rejects an empty payload with a 400"
+
+set_test "Negative-Path reproduces the second edge bullet"
+assert_contains "$edge_body" "behavior at the exact timeout"
+
+set_test "Negative-Path preserves the nested continuation line"
+assert_contains "$edge_body" "the error body names the missing field"
+
+set_test "Edge bullet with NEEDS CLARIFICATION is annotated (FR-005)"
+edge_neg_block=$(awk '/^## Negative-Path Tests/{f=1;next} /^## /{f=0} f' "$edge_out")
+assert_contains "$edge_neg_block" "unresolved clarification"
+
+set_test "Present Edge Cases section does NOT show the absent-stub line"
+assert_not_contains "$edge_body" "No edge cases identified in spec.md"
+
 test_summary
