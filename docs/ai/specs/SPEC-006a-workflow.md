@@ -24,7 +24,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | spec.md: 4 US, 15 FR, 5 SC, 9 scenarios; G1 pass (0 markers); FR-013 excerpt marker → Clarify S2 |
 | Clarify | `/speckit-clarify` | ⏳ Pending | 2 sessions: script contract + template rendering |
 | Plan | `/speckit-plan` | ⏳ Pending | Bash + jq, reuse `extract_heading_section()` |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Domains: api-contracts, error-handling, data-integrity |
@@ -59,7 +59,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 | Surgical edits | Touch only what the request requires | `git diff --stat` against `main` |
 | Verifiable success criteria | Each phase has a check command | See G1-G7 above |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ Baseline green 2026-05-28 — `bash speckit-pro/tests/run-all.sh` = 1395/1395 (L1 334+389, L4 500, L5 172). PROJECT_COMMANDS override (repo is a bash harness, detect-commands returns N/A): UNIT_TEST=`cd speckit-pro && bash tests/run-all.sh --layer 4`; PARITY=`--layer 1`; FULL_VERIFY=`bash tests/run-all.sh`. Branch-aware override: ON_FEATURE_BRANCH=true, SPECIFY_FEATURE_DIRECTORY=`specs/006a-uat-skeleton` (the `006a-` name breaks SpecKit's 3-digit branch regex, so the dir override is mandatory).
 
 ---
 
@@ -178,7 +178,7 @@ This spec adds the deterministic infrastructure half of that artifact: a heading
 
 ### Files Generated
 
-- [ ] `specs/006a-uat-skeleton/spec.md`
+- [x] `specs/006a-uat-skeleton/spec.md`
 
 ---
 
