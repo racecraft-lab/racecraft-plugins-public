@@ -28,7 +28,7 @@ Re-read it before each phase if you need to disambiguate a prompt. The Specify a
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions; 6 spec edits; FR-013 marker resolved; G2 pass (0 markers) |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. FR-002=copy helper verbatim (no `BASH_SOURCE` guard in generate-pr-body.sh → sourcing has side effects); FR-013 full-content=`cat` (not the head-40 helper); helper pinned L45-65. **Codex correction:** new script+template are single-copy under `skills/`; Codex calls them by path — lockstep = SKILL.md + `-codex.md` reference twins only (no scripts/templates dir in codex-skills). 11 total files (under warn). |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains, 84 items, 7 gaps all remediated in spec/plan; G4 pass (0 gaps); 0 consensus. Note for Analyze: FR-008 env-key schema added → sync into CLI contract doc. |
-| Tasks | `/speckit-tasks` | ⏳ Pending | TDD-first with Layer 4 unit tests |
+| Tasks | `/speckit-tasks` | ✅ Complete | 28 tasks, story-organized, TDD-first, 4 [P]; G5 pass; full FR/SC traceability. Reviewability tasks-gate = pass (ratified split exception; raw 1120 LOC/93 files is the path-token heuristic + vendored fixture data — authoritative check is diff-mode at PR). |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Cross-check spec / plan / tasks / design concept |
 | Implement | `/speckit-implement` | ⏳ Pending | One PR; reviewability budget ~670 LOC |
 
@@ -394,10 +394,10 @@ Focus on SPEC-006a requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | 6 |
-| **Parallel Opportunities** | Codex variant edits within US1-US5 polish phase |
-| **User Stories Covered** | US1-US4 |
+| **Total Tasks** | 28 |
+| **Phases** | 7 (Setup, Foundational, US1, US2, US3, US4, Polish) |
+| **Parallel Opportunities** | 4 `[P]`: vendored fixture, template scaffold, test harness, Codex `-codex.md` doc twins |
+| **User Stories Covered** | US1-US4 (all); RED Layer-4 assertion precedes GREEN impl per story |
 
 ---
 
