@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.5.0...speckit-pro-v2.5.1) (2026-05-28)
+
+
+### Bug Fixes
+
+* **speckit-pro:** preserve reviewability exceptions in large diffs ([#95](https://github.com/racecraft-lab/racecraft-plugins-public/issues/95)) ([cbca445](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cbca445efa14e14821f9d53cddb1c5d9f83f45ea))
+
 ## [2.5.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.4.1...speckit-pro-v2.5.0) (2026-05-27)
 
 
