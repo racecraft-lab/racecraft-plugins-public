@@ -6,7 +6,7 @@ source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 
 SKILLS_DIR="$PLUGIN_ROOT/skills"
-SKILLS=(speckit-autopilot speckit-coach speckit-install speckit-upgrade speckit-scaffold-spec speckit-status speckit-resolve-pr)
+SKILLS=(speckit-autopilot speckit-coach speckit-install speckit-upgrade speckit-scaffold-spec speckit-status speckit-resolve-pr speckit-prd)
 # Skills that require a populated references/ directory (heavy guidance skills with reference docs)
 SKILLS_REQUIRING_REFERENCES="speckit-autopilot speckit-coach"
 ALLOWED_KEYS="name description license allowed-tools metadata compatibility user-invocable disable-model-invocation argument-hint"

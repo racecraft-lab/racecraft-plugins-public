@@ -1,0 +1,52 @@
+{
+  "skill_name": "speckit-prd",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have a raw idea: 'Add saved searches with email alerts to our app — users save a query and get notified when new results match.' Write a lean PRD and the technical roadmap so I can scaffold specs from it. Interview me one question at a time with your recommended answer first.",
+      "expected_output": "Probes for an interactive runtime (request_user_input if available, else free-text Q&A), then runs a collaborative interview covering problem, users, goals, non-goals, feature breakdown, sequencing, acceptance criteria, constraints, and open questions — recommendation first on every question. Then writes docs/prd-saved-searches.md and docs/ai/specs/saved-searches-technical-roadmap.md, with every PRD feature mapping 1:1 to one SPEC.",
+      "expectations": [
+        "Probes for an interactive runtime before asking any question (request_user_input or free-text fallback); does not fabricate answers",
+        "Asks exactly one question per turn with the AI's recommendation first, labeled '(Recommended)', and a one-line rationale",
+        "Walks the feature-breakdown branch explicitly and derives the SPEC catalog from it (one SPEC per feature)",
+        "Writes a lean PRD to docs/prd-saved-searches.md with sections Problem, Goals/Non-goals, Acceptance Criteria grouped by feature (AC-N.*), Migration Path, Constraints, Open Questions, Success Criteria",
+        "Writes a technical roadmap to docs/ai/specs/saved-searches-technical-roadmap.md whose SPEC catalog is 1:1 with the PRD features (same count, names, and SPEC IDs), with a Source PRD reference",
+        "Confirms the dependency graph / execution order with the user before finalizing the roadmap",
+        "Recommends the next step ($speckit-status or $speckit-scaffold-spec SPEC-001), and does NOT create a worktree, workflow file, or spec.md"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Turn notes/discovery-call.md into a PRD and a technical roadmap. <file: an unstructured discovery call covering a customer-feedback widget, an admin moderation queue, and a weekly digest email>. Interview me only on the gaps the notes leave open.",
+      "expected_output": "Reads the file, treats it as discovery input, identifies the three candidate features, and interviews only where the notes are ambiguous. Produces the PRD and roadmap with three features mapped to three SPECs.",
+      "expectations": [
+        "References specific content from notes/discovery-call.md when forming questions, demonstrating it read the input",
+        "Does not re-ask questions the notes already answer — interviews only on genuine gaps",
+        "Derives three features (feedback widget, moderation queue, digest email) and maps each to exactly one SPEC",
+        "PRD captures validated decisions and states the WHAT, not implementation detail (no design-doc-level HOW in the PRD)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Write a PRD for 'a full billing system' — subscriptions, invoicing, payments, proration, dunning, refunds, and tax. Then build the roadmap.",
+      "expected_output": "Recognizes that several of these are too large for a single reviewable SPEC and splits them into multiple features during the interview, so no SPEC in the catalog blows the reviewability budget. Each resulting feature maps to one SPEC.",
+      "expectations": [
+        "Flags that one or more candidate features are too large for a single reviewable SPEC and splits them into smaller features during the interview",
+        "Keeps each SPEC within a stated reviewability budget; no single SPEC bundles all of subscriptions + invoicing + payments",
+        "The final §3 features, §7 SPEC Catalog Crosswalk, and roadmap catalog agree on count, names, and IDs",
+        "Records significant scoping decisions (what was split and why) in the PRD or roadmap"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Draft a lean PRD for a tiny change: 'add a copy-to-clipboard button to every code block on our docs site.' Keep it lean — don't over-document.",
+      "expected_output": "Produces a minimal PRD that drops the optional appendix and any section that does not reduce ambiguity, and a single-SPEC roadmap. Does not pad with solution sketches or information-architecture diagrams.",
+      "expectations": [
+        "Omits the optional appendix (solution sketch / information architecture / data flow) entirely",
+        "Keeps the PRD to the lean core sections; no ceremony sections that don't change what a spec would build",
+        "Produces a roadmap with a single SPEC (or clearly notes the work is one spec) rather than forcing a multi-spec catalog",
+        "Acceptance criteria remain observable and testable despite the small size"
+      ]
+    }
+  ]
+}

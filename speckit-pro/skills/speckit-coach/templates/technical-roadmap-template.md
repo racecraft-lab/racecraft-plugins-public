@@ -2,8 +2,9 @@
 
 **{{FEATURE_DESCRIPTION}}**
 
-This document defines the specification roadmap for {{FEATURE_NAME}}. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next.
+This document defines the **SPEC catalog** for {{FEATURE_NAME}}: an ordered set of specifications derived from the source PRD. Each SPEC corresponds 1:1 to a Feature / Acceptance-Criteria group in the PRD (`AC-N.*`), preserving traceability from PRD → roadmap → spec. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next, and is prepared for autopilot with `/speckit-pro:speckit-scaffold-spec SPEC-NNN`, which reads this roadmap as its input.
 
+**Source PRD:** {{PRD_LINK}} <!-- the PRD whose Features become the SPEC catalog below -->
 **Branch:** `{{BRANCH_NAME}}`
 **Tracker:** {{TRACKER_LINK}}
 
@@ -264,6 +265,8 @@ When breaking a feature into specs:
 
 ## References
 
+- **Source PRD:** {{PRD_LINK}} — the SPEC catalog above is derived from its Features / Acceptance Criteria
+- **PRD Template:** `prd-template.md` (same `templates/` directory) — author with `/speckit-pro:speckit-prd`
 - **SpecKit Workflow Template:** `docs/ai/speckit-workflow-template.md`
 - **Constitution:** `.specify/memory/constitution.md`
 - **Project Standards:** <!-- Link to AGENTS.md, CLAUDE.md, or equivalent -->

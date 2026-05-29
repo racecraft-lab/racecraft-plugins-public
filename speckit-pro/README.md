@@ -71,6 +71,7 @@ Then in Claude Code or Codex:
 
 | Capability | Claude Code | Codex |
 |---|---|---|
+| PRD + roadmap authoring (idea → PRD → SPEC catalog) | `/speckit-pro:speckit-prd` | `$speckit-prd` (explicit invocation only) |
 | SDD coaching | `/speckit-pro:speckit-coach` | `/speckit-coach` or `$speckit-coach` |
 | Iterative scoping interview | `/speckit-pro:grill-me` | `$grill-me` (explicit invocation only) |
 | Spec setup (worktree + workflow file) | `/speckit-pro:speckit-scaffold-spec` | `/speckit-scaffold-spec` or `$speckit-scaffold-spec` |
@@ -83,14 +84,14 @@ In Codex you can also type `@SpecKit Pro` and pick a skill from the menu. Codex 
 
 ## How it works
 
-speckit-pro takes raw input through three increasingly structured artifacts on its way to a PR.
+speckit-pro takes a raw idea through three increasingly structured artifacts — a PRD, a technical roadmap (SPEC catalog), and per-spec workflows — on its way to a PR.
 
 ```mermaid
 flowchart TD
     A([Raw idea / brief / transcript]) -->|optional standalone| GR["/speckit-pro:grill-me"]
     GR --> DC1[design-concept.md]
-    A -.-> PRD([PRD — outside this plugin])
-    PRD -->|/speckit-pro:speckit-coach| TR[(Technical Roadmap<br/>Goal, Scope, Acceptance,<br/>Dependencies, Priority, Status)]
+    A -->|/speckit-pro:speckit-prd| PRD([PRD<br/>Problem, Goals, Acceptance])
+    PRD -->|/speckit-pro:speckit-prd| TR[(Technical Roadmap, SPEC catalog<br/>Goal, Scope, Acceptance,<br/>Dependencies, Priority, Status)]
     TR -->|/speckit-pro:speckit-status| ST{Recommends next<br/>Pending spec}
     ST -->|/speckit-pro:speckit-scaffold-spec SPEC-NNN| SU[Worktree + Branch]
     SU --> GM["Grill Me<br/>(human-in-the-loop)"]
@@ -156,6 +157,31 @@ When a phase hits ambiguity, three perspective agents weigh in:
 Configure in `.claude/speckit-pro.local.md` (see [Configuration](#configuration)).
 
 ## Command reference
+
+<details>
+<summary><strong><code>/speckit-pro:speckit-prd [idea]</code> — author a PRD + technical roadmap</strong></summary>
+
+The front door of the chain. Collaboratively turns a raw product or technical idea into two artifacts — a lean PRD and a technical roadmap (SPEC catalog) — through a one-question-at-a-time interview with the AI's recommended answer on every question. Strictly human-in-the-loop.
+
+```text
+/speckit-pro:speckit-prd "saved searches with email alerts"
+/speckit-pro:speckit-prd notes/discovery-call.md
+/speckit-pro:speckit-prd                     # asks for the idea first
+```
+
+**What it does:**
+
+1. Reads input (idea string, brief/transcript file, or asks for it) and the project context (CLAUDE.md, constitution)
+2. Interviews one branch at a time — problem, users, goals, non-goals, **feature breakdown**, sequencing, acceptance criteria, constraints, open questions — recommendation first
+3. Drafts a lean PRD at `docs/prd-<slug>.md` (Problem, Goals/Non-goals, Acceptance Criteria grouped by feature, Migration Path, Constraints, Open Questions, Success Criteria)
+4. Decomposes it into `docs/ai/specs/<slug>-technical-roadmap.md` — one **SPEC** per PRD feature, with scope, dependencies, priority, and reviewability budget
+5. Keeps the **Feature ⇄ SPEC mapping** 1:1 so `/speckit-pro:speckit-scaffold-spec` can consume the roadmap directly
+
+**Use it for:** turning an idea or brief into spec-ready artifacts. Output feeds `/speckit-pro:speckit-status` (see the catalog) and `/speckit-pro:speckit-scaffold-spec SPEC-NNN` (execute a spec).
+
+> **Boundaries:** this authors the PRD *and* roadmap. For per-spec scoping of a roadmap entry use `/speckit-pro:grill-me`; if a PRD already exists and you only need decomposition, use `/speckit-pro:speckit-coach help me create a technical roadmap`.
+
+</details>
 
 <details>
 <summary><strong><code>/speckit-pro:speckit-coach</code> — SDD methodology coaching</strong></summary>

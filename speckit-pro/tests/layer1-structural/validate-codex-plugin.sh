@@ -22,7 +22,7 @@ else
 fi
 
 CONTENT=$(cat "$CODEX_JSON")
-REQUIRED_SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install grill-me)
+REQUIRED_SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install grill-me speckit-prd)
 
 section ".codex-plugin/plugin.json — Required Fields"
 

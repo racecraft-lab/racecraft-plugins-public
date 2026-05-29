@@ -1,0 +1,82 @@
+[
+  {
+    "query": "write a PRD for adding saved searches with email alerts to our app, and the technical roadmap to build it",
+    "should_trigger": true
+  },
+  {
+    "query": "create a product requirements document for a referral program, then decompose it into a SPEC catalog I can scaffold from",
+    "should_trigger": true
+  },
+  {
+    "query": "$speckit-prd notes/discovery-call.md — turn this into a lean PRD and a technical roadmap, one question at a time, recommended answer first",
+    "should_trigger": true
+  },
+  {
+    "query": "I have a raw idea but no PRD yet: a self-serve onboarding flow. shape it into a PRD and a roadmap with specs",
+    "should_trigger": true
+  },
+  {
+    "query": "use the speckit-prd skill to author a lean PRD and technical roadmap for the billing rewrite before I write any specs",
+    "should_trigger": true
+  },
+  {
+    "query": "help me plan a product: an analytics dashboard. I want a PRD plus a SPEC catalog where each feature maps to one spec",
+    "should_trigger": true
+  },
+  {
+    "query": "draft a PRD and roadmap for the notifications revamp so $speckit-scaffold-spec can pick up specs from it",
+    "should_trigger": true
+  },
+  {
+    "query": "$speckit-prd — collaborate with me on this product idea and produce docs/prd-*.md and docs/ai/specs/*-technical-roadmap.md",
+    "should_trigger": true
+  },
+  {
+    "query": "before I write specs I need a product requirements doc — walk the feature breakdown with me and write the PRD and roadmap",
+    "should_trigger": true
+  },
+  {
+    "query": "shape this brief into a PRD and decompose it into a SPEC catalog: a team workspace with shared dashboards and role-based access",
+    "should_trigger": true
+  },
+  {
+    "query": "grill me on SPEC-012 before /speckit-specify — produce a design concept doc by walking the design tree, recommended answer first",
+    "should_trigger": false
+  },
+  {
+    "query": "I already have a PRD at docs/prd.md — help me decompose it into a technical roadmap and track dependencies between specs",
+    "should_trigger": false
+  },
+  {
+    "query": "set up SPEC-018 for me — read the technical roadmap, create a worktree, populate the workflow file",
+    "should_trigger": false
+  },
+  {
+    "query": "run autopilot on the SPEC-027 workflow at docs/ai/specs/SPEC-027-workflow.md — all phase prompts are filled in",
+    "should_trigger": false
+  },
+  {
+    "query": "what's the difference between specify plan and specify tasks? I ran plan and I'm not sure what's next",
+    "should_trigger": false
+  },
+  {
+    "query": "which checklist domains should I pick for SPEC-012? it's a REST API that handles webhook delivery with retry logic",
+    "should_trigger": false
+  },
+  {
+    "query": "where am I in the workflow and what's the next pending spec I should work on?",
+    "should_trigger": false
+  },
+  {
+    "query": "review PR #42 on the omnifocus-mcp repo and leave inline comments on any issues you find",
+    "should_trigger": false
+  },
+  {
+    "query": "fix the TypeScript build error in src/tools/primitives/tasks.ts — the Zod schema is using z.union instead of z.discriminatedUnion",
+    "should_trigger": false
+  },
+  {
+    "query": "explain the consensus protocol — when do the 3 agents vote and what happens if they disagree on a gate result?",
+    "should_trigger": false
+  }
+]
