@@ -8,7 +8,7 @@ list, Codex-specific persistence primitives.
 ## Contents
 
 - [Checklist Naming Pattern](#checklist-naming-pattern) — exact item-name templates parsed from the workflow file
-- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 12 mandatory Post items + missing-extension behavior
+- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 13 mandatory Post items + missing-extension behavior
 - [Item Naming Rules](#item-naming-rules) — same names across both stores, completed-then-in_progress sequencing
 - [Reference `autopilot-state.json` Schema](#reference-autopilot-statejson-schema) — full example JSON document
 
@@ -52,6 +52,7 @@ extension is missing, still create the item but mark it
   "Post: Cleanup"                       ← cleanup ext
   "Post: Reviewability Diff Gate"       ← always required (no ext)
   "Post: Self-Review"                   ← always required (no ext, 4-question audit)
+  "Post: UAT Runbook Generation"        ← always required (no ext, deterministic script)
   "Post: PR Body Generation"            ← always required (no ext)
   "Post: PR Creation"                   ← always required (no ext)
   "Post: Review Remediation"            ← always required (no ext)
@@ -65,7 +66,7 @@ in the plan with status `skipped: <ext-name> not installed`. Never
 silently drop it.
 
 **Verify item-list completeness before starting Phase 1**: count
-the 12 entries above and confirm every single one is present in
+the 13 entries above and confirm every single one is present in
 both `update_plan` and `autopilot-state.json` (in addition to all
 Phase / Consensus items). If any are missing, ADD them before
 advancing.
@@ -114,6 +115,7 @@ advancing.
     {"step": "Post: Cleanup", "status": "pending"},
     {"step": "Post: Reviewability Diff Gate", "status": "pending"},
     {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
     {"step": "Post: Review Remediation", "status": "pending"},

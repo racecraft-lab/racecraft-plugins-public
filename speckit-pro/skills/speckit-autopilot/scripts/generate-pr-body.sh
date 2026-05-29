@@ -172,6 +172,27 @@ for heading in "What" "Why" "Non-goals" "Review Order" "Scope Budget" "Traceabil
   append_missing_section "$heading"
 done
 
+# Dedicated, size-aware UAT Runbook block (FR-013). Deliberately NOT routed through
+# the heading loop / append_missing_section / extract_heading_section above — those
+# truncate at head -40 and strip blank lines. Emitted at H2 (## UAT Runbook); SC-005
+# greps for that exact literal. Fail-open: an absent runbook still emits the heading.
+uat_runbook="$FEATURE_DIR/uat-runbook.md"
+{
+  printf '\n## UAT Runbook\n\n'
+  if [ -f "$uat_runbook" ]; then
+    uat_size=$(wc -c < "$uat_runbook")
+    if [ "$uat_size" -lt 50000 ]; then
+      cat "$uat_runbook"
+    else
+      head -60 "$uat_runbook"
+      printf '\n[Full runbook](./uat-runbook.md)\n'
+    fi
+  else
+    # shellcheck disable=SC2016  # backticks are literal Markdown, not a shell expansion
+    printf '%s\n' 'No UAT runbook was generated for this feature (expected at `uat-runbook.md`).'
+  fi
+} >> "$OUTPUT_FILE"
+
 {
   printf '\n<!-- speckit-pro-review-packet-source\n'
   printf 'template: %s\n' "$template"
