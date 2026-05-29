@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.5.1...speckit-pro-v2.6.0) (2026-05-29)
+
+
+### Features
+
+* **speckit-pro:** add speckit-prd skill and lean PRD template ([#100](https://github.com/racecraft-lab/racecraft-plugins-public/issues/100)) ([087287f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/087287f19b74dd9d1a10c0238a17826ff5e42247))
+* **speckit-pro:** generate a UAT runbook for autopilot PRs ([#99](https://github.com/racecraft-lab/racecraft-plugins-public/issues/99)) ([dcd1208](https://github.com/racecraft-lab/racecraft-plugins-public/commit/dcd1208a57780abbb9c9d204b3c096be3a7da188))
+
 ## [2.5.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.5.0...speckit-pro-v2.5.1) (2026-05-28)
 
 
