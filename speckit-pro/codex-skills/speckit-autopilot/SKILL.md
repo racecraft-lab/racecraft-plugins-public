@@ -74,8 +74,18 @@ Bind the workflow to actual Codex primitives:
   `spawn_agent` → `wait_agent` → `close_agent` — not just the first two. A
   completed agent thread stays OPEN and keeps consuming the session's
   concurrent-thread budget until you close it (Codex's own guidance: "Don't
-  keep agents open for too long if they are not needed anymore"). Never leave a
-  finished agent open.
+  keep agents open for too long if they are not needed anymore"), so close it
+  promptly in the SAME turn you read its result, while it is still fresh.
+- Treat `close_agent` as best-effort and idempotent. If it reports the thread
+  is already gone (`thread not found`, already-shutdown, `InternalAgentDied`),
+  the slot is already free — log it and move on. NEVER retry-loop a failed
+  close, never let a close error block the run, and NEVER stop closing future
+  agents because one close failed. Abandoning cleanup is exactly what lets
+  orphaned threads pile up, exhaust the cap, and freeze the session
+  (openai/codex#22779, #19197; newer Codex makes close idempotent via #24903).
+  Bound every `wait_agent` with a `timeout_ms` so a stuck subagent cannot hang
+  the orchestrator, and on resume never try to re-close an agent from an
+  earlier or aborted session — those threads are already gone.
 - Respect the session's concurrent-open-thread cap. It is `agents.max_threads`
   in `config.toml` (default **6**); Codex also surfaces it to you at spawn time
   as `max_concurrent_threads_per_session`. Never hold more open agent threads

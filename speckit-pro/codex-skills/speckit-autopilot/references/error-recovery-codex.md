@@ -29,6 +29,12 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
    missing, `pending`, or `in_progress`, resume at the first incomplete Post
    item. Do not summarize completion from a `Phase 7: Implement Complete`
    state.
+6. Do NOT try to `close_agent` or `wait_agent` on subagents from the previous
+   (interrupted) session — those threads are gone, and a close attempt will
+   error harmlessly. Resume with a clean `spawn_agent` → `wait_agent` →
+   `close_agent` lifecycle for newly spawned agents only. Keep closing the new
+   agents you spawn — do not conclude from one stale-agent close error that
+   closing is unsafe.
 
 ## Common Issues
 
@@ -42,6 +48,15 @@ $speckit-autopilot workflow.md --from-phase <next-pending-phase>
   and STOP. Present all 3 perspectives to the user.
 - **MCP tool unavailable:** Skip research that depends on it. Use
   file search and read fallbacks for codebase analysis. Log warning.
+- **`close_agent` errors, or a subagent appears stuck/frozen:** On the Codex
+  app especially, `close_agent` can report `thread not found` on an
+  already-gone agent, and a stuck subagent can leave the main thread spinning
+  (openai/codex#23219, #23292). Treat a failed close as already-closed — log
+  and continue; never retry-loop it, and never stop closing future agents.
+  Abandoning cleanup is what lets orphaned threads exhaust the cap and freeze
+  the session (openai/codex#19197). Bound `wait_agent` with a `timeout_ms` so
+  a stuck subagent cannot hang the orchestrator; on a hang, stop waiting, mark
+  the item for re-spawn, and continue.
 
 ## Context Window Management
 
