@@ -325,6 +325,15 @@ test count, pass/fail, regressions found.
    The generator uses the host repository's pull request template when present
    and appends any missing review-packet sections. If no host template exists,
    it uses the plugin fallback template.
+5b. Verify the body is script-generated (non-blocking self-check):
+   confirm `.git/speckit-pr-body.md` contains the
+   `speckit-pro-review-packet-source` marker comment AND a `## UAT Runbook`
+   heading. If either is missing, the body was hand-written or is stale —
+   re-run the step-5 command once. NEVER open the PR with a hand-written
+   body or an inline `--body`; the body MUST be the generator's
+   `.git/speckit-pr-body.md`. If the marker is still absent after the
+   re-run, log a loud warning to the workflow log and proceed (fail-open
+   — this never blocks PR creation).
 6. Create PR:
    gh pr create \
      --title "feat(SPEC-XXX): <Spec Name>" \

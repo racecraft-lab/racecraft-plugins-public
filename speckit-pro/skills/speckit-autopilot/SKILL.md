@@ -438,10 +438,25 @@ detailed procedures in `references/post-implementation.md`:
 1. **3.0 Parallel group** — auto-routed by `AGENT_TEAMS_AVAILABLE` (teams vs parallel-subagents)
 2. **3.1 Integration Suite** — verify spec-specific tests
    exist, run FULL suite to catch regressions, fix failures
-3. **3.2 PR Creation** — final verification, reviewability diff gate,
-   host-template-aware PR body generation, push, create PR with
-   `--body-file`, update workflow file
-4. **3.3 Review Remediation** — schedule `/loop` to monitor
+3. **Self-Review** — mandatory 4-question audit between Integration
+   Suite and the PR body; findings are recorded in the workflow log and
+   reproduced in the PR body. Reporting step — never gates the PR.
+4. **UAT Runbook Generation** — mandatory between Self-Review and the
+   PR body: run `generate-uat-skeleton.sh` to write
+   `<feature-dir>/uat-runbook.md`, then commit it. Fail-open (a nonzero
+   exit never blocks the PR) but NOT optional — it must run.
+5. **3.2 PR Creation** — final verification, reviewability diff gate,
+   then build the PR body by running `generate-pr-body.sh` →
+   `.git/speckit-pr-body.md` and open the PR with
+   `--body-file .git/speckit-pr-body.md`. **Never hand-write the body or
+   pass an inline `--body`** — the script is what embeds the review
+   packet and the `## UAT Runbook` section (which carries the Self-Review
+   findings).
+   Before `gh pr create`, confirm the body file carries the
+   `speckit-pro-review-packet-source` marker and a `## UAT Runbook`
+   heading; if either is missing, regenerate with the script once. Push,
+   create PR, update workflow file.
+6. **3.3 Review Remediation** — schedule `/loop` to monitor
    and resolve Copilot/human review comments every 5 minutes
 
 After scheduling the loop, the autopilot is DONE. Report
