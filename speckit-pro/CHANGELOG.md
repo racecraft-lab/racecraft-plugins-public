@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.6.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.0...speckit-pro-v2.6.1) (2026-05-30)
+
+
+### Bug Fixes
+
+* **speckit-pro:** close completed Codex agents and respect the concurrency cap ([#103](https://github.com/racecraft-lab/racecraft-plugins-public/issues/103)) ([3282b5c](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3282b5c7ce439cc7c6ea707db2722579f15a1767))
+* **speckit-pro:** ensure autopilot always generates the UAT runbook in the PR ([#102](https://github.com/racecraft-lab/racecraft-plugins-public/issues/102)) ([37de795](https://github.com/racecraft-lab/racecraft-plugins-public/commit/37de795224dc82ac6afbfde08e39a09254e1f0b1))
+
 ## [2.6.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.5.1...speckit-pro-v2.6.0) (2026-05-29)
 
 
