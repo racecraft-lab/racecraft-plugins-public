@@ -80,14 +80,17 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists the post-implementation steps: verify, code review, integration tests, cleanup, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
+      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, cleanup, reviewability diff gate, self-review, UAT runbook generation, PR body generation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
       "expectations": [
         "Lists verify implementation as a post-implementation step",
         "Lists code review as a post-implementation step",
         "Lists integration test suite verification",
+        "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
+        "Lists UAT Runbook Generation — generate-uat-skeleton.sh writes and commits uat-runbook.md — as an always-required built-in step before PR body generation",
+        "Lists PR body generation via generate-pr-body.sh, with the PR opened using --body-file (not an inline or hand-written body)",
         "Lists PR creation with the gh CLI",
         "Lists the parent-session review remediation loop",
-        "Distinguishes which steps require extensions (verify, review, cleanup, retrospective) vs built-in (integration tests, PR creation, review loop)"
+        "Distinguishes which steps require extensions (verify, review, cleanup, retrospective) vs built-in (integration tests, reviewability diff gate, self-review, UAT runbook generation, PR body generation, PR creation, review loop)"
       ]
     },
     {
@@ -320,7 +323,7 @@
         "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
         "States the answers are reproduced in the generated PR body under a ## Self-Review Findings section",
         "States explicitly that self-review is a reporting step, NOT a gate — the PR opens regardless of what the review surfaces",
-        "Mentions that Post: Self-Review is item position #7 in the canonical 12-entry post-implementation list, between Post: Reviewability Diff Gate and Post: PR Body Generation",
+        "Mentions that Post: Self-Review is item position #8 in the canonical 13-entry post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
         "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
       ]
     },
@@ -337,6 +340,20 @@
         "Continues through PR body generation and PR creation instead of stopping after Phase 7",
         "Mentions review remediation and Post: Retrospective before completion",
         "Reports completion only after the PR URL is known and every Post item is completed or explicitly skipped"
+      ]
+    },
+    {
+      "id": 27,
+      "prompt": "The Codex autopilot has finished Post: Self-Review and is about to open the PR. Walk through exactly how the parent session produces the PR body and guarantees the UAT runbook reaches the human reviewer. Name the scripts it runs, the order, what it commits, how it invokes gh pr create, and what it does if the generated body is missing the review-packet marker.",
+      "expected_output": "States the parent session runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md and commits it, then runs generate-pr-body.sh to produce .git/speckit-pr-body.md, and opens the PR with gh pr create --body-file .git/speckit-pr-body.md — never a hand-written or inline --body. The generated body always contains a ## UAT Runbook section because the generator emits the heading even when the runbook file is absent. Before creating the PR it confirms the body carries the speckit-pro-review-packet-source marker and a ## UAT Runbook heading; if either is missing it regenerates once. Post: UAT Runbook Generation transitions through update_plan + autopilot-state.json like every canonical Post item; it is fail-open (a nonzero exit never blocks the PR) but mandatory.",
+      "expectations": [
+        "Parent session runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md before PR body generation",
+        "Commits the uat-runbook.md artifact (e.g. docs(SPEC-XXX): add UAT runbook)",
+        "Runs generate-pr-body.sh to produce .git/speckit-pr-body.md",
+        "Opens the PR with gh pr create --body-file .git/speckit-pr-body.md — explicitly NOT a hand-written body or an inline --body",
+        "States the generated PR body always contains a ## UAT Runbook section because generate-pr-body.sh emits the heading even when the runbook file is absent",
+        "Describes the non-blocking self-check: if .git/speckit-pr-body.md lacks the speckit-pro-review-packet-source marker or the ## UAT Runbook heading, regenerate with the script once",
+        "States Post: UAT Runbook Generation appears in update_plan and autopilot-state.json and is fail-open (never blocks PR creation) yet mandatory — not an optional step"
       ]
     }
   ]

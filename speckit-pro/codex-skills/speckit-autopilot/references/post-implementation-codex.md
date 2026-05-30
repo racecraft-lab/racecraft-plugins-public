@@ -119,6 +119,15 @@ exists, preserves unknown host-required sections, appends missing review-packet
 sections, and falls back to the bundled template when the host has none. Use
 `gh pr create --body-file .git/speckit-pr-body.md`, not an inline placeholder.
 
+**Non-blocking self-check before `gh pr create`:** confirm
+`.git/speckit-pr-body.md` carries the `speckit-pro-review-packet-source`
+marker comment AND a `## UAT Runbook` heading. If either is missing, the body
+was hand-written or is stale — re-run `generate-pr-body.sh` once. NEVER open
+the PR with a hand-written body or an inline `--body`; the body MUST be the
+generator output. If the marker is still absent after the re-run, log a loud
+warning to the workflow log and proceed (fail-open — this never blocks PR
+creation).
+
 ## Self-Review Before Finalizing
 
 After G7 passes and before opening the PR (between `Post: Integration Suite`
