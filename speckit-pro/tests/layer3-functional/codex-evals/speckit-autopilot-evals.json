@@ -338,6 +338,19 @@
         "Mentions review remediation and Post: Retrospective before completion",
         "Reports completion only after the PR URL is known and every Post item is completed or explicitly skipped"
       ]
+    },
+    {
+      "id": 28,
+      "prompt": "You are running the Codex autopilot and you are about to fan out work to subagents — for example a Phase 7 batch of [P]-marked tasks, or consensus analysts across several queued items. Describe exactly how you manage agent threads: how many you keep open at once and why, what the full lifecycle of each spawned agent is, and what you do with agents once they finish. Also state what you check about agent threads before reporting the run complete.",
+      "expected_output": "States the full lifecycle is spawn_agent -> wait_agent -> close_agent: every spawned agent is closed with close_agent once its result is consumed, because a completed thread stays open and consumes the session's concurrent-thread budget until closed. States the session caps concurrently open threads at agents.max_threads (config.toml, default 6; surfaced as max_concurrent_threads_per_session), and that fan-out wider than the cap is dispatched incrementally in waves (spawn up to the cap, close each as wait_agent reports it final, refill the freed slot) rather than spawning everything in one turn. States that before reporting the run complete it calls list_agents and closes any thread still open.",
+      "expectations": [
+        "Names the spawn_agent -> wait_agent -> close_agent lifecycle and that close_agent is required for every spawned agent",
+        "Explains that a completed agent thread stays OPEN and consumes the concurrency budget until close_agent is called",
+        "States the concurrent-open-thread cap is agents.max_threads (default 6), also surfaced as max_concurrent_threads_per_session",
+        "Dispatches fan-out wider than the cap in waves (spawn up to the cap, close each finished agent, refill the freed slot) instead of spawning all in one turn",
+        "Notes wait_agent returns whichever agent finishes first, so slots drain and refill incrementally rather than as an all-at-once barrier",
+        "Before reporting completion, calls list_agents and close_agent on any thread still open from the run"
+      ]
     }
   ]
 }

@@ -74,10 +74,12 @@ have Agent Teams primitives — Codex always uses the parallel
 - **Track C:** Verify-chain (items 11 → 12 → 14) — single subagent that
   runs the 3 commands sequentially in its own context (shared test fixtures)
 
-Dispatch the 3 tracks in ONE tool turn via `spawn_agent`, then
-`wait_agent` on all three. The Lead synthesizes findings into the
-workflow file's Post-Implementation Checklist, then continues serial tail
-(15 → 16 → 17 → 18 → 19 → 20).
+Dispatch the 3 tracks via `spawn_agent`, then `wait_agent` for each and
+`close_agent` it as soon as its result is recorded. Three tracks fits within
+the default `agents.max_threads` (6); if the session's cap is lower, dispatch
+in cap-bounded waves rather than all at once. The Lead synthesizes findings
+into the workflow file's Post-Implementation Checklist, then continues serial
+tail (15 → 16 → 17 → 18 → 19 → 20).
 
 The Claude Code variant capability-detects Anthropic's Agent Teams
 (env var + version) and routes to a team when available, with parallel
@@ -104,6 +106,10 @@ background subagents as the fallback path. The 3-track structure
   item is pending, in_progress, or missing. Continue with the first
   incomplete item instead. `Post: Retrospective` remains the final Post item and
   must be completed or explicitly skipped before completion can be reported.
+- **Agent-thread sweep before completion:** as part of the same pre-final audit,
+  call `list_agents` and `close_agent` any thread still open from this run. No
+  completed agent thread should outlive the run — leaked open threads consume
+  the session's `agents.max_threads` budget and starve later spawns.
 
 ## PR Body Generation Workflow
 
