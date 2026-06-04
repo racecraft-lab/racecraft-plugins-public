@@ -45,10 +45,10 @@ else
 fi
 
 set_test "description uses scaffold naming for spec preparation"
-if [[ "$desc_val" == *"scaffolding"* && "$desc_val" != *"coaching, setup,"* ]]; then
+if [[ "$desc_val" == *"spec scaffolding"* && "$desc_val" != *"setup"* ]]; then
   _pass
 else
-  _fail "expected Codex plugin description to say scaffolding, not setup"
+  _fail "expected Codex plugin description to use scaffolding terminology (no 'setup')"
 fi
 
 set_test "homepage field exists"
