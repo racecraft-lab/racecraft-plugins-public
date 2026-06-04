@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.1...speckit-pro-v2.6.2) (2026-06-04)
+
+
+### Bug Fixes
+
+* **codex:** align scaffold skill labels ([#106](https://github.com/racecraft-lab/racecraft-plugins-public/issues/106)) ([e59c8ec](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e59c8eca5cea02d37782ebf2be4590bdcaf22ee2))
+
 ## [2.6.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.0...speckit-pro-v2.6.1) (2026-05-30)
 
 
