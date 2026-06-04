@@ -91,6 +91,28 @@ for skill in "${SKILLS[@]}"; do
   set_test "${skill}: agents/openai.yaml sidecar exists"
   assert_file_exists "$SKILL_DIR/agents/openai.yaml"
 
+  if [ "$skill" = "speckit-scaffold-spec" ]; then
+    set_test "speckit-scaffold-spec: Codex picker metadata uses scaffold naming"
+    sidecar_content=""
+    [ -f "$SKILL_DIR/agents/openai.yaml" ] && sidecar_content=$(cat "$SKILL_DIR/agents/openai.yaml")
+    if [[ "$sidecar_content" == *'display_name: "SpecKit Scaffold Spec"'* \
+      && "$sidecar_content" == *'default_prompt: "Scaffold a SPEC-ID from the technical roadmap for SpecKit autopilot"'* \
+      && "$sidecar_content" != *'SpecKit Setup'* \
+      && "$sidecar_content" != *'Set up a SPEC-ID'* ]]; then
+      _pass
+    else
+      _fail "expected scaffold naming in codex-skills/speckit-scaffold-spec/agents/openai.yaml"
+    fi
+
+    set_test "speckit-scaffold-spec: Codex skill heading uses scaffold naming"
+    if grep -q '^# SpecKit Scaffold Spec$' "$SKILL_FILE" \
+      && ! grep -q '^# SpecKit Setup$' "$SKILL_FILE"; then
+      _pass
+    else
+      _fail "expected '# SpecKit Scaffold Spec' heading in codex-skills/speckit-scaffold-spec/SKILL.md"
+    fi
+  fi
+
   set_test "${skill}: body word count between 500 and 8000"
   body=$(awk 'BEGIN{n=0} /^---$/{n++; if(n==2){found=1; next}} found{print}' "$SKILL_FILE")
   word_count=$(echo "$body" | wc -w | tr -d ' ')

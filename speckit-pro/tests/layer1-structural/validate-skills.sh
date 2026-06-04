@@ -127,6 +127,24 @@ else:
     _fail "body is only $body_len chars (need > 100)"
   fi
 
+  if [ "$skill" = "speckit-scaffold-spec" ]; then
+    set_test "speckit-scaffold-spec: skill heading uses scaffold naming"
+    if grep -q '^# SpecKit Scaffold Spec$' "$SKILL_FILE" \
+      && ! grep -q '^# SpecKit Setup$' "$SKILL_FILE"; then
+      _pass
+    else
+      _fail "expected '# SpecKit Scaffold Spec' heading in skills/speckit-scaffold-spec/SKILL.md"
+    fi
+
+    set_test "speckit-scaffold-spec: completion report uses scaffold naming"
+    if grep -q '^## Scaffold Complete$' "$SKILL_FILE" \
+      && ! grep -q '^## Setup Complete$' "$SKILL_FILE"; then
+      _pass
+    else
+      _fail "expected '## Scaffold Complete' report heading in skills/speckit-scaffold-spec/SKILL.md"
+    fi
+  fi
+
   set_test "${skill}: body word count between 500 and 8000"
   word_count=$(echo "$body" | wc -w | tr -d ' ')
   if [ "$word_count" -ge 500 ] && [ "$word_count" -le 8000 ]; then

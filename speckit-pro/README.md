@@ -244,7 +244,7 @@ Walks down each branch of the design tree, asks one question at a time, and prov
 **Sample output:**
 
 ```text
-## Setup Complete
+## Scaffold Complete
 
 Spec:           SPEC-009 Search & Database
 Branch:         009-search-database
