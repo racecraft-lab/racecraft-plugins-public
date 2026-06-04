@@ -27,7 +27,7 @@ instead of becoming a permanent split-brain repo.
 |----------|--------|
 | Code strategy | **O2 split-PR default** + atomicity-test routing |
 | Slice unit | **PR within one spec** (one SPEC-ID, one `tasks.md`, **one artifact set**, N PRs). `006a/006b` sub-specs reserved for O5 monster-epics only |
-| Artifacts v1 | **Collapse-only** (`.gitattributes`); post-merge relocation deferred to v2 |
+| Artifacts v1 | **Collapse-only** via `.gitattributes` **`linguist-generated`** (NOT `-diff` — keeps artifacts loadable/inspectable; see SPEC-001 decision); post-merge relocation deferred to v2 |
 | MOC "Why" annotations | **Advisory** in v1 |
 | Releasability gate | **Detect-and-route to atomic + warn**; defer invariant-checking machinery |
 | Mechanical-only specs | **Accept + route to one-navigable-PR** (don't decline) |
@@ -83,6 +83,15 @@ diff at the source. Orthogonal precondition for everything else.
   (`specs/*/.process/** linguist-generated=true`); align `reviewability-gate.sh`
   `is_excluded_generated()` to the same glob; Layer-1 lint asserting the glob is
   scoped to `.process/` ONLY and never matches a CONTRACT path.
+- **Decision — collapse mechanism (`linguist-generated` only; `-diff` deferred).**
+  v1 uses `linguist-generated=true` ALONE. It collapses the artifact diff in the PR but
+  keeps it **loadable on demand** ("Load diff"), preserving audit/provenance.
+  **`-diff` is deferred:** adding it would also drop artifact LOC out of the PR's `+/−`
+  size count, but it renders the files **non-diffable** (un-inspectable in the PR) — a
+  worse provenance tradeoff. Consequence (consistent with the Visibility expectation
+  above): `linguist-generated` changes how the diff *reads*, **not** the headline
+  `+/−`, the per-file stats, or the file-count — the real size reduction comes from
+  splitting (SPEC-009) and relocation (SPEC-011), not from `.gitattributes`.
 - **Skills/files:** `speckit-scaffold-spec`, `speckit-autopilot/references/phase-execution.md`, `reviewability-gate.sh`, new `.gitattributes`.
 - **Deps:** none. **Budget:** ~250 LOC. **Tests:** L1 (gitattributes + scoping), L4 (commit-target logic).
 
