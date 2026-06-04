@@ -341,7 +341,7 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
   - Structural/file changes → **Layer-1**. Multi-PR/dispatch changes → **Layer-7**.
   The L2/L3/L6 harnesses live under `tests/layer2-trigger/`, `tests/layer3-functional/`,
   `tests/layer6-efficiency/` and require `claude -p` + the `skill-creator` plugin
-  (developer-local); CI-fast layers (1/4/5/7-replay/8-dry-run) gate every PR. The
+  (developer-local); CI runs the default `bash tests/run-all.sh` suite (Layers 1, 4, 5). Layer 7 replay (`--integration`) and Layer 8 parity are opt-in runs. The
   authoritative per-SPEC coverage is the table below.
 
 ## Per-SPEC test & script coverage (authoritative)
