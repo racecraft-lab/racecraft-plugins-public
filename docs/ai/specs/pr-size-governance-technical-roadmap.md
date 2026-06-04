@@ -389,8 +389,8 @@ there.
   ordered pending migrations and mutates nothing; the relocate codemod hard-fails on a
   dirty tree and is idempotent (re-run = no-op).
 - **Every phase (gate):** all layers from the coverage table pass for each SPEC —
-  CI-fast layers (L1/L4/L5/L7-replay/L8-dry-run) green in CI, and the AI evals
-  (L2/L3, plus L6 where applicable) run developer-local (`claude -p`) and recorded as
+  CI-fast layers (L1/L4/L5) green in CI by default; Layer 7 replay (`--integration`) and
+  Layer 8 parity are opt-in runs, and the AI evals
   passing **before** the SPEC merges. A skill change without its L2/L3 eval is **not
   done**, regardless of code completeness.
 
