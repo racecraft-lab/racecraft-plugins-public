@@ -293,5 +293,5 @@ Stop instead of improvising when any of the following are true:
 - `$grill-me` aborts because no interactive runtime is available (e.g.,
   invoked from `codex exec` or a CI runner). Scaffolding is HITL-gated by design.
 
-If setup partially succeeds before a failure, report exactly what was created
+If scaffolding partially succeeds before a failure, report exactly what was created
 and what remains unfinished so the user can resume without duplicating work.
