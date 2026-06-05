@@ -52,8 +52,8 @@ Re-read it before each phase. The locked decisions from that interview (Q1–Q5)
 | Clarify | `/speckit-clarify` | ✅ Complete | **Skipped** — 0 markers after Specify; the 4 big decisions are locked in the design concept and the 3 session mechanics are carried verbatim in the Plan prompt's grounded map. G6/Analyze verifies design-concept ↔ spec/plan/tasks consistency. |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md (20KB) + research.md (pointer); bash+jq+markdown; US1→US2 sequencing; Codex parity identified; constitution PASS via ratified split exception (commit 45ee7cf). Garbled `update-agent-context.sh` CLAUDE.md append reverted. |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains; 7 gaps → 0; 1 consensus (safe-write mechanism). Spec hardened FR-009/010/013/015, SC-007 (commit 98a2238) |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | tasks.md: 20 tasks, 4 phases, 3 [P]; full FR/AC/SC coverage; G5 + reviewability tasks gate (excepted) pass (commit cfbd081) |
+| Analyze | `/speckit-analyze` | ✅ Complete | 3 MEDIUM findings (plan FR/SC drift ×2 + Out-of-Scope symmetry), all remediated; 0 CRITICAL → G6 pass; consensus not needed (0 unresolved) |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -411,9 +411,9 @@ Focus on Artifact relocation requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | 4 |
-| **Parallel Opportunities** | |
+| **Total Tasks** | 20 (T001-T004, T009A, T010-T024) |
+| **Phases** | 4 (Foundation, US1 redirect, US2 collapse/align, Polish) |
+| **Parallel Opportunities** | 3 ([P]: T013, T017, T019) |
 | **User Stories Covered** | US1, US2 |
 
 ---
@@ -438,7 +438,10 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | MEDIUM | plan.md said "14 FRs" — spec now has 15 | plan.md → "15 FRs" |
+| F2 | MEDIUM | plan.md traceability "FR-001…FR-014 / SC-001…SC-006" stale | plan.md → "FR-001…FR-015 / SC-001…SC-007" |
+| F3 | MEDIUM | Out-of-Scope "migrating legacy spec" named only `specs/<NNN>/`, asymmetric with broadened FR-013 | spec.md Out-of-Scope bullet extended to cover legacy `docs/ai/specs/` files (consistent with FR-013) |
+| — | — | **0 CRITICAL, 0 HIGH** → G6 PASS; locked decisions intact; US2-before-US1 holds | Unresolved for consensus: NONE |
 
 ---
 
