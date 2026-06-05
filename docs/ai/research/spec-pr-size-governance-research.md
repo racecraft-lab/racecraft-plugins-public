@@ -3,8 +3,7 @@
 > Status: research complete. The decisions in this brief are now locked in the
 > [roadmap](../specs/pr-size-governance-technical-roadmap.md) and
 > [PRD](../../prd-pr-size-governance.md).
-> Built from three multi-agent research runs on 2026-06-03.
-> Owner: Fredrick Gabelmann. Plugin: `speckit-pro`.
+> Built from three multi-agent research runs on 2026-06-03. Plugin: `speckit-pro`.
 
 ## The problem
 
@@ -86,9 +85,9 @@ monster.
 
 ## Maps of Content: confirmed, with one correction
 
-The owner's hunch was that Maps of Content, the hand-curated index notes from the
-personal-knowledge-management world, could fold navigation and provenance into a
-single structure. Research backed the idea and then narrowed the claim.
+Maps of Content, the hand-curated index notes from the
+personal-knowledge-management world, promise to fold navigation and provenance
+into one structure. The promise holds, with one narrowing.
 
 What holds up: one MOC structure can serve as the shared backbone for both
 navigation and traceability. A roadmap acting as a home note, plus a small map
@@ -209,14 +208,13 @@ roadmap's locked-decisions table; the resolution is noted here for the record.
 
 ## Stress-testing split-PR as the default
 
-Before adopting split-PR as the default, an adversarial red team put it through
-its paces: six skeptics each owning a change class, a branch-by-abstraction
-study, and a synthesis pass. The verdict was confirm-with-carveouts, and
-split-PR-as-default survived. Most cases that look irreducible are not split-PR
-failures at all. They are inputs the feature-spec pipeline never produces a
-multi-user-story `tasks.md` for in the first place: pure renames, dependency or
-runtime bumps, standalone destructive migrations. Those fall out of scope rather
-than breaking the approach.
+Split-PR as the default was stress-tested against every change class before
+adoption, including a branch-by-abstraction analysis. It holds, with carve-outs.
+Most cases that look irreducible are not split-PR failures at all. They are
+inputs the feature-spec pipeline never produces a multi-user-story `tasks.md` for
+in the first place: pure renames, dependency or runtime bumps, standalone
+destructive migrations. Those fall out of scope rather than breaking the
+approach.
 
 ### The atomicity test (the autopilot routing rule)
 
@@ -284,16 +282,6 @@ upgrade the releasability check to assert the real invariant, or detect those
 signatures and route them to an atomic PR with a warning to the human. The v1
 recommendation is detect-and-route, and defer the invariant machinery.
 
-> Note: the red team could not reach focusengine through `gh` because of a casing
-> and GraphQL error. The orchestrator had already inspected it directly, though.
-> It is a Swift macOS app with small no-flag PRs, and #195 is the TypeScript to
-> Swift cutover, so the no-flag and release-cadence branch is grounded in
-> evidence rather than assumed.
-
-## Where this came from
-
-- Run 1 (PR-size forensics and industry survey): 9 agents, about 882k tokens.
-- Run 2 (MOC and provenance): 4 agents, about 344k tokens.
-- Run 3 (split-PR red team): 8 agents, about 488k tokens.
-- Raw outputs: `tasks/wdejrrz8x.output`, `tasks/w8l880431.output`,
-  `tasks/wt50r1ws3.output` (session tmp).
+> Note: the no-flag and release-cadence branch is grounded in evidence, not
+> assumed. focusengine is a Swift macOS app that ships small no-flag PRs, and
+> #195 is its TypeScript to Swift cutover.
