@@ -1,251 +1,299 @@
-# Spec & PR Size Governance — Research Synthesis & Decision Brief
+# Spec and PR Size Governance: Research and Decision Brief
 
-> Status: **research complete, decisions open**. Working document (not a spec).
-> Produced from two multi-agent research workflows on 2026-06-03.
-> Problem owner: Fredrick Gabelmann. Plugin: `speckit-pro`.
+> Status: research complete. The decisions in this brief are now locked in the
+> [roadmap](../specs/pr-size-governance-technical-roadmap.md) and
+> [PRD](../../prd-pr-size-governance.md).
+> Built from three multi-agent research runs on 2026-06-03.
+> Owner: Fredrick Gabelmann. Plugin: `speckit-pro`.
 
-## Problem
+## The problem
 
-`speckit-pro` binds **one roadmap SPEC → one branch/worktree → one PR**. Big SPECs
-therefore produce unreviewable PRs. Evidence (racecraft-lab/Paddock,
-racecraft-lab/focusengine):
+speckit-pro ties each roadmap SPEC to one branch, one worktree, and one pull
+request. When a SPEC is large, the pull request is large, and nobody can review
+it. Two real repositories show the scale, Paddock and focusengine:
 
-- Paddock #26 (SPEC-008): **83,898 additions / 532 files** — 46% production code
-  (38,793 LOC / 279 files), 28% tests, 14% process artifacts, 9% seed/config.
-- Typical feature PRs (#57, #60): ~11k additions each, composed **~30% production
-  code / ~37% tests / ~32% auto-generated process artifacts**.
-- Production-code median across Paddock feature PRs ≈ **1,669 LOC** (floor 932) —
-  still over an 800-LOC reviewable budget even after artifacts are removed.
+- Paddock #26 (SPEC-008) shipped 83,898 added lines across 532 files. Production
+  code was 46% of that (38,793 lines in 279 files). Tests were 28%, process
+  artifacts 14%, seed and config 9%.
+- Ordinary feature PRs such as #57 and #60 run roughly 11,000 added lines each.
+  About 30% is production code, 37% is tests, and 32% is auto-generated process
+  artifacts.
+- Strip the artifacts and the median feature PR still carries about 1,669 lines
+  of production code, with the leanest at 932. That alone overshoots a sane
+  review budget of 800 lines.
 
-## Why all prior art failed (forensic findings)
+So a third of every PR is paperwork no human reads line by line, and the code
+that remains is still too big to review in one sitting.
 
-1. **The reviewability gate is a literal no-op.** `reviewability-gate.sh` line 102
-   flips `block → exception` whenever it greps an exception keyword in *any* `.md`,
-   so line 138's `exit 1` never fires. The exception keyword **ships as boilerplate
-   in the roadmap template** (`Budget result: …split exception`) — every roadmap
-   auto-downgrades to `exception`. The only programmatic caller
-   (`generate-pr-body.sh`) runs it under `set +e … 2>/dev/null` and **discards the
-   exit code**. Commit #95 (latest governance change) hardened the bypass, not the
-   gate. → It is a detective control that detects nothing and is wired to do nothing.
+## Why nothing we tried before worked
 
-2. **Spec-splitting (naïve "Lever C") is a trap.** focusengine's 31→45 spec-split
-   (#199) produced **zero smaller code PRs and +9 artifact files on day one**.
-   Paddock spec-splits multiplied the artifact tax **4.7×–8.7×** (SPEC-009 → 9
-   children carried 28,928 artifact LOC). Each spec drags its own
-   design-concept + workflow + retrospective, so splitting specs makes the
-   aggregate worse. **Null-to-negative result.**
+Three findings, each pulled from the actual code and commit history.
 
-3. **The 1-SPEC→1-PR binding is structural-by-absence.** `scaffold-spec` creates
-   exactly one branch/worktree; every phase commits onto it; no code path can emit
-   a second PR from one SPEC. "Split" today means a human re-authoring the roadmap
-   by hand — which never happens voluntarily.
+1. **The reviewability gate is inert.** `reviewability-gate.sh` rewrites its own
+   verdict from "block" to "exception" the instant it greps an exception keyword
+   in any `.md` file (line 102), so the `exit 1` on line 138 never fires. That
+   keyword ships as boilerplate inside the roadmap template (the
+   `Budget result: ...split exception` line), which means every roadmap quietly
+   downgrades itself. The one caller that touches the gate,
+   `generate-pr-body.sh`, runs it with errors muted and then discards the exit
+   code. Commit #95, the most recent governance change, reinforced the bypass
+   rather than the check. The net effect is a guard that catches nothing and is
+   wired to act on nothing.
 
-## Design principle (hard constraint)
+2. **Splitting specs backfires.** When focusengine cut 31 specs into 45 (#199),
+   it produced zero smaller code PRs and added 9 artifact files on day one.
+   Paddock's spec-splits multiplied the artifact tax somewhere between 4.7x and
+   8.7x; SPEC-009 fanned into 9 children that together hauled 28,928 lines of
+   artifacts. Every spec drags its own design concept, workflow file, and
+   retrospective, so chopping one spec into many simply multiplies the
+   bookkeeping. The outcome was null at best and negative in practice.
 
-Any option that tightens **detection** without an **automated decomposition path**
-just increases exception usage. The winner must make the **small-PR path the
-default / cheap / automatic** output of the pipeline, be effectively
-non-bypassable (because nothing oversized is *produced* to bypass), address **both**
-the artifact tax **and** code decomposition, and survive **squash-only** merge
-(both repos: `squash:true, merge:false, rebase:false, delete_branch_on_merge:true`).
+3. **The one-SPEC-one-PR rule is baked in by omission.** `scaffold-spec` builds
+   exactly one branch and worktree. Every phase commits onto it. No code path can
+   emit a second PR from a single SPEC. "Splitting" today means a person rewriting
+   the roadmap by hand, which nobody volunteers to do.
 
-## Scored option set
+## The rule any fix has to obey
+
+Tighten detection without giving people an automatic way to decompose, and you
+just funnel them toward the exception path. A real fix therefore has to clear
+four bars at once. It makes the small PR the default output, the cheap path, the
+thing that happens without anyone asking. It resists bypass, because nothing
+oversized gets produced to bypass in the first place. It tackles both halves of
+the mess, the artifact tax and the code itself. And it survives squash-only
+merging, which both repos enforce (squash on, merge commits off, rebase off,
+branches deleted on merge).
+
+## What we scored
 
 | ID | Option | Lever | Score | Verdict |
 |----|--------|-------|-------|---------|
-| **O1** | Relocate process artifacts out of the diff (`.process/` + collapse/relocate) | A | 72 | **Hard precondition**, orthogonal, cheap (S) |
-| **O2** | Independent slices: 1 PR per `tasks.md` dependency layer, off `main` (squash-immune) | split-PR | 80 | **Preferred code-decomposition lever** (M/L) |
-| **O4** | Upstream vertical-slice sizing (SPIDR/INVEST in prd/grill-me; ~400 prod-LOC ceiling; kill surface-count blocker) | scoping | 78 | Attacks root cause cheaply (M) |
-| **O5** | Epic → child specs that **share** artifacts | split-spec (rescued) | 68 | **Monsters only** (#26-class) (L) |
-| O3 | gh-stack dependent stacks for genuinely sequential edges | split-PR | 58 | Fallback only; tool post-cutoff, maturity risk |
-| **O6** | **Hybrid = O1 + O2 + O4** | hybrid | **91** | **Recommended spine** |
-| O7 | Harden the gate / tighten thresholds | — | 18 | **Rejected** (the named anti-pattern) |
+| **O1** | Move process artifacts out of the diff (`.process/` plus collapse or relocate) | relocate | 72 | Hard precondition. Stands apart, cheap. |
+| **O2** | Independent slices: one PR per `tasks.md` dependency layer, branched off `main` so squash cannot break it | split-PR | 80 | Preferred way to decompose code. |
+| **O4** | Size specs right upstream (SPIDR and INVEST in prd and grill-me; ~400 production-LOC ceiling; drop the surface-count blocker) | scoping | 78 | Attacks the root cause cheaply. |
+| **O5** | Epic feeding child specs that share one artifact set | split-spec | 68 | Monsters only, the #26 class. |
+| O3 | gh-stack dependent stacks for genuinely sequential edges | split-PR | 58 | Fallback only. The tool is new and unproven. |
+| **O6** | Bundle of O1 plus O2 plus O4 | hybrid | **91** | Recommended spine. |
+| O7 | Harden the gate, tighten the thresholds | none | 18 | Rejected. This is the anti-pattern we already have. |
 
-Combination logic: **O1 is orthogonal and a hard precondition** for any
-decomposition (else any split still ships 30%+ artifacts). The two code-decomposition
-flavors are **alternatives**: **O2 (split-PR) is preferred over O5 (split-spec)**
-because it keeps one artifact set per SPEC. **O4** is the preventive front end.
-**O3** only for genuinely dependent edges. → **O6 = O1 + O2 + O4**, sequenced
-relocate-first, harden-the-hatch-last; **O5** is the monster escalation.
+O1 sits on its own and goes first, because any split that skips it still ships
+more than 30% artifacts. The two ways to cut code are alternatives, not
+companions, and split-PR (O2) wins over split-spec (O5) because it keeps a single
+artifact set per spec. O4 is the preventive front end. O3 earns a place only on
+edges that are truly sequential. That leaves the recommended bundle: O1 plus O2
+plus O4, sequenced relocate-first and harden-last, with O5 held back for the rare
+monster.
 
-## The MOC layer (second workflow) — REFINED verdict
+## Maps of Content: confirmed, with one correction
 
-The owner's hypothesis (Maps of Content unify the decomposition-navigation and
-artifact-provenance concerns) is **confirmed in kind but refined in scope**:
+The owner's hunch was that Maps of Content, the hand-curated index notes from the
+personal-knowledge-management world, could fold navigation and provenance into a
+single structure. Research backed the idea and then narrowed the claim.
 
-- **CONFIRM:** one MOC structure is the shared navigation + traceability backbone.
-  roadmap-as-home-note + per-spec leaf MOCs + up/down/lateral links give full
-  `epic → spec → slice → PR → artifact` traceability with **zero runtime engine**,
-  and it is **squash-safe** because it lives in tracked files, not commit boundaries
-  (which squash discards). ADR/RFC convention is independent proof.
+What holds up: one MOC structure can serve as the shared backbone for both
+navigation and traceability. A roadmap acting as a home note, plus a small map
+note per spec, plus links that point up, down, and sideways, yields the whole
+chain from epic to spec to slice to PR to artifact, with no runtime engine. It
+survives squashing because it lives in tracked files rather than commit
+boundaries, which squash discards. The ADR and RFC conventions are independent
+proof that the pattern works.
 
-- **REFINE (the overclaim):** the MOC is the **enabling layer**, not the whole
-  solution. It solves the **find/navigate/trace** half of both concerns. It does
-  **not** exclude diffs (that is git mechanics) nor right-size specs (that is the
-  decomposition lever). Honest framing: **relocation (A) is only *safe* because the
-  MOC preserves traceability to hidden files; decomposition is only *navigable*
-  because the MOC externalizes the tree so the user navigates instead of memorizing.**
+The correction: a MOC enables the fix; it is not the fix. It solves finding,
+navigating, and tracing. It does not hide diffs, which is git's job, and it does
+not make specs smaller, which is the decomposition lever's job. Put bluntly,
+relocating artifacts is only safe because the MOC keeps the hidden files linked,
+and splitting work is only navigable because the MOC holds the tree so people
+read a map instead of memorizing one.
 
-### Three complementary layers under one structure
+### Three layers, one structure
 
-1. **Right-sizing** (O4 + O2, with O5 for monsters) — makes the code small.
-2. **Artifact diff-management** (O1) — keystone is *tiering*:
-   - **CONTRACT** (always visible; never mark generated): `spec.md`, `plan.md`,
-     `tasks.md`, `research.md`, `data-model.md`, `contracts/**`, `checklists/**`,
-     `SPEC-MOC.md`.
-   - **EXHAUST** (~32% noise; consolidate under `specs/<NNN>/.process/`):
-     `design-concept.md`, `workflow.md`, `peer-review-*.md`,
-     `verification-evidence.md`, `retrospective.md`.
-   - **COLLAPSE** routine exhaust via repo-root `.gitattributes`
-     (`specs/*/.process/** linguist-generated=true`) — diff hidden behind a
-     "Load diff" banner. **Caveat: collapse ≠ exclusion** — files still appear in
-     the Files-changed list and still count toward GitHub's 300-file render cap.
-   - **TRUE EXCLUDE** bulky exhaust via post-merge `chore(sdd): archive SPEC-NNN
-     artifacts [skip ci]` bot-push to `main` (reuses the marketplace-sync pattern).
-     Recommended **collapse-only v1, relocation v2**.
-3. **MOC navigation/traceability spine** (the enabling layer):
-   - **roadmap-MOC** (`docs/ai/specs/<NAME>-roadmap-MOC.md`, or fold into the
-     existing technical-roadmap which is ~80% there): two strictly-separated zones —
-     a **human-curated** epic section (the *WHY*) and a **machine-generated** index
-     table between `<!-- BEGIN/END GENERATED INDEX -->` sentinels (`speckit-status`
-     is the generator).
-   - **spec-MOC** (`specs/<NNN>/SPEC-MOC.md`) — minted **only at the multi-slice
-     squeeze point**, never one-per-spec. Frontmatter `up:`/`related:`/`status:`/
-     `rank:` is the join-key contract; the parent's generated index reads exactly
-     those fields.
-   - **Link topology:** DOWN = relative `[](links)` (render on github.com); UP =
-     `up:` frontmatter; LATERAL = `related:` (genuine deps only); BACK =
-     **bash-generated** between sentinels (plain markdown has no backlink engine).
-     Join key = existing `SPEC-NNN` + `006a/006b` suffix scheme (NOT invented
-     decimals). PR→spec survives squash via the generated `PR# → merged SHA` table.
-   - **Cognitive-load rule (the most important build rule):** strict machine/human
-     split — bash emits the *blind skeleton* (links, tables, backlinks, `up:`);
-     the human writes *only* the few-sentence *WHY*. If the human must hand-curate
-     everything, load **moves** rather than **shrinks** and the system gets
-     abandoned (documented Zettelkasten failure mode).
+1. **Right-sizing** (O4 and O2, with O5 for monsters) keeps the code small.
+2. **Artifact management** (O1) works by sorting files into three tiers:
+   - **Contract** files stay visible and are never marked generated: `spec.md`,
+     `plan.md`, `tasks.md`, `research.md`, `data-model.md`, everything under
+     `contracts/` and `checklists/`, and the spec map note `SPEC-MOC.md`.
+   - **Exhaust** files are the ~32% of noise, and they move under
+     `specs/<NNN>/.process/`: `design-concept.md`, `workflow.md`, the
+     `peer-review-*.md` notes, `verification-evidence.md`, `retrospective.md`.
+   - **Collapse** the routine exhaust with a repo-root `.gitattributes` rule
+     (`specs/*/.process/** linguist-generated=true`). GitHub then tucks the diff
+     behind a "Load diff" banner. One caveat that matters: collapse is not
+     exclusion. The files still appear in the changed-files list and still count
+     against GitHub's 300-file render limit.
+   - **Truly exclude** only the bulky exhaust, later, through a post-merge bot
+     push that archives it (the same trick the marketplace-sync workflow already
+     uses). Recommendation: collapse only for v1, relocation in v2.
+3. **The MOC navigation spine** is the enabling layer:
+   - The **roadmap-MOC** (`docs/ai/specs/<NAME>-roadmap-MOC.md`, or folded into
+     the existing technical roadmap, which is already about 80% there) holds two
+     strictly separated zones: a human-curated epic section that carries the why,
+     and a machine-generated index table between
+     `<!-- BEGIN/END GENERATED INDEX -->` sentinels. `speckit-status` is the
+     generator.
+   - The **spec-MOC** (`specs/<NNN>/SPEC-MOC.md`) is minted only when a spec
+     actually breaks into multiple slices, never one per spec. Its frontmatter
+     (`up`, `related`, `status`, `rank`) is the contract the parent's generated
+     index reads.
+   - **Link directions.** Down uses plain relative links that render on
+     github.com. Up lives in frontmatter. Sideways uses `related`, and only for
+     genuine dependencies. Backlinks are generated by bash between sentinels,
+     since plain markdown has no backlink engine. The join key is the existing
+     `SPEC-NNN` scheme with the `006a/006b` suffixes, not invented decimals. The
+     PR-to-spec link survives squashing through a generated table that maps PR
+     number to merged commit SHA.
+   - **The single most important build rule** is the split between machine work
+     and human work. Bash writes the blind skeleton: links, tables, backlinks,
+     the `up` pointer. The human writes only the few sentences of why. Make a
+     person hand-maintain everything and the labor merely relocates instead of
+     shrinking, and the system gets abandoned. That is the documented way
+     Zettelkasten setups die.
 
-## Pipeline mapping (mostly additive)
+## How this lands in the pipeline (mostly additive)
 
-- **speckit-prd** — also emit the roadmap-MOC home note (curated epics + generated
-  index sentinels) when it writes the PRD + technical-roadmap.
-- **speckit-coach** — teach the two-zone structure + "cap epics below ~10" guardrail.
-- **speckit-scaffold-spec** — birth the `SPEC-MOC.md` skeleton with `up:`; place
-  exhaust under `.process/`; commit the repo-root `.gitattributes` if absent;
-  mint a SPEC-MOC only when the roadmap entry decomposes into multiple slices.
-- **speckit-autopilot** — point exhaust commits at `.process/`; add a
-  regenerate-index/backlinks **phase-gate** step (the #1 staleness mitigation);
-  at PR creation update the generated `PR#→SHA` block; optionally run post-merge
-  relocation for bulky exhaust (v2).
-- **speckit-status** — IS the generated-index generator (shared
-  `scripts/generate-spec-index.sh`).
-- **Tests:** Layer-1 lint (stale-index: MOC link → nonexistent file; orphan: `.md`
-  lacking valid `up:`; `.gitattributes` missing `.process` glob); Layer-4 determinism
-  test for the generator scripts.
+- **speckit-prd** also emits the roadmap-MOC home note (curated epics plus
+  generated-index sentinels) when it writes the PRD and technical roadmap.
+- **speckit-coach** teaches the two-zone structure and the "keep epics under
+  about 10" guardrail.
+- **speckit-scaffold-spec** births the `SPEC-MOC.md` skeleton with `up:` set,
+  places exhaust under `.process/`, commits the repo-root `.gitattributes` if it
+  is missing, and mints a spec-MOC only when the roadmap entry breaks into
+  multiple slices.
+- **speckit-autopilot** points exhaust commits at `.process/`, regenerates the
+  index and backlinks as a phase-gate step (the top staleness mitigation),
+  updates the PR-to-SHA block when it opens a PR, and optionally runs post-merge
+  relocation for bulky exhaust in v2.
+- **speckit-status** is the index generator, sharing
+  `scripts/generate-spec-index.sh`.
+- **Tests.** Layer-1 lints catch a stale index (a MOC link pointing at a missing
+  file), an orphan (a `.md` with no valid `up:`), and a `.gitattributes` that
+  forgets the `.process` glob. A Layer-4 test pins the generator scripts to
+  deterministic output.
 
-## Top risks
+## The biggest risks
 
-- **Stale index** (#1) — no live engine; generated blocks silently lie. → phase-gate
-  regeneration + Layer-1 lint.
-- **Overclaiming `.gitattributes` "excludes"** — it *collapses*; file-count cap
-  (which the 279-file PR already busts) needs right-sizing or relocation.
-- **Marking the contract generated** — scope the glob strictly to `.process/**`.
-- **MOC sprawl / over-decomposition** — mint at the squeeze point only; right-size
-  to PR-sized, not atom-sized.
-- **Curation becomes a job** — strict machine/human split.
-- **Wikilink/Obsidian-runtime trap** — every nav feature needs a static,
-  bash-generated relative-link `.md` equivalent (the vault is `[[wikilink]]`/Dataview
-  heavy; those render as nothing in a PR diff).
+- **A stale index** is the headline risk. There is no live engine, so a generated
+  block can silently lie. Mitigate with phase-gate regeneration and a Layer-1
+  lint.
+- **Overselling what `.gitattributes` does.** It collapses; it does not exclude.
+  The file-count cap, which the 279-file PR already busts, needs right-sizing or
+  relocation to actually move.
+- **Marking a contract file as generated.** Scope the glob strictly to
+  `.process/**` so it can never touch a contract path.
+- **MOC sprawl from over-decomposition.** Mint at the squeeze point only, and
+  size to PR-sized rather than atom-sized.
+- **Curation turning into a second job.** Hold the machine-versus-human line.
+- **The wikilink trap.** Every navigation feature needs a static,
+  bash-generated, relative-link equivalent. The vault leans on `[[wikilinks]]`
+  and Dataview, and both render as nothing in a PR diff.
 
-## Open decisions (human's to make)
+## Decisions this brief raised (now resolved)
 
-1. **Accept the flip?** Code decomposition via split-PR (O2), spec-splitting demoted
-   to shared-artifact epics (O5) for monsters only.
-2. **Slice = sub-spec or sub-PR?** (biggest structural fork) — sub-spec siblings
-   (own branch/PR, matches 006a/006b) vs sub-PRs off one spec branch.
-3. **Artifact v1 scope:** collapse-only (`.gitattributes`, zero new infra) vs
-   collapse + post-merge relocate.
-4. **Tier the design-concept** (and `uat-runbook`): exhaust (collapse) or contract
-   (stay visible)?
-5. **WHY annotations:** mandatory (guarantee benefit) or advisory (avoid abandonment)?
-6. **Migration:** retrofit existing specs to `.process/` + backfill MOCs, or
-   new-specs-only?
+These were the open forks at the time of research. All six are settled in the
+roadmap's locked-decisions table; the resolution is noted here for the record.
 
-## O2 red-team verdict & decision rule (workflow 3)
+1. **Accept the flip to split-PR?** Yes. Code decomposition runs through split-PR
+   (O2); spec-splitting drops to shared-artifact epics (O5) for monsters only.
+2. **Slice as a sub-spec or a sub-PR?** Sub-PRs within one spec: one SPEC ID, one
+   `tasks.md`, one artifact set, N PRs. The `006a/006b` sub-spec form is reserved
+   for monster epics.
+3. **Artifact scope in v1?** Collapse only via `.gitattributes`, zero new
+   infrastructure. Post-merge relocation waits for v2.
+4. **Tier the design concept and the UAT runbook as exhaust or contract?**
+   Exhaust, collapsed under `.process/`.
+5. **Why annotations mandatory or advisory?** Advisory in v1, to avoid the
+   abandonment failure mode.
+6. **Migrate existing specs or ship new-specs-only?** Tiered retro-migration
+   (SPEC-011): repo-level edits eagerly, navigation backfill for completed specs,
+   and an on-demand relocate codemod for the specs that have a `specs/<NNN>/`
+   directory. Legacy specs are grandfathered by the absence of a version marker.
 
-An adversarial red-team (6 change-class skeptics + branch-by-abstraction research +
-synthesis) stress-tested **O2 as the default** before adoption. Verdict:
-**confirm-with-carveouts — O2-as-default survives.** Most "irreducible" cases are
-not O2 failures; they are inputs the feature-spec pipeline never produces a
-multi-user-story `tasks.md` for (pure renames, dep/runtime bumps, standalone
-destructive migrations) → **out of scope**, not "O2 broke."
+## Stress-testing split-PR as the default
 
-### The atomicity test (autopilot routing rule)
+Before adopting split-PR as the default, an adversarial red team put it through
+its paces: six skeptics each owning a change class, a branch-by-abstraction
+study, and a synthesis pass. The verdict was confirm-with-carveouts, and
+split-PR-as-default survived. Most cases that look irreducible are not split-PR
+failures at all. They are inputs the feature-spec pipeline never produces a
+multi-user-story `tasks.md` for in the first place: pure renames, dependency or
+runtime bumps, standalone destructive migrations. Those fall out of scope rather
+than breaking the approach.
 
-1. **Sliceable shape?** Does `tasks.md` decompose into user-story phases (US1/US2…),
-   each with an Independent Test + "independently functional" checkpoint? **No** →
-   one-navigable-PR (if mechanical/atomic) or **out-of-scope** (not a feature spec).
-2. **Additive / wire-last?** Is every increment purely additive / dead-but-compiled,
-   existing entry points unchanged until the final slice? **Yes** → **SPLIT-PR
-   (default)** — no flag, no cadence check needed.
-3. **Coexistence test?** Can OLD + NEW both live in one build that passes its own
-   tests, all consumers in-tree? **Yes** → **branch-by-abstraction**
-   (expand → migrate callers → contract last; force the contract slice to complete).
-4. **Darkening available?** Flag system present, OR release-cadence app with no
-   out-of-tree consumer? **Yes** → ship the cutover as one flagged/dark slice.
-5. **Hard-atomic override → single atomic PR:** exported-symbol rename with
-   cross-module compile coupling; one global version/runtime pin (dep/framework
-   cutover); in-place destructive/backfill migration (rewrites rows / flips
-   CHECK/enum); mutual-exclusion / auth / payment primitive where dual-running is the
-   hazard; breaking change to a versioned / out-of-tree consumer surface.
-6. **Releasability ≠ CI-green (the critical carve-out).** For per-table destructive
-   migrations and dual-run concurrency cutovers, `build+test green` passes while
-   `main` is corrupt/unsafe on deploy. The releasability check MUST assert the
-   cross-table / cross-tree / runtime invariant — not just that the build is green.
-   If the invariant can't be asserted in an intermediate slice, the cut is mid-atom:
-   merge it into the cutover PR.
-7. **Mechanical-tier exemption:** large + mechanical + atomic diffs (renames,
-   codemods, dep bumps) → one-navigable-PR. Correct low-cognitive-load form, NOT an
-   O2 failure.
+### The atomicity test (the autopilot routing rule)
+
+1. **Is the shape sliceable?** Does `tasks.md` break into user-story phases (US1,
+   US2, and so on), each with an independent test and an "independently
+   functional" checkpoint? If no, route to one-navigable-PR when the work is
+   mechanical or atomic, or out-of-scope when it is not a feature spec at all.
+2. **Is it additive and wired last?** Is every increment purely additive or
+   dead-but-compiled, with existing entry points untouched until the final slice?
+   If yes, split-PR is the default. No flag and no cadence check needed.
+3. **Can old and new coexist?** Can both live in one build that passes its own
+   tests, with every consumer in the tree? If yes, use branch-by-abstraction:
+   expand, migrate the callers, then contract last, and force the contract slice
+   to complete.
+4. **Is darkening available?** Is there a flag system, or a release-cadence app
+   with no out-of-tree consumer? If yes, ship the cutover as one flagged or dark
+   slice.
+5. **Hard-atomic override, ship one atomic PR.** This covers an exported-symbol
+   rename with cross-module compile coupling, a single global version or runtime
+   pin (a dependency or framework cutover), an in-place destructive or backfill
+   migration that rewrites rows or flips a CHECK constraint or enum, a
+   mutual-exclusion, auth, or payment primitive where dual-running is the hazard,
+   and any breaking change to a versioned or out-of-tree consumer surface.
+6. **"Releasable" is not the same as "CI-green."** This is the critical carve-out.
+   For per-table destructive migrations and dual-run concurrency cutovers, build
+   and test go green while `main` is corrupt or unsafe to deploy. The releasability
+   check has to assert the cross-table, cross-tree, or runtime invariant, not just
+   that the build passed. If you cannot assert the invariant in an intermediate
+   slice, the cut lands mid-atom, so fold it into the cutover PR.
+7. **Mechanical-tier exemption.** A large but mechanical and atomic diff (a
+   rename, a codemod, a dependency bump) routes to one-navigable-PR. That is the
+   correct low-cognitive-load form, not a split-PR failure.
 
 ### Per-class routing
 
 | Change class | Route |
 |--------------|-------|
-| Greenfield/additive feature, user-story decomposition (model→logic→UI, wired last) | **SPLIT-PR (default)** |
-| In-place modification, all consumers in-tree | **branch-by-abstraction** |
-| Breaking change to versioned / out-of-tree consumer surface | fallback (v2-beside-v1, or atomic PR + consumer plan) |
-| In-place destructive/backfill migration | fallback (atomic PR + lockstep code) |
-| Security/auth/concurrency mutual-exclusion cutover | fallback (flag-gated, or atomic PR if no flag) |
-| Cross-cutting exported-symbol rename (100s of call sites) | **out-of-scope** (one navigable PR) |
-| Dep/framework/runtime/platform cutover (one global pin) | **out-of-scope** (atomic flip; prep/cleanup may slice) |
-| Redesign replacing an existing visible screen on a no-flag release-cadence app | fallback (one swap PR + release-hold, or add runtime toggle in Foundation) |
+| Greenfield or additive feature with user-story decomposition (model, then logic, then UI, wired last) | split-PR (default) |
+| In-place modification with all consumers in the tree | branch-by-abstraction |
+| Breaking change to a versioned or out-of-tree consumer surface | fallback (v2 beside v1, or atomic PR plus a consumer plan) |
+| In-place destructive or backfill migration | fallback (atomic PR plus lockstep code) |
+| Security, auth, or concurrency mutual-exclusion cutover | fallback (flag-gated, or atomic PR when there is no flag) |
+| Cross-cutting exported-symbol rename across hundreds of call sites | out-of-scope (one navigable PR) |
+| Dependency, framework, runtime, or platform cutover on a single global pin | out-of-scope (atomic flip; prep and cleanup may still slice) |
+| Redesign that replaces a visible screen on a no-flag release-cadence app | fallback (one swap PR plus a release hold, or a runtime toggle added in Foundation) |
 
-### Detection order (cheapest/most-authoritative first)
+### Detection order (cheapest and most authoritative first)
 
-1. `tasks.md` shape (user-story phases?) → 2. additive-vs-modify per increment
-(grep diff for existing-symbol edits / migration `UPDATE/DELETE/DROP/CHECK` vs net-new
-`CREATE TABLE`/nullable `ADD COLUMN`) → 3. flag-system probe (`feature-flags*`,
-`FEATURE_*`, OpenFeature) → 4. release cadence (Sparkle/appcast/Info.plist/App-Store =
-release-cadence; Vercel/preview = continuous) → 5. consumer locality for API changes
-(versioned `/api/vN` or MCP process ⇒ treat as out-of-tree, route conservatively).
+1. Read the `tasks.md` shape. Does it carry user-story phases?
+2. Check additive-versus-modify per increment. Grep the diff for edits to
+   existing symbols, and for migration verbs like `UPDATE`, `DELETE`, `DROP`, and
+   `CHECK`, versus net-new work like `CREATE TABLE` or a nullable `ADD COLUMN`.
+3. Probe for a flag system (`feature-flags*`, `FEATURE_*`, OpenFeature).
+4. Read the release cadence. Sparkle, an appcast, `Info.plist`, or the App Store
+   means release-cadence; Vercel or preview deploys mean continuous.
+5. Check consumer locality for API changes. A versioned `/api/vN` or an MCP
+   process counts as out-of-tree, so route conservatively.
 
-### Highest-impact residual risk
+### The risk that matters most
 
-A naive O2 gate that equates "build+test green" with "releasable" actively
-**manufactures a deploy-corruption failure mode the single big PR did not have**
-(mixed-schema `main`; two live admission controllers). Either upgrade the
-releasability check to assert invariants, or **detect-and-route** those signatures to
-atomic + warn the human. (Recommended v1: detect-and-route; defer invariant machinery.)
+A naive split-PR gate that treats "build and test green" as "releasable"
+manufactures a deploy-corruption failure mode the single big PR never had: a
+mixed-schema `main`, or two live admission controllers. Two ways out. Either
+upgrade the releasability check to assert the real invariant, or detect those
+signatures and route them to an atomic PR with a warning to the human. The v1
+recommendation is detect-and-route, and defer the invariant machinery.
 
-> Note: the red-team could not reach FocusEngine via `gh` (a casing/GraphQL error);
-> however the orchestrator inspected it directly earlier — it IS accessible, is a Swift
-> macOS app with small no-flag PRs, and #195 is the TS→Swift cutover — so the no-flag /
-> release-cadence branch is empirically grounded, not just asserted.
+> Note: the red team could not reach focusengine through `gh` because of a casing
+> and GraphQL error. The orchestrator had already inspected it directly, though.
+> It is a Swift macOS app with small no-flag PRs, and #195 is the TypeScript to
+> Swift cutover, so the no-flag and release-cadence branch is grounded in
+> evidence rather than assumed.
 
-## Provenance
+## Where this came from
 
-- Workflow 1 (PR-size forensics + industry): 9 agents, ~882k tokens.
-- Workflow 2 (MOC + provenance): 4 agents, ~344k tokens.
-- Workflow 3 (O2 red-team): 8 agents, ~488k tokens.
+- Run 1 (PR-size forensics and industry survey): 9 agents, about 882k tokens.
+- Run 2 (MOC and provenance): 4 agents, about 344k tokens.
+- Run 3 (split-PR red team): 8 agents, about 488k tokens.
 - Raw outputs: `tasks/wdejrrz8x.output`, `tasks/w8l880431.output`,
   `tasks/wt50r1ws3.output` (session tmp).
