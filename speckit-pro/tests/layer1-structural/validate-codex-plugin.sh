@@ -44,6 +44,13 @@ else
   _fail "description is empty"
 fi
 
+set_test "description uses scaffold naming for spec preparation"
+if [[ "$desc_val" == *"spec scaffolding"* && "$desc_val" != *"setup"* ]]; then
+  _pass
+else
+  _fail "expected Codex plugin description to use scaffolding terminology (no 'setup')"
+fi
+
 set_test "homepage field exists"
 assert_json_field_exists "$CONTENT" "homepage"
 
@@ -58,6 +65,15 @@ assert_json_field_exists "$CONTENT" "interface.category"
 
 set_test "interface.defaultPrompt exists"
 assert_json_field_exists "$CONTENT" "interface.defaultPrompt"
+
+set_test "interface.defaultPrompt uses scaffold naming for spec preparation"
+default_prompts=$(printf '%s' "$CONTENT" | python3 -c "import sys,json; print('\n'.join(json.load(sys.stdin)['interface']['defaultPrompt']))" 2>/dev/null)
+if [[ "$default_prompts" == *"scaffold a spec worktree"* \
+  && "$default_prompts" != *"set up a spec worktree"* ]]; then
+  _pass
+else
+  _fail "expected Codex default prompt to say scaffold a spec worktree"
+fi
 
 section ".codex-plugin — Directory Structure"
 

@@ -7,7 +7,7 @@ allowed-tools: Bash Read Edit Write Skill Agent
 license: MIT
 ---
 
-# SpecKit Setup
+# SpecKit Scaffold Spec
 
 ## Codex Skill-Selection Guard
 
@@ -284,7 +284,7 @@ All commits happen on the worktree branch — NEVER on main.
 Report:
 
 ```text
-## Setup Complete
+## Scaffold Complete
 
 **Spec:** SPEC-009 Search & Database
 **Branch:** 009-search-database

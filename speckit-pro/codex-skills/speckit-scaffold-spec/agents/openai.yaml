@@ -1,7 +1,7 @@
 interface:
-  display_name: "SpecKit Setup"
+  display_name: "SpecKit Scaffold Spec"
   short_description: "Prepare a spec branch and workflow for autopilot"
-  default_prompt: "Set up a SPEC-ID from the technical roadmap for SpecKit autopilot"
+  default_prompt: "Scaffold a SPEC-ID from the technical roadmap for SpecKit autopilot"
 
 policy:
   allow_implicit_invocation: false
