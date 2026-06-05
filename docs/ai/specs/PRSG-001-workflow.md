@@ -50,7 +50,7 @@ Re-read it before each phase. The locked decisions from that interview (Q1–Q5)
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 14 FRs, US1/US2, 8 ACs, 6 SCs; 0 `[NEEDS CLARIFICATION]`; ext-authored exhaust scoped out (commit 58c03ab) |
 | Clarify | `/speckit-clarify` | ✅ Complete | **Skipped** — 0 markers after Specify; the 4 big decisions are locked in the design concept and the 3 session mechanics are carried verbatim in the Plan prompt's grounded map. G6/Analyze verifies design-concept ↔ spec/plan/tasks consistency. |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | plan.md (20KB) + research.md (pointer); bash+jq+markdown; US1→US2 sequencing; Codex parity identified; constitution PASS via ratified split exception (commit 45ee7cf). Garbled `update-agent-context.sh` CLAUDE.md append reverted. |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -287,11 +287,11 @@ production_files for markdown — only diff-mode reviewable_loc.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | bash+jq+markdown; redirect map; sequencing US1→US2 |
-| `research.md` | ⏳ | Only if a new decision surfaces (most are locked) |
-| `data-model.md` | ⏳ | N/A (no data model) — omit if empty |
-| `contracts/` | ⏳ | N/A — omit if empty |
-| `quickstart.md` | ⏳ | Optional |
+| `plan.md` | ✅ | bash+jq+markdown; redirect map; US1→US2 sequencing; split exception ratified for surface budget |
+| `research.md` | ✅ | Thin pointer to design concept (no re-derivation; all decisions locked) |
+| `data-model.md` | N/A | Correctly omitted — no data model (taxonomy is prose in spec.md) |
+| `contracts/` | N/A | Correctly omitted — no API/CLI/machine interface |
+| `quickstart.md` | N/A | Correctly omitted — no user-facing runtime |
 
 ---
 
