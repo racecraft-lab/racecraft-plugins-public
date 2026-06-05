@@ -98,7 +98,7 @@ Verify against `.specify/memory/constitution.md` (v1.1.0) before G1:
 |-------|-------|
 | **Spec ID** | PRSG-001 |
 | **Name** | Artifact relocation: tiering, .process/, collapse |
-| **Branch** | `prsg-001-artifact-relocation` |
+| **Branch** | `007-artifact-relocation` |
 | **Dependencies** | None (orthogonal precondition) |
 | **Enables** | PRSG-002 (MOC skeleton under `.process/`-aware tree), PRSG-006 (gate threshold rework reuses the aligned exclusion), PRSG-011 (consumes the `.process/` glob + gate fix) |
 | **Priority** | P1 (Phase 1, MVP) |
@@ -131,7 +131,7 @@ extension-authored exhaust documented as future work):
 
 ## Phase 1: Specify
 
-**When to run:** Start here. Focus on **WHAT** and **WHY**. Output: `specs/prsg-001-artifact-relocation/spec.md`
+**When to run:** Start here. Focus on **WHAT** and **WHY**. Output: `specs/007-artifact-relocation/spec.md`
 
 ### Specify Prompt
 
@@ -193,7 +193,7 @@ projects), and the maintainers who rely on the reviewability gate's LOC accounti
 
 ### Files Generated
 
-- [ ] `specs/prsg-001-artifact-relocation/spec.md`
+- [ ] `specs/007-artifact-relocation/spec.md`
 
 ---
 
@@ -234,7 +234,7 @@ to pin implementation mechanics, max 5 questions per session.
 
 ## Phase 3: Plan
 
-**When to run:** After spec is finalized. Output: `specs/prsg-001-artifact-relocation/plan.md`
+**When to run:** After spec is finalized. Output: `specs/007-artifact-relocation/plan.md`
 
 ### Plan Prompt
 
@@ -366,7 +366,7 @@ Focus on Artifact relocation requirements:
 
 ## Phase 5: Tasks
 
-**When to run:** After checklists. Output: `specs/prsg-001-artifact-relocation/tasks.md`
+**When to run:** After checklists. Output: `specs/007-artifact-relocation/tasks.md`
 
 ### Tasks Prompt
 
@@ -445,7 +445,7 @@ Focus on:
 4. VERIFY: collapse on a real diff; PR body UAT section renders.
 
 ### Pre-Implementation Setup
-1. Work in the worktree on branch prsg-001-artifact-relocation.
+1. Work in the worktree on branch 007-artifact-relocation.
 2. Baseline green: `bash speckit-pro/tests/run-all.sh` (Layers 1,4,5).
 3. Keep the Codex mirror edits in the SAME commits as their skills/ counterparts.
 

@@ -279,7 +279,7 @@ add a little; treat ~250 as a target, not a ceiling.
 
 ## Recommended Next Step
 
-Setup mode — the worktree, branch (`prsg-001-artifact-relocation`), and this
+Setup mode — the worktree, branch (`007-artifact-relocation`), and this
 design concept already exist. After the workflow file is populated and committed:
 
 ```text
