@@ -17,7 +17,7 @@ evidence-backed implementation map live at:
 docs/ai/specs/PRSG-001-design-concept.md
 ```
 
-Re-read it before each phase. The four locked decisions from that interview:
+Re-read it before each phase. The locked decisions from that interview (Q1–Q5):
 
 1. **Redirect path = dual `.process/` anchor.** scaffold-spec writes
    `docs/ai/specs/.process/`, autopilot writes `specs/<NNN>/.process/`; one
@@ -27,10 +27,16 @@ Re-read it before each phase. The four locked decisions from that interview:
    so consuming projects collapse their new specs too.
 3. **`uat-runbook.md` = EXHAUST.** Move it to `.process/` and repoint
    `generate-pr-body.sh` so the PR body's UAT section still renders.
-4. **Extension-authored exhaust = out of scope, documented.** PRSG-001 redirects only
-   what speckit-pro authors (design-concept, workflow, uat-runbook). retrospective /
-   peer-review / verification-evidence / cleanup / analysis are written by external
-   extensions and collapse only once they land under `.process/` (future / PRSG-011).
+4. **Extension-authored exhaust = out of scope; the `archive` extension owns it.**
+   PRSG-001 is the **review-window** half: it collapses only what speckit-pro authors
+   (design-concept, workflow, uat-runbook). retrospective / verify-tasks-report are
+   written by external extensions and stay visible at review; their **post-merge**
+   cleanup is already owned by the installed `archive` extension (distill to
+   `.specify/memory/` + gated whole-dir removal). Do **not** build a `git mv` sweep —
+   that duplicates `archive`. (`verify` writes no file; `peer-review`/`analyze` are
+   speckit-pro's own, not extensions.) The roadmap already designed this split
+   (locked: collapse-only v1, post-merge relocation deferred to v2; PRSG-011 mirrors
+   the archive extension's gated-safety pattern).
 
 > **Note:** Grill Me is human-in-the-loop only and is **not** part of the autopilot
 > loop. Once autopilot begins, clarifications happen via `/speckit-clarify` and the
@@ -108,8 +114,8 @@ extension-authored exhaust documented as future work):
       `specs/<NNN>/.process/` for autopilot post-impl files). The CONTRACT set
       (`spec`/`plan`/`tasks`/`research`/`data-model`/`contracts`/`checklists`/`SPEC-MOC`)
       stays at the visible spec root. spec.md documents that extension-authored exhaust
-      (retrospective/peer-review/verification-evidence/cleanup/analysis) is not redirected
-      by this spec.
+      (retrospective, verify-tasks-report) is not redirected by this spec — it stays
+      visible at review and is cleaned up post-merge by the `archive` extension.
 - [ ] **AC-1.2:** a repo-root `.gitattributes` marks `**/.process/**` as
       `linguist-generated=true` so a fresh autopilot run's `.process/` diff collapses in
       the GitHub UI yet stays loadable on demand; an idempotent ensure-step writes the
@@ -168,9 +174,11 @@ projects), and the maintainers who rely on the reviewability gate's LOC accounti
   repoint add a little).
 
 ### Out of Scope
-- Redirecting extension-authored exhaust (retrospective, peer-review,
-  verification-evidence, cleanup, analysis) — they are written by external SpecKit
-  extensions; document the limitation, do not wire a sweep (that overlaps PRSG-011).
+- Redirecting extension-authored exhaust (retrospective, verify-tasks-report) — they
+  are written by external SpecKit extensions; they stay visible in the review window
+  and their POST-MERGE cleanup is owned by the installed `archive` extension (distill
+  to `.specify/memory/` + gated whole-dir removal). Do NOT wire a `git mv` sweep — it
+  duplicates `archive` and the roadmap already defers post-merge relocation to v2.
 - Moving the CONTRACT set or any legacy spec.
 - `-diff`, retro-migration, MOC templates (PRSG-002), gate threshold rework (PRSG-006).
 ```

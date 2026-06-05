@@ -7,7 +7,7 @@ spec_id: "PRSG-001"
 source_input:
   type: "topic"
   ref: "docs/ai/specs/pr-size-governance-technical-roadmap.md (### PRSG-001); docs/prd-pr-size-governance.md (§3.1)"
-question_count: 4
+question_count: 5
 stop_reason: "natural"
 ---
 
@@ -42,11 +42,14 @@ roadmap text.
 
 ## Non-goals
 
-- **Collapsing extension-authored exhaust** (retrospective, peer-review,
-  verification-evidence, cleanup, analysis). Answered in Q4: those are written by
-  external SpecKit extensions speckit-pro does not control; they collapse only
-  once they land under `.process/`, which they do not today. Documented as future
-  work, not wired here.
+- **Collapsing extension-authored exhaust** (retrospective, verify-tasks-report).
+  Answered in Q4, confirmed by the archive-extension finding (below): these are
+  written by external SpecKit extensions speckit-pro does not control, and their
+  **post-merge cleanup is already owned by the `archive` extension** (distill to
+  `.specify/memory/` + gated whole-dir removal). PRSG-001 leaves them visible in
+  the review window and does **not** build a `git mv` sweep to chase them into
+  `.process/`. (`verify` writes no file; `peer-review`/`analyze` are speckit-pro's
+  own, not extensions.)
 - **`-diff` (rendering artifacts non-diffable).** Locked in the roadmap:
   `linguist-generated` only, so artifacts stay loadable/inspectable ("Load diff").
 - **Retro-migrating existing/legacy specs.** Locked new-specs-only; the codemod
@@ -162,7 +165,40 @@ collapses only once it lands under `.process/` — explicitly future/PRSG-011 wo
 - Add a post-impl sweep step: collapses everything the PRD names, but adds real
   LOC + fragility, overlaps PRSG-011, and breaks the single-responsibility line.
 
-**User's answer:** Scope to authored + document (Recommended)
+**User's answer:** Scope to authored + document (Recommended) — see Q5, which
+re-grounded the "document as future/PRSG-011 work" half: post-merge cleanup of
+extension exhaust is already owned by the `archive` extension, so it is not a gap.
+
+---
+
+### Q5. Does the existing `archive` extension already clean up the SpecKit exhaust? (raised by the user before finalizing)
+
+**Branch:** Lifecycle / build-vs-reuse
+
+**Finding:** The installed `archive` extension (`v1.1.0`, `racecraft-lab/spec-kit-archive`)
+**distills then sweeps**: it folds a merged feature's substance into
+`.specify/memory/` (`spec.md`/`plan.md`/`changelog.md` + agent file) with provenance
+and recovery commands, then under `--apply-cleanup` (8 gates) removes/moves the
+**entire merged feature dir** out of `specs/**`. It is wired as a `before_specify`
+**dry-run** sweep (optional prompt); apply-cleanup is a separate gated step.
+
+**Resolution:** It cleans up exhaust **post-merge, whole-dir** — the *opposite end
+of the lifecycle* from PRSG-001, which collapses exhaust in the **review window**
+(an open PR; archive never touches it because the feature isn't merged yet). They
+are **complementary halves**, and the roadmap already designed for this:
+locked decision = "collapse-only v1, post-merge **relocation deferred to v2**";
+PRSG-011 "mirrors speckit-archive-run's gated-safety pattern."
+> Consequence: the "extension exhaust accumulates" worry (Paddock-scale specs/ trees)
+> is owned by `archive`, not PRSG-001. So PRSG-001 stays the review-window half:
+> collapse what speckit-pro authors (design-concept, workflow, uat-runbook); leave
+> retrospective/verify-tasks-report visible at review (archive cleans them after
+> merge); do NOT build a `git mv` sweep. Evidence:
+> .specify/extensions/archive/commands/archive.md:55-57,89-105,283,347;
+> extensions.yml:83-89 (before_specify dry-run hook); roadmap locked-decisions table.
+
+**User's answer:** Lock in the scoped PRSG-001 (review-window collapse of
+speckit-pro-authored exhaust; archive owns post-merge); add the
+"extension exhaust → archive extension (post-merge)" note.
 
 ## Open Questions
 
