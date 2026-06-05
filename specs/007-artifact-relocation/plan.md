@@ -253,6 +253,25 @@ and `codex-skills/` trees, plus one new repo-root `.gitattributes` and one new f
 the existing `speckit-pro/tests/layer1-structural/` array. This matches the plugin
 layout (constitution Principle I) and keeps the change surgical (CLAUDE.md rule 3).
 
+**Consensus resolution — consumer `.gitattributes` safe-write (Checklist/error-handling):**
+The consumer ensure-step (folded into `ensure-reviewability-preset.sh`) MUST:
+1. Detect presence with `grep -qxF "$rule" "$file"` — fixed-string (`-F`, because the rule
+   contains `*` glob metacharacters) whole-line (`-x`) match; short-circuit if already present.
+2. Normalize the trailing newline before appending: if the existing file's last byte is not
+   `\n`, add one first — otherwise the rule silently concatenates onto the last existing line
+   and yields a malformed `.gitattributes` (git-lfs#167). Upholds FR-009(c) "preserve every
+   pre-existing line byte-for-byte".
+3. Write atomically: copy existing content (if any) into a SAME-DIRECTORY temp file
+   `mktemp "${file}.XXXXXX"` (same dir keeps `mv` atomic on macOS, where `/tmp` is a separate
+   filesystem and a cross-device `mv` degrades to non-atomic copy), append the rule to the temp,
+   then `mv` it over the target; `trap 'rm -f "$tmp"' EXIT` to avoid orphaned temps. Satisfies
+   the Edge Case "no partial/truncated file on interruption".
+
+This is ~10 LOC, matches the repo's established temp-then-rename convention
+(`install-curated-set.sh`, `generate-uat-skeleton.sh`'s "write once at the end"), and adds no
+new script/abstraction (constitution VI). Resolved by 2-analyst consensus (codebase + domain),
+both high-confidence on the prerequisites.
+
 ## Complexity Tracking
 
 > One row: the reviewability **surface budget** is exceeded by the mechanical gate
