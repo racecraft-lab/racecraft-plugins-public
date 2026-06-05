@@ -2,6 +2,7 @@
 
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
+> **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
 > Status: **approved direction, ready to scaffold**. Created 2026-06-03.
 
 ## Vision
