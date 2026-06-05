@@ -140,7 +140,8 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-hooks.sh" \
     "$TESTS_DIR/layer1-structural/validate-scripts.sh" \
     "$TESTS_DIR/layer1-structural/validate-curated-set.sh" \
-    "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh"
+    "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh" \
+    "$TESTS_DIR/layer1-structural/validate-process-gitattributes.sh"
 
   # Codex structural tests are part of the default layer 1 run.
   run_layer 1 "Codex Structural Validation" \
