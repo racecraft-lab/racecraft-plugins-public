@@ -35,7 +35,7 @@ forward designs.
 **Layer 1 — Executor agent (first pass):** Each phase has a
 specialized executor agent (clarify-executor,
 checklist-executor, analyze-executor) that runs the
-`/speckit.*` command AND does direct research using web search,
+`/speckit-*` command AND does direct research using web search,
 library docs, and codebase exploration (MCP tools when available,
 built-in fallbacks otherwise). The executor
 resolves most items directly (~80%) and applies fixes to

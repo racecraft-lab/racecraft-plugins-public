@@ -4,7 +4,7 @@
 
 1. **SUBAGENT PER PHASE** — Spawn a foreground subagent for
    each phase via the Agent tool. The subagent runs the
-   `/speckit.*` command and returns a summary. The parent
+   `/speckit-*` command and returns a summary. The parent
    receives the result as a tool response, keeping the agent
    loop alive.
 2. **MULTI-PROMPT** — Clarify and Checklist have multiple
@@ -22,7 +22,7 @@
 
 How each SDD phase is executed by the autopilot. Each phase
 is delegated to a **foreground subagent** that runs the real
-`/speckit.*` command via the `Skill` tool. The subagent
+`/speckit-*` command via the `Skill` tool. The subagent
 operates in its own context — the command's noise (template
 reads, file exploration, completion reports) stays there and
 never touches the parent. The parent receives only a summary.
@@ -75,7 +75,7 @@ commands and scripts:
 Each phase is executed by spawning a foreground subagent via
 the Agent tool. The subagent:
 
-1. Loads the `/speckit.*` command via `Skill()`
+1. Loads the `/speckit-*` command via `Skill()`
 2. Runs the command in its own context
 3. Returns a concise summary to the parent
 
@@ -158,7 +158,7 @@ Update tasks as each subagent returns.
 ### Phase 0: Prerequisites (Constitution Validation)
 
 **No subagent.** This runs directly in the main session —
-it does NOT invoke a `/speckit.*` command.
+it does NOT invoke a `/speckit-*` command.
 
 1. Read `.specify/memory/constitution.md` — extract all
    numbered principles
@@ -787,7 +787,7 @@ should understand what the presets enforce:
    should handle any structure.
 4. **Debug with `specify preset resolve`** — if artifacts have
    unexpected structure, run `specify preset resolve <template>`
-   to see which file the `/speckit.*` command actually used
+   to see which file the `/speckit-*` command actually used
 
 ## PR Creation Protocol
 

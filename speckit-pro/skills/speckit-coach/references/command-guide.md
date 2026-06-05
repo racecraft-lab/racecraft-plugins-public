@@ -511,7 +511,7 @@ core files.
 
 ### Template Resolution Order
 
-When a `/speckit.*` command needs a template, resolution checks
+When a SpecKit skill needs a template, resolution checks
 these locations in order (first match wins):
 
 1. **Project overrides** — `.specify/templates/overrides/`

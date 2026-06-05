@@ -54,7 +54,7 @@ specify preset catalog remove <name>           # remove catalog
 
 ### Template Resolution Order
 
-When a `/speckit.*` command needs a template, the system checks
+When a SpecKit skill needs a template, the system checks
 these locations in order — first match wins:
 
 ```

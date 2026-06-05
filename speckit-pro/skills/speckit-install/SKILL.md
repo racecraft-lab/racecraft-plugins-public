@@ -154,7 +154,7 @@ Report to the operator:
 - Each integration that was installed and its artifact path.
 - The constitution placeholder at `.specify/memory/constitution.md` —
   next step is `/speckit-pro:speckit-coach create my project constitution`
-  or `/speckit.constitution` (or `$speckit-coach` / `$speckit-constitution`
+  or `/speckit-constitution` (or `$speckit-coach` / `$speckit-constitution`
   in Codex).
 - A reminder to **restart the coding-agent process** (Claude Code or
   Codex CLI) so the newly installed skills/commands are picked up.

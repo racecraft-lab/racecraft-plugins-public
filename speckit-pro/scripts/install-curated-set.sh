@@ -164,10 +164,11 @@ while IFS='|' read -r id kind repo; do
           # remove); the here-string answers the untrusted-source prompt.
           "$SPECIFY" "$kind" add "$id" --from "$zip_url" --force <<< "y"
         else
-          # presets have no `add --force`; remove then re-add (preset add takes an
-          # optional positional and does not prompt on --from).
-          "$SPECIFY" "$kind" remove "$id" >/dev/null 2>&1 <<< "y" || true
-          "$SPECIFY" "$kind" add "$id" --from "$zip_url" <<< "y"
+          # presets have no `add --force`, so remove then re-add. preset
+          # add/remove do not show the untrusted-source prompt, so (unlike the
+          # extension branch above) no stdin feed is needed.
+          "$SPECIFY" "$kind" remove "$id" >/dev/null 2>&1 || true
+          "$SPECIFY" "$kind" add "$id" --from "$zip_url"
         fi
         record_action "$id" "upgraded" "$kind" "$ref_kind" "$ref_tag" "$installed" "$repo" "$zip_url"
       else

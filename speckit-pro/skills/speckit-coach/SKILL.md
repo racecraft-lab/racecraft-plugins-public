@@ -28,7 +28,7 @@ uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify init --integration claude     # 25+ agents: copilot, cursor-agent, gemini, codex, etc.
 ```
 
-After installation, the developer has access to all `/speckit.*` slash commands. This skill provides **coaching, guidance, and enhancement** on top of those commands.
+After installation, the developer has access to the SpecKit skills (`/speckit-*`) and extension commands. This skill provides **coaching, guidance, and enhancement** on top of those commands.
 
 ## What This Skill Does
 
