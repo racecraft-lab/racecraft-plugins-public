@@ -202,7 +202,7 @@ roadmap's locked-decisions table; the resolution is noted here for the record.
 5. **Why annotations mandatory or advisory?** Advisory in v1, to avoid the
    abandonment failure mode.
 6. **Migrate existing specs or ship new-specs-only?** Tiered retro-migration
-   (SPEC-011): repo-level edits eagerly, navigation backfill for completed specs,
+   (PRSG-011): repo-level edits eagerly, navigation backfill for completed specs,
    and an on-demand relocate codemod for the specs that have a `specs/<NNN>/`
    directory. Legacy specs are grandfathered by the absence of a version marker.
 

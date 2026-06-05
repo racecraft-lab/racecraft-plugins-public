@@ -19,7 +19,7 @@ template boilerplate) with three composed layers:
 - **Navigate** the whole tree (epic ↔ spec ↔ slice ↔ PR ↔ artifact) with a **MOC
   spine** so decomposition adds traceability instead of cognitive load.
 
-…and a **state-keyed retro-migration** (SPEC-011) so existing projects upgrade cleanly
+…and a **state-keyed retro-migration** (PRSG-011) so existing projects upgrade cleanly
 instead of becoming a permanent split-brain repo.
 
 ## Locked decisions (2026-06-03)
@@ -28,12 +28,12 @@ instead of becoming a permanent split-brain repo.
 |----------|--------|
 | Code strategy | **O2 split-PR default** + atomicity-test routing |
 | Slice unit | **PR within one spec** (one SPEC-ID, one `tasks.md`, **one artifact set**, N PRs). `006a/006b` sub-specs reserved for O5 monster-epics only |
-| Artifacts v1 | **Collapse-only** via `.gitattributes` **`linguist-generated`** (NOT `-diff` — keeps artifacts loadable/inspectable; see SPEC-001 decision); post-merge relocation deferred to v2 |
+| Artifacts v1 | **Collapse-only** via `.gitattributes` **`linguist-generated`** (NOT `-diff` — keeps artifacts loadable/inspectable; see PRSG-001 decision); post-merge relocation deferred to v2 |
 | MOC "Why" annotations | **Advisory** in v1 |
 | Releasability gate | **Detect-and-route to atomic + warn**; defer invariant-checking machinery |
 | Mechanical-only specs | **Accept + route to one-navigable-PR** (don't decline) |
 | No-flag cutovers | **Atomic PR + release-hold note** by default; *offer* an app-native runtime toggle |
-| Migration / back-compat | **Tiered retro-migration (SPEC-011)** — supersedes the earlier new-specs-only stance. SPEC-001–010 ship new-specs-only; SPEC-011 adds state-keyed backfill: Tier 1 repo-level (eager, version-gated), Tier 0 navigation index-backfill for completed specs, Tier 2 on-demand relocate codemod for the ~8 specs that have a `specs/<NNN>/` dir. In-flight specs (per `.specify/feature.json`) are **frozen**; legacy specs grandfathered by marker-absence |
+| Migration / back-compat | **Tiered retro-migration (PRSG-011)** — supersedes the earlier new-specs-only stance. PRSG-001–010 ship new-specs-only; PRSG-011 adds state-keyed backfill: Tier 1 repo-level (eager, version-gated), Tier 0 navigation index-backfill for completed specs, Tier 2 on-demand relocate codemod for the ~8 specs that have a `specs/<NNN>/` dir. In-flight specs (per `.specify/feature.json`) are **frozen**; legacy specs grandfathered by marker-absence |
 
 ## Sequencing principle (non-negotiable)
 
@@ -44,21 +44,21 @@ the *last* thing wired, and only as a backstop that triggers **re-slicing**, not
 blocking.
 
 ```
-Phase 1 ─ Relocate (SPEC-001)            ← cheap precondition, immediate win
+Phase 1 ─ Relocate (PRSG-001)            ← cheap precondition, immediate win
    │
-Phase 2 ─ MOC spine (SPEC-002→003→004)   ┐
-Phase 3 ─ Upstream sizing (SPEC-005,006) ┘ ← parallelizable with Phase 2
+Phase 2 ─ MOC spine (PRSG-002→003→004)   ┐
+Phase 3 ─ Upstream sizing (PRSG-005,006) ┘ ← parallelizable with Phase 2
    │
-Phase 4 ─ Split-PR engine (SPEC-007→008→009)  ← core architectural change
+Phase 4 ─ Split-PR engine (PRSG-007→008→009)  ← core architectural change
    │
-Phase 5 ─ Harden the hatch (SPEC-010)    ← ONLY after the small path exists
+Phase 5 ─ Harden the hatch (PRSG-010)    ← ONLY after the small path exists
    ┊
-Phase 6 ─ Retro-migration (SPEC-011)     ← needs only SPEC-001/002/003; can land in
+Phase 6 ─ Retro-migration (PRSG-011)     ← needs only PRSG-001/002/003; can land in
                                             parallel with Phases 3–5 once the spine exists
 ```
 
 **Visibility expectation (set, don't fix):** the first *visible* drop in reviewable PR
-size lands at **SPEC-009**, not earlier. Phase 1 *collapses* artifacts in the GitHub UI
+size lands at **PRSG-009**, not earlier. Phase 1 *collapses* artifacts in the GitHub UI
 but file-count is unchanged; code + tests (~68% of a feature diff) stay big until
 splitting exists. Phases 1–3 are the safety/navigation/sizing groundwork that makes
 splitting safe — they are not expected to move the headline number on their own.
@@ -71,7 +71,7 @@ Each SPEC is scoped to land as a small PR (or a short slice set). Budget = targe
 
 ---
 
-### SPEC-001 — Artifact relocation: tiering, `.process/`, collapse  · Phase 1 · P1 · MVP
+### PRSG-001 — Artifact relocation: tiering, `.process/`, collapse  · Phase 1 · P1 · MVP
 **Why:** ~32% of every feature PR is auto-generated exhaust. Remove it from the review
 diff at the source. Orthogonal precondition for everything else.
 
@@ -92,13 +92,13 @@ diff at the source. Orthogonal precondition for everything else.
   worse provenance tradeoff. Consequence (consistent with the Visibility expectation
   above): `linguist-generated` changes how the diff *reads*, **not** the headline
   `+/−`, the per-file stats, or the file-count — the real size reduction comes from
-  splitting (SPEC-009) and relocation (SPEC-011), not from `.gitattributes`.
+  splitting (PRSG-009) and relocation (PRSG-011), not from `.gitattributes`.
 - **Skills/files:** `speckit-scaffold-spec`, `speckit-autopilot/references/phase-execution.md`, `reviewability-gate.sh`, new `.gitattributes`.
 - **Deps:** none. **Budget:** ~250 LOC. **Tests:** L1 (gitattributes + scoping), L4 (commit-target logic).
 
 ---
 
-### SPEC-002 — MOC templates + scaffold-time skeleton + version-gated lints  · Phase 2 · P1
+### PRSG-002 — MOC templates + scaffold-time skeleton + version-gated lints  · Phase 2 · P1
 **Why:** the navigation/traceability spine that makes relocation *safe* (hidden files
 stay linked) and decomposition *navigable* (you navigate the map, not memorize the tree).
 
@@ -113,16 +113,16 @@ stay linked) and decomposition *navigable* (you navigate the map, not memorize t
   version-gated:** each lint fires ONLY when the spec's `SPEC-MOC.md` frontmatter has
   `structureVersion >= N`; a spec with **no marker is grandfathered/exempt** —
   otherwise the first plugin upgrade red-fails CI on every pre-existing legacy spec
-  (this is a hard upstream coupling to SPEC-011, not a downstream patch). **ID
+  (this is a hard upstream coupling to PRSG-011, not a downstream patch). **ID
   normalization:** join doc IDs (`SPEC-013B`) to dir IDs (`013b-slug`) by lowercase +
   strip-`SPEC-` + **exact-segment match** (so `SPEC-013A` ≠ the `013a1` dir); naive
   prefix-matching emits false orphan/stale hits.
 - **Skills/files:** `speckit-scaffold-spec`, new templates, Layer-1 test scripts.
-- **Deps:** SPEC-001 (`.process/` path). **Budget:** ~350 LOC. **Tests:** L1, L4 (version-gate + ID-normalization fixtures).
+- **Deps:** PRSG-001 (`.process/` path). **Budget:** ~350 LOC. **Tests:** L1, L4 (version-gate + ID-normalization fixtures).
 
 ---
 
-### SPEC-003 — Generated index/PRs/backlinks + status integration + phase-gate regen  · Phase 2 · P1
+### PRSG-003 — Generated index/PRs/backlinks + status integration + phase-gate regen  · Phase 2 · P1
 **Why:** plain markdown has no live engine; generated blocks must be regenerated or
 they silently lie (the #1 risk).
 
@@ -134,11 +134,11 @@ they silently lie (the #1 risk).
 - **US2 — Wire it.** `speckit-status` invokes the generator (it IS the index
   generator); autopilot runs regeneration as a **phase-gate step** at phase boundaries.
 - **Skills/files:** `speckit-status`, `speckit-autopilot`, new `generate-spec-index.sh`.
-- **Deps:** SPEC-002. **Budget:** ~350 LOC. **Tests:** L1 (determinism fixture), L4.
+- **Deps:** PRSG-002. **Budget:** ~350 LOC. **Tests:** L1 (determinism fixture), L4.
 
 ---
 
-### SPEC-004 — Roadmap-MOC home note from PRD + coach the two-zone structure  · Phase 2 · P2
+### PRSG-004 — Roadmap-MOC home note from PRD + coach the two-zone structure  · Phase 2 · P2
 **Why:** the user's cognitive-load answer — one home note, curated epics + generated
 index, authored once cheaply during the PRD interview.
 
@@ -148,11 +148,11 @@ index, authored once cheaply during the PRD interview.
 - **US2 — Coach.** `speckit-coach` teaches the curated/generated two-zone split and the
   "cap epics below ~10" guardrail.
 - **Skills/files:** `speckit-prd`, `speckit-coach`.
-- **Deps:** SPEC-002, SPEC-003. **Budget:** ~200 LOC. **Tests:** L1.
+- **Deps:** PRSG-002, PRSG-003. **Budget:** ~200 LOC. **Tests:** L1.
 
 ---
 
-### SPEC-005 — Vertical-slice sizing heuristics in PRD/grill-me  · Phase 3 · P1
+### PRSG-005 — Vertical-slice sizing heuristics in PRD/grill-me  · Phase 3 · P1
 **Why:** attack the root cause at the cheapest moment — specs born PR-sized.
 
 - **US1 — Slicing heuristics.** Bake SPIDR + INVEST + vertical-slicing guidance into
@@ -163,7 +163,7 @@ index, authored once cheaply during the PRD interview.
 
 ---
 
-### SPEC-006 — Plan-phase reviewability budget + gate threshold rework  · Phase 3 · P1
+### PRSG-006 — Plan-phase reviewability budget + gate threshold rework  · Phase 3 · P1
 **Why:** make sizing preventive, not detective; fix the metrics; replace the broken
 escape hatch with typed exceptions.
 
@@ -173,11 +173,11 @@ escape hatch with typed exceptions.
   allowance); **drop surface-count as a blocker**; replace the one-keyword exception
   with typed exception classes (refactor/infra/upgrade).
 - **Skills/files:** `speckit-autopilot` (plan), `reviewability-gate.sh`, roadmap template.
-- **Deps:** SPEC-001. **Budget:** ~300 LOC. **Tests:** L4.
+- **Deps:** PRSG-001. **Budget:** ~300 LOC. **Tests:** L4.
 
 ---
 
-### SPEC-007 — Atomicity-test router (read-only classifier)  · Phase 4 · P1 · engine MVP
+### PRSG-007 — Atomicity-test router (read-only classifier)  · Phase 4 · P1 · engine MVP
 **Why:** the brain that makes split-PR a *safe* default. Ship as a read-only classifier
 that emits a routing decision into the workflow file before any emission is wired.
 
@@ -192,22 +192,22 @@ that emits a routing decision into the workflow file before any emission is wire
   destructive-migration / concurrency signatures and route to atomic + **warn that
   CI-green ≠ releasable** for those classes.
 - **Skills/files:** `speckit-autopilot`, new `scripts/atomicity-route.sh`.
-- **Deps:** SPEC-006 (benefits). **Budget:** ~400 LOC. **Tests:** L4 (one fixture per change class), L1.
+- **Deps:** PRSG-006 (benefits). **Budget:** ~400 LOC. **Tests:** L4 (one fixture per change class), L1.
 
 ---
 
-### SPEC-008 — Layer-planner: tasks.md → ordered increments  · Phase 4 · P1
+### PRSG-008 — Layer-planner: tasks.md → ordered increments  · Phase 4 · P1
 **Why:** turn the decomposition `tasks.md` already declares into an executable plan.
 
 - **US1 — Planner.** Parse user-story phases + `## Dependencies & Execution Order` +
   `### Incremental Delivery` → ordered increments (Foundation → US1…USN → Polish) with
   per-increment file/test sets and the dependency DAG.
 - **Skills/files:** `speckit-autopilot`, new `scripts/plan-layers.sh`.
-- **Deps:** SPEC-007. **Budget:** ~350 LOC. **Tests:** L4 (planner fixtures from real `tasks.md`).
+- **Deps:** PRSG-007. **Budget:** ~350 LOC. **Tests:** L4 (planner fixtures from real `tasks.md`).
 
 ---
 
-### SPEC-009 — Multi-PR emission (post-implementation rewrite)  · Phase 4 · P1
+### PRSG-009 — Multi-PR emission (post-implementation rewrite)  · Phase 4 · P1
 **Why:** the actual behavior change — stop flattening; emit N PRs.
 
 - **US1 — Emit N PRs.** Rewrite post-implementation §3.2 from one `gh pr create` to N
@@ -223,18 +223,18 @@ that emits a routing decision into the workflow file before any emission is wire
   regression suite gates only the base/last merge** — a later slice's tests cannot pass
   before its code merges, so they must not block earlier slice PRs.
 - **Skills/files:** `speckit-autopilot/references/post-implementation.md`, `generate-pr-body.sh`, `speckit-scaffold-spec` (branch topology).
-- **Deps:** SPEC-008, SPEC-003 (MOC PRs table), SPEC-001 (artifacts out of slice).
+- **Deps:** PRSG-008, PRSG-003 (MOC PRs table), PRSG-001 (artifacts out of slice).
   **Budget:** ~450 LOC. **Tests:** L4, L7 (dispatch graph if new agents), L8 (Codex parity).
 
 ---
 
-### SPEC-010 — Harden the hatch + O5 monster-epics  · Phase 5 · P2 · LAST
+### PRSG-010 — Harden the hatch + O5 monster-epics  · Phase 5 · P2 · LAST
 **Why:** only now that the automatic small path exists is it safe to make the backstop
 real.
 
 - **US1 — Real backstop.** Remove the exception boilerplate from the roadmap template;
   wire the diff-gate exit code (stop discarding it) as a backstop that triggers
-  **re-slicing** (route back through SPEC-007/008/009), not blind blocking.
+  **re-slicing** (route back through PRSG-007/008/009), not blind blocking.
 - **US2 — Monster-epics (O5).** Epic → child specs that SHARE one design-concept +
   retrospective (thin per-child deltas, `depends-on` order); `speckit-status` rolls
   children up. Reserved for genuine monsters O4 can't slice thin.
@@ -243,9 +243,9 @@ real.
 
 ---
 
-### SPEC-011 — Retro-migration: version marker + state-keyed backfill/relocate  · Phase 6 · P2
-**Why:** SPEC-001–010 are new-specs-only; existing projects (Paddock: 27 SPEC IDs;
-focusengine: 50) would otherwise be a permanent split-brain repo, **and SPEC-002's
+### PRSG-011 — Retro-migration: version marker + state-keyed backfill/relocate  · Phase 6 · P2
+**Why:** PRSG-001–010 are new-specs-only; existing projects (Paddock: 27 SPEC IDs;
+focusengine: 50) would otherwise be a permanent split-brain repo, **and PRSG-002's
 version-gated lints need a marker-writer or legacy specs stay exempt forever.** Supplies
 the backward/contract half. Reuses `speckit-upgrade`'s backup-and-restore (the v0.8.13
 slash→skills migration is the precedent) and **mirrors** `speckit-archive-run`'s
@@ -259,10 +259,10 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
   list (this IS `--dry-run`)**; phase 2 applies + writes the new marker. Tier-1 steps
   touch **no** existing spec data: write repo-root `.gitattributes`; de-boilerplate the
   **live project roadmap** (strip `split exception` lines — the *project* roadmap, NOT
-  the plugin template, which is SPEC-010's job). Each step self-guards (idempotent);
-  hard-fail on a dirty tree. (The gate `is_excluded_generated()` fix is SPEC-001's job,
+  the plugin template, which is PRSG-010's job). Each step self-guards (idempotent);
+  hard-fail on a dirty tree. (The gate `is_excluded_generated()` fix is PRSG-001's job,
   not here — the gate never reads `.gitattributes`.)
-- **US2 — Tier-0 navigation backfill (completed specs, the bulk).** Reuse SPEC-003's
+- **US2 — Tier-0 navigation backfill (completed specs, the bulk).** Reuse PRSG-003's
   `generate-spec-index.sh` to emit one roadmap-MOC GENERATED-INDEX row per historical
   spec (one file touched; **no file moves, no frontmatter stamp** on legacy specs — they
   stay exempt-by-absence). ID-normalized join; whole-zone regen.
@@ -280,8 +280,8 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
 - **Skills/files:** `speckit-upgrade` (Tier 1+0 step), `speckit-scaffold-spec` +
   `speckit-autopilot` (Tier-2 codemod registration), new `.specify/structure-version.json`,
   new `migrate-structure.sh` + `relocate-process-artifacts.sh` + ID-normalization helper.
-- **Deps:** SPEC-001 (`.process/` glob), SPEC-002 (MOC contract + version-gated lints),
-  SPEC-003 (index generator). **Budget:** ~450 LOC. **Tests:** L1, L3 (speckit-upgrade
+- **Deps:** PRSG-001 (`.process/` glob), PRSG-002 (MOC contract + version-gated lints),
+  PRSG-003 (index generator). **Budget:** ~450 LOC. **Tests:** L1, L3 (speckit-upgrade
   migration behavior), L4 (dry-run / idempotency / move-set + ID-norm fixtures), L8.
 
 ## Which skills/files change (matrix)
@@ -308,15 +308,15 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
   fixtures** green; run `speckit-skill-reviewer` as a pre-commit gate. This applies to
   every catalog SPEC that touches a mirrored skill (at minimum `speckit-autopilot`,
   and any of `scaffold-spec`/`prd`/`coach`/`status`/`upgrade` that carry a Codex
-  variant) — i.e. **SPEC-001 through SPEC-011**. Add **L8** to those SPECs' test sets
+  variant) — i.e. **PRSG-001 through PRSG-011**. Add **L8** to those SPECs' test sets
   and treat the Codex mirror as part of each SPEC's deliverable, or parity tests fail
-  around SPEC-002.
-- **Migration (SPEC-011) supersedes the earlier new-specs-only stance.** SPEC-001–010
-  ship new-specs-only; **SPEC-011** adds state-keyed retro-migration (Tier 1 repo-level,
+  around PRSG-002.
+- **Migration (PRSG-011) supersedes the earlier new-specs-only stance.** PRSG-001–010
+  ship new-specs-only; **PRSG-011** adds state-keyed retro-migration (Tier 1 repo-level,
   Tier 0 navigation backfill, Tier 2 on-demand relocate codemod) gated by a
   `.specify/structure-version.json` marker, legacy specs grandfathered by marker-absence.
-  **Hard upstream coupling:** SPEC-002's lints MUST be born version-gated (see SPEC-002
-  US2), or the first upgrade red-fails CI on all pre-existing specs before SPEC-011 runs.
+  **Hard upstream coupling:** PRSG-002's lints MUST be born version-gated (see PRSG-002
+  US2), or the first upgrade red-fails CI on all pre-existing specs before PRSG-011 runs.
 - **Scripts-first (determinism + token savings) — design mandate.** Any step whose
   logic is deterministic MUST be a `bash`+`jq` script invoked by the skill/agent, NOT
   LLM reasoning. Reserve agent/LLM work for genuine ambiguity or human-judgment
@@ -325,8 +325,8 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
   output) instead of a flaky AI eval; (2) **token savings** — no agent round-trip at
   runtime; (3) **smaller eval surface** — every bit of logic moved into a script
   *removes* a unit of L2/L3/L6 AI-eval burden and replaces it with a cheap L4 test.
-  Concretely, the router (SPEC-007), layer-planner (SPEC-008), and migration runner +
-  codemod (SPEC-011) are **scripts**, not agents — so they need L4 determinism
+  Concretely, the router (PRSG-007), layer-planner (PRSG-008), and migration runner +
+  codemod (PRSG-011) are **scripts**, not agents — so they need L4 determinism
   fixtures, not L5/L6/L7 agent evals. Each script: same inputs → byte-identical output.
 
 - **Tests AND evals are mandatory for every skill addition/change — non-negotiable.**
@@ -374,7 +374,7 @@ there.
 
 - **Phase 1:** a fresh autopilot run produces a PR whose diff **collapses** `.process/`
   in the GitHub UI (artifacts persist in-repo and stay linked). Note: file-count is
-  unchanged until splitting lands (SPEC-009) — collapse ≠ exclude.
+  unchanged until splitting lands (PRSG-009) — collapse ≠ exclude.
 - **Phase 2:** scaffolding a multi-slice spec produces a navigable spec-MOC; lints fail
   on orphan/stale links in CI **only for version-stamped specs** (legacy specs exempt).
 - **Phase 3:** PRD interviews emit PR-sized SPECs; plan phase auto-approves under budget
@@ -411,7 +411,7 @@ These are recorded with my recommended default; flag any you want changed:
    out of scope for v1; left as a separate legacy namespace*.
 5. **Marker model** — *default: single integer high-water-mark* (reject the heavier
    Rails applied-ID-set unless partial-resume becomes a real need).
-6. **Gate ↔ `.gitattributes`** — *default: keep the SPEC-001 hardcoded `.process/`
+6. **Gate ↔ `.gitattributes`** — *default: keep the PRSG-001 hardcoded `.process/`
    glob in `is_excluded_generated()`* (the gate does not parse `.gitattributes`;
    accept the path living in two places).
 
@@ -419,13 +419,13 @@ These are recorded with my recommended default; flag any you want changed:
 
 - Stale generated blocks (mitigate: phase-gate regen + Layer-1 lint + whole-zone regen).
 - "Build green ≠ releasable" for destructive-migration / concurrency (mitigate:
-  SPEC-007 detect-and-route + warn).
-- **SPEC-002 lints unconditional** → first upgrade red-fails all legacy specs (mitigate:
-  version-gate the lints from birth — built into SPEC-002 US2).
+  PRSG-007 detect-and-route + warn).
+- **PRSG-002 lints unconditional** → first upgrade red-fails all legacy specs (mitigate:
+  version-gate the lints from birth — built into PRSG-002 US2).
 - **ID mis-join** (`SPEC-013A` vs `013a1`) → false orphan/stale hits (mitigate:
-  exact-segment ID normalization in SPEC-002/003/011).
+  exact-segment ID normalization in PRSG-002/003/011).
 - Branch-by-abstraction deferred-contract lingering (mitigate: never split the contract
   slice from the slice that introduced the dual path).
-- N× reviewer/CI workload (mitigate: SPEC-005/006 right-sizing keeps N small).
+- N× reviewer/CI workload (mitigate: PRSG-005/006 right-sizing keeps N small).
 - Squash-only merge-conflict surfaces (marker file, central baselines) — mitigate:
   single-integer marker + in-band per-spec pragmas, per-spec atomic migration commits.

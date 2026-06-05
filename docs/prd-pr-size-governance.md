@@ -4,7 +4,7 @@
 **Source**: [`docs/ai/research/spec-pr-size-governance-research.md`](ai/research/spec-pr-size-governance-research.md) (research synthesis) + [`docs/ai/specs/pr-size-governance-technical-roadmap.md`](ai/specs/pr-size-governance-technical-roadmap.md) (locked roadmap)
 **Created**: 2026-06-04
 **Last updated**: 2026-06-04
-**Target window**: Near-term. SPEC-001 is ready to scaffold; the headline win lands at SPEC-009.
+**Target window**: Near-term. PRSG-001 is ready to scaffold; the headline win lands at PRSG-009.
 
 ---
 
@@ -59,24 +59,24 @@ construction, not by a gate.
 
 - **Naive spec-splitting as the primary lever.** Research-proven null-to-negative
   (multiplies the artifact tax 4.7×–8.7×). Demoted to shared-artifact "monster epics"
-  for genuine #26-class cases only — handled in **SPEC-010**, not the default path.
+  for genuine #26-class cases only — handled in **PRSG-010**, not the default path.
 - **`.gitattributes` `-diff` artifact exclusion (v1).** Deferred. `-diff` would drop
   artifact LOC from the PR's `+/−` count but render the files non-diffable; v1 uses
-  `linguist-generated` (collapse-only, still loadable) — see **SPEC-001**.
+  `linguist-generated` (collapse-only, still loadable) — see **PRSG-001**.
 - **Post-merge artifact relocation (v1).** Collapse-only ships first; bot-push
-  relocation to `main` is **v2** — deferred from SPEC-001.
+  relocation to `main` is **v2** — deferred from PRSG-001.
 - **Releasability invariant-checking machinery (v1).** Destructive-migration and
   concurrency cutovers are **detect-and-routed** to an atomic PR with a warning, rather
-  than asserting cross-table/runtime invariants in code — deferred in **SPEC-007**.
+  than asserting cross-table/runtime invariants in code — deferred in **PRSG-007**.
 - **Hardening the gate first.** Doing so before the small path exists is the exact
-  prior-art failure. The hatch is wired **last** (**SPEC-010**).
+  prior-art failure. The hatch is wired **last** (**PRSG-010**).
 
 ## 3. Acceptance Criteria
 
 > One Feature per roadmap SPEC; criteria are derived from each SPEC's user stories and
 > Definition of Done. The HOW lives in the roadmap — these state the observable WHAT.
 
-### 3.1 Artifact relocation: tiering, `.process/`, collapse *(→ SPEC-001)*
+### 3.1 Artifact relocation: tiering, `.process/`, collapse *(→ PRSG-001)*
 
 - **AC-1.1**: scaffold-spec and autopilot write process exhaust (`design-concept`,
   `workflow.md`, `peer-review-*`, `verification-evidence`, `retrospective`) under
@@ -88,7 +88,7 @@ construction, not by a gate.
 - **AC-1.3**: a Layer-1 lint asserts the `.gitattributes` glob is scoped to `.process/`
   only and never matches a CONTRACT path.
 
-### 3.2 MOC templates + scaffold-time skeleton + version-gated lints *(→ SPEC-002)*
+### 3.2 MOC templates + scaffold-time skeleton + version-gated lints *(→ PRSG-002)*
 
 - **AC-2.1**: roadmap-MOC and spec-MOC templates exist with the frontmatter join-key
   contract (`up`/`related`/`status`/`rank`/`spec_id`/`structureVersion`); scaffold-spec
@@ -99,7 +99,7 @@ construction, not by a gate.
 - **AC-2.3**: ID normalization joins doc IDs to dir IDs by lowercase + strip-`SPEC-` +
   exact-segment match (so `SPEC-013A` ≠ the `013a1` dir).
 
-### 3.3 Generated index / PRs / backlinks + status integration *(→ SPEC-003)*
+### 3.3 Generated index / PRs / backlinks + status integration *(→ PRSG-003)*
 
 - **AC-3.1**: `generate-spec-index.sh` deterministically writes the GENERATED INDEX,
   GENERATED PRS (`slice → PR# → merged SHA`), and GENERATED BACKLINKS blocks between
@@ -107,19 +107,19 @@ construction, not by a gate.
 - **AC-3.2**: `speckit-status` invokes the generator, and autopilot regenerates the
   zone as a phase-gate step at phase boundaries.
 
-### 3.4 Roadmap-MOC home note from PRD + coach the two-zone structure *(→ SPEC-004)*
+### 3.4 Roadmap-MOC home note from PRD + coach the two-zone structure *(→ PRSG-004)*
 
 - **AC-4.1**: `speckit-prd` emits the roadmap-MOC home note (human-curated epics zone +
   GENERATED INDEX sentinels) alongside the PRD and technical roadmap.
 - **AC-4.2**: `speckit-coach` teaches the curated/generated two-zone split and the
   "cap epics below ~10" guardrail.
 
-### 3.5 Vertical-slice sizing heuristics in PRD/grill-me *(→ SPEC-005)*
+### 3.5 Vertical-slice sizing heuristics in PRD/grill-me *(→ PRSG-005)*
 
 - **AC-5.1**: `speckit-prd` and `grill-me` bake in SPIDR + INVEST + vertical-slicing
   guidance so the emitted SPEC catalog is thin, end-to-end slices by construction.
 
-### 3.6 Plan-phase reviewability budget + gate threshold rework *(→ SPEC-006)*
+### 3.6 Plan-phase reviewability budget + gate threshold rework *(→ PRSG-006)*
 
 - **AC-6.1**: the plan phase estimates per-slice footprint, auto-approves under budget,
   and surfaces to the human only when over.
@@ -127,7 +127,7 @@ construction, not by a gate.
   surface-count as a blocker, and replaces the single-keyword exception with typed
   exception classes (refactor/infra/upgrade).
 
-### 3.7 Atomicity-test router (read-only classifier) *(→ SPEC-007)*
+### 3.7 Atomicity-test router (read-only classifier) *(→ PRSG-007)*
 
 - **AC-7.1**: a `atomicity-route.sh` classifier emits a routing decision ∈ {split-PR,
   one-navigable-PR, branch-by-abstraction, single-atomic-PR, out-of-scope} from
@@ -138,14 +138,14 @@ construction, not by a gate.
   break) route to atomic; destructive-migration / concurrency signatures route to
   atomic **with a "CI-green ≠ releasable" warning**.
 
-### 3.8 Layer-planner: tasks.md → ordered increments *(→ SPEC-008)*
+### 3.8 Layer-planner: tasks.md → ordered increments *(→ PRSG-008)*
 
 - **AC-8.1**: `plan-layers.sh` parses user-story phases, `## Dependencies & Execution
   Order`, and `### Incremental Delivery` into ordered increments
   (Foundation → US1…USN → Polish) with per-increment file/test sets and a dependency
   DAG.
 
-### 3.9 Multi-PR emission (post-implementation rewrite) *(→ SPEC-009)*
+### 3.9 Multi-PR emission (post-implementation rewrite) *(→ PRSG-009)*
 
 - **AC-9.1**: post-implementation emits N PRs in dependency order (incremental stack),
   each carrying its slice's tests and a per-slice generated PR body — replacing the
@@ -156,16 +156,16 @@ construction, not by a gate.
   suite gates only the base/last merge, so a later slice's tests never block an earlier
   slice PR.
 
-### 3.10 Harden the hatch + monster-epics *(→ SPEC-010)*
+### 3.10 Harden the hatch + monster-epics *(→ PRSG-010)*
 
 - **AC-10.1**: the roadmap template no longer ships the exception keyword; the diff-gate
   exit code is wired as a backstop that triggers re-slicing (back through
-  SPEC-007/008/009), not blind blocking.
+  PRSG-007/008/009), not blind blocking.
 - **AC-10.2**: an epic can decompose into child specs that share one design-concept and
   retrospective, with `speckit-status` rolling children up — reserved for monsters that
   upstream sizing cannot slice thin.
 
-### 3.11 Retro-migration: version marker + state-keyed backfill/relocate *(→ SPEC-011)*
+### 3.11 Retro-migration: version marker + state-keyed backfill/relocate *(→ PRSG-011)*
 
 - **AC-11.1**: `migrate-structure.sh` runs two-phase (dry-run prints the ordered pending
   migrations and mutates nothing; apply performs idempotent, self-guarding Tier-1 repo
@@ -181,19 +181,19 @@ construction, not by a gate.
 
 ## 4. Migration Path (phased — one phase per SPEC)
 
-- **Phase 1 (SPEC-001) — Artifact relocation**: ships first; cheap, orthogonal
+- **Phase 1 (PRSG-001) — Artifact relocation**: ships first; cheap, orthogonal
   precondition that removes the artifact tax from the diff before anything is split.
-- **Phase 2 (SPEC-002 → 003 → 004) — MOC spine**: the navigation/traceability backbone
+- **Phase 2 (PRSG-002 → 003 → 004) — MOC spine**: the navigation/traceability backbone
   that makes relocation safe (hidden files stay linked) and decomposition navigable.
   Depends on the `.process/` path from Phase 1.
-- **Phase 3 (SPEC-005, 006) — Upstream sizing**: specs born PR-sized; preventive plan
+- **Phase 3 (PRSG-005, 006) — Upstream sizing**: specs born PR-sized; preventive plan
   budget; gate metrics fixed. Parallelizable with Phase 2.
-- **Phase 4 (SPEC-007 → 008 → 009) — Split-PR engine**: the core change — classify,
+- **Phase 4 (PRSG-007 → 008 → 009) — Split-PR engine**: the core change — classify,
   plan increments, emit N PRs. **The headline reviewable-size drop lands here.**
-- **Phase 5 (SPEC-010) — Harden the hatch**: only now that the small path exists is it
+- **Phase 5 (PRSG-010) — Harden the hatch**: only now that the small path exists is it
   safe to make the backstop real; adds monster-epic escalation.
-- **Phase 6 (SPEC-011) — Retro-migration**: state-keyed backfill/relocate for existing
-  projects; needs only SPEC-001/002/003, so it can land in parallel with Phases 3–5.
+- **Phase 6 (PRSG-011) — Retro-migration**: state-keyed backfill/relocate for existing
+  projects; needs only PRSG-001/002/003, so it can land in parallel with Phases 3–5.
 
 ## 5. Constraints
 
@@ -217,20 +217,20 @@ construction, not by a gate.
 ## 6. Open Questions
 
 > Recorded with recommended defaults (already applied in the roadmap catalog). None
-> block PRD acceptance; each is resolved in the SPEC-011 grill-me / clarify pass.
+> block PRD acceptance; each is resolved in the PRSG-011 grill-me / clarify pass.
 
-- **OQ-1 (SPEC-011):** Tier-0 scope — *recommend eager index-backfill of all historical
+- **OQ-1 (PRSG-011):** Tier-0 scope — *recommend eager index-backfill of all historical
   specs on upgrade* (one generated-zone write) over deferring until each spec is
   reworked.
-- **OQ-2 (SPEC-011):** Stamp timing — *recommend legacy specs stay exempt by
+- **OQ-2 (PRSG-011):** Stamp timing — *recommend legacy specs stay exempt by
   marker-absence* (no frontmatter stamp during Tier-0; stamp only on Tier-2 thaw).
-- **OQ-3 (SPEC-011):** Multi-ID / gappy legacy entries — *recommend one index row per
+- **OQ-3 (PRSG-011):** Multi-ID / gappy legacy entries — *recommend one index row per
   file, no special-casing*.
-- **OQ-4 (SPEC-011):** Legacy non-SpecKit namespaces (date-named design docs, JSON
+- **OQ-4 (PRSG-011):** Legacy non-SpecKit namespaces (date-named design docs, JSON
   spikes) — *recommend out of scope for v1*.
-- **OQ-5 (SPEC-011):** Marker model — *recommend a single integer high-water-mark* over
+- **OQ-5 (PRSG-011):** Marker model — *recommend a single integer high-water-mark* over
   a heavier applied-ID set.
-- **OQ-6 (SPEC-001 / SPEC-011):** Gate ↔ `.gitattributes` — *recommend keeping the
+- **OQ-6 (PRSG-001 / PRSG-011):** Gate ↔ `.gitattributes` — *recommend keeping the
   hardcoded `.process/` glob in the gate* (it does not parse `.gitattributes`; accept
   the path living in two places).
 
@@ -238,17 +238,17 @@ construction, not by a gate.
 
 | Feature (§3) | Acceptance Criteria | SPEC | Depends on | Priority |
 |---|---|---|---|---|
-| Artifact relocation: tiering, `.process/`, collapse | AC-1.* | SPEC-001 | — | P1 |
-| MOC templates + scaffold-time skeleton + version-gated lints | AC-2.* | SPEC-002 | SPEC-001 | P1 |
-| Generated index / PRs / backlinks + status integration | AC-3.* | SPEC-003 | SPEC-002 | P1 |
-| Roadmap-MOC home note from PRD + coach two-zone structure | AC-4.* | SPEC-004 | SPEC-002, SPEC-003 | P2 |
-| Vertical-slice sizing heuristics in PRD/grill-me | AC-5.* | SPEC-005 | — | P1 |
-| Plan-phase reviewability budget + gate threshold rework | AC-6.* | SPEC-006 | SPEC-001 | P1 |
-| Atomicity-test router (read-only classifier) | AC-7.* | SPEC-007 | SPEC-006 | P1 |
-| Layer-planner: tasks.md → ordered increments | AC-8.* | SPEC-008 | SPEC-007 | P1 |
-| Multi-PR emission (post-implementation rewrite) | AC-9.* | SPEC-009 | SPEC-008, SPEC-003, SPEC-001 | P1 |
-| Harden the hatch + monster-epics | AC-10.* | SPEC-010 | Phases 1–4 | P2 |
-| Retro-migration: version marker + state-keyed backfill/relocate | AC-11.* | SPEC-011 | SPEC-001, SPEC-002, SPEC-003 | P2 |
+| Artifact relocation: tiering, `.process/`, collapse | AC-1.* | PRSG-001 | — | P1 |
+| MOC templates + scaffold-time skeleton + version-gated lints | AC-2.* | PRSG-002 | PRSG-001 | P1 |
+| Generated index / PRs / backlinks + status integration | AC-3.* | PRSG-003 | PRSG-002 | P1 |
+| Roadmap-MOC home note from PRD + coach two-zone structure | AC-4.* | PRSG-004 | PRSG-002, PRSG-003 | P2 |
+| Vertical-slice sizing heuristics in PRD/grill-me | AC-5.* | PRSG-005 | — | P1 |
+| Plan-phase reviewability budget + gate threshold rework | AC-6.* | PRSG-006 | PRSG-001 | P1 |
+| Atomicity-test router (read-only classifier) | AC-7.* | PRSG-007 | PRSG-006 | P1 |
+| Layer-planner: tasks.md → ordered increments | AC-8.* | PRSG-008 | PRSG-007 | P1 |
+| Multi-PR emission (post-implementation rewrite) | AC-9.* | PRSG-009 | PRSG-008, PRSG-003, PRSG-001 | P1 |
+| Harden the hatch + monster-epics | AC-10.* | PRSG-010 | Phases 1–4 | P2 |
+| Retro-migration: version marker + state-keyed backfill/relocate | AC-11.* | PRSG-011 | PRSG-001, PRSG-002, PRSG-003 | P2 |
 
 ## 8. Success Criteria
 
