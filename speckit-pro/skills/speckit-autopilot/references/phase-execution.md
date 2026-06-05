@@ -174,7 +174,7 @@ it does NOT invoke a `/speckit.*` command.
 fail, STOP.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
-After G0 passes, run `/speckit.doctor` for a full
+After G0 passes, run `/speckit.speckit-utils.doctor` for a full
 project diagnostic (structure, agents, features, scripts,
 extensions, git). Log the report in the workflow file.
 
@@ -183,7 +183,7 @@ TaskUpdate: "Phase 0: Doctor Health Check" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX doctor health check",
-  prompt: "Run /speckit.doctor for this project.
+  prompt: "Run /speckit.speckit-utils.doctor for this project.
     Return the diagnostic report summary."
 )
 TaskUpdate: → completed

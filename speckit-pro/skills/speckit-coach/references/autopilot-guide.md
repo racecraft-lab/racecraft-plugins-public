@@ -45,7 +45,7 @@ specify check  # Verify installation
 ### 2. SpecKit Initialized in the Project
 
 ```bash
-specify init --ai claude  # or: --ai copilot, --ai cursor
+specify init --integration claude  # or: --integration copilot, --integration cursor
 ```
 
 This creates `.specify/`, templates, and slash commands.
@@ -467,7 +467,7 @@ re-run from an earlier phase.
 ```bash
 # Install SpecKit (if not already)
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --ai claude
+specify init --integration claude
 
 # Create constitution (if not already)
 /speckit-constitution

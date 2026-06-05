@@ -19,10 +19,12 @@ trap 'rm -rf "$FIXTURE_DIR"' EXIT
 # Helper: create a minimal SpecKit project fixture
 make_project() {
   local dir="$FIXTURE_DIR/$1"
-  mkdir -p "$dir/.specify/memory" "$dir/.claude/commands"
+  mkdir -p "$dir/.specify/memory"
   printf '# Constitution\n' > "$dir/.specify/memory/constitution.md"
+  # SpecKit v0.8.13+ installs the core phases as skills (.claude/skills/<cmd>/SKILL.md)
   for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
-    printf -- '---\ndescription: test\n---\n# Test\n' > "$dir/.claude/commands/${cmd}.md"
+    mkdir -p "$dir/.claude/skills/${cmd}"
+    printf -- '---\ndescription: test\n---\n# Test\n' > "$dir/.claude/skills/${cmd}/SKILL.md"
   done
   # Create a dummy workflow file
   printf '# Workflow\n' > "$dir/workflow.md"
@@ -65,7 +67,7 @@ assert_eq "1" "$result" "exit code"
 
 set_test "Missing commands → commands false"
 dir=$(make_project "missing-cmds")
-rm -f "$dir/.claude/commands/speckit-plan.md"
+rm -rf "$dir/.claude/skills/speckit-plan"
 result=0
 output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || result=$?
 assert_eq "1" "$result" "exit code"

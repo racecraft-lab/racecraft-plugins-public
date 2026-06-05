@@ -439,19 +439,19 @@ specify init [PROJECT_NAME]
 
 | Flag | Description |
 |------|-------------|
-| `--ai <agent>` | Target AI agent (claude, gemini, copilot, etc.) |
+| `--integration <key>` | Target coding-agent integration (claude, codex, gemini, …); installs skills |
 | `--here` | Initialize in current directory (no new folder) |
 | `--force` | Overwrite existing `.specify/` config |
 | `--no-git` | Skip Git initialization |
-| `--ai-skills` | Generate skill files (not just commands) |
+| `--integration-options="--skills"` | Install as skills — the standard mode (auto for Claude; required for Codex/Antigravity) |
 | `--preset <name>` | Install a preset during init |
-| `--branch-numbering` | Enable numbered branch prefixes |
+| `--branch-numbering <strategy>` | Branch numbering strategy (e.g. `sequential`) |
 | `--script <name>` | Run a post-init script |
 | `--ignore-agent-tools` | Skip agent tool detection |
 | `--skip-tls` | Skip TLS verification for downloads |
 | `--debug` | Enable debug output |
 | `--github-token <token>` | GitHub API token for private repos |
-| `--ai-commands-dir <path>` | Custom commands directory |
+| `--integration-options="--commands-dir <path>"` | Custom command directory (for `--integration generic`) |
 
 ### `specify check` — Installation Health
 
@@ -730,7 +730,7 @@ cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
 cp -r .specify/templates .specify/templates-backup
 
 # 3. Run upgrade
-specify init --here --force --ai claude
+specify init --here --force --integration claude
 
 # 4. Restore constitution
 git restore .specify/memory/constitution.md
@@ -751,7 +751,8 @@ specify check
 - **Constitution** (`constitution.md`) — always back up first
 - **Templates** (`.specify/templates/`) — custom modifications lost
 - **Scripts** (`.specify/scripts/`) — replaced with latest hardened versions
-- **Commands** (`.claude/commands/speckit.*`) — replaced with latest versions
+- **Core phase skills** (`.claude/skills/speckit-*/`) — replaced with latest versions
+- **Extension commands** (`.claude/commands/speckit.*`) — replaced with latest versions
 
 ### Version Compatibility
 

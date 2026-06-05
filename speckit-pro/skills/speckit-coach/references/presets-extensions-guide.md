@@ -203,7 +203,7 @@ specify extension set-priority <name> <N>     # change resolution priority
 
 # Catalog management
 specify extension catalog list                 # list active catalogs
-specify extension catalog add --name <n> --install-allowed <url>
+specify extension catalog add <url> --name <n> --install-allowed
 specify extension catalog remove <name>        # remove catalog
 ```
 

@@ -13,7 +13,7 @@ This skill **enhances** the official SpecKit CLI — it does not replace it. The
 
 ```bash
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --ai claude     # 25+ agents: copilot, cursor-agent, gemini, codex, etc.
+specify init --integration claude     # 25+ agents: copilot, cursor-agent, gemini, codex, etc.
 ```
 
 After installation, Codex exposes the bundled skill entrypoints `$speckit-coach`, `$speckit-scaffold-spec`, `$speckit-autopilot`, `$speckit-status`, `$speckit-resolve-pr`, and `$grill-me`. This skill provides **coaching, guidance, and enhancement** on top of those entrypoints. Users invoke them via the `$skill-name` syntax, implicit description-match, or `@SpecKit Pro`.

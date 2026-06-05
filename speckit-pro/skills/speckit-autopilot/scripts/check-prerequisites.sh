@@ -51,11 +51,10 @@ fi
 # 0.4 SpecKit Commands Installed
 missing_cmds=()
 # SpecKit v0.8.13+ installs the core SDD phases as SKILLS
-# (.claude/skills/<cmd>/SKILL.md); pre-0.8.13 installs used command files
-# (.claude/commands/<cmd>.md). Accept either so the check works across versions.
+# (.claude/skills/<cmd>/SKILL.md). The plugin standardizes on skills; the
+# legacy command form (.claude/commands/<cmd>.md) is deprecated and not checked.
 for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
-  if [ ! -f ".claude/skills/${cmd}/SKILL.md" ] \
-    && [ ! -f ".claude/commands/${cmd}.md" ]; then
+  if [ ! -f ".claude/skills/${cmd}/SKILL.md" ]; then
     missing_cmds+=("$cmd")
   fi
 done

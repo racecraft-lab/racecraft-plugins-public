@@ -37,7 +37,7 @@ After install, run `@SpecKit Pro` → `install` to register custom agents, then 
 
 ```bash
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --ai claude
+specify init --integration claude
 ```
 
 Then in Claude Code or Codex:
@@ -379,7 +379,7 @@ auto-commit: per-phase      # per-phase | batch | none
 
 - **Claude Code or Codex** — separate entrypoint surfaces ship for both runtimes
 - **SpecKit CLI** — `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`
-- **SpecKit initialized** — `specify init --ai claude`
+- **SpecKit initialized** — `specify init --integration claude`
 - **Constitution created** — `/speckit.constitution`
 - **GitHub CLI (`gh`)** — required for PR creation and review resolution
 - **jq** — required by validation scripts
