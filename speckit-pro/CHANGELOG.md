@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.6.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.2...speckit-pro-v2.6.3) (2026-06-05)
+
+
+### Bug Fixes
+
+* **speckit-pro:** support SpecKit CLI 0.9.4 ([#109](https://github.com/racecraft-lab/racecraft-plugins-public/issues/109)) ([6ec5cea](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6ec5cea7f8059e69402b61c0922647585df3793f))
+
 ## [2.6.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.1...speckit-pro-v2.6.2) (2026-06-04)
 
 
