@@ -51,7 +51,7 @@ Re-read it before each phase. The locked decisions from that interview (Q1–Q5)
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 14 FRs, US1/US2, 8 ACs, 6 SCs; 0 `[NEEDS CLARIFICATION]`; ext-authored exhaust scoped out (commit 58c03ab) |
 | Clarify | `/speckit-clarify` | ✅ Complete | **Skipped** — 0 markers after Specify; the 4 big decisions are locked in the design concept and the 3 session mechanics are carried verbatim in the Plan prompt's grounded map. G6/Analyze verifies design-concept ↔ spec/plan/tasks consistency. |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md (20KB) + research.md (pointer); bash+jq+markdown; US1→US2 sequencing; Codex parity identified; constitution PASS via ratified split exception (commit 45ee7cf). Garbled `update-agent-context.sh` CLAUDE.md append reverted. |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains; 7 gaps → 0; 1 consensus (safe-write mechanism). Spec hardened FR-009/010/013/015, SC-007 (commit 98a2238) |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -358,12 +358,18 @@ Focus on Artifact relocation requirements:
 
 ### Checklist Results
 
-| Checklist | Items | Gaps | Spec References |
+| Checklist | Items | Gaps (found→remaining) | Spec References |
 |-----------|-------|------|-----------------|
-| data-integrity | | | |
-| error-handling | | | |
-| backward-compatibility | | | |
-| **Total** | | | |
+| data-integrity | 22 | 1 → 0 | Key Entities (CONTRACT set enumerated; `*-technical-roadmap.md` named as same-tree, protected) |
+| error-handling | 13 | 4 → 0 | FR-009 (create/append-only/idempotent), FR-010 (no-false-exclusion), Edge Cases |
+| backward-compatibility | 19 | 2 → 0 | FR-013 (legacy-doc protection), FR-015 + SC-007 (no-regression) |
+| **Total** | **54** | **7 → 0** | + 1 consensus item resolved |
+
+**Consensus Resolution Log:**
+
+| Phase / Domain | Item | Categories | Round | N | Outcome | Confidence | Applied to |
+|---|---|---|---|---|---|---|---|
+| Checklist / error-handling | CHK012 — consumer `.gitattributes` safe-write mechanism | `[codebase]` `[domain]` | 1 | 2 | Temp-file + atomic `mv` (same-dir `mktemp`), fixed-string `grep -qxF` presence guard, trailing-newline normalize before append | High (both analysts agree) | spec.md Edge Case + plan.md (mechanism pinned) |
 
 ---
 
