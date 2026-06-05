@@ -162,7 +162,7 @@ Constitution v1.1.0 principles evaluated:
   - *Review order*: US1 (redirect) before US2 (collapse/gate/lint) — US2 is inert
     until US1 writes under `.process/`.
   - *Scope budget*: as above (PASS).
-  - *Traceability*: FR-001…FR-014 → tasks; SC-001…SC-006 → tests.
+  - *Traceability*: FR-001…FR-015 → tasks; SC-001…SC-007 → tests.
   - *Verification*: `bash speckit-pro/tests/run-all.sh` (Layers 1/4/5) green;
     new L1 lint + extended L4 tests pass.
   - *Known gaps*: pre-existing dead-code arm in the gate
@@ -185,7 +185,7 @@ not a design-complexity addition.)
 
 ```text
 specs/007-artifact-relocation/
-├── spec.md              # Feature spec (already complete: 14 FRs, US1/US2, 8 ACs)
+├── spec.md              # Feature spec (already complete: 15 FRs, US1/US2, 8 ACs)
 ├── plan.md              # This file (/speckit-plan output)
 ├── research.md          # Phase 0 — minimal pointer (design concept resolved all unknowns)
 └── tasks.md             # Phase 2 output (/speckit-tasks — NOT created here)
