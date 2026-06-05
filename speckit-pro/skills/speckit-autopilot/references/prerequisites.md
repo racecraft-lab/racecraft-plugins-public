@@ -29,13 +29,13 @@ to archive previously merged specs.
    **Feature / spec worktree branch** (normal autopilot case — run with actual
    cleanup):
    ```text
-   /speckit.archive.run --sweep --current-target <current-spec-dir>
+   /speckit-archive-run --sweep --current-target <current-spec-dir>
    ```
 
    **`main`, a release branch, or any protected integration branch** (dry-run
    only — do not delete spec folders on the integration branch):
    ```text
-   /speckit.archive.run --sweep --current-target <current-spec-dir> --dry-run
+   /speckit-archive-run --sweep --current-target <current-spec-dir> --dry-run
    ```
 
 4. Archive Sweep may archive/clean up only previously merged specs. It MUST

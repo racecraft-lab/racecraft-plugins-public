@@ -98,7 +98,8 @@ This creates:
 | `.specify/templates/` | Templates that guide each SpecKit command |
 | `.specify/scripts/bash/` | Helper scripts (prerequisites, branch creation, plan setup) |
 | `.specify/memory/constitution.md` | Your project's constitution (starts as template) |
-| `.claude/commands/speckit.*.md` | Slash commands for Claude Code (varies by `--ai`) |
+| `.claude/skills/speckit-*/SKILL.md` | Core SDD phase skills for Claude Code (SpecKit v0.8.13+) |
+| `.claude/commands/speckit.*.md` | Extension-provided slash commands for Claude Code |
 | `.specify/init-options.json` | Persisted init options for upgrades |
 
 ### 3. Create Your Feature Branch

@@ -54,7 +54,8 @@ commands and scripts:
 
 | Component | Location | Purpose |
 | ----------- | ---------------------------------------- | --------------------------------------------------------- |
-| **Commands** | `.claude/commands/speckit.*.md` | Slash commands that orchestrate each SDD phase |
+| **Core phase skills** | `.claude/skills/speckit-*/SKILL.md` | Skills that orchestrate each SDD phase (specify/plan/tasks/clarify/checklist/analyze/implement) — SpecKit v0.8.13+ |
+| **Extension commands** | `.claude/commands/speckit.*.md` | Slash commands provided by SpecKit extensions (verify, retrospective, …) |
 | **Scripts** | `.specify/scripts/bash/` | Shell scripts for branch creation, path resolution, prerequisite checking |
 | **Templates** | `.specify/templates/` | Spec, plan, tasks, checklist, and agent file templates |
 | **Constitution** | `.specify/memory/constitution.md` | Project principles for gate validation |
@@ -93,8 +94,8 @@ Agent(
   subagent_type: "phase-executor",
   description: "SPEC-XXX <phase>",
   prompt: """
-    Run the /speckit.<phase> command.
-    Use: Skill("speckit.<phase>", args: "<workflow prompt>")
+    Run the /speckit-<phase> command.
+    Use: Skill("speckit-<phase>", args: "<workflow prompt>")
 
     <branch prefix if ON_FEATURE_BRANCH>
 

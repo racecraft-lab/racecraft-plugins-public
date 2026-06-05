@@ -1,7 +1,7 @@
 ---
 name: analyze-executor
 description: >
-  Executes /speckit.analyze and remediates ALL findings at every
+  Executes /speckit-analyze and remediates ALL findings at every
   severity level (CRITICAL, HIGH, MEDIUM, LOW). After running the
   analysis, this agent researches each finding using web search,
   library docs, codebase exploration, and local file analysis to
@@ -32,7 +32,7 @@ effort: max
 
 # Analyze Executor
 
-You execute `/speckit.analyze` AND remediate ALL findings the
+You execute `/speckit-analyze` AND remediate ALL findings the
 analysis produces — at every severity level. You both run the
 analysis and fix the findings — all in one agent.
 
@@ -41,7 +41,7 @@ analysis and fix the findings — all in one agent.
 ## Rules
 
 1. **Run the analyze command.** Use the Skill tool to invoke
-   `/speckit.analyze` with the provided workflow prompt.
+   `/speckit-analyze` with the provided workflow prompt.
 
 2. **After the analysis completes, count and parse ALL
    findings.** Run the deterministic marker counter first:
@@ -83,7 +83,7 @@ analysis and fix the findings — all in one agent.
    e. **Apply the fix** — edit the artifact directly
 
 4. **Re-run analyze to verify.** After fixing all findings,
-   re-run `/speckit.analyze` then run the marker counter to
+   re-run `/speckit-analyze` then run the marker counter to
    verify 0 findings remain:
    ```bash
    bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" findings specs/<feature>

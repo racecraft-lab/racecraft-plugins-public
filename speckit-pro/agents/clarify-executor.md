@@ -40,7 +40,7 @@ agent.
 ## Rules
 
 1. **Do not invoke interactive skills.** Do not call the Skill tool
-   for `/speckit.clarify`, `grill-me`, or any other interactive
+   for `/speckit-clarify`, `grill-me`, or any other interactive
    command. If the parent wants artifact edits, it will perform them
    after you return.
 

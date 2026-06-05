@@ -216,7 +216,7 @@ the decisions the roadmap left ambiguous.
 
 - **Clarify Prompts:** Use the design concept's Open Questions section
   to seed the autopilot's clarify session focuses. Anything still open
-  after the grill-me interview is exactly what `/speckit.clarify` should
+  after the grill-me interview is exactly what `/speckit-clarify` should
   be told to dig into. Generate session focuses based on the tool types
   and any unresolved branches (e.g., "Session 1: Search API Behavior",
   "Session 2: Database Operations").

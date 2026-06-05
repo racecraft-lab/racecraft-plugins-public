@@ -199,10 +199,10 @@ assert_eq "0" "$result" "exit code"
 
 set_test "install mode invoked specify extension add for review"
 specify_calls=$(cat "$env3/specify.log" 2>/dev/null || echo "")
-assert_contains "$specify_calls" "extension add --from https://github.com/alpha/review/archive/refs/tags/v1.0.1.zip"
+assert_contains "$specify_calls" "extension add review --from https://github.com/alpha/review/archive/refs/tags/v1.0.1.zip"
 
 set_test "install mode invoked specify preset add for claude-ask-questions"
-assert_contains "$specify_calls" "preset add --from https://github.com/alpha/preset/archive/refs/tags/v1.0.0.zip"
+assert_contains "$specify_calls" "preset add claude-ask-questions --from https://github.com/alpha/preset/archive/refs/tags/v1.0.0.zip"
 
 set_test "install mode did NOT touch verify-tasks (filtered by --accept)"
 assert_not_contains "$specify_calls" "verify-tasks"
@@ -257,10 +257,10 @@ assert_eq "0" "$result" "exit code"
 set_test "upgrade mode reports upgrade direction"
 assert_contains "$output" "upgrading 1.0.0"
 
-set_test "upgrade mode invoked remove then add"
+set_test "upgrade mode force-adds extension (no separate remove on 0.9.4)"
 upgrade_calls=$(cat "$env5/specify.log")
-assert_contains "$upgrade_calls" "extension remove review"
-assert_contains "$upgrade_calls" "extension add --from https://github.com/alpha/review/archive/refs/tags/v1.0.1.zip"
+assert_not_contains "$upgrade_calls" "extension remove review"
+assert_contains "$upgrade_calls" "extension add review --from https://github.com/alpha/review/archive/refs/tags/v1.0.1.zip --force"
 
 # ─────────────────────────────────────────
 section "invalid arguments"

@@ -581,7 +581,7 @@ They're independently versioned and optionally installed.
 | `specify extension search --verified` | Show verified only |
 | `specify extension info <name>` | Detailed extension info |
 | `specify extension add <name>` | Install from approved catalog |
-| `specify extension add --from <url>` | Install from ZIP URL |
+| `specify extension add <name> --from <url>` | Install from ZIP URL |
 | `specify extension add --dev <path>` | Install from local directory |
 | `specify extension list` | Show installed extensions |
 | `specify extension list --available` | Show available extensions from catalogs |

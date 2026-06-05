@@ -185,7 +185,7 @@ specify extension info <name>                  # detailed info
 
 # Installation
 specify extension add <name>                   # install from approved catalog
-specify extension add --from <zip-url>         # install from GitHub release URL
+specify extension add <name> --from <zip-url>         # install from GitHub release URL
 specify extension add --dev <path>             # install from local directory
 
 # Management
@@ -249,7 +249,7 @@ install silently.
 | `verify-tasks` | extension | `datastone-inc/spec-kit-verify-tasks` | Post-impl Verify chain — phantom-task detector |
 | `cleanup` | extension | `dsrednicki/spec-kit-cleanup` | Sequential after the parallel group — scout-rule cleanup |
 | `retrospective` | extension | `emi-dm/spec-kit-retrospective` | Sequential after Cleanup — post-impl reflection |
-| `claude-ask-questions` | preset | `0xrafasec/spec-kit-preset-claude-ask-questions` | Upgrades `/speckit.clarify` and `/speckit.checklist` to use the native AskUserQuestion picker on Claude Code |
+| `claude-ask-questions` | preset | `0xrafasec/spec-kit-preset-claude-ask-questions` | Upgrades `/speckit-clarify` and `/speckit-checklist` to use the native AskUserQuestion picker on Claude Code |
 
 **Resolution rule — latest tagged release at invocation time.** The
 installer queries `gh release list` for each entry's most recent

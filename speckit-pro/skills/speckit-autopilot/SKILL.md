@@ -237,7 +237,7 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 1. **Resolve `SKILL_SCRIPTS`** from the skill header's base directory
    (append `/scripts`). All script invocations below use it as prefix.
    `CLAUDE_PLUGIN_ROOT` is unavailable in Bash; use the literal path.
-2. **Archive Sweep** — `/speckit.archive.run --sweep --current-target
+2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
    <current-spec-dir>` on feature/spec branches; add `--dry-run` on
    `main`, release, or any protected integration branch. Skip if the
    archive extension is absent. Excludes the current target spec.
