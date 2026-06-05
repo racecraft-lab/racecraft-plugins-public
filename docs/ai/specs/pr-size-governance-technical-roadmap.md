@@ -391,9 +391,9 @@ there.
   dirty tree and is idempotent (re-run = no-op).
 - **Every phase (gate):** all layers from the coverage table pass for each SPEC —
   CI-fast layers (L1/L4/L5) green in CI by default; Layer 7 replay (`--integration`) and
-  Layer 8 parity are opt-in runs, and the AI evals
-  passing **before** the SPEC merges. A skill change without its L2/L3 eval is **not
-  done**, regardless of code completeness.
+  Layer 8 parity are opt-in runs; and the AI evals (L2/L3, plus L6 where applicable) run
+  developer-local (`claude -p`) and are recorded as passing **before** the SPEC merges.
+  A skill change without its L2/L3 eval is **not done**, regardless of code completeness.
 
 ## Open migration decisions (your call — defaults applied in the catalog)
 
