@@ -48,8 +48,8 @@ Re-read it before each phase. The locked decisions from that interview (Q1–Q5)
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Light — most decisions locked in the design concept |
+| Specify | `/speckit-specify` | ✅ Complete | spec.md: 14 FRs, US1/US2, 8 ACs, 6 SCs; 0 `[NEEDS CLARIFICATION]`; ext-authored exhaust scoped out (commit 58c03ab) |
+| Clarify | `/speckit-clarify` | ✅ Complete | **Skipped** — 0 markers after Specify; the 4 big decisions are locked in the design concept and the 3 session mechanics are carried verbatim in the Plan prompt's grounded map. G6/Analyze verifies design-concept ↔ spec/plan/tasks consistency. |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -187,13 +187,14 @@ projects), and the maintainers who rely on the reviewability gate's LOC accounti
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- fill after run --> |
+| Functional Requirements | 14 (FR-001…FR-014) |
 | User Stories | 2 (US1, US2) |
-| Acceptance Criteria | AC-1.1, AC-1.2, AC-1.3 (+ gate alignment, Codex parity) |
+| Acceptance Criteria | AC-1.1, AC-1.2, AC-1.3, AC-1.4 (Codex parity); AC-2.1, AC-2.2 (gate alignment), AC-2.3, AC-2.4 + SC-001…SC-006 |
 
 ### Files Generated
 
-- [ ] `specs/007-artifact-relocation/spec.md`
+- [x] `specs/007-artifact-relocation/spec.md`
+- [x] `specs/007-artifact-relocation/checklists/requirements.md`
 
 ---
 
@@ -224,11 +225,13 @@ to pin implementation mechanics, max 5 questions per session.
 
 ### Clarify Results
 
+**Phase skipped** — Specify produced 0 `[NEEDS CLARIFICATION]` markers (the design concept pre-resolved the 4 big decisions). Autopilot Clarify is marker-gated; the 3 session focuses below are implementation mechanics already carried verbatim in the Plan prompt's grounded map, so nothing is lost. Drift is caught at G6 (Analyze checks design-concept ↔ spec/plan/tasks consistency + the ext-authored-exhaust scope cut).
+
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Redirect mechanics | | |
-| 2 | Ensure-step + gate | | |
-| 3 | uat repoint | | |
+| 1 | Redirect mechanics | — (skipped) | Carried in Plan prompt (path-string edits) |
+| 2 | Ensure-step + gate | — (skipped) | Carried in Plan prompt (gate arm + ensure-step pattern) |
+| 3 | uat repoint | — (skipped) | Carried in Plan prompt (generate-pr-body.sh + post-implementation.md) |
 
 ---
 
