@@ -9,6 +9,8 @@ The grammar the shared normalizer implements and that the `spec_id` check (FR-01
 3. If the **first** dash-delimited segment is **all-alpha** (`^[a-z]+$`): `namespace` = that segment, `number-suffix` = the **next** segment.
 4. Else: `namespace = "spec"`, `number-suffix` = the **first** segment.
 
+**Totality**: the grammar yields a defined `(namespace, number-suffix)` pair for ANY input. When the selected number-suffix segment is missing or empty (an all-alpha value like `prsg`, a trailing-dash value like `prsg-`, an empty value, or a lone `-`), `number-suffix` is the empty string. An empty number-suffix can never byte-equal a well-formed directory's number-suffix, so a degenerate value never yields a false match.
+
 ## Comparison: match requires BOTH parts
 
 - `namespace` equality (byte-equal lowercased strings), AND
@@ -37,4 +39,4 @@ The grammar the shared normalizer implements and that the `spec_id` check (FR-01
 
 ## Usage in the `spec_id` check (FR-019)
 
-For a version-gated `SPEC-MOC.md`: `normalize(frontmatter spec_id)` MUST equal `normalize(name of the containing directory)`. A mismatch is a violation. This is the check that actually validates the headline ID-join feature.
+For a version-gated `SPEC-MOC.md`: `normalize(frontmatter spec_id)` MUST equal `normalize(name of the containing directory)`. A mismatch is a violation. This is the check that actually validates the headline ID-join feature. Both sides are reduced with the SAME grammar before comparison (symmetric — neither side is compared raw). An ABSENT or EMPTY `spec_id` in a version-gated marker is itself a violation (a marker with no join key cannot satisfy the join), distinct from a present-but-mismatched value.

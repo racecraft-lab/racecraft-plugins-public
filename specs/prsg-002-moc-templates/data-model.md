@@ -51,9 +51,11 @@ A `(namespace, number-suffix)` pair derived from a doc ID or a directory name, u
 The condition that determines whether a spec is subject to a given lint.
 
 - **Condition**: `structureVersion >= <lint's shipped version>` (v1 lints: shipped version = `1`).
-- **Exempt (silently skipped, never a violation)**:
+- **Exempt (silently skipped, never a violation)** — decided BEFORE any body-content read (FR-023):
   - a spec directory with no `SPEC-MOC.md`, OR
-  - a `SPEC-MOC.md` whose frontmatter carries no `structureVersion`.
+  - a `SPEC-MOC.md` whose frontmatter carries no `structureVersion`, a non-bare-integer `structureVersion`, or `structureVersion < 1`, OR
+  - a `SPEC-MOC.md` with no `---` fence / unparseable frontmatter (no readable `structureVersion`), OR
+  - an UNREADABLE `SPEC-MOC.md` (permission denied → skip + stderr warning). The version-gate read is **total** and never crashes the lint (FR-021).
 - **Consequence**: pre-existing legacy specs (which have no marker) are grandfathered — the first adoption of this feature does not red-fail CI (SC-002).
 
 ## Entity: Spec tree
@@ -69,19 +71,30 @@ A scanned directory of specs over which the lints operate.
 ## State / control flow (per lint, per version-gated MOC)
 
 ```text
+resolve REPO_ROOT; for each scan root in { docs/ai/specs/, specs/ }:
+    if scan root missing or empty            -> SKIP this root (not an error; FR-022)
+
 for each spec directory under the scanned trees:
-    if no SPEC-MOC.md           -> SKIP (exempt)
-    if structureVersion absent   -> SKIP (exempt)
-    if structureVersion < 1      -> SKIP (not gated for v1 lints)
+    # exempt/skip decided BEFORE any body-content read (FR-023) -> legacy never red-fails
+    if no SPEC-MOC.md                        -> SKIP (exempt)
+    if SPEC-MOC.md unreadable                 -> SKIP + stderr warning (exempt; FR-021)
+    if no ---fence / unparseable frontmatter  -> SKIP (no readable structureVersion; FR-021)
+    if structureVersion absent                -> SKIP (exempt)
+    if structureVersion not a bare integer    -> SKIP (malformed treated as absence; gate fires only on integer >= 1)
+    if structureVersion < 1                   -> SKIP (not gated for v1 lints)
     else (version-gated):
         orphan lint:
             up present & non-empty & well-formed relative []() link?  else VIOLATION
         stale-index lint:
-            every relative []() target (incl. the up: value + body links) resolves to an existing file?  else VIOLATION
+            every relative []() target (incl. up: value + body links) resolves to an existing REGULAR file?
+                (a directory or broken symlink at the path = NOT resolving = VIOLATION; FR-011)  else VIOLATION
             any [[wikilink]] present?  -> VIOLATION
         spec_id check (FR-019):
-            normalize(spec_id) == normalize(dirname)?  else VIOLATION
+            spec_id absent or empty?  -> VIOLATION (no join key)
+            normalize(spec_id) == normalize(dirname)?  else VIOLATION   (both sides normalized, same grammar)
 
-any VIOLATION in a version-gated spec -> exit nonzero
-no violations among checkable specs   -> exit success
+exit codes (FR-020):
+    0  clean: no violations among checkable specs (INCLUDING zero version-gated specs found)
+    1  one or more content violations in a version-gated spec  (report file + failed rule; FR-024)
+    2  internal/operational error (trapped set -euo pipefail failure) -> stderr; NEVER reported as 1
 ```
