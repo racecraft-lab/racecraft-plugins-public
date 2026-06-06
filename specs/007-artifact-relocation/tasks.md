@@ -48,7 +48,7 @@ the existing `speckit-pro/tests/layer1-structural/` array. Tests run via
 can be checked after implementation. The Foundation layer from the workflow prompt (the
 repo-root `.gitattributes` rule + its guard lint) lands in Phase 2.
 
-- [ ] T001 Confirm the worktree baseline is green before any change: from
+- [x] T001 Confirm the worktree baseline is green before any change: from
   `speckit-pro/`, run `bash tests/run-all.sh --layer 1` and record the passing count
   (expected baseline 765/765) so SC-007's "≥ baseline" can be checked at the end. Do
   NOT modify any file in this task.
@@ -72,7 +72,7 @@ tasks so the cross-file agreement is anchored.
 > add the rule (T004) and observe GREEN. Writing precedes registering so the runner never
 > references a not-yet-created script.
 
-- [ ] T002 Write the collapse-scope lint
+- [x] T002 Write the collapse-scope lint
   `speckit-pro/tests/layer1-structural/validate-process-gitattributes.sh` (FR-012/AC-2.4/SC-005),
   modeled on the existing `validate-pr-checks-sentinel.sh` (same `#!/usr/bin/env bash` +
   `set -euo pipefail` header, same pass/fail reporting convention). The lint MUST parse
@@ -86,18 +86,18 @@ tasks so the cross-file agreement is anchored.
   make the gate parse `.gitattributes` (it only validates the static file; the gate stays
   self-contained per FR-011). Run it now and confirm it FAILS (RED — no `.process/` rule
   exists yet).
-- [ ] T003 Register the new Layer-1 lint in the runner: add
+- [x] T003 Register the new Layer-1 lint in the runner: add
   `validate-process-gitattributes.sh` to the Layer-1 validator array in
   `speckit-pro/tests/run-all.sh` (alongside the existing structural validators —
   EXTEND the array, do NOT renumber or replace any existing entry, per FR-015). Re-run
   `bash tests/run-all.sh --layer 1` and confirm the new lint reports RED there (the
   script now exists, so no missing-file error — it fails on the absent `.process/` rule).
-- [ ] T004 Create the NEW repo-root collapse rule file `.gitattributes` at the worktree
+- [x] T004 Create the NEW repo-root collapse rule file `.gitattributes` at the worktree
   root containing exactly one rule: `**/.process/** linguist-generated=true` (FR-007).
   Use `linguist-generated=true` ONLY — do NOT add `-diff` (FR-008: relocated artifacts
   stay diffable and loadable on demand). Re-run the lint (T002) and confirm it now PASSES
   (GREEN). This dogfoods the rule in this plugin repo AND gives the lint its target.
-- [ ] T009A Verify the reviewability budget against the planned task/file scope and
+- [x] T009A Verify the reviewability budget against the planned task/file scope and
   record the split decision in plan.md: confirm the ratified `split exception` is
   present (the gate greps changed `.md` for the phrase `split exception`; plan.md
   already carries it in the Constitution Check + Complexity Tracking). No new split is
@@ -133,14 +133,14 @@ redirects to the identical paths.
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] (Taxonomy / AC-1.1) Add the CONTRACT-vs-EXHAUST artifact taxonomy note
+- [x] T010 [US1] (Taxonomy / AC-1.1) Add the CONTRACT-vs-EXHAUST artifact taxonomy note
   to `specs/007-artifact-relocation/spec.md` is ALREADY present (Key Entities); instead,
   surface the taxonomy where authors see it: add a short "Artifact tiering (CONTRACT vs
   EXHAUST)" note to `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` stating the
   CONTRACT set stays at its existing location and the three authored EXHAUST artifacts go
   to `.process/`. This satisfies FR-001/AC-1.1 at the authoring surface (documentation,
   not a new artifact file). [paired Codex mirror: T011 covers the same SKILL.md region.]
-- [ ] T011 [US1] (Redirect, scaffold — FR-002/AC-1.2) In
+- [x] T011 [US1] (Redirect, scaffold — FR-002/AC-1.2) In
   `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, repoint the four scaffold
   touchpoints for the design-concept doc and the workflow file to
   `docs/ai/specs/.process/` instead of directly in `docs/ai/specs/` (FR-002): (1) the
@@ -150,20 +150,20 @@ redirects to the identical paths.
   readable after the run — no deletion (FR-004/AC-1.2). Edit ONLY the
   design-concept + workflow paths — do NOT touch the CONTRACT set and do NOT redirect any
   extension-authored exhaust (Non-goal).
-- [ ] T012 [US1] (Codex mirror of T010+T011 — FR-002/FR-006/AC-1.2/AC-1.4) Apply the
+- [x] T012 [US1] (Codex mirror of T010+T011 — FR-002/FR-006/AC-1.2/AC-1.4) Apply the
   IDENTICAL taxonomy note and the IDENTICAL four-touchpoint redirect to
   `docs/ai/specs/.process/` in
   `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`, so both coding agents write
   to the same paths with zero drift (FR-006/AC-1.4/SC-006). This is the paired mirror for
   T010 and T011 in the same story.
-- [ ] T013 [P] [US1] (Redirect, workflow template self-refs) In
+- [x] T013 [P] [US1] (Redirect, workflow template self-refs) In
   `speckit-pro/skills/speckit-coach/templates/workflow-template.md`, repoint the
   design-concept-doc and workflow self-references to `docs/ai/specs/.process/` so the
   template's own pointers match where scaffold-spec now writes. [P]: independent file
   from T011/T014. (No Codex mirror owed — this is a coach template, not a paired
   Claude/Codex SKILL.md; confirm there is no codex-skills counterpart of this template
   before marking done.)
-- [ ] T014 [US1] (Redirect, UAT runbook generator output) In
+- [x] T014 [US1] (Redirect, UAT runbook generator output) In
   `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`, repoint the
   UAT-runbook generator output path (≈ L564) and its `git add` path (≈ L590) to the
   feature's own `specs/<NNN>/.process/` directory (FR-003), creating that directory when
@@ -171,7 +171,7 @@ redirects to the identical paths.
   of this reference exists — if it does, pair a mirror task; if it does not, note "no
   Codex counterpart" when marking done (the parity mandate applies to mirrored skills,
   not to Claude-only references).
-- [ ] T015 [US1] (Redirect, PR-body read path — AC-1.3/FR-005) In
+- [x] T015 [US1] (Redirect, PR-body read path — AC-1.3/FR-005) In
   `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`, repoint the
   UAT-runbook READ path (≈ L179) and the `./uat-runbook.md` link (≈ L188) to
   `specs/<NNN>/.process/`, while KEEPING the `## UAT Runbook` section heading so the PR
@@ -179,7 +179,7 @@ redirects to the identical paths.
   the section; only repoint the source path. (This `.sh` lives under
   `speckit-pro/skills/.../scripts/`, so it counts zero production files per the gate
   heuristic — see plan.md.)
-- [ ] T016 [US1] (Out-of-scope guardrail note — AC-1.1 boundary) In
+- [x] T016 [US1] (Out-of-scope guardrail note — AC-1.1 boundary) In
   `specs/007-artifact-relocation/spec.md`, confirm the "Out of Scope" entry stating
   extension-authored exhaust (retrospective report, verify-tasks report) is NOT
   redirected by this feature and stays review-visible (its post-merge cleanup is owned by
@@ -222,7 +222,7 @@ broadened.
 
 ### Gate exclusion: test then implement (RED → GREEN)
 
-- [ ] T017 [P] [US2] (Gate exclusion test — SC-003/AC-2.2/FR-010) EXTEND
+- [x] T017 [P] [US2] (Gate exclusion test — SC-003/AC-2.2/FR-010) EXTEND
   `speckit-pro/tests/layer4-scripts/test-reviewability-gate.sh` with ADDITIVE
   diff-mode assertions (append new assertions; preserve every existing one per FR-015):
   given a change that adds known line counts to BOTH a `specs/<NNN>/.process/…` file and
@@ -232,7 +232,7 @@ broadened.
   `.process/` paths leaves the count identical to pre-feature) per FR-010. Run now and
   confirm the new assertions FAIL (RED — the gate has no `.process/` arm yet). [P]:
   different file from T019.
-- [ ] T018 [US2] (Gate arm — FR-010/AC-2.2/SC-003) In
+- [x] T018 [US2] (Gate arm — FR-010/AC-2.2/SC-003) In
   `speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh`, add ONE `case`
   arm to `is_excluded_generated()` (lines ≈ 48–57):
   `*/.process/*|*.process/*) return 0 ;;` (the arm pinned in plan.md line 237) so any
@@ -245,7 +245,7 @@ broadened.
 
 ### Consumer ensure-step: test then implement (RED → GREEN)
 
-- [ ] T019 [P] [US2] (Consumer ensure-step idempotency + safe-write test —
+- [x] T019 [P] [US2] (Consumer ensure-step idempotency + safe-write test —
   SC-004/AC-2.3/FR-009) EXTEND
   `speckit-pro/tests/layer4-scripts/test-ensure-reviewability-preset.sh` with ADDITIVE
   assertions (preserve existing ones per FR-015) over a temp consumer repo:
@@ -262,7 +262,7 @@ broadened.
   (e) **both branches converge** on the single-rule end state.
   Run now and confirm these FAIL (RED — no ensure-step arm exists yet). [P]: different
   file from T017.
-- [ ] T020 [US2] (Consumer ensure-step — FR-009/AC-2.3/SC-004; consensus-pinned
+- [x] T020 [US2] (Consumer ensure-step — FR-009/AC-2.3/SC-004; consensus-pinned
   safe-write) FOLD an idempotent `.process/`-rule ensure-step INTO the existing
   `speckit-pro/skills/speckit-coach/scripts/ensure-reviewability-preset.sh` (reuse its
   `PROJECT_ROOT=${1:-$PWD}`; do NOT create a new script or a flag — Non-goal). The
@@ -295,7 +295,7 @@ the repo-root rule + lint from Phase 2 guard the collapse scope. US1 + US2 both 
 **Purpose**: Prove the whole pathway green, confirm Codex parity, verify collapse on a
 real fixture diff, and assemble the PR review packet. No new behavior is added here.
 
-- [ ] T021 Verify collapse + UAT rendering + zero-data-loss on a REAL fixture
+- [x] T021 Verify collapse + UAT rendering + zero-data-loss on a REAL fixture
   diff (cross-cutting US1 + US2): scaffold (or stage) a fixture change that places a file
   under
   `specs/<NNN>/.process/` AND a CONTRACT artifact, then (a) run the reviewability gate in
@@ -308,16 +308,16 @@ real fixture diff, and assemble the PR review packet. No new behavior is added h
   under `specs/<NNN>/.process/`) STILL EXIST and are READABLE at their new locations after
   the run — zero data loss, no deletion (FR-004/SC-002).
   (SC-001/SC-002/SC-003/FR-004/FR-005/AC-1.3/AC-2.1/AC-2.2)
-- [ ] T022 Run the Codex-parity validators: from `speckit-pro/`, run
+- [x] T022 Run the Codex-parity validators: from `speckit-pro/`, run
   `bash tests/layer1-structural/validate-codex-skills.sh` and the Layer-8 parity
   fixtures (`bash tests/layer8-parity/run-parity-fixtures.sh --dry-run`) and confirm zero
   drift between the scaffold-spec Claude SKILL.md and its Codex mirror in the redirect
   targets (FR-006/SC-006/AC-1.4).
-- [ ] T023 Run the full deterministic suite green: from `speckit-pro/`, run
+- [x] T023 Run the full deterministic suite green: from `speckit-pro/`, run
   `bash tests/run-all.sh` (Layers 1, 4, 5) and confirm ZERO failures, with the passing
   count ≥ the T001 baseline (the new Layer-1 lint + the extended Layer-4 assertions add
   to the count; nothing previously passing regresses) — SC-007/FR-015.
-- [ ] T024 Assemble the PR review packet per plan.md's "PR review packet source":
+- [x] T024 Assemble the PR review packet per plan.md's "PR review packet source":
   *what changed* (redirect of three authored exhaust artifacts into `.process/`;
   repo-root + consumer collapse rule; gate diff-mode exclusion; collapse-scope lint),
   *why* (~32% of a feature PR is exhaust burying the contract artifacts), *review order*

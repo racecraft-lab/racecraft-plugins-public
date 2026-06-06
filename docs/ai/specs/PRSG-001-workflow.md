@@ -54,7 +54,7 @@ Re-read it before each phase. The locked decisions from that interview (Q1–Q5)
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains; 7 gaps → 0; 1 consensus (safe-write mechanism). Spec hardened FR-009/010/013/015, SC-007 (commit 98a2238) |
 | Tasks | `/speckit-tasks` | ✅ Complete | tasks.md: 20 tasks, 4 phases, 3 [P]; full FR/AC/SC coverage; G5 + reviewability tasks gate (excepted) pass (commit cfbd081) |
 | Analyze | `/speckit-analyze` | ✅ Complete | 3 MEDIUM findings (plan FR/SC drift ×2 + Out-of-Scope symmetry), all remediated; 0 CRITICAL → G6 pass; consensus not needed (0 unresolved) |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | 4 groups, all TDD RED→GREEN; G7 full suite 1527/1527 (L1 770 + L4 585 + L5 172) + L8 parity 3/3. Commits: 4ab227e, 5c22e2e, b5fbbb0 |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -476,10 +476,10 @@ Focus on:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation (.gitattributes + L1) | | | |
-| 2 - US1 (redirect + Codex mirror) | | | |
-| 3 - US2 (gate + ensure-step + L4) | | | |
-| 4 - Polish (parity, collapse verify) | | | |
+| 1 - Foundation (.gitattributes + L1) | T001-T004, T009A | ✅ | .gitattributes rule + scope lint (5 checks); RED→GREEN proven; L1 765→770 (4ab227e) |
+| 2 - US1 (redirect + Codex mirror) | T010-T016 | ✅ | scaffold-spec + Codex mirror lockstep + post-impl mirror + uat repoint; codex-parity 72/72 (5c22e2e) |
+| 3 - US2 (gate + ensure-step + L4) | T017-T020 | ✅ | gate .process/ arm + consensus safe-write ensure-step; both TDD; L4 572→585 (b5fbbb0) |
+| 4 - Polish (parity, collapse verify) | T021-T024 | ✅ | real-fixture collapse (reviewable_loc 5, .process/ excluded) + UAT renders from .process/ + zero data loss; verification-only |
 
 ---
 
