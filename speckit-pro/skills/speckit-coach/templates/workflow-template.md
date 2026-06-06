@@ -35,7 +35,7 @@ This workflow file was enriched from a Grill Me interview run during
 Questions live at:
 
 ```text
-docs/ai/specs/{{SPEC_ID}}-design-concept.md
+docs/ai/specs/.process/{{SPEC_ID}}-design-concept.md
 ```
 
 Re-read it before each phase if you need to disambiguate a prompt. The

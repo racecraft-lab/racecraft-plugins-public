@@ -22,6 +22,17 @@ Prepare a spec from the technical roadmap for autonomous execution.
 Creates the worktree, branch, and workflow file — ready for
 `/speckit-pro:speckit-autopilot`.
 
+## Artifact tiering (CONTRACT vs EXHAUST)
+
+speckit-pro artifacts are tiered. **CONTRACT** artifacts (`spec.md`, `plan.md`,
+`tasks.md`, `research.md`, supporting design artifacts) are review-visible and stay
+at their existing location — this skill does not relocate them. The three authored
+**EXHAUST** artifacts (the design-concept doc, the workflow file, and the UAT
+runbook) are scaffolding, so they are written under a `.process/` directory:
+the design-concept doc and workflow file land under `docs/ai/specs/.process/`, and
+the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
+deleted — every relocated file still exists and is readable at its `.process/` path.
+
 ## Invocation
 
 ```text
@@ -141,8 +152,9 @@ invocation — do not attempt to skip grilling.
 </hard_constraints>
 
 ```text
-1. Create docs directory in the WORKTREE for the design concept:
-   Bash("mkdir -p .worktrees/<number>-<short-name>/docs/ai/specs/")
+1. Create the .process/ docs directory in the WORKTREE for the design concept
+   (created when absent so the first exhaust artifact lands correctly):
+   Bash("mkdir -p .worktrees/<number>-<short-name>/docs/ai/specs/.process/")
 
 2. Invoke the grill-me skill with the spec scope as input:
    Skill("grill-me", args: {
@@ -150,7 +162,7 @@ invocation — do not attempt to skip grilling.
      spec_id: "SPEC-<ID>",
      spec_name: "<spec name from roadmap>",
      scope: <full scope description from technical roadmap>,
-     output_path: ".worktrees/<number>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md"
+     output_path: ".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md"
    })
 
 3. The skill walks the design tree using AskUserQuestion (one question
@@ -159,7 +171,7 @@ invocation — do not attempt to skip grilling.
    at 30 questions and chooses to wrap up, or selects "End interview".
 
 4. Verify the design concept doc exists:
-   Read(".worktrees/<number>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md")
+   Read(".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md")
    Must contain Goals, Non-goals, Design Tree (Q&A log), and Open Questions.
 ```
 
@@ -186,7 +198,7 @@ All file operations happen in the worktree directory.
    Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md")
 
 2. Write the template to the WORKTREE:
-   Write(".worktrees/<number>-<short-name>/docs/ai/specs/SPEC-<ID>-workflow.md",
+   Write(".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-workflow.md",
          content: <template content from step 1>)
 ```
 
@@ -261,8 +273,8 @@ All commits happen on the worktree branch — NEVER on main.
 ```text
 1. Stage and commit BOTH the design concept doc AND the workflow file:
    Bash("cd .worktrees/<number>-<short-name> && \
-     git add docs/ai/specs/SPEC-<ID>-design-concept.md \
-             docs/ai/specs/SPEC-<ID>-workflow.md && \
+     git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
+             docs/ai/specs/.process/SPEC-<ID>-workflow.md && \
      git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'")
 
 2. Push the WORKTREE BRANCH:
@@ -289,12 +301,12 @@ Report:
 **Spec:** SPEC-009 Search & Database
 **Branch:** 009-search-database
 **Worktree:** .worktrees/009-search-database/
-**Design Concept:** .worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md
-**Workflow:** .worktrees/009-search-database/docs/ai/specs/SPEC-009-workflow.md
+**Design Concept:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-design-concept.md
+**Workflow:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-workflow.md
 **Remote:** Pushed to <remote>/009-search-database
 
 **Ready to run:**
-/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-009-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-009-workflow.md
 
 **Review both files first** — the design concept doc captures the
 decisions you made during grill-me; the workflow file is what the

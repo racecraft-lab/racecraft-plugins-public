@@ -18,6 +18,17 @@ technical roadmap, or understand the SDD process, redirect them to
 `$speckit-coach`. Do not invent roadmap data or phase prompts from vague
 requirements when the roadmap entry does not exist.
 
+## Artifact tiering (CONTRACT vs EXHAUST)
+
+speckit-pro artifacts are tiered. **CONTRACT** artifacts (`spec.md`, `plan.md`,
+`tasks.md`, `research.md`, supporting design artifacts) are review-visible and stay
+at their existing location — this skill does not relocate them. The three authored
+**EXHAUST** artifacts (the design-concept doc, the workflow file, and the UAT
+runbook) are scaffolding, so they are written under a `.process/` directory:
+the design-concept doc and workflow file land under `docs/ai/specs/.process/`, and
+the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
+deleted — every relocated file still exists and is readable at its `.process/` path.
+
 > **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 69% (11/16) on the Codex selector — but POS is a perfect 8/8 (every "scaffold SPEC-009" / "create a new spec branch" / "prep SPEC-022 for autopilot" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("roadmap status" / "what's the progress on SPEC-009" → should go to `$speckit-status`, "run the fully populated workflow" → `$speckit-autopilot`, "resolve PR review comments" → `$speckit-resolve-pr`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number. (This skill was renamed from `speckit-setup` in v1.12; the rename did not regress trigger behavior — same POS pass rate as before.)
 
 ## Input
@@ -145,7 +156,7 @@ Invoke `$grill-me` from inside the worktree with a setup-mode marker so it
 knows to:
 
 - Write its Design Concept doc to
-  `docs/ai/specs/SPEC-<ID>-design-concept.md` inside the worktree
+  `docs/ai/specs/.process/SPEC-<ID>-design-concept.md` inside the worktree
 - Surface the key answers (Goals, Non-goals, major design decisions) back to
   this skill so step 6 can fold them into the workflow prompts
 
@@ -186,9 +197,10 @@ or to a project-specific higher-priority override that intentionally includes
 the reviewability sections.
 
 Create the destination directory inside the worktree, typically
-`docs/ai/specs/`, then load the shared workflow template from the plugin. Do
+`docs/ai/specs/.process/` (created when absent so the first exhaust artifact
+lands correctly), then load the shared workflow template from the plugin. Do
 not author a new template from scratch. The generated file should live at a
-path like `docs/ai/specs/SPEC-009-workflow.md` inside the worktree.
+path like `docs/ai/specs/.process/SPEC-009-workflow.md` inside the worktree.
 
 ### 6. Populate the workflow file
 
@@ -239,8 +251,8 @@ focused setup commit and push that branch to the detected remote:
 ```
 git add .specify/presets/speckit-pro-reviewability \
         .specify/presets/.registry \
-        docs/ai/specs/SPEC-<ID>-design-concept.md \
-        docs/ai/specs/SPEC-<ID>-workflow.md
+        docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
+        docs/ai/specs/.process/SPEC-<ID>-workflow.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
 
@@ -248,8 +260,8 @@ If the preset was already present and unchanged, the add command may include
 only the design concept and workflow:
 
 ```
-git add docs/ai/specs/SPEC-<ID>-design-concept.md \
-        docs/ai/specs/SPEC-<ID>-workflow.md
+git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
+        docs/ai/specs/.process/SPEC-<ID>-workflow.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
 

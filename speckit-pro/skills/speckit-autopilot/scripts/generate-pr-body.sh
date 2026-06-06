@@ -176,7 +176,7 @@ done
 # the heading loop / append_missing_section / extract_heading_section above — those
 # truncate at head -40 and strip blank lines. Emitted at H2 (## UAT Runbook); SC-005
 # greps for that exact literal. Fail-open: an absent runbook still emits the heading.
-uat_runbook="$FEATURE_DIR/uat-runbook.md"
+uat_runbook="$FEATURE_DIR/.process/uat-runbook.md"
 {
   printf '\n## UAT Runbook\n\n'
   if [ -f "$uat_runbook" ]; then
@@ -185,11 +185,11 @@ uat_runbook="$FEATURE_DIR/uat-runbook.md"
       cat "$uat_runbook"
     else
       head -60 "$uat_runbook"
-      printf '\n[Full runbook](./uat-runbook.md)\n'
+      printf '\n[Full runbook](./.process/uat-runbook.md)\n'
     fi
   else
     # shellcheck disable=SC2016  # backticks are literal Markdown, not a shell expansion
-    printf '%s\n' 'No UAT runbook was generated for this feature (expected at `uat-runbook.md`).'
+    printf '%s\n' 'No UAT runbook was generated for this feature (expected at `.process/uat-runbook.md`).'
   fi
 } >> "$OUTPUT_FILE"
 

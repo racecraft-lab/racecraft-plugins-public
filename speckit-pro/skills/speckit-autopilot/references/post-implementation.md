@@ -555,13 +555,16 @@ answers in writing so anyone reviewing the PR sees them.
 Immediately after Self-Review and before PR-body generation
 (between `Post: Self-Review` and `Post: PR Body Generation`), the
 orchestrator generates a deterministic UAT runbook from `spec.md` so
-the PR ships with a story-by-story acceptance artifact. Run the
-bundled skeleton script:
+the PR ships with a story-by-story acceptance artifact. The runbook is
+EXHAUST, so it is written under the feature's own `.process/` directory;
+create that directory first (it may not exist), then run the bundled
+skeleton script:
 
 ```text
-Bash("UAT_PROJECT_COMMANDS='<PROJECT_COMMANDS as JSON>' \
+Bash("mkdir -p <feature-dir>/.process && \
+  UAT_PROJECT_COMMANDS='<PROJECT_COMMANDS as JSON>' \
   bash '<SKILL_SCRIPTS>/generate-uat-skeleton.sh' \
-  <feature-dir>/spec.md <feature-dir>/uat-runbook.md \
+  <feature-dir>/spec.md <feature-dir>/.process/uat-runbook.md \
   --workflow-file <workflow-file>")
 ```
 
@@ -571,7 +574,7 @@ Bash("UAT_PROJECT_COMMANDS='<PROJECT_COMMANDS as JSON>' \
 - `--workflow-file <workflow-file>` lets the script echo the
   `## Self-Review` block written just above into the runbook's
   Self-Review Findings section.
-- Output is written exactly once to `<feature-dir>/uat-runbook.md`
+- Output is written exactly once to `<feature-dir>/.process/uat-runbook.md`
   (deterministic overwrite, no merge); the script is silent on stdout.
 
 **This step is FAIL-OPEN.** A nonzero exit (e.g., exit 1 on an
@@ -587,7 +590,7 @@ the failure detail lives in the workflow log, not the artifact.
 After the script runs, auto-commit the artifact:
 
 ```text
-git add <feature-dir>/uat-runbook.md
+git add <feature-dir>/.process/uat-runbook.md
 git commit -m "docs(SPEC-XXX): add UAT runbook"
 ```
 
