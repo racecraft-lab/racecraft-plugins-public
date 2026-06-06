@@ -334,7 +334,7 @@ Consult the design concept Q&A for the "why" behind each decision. Key invariant
 - [X] New lints green on this repo's existing legacy specs (grandfathered) AND on PRSG-002's freshly-written marker
 - [X] Codex parity: `validate-codex-parity.sh` (74/74) + `validate-codex-skills.sh` pass
 - [X] Reviewability gate passes (transition exception; implementation surface ~350 LOC, bulk of diff is SDD process/spec markdown)
-- [ ] PR created with a plain-English body + UAT runbook
+- [X] PR created with a plain-English body + UAT runbook — **PR #116** (https://github.com/racecraft-lab/racecraft-plugins-public/pull/116)
 
 ---
 
