@@ -35,6 +35,13 @@ source "$LIB_DIR/moc-id-normalize.sh"
 # shellcheck source=../lib/moc-frontmatter.sh
 source "$LIB_DIR/moc-frontmatter.sh"
 
+# errtrace: propagate the ERR trap into shell FUNCTIONS so an unexpected failure
+# inside scan_root (e.g. a broken basename) trips the trap -> exit 2 (FR-020).
+# Without -E the ERR trap is NOT inherited by functions and an internal failure
+# would surface as set -e's raw exit code, not the contract's exit 2. Set AFTER
+# the source lines (the libs' own `set -euo pipefail` does not clear -E).
+set -E
+
 # layer1-structural -> tests -> speckit-pro -> repo root.
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 
@@ -43,6 +50,13 @@ REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 # (The actual integer test lives in moc_is_gated; this comment marks the
 # duplication intentionally per the lint-behavior contract.)
 GATE_VERSION=1
+
+# Global violation accumulator for the real-tree / arg scan path. scan_root
+# RETURNS 0 and increments this; main decides exit 1 if > 0 else 0. This keeps
+# the ERR trap LIVE when scan_root is called BARE (not in a `||` that suppresses
+# set -e), so an unexpected internal failure -> exit 2 (FR-020), distinct from a
+# content-violation exit 1 derived from the counter.
+VIOLATION_COUNT=0
 
 # ---------------------------------------------------------------------------
 # Side-effect-free predicates (pure booleans; no printing, no exit). Safe to
@@ -79,9 +93,12 @@ moc_specid_matches_dir() {
 }
 
 # ---------------------------------------------------------------------------
-# Scan: evaluate the gated content rules over a scan root. RETURNS (never
-# exits). Prints "path + which rule failed" to stdout on each violation.
-# Returns 0 when clean, 1 when at least one violation was found.
+# Scan: evaluate the gated content rules over a scan root. RETURNS 0 always
+# (never exits, never returns nonzero) and increments the GLOBAL VIOLATION_COUNT
+# per violation, printing "path + which rule failed" to stdout. Returning 0
+# keeps the ERR trap live when the caller invokes scan_root BARE — any
+# UNEXPECTED set -e failure inside then trips the trap -> exit 2 (FR-020),
+# distinct from the content-violation exit 1 main derives from VIOLATION_COUNT.
 # ---------------------------------------------------------------------------
 
 # scan_root <root-dir>
@@ -89,7 +106,7 @@ moc_specid_matches_dir() {
 # SPEC-MOC.md (exempt-before-content) and apply the orphan + spec_id rules to
 # gated markers only. A missing or empty root is SKIPPED (not an error).
 scan_root() {
-  local root="$1" rc=0 spec_dir marker dir_name
+  local root="$1" spec_dir marker dir_name
   [ -d "$root" ] || return 0   # missing root -> skip (FR-022)
 
   for spec_dir in "$root"/*/; do
@@ -99,10 +116,20 @@ scan_root() {
     esac
     marker="${spec_dir}SPEC-MOC.md"
 
+    # Unreadable marker (FR-021/FR-023): a SPEC-MOC.md that EXISTS but is not
+    # readable (permission denied) is SKIPPED with a stderr WARNING — never a
+    # content violation. Checked BEFORE the gate so it is not silently dropped.
+    # (A truly ABSENT marker falls through to the gate check, which SKIPs it
+    # silently — no warning.)
+    if [ -e "$marker" ] && [ ! -r "$marker" ]; then
+      printf 'WARNING: validate-moc-orphan.sh: skipping unreadable marker %s\n' "$marker" >&2
+      continue
+    fi
+
     # Exempt-before-content (FR-023): gate decision uses ONLY the marker's
     # version field; no body read happens before this.
     if ! moc_is_gated "$marker"; then
-      continue                               # no/unreadable/malformed marker -> SKIP
+      continue                               # no/absent/malformed marker -> SKIP
     fi
 
     dir_name="$(basename "$spec_dir")"
@@ -110,17 +137,17 @@ scan_root() {
     # Orphan rule (MOC files only — the marker is the only SPEC-MOC.md here).
     if ! moc_up_well_formed "$marker"; then
       printf 'VIOLATION [orphan]: %s — up: missing, empty, or ill-formed (not a well-formed relative [](...) link)\n' "$marker"
-      rc=1
+      VIOLATION_COUNT=$((VIOLATION_COUNT + 1))
     fi
 
     # spec_id join rule.
     if ! moc_specid_matches_dir "$marker" "$dir_name"; then
       printf 'VIOLATION [spec_id]: %s — spec_id absent/empty or does not namespace-match directory "%s"\n' "$marker" "$dir_name"
-      rc=1
+      VIOLATION_COUNT=$((VIOLATION_COUNT + 1))
     fi
   done
 
-  return "$rc"
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -128,6 +155,13 @@ scan_root() {
 # stderr — distinct from a content violation (exit 1 on stdout). Disarmed
 # before the deliberate final exit so a clean/violation exit is never remapped.
 # ---------------------------------------------------------------------------
+# NOTE: under `set -E`, a failed command-substitution-in-assignment inside a
+# function fires ERR once in the function frame and again as the failure unwinds
+# to main — and the two invocations do NOT share variable state, so an in-shell
+# re-entrancy guard cannot dedupe them. The internal-error path may therefore
+# emit this stderr line twice; the EXIT CODE is always 2 and the message is
+# always on STDERR (never conflated with the stdout exit-1 violations), which is
+# what the 3-way exit contract (FR-020/FR-024) requires.
 _on_err() {
   local ec=$?
   printf 'ERROR: validate-moc-orphan.sh: internal failure (exit %d)\n' "$ec" >&2
@@ -138,22 +172,23 @@ trap _on_err ERR
 
 # ---------------------------------------------------------------------------
 # Mode A: explicit scan-root arg -> scan only that root, exit with its result.
-# (This is the path the next group's Layer-4 driver exercises.)
+# (This is the path the Layer-4 exit-code driver exercises.)
 #
-# KNOWN GAP (handoff to T020): scan_root is called here on the left of `||`,
-# which suppresses `set -e` for its entire body — so the ERR trap is inert
-# INSIDE scan_root. An internal failure there (e.g. a broken basename) is
-# currently surfaced as exit 1, not the contract's exit 2. T020 (Layer-4
-# exit-code driver) pins and finalizes the exit-2/stderr half of FR-020/FR-024;
-# the fix is to refactor scan_root to accumulate violations in a global counter,
-# return 0, and call it BARE so the ERR trap stays live and maps internal
-# failures -> 2. This group verifies only exit 0/1 + the stdout path+rule half.
+# scan_root is called BARE (not inside `||` or a command substitution) so the
+# ERR trap stays LIVE: an UNEXPECTED internal failure -> exit 2 (FR-020), while
+# a content violation (VIOLATION_COUNT > 0) -> exit 1. The two failure classes
+# are never conflated (FR-024). The earlier KNOWN GAP (scan_root on the left of
+# `||` suppressing set -e, leaving the trap inert and surfacing internal
+# failures as exit 1) is fixed by the counter-based scan_root above.
 # ---------------------------------------------------------------------------
 if [ "$#" -ge 1 ]; then
-  rc=0
-  scan_root "$1" || rc=$?
+  VIOLATION_COUNT=0
+  scan_root "$1"
   trap - ERR EXIT
-  exit "$rc"
+  if [ "$VIOLATION_COUNT" -gt 0 ]; then
+    exit 1
+  fi
+  exit 0
 fi
 
 # ---------------------------------------------------------------------------
@@ -179,7 +214,9 @@ set_test "wikilink up: is a violation (ill-formed for orphan)"
 assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-wikilink-up/SPEC-MOC.md"
 
 set_test "non-MOC docs in a gated spec are not required to carry up: (scan clean)"
-assert_exit_code 0 scan_root "$FIX/scan-clean"
+VIOLATION_COUNT=0
+scan_root "$FIX/scan-clean" >/dev/null
+assert_eq "0" "$VIOLATION_COUNT" "non-MOC docs must not be required to carry up:"
 
 section "MOC orphan lint — version gate / parsing (T013, FR-013/FR-021/FR-023)"
 
@@ -202,7 +239,9 @@ set_test "no --- fence -> SKIP (unparseable frontmatter)"
 assert_exit_code 1 moc_is_gated "$FIX/gate/gate-no-fence/SPEC-MOC.md"
 
 set_test "no SPEC-MOC.md in dir -> SKIP (scan clean, no marker globbed)"
-assert_exit_code 0 scan_root "$FIX/gate"
+VIOLATION_COUNT=0
+scan_root "$FIX/gate" >/dev/null
+assert_eq "0" "$VIOLATION_COUNT" "gate fixtures: only the gated-commented marker is checked and it passes orphan+spec_id"
 
 set_test "bare integer 1 WITH inline # comment -> GATED (guards inline-comment false-skip)"
 assert_exit_code 0 moc_is_gated "$FIX/gate/gate-version-commented/SPEC-MOC.md"
@@ -236,10 +275,14 @@ set_test "PRSG-002 marker is version-gated (observable, not inferred from exit 0
 if moc_is_gated "$PRSG_MARKER"; then _pass; else _fail "PRSG-002 SPEC-MOC.md is NOT gated (inline-comment false-skip?)"; fi
 
 set_test "real-tree scan of docs/ai/specs/ is clean (legacy skipped)"
-assert_exit_code 0 scan_root "$REPO_ROOT/docs/ai/specs"
+VIOLATION_COUNT=0
+scan_root "$REPO_ROOT/docs/ai/specs" >/dev/null
+assert_eq "0" "$VIOLATION_COUNT" "docs/ai/specs scan should find zero orphan/spec_id violations"
 
 set_test "real-tree scan of specs/ is clean (PRSG-002 passes, legacy skipped)"
-assert_exit_code 0 scan_root "$REPO_ROOT/specs"
+VIOLATION_COUNT=0
+scan_root "$REPO_ROOT/specs" >/dev/null
+assert_eq "0" "$VIOLATION_COUNT" "specs/ scan should find zero orphan/spec_id violations"
 
 # Compute final exit code from the self-test summary, then disarm the traps so
 # a nonzero summary exit is NOT remapped to 2 by the ERR trap under set -e.
