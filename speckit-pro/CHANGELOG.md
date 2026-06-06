@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.7.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.3...speckit-pro-v2.7.0) (2026-06-06)
+
+
+### Features
+
+* **speckit-pro:** collapse generated spec exhaust under .process/ ([#111](https://github.com/racecraft-lab/racecraft-plugins-public/issues/111)) ([ed043d5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/ed043d5409d387f518cac5b8dc4595ed1d8f20c6))
+* **speckit-pro:** make autopilot PR descriptions and UAT runbooks human-readable ([#114](https://github.com/racecraft-lab/racecraft-plugins-public/issues/114)) ([049e6d9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/049e6d9722b1e50930237ea7e33f57c0f1492ef5))
+
 ## [2.6.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.2...speckit-pro-v2.6.3) (2026-06-05)
 
 
