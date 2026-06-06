@@ -496,16 +496,27 @@ Focus on:
 
 ---
 
+## Self-Review (4-question audit — reporting only, does not gate)
+
+1. **Does the implementation satisfy every spec requirement?** Yes. All 15 FRs / 8 ACs / 7 SCs are covered and fixture-verified: the repo-root collapse rule + scope lint (FR-007/008/012, AC-2.1/2.4, SC-005), the gate `.process/` exclusion arm (FR-010/011, AC-2.2, SC-003), the crash-safe consumer ensure-step (FR-009, AC-2.3, SC-004), the US1 redirects with byte-identical Codex mirrors (FR-001–006, AC-1.1–1.4, SC-001/002/006), and no-regression (FR-015, SC-007). A real-fixture run showed `.process/` lines drop from reviewable LOC (5 vs 35), the PR-body UAT section renders from the relocated runbook, and no artifact is lost.
+2. **Any shortcuts / TODOs / tech debt?** None introduced. The consumer write uses the consensus-decided crash-safe pattern (same-dir temp + atomic rename + trailing-newline normalize + fixed-string guard), not a naive append. One **pre-existing** defect was discovered (not introduced, not fixed here, out of scope): `count-markers.sh` errors when ≥2 scanned files emit `[]` — flagged as a separate follow-up.
+3. **Is the change surgical?** Yes. Every changed line traces to a task/requirement. New-specs-only is honored (no legacy spec/doc moved). The pre-existing dead-code arm in the gate was left untouched. The SpecKit 0.9.4 integration refresh is isolated in its own commit, not mixed into feature commits.
+4. **Are tests adequate?** Yes. New Layer-1 scope lint (RED-proven, incl. the broadening case), extended Layer-4 gate test (diff-mode + no-false-exclusion negative controls), extended Layer-4 ensure-step test (create/append/idempotent/newline-normalize/byte-preserve/convergence), Codex parity (Layer-1 + Layer-8), and an end-to-end fixture. Full suite green at 1527/1527.
+
 ## Lessons Learned
 
 ### What Worked Well
--
+- Pre-resolving decisions in the design concept made Clarify a no-op (0 markers) and kept Checklist/Analyze focused on real gaps.
+- Isolating the SpecKit 0.9.4 integration refresh in its own commit kept the feature diff legible.
+- Two-analyst consensus settled the one genuinely-open design choice (consumer-file safe-write) with a crash-safe, repo-idiomatic mechanism.
 
 ### Challenges Encountered
--
+- Two subagent runs hit transport/socket interruptions mid-task; independent on-disk verification confirmed their work and recovered the summaries (no rework needed).
+- The reviewability gate's tasks-mode file count (105) was a path-token artifact; the real diff is far smaller — verified against `origin/main` after fetching (local main was stale).
 
 ### Patterns to Reuse
--
+- For consumer-file edits, the same-dir `mktemp` + atomic `mv` + trailing-newline-normalize + `grep -qxF` guard is the crash-safe, idempotent idiom.
+- Always recompute PR scope against a freshly-fetched `origin/main`, not local main.
 
 ---
 
