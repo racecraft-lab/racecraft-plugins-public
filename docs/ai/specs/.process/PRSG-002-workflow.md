@@ -29,8 +29,8 @@ Re-read it before each phase to disambiguate a prompt.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Verify-not-reopen: decisions are locked |
+| Specify | `/speckit-specify` | ✅ Complete | 19 FRs, 0 clarification markers. Contract dir=`specs/prsg-002-moc-templates`. Resolved spec_id↔dir join → decision (A): namespace-prefixed dirs, spec_id carries roadmap id. |
+| Clarify | `/speckit-clarify` | ✅ Complete | Verify-not-reopen pass (2 sessions, 0 markers). Tightened FR-004/007/009/010/011/017/018 + 2 assumptions: SPEC-MOC lives in CONTRACT dir `specs/<branch>/`; MOC=exact filename; orphan checks `up:` well-formedness, stale-index resolves `up:` value; exact-segment = opaque-segment compare. R1 (create-new-feature numbering) resolved from primary source. |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | data-integrity, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
