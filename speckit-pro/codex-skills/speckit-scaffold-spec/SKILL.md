@@ -202,6 +202,39 @@ lands correctly), then load the shared workflow template from the plugin. Do
 not author a new template from scratch. The generated file should live at a
 path like `docs/ai/specs/.process/SPEC-009-workflow.md` inside the worktree.
 
+### 5.5. Write the SPEC-MOC marker (in the worktree)
+
+Write a minimal `SPEC-MOC.md` navigation marker into the spec's CONTRACT
+directory on EVERY new spec, regardless of how many slices it will ultimately
+have (single-slice specs get the marker too — it is the version-gate carrier).
+
+This marker is a CONTRACT artifact: write it to `specs/<branch-name>/SPEC-MOC.md`
+— NOT redirected to `.process/`, and NOT written to `docs/ai/specs/`. Create the
+contract directory if it is absent (`mkdir -p specs/<branch-name>/`); scaffold
+owns this early creation. Name the directory from the branch (NOT auto-numbered)
+so the `spec_id` namespace-matches the directory.
+
+Load the shared spec-MOC template from the plugin at
+`skills/speckit-coach/templates/spec-moc-template.md` (the template is a single
+shared, runtime-agnostic copy — do NOT duplicate it under `codex-skills/`).
+Token-substitute it with the same `{{TOKEN}}` mechanism used for the workflow
+template:
+
+- `{{ROADMAP_TITLE}}` — a short link text for the roadmap (e.g., the spec series
+  name + " roadmap")
+- `{{ROADMAP_FILENAME}}` — the existing `*-technical-roadmap.md` filename without
+  the `.md` extension
+- `{{SPEC_ID}}` — the roadmap identity, e.g., `PRSG-002` (must namespace-match
+  `<branch-name>`)
+
+The written marker MUST carry a non-empty, quoted relative `up:` markdown link
+pointing at the existing `*-technical-roadmap.md` — from `specs/<branch-name>/`
+this resolves as `../../docs/ai/specs/<roadmap-filename>.md` (the
+`../../docs/ai/specs/` prefix is hardcoded in the template; only the filename is
+tokenized), NEVER a `[[wikilink]]` — plus `structureVersion: 1` (carried verbatim
+from the template, with its "keep in sync with the lint scripts' hardcoded
+literal" comment) and a `spec_id` that namespace-matches the contract directory.
+
 ### 6. Populate the workflow file
 
 Replace all placeholders using the roadmap data. At minimum populate:
@@ -244,24 +277,28 @@ filling it with fiction.
 
 ### 7. Commit and push from the worktree
 
-Stage the generated/updated preset files when present, plus **both** the
-design concept doc and the workflow file in the worktree branch. Create a
-focused setup commit and push that branch to the detected remote:
+Stage the generated/updated preset files when present, plus the design concept
+doc, the workflow file, AND the SPEC-MOC marker in the worktree branch (the
+marker is a review-visible CONTRACT artifact — if it is written but left
+untracked it never reaches the PR). Create a focused setup commit and push that
+branch to the detected remote:
 
 ```
 git add .specify/presets/speckit-pro-reviewability \
         .specify/presets/.registry \
         docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
-        docs/ai/specs/.process/SPEC-<ID>-workflow.md
+        docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+        specs/<branch-name>/SPEC-MOC.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
 
 If the preset was already present and unchanged, the add command may include
-only the design concept and workflow:
+only the design concept, the workflow, and the marker:
 
 ```
 git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
-        docs/ai/specs/.process/SPEC-<ID>-workflow.md
+        docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+        specs/<branch-name>/SPEC-MOC.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
 

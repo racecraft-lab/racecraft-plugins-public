@@ -202,6 +202,48 @@ All file operations happen in the worktree directory.
          content: <template content from step 1>)
 ```
 
+### 5.5. Write the SPEC-MOC Marker (IN the Worktree)
+
+Write a minimal `SPEC-MOC.md` navigation marker into the spec's CONTRACT
+directory on EVERY new spec, regardless of how many slices it will ultimately
+have (single-slice specs get the marker too — it is the version-gate carrier).
+
+This marker is a CONTRACT artifact: it is written to `specs/<branch-name>/` —
+NOT redirected to `.process/`, and NOT written to `docs/ai/specs/`. The
+directory is named from the branch (NOT auto-numbered), so its `spec_id`
+namespace-matches the directory.
+
+```text
+1. Create the spec's contract directory in the WORKTREE (scaffold owns this
+   early creation; mkdir -p is a no-op if it already exists):
+   Bash("mkdir -p .worktrees/<number>-<short-name>/specs/<branch-name>/")
+
+2. Read the spec-MOC template from the plugin:
+   Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/spec-moc-template.md")
+
+3. Token-substitute the template (same {{TOKEN}} mechanism as the workflow
+   template) and write it to the contract directory:
+   Write(".worktrees/<number>-<short-name>/specs/<branch-name>/SPEC-MOC.md",
+         content: <template with the tokens below substituted>)
+
+   | Token | Replace With |
+   | ----- | ------------ |
+   | `{{ROADMAP_TITLE}}` | a short link text for the roadmap (e.g., the spec series name + " roadmap") |
+   | `{{ROADMAP_FILENAME}}` | the existing `*-technical-roadmap.md` filename WITHOUT the `.md` extension (from Step 1) |
+   | `{{SPEC_ID}}` | the roadmap identity, e.g., `PRSG-002` (must namespace-match `<branch-name>`) |
+```
+
+The written marker MUST carry:
+
+- a non-empty, quoted relative `up:` markdown link pointing at the existing
+  `*-technical-roadmap.md` — from `specs/<branch-name>/` this resolves as
+  `../../docs/ai/specs/<roadmap-filename>.md` (the `../../docs/ai/specs/`
+  prefix is hardcoded in the template; only the filename is tokenized), NEVER
+  a `[[wikilink]]`;
+- `structureVersion: 1` (carried verbatim from the template, with its "keep in
+  sync with the lint scripts' hardcoded literal" comment); and
+- a `spec_id` that namespace-matches the contract directory name.
+
 ### 6. Populate the Workflow File
 
 Read the copied workflow file (in the worktree) and replace
@@ -271,10 +313,13 @@ the decisions the roadmap left ambiguous.
 All commits happen on the worktree branch — NEVER on main.
 
 ```text
-1. Stage and commit BOTH the design concept doc AND the workflow file:
+1. Stage and commit the design concept doc, the workflow file, AND the
+   SPEC-MOC marker (the marker is a review-visible CONTRACT artifact — if it is
+   written but left untracked it never reaches the PR):
    Bash("cd .worktrees/<number>-<short-name> && \
      git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
-             docs/ai/specs/.process/SPEC-<ID>-workflow.md && \
+             docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+             specs/<branch-name>/SPEC-MOC.md && \
      git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'")
 
 2. Push the WORKTREE BRANCH:
