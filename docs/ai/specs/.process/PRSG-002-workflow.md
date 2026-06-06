@@ -329,10 +329,22 @@ Consult the design concept Q&A for the "why" behind each decision. Key invariant
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks complete in tasks.md
-- [ ] `bash tests/run-all.sh` green (L1 + L4 + L5)
-- [ ] New lints green on this repo's existing legacy specs (grandfathered) AND on a freshly-scaffolded spec
-- [ ] Codex parity: `validate-codex-parity.sh` + `validate-codex-skills.sh` pass
-- [ ] Reviewability gate passes (single docs/process surface, ~350 LOC)
+- [X] All tasks complete in tasks.md (24/24 [X])
+- [X] `bash tests/run-all.sh` green (L1 + L4 + L5) — 1640/1640
+- [X] New lints green on this repo's existing legacy specs (grandfathered) AND on PRSG-002's freshly-written marker
+- [X] Codex parity: `validate-codex-parity.sh` (74/74) + `validate-codex-skills.sh` pass
+- [X] Reviewability gate passes (transition exception; implementation surface ~350 LOC, bulk of diff is SDD process/spec markdown)
 - [ ] PR created with a plain-English body + UAT runbook
+
+---
+
+## Self-Review (auto-generated)
+
+**Tests executed:** Yes. `bash tests/run-all.sh` (Layers 1, 4, 5) ran during Phase 7 and was re-run independently by the orchestrator after the final group, returning **1640/1640 passed, exit 0** (L1 387+419, L4 644, L5 190; +89 over the 1551 baseline). This repo has no BUILD/TYPECHECK/LINT/INTEGRATION step — `bash tests/run-all.sh` is the full verification. Both new lints were also run standalone and exit 0 on the real spec trees (dogfood).
+
+**Edge cases:** All acceptance criteria have non-happy-path tests. orphan missing/empty/wikilink `up:` → `fixtures/moc/orphan/*`; stale-index absent target / directory target / broken symlink / wikilink → `fixtures/moc/stale/*`; version-gate no-marker / no-version / `<1` / quoted / decimal / text / no-fence → `fixtures/moc/gate/*`; `spec_id` mismatch / cross-namespace collision / `013a`-vs-`013a1` near-miss / absent / empty → `fixtures/moc/specid/*` + `test-moc-id-normalize.sh` (22 assertions); exit-2-on-internal-error / unreadable-marker-skip / missing-or-empty-scan-root / exempt-before-content / stdout-vs-stderr → `test-moc-lint-exit-codes.sh` (34 assertions, cases a–e). No `[edge-case-gap]`.
+
+**Requirements matched:** FR-001..FR-024 each map to ≥1 `[X]` task and ≥1 fixture/test (FR→Task map in tasks.md; all 24 boxes now `[X]`), with implementation evidence in commits 8339282 / 5b8bfe5 / 7ea67ba / afb9816 and the green suite. No orphan FRs and no orphan tasks.
+
+**Follow-up:** (1) Deferred-by-design per Non-goals — PRSG-003 (generated MOC content / down-index / backlinks), PRSG-004 (roadmap-MOC home note + repoint `up:`), PRSG-011 (retro-migration / relocation); all already tracked on the PR-size-governance roadmap and noted in the PR body Out-of-scope. (2) Cosmetic: under `set -E` the internal-error stderr line can print twice (documented in the stale-index lint); the exit code is always `2` on stderr, so the contract holds. (3) `update-agent-context.sh` added a `<!-- SPECKIT START -->…plan.md…<!-- SPECKIT END -->` pointer block to the repo's top-level `CLAUDE.md`; this is standard SpecKit behavior inside auto-managed markers, flagged in the PR body for the maintainer to keep or drop at merge. No silent deferrals.
 ```
