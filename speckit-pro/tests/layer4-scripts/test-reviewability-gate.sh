@@ -178,4 +178,54 @@ assert_eq "2" "$result" "exit code"
 set_test "Diff invalid range emits JSON error"
 assert_json_field "$output" "error" "git diff range could not be resolved: does-not-exist...HEAD"
 
+section "diff mode — .process/ exclusion (FR-010/AC-2.2/SC-003)"
+
+# A change that adds known line counts to BOTH a specs/<NNN>/.process/ file
+# (EXHAUST — must be excluded from reviewable_loc) and a CONTRACT artifact
+# (spec.md — must stay counted). reviewable_loc must equal the contract lines
+# only. RED before the gate's .process/ arm exists (both files counted).
+process_repo="$FIXTURE_DIR/process-repo"
+mkdir -p "$process_repo/specs/007-demo/.process" "$process_repo/specs/007-demo"
+git -C "$process_repo" init >/dev/null
+git -C "$process_repo" config user.email support@openai.com
+git -C "$process_repo" config user.name Test
+git -C "$process_repo" config commit.gpgsign false
+printf 'base\n' > "$process_repo/specs/007-demo/spec.md"
+printf 'base\n' > "$process_repo/specs/007-demo/.process/design-concept.md"
+git -C "$process_repo" add .
+git -C "$process_repo" commit -m init >/dev/null
+# Add 5 lines to the CONTRACT spec.md and 30 lines to the .process/ exhaust.
+seq 1 5 >> "$process_repo/specs/007-demo/spec.md"
+seq 1 30 >> "$process_repo/specs/007-demo/.process/design-concept.md"
+
+set_test "Diff excludes .process/ lines, counts contract lines"
+result=0
+output=$(cd "$process_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "5"
+
+# No-false-exclusion: a path with NO /.process/ segment is still counted.
+nonprocess_repo="$FIXTURE_DIR/nonprocess-repo"
+mkdir -p "$nonprocess_repo/specs/008-demo"
+git -C "$nonprocess_repo" init >/dev/null
+git -C "$nonprocess_repo" config user.email support@openai.com
+git -C "$nonprocess_repo" config user.name Test
+git -C "$nonprocess_repo" config commit.gpgsign false
+printf 'base\n' > "$nonprocess_repo/specs/008-demo/plan.md"
+git -C "$nonprocess_repo" add .
+git -C "$nonprocess_repo" commit -m init >/dev/null
+seq 1 7 >> "$nonprocess_repo/specs/008-demo/plan.md"
+
+set_test "Diff does not exclude non-.process/ contract path (no false exclusion)"
+result=0
+output=$(cd "$nonprocess_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "7"
+
+# No-op: a change with zero .process/ paths leaves reviewable_loc identical to
+# the sum of its (non-excluded) added lines — the exclusion arm degrades to a
+# no-op (FR-010). docs/guide.md from the earlier "$repo" fixture added 1 line.
+set_test "Diff with zero .process/ paths is unaffected by the exclusion arm"
+result=0
+output=$(cd "$repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "1"
+
 test_summary
