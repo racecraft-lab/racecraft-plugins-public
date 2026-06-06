@@ -450,6 +450,41 @@ max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
 
 # ===========================================================================
+# uat-runbook-author
+# ===========================================================================
+section "uat-runbook-author"
+
+AGENT_FILE="$AGENTS_DIR/uat-runbook-author.md"
+TOOLS=$(extract_tools "$AGENT_FILE")
+
+for tool in Read Edit Write Bash Grep Glob; do
+  set_test "uat-runbook-author has $tool"
+  assert_tool_present "$TOOLS" "$tool" "uat-runbook-author"
+done
+
+set_test "uat-runbook-author does NOT have Skill (terminal worker)"
+assert_tool_absent "$TOOLS" "Skill" "uat-runbook-author"
+
+set_test "uat-runbook-author has no mcp__ tools"
+assert_no_mcp_tools "$TOOLS" "uat-runbook-author"
+
+set_test "uat-runbook-author model is sonnet (read-and-synthesize task)"
+model=$(extract_field "$AGENT_FILE" "model")
+assert_eq "sonnet" "$model"
+
+set_test "uat-runbook-author effort is max (max-thinking policy)"
+effort=$(extract_field "$AGENT_FILE" "effort")
+assert_eq "max" "$effort"
+
+set_test "uat-runbook-author permissionMode is acceptEdits"
+mode=$(extract_field "$AGENT_FILE" "permissionMode")
+assert_eq "acceptEdits" "$mode"
+
+set_test "uat-runbook-author maxTurns exists and is positive"
+max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
+assert_gt "$max_turns" 0
+
+# ===========================================================================
 # Universal: single orchestrator invariant — no subagent may dispatch
 # ===========================================================================
 # Enforces the architectural rule documented in
@@ -536,7 +571,7 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
   done
 
   # Write agents must have sandbox_mode: workspace-write
-  for agent in checklist-executor analyze-executor implement-executor phase-executor; do
+  for agent in checklist-executor analyze-executor implement-executor phase-executor uat-runbook-author; do
     AGENT_FILE="$CODEX_AGENTS_DIR/${agent}.toml"
     if [ -f "$AGENT_FILE" ]; then
       sandbox=$(extract_toml_field "$AGENT_FILE" "sandbox_mode")

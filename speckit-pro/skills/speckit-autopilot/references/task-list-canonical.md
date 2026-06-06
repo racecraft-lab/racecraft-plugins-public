@@ -42,7 +42,7 @@ Parsed from the workflow file:
   "Post: Cleanup"                       ← cleanup ext
   "Post: Reviewability Diff Gate"       ← always required (no ext)
   "Post: Self-Review"                   ← always required (no ext, 4-question audit)
-  "Post: UAT Runbook Generation"        ← always required (no ext, deterministic script)
+  "Post: UAT Runbook Generation"        ← always required (no ext, skeleton script + author agent)
   "Post: PR Body Generation"            ← always required (no ext)
   "Post: PR Creation"                   ← always required (no ext)
   "Post: Review Remediation"            ← always required (no ext)

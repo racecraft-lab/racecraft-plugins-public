@@ -732,15 +732,19 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    reproduced in the PR body. Reporting step — never gates the PR.
 3. **UAT Runbook Generation** — mandatory between Self-Review and the
    PR body: run `generate-uat-skeleton.sh` to write
-   `<feature-dir>/uat-runbook.md`, then commit it. Fail-open (a nonzero
-   exit never blocks the PR) but NOT optional — it must run.
+   `<feature-dir>/.process/uat-runbook.md`, then `spawn_agent` the
+   `uat-runbook-author` agent to rewrite the skeleton into plain,
+   executable steps, then commit it. Both the script and the author step
+   are fail-open (never block the PR) but NOT optional — they run.
 4. **3.2 PR Creation** — final verification, reviewability diff gate,
    then build the PR body by running `generate-pr-body.sh` →
-   `.git/speckit-pr-body.md` and open the PR with
-   `--body-file .git/speckit-pr-body.md`. **Never hand-write the body or
-   pass an inline `--body`** — the script is what embeds the review
-   packet and the `## UAT Runbook` section (which carries the Self-Review
-   findings).
+   `.git/speckit-pr-body.md`, fill its **What changed / Why it matters /
+   Anything reviewers should know** sections in plain English (no internal
+   jargon; governance stays in the collapsed details block), and open the
+   PR with `--body-file .git/speckit-pr-body.md`. **Never write the body
+   from scratch or pass an inline `--body`** — the script is what embeds
+   the review packet and the `## UAT Runbook` section (which carries the
+   Self-Review findings).
    Before `gh pr create`, confirm the body file carries the
    `speckit-pro-review-packet-source` marker and a `## UAT Runbook`
    heading; if either is missing, regenerate with the script once. Push,

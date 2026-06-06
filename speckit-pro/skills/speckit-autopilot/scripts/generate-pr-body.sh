@@ -106,48 +106,14 @@ if [ -z "$non_goals" ]; then non_goals="No additional non-goals were extracted a
 review_packet=$(mktemp)
 trap 'rm -f "$review_packet"' EXIT
 cat > "$review_packet" <<EOF
-# What
+# What changed
 $what
 
-# Why
+# Why it matters
 $why
 
-# Non-goals
+# Anything reviewers should know
 $non_goals
-
-# Review Order
-1. Start with \`$FEATURE_DIR/spec.md\`, \`$FEATURE_DIR/plan.md\`, and \`$FEATURE_DIR/tasks.md\`.
-2. Review production files by primary surface: ${surfaces:-unknown}.
-3. Confirm verification evidence, known gaps, and rollback/flag notes before approval.
-
-# Scope Budget
-- Reviewable LOC: ${reviewable_loc:-unknown}
-- Production files: ${production_files:-unknown}
-- Total files: ${total_files:-unknown}
-- Primary surfaces touched: ${surfaces:-unknown}
-- Budget result: ${budget_status:-unknown}
-- Split or exception rationale: Fill from workflow if the result is not within budget.
-
-# Traceability
-| Requirement / Goal | Changed files | Verification |
-|---|---|---|
-| Spec requirements | \`$FEATURE_DIR/spec.md\`, implementation diff | Commands listed below |
-
-# Verification
-- [ ] Build passes
-- [ ] Typecheck passes
-- [ ] Lint passes
-- [ ] Tests pass
-- [ ] Visual review completed or N/A
-
-Commands run and results:
-- Fill with final local and CI evidence.
-
-# Known Gaps
-Fill with skipped checks, baseline failures, or deferred follow-up from the workflow.
-
-# Rollback / Flags
-Fill with feature flags, rollout scope, rollback files, or N/A.
 EOF
 
 template=$(detect_host_template "$REPO_ROOT" || true)
@@ -168,9 +134,30 @@ append_missing_section() {
   fi
 }
 
-for heading in "What" "Why" "Non-goals" "Review Order" "Scope Budget" "Traceability" "Verification" "Known Gaps" "Rollback / Flags"; do
+for heading in "What changed" "Why it matters" "Anything reviewers should know"; do
   append_missing_section "$heading"
 done
+
+# Reviewer checklist & scope details — appended unconditionally as a collapsed
+# <details> block so governance numbers stay out of the reader's way (a reviewer
+# expands them only if needed). NOT a Markdown heading, so it is appended directly
+# rather than via the append_missing_section / has_heading mechanism above. Numbers
+# are pre-filled from the reviewability gate JSON; absent values render as "unknown".
+{
+  printf '\n<details>\n<summary>Reviewer checklist &amp; scope details</summary>\n\n'
+  printf '**Size:** %s reviewable lines across %s files (%s production). Budget: %s.\n' \
+    "${reviewable_loc:-unknown}" "${total_files:-unknown}" "${production_files:-unknown}" "${budget_status:-unknown}"
+  printf '**Primary surfaces:** %s.\n\n' "${surfaces:-unknown}"
+  printf '**Review in this order:**\n'
+  printf '1. The spec and plan under `%s`.\n' "$FEATURE_DIR"
+  printf '2. The highest-risk production files.\n'
+  printf '3. Verification evidence and any known gaps.\n\n'
+  printf '**Verification:**\n'
+  printf -- '- [ ] Build / Typecheck / Lint / Tests pass (or N/A for this repo)\n'
+  printf -- '- [ ] Visual review completed or N/A\n\n'
+  printf '**Rollback:** `git revert <SHA>` unless noted otherwise.\n'
+  printf '</details>\n'
+} >> "$OUTPUT_FILE"
 
 # Dedicated, size-aware UAT Runbook block (FR-013). Deliberately NOT routed through
 # the heading loop / append_missing_section / extract_heading_section above — those

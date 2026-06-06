@@ -329,11 +329,32 @@ test count, pass/fail, regressions found.
    confirm `.git/speckit-pr-body.md` contains the
    `speckit-pro-review-packet-source` marker comment AND a `## UAT Runbook`
    heading. If either is missing, the body was hand-written or is stale —
-   re-run the step-5 command once. NEVER open the PR with a hand-written
-   body or an inline `--body`; the body MUST be the generator's
+   re-run the step-5 command once. NEVER open the PR with a body written
+   from scratch or an inline `--body`; the body MUST be the generator's
    `.git/speckit-pr-body.md`. If the marker is still absent after the
    re-run, log a loud warning to the workflow log and proceed (fail-open
    — this never blocks PR creation).
+5c. **Fill the body in plain English — write for a non-expert public reader.**
+   The generator emits the structure with placeholder comments. Edit
+   `.git/speckit-pr-body.md` in place to replace the `<!-- ... -->` comments
+   under **What changed**, **Why it matters**, and **Anything reviewers should
+   know** with real content drawn from `spec.md`, `plan.md`, and the diff. This
+   is the ONE sanctioned edit of the generated body — everything below stays
+   as generated. Style rules (the PR page is the public face of the plugin):
+   - **Lead with what the change does, in human terms.** A reader who has never
+     seen this repo should understand it at a glance.
+   - **No internal jargon.** Drop requirement IDs (`FR-009`), internal layer
+     numbers (`Layer 4`), workstream/codenames, and process jargon
+     (`consensus`, `tolerance arm`, `gate`). Say what happened in English.
+   - **Keep governance terse and collapsed.** Do NOT promote the
+     `<details>Reviewer checklist &amp; scope details</details>` block to
+     top-level headings, and do NOT pad it — the auto-filled numbers plus a
+     one-line rollback are enough.
+   - **Do not touch the `## UAT Runbook` section or the
+     `speckit-pro-review-packet-source` marker** — leave both exactly as the
+     generator produced them.
+   - Omit **Anything reviewers should know** entirely if there is nothing real
+     to say. An empty section is worse than no section.
 6. Create PR:
    gh pr create \
      --title "feat(SPEC-XXX): <Spec Name>" \
@@ -587,13 +608,45 @@ with a one-line stub note. The heading is therefore always present in
 the PR body whether the generator succeeded, failed, or never ran;
 the failure detail lives in the workflow log, not the artifact.
 
-After the script runs, auto-commit the artifact:
+After the skeleton is written, **spawn the `uat-runbook-author`
+subagent to rewrite it in place** so the runbook reads in plain English
+and a non-engineer can actually execute it:
+
+```text
+Agent(
+  subagent_type: "uat-runbook-author",
+  description: "SPEC-XXX UAT runbook authoring",
+  prompt: """
+    Rewrite the UAT runbook skeleton in place so a non-engineer can
+    follow it. Edit ONLY this file: <feature-dir>/.process/uat-runbook.md
+
+    Inputs:
+    - Skeleton: <feature-dir>/.process/uat-runbook.md
+    - Spec: <feature-dir>/spec.md
+    - Plan: <feature-dir>/plan.md
+    - Quickstart (if present): <feature-dir>/quickstart.md
+    - PROJECT_COMMANDS: <PROJECT_COMMANDS as JSON>
+    - Diff range: origin/main...HEAD
+    - Feature dir: <feature-dir>
+
+    Apply all three mandatory rewrites — plain-prose Env Setup, concrete
+    do-this-see-that per-story steps, and a real (or removed) FR Coverage
+    Matrix — per your agent instructions. Edit in place; do not create a
+    new file.
+  """
+)
+```
+
+- **Pass PROJECT_COMMANDS to the agent.** This is what lets it write a
+  real Env Setup instead of the skeleton's `<unknown>` rows — the same
+  gap that produced the meaningless Env Setup table in earlier PRs.
+- **This step is FAIL-OPEN too.** If the author agent errors or returns
+  without editing, leave the deterministic skeleton in place and continue
+  — never block PR creation. A plain skeleton is an acceptable fallback.
+
+Then auto-commit whatever runbook resulted (authored or skeleton):
 
 ```text
 git add <feature-dir>/.process/uat-runbook.md
 git commit -m "docs(SPEC-XXX): add UAT runbook"
 ```
-
-**SPEC-006a scope:** this step runs the deterministic skeleton
-script ONLY. The LLM-authored narrative test prose and the UAT author
-agent are deferred to SPEC-006b — do not spawn an author agent here.

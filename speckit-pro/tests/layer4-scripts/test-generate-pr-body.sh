@@ -63,14 +63,17 @@ body=$(cat "$output_file")
 set_test "Preserves host-required section"
 assert_contains "$body" "# Host Required"
 
-set_test "Appends Non-goals section"
-assert_contains "$body" "# Non-goals"
+set_test "Appends Anything reviewers should know section"
+assert_contains "$body" "# Anything reviewers should know"
 
 set_test "Extracts section content from level-two spec headings"
 assert_contains "$body" "Do not add unrelated runtime behavior."
 
-set_test "Appends Scope Budget section"
-assert_contains "$body" "# Scope Budget"
+set_test "Appends collapsed reviewer checklist & scope details block"
+assert_contains "$body" "<summary>Reviewer checklist"
+
+set_test "Does not emit governance as a top-level heading"
+assert_not_contains "$body" "# Scope Budget"
 
 set_test "Records host template source"
 assert_contains "$body" "template: $repo/.github/pull_request_template.md"
@@ -86,8 +89,11 @@ assert_eq "0" "$result" "exit code"
 
 fallback_body=$(cat "$fallback_file")
 
-set_test "Fallback body includes Review Order"
-assert_contains "$fallback_body" "# Review Order"
+set_test "Fallback body leads with the plain-English What changed heading"
+assert_contains "$fallback_body" "# What changed"
+
+set_test "Fallback body includes the collapsed reviewer checklist block"
+assert_contains "$fallback_body" "<summary>Reviewer checklist"
 
 set_test "Fallback body includes review packet source marker"
 assert_contains "$fallback_body" "speckit-pro-review-packet-source"
