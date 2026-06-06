@@ -4,7 +4,7 @@
 
 This document defines the specification roadmap for the Reviewer Experience workstream. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next.
 
-**Current Status:** Planning complete (2026-05-27) — all scope decisions locked in via interactive Q&A. SPEC-006a and SPEC-006b are ready for `/speckit-pro:speckit-scaffold-spec`. Approved plan at `~/.claude/plans/wobbly-fluttering-knuth.md`.
+**Current Status:** ✅ Complete (2026-06-06). Both specs shipped. SPEC-006a's deterministic UAT skeleton, template, and PR-body wiring are on `main`; SPEC-006b's UAT author agent (Claude Code + Codex) plus the PR-body readability rework shipped in PR #114 (released in speckit-pro 2.7.0). SPEC-006b was delivered as a direct PR rather than a scaffolded autopilot run, so no `SPEC-006b-workflow.md` exists, and the `SPEC-006a-*` workflow/design-concept files are now historical. Approved plan: `~/.claude/plans/wobbly-fluttering-knuth.md`.
 
 **Parent Branch:** `feat/reviewer-experience`
 **Per-spec branches:** `006a-uat-skeleton`, `006b-uat-author-agent`
@@ -82,8 +82,8 @@ SPEC-006a (Deterministic UAT Skeleton + Template + PR Body Wiring)
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| SPEC-006a | Deterministic UAT Skeleton + PR Body Integration | 🔄 In Progress | `SPEC-006a-workflow.md` (scaffolded 2026-05-27 on `006a-uat-skeleton`) | Specify — autopilot-ready |
-| SPEC-006b | UAT Author Agent + Autopilot Integration | ⏳ Pending | `SPEC-006b-workflow.md` (not yet scaffolded) | Blocked by SPEC-006a |
+| SPEC-006a | Deterministic UAT Skeleton + PR Body Integration | ✅ Complete | `SPEC-006a-workflow.md` (historical) | Shipped — skeleton script, template, and PR-body wiring on `main` |
+| SPEC-006b | UAT Author Agent + Autopilot Integration | ✅ Complete | — (delivered as direct PR #114, not scaffolded) | Shipped in speckit-pro 2.7.0 (PR #114) |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
