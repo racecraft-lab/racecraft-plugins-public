@@ -71,7 +71,7 @@ Each SPEC is scoped to land as a small PR (or a short slice set). Budget = targe
 
 ---
 
-### PRSG-001 — Artifact relocation: tiering, `.process/`, collapse  · Phase 1 · P1 · MVP · 🔄 In Progress
+### PRSG-001 — Artifact relocation: tiering, `.process/`, collapse  · Phase 1 · P1 · MVP · ✅ Complete
 **Why:** ~32% of every feature PR is auto-generated exhaust. Remove it from the review
 diff at the source. Orthogonal precondition for everything else.
 
