@@ -102,6 +102,8 @@ Verify against `.specify/memory/constitution.md` (v1.1.0) before G1:
 | **Dependencies** | None (orthogonal precondition) |
 | **Enables** | PRSG-002 (MOC skeleton under `.process/`-aware tree), PRSG-006 (gate threshold rework reuses the aligned exclusion), PRSG-011 (consumes the `.process/` glob + gate fix) |
 | **Priority** | P1 (Phase 1, MVP) |
+| **Status** | ✅ All 7 phases + post-implementation complete |
+| **PR** | [#111](https://github.com/racecraft-lab/racecraft-plugins-public/pull/111) — open, awaiting human review (autopilot does not merge) |
 
 ### Success Criteria Summary
 
