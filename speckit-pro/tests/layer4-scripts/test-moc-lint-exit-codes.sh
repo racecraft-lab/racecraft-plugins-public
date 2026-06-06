@@ -30,10 +30,16 @@ STALE="$PLUGIN_ROOT/tests/layer1-structural/validate-moc-stale-index.sh"
 
 # Temp workspace with cleanup (restore any chmod-000 before rm so cleanup works).
 WORK="$(mktemp -d)"
+# The Mode-B internal-error case (section (f)) drives the stale lint with NO arg,
+# which creates a runtime broken-symlink fixture in the REAL working tree (outside
+# $WORK). Belt-and-suspenders: ensure that symlink never survives this driver even
+# if a case fails mid-run, so the orchestrator's final suite pass starts clean.
+STALE_RUNTIME_SYMLINK="$PLUGIN_ROOT/tests/layer1-structural/fixtures/moc/stale/stale-broken-symlink/broken-link.md"
 cleanup() {
   # Restore permissions on anything we chmod-000'd so rm -rf can remove it.
   find "$WORK" -type f -exec chmod u+rwx {} + 2>/dev/null || true
   rm -rf "$WORK"
+  rm -f "$STALE_RUNTIME_SYMLINK"
 }
 trap cleanup EXIT
 
@@ -326,5 +332,32 @@ err=$(cat "$WORK/e-interr-stale.err")
 assert_contains "$err" "internal failure"
 set_test "stale-index: internal error -> NO VIOLATION on STDOUT (classes not conflated)"
 assert_not_contains "$out" "VIOLATION"
+
+# ─────────────────────────────────────────
+section "(f) FR-020: Mode-B internal error AFTER symlink fixture -> exit 2 AND working tree left clean"
+# ─────────────────────────────────────────
+# Stale's no-arg self-test (Mode B) creates a runtime broken-symlink fixture in
+# the real tree and installs an EXIT trap to remove it. Force an internal error
+# AFTER that point (the bare scan_root over the committed stale fixtures calls
+# `dirname <...>/SPEC-MOC.md`, which the dirname stub fails) so the ERR trap maps
+# it to exit 2. The fix must still let the symlink cleanup run on that path; if
+# the ERR handler clears the EXIT trap, the broken-link.md symlink is orphaned in
+# the working tree. Use `-L` (not `-e`/`-f`): the fixture is a BROKEN symlink, so
+# -e/-f dereference and report absent whether or not the entry exists.
+
+rm -f "$STALE_RUNTIME_SYMLINK"   # ensure a clean precondition
+
+set_test "stale-index: Mode-B internal error (no arg) -> exit 2"
+rc=0
+PATH="$STUB_STALE:$PATH" "$STALE" >/dev/null 2>&1 || rc=$?
+assert_eq "2" "$rc" "Mode-B internal error must still exit 2 (3-way contract)"
+
+set_test "stale-index: Mode-B internal error -> runtime broken symlink cleaned up (tree left clean)"
+if [ ! -L "$STALE_RUNTIME_SYMLINK" ]; then
+  _pass
+else
+  _fail "broken-link.md symlink leaked into the working tree after an internal error"
+  rm -f "$STALE_RUNTIME_SYMLINK"
+fi
 
 test_summary

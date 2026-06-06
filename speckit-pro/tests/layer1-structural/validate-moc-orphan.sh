@@ -68,7 +68,7 @@ VIOLATION_COUNT=0
 # link. A `[[wikilink]]` form is NOT well-formed -> exit 1. Exit 1 if absent
 # or empty. Does NOT resolve the target.
 moc_up_well_formed() {
-  local file="$1" up
+  local file="$1" up target before
   up="$(moc_frontmatter_field "$file" up)" || return 1   # absent -> violation
   [ -n "$up" ] || return 1                                # empty  -> violation
   # Reject the wikilink form outright (ill-formed for orphan).
@@ -77,9 +77,37 @@ moc_up_well_formed() {
   esac
   # Require a well-formed inline link: `[text](target)` somewhere in the value.
   case "$up" in
-    *'['*']('*')'*) return 0 ;;
+    *'['*']('*')'*) : ;;                  # has [text](target) shape
     *) return 1 ;;
   esac
+  # The target MUST be RELATIVE (FR-009). Extract the target between the first
+  # `](` and the next `)`, trim surrounding whitespace, then reject non-relative
+  # forms: an absolute URL or any URI scheme (e.g. `https://`, `mailto:`), a
+  # protocol-relative (`//host`), root-absolute (`/path`), or anchor-only
+  # (`#frag`). Accept only a genuinely relative path.
+  target="${up#*](}"                       # drop up to first `](`
+  target="${target%%)*}"                   # keep up to first `)`
+  # Trim leading/trailing whitespace (bash 3.2-safe) so e.g. `]( /abs)` is caught
+  # by the root-absolute arm below rather than slipping past the anchored glob.
+  target="${target#"${target%%[![:space:]]*}"}"
+  target="${target%"${target##*[![:space:]]}"}"
+  [ -n "$target" ] || return 1             # empty/whitespace-only target -> violation
+  case "$target" in
+    *'://'*) return 1 ;;                    # absolute URL (any scheme)
+    //*)     return 1 ;;                    # protocol-relative
+    /*)      return 1 ;;                    # root-absolute
+    '#'*)    return 1 ;;                    # anchor-only
+  esac
+  # Reject any other URI scheme (a colon appearing before the first slash),
+  # e.g. `mailto:`, `tel:` — a parent roadmap link is never schemed.
+  case "$target" in
+    */*) before="${target%%/*}" ;;
+    *)   before="$target" ;;
+  esac
+  case "$before" in
+    *:*) return 1 ;;
+  esac
+  return 0
 }
 
 # moc_specid_matches_dir <marker-file> <dir-name>
@@ -212,6 +240,24 @@ assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-empty-up/SPEC-MOC.md"
 
 set_test "wikilink up: is a violation (ill-formed for orphan)"
 assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-wikilink-up/SPEC-MOC.md"
+
+set_test "absolute-URL up: is a violation (not a relative target)"
+assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-absolute-url-up/SPEC-MOC.md"
+
+set_test "root-absolute up: is a violation (not a relative target)"
+assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-root-absolute-up/SPEC-MOC.md"
+
+set_test "protocol-relative up: is a violation (not a relative target)"
+assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-protocol-relative-up/SPEC-MOC.md"
+
+set_test "anchor-only up: is a violation (not a relative target)"
+assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-anchor-only-up/SPEC-MOC.md"
+
+set_test "root-absolute up: with a LEADING SPACE is still a violation (trimmed)"
+assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-leading-space-up/SPEC-MOC.md"
+
+set_test "schemed up: (mailto:/tel:) is a violation (not a relative target)"
+assert_exit_code 1 moc_up_well_formed "$FIX/orphan/orphan-scheme-up/SPEC-MOC.md"
 
 set_test "non-MOC docs in a gated spec are not required to carry up: (scan clean)"
 VIOLATION_COUNT=0

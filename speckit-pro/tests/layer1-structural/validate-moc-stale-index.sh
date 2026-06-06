@@ -239,7 +239,13 @@ EOF
 _on_err() {
   local ec=$?
   printf 'ERROR: validate-moc-stale-index.sh: internal failure (exit %d)\n' "$ec" >&2
-  trap - ERR EXIT
+  # Clear ONLY the ERR trap (not EXIT): re-entrancy is prevented while the
+  # deliberate `exit 2` still fires the EXIT trap, so Mode B's _cleanup_symlink
+  # runs and the runtime broken-symlink fixture never leaks into the working tree
+  # on the internal-error path. `exit 2` sets the status the EXIT trap preserves,
+  # keeping the 3-way contract intact (FR-020). Mode A installs no EXIT trap, so
+  # this is identical to the prior behavior there.
+  trap - ERR
   exit 2
 }
 trap _on_err ERR
