@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **approved direction, ready to scaffold**. Created 2026-06-03.
+> Status: **in progress** — PRSG-001 ✅ complete (PR #111); PRSG-002 🔄 scaffolded 2026-06-06. Created 2026-06-03.
 
 ## Vision
 
@@ -98,7 +98,7 @@ diff at the source. Orthogonal precondition for everything else.
 
 ---
 
-### PRSG-002 — MOC templates + scaffold-time skeleton + version-gated lints  · Phase 2 · P1
+### PRSG-002 — MOC templates + scaffold-time skeleton + version-gated lints  · Phase 2 · P1 · 🔄 In Progress
 **Why:** the navigation/traceability spine that makes relocation *safe* (hidden files
 stay linked) and decomposition *navigable* (you navigate the map, not memorize the tree).
 
