@@ -220,6 +220,25 @@ result=0
 output=$(cd "$nonprocess_repo" && "$SCRIPT" diff HEAD) || result=$?
 assert_json_field "$output" "reviewable_loc" "7"
 
+# Regression guard (PR #111 review): a directory that merely ENDS in ".process"
+# (foo.process/) is NOT the .process/ exhaust dir and MUST stay counted. The
+# earlier *.process/* arm wrongly excluded it.
+endsprocess_repo="$FIXTURE_DIR/endsprocess-repo"
+mkdir -p "$endsprocess_repo/docs/foo.process"
+git -C "$endsprocess_repo" init >/dev/null
+git -C "$endsprocess_repo" config user.email support@openai.com
+git -C "$endsprocess_repo" config user.name Test
+git -C "$endsprocess_repo" config commit.gpgsign false
+printf 'base\n' > "$endsprocess_repo/docs/foo.process/notes.md"
+git -C "$endsprocess_repo" add .
+git -C "$endsprocess_repo" commit -m init >/dev/null
+seq 1 9 >> "$endsprocess_repo/docs/foo.process/notes.md"
+
+set_test "Diff counts a dir ending in .process (foo.process/) — not the .process/ dir"
+result=0
+output=$(cd "$endsprocess_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "9"
+
 # No-op: a change with zero .process/ paths leaves reviewable_loc identical to
 # the sum of its (non-excluded) added lines — the exclusion arm degrades to a
 # no-op (FR-010). docs/guide.md from the earlier "$repo" fixture added 1 line.

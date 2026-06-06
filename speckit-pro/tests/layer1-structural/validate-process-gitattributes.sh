@@ -33,8 +33,8 @@ rules_scoped() {
     case "$line" in
       *linguist-generated*)
         case "$line" in
-          *.process/*) ;;          # scoped — ok
-          *) rc=1 ;;               # broadened beyond .process/ — fail
+          */.process/*|.process/*) ;;  # scoped to the /.process/ segment — ok
+          *) rc=1 ;;               # broadened beyond .process/ (e.g. foo.process/) — fail
         esac
         ;;
     esac
@@ -83,5 +83,14 @@ assert_exit_code 0 rules_scoped "$good_fixture"
 
 set_test "broadened rule fails (SC-005 negative case)"
 assert_exit_code 1 rules_scoped "$bad_fixture"
+
+# Regression guard (PR #111 review): a rule targeting a directory that merely
+# ENDS in ".process" (foo.process/) is NOT the dedicated .process/ exhaust dir
+# and MUST fail — the earlier *.process/* predicate wrongly accepted it.
+ends_in_process_fixture="$(mktemp)"
+printf '%s\n' '**/foo.process/** linguist-generated=true' > "$ends_in_process_fixture"
+set_test "rule for a dir ending in .process (foo.process/) fails — not the .process/ dir"
+assert_exit_code 1 rules_scoped "$ends_in_process_fixture"
+rm -f "$ends_in_process_fixture"
 
 test_summary
