@@ -387,3 +387,10 @@ Consult the design concept Q&A for the "why" behind each decision. Key invariant
 - [ ] Developer-local L2 (trigger) + L3 (functional) recorded as passing.
 - [ ] Reviewability gate passes (~200 LOC primary surface).
 - [ ] PR created with a plain-English body + UAT runbook.
+
+## Self-Review (post-implementation 4-question audit — reporting only, never gates)
+
+1. **Spec satisfied?** Yes — 17/17 FRs implemented and mapped to tasks; the estimator was read and verified against `contracts/estimate-spec-size.md` (spike short-circuit, FR-016 single normalize path, at-ceiling `-gt` boundary, ceil-min-1 slices, always `exit 0`); quickstart behavior confirmed live; SC-001..006 covered.
+2. **Regressions?** None — full suite **1694/1694** green (baseline + new estimator/L4/fixtures).
+3. **Conventions/constitution?** Yes — Script Safety (validate-scripts 60/60 incl. the new script, `bash -n` clean, `set -euo pipefail`, chmod +x); KISS heuristic; single-source-of-truth (T017); advisory-only (T018); Codex parity (validate-codex-parity 76/76); conventional commits.
+4. **Security / scope / known gaps?** No security surface (bash+jq + markdown). No scope creep — no gate/threshold/exit-code, no split engine, no roadmap-schema change; estimator always exits 0. **Known gaps (reproduced in PR body):** (a) L2/L3/L8 evals (T021–T023) are developer-local pre-merge follow-ups, NOT executed in autopilot; (b) the LOC weights (25/40/15) are a documented first-pass heuristic, tunable later; (c) the tasks-mode reviewability gate over-counted committed SDD artifacts (transition_exception) — the pre-PR diff gate is authoritative.
