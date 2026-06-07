@@ -236,7 +236,7 @@ recorded for PRSG-011.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Estimator mechanics | | |
+| 1 | Estimator mechanics | 2 (both → consensus) | **Q1 (declaration format):** split (codebase-analyst: add planned-files block to preset plan-template; spec-context-analyst: out-of-scope, parse existing tree). **Synthesis (altitude reconcile):** spec sets constraints, Plan picks the parse convention — added to spec Deferred (deterministic, enumerate prod files + new/modified, no unflagged template-surface expansion). **Q2 (empty plan):** unanimous (domain + spec-context + executor) → "not estimated" (3-value status `{pass,over_budget,not_estimated}`, `projected:null`, non-blocking). Folded in: ×40 is per-task→estimator declares own per-file constant (FR-007); `is_production_file` doesn't match repo `.sh` (known limit, PRSG-001); L4 fixture must assert known LOC value (FR-002). Edits: FR-002/003/007, Edge Case, Key Entities, Assumptions, Deferred. |
 | 2 | Gate metric + greenfield | | |
 | 3 | Exception pragma + back-compat | | |
 
