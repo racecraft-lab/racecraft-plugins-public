@@ -447,8 +447,8 @@ code) → REFACTOR → VERIFY.
 - [x] MOC lints (`validate-moc-orphan.sh`, `validate-moc-stale-index.sh`) still green on real spec trees (prsg-002 + prsg-003)
 - [x] Generator is idempotent (second run = zero diff) — verified live + empty-tree no-op (SC-012)
 - [x] Codex parity: `validate-codex-skills.sh` (140/140) + `validate-codex-parity.sh` (74/74) green; `speckit-status` + `speckit-autopilot` mirrors updated
-- [ ] PR title is public-readable: `feat(speckit-pro): …` (no internal IDs)
-- [ ] PR created and reviewed
+- [x] PR title is public-readable: `feat(speckit-pro): generate spec navigation maps and catch stale ones`
+- [x] PR created: **#121** — https://github.com/racecraft-lab/racecraft-plugins-public/pull/121 (review-remediation loop scheduled; NOT merged — humans merge)
 
 ---
 
