@@ -215,6 +215,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
     "$TESTS_DIR/layer4-scripts/test-reviewability-gate.sh"
     "$TESTS_DIR/layer4-scripts/test-ensure-reviewability-preset.sh"
+    "$TESTS_DIR/layer4-scripts/test-estimate-spec-size.sh"
     "$TESTS_DIR/layer4-scripts/test-generate-pr-body.sh"
     "$TESTS_DIR/layer4-scripts/test-generate-uat-skeleton.sh"
     "$TESTS_DIR/layer4-scripts/test-project-fixup.sh"

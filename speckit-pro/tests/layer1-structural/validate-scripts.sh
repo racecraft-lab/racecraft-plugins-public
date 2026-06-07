@@ -15,6 +15,7 @@ SCRIPT_FILES=(
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/reviewability-gate.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-pr-body.sh"
   "$PLUGIN_ROOT/skills/speckit-coach/scripts/ensure-reviewability-preset.sh"
+  "$PLUGIN_ROOT/skills/speckit-coach/scripts/estimate-spec-size.sh"
   "$PLUGIN_ROOT/skills/speckit-coach/scripts/project-fixup.sh"
   "$PLUGIN_ROOT/scripts/install-curated-set.sh"
 )
