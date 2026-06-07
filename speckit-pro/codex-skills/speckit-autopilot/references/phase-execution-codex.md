@@ -95,6 +95,64 @@ for phase in PHASES starting from first_pending:
 After all 7 phases complete, proceed to the post-implementation parallel
 group (see [post-implementation-codex.md](./post-implementation-codex.md)).
 
+## Phase-Gate: Spec-MOC Navigation Regeneration
+
+At **every phase boundary** — for all seven phases — regenerate the spec map
+navigation zones and fold any change into that phase's existing checkpoint
+commit. This runs as an **idempotent** step **immediately before step 10's
+commit** in the Main Execution Loop above (`git add specs/ && git commit` for
+phases 1–6, `git add -A && git commit` for phase 7), so the rebuilt maps are
+swept into that same commit. A boundary that changes nothing contributes
+nothing — no extra `update_plan` item and no `autopilot-state.json` transition
+are recorded for this step.
+
+**Why before step 10:** step 10's `git add … && git commit` is what folds the
+rebuilt maps into the one checkpoint commit. Running the rebuild *after* the
+commit would force a second commit on every map-affecting boundary — the
+failure this ordering avoids.
+
+**Step (run at each boundary, before step 10):**
+
+```bash
+# Write mode (NO --check): regenerate over the autopilot's target repo.
+# Pass "$PWD" explicitly — do NOT rely on the generator's default REPO_ROOT.
+# In a cached-plugin run the default resolves to the plugin cache's parent, not
+# the user's project, so the explicit arg is required (same path-prefix +
+# "$PWD" convention as generate-pr-body.sh below).
+skills/speckit-autopilot/scripts/generate-spec-index.sh "$PWD"
+```
+
+**Act on the result:**
+
+- **Exit 2 (error)** → a map is malformed/unbalanced or a PRS manifest is
+  unreadable. **Surface the actionable stderr line and STOP.** Do NOT commit a
+  broken regen and do NOT advance the phase.
+- **Exit 0 (clean)** → the generator wrote any stale maps and returned success.
+  **The commit decision is diff-driven, not exit-code-driven** (write mode
+  returns `0` whether or not it changed a file; the stale `exit 1` is
+  `--check`-only and is never reached here). Inspect the working tree:
+  - `git diff` (plus `git status` for newly-injected zones) is **empty** →
+    nothing was regenerated. This is the idempotent no-op: contribute nothing,
+    proceed to step 10's normal commit.
+  - `git diff` is **non-empty** and the rebuild rides **alongside** other
+    staged phase work → it is folded into that phase's existing checkpoint
+    commit (`feat(SPEC-XXX): complete <phase> phase` / `feat(SPEC-XXX):
+    implement phase`). No separate commit is made.
+  - `git diff` is **non-empty** and the regenerated maps are the **only**
+    staged change → make a standalone commit with this fixed, public-readable
+    subject:
+
+    ```text
+    docs(speckit-pro): regenerate spec-MOC navigation zones
+    ```
+
+This subject is a fixed constant (it is NOT computed per run): `docs:` because
+regenerating generated documentation zones is a docs-scope change and does not
+trigger a release-please version bump. The regeneration is a pure function of
+committed files, so re-running it on an unchanged tree yields a zero-byte diff
+and no commit — exactly one rebuild contribution to the checkpoint commit on a
+map-affecting boundary, and none on a no-op boundary.
+
 ## Phase 6.5: Pre-Implement Confidence Gate
 
 After Phase 6 (Analyze) commits and before Phase 7 begins, run the optional

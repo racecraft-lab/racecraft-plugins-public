@@ -153,6 +153,38 @@ Include an Archive Sweep summary when archive state exists:
 - next step: install/vendor archive, keep dry-run-only, or perform reviewed
   cleanup after archive success and recovery commands
 
+#### Spec-Map Index Freshness (read-only)
+
+As part of producing the dashboard, report whether each version-marked
+`SPEC-MOC.md`'s generated navigation zones are current. Run the shared
+generator in **read-only `--check` mode** — it regenerates the zones in
+memory, diffs them against the committed maps, and **writes nothing**:
+
+```text
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/generate-spec-index.sh --check \"$PWD\"")
+```
+
+Pass `"$PWD"` (the project root) explicitly. Without it the generator infers
+its repo root from the script's own location, which in a cached-plugin install
+is the plugin cache — not the user's project — so the freshness check would
+scan the wrong tree.
+
+Surface a single freshness line in the dashboard from the exit code:
+
+- exit `0` → **index current**
+- exit `1` → **index stale — run regen** (the maps drifted from their
+  sources; the fix is `/speckit-pro:speckit-autopilot`, whose phase gates
+  rebuild the zones — `speckit-status` does not regenerate them)
+- exit `2` → **index check error: `<message>`** — name the failure from the
+  generator's stderr line (e.g. a malformed `prs.json` or a non-regular-file
+  map target)
+
+**Read-only guarantee:** `speckit-status` MUST NOT write any file. It invokes
+the generator only with `--check`, which writes nothing on **any** path —
+including the exit-`2` error path. The dashboard never runs the generator in
+write mode and never regenerates the maps itself; reporting staleness here is
+purely advisory.
+
 ### 5. Recommend Next Spec
 
 After the dashboard tables, add a `## Recommended Next` section
