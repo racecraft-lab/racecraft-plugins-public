@@ -203,8 +203,13 @@ keep-in-sync comment per FR-007.
 PROD_LOC_PER_FILE=40
 ```
 
-(`40` chosen to reuse the established magnitude; whether it stays `40` or is tuned is a
-tasks/implement detail — the fixed requirement is determinism, FR-002.)
+The literal comment token `KEEP IN SYNC with reviewability-gate.sh` (and a reciprocal
+`KEEP IN SYNC with estimate-reviewable-loc.sh` marker added beside the gate's `×40` site at
+`reviewability-gate.sh:199`) is the greppable marker the L1 drift-guard asserts is present in
+both files (see Test strategy → L1). The L1 check is **comment-presence only** — it does NOT
+compare the two numeric values, because they carry different units (per-task vs per-file) and
+the per-file value is tunable. (`40` chosen to reuse the established magnitude; whether it stays
+`40` or is tuned is a tasks/implement detail — the fixed requirement is determinism, FR-002.)
 
 ### Gate rework sites (line numbers, current `reviewability-gate.sh`)
 
@@ -241,6 +246,21 @@ over-budget note and **continue** (advisory, non-blocking). On `over_budget` **i
 production files)" and continue. **No hard block, no re-slicing** (that is PRSG-010 — Q3,
 non-negotiable sequencing).
 
+**The wiring MUST read the estimator's exit code and branch on it — it MUST NOT let a non-zero
+exit propagate and abort the run.** The three budget statuses (`pass`, `over_budget`,
+`not_estimated`) all return exit 0 with the verdict in JSON `status` (see
+`contracts/estimate-reviewable-loc.output.md`), so they are read from `status`. A **non-zero
+exit (exit 2: usage error or an unreadable/absent `plan.md`)** is the only non-success path and
+MUST be handled non-fatally: record an "estimator could not run (exit N)" note and **continue**
+the autonomous run. Because the autopilot harness runs under `set -euo pipefail`, the invocation
+MUST be guarded (e.g. capture the exit code rather than letting `set -e` abort — invoke in a form
+that does not trip `errexit`, such as `code=0; estimate-reviewable-loc.sh "$plan" || code=$?`) so
+that an estimator error degrades to a recorded note, never a crashed run. This matches the
+established gate-handling pattern in `phase-execution.md` (the G6/G6.5 steps read the gate's exit
+code and branch on it rather than aborting). Advisory-and-never-crash is the invariant for the
+entire plan-phase budget step: no estimator outcome — under-budget, over-budget, unmeasured, or
+errored — may block, prompt mid-autonomous-run, or crash the run.
+
 ### Codex parity (FR-015, Q10)
 
 Mirror ONLY the plan-phase budget instruction into
@@ -256,6 +276,13 @@ parity cover the mirrored wording.
 - The roadmap template's Reviewability Contract advertises the production-LOC thresholds,
   surface-count-as-warning wording, and `Reviewability-Exception: <class>` vocabulary that the
   gate honors (template↔gate consistency — SC-007).
+- **Keep-in-sync drift guard (FR-007):** the keep-in-sync comment marker for the
+  production-LOC-per-file constant is present in BOTH `estimate-reviewable-loc.sh` and
+  `reviewability-gate.sh`. This is a **comment-presence** assertion (matching the repo's
+  existing comment-only keep-in-sync precedents), NOT a numeric value-equality check — the
+  two constants differ in unit (per-task vs per-file) and the estimator's value is tunable,
+  so equality would false-fail on a legitimate tune. The assertion guards that the
+  drift-warning comment cannot be silently deleted.
 - `validate-codex-skills.sh` passes after the Codex mirror edit.
 
 **L4 script-unit** (`tests/run-all.sh --layer 4`, CI) — the real contract here:

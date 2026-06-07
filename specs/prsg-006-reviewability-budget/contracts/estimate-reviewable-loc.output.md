@@ -99,6 +99,16 @@ ignored:
 Group 1 = `STATUS` (`NEW`|`MODIFIED`); group 2 = repo-relative path (full path required so
 `is_production_file`'s prefix arm can classify — see plan.md Decision 1).
 
+**De-duplication (no double-counting):** entries are de-duplicated by repo-relative path
+before counting — a path that appears more than once in the block contributes **once** to
+`declared_files.*` and to `projected` (the estimator's counterpart to the gate's `sort -u`
+dedupe of its file lists at `reviewability-gate.sh:191,225`). This keeps the projection
+stable under a duplicated declaration and preserves the byte-identical-output contract
+(determinism of meaning, not just of formatting). If the same path appears once as `NEW`
+and once as `MODIFIED`, the de-duplicated entry is treated as `MODIFIED` (so the slice is
+correctly NOT greenfield — fail-safe toward "an existing file is touched", consistent with
+FR-006's "any modified existing file disqualifies greenfield").
+
 ## Known limitation (recorded in code per spec Assumptions; do NOT "fix" here)
 
 `is_production_file` matches `src/ app/ lib/ scripts/` prefixes + JS/TS/SQL extensions. It does

@@ -35,7 +35,7 @@ every scoping decision captured during the interview. Where a phase prompt cites
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 15 FRs (FR-001–015), US1/US2, 0 `[NEEDS CLARIFICATION]`, G1 `pass:true`. Branch-aware override held (no derail). |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions; 6 questions total (S1: 2→consensus, S2: 1, S3: 3 security→full consensus). Spec hardened: estimator input contract + not-estimated; greenfield file-set; exception matcher + added-lines + all-3-modes. 0 `[NEEDS CLARIFICATION]` remain. |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + contracts/ (estimator + gate JSON shapes). Two-script design; **parse convention decided** = `## Declared File Operations` block (`- {NEW\|MODIFIED} <path>`) → needs a stub in the reviewability-preset plan-template (flagged minor surface, tasks-phase sequencing). Single shared `match_exception_pragma` across modes. Constitution II/IV/VI PASS. G3 `pass:true`. (CLAUDE.md SPECKIT managed-block pointer auto-updated — review at PR.) |
-| Checklist | `/speckit-checklist` | ⏳ Pending | error-handling + data-integrity |
+| Checklist | `/speckit-checklist` | ✅ Complete | error-handling (41, 2 gaps) + data-integrity (18, 2 gaps); all 4 gaps remediated in-place, 0 consensus. G4 pass. |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Two user stories: US1 plan budget, US2 gate rework |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | Scripts-first; TDD red→green |
@@ -351,9 +351,9 @@ Focus on PRSG-006 estimation correctness:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | | | |
-| data-integrity | | | |
-| **Total** | | | |
+| error-handling | 41 | 2→0 (no consensus) | Both remediated in-place: (CHK019) estimator exit-code contract — content-level statuses all exit 0, file-level unreadable/usage error exits non-zero, never reported as `not_estimated` (FR-003); (CHK020, high-value) estimator non-zero exit MUST NOT crash the autonomous run under `set -euo pipefail` — `errexit`-guarded wiring (plan §Plan-phase wiring) + new "Estimator cannot run" Edge Case making advisory-never-crash the invariant for all outcomes. |
+| data-integrity | 18 | 2→0 (no consensus) | (CHK006) estimator double-counting → dedupe declared-files by repo-relative path (NEW+MODIFIED same path ⇒ MODIFIED), mirroring gate `sort -u` (FR-008 + contract); (CHK010) shared-constant drift was comment-only → **L1 comment-presence assert** in both scripts (NOT value-equality: ×40 is per-task, estimator's per-file constant is tunable) (FR-007 + plan §Test strategy). |
+| **Total** | 59 | 4→0 | error-handling 41 (2) + data-integrity 18 (2); all remediated in-place, no consensus. |
 
 ---
 
