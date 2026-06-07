@@ -97,14 +97,18 @@ chosen split is recorded in the Design Concept document.
 ### Edge Cases
 
 - **Estimate at exactly the ceiling**: the estimator's status boundary (ok vs warn) at
-  exactly the documented ceiling must be defined and consistent across both skills.
+  exactly the documented ceiling must be defined and consistent across both skills. At
+  exactly the ceiling `status` is `ok`; `warn` applies only when `estimated_loc` is
+  strictly over the ceiling.
 - **Malformed, missing, zero, or negative size signals**: the estimator must behave
   predictably (non-crashing, sensible status) rather than emit a misleading number.
-- **SPIDR "Spike" (research-only) slice**: a research-only slice has near-zero production
-  LOC, so a pure LOC estimate could read as "trivially fine" when the real concern is
-  uncertainty, not size. [NEEDS CLARIFICATION: should a SPIDR Spike be flagged as a
-  distinct slice *type* exempt from the LOC threshold, rather than sized by LOC alone? —
-  seeded for the estimator-semantics clarification session.]
+- **SPIDR "Spike" (research-only) slice**: a research-only slice is sized by timebox, not
+  LOC, so it is treated as a distinct slice *type* that is exempt from the LOC threshold.
+  The estimator accepts an optional input marking the slice as a spike; when set, it skips
+  the LOC-threshold comparison and returns `status: ok` with `suggested_slices: 1` and
+  `estimated_loc: 0`. Here `status: ok` means "LOC sizing is not applicable to a research
+  slice" (the INVEST "Estimable" escape hatch) — not "trivially small" — so a spike never
+  trips a misleading `warn` and the advisory-only invariant (FR-011) is preserved.
 - **Estimator unavailable mid-interview**: both skills must degrade to advisory text and
   continue; never convert an unavailable estimate or a `warn` into a hard stop.
 - **Existing trigger phrases**: adding sizing/slicing phrases must not cause existing
@@ -160,6 +164,13 @@ chosen split is recorded in the Design Concept document.
   users do not over-trust the number. *(US1, US2)*
 - **FR-016**: The estimator MUST behave predictably on malformed, missing, zero, or negative
   size signals (non-crashing, sensible status) rather than emit a misleading estimate. *(US2)*
+- **FR-017**: The estimator MUST accept an optional input that marks a slice as a SPIDR
+  "Spike" (research-only). When set, the estimator MUST skip the LOC-threshold comparison and
+  return `status: ok` with `suggested_slices: 1` and `estimated_loc: 0`, rather than sizing
+  the slice by LOC. The shared reference document MUST document the spike as a timebox-sized
+  slice type (the INVEST "Estimable" escape hatch) and clarify that `status: ok` for a spike
+  means LOC sizing is not applicable, not that the slice is small. This MUST NOT introduce any
+  new `status` value beyond `ok`/`warn`. *(US1, US2)*
 
 ### Reviewability Budget *(mandatory)*
 
@@ -229,12 +240,20 @@ chosen split is recorded in the Design Concept document.
   PRSG-005 populates it rather than introducing a new field (Q9).
 - The documented LOC ceiling is ~400 reviewable LOC, shared with PRSG-006 as a documented
   constant only; PRSG-005 emits no artifact for a downstream gate to consume (Q3).
-- The precise on-disk home of the shared reference doc and the shared estimator script is a
-  Plan-phase decision (locked direction: one shared doc + one shared script invoked via the
-  plugin root path, mirroring where PRSG-002 placed its shared normalizer). It is not a
-  spec-level (WHAT) question.
+- The on-disk home of the shared reference doc and the shared estimator script is a recorded
+  Plan-phase (HOW) decision, now locked to: the reference doc at
+  `speckit-pro/skills/speckit-coach/references/slicing-heuristics.md` (alongside the existing
+  shared reference docs) and the estimator at
+  `speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh` (alongside the existing
+  shared cross-skill runtime scripts `ensure-reviewability-preset.sh` / `project-fixup.sh`),
+  both invoked by both skills and both Codex mirrors via `${CLAUDE_PLUGIN_ROOT}` — the same
+  shared-asset placement PRSG-002 used for its shared templates under
+  `speckit-coach/templates/`. This remains a directional Plan target, not a spec-level (WHAT)
+  requirement.
 - The exact mechanism by which each skill collects the estimator's structured inputs during a
-  free-flowing interview is an implementation detail resolved in Plan/Tasks.
+  free-flowing interview is an implementation detail resolved in Plan/Tasks — `speckit-prd`
+  derives the signals from the catalog entry it is drafting, `grill-me` from the single spec
+  it is scoping.
 - The Codex skill variants use a free-text question-and-answer loop instead of
   `AskUserQuestion`; the split-question mechanism is adapted accordingly while preserving
   behavioral parity.

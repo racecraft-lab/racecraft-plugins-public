@@ -30,9 +30,9 @@ to that doc's Design Tree.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | Two user stories: prd catalog-level slicing; grill-me per-spec validation + split. |
-| Clarify | `/speckit-clarify` | ⏳ Pending | 2 sessions seeded from Open Questions (estimator semantics; responsibility boundary + final paths). Verify-not-reopen the 10 locked decisions. |
-| Plan | `/speckit-plan` | ⏳ Pending | bash+jq script + shared reference doc + two skill edits (CC) with Codex mirrors. |
+| Specify | `/speckit-specify` | ✅ Complete | spec.md: 16 FRs, US1+US2, 6 SCs, advisory-only (FR-011/SC-004). G1 pass (0 markers). 1 deferred [NEEDS CLARIFICATION] = OQ#1 spike handling → Clarify S1. |
+| Clarify | `/speckit-clarify` | ✅ Complete | S1: spike = exempt slice type via input flag → FR-017; at-ceiling boundary pinned (ok at ceiling). S2: shared homes LOCKED (coach/scripts + coach/references); boundary + advisory-only confirmed. 0 markers. No consensus needed. |
+| Plan | `/speckit-plan` | 🔄 In Progress | bash+jq script + shared reference doc + two skill edits (CC) with Codex mirrors. |
 | Checklist | `/speckit-checklist` | ⏳ Pending | data-integrity + error-handling. |
 | Tasks | `/speckit-tasks` | ⏳ Pending | TDD: L4 estimator fixture RED before GREEN; Codex mirror edits paired. |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Cross-artifact + drift check vs design concept's 10 decisions. |
@@ -234,10 +234,11 @@ only the ~400-LOC ceiling constant.
 - Codex mirrors: codex-skills/speckit-prd/SKILL.md and codex-skills/grill-me/SKILL.md must
   carry the same guidance (the Codex variants use a free-text Q&A loop instead of
   AskUserQuestion — adapt the split-question mechanism accordingly).
-- Shared reference doc: ONE canonical slicing-heuristics doc (e.g.
-  speckit-coach/references/slicing-heuristics.md) — confirm exact path in Clarify Session 2.
-- Shared script: estimate-spec-size.sh — single runtime-agnostic bash+jq script in a shared
-  plugin scripts location invoked via ${CLAUDE_PLUGIN_ROOT} (e.g. speckit-coach/scripts/);
+- Shared reference doc: ONE canonical slicing-heuristics doc — LOCKED (Clarify S2) to
+  speckit-pro/skills/speckit-coach/references/slicing-heuristics.md.
+- Shared script: estimate-spec-size.sh — single runtime-agnostic bash+jq script — LOCKED
+  (Clarify S2) to speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh, invoked by
+  both skills + both Codex mirrors via ${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/;
   one committed L4 fixture set (same inputs → byte-identical JSON output).
 - Tests: L1 (structural + codex skills), L4 (estimator determinism fixtures), L5 (no agent
   scoping change expected). Developer-local: L2 (trigger), L3 (functional), L8 (parity).
