@@ -136,7 +136,7 @@ These are the Plan-phase HOW decisions the G3 gate requires, all pinned here:
 - **At-ceiling boundary rule**: at exactly the ceiling, `status` is `ok`; `warn` applies only when `estimated_loc` is **strictly greater than** the ceiling (Edge Cases; Clarify S1 LOCKED).
 - **Spike rule** (FR-017): when the spike flag is set, the estimator **skips** the LOC-threshold comparison and returns `status: ok`, `suggested_slices: 1`, `estimated_loc: 0`. Here `ok` means "LOC sizing is not applicable to a research slice" (the INVEST "Estimable" escape hatch), not "trivially small" — so a spike never trips a misleading `warn`, preserving the advisory-only invariant.
 - **suggested_slices formula**: `ceil(estimated_loc / ceiling)` for a non-spike slice (documented in the script and the shared doc); the L4 fixtures pin the integer-rounding behavior at and around the ceiling.
-- **Robustness** (FR-016): malformed, missing, zero, or negative size signals produce predictable, non-crashing behavior with a sensible status rather than a misleading number. This is exercised by L4 fixtures, never by raising a hard error that could read as a block.
+- **Robustness** (FR-016): each malformed, missing, zero, or negative size signal normalizes to `0`, and `status` then follows the same at-ceiling boundary rule as normal inputs on the resulting `estimated_loc` — not a separate code path, and never a misleading `warn` or a third status value (all-bad/absent input → `estimated_loc: 0` → `ok`). This is exercised by L4 fixtures, never by raising a hard error that could read as a block.
 
 ### Division of labor (Q1 — no duplicated guidance prose)
 

@@ -37,6 +37,12 @@ Compact JSON on stdout, produced via `jq`:
 - `status` is **exactly** `ok` or `warn`. No third value is ever emitted (FR-017).
 - The script exits `0` on a successful estimate (including `warn`). `warn` is **informational
   only** and MUST NOT be expressed as a non-zero/blocking exit — advisory-only (FR-011).
+- **Caller-side obligation** (FR-011): a calling skill MUST NOT use this script's exit code for
+  control flow or treat it as a gate. If the script is unavailable (missing script, missing
+  `jq`, a non-zero exit, or empty/unparseable output), the caller MUST treat the result as an
+  absent estimate, surface an advisory note, and continue — never a hard stop. The script-side
+  `exits 0` guarantee above covers only the case where the script runs; this caller-side rule
+  covers the case where it cannot run.
 
 ## Behavior rules
 
@@ -47,8 +53,14 @@ Compact JSON on stdout, produced via `jq`:
 3. **Spike** (FR-017): `spike=true` → skip the LOC-threshold comparison; return
    `{"estimated_loc":0,"suggested_slices":1,"status":"ok"}`.
 4. **suggested_slices** (non-spike): `ceil(estimated_loc / ceiling)`, minimum `1`.
-5. **Robustness** (FR-016): missing → `0`; negative → normalized non-negative; malformed →
-   predictable value + sensible status; never crash, never block.
+5. **Robustness** (FR-016): each non-conforming numeric signal is normalized to `0` before the
+   estimate — missing → `0`; negative → `0`; zero → `0`; malformed/non-numeric → `0`. `status`
+   then follows the same at-ceiling boundary rule as rule 2 on the resulting `estimated_loc`
+   — it is **not** a separate code path. When every signal is bad/absent the estimate is `0`
+   (at/under the ceiling) → `status: ok`; a mixed input keeps its valid signals and is sized
+   normally. Here `ok` means "there is no over-ceiling estimate to flag", **not** "the input
+   was validated as good" (mirrors the spike `ok` rationale in rule 3). Never crash, never
+   block, never emit a third status value.
 6. **Ceiling constant** (FR-008): a single hardcoded `~400` constant with a "keep in sync with
    the documented ceiling in slicing-heuristics.md" comment.
 

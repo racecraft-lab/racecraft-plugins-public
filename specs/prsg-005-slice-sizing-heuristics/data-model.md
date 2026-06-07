@@ -22,10 +22,18 @@ reads roadmap markdown itself.
 
 - Missing or empty numeric signals are treated as `0` (a sensible, non-misleading default),
   never a crash.
-- Negative numeric signals are clamped/normalized to a predictable non-negative value rather
-  than producing a misleading negative estimate.
-- Malformed (non-numeric) input does not crash the estimator; it degrades to a predictable
-  value and a sensible `status`.
+- Negative numeric signals are clamped/normalized to `0` rather than producing a misleading
+  negative estimate.
+- Malformed (non-numeric) input does not crash the estimator; it normalizes to `0` rather
+  than degrading to an arbitrary value.
+- **Pinned bad-input status**: each non-conforming signal normalizes to `0`, and `status`
+  then follows the same at-ceiling boundary rule used for normal inputs on the resulting
+  `estimated_loc` — not a separate code path. When every signal is bad/absent the estimate
+  is `0` (at/under the ceiling) → `status` is **`ok`**; a mixed input keeps its valid signals
+  and is sized normally. Here `ok` means "there is no over-ceiling estimate to flag", not
+  "the input was validated as good" (the same `ok ≠ endorsement` framing the spike rule
+  uses). A bad input therefore never trips a misleading `warn` and introduces no third
+  status value.
 - The estimator never raises a hard error or non-zero "block" exit that a caller could read
   as a gate — robustness behavior keeps the advisory-only invariant (FR-011) intact.
 

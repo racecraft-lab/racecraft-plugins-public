@@ -49,6 +49,12 @@ INVEST/vertical-slice rationale.
 4. **Given** a maintainer types a sizing/slicing phrase such as "right-size the catalog",
    **When** the request is routed, **Then** `speckit-prd` activates, and existing
    `speckit-prd` trigger phrases continue to route to `speckit-prd` unchanged.
+5. **Given** the estimator is unavailable while `speckit-prd` is decomposing the catalog
+   (missing script, missing `jq`, a non-zero exit, or empty/unparseable output), **When**
+   `speckit-prd` records a catalog entry, **Then** it degrades to advisory text, leaves the
+   entry's `Budget: ~N LOC` line unpopulated (or noted as unavailable), and continues the
+   interview — the unavailable estimate is never converted into a hard stop and the script's
+   exit code is never read as a gate.
 
 ---
 
@@ -101,7 +107,12 @@ chosen split is recorded in the Design Concept document.
   exactly the ceiling `status` is `ok`; `warn` applies only when `estimated_loc` is
   strictly over the ceiling.
 - **Malformed, missing, zero, or negative size signals**: the estimator must behave
-  predictably (non-crashing, sensible status) rather than emit a misleading number.
+  predictably (non-crashing) rather than emit a misleading number. Each such signal is
+  treated as zero, and `status` then follows the at-ceiling boundary rule on the resulting
+  estimate — when every signal is bad/absent the result is `estimated_loc: 0` with
+  `status: ok` (at/under the ceiling) — never a misleading `warn` and never a third status
+  value. Here `status: ok` means "there is no over-ceiling estimate to flag", not that the
+  input was validated as good.
 - **SPIDR "Spike" (research-only) slice**: a research-only slice is sized by timebox, not
   LOC, so it is treated as a distinct slice *type* that is exempt from the LOC threshold.
   The estimator accepts an optional input marking the slice as a spike; when set, it skips
@@ -110,7 +121,14 @@ chosen split is recorded in the Design Concept document.
   slice" (the INVEST "Estimable" escape hatch) — not "trivially small" — so a spike never
   trips a misleading `warn` and the advisory-only invariant (FR-011) is preserved.
 - **Estimator unavailable mid-interview**: both skills must degrade to advisory text and
-  continue; never convert an unavailable estimate or a `warn` into a hard stop.
+  continue; never convert an unavailable estimate or a `warn` into a hard stop. "Unavailable"
+  means the estimator cannot produce a usable result for any reason — missing script, missing
+  `jq`, a non-zero exit, or empty/unparseable output. In every such case each calling skill
+  (`speckit-prd` and `grill-me`) MUST treat the result as an absent estimate, surface an
+  advisory note, and continue the interview. A non-zero exit code from the script MUST NOT be
+  read by either caller as a gate or hard stop — the caller never uses the script's exit code
+  for control flow. (This is the caller-side counterpart to the contract's script-side
+  guarantee that a successful estimate, including `warn`, exits `0`; FR-011.)
 - **Existing trigger phrases**: adding sizing/slicing phrases must not cause existing
   phrases for either skill to mis-route (no over-trigger or under-trigger regression).
 
@@ -163,7 +181,10 @@ chosen split is recorded in the Design Concept document.
   *forward* guess made before implementation, NOT the authoritative reviewable-LOC count, so
   users do not over-trust the number. *(US1, US2)*
 - **FR-016**: The estimator MUST behave predictably on malformed, missing, zero, or negative
-  size signals (non-crashing, sensible status) rather than emit a misleading estimate. *(US2)*
+  size signals (non-crashing) rather than emit a misleading estimate. Each such signal MUST be
+  treated as zero, and `status` MUST follow the same at-ceiling rule on the resulting estimate
+  (all-bad/absent input → `estimated_loc: 0` → `status: ok`), never a misleading `warn` and
+  never a third `status` value. *(US2)*
 - **FR-017**: The estimator MUST accept an optional input that marks a slice as a SPIDR
   "Spike" (research-only). When set, the estimator MUST skip the LOC-threshold comparison and
   return `status: ok` with `suggested_slices: 1` and `estimated_loc: 0`, rather than sizing
