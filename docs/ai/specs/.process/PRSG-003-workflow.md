@@ -35,8 +35,8 @@ there is an explicit revision note.
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions + 1 consensus; SC-002/FR-008/FR-017/SC-010 tightened; roadmap L8→L1 bar settled; 0 markers; G2 pass |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + research.md + data-model.md + 3 contracts + quickstart.md; 4 deferred decisions finalized; bash+jq only, reuses moc-id-normalize.sh; G3 pass |
 | Checklist | `/speckit-checklist` | ✅ Complete | data-integrity (5 gaps→0, +SC-011) + error-handling (12 gaps→0, +FR-021/FR-022/SC-012, atomic writes); FR-022 fork resolved fail-safe via consensus; G4 pass |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 26 tasks (8 [P]), 2 stories; TDD RED tests T005/T006 before generator; every FR→task; Codex mirrors paired (T016/T018); G5 pass; tasks-mode reviewability `block`→ratified exception (path-token over-count, deferred to pre-PR diff gate) |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -346,8 +346,8 @@ speckit-status write a file. Those belong to PRSG-004/009/011, not here.
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Parallel Opportunities** | |
+| **Total Tasks** | 26 (T001–T026) |
+| **Parallel Opportunities** | 8 [P]: T005∥T006, T015∥T017, T016∥T018, T019∥T020 |
 | **User Stories Covered** | US1, US2 |
 
 ---
