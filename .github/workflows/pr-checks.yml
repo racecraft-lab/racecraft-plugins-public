@@ -49,22 +49,22 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Find all top-level directories that changed relative to the base branch.
-          changed_dirs=$(
-            git diff --name-only "origin/${BASE_REF}...HEAD" \
-              | cut -d'/' -f1 \
-              | sort -u
-          )
+          # All files changed relative to the base branch.
+          changed_files=$(git diff --name-only "origin/${BASE_REF}...HEAD")
 
-          # Filter to directories that contain a plugin manifest.
-          # Directory names are kebab-case (Constitution Principle I), safe for iteration.
+          # A plugin counts as "changed" if its own directory OR its out-of-plugin
+          # test directory (tests/<plugin>/) changed. The test suite lives at
+          # repo-root tests/<plugin>/ so it is NOT shipped to consumers — but
+          # test-only changes must still trigger that plugin's matrix job.
+          # Plugin directory names are kebab-case (Constitution Principle I), safe for regex.
           plugins=()
-          while IFS= read -r dir; do
-            [ -z "$dir" ] && continue
-            if [ -f "${dir}/.claude-plugin/plugin.json" ]; then
+          for manifest in */.claude-plugin/plugin.json; do
+            [ -e "$manifest" ] || continue
+            dir="${manifest%%/.claude-plugin/plugin.json}"
+            if printf '%s\n' "$changed_files" | grep -qE "^(${dir}|tests/${dir})/"; then
               plugins+=("$dir")
             fi
-          done <<< "$changed_dirs"
+          done
 
           # Build a JSON array from the matched directories (jq handles escaping).
           if [ ${#plugins[@]} -gt 0 ]; then
@@ -97,18 +97,23 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
       - name: Run test suite
-        working-directory: ${{ matrix.plugin }}
+        env:
+          PLUGIN: ${{ matrix.plugin }}
         run: |
           set -euo pipefail
 
-          if [ ! -f "tests/run-all.sh" ]; then
-            echo "::error::Missing test runner: ${{ matrix.plugin }}/tests/run-all.sh"
-            echo "Plugin '${{ matrix.plugin }}' is missing the required test runner at '${{ matrix.plugin }}/tests/run-all.sh'."
-            echo "Every plugin must include tests/run-all.sh."
+          # The test suite lives at repo-root tests/<plugin>/ (outside the plugin
+          # dir, so it is not shipped to consumers). Run it from the repo root;
+          # run-all.sh self-locates the plugin it validates.
+          runner="tests/${PLUGIN}/run-all.sh"
+          if [ ! -f "$runner" ]; then
+            echo "::error::Missing test runner: ${runner}"
+            echo "Plugin '${PLUGIN}' is missing the required test runner at '${runner}'."
+            echo "Every plugin must include tests/<plugin>/run-all.sh."
             exit 2
           fi
 
-          bash tests/run-all.sh
+          bash "$runner"
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate PR title against Conventional Commits format

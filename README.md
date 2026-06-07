@@ -91,8 +91,17 @@ plugin-name/
 ├── agents/              # Claude Code agent definitions (optional)
 ├── skills/              # Skill definitions (optional)
 ├── hooks/               # Event hooks (optional)
-├── tests/               # Plugin test suite (optional)
 └── README.md            # Documentation
+```
+
+The test suite is intentionally **not** inside the plugin directory — plugin
+install copies the whole plugin dir to every consumer, so the suite lives at the
+repo root in `tests/<plugin>/` (e.g. `tests/speckit-pro/`) to keep it out of
+installs:
+
+```
+tests/
+└── plugin-name/         # 5-layer test suite (run-all.sh) — sibling of the plugin, never shipped
 ```
 
 ## License
