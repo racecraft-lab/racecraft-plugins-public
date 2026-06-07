@@ -64,6 +64,17 @@ PRSPOP_ROOT="$FIX/prs-populated";    PRSPOP_MOC="specs/prsg-905-prs-populated/SP
 PRSEMP_ROOT="$FIX/prs-empty";        PRSEMP_MOC="specs/prsg-906-prs-empty/SPEC-MOC.md"
 PRSABS_ROOT="$FIX/prs-absent";       PRSABS_MOC="specs/prsg-907-prs-absent/SPEC-MOC.md"
 PRSMAL_ROOT="$FIX/prs-malformed";    PRSMAL_MOC="specs/prsg-908-prs-malformed/SPEC-MOC.md"
+# Type-violation manifests: a `pr` that is a string ("abc") or a non-integer number
+# (117.5). Both pass a presence-only guard but violate the schema (pr: integer), so
+# the renderer must fail safe (exit 2), distinct from absent/empty (FR-016, D3).
+PRSBADSTR_ROOT="$FIX/prs-bad-pr-string";  PRSBADSTR_MOC="specs/prsg-916-prs-bad-string/SPEC-MOC.md"
+PRSBADFLT_ROOT="$FIX/prs-bad-pr-float";   PRSBADFLT_MOC="specs/prsg-917-prs-bad-float/SPEC-MOC.md"
+# Symlinked-MOC fixture: a version-marked spec dir whose SPEC-MOC.md is built as a
+# symlink (to moc-target.md) at runtime. The generator must reject the non-regular
+# target (exit 2) and NOT replace the symlink (FR-016).
+SYMLINK_ROOT="$FIX/symlinked-moc"
+SYMLINK_MOC="specs/prsg-918-symlink/SPEC-MOC.md"
+SYMLINK_TARGET="specs/prsg-918-symlink/moc-target.md"
 # A dedicated multi-spec root for (f) atomicity: a good map + an out-of-scope
 # legacy map + a poison (unbalanced) map share one REPO_ROOT.
 ATOM_ROOT="$FIX/atomicity"
@@ -273,6 +284,37 @@ set_test "malformed prs.json -> exit 2 (error, distinct from absent/empty)"
 rc_g4=0; "$GEN" "$copy_g_mal" >/dev/null 2>&1 || rc_g4=$?
 assert_eq "2" "$rc_g4" "malformed manifest fails safe (FR-016), never empty-but-valid"
 
+# type violation — a `pr` that is a STRING ("abc"): the schema requires an integer,
+# so this is the malformed case (exit 2), NOT a silently-corrupt exit-0 row. A
+# presence-only guard would let "abc" through and only blow up later (printf invalid
+# number) while exiting 0; the renderer must type-check and fail safe (FR-016, D3).
+copy_g_bstr="$(fresh_copy "$PRSBADSTR_ROOT")"
+str_before="$(shasum "$copy_g_bstr/$PRSBADSTR_MOC" | awk '{print $1}')"
+set_test "string pr (\"abc\") -> write run exits 2 (type violation, FR-016)"
+rc_g5=0; gstr_err="$("$GEN" "$copy_g_bstr" 2>&1 >/dev/null)" || rc_g5=$?
+assert_eq "2" "$rc_g5" "a non-integer pr is malformed, never a silent exit-0 corrupt row (D3/FR-016)"
+set_test "string-pr manifest is distinct from absent/empty (exit 2 != exit 0)"
+if [ "$rc_g5" -ne "$rc_g1" ]; then _pass; else _fail "type violation ($rc_g5) must differ from absent/empty ($rc_g1) (FR-011 vs FR-016)"; fi
+set_test "string-pr write leaves the map byte-for-byte unchanged (no partial write)"
+str_after="$(shasum "$copy_g_bstr/$PRSBADSTR_MOC" | awk '{print $1}')"
+assert_eq "$str_before" "$str_after" "fail-safe path must not write (FR-016)"
+set_test "string-pr error message names prs.json on stderr (not stdout)"
+assert_contains "$gstr_err" "prs.json" "actionable error must name the offending manifest (FR-016)"
+set_test "string-pr --check also exits 2 (read-only error path)"
+rc_g5c=0; "$GEN" --check "$PRSBADSTR_ROOT" >/dev/null 2>&1 || rc_g5c=$?
+assert_eq "2" "$rc_g5c" "--check on a type-violation manifest is exit 2, never exit 1 stale (FR-012/FR-016)"
+
+# type violation — a `pr` that is a NON-INTEGER number (117.5): also rejected, since
+# the schema requires an integer PR number. floor != value => malformed (exit 2).
+copy_g_bflt="$(fresh_copy "$PRSBADFLT_ROOT")"
+flt_before="$(shasum "$copy_g_bflt/$PRSBADFLT_MOC" | awk '{print $1}')"
+set_test "non-integer pr (117.5) -> write run exits 2 (type violation, FR-016)"
+rc_g6=0; "$GEN" "$copy_g_bflt" >/dev/null 2>&1 || rc_g6=$?
+assert_eq "2" "$rc_g6" "a fractional pr is malformed, never a silent exit-0 row (D3/FR-016)"
+set_test "non-integer-pr write leaves the map byte-for-byte unchanged (no partial write)"
+flt_after="$(shasum "$copy_g_bflt/$PRSBADFLT_MOC" | awk '{print $1}')"
+assert_eq "$flt_before" "$flt_after" "fail-safe path must not write (FR-016)"
+
 # ───────────────────────────────────────────────────────────────────────────
 section "(h) template-born block == inject-if-missing block (byte-identical)"
 # ───────────────────────────────────────────────────────────────────────────
@@ -318,5 +360,35 @@ if [ "${#i_plan}" -lt "${#i_contract}" ]; then _pass; else _fail "ordering: plan
 set_test "contracts/ precedes .process/ in BACKLINKS (fixed precedence)"
 i_proc="${bz_i%%.process/*}"
 if [ "${#i_contract}" -lt "${#i_proc}" ]; then _pass; else _fail "ordering: contracts/** must precede .process/** (FR-005)"; fi
+
+# ───────────────────────────────────────────────────────────────────────────
+section "(j) a symlinked SPEC-MOC.md is rejected (exit 2), never followed + rewritten"
+# ───────────────────────────────────────────────────────────────────────────
+# A non-regular-file target where a MOC is expected — here a SYMLINK to a regular
+# file — must fail safe (exit 2, FR-016) and must NOT be replaced by a regular file
+# (a naive `mv -f` over a followed symlink would silently clobber the link). The
+# symlink is constructed at runtime: copy the fixture, then point SPEC-MOC.md at its
+# committed regular-file target moc-target.md.
+copy_j="$(fresh_copy "$SYMLINK_ROOT")"
+ln -sf "moc-target.md" "$copy_j/$SYMLINK_MOC"
+set_test "the test set up SPEC-MOC.md as a symlink (precondition)"
+if [ -L "$copy_j/$SYMLINK_MOC" ]; then _pass; else _fail "fixture setup failed: SPEC-MOC.md is not a symlink"; fi
+set_test "write run over a symlinked-MOC spec -> exit 2 (non-regular target, FR-016)"
+rc_j=0; jerr="$("$GEN" "$copy_j" 2>&1 >/dev/null)" || rc_j=$?
+assert_eq "2" "$rc_j" "a symlinked SPEC-MOC.md must be rejected, not followed (FR-016)"
+set_test "SPEC-MOC.md is STILL a symlink after the failed run (not clobbered to a file)"
+if [ -L "$copy_j/$SYMLINK_MOC" ]; then _pass; else _fail "FR-016: the symlink was replaced by a regular file (mv -f followed the link)"; fi
+set_test "the symlink's target file is itself unchanged (no write-through)"
+# Resolve the link target relative to the spec dir and confirm it was not rewritten.
+tgt_before="$(shasum "$copy_j/$SYMLINK_TARGET" | awk '{print $1}')"
+assert_contains "$jerr" "SPEC-MOC.md" "error must name the offending target on stderr (FR-016)"
+set_test "the symlink target was not written through the link"
+# moc-target.md is version-marked but is NOT named SPEC-MOC.md, so discovery never
+# treats it as a map; its bytes must be identical to the committed fixture target.
+tgt_committed="$(shasum "$SYMLINK_ROOT/$SYMLINK_TARGET" | awk '{print $1}')"
+assert_eq "$tgt_committed" "$tgt_before" "FR-016: nothing was written through the symlink"
+set_test "symlinked-MOC --check also exits 2 (read-only error path)"
+rc_jc=0; "$GEN" --check "$copy_j" >/dev/null 2>&1 || rc_jc=$?
+assert_eq "2" "$rc_jc" "--check on a symlinked target is exit 2, never exit 1 stale (FR-012/FR-016)"
 
 test_summary

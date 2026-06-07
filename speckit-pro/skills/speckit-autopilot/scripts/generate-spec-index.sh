@@ -134,29 +134,43 @@ render_prs() {
     return 1
   fi
 
-  # Emit tab-separated "<slice>\t<pr>\t<merged_sha>" rows. A record missing a
-  # required field is the malformed case (fail safe via the caller's `|| err`).
+  # Emit tab-separated "<slice>\t<pr>\t<merged_sha>" rows. Each record must satisfy
+  # the schema (prs-manifest.schema.md): slice string, pr INTEGER, merged_sha string.
+  # A missing field OR a wrong type (e.g. "pr":"abc" or "pr":117.5) is the malformed
+  # case — jq raises error(), the `if !` turns it into the fail-safe via the caller's
+  # `|| err`. Presence alone is not enough: a string/float pr would survive a
+  # presence-only guard and then corrupt the printf %d below.
   local rows
   if ! rows="$(
     jq -r '
       .records[]
-      | if (has("slice") and has("pr") and has("merged_sha")) then
+      | if ((.slice | type) == "string")
+           and ((.pr | type) == "number") and (.pr == (.pr | floor))
+           and ((.merged_sha | type) == "string") then
           [ (.slice | tostring), (.pr | tostring), (.merged_sha | tostring) ] | @tsv
         else
-          error("record missing a required field")
+          error("record has a missing or wrong-typed field (slice/pr/merged_sha)")
         end
     ' "$manifest" 2>/dev/null
   )"; then
-    printf 'generate-spec-index.sh: malformed PRS manifest (record missing slice/pr/merged_sha): %s\n' "$manifest" >&2
+    printf 'generate-spec-index.sh: malformed PRS manifest (record missing/wrong-typed slice/pr/merged_sha): %s\n' "$manifest" >&2
     return 1
   fi
 
   [ -n "$rows" ] || return 0              # records:[] => empty-but-valid
 
   # Build sortable lines: <norm-slice>\t<zero-padded-pr>\t<slice>\t<pr>\t<sha>.
+  # The jq guard above already enforces an integer pr; this bash guard is
+  # belt-and-suspenders so the `printf %012d` can never hit an invalid number
+  # (defense in depth — a corrupt row must fail safe, never write).
   local sortable="" slice pr sha norm
   while IFS=$'\t' read -r slice pr sha; do
     [ -n "$slice" ] || continue
+    case "$pr" in
+      ''|*[!0-9]*)
+        printf 'generate-spec-index.sh: malformed PRS manifest (non-integer pr "%s"): %s\n' "$pr" "$manifest" >&2
+        return 1 ;;
+    esac
     norm="$(moc_normalize "$slice")"
     sortable+="$(printf '%s\t%012d\t%s\t%s\t%s\n' "$norm" "$pr" "$slice" "$pr" "$sha")"$'\n'
   done <<<"$rows"
@@ -409,10 +423,12 @@ main() {
     branch="$(basename "$d")"
     moc="$d/SPEC-MOC.md"
 
-    # A non-regular-file target where a MOC is expected (dir/symlink) is an error
-    # only when something named SPEC-MOC.md exists but is not a regular file. A
-    # spec dir with no SPEC-MOC.md at all is simply not a map (skipped).
-    if [ -e "$moc" ] && [ ! -f "$moc" ]; then
+    # A non-regular-file target where a MOC is expected is an error: a directory, a
+    # symlink (even one resolving to a regular file — a naive `mv -f` would clobber
+    # the link), or a broken symlink. `-e`/`-f` follow symlinks, so test `-L` FIRST
+    # (it does not follow) before the follow-through `-e && ! -f` check. A spec dir
+    # with no SPEC-MOC.md at all is simply not a map (skipped). [FR-016]
+    if [ -L "$moc" ] || { [ -e "$moc" ] && [ ! -f "$moc" ]; }; then
       err "SPEC-MOC.md is not a regular file: $moc"
     fi
     [ -f "$moc" ] || continue
