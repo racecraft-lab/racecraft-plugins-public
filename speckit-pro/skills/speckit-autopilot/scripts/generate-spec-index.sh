@@ -67,6 +67,17 @@ err() {
   exit 2
 }
 
+# die2 — silent exit-2 fail-safe: same trap-disarm as err() but prints NOTHING.
+# Used at call sites where the callee (e.g. render_prs) has ALREADY emitted the one
+# precise, actionable stderr line; a second line here would muddy the single message
+# a consumer (speckit-status) is told to surface. The `|| die2` is still load-bearing
+# — `local x="$(…)"` / a bare assignment masks the failure under set -e, so the
+# explicit propagation is required to reach exit 2 rather than wrongly continuing.
+die2() {
+  trap - ERR EXIT
+  exit 2
+}
+
 # ── Argument parsing (T007): [--check] [REPO_ROOT], order-tolerant for the flag.
 CHECK_MODE=0
 REPO_ROOT=""
@@ -172,7 +183,10 @@ render_prs() {
         return 1 ;;
     esac
     norm="$(moc_normalize "$slice")"
-    sortable+="$(printf '%s\t%012d\t%s\t%s\t%s\n' "$norm" "$pr" "$slice" "$pr" "$sha")"$'\n'
+    # One newline per record from the $'\n' append; the printf format carries no
+    # trailing \n (a $()-wrapped printf newline would be stripped anyway). Output is
+    # byte-identical to the prior form — the $() stripped one of the two newlines.
+    sortable+="$(printf '%s\t%012d\t%s\t%s\t%s' "$norm" "$pr" "$slice" "$pr" "$sha")"$'\n'
   done <<<"$rows"
 
   # Sort by normalized slice (col1) asc then padded pr (col2) asc, then render.
@@ -317,20 +331,23 @@ rebuild_map() {
   st_backlinks="$(_zone_state "$bs" "$be")" || err "unbalanced GENERATED:BACKLINKS marker pair in: $moc"
 
   # Render the body of each present zone up front. render_prs returns non-zero on a
-  # malformed manifest; the `|| err` turns that into the exit-2 fail-safe directly in
-  # this function (so the exit propagates out of the command substitution, never
-  # swallowed). Init to empty so an absent zone's var is defined under set -u.
+  # malformed manifest, having already printed the one precise stderr line naming the
+  # offending prs.json; the `|| die2` propagates that into the exit-2 fail-safe
+  # WITHOUT printing a second, less-precise line. The `||` is load-bearing — a bare
+  # assignment masks the failure under set -e. Init to empty so an absent zone's var
+  # is defined under set -u.
   local idx_body="" prs_body="" bl_body=""
   if [ "$st_index" = present ];     then idx_body="$(render_index "$spec_dir")"; fi
-  if [ "$st_prs" = present ];       then prs_body="$(render_prs "$spec_dir")" || err "fail-safe on PRS manifest: $moc"; fi
+  if [ "$st_prs" = present ];       then prs_body="$(render_prs "$spec_dir")" || die2; fi
   if [ "$st_backlinks" = present ]; then bl_body="$(render_backlinks "$spec_dir")"; fi
 
   # Inject-if-missing: ONLY when all three pairs are absent. A map missing exactly
   # one pair (skip-one) keeps that zone absent — never injected (FR-009).
   if [ "$st_index" = absent ] && [ "$st_prs" = absent ] && [ "$st_backlinks" = absent ]; then
     # For an all-absent in-scope map, the PRS body was not rendered above (st_prs is
-    # absent), so render it now — the injected zones must be filled too.
-    prs_body="$(render_prs "$spec_dir")" || err "fail-safe on PRS manifest: $moc"
+    # absent), so render it now — the injected zones must be filled too. `|| die2`:
+    # render_prs already emitted the precise stderr line; propagate to exit 2 silently.
+    prs_body="$(render_prs "$spec_dir")" || die2
     bl_body="$(render_backlinks "$spec_dir")"
     # Append the three-zone block at the canonical anchor (end of body) with exactly
     # one blank line before INDEX_START and a single trailing newline.

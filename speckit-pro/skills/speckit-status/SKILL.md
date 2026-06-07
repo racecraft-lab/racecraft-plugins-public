@@ -161,8 +161,13 @@ generator in **read-only `--check` mode** — it regenerates the zones in
 memory, diffs them against the committed maps, and **writes nothing**:
 
 ```text
-Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/generate-spec-index.sh --check")
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/generate-spec-index.sh --check \"$PWD\"")
 ```
+
+Pass `"$PWD"` (the project root) explicitly. Without it the generator infers
+its repo root from the script's own location, which in a cached-plugin install
+is the plugin cache — not the user's project — so the freshness check would
+scan the wrong tree.
 
 Surface a single freshness line in the dashboard from the exit code:
 

@@ -129,8 +129,13 @@ reference it by its plugin-root-relative path rather than reimplementing the
 check:
 
 ```text
-skills/speckit-autopilot/scripts/generate-spec-index.sh --check
+skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"
 ```
+
+Pass `"$PWD"` (the project root) explicitly. Without it the generator infers its
+repo root from the script's own location, which in a cached-plugin install is the
+plugin cache — not the user's project — so the freshness check would scan the
+wrong tree.
 
 Surface one freshness line in the dashboard from the exit code:
 

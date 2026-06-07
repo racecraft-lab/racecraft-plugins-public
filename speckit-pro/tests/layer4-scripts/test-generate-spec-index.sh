@@ -300,6 +300,12 @@ str_after="$(shasum "$copy_g_bstr/$PRSBADSTR_MOC" | awk '{print $1}')"
 assert_eq "$str_before" "$str_after" "fail-safe path must not write (FR-016)"
 set_test "string-pr error message names prs.json on stderr (not stdout)"
 assert_contains "$gstr_err" "prs.json" "actionable error must name the offending manifest (FR-016)"
+# A malformed manifest must surface EXACTLY ONE stderr line (the precise one from
+# render_prs naming prs.json) — never a duplicate from a second `|| err` at the call
+# site. speckit-status surfaces "the generator's stderr line" (singular).
+set_test "string-pr emits exactly ONE stderr line (no duplicate fail-safe message)"
+gstr_lines="$("$GEN" "$copy_g_bstr" 2>&1 >/dev/null | grep -c . || true)"
+assert_eq "1" "$gstr_lines" "malformed manifest must surface a single, precise stderr line"
 set_test "string-pr --check also exits 2 (read-only error path)"
 rc_g5c=0; "$GEN" --check "$PRSBADSTR_ROOT" >/dev/null 2>&1 || rc_g5c=$?
 assert_eq "2" "$rc_g5c" "--check on a type-violation manifest is exit 2, never exit 1 stale (FR-012/FR-016)"
