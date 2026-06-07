@@ -35,8 +35,8 @@ to that doc's Design Tree.
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + data-model + contracts/estimate-spec-size.md + quickstart. Constitution 6/6 PASS. Budget ~200 LOC, 1 surface. G3 pass. 6 surfaces + Codex parity captured. |
 | Checklist | `/speckit-checklist` | ✅ Complete | data-integrity (28 items, 1 gap→bad-input status pinned ok) + error-handling (20 items, 2 gaps→caller-side unavailable/exit-code invariant + prd US1 AS5). 0 gaps. No consensus. |
 | Tasks | `/speckit-tasks` | ✅ Complete | tasks.md: 23 tasks, FR 17/17, TDD T004 (L4 fixture RED)→T005 (estimator GREEN), 8 [P], Codex mirrors paired (T009/T013/T015). G5 pass. Reviewability tasks-mode = transition_exception/pass (projection over-counts SDD artifacts; authoritative = pre-PR diff gate). T021–T023 (L2/L3/L8) are developer-local follow-ups, not autopilot-run. |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | Cross-artifact + drift check vs design concept's 10 decisions. |
-| Implement | `/speckit-implement` | ⏳ Pending | Estimator + shared doc + prd/grill-me edits + Codex mirrors. |
+| Analyze | `/speckit-analyze` | ✅ Complete | 3 findings (0 CRIT, 0 HIGH, 1 MED, 2 LOW): F1 requirements.md stale note + F2 data-model.md new_vs_modify→optional fixed; F3 deferred (non-defect). SC→task + Codex parity complete; no drift from 10 decisions; advisory-only holds. G6 pass. 📊 Confidence: 0.96 |
+| Implement | `/speckit-implement` | 🔄 In Progress | Estimator + shared doc + prd/grill-me edits + Codex mirrors. |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 

@@ -15,7 +15,7 @@ reads roadmap markdown itself.
 | `user_stories` | integer ≥ 0 | yes | Number of user stories in the spec/catalog entry. |
 | `files_or_surfaces` | integer ≥ 0 | yes | Number of files/surfaces the spec touches. |
 | `functional_requirements` | integer ≥ 0 | yes | Number of functional requirements. |
-| `new_vs_modify` | enum `new` \| `modify` | yes | Whether the spec is net-new or modifies existing code. |
+| `new_vs_modify` | enum `new` \| `modify` | no (default `new`) | Whether the spec is net-new or modifies existing code; defaults to `new` when absent (matches contract §Inputs). |
 | `spike` | boolean | no (default false) | Marks the slice as a SPIDR "Spike" (research-only). FR-017. |
 
 **Validation / robustness rules (FR-016):**

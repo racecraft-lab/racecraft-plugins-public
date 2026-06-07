@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,11 +31,13 @@
 
 ## Notes
 
-- One clarification marker remains in spec.md by design: SPIDR "Spike" handling in the
-  estimator (whether a research-only near-zero-LOC slice is flagged as a distinct slice
-  *type* exempt from the LOC threshold). This is a genuine WHAT-level ambiguity with no
-  reasonable default, explicitly seeded for the autopilot Clarify phase (estimator-semantics
-  session). It is intentionally left for `/speckit-clarify`, not resolved here.
+- RESOLVED: the spike clarification marker that originally remained in spec.md (SPIDR
+  "Spike" handling — whether a research-only near-zero-LOC slice is flagged as a distinct
+  slice *type* exempt from the LOC threshold) was resolved by the autopilot Clarify phase
+  (estimator-semantics session) into FR-017 + the spike Edge Case: a spike is a distinct,
+  timebox-sized slice type, the estimator skips the LOC-threshold comparison and returns
+  `{estimated_loc:0, suggested_slices:1, status:ok}`, and `status: ok` means "LOC sizing is
+  not applicable", not "trivially small". No `[NEEDS CLARIFICATION]` marker remains in spec.md.
 - All 10 design decisions locked during the pre-spec interview (Q1–Q10) are reflected in the
   spec without any clarification marker; the remaining Open Questions that are Plan-phase
   (exact paths) or implementation details (input collection) are captured in Assumptions,
