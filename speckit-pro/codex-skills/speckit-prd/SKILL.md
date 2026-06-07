@@ -7,8 +7,9 @@ description: >
   "write a PRD", "$speckit-prd", "create a product requirements
   document", "draft a PRD and roadmap", "shape this idea into a PRD",
   "turn this brief into a PRD", "plan a product", "decompose an idea
-  into a SPEC catalog", "before I write specs". Runs a one-question-at-
-  a-time interview with a recommended answer first, then writes
+  into a SPEC catalog", "before I write specs", "right-size the
+  catalog". Runs a one-question-at-a-time interview with a recommended
+  answer first, then writes
   docs/prd-NAME.md and docs/ai/specs/NAME-technical-roadmap.md. Front
   door of the chain: PRD then roadmap then scaffold-spec then autopilot.
   NOT per-spec scoping (use grill-me), NOT worktree prep from an existing

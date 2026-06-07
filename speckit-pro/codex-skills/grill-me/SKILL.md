@@ -6,8 +6,9 @@ description: >
   the user says: "grill me", "$grill-me", "grill me on this",
   "interview me about", "walk the design tree", "relentless
   interviewer", "produce a Design Concept doc", "Design Concept
-  document for", "pre-spec scoping for". Accepts .md, .txt, or a
-  free-text topic as input.
+  document for", "pre-spec scoping for", "slice-sizing", "is this spec
+  too big to split", "recommend a vertical-slice split". Accepts .md,
+  .txt, or a free-text topic as input.
 ---
 
 # Grill Me — Iterative Project Scoping Interview (Codex)
