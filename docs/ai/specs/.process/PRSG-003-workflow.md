@@ -452,6 +452,51 @@ code) → REFACTOR → VERIFY.
 
 ---
 
+## Retrospective (#32 — FINAL)
+
+**Outcome.** PRSG-003 shipped as PR #121: a deterministic spec-MOC navigation
+generator (`generate-spec-index.sh`, ~518 LOC bash+jq) plus read-only status
+wiring, autopilot phase-gate regeneration, Codex mirrors, and a live dogfood over
+the prsg-002 + prsg-003 maps. All 7 phases passed their gates; final suite
+1708/1708 + integration 210/210; lint clean.
+
+**What worked.** TDD RED→GREEN held end-to-end (the generator was built to satisfy
+failing tests). Empirical verification after every subagent — rather than trusting
+self-reports — repeatedly paid off: it caught the GREEN gap (BACKLINKS ordering was
+lexicographic, not bucket-precedence), the staleness the UAT-runbook addition
+introduced, and the suite-wiring gap below. The adversarial code review found two
+real defects that the test suite and gates had passed.
+
+**What surprised us / lessons.**
+1. **The reviewability "ratified exception" phrase auto-clears the diff-mode gate,
+   not just the tasks-mode gate.** The diff-mode gate returns `pass: true` because
+   it detects the phrase in `tasks.md` (which is in the diff) — it does not make an
+   independent size judgment. The real ship-vs-split decision had to be made
+   manually and documented honestly (composition: ~700 LOC code / ~1050 tests+
+   fixtures / ~2850 SDD docs), anchored to the #116 precedent. *Tooling follow-up
+   worth filing:* the gate conflates the two phases — a tasks-phase transition
+   exception probably should NOT silently satisfy the pre-PR diff-mode gate.
+2. **A new test can be created but never wired into the suite.** `test-generate-
+   spec-index.sh` (49 assertions) ran green standalone but was absent from
+   `run-all.sh`'s explicit layer-4 list — T022 only wired the L1 fixture. The
+   tell was a suite count that didn't move (1659 → still 1659) after adding 13
+   assertions. Lesson: when adding a test, wire it in AND confirm the aggregate
+   count increases.
+3. **Code review caught what tests + gates missed:** a non-integer `pr` in
+   `prs.json` produced a corrupt row and exit 0 (a `printf '%012d'` failure outside
+   the ERR trap), and a symlinked `SPEC-MOC.md` was followed and clobbered. Both
+   are exactly the silent-failure modes the spec's own fail-safe FRs exist to
+   prevent. Fixed test-first.
+4. **Adding the UAT runbook made the dogfooded map stale** — the generator
+   correctly flagged it, validating the staleness detection. A phase-gate regen is
+   required after any artifact addition under a spec's tree.
+
+**Follow-ups (all with landing places, none silent):** PRSG-004 (roadmap INDEX live
+population), PRSG-009 (live PR#/SHA writing), PRSG-011 (legacy backfill); plus the
+gate-conflation tooling note in lesson #1.
+
+---
+
 ## Post-Implementation Results
 
 ### Doctor / Extension Health (#20)
