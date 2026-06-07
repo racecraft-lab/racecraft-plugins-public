@@ -232,6 +232,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-install-curated-set.sh"
     "$TESTS_DIR/layer4-scripts/test-moc-id-normalize.sh"
     "$TESTS_DIR/layer4-scripts/test-moc-lint-exit-codes.sh"
+    "$TESTS_DIR/layer4-scripts/test-generate-spec-index.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then
