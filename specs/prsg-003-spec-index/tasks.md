@@ -125,7 +125,7 @@ each zone is rebuilt between its marker pair, content is canonically ordered, an
 second run with no source change yields a zero-byte diff (SC-001/SC-006/SC-009).
 Fully testable with no status/autopilot wiring.
 
-### Tests for User Story 1 (TDD — write FIRST, MUST FAIL before T009) ⚠️
+### Tests for User Story 1 (TDD — write FIRST, MUST FAIL until T014 GREEN) ⚠️
 
 - [ ] T005 [P] [US1] Write the Layer 1 determinism fixture at
   `speckit-pro/tests/layer1-structural/validate-spec-index-determinism.sh`
