@@ -14,18 +14,18 @@ Auto-generated from feature plans on archival. Last updated: 2026-06-05
 ```text
 .gitattributes                      # repo-root collapse rule: **/.process/** linguist-generated=true
 .specify/memory/                    # distilled project memory (spec.md, plan.md, changelog.md, constitution.md)
-speckit-pro/
+speckit-pro/                        # the shipped plugin — copied verbatim into every consumer's install
 ├── skills/                         # Claude skills (speckit-scaffold-spec, speckit-coach, speckit-autopilot, ...)
-├── codex-skills/                   # Codex mirrors of Claude skills (kept in parity)
-└── tests/                          # 5-layer shell test suite (run-all.sh)
+└── codex-skills/                   # Codex mirrors of Claude skills (kept in parity)
+tests/speckit-pro/                  # 5-layer shell test suite (run-all.sh) — sibling of the plugin, never shipped
 docs/ai/specs/                      # roadmaps + design concepts; scaffold exhaust → docs/ai/specs/.process/
 specs/<NNN>/                        # per-feature spec dirs; per-feature exhaust → specs/<NNN>/.process/
 ```
 
 ## Commands
 
-- `bash speckit-pro/tests/run-all.sh` — default deterministic layers (1, 4, 5).
-- `bash speckit-pro/tests/run-all.sh --layer 1` — structural validation only.
+- `bash tests/speckit-pro/run-all.sh` — default deterministic layers (1, 4, 5).
+- `bash tests/speckit-pro/run-all.sh --layer 1` — structural validation only.
 - `.specify/scripts/bash/check-prerequisites.sh --json --paths-only` — resolve repo paths.
 
 ## Code Style

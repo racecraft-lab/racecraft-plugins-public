@@ -1,0 +1,312 @@
+#!/usr/bin/env bash
+# validate-codex-skills.sh — Structural validation for Codex skill directories
+set -euo pipefail
+
+source "$(dirname "$0")/../lib/assertions.sh"
+PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
+
+CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
+# Canonical skill list — keep in sync with the case block in the
+# "corresponding source artifact exists" test below.
+SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install speckit-install speckit-upgrade grill-me speckit-prd)
+COLLISION_GUARD_SKILLS=(speckit-autopilot speckit-coach grill-me speckit-prd)
+
+# Claude Code-only frontmatter keys that must NOT appear in Codex skills
+CC_ONLY_KEYS=(user-invocable disable-model-invocation license argument-hint)
+
+section "Codex skill-selection collision guards"
+
+for skill in "${COLLISION_GUARD_SKILLS[@]}"; do
+  SHARED_SKILL_FILE="$PLUGIN_ROOT/skills/$skill/SKILL.md"
+  CODEX_SKILL_FILE="$CODEX_SKILLS_DIR/$skill/SKILL.md"
+
+  set_test "${skill}: shared and Codex variants both exist"
+  if [ -f "$SHARED_SKILL_FILE" ] && [ -f "$CODEX_SKILL_FILE" ]; then
+    _pass
+  else
+    _fail "expected both $SHARED_SKILL_FILE and $CODEX_SKILL_FILE"
+    continue
+  fi
+
+  shared_content=$(cat "$SHARED_SKILL_FILE")
+
+  set_test "${skill}: shared variant redirects when selected by Codex"
+  assert_contains "$shared_content" "Codex Skill-Selection Guard"
+
+  set_test "${skill}: shared guard names the Codex variant path"
+  assert_contains "$shared_content" "../../codex-skills/$skill/SKILL.md"
+
+  set_test "${skill}: shared guard forbids Claude instructions in Codex"
+  assert_contains "$shared_content" "Do not follow the Claude-oriented instructions below in Codex"
+done
+
+for skill in "${SKILLS[@]}"; do
+  SKILL_DIR="$CODEX_SKILLS_DIR/$skill"
+  SKILL_FILE="$SKILL_DIR/SKILL.md"
+
+  section "codex-skills/${skill}/SKILL.md"
+
+  set_test "${skill}: SKILL.md exists"
+  assert_file_exists "$SKILL_FILE"
+
+  if [ ! -f "$SKILL_FILE" ]; then
+    continue
+  fi
+
+  first_line=$(head -n1 "$SKILL_FILE")
+
+  set_test "${skill}: YAML frontmatter present (starts with ---)"
+  assert_eq "---" "$first_line" "first line must be ---"
+
+  set_test "${skill}: has closing ---"
+  fence_count=$(grep -c '^---$' "$SKILL_FILE") || fence_count=0
+  if [ "$fence_count" -ge 2 ]; then
+    _pass
+  else
+    _fail "expected at least 2 '---' lines, found $fence_count"
+  fi
+
+  # Extract frontmatter (between first and second ---)
+  frontmatter=$(awk '/^---$/{n++; if(n==1){next} if(n==2){exit}} n==1{print}' "$SKILL_FILE")
+
+  set_test "${skill}: has name: field"
+  assert_contains "$frontmatter" "name:"
+
+  set_test "${skill}: has description: field"
+  assert_contains "$frontmatter" "description:"
+
+  set_test "${skill}: no Claude Code-only frontmatter keys"
+  bad_keys=""
+  for key in "${CC_ONLY_KEYS[@]}"; do
+    if echo "$frontmatter" | grep -qE "^${key}:"; then
+      bad_keys="$bad_keys $key"
+    fi
+  done
+  if [ -z "$bad_keys" ]; then
+    _pass
+  else
+    _fail "Claude Code-only keys found:$bad_keys"
+  fi
+
+  set_test "${skill}: agents/openai.yaml sidecar exists"
+  assert_file_exists "$SKILL_DIR/agents/openai.yaml"
+
+  if [ "$skill" = "speckit-scaffold-spec" ]; then
+    set_test "speckit-scaffold-spec: Codex picker metadata uses scaffold naming"
+    sidecar_content=""
+    [ -f "$SKILL_DIR/agents/openai.yaml" ] && sidecar_content=$(cat "$SKILL_DIR/agents/openai.yaml")
+    if [[ "$sidecar_content" == *'display_name: "SpecKit Scaffold Spec"'* \
+      && "$sidecar_content" == *'default_prompt: "Scaffold a SPEC-ID from the technical roadmap for SpecKit autopilot"'* \
+      && "$sidecar_content" != *'SpecKit Setup'* \
+      && "$sidecar_content" != *'Set up a SPEC-ID'* ]]; then
+      _pass
+    else
+      _fail "expected scaffold naming in codex-skills/speckit-scaffold-spec/agents/openai.yaml"
+    fi
+
+    set_test "speckit-scaffold-spec: Codex skill heading uses scaffold naming"
+    if grep -q '^# SpecKit Scaffold Spec$' "$SKILL_FILE" \
+      && ! grep -q '^# SpecKit Setup$' "$SKILL_FILE"; then
+      _pass
+    else
+      _fail "expected '# SpecKit Scaffold Spec' heading in codex-skills/speckit-scaffold-spec/SKILL.md"
+    fi
+  fi
+
+  set_test "${skill}: body word count between 500 and 8000"
+  body=$(awk 'BEGIN{n=0} /^---$/{n++; if(n==2){found=1; next}} found{print}' "$SKILL_FILE")
+  word_count=$(echo "$body" | wc -w | tr -d ' ')
+  if [ "$word_count" -ge 500 ] && [ "$word_count" -le 8000 ]; then
+    _pass
+  else
+    _fail "body is $word_count words (need 500-8000)"
+  fi
+
+  if [ "$skill" = "speckit-autopilot" ]; then
+    runtime_doc="$body"
+    for ref_file in \
+      "$SKILL_DIR/references/phase-execution-codex.md" \
+      "$SKILL_DIR/references/post-implementation-codex.md"; do
+      if [ -f "$ref_file" ]; then
+        runtime_doc="${runtime_doc}
+$(cat "$ref_file")"
+      fi
+    done
+
+    set_test "speckit-autopilot: requires update_plan as the progress contract"
+    assert_contains "$runtime_doc" "update_plan"
+
+    set_test "speckit-autopilot: requires durable autopilot-state.json persistence"
+    assert_contains "$runtime_doc" "autopilot-state.json"
+
+    set_test "speckit-autopilot: names Codex-native delegation tools"
+    if [[ "$runtime_doc" == *"spawn_agent"* && "$runtime_doc" == *"wait_agent"* ]]; then
+      _pass
+    else
+      _fail "expected both spawn_agent and wait_agent in the Codex autopilot skill"
+    fi
+
+    set_test "speckit-autopilot: names real Codex follow-up tools"
+    if [[ "$runtime_doc" == *"followup_task"* \
+      && "$runtime_doc" == *"send_message"* \
+      && "$runtime_doc" != *"send_input"* ]]; then
+      _pass
+    else
+      _fail "expected followup_task/send_message and no obsolete send_input reference"
+    fi
+
+    set_test "speckit-autopilot: validates a single in_progress item before phase execution"
+    assert_contains "$body" 'Exactly one plan item is `in_progress`'
+
+    set_test "speckit-autopilot: requires all canonical phase families before execution"
+    if [[ "$runtime_doc" == *"phase family coverage is mandatory"* \
+      && "$runtime_doc" == *"Phase 7: Implement - Pending task decomposition"* \
+      && "$runtime_doc" == *"Post: Doctor Extension Check"* \
+      && "$runtime_doc" == *"Post: Retrospective"* ]]; then
+      _pass
+    else
+      _fail "expected all-phase coverage, Phase 7 placeholder, and the canonical Post item list (Doctor Extension Check → Retrospective) in the Codex autopilot skill"
+    fi
+
+    set_test "speckit-autopilot: documents canonical PHASES order"
+    assert_contains "$runtime_doc" 'PHASES = [specify, clarify, plan, checklist, tasks, analyze, implement]'
+
+    set_test "speckit-autopilot: prevents from-phase from dropping later phases"
+    assert_contains "$runtime_doc" '`--from-phase` changes only the starting index'
+
+    set_test "speckit-autopilot: requires concrete Phase 7 tasks after G5"
+    if [[ "$runtime_doc" == *"After the Tasks phase and G5 pass"* \
+      && "$runtime_doc" == *"the placeholder no longer exists"* \
+      && "$runtime_doc" == *"each concrete Phase 7 item names task IDs"* ]]; then
+      _pass
+    else
+      _fail "expected G5 Phase 7 placeholder replacement guardrails"
+    fi
+
+    set_test "speckit-autopilot: resumes into Post before reporting complete"
+    if [[ "$runtime_doc" == *"all seven SDD phases are complete"* \
+      && "$runtime_doc" == *"items are missing, pending, or in progress"* \
+      && "$runtime_doc" == *"execute Step 3"* ]]; then
+      _pass
+    else
+      _fail "expected all-phases-complete resume to continue into Post"
+    fi
+
+    set_test "speckit-autopilot: blocks final answers while Post items remain incomplete"
+    if [[ "$runtime_doc" == *"Pre-final completion audit"* \
+      && "$runtime_doc" == *"MUST NOT send a final response"* \
+      && "$runtime_doc" == *"any Post item is pending, in_progress, or missing"* \
+      && "$runtime_doc" == *"Post: Retrospective"* ]]; then
+      _pass
+    else
+      _fail "expected a pre-final guard that prevents stopping after implementation while post items remain incomplete"
+    fi
+
+    set_test "speckit-autopilot: documents skill-local agents/openai.yaml metadata"
+    assert_contains "$body" 'agents/openai.yaml'
+
+    set_test "speckit-autopilot: validates installed Codex subagent paths"
+    if [[ "$body" == *".codex/agents/"* && "$body" == *"~/.codex/agents/"* ]]; then
+      _pass
+    else
+      _fail "expected both project and user Codex subagent paths in the autopilot skill"
+    fi
+
+    set_test "speckit-autopilot: fails closed to the install skill when subagents are missing"
+    assert_contains "$body" '$install'
+
+    set_test "speckit-autopilot: documents the optional Spark helper"
+    assert_contains "$body" 'autopilot-fast-helper'
+
+    set_test "speckit-autopilot: keeps the Spark helper advisory and parent-only"
+    if [[ "$body" == *"Only the parent orchestrator may call this helper"* && "$body" == *"latency optimization, not a dependency"* ]]; then
+      _pass
+    else
+      _fail "expected parent-only and optional guardrails for autopilot-fast-helper"
+    fi
+
+    set_test "speckit-autopilot: does not bundle skill-local TOML subagents"
+    bundled_count=$(find "$SKILL_DIR/agents" -maxdepth 1 -type f -name '*.toml' | wc -l | tr -d ' ')
+    assert_eq "0" "$bundled_count" "expected no bundled custom-agent templates in speckit-autopilot/agents"
+
+    set_test "speckit-autopilot: excludes Claude-only runtime primitives"
+    if echo "$runtime_doc" | grep -qE 'TaskCreate|TaskUpdate|Agent\(|Bash\(|Opus-class|Opus 4\.6|/model opus|/effort max|/speckit[.:]|run /<command>|general-purpose agent'; then
+      _fail "found Claude-only primitive or runtime guidance in Codex autopilot skill"
+    else
+      _pass
+    fi
+
+    set_test "speckit-autopilot: Codex-specific references exist"
+    assert_file_exists "$SKILL_DIR/references/phase-execution-codex.md"
+
+    set_test "speckit-autopilot: Codex post-implementation reference exists"
+    assert_file_exists "$SKILL_DIR/references/post-implementation-codex.md"
+  fi
+
+  set_test "${skill}: agents/openai.yaml allow_implicit_invocation policy"
+  if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
+    yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
+    case "$skill" in
+      speckit-scaffold-spec|speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me|speckit-prd)
+        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
+          _pass
+        else
+          _fail "mutation-heavy skill must have allow_implicit_invocation: false"
+        fi
+        ;;
+      speckit-coach|speckit-status)
+        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: true'; then
+          _pass
+        else
+          _fail "read-only skill must have allow_implicit_invocation: true"
+        fi
+        ;;
+      *)
+        _fail "no implicit-invocation policy expectation defined for '$skill'; update validate-codex-skills.sh"
+        ;;
+    esac
+  else
+    _fail "agents/openai.yaml not found; skipping policy check"
+  fi
+
+  # Map each Codex skill to its Claude Code source artifact.
+  # When adding a new skill to the SKILLS array above, add a case branch here.
+  set_test "${skill}: corresponding source artifact exists"
+  case "$skill" in
+    speckit-autopilot|speckit-coach|grill-me)
+      if [ -f "$PLUGIN_ROOT/skills/$skill/SKILL.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude skill not found at skills/$skill/SKILL.md"
+      fi
+      ;;
+    speckit-scaffold-spec|speckit-status|speckit-resolve-pr|speckit-install|speckit-upgrade|speckit-prd)
+      if [ -f "$PLUGIN_ROOT/skills/$skill/SKILL.md" ]; then
+        _pass
+      else
+        _fail "corresponding Claude skill not found at skills/$skill/SKILL.md"
+      fi
+      ;;
+    install)
+      _pass
+      ;;
+    *)
+      _fail "no corresponding source artifact mapping defined for skill '$skill'; update validate-codex-skills.sh"
+      ;;
+  esac
+
+  # speckit-scaffold-spec hard-codes a reference to the shared workflow template —
+  # verify the file it points to actually exists.
+  if [ "$skill" = "speckit-scaffold-spec" ]; then
+    set_test "speckit-scaffold-spec: referenced workflow template exists (skills/speckit-coach/templates/workflow-template.md)"
+    assert_file_exists "$PLUGIN_ROOT/skills/speckit-coach/templates/workflow-template.md"
+  fi
+
+  if [ "$skill" = "install" ]; then
+    set_test "install: installer script exists"
+    assert_file_exists "$SKILL_DIR/scripts/install-codex-agents.sh"
+  fi
+
+done
+
+test_summary
