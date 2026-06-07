@@ -34,7 +34,7 @@ there is an explicit revision note.
 | Specify | `/speckit-specify` | ✅ Complete | 2 stories, 20 FR, 10 SC; 0 markers; G1 pass; branch-aware (before_specify hook skipped) |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions + 1 consensus; SC-002/FR-008/FR-017/SC-010 tightened; roadmap L8→L1 bar settled; 0 markers; G2 pass |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + research.md + data-model.md + 3 contracts + quickstart.md; 4 deferred decisions finalized; bash+jq only, reuses moc-id-normalize.sh; G3 pass |
-| Checklist | `/speckit-checklist` | ⏳ Pending | data-integrity + error-handling |
+| Checklist | `/speckit-checklist` | ✅ Complete | data-integrity (5 gaps→0, +SC-011) + error-handling (12 gaps→0, +FR-021/FR-022/SC-012, atomic writes); FR-022 fork resolved fail-safe via consensus; G4 pass |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |

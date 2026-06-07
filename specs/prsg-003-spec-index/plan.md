@@ -41,7 +41,12 @@ lints are bash-3.2-safe) + `jq` for the PRS manifest parse. No new dependency
 (`moc_normalize` / `moc_id_match`) for every ID join; reuses
 `speckit-pro/tests/lib/moc-frontmatter.sh` (`moc_is_gated`,
 `moc_frontmatter_field`) for version-gating and frontmatter reads. No second
-normalizer is introduced (FR-004).
+normalizer is introduced (FR-004). Reusing this join inherits its opaque
+whole-segment number-suffix comparison — the number-suffix segment is compared
+byte-for-byte as a whole (e.g. `013a1` is never truncated to `013a`), with no
+`[0-9]+[a-z]*` sub-parse — so cross-spec ID joins cannot silently collide
+distinct slices. This correctness property is owned by the reused library (and its
+own Layer-4 test), not re-derived here.
 
 **Storage**: Committed repo files only. The generator is a pure function of:
 (a) each spec's `SPEC-MOC.md`, (b) the files under each in-scope `specs/<branch>/**`
@@ -69,9 +74,12 @@ performance target beyond "finishes promptly and offline."
 
 **Constraints**: Deterministic — identical committed inputs MUST produce
 byte-identical output, and a re-run with no source change MUST produce a
-zero-byte diff (FR-003, SC-001, SC-009). `--check` writes nothing, ever, even on
-error paths (FR-012). The PRS zone never contacts the network (FR-010). The
-roadmap INDEX path stays dormant (FR-019). Stay within ~350 production LOC.
+zero-byte diff (FR-003, SC-001, SC-009). The enumeration-independence required by
+SC-009 is achieved concretely by sorting every discovered file/spec list under
+`LC_ALL=C sort` before rendering, so `find`/glob enumeration order can never leak
+into the output. `--check` writes nothing, ever, even on error paths (FR-012). The
+PRS zone never contacts the network (FR-010). The roadmap INDEX path stays dormant
+(FR-019). Stay within ~350 production LOC.
 
 **Scale/Scope**: Repository-wide over version-marked specs (currently `prsg-002`
 and, after its later-phase MOC artifact lands, `prsg-003`). Three zones; two
@@ -152,8 +160,14 @@ per-spec committed JSON manifest at `specs/<branch>/.process/prs.json`. Shape
 ```
 
 Parsed with `jq`. **Absent file OR `records: []` → render an empty-but-valid
-(link-free) PRS zone, not an error** (FR-011). Records render in a fixed order:
-by normalized `slice` ID ascending (via `moc_normalize`), then by `pr` ascending.
+(link-free) PRS zone, not an error** (FR-011). A manifest that is present but
+malformed/unreadable is the distinct error case: fail safe with exit 2 and no
+partial write (FR-016), never conflated with the absent/empty path. An unknown
+`schemaVersion` is handled conservatively — render the records the renderer
+understands, and fall back to the FR-016 fail-safe only when the structure is
+unparseable (full rule in `contracts/prs-manifest.schema.md`). Records render in a
+fixed order: by normalized `slice` ID ascending (via `moc_normalize`), then by
+`pr` ascending.
 The PRS rows render as plain text (slice · PR#`117` · sha`abc1234`) — **not** as
 `[](...)` markdown links — so they introduce no link the stale-index lint must
 resolve, and so the dormant-vs-empty zone stays lint-clean. *Who writes* this
@@ -183,6 +197,40 @@ generated zones are not a shipped feature). When the rebuild rides **alongside**
 other staged phase work, it is folded into that phase's existing checkpoint
 commit and no separate commit is made (FR-014 / SC-005). This wording is a fixed
 constant in the autopilot phase-execution reference, not computed per-run.
+
+### Error-handling discipline (the 3-way enum, internal-error trap, atomic write)
+
+These pin the *mechanism* behind the error-result requirements (FR-015/FR-016/
+FR-021/FR-022, SC-012). The authoritative exit-code/result contract is
+`contracts/generator-cli.md` (the 3-way enum `0` current / `1` stale / `2` error;
+`--check` writes nothing on any path incl. error; `set -E` + ERR trap mapping an
+unexpected `set -e` failure to exit 2 on stderr, same pattern as the PRSG-002
+lints). This block adds only the points not already nailed there:
+
+**D5 — Internal-error trap, never conflated with stale (FR-021/FR-015).** The
+generator follows the PRSG-002 lint's trap shape exactly (the grounding precedent
+is `speckit-pro/tests/layer1-structural/validate-moc-orphan.sh`: `set -E` after the
+`source` lines, an `_on_err` trap that prints an actionable stderr line and
+`exit 2`, with `errtrace` so the trap propagates into shell functions). The
+load-bearing rule the contract does not spell out: **the ERR/EXIT trap is disarmed
+(`trap - ERR EXIT`) immediately before any deliberate non-zero exit** — i.e. before
+the `--check` stale `exit 1` — so a legitimate stale result is never remapped to
+the error `exit 2`. An unexpected internal failure (a fault not explicitly handled)
+therefore lands on `exit 2` (error), and the benign content-difference path lands on
+`exit 1` (stale); the two are structurally prevented from being conflated.
+
+**D6 — Atomic whole-file write (no half-written map note; FR-016/FR-002).** Write
+mode never edits a map note in place. For each map note that changed, the generator
+writes the full new file body to a sibling temp file via `mktemp` (the established
+plugin idiom — see `generate-pr-body.sh`), then `mv`-renames it over the target.
+`mv` within one filesystem is atomic, so a target is observed as either the old or
+the new whole file — never a half-written or corrupted note, even if the process
+dies mid-write. The temp file is per target, so a failure writing one spec's map
+note cannot leave any other spec's note half-written (FR-016 per-target atomicity).
+A failed temp write or rename trips the D5 error path (`exit 2`, no partial result).
+Because `--check` writes nothing at all (FR-012), atomicity is purely a write-mode
+concern; the `--check` path only diffs the in-memory rebuild and never opens the
+target for writing, even on its own error paths.
 
 ## Constitution Check
 

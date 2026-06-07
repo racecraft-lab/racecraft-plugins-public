@@ -113,11 +113,30 @@ no commit.
   skipped silently (consistent with "no marker → exempt").
 - The pull-requests source data is absent or empty: the zone renders as an
   empty-but-valid zone, not an error.
+- The pull-requests source data is present but malformed or unreadable (distinct
+  from absent/empty): the generator fails safe with an actionable message and a
+  non-success result, and MUST NOT partially write or corrupt the target — the
+  same fail-safe contract as a malformed map note, never conflated with the
+  absent/empty empty-but-valid case.
 - A source map note is malformed or unreadable: the generator fails safe with an
   actionable message and a non-zero exit, and the check mode never writes even on
   this error path.
 - A target that is not a regular file (for example, a directory or symlink where
   a map note is expected) is rejected rather than written through.
+- A zone's marker pair is unbalanced or ill-formed (a start marker without its
+  matching end marker, or the reverse, or a duplicated or out-of-order pair within
+  one map note): this is the malformed-target fail-safe case (actionable message,
+  non-success result, no partial write — FR-022/FR-016), distinct from an
+  *entirely missing* (absent) marker pair, which simply skips that one zone while
+  other present zones are still rebuilt (FR-009).
+- An unexpected internal or operational failure mid-run (one the generator did
+  not explicitly anticipate) surfaces as the error result, never as the benign
+  "stale" / content-difference result, so a real failure is never mistaken for "the
+  maps merely need a regen" (FR-021).
+- No in-scope (version-marked) specs are discovered at all (an empty tree, or a
+  repository with only legacy non-marked specs): this is a clean no-op success, not
+  an error — the generator reports nothing to do, modifies zero files, and succeeds
+  offline.
 - The roadmap-level index zone has no home note in this repository yet: the index
   path is exercised by fixtures but renders nothing live here (dormant until a
   later spec supplies the home note).
@@ -179,7 +198,14 @@ no commit.
   workflow phase-gate step can act on them unambiguously.
 - **FR-016**: On a malformed or unreadable target, the generator MUST fail safe
   with an actionable message and a non-success result, and MUST NOT partially
-  write or corrupt the target.
+  write or corrupt the target. The no-partial-write guarantee MUST hold even when
+  a write fails partway through: a write that cannot complete MUST leave the
+  target either fully updated or wholly unchanged — never a half-written or
+  corrupted map note (a half-updated zone is the exact failure mode being
+  eliminated, FR-002). This atomicity MUST hold per target across a multi-map
+  run, so a failure writing one spec's map note cannot leave any other spec's map
+  note half-written. The "actionable message" MUST name the offending file and
+  the failure class so the outcome is objectively diagnosable, not a bare adjective.
 - **FR-017**: The spec map template used to scaffold new specs MUST include the
   three empty generated zones at the fixed anchor, so newly created specs are born
   with the zones present. The template MUST place them at the same fixed anchor and
@@ -196,6 +222,21 @@ no commit.
   counterpart for the alternate coding-agent runtime MUST be reflected in that
   mirror so the two stay in parity, while the generator itself remains a single
   shared implementation referenced by path rather than duplicated.
+- **FR-021**: An unexpected internal or operational failure during a run (a fault
+  the generator did not explicitly anticipate) MUST surface as the error result
+  (the same non-success outcome as a malformed target, FR-016) and MUST NOT be
+  reported as the benign "stale" / content-difference result. The error outcome
+  and the stale outcome are never conflated: a real failure must never be
+  mistaken for "the committed maps merely need a regen", because the status
+  dashboard and the workflow phase gate act differently on each (FR-013/FR-014).
+- **FR-022**: A zone whose marker pair is unbalanced or ill-formed — a start
+  marker present without its matching end marker (or the reverse), or a
+  duplicated or out-of-order pair within one map note — MUST be treated as the
+  malformed-target fail-safe case (FR-016): the generator stops with an
+  actionable message and a non-success result and MUST NOT partially write or
+  corrupt the target. This is distinct from FR-009's *missing* (entirely absent)
+  marker pair, where neither marker is present and that one zone is simply
+  skipped while other present zones are still rebuilt.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -279,6 +320,17 @@ no commit.
   presence/structure, not byte-identity: each Codex mirror describes the same new
   behavior in Codex-native framing and MUST NOT carry Claude-only frontmatter keys
   (`argument-hint`, `user-invocable`, `license`, `disable-model-invocation`).
+- **SC-011**: After the generator writes the dogfooded version-marked spec maps,
+  the project's existing orphan and stale-index map-note lints pass on those real
+  maps (zero new lint failures introduced by the generated zones) — confirming the
+  generated content keeps the navigation layer's integrity guarantees green, not
+  only on fixtures.
+- **SC-012**: Running the generator against a tree with no in-scope (version-marked)
+  specs — an empty tree, or one holding only legacy non-marked specs — succeeds as
+  a clean no-op: it returns the success result, modifies zero files on disk, and
+  completes offline. A malformed or unreadable input, by contrast, returns the
+  error result with a non-success exit and still writes zero files; the success
+  no-op and the error outcome are never conflated.
 
 ## Assumptions
 
