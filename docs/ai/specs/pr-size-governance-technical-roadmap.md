@@ -163,7 +163,7 @@ index, authored once cheaply during the PRD interview.
 
 ---
 
-### PRSG-006 — Plan-phase reviewability budget + gate threshold rework  · Phase 3 · P1
+### PRSG-006 — Plan-phase reviewability budget + gate threshold rework  · Phase 3 · P1 · 🔄 In Progress
 **Why:** make sizing preventive, not detective; fix the metrics; replace the broken
 escape hatch with typed exceptions.
 
