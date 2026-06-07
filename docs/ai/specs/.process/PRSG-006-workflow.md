@@ -32,7 +32,7 @@ every scoping decision captured during the interview. Where a phase prompt cites
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | spec.md: 15 FRs (FR-001–015), US1/US2, 0 `[NEEDS CLARIFICATION]`, G1 `pass:true`. Branch-aware override held (no derail). |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Sessions seeded from design-concept Open Questions |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | error-handling + data-integrity |
@@ -71,7 +71,14 @@ Verify alignment with `.specify/memory/constitution.md` before G1:
 | IV. Test Coverage Before Merge | L1/L3/L4/L8 recorded passing before merge | `bash tests/run-all.sh` + developer-local L3 |
 | VI. KISS / YAGNI | No differential per-class exception allowances; one tunable greenfield factor | Code review |
 
-**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+**Constitution Check:** ✅ (G0 baseline `bash speckit-pro/tests/run-all.sh` = 1509/1509 green: L1 348+417, L4 572, L5 172, on 2026-06-06 before any change). II/IV/VI verified pre-change; re-checked at G7.
+
+**Autopilot Run Context (recorded Phase 0):**
+- Branch `prsg-006-reviewability-budget` is non-`NNN-` → `on_feature_branch=false` by the regex, but it IS the deliberate feature branch. Orchestrator override: Specify is branch-aware (skip `create-new-feature.sh`); feature dir `specs/prsg-006-reviewability-budget/` pre-created.
+- `.specify/feature.json` was stale (`specs/006a-uat-skeleton`) → repointed to `specs/prsg-006-reviewability-budget` so `get_feature_paths` resolves correctly for Plan/Tasks/gate; will be restored to base value before PR creation (local state, not a deliverable).
+- `PROJECT_COMMANDS` auto-detect was blank (bash/shell repo) → overridden to `bash speckit-pro/tests/run-all.sh --layer {1,4,5}` (UNIT_TEST=L4, FULL_VERIFY=L1). TDD granularity is fixture-level.
+- Archive sweep skipped (stacked branch; would pull complete 001–004 into this PR).
+- Confidence gate mode: `advisory`. Settings: defaults (gate-failure=stop).
 
 ---
 

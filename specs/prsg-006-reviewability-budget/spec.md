@@ -1,0 +1,141 @@
+# Feature Specification: Plan-phase reviewability budget + gate threshold rework (PRSG-006)
+
+**Feature Branch**: `prsg-006-reviewability-budget`
+
+**Created**: 2026-06-06
+
+**Status**: Draft
+
+**Input**: User description: "Plan-phase reviewability budget + gate threshold rework (PRSG-006) — make reviewable-PR sizing preventive (decided at plan time) instead of detective (blocked at an end-stage gate), correct the gate's size metrics, and replace the broken one-keyword escape hatch with typed, auditable exception classes."
+
+## Problem Statement
+
+Reviewable-PR sizing today is **detective**: the only enforcement is an end-stage `reviewability-gate.sh`. That gate has two defects.
+
+1. **A defeated escape hatch.** Any one of three magic phrases (`split exception | transition exception | ratified exception`) appearing *anywhere* in a document flips a `block` result to a pass. The loose anywhere-in-prose substring match is trivial to trip incidentally and impossible to audit, making the block a no-op in practice.
+2. **Wrong metrics.** The gate counts *total* reviewable lines of code (LOC) — including documentation and tests — which inflates the size signal, and it treats a slice spanning more than one primary surface as a hard block even when that is legitimate.
+
+PRSG-006 makes sizing **preventive** — the budget decision moves to plan time, before the work is written — and corrects the gate's metric and exception model so the end-stage gate becomes detective-but-correct rather than detective-and-broken.
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - Preventive plan-phase reviewability budget (Priority: P1) `[US1]`
+
+During the autopilot **plan** phase, a deterministic estimator projects each slice's production-LOC footprint from the planned-file structure declared in `plan.md`. The plan phase runs *before* `tasks.md` exists, so the projection is computed from `plan.md`'s declared files/modules — the richest size signal that exists at plan time. When the projection is under budget, the estimator passes silently. When it is over budget, it surfaces: in an autonomous autopilot run it records an over-budget note and continues (advisory, non-blocking); in interactive use it surfaces a decision to the human.
+
+**Why this priority**: This is the headline shift from detective to preventive sizing — catching an oversized slice at plan time, before any code is written, is the core value of PRSG-006. It is independently valuable even without the gate rework.
+
+**Independent Test**: Run the plan-phase estimator against a `plan.md` whose declared production files project under budget and confirm a silent pass; run it against a `plan.md` that projects over budget and confirm the over-budget result is recorded (autonomous) and the run continues. Confirm the same `plan.md` input always yields byte-identical output.
+
+**Acceptance Scenarios**:
+
+1. **Given** a `plan.md` whose declared production files project a footprint under the budget, **When** the plan-phase estimator runs in an autonomous autopilot run, **Then** it passes silently and records "within budget" in the workflow/plan record (no human prompt, no block).
+2. **Given** a `plan.md` whose declared production files project a footprint over the budget, **When** the plan-phase estimator runs in an autonomous autopilot run, **Then** it records an over-budget note in `plan.md`/the workflow record and the run continues (advisory, non-blocking).
+3. **Given** the same `plan.md` content, **When** the plan-phase estimator is run twice, **Then** both runs produce byte-identical output.
+4. **Given** a `plan.md` whose declared files are all net-new (no existing files modified), **When** the plan-phase estimator runs, **Then** the greenfield allowance is applied to the budget for that slice.
+
+---
+
+### User Story 2 - Reworked reviewability gate: correct metrics + typed exceptions (Priority: P2) `[US2]`
+
+The maintainer/reviewer relies on `reviewability-gate.sh` at the end stage to flag oversized or hard-to-review PRs and to audit any exceptions. The gate is reworked so its size metric counts **production code only** (excluding docs, tests, and config), grants a greenfield allowance for all-new slices, treats a multi-surface slice as a warning rather than a hard block, and honors a **typed, fail-closed exception pragma** in place of the loose three-phrase keyword. The roadmap template's Reviewability Contract is updated to match, so the gate's setup-mode parsing of the template stays consistent.
+
+**Why this priority**: This corrects the detective gate's false signals (inflated LOC, multi-surface blocks) and replaces the defeated escape hatch with an auditable one. It depends on no other PRSG spec and composes with US1, but the preventive budget (US1) is the headline change, so this is P2.
+
+**Independent Test**: Run the gate in `diff` mode against a slice whose production LOC is under 400 but whose total LOC (with docs/tests) exceeds 400, and confirm it does not warn (proving the metric counts production code only). Run it against a multi-surface slice and confirm a warning, not a block. Run it against a block-sized slice carrying a valid typed exception pragma and confirm the block is flipped; run it against a block-sized slice carrying an unknown or missing exception class and confirm the block stands.
+
+**Acceptance Scenarios**:
+
+1. **Given** a slice whose production-code additions are under 400 lines but whose total additions (including documentation and tests) exceed 400 lines, **When** the gate runs in `diff` mode, **Then** it reports within-budget and does not warn (the size metric counts production code only).
+2. **Given** a slice that adds only net-new production files and modifies no existing files, **When** the gate runs, **Then** the greenfield allowance is applied (the warn/block thresholds are scaled by 1.5x for that slice).
+3. **Given** a slice spanning more than one primary surface, **When** the gate runs, **Then** it emits a warning (not a block) and the JSON output still reports the surface count and the list of primary surfaces.
+4. **Given** a block-sized slice whose document carries the exact pragma `Reviewability-Exception: refactor` (or `infra`, or `upgrade`), **When** the gate runs, **Then** the block is flipped to an honored exception (pass).
+5. **Given** a block-sized slice whose document carries an exception class outside the closed set, or no pragma at all, **When** the gate runs, **Then** the exception is not honored and the result stays `block` (fail-closed).
+6. **Given** a block-sized slice whose document contains one of the legacy phrases (`split exception`, `transition exception`, `ratified exception`) but no typed pragma, **When** the gate runs, **Then** the legacy phrase is not honored and the result stays `block`.
+7. **Given** the reworked gate and the updated roadmap template, **When** the gate runs in `setup` mode and parses the template's Reviewability Contract, **Then** parsing succeeds against the updated thresholds, the surface-count-as-warning wording, and the typed pragma vocabulary.
+
+---
+
+### Edge Cases
+
+- **Over budget in an autonomous run**: must never block or prompt mid-run; the over-budget result is recorded and the run proceeds. Blocking or re-slicing on an over-budget result is explicitly out of scope (deferred to PRSG-010).
+- **A document carrying both a legacy phrase and a valid typed pragma**: the valid typed pragma is honored; the legacy phrase is ignored either way (legacy phrases are never honored).
+- **An exception pragma with a class that is misspelled or outside `{refactor, infra, upgrade}`**: not honored — the result stays `block` (fail-closed; an unknown class is treated as no exception).
+- **A slice that adds net-new files AND modifies existing files**: it does not qualify as all-new, so the greenfield allowance does not apply.
+- **A slice composed entirely of documentation, tests, or config (no production files)**: its production-LOC count is zero, so it is within budget on the size metric.
+- **A `plan.md` with no parseable declared file structure**: the estimator still produces a deterministic result for the same input (the precise heuristic is an implementation detail; the determinism contract is fixed).
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+#### Plan-phase budget (US1)
+
+- **FR-001** `[US1]`: A deterministic plan-phase estimator MUST project each slice's production-LOC footprint from the planned-file structure declared in `plan.md`, computed at plan time (before `tasks.md` exists).
+- **FR-002** `[US1]`: The plan-phase estimator MUST be deterministic — the same `plan.md` input MUST produce byte-identical output — and MUST be implemented as deterministic scripting (not LLM reasoning), with a determinism fixture proving same-input-to-same-output.
+- **FR-003** `[US1]`: When the projected footprint is under budget, the estimator MUST pass silently (a log line plus a workflow/plan record of "within budget"), with no human prompt and no block.
+- **FR-004** `[US1]`: When the projected footprint is over budget in an autonomous autopilot run, the estimator MUST record an over-budget note (in `plan.md`/the workflow record) and allow the run to continue; it MUST NOT block the run or trigger re-slicing.
+- **FR-005** `[US1]`: When the projected footprint is over budget in interactive use, the estimator MUST surface the over-budget result as a decision for the human.
+- **FR-006** `[US1]`: The plan-phase estimator MUST detect a greenfield (all-new-files) slice deterministically from `plan.md`'s declared new-file list, and apply the greenfield allowance (FR-008) to the plan-time budget for such a slice.
+- **FR-007** `[US1]`: The plan-phase estimator MUST be a separate standalone script (`estimate-reviewable-loc.sh`) invoked directly by the plan phase; it MUST NOT be added as a new mode of the existing gate, and the existing gate's `setup`/`tasks`/`diff` modes MUST remain unchanged. The production-LOC-per-file constant shared between the estimator and the gate MUST be kept aligned via the repository's established "keep in sync" copied-comment pattern (a single source of truth is not required, but drift MUST be guarded by the comment convention).
+
+#### Gate rework (US2)
+
+- **FR-008** `[US2]`: The gate's size metric MUST count production code only — files that are production files and are not excluded/generated — so that documentation, tests, and config no longer contribute to the LOC count. The warn threshold MUST remain 400 and the block threshold MUST remain 800, now measured on this narrower production-only metric. The change is to the metric, not to the threshold numbers. This production-only recount MUST apply in the gate's `diff` mode and in the plan-phase estimator consistently.
+- **FR-009** `[US2]`: The gate MUST apply a 1.5x greenfield allowance when a slice adds only net-new files and modifies no existing files (warn 400→600, block 800→1200). Greenfield status MUST be detected deterministically from git add-status (`A`) at diff time.
+- **FR-010** `[US2]`: The gate MUST treat a primary-surface count greater than one as a warning, not a block. The blocker behavior for multi-surface slices MUST be removed; the warning MUST be kept. The JSON output MUST continue to report the primary-surface count and the list of primary surfaces for downstream consumers.
+- **FR-011** `[US2]`: The gate MUST honor exceptions only via a typed pragma of the exact form `Reviewability-Exception: <class>` where `<class>` is a member of the closed set `{refactor, infra, upgrade}`. A block result carrying a valid typed pragma MUST be flipped to an honored exception. All three classes MUST flip a block equally in v1 (the class is recorded for auditability of *why* the exception is justified, not to grant a different budget).
+- **FR-012** `[US2]`: The typed exception MUST be fail-closed — an exception class outside the closed set, or a missing pragma, MUST NOT be honored and MUST leave the result as `block`. The gate MUST match the exact pragma form and validate enum membership; it MUST NOT honor an exception declared via free-form prose.
+- **FR-013** `[US2]`: The loose three-phrase legacy exception keyword (`split exception | transition exception | ratified exception`, matched anywhere in a document) MUST no longer be honored by the gate. Legacy phrases that previously flipped a block MUST stop doing so (new-specs-only; no deprecated-alias transition window). This backward-incompatible break MUST be documented in this spec so PRSG-011 can pick it up for retro-migration of existing roadmaps.
+- **FR-014** `[US2]`: The roadmap template's `Reviewability Contract` block MUST be updated to match the reworked gate — production-LOC thresholds, surface count described as a warning (not a block), and the typed `Reviewability-Exception: <class>` pragma replacing the legacy `split exception` keyword — so that the gate's `setup`-mode parsing of the template stays consistent with the gate's behavior. (Required for correctness: setup-mode reads the template, so a gate-only change would leave the template advertising stale thresholds and a keyword the gate no longer honors.)
+
+#### Codex parity (cross-cutting)
+
+- **FR-015** `[US1]`: The plan-phase budget instruction MUST be mirrored into the Codex autopilot skill surface (the autopilot `SKILL.md` and its phase-execution reference) so the Claude and Codex autopilot paths stay at parity. The deterministic scripts (`reviewability-gate.sh`, `estimate-reviewable-loc.sh`) and the roadmap template are runtime-agnostic and MUST remain single-copy (not mirrored into a Codex-specific copy).
+
+### Key Entities *(include if feature involves data)*
+
+- **Production-LOC projection**: the estimated count of production-code lines a slice will add, derived at plan time from `plan.md`'s declared file structure and at diff time from the actual diff. Drives the budget decision. Counts production files only.
+- **Reviewability budget**: the warn (400) / block (800) thresholds on the production-LOC metric, scaled by the 1.5x greenfield allowance for all-new slices.
+- **Typed exception pragma**: a single declared line `Reviewability-Exception: <class>` with `<class>` drawn from the closed set `{refactor, infra, upgrade}`. The auditable record of why a block-sized slice is allowed. Fail-closed.
+- **Primary-surface count**: the number of distinct primary surfaces a slice touches. Reported in the gate's JSON output; drives a warning (not a block) when greater than one. Retained as a diagnostic for downstream consumers.
+- **Reviewability Contract (roadmap template)**: the block in the roadmap template that declares the budget thresholds, surface treatment, and exception vocabulary. Parsed by the gate's `setup` mode; must stay consistent with the gate.
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001** `[US1]`: 100% of plan-phase estimator runs on identical `plan.md` input produce byte-identical output (determinism verified by a fixture).
+- **SC-002** `[US1]`: In an autonomous run, an over-budget plan-phase result never blocks or interrupts the run — 0% of over-budget plan-phase results halt or prompt mid-run; 100% are recorded and the run proceeds.
+- **SC-003** `[US2]`: A slice whose production additions are under 400 lines but whose total additions (with docs/tests) exceed 400 lines produces no warning — the size signal is driven entirely by production code.
+- **SC-004** `[US2]`: A multi-surface slice produces 0 blocks attributable to surface count, while still producing a surface-count warning and retaining surface data in the JSON output.
+- **SC-005** `[US2]`: 100% of block-sized slices carrying an exception class outside `{refactor, infra, upgrade}` (or no pragma) remain blocked (fail-closed); 100% carrying a valid typed pragma are flipped to an honored exception.
+- **SC-006** `[US2]`: 0% of slices relying solely on a legacy three-phrase keyword have their block flipped (legacy keywords are no longer honored).
+- **SC-007** `[US2]`: After the template update, the gate's `setup`-mode parsing of the roadmap template's Reviewability Contract succeeds with no parse failures against the new thresholds, surface-as-warning wording, and typed pragma vocabulary.
+
+## Assumptions
+
+- The autopilot plan phase has access to a populated `plan.md` describing the planned file/module structure at the time the estimator runs; this is the size signal the projection consumes.
+- The repository's existing definitions of "production file" and "excluded/generated file" (e.g., `is_production_file`, `is_excluded_generated`) are reused as-is for the production-only metric. Aligning `is_excluded_generated()` to the `.process/` glob is out of scope here (it is PRSG-001's deliverable).
+- The existing warn=400 / block=800 threshold numbers are retained deliberately for cutover continuity; the tightening comes from narrowing what is counted, not from lowering the numbers.
+- `1.5x` is a round, tunable greenfield factor; whether it is hardcoded or held in a single named variable is an implementation detail.
+- Deterministic logic is implemented with `bash` + `jq` only (`set -euo pipefail`), introducing no new dependency, consistent with the scripts-first mandate.
+- Test coverage for this feature is L1 (structural: script exists; template thresholds/pragma vocabulary match the gate; Codex-skills validation), L3 (functional: the plan phase auto-approves under budget and records/surfaces when over), L4 (script unit: the reworked gate thresholds/metric/surface/exception behavior, plus a determinism fixture for the estimator), and L8 (autopilot Path-A/Path-B parity). No new agent is introduced, so no L7 coverage is added.
+
+## Out of Scope
+
+- **The split-PR engine** — the atomicity router (PRSG-007), the layer-planner (PRSG-008), and multi-PR emission (PRSG-009). PRSG-006 is upstream sizing only: a plan-time budget plus a corrected gate. It does not split anything.
+- **Hardening the hatch / re-slicing wiring** — making an over-budget result *block* or trigger re-slicing is explicitly PRSG-010 ("harden the hatch LAST"). PRSG-006 keeps the plan budget advisory and the gate detective-but-correct.
+- **Removing the exception boilerplate from the template entirely** — PRSG-006 *modernizes* the template's exception vocabulary to typed classes; PRSG-010 later *removes* the boilerplate once the automatic small path exists. The two compose.
+- **Retro-migration / legacy back-compat** — old `split/transition/ratified exception` phrases stop being honored (new-specs-only). De-boilerplating existing project roadmaps and migrating old keywords is PRSG-011's job; this spec documents the break (FR-013) for PRSG-011 to pick up.
+- **Aligning the gate's `is_excluded_generated()` to the `.process/` glob** — that is PRSG-001's deliverable, a dependency, not in scope here.
+- **Differential per-class exception allowances** — all three exception classes flip a block equally in v1; per-class budgets are out of scope (YAGNI). The classes exist for auditability, not for different budgets.
+- **Product code** — this is a plugin skill/script/template change, not product code.
+
+## Deferred (decided, not ambiguous)
+
+These are settled scoping decisions whose precise values are implementation-tuning details, deferred to the Plan/Implement phases. They are not open questions.
+
+- **Exact per-file LOC heuristic for `plan.md` parsing** — the precise mapping from a planned-file entry to projected production-LOC (flat per-file constant vs. weighting by file type) is an implementation tuning detail. The fixed requirement is the determinism contract (same `plan.md` → same number).
+- **The literal warn/block constants for greenfield beyond the `1.5x` rule** — whether `1.5x` is hardcoded or held in a single named variable is a code-style detail resolved at implementation.
+- **Whether PRSG-011 should also strip this repository's own roadmap exception lines** — flagged here as the downstream consequence of FR-013's new-specs-only break; tracked for PRSG-011, out of scope for PRSG-006.
