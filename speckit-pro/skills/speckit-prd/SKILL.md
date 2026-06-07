@@ -1,6 +1,6 @@
 ---
 name: speckit-prd
-description: "Use this skill to collaboratively turn a raw product or technical idea into two artifacts — a lean PRD and a technical roadmap with a SPEC catalog — ready for /speckit-pro:speckit-scaffold-spec and /speckit-pro:speckit-autopilot. Triggers on: write a PRD, create a product requirements document, draft a PRD and roadmap, shape this idea into a PRD, turn this brief into a PRD, plan a product, decompose an idea into a SPEC catalog, what features should this have, before I write specs. Runs a one-question-at-a-time interview with a recommended answer on every question, then writes docs/prd-NAME.md and docs/ai/specs/NAME-technical-roadmap.md. This is the front door of the chain: PRD then roadmap then scaffold-spec then autopilot. NOT per-spec scoping for a single spec already in the roadmap (use grill-me), NOT preparing a worktree from an existing roadmap entry (use speckit-scaffold-spec), NOT SDD methodology coaching (use speckit-coach). Requires an interactive session."
+description: "Use this skill to collaboratively turn a raw product or technical idea into two artifacts — a lean PRD and a technical roadmap with a SPEC catalog — ready for /speckit-pro:speckit-scaffold-spec and /speckit-pro:speckit-autopilot. Triggers on: write a PRD, create a product requirements document, draft a PRD and roadmap, shape this idea into a PRD, turn this brief into a PRD, plan a product, decompose an idea into a SPEC catalog, what features should this have, before I write specs, right-size the catalog. Runs a one-question-at-a-time interview with a recommended answer on every question, then writes docs/prd-NAME.md and docs/ai/specs/NAME-technical-roadmap.md. This is the front door of the chain: PRD then roadmap then scaffold-spec then autopilot. NOT per-spec scoping for a single spec already in the roadmap (use grill-me), NOT preparing a worktree from an existing roadmap entry (use speckit-scaffold-spec), NOT SDD methodology coaching (use speckit-coach). Requires an interactive session."
 argument-hint: "a product/technical idea, a brief, or a file path"
 user-invocable: true
 license: MIT
@@ -142,11 +142,54 @@ Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/technical-roadmap-tem
 Write("docs/ai/specs/<slug>-technical-roadmap.md", <filled template>)
 ```
 
+**Right-size the catalog by construction.** Use SPIDR (split along a Spike,
+Path, Interface, Data, or Rule seam) and vertical slicing so every SPEC is a
+*thin, end-to-end slice* — cutting through all its layers to deliver one small
+working capability — that clears the INVEST bar (Independent, Negotiable,
+Valuable, Estimable, Small, Testable). Decompose into many thin vertical slices,
+not a few fat horizontal specs (a SPEC that is "all the models" then "all the
+UI" is a re-slicing signal). The canonical SPIDR + INVEST + vertical-slicing
+guidance, the ~400 reviewable-LOC ceiling, and the spike escape hatch live in one
+shared reference — read it, do not restate it:
+[`speckit-coach/references/slicing-heuristics.md`](../speckit-coach/references/slicing-heuristics.md).
+
 For each SPEC: scope (detailed enough to drive `/speckit-specify`), depends-on /
 enables, priority, status (`⏳ Pending`), reviewability budget, and key files.
 Set `**Source PRD:**` to `docs/prd-<slug>.md`. **Review the dependency graph
 with the user** (one more `AskUserQuestion`) before finalizing — execution order
 is a consequential decision.
+
+**Populate each entry's size budget from the shared estimator.** For every SPEC
+you draft, derive its size signals from the entry itself — number of user stories
+/ acceptance-criteria groups, files or surfaces touched, functional requirements,
+and whether it is net-new or modifies existing code (mark a research-only slice
+with `--spike`) — then run the single shared estimator:
+
+```text
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh \
+  --user-stories N --files N --frs N --new-vs-modify new|modify [--spike]")
+```
+
+Populate that entry's existing **`Projected reviewable LOC`** field in its
+`**Reviewability Budget:**` line with the returned `estimated_loc` (this is the
+roadmap template's per-SPEC budget line — reuse it; do **not** add a new
+`Budget` field or otherwise change the template schema), and add a one-line
+INVEST/vertical-slice rationale to the entry's scope (e.g. "one vertical slice:
+endpoint → handler → store; Independent and Small"). If the estimator returns
+`status: "warn"` (the entry is over the documented ceiling), surface that as an
+**advisory** note — record the size signal, optionally suggest the
+`suggested_slices` count as a split the user may take, and continue the
+interview. Nothing is blocked or rejected; the estimate is a forward guess that
+shapes decomposition early, never a gate (see the shared reference's
+"forward guess, not the authoritative count" caveat).
+
+If the estimator cannot produce a usable result for any reason — the script is
+missing, `jq` is missing, it exits non-zero, or it prints empty/unparseable
+output — treat it as an **absent estimate**: leave that entry's
+`Projected reviewable LOC` field unpopulated (or note it as unavailable), add a
+short advisory note, and continue the interview. Never read the script's exit
+code as a gate and never let an unavailable estimate become a hard stop — the
+catalog is still authored, just without the forward size signal on that entry.
 
 ### 5. Verify and hand off
 
@@ -242,5 +285,6 @@ interactive pass before it is roadmap-ready. Do not invent user intent.
   PRD→roadmap decomposition algorithm (read before starting).
 - `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/prd-template.md` — the lean PRD template.
 - `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/technical-roadmap-template.md` — the roadmap / SPEC-catalog template.
+- [`speckit-coach/references/slicing-heuristics.md`](../speckit-coach/references/slicing-heuristics.md) — the single source of truth for SPIDR + INVEST + vertical-slicing and the ~400 reviewable-LOC ceiling (summarized inline above; invoked via `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh`).
 - `/speckit-pro:speckit-coach` — decomposition algorithm and SDD methodology depth.
 - `/speckit-pro:grill-me` — the downstream per-spec interview that mirrors this skill's one-question-at-a-time machinery.

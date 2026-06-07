@@ -9,3 +9,6 @@
 
 # Layer 7 live captures are transient; commit reduced parser-fixture.jsonl only.
 speckit-pro/tests/layer7-integration/**/transcript.jsonl
+
+# Transient per-agent scratch memory (subagent learnings; not a deliverable)
+.claude/agent-memory/

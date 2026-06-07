@@ -7,8 +7,9 @@ description: >
   "write a PRD", "$speckit-prd", "create a product requirements
   document", "draft a PRD and roadmap", "shape this idea into a PRD",
   "turn this brief into a PRD", "plan a product", "decompose an idea
-  into a SPEC catalog", "before I write specs". Runs a one-question-at-
-  a-time interview with a recommended answer first, then writes
+  into a SPEC catalog", "before I write specs", "right-size the
+  catalog". Runs a one-question-at-a-time interview with a recommended
+  answer first, then writes
   docs/prd-NAME.md and docs/ai/specs/NAME-technical-roadmap.md. Front
   door of the chain: PRD then roadmap then scaffold-spec then autopilot.
   NOT per-spec scoping (use grill-me), NOT worktree prep from an existing
@@ -100,6 +101,41 @@ starting. High-level loop:
    dependencies, priority, status `⏳ Pending`, reviewability budget. Set
    `Source PRD` to `docs/prd-<slug>.md`. Confirm the dependency graph with the
    user. Write `docs/ai/specs/<slug>-technical-roadmap.md`.
+
+   **Right-size the catalog by construction.** Use SPIDR (split along a Spike,
+   Path, Interface, Data, or Rule seam) and vertical slicing so every SPEC is a
+   *thin, end-to-end slice* — cutting through all its layers to deliver one
+   small working capability — that clears the INVEST bar (Independent,
+   Negotiable, Valuable, Estimable, Small, Testable). Emit many thin vertical
+   slices, not a few fat horizontal specs (an "all the models, then all the UI"
+   SPEC is a re-slicing signal). The canonical SPIDR + INVEST + vertical-slicing
+   guidance, the ~400 reviewable-LOC ceiling, and the spike escape hatch live in
+   one shared reference — read it, do not restate it:
+   `../../skills/speckit-coach/references/slicing-heuristics.md`.
+
+   **Populate each entry's size budget from the shared estimator.** For every
+   SPEC you draft, derive its size signals from the entry itself — number of
+   user stories / acceptance-criteria groups, files or surfaces touched,
+   functional requirements, and whether it is net-new or modifies existing code
+   (mark a research-only slice with `--spike`) — then run the single shared
+   estimator:
+   `bash "../../skills/speckit-coach/scripts/estimate-spec-size.sh" --user-stories N --files N --frs N --new-vs-modify new|modify [--spike]`.
+   Populate that entry's existing `Projected reviewable LOC` field in its
+   `Reviewability Budget` line with the returned `estimated_loc` (reuse the
+   roadmap template's per-SPEC budget line; do **not** add a new `Budget` field
+   or change the template schema), and add a one-line INVEST/vertical-slice
+   rationale to the entry's scope. If the estimator returns `status: "warn"`
+   (over the documented ceiling), surface it as an **advisory** note — record the
+   size signal, optionally suggest the `suggested_slices` count as a split the
+   user may take, and continue the interview. Nothing is blocked or rejected; the
+   estimate is a forward guess that shapes decomposition early, never a gate.
+
+   If the estimator cannot produce a usable result for any reason — the script is
+   missing, `jq` is missing, it exits non-zero, or it prints empty/unparseable
+   output — treat it as an **absent estimate**: leave that entry's
+   `Projected reviewable LOC` field unpopulated (or note it as unavailable), add a
+   short advisory note, and continue. Never read the script's exit code as a gate
+   and never let an unavailable estimate become a hard stop.
 6. **Verify & hand off.** §3 features, the §7 crosswalk, and the roadmap catalog
    must agree on count, names, and IDs. Report both paths and the next step.
 
@@ -178,3 +214,4 @@ interactive pass before it is roadmap-ready.
   taxonomy, heuristics, stop conditions, decomposition algorithm.
 - `../../skills/speckit-coach/templates/prd-template.md` — lean PRD template.
 - `../../skills/speckit-coach/templates/technical-roadmap-template.md` — roadmap / SPEC-catalog template.
+- `../../skills/speckit-coach/references/slicing-heuristics.md` — single source of truth for SPIDR + INVEST + vertical-slicing and the ~400 reviewable-LOC ceiling (summarized inline above; invoked via `../../skills/speckit-coach/scripts/estimate-spec-size.sh`).

@@ -426,5 +426,5 @@ git push origin main
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan at
-specs/prsg-002-moc-templates/plan.md
+specs/prsg-005-slice-sizing-heuristics/plan.md
 <!-- SPECKIT END -->

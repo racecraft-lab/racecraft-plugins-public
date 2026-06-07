@@ -144,7 +144,8 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh" \
     "$TESTS_DIR/layer1-structural/validate-process-gitattributes.sh" \
     "$TESTS_DIR/layer1-structural/validate-moc-orphan.sh" \
-    "$TESTS_DIR/layer1-structural/validate-moc-stale-index.sh"
+    "$TESTS_DIR/layer1-structural/validate-moc-stale-index.sh" \
+    "$TESTS_DIR/layer1-structural/validate-spec-index-determinism.sh"
 
   # Codex structural tests are part of the default layer 1 run.
   run_layer 1 "Codex Structural Validation" \
@@ -217,6 +218,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-reviewability-gate.sh"
     "$TESTS_DIR/layer4-scripts/test-estimate-reviewable-loc.sh"
     "$TESTS_DIR/layer4-scripts/test-ensure-reviewability-preset.sh"
+    "$TESTS_DIR/layer4-scripts/test-estimate-spec-size.sh"
     "$TESTS_DIR/layer4-scripts/test-generate-pr-body.sh"
     "$TESTS_DIR/layer4-scripts/test-generate-uat-skeleton.sh"
     "$TESTS_DIR/layer4-scripts/test-project-fixup.sh"
@@ -233,6 +235,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-install-curated-set.sh"
     "$TESTS_DIR/layer4-scripts/test-moc-id-normalize.sh"
     "$TESTS_DIR/layer4-scripts/test-moc-lint-exit-codes.sh"
+    "$TESTS_DIR/layer4-scripts/test-generate-spec-index.sh"
   )
 
   if [ -n "$LIVE_FLAG" ]; then

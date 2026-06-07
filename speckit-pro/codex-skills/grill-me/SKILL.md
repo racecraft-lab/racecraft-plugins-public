@@ -6,8 +6,9 @@ description: >
   the user says: "grill me", "$grill-me", "grill me on this",
   "interview me about", "walk the design tree", "relentless
   interviewer", "produce a Design Concept doc", "Design Concept
-  document for", "pre-spec scoping for". Accepts .md, .txt, or a
-  free-text topic as input.
+  document for", "pre-spec scoping for", "slice-sizing", "is this spec
+  too big to split", "recommend a vertical-slice split". Accepts .md,
+  .txt, or a free-text topic as input.
 ---
 
 # Grill Me — Iterative Project Scoping Interview (Codex)
@@ -133,7 +134,9 @@ that file before activating. The high-level loop:
 2. **Identify design-tree branches** for this input. Use the
    checklist domain catalog
    (`../../skills/speckit-coach/references/checklist-domains-guide.md`)
-   as a starting taxonomy, plus the input-specific branches.
+   as a starting taxonomy, plus the input-specific branches. **Always
+   include the slice-sizing branch** (see below) as one of the branches
+   to walk.
 3. **Loop**:
    a. Generate the single most-uncertain critical question for the
       next branch.
@@ -147,11 +150,99 @@ that file before activating. The high-level loop:
    d. Record the user's selected answer (including any free-text
       override). Update your mental model.
    e. Continue until stop condition triggers.
-4. **Stop** when no critical open questions remain (preferred), the
+4. **Run the slice-sizing branch** once the interview has surfaced the
+   spec's size signals (number of user stories, files/surfaces touched,
+   functional requirements, new-vs-modify). See
+   [The slice-sizing branch](#the-slice-sizing-branch) below — it runs
+   near the end of the loop, after the tree is mostly walked.
+5. **Stop** when no critical open questions remain (preferred), the
    user explicitly ends the interview, or the soft cap (30 questions)
    prompts a checkpoint that the user uses to wrap up.
-5. **Write the Design Concept doc** following the schema in
-   `references/output-formats.md`.
+6. **Write the Design Concept doc** following the schema in
+   `references/output-formats.md`, recording any chosen split (see the
+   slice-sizing branch).
+
+## The slice-sizing branch
+
+A dedicated branch of the design tree that right-sizes the single spec
+being scoped. Walk it near the end of the loop, once the interview has
+surfaced the spec's structured size signals — number of user stories,
+files/surfaces touched, functional requirements, and whether the work is
+net-new or modifies existing code.
+
+**The inline summary (read the shared doc; do not restate it).** Aim for
+*thin, vertical* slices: each slice cuts end-to-end through every layer
+it touches (data → logic → interface) and delivers one small working
+capability, rather than one fat layer at a time. Split a too-big slice
+along a SPIDR seam (Spike, Path, Interface, Data, Rule) and hold each
+slice to the INVEST bar (Independent, Negotiable, Valuable, Estimable,
+Small, Testable) and the ~400 reviewable-LOC ceiling. A research-only
+slice is a **Spike**, sized by timebox rather than LOC. The canonical
+SPIDR + INVEST + vertical-slicing guidance, the ceiling value, and the
+spike escape hatch all live in one shared reference — read it, do not
+duplicate it here:
+`../../skills/speckit-coach/references/slicing-heuristics.md`.
+
+**Run the shared estimator.** Derive the size signals from the spec you
+are scoping, then invoke the single shared estimator (the same copy
+`speckit-prd` uses — no per-skill copy):
+
+```text
+bash "../../skills/speckit-coach/scripts/estimate-spec-size.sh" \
+  --user-stories N --files N --frs N --new-vs-modify new|modify [--spike]
+```
+
+It returns `{estimated_loc, suggested_slices, status}` where `status` is
+`ok` or `warn`. This is a forward guess to shape decomposition at scoping
+time, **not** the authoritative reviewable-LOC count (see the shared
+reference's "forward guess" caveat).
+
+**Decide what to do with the result.** The split question has two
+independent triggers — one from the estimator, one from your own reading
+of the spec:
+
+- **Over the ceiling** (`status: "warn"`) **OR the spec is horizontally
+  sliced** — ask a split question using the same structured-input
+  mechanism the HITL probe confirmed (`request_user_input` in Plan mode,
+  otherwise a free-text Q&A turn in the chat) — *not* a new mechanism,
+  the same one every other question uses. The estimator only sizes; it
+  has no concept of layering, so *you* judge from the interview whether
+  the spec cuts by layer ("all the models", then "all the UI") rather
+  than end-to-end. When the estimator returned `warn`, recommend
+  splitting into N thin vertical slices where **N is the estimator's
+  `suggested_slices`**; present that as the first option marked
+  `(Recommended)`, with 1–2 alternatives (e.g. keep as one spec, or a
+  different split). When the spec is horizontally sliced, recommend
+  re-slicing it into vertical slices, each delivering one thin
+  end-to-end capability.
+- **At or under the ceiling** (`status: "ok"`, not a spike, not
+  horizontally sliced) — surface the size estimate as an **advisory
+  note** in the interview and the Design Concept doc. Do **not** force a
+  split.
+- **Borderline, a spike, or the estimator is unavailable** — degrade to
+  an advisory note and continue. "Unavailable" means the estimator could
+  not produce a usable result for any reason: the script is missing,
+  `jq` is missing, it exited non-zero, or it printed empty/unparseable
+  output. In every such case, treat the result as an **absent estimate**,
+  note it, and keep interviewing.
+
+This branch is **advisory-only**. It NEVER blocks the interview, never
+rejects a spec, and never reads the script's exit code as a gate — a
+non-zero exit is treated as an unavailable estimate, not a hard stop. A
+`warn` is informational: the maintainer is free to decline the split and
+continue.
+
+**Record the chosen split.** When the maintainer chooses a split in this
+branch, write that decision into the Design Concept doc so
+`$speckit-scaffold-spec` and `$speckit-autopilot` can act on it later:
+
+- A split the maintainer **accepted** is a decision — record it in
+  **Goals** (e.g. "Split into 2 vertical slices: …; …").
+- A split the maintainer **deferred** ("decide later") belongs in
+  **Open Questions** with a suggested next step.
+
+If no split was warranted (at/under the ceiling, or declined), record the
+advisory size estimate as a note and move on — there is nothing to split.
 
 ## Output Contract
 
@@ -164,9 +255,13 @@ sections (full schema in `references/output-formats.md`):
 - **Design Tree (Q&A log)** — every question, your recommended answer
   + reasoning, the user's chosen answer, any free-text notes.
 - **Open Questions** — anything you flagged as worth follow-up but
-  the user deferred.
+  the user deferred (including a deferred slice-split decision).
 - **Recommended Next Step** — usually `$speckit-coach` for roadmap
   authoring or `$speckit-scaffold-spec SPEC-XXX` if a roadmap entry exists.
+
+A chosen slice-split from the slice-sizing branch is recorded in
+**Goals** (accepted) or **Open Questions** (deferred); see
+[The slice-sizing branch](#the-slice-sizing-branch).
 
 ## What This Skill Does NOT Do
 
@@ -292,3 +387,7 @@ For detailed operational guidance, consult these files only as needed:
   generation heuristics, stop conditions, recovery from edge cases.
 - **`references/output-formats.md`** — Design Concept doc schema, file
   paths for standalone vs setup mode, body structure, style rules.
+- **`../../skills/speckit-coach/references/slicing-heuristics.md`** — the
+  single source of truth for SPIDR + INVEST + vertical-slicing and the
+  ~400 reviewable-LOC ceiling (summarized inline in the slice-sizing
+  branch; invoked via `../../skills/speckit-coach/scripts/estimate-spec-size.sh`).

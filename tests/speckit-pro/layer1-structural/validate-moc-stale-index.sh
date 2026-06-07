@@ -32,10 +32,13 @@
 set -euo pipefail
 
 LIB_DIR="$(cd "$(dirname "$0")/../lib" && pwd)"
+# The canonical MOC libs ship inside the plugin (FR-004); the test tree does not
+# ship, so source them from their shipped home, not from this test tree's lib/.
+MOC_LIB_DIR="$(cd "$(dirname "$0")/../../../speckit-pro/skills/speckit-autopilot/scripts/lib" && pwd)"
 # shellcheck source=../lib/assertions.sh
 source "$LIB_DIR/assertions.sh"
-# shellcheck source=../lib/moc-frontmatter.sh
-source "$LIB_DIR/moc-frontmatter.sh"
+# shellcheck source=../../../speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh
+source "$MOC_LIB_DIR/moc-frontmatter.sh"
 
 # errtrace: propagate the ERR trap into shell FUNCTIONS so an unexpected failure
 # inside scan_root (e.g. a broken dirname) trips the trap -> exit 2 (FR-020).

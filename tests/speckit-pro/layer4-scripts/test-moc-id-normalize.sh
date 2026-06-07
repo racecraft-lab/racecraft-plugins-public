@@ -13,7 +13,9 @@
 set -euo pipefail
 
 source "$(dirname "$0")/../lib/assertions.sh"
-source "$(dirname "$0")/../lib/moc-id-normalize.sh"
+# The canonical normalizer ships inside the plugin (FR-004); the test tree does not
+# ship, so source it from its shipped home, not from this test tree's lib/.
+source "$(dirname "$0")/../../../speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh"
 
 # ─────────────────────────────────────────
 section "Normalize: value → (namespace, number-suffix)"
