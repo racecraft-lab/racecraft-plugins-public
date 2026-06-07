@@ -154,7 +154,9 @@ no commit.
 - **FR-008**: The generator MUST insert the three empty generated zones at a
   fixed anchor into any in-scope version-marked map note that is missing them, do
   so exactly once, and then fill them; this injection MUST be idempotent across
-  repeated runs.
+  repeated runs. The injection MUST use the same fixed anchor and the same zone
+  order used by the template (FR-017), so a template-born map and an
+  injection-migrated map are byte-identical.
 - **FR-009**: A map note that is missing an individual zone's marker pair MUST
   have that single zone skipped while any other present zones are still rebuilt.
 - **FR-010**: The pull-requests zone MUST be rendered only from a repository-local
@@ -180,7 +182,9 @@ no commit.
   write or corrupt the target.
 - **FR-017**: The spec map template used to scaffold new specs MUST include the
   three empty generated zones at the fixed anchor, so newly created specs are born
-  with the zones present.
+  with the zones present. The template MUST place them at the same fixed anchor and
+  in the same zone order used by FR-008's inject-if-missing path, so template-born
+  and injection-migrated spec maps are byte-identical.
 - **FR-018**: The generator's per-spec reachability enumeration MUST be bounded to
   that spec's own directory tree (including its process subtree) and MUST NOT reach
   into any other tree.
@@ -250,8 +254,8 @@ no commit.
 - **SC-001**: Running the generator twice in a row with no intervening source
   change yields a zero-byte difference on every spec map note (idempotent).
 - **SC-002**: For every in-scope spec, 100% of that spec's own artifacts (its
-  specification, plan, tasks, contracts, checklists, and process exhaust) are
-  reachable as links from its map note's backlinks zone.
+  specification, plan, tasks, data-model, research, contracts, checklists, and
+  process exhaust) are reachable as links from its map note's backlinks zone.
 - **SC-003**: When a source artifact is changed without regenerating, the status
   dashboard reports the index as stale and modifies zero files on disk.
 - **SC-004**: When the maps are current, the status dashboard reports the index as
@@ -270,7 +274,11 @@ no commit.
 - **SC-009**: Zone ordering is identical when the generator runs on two machines
   with different filesystem enumeration orders (byte-identical output).
 - **SC-010**: The two mirrored skill behavior descriptions remain in parity after
-  the change (their parity check passes).
+  the change (their parity check passes). Parity is verified by the structural
+  Codex-skill checks (`validate-codex-skills.sh` + `validate-codex-parity.sh`) —
+  presence/structure, not byte-identity: each Codex mirror describes the same new
+  behavior in Codex-native framing and MUST NOT carry Claude-only frontmatter keys
+  (`argument-hint`, `user-invocable`, `license`, `disable-model-invocation`).
 
 ## Assumptions
 
@@ -286,6 +294,12 @@ no commit.
   rendered, are independently positionable, and are easy to search for. The exact
   marker text is a settled design choice defined in one place; its precise
   spelling is finalized during planning.
+- **Zone anchor position (default; finalized in Plan).** There is one canonical
+  anchor and one fixed zone order, used identically by the template (FR-017) and
+  the generator's inject-if-missing path (FR-008) — this shared placement is what
+  keeps template-born and injection-migrated maps byte-identical (SC-001/SC-009).
+  The default position is the end of the map note body, immediately after the
+  introductory paragraph; the exact byte position is finalized during planning.
 - **Pull-requests data source shape (deferred to Plan).** The exact shape of the
   repository-local committed source for slice → PR number → merged commit (a
   dedicated process-tree manifest versus data carried in the map note body) is a
@@ -306,6 +320,16 @@ no commit.
   referenced by absolute path from both consumers (the status dashboard and the
   autonomous workflow) and their alternate-runtime mirrors; only the skill
   behavior descriptions are mirrored, never the script.
+- **Alternate-runtime parity bar is the structural skill check, not the
+  teams-vs-subagents parity harness.** The PR-size-governance roadmap's per-spec
+  coverage table lists the multi-path parity harness for this spec, but that
+  harness verifies Agent-Teams-vs-parallel-subagents runtime equivalence for the
+  post-implementation parallel group — a concern introduced by a later spec, not
+  touched here. This feature's alternate-runtime surface is prose-only (the two
+  mirrored skill descriptions), verified by the structural skill checks named in
+  SC-010; because the generator is one shared script referenced by path, there is
+  no second execution path to compare. The roadmap's parity-harness entry for this
+  spec does not apply; any such work is deferred to the multi-path spec.
 - **Scope is plugin behavior and a shared script only.** No end-user product code
   is involved; this feature changes plugin-skill behavior plus one shared script
   and its tests.
