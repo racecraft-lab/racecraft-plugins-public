@@ -38,7 +38,7 @@ every scoping decision captured during the interview. Where a phase prompt cites
 | Checklist | `/speckit-checklist` | ✅ Complete | error-handling (41, 2 gaps) + data-integrity (18, 2 gaps); all 4 gaps remediated in-place, 0 consensus. G4 pass. |
 | Tasks | `/speckit-tasks` | ✅ Complete | 35 tasks (T001–035): Setup 1 / Foundational 2 / US1 12 / US2 13 / Polish 7; 17 `[P]`; every FR-001–015 mapped, every deterministic behavior has an L4 fixture **before** impl (TDD red-first); 0 L7, 0 out-of-scope, 0 markers. G5 pass. Post-Tasks gate: `pass:true` (excepted) — **self-demonstration**: old gate flipped block→exception because its loose substring hatch matched "transition exception" in PRSG-006's own prose, and `production_files:0` confirms the documented `is_production_file`-misses-`.sh` limit (1400 = task-count×40 inflation). Both defects PRSG-006 repairs fired on PRSG-006 — recorded for the PR reviewer note; NOT split. |
 | Analyze | `/speckit-analyze` | ✅ Complete | 2 LOW findings, both remediated (explicit FR-005/SC-002 task citations; dedupe line-citation precision). 0 CRITICAL/HIGH/MEDIUM. Matcher regex byte-identical across spec/plan/both contracts; constitution II/IV/VI hold; no Non-goal crossed; full FR/US/SC/L4 coverage. G6 pass; G6.5 advisory (no consensus emit → NO_DATA soft-skip). |
-| Implement | `/speckit-implement` | ⏳ Pending | Scripts-first; TDD red→green |
+| Implement | `/speckit-implement` | ✅ Complete | 35/35 tasks across 4 file-disjoint slices (estimator+L4 / gate-rework+L4+roadmap / SKILL+phase-exec wiring+Codex mirror / L1 guards+preset stub). G7 `pass:true` (35/35). L1 786/786, L4 678/678 green together. T033 (L3) + T034 (L8) recorded developer-local before merge (not CI). Commit 976e54e. |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -467,20 +467,20 @@ For each deterministic behavior:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | shared LOC constant |
-| 2 - US1 plan budget | | | estimator + wiring + Codex mirror |
-| 3 - US2 gate rework | | | metric/surface/exception + template |
-| 4 - Polish | | | L1/L3/L4/L8 + doc the break |
+| 1 - Foundation | T001-T003 | 3/3 | predicate inventory + shared LOC constant + gate keep-in-sync marker |
+| 2 - US1 plan budget | T004-T015 | 12/12 | estimator (43/43 L4) + plan-phase wiring + Codex mirror |
+| 3 - US2 gate rework | T016-T028 | 13/13 | production-only metric / surface-as-warning / typed exception (84/84 L4) + roadmap template |
+| 4 - Polish | T029-T035 | 7/7 | L1 guards (validate-scripts 71/71, validate-codex-skills 145/145) + preset stub; L3/L8 recorded developer-local |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] L1 structural: `bash tests/run-all.sh --layer 1` green
-- [ ] L4 script-unit: `bash tests/run-all.sh --layer 4` green (gate + estimator fixtures)
-- [ ] L3 functional eval recorded passing (developer-local, `claude -p`)
-- [ ] L8 Codex parity recorded passing
+- [x] All tasks marked complete in tasks.md (35/35; G7 `pass:true`)
+- [x] L1 structural: `bash tests/run-all.sh --layer 1` green (786/786)
+- [x] L4 script-unit: `bash tests/run-all.sh --layer 4` green (678/678; gate + estimator fixtures)
+- [ ] L3 functional eval — DEFERRED developer-local (T033, `claude -p`; not run in autopilot, run before merge)
+- [ ] L8 Codex parity — DEFERRED developer-local (T034; not run in autopilot, run before merge)
 - [ ] Back-compat break (old exception keywords) documented for PRSG-011
 - [ ] PR created (plain-English title with conventional-commits prefix) and reviewed
 
