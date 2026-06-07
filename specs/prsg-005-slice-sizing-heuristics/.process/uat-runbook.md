@@ -18,7 +18,7 @@ All commands in this runbook that run the estimator script or the test suite ass
 The fast automated test suite (run this once before starting UAT to confirm the deterministic layer is green):
 
 ```bash
-cd speckit-pro && bash tests/run-all.sh
+bash tests/speckit-pro/run-all.sh
 ```
 
 This runs Layers 1, 4, and 5 — structural validation, script unit tests, and agent tool scoping. All three should pass before you walk the human acceptance steps below.
@@ -33,7 +33,7 @@ This runs Layers 1, 4, and 5 — structural validation, script unit tests, and a
 **Automated backstop (run first):** From the worktree root:
 
 ```bash
-cd speckit-pro && bash tests/run-all.sh --layer 4
+bash tests/speckit-pro/run-all.sh --layer 4
 ```
 
 All estimator unit tests should pass before you walk the human steps below.

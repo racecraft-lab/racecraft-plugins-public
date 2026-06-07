@@ -20,7 +20,7 @@ set -euo pipefail
 
 source "$(dirname "$0")/../lib/assertions.sh"
 
-PLUGIN_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
 SCRIPT="$PLUGIN_ROOT/skills/speckit-coach/scripts/estimate-spec-size.sh"
 FIXTURE_DIR="$(cd "$(dirname "$0")" && pwd)/fixtures/estimate-spec-size"
 
