@@ -482,7 +482,7 @@ For each deterministic behavior:
 - [ ] L3 functional eval — DEFERRED developer-local (T033, `claude -p`; not run in autopilot, run before merge)
 - [ ] L8 Codex parity — DEFERRED developer-local (T034; not run in autopilot, run before merge)
 - [x] Back-compat break (old exception keywords) documented (spec FR-013 + Out-of-Scope → PRSG-011)
-- [ ] PR created (plain-English title with conventional-commits prefix) and reviewed
+- [x] PR created (plain-English title with conventional-commits prefix): **[PR #119](https://github.com/racecraft-lab/racecraft-plugins-public/pull/119)** — base `main`, MERGEABLE
 
 ---
 
