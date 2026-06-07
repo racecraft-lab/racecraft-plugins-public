@@ -8,6 +8,7 @@ installed custom subagents through `spawn_agent` and `wait_agent`.
 - [Canonical Order](#canonical-order) — `PHASES = [...]` + `--from-phase` semantics
 - [Agent Mapping](#agent-mapping) — per-phase executor + prompt prefix table
 - [Main Execution Loop](#main-execution-loop) — full 11-step per-phase pseudocode
+- [Phase 3: Plan — Reviewability Budget](#phase-3-plan--reviewability-budget-advisory) — advisory plan-phase production-LOC estimate
 - [Phase 7: Implement](#phase-7-implement) — task decomposition + placeholder replacement + reviewability gate
 - [PR Body Generation](#pr-body-generation) — script invocation order pre-PR
 - [Coverage Audit](#coverage-audit) — all-phase prefix audit run before/during/on-resume
@@ -94,6 +95,49 @@ for phase in PHASES starting from first_pending:
 
 After all 7 phases complete, proceed to the post-implementation parallel
 group (see [post-implementation-codex.md](./post-implementation-codex.md)).
+
+## Phase 3: Plan — Reviewability Budget (advisory)
+
+After the Plan phase executor returns and `plan.md` exists (G3 pass), run the
+standalone plan-phase estimator to project each slice's production-LOC footprint
+from `plan.md`'s declared file structure. This is preventive sizing — it catches
+an oversized slice at plan time, before any code is written. It is **advisory
+only**: no outcome blocks, prompts mid-autonomous-run, or aborts the run (hard
+blocking / re-slicing is PRSG-010, explicitly out of scope here).
+
+Invoke the estimator from the parent session with `exec_command` and **capture
+the exit code** rather than letting a non-zero exit propagate and abort the run:
+
+```text
+plan = "specs/<feature>/plan.md"
+exec_command: bash -c 'code=0; out=$("<SKILL_SCRIPTS>/estimate-reviewable-loc.sh" "$1") || code=$?; printf "%s\n" "$out"; exit "$code"' _ "$plan"
+```
+
+The three budget statuses (`pass`, `over_budget`, `not_estimated`) all return
+exit 0 with the verdict in the JSON `status` field; a non-zero exit (exit 2:
+usage error or an absent/unreadable `plan.md`) is the only error path. Branch on
+the JSON `status` when the exit code is 0, and on the exit code otherwise:
+
+- **`pass`** → record "within budget" in the workflow/plan record and
+  `autopilot-state.json` (silent — no prompt, no block).
+- **`over_budget`, autonomous run** → record an over-budget note in the
+  workflow/plan record and **CONTINUE** (advisory, non-blocking — FR-004,
+  SC-002). Never block the run or trigger re-slicing.
+- **`over_budget`, interactive use** → surface the over-budget result to the
+  human as a decision (FR-005).
+- **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
+  production-file structure) → record "not estimated (no declared production
+  files)" and continue. Never treat this as a within-budget pass.
+- **non-zero exit** (exit 2) → record "estimator could not run (exit N)" and
+  continue the autonomous run.
+
+This mirrors the Codex gate-handling pattern (the G6.5 confidence-gate step reads
+the script's exit code and branches on it rather than aborting).
+Advisory-and-never-crash is the invariant for every outcome — under-budget,
+over-budget, unmeasured, or errored — none may block, prompt
+mid-autonomous-run, or crash the run. The estimator does not yet exist on older
+plugin builds; when the script is absent the captured non-zero exit is recorded
+as the error note and the run continues, same as any other error path.
 
 ## Phase 6.5: Pre-Implement Confidence Gate
 

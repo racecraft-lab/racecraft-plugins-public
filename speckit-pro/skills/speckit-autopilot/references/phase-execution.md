@@ -268,6 +268,51 @@ before the next session runs.
 Read the workflow file's `### Plan Prompt` section.
 Spawn a subagent.
 
+**Plan-phase reviewability budget (advisory — never blocks, never crashes):**
+After `plan.md` exists, run the standalone plan-phase estimator to project
+each slice's production-LOC footprint from `plan.md`'s declared file structure.
+This is preventive sizing — it catches an oversized slice at plan time, before
+any code is written. It is **advisory only**: no outcome blocks, prompts
+mid-autonomous-run, or aborts the run (hard blocking / re-slicing is PRSG-010,
+explicitly out of scope here).
+
+Because the autopilot harness runs under `set -euo pipefail`, the invocation
+MUST be guarded so a non-zero exit cannot trip `errexit` and abort the run —
+capture the exit code instead of letting it propagate:
+
+```bash
+plan="specs/<feature>/plan.md"
+code=0
+out=$("<SKILL_SCRIPTS>/estimate-reviewable-loc.sh" "$plan") || code=$?
+```
+
+The three budget statuses (`pass`, `over_budget`, `not_estimated`) all return
+exit 0 with the verdict in the JSON `status` field; a non-zero exit (exit 2:
+usage error or an absent/unreadable `plan.md`) is the only error path. Branch on
+the JSON `status` (read with `jq`) when `code == 0`, and on the exit code
+otherwise:
+
+- **`pass`** → log "within budget" and record it in the workflow/plan record
+  (silent — no prompt, no block).
+- **`over_budget`, autonomous run** → record an over-budget note in the
+  workflow/plan record and **CONTINUE** (advisory, non-blocking — FR-004,
+  SC-002). MUST NOT block the run or trigger re-slicing.
+- **`over_budget`, interactive use** → surface the over-budget result to the
+  human as a decision (FR-005).
+- **`not_estimated`** (`projected: null` — `plan.md` has no parseable declared
+  production-file structure) → record "not estimated (no declared production
+  files)" and continue. Never treat this as a within-budget pass.
+- **non-zero exit** (exit 2) → record "estimator could not run (exit N)" and
+  continue the autonomous run.
+
+This mirrors the established gate-handling pattern below (the G6/G6.5 steps read
+the gate's exit code and branch on it rather than aborting).
+Advisory-and-never-crash is the invariant for every outcome — under-budget,
+over-budget, unmeasured, or errored — none may block, prompt mid-autonomous-run,
+or crash the run. The estimator does not yet exist on older plugin builds; when
+the script is absent the guarded invocation records the non-zero exit note and
+continues, same as any other error path.
+
 **Gate:** G3 — verify plan.md, research.md, data-model.md
 exist
 

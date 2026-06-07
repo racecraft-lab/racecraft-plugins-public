@@ -37,6 +37,19 @@
 **Scale/Scope**: [domain-specific, e.g., 10k users, 1M LOC, 50 screens or NEEDS CLARIFICATION]
 **Reviewability Budget**: [Primary surface; projected reviewable LOC; production files; total files; budget result]
 
+## Declared File Operations
+
+The plan-phase reviewability estimator (`estimate-reviewable-loc.sh`) parses this
+block to project the slice's production-LOC footprint before `tasks.md` exists.
+List one entry per file as `STATUS  repo-relative-path`, where STATUS is `NEW` or
+`MODIFIED`. Omit this block and the estimator degrades gracefully to
+`not_estimated`.
+
+<!--
+  NEW       path/to/new-file.ext
+  MODIFIED  path/to/existing-file.ext
+-->
+
 ## Constitution Check
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*

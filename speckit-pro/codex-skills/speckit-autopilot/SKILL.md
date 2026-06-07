@@ -591,6 +591,17 @@ post-phase hooks → gate validation → auto-commit + advance. Full
 and `--from-phase` semantics) lives in
 [phase-execution-codex.md §Main Execution Loop](./references/phase-execution-codex.md#main-execution-loop).
 
+**Plan-phase reviewability budget (advisory):** After the Plan phase
+(G3 pass, `plan.md` exists), the parent runs
+`estimate-reviewable-loc.sh <plan.md>` via `exec_command`, capturing
+the exit code so a non-zero exit can never abort the run. Branch on the
+JSON `status` (`pass` / `over_budget` / `not_estimated`) or the exit
+code, recording the outcome to the workflow file and
+`autopilot-state.json`. This is preventive sizing and **advisory only**
+— no outcome blocks, prompts mid-autonomous-run, or crashes the run
+(hard block / re-slicing is PRSG-010). Full status branch in
+[phase-execution-codex.md §Phase 3: Plan — Reviewability Budget](./references/phase-execution-codex.md#phase-3-plan--reviewability-budget-advisory).
+
 **Phase 7 task-list reconciliation (body-pinned invariants):**
 After the Tasks phase and G5 pass, parse `tasks.md` and replace
 the `Phase 7: Implement - Pending task decomposition` placeholder
@@ -849,6 +860,13 @@ never from `.specify/scripts/bash/`.
   to set `CONFIDENCE_GATE_MODE` before G6.5.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` — Enforce
   setup, tasks, and pre-PR reviewability budgets (JSON)
+- `estimate-reviewable-loc.sh <plan.md>` — Plan-phase reviewability
+  budget: project production-LOC from `plan.md`'s declared file structure
+  and emit a three-value `status` (`pass` / `over_budget` /
+  `not_estimated`) in JSON. Advisory — the three statuses return exit 0
+  (verdict in `status`); only a usage/IO error exits non-zero. Wired into
+  the Plan phase advisory-and-never-crash (see
+  [phase-execution-codex.md §Phase 3: Plan — Reviewability Budget](./references/phase-execution-codex.md#phase-3-plan--reviewability-budget-advisory)).
 - `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —
   Generate a PR review packet from the host repository PR template when present,
   or from the bundled fallback template

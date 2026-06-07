@@ -40,15 +40,24 @@ The feature is decomposed into **{{N}} specifications** across **{{M}} dependenc
 ## Reviewability Contract
 
 Every spec must fit a human review budget before setup and again before PR
-creation.
+creation. The size metric counts **production code only** — documentation,
+tests, and config do not contribute to the reviewable-LOC count.
 
-- Warn above 400 reviewable LOC, 6 production files, 15 total files, or more
-  than one primary surface.
-- Block above 800 reviewable LOC, 8 production files, 25 total files, or more
-  than one primary surface unless this roadmap records a ratified split
-  exception.
+- Warn above 400 reviewable production LOC, 6 production files, or 15 total
+  files. Touching more than one primary surface is also a warning, not a block.
+- Block above 800 reviewable production LOC, 8 production files, or 25 total
+  files, unless this roadmap records a typed exception pragma (below).
+- A slice that adds only net-new files (no existing files modified) gets a 1.5x
+  greenfield allowance on the production-LOC thresholds (warn 600, block 1200).
 - Primary surfaces are schema/migration, API, UI, scheduler/runtime,
   harness/adapter, seed/config, and docs/process.
+- A block-sized slice may be allowed only by a typed, auditable exception
+  pragma on its own line, exactly: `Reviewability-Exception: <class>` where
+  `<class>` is one of `refactor`, `infra`, or `upgrade`. The match is
+  line-anchored and case-sensitive with no trailing content; an unknown class,
+  a mis-cased class, or free-form prose is not honored (fail-closed). Replace
+  `<class>` with a real class when claiming an exception — the literal
+  `<class>` placeholder is deliberately not a valid class.
 - PR descriptions are review packets. They must include what changed, why,
   non-goals, review order, scope budget, traceability, verification evidence,
   known gaps, and rollback/flag notes.

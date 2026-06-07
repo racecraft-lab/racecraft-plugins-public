@@ -331,6 +331,12 @@ for phase in PHASES starting from first_pending:
     7. Update workflow file; auto-commit if configured
          phases 1-6: git add specs/ && git commit
          phase 7:    git add -A && git commit
+    7b. After Plan (G3 pass, plan.md exists), run the plan-phase
+        reviewability budget: estimate-reviewable-loc.sh <plan.md>,
+        guarded against errexit. Branch on JSON `status`
+        (pass / over_budget / not_estimated) or the exit code.
+        ADVISORY — never blocks, prompts mid-autonomous-run, or
+        crashes the run (hard block / re-slicing is PRSG-010).
     8. After Tasks (G5 pass), run reviewability-gate.sh tasks;
        unexcepted `block` → STOP and split the spec
     9. Advance
@@ -529,6 +535,13 @@ Always invoke via the full resolved path — never from `.specify/scripts/bash/`
   the orchestrator in Step 0.6b to set `CONFIDENCE_GATE_MODE` before G6.5.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` —
   Enforce setup, tasks, and pre-PR reviewability budgets (JSON)
+- `estimate-reviewable-loc.sh <plan.md>` — Plan-phase reviewability
+  budget: project production-LOC from `plan.md`'s declared file
+  structure and emit a three-value `status` (`pass` / `over_budget` /
+  `not_estimated`) in JSON. Advisory — the three statuses return exit 0
+  (verdict in `status`); only a usage/IO error exits non-zero. Wired
+  into the Plan phase advisory-and-never-crash (see
+  [Phase Execution §Phase 3: Plan](./references/phase-execution.md#phase-3-plan)).
 - `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —
   Generate a PR review packet from the host repository PR template when present,
   or from the bundled fallback template

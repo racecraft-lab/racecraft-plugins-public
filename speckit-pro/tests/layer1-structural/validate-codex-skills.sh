@@ -241,6 +241,30 @@ $(cat "$ref_file")"
 
     set_test "speckit-autopilot: Codex post-implementation reference exists"
     assert_file_exists "$SKILL_DIR/references/post-implementation-codex.md"
+
+    # FR-015: the T015 Codex mirror must carry the plan-phase reviewability
+    # budget wording. Assert the estimator name and the three-value status
+    # vocab landed in BOTH the Codex SKILL.md body and the phase-execution
+    # reference (asserted against each file's own content so a deleted mirror
+    # fails the guard rather than passing on the other file's copy).
+    set_test "speckit-autopilot: Codex SKILL.md names the plan-phase estimator"
+    assert_contains "$body" "estimate-reviewable-loc.sh"
+
+    set_test "speckit-autopilot: Codex SKILL.md carries the three-value status vocab"
+    assert_contains "$body" '`pass` / `over_budget` / `not_estimated`'
+
+    phase_exec=""
+    [ -f "$SKILL_DIR/references/phase-execution-codex.md" ] \
+      && phase_exec=$(cat "$SKILL_DIR/references/phase-execution-codex.md")
+
+    set_test "speckit-autopilot: phase-execution-codex.md names the plan-phase estimator"
+    assert_contains "$phase_exec" "estimate-reviewable-loc.sh"
+
+    set_test "speckit-autopilot: phase-execution-codex.md documents the over_budget status"
+    assert_contains "$phase_exec" "over_budget"
+
+    set_test "speckit-autopilot: phase-execution-codex.md documents the not_estimated status"
+    assert_contains "$phase_exec" "not_estimated"
   fi
 
   set_test "${skill}: agents/openai.yaml allow_implicit_invocation policy"
