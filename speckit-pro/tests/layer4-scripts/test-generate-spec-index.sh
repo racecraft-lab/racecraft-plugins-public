@@ -86,17 +86,27 @@ run_gen() {
   assert_eq "$__want" "$__rc" "exit code for: generate-spec-index.sh $*"
 }
 
-# fresh_copy <src-root> — copy ONE fixture REPO_ROOT into a disposable mktemp dir
-# and echo the copy's path. Write-mode mutates SPEC-MOC.md files, so each write
-# case operates on its own copy of just that case's root (never the whole fixture
-# tree — distinct cases must not share a run). trap-cleaned at EOF.
+# fresh_copy <src-root> — copy ONE fixture REPO_ROOT into a disposable, UNIQUE
+# directory and echo the copy's REPO_ROOT path (the dir that contains `specs/`).
+# Write-mode mutates SPEC-MOC.md files, so each write case operates on its own copy
+# of just that case's root (never the whole fixture tree — distinct cases must not
+# share a run). All copies live under TMP_ROOT, trap-cleaned at EOF.
+#
+# fresh_copy is invoked via `copy="$(fresh_copy …)"`, i.e. inside a command
+# substitution subshell, so a parent-scope counter would never increment (every
+# call would collide on the same name and `cp -R` would nest the second copy inside
+# the first). `mktemp -d` per call gives a guaranteed-unique parent regardless of
+# subshell scoping; the fixture is copied into `<unique>/root` so the returned path
+# keeps the `<repo-root>/specs/<branch>/…` layout the assertions read.
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/spec-index-l4.XXXXXX")"
 trap 'rm -rf "$TMP_ROOT"' EXIT
-COPY_N=0
 fresh_copy() {
-  local src="$1"
-  COPY_N=$((COPY_N + 1))
-  local dest="$TMP_ROOT/copy-$COPY_N"
+  # No-arg calls (groups h/i) copy the WHOLE fixture tree ($FIX) and index into a
+  # case subdir; single-arg calls copy just one case REPO_ROOT. Default under set -u.
+  local src="${1:-$FIX}"
+  local parent dest
+  parent="$(mktemp -d "$TMP_ROOT/copy.XXXXXX")"
+  dest="$parent/root"
   cp -R "$src" "$dest"
   printf '%s' "$dest"
 }
@@ -277,8 +287,10 @@ assert_eq "0" "$rc_h1" "inject-if-missing must succeed"
 set_test "template-born write run succeeds (exit 0)"
 rc_h2=0; "$GEN" "$copy_h/template-born" >/dev/null 2>&1 || rc_h2=$?
 assert_eq "0" "$rc_h2" "template-born fill must succeed"
-inj_h="$(cat "$copy_h/inject-missing-all/SPEC-MOC.md" 2>/dev/null || true)"
-tpl_h="$(cat "$copy_h/template-born/SPEC-MOC.md" 2>/dev/null || true)"
+# Read each map at its real nested path (specs/<branch>/SPEC-MOC.md) via the
+# per-case constants defined above — the case dir is the REPO_ROOT, not the MOC dir.
+inj_h="$(cat "$copy_h/inject-missing-all/$INJECT_MOC" 2>/dev/null || true)"
+tpl_h="$(cat "$copy_h/template-born/$TPL_MOC" 2>/dev/null || true)"
 set_test "the injected map is byte-identical to the template-born map"
 assert_eq "$tpl_h" "$inj_h" "FR-008/FR-017: inject-if-missing and template-born are byte-identical"
 set_test "the inject-if-missing map actually gained the three zones"
@@ -294,7 +306,8 @@ copy_i="$(fresh_copy)"
 set_test "write run over the ordering fixture succeeds (exit 0)"
 rc_i=0; "$GEN" "$copy_i/stale-fill" >/dev/null 2>&1 || rc_i=$?
 assert_eq "0" "$rc_i" "the ordering fixture must render without error"
-moc_i="$(cat "$copy_i/stale-fill/SPEC-MOC.md" 2>/dev/null || true)"
+# Read the map at its real nested path (specs/<branch>/SPEC-MOC.md) via $STALE_MOC.
+moc_i="$(cat "$copy_i/stale-fill/$STALE_MOC" 2>/dev/null || true)"
 bz_i="${moc_i#*GENERATED:BACKLINKS:START}"; bz_i="${bz_i%%GENERATED:BACKLINKS:END*}"
 set_test "spec.md precedes plan.md in BACKLINKS (fixed precedence)"
 i_spec="${bz_i%%(spec.md)*}"; i_plan="${bz_i%%(plan.md)*}"
