@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — PRSG-001 ✅ complete (PR #111); PRSG-002 🔄 scaffolded 2026-06-06. Created 2026-06-03.
+> Status: **in progress** — PRSG-001 ✅ complete (PR #111); PRSG-002 🔄 scaffolded 2026-06-06; PRSG-005 🔄 scaffolded 2026-06-06. Created 2026-06-03.
 
 ## Vision
 
@@ -152,7 +152,7 @@ index, authored once cheaply during the PRD interview.
 
 ---
 
-### PRSG-005 — Vertical-slice sizing heuristics in PRD/grill-me  · Phase 3 · P1
+### PRSG-005 — Vertical-slice sizing heuristics in PRD/grill-me  · Phase 3 · P1 · 🔄 In Progress
 **Why:** attack the root cause at the cheapest moment — specs born PR-sized.
 
 - **US1 — Slicing heuristics.** Bake SPIDR + INVEST + vertical-slicing guidance into
