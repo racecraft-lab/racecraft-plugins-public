@@ -101,8 +101,12 @@ Group 1 = `STATUS` (`NEW`|`MODIFIED`); group 2 = repo-relative path (full path r
 
 **De-duplication (no double-counting):** entries are de-duplicated by repo-relative path
 before counting — a path that appears more than once in the block contributes **once** to
-`declared_files.*` and to `projected` (the estimator's counterpart to the gate's `sort -u`
-dedupe of its file lists at `reviewability-gate.sh:191,225`). This keeps the projection
+`declared_files.*` and to `projected`. This is the estimator's counterpart to the gate's
+per-mode path-uniqueness: the gate's `setup`/`tasks` modes de-duplicate explicitly via
+`sort -u` (`reviewability-gate.sh:191`), and its `diff` mode is inherently per-path-unique
+because `git diff --name-only`/`--numstat` (`reviewability-gate.sh:221-222`) never list the
+same path twice. The estimator parses free-form `plan.md` lines, where a path genuinely can
+repeat, so it must de-duplicate explicitly to match that guarantee. This keeps the projection
 stable under a duplicated declaration and preserves the byte-identical-output contract
 (determinism of meaning, not just of formatting). If the same path appears once as `NEW`
 and once as `MODIFIED`, the de-duplicated entry is treated as `MODIFIED` (so the slice is
