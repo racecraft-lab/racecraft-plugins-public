@@ -477,12 +477,82 @@ For each deterministic behavior:
 ## Post-Implementation Checklist
 
 - [x] All tasks marked complete in tasks.md (35/35; G7 `pass:true`)
-- [x] L1 structural: `bash tests/run-all.sh --layer 1` green (786/786)
-- [x] L4 script-unit: `bash tests/run-all.sh --layer 4` green (678/678; gate + estimator fixtures)
+- [x] L1 structural: `bash tests/run-all.sh --layer 1` green (837/837 post-merge)
+- [x] L4 script-unit: `bash tests/run-all.sh --layer 4` green (752/752 post-merge; gate + estimator fixtures)
 - [ ] L3 functional eval — DEFERRED developer-local (T033, `claude -p`; not run in autopilot, run before merge)
 - [ ] L8 Codex parity — DEFERRED developer-local (T034; not run in autopilot, run before merge)
-- [ ] Back-compat break (old exception keywords) documented for PRSG-011
+- [x] Back-compat break (old exception keywords) documented (spec FR-013 + Out-of-Scope → PRSG-011)
 - [ ] PR created (plain-English title with conventional-commits prefix) and reviewed
+
+---
+
+## Post-Implementation Results
+
+### Merge with main (branch was stale)
+
+The branch was built on base `1068903`; `main` had since merged #108/#109/#111/
+#114/#115/#116. Merged `origin/main` in (commit `095fede`) and resolved conflicts:
+`reviewability-gate.sh` auto-merged (PRSG-006's production-only `reviewable_loc`
+subsumes #111's `.process/` exclusion); the four #111 diff-mode tests asserted the
+superseded markdown-counting contract and were rewritten to exercise the same
+`.process/` guarantee with production files under the new metric; roadmap kept
+main's PRSG-001 ✅ + PRSG-002 🔄 and this branch's PRSG-006 🔄; CLAUDE.md pointer +
+`feature.json` took main's values (PR does not touch transient pointers).
+Post-merge: L1 837/837, L4 752/752.
+
+### Verification audits (#26 / #27)
+
+- **Verify implementation:** PASS — all 15 FRs (FR-001–015) trace to an implementation
+  file AND a test (L4 fixture or L1 guard). FR-004/005 are doc-wiring (advisory branch
+  behavior); FR-007/014/015 are L1-asserted. No gaps.
+- **Verify-tasks phantom check:** PASS — no phantom completions. T033 (L3) / T034 (L8)
+  are `[x]` with definition-of-done = "record as developer-local before merge (not CI)";
+  the recording is the deliverable, so `[x]` is legitimate, not phantom.
+- **Defect found + fixed (commit `ff382f2`):** the reviewability-preset plan-template
+  stub demonstrated `NEW path` without the `- ` list marker the estimator's parser
+  requires, so an author following it would get a silent `not_estimated` — a no-op of
+  US1's headline. Corrected to `- NEW <path>` / `- MODIFIED <path>` (placeholders kept
+  non-matching) and added an L1 guard so it can't regress.
+
+### Reviewability diff gate (#31) — self-demonstration
+
+PRSG-006's own gate on its own diff (`origin/main...HEAD`): `status: warn, pass: true,
+blockers: []`. Notable:
+- `primary_surfaces: 4` → **a warning, not a blocker** — exactly PRSG-006's FR-010 change
+  (the old gate blocked on >1 surface). The gate demonstrates its own fix.
+- `reviewable_loc: 0` / `production_files: 0` → the documented `is_production_file`-misses-
+  `.sh` limitation (PRSG-001's domain, explicitly out of scope here). PRSG-006's real change
+  is ~370 LOC of bash the metric does not yet recognize.
+- `total_files: 24` → warning (<25 block).
+No unexcepted block → PR creation is clear.
+
+### Self-Review (auto-generated)
+
+**Tests executed:** L1 (`bash tests/run-all.sh --layer 1`) → 837/837 and L4
+(`--layer 4`) → 752/752 both ran this session and exited zero (most recently after the
+`ff382f2` plan-template fix). This is a Bash plugin: L1 (`bash -n` + structural) and L4
+(script unit) ARE the build/typecheck/test surface — there is no separate compile step.
+L7 integration is **out of scope per the spec** (required layers L1/L3/L4/L8, no L7); L3
+and L8 are developer-local before merge (T033/T034), not run in the autopilot. No test
+was inferred-green: each cited run was invoked directly.
+
+**Edge cases:** Every acceptance criterion has a non-happy-path test. FR-012 (fail-closed
+exception) has an 8-variant bypass list (invalid class, mis-case, trailing content, context/
+removed lines, `+++` header, commit-message) all asserted to STAY block; FR-003 covers the
+`not_estimated` / exit-code arms; FR-006/009 cover NEW+MODIFIED-same-path dedupe and the
+modified-file greenfield disqualifier; the fenced-code pragma residual is recorded as a
+known limitation (L4 records current behavior; hardening is PRSG-010). No `[edge-case-gap]`.
+
+**Requirements matched:** spec FR-001–015 ↔ tasks.md is 1:1 (every FR cited by ≥1 task;
+every `[x]` task has implementation evidence in the diff). No orphans in either direction.
+
+**Follow-up (each with a landing place):**
+- T033 (L3) / T034 (L8) — developer-local before merge; noted in PR body §Verification.
+- `is_production_file` misses `.sh` plugin paths — documented limitation, PRSG-001's domain.
+- Fenced-code-block exception pragma residual — documented; hardening is PRSG-010.
+- Legacy 3-phrase keyword now honored by no mode (back-compat break) — spec FR-013 +
+  Out-of-Scope note for PRSG-011's retro-migration.
+No silent deferrals.
 
 ---
 
