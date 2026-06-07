@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — PRSG-001 ✅ complete (PR #111); PRSG-002 🔄 scaffolded 2026-06-06. Created 2026-06-03.
+> Status: **in progress** — PRSG-001 ✅ complete (PR #111); PRSG-002 🔄 scaffolded 2026-06-06; PRSG-003 🔄 scaffolded 2026-06-06. Created 2026-06-03.
 
 ## Vision
 
@@ -122,7 +122,7 @@ stay linked) and decomposition *navigable* (you navigate the map, not memorize t
 
 ---
 
-### PRSG-003 — Generated index/PRs/backlinks + status integration + phase-gate regen  · Phase 2 · P1
+### PRSG-003 — Generated index/PRs/backlinks + status integration + phase-gate regen  · Phase 2 · P1 · 🔄 In Progress
 **Why:** plain markdown has no live engine; generated blocks must be regenerated or
 they silently lie (the #1 risk).
 
