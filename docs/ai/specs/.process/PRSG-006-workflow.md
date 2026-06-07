@@ -556,6 +556,43 @@ No silent deferrals.
 
 ---
 
+## Retrospective
+
+**Outcome:** All 7 SDD phases completed (G1–G7 pass), merged up to date with `main`,
+PR [#119](https://github.com/racecraft-lab/racecraft-plugins-public/pull/119) opened
+MERGEABLE. Final test state: L1 837/837, L4 752/752.
+
+**What went well:**
+- The non-`NNN` `PRSG-` branch name was handled end-to-end (branch-aware Specify
+  override + `feature.json` repoint) without derailing path resolution.
+- Phase 7 decomposed cleanly into 4 file-disjoint slices, each TDD red→green, dispatched
+  in parallel without write contention.
+- The gate self-demonstrated its own fix: run on its own diff it returned a *warning*
+  (not a block) for touching 4 surfaces — exactly the FR-010 behavior this spec ships.
+
+**What was hard / the two saves that mattered:**
+1. **Stale-branch semantic conflict.** The branch was built on a base from before `main`
+   absorbed #109/#111/#114. `reviewability-gate.sh` merged with zero textual conflict but
+   was *semantically* broken — #111's `.process/` tests asserted a markdown-counting
+   `reviewable_loc` that this spec replaced with a production-only metric. Re-running L4
+   after the merge (rather than trusting a clean textual merge) caught the 4 failures; the
+   fix was to reconcile #111's four tests to the new metric while preserving their
+   `.process/` guarantee with production-file fixtures. **Lesson: a clean text-merge of a
+   logic file is not evidence of behavioral correctness — always re-run the behavior tests.**
+2. **A shipped-path defect the green suite missed.** The fresh-eyes verification audit found
+   the reviewability-preset plan-template taught `NEW path` without the `- ` list marker the
+   estimator's parser requires — so an author following the template would get a silent
+   `not_estimated`, a no-op of US1's headline. Every L4 fixture hand-authored the correct
+   format, so nothing fed the template's own format through the parser. Fixed + added an L1
+   guard. **Lesson: test the author-facing artifact through the real parser, not just the
+   parser through hand-authored inputs.**
+
+**What the autopilot would do differently:** rebase/sync with `main` *before* implementation
+when the branch base is more than a few PRs stale, so the gate/skill rework starts from the
+current files instead of reconciling two reworks at the end.
+
+---
+
 ## Project Structure Reference
 
 ```
