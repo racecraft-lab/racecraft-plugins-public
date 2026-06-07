@@ -13,11 +13,7 @@
 
 No build step and no package install required. You need two standard tools: `bash` and `jq`. Both are present on any macOS or Linux machine.
 
-All commands in this runbook that run the estimator script or the test suite assume your working directory is the worktree root:
-
-```
-/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public/.worktrees/prsg-005-slice-sizing-heuristics
-```
+All commands in this runbook that run the estimator script or the test suite assume your working directory is the **repository root** of your checkout — the directory that contains `speckit-pro/`, `specs/`, and `docs/`.
 
 The fast automated test suite (run this once before starting UAT to confirm the deterministic layer is green):
 
