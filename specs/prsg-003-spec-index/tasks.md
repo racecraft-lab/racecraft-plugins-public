@@ -102,11 +102,12 @@ counts.
   (FR-016); and a non-version-marked legacy spec (FR-007 skip). These are inputs
   only — no production code.
 - [ ] T004 Verify the reviewability budget against the planned task/file scope
-  (one new script `generate-spec-index.sh`; edits to `spec-moc-template.md`, the
-  dormant-INDEX-only `roadmap-moc-template.md`, `speckit-status` SKILL.md +
-  `speckit-autopilot` phase-execution.md and their 3 Codex mirrors; 2 new test
-  files + fixtures) and record the split decision (remains one spec) in this task's
-  notes before implementation. Within budget — no exception needed.
+  (one new script `generate-spec-index.sh`; edits to `spec-moc-template.md`,
+  `speckit-status` SKILL.md + `speckit-autopilot` phase-execution.md and their 3
+  Codex mirrors; 2 new test files + fixtures) and record the split decision (remains
+  one spec) in this task's notes before implementation. Within budget — no exception
+  needed. (Matches plan.md's file manifest exactly; the previously-flagged
+  `roadmap-moc-template.md` edit was dropped by Analyze — see the T020 tombstone.)
 
 **Checkpoint**: Foundation ready — US1 implementation can begin.
 
@@ -255,20 +256,31 @@ boundary produces none (SC-005).
   `disable-model-invocation`) [FR-020, SC-010 — keeps `validate-codex-skills.sh` +
   `validate-codex-parity.sh` green]. The generator script is referenced by path, not
   duplicated.
-- [ ] T017 [P] [US2] Wire the autopilot phase-gate rebuild on the Claude side: edit
-  `speckit-pro/skills/speckit-autopilot/references/phase-execution.md` to add an
+- [ ] T017 [P] [US2] Wire the autopilot phase-gate rebuild on the Claude side. The
+  authoritative behavior text goes in
+  `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`: add an
   idempotent regen-and-commit-on-non-empty-diff step at EVERY phase boundary —
   run `generate-spec-index.sh` (write mode), and if `git diff` is non-empty, fold the
   changed maps into the existing checkpoint commit; when the rebuild is the only
   staged change, use the fixed subject `docs(speckit-pro): regenerate spec-MOC
   navigation zones` [D4, FR-014, SC-005]. exit 2 → surface and stop (do not commit a
-  broken regen).
-- [ ] T018 [P] [US2] Mirror the T017 phase-gate behavior into the two
-  `speckit-autopilot` Codex files — `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
-  AND `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
-  (the path `validate-codex-skills.sh` asserts) — in Codex-native framing, same
+  broken regen). **Mirror-symmetry note (FR-020):** if (and only if) this edit also
+  adds a *pointer* to the new step in the Claude `speckit-autopilot/SKILL.md` Main
+  Execution Loop section, T018 MUST add the equivalent pointer to the Codex
+  `SKILL.md` — and vice-versa — so the two runtimes describe the phase-gate step at
+  the SAME level. Default: keep the behavior in the reference file only and add no
+  SKILL.md pointer on either side.
+- [ ] T018 [P] [US2] Mirror the T017 phase-gate behavior into the Codex autopilot
+  reference at
+  `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
+  (the path `validate-codex-skills.sh` asserts) in Codex-native framing — same
   commit-on-non-empty-diff behavior and same fixed D4 subject; no Claude-only
-  frontmatter keys [FR-020, SC-010].
+  frontmatter keys [FR-020, SC-010]. Touch
+  `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` ONLY to keep it
+  level-symmetric with the Claude `speckit-autopilot/SKILL.md` per T017's
+  mirror-symmetry note: if T017 added no Claude SKILL.md pointer, add none here
+  either (avoid a Codex-only SKILL.md description of behavior the Claude SKILL.md
+  lacks — that is the asymmetric-mirror FR-020 violation this task must not create).
 
 **Checkpoint**: US1 + US2 both functional. The engine is read-only-safe in status
 and write-authoritative at autopilot gates.
@@ -285,14 +297,24 @@ dogfoods on real maps, and register the new L1 fixture in the suite.
   reproducing the `contracts/sentinel-grammar.md` framing exactly so a template-born
   spec map and an inject-if-missing map are byte-identical [FR-017/FR-008]. This is
   the unambiguous FR-017 deliverable (spec map template, singular).
-- [ ] T020 [P] Add the dormant **INDEX zone only** at the canonical anchor to
-  `speckit-pro/skills/speckit-coach/templates/roadmap-moc-template.md` (the one zone
-  semantically valid for a roadmap MOC; PRS/BACKLINKS are per-spec). **SCOPE FLAG —
-  EXCEEDS plan.md**: plan.md and FR-017 name only `spec-moc-template.md`; this task
-  exists to honor the workflow brief's "roadmap-moc-template" line literally, scoped
-  to the dormant INDEX zone with NO home-note creation and NO live population (that
-  is PRSG-004, FR-019). Surface for Analyze (G6) to adjudicate keep-or-drop. If
-  Analyze rules it scope creep, drop this task; T019 alone satisfies FR-017.
+- ~~**T020** (no checkbox — not an actionable task)~~ **DROPPED by Analyze (G6) — roadmap-MOC template INDEX zone is PRSG-004 scope.**
+  This task previously proposed adding a dormant INDEX-only zone to
+  `roadmap-moc-template.md`. It is dropped, and the work is NOT performed. Rationale
+  (decided on the evidence): (1) the design concept's seeding decision (Q10) names
+  only `spec-moc-template.md`, and FR-017 + plan.md name only the spec-map template
+  (singular); (2) the roadmap-level INDEX is an explicit **non-goal** here —
+  "dormant ... until PRSG-004 creates the home note carrying the INDEX sentinels"
+  (design concept Non-goals, FR-019); (3) the generator's discovery is bounded to
+  version-marked `SPEC-MOC.md` notes under `specs/` (FR-007, T009) and never
+  processes `roadmap-moc-template.md`, so an INDEX-only zone hand-added to that
+  template would be generator-unmanaged, covered by no fixture, and not emitted by
+  the shared `assemble_zone_block()` (whose fixed block is INDEX → PRS → BACKLINKS,
+  D2) — i.e. orphaned sentinel text, which Constitution VI (YAGNI) and the
+  "built-but-dormant means *fixture-tested*" framing argue against. **T019 alone
+  satisfies FR-017.** The dormant INDEX path that IS in scope lives inside spec-MOCs
+  and is fixture-exercised (T013), not in the roadmap template. The roadmap-MOC
+  template's INDEX seeding is deferred to PRSG-004 with its home note. No scope
+  contradiction remains in this list.
 - [ ] T021 Create this spec's own version-marked map note at
   `specs/prsg-003-spec-index/SPEC-MOC.md` — AFTER the generator exists (T014) so it
   dogfoods — with frontmatter `structureVersion: 1`, a valid relative `up:`,
@@ -306,8 +328,8 @@ dogfoods on real maps, and register the new L1 fixture in the suite.
   `validate-moc-orphan.sh` / `validate-moc-stale-index.sh` entries (lines ~145-146),
   so `bash tests/run-all.sh --layer 1` runs it [constitution IV].
 
-**Checkpoint**: Template + roadmap-template (flagged) + dogfood MOC + suite wiring
-done.
+**Checkpoint**: Spec-map template (T019) + dogfood MOC (T021) + suite wiring (T022)
+done. (T020 dropped by Analyze — roadmap-MOC template INDEX zone is PRSG-004 scope.)
 
 ---
 
@@ -347,8 +369,8 @@ done.
 - **US2 (Phase 4)**: **Hard-depends on US1 GREEN** (T014). Wiring is meaningless
   without the generator — US1 and US2 are NOT independent/parallel.
 - **Cross-Cutting (Phase 5)**: T021 (dogfood MOC) depends on T014; T022 (suite
-  wiring) depends on T005 existing; T019/T020 (templates) depend on the sentinel
-  framing (T010) being settled but edit different files.
+  wiring) depends on T005 existing; T019 (spec-MOC template) depends on the sentinel
+  framing (T010) being settled. (T020 dropped by Analyze.)
 - **Polish (Phase 6)**: Depends on Phases 3-5 complete.
 
 ### Within US1
@@ -365,7 +387,7 @@ done.
   phase-execution.md) are different files.
 - **T016 ∥ T018** — the two Codex mirror edits (status mirror vs autopilot mirror
   pair) are different files.
-- **T019 ∥ T020** — the spec-MOC template vs the roadmap-MOC template are different files.
+- (T019 ∥ T020 was a parallel pair; T020 dropped by Analyze, so T019 now stands alone.)
 - The generator-core spine (T007 → T008 → T009 → T010 → T011 → T012 → T013 → T014)
   is **sequential** — same file, ordered dependencies. NOT `[P]`.
 - T021 (dogfood MOC) → T022 (suite wiring) → Phase 6 verification is a sequential tail.
@@ -417,8 +439,9 @@ Task: "speckit-autopilot Codex mirror pair (SKILL.md + references/phase-executio
 No task below populates these — they belong to downstream specs and would fail G6:
 
 - **Roadmap-level INDEX live population** against a real home note → PRSG-004
-  (here the INDEX path is built-but-dormant, T013; the roadmap-template touch in
-  T020 is INDEX-zone-only and explicitly flagged).
+  (here the INDEX path is built-but-dormant inside spec-MOCs and fixture-exercised,
+  T013). Seeding the roadmap-MOC *template* with an INDEX zone is also PRSG-004's job
+  and was dropped from this list by Analyze — see the T020 tombstone.
 - **Live slice → PR# → merged-SHA writing** → PRSG-009 (T012 only *renders* a
   repo-local committed `prs.json`; never `gh`/network).
 - **Backfilling zones into legacy specs lacking a `SPEC-MOC.md`** → PRSG-011
@@ -436,5 +459,6 @@ No task below populates these — they belong to downstream specs and would fail
 - Verify T005/T006 FAIL before implementing T007+; they pass GREEN at T014.
 - Commit after each task or logical group (the orchestrator owns commits in autopilot).
 - The generator is ONE shared script; Codex consumes it by path (no duplicate) — FR-020.
-- T020 is the single point where this list exceeds plan.md; it is scoped to the
-  dormant INDEX zone and flagged for Analyze to keep-or-drop.
+- T020 was the single point where this list exceeded plan.md; Analyze (G6) ruled it
+  scope creep into PRSG-004 and dropped it. The list now matches plan.md's file
+  manifest exactly, with no unreconciled scope contradiction.

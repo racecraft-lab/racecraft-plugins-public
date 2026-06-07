@@ -168,8 +168,10 @@ understands, and fall back to the FR-016 fail-safe only when the structure is
 unparseable (full rule in `contracts/prs-manifest.schema.md`). Records render in a
 fixed order: by normalized `slice` ID ascending (via `moc_normalize`), then by
 `pr` ascending.
-The PRS rows render as plain text (slice · PR#`117` · sha`abc1234`) — **not** as
-`[](...)` markdown links — so they introduce no link the stale-index lint must
+The PRS rows render as plain text — the canonical example string is
+`PRSG-003 · PR#117 · abc1234` (the exact form pinned in
+`contracts/prs-manifest.schema.md` and `data-model.md` E4) — **not** as
+`[](...)` markdown links, so they introduce no link the stale-index lint must
 resolve, and so the dormant-vs-empty zone stays lint-clean. *Who writes* this
 manifest when a slice merges is PRSG-009; PRSG-003 ships only the renderer + the
 input contract + the fixture. When present, `prs.json` lives under `.process/`

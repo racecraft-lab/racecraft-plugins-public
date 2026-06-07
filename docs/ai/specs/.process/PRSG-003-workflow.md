@@ -36,7 +36,7 @@ there is an explicit revision note.
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + research.md + data-model.md + 3 contracts + quickstart.md; 4 deferred decisions finalized; bash+jq only, reuses moc-id-normalize.sh; G3 pass |
 | Checklist | `/speckit-checklist` | ✅ Complete | data-integrity (5 gaps→0, +SC-011) + error-handling (12 gaps→0, +FR-021/FR-022/SC-012, atomic writes); FR-022 fork resolved fail-safe via consensus; G4 pass |
 | Tasks | `/speckit-tasks` | ✅ Complete | 26 tasks (8 [P]), 2 stories; TDD RED tests T005/T006 before generator; every FR→task; Codex mirrors paired (T016/T018); G5 pass; tasks-mode reviewability `block`→ratified exception (path-token over-count, deferred to pre-PR diff gate) |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 0 CRITICAL; no design-concept drift; no PRSG-004/009/011 creep; T020 ruled DROP (roadmap-template INDEX is PRSG-004 scope; T019 alone satisfies FR-017); Codex mirror symmetry + PRS-format drift fixed; 0 unresolved → consensus skipped; G6 pass |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -373,7 +373,10 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| S1 | MEDIUM (scope) | T020 added a dormant INDEX zone to `roadmap-moc-template.md`, which plan.md/FR-017 never name (self-flagged "EXCEEDS plan.md") | **DROPPED.** Generator discovery is bounded to version-marked `SPEC-MOC.md` under `specs/` (FR-007) and never processes the roadmap template — an INDEX-only zone there would be orphaned/untested. Roadmap INDEX live population is PRSG-004 (FR-019). T020 → tombstone; T019 alone satisfies FR-017; 6 downstream references reconciled. |
+| M1 | MEDIUM (parity) | Asymmetric Codex mirror: T018 touched Codex `SKILL.md` + `phase-execution-codex.md`, but T017 touched only the Claude reference, not the Claude `SKILL.md` (FR-020 risk not caught by parity validators) | Amended T017/T018 with a mirror-symmetry note: behavior lives in the reference file; any `SKILL.md` pointer is added on both runtimes or neither (default reference-only). |
+| L1 | LOW (consistency) | plan.md D3 wrote the PRS plain-text render as shorthand, diverging from the canonical `PRSG-003 · PR#117 · abc1234` in the contract/data-model/T012 | Edited plan.md D3 to cite the canonical example string and point to the contract + data-model as the byte authority. |
+| — | — | Coverage / TDD-order / Codex-pairs / contract read-only / boundary integrity audited | All 22 FR + 12 SC map to ≥1 task; T005/T006 RED before T014 GREEN; T016↔T015 & T018↔T017 paired; status read-only; PRSG-004/009/011 cleanly out of scope. No change needed. |
 
 ---
 
