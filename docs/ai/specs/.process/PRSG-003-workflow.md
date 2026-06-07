@@ -452,6 +452,78 @@ code) → REFACTOR → VERIFY.
 
 ---
 
+## Post-Implementation Results
+
+### Doctor / Extension Health (#20)
+`specify check`: Git, Claude Code, Codex CLI all available. Extension registry
+intact — 7 enabled (verify, verify-tasks, checkpoint, retrospective,
+speckit-utils, git, archive). `review` + `cleanup` not installed.
+
+### Integration Suite (#24)
+`bash tests/run-all.sh --integration` (Layer 7 replay) → **210/210 passed**,
+exit 0. No regressions. Full unit/structural suite **1659/1659**.
+
+### Reviewability Diff Gate (#26) — ship-as-one (honest exception)
+`reviewability-gate.sh diff origin/main...HEAD` returns `pass: true` ONLY via the
+ratified-exception phrase in tasks.md — it is NOT an independent size verdict.
+Real diff: ~4464 added lines / 63 files. Composition: ~700 LOC production code
+(generator + wiring) · ~1050 LOC tests + fixtures · **~2850 LOC SDD documentation
+(~64%)**. Decision: **ship as one PR.** Splitting duplicates the SDD docs across
+sub-specs and fragments a hard-coupled feature. Precedent: the comparable
+predecessor autopilot PR (PRSG-002, #116) merged at 3858 additions / 71 files —
+same profile. Size + composition stated plainly in the PR body (not behind a green
+check). Full rationale: `specs/prsg-003-spec-index/tasks.md` §Reviewability Scope
+Exception.
+
+### Verify / Verify-Tasks (#21/#22)
+The `verify` / `verify-tasks` SpecKit extensions register as skills, not headless
+`specify` subcommands. Their intent — implementation-matches-spec and
+phantom-completion detection — is covered by the Self-Review below (every `[x]`
+task cross-walked to commit + passing-test evidence; no phantom completions).
+
+### Code Review (#23)
+`review` extension not installed; ran a dedicated adversarial code-review subagent
+over the generator + wiring + tests instead (findings folded into the PR body /
+acted on before PR open).
+
+### Self-Review (auto-generated) (#27)
+
+**Tests executed:** All applicable commands ran this session (2026-06-07) and
+exited zero — UNIT/STRUCTURAL `bash tests/run-all.sh` → 1659/1659; INTEGRATION
+`bash tests/run-all.sh --integration` → 210/210; LINT `shellcheck` + `bash -n` on
+`generate-spec-index.sh` → clean (only SC1091 lib-sourcing info, matching sibling
+lints). BUILD/TYPECHECK → N/A (bash + jq, no compile step). Evidence: workflow
+§Implementation Progress + §Post-Implementation Results.
+
+**Edge cases:** Every success criterion has a non-happy-path test. SC-001/SC-009
+determinism + filesystem-order independence → `validate-spec-index-determinism.sh`
+(runs the generator twice; asserts byte-identical + order-independent). FR-015/
+FR-021 stale≠error + trap-disarm-before-deliberate-exit → L4 (a)/(c). FR-012
+`--check` writes nothing incl. error path → L4 (b). FR-009 missing-one-pair skip →
+L4 (d). FR-022 unbalanced/duplicated pair fail-safe exit 2, no partial write → L4
+(e). FR-016/D6 atomic per-target write (no half-write across maps) → L4 (f).
+FR-011 vs FR-016 PRS absent/empty vs malformed → L4 (g). FR-008/FR-017 template-
+born ≡ inject-if-missing byte-identical → L4 (h) + the T019 `--check` exit-0
+byte-identity proof on the real template. FR-005 canonical ordering → L4 (i) +
+independent ground-truth inspection. SC-012 empty-tree no-op → verified manually
+(no-`specs/` tree and non-version-marked legacy → exit 0, nothing written). No
+`[edge-case-gap]` markers.
+
+**Requirements matched:** All 22 FR (FR-001…FR-022) and 12 SC (SC-001…SC-012) map
+to ≥1 task (confirmed at Analyze). US1 = T005–T014, US2 = T015–T018, cross-cutting
+T019/T021/T022. Every `[x]` task has implementation evidence (6 Phase-7 commits +
+passing tests). T020 dropped by Analyze (roadmap-template INDEX zone → PRSG-004);
+FR-017 still covered by T019, FR-019 by T013. No orphans in either direction.
+
+**Follow-up:** All deferrals have explicit landing places (no silent TODOs):
+roadmap-level INDEX live population → PRSG-004; live slice→PR#→merged-SHA writing →
+PRSG-009; backfilling zones into legacy specs lacking a map → PRSG-011; inbound
+cross-spec citation graph → future (`related:` empty in v1). The in-scope cross-spec
+edit — populating prsg-002's already-merged map with the zones its body said would
+come "from a later spec" — is surfaced in the PR body, not a surprise diff.
+
+---
+
 ## Project Structure Reference
 
 ```
