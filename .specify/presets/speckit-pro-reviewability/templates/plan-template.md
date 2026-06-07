@@ -41,13 +41,16 @@
 
 The plan-phase reviewability estimator (`estimate-reviewable-loc.sh`) parses this
 block to project the slice's production-LOC footprint before `tasks.md` exists.
-List one entry per file as `STATUS  repo-relative-path`, where STATUS is `NEW` or
-`MODIFIED`. Omit this block and the estimator degrades gracefully to
-`not_estimated`.
+List one entry per file on its own line, each starting with a `- ` list marker:
+`- NEW <repo-relative-path>` for a new file or `- MODIFIED <repo-relative-path>`
+for an existing one. The leading `- ` marker is required — a line without it is
+ignored. Omit this block entirely and the estimator degrades gracefully to
+`not_estimated`. Replace the angle-bracket placeholders below with real paths
+(the placeholders are intentionally non-matching so the example never counts):
 
 <!--
-  NEW       path/to/new-file.ext
-  MODIFIED  path/to/existing-file.ext
+  - NEW <path to a new file>
+  - MODIFIED <path to an existing file>
 -->
 
 ## Constitution Check

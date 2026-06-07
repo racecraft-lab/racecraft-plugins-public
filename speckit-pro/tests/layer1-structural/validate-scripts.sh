@@ -105,4 +105,31 @@ assert_contains "$roadmap_content" "infra"
 set_test "technical-roadmap-template.md: names the upgrade exception class"
 assert_contains "$roadmap_content" "upgrade"
 
+# FR-001/US1: the reviewability-preset plan-template's `## Declared File Operations`
+# stub is the sole author-facing source of the block the estimator parses. It MUST
+# demonstrate the `- ` list-marker format the parser requires
+# (estimate-reviewable-loc.sh ENTRY_RE: `^[[:space:]]*[-*][[:space:]]+(NEW|MODIFIED)...`).
+# A stub that shows a bare `NEW path` (no leading `- `) teaches a format the parser
+# silently drops → every wired plan run degrades to `not_estimated`, making the
+# preventive budget a no-op through its own delivery vehicle. Guard against that.
+section "reviewability-preset plan-template declared-files format (FR-001/US1)"
+
+PRESET_PLAN_TEMPLATE="$(cd "$PLUGIN_ROOT/.." && pwd)/.specify/presets/speckit-pro-reviewability/templates/plan-template.md"
+
+set_test "reviewability-preset plan-template.md: exists"
+assert_file_exists "$PRESET_PLAN_TEMPLATE"
+
+if [ -f "$PRESET_PLAN_TEMPLATE" ]; then
+  preset_plan_content=$(cat "$PRESET_PLAN_TEMPLATE")
+
+  set_test "reviewability-preset plan-template.md: has Declared File Operations section"
+  assert_contains "$preset_plan_content" "## Declared File Operations"
+
+  set_test "reviewability-preset plan-template.md: teaches the '- NEW' list-marker format the parser requires"
+  assert_contains "$preset_plan_content" "- NEW "
+
+  set_test "reviewability-preset plan-template.md: teaches the '- MODIFIED' list-marker format the parser requires"
+  assert_contains "$preset_plan_content" "- MODIFIED "
+fi
+
 test_summary
