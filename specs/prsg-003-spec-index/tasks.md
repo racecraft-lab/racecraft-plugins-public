@@ -70,12 +70,12 @@ counts.
 
 **Purpose**: Confirm the reuse surface and contracts are in place before writing tests.
 
-- [ ] T001 Confirm the reused PRSG-002 libraries exist and expose the needed
+- [x] T001 Confirm the reused PRSG-002 libraries exist and expose the needed
   functions: `speckit-pro/tests/lib/moc-id-normalize.sh` (`moc_normalize`,
   `moc_id_match`) and `speckit-pro/tests/lib/moc-frontmatter.sh` (`moc_is_gated`,
   `moc_frontmatter_field`). No second normalizer is introduced (FR-004). No file
   is created in this task; it gates the implementation against reinventing the join.
-- [ ] T002 Re-read the three authoritative contracts so every test/impl task below
+- [x] T002 Re-read the three authoritative contracts so every test/impl task below
   matches them byte-for-byte: `specs/prsg-003-spec-index/contracts/sentinel-grammar.md`
   (D1/D2 — the six sentinel lines, fixed order INDEX → PRS → BACKLINKS, byte framing),
   `specs/prsg-003-spec-index/contracts/generator-cli.md` (the 3-way exit enum
@@ -91,7 +91,7 @@ counts.
 
 **⚠️ CRITICAL**: No US1/US2 implementation begins until T004 confirms scope.
 
-- [ ] T003 Create the committed fixture directory
+- [x] T003 Create the committed fixture directory
   `speckit-pro/tests/layer1-structural/fixtures/spec-index/` to hold the
   fixture spec trees the L1 determinism fixture and the L4 unit test consume
   (per plan.md Project Structure). Fixtures cover: a version-marked MOC with all
@@ -101,7 +101,7 @@ counts.
   `.process/prs.json`; an absent/empty `prs.json` (FR-011); a malformed `prs.json`
   (FR-016); and a non-version-marked legacy spec (FR-007 skip). These are inputs
   only — no production code.
-- [ ] T004 Verify the reviewability budget against the planned task/file scope
+- [x] T004 Verify the reviewability budget against the planned task/file scope
   (one new script `generate-spec-index.sh`; edits to `spec-moc-template.md`,
   `speckit-status` SKILL.md + `speckit-autopilot` phase-execution.md and their 3
   Codex mirrors; 2 new test files + fixtures) and record the split decision (remains
@@ -127,7 +127,7 @@ Fully testable with no status/autopilot wiring.
 
 ### Tests for User Story 1 (TDD — write FIRST, MUST FAIL until T014 GREEN) ⚠️
 
-- [ ] T005 [P] [US1] Write the Layer 1 determinism fixture at
+- [x] T005 [P] [US1] Write the Layer 1 determinism fixture at
   `speckit-pro/tests/layer1-structural/validate-spec-index-determinism.sh`
   (sibling of `validate-moc-orphan.sh`), using `tests/lib/assertions.sh`. It runs
   the generator twice over the fixture trees in
@@ -135,7 +135,7 @@ Fully testable with no status/autopilot wiring.
   byte-identical to the first (zero diff) and that output is independent of
   filesystem enumeration order (FR-003, SC-001, SC-009). MUST FAIL now (generator
   absent).
-- [ ] T006 [P] [US1] Write the Layer 4 unit test at
+- [x] T006 [P] [US1] Write the Layer 4 unit test at
   `speckit-pro/tests/layer4-scripts/test-generate-spec-index.sh` (sibling of
   `test-moc-id-normalize.sh`), using `tests/lib/assertions.sh`. It MUST enumerate
   assertions for: (a) the 3-way exit enum — `--check` returns `0` current, `1`
@@ -155,7 +155,7 @@ Fully testable with no status/autopilot wiring.
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Create the generator skeleton at
+- [x] T007 [US1] Create the generator skeleton at
   `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh` (sibling of
   `reviewability-gate.sh` / `generate-pr-body.sh`): `#!/usr/bin/env bash`,
   `set -euo pipefail`, `chmod +x`; source `tests/lib/moc-id-normalize.sh` and
@@ -164,20 +164,20 @@ Fully testable with no status/autopilot wiring.
   parse `[--check] [REPO_ROOT]` per `contracts/generator-cli.md`; infer repo root
   from script location with optional positional override (FR-020 — single shared
   copy, no Codex duplicate). `shellcheck` + `bash -n` clean (constitution II).
-- [ ] T008 [US1] Implement the internal-error trap + 3-way exit enum in
+- [x] T008 [US1] Implement the internal-error trap + 3-way exit enum in
   `generate-spec-index.sh`: `set -E` after the `source` lines, an `_on_err` ERR trap
   (errtrace) that prints an actionable stderr line naming the file + failure class
   and `exit 2`; disarm the trap (`trap - ERR EXIT`) immediately before any deliberate
   non-zero exit (the `--check` stale `exit 1`), so stale (1) and error (2) are
   structurally never conflated [D5, FR-015/FR-016/FR-021]. Exit `0` current, `1`
   stale, `2` error per `contracts/generator-cli.md`.
-- [ ] T009 [US1] Implement discovery + version-gating in `generate-spec-index.sh`:
+- [x] T009 [US1] Implement discovery + version-gating in `generate-spec-index.sh`:
   enumerate spec dirs under `specs/`, select a dir as in-scope iff its `SPEC-MOC.md`
   is version-marked via `moc_is_gated`; skip non-marked/legacy specs unmodified
   [FR-007, SC-007]. Reject a non-regular-file target (dir/symlink where a MOC is
   expected) with the T008 error path [FR-016]. `LC_ALL=C sort` every discovered
   spec/file list before rendering so enumeration order never leaks [FR-005, SC-009].
-- [ ] T010 [US1] Implement `assemble_zone_block()` in `generate-spec-index.sh` — the
+- [x] T010 [US1] Implement `assemble_zone_block()` in `generate-spec-index.sh` — the
   SINGLE function that emits the three-zone block (INDEX → PRS → BACKLINKS) for BOTH
   the template-fill path and the inject-if-missing path, reproducing the byte framing
   from `contracts/sentinel-grammar.md` exactly: one blank line before the first
@@ -186,7 +186,7 @@ Fully testable with no status/autopilot wiring.
   an empty zone is the two sentinel lines on consecutive lines with no body between
   them (link-free) [D2, FR-008/FR-017]. This shared function is what makes
   template-born and injection-migrated maps byte-identical.
-- [ ] T011 [US1] Implement the BACKLINKS renderer in `generate-spec-index.sh` — the
+- [x] T011 [US1] Implement the BACKLINKS renderer in `generate-spec-index.sh` — the
   v1-active zone. For each in-scope spec, render a reachability list of that spec's
   own artifacts as relative `[](...)` links **relative to the MOC's own directory**,
   enumerating ONLY that spec's `specs/<branch>/**` tree including its `.process/`
@@ -194,7 +194,7 @@ Fully testable with no status/autopilot wiring.
   Order by the fixed artifact precedence spec → plan → tasks → data-model → research
   → contracts → checklists → `.process`, then lexicographic path within each bucket
   [FR-005, SC-002]. Keeps PRSG-002's stale-index lint green (G7).
-- [ ] T012 [US1] Implement the PRS renderer in `generate-spec-index.sh`: read the
+- [x] T012 [US1] Implement the PRS renderer in `generate-spec-index.sh`: read the
   per-spec `specs/<branch>/.process/prs.json` with `jq` (never `gh`/network)
   [FR-010, SC-008]; render each record as **plain text** (e.g. `PRSG-003 · PR#117 ·
   abc1234`), NOT a `[](...)` link, ordered by normalized `slice` ascending
@@ -202,14 +202,14 @@ Fully testable with no status/autopilot wiring.
   empty-but-valid link-free zone [FR-011]; malformed/unreadable manifest → fail-safe
   exit 2 with no partial write [FR-016], never conflated with the absent/empty case;
   unknown `schemaVersion` handled conservatively per the contract.
-- [ ] T013 [US1] Implement the dormant roadmap-level INDEX path in
+- [x] T013 [US1] Implement the dormant roadmap-level INDEX path in
   `generate-spec-index.sh`: build and exercise it via fixtures, but render nothing
   live in this repo — in a spec-MOC the INDEX zone is present-but-empty/link-free,
   and the roadmap home note that carries live INDEX markers is PRSG-004's deliverable
   [FR-019]. **Non-goal guard**: this task MUST NOT create a roadmap home note or
   populate a live roadmap INDEX (that is PRSG-004). INDEX ordering, when active, is
   normalized-ID ascending [FR-005].
-- [ ] T014 [US1] Implement the whole-zone splice + inject-if-missing + atomic write
+- [x] T014 [US1] Implement the whole-zone splice + inject-if-missing + atomic write
   in `generate-spec-index.sh`: locate each present marker pair and replace its ENTIRE
   body (never a partial in-place patch) [FR-002]; for an in-scope MOC missing zones,
   inject the empty zones once at the canonical anchor (end of body, after the intro
@@ -242,21 +242,21 @@ boundary produces none (SC-005).
 
 ### Implementation for User Story 2
 
-- [ ] T015 [P] [US2] Wire `speckit-status` to invoke the generator in read-only
+- [x] T015 [P] [US2] Wire `speckit-status` to invoke the generator in read-only
   `--check` mode: edit `speckit-pro/skills/speckit-status/SKILL.md` to call
   `generate-spec-index.sh --check` by absolute plugin path and surface, in the
   dashboard, exit 0 → "index current", exit 1 → "index stale — run regen", exit 2 →
   an error line — **writing nothing on any path** [FR-012/FR-013, SC-003/SC-004].
   **Non-goal guard**: `speckit-status` MUST NOT write any file (that read-only
   contract is preserved by design).
-- [ ] T016 [P] [US2] Mirror the T015 behavior into
+- [x] T016 [P] [US2] Mirror the T015 behavior into
   `speckit-pro/codex-skills/speckit-status/SKILL.md` in Codex-native framing,
   describing the same `--check` read-only staleness behavior; MUST NOT carry
   Claude-only frontmatter keys (`argument-hint`, `user-invocable`, `license`,
   `disable-model-invocation`) [FR-020, SC-010 — keeps `validate-codex-skills.sh` +
   `validate-codex-parity.sh` green]. The generator script is referenced by path, not
   duplicated.
-- [ ] T017 [P] [US2] Wire the autopilot phase-gate rebuild on the Claude side. The
+- [x] T017 [P] [US2] Wire the autopilot phase-gate rebuild on the Claude side. The
   authoritative behavior text goes in
   `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`: add an
   idempotent regen-and-commit-on-non-empty-diff step at EVERY phase boundary —
@@ -270,7 +270,7 @@ boundary produces none (SC-005).
   `SKILL.md` — and vice-versa — so the two runtimes describe the phase-gate step at
   the SAME level. Default: keep the behavior in the reference file only and add no
   SKILL.md pointer on either side.
-- [ ] T018 [P] [US2] Mirror the T017 phase-gate behavior into the Codex autopilot
+- [x] T018 [P] [US2] Mirror the T017 phase-gate behavior into the Codex autopilot
   reference at
   `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
   (the path `validate-codex-skills.sh` asserts) in Codex-native framing — same
@@ -292,7 +292,7 @@ and write-authoritative at autopilot gates.
 **Purpose**: Seed the zones into the template + this spec's own MOC so the generator
 dogfoods on real maps, and register the new L1 fixture in the suite.
 
-- [ ] T019 [P] Add the three empty GENERATED zones (INDEX → PRS → BACKLINKS) at the
+- [x] T019 [P] Add the three empty GENERATED zones (INDEX → PRS → BACKLINKS) at the
   canonical anchor to `speckit-pro/skills/speckit-coach/templates/spec-moc-template.md`,
   reproducing the `contracts/sentinel-grammar.md` framing exactly so a template-born
   spec map and an inject-if-missing map are byte-identical [FR-017/FR-008]. This is
@@ -315,14 +315,14 @@ dogfoods on real maps, and register the new L1 fixture in the suite.
   and is fixture-exercised (T013), not in the roadmap template. The roadmap-MOC
   template's INDEX seeding is deferred to PRSG-004 with its home note. No scope
   contradiction remains in this list.
-- [ ] T021 Create this spec's own version-marked map note at
+- [x] T021 Create this spec's own version-marked map note at
   `specs/prsg-003-spec-index/SPEC-MOC.md` — AFTER the generator exists (T014) so it
   dogfoods — with frontmatter `structureVersion: 1`, a valid relative `up:`,
   `spec_id: "PRSG-003"`, and the three empty GENERATED zones at the canonical anchor;
   then run the generator (write mode) to fill its BACKLINKS over
   `specs/prsg-003-spec-index/**` [SC-006]. Depends on T014. (This is the artifact
   spec.md Assumptions + plan.md defer to a later phase.)
-- [ ] T022 Wire the new L1 determinism fixture into the suite: add
+- [x] T022 Wire the new L1 determinism fixture into the suite: add
   `"$TESTS_DIR/layer1-structural/validate-spec-index-determinism.sh"` to
   `speckit-pro/tests/run-all.sh` immediately beside the existing
   `validate-moc-orphan.sh` / `validate-moc-stale-index.sh` entries (lines ~145-146),
@@ -337,20 +337,20 @@ done. (T020 dropped by Analyze — roadmap-MOC template INDEX zone is PRSG-004 s
 
 **Purpose**: Verify determinism, parity, lints-stay-green, and assemble the PR packet.
 
-- [ ] T023 Run `shellcheck skills/speckit-autopilot/scripts/generate-spec-index.sh`
+- [x] T023 Run `shellcheck skills/speckit-autopilot/scripts/generate-spec-index.sh`
   and `bash -n skills/speckit-autopilot/scripts/generate-spec-index.sh` from the
   `speckit-pro/` directory; both clean (constitution II).
-- [ ] T024 Run `bash tests/run-all.sh` from `speckit-pro/` (Layers 1, 4, 5) green —
+- [x] T024 Run `bash tests/run-all.sh` from `speckit-pro/` (Layers 1, 4, 5) green —
   including the new L1 determinism fixture (T005) and L4 unit test (T006) — and
   confirm the two PRSG-002 lints (`validate-moc-orphan.sh`,
   `validate-moc-stale-index.sh`) stay green on the real `prsg-002` and `prsg-003`
   dogfooded maps [SC-011, G7]. Confirm `validate-codex-skills.sh` +
   `validate-codex-parity.sh` pass [SC-010].
-- [ ] T025 Prove idempotency by hand per `quickstart.md`: run the generator twice;
+- [x] T025 Prove idempotency by hand per `quickstart.md`: run the generator twice;
   the second run yields a zero-byte `git diff` on every `SPEC-MOC.md` [SC-001]; and
   confirm a clean no-op success (exit 0, zero files modified) against a tree with no
   in-scope specs [SC-012].
-- [ ] T026 Generate/update the PR review packet (per spec PR-Review-Packet
+- [x] T026 Generate/update the PR review packet (per spec PR-Review-Packet
   requirements): what changed, why, non-goals (roadmap INDEX population → PRSG-004;
   live PR/SHA → PRSG-009; legacy backfill → PRSG-011), review order (from
   `quickstart.md`), scope budget, traceability (FR → changed files + evidence),

@@ -37,7 +37,7 @@ there is an explicit revision note.
 | Checklist | `/speckit-checklist` | ✅ Complete | data-integrity (5 gaps→0, +SC-011) + error-handling (12 gaps→0, +FR-021/FR-022/SC-012, atomic writes); FR-022 fork resolved fail-safe via consensus; G4 pass |
 | Tasks | `/speckit-tasks` | ✅ Complete | 26 tasks (8 [P]), 2 stories; TDD RED tests T005/T006 before generator; every FR→task; Codex mirrors paired (T016/T018); G5 pass; tasks-mode reviewability `block`→ratified exception (path-token over-count, deferred to pre-PR diff gate) |
 | Analyze | `/speckit-analyze` | ✅ Complete | 0 CRITICAL; no design-concept drift; no PRSG-004/009/011 creep; T020 ruled DROP (roadmap-template INDEX is PRSG-004 scope; T019 alone satisfies FR-017); Codex mirror symmetry + PRS-format drift fixed; 0 unresolved → consensus skipped; G6 pass |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | TDD RED→GREEN; generator + status/autopilot wiring + Codex mirrors + dogfood; full suite 1659/1659; lint clean; 0 placeholder tests; G7 pass |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -431,22 +431,22 @@ code) → REFACTOR → VERIFY.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Generator core (normalizer reuse, sentinels, zones) | | | |
-| 2 - Template zones + inject-if-missing | | | |
-| 3 - status --check wiring (+ Codex mirror) | | | |
-| 4 - autopilot phase-gate step (+ Codex mirror) | | | |
-| 5 - Tests (L1 fixture, L4) + dogfood | | | |
+| 1 - Generator core (normalizer reuse, sentinels, zones) | T007–T014 | ✅ | 502-LOC bash+jq; reuses moc-id-normalize.sh; 3-way exit enum; atomic per-target write; commit `884faf1` |
+| 2 - Template zones + inject-if-missing | T019 | ✅ | spec-moc-template zones byte-identical to generator output; commit `40c9f03` |
+| 3 - status --check wiring (+ Codex mirror) | T015, T016 | ✅ | read-only freshness line; Codex mirror parity green; commits `40c9f03`/`330e82b` |
+| 4 - autopilot phase-gate step (+ Codex mirror) | T017, T018 | ✅ | regen-and-commit-on-non-empty-diff at every boundary; level-symmetric mirror; commits `40c9f03`/`330e82b` |
+| 5 - Tests (L1 fixture, L4) + dogfood | T003–T006, T021, T022 | ✅ | RED→GREEN; dogfooded on prsg-002+prsg-003 maps; suite wired; commits `0a63be3`/`79e7f80` |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] `shellcheck` + `bash -n` clean on `generate-spec-index.sh`
-- [ ] `bash tests/run-all.sh` green (incl. new L1 determinism fixture + L4)
-- [ ] MOC lints (`validate-moc-orphan.sh`, `validate-moc-stale-index.sh`) still green on real spec trees
-- [ ] Generator is idempotent (second run = zero diff) — verified
-- [ ] Codex parity: `validate-codex-skills.sh` green; `speckit-status` + `speckit-autopilot` mirrors updated
+- [x] All tasks marked complete in tasks.md (25; T020 tombstoned by Analyze)
+- [x] `shellcheck` + `bash -n` clean on `generate-spec-index.sh` (only SC1091 lib-sourcing info, matching sibling lints)
+- [x] `bash tests/run-all.sh` green (1659/1659, incl. new L1 determinism fixture + L4)
+- [x] MOC lints (`validate-moc-orphan.sh`, `validate-moc-stale-index.sh`) still green on real spec trees (prsg-002 + prsg-003)
+- [x] Generator is idempotent (second run = zero diff) — verified live + empty-tree no-op (SC-012)
+- [x] Codex parity: `validate-codex-skills.sh` (140/140) + `validate-codex-parity.sh` (74/74) green; `speckit-status` + `speckit-autopilot` mirrors updated
 - [ ] PR title is public-readable: `feat(speckit-pro): …` (no internal IDs)
 - [ ] PR created and reviewed
 
