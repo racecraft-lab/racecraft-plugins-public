@@ -1,7 +1,8 @@
 # Quickstart: PRSG-005 — Vertical-slice sizing heuristics
 
-How to run and verify the feature once implemented. All test commands run from the
-`speckit-pro/` directory.
+How to run and verify the feature once implemented. All commands below run from the
+**repository root** of your checkout (the directory that contains `speckit-pro/`, `specs/`,
+and `tests/`).
 
 ## Run the estimator directly
 
@@ -19,8 +20,7 @@ bash speckit-pro/skills/speckit-coach/scripts/estimate-spec-size.sh --spike
 ## Verify the estimator (Layer 4)
 
 ```bash
-cd speckit-pro
-bash tests/run-all.sh --layer 4        # runs test-estimate-spec-size.sh among others
+bash tests/speckit-pro/run-all.sh --layer 4   # runs test-estimate-spec-size.sh among others
 ```
 
 Asserts: byte-identical output for identical inputs; `ok` at exactly the ceiling and `warn`
@@ -29,9 +29,8 @@ strictly over; spike → `ok`/1/0; zero/negative/missing/malformed → predictab
 ## Verify structural + Codex parity (Layer 1) and full fast suite
 
 ```bash
-cd speckit-pro
-bash tests/run-all.sh --layer 1        # structural + validate-codex-skills.sh
-bash tests/run-all.sh                  # Layers 1 + 4 + 5 (the CI gate for this feature)
+bash tests/speckit-pro/run-all.sh --layer 1   # structural + validate-codex-skills.sh
+bash tests/speckit-pro/run-all.sh             # Layers 1 + 4 + 5 (the CI gate for this feature)
 ```
 
 ## Exercise the skill behavior (developer-local, not CI)
@@ -41,7 +40,7 @@ bash tests/run-all.sh                  # Layers 1 + 4 + 5 (the CI gate for this 
   regression).
 - **Layer 3 (functional)**: run a `speckit-prd` interview on a would-be-fat fixture idea and
   confirm the emitted catalog is multiple thin vertical slices, each with a populated
-  `Budget: ~N LOC` from the estimator + a one-line INVEST/vertical-slice rationale; run a
+  `Projected reviewable LOC` from the estimator + a one-line INVEST/vertical-slice rationale; run a
   `grill-me` interview on a fat/horizontal single spec and confirm the slice-sizing branch
   triggers, asks the split question, and records the chosen split in the Design Concept doc.
 - **Layer 8 (Codex parity)**: confirm both `codex-skills/` mirrors behave equivalently

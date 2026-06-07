@@ -85,26 +85,26 @@ shared reference doc exist. Both user stories can now begin (in parallel if staf
 
 **Goal**: `speckit-prd` decomposes an idea into a SPEC catalog of thin vertical slices *by
 construction* (SPIDR + vertical slicing), populates each catalog entry's existing
-`Budget: ~N LOC` line from the shared estimator, and adds a one-line INVEST/vertical-slice
+`Projected reviewable LOC` field from the shared estimator, and adds a one-line INVEST/vertical-slice
 rationale — so the roadmap is born PR-sized.
 
 **Independent Test**: Run a `speckit-prd` interview on a fixture idea that would naively
 become one fat spec; confirm the emitted catalog is multiple thin vertical slices, each
-carrying a `Budget: ~N LOC` populated from the estimator plus a one-line INVEST/vertical-slice
+carrying a `Projected reviewable LOC` populated from the estimator plus a one-line INVEST/vertical-slice
 rationale (SC-001).
 
 ### Implementation for User Story 1
 
 - [x] T006 [US1] Edit `speckit-pro/skills/speckit-prd/SKILL.md` (Claude Code) to add catalog-level decomposition: instruct the skill to apply SPIDR story-splitting + vertical slicing so the emitted SPEC catalog is composed of thin, end-to-end (vertical) slices by construction rather than a few fat horizontal specs. Add a SHORT inline SPIDR/INVEST/vertical-slice summary plus a link to the shared `slicing-heuristics.md` (no duplicated guidance prose — FR-010). (FR-001, FR-010; US1 AS1; SC-001.)
 
-- [x] T007 [US1] In `speckit-pro/skills/speckit-prd/SKILL.md` (Claude Code), wire the Budget-line population: for each catalog entry it drafts, the skill derives the estimator's size signals from that entry and invokes the SINGLE shared estimator via `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh` (FR-009), then populates that entry's EXISTING `Budget: ~N LOC` line with the returned `estimated_loc` and adds a one-line INVEST/vertical-slice rationale. MUST reuse the existing per-SPEC `Budget` line — NO roadmap-template schema change and no new structured catalog fields (FR-012). When the estimator reports an entry over the ceiling, surface the size signal as ADVISORY text and continue the interview — nothing blocked or rejected (FR-011). (FR-002, FR-009, FR-011, FR-012; US1 AS2, AS3; SC-001.)
+- [x] T007 [US1] In `speckit-pro/skills/speckit-prd/SKILL.md` (Claude Code), wire the Projected reviewable LOC field population: for each catalog entry it drafts, the skill derives the estimator's size signals from that entry and invokes the SINGLE shared estimator via `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh` (FR-009), then populates that entry's EXISTING `Projected reviewable LOC` field with the returned `estimated_loc` and adds a one-line INVEST/vertical-slice rationale. MUST reuse the existing per-SPEC `Projected reviewable LOC` field — NO roadmap-template schema change and no new structured catalog fields (FR-012). When the estimator reports an entry over the ceiling, surface the size signal as ADVISORY text and continue the interview — nothing blocked or rejected (FR-011). (FR-002, FR-009, FR-011, FR-012; US1 AS2, AS3; SC-001.)
 
-- [x] T008 [US1] In `speckit-pro/skills/speckit-prd/SKILL.md` (Claude Code), specify the estimator-unavailable degradation path (US1 AS5): when the estimator cannot produce a usable result for any reason — missing script, missing `jq`, a non-zero exit, or empty/unparseable output — the skill MUST treat the result as an ABSENT estimate, leave that entry's `Budget: ~N LOC` line unpopulated (or noted as unavailable), surface an advisory note, and CONTINUE the interview. The skill MUST NOT read the script's exit code as a gate or convert an unavailable estimate into a hard stop. (FR-011; US1 AS5; SC-004.)
+- [x] T008 [US1] In `speckit-pro/skills/speckit-prd/SKILL.md` (Claude Code), specify the estimator-unavailable degradation path (US1 AS5): when the estimator cannot produce a usable result for any reason — missing script, missing `jq`, a non-zero exit, or empty/unparseable output — the skill MUST treat the result as an ABSENT estimate, leave that entry's `Projected reviewable LOC` field unpopulated (or noted as unavailable), surface an advisory note, and CONTINUE the interview. The skill MUST NOT read the script's exit code as a gate or convert an unavailable estimate into a hard stop. (FR-011; US1 AS5; SC-004.)
 
-- [x] T009 [P] [US1] Mirror the US1 edits into the Codex counterpart `speckit-pro/codex-skills/speckit-prd/SKILL.md` (FR-014), behavior-equivalent to T006–T008: same catalog decomposition (SPIDR + vertical slicing), same inline summary + link to the single shared `slicing-heuristics.md`, same invocation of the single shared `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh`, same Budget-line population + INVEST rationale, same advisory-only over-ceiling and unavailable-estimate behavior. `speckit-prd`'s catalog-decomposition prose carries across with no tool dependency (no `AskUserQuestion` involved here). The shared doc + script remain single copies — no Codex-specific second copy. (FR-014; SC-006.)
+- [x] T009 [P] [US1] Mirror the US1 edits into the Codex counterpart `speckit-pro/codex-skills/speckit-prd/SKILL.md` (FR-014), behavior-equivalent to T006–T008: same catalog decomposition (SPIDR + vertical slicing), same inline summary + link to the single shared `slicing-heuristics.md`, same invocation of the single shared `${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/scripts/estimate-spec-size.sh`, same Projected reviewable LOC field population + INVEST rationale, same advisory-only over-ceiling and unavailable-estimate behavior. `speckit-prd`'s catalog-decomposition prose carries across with no tool dependency (no `AskUserQuestion` involved here). The shared doc + script remain single copies — no Codex-specific second copy. (FR-014; SC-006.)
 
 **Checkpoint**: `speckit-prd` (Claude Code + Codex mirror) emits a thin-vertical-slice catalog
-with populated Budget lines and INVEST rationale, degrading to advisory text when the estimator
+with populated Projected reviewable LOC fields and INVEST rationale, degrading to advisory text when the estimator
 is unavailable. US1 is independently testable.
 
 ---
@@ -163,7 +163,7 @@ PR review packet, and enumeration of the developer-local eval surfaces as follow
 
 - [ ] T021 [P] Layer 2 (trigger routing) — developer-local follow-up: run the trigger evals for `speckit-prd` and `grill-me` and confirm the newly added sizing/slicing phrases route to the correct skill AND every existing trigger phrase for both skills still routes unchanged (no over-trigger or under-trigger regression). Record the result. (FR-013; SC-005.)
 
-- [ ] T022 [P] Layer 3 (functional) — developer-local follow-up: run a `speckit-prd` interview on a would-be-fat fixture idea and confirm the emitted catalog is multiple thin vertical slices, each with a populated `Budget: ~N LOC` from the estimator + a one-line INVEST/vertical-slice rationale; run a `grill-me` interview on a fat/horizontal single spec and confirm the slice-sizing branch triggers, asks the split question, and records the chosen split in the Design Concept doc. Record the result. (SC-001, SC-002.)
+- [ ] T022 [P] Layer 3 (functional) — developer-local follow-up: run a `speckit-prd` interview on a would-be-fat fixture idea and confirm the emitted catalog is multiple thin vertical slices, each with a populated `Projected reviewable LOC` from the estimator + a one-line INVEST/vertical-slice rationale; run a `grill-me` interview on a fat/horizontal single spec and confirm the slice-sizing branch triggers, asks the split question, and records the chosen split in the Design Concept doc. Record the result. (SC-001, SC-002.)
 
 - [ ] T023 [P] Layer 8 (Codex parity) — developer-local follow-up: confirm both `codex-skills/` mirrors behave equivalently to their Claude Code counterparts (the free-text Q&A loop standing in for `AskUserQuestion` in `grill-me`). Record the result. (FR-014; SC-006.)
 
@@ -243,7 +243,7 @@ The `[P]` tasks (different files, no dependency on incomplete work in the same p
 3. Complete Phase 3: User Story 1 (T006–T009) — `speckit-prd` catalog decomposition + Budget
    population + Codex mirror.
 4. **STOP and VALIDATE**: run a `speckit-prd` interview on a fixture fat idea; confirm a
-   thin-vertical-slice catalog with populated Budget lines (SC-001).
+   thin-vertical-slice catalog with populated Projected reviewable LOC fields (SC-001).
 
 ### Incremental Delivery
 
@@ -262,7 +262,7 @@ Every functional requirement maps to at least one task (G5):
 | FR | Requirement (short) | Task(s) |
 |----|---------------------|---------|
 | FR-001 | speckit-prd SPIDR + vertical-slice catalog decomposition | T006, T009 |
-| FR-002 | Populate Budget line + INVEST rationale per entry | T007, T009 |
+| FR-002 | Populate Projected reviewable LOC field + INVEST rationale per entry | T007, T009 |
 | FR-003 | grill-me slice-sizing design-tree branch | T010, T013 |
 | FR-004 | grill-me split question recommending N vertical slices | T011, T013 |
 | FR-005 | Record chosen split in Design Concept doc | T012, T013 |
@@ -272,7 +272,7 @@ Every functional requirement maps to at least one task (G5):
 | FR-009 | Both skills invoke the SAME single estimator copy via `${CLAUDE_PLUGIN_ROOT}` | T007, T010, T017 |
 | FR-010 | Canonical guidance in ONE doc; skills carry inline summary + link | T002, T006, T010, T017 |
 | FR-011 | Advisory-only — no block/gate/exit-code/threshold; `warn` informational | T005, T007, T008, T011, T013, T018 |
-| FR-012 | No roadmap-template schema change; reuse existing `Budget` line | T007, T018 |
+| FR-012 | No roadmap-template schema change; reuse existing `Projected reviewable LOC` field | T007, T018 |
 | FR-013 | Light trigger touch; no over/under-trigger regression | T014, T015, T021 |
 | FR-014 | Every CC skill edit mirrored in Codex; shared doc + script single copies | T009, T013, T015, T017, T023 |
 | FR-015 | Doc states estimate is a forward guess, NOT authoritative reviewable-LOC | T002 |

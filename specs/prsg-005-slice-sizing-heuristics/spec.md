@@ -17,7 +17,7 @@ into a PRD and a technical-roadmap SPEC catalog. The skill decomposes the idea i
 catalog using SPIDR story-splitting and vertical slicing, so the emitted catalog is
 composed of thin, end-to-end (vertical) slices *by construction* instead of a few fat
 specs that must be split later. For each catalog entry, the skill populates the existing
-`Budget: ~N LOC` line from the deterministic estimator and adds a one-line
+`Projected reviewable LOC` field from the deterministic estimator and adds a one-line
 INVEST/vertical-slice rationale, so the size signal is visible in the roadmap the moment
 it is authored.
 
@@ -30,7 +30,7 @@ populated budgets.
 
 **Independent Test**: Run a `speckit-prd` interview on a fixture idea that would naively
 become one fat spec, and confirm the emitted catalog is multiple thin vertical slices,
-each carrying a `Budget: ~N LOC` populated from the estimator plus a one-line
+each carrying a `Projected reviewable LOC` populated from the estimator plus a one-line
 INVEST/vertical-slice rationale.
 
 **Acceptance Scenarios**:
@@ -40,7 +40,7 @@ INVEST/vertical-slice rationale.
    thin vertical slices (each cutting end-to-end through its layers) rather than one fat
    horizontal spec.
 2. **Given** `speckit-prd` is producing a catalog entry, **When** it writes that entry,
-   **Then** the entry's existing `Budget: ~N LOC` line is populated with the estimated LOC
+   **Then** the entry's existing `Projected reviewable LOC` field is populated with the estimated LOC
    returned by the deterministic estimator and carries a one-line INVEST/vertical-slice
    rationale.
 3. **Given** the estimator reports a catalog entry over the documented ceiling, **When**
@@ -52,7 +52,7 @@ INVEST/vertical-slice rationale.
 5. **Given** the estimator is unavailable while `speckit-prd` is decomposing the catalog
    (missing script, missing `jq`, a non-zero exit, or empty/unparseable output), **When**
    `speckit-prd` records a catalog entry, **Then** it degrades to advisory text, leaves the
-   entry's `Budget: ~N LOC` line unpopulated (or noted as unavailable), and continues the
+   entry's `Projected reviewable LOC` field unpopulated (or noted as unavailable), and continues the
    interview — the unavailable estimate is never converted into a hard stop and the script's
    exit code is never read as a gate.
 
@@ -140,7 +140,7 @@ chosen split is recorded in the Design Concept document.
   story-splitting and vertical slicing, so the emitted catalog is composed of thin,
   end-to-end (vertical) slices by construction. *(US1)*
 - **FR-002**: For each emitted catalog entry, `speckit-prd` MUST populate that entry's
-  existing `Budget: ~N LOC` line with the estimated LOC returned by the deterministic
+  existing `Projected reviewable LOC` field with the estimated LOC returned by the deterministic
   estimator, and MUST add a one-line INVEST/vertical-slice rationale to the entry. *(US1)*
 - **FR-003**: `grill-me` MUST include a dedicated slice-sizing branch in its design tree
   that runs the deterministic estimator on the single spec's size signals. *(US2)*
@@ -170,7 +170,7 @@ chosen split is recorded in the Design Concept document.
   exit-code/threshold logic at any phase. A `warn` status is informational only; both skills
   MUST continue the interview after surfacing it. *(US1, US2)*
 - **FR-012**: PRSG-005 MUST NOT change the technical-roadmap template schema; it MUST reuse
-  the existing per-SPEC `Budget: ~N LOC` line and existing entry prose. *(US1)*
+  the existing per-SPEC `Projected reviewable LOC` field and existing entry prose. *(US1)*
 - **FR-013**: Trigger changes MUST be limited to adding a few sizing/slicing phrases to each
   skill's description; all existing trigger phrases MUST continue to route as before (no
   over-trigger or under-trigger regression). *(US1, US2)*
@@ -239,7 +239,7 @@ chosen split is recorded in the Design Concept document.
 ### Measurable Outcomes
 
 - **SC-001**: Running `speckit-prd` on a fixture idea that would naively be one fat spec
-  yields a catalog of multiple thin vertical slices, each with a `Budget: ~N LOC` populated
+  yields a catalog of multiple thin vertical slices, each with a `Projected reviewable LOC` populated
   from the estimator and a one-line INVEST/vertical-slice rationale.
 - **SC-002**: Running `grill-me` on a fixture single spec that is fat or horizontally sliced
   triggers the slice-sizing branch and produces a split recommendation of N vertical slices
@@ -257,7 +257,7 @@ chosen split is recorded in the Design Concept document.
 
 ## Assumptions
 
-- The existing technical-roadmap template already carries a per-SPEC `Budget: ~N LOC` line;
+- The existing technical-roadmap template already carries a per-SPEC `Projected reviewable LOC` field;
   PRSG-005 populates it rather than introducing a new field (Q9).
 - The documented LOC ceiling is ~400 reviewable LOC, shared with PRSG-006 as a documented
   constant only; PRSG-005 emits no artifact for a downstream gate to consume (Q3).

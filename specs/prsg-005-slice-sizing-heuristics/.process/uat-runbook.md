@@ -48,13 +48,13 @@ All estimator unit tests should pass before you walk the human steps below.
 
 2. When the interview completes and the SPEC catalog is emitted, read through each entry. Confirm that the catalog lists **multiple separate spec entries** (not one combined entry covering everything). Each entry should describe a thin end-to-end slice — for example, one entry for "login/registration" and a separate entry for "profile editing," rather than one entry labeled "auth system."
 
-3. For each catalog entry, confirm there is a line reading `Budget: ~N LOC` where N is a number filled in by the estimator (not a blank or a placeholder like `~? LOC`). Confirm there is also a one-line note explaining why this slice is a good vertical cut (something like "delivers working login end-to-end" or "independent deployable unit covering profile reads and writes").
+3. For each catalog entry, confirm there is a line reading `Projected reviewable LOC` where N is a number filled in by the estimator (not a blank or a placeholder like `~? LOC`). Confirm there is also a one-line note explaining why this slice is a good vertical cut (something like "delivers working login end-to-end" or "independent deployable unit covering profile reads and writes").
 
 4. If any single entry has an estimated size above roughly 400 lines, confirm the catalog shows an advisory note flagging it as potentially large — and confirm the interview continued anyway and produced a complete catalog. Nothing should have been blocked or refused.
 
 5. Invoke the PRD skill a second time with the same idea. Confirm the estimator produces identical budget numbers for matching entries (same input → same output).
 
-- [ ] US1 confirmed: catalog is multiple thin slices, each has a Budget line from the estimator and a one-line slice rationale, over-size appears as advisory only, and repeated runs produce the same numbers.
+- [ ] US1 confirmed: catalog is multiple thin slices, each has a Projected reviewable LOC field from the estimator and a one-line slice rationale, over-size appears as advisory only, and repeated runs produce the same numbers.
 
 ---
 
@@ -100,7 +100,7 @@ All estimator unit tests should pass before you walk the human steps below.
 | Requirement | Check that proves it |
 |-------------|----------------------|
 | Catalog is multiple thin vertical slices (FR-001) | US1 step 2 |
-| Each catalog entry has Budget line + slice rationale (FR-002) | US1 step 3 |
+| Each catalog entry has Projected reviewable LOC field + slice rationale (FR-002) | US1 step 3 |
 | grill-me has a slice-sizing branch (FR-003) | US2 step 2 |
 | grill-me asks a split question when over-size or horizontal (FR-004) | US2 step 2 |
 | Chosen split is recorded in the Design Concept doc (FR-005) | US2 step 4 |
@@ -110,7 +110,7 @@ All estimator unit tests should pass before you walk the human steps below.
 | Both skills use the same single estimator script (FR-009) | Layer 1 fast suite (structural — single file at expected path) |
 | SPIDR/INVEST guidance in exactly one shared doc, both skills link to it (FR-010) | Layer 1 fast suite (structural file check) |
 | Advisory-only — warn exits 0, nothing blocks (FR-011) | Negative-Path step D |
-| No change to roadmap template schema (FR-012) | US1 step 3 (Budget line is an existing field, not a new one) |
+| No change to roadmap template schema (FR-012) | US1 step 3 (Projected reviewable LOC is an existing field, not a new one) |
 | New trigger phrases added without breaking existing routing (FR-013) | Layer 1 + Layer 4 fast suite |
 | Codex skill mirrors carry equivalent behavior (FR-014) | Layer 1 fast suite (validate-codex-skills.sh) |
 | Reference doc states estimate is a forward guess, not authoritative LOC (FR-015) | Review the file `speckit-pro/skills/speckit-coach/references/slicing-heuristics.md` for the caveat text |
