@@ -27,7 +27,7 @@ fallback guard was triggered.
 The Codex variant must use `update_plan`, `spawn_agent`, `wait_agent`,
 `send_message` or `followup_task`, and `autopilot-state.json`. It must not
 use Claude-only runtime primitives such as `TaskCreate`, `TaskUpdate`,
-`Agent(...)`, Opus 4.6 model names, or `/speckit.*` slash-command
+`Agent(...)`, Opus 4.6 model names, or `/speckit-*` slash-command
 orchestration.
 
 ## Scope
@@ -38,7 +38,7 @@ questions, SDD philosophy, or learning how SpecKit works, redirect to
 
 You are an **orchestrator** for SpecKit workflows: read prompts from
 the workflow file and delegate each phase to a **subagent** that runs
-the `/speckit.*` command. You never run the commands yourself — you
+the `/speckit-*` command. You never run the commands yourself — you
 spawn, collect results, validate gates, and advance. Your context
 window auto-compacts; do not stop early, complete all 7 phases.
 
@@ -117,7 +117,7 @@ tool call history.
 ### 1. Subagent per phase
 
 For each phase, spawn a **foreground subagent** via the Agent
-tool. The subagent runs the `/speckit.*` command and returns a
+tool. The subagent runs the `/speckit-*` command and returns a
 summary. You (the parent) receive the result as a tool call
 response, which keeps your agent loop alive.
 
@@ -237,7 +237,7 @@ Run the pre-flight sequence before any phase work. STOP on failure.
 1. **Resolve `SKILL_SCRIPTS`** from the skill header's base directory
    (append `/scripts`). All script invocations below use it as prefix.
    `CLAUDE_PLUGIN_ROOT` is unavailable in Bash; use the literal path.
-2. **Archive Sweep** — `/speckit.archive.run --sweep --current-target
+2. **Archive Sweep** — `/speckit-archive-run --sweep --current-target
    <current-spec-dir>` on feature/spec branches; add `--dry-run` on
    `main`, release, or any protected integration branch. Skip if the
    archive extension is absent. Excludes the current target spec.
@@ -449,15 +449,19 @@ detailed procedures in `references/post-implementation.md`:
    reproduced in the PR body. Reporting step — never gates the PR.
 4. **UAT Runbook Generation** — mandatory between Self-Review and the
    PR body: run `generate-uat-skeleton.sh` to write
-   `<feature-dir>/uat-runbook.md`, then commit it. Fail-open (a nonzero
-   exit never blocks the PR) but NOT optional — it must run.
+   `<feature-dir>/.process/uat-runbook.md`, then spawn the
+   `uat-runbook-author` subagent to rewrite the skeleton into plain,
+   executable steps, then commit it. Both the script and the author step
+   are fail-open (never block the PR) but NOT optional — they run.
 5. **3.2 PR Creation** — final verification, reviewability diff gate,
    then build the PR body by running `generate-pr-body.sh` →
-   `.git/speckit-pr-body.md` and open the PR with
-   `--body-file .git/speckit-pr-body.md`. **Never hand-write the body or
-   pass an inline `--body`** — the script is what embeds the review
-   packet and the `## UAT Runbook` section (which carries the Self-Review
-   findings).
+   `.git/speckit-pr-body.md`, fill its **What changed / Why it matters /
+   Anything reviewers should know** sections in plain English (no internal
+   jargon; governance stays in the collapsed details block), and open the
+   PR with `--body-file .git/speckit-pr-body.md`. **Never write the body
+   from scratch or pass an inline `--body`** — the script is what embeds
+   the review packet and the `## UAT Runbook` section (which carries the
+   Self-Review findings).
    Before `gh pr create`, confirm the body file carries the
    `speckit-pro-review-packet-source` marker and a `## UAT Runbook`
    heading; if either is missing, regenerate with the script once. Push,

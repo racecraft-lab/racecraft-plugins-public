@@ -1,42 +1,15 @@
-# What
-<!-- Filled from spec artifacts and implementation summary. -->
+# What changed
+<!-- 2-4 plain-English sentences a non-engineer can follow. What does this PR
+     actually do, in human terms? No internal codes, no layer numbers, no spec
+     or tooling jargon (no "FR-009", "consensus", "tolerance arm", "Layer 4"). -->
 
-# Why
-<!-- Filled from spec goals, requirements, issue, or workflow rationale. -->
+# Why it matters
+<!-- 1-3 plain sentences: the problem this solves and why a reader should care.
+     Plain English. -->
 
-# Non-goals
-<!-- Filled from spec non-goals and deferred work. -->
+# Anything reviewers should know
+<!-- Short bullets: caveats, non-goals, deferred follow-ups, or known gaps.
+     Omit this section entirely if there are none. -->
 
-# Review Order
-1. Start with the spec and plan artifacts.
-2. Review the highest-risk production files.
-3. Confirm verification evidence and known gaps.
-
-# Scope Budget
-- Reviewable LOC:
-- Production files:
-- Total files:
-- Primary surfaces touched:
-- Budget result:
-- Split or exception rationale:
-
-# Traceability
-| Requirement / Goal | Changed files | Verification |
-|---|---|---|
-|  |  |  |
-
-# Verification
-- [ ] Build passes
-- [ ] Typecheck passes
-- [ ] Lint passes
-- [ ] Tests pass
-- [ ] Visual review completed or N/A
-
-Commands run and results:
--
-
-# Known Gaps
-<!-- Filled from workflow caveats, skipped checks, or deferred follow-up. -->
-
-# Rollback / Flags
-<!-- Filled from feature flags, rollout scope, rollback files, or N/A. -->
+<!-- The "Reviewer checklist & scope details" block and the "UAT Runbook" section
+     are appended automatically by generate-pr-body.sh. Do not add them by hand. -->

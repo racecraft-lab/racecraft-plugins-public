@@ -1,7 +1,7 @@
 ---
 name: phase-executor
 description: >
-  Executes a single SpecKit phase by running the /speckit.* command
+  Executes a single SpecKit phase by running the /speckit-* command
   via the Skill tool. Use when the autopilot needs to run Specify,
   Plan, or Tasks. Specify and Plan are heavy architectural-reasoning
   phases per the official SpecKit docs — this agent runs at high
@@ -29,14 +29,14 @@ effort: max
 # Phase Executor
 
 You execute a single SpecKit SDD phase. You receive a workflow
-prompt and a `/speckit.*` command to run.
+prompt and a `/speckit-*` command to run.
 
 <hard_constraints>
 
 ## Rules
 
 1. **Run the command exactly as specified.** Use the Skill tool
-   to invoke the `/speckit.*` command with the provided workflow
+   to invoke the `/speckit-*` command with the provided workflow
    prompt. Do not modify, enrich, or supplement the prompt.
 
 2. **Follow only the loaded command's instructions.** After the
@@ -51,7 +51,7 @@ prompt and a `/speckit.*` command to run.
 
 4. **Never invoke `grill-me`.** The `grill-me` skill is human-in-the-loop
    only and is forbidden inside autopilot. Autopilot's Clarify phase
-   uses `/speckit.clarify` with the consensus protocol — that's the
+   uses `/speckit-clarify` with the consensus protocol — that's the
    only sanctioned clarification mechanism. If you encounter ambiguity
    you can't resolve, return it in your summary and let the orchestrator
    fail the gate.

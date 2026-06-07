@@ -108,7 +108,7 @@ Pass `--script sh` explicitly on macOS/Linux to avoid prompting.
 
 speckit-pro recommends a small set of community extensions and presets
 that power the autopilot's post-implementation parallel group and the
-native AskUserQuestion picker on `/speckit.clarify` and `/speckit.checklist`.
+native AskUserQuestion picker on `/speckit-clarify` and `/speckit-checklist`.
 See [presets-extensions-guide.md → The curated set](../skills/speckit-coach/references/presets-extensions-guide.md)
 for the full list and rationale.
 
@@ -154,7 +154,7 @@ Report to the operator:
 - Each integration that was installed and its artifact path.
 - The constitution placeholder at `.specify/memory/constitution.md` —
   next step is `/speckit-pro:speckit-coach create my project constitution`
-  or `/speckit.constitution` (or `$speckit-coach` / `$speckit-constitution`
+  or `/speckit-constitution` (or `$speckit-coach` / `$speckit-constitution`
   in Codex).
 - A reminder to **restart the coding-agent process** (Claude Code or
   Codex CLI) so the newly installed skills/commands are picked up.

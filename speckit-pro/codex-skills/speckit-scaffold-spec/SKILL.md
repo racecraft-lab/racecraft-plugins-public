@@ -18,6 +18,17 @@ technical roadmap, or understand the SDD process, redirect them to
 `$speckit-coach`. Do not invent roadmap data or phase prompts from vague
 requirements when the roadmap entry does not exist.
 
+## Artifact tiering (CONTRACT vs EXHAUST)
+
+speckit-pro artifacts are tiered. **CONTRACT** artifacts (`spec.md`, `plan.md`,
+`tasks.md`, `research.md`, supporting design artifacts) are review-visible and stay
+at their existing location — this skill does not relocate them. The three authored
+**EXHAUST** artifacts (the design-concept doc, the workflow file, and the UAT
+runbook) are scaffolding, so they are written under a `.process/` directory:
+the design-concept doc and workflow file land under `docs/ai/specs/.process/`, and
+the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
+deleted — every relocated file still exists and is readable at its `.process/` path.
+
 > **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 69% (11/16) on the Codex selector — but POS is a perfect 8/8 (every "scaffold SPEC-009" / "create a new spec branch" / "prep SPEC-022 for autopilot" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("roadmap status" / "what's the progress on SPEC-009" → should go to `$speckit-status`, "run the fully populated workflow" → `$speckit-autopilot`, "resolve PR review comments" → `$speckit-resolve-pr`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number. (This skill was renamed from `speckit-setup` in v1.12; the rename did not regress trigger behavior — same POS pass rate as before.)
 
 ## Input
@@ -145,7 +156,7 @@ Invoke `$grill-me` from inside the worktree with a setup-mode marker so it
 knows to:
 
 - Write its Design Concept doc to
-  `docs/ai/specs/SPEC-<ID>-design-concept.md` inside the worktree
+  `docs/ai/specs/.process/SPEC-<ID>-design-concept.md` inside the worktree
 - Surface the key answers (Goals, Non-goals, major design decisions) back to
   this skill so step 6 can fold them into the workflow prompts
 
@@ -186,9 +197,43 @@ or to a project-specific higher-priority override that intentionally includes
 the reviewability sections.
 
 Create the destination directory inside the worktree, typically
-`docs/ai/specs/`, then load the shared workflow template from the plugin. Do
+`docs/ai/specs/.process/` (created when absent so the first exhaust artifact
+lands correctly), then load the shared workflow template from the plugin. Do
 not author a new template from scratch. The generated file should live at a
-path like `docs/ai/specs/SPEC-009-workflow.md` inside the worktree.
+path like `docs/ai/specs/.process/SPEC-009-workflow.md` inside the worktree.
+
+### 5.5. Write the SPEC-MOC marker (in the worktree)
+
+Write a minimal `SPEC-MOC.md` navigation marker into the spec's CONTRACT
+directory on EVERY new spec, regardless of how many slices it will ultimately
+have (single-slice specs get the marker too — it is the version-gate carrier).
+
+This marker is a CONTRACT artifact: write it to `specs/<branch-name>/SPEC-MOC.md`
+— NOT redirected to `.process/`, and NOT written to `docs/ai/specs/`. Create the
+contract directory if it is absent (`mkdir -p specs/<branch-name>/`); scaffold
+owns this early creation. Name the directory from the branch (NOT auto-numbered)
+so the `spec_id` namespace-matches the directory.
+
+Load the shared spec-MOC template from the plugin at
+`skills/speckit-coach/templates/spec-moc-template.md` (the template is a single
+shared, runtime-agnostic copy — do NOT duplicate it under `codex-skills/`).
+Token-substitute it with the same `{{TOKEN}}` mechanism used for the workflow
+template:
+
+- `{{ROADMAP_TITLE}}` — a short link text for the roadmap (e.g., the spec series
+  name + " roadmap")
+- `{{ROADMAP_FILENAME}}` — the existing `*-technical-roadmap.md` filename without
+  the `.md` extension
+- `{{SPEC_ID}}` — the roadmap identity, e.g., `PRSG-002` (must namespace-match
+  `<branch-name>`)
+
+The written marker MUST carry a non-empty, quoted relative `up:` markdown link
+pointing at the existing `*-technical-roadmap.md` — from `specs/<branch-name>/`
+this resolves as `../../docs/ai/specs/<roadmap-filename>.md` (the
+`../../docs/ai/specs/` prefix is hardcoded in the template; only the filename is
+tokenized), NEVER a `[[wikilink]]` — plus `structureVersion: 1` (carried verbatim
+from the template, with its "keep in sync with the lint scripts' hardcoded
+literal" comment) and a `spec_id` that namespace-matches the contract directory.
 
 ### 6. Populate the workflow file
 
@@ -232,24 +277,28 @@ filling it with fiction.
 
 ### 7. Commit and push from the worktree
 
-Stage the generated/updated preset files when present, plus **both** the
-design concept doc and the workflow file in the worktree branch. Create a
-focused setup commit and push that branch to the detected remote:
+Stage the generated/updated preset files when present, plus the design concept
+doc, the workflow file, AND the SPEC-MOC marker in the worktree branch (the
+marker is a review-visible CONTRACT artifact — if it is written but left
+untracked it never reaches the PR). Create a focused setup commit and push that
+branch to the detected remote:
 
 ```
 git add .specify/presets/speckit-pro-reviewability \
         .specify/presets/.registry \
-        docs/ai/specs/SPEC-<ID>-design-concept.md \
-        docs/ai/specs/SPEC-<ID>-workflow.md
+        docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
+        docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+        specs/<branch-name>/SPEC-MOC.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
 
 If the preset was already present and unchanged, the add command may include
-only the design concept and workflow:
+only the design concept, the workflow, and the marker:
 
 ```
-git add docs/ai/specs/SPEC-<ID>-design-concept.md \
-        docs/ai/specs/SPEC-<ID>-workflow.md
+git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
+        docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+        specs/<branch-name>/SPEC-MOC.md
 git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'
 ```
 

@@ -37,7 +37,7 @@ You will receive one of three types of input:
 
 1. **Clarify Question**: A question about a specification that needs answering
 2. **Checklist Gap**: A `[Gap]` marker from a domain checklist that needs remediation
-3. **Analyze Finding**: A CRITICAL or HIGH finding from `/speckit.analyze` that needs fixing
+3. **Analyze Finding**: A CRITICAL or HIGH finding from `/speckit-analyze` that needs fixing
 
 Each input includes the relevant context (spec.md excerpt, question text, gap description, or finding details).
 

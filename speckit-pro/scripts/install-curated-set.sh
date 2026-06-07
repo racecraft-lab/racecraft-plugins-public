@@ -147,18 +147,29 @@ while IFS='|' read -r id kind repo; do
         continue
       fi
       echo "[$id] installing $kind from $ref_kind:$ref_tag"
-      "$SPECIFY" "$kind" add --from "$zip_url"
+      # 0.9.4: `extension add` requires the positional id; the here-string answers
+      # the untrusted-source confirmation 0.9.4 prompts for any --from external URL.
+      "$SPECIFY" "$kind" add "$id" --from "$zip_url" <<< "y"
       record_action "$id" "installed" "$kind" "$ref_kind" "$ref_tag" "" "$repo" "$zip_url"
       ;;
     upgrade)
       if [[ -z "$installed" ]]; then
         echo "[$id] missing — installing $kind from $ref_kind:$ref_tag"
-        "$SPECIFY" "$kind" add --from "$zip_url"
+        "$SPECIFY" "$kind" add "$id" --from "$zip_url" <<< "y"
         record_action "$id" "installed" "$kind" "$ref_kind" "$ref_tag" "" "$repo" "$zip_url"
       elif [[ "$installed_norm" != "$ref_norm" ]]; then
         echo "[$id] upgrading $installed → $ref_tag"
-        "$SPECIFY" "$kind" remove "$id" >/dev/null 2>&1 || true
-        "$SPECIFY" "$kind" add --from "$zip_url"
+        if [[ "$kind" == "extension" ]]; then
+          # 0.9.4: `extension add --force` overwrites the installed copy (no separate
+          # remove); the here-string answers the untrusted-source prompt.
+          "$SPECIFY" "$kind" add "$id" --from "$zip_url" --force <<< "y"
+        else
+          # presets have no `add --force`, so remove then re-add. preset
+          # add/remove do not show the untrusted-source prompt, so (unlike the
+          # extension branch above) no stdin feed is needed.
+          "$SPECIFY" "$kind" remove "$id" >/dev/null 2>&1 || true
+          "$SPECIFY" "$kind" add "$id" --from "$zip_url"
+        fi
         record_action "$id" "upgraded" "$kind" "$ref_kind" "$ref_tag" "$installed" "$repo" "$zip_url"
       else
         echo "[$id] already at latest ($installed) — skipping"

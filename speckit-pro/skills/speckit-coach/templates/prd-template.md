@@ -120,7 +120,7 @@
 <!--
   Unresolved decisions, tagged to the SPEC that will resolve them. These do not
   block PRD acceptance — they get answered in the per-spec grill-me interview or
-  /speckit.clarify. Give each a recommendation if you have one.
+  /speckit-clarify. Give each a recommendation if you have one.
 -->
 
 - **OQ-1 (SPEC-00N):** <!-- question — recommendation, if any -->

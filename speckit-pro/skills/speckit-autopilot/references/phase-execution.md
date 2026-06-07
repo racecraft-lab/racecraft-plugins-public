@@ -4,7 +4,7 @@
 
 1. **SUBAGENT PER PHASE** — Spawn a foreground subagent for
    each phase via the Agent tool. The subagent runs the
-   `/speckit.*` command and returns a summary. The parent
+   `/speckit-*` command and returns a summary. The parent
    receives the result as a tool response, keeping the agent
    loop alive.
 2. **MULTI-PROMPT** — Clarify and Checklist have multiple
@@ -22,7 +22,7 @@
 
 How each SDD phase is executed by the autopilot. Each phase
 is delegated to a **foreground subagent** that runs the real
-`/speckit.*` command via the `Skill` tool. The subagent
+`/speckit-*` command via the `Skill` tool. The subagent
 operates in its own context — the command's noise (template
 reads, file exploration, completion reports) stays there and
 never touches the parent. The parent receives only a summary.
@@ -54,7 +54,8 @@ commands and scripts:
 
 | Component | Location | Purpose |
 | ----------- | ---------------------------------------- | --------------------------------------------------------- |
-| **Commands** | `.claude/commands/speckit.*.md` | Slash commands that orchestrate each SDD phase |
+| **Core phase skills** | `.claude/skills/speckit-*/SKILL.md` | Skills that orchestrate each SDD phase (specify/plan/tasks/clarify/checklist/analyze/implement) — SpecKit v0.8.13+ |
+| **Extension commands** | `.claude/commands/speckit.*.md` | Slash commands provided by SpecKit extensions (verify, retrospective, …) |
 | **Scripts** | `.specify/scripts/bash/` | Shell scripts for branch creation, path resolution, prerequisite checking |
 | **Templates** | `.specify/templates/` | Spec, plan, tasks, checklist, and agent file templates |
 | **Constitution** | `.specify/memory/constitution.md` | Project principles for gate validation |
@@ -74,7 +75,7 @@ commands and scripts:
 Each phase is executed by spawning a foreground subagent via
 the Agent tool. The subagent:
 
-1. Loads the `/speckit.*` command via `Skill()`
+1. Loads the `/speckit-*` command via `Skill()`
 2. Runs the command in its own context
 3. Returns a concise summary to the parent
 
@@ -93,8 +94,8 @@ Agent(
   subagent_type: "phase-executor",
   description: "SPEC-XXX <phase>",
   prompt: """
-    Run the /speckit.<phase> command.
-    Use: Skill("speckit.<phase>", args: "<workflow prompt>")
+    Run the /speckit-<phase> command.
+    Use: Skill("speckit-<phase>", args: "<workflow prompt>")
 
     <branch prefix if ON_FEATURE_BRANCH>
 
@@ -157,7 +158,7 @@ Update tasks as each subagent returns.
 ### Phase 0: Prerequisites (Constitution Validation)
 
 **No subagent.** This runs directly in the main session —
-it does NOT invoke a `/speckit.*` command.
+it does NOT invoke a `/speckit-*` command.
 
 1. Read `.specify/memory/constitution.md` — extract all
    numbered principles
@@ -173,7 +174,7 @@ it does NOT invoke a `/speckit.*` command.
 fail, STOP.
 
 **Doctor Health Check (ALWAYS — plugin skill):**
-After G0 passes, run `/speckit.doctor` for a full
+After G0 passes, run `/speckit.speckit-utils.doctor` for a full
 project diagnostic (structure, agents, features, scripts,
 extensions, git). Log the report in the workflow file.
 
@@ -182,7 +183,7 @@ TaskUpdate: "Phase 0: Doctor Health Check" → in_progress
 Agent(
   subagent_type: "general-purpose",
   description: "SPEC-XXX doctor health check",
-  prompt: "Run /speckit.doctor for this project.
+  prompt: "Run /speckit.speckit-utils.doctor for this project.
     Return the diagnostic report summary."
 )
 TaskUpdate: → completed
@@ -831,7 +832,7 @@ should understand what the presets enforce:
    should handle any structure.
 4. **Debug with `specify preset resolve`** — if artifacts have
    unexpected structure, run `specify preset resolve <template>`
-   to see which file the `/speckit.*` command actually used
+   to see which file the `/speckit-*` command actually used
 
 ## PR Creation Protocol
 

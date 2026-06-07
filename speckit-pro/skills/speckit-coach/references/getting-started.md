@@ -39,21 +39,21 @@ specify check
 
 ```bash
 cd your-project
-specify init --ai claude
+specify init --integration claude
 ```
 
 **`specify init` options:**
 
 | Flag | Description |
 |------|-------------|
-| `--ai <agent>` | Agent type (see table below) |
-| `--ai-skills` | Install as agent skills (for Codex, Antigravity) |
-| `--ai-commands-dir <path>` | Custom command directory (for `--ai generic`) |
+| `--integration <key>` | Coding-agent integration (see table below); installs skills by default |
+| `--integration-options="--skills"` | Force agent-skills install — the standard mode (auto for Claude; required for Codex/Antigravity) |
+| `--integration-options="--commands-dir <path>"` | Custom command directory (for `--integration generic`) |
 | `--here` | Initialize in current directory (for upgrades) |
 | `--force` | Overwrite without confirmation |
 | `--no-git` | Skip git initialization |
 | `--preset <name>` | Install a preset during initialization |
-| `--branch-numbering` | Enable numbered branch prefixes (e.g., 001-feature) |
+| `--branch-numbering <strategy>` | Branch numbering strategy, e.g. `sequential` (001-feature prefixes) |
 | `--script sh\|ps` | Script type (bash or PowerShell) |
 | `--skip-tls` | Disable SSL/TLS verification |
 | `--debug` | Verbose troubleshooting output |
@@ -68,7 +68,7 @@ specify init --ai claude
 | GitHub Copilot | `copilot` | IDE-based |
 | Cursor | `cursor-agent` | IDE-based |
 | Gemini CLI | `gemini` | |
-| Codex CLI | `codex` | Requires `--ai-skills` |
+| Codex CLI | `codex` | Requires `--integration-options="--skills"` |
 | Windsurf | `windsurf` | IDE-based |
 | Qwen Code | `qwen` | |
 | opencode | `opencode` | |
@@ -82,7 +82,7 @@ specify init --ai claude
 | Amp | `amp` | |
 | SHAI | `shai` | |
 | Tabnine CLI | `tabnine` | |
-| Antigravity | `agy` | IDE-based, requires `--ai-skills` |
+| Antigravity | `agy` | IDE-based, requires `--integration-options="--skills"` |
 | IBM Bob | `bob` | IDE-based |
 | Mistral Vibe | `vibe` | |
 | Kimi Code | `kimi` | |
@@ -98,7 +98,8 @@ This creates:
 | `.specify/templates/` | Templates that guide each SpecKit command |
 | `.specify/scripts/bash/` | Helper scripts (prerequisites, branch creation, plan setup) |
 | `.specify/memory/constitution.md` | Your project's constitution (starts as template) |
-| `.claude/commands/speckit.*.md` | Slash commands for Claude Code (varies by `--ai`) |
+| `.claude/skills/speckit-*/SKILL.md` | Core SDD phase skills for Claude Code (SpecKit v0.8.13+) |
+| `.claude/commands/speckit.*.md` | Extension-provided slash commands for Claude Code |
 | `.specify/init-options.json` | Persisted init options for upgrades |
 
 ### 3. Create Your Feature Branch
@@ -162,7 +163,7 @@ uv tool install specify-cli --force --from git+https://github.com/github/spec-ki
 cp .specify/memory/constitution.md .specify/memory/constitution-backup.md
 
 # 3. Update project files
-specify init --here --force --ai claude
+specify init --here --force --integration claude
 
 # 4. Restore constitution
 git restore .specify/memory/constitution.md
@@ -614,8 +615,8 @@ After implementation, specs and code naturally diverge as bugs are fixed and req
 
 ```
 INSTALL:    uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-INIT:       specify init --ai claude     # 25+ agents supported
-UPGRADE:    specify init --here --force --ai claude
+INIT:       specify init --integration claude     # 25+ agents supported
+UPGRADE:    specify init --here --force --integration claude
 CHECK:      specify check
 VERSION:    specify version
 DOCTOR:     /speckit.doctor         # project health diagnostics

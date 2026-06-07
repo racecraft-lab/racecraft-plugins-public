@@ -17,6 +17,42 @@ PRESET_ID="${3:-speckit-pro-reviewability}"
 PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
 PLUGIN_ROOT="$(cd "$PLUGIN_ROOT" && pwd)"
 
+# Ensure the consuming project's repo-root .gitattributes carries the .process/
+# collapse rule (FR-009). Idempotent + corruption-safe: fixed-string whole-line
+# presence guard, trailing-newline normalize before append, write to a
+# same-directory temp then atomic rename.
+ensure_collapse_rule() {
+  local file="$PROJECT_ROOT/.gitattributes"
+  local rule='**/.process/** linguist-generated=true'
+
+  # Short-circuit if the rule is already present (whole-line, fixed-string match
+  # because the rule contains '*' glob metacharacters).
+  if [ -f "$file" ] && grep -qxF "$rule" "$file"; then
+    return 0
+  fi
+
+  # Subshell scopes the cleanup trap locally. A bash RETURN trap is global — it
+  # would leak and fire on every later function return; an EXIT trap inside a
+  # subshell fires only when the subshell exits, so cleanup stays local.
+  (
+    tmp="$(mktemp "${file}.XXXXXX")"
+    trap 'rm -f "$tmp"' EXIT
+
+    if [ -f "$file" ]; then
+      cat "$file" > "$tmp"
+      # Normalize a missing trailing newline so the rule never concatenates onto
+      # the last existing line (git-lfs#167).
+      if [ -s "$tmp" ] && [ "$(tail -c1 "$tmp")" != "" ]; then
+        printf '\n' >> "$tmp"
+      fi
+    fi
+    printf '%s\n' "$rule" >> "$tmp"
+    mv "$tmp" "$file"
+  )
+}
+
+ensure_collapse_rule
+
 if ! command -v python3 >/dev/null 2>&1; then
   printf '{"status":"block","error":"python3 is required to install the reviewability preset"}\n'
   exit 1

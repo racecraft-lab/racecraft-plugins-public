@@ -51,6 +51,7 @@ is_excluded_generated() {
     pnpm-lock.yaml|*/pnpm-lock.yaml|package-lock.json|*/package-lock.json|npm-shrinkwrap.json|*/npm-shrinkwrap.json|yarn.lock|*/yarn.lock|bun.lock|*/bun.lock|bun.lockb|*/bun.lockb|Cargo.lock|*/Cargo.lock|Gemfile.lock|*/Gemfile.lock|Pipfile.lock|*/Pipfile.lock|poetry.lock|*/poetry.lock|composer.lock|*/composer.lock) return 0 ;;
     *.snap|*.snapshot|__snapshots__/*|snapshots/*) return 0 ;;
     vendor/*|vendors/*|third_party/*|generated/*|dist/*|build/*) return 0 ;;
+    */.process/*|.process/*) return 0 ;;
     docs/ai/workflows/*/exports/*) return 0 ;;
     *) return 1 ;;
   esac

@@ -1,0 +1,3 @@
+# Keeps the `somedir/` directory tracked so the directory-target fixture is
+# reproducible from a clean checkout. The stale-index link points at `somedir`
+# (a directory), which must NOT resolve as a regular file.

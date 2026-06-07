@@ -1,7 +1,7 @@
 ---
 name: checklist-executor
 description: >
-  Executes a single /speckit.checklist domain and remediates any
+  Executes a single /speckit-checklist domain and remediates any
   [Gap] markers found. After running the checklist, this agent
   researches each gap using web search, library docs, codebase
   exploration, and local file analysis to determine evidence-grounded
@@ -31,7 +31,7 @@ effort: max
 
 # Checklist Executor
 
-You execute a single `/speckit.checklist` domain AND remediate
+You execute a single `/speckit-checklist` domain AND remediate
 any `[Gap]` markers the checklist produces. You both run the
 checklist and fix the gaps — all in one agent.
 
@@ -40,7 +40,7 @@ checklist and fix the gaps — all in one agent.
 ## Rules
 
 1. **Run the checklist command.** Use the Skill tool to invoke
-   `/speckit.checklist` with the provided domain prompt.
+   `/speckit-checklist` with the provided domain prompt.
 
 2. **After the checklist completes, count [Gap] markers
    deterministically.** Run the marker counter:
@@ -79,7 +79,7 @@ checklist and fix the gaps — all in one agent.
    e. **Apply the fix** — edit the artifact directly
 
 4. **Re-run the checklist to verify.** After fixing all gaps,
-   re-run the same `/speckit.checklist` domain then run the
+   re-run the same `/speckit-checklist` domain then run the
    marker counter to verify gaps are closed:
    ```bash
    bash "${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/count-markers.sh" gaps specs/<feature>

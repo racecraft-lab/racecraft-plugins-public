@@ -570,5 +570,90 @@ result=0
 output=$(cd "$fenced_repo" && "$SCRIPT" diff "$fenced_base"...HEAD) || result=$?
 assert_eq "0" "$result" "exit code (documented residual — PRSG-010)"
 assert_json_field "$output" "exception_honored" "True"
+section "diff mode — .process/ exclusion under the production-only metric (FR-008/FR-010, reconciled with PR #111)"
+
+# PRSG-006 makes reviewable_loc PRODUCTION-only (FR-008), superseding PR #111's
+# markdown-counting fixtures (which expected spec.md/plan.md lines to count). The
+# .process/ exhaust-exclusion guarantee #111 added — the `*/.process/*` arm of
+# is_excluded_generated, PRSG-001's deliverable, reused here as-is — still holds,
+# now exercised with PRODUCTION files: a production file under specs/<NNN>/.process/
+# is EXCLUDED; production code elsewhere is counted.
+process_repo="$FIXTURE_DIR/process-repo"
+mkdir -p "$process_repo/src" "$process_repo/specs/007-demo/.process"
+git -C "$process_repo" init >/dev/null
+git -C "$process_repo" config user.email support@openai.com
+git -C "$process_repo" config user.name Test
+git -C "$process_repo" config commit.gpgsign false
+printf 'const base=0\n' > "$process_repo/src/keep.ts"
+printf 'const base=0\n' > "$process_repo/specs/007-demo/.process/gen.ts"
+git -C "$process_repo" add .
+git -C "$process_repo" commit -m init >/dev/null
+# Add 5 production lines to src/ (counted) and 30 to a .process/ production file
+# (excluded). A regression in the .process/ glob would count all 35.
+seq 1 5 | sed 's/^/const a/' >> "$process_repo/src/keep.ts"
+seq 1 30 | sed 's/^/const b/' >> "$process_repo/specs/007-demo/.process/gen.ts"
+
+set_test "Diff: src/ production counts, a production file under .process/ is excluded (reviewable_loc 5, not 35)"
+result=0
+output=$(cd "$process_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "5"
+
+# No-false-exclusion: a production path with NO /.process/ segment is counted.
+nonprocess_repo="$FIXTURE_DIR/nonprocess-repo"
+mkdir -p "$nonprocess_repo/src"
+git -C "$nonprocess_repo" init >/dev/null
+git -C "$nonprocess_repo" config user.email support@openai.com
+git -C "$nonprocess_repo" config user.name Test
+git -C "$nonprocess_repo" config commit.gpgsign false
+printf 'const base=0\n' > "$nonprocess_repo/src/plain.ts"
+git -C "$nonprocess_repo" add .
+git -C "$nonprocess_repo" commit -m init >/dev/null
+seq 1 7 | sed 's/^/const c/' >> "$nonprocess_repo/src/plain.ts"
+
+set_test "Diff: production file with no .process/ segment is not excluded (reviewable_loc 7)"
+result=0
+output=$(cd "$nonprocess_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "7"
+
+# Regression guard (PR #111 review): a directory that merely ENDS in ".process"
+# (foo.process/) is NOT the .process/ exhaust dir and MUST stay counted. The
+# earlier over-broad *.process/* arm wrongly excluded it; the `*/.process/*`
+# segment glob counts it. Exercised with a production file under PRSG-006's metric.
+endsprocess_repo="$FIXTURE_DIR/endsprocess-repo"
+mkdir -p "$endsprocess_repo/src/foo.process"
+git -C "$endsprocess_repo" init >/dev/null
+git -C "$endsprocess_repo" config user.email support@openai.com
+git -C "$endsprocess_repo" config user.name Test
+git -C "$endsprocess_repo" config commit.gpgsign false
+printf 'const base=0\n' > "$endsprocess_repo/src/foo.process/mod.ts"
+git -C "$endsprocess_repo" add .
+git -C "$endsprocess_repo" commit -m init >/dev/null
+seq 1 9 | sed 's/^/const d/' >> "$endsprocess_repo/src/foo.process/mod.ts"
+
+set_test "Diff: a dir ending in .process (foo.process/) is NOT the .process/ dir — production code counts (reviewable_loc 9)"
+result=0
+output=$(cd "$endsprocess_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "9"
+
+# No-op of the .process/ arm when no .process/ path is present: a mixed change
+# (production + markdown, neither under .process/) counts production only — the
+# markdown is dropped by the production filter (FR-008), not the .process/ arm.
+mixed_repo="$FIXTURE_DIR/mixed-noprocess-repo"
+mkdir -p "$mixed_repo/src" "$mixed_repo/docs"
+git -C "$mixed_repo" init >/dev/null
+git -C "$mixed_repo" config user.email support@openai.com
+git -C "$mixed_repo" config user.name Test
+git -C "$mixed_repo" config commit.gpgsign false
+printf 'const base=0\n' > "$mixed_repo/src/app.ts"
+printf 'base\n' > "$mixed_repo/docs/guide.md"
+git -C "$mixed_repo" add .
+git -C "$mixed_repo" commit -m init >/dev/null
+seq 1 4 | sed 's/^/const e/' >> "$mixed_repo/src/app.ts"
+seq 1 20 >> "$mixed_repo/docs/guide.md"
+
+set_test "Diff: mixed production+markdown, zero .process/ paths → counts production only (reviewable_loc 4)"
+result=0
+output=$(cd "$mixed_repo" && "$SCRIPT" diff HEAD) || result=$?
+assert_json_field "$output" "reviewable_loc" "4"
 
 test_summary

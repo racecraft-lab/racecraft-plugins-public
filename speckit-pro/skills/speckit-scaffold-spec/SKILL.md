@@ -22,6 +22,17 @@ Prepare a spec from the technical roadmap for autonomous execution.
 Creates the worktree, branch, and workflow file — ready for
 `/speckit-pro:speckit-autopilot`.
 
+## Artifact tiering (CONTRACT vs EXHAUST)
+
+speckit-pro artifacts are tiered. **CONTRACT** artifacts (`spec.md`, `plan.md`,
+`tasks.md`, `research.md`, supporting design artifacts) are review-visible and stay
+at their existing location — this skill does not relocate them. The three authored
+**EXHAUST** artifacts (the design-concept doc, the workflow file, and the UAT
+runbook) are scaffolding, so they are written under a `.process/` directory:
+the design-concept doc and workflow file land under `docs/ai/specs/.process/`, and
+the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
+deleted — every relocated file still exists and is readable at its `.process/` path.
+
 ## Invocation
 
 ```text
@@ -141,8 +152,9 @@ invocation — do not attempt to skip grilling.
 </hard_constraints>
 
 ```text
-1. Create docs directory in the WORKTREE for the design concept:
-   Bash("mkdir -p .worktrees/<number>-<short-name>/docs/ai/specs/")
+1. Create the .process/ docs directory in the WORKTREE for the design concept
+   (created when absent so the first exhaust artifact lands correctly):
+   Bash("mkdir -p .worktrees/<number>-<short-name>/docs/ai/specs/.process/")
 
 2. Invoke the grill-me skill with the spec scope as input:
    Skill("grill-me", args: {
@@ -150,7 +162,7 @@ invocation — do not attempt to skip grilling.
      spec_id: "SPEC-<ID>",
      spec_name: "<spec name from roadmap>",
      scope: <full scope description from technical roadmap>,
-     output_path: ".worktrees/<number>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md"
+     output_path: ".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md"
    })
 
 3. The skill walks the design tree using AskUserQuestion (one question
@@ -159,7 +171,7 @@ invocation — do not attempt to skip grilling.
    at 30 questions and chooses to wrap up, or selects "End interview".
 
 4. Verify the design concept doc exists:
-   Read(".worktrees/<number>-<short-name>/docs/ai/specs/SPEC-<ID>-design-concept.md")
+   Read(".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-design-concept.md")
    Must contain Goals, Non-goals, Design Tree (Q&A log), and Open Questions.
 ```
 
@@ -186,9 +198,51 @@ All file operations happen in the worktree directory.
    Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/workflow-template.md")
 
 2. Write the template to the WORKTREE:
-   Write(".worktrees/<number>-<short-name>/docs/ai/specs/SPEC-<ID>-workflow.md",
+   Write(".worktrees/<number>-<short-name>/docs/ai/specs/.process/SPEC-<ID>-workflow.md",
          content: <template content from step 1>)
 ```
+
+### 5.5. Write the SPEC-MOC Marker (IN the Worktree)
+
+Write a minimal `SPEC-MOC.md` navigation marker into the spec's CONTRACT
+directory on EVERY new spec, regardless of how many slices it will ultimately
+have (single-slice specs get the marker too — it is the version-gate carrier).
+
+This marker is a CONTRACT artifact: it is written to `specs/<branch-name>/` —
+NOT redirected to `.process/`, and NOT written to `docs/ai/specs/`. The
+directory is named from the branch (NOT auto-numbered), so its `spec_id`
+namespace-matches the directory.
+
+```text
+1. Create the spec's contract directory in the WORKTREE (scaffold owns this
+   early creation; mkdir -p is a no-op if it already exists):
+   Bash("mkdir -p .worktrees/<number>-<short-name>/specs/<branch-name>/")
+
+2. Read the spec-MOC template from the plugin:
+   Read("${CLAUDE_PLUGIN_ROOT}/skills/speckit-coach/templates/spec-moc-template.md")
+
+3. Token-substitute the template (same {{TOKEN}} mechanism as the workflow
+   template) and write it to the contract directory:
+   Write(".worktrees/<number>-<short-name>/specs/<branch-name>/SPEC-MOC.md",
+         content: <template with the tokens below substituted>)
+
+   | Token | Replace With |
+   | ----- | ------------ |
+   | `{{ROADMAP_TITLE}}` | a short link text for the roadmap (e.g., the spec series name + " roadmap") |
+   | `{{ROADMAP_FILENAME}}` | the existing `*-technical-roadmap.md` filename WITHOUT the `.md` extension (from Step 1) |
+   | `{{SPEC_ID}}` | the roadmap identity, e.g., `PRSG-002` (must namespace-match `<branch-name>`) |
+```
+
+The written marker MUST carry:
+
+- a non-empty, quoted relative `up:` markdown link pointing at the existing
+  `*-technical-roadmap.md` — from `specs/<branch-name>/` this resolves as
+  `../../docs/ai/specs/<roadmap-filename>.md` (the `../../docs/ai/specs/`
+  prefix is hardcoded in the template; only the filename is tokenized), NEVER
+  a `[[wikilink]]`;
+- `structureVersion: 1` (carried verbatim from the template, with its "keep in
+  sync with the lint scripts' hardcoded literal" comment); and
+- a `spec_id` that namespace-matches the contract directory name.
 
 ### 6. Populate the Workflow File
 
@@ -216,7 +270,7 @@ the decisions the roadmap left ambiguous.
 
 - **Clarify Prompts:** Use the design concept's Open Questions section
   to seed the autopilot's clarify session focuses. Anything still open
-  after the grill-me interview is exactly what `/speckit.clarify` should
+  after the grill-me interview is exactly what `/speckit-clarify` should
   be told to dig into. Generate session focuses based on the tool types
   and any unresolved branches (e.g., "Session 1: Search API Behavior",
   "Session 2: Database Operations").
@@ -259,10 +313,13 @@ the decisions the roadmap left ambiguous.
 All commits happen on the worktree branch — NEVER on main.
 
 ```text
-1. Stage and commit BOTH the design concept doc AND the workflow file:
+1. Stage and commit the design concept doc, the workflow file, AND the
+   SPEC-MOC marker (the marker is a review-visible CONTRACT artifact — if it is
+   written but left untracked it never reaches the PR):
    Bash("cd .worktrees/<number>-<short-name> && \
-     git add docs/ai/specs/SPEC-<ID>-design-concept.md \
-             docs/ai/specs/SPEC-<ID>-workflow.md && \
+     git add docs/ai/specs/.process/SPEC-<ID>-design-concept.md \
+             docs/ai/specs/.process/SPEC-<ID>-workflow.md \
+             specs/<branch-name>/SPEC-MOC.md && \
      git commit -m 'chore(SPEC-XXX): add design concept and workflow for autopilot'")
 
 2. Push the WORKTREE BRANCH:
@@ -289,12 +346,12 @@ Report:
 **Spec:** SPEC-009 Search & Database
 **Branch:** 009-search-database
 **Worktree:** .worktrees/009-search-database/
-**Design Concept:** .worktrees/009-search-database/docs/ai/specs/SPEC-009-design-concept.md
-**Workflow:** .worktrees/009-search-database/docs/ai/specs/SPEC-009-workflow.md
+**Design Concept:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-design-concept.md
+**Workflow:** .worktrees/009-search-database/docs/ai/specs/.process/SPEC-009-workflow.md
 **Remote:** Pushed to <remote>/009-search-database
 
 **Ready to run:**
-/speckit-pro:speckit-autopilot docs/ai/specs/SPEC-009-workflow.md
+/speckit-pro:speckit-autopilot docs/ai/specs/.process/SPEC-009-workflow.md
 
 **Review both files first** — the design concept doc captures the
 decisions you made during grill-me; the workflow file is what the

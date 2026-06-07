@@ -419,5 +419,5 @@ git push origin main
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan at
-`specs/prsg-006-reviewability-budget/plan.md`
+specs/prsg-002-moc-templates/plan.md
 <!-- SPECKIT END -->

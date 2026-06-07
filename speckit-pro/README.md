@@ -37,13 +37,13 @@ After install, run `@SpecKit Pro` → `install` to register custom agents, then 
 
 ```bash
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --ai claude
+specify init --integration claude
 ```
 
 Then in Claude Code or Codex:
 
 ```text
-/speckit.constitution    # one-time: define your project's principles
+/speckit-constitution    # one-time: define your project's principles
 ```
 
 ### 3. Run your first spec
@@ -364,7 +364,7 @@ auto-commit: per-phase      # per-phase | batch | none
 - Quick bug fixes or one-line changes
 - Exploratory prototyping where requirements are unknown
 - Changes that don't warrant a full specification cycle
-- Projects without a constitution (create one first with `/speckit.constitution`)
+- Projects without a constitution (create one first with `/speckit-constitution`)
 
 **Tips:**
 
@@ -379,8 +379,8 @@ auto-commit: per-phase      # per-phase | batch | none
 
 - **Claude Code or Codex** — separate entrypoint surfaces ship for both runtimes
 - **SpecKit CLI** — `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`
-- **SpecKit initialized** — `specify init --ai claude`
-- **Constitution created** — `/speckit.constitution`
+- **SpecKit initialized** — `specify init --integration claude`
+- **Constitution created** — `/speckit-constitution`
 - **GitHub CLI (`gh`)** — required for PR creation and review resolution
 - **jq** — required by validation scripts
 

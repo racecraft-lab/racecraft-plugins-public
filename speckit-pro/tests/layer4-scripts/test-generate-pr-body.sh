@@ -13,7 +13,7 @@ trap 'rm -rf "$FIXTURE_DIR"' EXIT
 
 repo="$FIXTURE_DIR/repo"
 feature="$repo/specs/001-demo"
-mkdir -p "$repo/.github" "$feature" "$repo/docs"
+mkdir -p "$repo/.github" "$feature" "$feature/.process" "$repo/docs"
 git -C "$repo" init >/dev/null
 git -C "$repo" config user.email support@openai.com
 git -C "$repo" config user.name Test
@@ -63,14 +63,17 @@ body=$(cat "$output_file")
 set_test "Preserves host-required section"
 assert_contains "$body" "# Host Required"
 
-set_test "Appends Non-goals section"
-assert_contains "$body" "# Non-goals"
+set_test "Appends Anything reviewers should know section"
+assert_contains "$body" "# Anything reviewers should know"
 
 set_test "Extracts section content from level-two spec headings"
 assert_contains "$body" "Do not add unrelated runtime behavior."
 
-set_test "Appends Scope Budget section"
-assert_contains "$body" "# Scope Budget"
+set_test "Appends collapsed reviewer checklist & scope details block"
+assert_contains "$body" "<summary>Reviewer checklist"
+
+set_test "Does not emit governance as a top-level heading"
+assert_not_contains "$body" "# Scope Budget"
 
 set_test "Records host template source"
 assert_contains "$body" "template: $repo/.github/pull_request_template.md"
@@ -86,8 +89,11 @@ assert_eq "0" "$result" "exit code"
 
 fallback_body=$(cat "$fallback_file")
 
-set_test "Fallback body includes Review Order"
-assert_contains "$fallback_body" "# Review Order"
+set_test "Fallback body leads with the plain-English What changed heading"
+assert_contains "$fallback_body" "# What changed"
+
+set_test "Fallback body includes the collapsed reviewer checklist block"
+assert_contains "$fallback_body" "<summary>Reviewer checklist"
 
 set_test "Fallback body includes review packet source marker"
 assert_contains "$fallback_body" "speckit-pro-review-packet-source"
@@ -115,7 +121,7 @@ section "UAT Runbook embed (FR-013)"
 
 # (a) runbook present and under 50,000 chars → full content embedded via cat,
 #     blank lines preserved (Decision 2).
-cat > "$feature/uat-runbook.md" <<'EOF'
+cat > "$feature/.process/uat-runbook.md" <<'EOF'
 # UAT Runbook: 001-demo
 
 | Field | Value |
@@ -148,7 +154,7 @@ set_test "Preserves blank lines from the runbook (Header table renders)"
 assert_contains "$uat_small_body" "| Spec | 001-demo |"
 
 set_test "Small-runbook embed omits the Full runbook link"
-assert_not_contains "$uat_small_body" "[Full runbook](./uat-runbook.md)"
+assert_not_contains "$uat_small_body" "[Full runbook](./.process/uat-runbook.md)"
 
 # (b) runbook at/over 50,000 chars → head -60 + relative link.
 {
@@ -159,7 +165,7 @@ assert_not_contains "$uat_small_body" "[Full runbook](./uat-runbook.md)"
     printf 'Padding line %04d %s\n' "$i" "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
   done
   printf 'UAT_SENTINEL_LAST_LINE_PAST_HEAD60\n'
-} > "$feature/uat-runbook.md"
+} > "$feature/.process/uat-runbook.md"
 
 set_test "Generator succeeds with a large runbook present"
 uat_big_file="$FIXTURE_DIR/pr-body-uat-big.md"
@@ -176,10 +182,10 @@ set_test "Large-runbook embed truncates at head -60 (last line absent)"
 assert_not_contains "$uat_big_body" "UAT_SENTINEL_LAST_LINE_PAST_HEAD60"
 
 set_test "Large-runbook embed appends the Full runbook link"
-assert_contains "$uat_big_body" "[Full runbook](./uat-runbook.md)"
+assert_contains "$uat_big_body" "[Full runbook](./.process/uat-runbook.md)"
 
 # (c) runbook absent → heading + one-line stub (fail-open).
-rm -f "$feature/uat-runbook.md"
+rm -f "$feature/.process/uat-runbook.md"
 
 set_test "Generator succeeds with no runbook present (fail-open)"
 uat_absent_file="$FIXTURE_DIR/pr-body-uat-absent.md"

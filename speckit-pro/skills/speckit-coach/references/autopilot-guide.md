@@ -45,7 +45,7 @@ specify check  # Verify installation
 ### 2. SpecKit Initialized in the Project
 
 ```bash
-specify init --ai claude  # or: --ai copilot, --ai cursor
+specify init --integration claude  # or: --integration copilot, --integration cursor
 ```
 
 This creates `.specify/`, templates, and slash commands.
@@ -109,7 +109,7 @@ The autopilot skill runs **in the main session** so it can
 spawn sub-agents directly. This avoids the subagent nesting
 limitation (sub-agents cannot spawn their own sub-agents).
 
-Each phase **invokes the real `/speckit.*` command** via the
+Each phase **invokes the real `/speckit-*` command** via the
 `Skill` tool, passing the **workflow file's prompt directly**
 as the argument. The autopilot does not enrich, supplement, or
 modify the prompts — it passes them as-is, like a human would
@@ -120,7 +120,7 @@ prerequisite validation via `.specify/scripts/bash/`).
 ```text
 Main session (speckit-autopilot skill loaded)
     │
-    ├── Simple phases → pass workflow prompt to /speckit.* via Skill
+    ├── Simple phases → pass workflow prompt to /speckit-* via Skill
     │   ├── Specify → Skill("speckit-specify", args: "<workflow prompt>")
     │   ├── Plan    → Skill("speckit-plan", args: "<workflow prompt>")
     │   └── Tasks   → Skill("speckit-tasks", args: "<workflow prompt>")
@@ -467,7 +467,7 @@ re-run from an earlier phase.
 ```bash
 # Install SpecKit (if not already)
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify init --ai claude
+specify init --integration claude
 
 # Create constitution (if not already)
 /speckit-constitution
@@ -561,6 +561,6 @@ When presets are installed, template resolution follows a
 4. Core templates
 
 The autopilot doesn't need to know the resolution order — it
-just invokes `/speckit.*` commands and the template system
+just invokes `/speckit-*` commands and the template system
 handles resolution. But awareness helps with debugging if
 generated artifacts have unexpected structure.
