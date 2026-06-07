@@ -34,7 +34,7 @@ every scoping decision captured during the interview. Where a phase prompt cites
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 15 FRs (FR-001–015), US1/US2, 0 `[NEEDS CLARIFICATION]`, G1 `pass:true`. Branch-aware override held (no derail). |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions; 6 questions total (S1: 2→consensus, S2: 1, S3: 3 security→full consensus). Spec hardened: estimator input contract + not-estimated; greenfield file-set; exception matcher + added-lines + all-3-modes. 0 `[NEEDS CLARIFICATION]` remain. |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | plan.md + contracts/ (estimator + gate JSON shapes). Two-script design; **parse convention decided** = `## Declared File Operations` block (`- {NEW\|MODIFIED} <path>`) → needs a stub in the reviewability-preset plan-template (flagged minor surface, tasks-phase sequencing). Single shared `match_exception_pragma` across modes. Constitution II/IV/VI PASS. G3 `pass:true`. (CLAUDE.md SPECKIT managed-block pointer auto-updated — review at PR.) |
 | Checklist | `/speckit-checklist` | ⏳ Pending | error-handling + data-integrity |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Two user stories: US1 plan budget, US2 gate rework |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
