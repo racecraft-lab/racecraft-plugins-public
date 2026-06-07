@@ -105,6 +105,20 @@ assert_contains "$roadmap_content" "infra"
 set_test "technical-roadmap-template.md: names the upgrade exception class"
 assert_contains "$roadmap_content" "upgrade"
 
+# PR #119 review (PRRT_kwDORvqw086HoVpr): the template must keep the exception
+# pragma as the NON-matching `<class>` placeholder. A concrete class line
+# (`Reviewability-Exception: refactor` etc.) in the template would be honored by
+# the live setup-mode matcher if a roadmap is derived from it — so assert the
+# template contains NO concrete honored pragma, only the placeholder.
+set_test "technical-roadmap-template.md: no concrete 'refactor' exception pragma (placeholder only)"
+assert_not_contains "$roadmap_content" "Reviewability-Exception: refactor"
+
+set_test "technical-roadmap-template.md: no concrete 'infra' exception pragma (placeholder only)"
+assert_not_contains "$roadmap_content" "Reviewability-Exception: infra"
+
+set_test "technical-roadmap-template.md: no concrete 'upgrade' exception pragma (placeholder only)"
+assert_not_contains "$roadmap_content" "Reviewability-Exception: upgrade"
+
 # FR-001/US1: the reviewability-preset plan-template's `## Declared File Operations`
 # stub is the sole author-facing source of the block the estimator parses. It MUST
 # demonstrate the `- ` list-marker format the parser requires

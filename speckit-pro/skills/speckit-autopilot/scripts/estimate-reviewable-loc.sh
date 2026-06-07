@@ -46,10 +46,11 @@ usage() {
 }
 
 # ── Reusable classification predicates ───────────────────────────────────────
-# Copied verbatim from reviewability-gate.sh (is_production_file :59,
-# is_excluded_generated :48) so the plan-time production-only metric matches the
-# gate's diff-time metric. Reused as-is (no signature change) per the spec's
-# Assumptions and tasks T002/T011.
+# Copied from reviewability-gate.sh (is_production_file, is_excluded_generated)
+# so the plan-time production-only metric matches the gate's diff-time metric —
+# INCLUDING the `*/.process/*` exclusion arm the gate carries (PRSG-001/#111), so
+# the estimator and gate agree on a production-ish file declared under `.process/`.
+# Reused as-is (no signature change) per the spec's Assumptions and tasks T002/T011.
 #
 # KNOWN LIMITATION (recorded per spec §Assumptions; do NOT "fix" here):
 #   is_production_file matches src/ app/ lib/ scripts/ prefixes + JS/TS/SQL
@@ -63,6 +64,7 @@ is_excluded_generated() {
     pnpm-lock.yaml|*/pnpm-lock.yaml|package-lock.json|*/package-lock.json|npm-shrinkwrap.json|*/npm-shrinkwrap.json|yarn.lock|*/yarn.lock|bun.lock|*/bun.lock|bun.lockb|*/bun.lockb|Cargo.lock|*/Cargo.lock|Gemfile.lock|*/Gemfile.lock|Pipfile.lock|*/Pipfile.lock|poetry.lock|*/poetry.lock|composer.lock|*/composer.lock) return 0 ;;
     *.snap|*.snapshot|__snapshots__/*|snapshots/*) return 0 ;;
     vendor/*|vendors/*|third_party/*|generated/*|dist/*|build/*) return 0 ;;
+    */.process/*|.process/*) return 0 ;;
     docs/ai/workflows/*/exports/*) return 0 ;;
     *) return 1 ;;
   esac
@@ -89,16 +91,32 @@ if [ ! -f "$PLAN" ] || [ ! -r "$PLAN" ]; then
 fi
 
 # ── Declared-files parser ────────────────────────────────────────────────────
-# Count only lines matching the entry grammar (POSIX ERE via grep -E):
+# Parse ONLY the section under the `## Declared File Operations` heading. The
+# contract is: with no such heading block, the result is not_estimated. Scoping
+# to the section (rather than grepping the whole file) enforces that and stops a
+# stray `- NEW ...` bullet elsewhere in the plan from being counted. The section
+# runs from that h2 to the next h2 (or EOF); `### ` subsections do not end it.
+#
+# Within the section, count only lines matching the entry grammar (POSIX ERE):
 #   ^[[:space:]]*[-*][[:space:]]+(NEW|MODIFIED)[[:space:]]+([^[:space:]]+)[[:space:]]*$
 # Group 1 = STATUS (NEW|MODIFIED); group 2 = repo-relative path. All other lines
 # (prose, blank, headings, comments) are ignored. The full path is required so
 # is_production_file's prefix arm can classify (plan.md Decision 1).
 ENTRY_RE='^[[:space:]]*[-*][[:space:]]+(NEW|MODIFIED)[[:space:]]+([^[:space:]]+)[[:space:]]*$'
 
-# Extract "STATUS<TAB>path" for each matching line, preserving file order.
-raw_entries=$(grep -E "$ENTRY_RE" "$PLAN" 2>/dev/null \
-  | sed -E 's/'"$ENTRY_RE"'/\1\t\2/' || true)
+declared_section=$(awk '
+  /^##[[:space:]]+Declared File Operations[[:space:]]*$/ { in_section = 1; next }
+  in_section && /^##[[:space:]]/ { in_section = 0 }
+  in_section { print }
+' "$PLAN")
+
+# Extract "STATUS<TAB>path" for each matching line, preserving file order. Use a
+# literal tab (printf), NOT sed's `\t` escape — BSD/macOS sed does not expand
+# `\t` in the replacement, which would collapse STATUS and path into one field
+# and drop every entry. The `IFS=$'\t' read` split below needs a real tab.
+TAB=$(printf '\t')
+raw_entries=$(printf '%s\n' "$declared_section" | grep -E "$ENTRY_RE" 2>/dev/null \
+  | sed -E 's/'"$ENTRY_RE"'/\1'"$TAB"'\2/' || true)
 
 declare -a paths_in_order=()
 declare -A status_by_path=()

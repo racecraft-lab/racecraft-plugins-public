@@ -301,4 +301,78 @@ assert_json_field "$output" "declared_files.new" "0"
 set_test "NEW+MODIFIED same path greenfield false (fail-safe to MODIFIED)"
 assert_json_field "$output" "greenfield" "False"
 
+# ── PR #119 review (PRRT_kwDORvqw086HoVpq): section-scoping ───────────────────
+# Contract: no `## Declared File Operations` heading -> not_estimated. A grammar-
+# matching `- NEW ...` bullet that lives OUTSIDE that section (no heading at all,
+# or under a different heading) must NOT be counted.
+plan_noheading="$FIXTURE_DIR/plan-noheading.md"
+cat > "$plan_noheading" <<'EOF'
+# Implementation Plan
+
+Some prose. An unrelated checklist that happens to match the entry grammar:
+
+- NEW src/should_not_count.ts
+- MODIFIED src/also_not.ts
+EOF
+
+set_test "no Declared File Operations heading -> not_estimated despite stray NEW bullets"
+output=$("$SCRIPT" "$plan_noheading")
+assert_json_field "$output" "status" "not_estimated"
+
+set_test "no heading -> projected null"
+assert_json_field "$output" "projected" "None"
+
+set_test "no heading -> total_entries == 0 (stray bullets not counted)"
+assert_json_field "$output" "declared_files.total_entries" "0"
+
+# A heading IS present, but a stray entry after a later h2 is out of section.
+plan_outofsection="$FIXTURE_DIR/plan-outofsection.md"
+cat > "$plan_outofsection" <<'EOF'
+## Declared File Operations
+
+- NEW src/counted.ts
+
+## Notes
+
+- NEW src/out_of_section.ts
+EOF
+
+set_test "entry after a later h2 is out of section (total_entries == 1)"
+output=$("$SCRIPT" "$plan_outofsection")
+assert_json_field "$output" "declared_files.total_entries" "1"
+
+set_test "out-of-section entry not counted (projected 40, one file)"
+assert_json_field "$output" "projected" "40"
+
+# ── PR #119 review (PRRT_kwDORvqw086HoVps): .process/ exclusion parity with gate ─
+# is_excluded_generated carries the gate's `*/.process/*` arm so the estimator and
+# gate agree: a production-ish file declared under specs/<NNN>/.process/ is excluded
+# from the production count; production code elsewhere is counted.
+plan_process="$FIXTURE_DIR/plan-process.md"
+cat > "$plan_process" <<'EOF'
+## Declared File Operations
+
+- NEW src/real.ts
+- NEW specs/007-demo/.process/generated.ts
+EOF
+
+set_test ".process/ production file excluded (production == 1, not 2)"
+output=$("$SCRIPT" "$plan_process")
+assert_json_field "$output" "declared_files.production" "1"
+
+set_test ".process/ production file excluded (projected 40, not 80)"
+assert_json_field "$output" "projected" "40"
+
+# A dir merely ENDING in .process (foo.process/) is NOT the exhaust dir → counted.
+plan_endsprocess="$FIXTURE_DIR/plan-endsprocess.md"
+cat > "$plan_endsprocess" <<'EOF'
+## Declared File Operations
+
+- NEW src/foo.process/mod.ts
+EOF
+
+set_test "dir ending in .process (foo.process/) is not excluded (production == 1)"
+output=$("$SCRIPT" "$plan_endsprocess")
+assert_json_field "$output" "declared_files.production" "1"
+
 test_summary
