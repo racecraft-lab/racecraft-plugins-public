@@ -1,0 +1,457 @@
+# SpecKit Workflow: PRSG-003 — Generated index/PRs/backlinks + status integration + phase-gate regen
+
+**Template Version**: 1.0.0
+**Created**: 2026-06-06
+**Purpose**: Autopilot-ready workflow for PRSG-003. Phase prompts below were populated from the Grill Me interview; the autopilot reads them phase by phase.
+
+---
+
+## Design Concept
+
+This workflow file was enriched from a Grill Me interview run during
+`/speckit-pro:speckit-scaffold-spec`. The full Q&A log (11 questions), Goals,
+Non-goals, and Open Questions live at:
+
+```text
+docs/ai/specs/.process/PRSG-003-design-concept.md
+```
+
+Re-read it before each phase if you need to disambiguate a prompt. The
+design concept doc is the **source of truth** for every scoping decision; if a
+downstream artifact contradicts it, the downstream artifact is wrong unless
+there is an explicit revision note.
+
+> **Note:** Grill Me is human-in-the-loop only. It is **not** part of the
+> autopilot loop. Once autopilot begins, clarifications happen via
+> `/speckit-clarify` and the consensus protocol — never via grill-me.
+
+---
+
+## Workflow Overview
+
+| Phase | Command | Status | Notes |
+|-------|---------|--------|-------|
+| Specify | `/speckit-specify` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ⏳ Pending | 3 seeded sessions (see Open Questions in the design concept) |
+| Plan | `/speckit-plan` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ⏳ Pending | data-integrity + error-handling |
+| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ⏳ Pending | |
+
+**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
+
+### Phase Gates
+
+| Gate | Checkpoint | Approval Criteria |
+|------|------------|-------------------|
+| G1 | After Specify | User stories clear; no `[NEEDS CLARIFICATION]` markers remain |
+| G2 | After Clarify | Sentinel format, ordering, PRS input contract, and the status/autopilot wiring all pinned |
+| G3 | After Plan | `bash`+`jq` only; reuses `moc-id-normalize.sh`; no new dependency; Codex parity planned for the two mirrored skills |
+| G4 | After Checklist | All `[Gap]` markers addressed |
+| G5 | After Tasks | Every FR maps to a task; L1 determinism fixture + L4 enumerated; Codex SKILL.md edits paired |
+| G6 | After Analyze | No `CRITICAL`; no contradiction with the design concept; no scope creep into PRSG-004/009/011 |
+| G7 | After Implementation | `bash tests/run-all.sh` green; lints dogfood-green on real spec-MOCs; generator is deterministic (re-run = zero diff) |
+
+---
+
+## Prerequisites
+
+### Constitution Validation
+
+Verify alignment with `.specify/memory/constitution.md` (v1.1.0) before G1:
+
+| Principle | Requirement | Verification |
+|-----------|-------------|--------------|
+| II. Script Safety | New `generate-spec-index.sh` is `set -euo pipefail`, `shellcheck`-clean, `bash -n`-clean | `shellcheck` + `bash -n` + script-safety suite |
+| IV. Test Coverage Before Merge | Generator has an L1 determinism fixture + L4 unit tests; lints stay green | `bash tests/run-all.sh` |
+| VI. KISS, Simplicity & YAGNI | No code for data that doesn't exist yet (PRS population, cross-spec graph, roadmap-MOC home note all deferred) | Code review against the design concept Non-goals |
+| V. Conventional Commits | Public-readable PR title `feat(speckit-pro): …`; no internal IDs in title/body | `validate-pr-title` CI |
+| I. Plugin Structure Compliance | Codex mirrors for `speckit-status` + `speckit-autopilot` SKILL.md stay in parity | `validate-codex-skills.sh` (L1) |
+
+**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+
+---
+
+## Specification Context
+
+### Basic Information
+
+| Field | Value |
+|-------|-------|
+| **Spec ID** | PRSG-003 |
+| **Name** | Generated index/PRs/backlinks + status integration + phase-gate regen |
+| **Branch** | `prsg-003-spec-index` |
+| **Dependencies** | PRSG-002 (MOC templates + version-gated lints + ID normalizer) — **merged on `main`, PR #116** |
+| **Enables** | PRSG-004 (roadmap-MOC home note fills the dormant INDEX zone), PRSG-009 (multi-PR emission populates the PRS zone), PRSG-011 (retro-migration reuses `generate-spec-index.sh` for legacy backfill) |
+| **Priority** | P1 · Phase 2 |
+| **Budget** | ~350 production LOC (`bash`+`jq`) |
+
+### Success Criteria Summary
+
+- [ ] `generate-spec-index.sh` exists at `speckit-pro/skills/speckit-autopilot/scripts/`, is **deterministic** (same repo inputs → byte-identical output; re-run produces zero diff), and **reuses** `speckit-pro/tests/lib/moc-id-normalize.sh` for every ID join (no reinvented normalizer).
+- [ ] Three sentinel-bounded zones — **INDEX**, **PRS**, **BACKLINKS** — each wrapped by an independent HTML-comment `START/END` pair; the whole zone is regenerated, never `sed`-patched; a file missing a pair skips that zone.
+- [ ] `spec-moc-template.md` is updated so new specs are **born** with empty zones; the generator **injects-if-missing** into existing version-marked spec-MOCs, then fills them.
+- [ ] **BACKLINKS** renders a per-spec reachability index over `specs/<branch>/**` (incl. its `.process/`) in canonical order — closing PRSG-002's deferred "non-MOC docs reachable" loop, dogfood-proven on `prsg-002` and `prsg-003`.
+- [ ] `speckit-status` invokes the generator in **read-only `--check` mode** (regenerate in memory, diff, report staleness; writes nothing).
+- [ ] `speckit-autopilot` runs regeneration as an **idempotent phase-gate step at every phase boundary**, committing only on a non-empty diff (the authoritative write path).
+- [ ] The **roadmap INDEX** path is built and fixture-tested but **dormant** here (it activates when PRSG-004 supplies the home note); the **PRS** renderer reads a **repo-local committed source only** (never live `gh`).
+- [ ] L1 determinism fixture + L4 unit tests pass; full suite green; Codex parity intact for both mirrored skills.
+
+---
+
+## Phase 1: Specify
+
+**When to run:** Start of the feature. Focus on **WHAT** and **WHY**. Output: `specs/prsg-003-spec-index/spec.md`
+
+### Specify Prompt
+
+```bash
+/speckit-specify
+
+## Feature: Generated index/PRs/backlinks + status integration + phase-gate regen (PRSG-003)
+
+### Problem Statement
+PRSG-002 shipped the MOC navigation layer as STATIC markdown shapes (templates,
+a scaffold-time skeleton, version-gated orphan/stale-index lints). Plain markdown
+has no live engine: any generated block must be regenerated from the source tree
+or it silently lies — the #1 risk in the PR-size-governance roadmap. PRSG-003
+adds the engine: a deterministic generator that (re)writes sentinel-bounded zones
+so the maps stay true, and closes the loop PRSG-002 explicitly deferred ("non-MOC
+docs become reachable via the MOC down-index once PRSG-003 lands").
+
+### Users
+- Repo maintainers reading `speckit-status` (must trust the index isn't stale).
+- The autopilot, which regenerates the maps as part of its phase gates.
+- Downstream specs: PRSG-004 (roadmap home note), PRSG-009 (multi-PR emission),
+  PRSG-011 (legacy backfill) all build on this engine.
+
+### User Stories
+- [US1] Generator. `generate-spec-index.sh` writes three sentinel-bounded zones —
+  GENERATED INDEX (roadmap → spec-MOCs), GENERATED PRS (slice → PR# → merged SHA),
+  GENERATED BACKLINKS (a spec's own-artifact reachability index) — between
+  HTML-comment START/END pairs. Deterministic and fixture-tested. Reuses the
+  canonical ID-normalization join (`moc-id-normalize.sh`) and always regenerates
+  the WHOLE zone (never sed-patches — stale partial zones lie).
+- [US2] Wire it. `speckit-status` invokes the generator in read-only `--check`
+  mode (regenerate in memory, diff the committed file, report staleness, write
+  nothing). The autopilot runs regeneration as an idempotent phase-gate step at
+  every phase boundary, committing only when the diff is non-empty.
+
+### Constraints
+- `bash` + `jq` only; no new dependency (constitution II, CLAUDE.md rule 2).
+- Deterministic: a pure function of committed repo files. Canonical ordering —
+  normalized-ID order across specs; fixed artifact precedence (spec.md → plan.md
+  → tasks.md → data-model → research → contracts/** → checklists/** → .process/**)
+  then lexicographic path within a spec.
+- Reuse `speckit-pro/tests/lib/moc-id-normalize.sh` (`moc_normalize` / `moc_id_match`).
+- Discovery: only specs that already carry a `SPEC-MOC.md` (version-marked); legacy
+  specs with no MOC are skipped.
+- ~350 production LOC.
+
+### Out of Scope (deferred by design — see design concept Non-goals)
+- Populating the roadmap-level INDEX against a real roadmap-MOC home note — the
+  home note is PRSG-004; PRSG-003's INDEX path is built+tested but DORMANT here.
+- Live population of slice → PR# → merged SHA — PRSG-003 only RENDERS the PRS zone
+  from a repo-local committed source; the writer is PRSG-009. Never call `gh` at
+  generation time.
+- Backfilling/injecting zones into legacy specs that lack a `SPEC-MOC.md` — PRSG-011.
+- An inbound cross-spec citation graph (reverse `related:`/`depends-on`) — `related:`
+  is empty in v1.
+- `speckit-status` writing any file — it stays strictly read-only.
+- Linking the cross-tree `docs/ai/specs/.process/` design-concept/workflow from the
+  spec-MOC — that exhaust is roadmap-scoped (PRSG-004's domain).
+```
+
+### Files Generated
+- [ ] `specs/prsg-003-spec-index/spec.md`
+
+---
+
+## Phase 2: Clarify
+
+**When to run:** After Specify. Max 5 targeted questions per session. Seed the sessions from the design concept's Open Questions (the PRS input-contract shape, INDEX-activation timing, and the commit-message wording were the deliberate deferrals).
+
+### Clarify Prompts
+
+#### Session 1: Zone contract & determinism
+
+```bash
+/speckit-clarify Focus on the generated-zone contract and determinism: the exact
+HTML-comment sentinel spelling for INDEX/PRS/BACKLINKS and where they're defined as
+constants; the whole-zone-replace mechanism (never sed-patch); the canonical
+ordering rule (normalized-ID across specs; fixed artifact precedence then path
+within a spec); and the SHAPE of the repo-local committed source the PRS zone
+renders from (a .process/ manifest vs. data carried in the spec-MOC body). No live
+gh at generation time.
+```
+
+#### Session 2: Wiring & idempotency
+
+```bash
+/speckit-clarify Focus on wiring: speckit-status --check output (how staleness is
+reported in the dashboard without writing); the autopilot phase-gate step running at
+every boundary with commit-only-on-non-empty-diff and the fixed commit message; and
+the inject-if-missing behavior — the fixed anchor where empty zones are inserted into
+an existing version-marked spec-MOC, and proof it's idempotent.
+```
+
+#### Session 3: Codex parity & scope edges
+
+```bash
+/speckit-clarify Focus on parity and scope edges: mirroring the speckit-status and
+speckit-autopilot SKILL.md changes into codex-skills/ (the generator script is a
+single shared copy referenced by path — not duplicated); discovery skipping legacy
+specs with no SPEC-MOC; and the enumeration boundary staying within specs/<branch>/**
+(incl. its .process/) only.
+```
+
+### Clarify Results
+
+| Session | Focus Area | Questions | Key Outcomes |
+|---------|------------|-----------|--------------|
+| 1 | Zone contract & determinism | | |
+| 2 | Wiring & idempotency | | |
+| 3 | Codex parity & scope edges | | |
+
+---
+
+## Phase 3: Plan
+
+**When to run:** After spec is finalized. Output: `specs/prsg-003-spec-index/plan.md`
+
+### Plan Prompt
+
+```bash
+/speckit-plan
+
+## Tech Stack
+- Runtime: Bash (macOS/Linux) + jq. No new dependency (constitution II; CLAUDE.md rule 2).
+- Reused library: speckit-pro/tests/lib/moc-id-normalize.sh — source it and call
+  moc_normalize / moc_id_match for EVERY ID join. Do not reinvent normalization.
+- New script: speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh
+  (sibling of reviewability-gate.sh / generate-pr-body.sh). Single shared,
+  runtime-agnostic copy referenced by absolute plugin path from both speckit-status
+  and speckit-autopilot (and their Codex mirrors).
+
+## Surfaces to design
+- generate-spec-index.sh: a `--check` (read-only diff) mode AND a write mode;
+  sentinel constants for the three zones; whole-zone regeneration; inject-if-missing
+  of empty zones into version-marked spec-MOCs at a fixed anchor; discovery limited to
+  specs that carry a SPEC-MOC.md; canonical ordering.
+- spec-moc-template.md: add the three empty GENERATED zones at a fixed anchor so new
+  specs are born with them.
+- speckit-status SKILL.md (+ codex-skills mirror): invoke the generator in --check
+  mode and surface "index stale — run regen" read-only.
+- speckit-autopilot references/phase-execution.md (+ codex-skills mirror): add the
+  idempotent regen-and-commit-on-diff phase-gate step at every boundary (the write path).
+- Tests: an L1 determinism fixture (the fixture-driven byte-stable assertion) wired
+  into tests/run-all.sh next to the existing validate-moc-* lints (lines ~145-146),
+  plus L4 unit tests for the generator's pure functions.
+
+## Constraints
+- The roadmap INDEX path is built but dormant (no roadmap-MOC home note exists; PRSG-004).
+- The PRS zone renders from a repo-local committed source only — never `gh`.
+- Stay within ~350 production LOC. Re-read docs/ai/specs/.process/PRSG-003-design-concept.md
+  for any decision this prompt didn't capture.
+```
+
+### Plan Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `plan.md` | ⏳ | Generator design, --check mode, sentinel constants, wiring |
+| `research.md` | ⏳ | Repo-local PRS-source decision; reuse-vs-reinvent normalizer |
+| `data-model.md` | ⏳ | Zone schemas (INDEX/PRS/BACKLINKS rows); frontmatter join keys |
+| `contracts/` | ⏳ | Sentinel grammar; generator CLI contract (`--check` vs write) |
+| `quickstart.md` | ⏳ | How to run the generator + interpret a staleness report |
+
+---
+
+## Phase 4: Domain Checklists
+
+**Recommended domains (2):** mirror PRSG-002's choices — the risk here is identical (a script that rewrites doc files in place).
+
+#### 1. data-integrity Checklist
+
+Why: the generator overwrites regions of committed MOC files. A bug corrupts navigation maps or drops links. Whole-zone regen + idempotency + canonical ordering are the integrity guarantees.
+
+```bash
+/speckit-checklist data-integrity
+
+Focus on PRSG-003 requirements:
+- Whole-zone replacement never corrupts content OUTSIDE the sentinel pair.
+- Re-running the generator with no source change produces a zero-byte diff (idempotent).
+- Canonical ordering is stable across machines / filesystem enumeration order.
+- inject-if-missing adds zones exactly once, at the fixed anchor, only to version-marked specs.
+- Pay special attention to: malformed/partial sentinel pairs and files with no zones.
+```
+
+#### 2. error-handling Checklist
+
+Why: real spec trees are messy — missing sentinels, empty PRS data, non-version-marked specs, malformed frontmatter, non-regular-file targets.
+
+```bash
+/speckit-checklist error-handling
+
+Focus on PRSG-003 requirements:
+- A spec-MOC with no zones and no marker is skipped silently (version-gating).
+- Empty/absent PRS source renders an empty-but-valid PRS zone, not an error.
+- Malformed frontmatter / unreadable file fails safe with an actionable message and a non-zero exit.
+- --check mode never writes, even on error paths.
+- Pay special attention to: exit-code contract (clean vs stale vs error) consumed by speckit-status and the autopilot gate.
+```
+
+### Checklist Results
+
+| Checklist | Items | Gaps | Spec References |
+|-----------|-------|------|-----------------|
+| data-integrity | | | |
+| error-handling | | | |
+| **Total** | | | |
+
+---
+
+## Phase 5: Tasks
+
+**When to run:** After checklists (all gaps resolved). Output: `specs/prsg-003-spec-index/tasks.md`
+
+### Tasks Prompt
+
+```bash
+/speckit-tasks
+
+## Task Structure
+- Small, testable chunks; clear acceptance referencing FR-xxx.
+- TDD: RED (failing L1 fixture / L4 unit test) before GREEN.
+- Dependency order: normalizer-reuse + sentinel constants → zone renderers
+  (BACKLINKS first, it's the v1-active zone; PRS renderer; dormant INDEX path)
+  → inject-if-missing + template zones → status --check wiring → autopilot
+  phase-gate step → Codex mirrors.
+- Pair every SKILL.md edit with its codex-skills mirror task (speckit-status,
+  speckit-autopilot).
+- Mark parallel-safe tasks [P].
+
+## Bound by the design concept Non-goals
+Flag any task that would: populate the roadmap INDEX, write live PR/SHA data,
+touch legacy non-MOC specs, build a cross-spec citation graph, or make
+speckit-status write a file. Those belong to PRSG-004/009/011, not here.
+
+## Constraints
+- Tests live under speckit-pro/tests/ (L1 fixture next to validate-moc-*; L4 unit tests).
+- The generator is one shared script; Codex consumes it by path (no duplicate).
+```
+
+### Tasks Results
+
+| Metric | Value |
+|--------|-------|
+| **Total Tasks** | |
+| **Parallel Opportunities** | |
+| **User Stories Covered** | US1, US2 |
+
+---
+
+## Phase 6: Analyze
+
+```bash
+/speckit-analyze
+
+Focus on:
+1. Cross-artifact consistency across spec.md, plan.md, tasks.md, AND
+   docs/ai/specs/.process/PRSG-003-design-concept.md. The design concept is the
+   source of truth for scoping decisions — flag any drift.
+2. Boundary integrity: no scope creep into PRSG-004 (roadmap INDEX population),
+   PRSG-009 (live PR/SHA), or PRSG-011 (legacy backfill). The INDEX path must be
+   present-but-dormant; the PRS renderer must read repo-local data only.
+3. Contract integrity: confirm speckit-status remains read-only (--check only).
+4. Coverage: every FR and both user stories have tasks; the L1 determinism fixture
+   and L4 unit tests are present; Codex SKILL.md edits are paired.
+```
+
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| | | | |
+
+---
+
+## Phase 7: Implement
+
+**When to run:** After tasks.md is analyzed (no gaps).
+
+### Implement Prompt
+
+```bash
+/speckit-implement
+
+## Approach: TDD-First
+For each task: RED (write the failing L1 fixture / L4 unit test) → GREEN (minimum
+code) → REFACTOR → VERIFY.
+
+## Implementation Notes
+- Source moc-id-normalize.sh; never reinvent the join. Reference the design concept
+  Q&A log for the "why" behind each decision.
+- Sentinel constants defined once; whole-zone regenerate; a missing pair skips the zone.
+- Prove determinism: run the generator twice → second run yields a zero-byte diff.
+- Dogfood: after wiring, the generator must produce a real BACKLINKS reachability index
+  on this repo's own version-marked spec-MOCs (prsg-002, prsg-003) and the moc lints
+  must stay green.
+- shellcheck + bash -n clean (constitution II). Mirror speckit-status and
+  speckit-autopilot SKILL.md changes into codex-skills/ and keep
+  validate-codex-skills.sh green.
+
+## Verification
+- bash tests/run-all.sh  (Layers 1, 4, 5) green, including the new L1 determinism fixture.
+- speckit-status reports a clean (non-stale) index after a regen; reports stale after a
+  hand-edit to a source artifact.
+```
+
+### Implementation Progress
+
+| Phase | Tasks | Completed | Notes |
+|-------|-------|-----------|-------|
+| 1 - Generator core (normalizer reuse, sentinels, zones) | | | |
+| 2 - Template zones + inject-if-missing | | | |
+| 3 - status --check wiring (+ Codex mirror) | | | |
+| 4 - autopilot phase-gate step (+ Codex mirror) | | | |
+| 5 - Tests (L1 fixture, L4) + dogfood | | | |
+
+---
+
+## Post-Implementation Checklist
+
+- [ ] All tasks marked complete in tasks.md
+- [ ] `shellcheck` + `bash -n` clean on `generate-spec-index.sh`
+- [ ] `bash tests/run-all.sh` green (incl. new L1 determinism fixture + L4)
+- [ ] MOC lints (`validate-moc-orphan.sh`, `validate-moc-stale-index.sh`) still green on real spec trees
+- [ ] Generator is idempotent (second run = zero diff) — verified
+- [ ] Codex parity: `validate-codex-skills.sh` green; `speckit-status` + `speckit-autopilot` mirrors updated
+- [ ] PR title is public-readable: `feat(speckit-pro): …` (no internal IDs)
+- [ ] PR created and reviewed
+
+---
+
+## Project Structure Reference
+
+```
+speckit-pro/
+├── skills/
+│   ├── speckit-autopilot/scripts/generate-spec-index.sh   # NEW — shared generator
+│   ├── speckit-status/SKILL.md                            # EDIT — --check wiring
+│   ├── speckit-autopilot/references/phase-execution.md    # EDIT — phase-gate regen step
+│   └── speckit-coach/templates/spec-moc-template.md       # EDIT — empty zones at anchor
+├── codex-skills/
+│   ├── speckit-status/SKILL.md                            # MIRROR
+│   └── speckit-autopilot/...                              # MIRROR
+└── tests/
+    ├── lib/moc-id-normalize.sh                            # REUSE (PRSG-002)
+    ├── layer1-structural/  (determinism fixture, wired in run-all.sh)
+    └── layer4-scripts/     (generator unit tests)
+```
+
+---
+
+Populated from the PRSG-003 Grill Me interview (2026-06-06). Run with:
+`/speckit-pro:speckit-autopilot docs/ai/specs/.process/PRSG-003-workflow.md`
