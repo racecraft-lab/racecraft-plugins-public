@@ -34,8 +34,8 @@ to that doc's Design Tree.
 | Clarify | `/speckit-clarify` | ✅ Complete | S1: spike = exempt slice type via input flag → FR-017; at-ceiling boundary pinned (ok at ceiling). S2: shared homes LOCKED (coach/scripts + coach/references); boundary + advisory-only confirmed. 0 markers. No consensus needed. |
 | Plan | `/speckit-plan` | ✅ Complete | plan.md + data-model + contracts/estimate-spec-size.md + quickstart. Constitution 6/6 PASS. Budget ~200 LOC, 1 surface. G3 pass. 6 surfaces + Codex parity captured. |
 | Checklist | `/speckit-checklist` | ✅ Complete | data-integrity (28 items, 1 gap→bad-input status pinned ok) + error-handling (20 items, 2 gaps→caller-side unavailable/exit-code invariant + prd US1 AS5). 0 gaps. No consensus. |
-| Tasks | `/speckit-tasks` | 🔄 In Progress | TDD: L4 estimator fixture RED before GREEN; Codex mirror edits paired. |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Cross-artifact + drift check vs design concept's 10 decisions. |
+| Tasks | `/speckit-tasks` | ✅ Complete | tasks.md: 23 tasks, FR 17/17, TDD T004 (L4 fixture RED)→T005 (estimator GREEN), 8 [P], Codex mirrors paired (T009/T013/T015). G5 pass. Reviewability tasks-mode = transition_exception/pass (projection over-counts SDD artifacts; authoritative = pre-PR diff gate). T021–T023 (L2/L3/L8) are developer-local follow-ups, not autopilot-run. |
+| Analyze | `/speckit-analyze` | 🔄 In Progress | Cross-artifact + drift check vs design concept's 10 decisions. |
 | Implement | `/speckit-implement` | ⏳ Pending | Estimator + shared doc + prd/grill-me edits + Codex mirrors. |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
