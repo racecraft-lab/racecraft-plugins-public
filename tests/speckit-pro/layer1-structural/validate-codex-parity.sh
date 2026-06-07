@@ -1,0 +1,191 @@
+#!/usr/bin/env bash
+# validate-codex-parity.sh — Cross-platform parity checks ensuring Claude Code
+# and Codex files stay in sync.
+set -euo pipefail
+
+source "$(dirname "$0")/../lib/assertions.sh"
+PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
+
+CC_PLUGIN="$PLUGIN_ROOT/.claude-plugin/plugin.json"
+CODEX_PLUGIN="$PLUGIN_ROOT/.codex-plugin/plugin.json"
+CC_MARKETPLACE="$PLUGIN_ROOT/../.claude-plugin/marketplace.json"
+CODEX_MARKETPLACE="$PLUGIN_ROOT/../.agents/plugins/marketplace.json"
+AGENTS_DIR="$PLUGIN_ROOT/agents"
+CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
+SKILLS_DIR="$PLUGIN_ROOT/skills"
+CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
+
+# ===========================================================================
+# Version Parity
+# ===========================================================================
+section "Version Parity"
+
+set_test "both plugin.json files exist"
+if [ -f "$CC_PLUGIN" ] && [ -f "$CODEX_PLUGIN" ]; then
+  _pass
+else
+  _fail "missing one or both plugin.json files (CC: $CC_PLUGIN, Codex: $CODEX_PLUGIN)"
+fi
+
+if [ -f "$CC_PLUGIN" ] && [ -f "$CODEX_PLUGIN" ]; then
+  cc_version=$(jq -r '.version' "$CC_PLUGIN")
+  codex_version=$(jq -r '.version' "$CODEX_PLUGIN")
+
+  set_test "CC and Codex plugin.json versions match ($cc_version)"
+  assert_eq "$cc_version" "$codex_version" "versions must match: CC=$cc_version, Codex=$codex_version"
+fi
+
+# ===========================================================================
+# Marketplace Parity
+# ===========================================================================
+section "Marketplace Parity"
+
+set_test "both marketplace.json files exist"
+if [ -f "$CC_MARKETPLACE" ] && [ -f "$CODEX_MARKETPLACE" ]; then
+  _pass
+else
+  _fail "missing one or both marketplace.json files (CC: $CC_MARKETPLACE, Codex: $CODEX_MARKETPLACE)"
+fi
+
+if [ -f "$CC_MARKETPLACE" ] && [ -f "$CODEX_MARKETPLACE" ]; then
+  cc_marketplace_name=$(jq -r '.name' "$CC_MARKETPLACE")
+  codex_marketplace_name=$(jq -r '.name' "$CODEX_MARKETPLACE")
+
+  set_test "CC and Codex marketplace names match ($cc_marketplace_name)"
+  assert_eq "$cc_marketplace_name" "$codex_marketplace_name" \
+    "marketplace names must match: CC=$cc_marketplace_name, Codex=$codex_marketplace_name"
+fi
+
+# ===========================================================================
+# Agent Parity — CC agents → Codex agents
+# ===========================================================================
+section "Agent Parity (CC → Codex)"
+
+CC_ONLY_AGENTS=(gate-validator consensus-synthesizer)
+CODEX_ONLY_AGENTS=(autopilot-fast-helper)
+
+is_cc_only() {
+  local name="$1"
+  for cc_only in "${CC_ONLY_AGENTS[@]}"; do
+    [ "$name" = "$cc_only" ] && return 0
+  done
+  return 1
+}
+
+is_codex_only() {
+  local name="$1"
+  for codex_only in "${CODEX_ONLY_AGENTS[@]}"; do
+    [ "$name" = "$codex_only" ] && return 0
+  done
+  return 1
+}
+
+if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
+  for cc_agent_file in "$AGENTS_DIR"/*.md; do
+    [ -f "$cc_agent_file" ] || continue
+    agent_name=$(basename "$cc_agent_file" .md)
+    if is_cc_only "$agent_name"; then
+      continue
+    fi
+    set_test "codex-agents/${agent_name}.toml exists for CC agent"
+    assert_file_exists "$CODEX_AGENTS_DIR/${agent_name}.toml"
+  done
+else
+  set_test "agents/ and codex-agents/ directories exist"
+  _fail "one or both agent directories missing (CC: $AGENTS_DIR, Codex: $CODEX_AGENTS_DIR)"
+fi
+
+# ===========================================================================
+# Agent Parity — Codex agents → CC agents
+# ===========================================================================
+section "Agent Parity (Codex → CC)"
+
+if [ -d "$AGENTS_DIR" ] && [ -d "$CODEX_AGENTS_DIR" ]; then
+  for codex_agent_file in "$CODEX_AGENTS_DIR"/*.toml; do
+    [ -f "$codex_agent_file" ] || continue
+    agent_name=$(basename "$codex_agent_file" .toml)
+    if is_codex_only "$agent_name"; then
+      continue
+    fi
+    set_test "agents/${agent_name}.md exists for Codex agent"
+    assert_file_exists "$AGENTS_DIR/${agent_name}.md"
+  done
+fi
+
+# ===========================================================================
+# CC Skill Coverage — every CC skill must have a matching Codex skill
+# ===========================================================================
+section "CC Skill Coverage (CC → Codex)"
+
+if [ -d "$SKILLS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
+  for skill_dir in "$SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+
+    set_test "skills/${skill_name}/SKILL.md exists"
+    assert_file_exists "$SKILLS_DIR/${skill_name}/SKILL.md"
+
+    set_test "codex-skills/${skill_name}/SKILL.md exists for CC skill"
+    assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
+  done
+else
+  set_test "skills/ and codex-skills/ directories exist"
+  _fail "one or both skills directories missing (CC: $SKILLS_DIR, Codex: $CODEX_SKILLS_DIR)"
+fi
+
+# ===========================================================================
+# Codex Skill Metadata Sidecars
+# ===========================================================================
+section "Codex Skill Metadata Sidecars"
+
+if [ -d "$CODEX_SKILLS_DIR" ]; then
+  for skill_dir in "$CODEX_SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    set_test "codex-skills/${skill_name}/agents/openai.yaml exists"
+    assert_file_exists "$CODEX_SKILLS_DIR/${skill_name}/agents/openai.yaml"
+  done
+else
+  set_test "codex-skills/ directory exists for metadata sidecars"
+  _fail "codex-skills directory missing: $CODEX_SKILLS_DIR"
+fi
+
+# ===========================================================================
+# Shared Reference Integrity — CC skill references/ directories resolve
+# ===========================================================================
+section "Shared Reference Integrity"
+
+if [ -d "$SKILLS_DIR" ] && [ -d "$CODEX_SKILLS_DIR" ]; then
+  for skill_dir in "$SKILLS_DIR"/*/; do
+    [ -d "$skill_dir" ] || continue
+    skill_name=$(basename "$skill_dir")
+    cc_refs="$SKILLS_DIR/${skill_name}/references"
+
+    [ -d "$cc_refs" ] || continue  # skills without references/ are fine
+
+    set_test "${skill_name}: CC skill references/ has at least one file"
+    ref_count=$(find "$cc_refs" -maxdepth 1 -type f | wc -l | tr -d ' ')
+    if [ "$ref_count" -gt 0 ]; then
+      _pass
+    else
+      _fail "skills/${skill_name}/references/ exists but contains no files"
+    fi
+
+    # Per-file check: every ../../skills/*/references/*.md path linked from the
+    # Codex SKILL.md must resolve to an actual file under skills/.
+    codex_skill_file="$CODEX_SKILLS_DIR/${skill_name}/SKILL.md"
+    if [ -f "$codex_skill_file" ]; then
+      ref_paths=$(grep -oE '\.\./\.\./skills/[^)]+\.md' "$codex_skill_file" | sort -u)
+      while IFS= read -r rel_path; do
+        [ -z "$rel_path" ] && continue
+        # Strip the leading ../../ — paths are relative to the Codex skill dir,
+        # which is two levels below the plugin root.
+        resolved="$PLUGIN_ROOT/${rel_path#../../}"
+        set_test "${skill_name}: referenced file exists (${rel_path#../../})"
+        assert_file_exists "$resolved"
+      done <<< "$ref_paths"
+    fi
+  done
+fi
+
+test_summary

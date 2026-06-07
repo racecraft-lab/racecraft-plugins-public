@@ -16,10 +16,10 @@ Inside `speckit-pro/`:
 
 There is no compiled build step. Work is validated through shell scripts and repository structure checks.
 
-- `cd speckit-pro && bash tests/run-all.sh` runs the default deterministic layers: 1, 4, and 5.
-- `cd speckit-pro && bash tests/run-all.sh --layer 1` runs structural validation only.
-- `cd speckit-pro && bash tests/run-all.sh --layer 4` runs script unit tests.
-- `cd speckit-pro && bash tests/run-all.sh --all` includes AI-eval layers when prerequisites are installed.
+- `bash tests/speckit-pro/run-all.sh` runs the default deterministic layers: 1, 4, and 5.
+- `bash tests/speckit-pro/run-all.sh --layer 1` runs structural validation only.
+- `bash tests/speckit-pro/run-all.sh --layer 4` runs script unit tests.
+- `bash tests/speckit-pro/run-all.sh --all` includes AI-eval layers when prerequisites are installed.
 
 For marketplace updates, commit and push changes, then refresh the marketplace in Claude Code with `/plugin marketplace update racecraft-plugins-public`.
 
@@ -33,7 +33,7 @@ Name plugins and skill directories in kebab-case, for example `speckit-autopilot
 
 Tests are shell-based. Structural tests verify manifests, command frontmatter, hooks, skills, and agents. Script tests cover helper scripts such as `skills/.../scripts/validate-gate.sh`.
 
-Add or update tests when changing command schemas, hook config, skill layout, or script behavior. Prefer the smallest relevant layer during development, then rerun `bash tests/run-all.sh` before opening a PR.
+Add or update tests when changing command schemas, hook config, skill layout, or script behavior. Prefer the smallest relevant layer during development, then rerun `bash tests/speckit-pro/run-all.sh` before opening a PR.
 
 ## Commit & Pull Request Guidelines
 

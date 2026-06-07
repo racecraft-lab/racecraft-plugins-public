@@ -14,7 +14,7 @@ Four rules, in priority order. These exist because plugin/marketplace edits have
 ### 2. Simplest change that solves it
 - No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
 - No flags/options "for future flexibility" — add them when a second caller actually appears.
-- For shell scripts under `speckit-pro/scripts/` and `speckit-pro/tests/`, prefer plain `bash` + `jq` over introducing a new dependency.
+- For shell scripts under `speckit-pro/scripts/` and `tests/speckit-pro/`, prefer plain `bash` + `jq` over introducing a new dependency.
 
 ### 3. Surgical edits
 - Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
@@ -23,7 +23,7 @@ Four rules, in priority order. These exist because plugin/marketplace edits have
 - Match existing style in shell scripts, YAML, and Markdown even if you'd write it differently.
 
 ### 4. Verifiable success criteria
-- Translate every task into a check before coding: "edit X" → "after edit, `bash tests/run-all.sh --layer 1` passes" or "`gh pr view <N>` shows green".
+- Translate every task into a check before coding: "edit X" → "after edit, `bash tests/speckit-pro/run-all.sh --layer 1` passes" or "`gh pr view <N>` shows green".
 - For workflow / release changes, the success check is "the next release PR from release-please reflects this" — say that out loud before editing.
 - For multi-step work, list the steps + their verification commands up front, then loop on them.
 
@@ -35,7 +35,7 @@ Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, us
 - **Release config:** `release-please-config.json` + `.release-please-manifest.json` (kept in sync; see "Adding a New Plugin to Release Automation" below)
 - **Pipeline verification runbook:** `docs/ai/specs/cicd-release-pipeline-verification.md` (authoritative for branch-protection + release-please setup)
 - **Per-plugin entry:** `<plugin>/.claude-plugin/plugin.json` (name, version, description)
-- **Test runner:** `<plugin>/tests/run-all.sh` (see "Running Tests")
+- **Test runner:** `tests/<plugin>/run-all.sh` (see "Running Tests") — lives at the repo root, outside the plugin dir, so it is not shipped to consumers
 
 ## What This Repo Is
 
@@ -61,11 +61,18 @@ plugin-name/
 ├── agents/                      ← Subagent definitions (.md files)
 ├── commands/                    ← Slash commands (.md files with YAML frontmatter)
 ├── hooks/hooks.json             ← Event hooks (SessionStart, etc.)
-├── skills/                      ← Skills with SKILL.md + optional references/ and scripts/
-└── tests/                       ← 5-layer test suite
+└── skills/                      ← Skills with SKILL.md + optional references/ and scripts/
 ```
 
 The marketplace registry is at `.claude-plugin/marketplace.json`. Adding a new plugin requires updating this file.
+
+**The test suite is NOT inside the plugin directory.** Plugin install (both Claude
+Code and Codex) copies the entire plugin directory to every consumer, and neither
+supports a file-exclusion mechanism — so anything under `<plugin>/` ships. To keep
+the 5-layer suite out of consumers' installs, it lives at the repo root in
+`tests/<plugin>/` (e.g. `tests/speckit-pro/`), a sibling of the plugin. The
+`validate-plugin-payload` Layer-1 check fails if `tests/`, `specs/`, or `.process/`
+ever reappear under the plugin dir.
 
 ### Command File Format
 Commands must have YAML frontmatter (`---`) with `description:` and `allowed-tools:` fields, followed by body content. No frontmatter = test failure.
@@ -75,27 +82,27 @@ Skills live under `skills/<skill-name>/` with a `SKILL.md` entry point. Supporti
 
 ## Running Tests
 
-All tests are shell scripts. Run from the `speckit-pro/` directory:
+All tests are shell scripts. Run from the repository root:
 
 ```bash
 # Default: Layers 1, 4, 5 (fast, deterministic)
-bash tests/run-all.sh
+bash tests/speckit-pro/run-all.sh
 
 # With live SpecKit project tests
-bash tests/run-all.sh --live
+bash tests/speckit-pro/run-all.sh --live
 
 # Single layer
-bash tests/run-all.sh --layer 1   # Structural validation
-bash tests/run-all.sh --layer 4   # Script unit tests
-bash tests/run-all.sh --layer 5   # Agent tool scoping
+bash tests/speckit-pro/run-all.sh --layer 1   # Structural validation
+bash tests/speckit-pro/run-all.sh --layer 4   # Script unit tests
+bash tests/speckit-pro/run-all.sh --layer 5   # Agent tool scoping
 
 # Layers 2 & 3 (AI evals — require skill-creator plugin and claude -p)
-bash tests/layer2-trigger/run-trigger-evals.sh speckit-coach
-bash tests/layer2-trigger/run-trigger-evals.sh speckit-autopilot
+bash tests/speckit-pro/layer2-trigger/run-trigger-evals.sh speckit-coach
+bash tests/speckit-pro/layer2-trigger/run-trigger-evals.sh speckit-autopilot
 
 # Layer 7 — multi-agent dispatch graph (replay = free, live = $$)
-bash tests/run-all.sh --integration         # all 3 classes, replay
-bash tests/run-all.sh --integration --live  # all 3 classes, live
+bash tests/speckit-pro/run-all.sh --integration         # all 3 classes, replay
+bash tests/speckit-pro/run-all.sh --integration --live  # all 3 classes, live
 ```
 
 ### Test Layers
@@ -111,13 +118,13 @@ bash tests/run-all.sh --integration --live  # all 3 classes, live
 
 Layer 2/3 evals require `skill-creator` plugin at `$SKILL_CREATOR_ROOT` (default: `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/skill-creator/skills/skill-creator`). Layers 2, 3, and 6 all require `claude -p` and are developer-local only.
 
-Layer 6 evals use `speckit-pro/tests/layer6-efficiency/run-efficiency-benchmarks.sh` and require `claude -p`.
+Layer 6 evals use `tests/speckit-pro/layer6-efficiency/run-efficiency-benchmarks.sh` and require `claude -p`.
 
-Layer 7 fixtures live under `speckit-pro/tests/layer7-integration/`. Replay mode parses committed `transcript.jsonl` files (parser regression test); `--live` mode invokes `claude -p` and captures fresh transcripts (real routing test). See `tests/layer7-integration/README.md` for fixture format and assertion philosophy.
+Layer 7 fixtures live under `tests/speckit-pro/layer7-integration/`. Replay mode parses committed `transcript.jsonl` files (parser regression test); `--live` mode invokes `claude -p` and captures fresh transcripts (real routing test). See `tests/speckit-pro/layer7-integration/README.md` for fixture format and assertion philosophy.
 
-Layer 8 parity fixtures (`tests/layer8-parity/`) verify Path A (Agent Teams) vs Path B (parallel-subagents fallback) produce equivalent outcomes. Run modes:
-- `bash tests/layer8-parity/run-parity-fixtures.sh --dry-run` — validates fixture structure only; free.
-- `bash tests/layer8-parity/run-parity-fixtures.sh --live --budget-usd 25` — invokes `claude -p` twice per fixture (once per env) with budget cap and runs tolerance comparison (`byte-identical`, `exact`, `tolerance-1`). `semantic-equivalent` tolerance currently skips with a warning (needs LLM judge in a follow-up). Cost: ~$10-30 per fixture pair.
+Layer 8 parity fixtures (`tests/speckit-pro/layer8-parity/`) verify Path A (Agent Teams) vs Path B (parallel-subagents fallback) produce equivalent outcomes. Run modes:
+- `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` — validates fixture structure only; free.
+- `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --live --budget-usd 25` — invokes `claude -p` twice per fixture (once per env) with budget cap and runs tolerance comparison (`byte-identical`, `exact`, `tolerance-1`). `semantic-equivalent` tolerance currently skips with a warning (needs LLM judge in a follow-up). Cost: ~$10-30 per fixture pair.
 
 ## speckit-pro Plugin
 
@@ -144,8 +151,8 @@ The SessionStart hook warns if `specify` is not found.
 ### Adding a Skill to speckit-pro
 
 1. Create `speckit-pro/skills/<skill-name>/SKILL.md` with YAML frontmatter (`name`, `description`, `license`). Add `references/` and `scripts/` only if needed.
-2. If the skill has a Codex counterpart, mirror it under `speckit-pro/codex-skills/<skill-name>/SKILL.md` and ensure `tests/layer1-structural/validate-codex-skills.sh` still passes.
-3. Run `bash tests/run-all.sh --layer 1` to confirm structural validation passes.
+2. If the skill has a Codex counterpart, mirror it under `speckit-pro/codex-skills/<skill-name>/SKILL.md` and ensure `tests/speckit-pro/layer1-structural/validate-codex-skills.sh` still passes.
+3. Run `bash tests/speckit-pro/run-all.sh --layer 1` to confirm structural validation passes.
 4. No `marketplace.json` or `release-please-config.json` edits are required for a new skill within an existing plugin — those files track plugins, not skills.
 5. Commit as `feat(speckit-pro): add <skill-name> skill` so release-please promotes it on the next release PR.
 
@@ -202,14 +209,14 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 
 | Job | Description |
 |-----|-------------|
-| `detect` | Detects which plugin directories changed relative to the base branch. Outputs a JSON array of plugin names. |
-| `test (<plugin>)` | Runs `bash tests/run-all.sh` for each changed plugin (e.g. `test (speckit-pro)`). The name is dynamic — one job per plugin in the matrix. Skipped entirely when no plugin files changed (docs-only PRs). |
+| `detect` | Detects which plugins changed relative to the base branch — a plugin counts as changed when either its own directory (`<plugin>/`) or its out-of-plugin test suite (`tests/<plugin>/`) changed. Outputs a JSON array of plugin names. |
+| `test (<plugin>)` | Runs `bash tests/<plugin>/run-all.sh` for each changed plugin (e.g. `test (speckit-pro)`). The name is dynamic — one job per plugin in the matrix. Skipped only when neither the plugin nor its `tests/<plugin>/` suite changed (e.g. docs-only PRs). |
 | `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when all `test` matrix jobs passed or were skipped; fails when any matrix job failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
 
 **Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates all matrix results into one stable name that branch protection can require.
 
-**Docs-only PRs:** When a PR touches only documentation (no plugin directories), `detect` outputs `[]`, `test` is skipped (job-level `if:` evaluates to false — GitHub treats a skipped job as passing, not pending), and `validate-plugins` also passes. Docs-only PRs are not blocked by the test matrix.
+**Docs-only PRs:** When a PR touches only documentation (no plugin directory and no `tests/<plugin>/` suite), `detect` outputs `[]`, `test` is skipped (job-level `if:` evaluates to false — GitHub treats a skipped job as passing, not pending), and `validate-plugins` also passes. Docs-only PRs are not blocked by the test matrix.
 
 **Maintenance warning:** If any job in `pr-checks.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. A stale check name silently degrades protection: the renamed check never reports, the branch protection rule becomes vacuous, and PRs become mergeable without the check passing.
 

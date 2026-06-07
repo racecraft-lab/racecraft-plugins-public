@@ -567,6 +567,30 @@ cross-spec citation graph → future (`related:` empty in v1). The in-scope cros
 edit — populating prsg-002's already-merged map with the zones its body said would
 come "from a later spec" — is surfaced in the PR body, not a surprise diff.
 
+### Post-Merge Integration (#118)
+
+After the branch opened, `main` merged a change (#118) that relocated the whole
+test suite out of the plugin directory to a repo-root sibling (`tests/speckit-pro/`),
+because anything under `speckit-pro/` ships to plugin consumers. That moved the two
+canonical MOC libs (`moc-id-normalize.sh`, `moc-frontmatter.sh`) out of the shipped
+plugin — but PRSG-003's generator ships inside the plugin and sourced them by the
+old `tests/lib/` path, so once `main` merged in, the shipped generator would fail
+for consumers with a missing-file error.
+
+Resolution: the two libs are now genuine runtime dependencies of a shipped script,
+so they belong in the shipped tree. They moved (one canonical copy, git-tracked
+rename — no duplication, FR-004 preserved) to
+`speckit-pro/skills/speckit-autopilot/scripts/lib/`, co-located with the generator.
+The generator, the two PRSG-002 lints, the normalizer's own unit test, and this
+spec's Layer-4 test all source the libs from that one shipped home; `assertions.sh`
+(test-only) stays in `tests/speckit-pro/lib/`. The generator contract was updated to
+match.
+
+Verification: full suite `bash tests/speckit-pro/run-all.sh` → 1712/1712; plus a
+plugin-shaped check — copy `speckit-pro/` alone (no test tree anywhere) and run its
+generator `--check` against fixture specs → libs resolve, exit 0, zero missing-file
+errors (the actual consumer failure mode, proven fixed).
+
 ---
 
 ## Project Structure Reference

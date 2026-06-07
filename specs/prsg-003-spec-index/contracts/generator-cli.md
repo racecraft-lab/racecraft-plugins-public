@@ -26,8 +26,10 @@ generate-spec-index.sh [--check] [REPO_ROOT]
 | `REPO_ROOT` (optional positional) | Scan root override; defaults to the repository root inferred from the script location (so it is runnable in any consuming project, mirroring the PRSG-002 lints' optional scan-root arg). |
 
 The script must begin with `#!/usr/bin/env bash` and `set -euo pipefail`
-(constitution II); it sources `tests/lib/moc-id-normalize.sh` and
-`tests/lib/moc-frontmatter.sh` by path relative to the repo root.
+(constitution II); it reuses the canonical normalizer (FR-004) by sourcing
+`moc-id-normalize.sh` and `moc-frontmatter.sh` from its co-located
+`scripts/lib/` directory, so the libs ship inside the plugin alongside the
+generator (the test tree at `tests/speckit-pro/` is not shipped to consumers).
 
 ## Exit-code contract (3-way enum — mirrors the PRSG-002 lints; FR-015)
 

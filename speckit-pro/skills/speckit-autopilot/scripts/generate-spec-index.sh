@@ -18,16 +18,17 @@
 
 set -euo pipefail
 
-# ── Plugin root (where the reused libs live) — derived from THIS script's path:
-# scripts -> speckit-autopilot -> skills -> speckit-pro (three dirs up). The libs
-# are co-located with the generator inside the plugin, independent of REPO_ROOT.
+# ── Plugin root — derived from THIS script's path: scripts -> speckit-autopilot ->
+# skills -> speckit-pro (three dirs up). Used for the REPO_ROOT default below.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
-# shellcheck source=../../../tests/lib/moc-id-normalize.sh
-source "$PLUGIN_ROOT/tests/lib/moc-id-normalize.sh"
-# shellcheck source=../../../tests/lib/moc-frontmatter.sh
-source "$PLUGIN_ROOT/tests/lib/moc-frontmatter.sh"
+# Reused canonical libs (FR-004), co-located with the generator under scripts/lib/
+# so they ship inside the plugin — the test tree (tests/speckit-pro/) does not ship.
+# shellcheck source=lib/moc-id-normalize.sh
+source "$SCRIPT_DIR/lib/moc-id-normalize.sh"
+# shellcheck source=lib/moc-frontmatter.sh
+source "$SCRIPT_DIR/lib/moc-frontmatter.sh"
 
 # ── The six sentinel lines — defined ONCE, in one place (D1, FR-001). Matched by
 # full-line string equality, never a loose substring regex, so a `GENERATED:` token
