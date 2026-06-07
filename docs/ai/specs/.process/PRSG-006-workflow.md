@@ -33,7 +33,7 @@ every scoping decision captured during the interview. Where a phase prompt cites
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 15 FRs (FR-001–015), US1/US2, 0 `[NEEDS CLARIFICATION]`, G1 `pass:true`. Branch-aware override held (no derail). |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Sessions seeded from design-concept Open Questions |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions; 6 questions total (S1: 2→consensus, S2: 1, S3: 3 security→full consensus). Spec hardened: estimator input contract + not-estimated; greenfield file-set; exception matcher + added-lines + all-3-modes. 0 `[NEEDS CLARIFICATION]` remain. |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | error-handling + data-integrity |
 | Tasks | `/speckit-tasks` | ⏳ Pending | Two user stories: US1 plan budget, US2 gate rework |
@@ -237,8 +237,8 @@ recorded for PRSG-011.
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
 | 1 | Estimator mechanics | 2 (both → consensus) | **Q1 (declaration format):** split (codebase-analyst: add planned-files block to preset plan-template; spec-context-analyst: out-of-scope, parse existing tree). **Synthesis (altitude reconcile):** spec sets constraints, Plan picks the parse convention — added to spec Deferred (deterministic, enumerate prod files + new/modified, no unflagged template-surface expansion). **Q2 (empty plan):** unanimous (domain + spec-context + executor) → "not estimated" (3-value status `{pass,over_budget,not_estimated}`, `projected:null`, non-blocking). Folded in: ×40 is per-task→estimator declares own per-file constant (FR-007); `is_production_file` doesn't match repo `.sh` (known limit, PRSG-001); L4 fixture must assert known LOC value (FR-002). Edits: FR-002/003/007, Edge Case, Key Entities, Assumptions, Deferred. |
-| 2 | Gate metric + greenfield | | |
-| 3 | Exception pragma + back-compat | | |
+| 2 | Gate metric + greenfield | 1 (no consensus needed) | **Q1 (diff-mode greenfield file-set):** resolved to Option A — greenfield iff every *non-excluded* changed path is add-status `A` (modified non-excluded doc/test/config disqualifies; modified generated/lockfile does not), `--no-renames` pinned for determinism; faithful to FR-009 plain reading + FR-008 exclusion philosophy (Option C rejected as contradicting the locked spec). Mirrored the file-set rule into FR-006 (plan-time) and fixed a cross-ref typo (FR-006 cited FR-008 for the allowance; corrected to FR-009). Edits: FR-009, FR-006. All other sub-topics settled by FR-008/Q4 + Deferred. |
+| 3 | Exception pragma + back-compat | 3 (all `[security]` → full consensus) | **Q1 matcher:** line-anchored, **case-sensitive**, exact-enum, no-trailing — `^[[:space:]]*Reviewability-Exception:[[:space:]]+(refactor\|infra\|upgrade)[[:space:]]*$` (ERE, CRLF-safe). 2-of-3 (codebase+domain) over spec-context's case-insensitive-class; case-sensitive is safe (fails closed) + KISS. **Q2 read-location:** committed `.md`, **added lines only** over PR range; `grep '^+'\|grep -v '^+++'\|sed 's/^+//'` defeats the `+++` header bypass; NOT PR body/commit msgs. 2-of-3 (codebase+domain); spec-context's "branch's own pragma" concern handled by merge-base..HEAD range semantics. **Q3 sites:** unanimous — replace legacy at all three modes (setup/tasks/diff) via ONE shared matcher (diff uses `^\+` variant); FR-007 = topology not exception-logic. **Known limit:** line-scoped (not Markdown-aware) → fenced-code pragma trips → defer section-scoping to PRSG-010. Edits: FR-011/012/013, AS-4, 2 Edge Cases (incl. L4 bypass-test list), Assumptions. |
 
 ---
 
