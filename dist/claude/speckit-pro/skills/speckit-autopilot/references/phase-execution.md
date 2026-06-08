@@ -85,7 +85,7 @@ gate and spawns the next subagent.
 
 ### Subagent Prompt Template
 
-Use the `phase-executor` agent type for every phase. This
+Use the `speckit-pro:phase-executor` agent type for every phase. This
 agent is pre-configured with rules to run the command and
 return only a structured summary.
 
@@ -107,7 +107,7 @@ Agent(
 )
 ```
 
-The phase-executor handles summary formatting and the
+The `speckit-pro:phase-executor` handles summary formatting and the
 "no recommendations" constraint automatically.
 
 ## Branch/Worktree Detection

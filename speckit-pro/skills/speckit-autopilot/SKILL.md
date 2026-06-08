@@ -145,13 +145,17 @@ Full `Agent(...)` prompt template + per-phase prefixes live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Subagent Delegation.
 
-**Agent-type namespacing (required):** every bundled agent above — and every
-one in the routing tables below — dispatches with its `speckit-pro:` prefix
-(`speckit-pro:phase-executor`, `speckit-pro:clarify-executor`, …). The runtime
-resolves plugin agents by their namespaced id, so a bare `subagent_type:
-"phase-executor"` fails immediately with `Agent type 'phase-executor' not
-found`. The ONLY exception is `general-purpose`, which is built-in and takes no
-prefix.
+**Agent-type namespacing (required):** the prefix requirement applies to every
+speckit-pro **bundled agent id** used as a `subagent_type` value — the
+executors above and the analysts in the routing tables below dispatch with
+their `speckit-pro:` prefix (`speckit-pro:phase-executor`,
+`speckit-pro:clarify-executor`, …). The runtime resolves plugin agents by their
+namespaced id, so a bare `subagent_type: "phase-executor"` fails immediately
+with `Agent type 'phase-executor' not found`. Identifiers that take **no**
+prefix: `general-purpose` (a built-in agent), and entries in the tables that are
+not bundled agent ids — the `PROJECT_IMPLEMENTATION_AGENT` variable (resolved to
+a host-project agent, with `speckit-pro:phase-executor` as its fallback value)
+and `orchestrator-direct` (the orchestrator acting directly, not a subagent).
 
 ### 3. Task list first
 
@@ -264,7 +268,7 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    workflow's Prerequisites table. STOP on any failure.
 5. **Implementation agent detection** — Glob `.claude/agents/*.md`,
    match descriptions against implementation keywords; set
-   `PROJECT_IMPLEMENTATION_AGENT` (fallback: `phase-executor`). Also
+   `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
    check CLAUDE.md for an explicit agent reference.
 6. **Load settings + Agent Teams probe** — read `.claude/speckit-pro.local.md`
    (`consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`);

@@ -83,7 +83,7 @@ the legacy "always 3 analysts" rule.
 | *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
 
 **Multi-category tags** are valid: `[codebase, domain]` dispatches
-both `codebase-analyst` and `domain-researcher`. The orchestrator
+both `speckit-pro:codebase-analyst` and `speckit-pro:domain-researcher`. The orchestrator
 parses comma-separated category lists inside the bracket and
 spawns the union.
 
@@ -113,7 +113,7 @@ ROUND 2 — full fan-out (legacy path)
 
 The escape hatch is the asymmetry that keeps routing cheap when
 right and safe when wrong. A `[codebase]` tag that should have
-been `[domain]` triggers Round 2 the moment `codebase-analyst`
+been `[domain]` triggers Round 2 the moment `speckit-pro:codebase-analyst`
 admits "no precedent in this repo" — no silently-shipped
 low-confidence answers.
 
