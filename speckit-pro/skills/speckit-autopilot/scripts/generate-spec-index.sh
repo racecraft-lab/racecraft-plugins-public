@@ -564,7 +564,7 @@ main() {
       in_moc+=("$hn")
       in_new+=("$hnew")
       in_branch+=("$hlabel")
-    done < <(find "$home_dir" -mindepth 1 -maxdepth 1 -type f -name '*-roadmap-MOC.md' | LC_ALL=C sort)
+    done < <(find "$home_dir" -mindepth 1 -maxdepth 1 -name '*-roadmap-MOC.md' | LC_ALL=C sort)
   fi
 
   # PASS 2 — compare each regenerated body to the committed file. In --check mode
