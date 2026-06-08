@@ -4,9 +4,9 @@
 
 This document defines the specification roadmap for the CI/CD & Release Pipeline. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next.
 
-**Current Status:** The original 5 specs are complete. A follow-up packaging
-remediation spec (SPEC-006) is pending as of 2026-06-08 to split Claude Code and
-Codex install payloads so each runtime receives only its own visible components.
+**Current Status:** All 6 specs are complete. SPEC-006 shipped in PR #124, the
+release workflow hotfix shipped in PR #125, and the 2.8.1 release plus local
+Codex reinstall verification confirmed clean platform-specific payloads.
 
 **Branch:** `feat/cicd-release-pipeline`
 **Design Spec:** [2026-03-24-cicd-versioning-release-pipeline-design.md](../superpowers/specs/2026-03-24-cicd-versioning-release-pipeline-design.md)
@@ -76,7 +76,7 @@ SPEC-001 (Repository Foundation)
 | SPEC-003 | Release Automation | ✅ Complete | [SPEC-003-workflow.md](SPEC-003-workflow.md) | PR #3 merged |
 | SPEC-004 | Integration & Verification | ✅ Complete | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Complete; SPEC-005 unblocked |
 | SPEC-005 | Skill Trigger Quality | ✅ Complete | — | PRs #89, #91 merged 2026-05-26 |
-| SPEC-006 | Clean Platform Plugin Payloads | ⏳ Pending | — | Scaffold workflow after plan approval |
+| SPEC-006 | Clean Platform Plugin Payloads | ✅ Complete | — | PR #124 merged; release 2.8.1 verified |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -294,7 +294,11 @@ Alternatives considered: `--bare` alone (skips command discovery); `--disallowed
 ### SPEC-006: Clean Platform Plugin Payloads
 
 **Priority:** P1 | **Depends On:** SPEC-001, SPEC-003, SPEC-004 | **Enables:** Clean Claude Code and Codex installs
-**Status:** ⏳ Pending
+**Status:** ✅ Complete | **Outcome:** Generated Claude and Codex install
+payloads ship from `dist/`; marketplace paths now target platform-specific
+payload roots; release automation rebuilds/syncs payloads; local Codex reinstall
+verification confirmed 10 unique SpecKit Pro skills with no duplicate
+`codex-skills/` or Claude/shared skill exposure.
 
 **Goal:** Stop shipping one mixed `speckit-pro/` install root to both runtimes.
 Generate and publish self-contained platform payloads so Claude Code users receive
