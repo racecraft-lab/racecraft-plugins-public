@@ -207,7 +207,22 @@ spec-MOC file is byte-identical to before.
   `../../../specs/<dir>/SPEC-MOC.md` (home note in `docs/ai/specs/`, spec tree in repo-root
   `specs/`) — never a `[[wikilink]]`.
 - **FR-015 [US3]**: A SPEC-MOC with an empty or missing `status` MUST still produce an
-  INDEX row (link + blank status); the row MUST NOT be dropped.
+  INDEX row (link + blank status); the row MUST NOT be dropped. The `status` field is
+  display-only (it is neither the link text nor the sort key), so a blank value degrades the
+  row gracefully rather than invalidating it.
+- **FR-015a [US3]**: `spec_id` is NOT symmetric with `status`. A non-empty `spec_id` is a
+  PRSG-002 gating invariant: an absent or empty `spec_id` in a version-gated marker is itself
+  a PRSG-002 lint violation (`specs/prsg-002-moc-templates/contracts/id-normalization-grammar.md`
+  — "a marker with no join key cannot satisfy the join"), and `spec_id` is BOTH the INDEX
+  row's visible link text AND its `moc_normalize` sort key. Therefore a gated SPEC-MOC whose
+  `spec_id` is absent or empty MUST be **skipped from the INDEX** (no row emitted) — distinct
+  from the empty-`status` case, which still emits a row. PRSG-004 adds no new validation for
+  this: the existing PRSG-002 `spec_id` lint remains the authority that flags the offending
+  marker; the INDEX renderer simply does not fabricate a row with no usable link text or sort
+  key (which would render as a zero-width `[]()` anchor and have no stable ordering). This
+  keeps SC-006 honest — a row that cannot link or sort is not "reachable," so skipping it (and
+  letting the lint surface the real defect) is the reachable-or-flagged outcome, not silent
+  half-rendering.
 - **FR-016 [US3]**: Only version-marked (gated) SPEC-MOCs MUST be indexed; legacy/
   non-marked SPEC-MOCs MUST be skipped, consistent with the existing gating.
 - **FR-017 [US3]**: The generator's `main()` MUST discover and process the roadmap-MOC home
@@ -216,6 +231,21 @@ spec-MOC file is byte-identical to before.
   `structureVersion` gate (`moc_is_gated`), processed **in addition to and disjoint from**
   the existing repo-root `specs/` scan (the two trees do not overlap, so no double-processing
   and a clean no-op when zero home notes exist).
+- **FR-017a [US3]**: A home note emitted from the PRSG-002 template ALWAYS carries exactly the
+  INDEX sentinel pair present and the PRS + BACKLINKS pairs absent (FR-002), so the normal
+  home-note regeneration takes the whole-zone-rewrite path (INDEX present → filled). The
+  generator MUST guard the inverse case: a **discovered, gated** home note that does NOT carry
+  its INDEX sentinel pair — i.e. all three GENERATED pairs are absent — MUST NOT be sent down
+  the inject-if-missing path. That path fires precisely on all-three-absent and would inject
+  ALL THREE zones (INDEX + PRS + BACKLINKS) and render PRS/BACKLINKS against the home note's
+  non-spec directory (`docs/ai/specs/`), directly contradicting FR-002's "INDEX pair only".
+  For a home-note target the generator MUST instead **fail safe (exit 2, no write, actionable
+  stderr line naming the offending home note)** when the INDEX pair is absent, because a gated
+  home note without its INDEX zone is a malformed home note, not a fresh spec-MOC awaiting
+  injection. (An unbalanced INDEX pair — orphan/duplicated sentinel — is already the exit-2
+  fail-safe inherited from the shared marker-balance check; this clause additionally covers the
+  all-absent case, which the inherited inject-if-missing default would otherwise mishandle for
+  a home-note target.)
 - **FR-018 [US3]**: The per-spec-MOC code path MUST remain byte-identical to its
   pre-activation output, so the pinned PRSG-003 byte-for-byte contracts stay green; the
   roadmap-MOC INDEX is an additive code path. Because `render_index` already runs against
@@ -227,9 +257,15 @@ spec-MOC file is byte-identical to before.
 
 **Cross-cutting**
 
-- **FR-020 [US1][US2]**: The emit prose (US1) MUST exist in BOTH the Claude Code and Codex
-  mirrors of `speckit-prd`, and the teach prose (US2) MUST exist in BOTH mirrors of
-  `speckit-coach` (Codex parity is mandatory for the two skills).
+- **FR-020 [US1][US2]**: The Codex mirrors MUST convey the SAME content as the Claude Code
+  variants, not merely co-exist alongside them. Specifically: the Codex `speckit-prd` mirror
+  MUST describe the same home-note emit step (same two-zone model, same curated-zone
+  derivation, same epic-cap advisory) as the Claude `speckit-prd`, and the Codex
+  `speckit-coach` mirror MUST teach the same two-zone split and the same cap-epics guardrail
+  as the Claude `speckit-coach`. Parity is **semantic equivalence**, not byte-identical prose:
+  each mirror MAY differ in its own voice and in its runtime's interview mechanism (the Codex
+  free-text Q&A loop vs `AskUserQuestion`), but MUST NOT differ in the model, the emit step, or
+  the teaching it conveys. (Codex parity is mandatory for the two skills.)
 - **FR-021 [US3]**: The generator MUST remain a single shared, runtime-agnostic copy
   referenced by path; it MUST NOT be duplicated into the Codex skills tree, and no new
   separate roadmap-MOC generator script and no shared-library extraction refactor is
@@ -298,8 +334,11 @@ spec-MOC file is byte-identical to before.
   `[[wikilink]]`.
 - **SC-007**: `speckit-coach` correctly explains the two-zone split (curated vs. generated,
   generated never hand-edited) and the advisory ~10-epic cap.
-- **SC-008**: The two skills retain Codex parity (the emit and teach prose appear in both
-  mirrors); the generator remains a single shared copy not duplicated into the Codex tree.
+- **SC-008**: The two skills retain Codex parity — each Codex mirror conveys the SAME emit
+  step / teaching content as its Claude variant (the same two-zone model, emit step, and
+  cap-epics guardrail), allowing each runtime's own voice and interview mechanism but no
+  divergence in the model or behavior taught; the generator remains a single shared copy not
+  duplicated into the Codex tree.
 
 ### Test Coverage Note (deliberate deviation)
 

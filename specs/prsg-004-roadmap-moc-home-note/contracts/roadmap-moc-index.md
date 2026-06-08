@@ -117,7 +117,10 @@ field empty (matching the `render_prs` precedent of always emitting the field se
 | Home note present, `specs/` empty or all-legacy | INDEX rendered **empty** (link-free) — NOT an error |
 | No home note (glob matches 0) | clean no-op; the `specs/` scan proceeds unaffected |
 | Home note not gated (no `structureVersion`) | skipped — NOT an error |
+| Home note gated but MISSING its INDEX sentinel pair (all three GENERATED pairs absent) | **fail-safe exit 2, no write** (FR-017a) — a gated home note without its INDEX zone is malformed; the generator MUST NOT take the inject-if-missing path (which would inject all three zones and render PRS/BACKLINKS against `docs/ai/specs/`, contradicting FR-002) |
+| Home note's INDEX sentinel pair unbalanced (orphan/duplicated START or END) | **fail-safe exit 2, no write** — inherited from the shared marker-balance check (`_zone_state`/`err`), same as the spec-MOC path |
 | `status` empty/missing on a spec | row still emitted (link + blank status) — see "Empty / missing status" |
+| `spec_id` empty/missing on a gated spec | **row SKIPPED** (no row) — `spec_id` is the link text AND sort key; an absent/empty `spec_id` in a gated marker is a PRSG-002 lint violation, so it is not fabricated into a zero-width `[]()` row (FR-015a). NOT symmetric with empty `status`. |
 | A spec-MOC target (NOT the home note) | INDEX zone rendered **empty** — the spec-MOC path is byte-identical to pre-activation (SC-005) |
 
 ## Determinism & idempotence (SC-004 / FR-019)

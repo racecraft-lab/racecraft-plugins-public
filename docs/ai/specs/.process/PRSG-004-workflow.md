@@ -35,8 +35,8 @@ revision note says otherwise.
 | Specify | `/speckit-specify` | ✅ Complete | 22 FRs, 3 US, 13 acceptance scenarios, 8 SC + L4 deviation; 0 markers. G1 pass. |
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions, all Open Questions CONFIRM defaults (evidence-based), 0 consensus items. G2 pass. |
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; render_index branch via main()→rebuild_map(4th arg)→render_index(2nd arg) default 0; INDEX sentinels pinned in PRSG-002 template; reviewability pass (7 file ops). G3 pass. |
-| Checklist | `/speckit-checklist` | 🔄 In Progress | Domains: documentation-quality, error-handling |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Checklist | `/speckit-checklist` | ✅ Complete | doc-quality (1 gap → FR-020/SC-008 semantic-equivalence parity) + error-handling (3 gaps → FR-015a/FR-017a + contract rows). 2 dispositions resolved by 2-of-2 consensus. 0 [Gap]. G4 pass. |
+| Tasks | `/speckit-tasks` | 🔄 In Progress | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
@@ -294,9 +294,18 @@ Focus on PRSG-004 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| documentation-quality | | | |
-| error-handling | | | |
-| **Total** | | | |
+| documentation-quality | 34 | 1 fixed, 0 left | FR-020, SC-008 (semantic-equivalence parity) |
+| error-handling | 29 | 3 fixed, 0 left | FR-015a, FR-017a; contract "Empty/absent behavior" table |
+| **Total** | 63 | 4 fixed, 0 left | — |
+
+### Consensus Resolution Log (Checklist)
+
+| Item | Categories | Round | Codebase | Spec/Constitution | Resolution | Confidence |
+|------|-----------|-------|----------|-------------------|------------|------------|
+| CHK047 — empty/missing `spec_id` on a gated SPEC-MOC | [codebase][spec] | 1 (N=2) | SKIP | SKIP | **SKIP** the row (FR-015a) — generator renders what it can; PRSG-002 lint owns `spec_id` enforcement | High (2-of-2 agree) |
+| CHK043/045 — gated home note missing its INDEX sentinel pair | [codebase][spec] | 1 (N=2) | EXIT_2 | EXIT_2 | **EXIT 2** fail-safe (FR-017a) — skip/inject would silently corrupt; structural-precondition violation | High (2-of-2 agree) |
+
+Both confirmed the checklist-executor's applied dispositions; correctly asymmetric (data degradation → skip vs structural malfunction → fail-safe), unified under Constitution Principle II. No artifact edit needed beyond what the executor already applied; synthesizer skipped (unanimous agreement, artifacts already match).
 
 ---
 
