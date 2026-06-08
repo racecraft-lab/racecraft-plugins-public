@@ -83,6 +83,22 @@ SYMLINK_TARGET="specs/prsg-918-symlink/moc-target.md"
 ATOM_ROOT="$FIX/atomicity"
 ATOM_LEGACY_MOC="specs/b-prsg-914-legacy/SPEC-MOC.md"
 
+# Roadmap-MOC home-note fixtures (PRSG-004). The home note lives at
+# docs/ai/specs/<slug>-roadmap-MOC.md and is processed disjoint from the specs/
+# scan. roadmap-moc/ exercises the repo-wide INDEX fill + every per-spec INDEX
+# staying empty/byte-identical; roadmap-moc-no-index/ exercises the FR-017a
+# fail-safe (a gated home note missing its INDEX pair -> exit 2, no write).
+RMOC_ROOT="$FIX/roadmap-moc"
+RMOC_HOME="docs/ai/specs/myproject-roadmap-MOC.md"
+RMOC_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"     # gated, status=complete  -> indexed
+RMOC_SPEC2="specs/prsg-002-bar/SPEC-MOC.md"     # gated, status=""        -> indexed (blank status)
+RMOC_SPEC10="specs/prsg-010-baz/SPEC-MOC.md"    # gated, status=in-progress -> indexed
+RMOC_NOID="specs/prsg-003-noid/SPEC-MOC.md"     # gated, spec_id=""        -> SKIPPED (FR-015a)
+RMOC_LEGACY="specs/legacy-thing/SPEC-MOC.md"    # NOT gated                -> SKIPPED (FR-016)
+RMOCNI_ROOT="$FIX/roadmap-moc-no-index"
+RMOCNI_HOME="docs/ai/specs/broken-roadmap-MOC.md"
+RMOCNI_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"
+
 # The middle dot in a PRS row is U+00B7 (· — two bytes 0xC2 0xB7), NOT an ASCII
 # dot. Pin the exact bytes the renderer must emit (D3 worked example).
 PRS_SEP=$'\xc2\xb7'
@@ -399,5 +415,130 @@ assert_eq "$tgt_committed" "$tgt_before" "FR-016: nothing was written through th
 set_test "symlinked-MOC --check also exits 2 (read-only error path)"
 rc_jc=0; "$GEN" --check "$copy_j" >/dev/null 2>&1 || rc_jc=$?
 assert_eq "2" "$rc_jc" "--check on a symlinked target is exit 2, never exit 1 stale (FR-012/FR-016)"
+
+# ───────────────────────────────────────────────────────────────────────────
+section "(k) roadmap-MOC home note — INDEX fills repo-wide; every spec-MOC stays empty"
+# ───────────────────────────────────────────────────────────────────────────
+# The home note at docs/ai/specs/<slug>-roadmap-MOC.md carries ONLY the INDEX
+# sentinel pair. A write run must fill its INDEX with one row per gated spec whose
+# spec_id is non-empty, normalized-ID ascending, each a relative []() link — while
+# EVERY per-spec SPEC-MOC INDEX stays empty/byte-identical (FR-018). This group
+# fails RED today: render_index returns empty, so the home note never fills.
+copy_k="$(fresh_copy "$RMOC_ROOT")"
+
+# Snapshot every per-spec SPEC-MOC.md BEFORE the run, to prove byte-identity after.
+spec1_before_k="$(shasum "$copy_k/$RMOC_SPEC1" | awk '{print $1}')"
+spec2_before_k="$(shasum "$copy_k/$RMOC_SPEC2" | awk '{print $1}')"
+spec10_before_k="$(shasum "$copy_k/$RMOC_SPEC10" | awk '{print $1}')"
+noid_before_k="$(shasum "$copy_k/$RMOC_NOID" | awk '{print $1}')"
+legacy_before_k="$(shasum "$copy_k/$RMOC_LEGACY" | awk '{print $1}')"
+
+set_test "write run over a repo with a roadmap-MOC home note succeeds (exit 0)"
+rc_k=0; "$GEN" "$copy_k" >/dev/null 2>&1 || rc_k=$?
+assert_eq "0" "$rc_k" "a well-formed home note + gated specs must regenerate without error (FR-011)"
+
+home_k="$(cat "$copy_k/$RMOC_HOME" 2>/dev/null || true)"
+# Isolate the home note's INDEX zone body (between the START and END sentinels).
+hidx_k="${home_k#*GENERATED:INDEX:START}"; hidx_k="${hidx_k#*$'\n'}"; hidx_k="${hidx_k%%<!-- GENERATED:INDEX:END*}"
+
+# (1) repo-wide fill: one row per gated, non-empty-spec_id spec, exact bytes incl.
+# the U+00B7 separator framing (FR-012/FR-014/SC-006). The link is the relative
+# ../../../specs/<dir>/SPEC-MOC.md target — never a [[wikilink]].
+set_test "home INDEX has the PRSG-001 row with exact bytes (relative link + U+00B7 + status)"
+assert_contains "$home_k" "- [PRSG-001](../../../specs/prsg-001-foo/SPEC-MOC.md) ${PRS_SEP} complete" "FR-012/FR-014 exact row bytes"
+set_test "home INDEX has the PRSG-010 row with exact bytes"
+assert_contains "$home_k" "- [PRSG-010](../../../specs/prsg-010-baz/SPEC-MOC.md) ${PRS_SEP} in-progress" "FR-012/FR-014 exact row bytes"
+# (3) empty-status spec STILL emits a row, separator present + blank status — pin the
+# frozen byte form (separator, one trailing space, end of line) (FR-015, SC-004).
+set_test "empty-status spec still emits a row with the frozen blank-status bytes (FR-015)"
+assert_contains "$home_k" $'- [PRSG-002](../../../specs/prsg-002-bar/SPEC-MOC.md) \xc2\xb7 \n' "FR-015 blank-status row: separator + trailing space, row not dropped"
+
+# (2) every INDEX link is a relative []() target, NEVER a [[wikilink]] (FR-014/SC-006).
+set_test "the home INDEX zone contains no [[wikilink]] targets (relative links only)"
+assert_not_contains "$hidx_k" "[[" "FR-014/SC-006: INDEX links are relative []() targets, never [[wikilinks]]"
+set_test "the home INDEX zone links into ../../../specs/ (reachable from docs/ai/specs/)"
+assert_contains "$hidx_k" "](../../../specs/" "FR-014: relative target resolves docs/ai/specs -> repo-root specs"
+
+# (4) absent/empty-spec_id gated spec is SKIPPED — no row (FR-015a). Its dir basename
+# (prsg-003-noid) and its blank status value must not appear as an INDEX row.
+set_test "the absent-spec_id gated spec is SKIPPED — no row in the home INDEX (FR-015a)"
+assert_not_contains "$hidx_k" "prsg-003-noid" "FR-015a: a gated spec with empty spec_id is not fabricated into a zero-width row"
+# (5) legacy non-gated dir is skipped (FR-016).
+set_test "the legacy non-gated dir is SKIPPED — no row in the home INDEX (FR-016)"
+assert_not_contains "$hidx_k" "legacy-thing" "FR-016: only version-marked specs are indexed"
+set_test "the home INDEX has no LEGACY-THING link text either (legacy fully skipped)"
+assert_not_contains "$hidx_k" "LEGACY-THING" "FR-016: legacy spec_id never appears as a row"
+
+# (FR-013) ordering: PRSG-001 row precedes PRSG-002 precedes PRSG-010, normalized-ID
+# ascending. Compare byte offsets via each row's UNIQUE link path (no glob
+# metacharacters — a [PRSG-00N] pattern would be a bracket character class, not a
+# literal, so anchor on the relative SPEC-MOC.md target instead).
+set_test "home INDEX rows are normalized-ID ascending (001 < 002 < 010)"
+off1_k="${home_k%%specs/prsg-001-foo/*}"
+off2_k="${home_k%%specs/prsg-002-bar/*}"
+off10_k="${home_k%%specs/prsg-010-baz/*}"
+if [ "${#off1_k}" -lt "${#off2_k}" ] && [ "${#off2_k}" -lt "${#off10_k}" ]; then _pass; else _fail "FR-013: INDEX rows must be normalized-ID ascending"; fi
+
+# (2nd half of the context-scoping invariant) — every per-spec SPEC-MOC INDEX stays
+# empty/byte-identical after the run (FR-018/SC-005). Each per-spec file must be
+# unchanged AND its own INDEX zone must remain consecutive START/END (link-free).
+set_test "per-spec PRSG-001 SPEC-MOC.md is byte-identical after the run (FR-018)"
+assert_eq "$spec1_before_k" "$(shasum "$copy_k/$RMOC_SPEC1" | awk '{print $1}')" "FR-018: spec-MOC path is byte-identical (INDEX stays empty)"
+set_test "per-spec PRSG-002 SPEC-MOC.md is byte-identical after the run (FR-018)"
+assert_eq "$spec2_before_k" "$(shasum "$copy_k/$RMOC_SPEC2" | awk '{print $1}')" "FR-018: spec-MOC path is byte-identical"
+set_test "per-spec PRSG-010 SPEC-MOC.md is byte-identical after the run (FR-018)"
+assert_eq "$spec10_before_k" "$(shasum "$copy_k/$RMOC_SPEC10" | awk '{print $1}')" "FR-018: spec-MOC path is byte-identical"
+set_test "per-spec absent-spec_id SPEC-MOC.md is byte-identical after the run (FR-018)"
+assert_eq "$noid_before_k" "$(shasum "$copy_k/$RMOC_NOID" | awk '{print $1}')" "FR-018: a skipped-from-INDEX spec-MOC is still byte-identical"
+set_test "the legacy non-gated SPEC-MOC.md is byte-identical after the run (FR-016)"
+assert_eq "$legacy_before_k" "$(shasum "$copy_k/$RMOC_LEGACY" | awk '{print $1}')" "FR-016: legacy spec-MOC left untouched"
+set_test "the per-spec PRSG-001 INDEX zone is still empty (consecutive START/END, link-free)"
+spec1_body_k="$(cat "$copy_k/$RMOC_SPEC1" 2>/dev/null || true)"
+assert_contains "$spec1_body_k" $'GENERATED:INDEX:START (do not edit; regenerated by generate-spec-index.sh) -->\n<!-- GENERATED:INDEX:END -->' "FR-018: spec-MOC INDEX stays empty even while the home note fills"
+
+# (7) idempotence — a SECOND consecutive run over the now-filled home note is a
+# zero-byte diff (SC-004/FR-019). After the first write the home note is up to date,
+# so --check must report current (exit 0) and a second write must change nothing.
+set_test "after the fill, --check reports the home note current (exit 0, idempotent)"
+rc_kc=0; "$GEN" --check "$copy_k" >/dev/null 2>&1 || rc_kc=$?
+assert_eq "0" "$rc_kc" "SC-004/FR-019: a regenerated home note is idempotent (no drift on re-check)"
+home_k_first="$(shasum "$copy_k/$RMOC_HOME" | awk '{print $1}')"
+set_test "a second write run leaves the home note byte-identical (zero-byte diff)"
+rc_k2=0; "$GEN" "$copy_k" >/dev/null 2>&1 || rc_k2=$?
+assert_eq "0" "$rc_k2" "second write run must succeed"
+assert_eq "$home_k_first" "$(shasum "$copy_k/$RMOC_HOME" | awk '{print $1}')" "SC-004/FR-019: second run is a zero-byte diff on the home note"
+
+# (no-home-note no-op) a repo with NO home note still processes specs/ unaffected —
+# implicitly covered by every other group (none carry a home note) and asserted by
+# the unchanged PRSG-003 cases; no extra fixture needed here.
+
+# ───────────────────────────────────────────────────────────────────────────
+section "(l) FR-017a — a gated home note missing its INDEX pair fails safe (exit 2, no write)"
+# ───────────────────────────────────────────────────────────────────────────
+# roadmap-moc-no-index/ has a version-gated home note carrying NONE of the three
+# GENERATED pairs. For a home-note target the generator MUST fail safe (exit 2, no
+# write, actionable stderr naming the offending home note) — it MUST NOT take the
+# inject-if-missing path (which would inject all three zones and render PRS/BACKLINKS
+# against docs/ai/specs/, contradicting FR-002). Fails RED today: main() does not yet
+# discover home notes, so the malformed home note is silently ignored (exit 0).
+copy_l="$(fresh_copy "$RMOCNI_ROOT")"
+home_before_l="$(shasum "$copy_l/$RMOCNI_HOME" | awk '{print $1}')"
+spec_before_l="$(shasum "$copy_l/$RMOCNI_SPEC1" | awk '{print $1}')"
+set_test "write run over a gated home note missing its INDEX pair -> exit 2 (FR-017a)"
+rc_l=0; lerr="$("$GEN" "$copy_l" 2>&1 >/dev/null)" || rc_l=$?
+assert_eq "2" "$rc_l" "FR-017a: a gated home note without its INDEX zone must fail safe, never inject-if-missing"
+set_test "the malformed home note is left wholly unmodified (no write, NOT injected)"
+assert_eq "$home_before_l" "$(shasum "$copy_l/$RMOCNI_HOME" | awk '{print $1}')" "FR-017a: no write on the fail-safe path"
+set_test "the malformed home note did NOT gain any injected GENERATED zones"
+home_after_l="$(cat "$copy_l/$RMOCNI_HOME" 2>/dev/null || true)"
+assert_not_contains "$home_after_l" "GENERATED:INDEX:START" "FR-017a: inject-if-missing must NOT fire for a home-note target"
+assert_not_contains "$home_after_l" "GENERATED:PRS:START" "FR-017a: PRS/BACKLINKS must never be rendered against docs/ai/specs/"
+set_test "the sibling gated spec-MOC is also untouched (whole batch aborted, no partial write)"
+assert_eq "$spec_before_l" "$(shasum "$copy_l/$RMOCNI_SPEC1" | awk '{print $1}')" "FR-017a: fail-safe aborts the batch before any write"
+set_test "the FR-017a error message names the offending home note on stderr (actionable)"
+assert_contains "$lerr" "broken-roadmap-MOC.md" "FR-017a: stderr must name the malformed home note"
+set_test "FR-017a --check also fails safe (exit 2, read-only error path)"
+rc_lc=0; "$GEN" --check "$RMOCNI_ROOT" >/dev/null 2>&1 || rc_lc=$?
+assert_eq "2" "$rc_lc" "FR-017a: --check on a malformed home note is exit 2, never exit 0/1"
 
 test_summary

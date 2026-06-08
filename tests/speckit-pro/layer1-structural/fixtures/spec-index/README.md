@@ -25,6 +25,8 @@ file ends with `GENERATED:BACKLINKS:END` + a single trailing newline.
 | `prs-absent/` | Version-marked MOC, NO `.process/prs.json` at all. Empty-but-valid link-free PRS zone, NOT an error. | FR-011 (T006 g) |
 | `prs-malformed/` | Version-marked MOC + a `.process/prs.json` containing invalid JSON. Fail-safe: exit 2, distinct from absent/empty. | FR-016 (T006 g) |
 | `legacy-skip/` | A NON-version-marked legacy spec (no `structureVersion`). Skipped and left unmodified by any run (stays byte-identical). | FR-007 skip (consumed by the L1 determinism run) |
+| `roadmap-moc/` | A roadmap-MOC home note at `docs/ai/specs/<slug>-roadmap-MOC.md` carrying ONLY the INDEX sentinel pair (gated), plus `specs/` dirs: two normal gated specs, one empty-`status` gated spec, one absent-`spec_id` gated spec, one legacy non-gated dir. The home note's INDEX fills repo-wide (one row per gated spec with a non-empty `spec_id`, normalized-ID ascending, relative `[]()` links); the empty-`status` spec still emits a row with a blank status; the absent-`spec_id` spec and the legacy dir are skipped; every per-spec SPEC-MOC INDEX stays empty/byte-identical. | FR-011…FR-019, FR-022 home-note INDEX (PRSG-004 T003/T004) |
+| `roadmap-moc-no-index/` | A version-gated home note that carries NONE of the three GENERATED sentinel pairs (no INDEX zone), plus one gated spec. For a home-note target the generator fails safe (exit 2, no write, stderr names the home note) instead of taking inject-if-missing. | FR-017a fail-safe (PRSG-004 T003/T004) |
 
 `SPEC-MOC.md` is the map note itself and is therefore NOT one of its own
 BACKLINKS rows (FR-006 / SC-002: "every **non-map** document … is reachable").
