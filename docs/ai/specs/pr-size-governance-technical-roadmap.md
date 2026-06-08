@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119). Pending: PRSG-004 (Phase 2, P2), PRSG-007→008→009 (Phase 4 split-PR engine), PRSG-010 (Phase 5), PRSG-011 (Phase 6 retro-migration — now unblocked: needs only PRSG-001/002/003). Created 2026-06-03; status refreshed 2026-06-08.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119). In progress: PRSG-004 (Phase 2, P2 — scaffolded 2026-06-08). Pending: PRSG-007→008→009 (Phase 4 split-PR engine), PRSG-010 (Phase 5), PRSG-011 (Phase 6 retro-migration — now unblocked: needs only PRSG-001/002/003). Created 2026-06-03; status refreshed 2026-06-08.
 
 ## Vision
 
@@ -138,7 +138,7 @@ they silently lie (the #1 risk).
 
 ---
 
-### PRSG-004 — Roadmap-MOC home note from PRD + coach the two-zone structure  · Phase 2 · P2
+### PRSG-004 — Roadmap-MOC home note from PRD + coach the two-zone structure  · Phase 2 · P2 · 🔄 In Progress
 **Why:** the user's cognitive-load answer — one home note, curated epics + generated
 index, authored once cheaply during the PRD interview.
 
