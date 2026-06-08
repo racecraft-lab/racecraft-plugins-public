@@ -38,7 +38,7 @@ revision note says otherwise.
 | Checklist | `/speckit-checklist` | ✅ Complete | doc-quality (1 gap → FR-020/SC-008 semantic-equivalence parity) + error-handling (3 gaps → FR-015a/FR-017a + contract rows). 2 dispositions resolved by 2-of-2 consensus. 0 [Gap]. G4 pass. |
 | Tasks | `/speckit-tasks` | ✅ Complete | 24 tasks (US3→US1→US2→polish), TDD-first, T007 = PRSG-003 byte regression guard, Codex mirrors T013/T017/T019. G5 pass. Reviewability tasks-gate block OVERRIDDEN (false positive — see note). |
 | Analyze | `/speckit-analyze` | ✅ Complete | 3 findings, all LOW (post-refinement staleness), all fixed. 100% FR/SC coverage. G6 pass (0 CRITICAL). Re-flagged consensus items = Phase-4-resolved duplicates (no new round). |
-| Implement | `/speckit-implement` | 🔄 In Progress | |
+| Implement | `/speckit-implement` | ✅ Complete | 24 tasks (US3 generator + US1 prd emit + US2 coach teach + polish). G7: full suite 1934/1934. spec-MOC byte-identical; PRSG-003 guard unchanged. |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -421,10 +421,10 @@ Focus on:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation (generator) | | | |
-| 2 - US1 (prd emit) | | | |
-| 3 - US2 (coach teach) | | | |
-| 4 - Polish (L1/L8/parity) | | | |
+| 1 - Foundation (US3 generator) | T001–T007 | ✅ | render_index activated (context-scoped branch); L4 fixture RED→GREEN; PRSG-003 guard byte-identical. Commit 19a8c91 |
+| 2 - US1 (prd emit) | T010–T014 | ✅ | template INDEX sentinels byte-match generator; emit-and-fill verified end-to-end; Output Contract 2→3; Codex mirror. Commit ebd142a |
+| 3 - US2 (coach teach) | T015–T020 | ✅ | new references/roadmap-moc-guide.md; description cluster + routing + L2 cases; Codex mirror shares the tree. Commit 44fdc17 |
+| 4 - Polish (L1/L8/parity) | T021–T026 | ✅ | T022 L1 sentinel-seam assertion; skill-reviewer applied prd description fix; L8 dry-run pass; full suite 1934/1934 |
 
 ---
 

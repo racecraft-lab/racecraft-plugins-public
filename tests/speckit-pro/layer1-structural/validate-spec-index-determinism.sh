@@ -132,4 +132,45 @@ legacy_after="$(shasum "$LEGACY_MOC_RUN" | awk '{print $1}')"
 set_test "the legacy (non-version-marked) map is unchanged after two runs"
 assert_eq "$legacy_pristine" "$legacy_after" "FR-007/SC-007: legacy specs are skipped and left unmodified"
 
+# ───────────────────────────────────────────────────────────────────────────
+section "Sentinel seam — roadmap-MOC template INDEX bytes == generator constants (PRSG-004 T022)"
+# ───────────────────────────────────────────────────────────────────────────
+# Belt-and-suspenders pin on the prd->generator seam (PRSG-004 research Decision 3):
+# a home note copied from the PRSG-002 template must carry an INDEX sentinel pair
+# BYTE-IDENTICAL to the generator's INDEX_START/INDEX_END constants, or the INDEX
+# zone silently never fills (the generator matches sentinels by full-line equality).
+# L4 already fails on drift; this catches it at structural-test speed. The drift case
+# (a renamed/removed constant or sentinel) must yield a clean FAIL + summary, never a
+# raw crash — so guard the extractions with `|| true` under this file's set -e, and a
+# non-empty gate stops a both-absent `assert_eq "" ""` from passing vacuously.
+TPL="$HERE/../../../speckit-pro/skills/speckit-coach/templates/roadmap-moc-template.md"
+
+set_test "roadmap-MOC template exists at the contracted path"
+assert_file_exists "$TPL" "FAIL: roadmap-MOC template not found at $TPL"
+
+# Generator side: peel the single-quoted RHS of the `readonly INDEX_*=…` constants.
+# Sourcing the generator would run main(); parse the two lines instead (bash+jq only).
+gen_index_start="$(sed -n "s/^readonly INDEX_START='\(.*\)'\$/\1/p" "$GEN" || true)"
+gen_index_end="$(sed -n "s/^readonly INDEX_END='\(.*\)'\$/\1/p" "$GEN" || true)"
+# Template side: each INDEX sentinel token appears on exactly one line; capture the
+# whole line. `|| true` so a removed sentinel fails cleanly instead of aborting.
+tpl_index_start="$(grep -F 'GENERATED:INDEX:START' "$TPL" || true)"
+tpl_index_end="$(grep -F 'GENERATED:INDEX:END' "$TPL" || true)"
+
+# Non-empty gate (mirrors the "not a no-op" guards above): both sides must be present
+# so the equality below can never pass vacuously on two empty strings.
+set_test "both the generator constants and the template sentinels are present"
+if [ -n "$gen_index_start" ] && [ -n "$gen_index_end" ] && \
+   [ -n "$tpl_index_start" ] && [ -n "$tpl_index_end" ]; then
+  _pass
+else
+  _fail "missing INDEX sentinel/constant — gen[$gen_index_start|$gen_index_end] tpl[$tpl_index_start|$tpl_index_end]"
+fi
+
+set_test "template INDEX:START byte-matches the generator INDEX_START constant"
+assert_eq "$gen_index_start" "$tpl_index_start" "template INDEX:START sentinel drifted from generate-spec-index.sh INDEX_START"
+
+set_test "template INDEX:END byte-matches the generator INDEX_END constant"
+assert_eq "$gen_index_end" "$tpl_index_end" "template INDEX:END sentinel drifted from generate-spec-index.sh INDEX_END"
+
 test_summary

@@ -1,21 +1,22 @@
 ---
 name: speckit-prd
 description: >
-  Collaboratively turn a raw product or technical idea into a lean PRD
-  and a technical roadmap with a SPEC catalog, ready for
-  $speckit-scaffold-spec and $speckit-autopilot. Use when the user says:
-  "write a PRD", "$speckit-prd", "create a product requirements
-  document", "draft a PRD and roadmap", "shape this idea into a PRD",
-  "turn this brief into a PRD", "plan a product", "decompose an idea
-  into a SPEC catalog", "before I write specs", "right-size the
-  catalog". Runs a one-question-at-a-time interview with a recommended
-  answer first, then writes
-  docs/prd-NAME.md and docs/ai/specs/NAME-technical-roadmap.md. Front
-  door of the chain: PRD then roadmap then scaffold-spec then autopilot.
-  NOT per-spec scoping (use grill-me), NOT worktree prep from an existing
-  roadmap entry (use speckit-scaffold-spec), NOT SDD coaching (use
-  speckit-coach). Accepts an idea string, a brief/transcript file, or
-  empty. Requires an interactive session.
+  Collaboratively turn a raw product or technical idea into three
+  artifacts — a lean PRD, a technical roadmap with a SPEC catalog,
+  and a roadmap-MOC home note — ready for $speckit-scaffold-spec and
+  $speckit-autopilot. Use when the user says: "write a PRD",
+  "$speckit-prd", "create a product requirements document",
+  "draft a PRD and roadmap", "shape this idea into a PRD",
+  "turn this brief into a PRD", "plan a product",
+  "decompose an idea into a SPEC catalog", "before I write specs",
+  "right-size the catalog". Runs a one-question-at-a-time interview
+  with a recommended answer first, then writes docs/prd-NAME.md,
+  docs/ai/specs/NAME-technical-roadmap.md, and
+  docs/ai/specs/NAME-roadmap-MOC.md. Front door of the chain: PRD
+  then roadmap then scaffold-spec then autopilot. NOT per-spec scoping
+  (use grill-me), NOT worktree prep (use speckit-scaffold-spec), NOT
+  SDD coaching (use speckit-coach). Accepts an idea string, a
+  brief/transcript file, or empty. Requires an interactive session.
 ---
 
 # SpecKit PRD — Collaborative PRD & Roadmap Authoring (Codex)
