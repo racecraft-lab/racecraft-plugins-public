@@ -276,7 +276,7 @@ create them. Spawn it again to fix:
 
 ```text
 Agent(
-  subagent_type: "implement-executor",
+  subagent_type: "speckit-pro:implement-executor",
   description: "SPEC-XXX missing integration tests",
   prompt: """
     The implementation phase did not create integration
@@ -614,7 +614,7 @@ and a non-engineer can actually execute it:
 
 ```text
 Agent(
-  subagent_type: "uat-runbook-author",
+  subagent_type: "speckit-pro:uat-runbook-author",
   description: "SPEC-XXX UAT runbook authoring",
   prompt: """
     Rewrite the UAT runbook skeleton in place so a non-engineer can

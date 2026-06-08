@@ -91,7 +91,7 @@ return only a structured summary.
 
 ```text
 Agent(
-  subagent_type: "phase-executor",
+  subagent_type: "speckit-pro:phase-executor",
   description: "SPEC-XXX <phase>",
   prompt: """
     Run the /speckit-<phase> command.
@@ -224,7 +224,7 @@ questions and applies accepted edits in the main session.
 ```text
 For each clarify session in the workflow file:
   1. TaskUpdate: session task → in_progress
-  2. Agent(subagent_type: "clarify-executor",
+  2. Agent(subagent_type: "speckit-pro:clarify-executor",
           prompt: """
             Prepare a Clarify Question Set for: <session prompt>
           """)
@@ -328,7 +328,7 @@ with two-layer resolution **after each domain**:
 ```text
 For each checklist domain in the workflow file:
   1. TaskUpdate: domain task → in_progress
-  2. Agent(subagent_type: "checklist-executor",
+  2. Agent(subagent_type: "speckit-pro:checklist-executor",
           prompt: "Run /speckit-checklist with: <domain prompt>")
      The checklist-executor runs the checklist, researches
      gaps, applies fixes, and re-runs to verify (Layer 1)
@@ -427,7 +427,7 @@ verify (Layer 1). Items it can't resolve are flagged in its
 
 ```text
 1. TaskUpdate: "Analyze" → in_progress
-2. Agent(subagent_type: "analyze-executor",
+2. Agent(subagent_type: "speckit-pro:analyze-executor",
         prompt: "Run /speckit-analyze with: <prompt>")
    The executor handles research + remediation (Layer 1)
 3. Parse executor's "Unresolved for consensus" section
@@ -712,9 +712,9 @@ Run FULL_VERIFY:
 
 | Task Type | Agent | TDD Protocol? |
 |-----------|-------|---------------|
-| Contract/unit/integration tests | `implement-executor` | Yes |
+| Contract/unit/integration tests | `speckit-pro:implement-executor` | Yes |
 | Implementation needing project patterns | PROJECT_IMPLEMENTATION_AGENT | Yes |
-| Research / API investigation | `domain-researcher` | No |
+| Research / API investigation | `speckit-pro:domain-researcher` | No |
 | Verification (build, lint, typecheck) | orchestrator-direct (Bash) | No |
 
 Every agent receiving implementation work gets the TDD protocol

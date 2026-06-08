@@ -75,9 +75,9 @@ the legacy "always 3 analysts" rule.
 
 | Tag | Meaning | Routes to |
 |-----|---------|-----------|
-| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `codebase-analyst` only |
-| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `spec-context-analyst` only |
-| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `domain-researcher` only |
+| `[codebase]` | Resolution depends on existing patterns/conventions in this repo's code | `speckit-pro:codebase-analyst` only |
+| `[spec]` | Resolution depends on project decisions in spec/plan/constitution/roadmap | `speckit-pro:spec-context-analyst` only |
+| `[domain]` | Resolution depends on external standards, RFCs, library docs, or community best practice | `speckit-pro:domain-researcher` only |
 | `[security]` | Item contains security keywords (auth, token, secret, encryption, PII, credential, permission, password, session, cookie, jwt, api-key, access-control) | All 3 (defense-in-depth, never single-routed) |
 | `[ambiguous]` | Executor uncertain which perspective applies | All 3 (safe default) |
 | *(missing/unparseable prefix)* | Treated as `[ambiguous]` | All 3 (safe default) |
@@ -203,7 +203,7 @@ Stage 1 — All routed analysts, ONE assistant message:
 
 Stage 2 — All synthesizers, ONE assistant message:
   For each item Ix:
-    Agent(subagent_type: "consensus-synthesizer",
+    Agent(subagent_type: "speckit-pro:consensus-synthesizer",
           run_in_background: true,
           description: "SPEC-XXX consensus synthesis (R1) [I<x>]",
           prompt: """
@@ -279,9 +279,9 @@ the batch.
 
 | Agent | Perspective | Primary Tools | Strength |
 |-------|------------|---------------|----------|
-| `codebase-analyst` | What does the existing code show? | RepoPrompt (preferred) or Grep/Glob/Read (fallback) | Finding established patterns, types, naming conventions, error handling |
-| `spec-context-analyst` | What do project decisions say? | Read (constitution, technical roadmap, prior specs, CLAUDE.md) | Grounding answers in established principles and prior decisions |
-| `domain-researcher` | What do best practices recommend? | Tavily/Context7 (preferred) or WebSearch/WebFetch (fallback) | External evidence — API docs, standards, community patterns |
+| `speckit-pro:codebase-analyst` | What does the existing code show? | RepoPrompt (preferred) or Grep/Glob/Read (fallback) | Finding established patterns, types, naming conventions, error handling |
+| `speckit-pro:spec-context-analyst` | What do project decisions say? | Read (constitution, technical roadmap, prior specs, CLAUDE.md) | Grounding answers in established principles and prior decisions |
+| `speckit-pro:domain-researcher` | What do best practices recommend? | Tavily/Context7 (preferred) or WebSearch/WebFetch (fallback) | External evidence — API docs, standards, community patterns |
 
 ## Consensus Rules
 

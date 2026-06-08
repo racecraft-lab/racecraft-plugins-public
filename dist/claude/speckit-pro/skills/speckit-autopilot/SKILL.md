@@ -120,15 +120,23 @@ stays in the subagent's context; the parent receives only a summary.
 
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
-| Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
-| Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
-| Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
-| Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
+| Specify, Plan, Tasks | `speckit-pro:phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
+| Clarify | `speckit-pro:clarify-executor` | Read-only question set; parent answers and edits |
+| Checklist | `speckit-pro:checklist-executor` | Must run checklist AND remediate gaps with research |
+| Analyze | `speckit-pro:analyze-executor` | Must run analysis AND remediate ALL findings with research |
 | Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
 
 Full `Agent(...)` prompt template + per-phase prefixes live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Subagent Delegation.
+
+**Agent-type namespacing (required):** every bundled agent above — and every
+one in the routing tables below — dispatches with its `speckit-pro:` prefix
+(`speckit-pro:phase-executor`, `speckit-pro:clarify-executor`, …). The runtime
+resolves plugin agents by their namespaced id, so a bare `subagent_type:
+"phase-executor"` fails immediately with `Agent type 'phase-executor' not
+found`. The ONLY exception is `general-purpose`, which is built-in and takes no
+prefix.
 
 ### 3. Task list first
 
@@ -362,12 +370,12 @@ present, `PRESET_CONVENTIONS` (from Step 0.12) and `PROJECT_COMMANDS`
 
 | Phase | subagent_type | Prefix |
 | ----- | ------------- | ------ |
-| Specify | `phase-executor` | Branch-aware when `ON_FEATURE_BRANCH` (skip `create-new-feature.sh`) |
-| Clarify | `clarify-executor` | Read-only — returns a Clarify Question Set; parent answers + applies edits |
-| Plan | `phase-executor` | None |
-| Checklist | `checklist-executor` | One subagent per domain |
-| Tasks | `phase-executor` | None |
-| Analyze | `analyze-executor` | None |
+| Specify | `speckit-pro:phase-executor` | Branch-aware when `ON_FEATURE_BRANCH` (skip `create-new-feature.sh`) |
+| Clarify | `speckit-pro:clarify-executor` | Read-only — returns a Clarify Question Set; parent answers + applies edits |
+| Plan | `speckit-pro:phase-executor` | None |
+| Checklist | `speckit-pro:checklist-executor` | One subagent per domain |
+| Tasks | `speckit-pro:phase-executor` | None |
+| Analyze | `speckit-pro:analyze-executor` | None |
 | Implement | per-task routing | TDD protocol + COMPLETED_TASKS — see Implement — Task-Level Dispatch below |
 
 Per-phase prefix templates (branch-aware Specify prefix, Clarify
@@ -402,9 +410,9 @@ safety net; on regression, fall back to serial re-run for that group.
 
 | Task Type | Agent | TDD? |
 |-----------|-------|------|
-| Tests (contract/unit/integration) | `implement-executor` | Yes |
+| Tests (contract/unit/integration) | `speckit-pro:implement-executor` | Yes |
 | Domain implementation | PROJECT_IMPLEMENTATION_AGENT | Yes |
-| Research / API investigation | `domain-researcher` | No |
+| Research / API investigation | `speckit-pro:domain-researcher` | No |
 | Verification (build, lint) | orchestrator-direct | No |
 
 Every implementation agent receives the TDD protocol from
