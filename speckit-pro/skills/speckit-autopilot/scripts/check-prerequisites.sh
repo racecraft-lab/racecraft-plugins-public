@@ -50,18 +50,22 @@ fi
 
 # 0.4 SpecKit Commands Installed
 missing_cmds=()
-# SpecKit v0.8.13+ installs the core SDD phases as SKILLS
-# (.claude/skills/<cmd>/SKILL.md). The plugin standardizes on skills; the
-# legacy command form (.claude/commands/<cmd>.md) is deprecated and not checked.
+# SpecKit v0.8.13+ installs the core SDD phases as SKILLS. Autopilot runs under
+# both Claude Code (.claude/skills/<cmd>/SKILL.md) and Codex
+# (.codex/skills/<cmd>/SKILL.md), and this same script serves both — so a command
+# counts as installed if it exists as a skill on EITHER platform. Only the
+# project-local install dirs are checked: the plugin's own bundled codex-skills/
+# must NOT count, or the gate would false-pass for every project.
 for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
-  if [ ! -f ".claude/skills/${cmd}/SKILL.md" ]; then
+  if [ ! -f ".claude/skills/${cmd}/SKILL.md" ] \
+    && [ ! -f ".codex/skills/${cmd}/SKILL.md" ]; then
     missing_cmds+=("$cmd")
   fi
 done
 if [ ${#missing_cmds[@]} -eq 0 ]; then
   results+=("$(json_result "commands" "true" "All SpecKit commands installed" "")")
 else
-  results+=("$(json_result "commands" "false" "Missing commands: ${missing_cmds[*]}. Run: specify integration install claude" "")")
+  results+=("$(json_result "commands" "false" "Missing commands: ${missing_cmds[*]}. Run: \$install from the SpecKit Pro plugin" "")")
   all_pass=false
 fi
 
@@ -89,7 +93,9 @@ if [ -n "$git_dir" ] && [ -n "$git_common" ] && [ "$git_dir" != "$git_common" ];
 fi
 
 on_feature_branch="false"
-if echo "$current_branch" | grep -qE '^[0-9]{3}-'; then
+# Match classic NNN- feature branches AND letter-suffixed spec slices
+# (e.g. 006a-, 013b-) that the roadmaps decompose specs into.
+if echo "$current_branch" | grep -qE '^[0-9]{3}[A-Za-z0-9]*-'; then
   on_feature_branch="true"
 fi
 

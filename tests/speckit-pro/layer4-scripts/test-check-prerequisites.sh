@@ -73,6 +73,17 @@ output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || result=$
 assert_eq "1" "$result" "exit code"
 assert_contains "$output" "speckit-plan"
 
+set_test "Codex skills install → commands detected"
+# Autopilot shares this script under Codex; phase skills live at .codex/skills/.
+dir=$(make_project "codex-skills")
+rm -rf "$dir/.claude/skills"
+for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
+  mkdir -p "$dir/.codex/skills/${cmd}"
+  printf -- '---\ndescription: test\n---\n# Test\n' > "$dir/.codex/skills/${cmd}/SKILL.md"
+done
+output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
+assert_contains "$output" "All SpecKit commands installed"
+
 # ─────────────────────────────────────────
 section "Branch detection"
 # ─────────────────────────────────────────
@@ -90,6 +101,13 @@ dir=$(make_project "feature-branch")
 result=0
 output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || result=$?
 assert_contains "$output" "009-search-database"
+
+set_test "Letter-suffixed slice branch → on_feature_branch true"
+# Roadmaps decompose specs into letter-suffixed slices (006a-, 013b-).
+dir=$(make_project "slice-branch")
+(cd "$dir" && git checkout -q -b 013b-spec-index 2>/dev/null) || true
+output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
+assert_json_field "$output" "on_feature_branch" "True"
 
 # ─────────────────────────────────────────
 section "Output format"
