@@ -24,17 +24,21 @@ jobs:
       - uses: actions/checkout@v6
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
 
+      - name: Build clean plugin payloads
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        run: bash scripts/build-plugin-payloads.sh
+
       - name: Sync marketplace versions
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: bash scripts/sync-marketplace-versions.sh
 
-      - name: Commit and push marketplace sync
+      - name: Commit and push payload and marketplace sync
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet .claude-plugin/marketplace.json; then
-            git add .claude-plugin/marketplace.json
-            git commit -m "chore: sync marketplace.json versions [skip ci]"
+          if ! git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json; then
+            git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json
+            git commit -m "chore: sync plugin payloads and marketplace versions [skip ci]"
             git push
           fi

@@ -1,0 +1,55 @@
+{
+  "$schema": "./curated-set.schema.json",
+  "version": 1,
+  "description": "Community extensions and presets that speckit-pro auto-installs on /speckit-pro:speckit-install and offers version bumps for on /speckit-pro:speckit-upgrade. Resolution: latest GitHub Release tag at install time, falling back to latest git tag if no Release exists. Never main. See speckit-pro/skills/speckit-coach/references/presets-extensions-guide.md for the rationale.",
+  "entries": [
+    {
+      "id": "review",
+      "kind": "extension",
+      "repo": "ismaelJimenez/spec-kit-review",
+      "recommended_default": true,
+      "description": "Post-implementation code review with specialized agents for code quality, comments, tests, error handling, type design, and simplification.",
+      "min_speckit_version": "0.8.0"
+    },
+    {
+      "id": "verify",
+      "kind": "extension",
+      "repo": "ismaelJimenez/spec-kit-verify",
+      "recommended_default": true,
+      "description": "Post-implementation quality gate that validates implemented code against specification artifacts.",
+      "min_speckit_version": "0.8.0"
+    },
+    {
+      "id": "verify-tasks",
+      "kind": "extension",
+      "repo": "datastone-inc/spec-kit-verify-tasks",
+      "recommended_default": true,
+      "description": "Detect phantom completions: tasks marked [X] in tasks.md with no real implementation.",
+      "min_speckit_version": "0.1.0"
+    },
+    {
+      "id": "cleanup",
+      "kind": "extension",
+      "repo": "dsrednicki/spec-kit-cleanup",
+      "recommended_default": true,
+      "description": "Post-implementation quality gate that reviews changes, fixes small issues (scout rule), creates tasks for medium issues, and generates analysis for large issues.",
+      "min_speckit_version": "0.8.0"
+    },
+    {
+      "id": "retrospective",
+      "kind": "extension",
+      "repo": "emi-dm/spec-kit-retrospective",
+      "recommended_default": true,
+      "description": "Post-implementation retrospective with spec adherence scoring, drift analysis, and human-gated spec updates.",
+      "min_speckit_version": "0.8.0"
+    },
+    {
+      "id": "claude-ask-questions",
+      "kind": "preset",
+      "repo": "0xrafasec/spec-kit-preset-claude-ask-questions",
+      "recommended_default": true,
+      "description": "Upgrades /speckit.clarify and /speckit.checklist on Claude Code from Markdown-table prompts to the native AskUserQuestion picker, with a recommended option and reasoning on every question.",
+      "min_speckit_version": "0.8.0"
+    }
+  ]
+}

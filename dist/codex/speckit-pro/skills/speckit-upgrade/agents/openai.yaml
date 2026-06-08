@@ -1,0 +1,7 @@
+interface:
+  display_name: "SpecKit Upgrade"
+  short_description: "Safely upgrade an existing SpecKit install with backup/restore"
+  default_prompt: "Upgrade SpecKit in this repository — preserve my customizations and handle the slash-command → skills migration"
+
+policy:
+  allow_implicit_invocation: false

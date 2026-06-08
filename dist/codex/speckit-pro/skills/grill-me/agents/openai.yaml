@@ -1,0 +1,10 @@
+interface:
+  display_name: "Grill Me"
+  short_description: "Iterative project-scoping interview before any spec work"
+  default_prompt: "Grill me on this idea — interview me one question at a time and produce a Design Concept doc"
+
+# HITL-only: must never auto-trigger from autopilot or other phase agents.
+# Codex's implicit-invocation policy is the load-bearing guarantee here —
+# always require an explicit `$grill-me` mention.
+policy:
+  allow_implicit_invocation: false

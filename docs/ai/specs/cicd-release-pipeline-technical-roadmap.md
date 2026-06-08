@@ -4,7 +4,9 @@
 
 This document defines the specification roadmap for the CI/CD & Release Pipeline. Each specification is executed end-to-end through the SpecKit workflow (specify → clarify → plan → checklist → tasks → analyze → implement) before moving to the next.
 
-**Current Status:** All 5 specs complete. Feature complete as of 2026-05-26.
+**Current Status:** The original 5 specs are complete. A follow-up packaging
+remediation spec (SPEC-006) is pending as of 2026-06-08 to split Claude Code and
+Codex install payloads so each runtime receives only its own visible components.
 
 **Branch:** `feat/cicd-release-pipeline`
 **Design Spec:** [2026-03-24-cicd-versioning-release-pipeline-design.md](../superpowers/specs/2026-03-24-cicd-versioning-release-pipeline-design.md)
@@ -22,7 +24,7 @@ This document defines the specification roadmap for the CI/CD & Release Pipeline
 
 ## Roadmap Overview
 
-The feature is decomposed into **5 specifications** across **4 dependency tiers**:
+The feature is decomposed into **6 specifications** across **5 dependency tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
 |------|-------|---------|-----------------|
@@ -30,8 +32,9 @@ The feature is decomposed into **5 specifications** across **4 dependency tiers*
 | **2** | SPEC-002, SPEC-003 | PR checks workflow, Release automation workflow | Parallel possible |
 | **3** | SPEC-004 | Branch protection, Copilot review, end-to-end integration verification | Sequential (depends on all above) |
 | **4** | SPEC-005 | Skill trigger optimization, eval framework fixes, description quality | Sequential (depends on SPEC-004) |
+| **5** | SPEC-006 | Platform-specific plugin payloads for clean Claude Code and Codex installs | Sequential remediation (depends on marketplace/release automation) |
 
-**Execution Order:** SPEC-001 → (SPEC-002 ‖ SPEC-003) → SPEC-004 → SPEC-005
+**Execution Order:** SPEC-001 → (SPEC-002 ‖ SPEC-003) → SPEC-004 → SPEC-005 → SPEC-006
 
 **Dependency Constraints:**
 - SPEC-002 requires SPEC-001 (PR checks need the config files and test runner to exist)
@@ -39,6 +42,8 @@ The feature is decomposed into **5 specifications** across **4 dependency tiers*
 - SPEC-002 and SPEC-003 can run in parallel (independent GitHub Actions workflows)
 - SPEC-004 requires SPEC-002 and SPEC-003 (branch protection rules reference CI check names; end-to-end verification needs all workflows operational)
 - SPEC-005 requires SPEC-004 (trigger evals depend on the `--bare` wrapper added in SPEC-004; also discovered during SPEC-004 verification)
+- SPEC-006 requires SPEC-001, SPEC-003, and SPEC-004 because it changes marketplace
+  source paths, release/version sync behavior, and install verification expectations
 
 ---
 
@@ -56,7 +61,8 @@ SPEC-001 (Repository Foundation)
                                                   ▼
                                    SPEC-005 (Skill Trigger Quality)
                                                   │
-                                       ─── FEATURE COMPLETE ───
+                                                  ▼
+                         SPEC-006 (Clean Platform Plugin Payloads)
 ```
 
 ---
@@ -70,6 +76,7 @@ SPEC-001 (Repository Foundation)
 | SPEC-003 | Release Automation | ✅ Complete | [SPEC-003-workflow.md](SPEC-003-workflow.md) | PR #3 merged |
 | SPEC-004 | Integration & Verification | ✅ Complete | [SPEC-004-workflow.md](SPEC-004-workflow.md) | Complete; SPEC-005 unblocked |
 | SPEC-005 | Skill Trigger Quality | ✅ Complete | — | PRs #89, #91 merged 2026-05-26 |
+| SPEC-006 | Clean Platform Plugin Payloads | ⏳ Pending | — | Scaffold workflow after plan approval |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -284,6 +291,157 @@ Alternatives considered: `--bare` alone (skips command discovery); `--disallowed
 
 ---
 
+### SPEC-006: Clean Platform Plugin Payloads
+
+**Priority:** P1 | **Depends On:** SPEC-001, SPEC-003, SPEC-004 | **Enables:** Clean Claude Code and Codex installs
+**Status:** ⏳ Pending
+
+**Goal:** Stop shipping one mixed `speckit-pro/` install root to both runtimes.
+Generate and publish self-contained platform payloads so Claude Code users receive
+only Claude-visible skills/agents/hooks and Codex users receive only Codex-visible
+skills/hooks/install support, eliminating duplicate Codex skill counts without
+deleting shared source content.
+
+**Background:**
+The source plugin root currently contains both Claude Code and Codex surfaces:
+`skills/`, `agents/`, and `hooks/` for Claude Code, plus `codex-skills/`,
+`codex-agents/`, `codex-hooks.json`, and `.codex-plugin/plugin.json` for Codex.
+Both marketplace files currently point at `./speckit-pro`, so the full mixed
+directory is copied into installs. Codex then sees both the Codex skill entrypoints
+and the shared/Claude `skills/*/SKILL.md` files, which produced a duplicate-facing
+install count of 19 skills (10 Codex + 9 shared/Claude).
+
+Official docs make this a packaging problem rather than a frontmatter problem:
+Claude Code loads plugin skills from `skills/` and always scans the default
+`skills/` directory even when a custom `skills` manifest path is present. Codex
+marketplace entries point `source.path` at the plugin folder to load, and Codex
+skills are normal `SKILL.md` directories with names that do not merge when two
+skills share the same `name`. Both runtimes copy installed marketplace plugins into
+local caches, so shipped payloads must be self-contained and must not depend on
+runtime `../` paths outside the installed plugin root.
+
+**Scope:**
+- Add a deterministic payload build script, likely
+  `scripts/build-plugin-payloads.sh`, that deletes and rebuilds:
+  - `dist/claude/speckit-pro`
+  - `dist/codex/speckit-pro`
+- Keep authoring source single-rooted for this spec. The existing `speckit-pro/`
+  tree remains the source of truth; `dist/**` is generated install output. A later
+  refactor may introduce `src/shared`, `src/claude`, and `src/codex` if the
+  transitional build script becomes too complex.
+- Claude payload includes `.claude-plugin/plugin.json`, `skills/`, `agents/`,
+  `hooks/`, `commands/` if present, README/license/changelog, and only the scripts,
+  templates, references, and assets required by Claude-visible components. It must
+  not include `codex-skills/`, `codex-agents/`, `codex-hooks.json`, or any
+  Codex-only `SKILL.md`.
+- Codex payload includes `.codex-plugin/plugin.json`, Codex skills materialized as
+  `skills/<skill>/SKILL.md` with `agents/openai.yaml` sidecars, `codex-agents/`,
+  `codex-hooks.json` or a payload-local hooks path, README/license/changelog, and
+  only the support files required by Codex-visible components. It must not include
+  the Claude/shared `skills/*/SKILL.md` tree.
+- Materialize shared support files inside each payload under a non-discoverable path
+  such as `_shared/`, or copy them into skill-local `references/`, `scripts/`,
+  `templates/`, or `assets/` directories. Rewrite any Codex references such as
+  `../../skills/...` so the installed Codex payload has no dependency on the source
+  `skills/` tree.
+- Update `.claude-plugin/marketplace.json` to point Claude Code at
+  `./dist/claude/speckit-pro`.
+- Update `.agents/plugins/marketplace.json` to point Codex at
+  `./dist/codex/speckit-pro`.
+- Resolve Codex marketplace collision risk explicitly. Codex may also consider
+  legacy-compatible marketplace surfaces; the implementation must prove with
+  `codex plugin marketplace list` and install-cache inspection that Codex installs
+  the Codex payload, not the Claude payload with the same marketplace/plugin name.
+- Update release/version automation so `release-please-config.json`,
+  `.release-please-manifest.json`, generated payload manifests, and both marketplace
+  files stay in sync. `sync-marketplace-versions.sh` must support both Claude string
+  `source` entries and Codex object-shaped `source.path` entries, or a new payload
+  sync script must replace it.
+- Update `README.md` and `speckit-pro/README.md` so installation docs name the
+  generated payload roots as the installable artifacts and describe `speckit-pro/`
+  as authoring source, not the shipped mixed plugin root.
+
+**Verification & Acceptance Criteria:**
+- `bash tests/speckit-pro/run-all.sh --layer 1` passes after adding payload-aware
+  structural tests.
+- A new payload cleanliness test passes:
+  - Claude payload contains exactly the expected Claude `SKILL.md` files and zero
+    `codex-skills/**/SKILL.md`.
+  - Codex payload contains exactly the expected Codex `SKILL.md` files and zero
+    Claude/shared `skills/*/SKILL.md` files.
+  - No payload file contains runtime references to forbidden cross-root paths such
+    as `../../skills/`, `../../codex-skills/`, or paths that escape the payload root.
+  - All manifest component paths start with `./` and resolve inside their payload.
+- A stale-dist guard passes: rebuild payloads from a clean tree and run
+  `git diff --exit-code -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json release-please-config.json`.
+- Codex source-tree parity tests still pass against the authoring tree, but payload
+  tests no longer require Claude and Codex skills to coexist in one shipped root.
+- Local Codex install verification proves the duplicate count is gone:
+  - `codex plugin marketplace list` shows the expected marketplace root.
+  - `codex plugin remove speckit-pro@racecraft-plugins-public` then
+    `codex plugin add speckit-pro@racecraft-plugins-public` installs the new versioned
+    cache from `dist/codex/speckit-pro`.
+  - The installed Codex cache contains only the expected Codex skill set and no
+    shared/Claude `SKILL.md` files.
+  - A fresh Codex thread or plugin UI picker shows the expected Codex-visible skill
+    count, not 19. Filesystem counts alone are not sufficient.
+- Local Claude Code verification proves the Claude surface still works:
+  - `claude plugin validate ./dist/claude/speckit-pro --strict` passes where the
+    installed Claude Code version supports it.
+  - Installing or loading the Claude payload shows the expected namespaced plugin
+    skills and agents, with no Codex-only skills visible.
+- Document cache/restart requirements for both runtimes. Claude Code plugin changes
+  may need `/reload-plugins` or restart; Codex marketplace/plugin changes require
+  restart or a fresh thread after install, and custom Codex agents still require the
+  existing install skill copy flow plus restart.
+
+**Out of Scope:**
+- Removing the current source `skills/` or `codex-skills/` trees during this spec.
+- Rewriting workflow behavior, skill content, or agent orchestration except for
+  payload-local path rewrites needed to make installs self-contained.
+- Replacing Codex custom-agent install behavior. `codex-agents/*.toml` remain bundled
+  templates copied by the Codex-only `install` skill until Codex supports direct
+  plugin-bundled custom-agent registration.
+- Relying on symlinks as the primary distribution mechanism. Generated payloads may
+  be copied from source, but installed caches must be self-contained and portable.
+
+**Key Decisions:**
+
+**[Generated Payloads as Published Artifacts] Decision (2026-06-08):** Commit and
+publish `dist/claude/speckit-pro` and `dist/codex/speckit-pro` because marketplace
+`source` / `source.path` fields point at directories available at the marketplace
+ref. Generated-only-in-CI payloads would not be installable by users.
+Alternatives considered: runtime config disables (user-local, does not fix published
+install), deleting shared skills (breaks Claude), one mixed root with guards (Codex UI
+still counts duplicates), uncommitted build output (not present for marketplace users).
+
+**[Self-Contained Payloads] Decision (2026-06-08):** Copy or rewrite shared support
+assets into each payload instead of relying on `../` references. Both plugin systems
+copy installed plugins into caches, and Claude Code explicitly rejects path traversal
+outside the plugin root after install.
+
+**[Codex Skills Under Payload `skills/`] Decision (2026-06-08):** Materialize Codex
+entrypoints under `dist/codex/speckit-pro/skills/` and set the Codex manifest to
+`"skills": "./skills/"`. This matches official Codex examples and avoids carrying a
+second skill directory name into the install payload.
+
+**Key Files:**
+- `scripts/build-plugin-payloads.sh` — New: deterministic payload builder
+- `dist/claude/speckit-pro/**` — New/generated: Claude Code install payload
+- `dist/codex/speckit-pro/**` — New/generated: Codex install payload
+- `.claude-plugin/marketplace.json` — Modified: point Claude Code marketplace to the Claude payload
+- `.agents/plugins/marketplace.json` — Modified: point Codex marketplace to the Codex payload
+- `release-please-config.json` — Modified: include generated payload manifests or invoke rebuild in release flow
+- `scripts/sync-marketplace-versions.sh` — Modified or replaced: sync both marketplace schemas
+- `tests/speckit-pro/layer1-structural/validate-plugin-payload.sh` — Modified: validate generated payload cleanliness
+- `tests/speckit-pro/layer1-structural/validate-codex-plugin.sh` — Modified: validate Codex payload manifest and source-tree manifest as separate surfaces
+- `tests/speckit-pro/layer1-structural/validate-codex-skills.sh` — Modified: keep source parity checks separate from payload cleanliness checks
+- `tests/speckit-pro/layer1-structural/validate-codex-parity.sh` — Modified: source-tree parity only; no mixed-root install assumptions
+- `tests/speckit-pro/run-all.sh` — Modified: include payload build/check steps in Layer 1
+- `README.md`, `speckit-pro/README.md` — Modified: document source vs payload layout and install verification
+
+---
+
 ## Environment & Deployment Context
 
 ### Existing Infrastructure (No Changes Needed)
@@ -305,6 +463,10 @@ Alternatives considered: `--bare` alone (skips command discovery); `--disallowed
 | Add CI workflows | `.github/workflows/` | `pr-checks.yml`, `release.yml` |
 | Configure branch protection | GitHub repo settings | Require PR, CI checks, Copilot review, squash-only |
 | Exempt Actions bot | GitHub repo rulesets | Allow CI bot to push marketplace sync commits |
+| Add payload builder | `scripts/` | `build-plugin-payloads.sh` for deterministic Claude/Codex payload generation |
+| Add generated install payloads | `dist/` | `dist/claude/speckit-pro` and `dist/codex/speckit-pro` become marketplace install roots |
+| Update marketplace source paths | `.claude-plugin/`, `.agents/plugins/` | Point Claude Code and Codex to their platform-specific payload roots |
+| Add payload cleanliness checks | `tests/speckit-pro/layer1-structural/` | Assert clean skill counts, no cross-runtime `SKILL.md` files, and no cross-root references |
 
 ### Local Development Setup
 
@@ -313,6 +475,7 @@ Alternatives considered: `--bare` alone (skips command discovery); `--disallowed
 | GitHub CLI | `brew install gh` (for branch protection config and PR workflows) |
 | SpecKit CLI | `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git` |
 | Claude Code | Required for local plugin testing via `claude --plugin-dir` |
+| Codex CLI/App | Required for Codex marketplace/cache install verification and UI skill-count checks |
 | jq | `brew install jq` (used by sync-marketplace-versions.sh) |
 
 ---
@@ -323,5 +486,6 @@ Alternatives considered: `--bare` alone (skips command discovery); `--disallowed
 - **SpecKit Workflow Template:** `docs/ai/speckit-workflow-template.md`
 - **Project Standards:** [CLAUDE.md](../../../CLAUDE.md), [AGENTS.md](../../../AGENTS.md)
 - **Anthropic Plugin Docs:** [Plugins Reference](https://code.claude.com/docs/en/plugins-reference), [Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
+- **OpenAI Codex Plugin Docs:** [Build plugins](https://developers.openai.com/codex/plugins/build), [Codex plugins](https://developers.openai.com/codex/plugins), [Codex skills](https://developers.openai.com/codex/skills)
 - **release-please:** [GitHub](https://github.com/googleapis/release-please), [Action](https://github.com/googleapis/release-please-action)
 - **Conventional Commits:** [Specification](https://www.conventionalcommits.org/)
