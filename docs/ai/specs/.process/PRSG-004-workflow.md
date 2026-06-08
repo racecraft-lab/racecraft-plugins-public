@@ -436,8 +436,10 @@ Focus on:
 - [ ] Layer 2 + Layer 3 evals recorded passing (developer-local, `claude -p`) — eval CASES added to both runtimes (T014/T018/T019); the `claude -p` RUN is developer-local, not executed in this autonomous run
 - [X] Layer 8 parity green for speckit-prd + speckit-coach (`run-parity-fixtures.sh --dry-run` pass); `validate-codex-skills.sh` 145/145 + `validate-codex-parity` 78/78 green
 - [X] `speckit-skill-reviewer` run on both changed SKILL.md files (prd: applied budget-fitting description fix; coach: clean, one pre-existing out-of-scope nit)
-- [ ] PR title `feat(speckit-pro): …`, plain-English, public-readable (pending PR creation)
-- [ ] PR created (not merged — humans merge) (pending)
+- [X] PR title `feat(speckit-pro): …`, plain-English, public-readable
+- [X] PR created (not merged — humans merge): **https://github.com/racecraft-lab/racecraft-plugins-public/pull/129** (title: "feat(speckit-pro): generate a navigable roadmap home note for a project's specs")
+
+**Related PR (done first, per the operator):** the recurring autopilot agent-type namespacing bug fixed as its own PR — https://github.com/racecraft-lab/racecraft-plugins-public/pull/128 ("fix(speckit-pro): use the plugin-prefixed agent names in the autopilot's dispatch guide").
 
 ### Post-Implementation Results
 
