@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.9.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.8.1...speckit-pro-v2.9.0) (2026-06-08)
+
+
+### Features
+
+* **speckit-pro:** generate a navigable roadmap home note for a project's specs ([#129](https://github.com/racecraft-lab/racecraft-plugins-public/issues/129)) ([6001831](https://github.com/racecraft-lab/racecraft-plugins-public/commit/60018313eb768b8339cf60737e9b9965cc9465b8))
+
+
+### Bug Fixes
+
+* **speckit-pro:** use the plugin-prefixed agent names in the autopilot's dispatch guide ([#128](https://github.com/racecraft-lab/racecraft-plugins-public/issues/128)) ([44a3e42](https://github.com/racecraft-lab/racecraft-plugins-public/commit/44a3e42a27cdfdbdf9b4a9f9b3b5b46b4b4a81b3))
+
 ## [2.8.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.8.0...speckit-pro-v2.8.1) (2026-06-08)
 
 
