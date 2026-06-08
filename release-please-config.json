@@ -15,16 +15,6 @@
           "type": "json",
           "path": ".codex-plugin/plugin.json",
           "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "../dist/claude/speckit-pro/.claude-plugin/plugin.json",
-          "jsonpath": "$.version"
-        },
-        {
-          "type": "json",
-          "path": "../dist/codex/speckit-pro/.codex-plugin/plugin.json",
-          "jsonpath": "$.version"
         }
       ]
     }

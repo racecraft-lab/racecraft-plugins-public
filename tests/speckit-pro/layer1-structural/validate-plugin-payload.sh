@@ -115,6 +115,20 @@ else
   _fail "$rebuild_output"
 fi
 
+set_test "release-please extra-files stay inside package paths"
+release_please_bad_paths=$(cd "$REPO_ROOT" && python3 -c '
+import json
+data = json.load(open("release-please-config.json"))
+bad = []
+for package, config in data.get("packages", {}).items():
+    for extra in config.get("extra-files", []):
+        path = extra.get("path", "")
+        if path.startswith("../") or "/../" in path or path == "..":
+            bad.append(f"{package}: {path}")
+print("\n".join(bad))
+')
+assert_eq "" "$release_please_bad_paths" "release-please illegal pathing characters"
+
 set_test "CI committed payload files are current"
 if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
   if diff_output=$(git -C "$REPO_ROOT" diff --exit-code -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json release-please-config.json 2>&1); then
