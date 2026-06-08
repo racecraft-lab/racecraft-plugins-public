@@ -31,6 +31,14 @@ create_marketplace() {
   printf '%s\n' "$content" > "$dir/.claude-plugin/marketplace.json"
 }
 
+# Create a minimal Codex marketplace.json in a fixture directory
+# Usage: create_codex_marketplace <fixture_dir> <json_content>
+create_codex_marketplace() {
+  local dir="$1" content="$2"
+  mkdir -p "$dir/.agents/plugins"
+  printf '%s\n' "$content" > "$dir/.agents/plugins/marketplace.json"
+}
+
 # Create a plugin.json for a plugin in a fixture directory
 # Usage: create_plugin <fixture_dir> <plugin_name> <version>
 create_plugin() {
@@ -41,6 +49,21 @@ create_plugin() {
   "name": "$name",
   "description": "Test plugin",
   "version": "$version"
+}
+EOF
+}
+
+# Create a Codex plugin.json for a plugin in a fixture directory
+# Usage: create_codex_plugin <fixture_dir> <plugin_path> <plugin_name> <version>
+create_codex_plugin() {
+  local dir="$1" path="$2" name="$3" version="$4"
+  mkdir -p "$dir/$path/.codex-plugin"
+  cat > "$dir/$path/.codex-plugin/plugin.json" <<EOF
+{
+  "name": "$name",
+  "description": "Test Codex plugin",
+  "version": "$version",
+  "skills": "./skills/"
 }
 EOF
 }
@@ -62,6 +85,13 @@ run_sync() {
 read_marketplace_version() {
   local dir="$1" idx="$2"
   jq -r ".plugins[$idx].version // empty" "$dir/.claude-plugin/marketplace.json"
+}
+
+# Read the Codex marketplace.json version for a given plugin index
+# Usage: read_codex_marketplace_version <fixture_dir> <index>
+read_codex_marketplace_version() {
+  local dir="$1" idx="$2"
+  jq -r ".plugins[$idx].version // empty" "$dir/.agents/plugins/marketplace.json"
 }
 
 # ─────────────────────────────────────────
@@ -462,5 +492,43 @@ create_marketplace "$dir" '{
 }'
 run_sync "$dir"
 assert_eq "1" "$exit_code" "exit code for object plugins"
+
+# ─────────────────────────────────────────
+section "T025: Codex marketplace source.path sync"
+# ─────────────────────────────────────────
+
+set_test "Codex source.path schema — version mismatch updates from .codex-plugin/plugin.json"
+dir="$FIXTURE_DIR/t025"
+create_marketplace "$dir" '{
+  "name": "test-marketplace",
+  "plugins": []
+}'
+create_codex_marketplace "$dir" '{
+  "name": "test-codex-marketplace",
+  "plugins": [
+    {
+      "name": "codex-plugin",
+      "source": {
+        "source": "local",
+        "path": "./dist/codex/codex-plugin"
+      },
+      "version": "0.1.0"
+    }
+  ]
+}'
+create_codex_plugin "$dir" "dist/codex/codex-plugin" "codex-plugin" "0.2.0"
+run_sync "$dir"
+assert_eq "0" "$exit_code" "exit code"
+
+set_test "Codex source.path schema — marketplace version updated"
+result_version=$(read_codex_marketplace_version "$dir" 0)
+assert_eq "0.2.0" "$result_version" "Codex marketplace version"
+
+set_test "Codex source.path schema — source object preserved"
+result_source_path=$(jq -r '.plugins[0].source.path' "$dir/.agents/plugins/marketplace.json")
+assert_eq "./dist/codex/codex-plugin" "$result_source_path" "Codex source.path"
+
+set_test "Codex source.path schema — stdout reports the change"
+assert_contains "$stdout_output" "dist/codex/codex-plugin" "stdout should mention Codex plugin path"
 
 test_summary

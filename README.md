@@ -6,7 +6,9 @@ A curated directory of open-source plugins from [Racecraft Lab](https://github.c
 
 ## Structure
 
-- **`/speckit-pro`** - Autonomous Spec-Driven Development powered by GitHub SpecKit
+- **`/speckit-pro`** - Authoring source for SpecKit Pro
+- **`/dist/claude/speckit-pro`** - Generated Claude Code install payload
+- **`/dist/codex/speckit-pro`** - Generated Codex install payload
 
 ## Installation
 
@@ -44,7 +46,7 @@ Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](./.ag
 
 After the plugin is installed in Codex, run `@SpecKit Pro` -> `install` or `$install` to copy the bundled custom-agent templates into `.codex/agents/` or `~/.codex/agents/`, then restart Codex again so those installed agents are registered.
 
-For personal installs, follow the official Codex plugin docs: copy the plugin to `~/.codex/plugins/<plugin-name>`, point `~/.agents/plugins/marketplace.json` at that directory with a `./`-prefixed relative path, restart Codex so the plugin appears, then run the install skill and restart Codex again to load the installed agents. Official references:
+For personal installs, follow the official Codex plugin docs: copy the generated Codex payload from `dist/codex/speckit-pro/` to `~/.codex/plugins/<plugin-name>`, point `~/.agents/plugins/marketplace.json` at that directory with a `./`-prefixed relative path, restart Codex so the plugin appears, then run the install skill and restart Codex again to load the installed agents. Do not copy the mixed authoring tree at `speckit-pro/` directly. Official references:
 
 - [Codex plugins](https://developers.openai.com/codex/plugins)
 - [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
@@ -76,14 +78,14 @@ Pull request titles must follow [Conventional Commits](https://www.conventionalc
 
 ## Plugin Structure
 
-Each plugin follows a cross-platform structure:
+Each plugin keeps one cross-platform authoring source:
 
 ```
 plugin-name/
 ├── .codex-plugin/
-│   └── plugin.json      # Codex plugin metadata (required for Codex)
+│   └── plugin.json      # Codex source metadata
 ├── .claude-plugin/
-│   └── plugin.json      # Claude Code plugin metadata (required for Claude Code)
+│   └── plugin.json      # Claude Code source metadata
 ├── commands/            # Slash commands (optional)
 ├── codex-skills/        # Codex skill entrypoints plus skill-owned sidecars (optional)
 │   └── */agents/        # `openai.yaml` skill metadata sidecars
@@ -94,10 +96,20 @@ plugin-name/
 └── README.md            # Documentation
 ```
 
-The test suite is intentionally **not** inside the plugin directory — plugin
-install copies the whole plugin dir to every consumer, so the suite lives at the
-repo root in `tests/<plugin>/` (e.g. `tests/speckit-pro/`) to keep it out of
-installs:
+Release packaging generates self-contained install roots:
+
+```
+dist/
+├── claude/plugin-name/  # Claude-visible content only
+└── codex/plugin-name/   # Codex-visible content only
+```
+
+Run `bash scripts/build-plugin-payloads.sh` after changing plugin source files,
+then commit the updated `dist/**` payloads with the source change.
+
+The test suite is intentionally **not** inside any install payload — the suite
+lives at the repo root in `tests/<plugin>/` (e.g. `tests/speckit-pro/`) to keep
+it out of installs:
 
 ```
 tests/

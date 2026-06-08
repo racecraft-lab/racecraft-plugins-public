@@ -1,0 +1,45 @@
+{
+  "name": "speckit-pro",
+  "version": "2.8.0",
+  "description": "Skill-backed Spec-Driven Development workflows for Codex, including archive-aware autopilot startup, coaching, spec scaffolding, Codex subagent installation, status dashboards, and PR review resolution.",
+  "author": {
+    "name": "Racecraft Lab",
+    "url": "https://github.com/racecraft-lab"
+  },
+  "homepage": "https://github.com/racecraft-lab/racecraft-plugins-public/tree/main/speckit-pro",
+  "repository": "https://github.com/racecraft-lab/racecraft-plugins-public",
+  "license": "MIT",
+  "keywords": [
+    "speckit",
+    "sdd",
+    "spec-driven-development",
+    "specification",
+    "planning",
+    "autopilot",
+    "autonomous",
+    "workflow"
+  ],
+  "skills": "./skills/",
+  "hooks": "./codex-hooks.json",
+  "interface": {
+    "displayName": "SpecKit Pro",
+    "shortDescription": "Spec-driven workflows and Codex subagent install support",
+    "longDescription": "Skill-backed Spec-Driven Development for Codex. Each Codex skill ships its own `agents/openai.yaml` metadata sidecar, and SpecKit Pro also bundles Codex custom-agent TOML templates plus a Codex-only install skill because Codex still registers custom agents from `.codex/agents/` or `~/.codex/agents/` rather than directly from the plugin bundle.",
+    "developerName": "Racecraft Lab",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/racecraft-lab/racecraft-plugins-public",
+    "defaultPrompt": [
+      "Use SpecKit Pro to install the bundled Codex subagents and tell me if I need to restart Codex.",
+      "Use SpecKit Pro to coach Spec-Driven Development and explain the next step for my current spec.",
+      "Use SpecKit Pro to scaffold a spec worktree and prepare the workflow for autopilot.",
+      "Use SpecKit Pro to run a populated workflow file with the installed SpecKit Codex agents.",
+      "Use SpecKit Pro to check whether the archive extension is installed and whether Archive Sweep cleanup is safe."
+    ],
+    "brandColor": "#6366F1"
+  }
+}

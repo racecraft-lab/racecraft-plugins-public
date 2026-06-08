@@ -52,8 +52,9 @@ jobs:
           # All files changed relative to the base branch.
           changed_files=$(git diff --name-only "origin/${BASE_REF}...HEAD")
 
-          # A plugin counts as "changed" if its own directory OR its out-of-plugin
-          # test directory (tests/<plugin>/) changed. The test suite lives at
+          # A plugin counts as "changed" if its source directory, generated
+          # payload directory, out-of-plugin test directory, marketplace entry,
+          # or shared packaging automation changed. The test suite lives at
           # repo-root tests/<plugin>/ so it is NOT shipped to consumers — but
           # test-only changes must still trigger that plugin's matrix job.
           # Plugin directory names are kebab-case (Constitution Principle I), safe for regex.
@@ -61,7 +62,7 @@ jobs:
           for manifest in */.claude-plugin/plugin.json; do
             [ -e "$manifest" ] || continue
             dir="${manifest%%/.claude-plugin/plugin.json}"
-            if printf '%s\n' "$changed_files" | grep -qE "^(${dir}|tests/${dir})/"; then
+            if printf '%s\n' "$changed_files" | grep -qE "^(${dir}|tests/${dir}|dist/(claude|codex)/${dir})/|^\\.claude-plugin/marketplace\\.json$|^\\.agents/plugins/marketplace\\.json$|^scripts/(build-plugin-payloads|sync-marketplace-versions)\\.sh$|^release-please-config\\.json$|^\\.github/workflows/(pr-checks|release)\\.yml$"; then
               plugins+=("$dir")
             fi
           done

@@ -8,13 +8,14 @@
       "name": "speckit-pro",
       "source": {
         "source": "local",
-        "path": "./speckit-pro"
+        "path": "./dist/codex/speckit-pro"
       },
       "policy": {
         "installation": "AVAILABLE",
         "authentication": "ON_INSTALL"
       },
-      "category": "Coding"
+      "category": "Coding",
+      "version": "2.8.0"
     }
   ]
 }
