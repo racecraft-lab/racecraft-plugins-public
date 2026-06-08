@@ -1,18 +1,9 @@
 ---
-# Spec-level Map of Content (MOC). Frontmatter join-key contract (PRSG-002).
-# Consumed by speckit-scaffold-spec via token substitution (same {{TOKEN}} mechanism
-# as workflow-template.md). Substitute every {{TOKEN}} below when writing SPEC-MOC.md.
-#
-# up: MUST be a quoted relative markdown link — "[text](relative/path.md)", NEVER a
-#     [[wikilink]]. The () target is load-bearing: the stale-index lint parses the
-#     relative []() target from this value and resolves it. From specs/<branch-name>/
-#     the existing roadmap resolves as ../../docs/ai/specs/<roadmap-filename>.md, so
-#     the ../../docs/ai/specs/ prefix is hardcoded and only the filename is tokenized.
-up: "[PR-Size Governance roadmap](../../docs/ai/specs/pr-size-governance-technical-roadmap.md)"
-related: []                  # list of relative []() links; carried, unenforced in v1
-status: ""                   # carried, unenforced in v1
-rank:                        # carried, unenforced in v1
-spec_id: "PRSG-007"          # e.g., PRSG-002 — namespace-matches the containing directory
+up: "[pr-size-governance roadmap](../../docs/ai/specs/pr-size-governance-technical-roadmap.md)"
+related: []
+status: ""
+rank:
+spec_id: "PRSG-007"
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
 ---
 
