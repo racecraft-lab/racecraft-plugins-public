@@ -120,15 +120,27 @@ stays in the subagent's context; the parent receives only a summary.
 
 | Phase | Agent | Why specialized |
 | ----- | ----- | --------------- |
-| Specify, Plan, Tasks | `phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
-| Clarify | `clarify-executor` | Read-only question set; parent answers and edits |
-| Checklist | `checklist-executor` | Must run checklist AND remediate gaps with research |
-| Analyze | `analyze-executor` | Must run analysis AND remediate ALL findings with research |
+| Specify, Plan, Tasks | `speckit-pro:phase-executor` | Heavy reasoning (Specify, Plan); mechanical for Tasks. Single skill invocation, single summary. |
+| Clarify | `speckit-pro:clarify-executor` | Read-only question set; parent answers and edits |
+| Checklist | `speckit-pro:checklist-executor` | Must run checklist AND remediate gaps with research |
+| Analyze | `speckit-pro:analyze-executor` | Must run analysis AND remediate ALL findings with research |
 | Implement | per-task routing | Task-level dispatch: routes each task to best-fit agent with TDD protocol |
 
 Full `Agent(...)` prompt template + per-phase prefixes live in
 [`references/phase-execution.md`](./references/phase-execution.md)
 §Subagent Delegation.
+
+**Agent-type namespacing (required):** the prefix requirement applies to every
+speckit-pro **bundled agent id** used as a `subagent_type` value — the
+executors above and the analysts in the routing tables below dispatch with
+their `speckit-pro:` prefix (`speckit-pro:phase-executor`,
+`speckit-pro:clarify-executor`, …). The runtime resolves plugin agents by their
+namespaced id, so a bare `subagent_type: "phase-executor"` fails immediately
+with `Agent type 'phase-executor' not found`. Identifiers that take **no**
+prefix: `general-purpose` (a built-in agent), and entries in the tables that are
+not bundled agent ids — the `PROJECT_IMPLEMENTATION_AGENT` variable (resolved to
+a host-project agent, with `speckit-pro:phase-executor` as its fallback value)
+and `orchestrator-direct` (the orchestrator acting directly, not a subagent).
 
 ### 3. Task list first
 
@@ -241,7 +253,7 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    workflow's Prerequisites table. STOP on any failure.
 5. **Implementation agent detection** — Glob `.claude/agents/*.md`,
    match descriptions against implementation keywords; set
-   `PROJECT_IMPLEMENTATION_AGENT` (fallback: `phase-executor`). Also
+   `PROJECT_IMPLEMENTATION_AGENT` (fallback: `speckit-pro:phase-executor`). Also
    check CLAUDE.md for an explicit agent reference.
 6. **Load settings + Agent Teams probe** — read `.claude/speckit-pro.local.md`
    (`consensus-mode`, `gate-failure`, `auto-commit`, `security-keywords`);
@@ -362,12 +374,12 @@ present, `PRESET_CONVENTIONS` (from Step 0.12) and `PROJECT_COMMANDS`
 
 | Phase | subagent_type | Prefix |
 | ----- | ------------- | ------ |
-| Specify | `phase-executor` | Branch-aware when `ON_FEATURE_BRANCH` (skip `create-new-feature.sh`) |
-| Clarify | `clarify-executor` | Read-only — returns a Clarify Question Set; parent answers + applies edits |
-| Plan | `phase-executor` | None |
-| Checklist | `checklist-executor` | One subagent per domain |
-| Tasks | `phase-executor` | None |
-| Analyze | `analyze-executor` | None |
+| Specify | `speckit-pro:phase-executor` | Branch-aware when `ON_FEATURE_BRANCH` (skip `create-new-feature.sh`) |
+| Clarify | `speckit-pro:clarify-executor` | Read-only — returns a Clarify Question Set; parent answers + applies edits |
+| Plan | `speckit-pro:phase-executor` | None |
+| Checklist | `speckit-pro:checklist-executor` | One subagent per domain |
+| Tasks | `speckit-pro:phase-executor` | None |
+| Analyze | `speckit-pro:analyze-executor` | None |
 | Implement | per-task routing | TDD protocol + COMPLETED_TASKS — see Implement — Task-Level Dispatch below |
 
 Per-phase prefix templates (branch-aware Specify prefix, Clarify
@@ -402,9 +414,9 @@ safety net; on regression, fall back to serial re-run for that group.
 
 | Task Type | Agent | TDD? |
 |-----------|-------|------|
-| Tests (contract/unit/integration) | `implement-executor` | Yes |
+| Tests (contract/unit/integration) | `speckit-pro:implement-executor` | Yes |
 | Domain implementation | PROJECT_IMPLEMENTATION_AGENT | Yes |
-| Research / API investigation | `domain-researcher` | No |
+| Research / API investigation | `speckit-pro:domain-researcher` | No |
 | Verification (build, lint) | orchestrator-direct | No |
 
 Every implementation agent receives the TDD protocol from

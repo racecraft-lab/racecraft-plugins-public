@@ -68,7 +68,7 @@ verifier can ask the reviewer "did you see the regression in
 
 ```text
 Create an agent team for SPEC-XXX post-implementation validation.
-Spawn 3 teammates, all using the phase-executor subagent type.
+Spawn 3 teammates, all using the speckit-pro:phase-executor subagent type.
 **Use Sonnet for each teammate** — these are focused execution
 tasks (run a slash command, report results), no opus reasoning
 needed. The lead stays on opus for synthesis.
@@ -112,7 +112,7 @@ Substitute the actual extension command names (e.g., `/speckit.doctor`
 vs `/speckit.speckit-utils.doctor`) based on Step 0.12 extension
 detection. Use the host project's `PROJECT_IMPLEMENTATION_AGENT`
 subagent type for any teammate where one is registered —
-`phase-executor` is the safe fallback.
+`speckit-pro:phase-executor` is the safe fallback.
 
 **Reusing existing subagent definitions:** per Anthropic's "Use
 subagent definitions for teammates," the teammate types here reference
@@ -261,7 +261,7 @@ to a single version check.
 ## 3.1 Full Integration / E2E Suite Verification
 
 Integration tests for the spec are created DURING the Implement
-phase (the implement-executor agent creates them as part of TDD).
+phase (the `speckit-pro:implement-executor` agent creates them as part of TDD).
 This step runs the FULL suite to catch regressions from other specs.
 
 **Step 1 — Verify spec-specific tests exist:**
@@ -271,12 +271,12 @@ Glob("tests/integration/*<spec-name>*")  <- TOOL CALL
 Glob("tests/e2e/*<spec-name>*")          <- TOOL CALL
 ```
 
-If no spec-specific tests exist, the implement-executor failed to
+If no spec-specific tests exist, the `speckit-pro:implement-executor` failed to
 create them. Spawn it again to fix:
 
 ```text
 Agent(
-  subagent_type: "implement-executor",
+  subagent_type: "speckit-pro:implement-executor",
   description: "SPEC-XXX missing integration tests",
   prompt: """
     The implementation phase did not create integration
@@ -608,13 +608,13 @@ with a one-line stub note. The heading is therefore always present in
 the PR body whether the generator succeeded, failed, or never ran;
 the failure detail lives in the workflow log, not the artifact.
 
-After the skeleton is written, **spawn the `uat-runbook-author`
+After the skeleton is written, **spawn the `speckit-pro:uat-runbook-author`
 subagent to rewrite it in place** so the runbook reads in plain English
 and a non-engineer can actually execute it:
 
 ```text
 Agent(
-  subagent_type: "uat-runbook-author",
+  subagent_type: "speckit-pro:uat-runbook-author",
   description: "SPEC-XXX UAT runbook authoring",
   prompt: """
     Rewrite the UAT runbook skeleton in place so a non-engineer can
