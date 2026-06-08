@@ -113,13 +113,55 @@ SPECS_DIR="$REPO_ROOT/specs"
 # Zone-body renderers
 # ─────────────────────────────────────────────────────────────────────────────
 
-# render_index <spec_dir> — the v1-dormant roadmap INDEX zone (FR-019). In a
-# spec-MOC the INDEX zone is present-but-empty/link-free; the live roadmap home
-# note that carries an active INDEX is PRSG-004's deliverable. NON-GOAL guard:
-# this never creates a roadmap home note or a live INDEX. Renders nothing (empty
-# zone). When active, INDEX order is normalized-ID ascending (FR-005).
+# render_index <spec_dir> [is_home] — the roadmap INDEX zone (PRSG-004 FR-011).
+# CONTEXT-SCOPED: render_index is invoked against every spec-MOC's present INDEX
+# zone (where it MUST stay empty, FR-018) AND against the roadmap-MOC home note's
+# INDEX zone (where it fills repo-wide). The 2nd arg defaults to 0, so the spec-MOC
+# call site (3-arg rebuild_map -> render_index "$spec_dir") stays byte-identical to
+# the pre-activation empty body. Only is_home=1 produces rows.
+#
+# When is_home=1 the body is the repo-wide index over every gated spec under
+# $SPECS_DIR: one row `- [<spec_id>](../../../specs/<dir>/SPEC-MOC.md) · <status>`,
+# normalized-ID ascending (FR-013), spec_id/status read from frontmatter (FR-012),
+# rows whose spec_id is absent/empty skipped (FR-015a), empty status still emits a
+# row with a blank status field (FR-015), the separator the U+00B7 PRS_SEP framing
+# (FR-012/FR-014). A relative []() target, never a [[wikilink]] (SC-006). spec_dir
+# is unused in the home-note path (the scan is repo-wide), kept for signature parity
+# with the spec-MOC call. Link + status only — no table, no H1 parse (FR-022).
 render_index() {
-  :  # intentionally empty body (dormant)
+  local spec_dir="$1" is_home="${2:-0}"
+  [ "$is_home" = 1 ] || return 0     # spec-MOC (default): empty, byte-identical
+
+  # Repo-wide scan, LC_ALL=C sorted so enumeration order never leaks (SC-009).
+  local sortable="" d moc spec_id status norm
+  while IFS= read -r d; do
+    [ -n "$d" ] || continue
+    moc="$d/SPEC-MOC.md"
+    [ -f "$moc" ] || continue
+    moc_is_gated "$moc" || continue            # legacy/non-marked skipped (FR-016)
+    # spec_id is the link text AND the sort key; absent/empty => skip (FR-015a).
+    spec_id="$(moc_frontmatter_field "$moc" spec_id)" || continue
+    [ -n "$spec_id" ] || continue
+    # status is display-only; absent/empty still emits a row (FR-015).
+    status="$(moc_frontmatter_field "$moc" status)" || status=""
+    norm="$(moc_normalize "$spec_id")"
+    # Sort key (col1) = normalized id; the rendered row (col2) follows. Sorting the
+    # whole line is fully deterministic: normalized-id ascending, ties broken by the
+    # row bytes. The link is relative docs/ai/specs -> repo-root specs (../../../).
+    sortable+="$(printf '%s\t- [%s](../../../specs/%s/SPEC-MOC.md) %s %s' \
+      "$norm" "$spec_id" "$(basename "$d")" "$PRS_SEP" "$status")"$'\n'
+  done < <(find "$SPECS_DIR" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort)
+
+  [ -n "$sortable" ] || return 0     # no gated specs => empty INDEX (not an error)
+
+  # Emit rows in normalized-ID ascending order; drop the sort-key column. Sorting the
+  # whole <norm>\t<row> line (no -k restriction) is deterministic: the leading <norm>
+  # field orders the rows, and the row bytes break any normalized-id tie stably
+  # (SC-004). The \t delimiter sorts before any printable row byte under LC_ALL=C.
+  printf '%s' "$sortable" | LC_ALL=C sort | while IFS=$'\t' read -r _norm row; do
+    [ -n "$row" ] || continue
+    printf '%s\n' "$row"
+  done
 }
 
 # render_prs <spec_dir> — plain-text PR rows from <spec_dir>/.process/prs.json
@@ -313,7 +355,7 @@ _zone_state() {
 # replace of each present pair (FR-002); inject the three zones only when ALL three
 # pairs are absent (FR-008); a partial/duplicated pair => fail-safe exit 2 (FR-022).
 rebuild_map() {
-  local moc="$1" spec_dir="$2" branch="$3"
+  local moc="$1" spec_dir="$2" branch="$3" is_home="${4:-0}"
 
   # Marker counts per kind (full-line equality — prose can't masquerade, D1).
   local is ie ps pe bs be
@@ -338,9 +380,18 @@ rebuild_map() {
   # assignment masks the failure under set -e. Init to empty so an absent zone's var
   # is defined under set -u.
   local idx_body="" prs_body="" bl_body=""
-  if [ "$st_index" = present ];     then idx_body="$(render_index "$spec_dir")"; fi
+  if [ "$st_index" = present ];     then idx_body="$(render_index "$spec_dir" "$is_home")"; fi
   if [ "$st_prs" = present ];       then prs_body="$(render_prs "$spec_dir")" || die2; fi
   if [ "$st_backlinks" = present ]; then bl_body="$(render_backlinks "$spec_dir")"; fi
+
+  # FR-017a fail-safe: a home-note target with ALL three pairs absent is a MALFORMED
+  # home note (a gated home note must carry its INDEX pair — FR-002), NOT a fresh
+  # spec-MOC awaiting injection. It MUST NOT take the inject-if-missing path below
+  # (which would inject all three zones and render PRS/BACKLINKS against the home
+  # note's non-spec directory). Fail safe: exit 2, no write, naming the home note.
+  if [ "$is_home" = 1 ] && [ "$st_index" = absent ] && [ "$st_prs" = absent ] && [ "$st_backlinks" = absent ]; then
+    err "roadmap-MOC home note is gated but missing its GENERATED:INDEX zone: $moc"
+  fi
 
   # Inject-if-missing: ONLY when all three pairs are absent. A map missing exactly
   # one pair (skip-one) keeps that zone absent — never injected (FR-009).
@@ -472,6 +523,49 @@ main() {
     in_new+=("$new")
     in_branch+=("$branch")
   done
+
+  # PASS 1b — discover roadmap-MOC home notes (FR-017), DISJOINT from the specs/
+  # scan above (the docs/ai/specs/ tree does not overlap specs/). Glob is the
+  # filename `docs/ai/specs/*-roadmap-MOC.md` (0..N). Each is gated via moc_is_gated;
+  # a non-gated/legacy home note is skipped (not an error). A gated home note is
+  # folded into the SAME in_moc/in_new/in_branch arrays but regenerated with
+  # is_home=1 so render_index fills its INDEX repo-wide. Validation (the FR-017a
+  # missing-INDEX fail-safe, marker balance) runs HERE in PASS 1, before any PASS 2
+  # write, so a malformed home note aborts the whole batch with no partial write.
+  local home_dir="$REPO_ROOT/docs/ai/specs"
+  if [ -d "$home_dir" ]; then
+    local hn
+    while IFS= read -r hn; do
+      [ -n "$hn" ] || continue
+      local hlabel
+      hlabel="$(basename "$hn")"
+
+      # Same non-regular-file guard as the spec-MOC path: reject a symlink or a
+      # non-regular target (test -L first; it does not follow), FR-016.
+      if [ -L "$hn" ] || { [ -e "$hn" ] && [ ! -f "$hn" ]; }; then
+        err "roadmap-MOC home note is not a regular file: $hn"
+      fi
+      [ -f "$hn" ] || continue
+
+      # In scope iff version-marked. Legacy/non-gated home note => skip, unmodified.
+      if ! moc_is_gated "$hn"; then
+        continue
+      fi
+
+      # Regenerate with is_home=1. rebuild_map fails safe (its own stderr line +
+      # exit 2) on the FR-017a missing-INDEX case or an unbalanced pair; capture the
+      # rc from the command substitution and re-raise cleanly (disarm first).
+      local hnew hrc=0
+      hnew="$(rebuild_map "$hn" "$home_dir" "$hlabel" 1)" || hrc=$?
+      if [ "$hrc" -ne 0 ]; then
+        trap - ERR EXIT
+        exit 2
+      fi
+      in_moc+=("$hn")
+      in_new+=("$hnew")
+      in_branch+=("$hlabel")
+    done < <(find "$home_dir" -mindepth 1 -maxdepth 1 -name '*-roadmap-MOC.md' | LC_ALL=C sort)
+  fi
 
   # PASS 2 — compare each regenerated body to the committed file. In --check mode
   # report drift and write nothing; in write mode write changed files atomically.
