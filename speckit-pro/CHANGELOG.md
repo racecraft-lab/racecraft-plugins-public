@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.8.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.7.0...speckit-pro-v2.8.0) (2026-06-08)
+
+
+### Features
+
+* **speckit-pro:** add a spec navigation-map layer that keeps docs reachable ([#116](https://github.com/racecraft-lab/racecraft-plugins-public/issues/116)) ([3e4be3e](https://github.com/racecraft-lab/racecraft-plugins-public/commit/3e4be3e9901c466040809a211af8aa0ec0c6935b))
+* **speckit-pro:** generate spec navigation maps and catch stale ones ([#121](https://github.com/racecraft-lab/racecraft-plugins-public/issues/121)) ([339fbaa](https://github.com/racecraft-lab/racecraft-plugins-public/commit/339fbaadc299f3593392937cf563b33e5d44627a))
+* **speckit-pro:** size pull requests at planning time and rework the reviewability check ([#119](https://github.com/racecraft-lab/racecraft-plugins-public/issues/119)) ([9d4b948](https://github.com/racecraft-lab/racecraft-plugins-public/commit/9d4b94867d2ad9e47a3b64b7551fa6d86ce8cf53))
+* **speckit-pro:** size roadmap specs into thin, reviewable slices during planning ([#120](https://github.com/racecraft-lab/racecraft-plugins-public/issues/120)) ([a4e930b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a4e930bc8989b84910b8840abb193f91bb1ae5b9))
+
+
+### Bug Fixes
+
+* **speckit-pro:** detect Codex installs and sliced spec branches in the autopilot prerequisite check ([#122](https://github.com/racecraft-lab/racecraft-plugins-public/issues/122)) ([daaa5c0](https://github.com/racecraft-lab/racecraft-plugins-public/commit/daaa5c0d3f573669d141914a9be43c8a512dfecf))
+
 ## [2.7.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.6.3...speckit-pro-v2.7.0) (2026-06-06)
 
 
