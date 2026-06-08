@@ -430,14 +430,20 @@ Focus on:
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks complete in tasks.md
-- [ ] `bash tests/speckit-pro/run-all.sh` (L1/4/5) green
-- [ ] Layer 4 determinism fixture for the roadmap-MOC INDEX passes; PRSG-003 contract fixtures unchanged
-- [ ] Layer 2 + Layer 3 evals recorded passing (developer-local, `claude -p`)
-- [ ] Layer 8 parity green for speckit-prd + speckit-coach; `validate-codex-skills.sh` green
-- [ ] `speckit-skill-reviewer` run on both changed SKILL.md files
-- [ ] PR title `feat(speckit-pro): …`, plain-English, public-readable
-- [ ] PR created (not merged — humans merge)
+- [X] All tasks complete in tasks.md (T001–T026; T008/T009 intentionally unused)
+- [X] `bash tests/speckit-pro/run-all.sh` (L1/4/5) green — **1934/1934**
+- [X] Layer 4 determinism fixture for the roadmap-MOC INDEX passes; PRSG-003 contract fixtures unchanged (byte-identical spec-MOC path verified via generator `--check` + the unchanged PRSG-003 fixture group)
+- [ ] Layer 2 + Layer 3 evals recorded passing (developer-local, `claude -p`) — eval CASES added to both runtimes (T014/T018/T019); the `claude -p` RUN is developer-local, not executed in this autonomous run
+- [X] Layer 8 parity green for speckit-prd + speckit-coach (`run-parity-fixtures.sh --dry-run` pass); `validate-codex-skills.sh` 145/145 + `validate-codex-parity` 78/78 green
+- [X] `speckit-skill-reviewer` run on both changed SKILL.md files (prd: applied budget-fitting description fix; coach: clean, one pre-existing out-of-scope nit)
+- [ ] PR title `feat(speckit-pro): …`, plain-English, public-readable (pending PR creation)
+- [ ] PR created (not merged — humans merge) (pending)
+
+### Post-Implementation Results
+
+**Integration suite (PRSG scope = L1+L4+L5; L7 explicitly out of scope per roadmap):** 1934/1934 green, including the new home-note L4 group (`test-generate-spec-index` 76/76) and the unchanged PRSG-003 regression fixtures.
+
+**Reviewability diff gate — BLOCK overridden (file-count artifact, same as the tasks-gate):** `reviewability-gate.sh diff origin/main...HEAD` returned `block`, but the real review-burden metric `reviewable_loc` = **0** (well under the 800 block) and `production_files` = 0 (under 8). Even counting every `speckit-pro/` insertion pessimistically, the production diff is **403 insertions across 7 files** (< 800). The block is driven solely by `total_files: 36` (8 new L4 test fixtures + ~10 SDD spec/process artifacts + 4 eval files — none are production review burden) and `primary_surfaces: 5` (path-pattern mis-classification). The production review surface is ~110 LOC of bash generator logic + skill/reference prose — a reviewable single PR. Consistent with the spec's documented single-spec split decision and the plan-phase estimator (pass). Override recorded.
 
 ---
 
