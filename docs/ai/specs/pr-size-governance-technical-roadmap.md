@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119). Pending: PRSG-007→008→009 (Phase 4 split-PR engine), PRSG-010 (Phase 5), PRSG-011 (Phase 6 retro-migration — now unblocked: needs only PRSG-001/002/003). Created 2026-06-03; status refreshed 2026-06-08.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119). PRSG-011 (Phase 6 retro-migration) is scaffolded and in progress on `prsg-011-retro-migration`; pending: PRSG-007→008→009 (Phase 4 split-PR engine), PRSG-010 (Phase 5). Created 2026-06-03; status refreshed 2026-06-08.
 
 ## Vision
 
@@ -243,7 +243,10 @@ real.
 
 ---
 
-### PRSG-011 — Retro-migration: version marker + state-keyed backfill/relocate  · Phase 6 · P2
+### PRSG-011 — Retro-migration: version marker + state-keyed backfill/relocate  · Phase 6 · P2 · 🔄 In Progress
+> Scaffolded 2026-06-08 on `prsg-011-retro-migration`; workflow:
+> `docs/ai/specs/.process/PRSG-011-workflow.md`.
+
 **Why:** PRSG-001–010 are new-specs-only; existing projects (Paddock: 27 SPEC IDs;
 focusengine: 50) would otherwise be a permanent split-brain repo, **and PRSG-002's
 version-gated lints need a marker-writer or legacy specs stay exempt forever.** Supplies
