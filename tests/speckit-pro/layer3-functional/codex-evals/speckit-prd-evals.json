@@ -47,6 +47,19 @@
         "Produces a roadmap with a single SPEC (or clearly notes the work is one spec) rather than forcing a multi-spec catalog",
         "Acceptance criteria remain observable and testable despite the small size"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "$speckit-prd — write a PRD and technical roadmap for a small analytics dashboard (data ingestion, a query layer, three chart widgets, and a sharing/permissions feature) grouped into phases. After you author them, emit the roadmap-MOC home note too.",
+      "expected_output": "Authors the lean PRD and the phase-grouped technical-roadmap, then writes a THIRD artifact docs/ai/specs/<slug>-roadmap-MOC.md — a home note with a curated epics zone scaffolded from the roadmap's phases (one epic per phase, member SPEC-MOC links, a one-line advisory Why per epic) and a sentinel-bounded GENERATED INDEX zone filled by generate-spec-index.sh. The curated zone is derived from the phases with no new interview questions. The home note's up: is a relative []() link to the technical-roadmap and the roadmap carries the reciprocal link back to the home note.",
+      "expectations": [
+        "Produces exactly three artifacts — the PRD, the technical-roadmap, and docs/ai/specs/<slug>-roadmap-MOC.md — with both zones (curated epics + GENERATED INDEX) present in the home note (SC-001)",
+        "Derives the curated epics zone from the roadmap's phase grouping (one epic per phase) without asking any new interview questions beyond the pre-existing PRD/roadmap interview (SC-002)",
+        "Emits the home note from the shared roadmap-moc template so it carries only the GENERATED:INDEX sentinel pair (not the PRS or BACKLINKS pairs), then invokes generate-spec-index.sh passing the consumer repo root positionally to fill the INDEX",
+        "If the derived scaffold yields more than ~10 epics, prints a single one-line advisory and still writes the home note — never blocks (SC-003)",
+        "The home note's up: is a relative []() link to <slug>-technical-roadmap.md and the technical-roadmap carries a one-line reciprocal []() link back to the home note (FR-006)",
+        "Does not backfill a home note for any pre-existing roadmap and does not change any spec-MOC up:, the spec-MOC template, or scaffold-spec (FR-007/FR-008)"
+      ]
     }
   ]
 }
