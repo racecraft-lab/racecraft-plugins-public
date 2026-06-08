@@ -65,7 +65,7 @@ done
 if [ ${#missing_cmds[@]} -eq 0 ]; then
   results+=("$(json_result "commands" "true" "All SpecKit commands installed" "")")
 else
-  results+=("$(json_result "commands" "false" "Missing commands: ${missing_cmds[*]}. Run: \$install from the SpecKit Pro plugin" "")")
+  results+=("$(json_result "commands" "false" "Missing commands: ${missing_cmds[*]}. Run: specify integration install <claude|codex>" "")")
   all_pass=false
 fi
 
