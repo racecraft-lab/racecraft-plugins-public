@@ -37,8 +37,8 @@ revision note says otherwise.
 | Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; render_index branch via main()→rebuild_map(4th arg)→render_index(2nd arg) default 0; INDEX sentinels pinned in PRSG-002 template; reviewability pass (7 file ops). G3 pass. |
 | Checklist | `/speckit-checklist` | ✅ Complete | doc-quality (1 gap → FR-020/SC-008 semantic-equivalence parity) + error-handling (3 gaps → FR-015a/FR-017a + contract rows). 2 dispositions resolved by 2-of-2 consensus. 0 [Gap]. G4 pass. |
 | Tasks | `/speckit-tasks` | ✅ Complete | 24 tasks (US3→US1→US2→polish), TDD-first, T007 = PRSG-003 byte regression guard, Codex mirrors T013/T017/T019. G5 pass. Reviewability tasks-gate block OVERRIDDEN (false positive — see note). |
-| Analyze | `/speckit-analyze` | 🔄 In Progress | |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 3 findings, all LOW (post-refinement staleness), all fixed. 100% FR/SC coverage. G6 pass (0 CRITICAL). Re-flagged consensus items = Phase-4-resolved duplicates (no new round). |
+| Implement | `/speckit-implement` | 🔄 In Progress | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -385,7 +385,13 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| F1 | LOW | requirements.md said "22 FRs" (FR-015a/FR-017a added later) | Updated to 24 |
+| F2 | LOW | US3 FR→US mapping omitted FR-015a/FR-017a | Amended mapping |
+| F3 | LOW | data-model.md `spec_id` row predated FR-015a skip behavior | Aligned to FR-015a (skip the row) |
+
+**G6: 0 CRITICAL/HIGH.** Coverage 100% (all 24 FRs + SC-001…SC-008 mapped; Codex mirror tasks T013/T017/T019; regression guard T007).
+
+**Consensus (Analyze):** The analyze-executor re-surfaced CHK047 (spec_id→skip) and CHK043/045 (home note missing INDEX→exit 2) from the stale checklist flags. These are the SAME two forks already resolved by 2-of-2 high-confidence consensus in Phase 4 (see Checklist Consensus Resolution Log) — including the `render_prs`-cuts-toward-exit-2 tension, which the Phase-4 codebase-analyst explicitly adjudicated (spec_id-absence = data degradation, not a corrupt manifest record → skip is correct). **No new consensus round — duplicate of an already-settled resolution.**
 
 ---
 

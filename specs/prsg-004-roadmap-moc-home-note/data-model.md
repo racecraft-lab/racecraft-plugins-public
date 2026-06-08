@@ -39,7 +39,7 @@ total/safe accessor `moc_frontmatter_field` (no new parser):
 
 | Field | Type | Used for | Empty/missing behavior |
 |-------|------|----------|------------------------|
-| `spec_id` | string | the row's visible link text; normalized via `moc_normalize` for ordering | a SPEC-MOC without a usable `spec_id` is outside the normal gated shape; the gate + frontmatter accessor govern (no new validation added here) |
+| `spec_id` | string | the row's visible link text; normalized via `moc_normalize` for ordering | a gated SPEC-MOC with absent/empty `spec_id` is **skipped from the INDEX** (no row) — `spec_id` is both link text and sort key, so a missing value cannot render a reachable row; NOT symmetric with empty `status` (FR-015a). No new validation is added here — the existing PRSG-002 `spec_id` lint remains the authority that flags the offending marker. |
 | `status` | string | the row's at-a-glance status field after the `·` separator | **empty/missing → row still emitted** (link + blank status), never dropped (FR-015) |
 | `structureVersion` | bare int ≥ 1 | the gate (`moc_is_gated`) — in-scope iff present | absent/quoted/decimal → SKIP (not indexed), consistent with existing gating (FR-016) |
 

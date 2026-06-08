@@ -31,9 +31,10 @@
 
 ## Notes
 
-- 22 functional requirements, all tagged to a user story. FR→US mapping: US1 = FR-001…FR-008
-  (+ FR-020); US2 = FR-009, FR-010 (+ FR-020); US3 = FR-011…FR-019, FR-021, FR-022. Story
-  labels are fixed by semantics, not renumbered by priority.
+- 24 functional requirements, all tagged to a user story. FR→US mapping: US1 = FR-001…FR-008
+  (+ FR-020); US2 = FR-009, FR-010 (+ FR-020); US3 = FR-011…FR-019 (incl. FR-015a, FR-017a),
+  FR-021, FR-022. Story labels are fixed by semantics, not renumbered by priority. (FR-015a
+  and FR-017a were added during the Clarify/checklist refinement; both are tagged [US3].)
 - Zero [NEEDS CLARIFICATION] markers — the design converged in the grill-me interview; the
   four deferred "how" details are recorded in Assumptions with a disposition (resolve in
   /speckit-plan or /speckit-tasks), not as spec ambiguities. The home note's own `up:`
