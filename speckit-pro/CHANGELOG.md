@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.8.0...speckit-pro-v2.8.1) (2026-06-08)
+
+
+### Bug Fixes
+
+* **speckit-pro:** split platform install payloads ([#124](https://github.com/racecraft-lab/racecraft-plugins-public/issues/124)) ([7ff59bc](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7ff59bcc7c98ab1902f60d302c4f0765f33f3e7d))
+
 ## [2.8.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.7.0...speckit-pro-v2.8.0) (2026-06-08)
 
 
