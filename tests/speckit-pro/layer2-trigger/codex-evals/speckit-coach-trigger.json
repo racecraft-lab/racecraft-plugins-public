@@ -102,5 +102,9 @@
   {
     "query": "interview me about the new search feature one question at a time with your recommended answer for each",
     "should_trigger": false
+  },
+  {
+    "query": "how is the roadmap home note / Map of Content structured? I want to understand the curated epics zone vs the generated INDEX zone and whether I can edit the INDEX by hand",
+    "should_trigger": true
   }
 ]

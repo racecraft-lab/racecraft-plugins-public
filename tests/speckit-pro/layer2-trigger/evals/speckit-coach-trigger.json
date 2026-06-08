@@ -102,5 +102,9 @@
   {
     "query": "kick off the autonomous pipeline for SPEC-019. the workflow is at specs/SPEC-019-workflow.md. run all phases as subagents with gate validation and consensus",
     "should_trigger": false
+  },
+  {
+    "query": "how is the roadmap home note / Map of Content structured? I want to understand the curated epics zone vs the generated INDEX zone and whether I can edit the INDEX by hand",
+    "should_trigger": true
   }
 ]
