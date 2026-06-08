@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — PRSG-001 ✅ complete (PR #111); PRSG-002 🔄 scaffolded 2026-06-06; PRSG-003 🔄 scaffolded 2026-06-06; PRSG-005 🔄 scaffolded 2026-06-06. Created 2026-06-03.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119). Pending: PRSG-004 (Phase 2, P2), PRSG-007→008→009 (Phase 4 split-PR engine), PRSG-010 (Phase 5), PRSG-011 (Phase 6 retro-migration — now unblocked: needs only PRSG-001/002/003). Created 2026-06-03; status refreshed 2026-06-08.
 
 ## Vision
 
@@ -98,7 +98,7 @@ diff at the source. Orthogonal precondition for everything else.
 
 ---
 
-### PRSG-002 — MOC templates + scaffold-time skeleton + version-gated lints  · Phase 2 · P1 · 🔄 In Progress
+### PRSG-002 — MOC templates + scaffold-time skeleton + version-gated lints  · Phase 2 · P1 · ✅ Complete (PR #116)
 **Why:** the navigation/traceability spine that makes relocation *safe* (hidden files
 stay linked) and decomposition *navigable* (you navigate the map, not memorize the tree).
 
@@ -122,7 +122,7 @@ stay linked) and decomposition *navigable* (you navigate the map, not memorize t
 
 ---
 
-### PRSG-003 — Generated index/PRs/backlinks + status integration + phase-gate regen  · Phase 2 · P1 · 🔄 In Progress
+### PRSG-003 — Generated index/PRs/backlinks + status integration + phase-gate regen  · Phase 2 · P1 · ✅ Complete (PR #121)
 **Why:** plain markdown has no live engine; generated blocks must be regenerated or
 they silently lie (the #1 risk).
 
@@ -152,7 +152,7 @@ index, authored once cheaply during the PRD interview.
 
 ---
 
-### PRSG-005 — Vertical-slice sizing heuristics in PRD/grill-me  · Phase 3 · P1 · 🔄 In Progress
+### PRSG-005 — Vertical-slice sizing heuristics in PRD/grill-me  · Phase 3 · P1 · ✅ Complete (PR #120)
 **Why:** attack the root cause at the cheapest moment — specs born PR-sized.
 
 - **US1 — Slicing heuristics.** Bake SPIDR + INVEST + vertical-slicing guidance into
@@ -163,7 +163,7 @@ index, authored once cheaply during the PRD interview.
 
 ---
 
-### PRSG-006 — Plan-phase reviewability budget + gate threshold rework  · Phase 3 · P1 · 🔄 In Progress
+### PRSG-006 — Plan-phase reviewability budget + gate threshold rework  · Phase 3 · P1 · ✅ Complete (PR #119)
 **Why:** make sizing preventive, not detective; fix the metrics; replace the broken
 escape hatch with typed exceptions.
 
