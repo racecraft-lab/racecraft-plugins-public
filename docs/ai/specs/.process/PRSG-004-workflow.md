@@ -34,8 +34,8 @@ revision note says otherwise.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 22 FRs, 3 US, 13 acceptance scenarios, 8 SC + L4 deviation; 0 markers. G1 pass. |
 | Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions, all Open Questions CONFIRM defaults (evidence-based), 0 consensus items. G2 pass. |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Domains: documentation-quality, error-handling |
+| Plan | `/speckit-plan` | ✅ Complete | 5 artifacts; render_index branch via main()→rebuild_map(4th arg)→render_index(2nd arg) default 0; INDEX sentinels pinned in PRSG-002 template; reviewability pass (7 file ops). G3 pass. |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | Domains: documentation-quality, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -248,11 +248,11 @@ Reuse the roadmap's per-SPEC budget line; reviewability preset already installed
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Generator-extension design + emission flow |
-| `research.md` | ⏳ | Only if a discovery-mechanism decision needs rationale |
-| `data-model.md` | ⏳ | Likely N/A (no new data entities) |
-| `contracts/` | ⏳ | render_index roadmap-MOC INDEX output contract (mirrors PRSG-003 contract style) |
-| `quickstart.md` | ⏳ | Optional |
+| `plan.md` | ✅ | Generator-extension design + emission flow; Constitution Check all 6 PASS; Declared File Operations filled (1 NEW + 6 MODIFIED) |
+| `research.md` | ✅ | 7 decisions incl. render_index context-scoping + discovery glob rationale; 3 open risks recorded for tasks |
+| `data-model.md` | ✅ | Present (no new data entities — describes the home note / curated zone / INDEX entities) |
+| `contracts/` | ✅ | `roadmap-moc-index.md` — INDEX output contract mirroring PRSG-003 style (exact row format, U+00B7 bytes, ordering, determinism) |
+| `quickstart.md` | ✅ | Maps SC-001…SC-008 to scenarios |
 
 ---
 
