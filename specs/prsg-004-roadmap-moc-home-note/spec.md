@@ -157,7 +157,10 @@ spec-MOC file is byte-identical to before.
   separate file (NOT zones injected into the prose technical-roadmap).
 - **FR-002 [US1]**: The home note MUST contain two zones: a human-curated epics zone and a
   sentinel-bounded GENERATED INDEX zone, using the same sentinel framing the generator
-  recognizes.
+  recognizes. `speckit-prd` MUST emit **only the INDEX sentinel pair** (not the PRS or
+  BACKLINKS pairs): the generator's inject-if-missing path fires only when all three
+  GENERATED pairs are absent, so a home note carrying just the INDEX pair takes the
+  whole-zone rewrite path and fills only the INDEX.
 - **FR-003 [US1]**: `speckit-prd` MUST auto-derive the curated epics zone from the
   roadmap's existing phase/tier grouping — one epic per phase, the phase's spec links, and
   a one-line advisory "Why" placeholder per epic — as an editable scaffold, adding ZERO new
@@ -190,7 +193,10 @@ spec-MOC file is byte-identical to before.
 
 - **FR-011 [US3]**: The generator MUST activate `render_index()` so the home note's
   GENERATED INDEX zone is produced from committed files only (deterministic; no network,
-  no `gh`).
+  no `gh`). Activation MUST be **context-scoped**: `render_index` is already invoked today
+  against every spec-MOC's present-but-empty INDEX zone (where it returns empty), so it MUST
+  emit repo-wide rows **only when the target is the roadmap-MOC home note** and continue to
+  render empty for spec-MOCs (see FR-018).
 - **FR-012 [US3]**: Each INDEX row MUST be exactly `- [<spec_id>](rel/SPEC-MOC.md) ·
   <status>`, where `spec_id` and `status` are read from each SPEC-MOC's frontmatter via the
   existing frontmatter accessor, and the separator is the U+00B7 MIDDLE DOT (matching the
@@ -205,11 +211,17 @@ spec-MOC file is byte-identical to before.
 - **FR-016 [US3]**: Only version-marked (gated) SPEC-MOCs MUST be indexed; legacy/
   non-marked SPEC-MOCs MUST be skipped, consistent with the existing gating.
 - **FR-017 [US3]**: The generator's `main()` MUST discover and process the roadmap-MOC home
-  note in addition to the per-spec MOCs. (The discovery mechanism is a plan-phase detail;
-  see Assumptions.)
+  note in addition to the per-spec MOCs. Discovery is a filename glob
+  `docs/ai/specs/*-roadmap-MOC.md` (0..N matches), each gated via the existing
+  `structureVersion` gate (`moc_is_gated`), processed **in addition to and disjoint from**
+  the existing repo-root `specs/` scan (the two trees do not overlap, so no double-processing
+  and a clean no-op when zero home notes exist).
 - **FR-018 [US3]**: The per-spec-MOC code path MUST remain byte-identical to its
   pre-activation output, so the pinned PRSG-003 byte-for-byte contracts stay green; the
-  roadmap-MOC INDEX is an additive code path.
+  roadmap-MOC INDEX is an additive code path. Because `render_index` already runs against
+  every spec-MOC's present INDEX zone, the activation MUST branch on target type: the
+  repo-wide INDEX render applies **only** to the home note, and the spec-MOC INDEX zone MUST
+  continue to render empty — emitting rows for spec-MOCs would break this guarantee.
 - **FR-019 [US3]**: Regenerating an up-to-date home note MUST be idempotent — a second
   run with no intervening edits produces a zero-byte diff.
 
@@ -304,15 +316,32 @@ deliberate, adjudicated deviation from the catalog's terse "Tests: L1".
 - **Home note `up:` target** (resolved here): the home note's `up:` points at the
   technical-roadmap (`<slug>-technical-roadmap.md`), and `speckit-prd` adds the reciprocal
   roadmap → home-note link, making the two top-level docs mutually linked. (FR-006.)
-- **Generator home-note discovery mechanism** (default; lock in `/speckit-plan`): the
-  extended `main()` discovers the home note by filename glob
-  `docs/ai/specs/*-roadmap-MOC.md`, gated on the same frontmatter version contract used for
-  the spec-MOC path. Affects the L4 fixture shape.
-- **coach teaching location** (default; resolve in `/speckit-tasks`): the two-zone guidance
-  lives in a `references/` section (a dedicated two-zone guide or a section in an existing
-  coach reference), not inline in `SKILL.md`, to keep the skill body lean.
-- **No-phases fallback shape** (default; resolve in `/speckit-plan`): a flat catalog yields
-  a single "Specs" epic with an advisory note to group the specs. (FR-004.)
+- **Generator home-note discovery mechanism** (resolved; confirmed against the generator +
+  lib): the extended `main()` discovers the home note by filename glob
+  `docs/ai/specs/*-roadmap-MOC.md` (0..N matches), gated via `moc_is_gated` (the
+  `structureVersion` bare-int gate — one mechanism, not a separate field), disjoint from the
+  repo-root `specs/` scan. `render_index` is **context-scoped**: the home-note INDEX is
+  repo-wide over all gated specs (PRSG-004 assumes a single roadmap; per-roadmap scoping for
+  coexisting roadmaps is deferred to PRSG-011), while every spec-MOC INDEX stays empty. The
+  L4 fixture MUST assert BOTH halves (home-note INDEX fills with repo-wide rows; every
+  spec-MOC INDEX stays byte-identical/empty) and that the emitted home note carries only the
+  INDEX sentinel pair.
+- **coach teaching location** (resolved): the two-zone + cap-epics teaching lives in a
+  **new dedicated reference file** `speckit-pro/skills/speckit-coach/references/roadmap-moc-guide.md`,
+  NOT inline in `SKILL.md` (keeps the body lean) and NOT appended to an existing reference
+  (`command-guide.md` covers only official `/speckit-*` commands; `slicing-heuristics.md` is
+  slice-sizing — a different concern, but the precedent for a focused single-topic reference).
+  The Codex `speckit-coach` mirror has no own `references/` and links to the shared tree
+  (`../../skills/speckit-coach/references/…`), so the file is authored once and Codex parity
+  (FR-020) needs no duplicate doc. Discoverability: add a minimal keyword cluster
+  ("roadmap map / home note / Map of Content / navigation") to the `description:` of BOTH
+  coach `SKILL.md` files (each in its own voice), plus one routing-table row and one
+  References-list entry per mirror. A **new Layer-2 trigger case** is added to both
+  `evals/speckit-coach-trigger.json` and `codex-evals/speckit-coach-trigger.json` to verify
+  the description surface triggers on roadmap-MOC home-note queries.
+- **No-phases fallback shape** (resolved): a flat catalog yields a single "Specs" epic with
+  an advisory note to group the specs — prd-emission prose only; the generator never touches
+  the curated zone. (FR-004.)
 - **Codex parity is a constraint, not an open question**: the home-note emission is
   post-interview file writing (runtime-agnostic), so both `speckit-prd` mirrors get the
   identical emit step even though the Codex interview uses a free-text Q&A loop; the

@@ -33,8 +33,8 @@ revision note says otherwise.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 22 FRs, 3 US, 13 acceptance scenarios, 8 SC + L4 deviation; 0 markers. G1 pass. |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Design converged; only the recorded Open Questions need clarifying |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | 2 sessions, all Open Questions CONFIRM defaults (evidence-based), 0 consensus items. G2 pass. |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Domains: documentation-quality, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -197,8 +197,8 @@ Keep to ≤5 questions per session.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Generator + emission | 3 | |
-| 2 | Coach teaching surface | 1 | |
+| 1 | Generator + emission | 3 | All CONFIRM. Load-bearing refinement: `render_index` is already invoked on every spec-MOC (present-empty INDEX) → activation MUST branch (repo-wide rows for the home note only; spec-MOC INDEX stays empty) or it breaks the PRSG-003 byte contract. Discovery = glob `docs/ai/specs/*-roadmap-MOC.md` (0..N), gated via `moc_is_gated` (=structureVersion), disjoint from the `specs/` scan. prd emits ONLY the INDEX sentinel pair (else inject-if-missing adds PRS+BACKLINKS). Encoded in FR-002/011/017/018 + Assumptions. |
+| 2 | Coach teaching surface | 2 | All CONFIRM. New dedicated file `speckit-coach/references/roadmap-moc-guide.md` (Codex mirror shares the CC tree → authored once). `description:` keyword cluster ("roadmap map / home note / Map of Content / navigation") added to BOTH coach SKILL.md, + routing row + References entry per mirror, + new L2 trigger case in both `evals/` and `codex-evals/`. Encoded in Assumptions. |
 
 ---
 
