@@ -32,8 +32,8 @@ revision note says otherwise.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Design converged; only the recorded Open Questions need clarifying |
+| Specify | `/speckit-specify` | ✅ Complete | 22 FRs, 3 US, 13 acceptance scenarios, 8 SC + L4 deviation; 0 markers. G1 pass. |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Design converged; only the recorded Open Questions need clarifying |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Domains: documentation-quality, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -70,7 +70,7 @@ Verify alignment with `.specify/memory/constitution.md` before G1:
 | VI. KISS / YAGNI | Extend the generator (don't refactor into a new lib); advisory cap (don't build a blocker) | Code review against design concept Non-goals |
 | I. Plugin Structure | Codex mirrors for `speckit-prd` + `speckit-coach` stay in parity | `validate-codex-skills.sh` (L1) + L8 |
 
-**Constitution Check:** ⏳ (mark before G1)
+**Constitution Check:** ✅ (initial, pre-G1) — PROJECT_COMMANDS are N/A for this bash/markdown plugin repo, so the constitution gate maps to the bash test suite: baseline `bash tests/speckit-pro/run-all.sh` green (L1 861/861, L4 851/851, L5 190/190) before any phase work; restored a stale scaffold-installed reviewability preset (commit 6d733aa) to get there. Script Safety / Test-Coverage / KISS / Codex-parity principles re-verified at G7.
 
 ---
 
