@@ -445,6 +445,19 @@ Focus on:
 
 **Reviewability diff gate — BLOCK overridden (file-count artifact, same as the tasks-gate):** `reviewability-gate.sh diff origin/main...HEAD` returned `block`, but the real review-burden metric `reviewable_loc` = **0** (well under the 800 block) and `production_files` = 0 (under 8). Even counting every `speckit-pro/` insertion pessimistically, the production diff is **403 insertions across 7 files** (< 800). The block is driven solely by `total_files: 36` (8 new L4 test fixtures + ~10 SDD spec/process artifacts + 4 eval files — none are production review burden) and `primary_surfaces: 5` (path-pattern mis-classification). The production review surface is ~110 LOC of bash generator logic + skill/reference prose — a reviewable single PR. Consistent with the spec's documented single-spec split decision and the plan-phase estimator (pass). Override recorded.
 
+**Post-impl quality gates:** verify-tasks → 0 phantoms (all `[X]` tasks backed by real artifacts); verify → PASS (24/24 FR coverage, SC satisfiable, constitution PASS); doctor → 7 PASS / 0 WARN / 0 FAIL; code-review → no CRITICAL/HIGH/MEDIUM, empirically verified byte-identical to the contract. One LOW code-review finding was fixed (a symlinked home note now fails safe with exit 2 instead of being silently skipped — commit ab16810).
+
+### Self-Review (mandatory 4-question audit)
+
+1. **Does the implementation satisfy the spec?** Yes. All 24 FRs (22 + FR-015a + FR-017a) and SC-001…SC-008 are backed and verified: `render_index` activated as a context-scoped branch; `speckit-prd` emits the home note (3-file Output Contract, verified end-to-end); `speckit-coach` teaches the two-zone split via a new reference doc + description surface; Codex parity maintained for both skills; generator stays a single shared copy (FR-021).
+2. **Shortcuts / gaps?** None that compromise the deliverable. L2/L3/L8 eval CASES are added to both runtimes but their `claude -p` RUNS are developer-local (not executed in this autonomous run) — consistent with the spec's own test-coverage note (L1/L4 are merge-blocking; L2/L3 dev-local). One pre-existing, out-of-scope nit noted: the Codex `speckit-coach` mirror lacks `license: MIT` (not introduced here).
+3. **Tested?** Yes. New Layer-4 determinism fixture (written RED, then GREEN), a Layer-1 sentinel-seam assertion, and the PRSG-003 byte-identical regression guard (unchanged). Full suite 1934/1934. Code review verified the byte-level output, idempotence, and every edge case empirically.
+4. **Risks / what a reviewer should scrutinize:**
+   - **Sentinel seam** (prd template ↔ generator `INDEX_START`/`INDEX_END`): a future drift would silently stop the INDEX from filling — guarded by the L4 fixture + the new L1 assertion.
+   - **Consumer repo-root** (research risk #2): `speckit-prd` MUST invoke the generator with the consumer repo root passed positionally (the default `PLUGIN_ROOT/..` is wrong in a consumer install) — documented in the prd emit prose.
+   - **Lexicographic INDEX ordering** (LOW, pre-existing): relies on the uniformly zero-padded 3-digit PRSG id convention; `render_prs` shares the same un-padded normalize key. Works for the convention; flagged for transparency.
+   - **Scope boundaries**: the repo-wide INDEX assumes a single roadmap (per-roadmap scoping for coexisting roadmaps → PRSG-011); new-roadmaps-only, no backfill (this repo's own roadmap gets its home note from PRSG-011, not here).
+
 ---
 
 ## Project Structure Reference
