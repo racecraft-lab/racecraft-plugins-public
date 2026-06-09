@@ -32,7 +32,7 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | 15 FRs, 2 US (P1), 9 acceptance scenarios, 7 SCs; 0 [NEEDS CLARIFICATION]. Branch-aware (no new branch/dir). |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Open Questions: branch-by-abstraction trigger, JSON schema, roadmap gap-closure |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Recommended domains: error-handling, api-contracts (the JSON output contract) |
@@ -163,7 +163,7 @@ downstream layer-planner and emission specs to read.
 
 ### Files Generated
 
-- [ ] `specs/prsg-007-atomicity-router/spec.md`
+- [x] `specs/prsg-007-atomicity-router/spec.md` (301 lines; + `checklists/requirements.md`, 16/16 quality items pass)
 
 ---
 
