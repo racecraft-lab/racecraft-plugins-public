@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T03:00:43Z",
-  "active_step": "Phase 7: US3 Skill Guidance (T022-T027)",
+  "updated_at": "2026-06-09T03:06:50Z",
+  "active_step": "Phase 7: Polish and Verification (T028-T034)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -179,11 +179,11 @@
     },
     {
       "step": "Phase 7: US3 Skill Guidance (T022-T027)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Polish and Verification (T028-T034)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",

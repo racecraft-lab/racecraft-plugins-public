@@ -29,6 +29,44 @@ the design-concept doc and workflow file land under `docs/ai/specs/.process/`, a
 the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
 deleted — every relocated file still exists and is readable at its `.process/` path.
 
+## Tier-2 Legacy PROCESS Relocation Suggestions
+
+Scaffold may encounter thawed legacy specs that predate the `.process/`
+layout. It must only give static operator guidance; it must not run the
+relocation codemod.
+
+When inspecting an existing target or nearby legacy candidate, suggest Tier-2
+relocation only when all of these are true:
+
+- The candidate is in scope: a current namespace whose first dash-delimited
+  segment is `prsg` or `spec`, or a legacy numeric/spec candidate that joins to
+  the roadmap spine. Suppress candidates whose first segment is all-alpha and
+  not `prsg`/`spec` with reason `non_speckit_namespace`, and suppress
+  date-first legacy names matching `YYYY`, `YYYY-MM`, or `YYYY-MM-DD` prefixes
+  with reason `date_named_legacy_namespace`.
+- The candidate is thawed: `.specify/feature.json` does not name it by exact
+  path or spec ID match. If it is named there, report `frozen/in-flight` and do
+  not suggest relocation. If active-feature state is invalid, report that state
+  and do not suggest relocation.
+- The candidate is legacy and not already current: its `SPEC-MOC.md` does not
+  already carry `structureVersion: 1`, and PROCESS artifacts are not already
+  normalized under `.process/`.
+- A root PROCESS allow-list artifact or matching docs-side scaffold artifact is
+  present. If none exists, report that no Tier-2 action is needed.
+
+For the one eligible thawed candidate, print these exact commands with the real
+`specs/<spec-dir>` value substituted:
+
+```text
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+```
+
+Frame `--apply` as a follow-up only after the operator reviews clean dry-run
+output and has a clean worktree. Never invoke
+`relocate-process-artifacts.sh --dry-run` or
+`relocate-process-artifacts.sh --apply` from `$speckit-scaffold-spec`.
+
 > **Codex implicit-trigger note (eval harness vs production):** Layer 2 trigger evals score this skill at 69% (11/16) on the Codex selector — but POS is a perfect 8/8 (every "scaffold SPEC-009" / "create a new spec branch" / "prep SPEC-022 for autopilot" query fires correctly). All 5 NEG misses are false-positives in single-skill staging where the harness loads only this skill, so the Codex selector has no alternative to route adjacent SDD queries to ("roadmap status" / "what's the progress on SPEC-009" → should go to `$speckit-status`, "run the fully populated workflow" → `$speckit-autopilot`, "resolve PR review comments" → `$speckit-resolve-pr`). In production all six speckit-pro skills are loaded together and Codex routes those queries to their proper destinations. The eval results under-report real-world accuracy; positive-trigger reliability is the operationally-relevant number. (This skill was renamed from `speckit-setup` in v1.12; the rename did not regress trigger behavior — same POS pass rate as before.)
 
 ## Input

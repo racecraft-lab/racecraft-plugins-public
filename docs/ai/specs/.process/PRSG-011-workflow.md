@@ -491,7 +491,7 @@ For each deterministic script behavior:
 |-------|-------|-----------|-------|
 | Foundation | T001-T003 | Complete | RED scaffold tests created; reviewability gate still `exception/pass` under upgrade exception |
 | Tier-1/Tier-0 | T001-T013 | Complete | `migrate-structure.sh` implemented with marker-gated generator delegation; `test-migrate-structure.sh` 69/69 passed and `test-generate-spec-index.sh` 76/76 passed |
-| Tier-2/register | T014-T021 | Suggestion fixtures complete | `relocate-process-artifacts.sh` implemented; `test-relocate-process-artifacts.sh` 104/104 passed; Layer 3 Claude/Codex scaffold and autopilot fixtures cover Tier-2 suggestions/suppression; skill wording remains pending |
+| Tier-2/register | T014-T027 | Complete | `relocate-process-artifacts.sh` implemented; `test-relocate-process-artifacts.sh` 104/104 passed; Layer 3 Claude/Codex scaffold and autopilot fixtures cover Tier-2 suggestions/suppression; Claude and Codex guidance now expose exact FR-026 commands, skip/no-op reasons, and no-auto-run guarantees |
 | Polish | Pending | Pending | |
 
 ---

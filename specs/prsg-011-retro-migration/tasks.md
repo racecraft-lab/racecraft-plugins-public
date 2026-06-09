@@ -92,12 +92,12 @@ Reviewability-Exception: upgrade
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Add static Tier-2 relocation suggestion wording, skip/no-op cases, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
-- [ ] T023 [US3] Mirror static Tier-2 relocation suggestion wording, skip/no-op cases, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
-- [ ] T024 [US3] Add static Tier-2 relocation suggestion behavior, frozen/in-flight and out-of-scope suppression, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/skills/speckit-autopilot/SKILL.md`
-- [ ] T025 [US3] Mirror static Tier-2 relocation suggestion behavior, frozen/in-flight and out-of-scope suppression, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
-- [ ] T026 [US3] Update autopilot phase execution guidance for static Tier-2 suggestions and no automatic relocation in `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
-- [ ] T027 [US3] Mirror autopilot phase execution guidance for static Tier-2 suggestions and no automatic relocation in `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
+- [x] T022 [US3] Add static Tier-2 relocation suggestion wording, skip/no-op cases, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
+- [x] T023 [US3] Mirror static Tier-2 relocation suggestion wording, skip/no-op cases, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+- [x] T024 [US3] Add static Tier-2 relocation suggestion behavior, frozen/in-flight and out-of-scope suppression, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/skills/speckit-autopilot/SKILL.md`
+- [x] T025 [US3] Mirror static Tier-2 relocation suggestion behavior, frozen/in-flight and out-of-scope suppression, exact FR-026 commands, and no-auto-run guarantee in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
+- [x] T026 [US3] Update autopilot phase execution guidance for static Tier-2 suggestions and no automatic relocation in `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
+- [x] T027 [US3] Mirror autopilot phase execution guidance for static Tier-2 suggestions and no automatic relocation in `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
 
 **Checkpoint**: User Story 3 is complete when Layer 3 fixtures prove the suggestion-only behavior and Claude Code/Codex skill wording remains behavior-equivalent.
 

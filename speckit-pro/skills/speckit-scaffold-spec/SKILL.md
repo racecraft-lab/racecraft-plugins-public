@@ -33,6 +33,44 @@ the design-concept doc and workflow file land under `docs/ai/specs/.process/`, a
 the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
 deleted — every relocated file still exists and is readable at its `.process/` path.
 
+## Tier-2 Legacy PROCESS Relocation Suggestions
+
+Scaffold may encounter thawed legacy specs that predate the `.process/`
+layout. It must only give static operator guidance; it must not run the
+relocation codemod.
+
+When inspecting an existing target or nearby legacy candidate, suggest Tier-2
+relocation only when all of these are true:
+
+- The candidate is in scope: a current namespace whose first dash-delimited
+  segment is `prsg` or `spec`, or a legacy numeric/spec candidate that joins to
+  the roadmap spine. Suppress candidates whose first segment is all-alpha and
+  not `prsg`/`spec` with reason `non_speckit_namespace`, and suppress
+  date-first legacy names matching `YYYY`, `YYYY-MM`, or `YYYY-MM-DD` prefixes
+  with reason `date_named_legacy_namespace`.
+- The candidate is thawed: `.specify/feature.json` does not name it by exact
+  path or spec ID match. If it is named there, report `frozen/in-flight` and do
+  not suggest relocation. If active-feature state is invalid, report that state
+  and do not suggest relocation.
+- The candidate is legacy and not already current: its `SPEC-MOC.md` does not
+  already carry `structureVersion: 1`, and PROCESS artifacts are not already
+  normalized under `.process/`.
+- A root PROCESS allow-list artifact or matching docs-side scaffold artifact is
+  present. If none exists, report that no Tier-2 action is needed.
+
+For the one eligible thawed candidate, print these exact commands with the real
+`specs/<spec-dir>` value substituted:
+
+```text
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+```
+
+Frame `--apply` as a follow-up only after the operator reviews clean dry-run
+output and has a clean worktree. Never invoke
+`relocate-process-artifacts.sh --dry-run` or
+`relocate-process-artifacts.sh --apply` from scaffold.
+
 ## Invocation
 
 ```text
