@@ -114,5 +114,12 @@ Additional coverage for this spec:
 - Layer 3 fixtures for scaffold/autopilot suggestion behavior, including no
   suggestions for out-of-scope namespaces, plus `speckit-upgrade` repository
   migration guidance.
-- Layer 8 parity checks for mirrored Codex skill prose covering the exact command
-  sequences and no-auto-run guarantees.
+- Layer 8 parity checks for mirrored Claude Code/Codex skill prose covering the
+  exact command sequences and no-auto-run guarantees.
+
+Verified implementation results:
+
+- `bash tests/speckit-pro/run-all.sh --layer 1` -> 887/887 passed.
+- `bash tests/speckit-pro/run-all.sh --layer 4` -> 881/881 passed.
+- `bash tests/speckit-pro/run-all.sh` -> 1958/1958 passed.
+- `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` -> 6 passed, 0 failed, 0 skipped.

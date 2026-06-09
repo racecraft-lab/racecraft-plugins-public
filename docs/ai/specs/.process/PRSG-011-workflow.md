@@ -492,20 +492,75 @@ For each deterministic script behavior:
 | Foundation | T001-T003 | Complete | RED scaffold tests created; reviewability gate still `exception/pass` under upgrade exception |
 | Tier-1/Tier-0 | T001-T013 | Complete | `migrate-structure.sh` implemented with marker-gated generator delegation; `test-migrate-structure.sh` 69/69 passed and `test-generate-spec-index.sh` 76/76 passed |
 | Tier-2/register | T014-T027 | Complete | `relocate-process-artifacts.sh` implemented; `test-relocate-process-artifacts.sh` 104/104 passed; Layer 3 Claude/Codex scaffold and autopilot fixtures cover Tier-2 suggestions/suppression; Claude and Codex guidance now expose exact FR-026 commands, skip/no-op reasons, and no-auto-run guarantees |
-| Polish | Pending | Pending | |
+| Polish | T028-T034 | Complete | Layer 8 fixture added and auto-discovered; Layer 1, Layer 4, default suite, affected Layer 3 helpers, and Layer 8 dry-run recorded |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 1`
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 4`
-- [ ] `bash tests/speckit-pro/run-all.sh`
-- [ ] Affected Layer 3 functional evals recorded
-- [ ] Layer 8 parity run recorded for mirrored Codex skill changes
-- [ ] `migrate-structure.sh --dry-run` fixture proves no mutation
-- [ ] `relocate-process-artifacts.sh` fixture proves allow-list, backup, idempotency, and CONTRACT protection
-- [ ] PR body documents review order, scope budget, traceability, verification, known gaps, and rollback
+- [x] `bash tests/speckit-pro/run-all.sh --layer 1`
+- [x] `bash tests/speckit-pro/run-all.sh --layer 4`
+- [x] `bash tests/speckit-pro/run-all.sh`
+- [x] Affected Layer 3 functional evals recorded
+- [x] Layer 8 parity run recorded for mirrored Codex skill changes
+- [x] `migrate-structure.sh --dry-run` fixture proves no mutation
+- [x] `relocate-process-artifacts.sh` fixture proves allow-list, backup, idempotency, and CONTRACT protection
+- [x] PR body documents review order, scope budget, traceability, verification, known gaps, and rollback
+
+---
+
+## Verification Evidence
+
+| Command | Result | Notes |
+|---------|--------|-------|
+| `bash tests/speckit-pro/run-all.sh --layer 1` | 887/887 passed | Includes plugin payload, `.process` gitattributes, MOC lint, Codex structural, and Codex parity checks |
+| `bash tests/speckit-pro/run-all.sh --layer 4` | 881/881 passed | Includes reviewability gate, migration/index helpers, Layer 8 extractor/judge helpers, and script unit tests |
+| `bash tests/speckit-pro/run-all.sh` | 1958/1958 passed | Default deterministic suite: Layer 1, Layer 4, and Layer 5 |
+| `bash tests/speckit-pro/layer3-functional/run-functional-evals.sh speckit-scaffold-spec` | 1 eval discovered | Claude scaffold Tier-2 suggestion fixture |
+| `bash tests/speckit-pro/layer3-functional/run-functional-evals.sh speckit-autopilot` | 23 evals discovered | Claude autopilot Tier-2 suggestion fixture included |
+| `bash tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh speckit-scaffold-spec` | 8 evals discovered | Codex scaffold Tier-2 suggestion fixture included |
+| `bash tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh speckit-autopilot` | 29 evals discovered | Codex autopilot Tier-2 suggestion fixture included |
+| `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` | 6 passed, 0 failed, 0 skipped | Fixture 02 auto-discovered; live Layer 8 not run because it is opt-in and token-costly |
+
+## PR Review Packet Draft
+
+**Review order**:
+1. `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
+2. `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
+3. `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
+4. Claude and Codex skill guidance plus dist payload mirrors
+5. Layer 4, Layer 3, and Layer 8 fixtures
+6. Spec/quickstart/workflow evidence updates
+
+**Scope budget**: Reviewability warning accepted. Primary surface remains
+schema/migration; secondary surfaces are docs/process and harness/adapter. The
+work stayed within the ratified one-spec migration scope and preserved the two
+internal increments: Tier-1/Tier-0 first, then Tier-2/register.
+
+**Traceability**:
+- FR-001 through FR-009, FR-023, FR-024, FR-028, FR-030, FR-031, FR-032:
+  repository migration script, marker-gated generator, upgrade guidance, and
+  Layer 4 migration/index fixtures.
+- FR-010 through FR-018, FR-025, FR-027: Tier-2 relocation script and Layer 4
+  relocation fixtures for allow-list, CONTRACT protection, dual anchors,
+  evidence normalization, backups, idempotency, frozen/in-flight, and
+  out-of-scope skips.
+- FR-019, FR-020, FR-026, FR-029: Layer 3 suggestion fixtures, scaffold/autopilot
+  guidance mirrors, phase-execution references, dist payload rebuild, and Layer 8
+  parity fixture 02.
+- SC-001 through SC-008: covered by the verification evidence table above.
+
+**Known gaps**:
+- Layer 8 live mode was not run; only dry-run fixture structure and JSON were
+  validated. Live mode is explicitly opt-in because it invokes `claude -p` twice
+  per fixture and consumes LLM budget.
+- No browser UAT applies; PRSG-011 is shell tooling and skill documentation.
+
+**Rollback**:
+- Plugin changes can be reverted by reverting the PR commits.
+- Operator migration commands are explicit and not auto-run by scaffold/autopilot.
+- If a maintainer uses an apply command in a downstream project, the JSON report
+  names the forced backup path and restore hint for file-state recovery.
 
 ---
 

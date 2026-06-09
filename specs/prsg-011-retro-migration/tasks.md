@@ -107,13 +107,13 @@ Reviewability-Exception: upgrade
 
 **Purpose**: Prove default suites, affected functional fixtures, parity, and operator docs before implementation is marked complete.
 
-- [ ] T028 Add PRSG-011 Layer 8 parity fixture for mirrored repository migration guidance and Tier-2 suggestion guarantees under `tests/speckit-pro/layer8-parity/02-prsg-011-migration-guidance/`
-- [ ] T029 Register the PRSG-011 Layer 8 parity fixture in `tests/speckit-pro/layer8-parity/run-parity-fixtures.sh` if the runner does not auto-discover the new fixture directory
-- [ ] T030 Run Layer 1 structural validation, including `.process` `.gitattributes` structural guards, with `bash tests/speckit-pro/run-all.sh --layer 1` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
-- [ ] T031 Run Layer 4 script validation, including reviewability-gate `.process` exclusion regression coverage, with `bash tests/speckit-pro/run-all.sh --layer 4` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
-- [ ] T032 Run the default suite with `bash tests/speckit-pro/run-all.sh` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
-- [ ] T033 Update operator quickstart examples and final verification notes in `specs/prsg-011-retro-migration/quickstart.md`
-- [ ] T034 Prepare the PR review packet content with review order, scope budget, traceability, verification evidence, known gaps, and rollback notes in `docs/ai/specs/.process/PRSG-011-workflow.md`
+- [x] T028 Add PRSG-011 Layer 8 parity fixture for mirrored repository migration guidance and Tier-2 suggestion guarantees under `tests/speckit-pro/layer8-parity/02-prsg-011-migration-guidance/`
+- [x] T029 Register the PRSG-011 Layer 8 parity fixture in `tests/speckit-pro/layer8-parity/run-parity-fixtures.sh` if the runner does not auto-discover the new fixture directory
+- [x] T030 Run Layer 1 structural validation, including `.process` `.gitattributes` structural guards, with `bash tests/speckit-pro/run-all.sh --layer 1` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
+- [x] T031 Run Layer 4 script validation, including reviewability-gate `.process` exclusion regression coverage, with `bash tests/speckit-pro/run-all.sh --layer 4` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
+- [x] T032 Run the default suite with `bash tests/speckit-pro/run-all.sh` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
+- [x] T033 Update operator quickstart examples and final verification notes in `specs/prsg-011-retro-migration/quickstart.md`
+- [x] T034 Prepare the PR review packet content with review order, scope budget, traceability, verification evidence, known gaps, and rollback notes in `docs/ai/specs/.process/PRSG-011-workflow.md`
 
 ---
 
