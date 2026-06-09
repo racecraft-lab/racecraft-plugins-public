@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.9.0...speckit-pro-v2.10.0) (2026-06-09)
+
+
+### Features
+
+* **speckit-pro:** add a read-only router that recommends how to split a change for review ([#133](https://github.com/racecraft-lab/racecraft-plugins-public/issues/133)) ([c918f22](https://github.com/racecraft-lab/racecraft-plugins-public/commit/c918f229aa8205b2b9d19ae1fbdd7af18a42c4d6))
+
 ## [2.9.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.8.1...speckit-pro-v2.9.0) (2026-06-08)
 
 
