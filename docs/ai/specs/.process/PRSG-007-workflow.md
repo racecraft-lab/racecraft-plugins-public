@@ -70,7 +70,7 @@ Each phase requires **human review and approval** before proceeding:
 | IV. Test Coverage | New script has a Layer-4 unit test; L1 passes | `bash tests/speckit-pro/run-all.sh --layer 4` / `--layer 1` |
 | VI. KISS / YAGNI | Simplest approach; duplicate a small matcher rather than abstract; no probe over-build | Code review + ~400 LOC budget |
 
-**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+**Constitution Check:** ✅ (G0 — 2026-06-08) — baseline `bash tests/speckit-pro/run-all.sh` green: **1958/1958** (L1 459+428, L4 881, L5 190). Script-safety / test-coverage gates re-checked at implement time against the new `atomicity-route.sh`. PROJECT_COMMANDS for this repo = `bash tests/speckit-pro/run-all.sh --layer 1` / `--layer 4` (detect-commands returns N/A — no Node/Rust/Go stack).
 
 ---
 
