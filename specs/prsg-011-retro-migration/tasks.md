@@ -85,10 +85,10 @@ Reviewability-Exception: upgrade
 
 ### Tests for User Story 3
 
-- [ ] T018 [P] [US3] Add Claude scaffold Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json`
-- [ ] T019 [P] [US3] Add Claude autopilot Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json`
-- [ ] T020 [P] [US3] Add Codex scaffold Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json`
-- [ ] T021 [P] [US3] Add Codex autopilot Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`
+- [x] T018 [P] [US3] Add Claude scaffold Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/evals/speckit-scaffold-spec-evals.json`
+- [x] T019 [P] [US3] Add Claude autopilot Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json`
+- [x] T020 [P] [US3] Add Codex scaffold Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/codex-evals/speckit-scaffold-spec-evals.json`
+- [x] T021 [P] [US3] Add Codex autopilot Tier-2 suggestion fixture coverage in `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`
 
 ### Implementation for User Story 3
 
