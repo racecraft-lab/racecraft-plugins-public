@@ -197,8 +197,122 @@ signals=$(array_of "$output" "signals")
 assert_not_contains "$signals" "flag-system" "advisory hint must not appear in signals[]"
 
 # ---------------------------------------------------------------------------
-# US2 / cross-cutting / dogfood assertions are added by later tasks
-# (T018, T023, T024) against the semantic per-class fixtures.
+# US2 hard-atomic override + releasability assertions (T018, FR-007/FR-007a/
+# FR-008/FR-009/FR-011b; SC-003/SC-004; quickstart 3, 4, 5, 6). Authored to FAIL
+# against the US1-only spine: before T019-T022 the hard-atomic-* fixtures route by
+# US1 rules (modify-heavy/abstain → one-navigable-PR, or additive-multi-seam →
+# split-PR) and carry no hard-atomic:*/releasability:* token, so every
+# `single-atomic-PR` / token / releasable:false assertion below is a real VALUE
+# mismatch, not a parse/file-not-found error.
+#
+# The two CI-green warning strings MUST be byte-identical to data-model.md Entity 3
+# (including the "≠" character). Membership is checked against the `signals`/
+# `warnings` arrays SPECIFICALLY via array_of (defined in the US1 section).
+# ---------------------------------------------------------------------------
+
+WARN_DESTRUCTIVE="destructive migration: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)"
+WARN_CONCURRENCY="concurrency-sensitive change: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)"
+
+section "US2: hard-atomic override → single-atomic-PR over seams (FR-007, SC-003; quickstart 3)"
+
+# Each hard-atomic-* fixture carries APPARENT seams; the override MUST win → single-atomic-PR
+# AND emit exactly its matching hard-atomic:* token in signals[].
+
+# hard-atomic-rename is authored as a PROVEN additive multi-seam change (CREATE TABLE
+# on a schema/migration surface + a UI panel, zero modify keywords) so US1 ALONE
+# would route it split-PR. The override must therefore beat an ACTIVE split signal —
+# this is the SC-003 "even when seams are present" property and the precedence guard
+# from the design notes (the US1 split branch must NOT re-set the route after the
+# override). The suppression assertion below fails if the dispatch is ever refactored
+# from the if/elif chain into a separate preceding if-block.
+set_test "hard-atomic-rename routes single-atomic-PR (override beats an ACTIVE split signal, SC-003)"
+output=$("$SCRIPT" "$FIXTURE_ROOT/hard-atomic-rename")
+assert_json_field "$output" "route" "single-atomic-PR" "exported-symbol rename → single-atomic-PR over split"
+
+set_test "hard-atomic-rename emits hard-atomic:exported-symbol-rename in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'hard-atomic:exported-symbol-rename'" "rename token in signals[]"
+
+set_test "hard-atomic-rename SUPPRESSES the split branch (no change-shape:additive-multi-seam, FR-007/SC-003)"
+assert_not_contains "$signals" "change-shape:additive-multi-seam" "override must suppress, not co-exist with, the split signal"
+
+set_test "hard-atomic-version-pin routes single-atomic-PR (override beats seams)"
+output=$("$SCRIPT" "$FIXTURE_ROOT/hard-atomic-version-pin")
+assert_json_field "$output" "route" "single-atomic-PR" "global version pin → single-atomic-PR"
+
+set_test "hard-atomic-version-pin emits hard-atomic:global-version-pin in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'hard-atomic:global-version-pin'" "version-pin token in signals[]"
+
+set_test "hard-atomic-mutual-exclusion routes single-atomic-PR (override beats seams)"
+output=$("$SCRIPT" "$FIXTURE_ROOT/hard-atomic-mutual-exclusion")
+assert_json_field "$output" "route" "single-atomic-PR" "mutual-exclusion primitive → single-atomic-PR"
+
+set_test "hard-atomic-mutual-exclusion emits hard-atomic:mutual-exclusion-primitive in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'hard-atomic:mutual-exclusion-primitive'" "mutual-exclusion token in signals[]"
+
+set_test "hard-atomic-out-of-tree-contract routes single-atomic-PR (override beats seams)"
+output=$("$SCRIPT" "$FIXTURE_ROOT/hard-atomic-out-of-tree-contract")
+assert_json_field "$output" "route" "single-atomic-PR" "out-of-tree contract break → single-atomic-PR"
+
+set_test "hard-atomic-out-of-tree-contract emits hard-atomic:out-of-tree-contract-break in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'hard-atomic:out-of-tree-contract-break'" "out-of-tree token in signals[]"
+
+set_test "hard-atomic-destructive-migration routes single-atomic-PR (override beats seams)"
+output=$("$SCRIPT" "$FIXTURE_ROOT/hard-atomic-destructive-migration")
+assert_json_field "$output" "route" "single-atomic-PR" "destructive migration → single-atomic-PR"
+
+set_test "hard-atomic-destructive-migration emits hard-atomic:destructive-migration in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'hard-atomic:destructive-migration'" "destructive-migration hard-atomic token in signals[]"
+
+section "US2: releasability is orthogonal to route (FR-008, FR-009, SC-004; quickstart 4, 5, 6)"
+
+# Destructive migration: single-atomic-PR AND releasable:false with the exact CI-green sentence.
+set_test "destructive-migration is releasable:false"
+output=$("$SCRIPT" "$FIXTURE_ROOT/hard-atomic-destructive-migration")
+assert_json_field "$output" "releasable" "False" "destructive migration is not releasable"
+
+set_test "destructive-migration emits releasability:destructive-migration in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'releasability:destructive-migration'" "destructive-migration releasability token in signals[]"
+
+set_test "destructive-migration carries the destructive-migration CI-green sentence in warnings[]"
+warnings=$(array_of "$output" "warnings")
+assert_contains "$warnings" "$WARN_DESTRUCTIVE" "exact destructive-migration warning string in warnings[]"
+
+# Concurrency: releasable:false with the exact CI-green sentence (route per other detectors).
+set_test "concurrency is releasable:false"
+output=$("$SCRIPT" "$FIXTURE_ROOT/concurrency")
+assert_json_field "$output" "releasable" "False" "concurrency change is not releasable"
+
+set_test "concurrency emits releasability:concurrency in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'releasability:concurrency'" "concurrency releasability token in signals[]"
+
+set_test "concurrency carries the concurrency CI-green sentence in warnings[]"
+warnings=$(array_of "$output" "warnings")
+assert_contains "$warnings" "$WARN_CONCURRENCY" "exact concurrency warning string in warnings[]"
+
+set_test "concurrency never routes branch-by-abstraction (reserved, SC-008)"
+route=$(field_of "$output" "route")
+assert_not_contains "$route" "branch-by-abstraction" "reserved enum is never emitted"
+
+# A hard-atomic fixture with NO releasability risk: releasable:true, empty warnings (FR-009).
+set_test "hard-atomic-rename is releasable with no CI-green warning (FR-009)"
+output=$("$SCRIPT" "$FIXTURE_ROOT/hard-atomic-rename")
+assert_json_field "$output" "releasable" "True" "rename carries no releasability risk"
+assert_json_field "$output" "warnings" "[]" "rename has no CI-green warning"
+
+set_test "hard-atomic-rename emits no releasability:* token in signals[] (FR-009)"
+signals=$(array_of "$output" "signals")
+assert_not_contains "$signals" "releasability:" "no spurious releasability token on a non-risk change"
+
+# ---------------------------------------------------------------------------
+# Cross-cutting / dogfood assertions are added by later tasks (T023, T024)
+# against the error path and PRSG-007's own feature dir.
 # ---------------------------------------------------------------------------
 
 test_summary

@@ -260,6 +260,103 @@ fi
 
 # <<< DETECTOR INSERTION POINT (US2: hard-atomic keyword + path detectors) >>>
 
+# US2 hard-atomic detector flags (set here, read by the routing dispatch and the
+# releasability pass). HARD_ATOMIC is the OR of the five class detectors; the route
+# dispatch keys the override on it. Each class also pushes its own signals[] token.
+HARD_ATOMIC=false
+DM_PATH_VERB=false   # destructive-migration class (path + SQL verb) — also drives releasability
+CONCURRENCY=false    # concurrency releasability class (keyword, action-shaped)
+
+# --- Keyword corpus (FR-007a (b)): the keyword-based hard-atomic classes AND the
+# concurrency releasability class read tasks.md + plan.md ONLY — NEVER spec.md,
+# which may merely ENUMERATE the class names as vocabulary (this is the dogfood
+# firewall, FR-007a). The path-signalled classes (destructive-migration,
+# out-of-tree) read all three artifacts below, because their signal is a file
+# path / SQL verb, not a definitional keyword.
+kw_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} 2>/dev/null || true)
+
+# --- Detector A: keyword hard-atomic classes (T019, FR-007/FR-007a; D4/D5) ------
+# FR-007a HYGIENE: each pattern matches a described ACTION/INTENT with a CONCRETE
+# operand, NOT a bare class noun / topic mention. The discriminator is concreteness
+# — a real backtick identifier, a real version digit, or a concrete object after an
+# action verb — implemented as a POSITIVE requirement (not a blacklist of the "…"
+# placeholder glyph). PRSG-007's own artifacts phrase these as enumerated vocabulary
+# with "…" placeholders ("rename … to …", "introduce/add … lock/mutex", "bump … to
+# vN"), so they carry no concrete operand and never fire (dogfood, FR-007a). Short
+# stems (lock/mutex/acl/otp/kms/mfa) are word-boundary guarded so `lock` never fires
+# on "block"; the `[^.…/`]` operand span additionally forbids a "…"/"/"-separated
+# enumeration between the verb and the stem.
+#
+# exported-symbol rename: rename verb + a backtick identifier + "to"/arrow + a 2nd
+# backtick identifier (the concrete from→to operands).
+if printf '%s' "$kw_corpus" | grep -qiE '\brenam(e|ing)\b[^.`]{0,30}`[^`]+`[^.`]{0,40}(\bto\b|->|→)[^.`]{0,20}`[^`]+`'; then
+  HARD_ATOMIC=true
+  SIGNALS+=("hard-atomic:exported-symbol-rename")
+fi
+# global version pin: bump/pin/upgrade verb + a real version digit (v20, 1.2.3).
+if printf '%s' "$kw_corpus" | grep -qiE '\b(bump|pin|upgrade|upgrading|bumping|pinning)\b[^.]{0,40}\bv?[0-9]+(\.[0-9]+)*\b'; then
+  HARD_ATOMIC=true
+  SIGNALS+=("hard-atomic:global-version-pin")
+fi
+# mutual-exclusion / auth / payment primitive (ONE coarse class): an action verb +
+# a mutual-exclusion stem + a concrete object (no "…"/"/"-enumeration in between).
+if printf '%s' "$kw_corpus" | grep -qiE '\b(introduce|introducing|add|adding|acquire|wrap|enforce|implement|implementing)\b[^.…/`]{0,25}\b(distributed[ -])?(lock|mutex|auth|payment|acl|otp|kms|mfa|leader[ -]election|mutual[ -]exclusion)\b'; then
+  HARD_ATOMIC=true
+  SIGNALS+=("hard-atomic:mutual-exclusion-primitive")
+fi
+
+# --- Detector B: concurrency releasability class (T022 input, FR-007a/FR-008) ---
+# Governed by the SAME action-intent discipline as the keyword hard-atomic classes
+# (FR-007a(a)): an action verb + a concurrency-only stem + a concrete object. Read
+# from tasks.md + plan.md ONLY. The concurrency stems here are DISJOINT from the
+# mutual-exclusion stems above on everything but `mutex`, so a "fix a data race"
+# change flags concurrency-releasability WITHOUT being mis-read as a hard-atomic
+# mutual-exclusion primitive (and vice versa). This is a releasability signal, NOT a
+# route signal — the route is decided by the other detectors (data-model Entity 4).
+if printf '%s' "$kw_corpus" | grep -qiE '\b(fix|fixing|introduce|resolve|resolving|guard|prevent|eliminate)\b[^.…/`]{0,25}\b(deadlock|mutex|semaphore|data[ -]race|race[ -]condition|isolation[ -]level|CAS|compare[ -]and[ -]swap)\b'; then
+  CONCURRENCY=true
+fi
+
+# --- Detector C: path-signalled hard-atomic classes (T020, FR-007/FR-014; D5/D6) -
+# These read ALL THREE artifacts (their signal is a path / SQL verb, not a keyword).
+# Bucketing uses the DUPLICATED surface_for_path / is_excluded_generated matchers
+# (T007) so detection stays stack-agnostic and in sync with the gate's taxonomy.
+path_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} ${SPEC:+"$SPEC"} 2>/dev/null || true)
+
+# destructive-migration: a schema/migration DELIVERABLE path CO-LOCATED on the SAME
+# line with a real destructive SQL verb (DROP/DELETE/TRUNCATE). Co-location is the
+# discriminator: PRSG-007's artifacts mention migration paths AND (separately)
+# destructive verbs as vocabulary, but never both on one line, so the dogfood does
+# not fire. Each candidate path token is bucketed via surface_for_path (== schema/
+# migration) and screened by is_excluded_generated, keeping the taxonomy shared.
+while IFS= read -r line; do
+  printf '%s' "$line" | grep -qiE '\b(DROP|DELETE|TRUNCATE)\b' || continue
+  # any backtick path token on this line that buckets as schema/migration?
+  while IFS= read -r tok; do
+    [ -n "$tok" ] || continue
+    is_excluded_generated "$tok" && continue
+    if [ "$(surface_for_path "$tok")" = "schema/migration" ]; then
+      DM_PATH_VERB=true
+      break
+    fi
+  done < <(printf '%s\n' "$line" | grep -oE '`[^`]+`' | tr -d '`' | grep -E '/|\.[A-Za-z0-9]+$' || true)
+  [ "$DM_PATH_VERB" = true ] && break
+done < <(printf '%s\n' "$path_corpus")
+if [ "$DM_PATH_VERB" = true ]; then
+  HARD_ATOMIC=true
+  SIGNALS+=("hard-atomic:destructive-migration")
+fi
+
+# out-of-tree contract break: a REAL versioned public path (/api/v<DIGIT>) OR an
+# API-bucket deliverable path co-located with a break/remove action. The real digit
+# is the discriminator — PRSG-007 mentions "/api/vN" (literal N) and bare
+# webhook/MCP as vocabulary, none of which carry a real version digit, so the
+# dogfood does not fire. (We deliberately do NOT fire on bare webhook/MCP keywords.)
+if printf '%s' "$path_corpus" | grep -qiE '/api/v[0-9]+'; then
+  HARD_ATOMIC=true
+  SIGNALS+=("hard-atomic:out-of-tree-contract-break")
+fi
+
 # ---------------------------------------------------------------------------
 # Routing dispatch (precedence, FR-003 / FR-007): hard-atomic override beats the
 # additive split signal, which beats the abstain floor. Resolved from flags so a
@@ -268,16 +365,23 @@ fi
 # ---------------------------------------------------------------------------
 # <<< ROUTING DISPATCH INSERTION POINT (hard-atomic → additive-multi-seam → abstain) >>>
 
-# US1 routing dispatch (T013/T014, FR-004/FR-005/FR-006/FR-011b). Precedence,
-# resolved from the detector flags (US2's hard-atomic override, T021, slots ABOVE
-# this block):
-#   1. proven additive multi-seam (multi-seam AND additive-dominant) → split-PR
-#   2. modify-heavy non-hard-atomic                                  → one-navigable-PR
-#   3. abstain (no decisive signal)                                  → one-navigable-PR (default)
-# NEVER branch-by-abstraction (reserved, FR-001/SC-008). The split branch is
-# gated on additive-dominance so an uncertain or modify-heavy change can never
-# auto-split (FR-006, SC-005).
-if [ "$MULTI_SEAM" = true ] && [ "$ADDITIVE_DOMINANT" = true ]; then
+# Routing dispatch (T013/T014 US1 + T021 US2, FR-003/FR-004/FR-005/FR-006/FR-007/
+# FR-011b). ONE if/elif chain so precedence is structural, resolved from the
+# detector flags (a later detector cannot break precedence by reordering its own
+# execution). Precedence:
+#   1. ANY hard-atomic signature → single-atomic-PR  (OVERRIDES split, FR-007/SC-003)
+#   2. proven additive multi-seam (multi-seam AND additive-dominant) → split-PR
+#   3. modify-heavy non-hard-atomic                                  → one-navigable-PR
+#   4. abstain (no decisive signal)                                  → one-navigable-PR (default)
+# The hard-atomic branch is PREPENDED INTO this chain (not a separate preceding
+# if-block) so the US1 split branch cannot re-set the route after the override.
+# Each hard-atomic class already pushed its own hard-atomic:* token above; the
+# override sets only the route here. NEVER branch-by-abstraction (reserved,
+# FR-001/SC-008). The split branch is gated on additive-dominance so an uncertain
+# or modify-heavy change can never auto-split (FR-006, SC-005).
+if [ "$HARD_ATOMIC" = true ]; then
+  ROUTE="single-atomic-PR"
+elif [ "$MULTI_SEAM" = true ] && [ "$ADDITIVE_DOMINANT" = true ]; then
   ROUTE="split-PR"
   SIGNALS+=("change-shape:additive-multi-seam")
 elif [ "$MODIFY_HEAVY" = true ]; then
@@ -288,8 +392,24 @@ fi
 # token (FR-006) — set by the decision-state defaults at the top of the file.
 
 # ---------------------------------------------------------------------------
-# Releasability pass (T022, FR-008/FR-009) — computed INDEPENDENTLY of the route.
+# Releasability pass (T022, FR-008/FR-009) — computed INDEPENDENTLY of the route
+# (a change MAY be single-atomic-PR AND not releasable; a destructive migration is
+# both, data-model Entity 4). For each releasability-risk class: RELEASABLE=false,
+# push its releasability:* token, and append its CANONICAL CI-green warning. The two
+# warning strings are the verbatim constants defined at the top of the file
+# (data-model Entity 3, incl. the "≠" char) — never reconstructed here. Otherwise
+# RELEASABLE stays the default true with an empty warnings[] (FR-009).
 # <<< RELEASABILITY INSERTION POINT (destructive-migration / concurrency) >>>
+if [ "$DM_PATH_VERB" = true ]; then
+  RELEASABLE=false
+  SIGNALS+=("releasability:destructive-migration")
+  WARNINGS+=("$WARN_DESTRUCTIVE_MIGRATION")
+fi
+if [ "$CONCURRENCY" = true ]; then
+  RELEASABLE=false
+  SIGNALS+=("releasability:concurrency")
+  WARNINGS+=("$WARN_CONCURRENCY")
+fi
 # ---------------------------------------------------------------------------
 
 emit_success
