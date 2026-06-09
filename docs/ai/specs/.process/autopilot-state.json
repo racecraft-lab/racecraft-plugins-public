@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T02:48:00Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-09T03:12:00Z",
+  "active_step": "Phase 7: Setup and Reviewability (T001-T003)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -147,19 +147,19 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Setup and Reviewability (T001-T003)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Foundational Test Contracts (T004-T007)",

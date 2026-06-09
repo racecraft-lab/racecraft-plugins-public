@@ -33,9 +33,9 @@ Reviewability-Exception: upgrade
 **Purpose**: Complete deterministic RED coverage that blocks both implementation increments.
 
 - [ ] T004 Add RED dry-run no-mutation, dirty-tree apply block, active-feature invalid, and frozen/in-flight fixtures in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
-- [ ] T005 Add RED marker write, current no-op, idempotency, generated-index backfill, archive-memory target, out-of-scope namespace, and false-join fixtures in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
+- [ ] T005 Add RED marker write, current no-op, idempotency, generated-index backfill, one-row-per-file multi-ID/gappy legacy inputs, archive-memory target, out-of-scope namespace, live-project roadmap de-boilerplate, `.gitattributes`/reviewability-gate separation, and false-join fixtures in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
 - [ ] T006 Add RED PROCESS allow-list, CONTRACT protection, already-normalized no-op, missing MOC, and target collision fixtures in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
-- [ ] T007 Add RED evidence normalization, review-packet canonicalization, docs-side design/workflow relocation, dirty-tree apply block, frozen/in-flight, out-of-scope, and idempotency fixtures in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
+- [ ] T007 Add RED evidence normalization, review-packet canonicalization, docs-side design/workflow relocation including deterministic PRSG-001 deferred scaffold artifact cases, dirty-tree apply block, frozen/in-flight, out-of-scope, and idempotency fixtures in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
 
 **Checkpoint**: Layer 4 fixtures should fail for missing PRSG-011 implementation before user story work begins.
 
@@ -51,7 +51,7 @@ Reviewability-Exception: upgrade
 
 - [ ] T008 [US1] Implement `migrate-structure.sh` mode parsing, repo-root resolution, active-feature tri-state parsing, dirty-tree reporting, and compact JSON envelope in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
 - [ ] T009 [US1] Implement marker detection, no-op detection, forced backup planning/creation, marker write, failure status, and recovery fields in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
-- [ ] T010 [US1] Update marker-gated legacy roadmap-row discovery, durable target selection, out-of-scope namespace reporting, in-flight skip handling, and helper reuse in `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
+- [ ] T010 [US1] Update marker-gated legacy roadmap-row discovery, one-row-per-file handling for multi-ID/gappy legacy inputs, durable target selection, out-of-scope namespace reporting, in-flight skip handling, no `.gitattributes` parser changes to reviewability logic, and helper reuse in `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
 - [ ] T011 [US1] Wire `migrate-structure.sh` to delegate generated-zone updates through `generate-spec-index.sh` without maintaining a second INDEX renderer in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
 - [ ] T012 [US1] Add repository migration dry-run/apply guidance, backup/restore wording, and no Tier-2 auto-run guarantee in `speckit-pro/skills/speckit-upgrade/SKILL.md`
 - [ ] T013 [US1] Mirror repository migration guidance and no Tier-2 auto-run guarantee in `speckit-pro/codex-skills/speckit-upgrade/SKILL.md`
@@ -70,7 +70,7 @@ Reviewability-Exception: upgrade
 
 - [ ] T014 [US2] Implement `relocate-process-artifacts.sh` mode parsing, required `--spec`, repo/spec path resolution, active-feature handling, candidate eligibility, and compact JSON envelope in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
 - [ ] T015 [US2] Implement PROCESS allow-list discovery, CONTRACT protection, already-normalized no-op reporting, missing/non-regular MOC block, and deterministic move-set sorting in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
-- [ ] T016 [US2] Implement evidence normalization, review-packet canonicalization, collision detection, and dual PROCESS anchors for matching docs-side design/workflow files in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
+- [ ] T016 [US2] Implement evidence normalization, review-packet canonicalization, collision detection, and dual PROCESS anchors for matching docs-side design/workflow files including PRSG-001 deferred scaffold artifact cases in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
 - [ ] T017 [US2] Implement apply clean-tree block, forced backup, `git mv` moves, `SPEC-MOC.md` `structureVersion: 1` stamp, generator delegation, idempotent no-op, and post-backup recovery statuses in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
 
 **Checkpoint**: User Story 2 is complete when relocation fixtures pass and the script never mutates dirty, in-flight, out-of-scope, missing-MOC, or collision states.
@@ -109,8 +109,8 @@ Reviewability-Exception: upgrade
 
 - [ ] T028 Add PRSG-011 Layer 8 parity fixture for mirrored repository migration guidance and Tier-2 suggestion guarantees under `tests/speckit-pro/layer8-parity/02-prsg-011-migration-guidance/`
 - [ ] T029 Register the PRSG-011 Layer 8 parity fixture in `tests/speckit-pro/layer8-parity/run-parity-fixtures.sh` if the runner does not auto-discover the new fixture directory
-- [ ] T030 Run Layer 1 structural validation with `bash tests/speckit-pro/run-all.sh --layer 1` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
-- [ ] T031 Run Layer 4 script validation with `bash tests/speckit-pro/run-all.sh --layer 4` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
+- [ ] T030 Run Layer 1 structural validation, including `.process` `.gitattributes` structural guards, with `bash tests/speckit-pro/run-all.sh --layer 1` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
+- [ ] T031 Run Layer 4 script validation, including reviewability-gate `.process` exclusion regression coverage, with `bash tests/speckit-pro/run-all.sh --layer 4` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
 - [ ] T032 Run the default suite with `bash tests/speckit-pro/run-all.sh` and record relevant output in `docs/ai/specs/.process/PRSG-011-workflow.md`
 - [ ] T033 Update operator quickstart examples and final verification notes in `specs/prsg-011-retro-migration/quickstart.md`
 - [ ] T034 Prepare the PR review packet content with review order, scope budget, traceability, verification evidence, known gaps, and rollback notes in `docs/ai/specs/.process/PRSG-011-workflow.md`
@@ -183,7 +183,7 @@ If implementation expands beyond the accepted warning budget or introduces anoth
 
 ## Requirement Coverage
 
-- **US1 / T001-T005, T008-T013**: FR-001 through FR-009, FR-021 through FR-024, FR-027 through FR-029, SC-001 through SC-003, SC-007, SC-008.
+- **US1 / T001-T005, T008-T013**: FR-001 through FR-009, FR-021 through FR-024, FR-027 through FR-032, SC-001 through SC-003, SC-007, SC-008.
 - **US2 / T002, T006-T007, T014-T017**: FR-010 through FR-018, FR-021, FR-022, FR-025, FR-027, SC-001, SC-002, SC-004, SC-005, SC-007.
 - **US3 / T018-T027**: FR-019, FR-020, FR-026, FR-027, FR-029, SC-006, SC-008.
 - **Polish / T028-T034**: Reviewability budget, PR review packet requirements, Layer 1/4/default verification, affected Layer 3 fixtures, Layer 8 parity, and quickstart/operator documentation.

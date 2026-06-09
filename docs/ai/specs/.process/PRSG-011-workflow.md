@@ -45,8 +45,8 @@ Re-read it before each phase. The locked decisions from that interview:
 | Plan | `/speckit-plan` | Complete | plan.md + research/data-model/quickstart + 3 contracts. Declared file operations filled; reviewability warning preserved with two internal vertical increments; G3 pass. |
 | Checklist | `/speckit-checklist` | Complete | 4 domains complete; 11 gaps found and remediated; G4 pass |
 | Tasks | `/speckit-tasks` | Complete | 34 tasks; 6 parallel-safe; reviewability gate exception/pass honored |
-| Analyze | `/speckit-analyze` | In Progress | |
-| Implement | `/speckit-implement` | Pending | |
+| Analyze | `/speckit-analyze` | Complete | 2 semantic findings remediated; G6 pass; confidence gate 0.94/pass |
+| Implement | `/speckit-implement` | In Progress | |
 
 ### Phase Gates
 
@@ -193,7 +193,7 @@ Fill in after running the command:
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 29 |
+| Functional Requirements | 32 |
 | User Stories | US1, US2, US3 |
 | Acceptance Criteria | 12 acceptance scenarios; 7 measurable success criteria |
 
@@ -448,7 +448,18 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | HIGH | Q1 default decisions were not fully explicit across spec, plan, and tasks | Added FR-030 through FR-032 plus plan/task coverage for one-row-per-file legacy rows, no `.gitattributes` parser in reviewability logic, and live-roadmap de-boilerplate |
+| A2 | MEDIUM | PRSG-001 deferred scaffold artifact fixture coverage was implicit | Added deterministic PRSG-001 deferred scaffold artifact fixture coverage to plan/tasks |
+
+**Analyze Verification:** G6 passed with 0 CRITICAL/HIGH findings after remediation. Layer 1 remained green at 887/887.
+
+📊 Confidence: 0.94
+
+- Task understanding: 0.96
+- Approach clarity: 0.94
+- Requirements alignment: 0.93
+- Risk assessment: 0.95
+- Completeness: 0.93
 
 ---
 

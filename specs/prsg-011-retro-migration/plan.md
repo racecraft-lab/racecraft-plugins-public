@@ -44,7 +44,12 @@ creating a backup. Post-backup partial failures must report the created backup
 path and restore hint. Tier-0 does not move or stamp historical spec files.
 Tier-2 moves only approved PROCESS artifacts and keeps CONTRACT artifacts in
 place. `.specify/feature.json` is the only in-flight source and every tier skips
-valid in-flight specs.
+valid in-flight specs. Tier-0 emits one generated navigation row per eligible
+historical source file or archive-memory entry and does not special-case
+multi-ID/gappy legacy inputs beyond shared candidate eligibility and
+`moc_id_match`. PRSG-011 may ensure or report the repo-root `.gitattributes`
+`.process` rule, but reviewability logic keeps the existing hardcoded `.process`
+predicate and does not parse `.gitattributes`.
 
 **Scale/Scope**: Existing SpecKit repositories with multiple completed,
 archived, in-flight, or thawed legacy specs. Non-SpecKit and date-named legacy
@@ -191,12 +196,16 @@ clean-tree check and before mutation.
 2. Extend `generate-spec-index.sh` so roadmap-MOC INDEX rendering includes
    eligible ID-normalizable completed or archived historical specs only when
    repo `.specify/structure-version.json` carries integer
-   `structureVersion >= 1`, while reporting non-SpecKit alpha namespaces and
-   date-first legacy namespaces as `skipped_out_of_scope`.
+   `structureVersion >= 1`, emitting one generated row per eligible historical
+   source file or archive-memory entry without special-casing multi-ID/gappy
+   legacy entries, while reporting non-SpecKit alpha namespaces and date-first
+   legacy namespaces as `skipped_out_of_scope`.
 3. Add Layer 4 fixtures for dry-run no-mutation, dirty apply block, marker
    absent/malformed behavior, idempotency, frozen/in-flight skip, archive-memory
-   target selection, ID normalization false-join protection, and out-of-scope
-   non-SpecKit/date-first namespace skip reporting with no Tier-0 row.
+   target selection, one-row-per-file multi-ID/gappy legacy inputs, ID
+   normalization false-join protection, live-project roadmap de-boilerplate as a
+   Tier-1 report/apply item, `.gitattributes`/reviewability-gate separation, and
+   out-of-scope non-SpecKit/date-first namespace skip reporting with no Tier-0 row.
 
 ### Increment 2: Tier-2 Relocation and Operator Suggestions
 
@@ -226,9 +235,10 @@ clean-tree check and before mutation.
    syntax may differ, but safe-command sequence, skip/no-op wording, and no-auto-run
    guarantees must match.
 5. Add Layer 4 relocation fixtures, Layer 3 skill behavior fixtures, and Layer 8
-   parity checks for mirrored skill prose, including no move candidates, no
-   suggestions for out-of-scope namespaces, and the exact safe-command sequences
-   from FR-026/FR-028.
+   parity checks for mirrored skill prose, including deterministic PRSG-001
+   deferred scaffold artifact fixtures, no move candidates, no suggestions for
+   out-of-scope namespaces, and the exact safe-command sequences from
+   FR-026/FR-028.
 
 ## Gate G3
 
