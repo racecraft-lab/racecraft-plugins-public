@@ -33,7 +33,7 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 15 FRs, 2 US (P1), 9 acceptance scenarios, 7 SCs; 0 [NEEDS CLARIFICATION]. Branch-aware (no new branch/dir). |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Open Questions: branch-by-abstraction trigger, JSON schema, roadmap gap-closure |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 pass (0 markers). 2 sessions + consensus on 4 flagged items. JSON contract pinned (FR-011a/b); branch-by-abstraction reserved-not-emitted; hard-atomic/releasability token vocabulary + FR-007a detection hygiene. OQ1 roadmap-gap-closure deferred to Implement checklist (PRSG-008/010 own probe depth). |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Recommended domains: error-handling, api-contracts (the JSON output contract) |
 | Tasks | `/speckit-tasks` | ⏳ Pending | One L4 fixture per change class; Codex-mirror tasks |
@@ -197,8 +197,17 @@ in tasks.md / plan.md / spec.md does each probe read?
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Route taxonomy & JSON contract | | |
-| 2 | Hard-atomic & releasability | | |
+| 1 | Route taxonomy & JSON contract | 5 (Q1 → consensus) | JSON contract pinned (FR-011a): flat top-level `route`/`releasable`/`signals`/`hints`/`warnings`, error path `{"error":...}`, aligned to reviewability-gate.sh. Missing/empty `tasks.md` short-circuits to `out-of-scope` before any detector (FR-003). No speculative `change_class` field. **Consensus (3/3 unanimous, high conf): `branch-by-abstraction` is a RESERVED enum value the MVP never emits** — its precondition (all-consumers-in-tree) is the advisory-only consumer-locality probe (FR-010), so modify-heavy abstains to `one-navigable-PR`; PRSG-010 US3 owns making it emittable. New FR-001 note + SC-008 + Out-of-Scope bullet. |
+| 2 | Hard-atomic & releasability | 5 (Q2/Q3/Q5A → consensus) | Per-class hard-atomic `signals[]` tokens pinned (FR-007): `exported-symbol-rename`, `global-version-pin`, `destructive-migration`, `mutual-exclusion-primitive` (one coarse class), `out-of-tree-contract-break`. Releasability (FR-008): `releasability:destructive-migration` + `releasability:concurrency` with two fixed canonical "CI-green ≠ releasable" warnings; `releasable` is route-independent. Controlled `signals/hints/warnings` vocabulary (FR-011b). Stack-agnostic via duplicated `surface_for_path` (FR-014). **New FR-007a (detection hygiene):** word-boundary/structural matching + read keyword classes from tasks.md+plan.md only (not spec.md) so the dogfood self-check holds. Rename kept UNQUALIFIED. |
+
+### Consensus Resolution Log
+
+| Phase/Session | Item | Categories | Analysts (verdict) | Round | Outcome |
+|---------------|------|-----------|--------------------|-------|---------|
+| Clarify S1 | Q1: branch-by-abstraction MVP trigger | [spec],[domain] | codebase (C), spec-context (C), domain (C) | R1 | 3/3 unanimous, high conf → **Option C: reserved enum, MVP never emits**. Applied to FR-001, SC-008, Out of Scope. |
+| Clarify S2 | Q2: auth/payment/mutual-exclusion detector | [security] | codebase, spec-context, domain (all: keep single coarse class) | R1 | 3/3 → keep `hard-atomic:mutual-exclusion-primitive` as ONE coarse class. Codebase found dogfood false-positive (lock⊂block; auth/payment as vocabulary) → **FR-007a** added (word-boundary + read keyword classes from tasks/plan only). Expanded keyword set recorded for Plan (add mutex/semaphore/password/mfa/oauth/rbac/acl/secret/kms/idempotency/refund/payout/settlement). |
+| Clarify S2 | Q3: releasability keyword sets | [domain] | domain (expand), spec-context (no drift), codebase (reuse FR-005 verbs + migration glob) | R1 | tokens/warnings faithful; **Plan must use expanded sets** — destructive: drop/truncate/purge/backfill/irreversible/data-migration/alter-table/rewrite; concurrency: +deadlock/mutex/semaphore/data-race/isolation/CAS. Apply KEEP-IN-SYNC marker on duplicated migration glob/verbs. |
+| Clarify S2 | Q5A: exported-symbol rename routing | [spec] | spec-context (unqualified), domain (unqualified), codebase (unqualified) | R1 | 3/3 high conf → **keep UNQUALIFIED**; research-doc 3-way split is ungreppable & superseded by locked spec. FR-007/SC-003 correct as-is — no change. |
 
 ---
 

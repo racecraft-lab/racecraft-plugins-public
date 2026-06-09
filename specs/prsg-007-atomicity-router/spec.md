@@ -121,8 +121,11 @@ releasable and carries the CI-green warning.
 - **No discernible signal at all**: When none of the detectors find a decisive signal, the
   classifier abstains to the default route `one-navigable-PR` — it never auto-splits and
   never blocks.
-- **Conflicting signals**: When a split-PR signal (multiple seams) coexists with a
-  hard-atomic signature, the hard-atomic override wins and the route is `single-atomic-PR`.
+- **Conflicting signals / precedence**: Precedence is total and ordered: (1) input shape — a
+  missing/empty `tasks.md` yields `out-of-scope` before anything else; then, among changes
+  that have a `tasks.md`, (2) a hard-atomic signature wins and yields `single-atomic-PR`,
+  overriding any split-PR signal; then (3) a proven additive multi-seam change yields
+  `split-PR`; otherwise (4) the change abstains to `one-navigable-PR`.
 - **Change is entirely outside the governed scope**: When the change does not fit any
   splittable or atomic category the router governs, it emits the `out-of-scope` route so
   the autopilot can fall back to its default single-PR behavior.
@@ -139,11 +142,20 @@ releasable and carries the CI-green warning.
 - **FR-001**: The classifier MUST accept a feature's `tasks.md`, `plan.md`, and `spec.md`
   as inputs and emit exactly one routing decision drawn from the fixed set: `split-PR`,
   `one-navigable-PR`, `branch-by-abstraction`, `single-atomic-PR`, `out-of-scope`.
+  The `branch-by-abstraction` value is **RESERVED** in this contract enum: the MVP's
+  fully-implemented detectors MUST NEVER emit it. Its trigger — in-place modification with
+  ALL consumers in the tree — depends on a *decisive* consumer-locality determination, which
+  FR-010 deliberately keeps advisory-only; so a modify-heavy, non-hard-atomic change abstains
+  to `one-navigable-PR` (FR-006) instead. The value is reserved (not dropped) to keep the
+  JSON enum a stable contract for PRSG-008; promoting the consumer-locality probe to decisive
+  (and thus making `branch-by-abstraction` emittable) is owned by PRSG-010 US3.
 - **FR-002**: The classifier MUST decide splittability by **structural seams** (multiple
   independent additive capabilities or surfaces), NOT by lines of code; it MUST NOT compute
   or rely on any LOC/sizing metric.
-- **FR-003**: The classifier MUST apply detectors in this order: (1) `tasks.md` shape,
-  (2) additive-vs-modify, (3) flag-system probe, (4) release cadence, (5) consumer
+- **FR-003**: The classifier MUST first short-circuit on input shape: if `tasks.md` is
+  missing or empty, it MUST emit `out-of-scope` and stop BEFORE any detector (including the
+  hard-atomic override) runs. Otherwise it MUST apply detectors in this order: (1) `tasks.md`
+  shape, (2) additive-vs-modify, (3) flag-system probe, (4) release cadence, (5) consumer
   locality.
 - **FR-004**: The classifier MUST fully implement the `tasks.md`-shape detector — reading
   the structure of `tasks.md` to identify whether the work comprises multiple independent
@@ -159,12 +171,40 @@ releasable and carries the CI-green warning.
 #### Hard-atomic override and releasability (fully implemented)
 
 - **FR-007**: The classifier MUST fully implement a hard-atomic override: on detecting any
-  hard-atomic signature — exported-symbol rename, global version pin, destructive
-  migration, mutual-exclusion/auth/payment primitive, or out-of-tree contract break — it
-  MUST route the change to `single-atomic-PR`, overriding any split-PR signal.
+  hard-atomic signature it MUST route the change to `single-atomic-PR`, overriding any
+  split-PR signal. Each class is detected by a case-insensitive intent-grep over the planning
+  prose (`tasks.md` + `plan.md` + `spec.md`) and, on a hit, emits one namespaced `signals[]`
+  token (the stable vocabulary for PRSG-008 and the L4 fixtures):
+  - `hard-atomic:exported-symbol-rename` — a described rename of an exported/public symbol.
+  - `hard-atomic:global-version-pin` — a global version/dependency/runtime bump or pin.
+  - `hard-atomic:destructive-migration` — a destructive/irreversible schema migration.
+  - `hard-atomic:mutual-exclusion-primitive` — an auth / payment / mutual-exclusion /
+    locking / leader-election primitive (ONE coarse, over-inclusive class; not sub-divided).
+  - `hard-atomic:out-of-tree-contract-break` — a breaking change to a versioned/out-of-tree
+    contract (e.g. `/api/vN`, a public / MCP / webhook surface).
+  Detection is tuned OVER-INCLUSIVE on purpose: a false positive only refuses a split
+  (→ `single-atomic-PR`), the safe direction; a false negative is the dangerous one.
+- **FR-007a**: Keyword-based detection of the conceptual classes that have no path signal
+  (exported-symbol rename, global version pin, auth/payment/mutual-exclusion primitive) MUST
+  avoid false positives from a feature's own definitional vocabulary: (a) it MUST match on
+  word boundaries or a structural task-/story-line shape, NOT bare substrings (e.g. `lock`
+  MUST NOT fire on "block"); and (b) it MUST read these keyword classes from `tasks.md` +
+  `plan.md` (the work description), NOT from `spec.md` (which may merely enumerate the class
+  names as vocabulary). This is what makes the mandated dogfood self-check hold: running the
+  classifier on PRSG-007's own feature dir — whose artifacts enumerate auth/payment/lock as
+  vocabulary — MUST NOT yield a spurious `single-atomic-PR`. (The path-signalled classes —
+  destructive-migration, additive-vs-modify — continue to read all three artifacts.)
 - **FR-008**: The classifier MUST detect destructive-migration and concurrency signatures
-  and, for those classes, mark the result not releasable AND attach a warning that a
-  passing CI run does not prove the change is releasable ("CI-green ≠ releasable").
+  and, for those classes, mark the result not releasable (`releasable: false`) AND append one
+  canonical `warnings[]` sentence. Each releasability class emits a namespaced `signals[]`
+  token and its fixed warning string (stable contract):
+  - `releasability:destructive-migration` → warning: "destructive migration: a passing CI
+    run does not prove this change is releasable (CI-green ≠ releasable)".
+  - `releasability:concurrency` → warning: "concurrency-sensitive change: a passing CI run
+    does not prove this change is releasable (CI-green ≠ releasable)".
+  Releasability is INDEPENDENT of the route: a change MAY be `single-atomic-PR` AND not
+  releasable (a destructive migration is both). A false negative here is the dangerous
+  direction, so these probes are tuned over-inclusive.
 - **FR-009**: For changes with no releasability-risk signature, the classifier MUST mark
   the result releasable and attach no CI-green warning.
 
@@ -179,6 +219,22 @@ releasable and carries the CI-green warning.
 
 - **FR-011**: The classifier MUST be read-only: it MUST emit exactly one machine-readable
   result to standard output and MUST write no files of its own.
+- **FR-011a**: The single JSON object MUST contain top-level keys `route` (string, one of
+  the five enum values), `releasable` (boolean), `signals` (array of strings, from the
+  fully-implemented detectors), `hints` (array of strings, from the three advisory probes),
+  and `warnings` (array of strings). The `signals` array carries decisive detector findings;
+  the `hints` array carries advisory-probe output (FR-010), kept distinct from `signals`.
+  Field names and the route enum are a STABLE CONTRACT consumed by PRSG-008; the error path
+  emits a top-level `{"error": <string>}` with no `route`. Naming follows the existing
+  `reviewability-gate.sh` conventions (flat top-level keys, string arrays).
+- **FR-011b**: The `signals[]` vocabulary is a controlled, stable contract for PRSG-008 and
+  the L4 fixtures. Decisive tokens: `hard-atomic:exported-symbol-rename`,
+  `hard-atomic:global-version-pin`, `hard-atomic:destructive-migration`,
+  `hard-atomic:mutual-exclusion-primitive`, `hard-atomic:out-of-tree-contract-break`,
+  `releasability:destructive-migration`, `releasability:concurrency`, plus the US1 routing
+  reads for additive-multi-seam vs modify-heavy. The three advisory probes (flag-system,
+  release-cadence, consumer-locality) emit ONLY into `hints[]` and MUST NOT appear in
+  `signals[]` (FR-010); `warnings[]` carries only the human CI-green sentences.
 - **FR-012**: The classifier MUST be advisory-only and MUST NOT act as a gate: it MUST
   report success without blocking the workflow, and MUST signal only a usage/unreadable-input
   error condition as a non-success outcome (it MUST NOT emit a "blocked"/threshold-exceeded
@@ -189,6 +245,14 @@ releasable and carries the CI-green warning.
 - **FR-014**: The classifier MUST be generic across technology stacks — its detection MUST
   rely on a stack-agnostic surface taxonomy (in the spirit of the existing reviewability
   surface taxonomy) rather than assuming a specific language, framework, or build system.
+  Two mechanisms keep it stack-agnostic: (1) surface-by-path detection that DUPLICATES the
+  small `surface_for_path` / `is_excluded_generated` matchers from `reviewability-gate.sh`
+  (per the no-shared-lib constraint, FR-015) for the migration/API surfaces; and (2)
+  over-inclusive natural-language intent-greps for the conceptual classes (rename, version
+  pin, auth/payment, concurrency) that have no path signal. Maintainers MUST NOT "tighten"
+  the hard-atomic / releasability probes into false negatives. The duplicated matcher MUST
+  carry a `KEEP IN SYNC with reviewability-gate.sh` comment marker (the repo's established
+  anti-drift convention for mandated duplication).
 - **FR-015**: The classifier MUST operate independently of the existing reviewability gate:
   it MUST NOT call that gate internally and MUST NOT edit it. (Combining this route with
   reviewability sizing to decide whether to *actually* split is the autopilot's job, not
@@ -223,14 +287,18 @@ releasable and carries the CI-green warning.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Routing decision**: The single result the classifier emits. Attributes: the chosen
-  route (one of `split-PR`, `one-navigable-PR`, `branch-by-abstraction`, `single-atomic-PR`,
-  `out-of-scope`); a releasability flag; an optional CI-green warning; and advisory hints
-  from the three shallow probes.
+- **Routing decision**: The single JSON result the classifier emits. Top-level keys
+  (FR-011a): `route` (one of `split-PR`, `one-navigable-PR`, `branch-by-abstraction`,
+  `single-atomic-PR`, `out-of-scope`); `releasable` (boolean); `signals` (decisive detector
+  findings); `hints` (advisory-probe output from the three shallow probes); and `warnings`
+  (e.g. the CI-green-≠-releasable message). The error path emits a top-level
+  `{"error": <string>}` instead.
 - **Change class**: The category a change falls into as read from its artifacts — e.g.
   additive multi-seam, modify-heavy, hard-atomic (rename / version pin / destructive
   migration / mutual-exclusion-auth-payment primitive / out-of-tree contract break), or
-  concurrency-sensitive. Each class maps to a route and a releasability reading.
+  concurrency-sensitive. Each class maps to a route and a releasability reading. Change class
+  is the conceptual mapping the detectors apply; it is NOT a separate emitted JSON field — it
+  is recoverable from `route` + `signals` (FR-011a).
 - **Atomicity Route record**: The "## Atomicity Route" section the autopilot SKILL writes
   into the workflow file from the emitted decision, for downstream specs to read. (Written
   by the SKILL, not by the classifier.)
@@ -240,7 +308,8 @@ releasable and carries the CI-green warning.
 ### Measurable Outcomes
 
 - **SC-001**: For every governed change class, the classifier emits exactly one route from
-  the fixed set of five, in a single machine-readable result.
+  the fixed set of five, in a single machine-readable result — a JSON object with the
+  contract keys `route`, `releasable`, `signals`, `hints`, `warnings` (FR-011a).
 - **SC-002**: A change with multiple independent additive capabilities is routed to
   `split-PR`, and an equivalent change measured only by size (large LOC, single seam) is
   NOT routed to `split-PR` — demonstrating the decision is seam-driven, not size-driven.
@@ -258,6 +327,11 @@ releasable and carries the CI-green warning.
 - **SC-007**: One Layer 4 fixture exists per change class and confirms the expected route
   and releasability reading; Layer 1 structural validation passes for the new script and
   any edited skill files.
+- **SC-008**: The MVP classifier NEVER emits `branch-by-abstraction`. A modify-heavy,
+  non-hard-atomic change (modify signals present, no hard-atomic signature, no proven
+  additive seams) routes to `one-navigable-PR` 100% of the time. One Layer 4 fixture for
+  this change class MUST exist and assert the emitted route is `one-navigable-PR` (never
+  `branch-by-abstraction`), releasable, with no CI-green warning.
 
 ## Assumptions
 
@@ -295,7 +369,14 @@ releasable and carries the CI-green warning.
 - **No deep implementation of the three contextual probes** — flag-system, release-cadence,
   and consumer-locality are emitted as advisory hints only in this spec; their deep
   implementation is deferred.
+- **No `branch-by-abstraction` emission in the MVP** — the route is a reserved enum value;
+  its trigger requires a decisive consumer-locality probe this spec keeps advisory-only.
+  PRSG-010 US3 owns deepening that probe (and thus making the route emittable). Until then a
+  modify-heavy non-hard-atomic change abstains to `one-navigable-PR` (FR-001, FR-006).
 - **No internal call to, and no edit of, the existing reviewability gate; no shared-library
   extraction** in this spec.
+- **No separate `change_class` JSON field** — the emitted contract is `route` + `releasable`
+  + `signals` + `hints` + `warnings` (FR-011a); the change class is recoverable from `route`
+  and `signals`.
 - **The route is NOT stored in `SPEC-MOC.md`** — only in the workflow file's "## Atomicity
   Route" section.
