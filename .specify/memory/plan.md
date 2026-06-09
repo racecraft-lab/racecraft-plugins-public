@@ -140,8 +140,9 @@ the gate to clear the block). Not a core-principle violation.
 
 ### Cleanup Notes
 
-Do not remove `specs/prsg-007-atomicity-router` until the dogfood/schema tests
-are moved to committed fixtures independent of the active spec tree.
+`specs/prsg-007-atomicity-router` was removed from active `specs/**` cleanup on
+2026-06-09 after PR #136 moved the dogfood/schema tests to committed fixtures
+independent of the active spec tree.
 
 ---
 
@@ -177,5 +178,6 @@ are moved to committed fixtures independent of the active spec tree.
 
 ### Cleanup Notes
 
-Keep the source spec folder until PRSG cleanup can remove all archived PRSG
-folders without breaking tests; cleanup requires `safeToApplyCleanup=true`.
+The source spec folder was removed from active `specs/**` cleanup on 2026-06-09
+after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007
+directory and the cleanup gate recorded `safeToApplyCleanup=true`.

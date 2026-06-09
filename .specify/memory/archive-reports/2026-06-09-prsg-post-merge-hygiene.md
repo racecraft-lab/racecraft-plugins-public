@@ -3,17 +3,25 @@
 ## Mode
 
 - archiveMode: sweep
-- dryRun: true
-- applyCleanupRequested: false
-- dryRunProvenanceOnly: true
-- safeToApplyCleanup: false
+- dryRun: false
+- applyCleanupRequested: true
+- dryRunProvenanceOnly: false
+- safeToApplyCleanup: true
 
 ## Sweep Summary
 
 | Spec | Eligibility | Cleanup Mode | Reason |
 |------|-------------|--------------|--------|
-| `specs/prsg-007-atomicity-router` | archived in memory | retain active folder | PR #133 is merged and provenance is recorded, but Layer 4 dogfood/schema tests read the live folder |
-| `specs/prsg-011-retro-migration` | archived in memory | retain active folder | PR #132 is merged and provenance is recorded; cleanup deferred so PRSG cleanup can happen as one test-safe change |
+| `specs/prsg-007-atomicity-router` | archived in memory | cleanup applied | PR #133 is merged, provenance/recovery commands are recorded, and PR #136 fixture-decoupled Layer 4 dogfood/schema tests from the live folder |
+| `specs/prsg-011-retro-migration` | archived in memory | cleanup applied | PR #132 is merged, provenance/recovery commands are recorded, and cleanup was applied in the same test-safe pass as PRSG-007 |
+
+## Cleanup Preconditions
+
+- Requested mode: `--apply-cleanup`
+- Cleanup branch: `codex/archive-apply-cleanup`, based on updated `origin/main`
+- Worktree state before cleanup: clean
+- Fixture-decoupling prerequisite: PR #136 merged at `128e1927d0fa0ca6e7c0b1545d7b6547cdb4db9f`
+- Pre-cleanup guard: `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh` passed `82/82`
 
 ## Excluded Current Spec
 
@@ -67,15 +75,17 @@ git show 6916ec43d2d4e3972d7e12425a05158f0b48ae3b:specs/prsg-011-retro-migration
 | `docs/ai/specs/pr-size-governance-technical-roadmap.md` | Marked PRSG-007 and PRSG-011 complete |
 | `docs/ai/specs/.process/autopilot-state.json` | Refreshed latest completed workflow pointer to PRSG-007 / PR #133 |
 | `.specify/feature.json` | Removed stale completed-spec pointer |
+| `specs/prsg-007-atomicity-router/` | Removed from active `specs/**`; recovery commands recorded above |
+| `specs/prsg-011-retro-migration/` | Removed from active `specs/**`; recovery commands recorded above |
 
 ## Cleanup Decision
 
-- cleanupApplied: false
-- cleanupCommand: N/A
-- blockedBy: PRSG-007 live spec directory is still used by Layer 4 dogfood/schema tests
+- cleanupApplied: true
+- cleanupCommand: `git rm -r specs/prsg-007-atomicity-router specs/prsg-011-retro-migration`
+- blockedBy: None
 
 ## Defaults Applied
 
 - No docs-side `.process` files were deleted.
-- No active `specs/**` folder was removed.
-- Cleanup can be revisited after tests are decoupled from live archived spec dirs.
+- Only archived active `specs/**` folders for PRSG-007 and PRSG-011 were removed.
+- Fixture-backed Layer 4 dogfood/schema coverage remains under `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/dogfood-prsg-007/`.

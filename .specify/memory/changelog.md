@@ -153,3 +153,22 @@ To recover the entire directory at the merge commit:
 ```text
 git checkout 6916ec43d2d4e3972d7e12425a05158f0b48ae3b -- specs/prsg-011-retro-migration
 ```
+
+---
+
+## PRSG Archive Cleanup Application
+
+[Source: .specify/memory/archive-reports/2026-06-09-prsg-post-merge-hygiene.md]
+
+- **Cleanup applied**: 2026-06-09
+- **Cleanup branch**: `codex/archive-apply-cleanup`
+- **Cleanup command**: `git rm -r specs/prsg-007-atomicity-router specs/prsg-011-retro-migration`
+- **Fixture-decoupling prerequisite**: PR #136 merged at `128e1927d0fa0ca6e7c0b1545d7b6547cdb4db9f`
+- **safeToApplyCleanup**: `true`
+- **Removed from active specs**: `specs/prsg-007-atomicity-router`, `specs/prsg-011-retro-migration`
+- **Recovery**: use the PRSG-007 and PRSG-011 `git show` / `git checkout` commands recorded above.
+
+The removed source folders were already archived in project memory. PR #136
+vendored the PRSG-007 dogfood/schema fixture under
+`tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/dogfood-prsg-007/`,
+so Layer 4 no longer depends on the live archived spec directory.

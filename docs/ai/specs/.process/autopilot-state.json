@@ -52,10 +52,10 @@
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "dry-run-record",
-    "safeToApplyCleanup": false,
+    "cleanup_mode": "apply-cleanup",
+    "safeToApplyCleanup": true,
     "excludedCurrentSpec": null,
-    "note": "Post-merge hygiene dry-run archived PRSG-007 and PRSG-011 provenance. Active specs cleanup stayed disabled because PRSG-007 is still used by Layer 4 dogfood/schema tests; no specs/** files were removed."
+    "note": "Post-merge cleanup applied for PRSG-007 and PRSG-011 after PR #136 fixture-decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory. Active specs folders were removed; raw artifacts remain recoverable from recorded merge commits."
   },
   "plan": [
     {

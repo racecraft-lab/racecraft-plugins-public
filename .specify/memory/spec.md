@@ -186,9 +186,9 @@ files and exits successfully for every valid classification.
 
 ### Cleanup Note
 
-The active spec folder remains in `specs/**` for now because
-`test-atomicity-route.sh` reads `specs/prsg-007-atomicity-router` directly as a
-dogfood/schema fixture.
+The active spec folder was removed from `specs/**` cleanup on 2026-06-09 after
+PR #136 decoupled `test-atomicity-route.sh` from the live
+`specs/prsg-007-atomicity-router` directory by vendoring a dogfood/schema fixture.
 
 ---
 
