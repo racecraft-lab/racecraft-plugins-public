@@ -145,3 +145,87 @@ location and remains diffable on demand.
 - Migrating any legacy/existing spec (owned by a later retro-migration spec).
 - Rendering artifacts non-diffable (`-diff`) — collapse is generated-only.
 - Map-of-content templates and gate-threshold rework (separate, later specs).
+
+---
+
+## Atomicity-test router (read-only classifier)
+
+[Source: specs/prsg-007-atomicity-router]
+**Branch**: `prsg-007-atomicity-router` · **Status**: Completed · **Archived**: 2026-06-09
+
+### Summary
+
+Adds a read-only routing classifier for the PR-size governance split-PR engine.
+`atomicity-route.sh` inspects a feature directory's task/plan/spec evidence and
+emits advisory JSON for downstream planner/emission phases. It never mutates
+files and exits successfully for every valid classification.
+
+### User Stories
+
+- **US1 — Classifier.** Emit a route from the locked enum
+  `split-PR`, `one-navigable-PR`, reserved `branch-by-abstraction`,
+  `single-atomic-PR`, or `out-of-scope`, using structural seams rather than LOC.
+- **US2 — Safety routing.** Override to `single-atomic-PR` for hard-atomic
+  signatures and emit `releasable:false` warnings for destructive migration or
+  concurrency classes where green CI is not enough.
+
+### Functional Requirements
+
+- The CLI is `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh <feature-dir>`.
+- Successful classifications write one JSON object to stdout and no files.
+- Usage or unreadable input exits 2 with an error JSON object.
+- Missing or empty `tasks.md` routes to `out-of-scope`.
+- Autopilot records the result in the workflow file's `## Atomicity Route`
+  section after Tasks/G5; PRSG-008/009 consume it later.
+
+### Success Criteria
+
+- Layer 4 router fixtures cover every route and hard-atomic class.
+- Dogfood on PRSG-007 routes to a non-split route with `releasable:true`.
+- Layer 1 Codex parity and structural validation remain green.
+
+### Cleanup Note
+
+The active spec folder remains in `specs/**` for now because
+`test-atomicity-route.sh` reads `specs/prsg-007-atomicity-router` directly as a
+dogfood/schema fixture.
+
+---
+
+## Retro-migration: version marker + state-keyed backfill/relocate
+
+[Source: specs/prsg-011-retro-migration]
+**Branch**: `prsg-011-retro-migration` · **Status**: Completed · **Archived**: 2026-06-09
+
+### Summary
+
+Adds deterministic structure-migration tooling so existing SpecKit projects can
+adopt PRSG-001/002/003 layout rules without mass-stamping or moving legacy specs.
+The migration path mirrors the archive extension's dry-run/apply safety model and
+keeps Tier-2 PROCESS relocation operator-triggered only.
+
+### User Stories
+
+- **US1 — Repo migration.** `migrate-structure.sh --dry-run` reports ordered
+  pending migrations; `--apply` on a clean tree writes the structure marker,
+  Tier-1 repo edits, and Tier-0 navigation backfill.
+- **US2 — Thawed legacy relocation.** `relocate-process-artifacts.sh` moves only
+  PROCESS artifacts into `.process/`, stamps `structureVersion: 1`, and preserves
+  recovery through forced backups.
+- **US3 — Suggestion-only registration.** Scaffold/autopilot can suggest the
+  codemod for thawed candidates but must not auto-run it.
+
+### Functional Requirements
+
+- Dirty-tree dry-runs are read-only; all mutation paths hard-fail on dirty trees.
+- `.specify/feature.json` marks in-flight specs as frozen and skipped.
+- Tier-0 does not stamp or move legacy specs.
+- Tier-2 protects CONTRACT paths and normalizes legacy evidence/review packet
+  names into `.process/`.
+
+### Success Criteria
+
+- Layer 4 validates dry-run, idempotency, backup, move-set, and ID-normalization
+  fixtures.
+- Layer 3/8 guidance confirms scaffold/autopilot only suggest the codemod.
+- Layer 1 structural checks pass for fresh and grandfathered legacy layouts.

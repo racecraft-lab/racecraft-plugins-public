@@ -1,7 +1,7 @@
 ---
 up: "[pr-size-governance roadmap](../../docs/ai/specs/pr-size-governance-technical-roadmap.md)"
 related: []
-status: ""
+status: "complete"
 rank:
 spec_id: "PRSG-007"
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
@@ -31,6 +31,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [.process/pr-packet-notes.md](.process/pr-packet-notes.md)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
 - [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->

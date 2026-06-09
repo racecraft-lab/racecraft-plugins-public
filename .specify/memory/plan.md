@@ -106,3 +106,76 @@ the gate to clear the block). Not a core-principle violation.
   model, no API, no user-facing runtime).
 - Authoritative design rationale lived at `docs/ai/specs/PRSG-001-design-concept.md`
   (four-agent grounding pass + Q&A log); `research.md` was a thin pointer to it.
+
+---
+
+## Atomicity-test router (read-only classifier)
+
+[Source: specs/prsg-007-atomicity-router]
+**Branch**: `prsg-007-atomicity-router` · **Status**: Completed · **Archived**: 2026-06-09
+
+### Dependencies & Versions
+
+- Bash + `jq` only; no package manager or compiled build step.
+- Reads local `tasks.md`, `plan.md`, and `spec.md`; no network, GitHub, or
+  reviewability-gate dependency.
+
+### Architecture / Approach
+
+- One production script:
+  `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`.
+- Small duplicated surface/path matchers rather than a shared abstraction with
+  `reviewability-gate.sh`.
+- Autopilot documentation records the post-Tasks/G5 route handoff; Codex skill
+  prose mirrors the Claude skill prose.
+
+### Test Strategy
+
+- `bash tests/speckit-pro/run-all.sh --layer 4` covers router fixtures and
+  dogfood behavior.
+- `bash tests/speckit-pro/run-all.sh --layer 1` covers structural and Codex
+  parity checks.
+- PR #133 CI recorded validate-plugins, test(speckit-pro), detect,
+  validate-pr-title, and CodeQL as successful.
+
+### Cleanup Notes
+
+Do not remove `specs/prsg-007-atomicity-router` until the dogfood/schema tests
+are moved to committed fixtures independent of the active spec tree.
+
+---
+
+## Retro-migration: version marker + state-keyed backfill/relocate
+
+[Source: specs/prsg-011-retro-migration]
+**Branch**: `prsg-011-retro-migration` · **Status**: Completed · **Archived**: 2026-06-09
+
+### Dependencies & Versions
+
+- Bash + `jq` only; no package manager or compiled build step.
+- Reuses `generate-spec-index.sh` and the MOC ID/frontmatter helper libraries.
+- Mirrors archive-extension safety: dry-run/apply separation, clean-tree guards,
+  backups, and recovery commands.
+
+### Architecture / Approach
+
+- `migrate-structure.sh`: repo-level structure marker, Tier-1 edits, and Tier-0
+  navigation backfill.
+- `relocate-process-artifacts.sh`: explicit Tier-2 relocation for thawed legacy
+  specs only.
+- `speckit-upgrade`, `speckit-scaffold-spec`, and `speckit-autopilot` document
+  the new behavior; scaffold/autopilot suggest the codemod but never auto-run it.
+
+### Test Strategy
+
+- Layer 4 covers migration dry-run/apply, idempotency, dirty-tree failure,
+  backup behavior, relocation allow-list, collisions, and ID normalization.
+- Layer 3/8 fixtures cover Claude/Codex guidance parity for Tier-2 suggestions.
+- PR #132 CI recorded validate-plugins, test(speckit-pro), detect, CodeQL, and
+  code scanning as successful; `validate-pr-title` failed on the already-merged
+  title and is recorded as a metadata gate exception.
+
+### Cleanup Notes
+
+Keep the source spec folder until PRSG cleanup can remove all archived PRSG
+folders without breaking tests; cleanup requires `safeToApplyCleanup=true`.

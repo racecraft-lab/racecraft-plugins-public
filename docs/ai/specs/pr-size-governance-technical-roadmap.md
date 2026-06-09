@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119). In progress: PRSG-007 (Phase 4, P1 — atomicity router, PR #133) and PRSG-011 (Phase 6 retro-migration, on `prsg-011-retro-migration`). Pending: PRSG-008→009 (Phase 4 split-PR engine), PRSG-010 (Phase 5). Created 2026-06-03; status refreshed 2026-06-09.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Pending: PRSG-008→009 (Phase 4 split-PR engine), PRSG-010 (Phase 5). Created 2026-06-03; status refreshed 2026-06-09.
 
 ## Vision
 
@@ -177,7 +177,7 @@ escape hatch with typed exceptions.
 
 ---
 
-### PRSG-007 — Atomicity-test router (read-only classifier)  · Phase 4 · P1 · engine MVP · 🔄 In Progress
+### PRSG-007 — Atomicity-test router (read-only classifier)  · Phase 4 · P1 · engine MVP · ✅ Complete (PR #133)
 **Why:** the brain that makes split-PR a *safe* default. Ship as a read-only classifier
 that emits a routing decision into the workflow file before any emission is wired.
 
@@ -244,8 +244,8 @@ real.
 
 ---
 
-### PRSG-011 — Retro-migration: version marker + state-keyed backfill/relocate  · Phase 6 · P2 · 🔄 In Progress
-> Scaffolded 2026-06-08 on `prsg-011-retro-migration`; workflow:
+### PRSG-011 — Retro-migration: version marker + state-keyed backfill/relocate  · Phase 6 · P2 · ✅ Complete (PR #132)
+> Completed 2026-06-09 via PR #132; workflow:
 > `docs/ai/specs/.process/PRSG-011-workflow.md`.
 
 **Why:** PRSG-001–010 are new-specs-only; existing projects (Paddock: 27 SPEC IDs;
