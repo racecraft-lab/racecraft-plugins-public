@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | prsg-007-atomicity-router |
 | Branch | prsg-007-atomicity-router |
-| PR | **PR:** <set on PR open> |
+| PR | **PR:** #133 |
 | Generated from | 2026-06-09T02:39:41Z |
 
 

@@ -459,13 +459,13 @@ NEVER split-PR. If it routes to split-PR, the precedence is wrong.
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] `bash -n speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh` clean; script is `chmod +x`
-- [ ] Layer 4 passes: `bash tests/speckit-pro/run-all.sh --layer 4`
-- [ ] Layer 1 passes (incl. validate-codex-skills.sh): `bash tests/speckit-pro/run-all.sh --layer 1`
-- [ ] Dogfood: router on PRSG-007's own feature dir routes to a non-split route
-- [ ] Open Question 1 closed: roadmap assigns the deferred contextual-probe depth to PRSG-008/010
-- [ ] PR created with a public-readable conventional-commits title
+- [x] All tasks marked complete in tasks.md (30/30)
+- [x] `bash -n speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh` clean; script is `chmod +x`
+- [x] Layer 4 passes: `bash tests/speckit-pro/run-all.sh --layer 4` (962/962)
+- [x] Layer 1 passes (incl. validate-codex-skills.sh): `bash tests/speckit-pro/run-all.sh --layer 1` (887/887)
+- [x] Dogfood: router on PRSG-007's own feature dir routes to a non-split route (`one-navigable-PR`, releasable)
+- [x] Open Question 1 closed: roadmap **PRSG-010 US3** owns the deferred contextual-probe depth (flag-system / release-cadence / consumer-locality) — verified in `pr-size-governance-technical-roadmap.md`
+- [x] PR created with a public-readable conventional-commits title (PR #133)
 
 ### Reviewability Diff-Gate — DOCUMENTED EXCEPTION (not split)
 
