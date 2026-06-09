@@ -263,7 +263,7 @@ stop_reason: "natural"
 
 - **What:** Roadmap gap-closure for the deferred contextual probes. PRSG-007 ships flag-system / release-cadence / consumer-locality as advisory-hint stubs (Q5). The full-depth implementation of each must have an explicit owner in the roadmap so the stubs are not orphaned.
   **Why deferred:** User explicitly required (Q5 note) that the roadmap "leaves NO gaps"; assigning probe depth to a downstream spec is roadmap-authoring work, not grill-me's job.
-  **Suggested next step:** Before merge, run `/speckit-pro:speckit-coach` to verify/annotate that PRSG-008 (layer-planner) and/or PRSG-010 (harden the hatch) own the deepened flag-system / release-cadence / consumer-locality probes. Treat as a blocker on closing PRSG-007's loop, not on starting it.
+  **Resolution (2026-06-08):** CLOSED at scaffold time. PRSG-010 ("Harden the hatch") gained a **US3 — Deepen the contextual atomicity probes** entry that explicitly owns promoting the flag-system / release-cadence / consumer-locality stubs to full-depth routing signals in `atomicity-route.sh`. The roadmap no longer has an orphaned stub; the Q5 "no gaps" requirement is satisfied.
 
 - **What:** `branch-by-abstraction` emission criteria. The route is in the enum but its exact MVP trigger (modify-heavy change with an identifiable abstraction seam vs. fall-through to `one-navigable-PR`) is unspecified.
   **Why deferred:** An implementation-precision detail better resolved with the spec/plan in hand.

@@ -238,7 +238,8 @@ real.
 - **US2 — Monster-epics (O5).** Epic → child specs that SHARE one design-concept +
   retrospective (thin per-child deltas, `depends-on` order); `speckit-status` rolls
   children up. Reserved for genuine monsters O4 can't slice thin.
-- **Skills/files:** `reviewability-gate.sh`, roadmap template, `speckit-scaffold-spec` (epic schema), `speckit-status` (rollup).
+- **US3 — Deepen the contextual atomicity probes.** Promote PRSG-007's advisory-hint stubs — flag-system, release-cadence, consumer-locality — from non-decisive hints to full-depth routing signals in `atomicity-route.sh`.
+- **Skills/files:** `reviewability-gate.sh`, `atomicity-route.sh`, roadmap template, `speckit-scaffold-spec` (epic schema), `speckit-status` (rollup).
 - **Deps:** ALL of Phases 1–4. **Budget:** ~400 LOC. **Tests:** L4, L1.
 
 ---
