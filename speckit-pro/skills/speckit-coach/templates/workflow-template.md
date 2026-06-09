@@ -385,6 +385,39 @@ When checklist identifies `[Gap]` items:
 
 ---
 
+## Atomicity Route
+
+**When this is filled:** After the Tasks phase / gate G5, the autopilot SKILL runs
+the read-only atomicity classifier and records its decision here. This is a
+**placeholder** until then — leave the cells blank during scoping. The classifier
+emits one machine-readable decision; the SKILL is what writes it into this section
+(the script never writes a file of its own). This route is recorded only here in the
+workflow file — never in the spec map. It is read downstream by the layer-planner and
+multi-PR emission work that builds on top of it; recording it now wires no PR creation
+or branch splitting on its own.
+
+The decision answers "can this change be split into multiple small PRs safely?" by
+inspecting the change's structural seams (independent additive capabilities), not its
+line count. Surface the four fields the SKILL extracts from the emitted decision:
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, or `out-of-scope`. |
+| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change (a passing CI run does not prove such a change is safe to release). |
+| **Signals** | | The decisive detector findings behind the route and releasability reading (may be empty when the classifier abstains). |
+| **Warnings** | | Any release-safety warning attached to the change (empty when there is no releasability risk). |
+
+To produce the decision, run the classifier against the feature directory:
+
+```bash
+bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/{{BRANCH_NAME}}
+```
+
+See the classifier script at
+[`speckit-autopilot/scripts/atomicity-route.sh`](../../speckit-autopilot/scripts/atomicity-route.sh).
+
+---
+
 ## Phase 6: Analyze
 
 **When to run:** Always run after generating tasks to catch issues.

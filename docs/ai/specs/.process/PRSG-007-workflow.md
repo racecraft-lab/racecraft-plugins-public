@@ -38,7 +38,7 @@ captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass (0 open [Gap]/[Conflict]). error-handling + api-contracts domains; 5 gaps fixed across both; signals[] contract drift reconciled + US1 token spelling locked (`change-shape:*`). Schema valid, closed 9-token enum. |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass: 30 tasks, 10 fixture classes, Codex-mirror (T027) + dogfood (T024) + template (T025) tasks. Reviewability tasks-gate `block` is a documented coarse false-positive (excepted, see Tasks Results) — diff gate is binding. |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass (0 CRITICAL). 1 MEDIUM (concurrency releasability self-vocabulary hygiene) resolved via consensus → FR-007a/FR-008/T022/T024 edits. All 4 prior consensus rounds verified consistent across spec/plan/tasks/data-model/schema. |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | G7 pass: L4 962/962, L1 887/887 (incl. validate-codex-skills 145/145). 30 tasks, 4 groups, strict TDD (81 L4 assertions for the new script). Dogfood verified by orchestrator: router on its own dir → one-navigable-PR, releasable:true, no spurious hard-atomic/releasability tokens. Script 415 LOC (~30 comments; reviewable logic <400). dist/ NOT committed (release-bot syncs it). |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -450,10 +450,10 @@ NEVER split-PR. If it routes to split-PR, the precedence is wrong.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | | | |
-| 2 - US1 Classifier | | | |
-| 3 - US2 Hard-atomic + releasability | | | |
-| 4 - Polish (template + SKILL + Codex mirror) | | | |
+| 1 - Foundation | T001–T008 | ✅ 8/8 | Script spine (CLI, exit contract, jq emitters, out-of-scope short-circuit, duplicated matchers + KEEP-IN-SYNC marker); 23 assertions GREEN. |
+| 2 - US1 Classifier | T009–T016 | ✅ 8/8 | tasks-shape + additive-vs-modify detectors, seam routing (additive-dominance gate), abstain, advisory hints → hints[]; 35 assertions. |
+| 3 - US2 Hard-atomic + releasability | T017–T022 | ✅ 6/6 | 5 hard-atomic detectors (FR-007a action-intent hygiene), override wired into dispatch chain, releasability pass; 56 assertions. Dogfood guard verified. |
+| 4 - Polish (template + SKILL + Codex mirror) | T023–T030 | ✅ 8/8 | error/read-only/dogfood/schema assertions (81 total), "## Atomicity Route" template section, SKILL+references docs, Codex mirror (L1 green), PR-packet notes. |
 
 ---
 

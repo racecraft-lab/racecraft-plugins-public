@@ -311,8 +311,206 @@ signals=$(array_of "$output" "signals")
 assert_not_contains "$signals" "releasability:" "no spurious releasability token on a non-risk change"
 
 # ---------------------------------------------------------------------------
-# Cross-cutting / dogfood assertions are added by later tasks (T023, T024)
-# against the error path and PRSG-007's own feature dir.
+# Cross-cutting assertions (T023, FR-011/FR-012/SC-006; quickstart 10, 11).
+# These lock behaviors the finished script ALREADY has (the error path from
+# T004 and the read-only guarantee from FR-011), so they pass GREEN with no RED
+# phase — the point is to GUARD them permanently. Each is authored to be
+# non-vacuous: the error-path block asserts a real exit 2 + a parsed top-level
+# `error` key + the ABSENCE of `route`, and the read-only block compares a
+# byte-level snapshot (file list + sha) of a fixture dir taken before and after
+# a successful run, so a script that ever wrote a file would flip it to FAIL.
 # ---------------------------------------------------------------------------
+
+section "cross-cutting: error path is exit 2 + {\"error\"} + no route (T023, FR-012; quickstart 11)"
+
+set_test "missing dir error path exits 2"
+missing="$SANDBOX/cc-missing-dir"
+result=0
+output=$("$SCRIPT" "$missing" 2>/dev/null) || result=$?
+assert_eq "2" "$result" "unreadable/absent input → exit 2 (never a block)"
+
+set_test "error path emits a parseable top-level error string"
+err_val=$(field_of "$output" "error")
+assert_not_contains "$err_val" "<<missing>>" "error object carries a top-level error key"
+assert_not_contains "$err_val" "<<parse-fail>>" "error object is valid JSON"
+
+set_test "error path carries NO route key (FR-011a)"
+has_route=$(printf '%s' "$output" | python3 -c "import sys,json; print('yes' if 'route' in json.load(sys.stdin) else 'no')" 2>/dev/null || echo "parse-fail")
+assert_eq "no" "$has_route" "error branch must not include a route key"
+
+section "cross-cutting: read-only — a successful run writes no files (T023, FR-011, SC-006; quickstart 10)"
+
+# Copy a real fixture into the sandbox, snapshot it (sorted relative paths +
+# per-file sha), run the classifier successfully against the COPY, then re-snapshot
+# and assert byte-for-byte equality. Driving off a copy (not the committed fixture
+# tree) keeps the assertion hermetic AND means a stray write would be caught here
+# rather than mutating a tracked fixture. find|sort|shasum is portable on macOS+Linux.
+snapshot_dir() {
+  # print "<relpath> <sha>" for every file under $1, sorted — a deterministic
+  # fingerprint of the directory's contents (names + bytes).
+  ( cd "$1" && find . -type f | LC_ALL=C sort | while IFS= read -r f; do
+      printf '%s %s\n' "$f" "$(shasum "$f" | awk '{print $1}')"
+    done )
+}
+
+ro_src="$FIXTURE_ROOT/modify-heavy"
+ro_copy="$SANDBOX/readonly-modify-heavy"
+rm -rf "$ro_copy"
+cp -R "$ro_src" "$ro_copy"
+before_snap=$(snapshot_dir "$ro_copy")
+result=0
+output=$("$SCRIPT" "$ro_copy") || result=$?
+after_snap=$(snapshot_dir "$ro_copy")
+
+set_test "read-only fixture run still succeeds (exit 0)"
+assert_eq "0" "$result" "classifier completes on the copied fixture"
+
+set_test "read-only run leaves the fixture dir byte-identical (no files written)"
+assert_eq "$before_snap" "$after_snap" "directory contents (names + sha) unchanged after a successful run"
+
+# ---------------------------------------------------------------------------
+# Dogfood self-check (T024, load-bearing per FR-007a; D4, D10; quickstart
+# "Dogfood self-check"). Run the FINISHED script against PRSG-007's OWN feature
+# dir and assert it does NOT spuriously self-classify off its own definitional
+# vocabulary. PRSG-007's artifacts enumerate auth/payment/lock/mutex/rename and
+# concurrency keywords as the detectors' vocabulary, and saturate the corpus with
+# modify keywords (UPDATE/DELETE/DROP/CHECK) — so the CORRECT real output is
+# route=one-navigable-PR (modify-heavy), releasable=true, no releasability token.
+# This is encoded against the REAL output (verified by hand); if the firewall
+# ever regresses, this is the assertion that catches it. The feature dir is
+# resolved ABSOLUTELY from this test file's location (not cwd) so it holds under
+# any working directory.
+# ---------------------------------------------------------------------------
+REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+DOGFOOD_DIR="$REPO_ROOT/specs/prsg-007-atomicity-router"
+
+section "dogfood self-check: PRSG-007 classifies its own artifacts safely (T024, FR-007a)"
+
+set_test "dogfood feature dir exists (sanity — non-vacuous guard target)"
+if [ -d "$DOGFOOD_DIR" ]; then _pass; else _fail "expected PRSG-007 feature dir at $DOGFOOD_DIR"; fi
+
+dogfood_out=$("$SCRIPT" "$DOGFOOD_DIR")
+dogfood_route=$(field_of "$dogfood_out" "route")
+dogfood_signals=$(array_of "$dogfood_out" "signals")
+
+set_test "dogfood (1): route != single-atomic-PR (no spurious hard-atomic self-classify)"
+assert_not_contains "$dogfood_route" "single-atomic-PR" "PRSG-007 vocabulary must not trip the hard-atomic override"
+
+set_test "dogfood (2): route is a non-split route (no spurious split off its own vocabulary)"
+assert_not_contains "$dogfood_route" "split-PR" "PRSG-007 must not spuriously route split-PR"
+
+set_test "dogfood (3): releasable == true (concurrency probe must not fire on vocabulary)"
+assert_json_field "$dogfood_out" "releasable" "True" "implementing a concurrency detector is not a concurrency-sensitive change"
+
+set_test "dogfood (4a): no releasability:concurrency token in signals[]"
+assert_not_contains "$dogfood_signals" "releasability:concurrency" "no spurious concurrency releasability token"
+
+set_test "dogfood (4b): no releasability:destructive-migration token in signals[]"
+assert_not_contains "$dogfood_signals" "releasability:destructive-migration" "no spurious destructive-migration releasability token"
+
+# ---------------------------------------------------------------------------
+# Contract validation (T028, FR-001/FR-011a/SC-001/SC-008; quickstart "Contract
+# validation"). Validate EVERY emitted object — all ten success fixtures, the
+# error branch, and the dogfood run — against routing-decision.schema.json. The
+# validator is python-stdlib ONLY (no jsonschema dependency, matching the suite's
+# bash+jq+stdlib norm): it loads the schema, picks the success/error arm by key
+# presence, and enforces required keys, key-set equality (additionalProperties:
+# false), types, and the route/signals/warnings enum membership the schema
+# declares. Membership is asserted POSITIVELY (route ∈ the five enum values), so a
+# parse failure or an empty string fails LOUD rather than passing vacuously — and
+# `branch-by-abstraction`, while a legal enum member, is separately asserted to be
+# absent from every emitted object (SC-008: reserved, never emitted by the MVP).
+# ---------------------------------------------------------------------------
+SCHEMA="$REPO_ROOT/specs/prsg-007-atomicity-router/contracts/routing-decision.schema.json"
+
+# validate_against_schema <json> — exit 0 if <json> satisfies the success OR error
+# arm of the schema AND (for success objects) does NOT carry branch-by-abstraction;
+# prints a one-line reason and exits 1 otherwise. Stdlib only. The candidate JSON
+# is passed as the SCHEMA_OBJECT env var (not stdin) because the python program
+# itself arrives on stdin via the `python3 - <<'PY'` heredoc — they cannot share
+# the same stream.
+validate_against_schema() {
+  SCHEMA_OBJECT="$1" python3 - "$SCHEMA" <<'PY'
+import os, sys, json
+schema_path = sys.argv[1]
+with open(schema_path) as fh:
+    schema = json.load(fh)
+try:
+    obj = json.loads(os.environ["SCHEMA_OBJECT"])
+except Exception as e:
+    print(f"invalid JSON: {e}"); sys.exit(1)
+
+arms = {a["title"]: a for a in schema["oneOf"]}
+success = arms["Success decision"]
+error = arms["Error decision"]
+
+def fail(msg):
+    print(msg); sys.exit(1)
+
+if "error" in obj:
+    arm = error
+    if set(obj.keys()) != set(arm["required"]):
+        fail(f"error object key-set {sorted(obj)} != required {sorted(arm['required'])}")
+    if not isinstance(obj["error"], str):
+        fail("error value must be a string")
+    sys.exit(0)
+
+# Success arm.
+arm = success
+if "route" not in obj:
+    fail("object has neither 'error' nor 'route'")
+# additionalProperties:false → key set must equal the required set exactly.
+if set(obj.keys()) != set(arm["required"]):
+    fail(f"success object key-set {sorted(obj)} != required {sorted(arm['required'])}")
+props = arm["properties"]
+route_enum = props["route"]["enum"]
+if obj["route"] not in route_enum:
+    fail(f"route '{obj['route']}' not in enum {route_enum}")
+if not isinstance(obj["releasable"], bool):
+    fail("releasable must be boolean")
+sig_enum = props["signals"]["items"]["enum"]
+for s in obj["signals"]:
+    if s not in sig_enum:
+        fail(f"signal '{s}' not in controlled vocabulary")
+if not isinstance(obj["hints"], list) or not all(isinstance(h, str) for h in obj["hints"]):
+    fail("hints must be a string array")
+warn_enum = props["warnings"]["items"]["enum"]
+for w in obj["warnings"]:
+    if w not in warn_enum:
+        fail(f"warning '{w}' is not a canonical CI-green sentence")
+# SC-008: branch-by-abstraction is reserved and must NEVER be emitted.
+if obj["route"] == "branch-by-abstraction":
+    fail("route is the reserved branch-by-abstraction (MUST NOT be emitted)")
+if "branch-by-abstraction" in obj["signals"]:
+    fail("branch-by-abstraction must never appear in signals[]")
+sys.exit(0)
+PY
+}
+
+section "contract: every emitted object validates against routing-decision.schema.json (T028, SC-001/SC-008)"
+
+set_test "schema file exists (non-vacuous guard target)"
+assert_file_exists "$SCHEMA"
+
+# All ten per-class fixtures (one per change class) — each success object.
+for fixture in \
+  additive-multi-seam single-additive-seam modify-heavy out-of-scope-empty \
+  hard-atomic-rename hard-atomic-version-pin hard-atomic-mutual-exclusion \
+  hard-atomic-out-of-tree-contract hard-atomic-destructive-migration concurrency; do
+  set_test "fixture $fixture emits a schema-valid object (no branch-by-abstraction)"
+  reason=0
+  msg=$(validate_against_schema "$("$SCRIPT" "$FIXTURE_ROOT/$fixture")") || reason=$?
+  if [ "$reason" -eq 0 ]; then _pass; else _fail "$fixture: $msg"; fi
+done
+
+set_test "error branch emits a schema-valid error object"
+reason=0
+msg=$(validate_against_schema "$("$SCRIPT" "$SANDBOX/does-not-exist" 2>/dev/null)") || reason=$?
+if [ "$reason" -eq 0 ]; then _pass; else _fail "error branch: $msg"; fi
+
+set_test "dogfood run emits a schema-valid object (no branch-by-abstraction)"
+reason=0
+msg=$(validate_against_schema "$dogfood_out") || reason=$?
+if [ "$reason" -eq 0 ]; then _pass; else _fail "dogfood: $msg"; fi
 
 test_summary

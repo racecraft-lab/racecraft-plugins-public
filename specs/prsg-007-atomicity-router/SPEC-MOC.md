@@ -30,6 +30,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/api-contracts.md](checklists/api-contracts.md)
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [.process/pr-packet-notes.md](.process/pr-packet-notes.md)
 - [quickstart.md](quickstart.md)
 - [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->

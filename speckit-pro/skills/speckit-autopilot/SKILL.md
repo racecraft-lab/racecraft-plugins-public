@@ -351,6 +351,12 @@ for phase in PHASES starting from first_pending:
         crashes the run (hard block / re-slicing is PRSG-010).
     8. After Tasks (G5 pass), run reviewability-gate.sh tasks;
        unexcepted `block` → STOP and split the spec
+    8c. After Tasks (G5 pass), run atomicity-route.sh <feature-dir>
+        and record the emitted JSON decision into the workflow
+        file's "## Atomicity Route" section. READ-ONLY + ADVISORY —
+        the script writes nothing and never blocks; the SKILL is
+        what records it. Wires NO PR emission or branch creation
+        (that is PRSG-008/PRSG-009).
     9. Advance
 ```
 
@@ -551,6 +557,16 @@ Always invoke via the full resolved path — never from `.specify/scripts/bash/`
   the orchestrator in Step 0.6b to set `CONFIDENCE_GATE_MODE` before G6.5.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` —
   Enforce setup, tasks, and pre-PR reviewability budgets (JSON)
+- `atomicity-route.sh <feature-dir>` — Read-only atomicity classifier:
+  given a feature's `tasks.md`/`plan.md`/`spec.md`, emit ONE routing
+  decision (`route` + `releasable` + `signals` + `hints` + `warnings`,
+  or `{"error":…}`) on stdout. Decides whether a change can be split
+  into multiple small PRs safely by structural seams (NOT LOC). Run
+  after Tasks/G5; the SKILL records the decision into the workflow
+  file's "## Atomicity Route" section (the script writes no file).
+  ADVISORY-only (never blocks) and wires NO PR emission/branch creation
+  (PRSG-008/PRSG-009). See
+  [Phase Execution §Phase 5: Tasks](./references/phase-execution.md#phase-5-tasks).
 - `estimate-reviewable-loc.sh <plan.md>` — Plan-phase reviewability
   budget: project production-LOC from `plan.md`'s declared file
   structure and emit a three-value `status` (`pass` / `over_budget` /
