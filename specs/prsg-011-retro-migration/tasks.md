@@ -22,9 +22,9 @@ Reviewability-Exception: upgrade
 
 **Purpose**: Establish script fixture contracts, helper reuse expectations, and reviewability checkpoint before implementation.
 
-- [ ] T001 [P] Create RED repository migration fixture scaffold covering helper reuse of `moc-id-normalize.sh` and `moc-frontmatter.sh` in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
-- [ ] T002 [P] Create RED Tier-2 relocation fixture scaffold covering shared JSON-report and backup override contracts in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
-- [ ] T003 Run `speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/prsg-011-retro-migration` and record the pre-implementation checkpoint in `docs/ai/specs/.process/PRSG-011-workflow.md`
+- [x] T001 [P] Create RED repository migration fixture scaffold covering helper reuse of `moc-id-normalize.sh` and `moc-frontmatter.sh` in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
+- [x] T002 [P] Create RED Tier-2 relocation fixture scaffold covering shared JSON-report and backup override contracts in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
+- [x] T003 Run `speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/prsg-011-retro-migration` and record the pre-implementation checkpoint in `docs/ai/specs/.process/PRSG-011-workflow.md`
 
 ---
 
@@ -32,12 +32,12 @@ Reviewability-Exception: upgrade
 
 **Purpose**: Complete deterministic RED coverage that blocks both implementation increments.
 
-- [ ] T004 Add RED dry-run no-mutation, dirty-tree apply block, active-feature invalid, and frozen/in-flight fixtures in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
-- [ ] T005 Add RED marker write, current no-op, idempotency, generated-index backfill, one-row-per-file multi-ID/gappy legacy inputs, archive-memory target, out-of-scope namespace, live-project roadmap de-boilerplate, `.gitattributes`/reviewability-gate separation, and false-join fixtures in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
-- [ ] T006 Add RED PROCESS allow-list, CONTRACT protection, already-normalized no-op, missing MOC, and target collision fixtures in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
-- [ ] T007 Add RED evidence normalization, review-packet canonicalization, docs-side design/workflow relocation including deterministic PRSG-001 deferred scaffold artifact cases, dirty-tree apply block, frozen/in-flight, out-of-scope, and idempotency fixtures in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
+- [x] T004 Add RED dry-run no-mutation, dirty-tree apply block, active-feature invalid, and frozen/in-flight fixtures in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
+- [x] T005 Add RED marker write, current no-op, idempotency, generated-index backfill, one-row-per-file multi-ID/gappy legacy inputs, archive-memory target, out-of-scope namespace, live-project roadmap de-boilerplate, `.gitattributes`/reviewability-gate separation, and false-join fixtures in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh`
+- [x] T006 Add RED PROCESS allow-list, CONTRACT protection, already-normalized no-op, missing MOC, and target collision fixtures in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
+- [x] T007 Add RED evidence normalization, review-packet canonicalization, docs-side design/workflow relocation including deterministic PRSG-001 deferred scaffold artifact cases, dirty-tree apply block, frozen/in-flight, out-of-scope, and idempotency fixtures in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh`
 
-**Checkpoint**: Layer 4 fixtures should fail for missing PRSG-011 implementation before user story work begins.
+**Checkpoint**: Layer 4 fixtures fail for missing PRSG-011 implementation before user story work begins.
 
 ---
 

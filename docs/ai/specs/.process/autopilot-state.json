@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T03:12:00Z",
-  "active_step": "Phase 7: Setup and Reviewability (T001-T003)",
+  "updated_at": "2026-06-09T04:05:00Z",
+  "active_step": "Phase 7: US1 Repository Migration (T008-T013)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -159,15 +159,15 @@
     },
     {
       "step": "Phase 7: Setup and Reviewability (T001-T003)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Foundational Test Contracts (T004-T007)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: US1 Repository Migration (T008-T013)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: US2 Tier-2 Relocation (T014-T017)",
