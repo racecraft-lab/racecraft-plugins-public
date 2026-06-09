@@ -512,5 +512,45 @@ zero merge consequence; a narrative exception is sufficient (no exception-class 
 
 ---
 
+## Retrospective (post-Implement)
+
+**Outcome:** All 7 phases passed their gates (G0–G7, G6.5); 30/30 tasks implemented via TDD;
+full suite green (Layer 4 962/962, Layer 1 887/887); independent fresh-eyes review verdict
+**SHIP**; PR #133 opened with `validate-pr-title` and `detect` green.
+
+**What went well**
+- **Consensus caught a load-bearing bug early.** The Clarify-phase codebase analyst noticed
+  that a naive keyword grep would self-classify PRSG-007 as hard-atomic (its own docs use
+  "lock/auth/payment/rename" as vocabulary). That produced FR-007a (word-boundary stem guards
+  + action-intent + read-from-tasks/plan-only), and the dogfood self-check (T024) became the
+  single most valuable assertion — it is what proved the firewall holds.
+- **TDD red-green discipline** kept the 415-LOC script honest: 81 assertions, one fixture per
+  change class, every route/token/warning verified against the closed 9-token contract.
+- **Closed-vocabulary contract** (route enum + signals enum + two fixed warning strings) made
+  the schema validator (T028) and the downstream PRSG-008 hand-off unambiguous.
+
+**What was friction**
+- **The reviewability gate mis-measures shell scripts.** Both the tasks-gate and the diff-gate
+  reported `production_files: 0` / `reviewable_loc: 0` because `surface_for_path` does not
+  classify `skills/.../scripts/*.sh` as production. Both required a documented exception with a
+  direct `wc -l` as the honest basis. **Improvement:** teach `surface_for_path` to recognize
+  shipped `scripts/*.sh` as a production surface (a fix for the gate itself, future work).
+- **File-count inflation from generated mirrors.** The committed `dist/` payload mirrors
+  double-count every source file, pushing `total_files` over the block threshold on a change
+  whose real surface is ~6 files. The gate counts artifacts it shouldn't weigh as review load.
+- **Worktree `.git` is a file, not a dir.** `generate-pr-body.sh` with a `.git/...` output path
+  failed until resolved via `git rev-parse --git-path` — a known worktree gotcha worth baking
+  into the post-impl script invocation.
+- **The UAT author agent hit an API overload** mid-run; it failed open (skeleton untouched) and
+  the runbook was authored directly from observed script output. Fail-open behaved correctly.
+
+**Carry-forward**
+- Production sits AT the ~400-LOC warn line; if a follow-up grows `atomicity-route.sh` past
+  ~500 LOC, run the diff gate straight rather than pre-committing to an override.
+- The three advisory probes are stubs by design; PRSG-008/010 own their full depth
+  (Open Question 1).
+
+---
+
 Template based on SpecKit best practices. Source of truth for scoping decisions:
 `docs/ai/specs/.process/PRSG-007-design-concept.md`.
