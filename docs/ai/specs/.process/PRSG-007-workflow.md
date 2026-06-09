@@ -34,7 +34,7 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 15 FRs, 2 US (P1), 9 acceptance scenarios, 7 SCs; 0 [NEEDS CLARIFICATION]. Branch-aware (no new branch/dir). |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass (0 markers). 2 sessions + consensus on 4 flagged items. JSON contract pinned (FR-011a/b); branch-by-abstraction reserved-not-emitted; hard-atomic/releasability token vocabulary + FR-007a detection hygiene. OQ1 roadmap-gap-closure deferred to Implement checklist (PRSG-008/010 own probe depth). |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass. plan.md + research.md (10 decisions) + data-model.md (5 entities) + contracts/routing-decision.schema.json + quickstart.md (incl. dogfood self-check). 1 production file (atomicity-route.sh), ~400 LOC, within budget. reviewability-gate.sh untouched; duplicate-not-share (surface_for_path + is_excluded_generated, KEEP-IN-SYNC marker). Dogfood risk carried to Implement: detector must match action-intent, not topic-mention. |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Recommended domains: error-handling, api-contracts (the JSON output contract) |
 | Tasks | `/speckit-tasks` | ⏳ Pending | One L4 fixture per change class; Codex-mirror tasks |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -256,8 +256,11 @@ in tasks.md / plan.md / spec.md does each probe read?
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | |
-| `research.md` | ⏳ | Only if a probe signature needs justification |
+| `plan.md` | ✅ | Filled from preset plan-template; 1 production file, within budget |
+| `research.md` | ✅ | 10 decisions (D1–D10); D4 sharpens dogfood/detection-hygiene; D6 duplicate-not-share |
+| `data-model.md` | ✅ | 5 entities (routing decision, change class, signals/hints/warnings) |
+| `contracts/routing-decision.schema.json` | ✅ | JSON contract for PRSG-008 |
+| `quickstart.md` | ✅ | 11 validation scenarios + dogfood self-check |
 
 ---
 
