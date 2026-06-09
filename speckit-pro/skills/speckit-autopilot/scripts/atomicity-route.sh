@@ -165,8 +165,8 @@ fi
 # structural, not execution-order-dependent: detectors only SET flags; the
 # routing dispatch below resolves precedence. Later tasks fill these in.
 #
-#   1. tasks.md shape           (T011) → ADDITIVE_MULTI_SEAM
-#   2. additive-vs-modify       (T012) → MODIFY_HEAVY / additive read
+#   1. tasks.md shape           (T011) → MULTI_SEAM
+#   2. additive-vs-modify       (T012) → ADDITIVE_DOMINANT / MODIFY_HEAVY
 #   3. flag-system probe        (T015) → HINTS only (advisory, FR-010)
 #   4. release-cadence probe    (T015) → HINTS only (advisory, FR-010)
 #   5. consumer-locality probe  (T015) → HINTS only (advisory, FR-010)
@@ -174,7 +174,90 @@ fi
 #   releasability pass          (T022) → RELEASABLE=false + releasability:* + warning
 # ---------------------------------------------------------------------------
 
+# US1 detector flags (set by the detectors, read by the routing dispatch).
+MULTI_SEAM=false
+ADDITIVE_DOMINANT=false
+MODIFY_HEAVY=false
+
 # <<< DETECTOR INSERTION POINT (US1: tasks-shape, additive-vs-modify, advisory probes) >>>
+
+# --- Detector 1: tasks.md shape (T011, FR-002/FR-004) -----------------------
+# Count STRUCTURAL SEAMS = the number of DISTINCT production surfaces the work
+# touches, read from each task line's named deliverable path and bucketed with
+# the DUPLICATED surface_for_path matcher (FR-014). This is a structural count,
+# NOT a LOC/sizing metric (FR-002): two independent additive surfaces are two
+# seams whether each is 5 lines or 500. Docs/process and seed/config buckets are
+# not production seams, so they do not count toward splittability. ≥2 distinct
+# production surfaces ⇒ MULTI_SEAM. (The split branch is additionally gated on
+# additive-dominance below, so this count only decides split for already-additive
+# changes — FR-005, data-model Entity 4 "proven additive multi-seam".)
+if [ -s "$TASKS" ]; then
+  # Pull backtick-quoted path-like tokens from task lines AND their indented
+  # continuation lines (SpecKit task descriptions wrap, and the named deliverable
+  # path frequently lands on the continuation line); bucket each via the
+  # duplicated surface_for_path matcher; count DISTINCT production surfaces. The
+  # trailing `|| true` is REQUIRED: under `set -o pipefail` a mid-pipe grep that
+  # finds no production surface exits non-zero and would otherwise trip `set -e`
+  # on a legitimately single-/zero-seam change (the abstain floor).
+  seam_lines=$(awk '
+    /^[[:space:]]*-[[:space:]]*\[[ xX]?\][[:space:]]*T[0-9]/ { intask=1; print; next }
+    intask && /^[[:space:]]+[^[:space:]]/ { print; next }
+    { intask=0 }
+  ' "$TASKS" 2>/dev/null || true)
+  seam_surfaces=$(
+    printf '%s\n' "$seam_lines" \
+      | grep -oE '`[^`]+`' \
+      | tr -d '`' \
+      | grep -E '/|\.[A-Za-z0-9]+$' \
+      | while IFS= read -r tok; do
+          is_excluded_generated "$tok" && continue
+          surface_for_path "$tok"
+        done \
+      | grep -E '^(schema/migration|API|UI|scheduler/runtime|harness/adapter)$' \
+      | sort -u | wc -l | tr -d ' '
+  ) || true
+  if [ "${seam_surfaces:-0}" -ge 2 ]; then
+    MULTI_SEAM=true
+  fi
+fi
+
+# --- Detector 2: additive-vs-modify (T012, FR-005) --------------------------
+# Distinguish modify signals (UPDATE/DELETE/DROP/CHECK) from additive signals
+# (CREATE TABLE, nullable column additions), read across all three artifacts
+# (the path-signalled read, D4). ADDITIVE_DOMINANT is the strict "proven
+# additive" gate for split — additive present AND NO modify signal at all — so a
+# spec saturated with modify VOCABULARY (e.g. PRSG-007's own artifacts, which
+# enumerate UPDATE/DELETE/DROP/CHECK as the detector's keyword list) never reads
+# as additive-dominant and never reaches the split branch (dogfood, FR-007a).
+# MODIFY_HEAVY = modify signals present (and not additive-dominant).
+addmod_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} ${SPEC:+"$SPEC"} 2>/dev/null || true)
+additive_hits=$(printf '%s' "$addmod_corpus" | grep -ciE 'CREATE[[:space:]]+TABLE|nullable' || true)
+modify_hits=$(printf '%s' "$addmod_corpus" | grep -coiE '\b(UPDATE|DELETE|DROP|CHECK)\b' || true)
+if [ "${additive_hits:-0}" -gt 0 ] && [ "${modify_hits:-0}" -eq 0 ]; then
+  ADDITIVE_DOMINANT=true
+elif [ "${modify_hits:-0}" -gt 0 ]; then
+  MODIFY_HEAVY=true
+fi
+
+# --- Detectors 3-5: advisory probes (T015, FR-010) — HINTS ONLY -------------
+# Flag-system, release-cadence, and consumer-locality are advisory ONLY: each
+# emits into hints[] (never signals[], FR-011b) and degrades silently — a probe
+# that finds nothing emits no hint, and an empty hints[] is a normal success
+# (FR-012, edge case "Advisory probe cannot run"). Each hint carries a TODO
+# naming its deferred full-depth home (PRSG-010 US3 owns deepening these). They
+# are deliberately SHALLOW keyword surfaces; do NOT promote them to decisive
+# detectors (out of scope, FR-010).
+probe_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} 2>/dev/null || true)
+if printf '%s' "$probe_corpus" | grep -qiE 'feature[ -]?flag|flag[ -]?system|LaunchDarkly|toggle'; then
+  HINTS+=("flag-system signal seen (advisory only; TODO deepen in PRSG-010 US3)")
+fi
+if printf '%s' "$probe_corpus" | grep -qiE 'release[ -]?cadence|release[ -]?train|ship[ -]?cadence|deploy[ -]?cadence'; then
+  HINTS+=("release-cadence signal seen (advisory only; TODO deepen in PRSG-010 US3)")
+fi
+if printf '%s' "$probe_corpus" | grep -qiE 'consumer[ -]?locality|all consumers|in[ -]?tree consumers|downstream consumers'; then
+  HINTS+=("consumer-locality signal seen (advisory only; TODO deepen in PRSG-010 US3)")
+fi
+
 # <<< DETECTOR INSERTION POINT (US2: hard-atomic keyword + path detectors) >>>
 
 # ---------------------------------------------------------------------------
@@ -184,6 +267,25 @@ fi
 # US1 (T013) and US2 (T021) wire the branches into this dispatch.
 # ---------------------------------------------------------------------------
 # <<< ROUTING DISPATCH INSERTION POINT (hard-atomic → additive-multi-seam → abstain) >>>
+
+# US1 routing dispatch (T013/T014, FR-004/FR-005/FR-006/FR-011b). Precedence,
+# resolved from the detector flags (US2's hard-atomic override, T021, slots ABOVE
+# this block):
+#   1. proven additive multi-seam (multi-seam AND additive-dominant) → split-PR
+#   2. modify-heavy non-hard-atomic                                  → one-navigable-PR
+#   3. abstain (no decisive signal)                                  → one-navigable-PR (default)
+# NEVER branch-by-abstraction (reserved, FR-001/SC-008). The split branch is
+# gated on additive-dominance so an uncertain or modify-heavy change can never
+# auto-split (FR-006, SC-005).
+if [ "$MULTI_SEAM" = true ] && [ "$ADDITIVE_DOMINANT" = true ]; then
+  ROUTE="split-PR"
+  SIGNALS+=("change-shape:additive-multi-seam")
+elif [ "$MODIFY_HEAVY" = true ]; then
+  ROUTE="one-navigable-PR"
+  SIGNALS+=("change-shape:modify-heavy")
+fi
+# else: ROUTE stays the abstain floor (one-navigable-PR) with no change-shape
+# token (FR-006) — set by the decision-state defaults at the top of the file.
 
 # ---------------------------------------------------------------------------
 # Releasability pass (T022, FR-008/FR-009) — computed INDEPENDENTLY of the route.

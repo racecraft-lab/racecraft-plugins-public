@@ -102,9 +102,103 @@ assert_json_field "$output" "releasable" "True" "abstain is releasable"
 assert_json_field "$output" "warnings" "[]" "abstain has no warning"
 
 # ---------------------------------------------------------------------------
-# US1 / US2 / cross-cutting / dogfood assertions are added by later tasks
-# (T010, T018, T023, T024) against the semantic per-class fixtures.
-# FIXTURE_ROOT is resolved above so those tasks have a stable anchor.
+# US1 routing assertions (T010, FR-002/FR-004/FR-005/FR-006/FR-011b;
+# SC-002/SC-005/SC-008; quickstart 1, 2, 7, 8, 9). Authored to FAIL against the
+# pre-detector spine (the spine abstains to one-navigable-PR with empty signals,
+# so additive-multi-seam → split-PR and modify-heavy → change-shape:modify-heavy
+# are real VALUE mismatches, not parse/file-not-found errors) and to pass once
+# T011-T016 land.
+#
+# Membership is checked against the `signals` array SPECIFICALLY (not the whole
+# object) so an advisory hint can never false-pass a signals[] assertion. We
+# extract the named array as a python list-repr string and substring-match the
+# quoted token, mirroring the foundational tests' assert_contains convention.
+# ---------------------------------------------------------------------------
+
+# array_of <json> <field> — print a named top-level array as its python list
+# repr (e.g. "['change-shape:modify-heavy']"); empty array prints "[]".
+array_of() {
+  printf '%s' "$1" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$2', '<<missing>>'))" 2>/dev/null || echo "<<parse-fail>>"
+}
+
+# field_of <json> <field> — print a named top-level scalar field.
+field_of() {
+  printf '%s' "$1" | python3 -c "import sys,json; print(json.load(sys.stdin).get('$2', '<<missing>>'))" 2>/dev/null || echo "<<parse-fail>>"
+}
+
+section "US1: additive multi-seam → split-PR (FR-004, SC-002, FR-011b; quickstart 1)"
+
+set_test "additive-multi-seam fixture routes split-PR"
+output=$("$SCRIPT" "$FIXTURE_ROOT/additive-multi-seam")
+assert_json_field "$output" "route" "split-PR" "proven additive multi-seam → split-PR"
+
+set_test "additive-multi-seam emits change-shape:additive-multi-seam in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'change-shape:additive-multi-seam'" "decisive split token in signals[]"
+
+section "US1: single additive seam → single-PR-style, never split (US1 AS2; quickstart 2)"
+
+set_test "single-additive-seam fixture is single-PR-style"
+output=$("$SCRIPT" "$FIXTURE_ROOT/single-additive-seam")
+route=$(field_of "$output" "route")
+# .route ∈ {one-navigable-PR, single-atomic-PR}
+case "$route" in
+  one-navigable-PR|single-atomic-PR) _pass ;;
+  *) _fail "single additive seam: expected one-navigable-PR or single-atomic-PR, got '$route'" ;;
+esac
+
+set_test "single-additive-seam never routes split-PR"
+assert_not_contains "$route" "split-PR" "one indivisible seam must not split"
+
+section "US1: modify-heavy → one-navigable-PR, never branch-by-abstraction (SC-008; quickstart 8)"
+
+set_test "modify-heavy fixture routes one-navigable-PR"
+output=$("$SCRIPT" "$FIXTURE_ROOT/modify-heavy")
+assert_json_field "$output" "route" "one-navigable-PR" "modify-heavy non-hard-atomic → one-navigable-PR"
+
+set_test "modify-heavy emits change-shape:modify-heavy in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'change-shape:modify-heavy'" "decisive modify token in signals[]"
+
+set_test "modify-heavy never routes branch-by-abstraction (reserved, SC-008)"
+route=$(field_of "$output" "route")
+assert_not_contains "$route" "branch-by-abstraction" "reserved enum is never emitted"
+
+set_test "modify-heavy is releasable with no warning (FR-009, SC-008)"
+assert_json_field "$output" "releasable" "True" "modify-heavy is releasable"
+assert_json_field "$output" "warnings" "[]" "modify-heavy carries no CI-green warning"
+
+section "US1: out-of-scope empty fixture → out-of-scope (FR-003; quickstart 9)"
+
+set_test "out-of-scope-empty fixture routes out-of-scope"
+output=$("$SCRIPT" "$FIXTURE_ROOT/out-of-scope-empty")
+assert_json_field "$output" "route" "out-of-scope" "empty/absent tasks.md → out-of-scope"
+
+section "US1: advisory probes emit into hints[] only, never signals[] (T015, FR-010/FR-011b)"
+
+# Regression lock for the three advisory probes (flag-system/release-cadence/
+# consumer-locality). Driven off a sandbox tasks.md (not a per-class fixture) so
+# it stays isolated from the routing fixtures. Asserts the probe→hints[] path
+# works AND the FR-011b invariant signals[] ∩ hints[] == ∅ holds.
+hintdir="$SANDBOX/flag-hint"
+mkdir -p "$hintdir"
+cat > "$hintdir/tasks.md" <<'EOF'
+# Tasks
+- [ ] T001 Gate the new path behind a feature flag in the existing handler.
+EOF
+output=$("$SCRIPT" "$hintdir")
+
+set_test "flag-system signal surfaces as an advisory hint"
+hints=$(array_of "$output" "hints")
+assert_contains "$hints" "flag-system" "flag keyword → hints[]"
+
+set_test "advisory probe output never leaks into signals[] (FR-011b disjointness)"
+signals=$(array_of "$output" "signals")
+assert_not_contains "$signals" "flag-system" "advisory hint must not appear in signals[]"
+
+# ---------------------------------------------------------------------------
+# US2 / cross-cutting / dogfood assertions are added by later tasks
+# (T018, T023, T024) against the semantic per-class fixtures.
 # ---------------------------------------------------------------------------
 
 test_summary
