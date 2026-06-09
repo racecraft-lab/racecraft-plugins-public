@@ -35,7 +35,7 @@ captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | 15 FRs, 2 US (P1), 9 acceptance scenarios, 7 SCs; 0 [NEEDS CLARIFICATION]. Branch-aware (no new branch/dir). |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass (0 markers). 2 sessions + consensus on 4 flagged items. JSON contract pinned (FR-011a/b); branch-by-abstraction reserved-not-emitted; hard-atomic/releasability token vocabulary + FR-007a detection hygiene. OQ1 roadmap-gap-closure deferred to Implement checklist (PRSG-008/010 own probe depth). |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. plan.md + research.md (10 decisions) + data-model.md (5 entities) + contracts/routing-decision.schema.json + quickstart.md (incl. dogfood self-check). 1 production file (atomicity-route.sh), ~400 LOC, within budget. reviewability-gate.sh untouched; duplicate-not-share (surface_for_path + is_excluded_generated, KEEP-IN-SYNC marker). Dogfood risk carried to Implement: detector must match action-intent, not topic-mention. |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Recommended domains: error-handling, api-contracts (the JSON output contract) |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 pass (0 open [Gap]/[Conflict]). error-handling + api-contracts domains; 5 gaps fixed across both; signals[] contract drift reconciled + US1 token spelling locked (`change-shape:*`). Schema valid, closed 9-token enum. |
 | Tasks | `/speckit-tasks` | ⏳ Pending | One L4 fixture per change class; Codex-mirror tasks |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -208,6 +208,7 @@ in tasks.md / plan.md / spec.md does each probe read?
 | Clarify S2 | Q2: auth/payment/mutual-exclusion detector | [security] | codebase, spec-context, domain (all: keep single coarse class) | R1 | 3/3 → keep `hard-atomic:mutual-exclusion-primitive` as ONE coarse class. Codebase found dogfood false-positive (lock⊂block; auth/payment as vocabulary) → **FR-007a** added (word-boundary + read keyword classes from tasks/plan only). Expanded keyword set recorded for Plan (add mutex/semaphore/password/mfa/oauth/rbac/acl/secret/kms/idempotency/refund/payout/settlement). |
 | Clarify S2 | Q3: releasability keyword sets | [domain] | domain (expand), spec-context (no drift), codebase (reuse FR-005 verbs + migration glob) | R1 | tokens/warnings faithful; **Plan must use expanded sets** — destructive: drop/truncate/purge/backfill/irreversible/data-migration/alter-table/rewrite; concurrency: +deadlock/mutex/semaphore/data-race/isolation/CAS. Apply KEEP-IN-SYNC marker on duplicated migration glob/verbs. |
 | Clarify S2 | Q5A: exported-symbol rename routing | [spec] | spec-context (unqualified), domain (unqualified), codebase (unqualified) | R1 | 3/3 high conf → **keep UNQUALIFIED**; research-doc 3-way split is ungreppable & superseded by locked spec. FR-007/SC-003 correct as-is — no change. |
+| Checklist (api-contracts) | US1 signals[] token spelling | [spec] | spec-context (lock now, high conf) | R1 (N=1) | **LOCK** `change-shape:additive-multi-seam` (→split-PR) + `change-shape:modify-heavy` (→one-navigable-PR); abstain emits no token. Applied to FR-011b, data-model Entity 2/4/validation, schema enum (now closed, 9 tokens). |
 
 ---
 
@@ -303,8 +304,8 @@ Focus on Atomicity-test router requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | | | |
-| api-contracts | | | |
+| error-handling | 25 (CHK001–025) | 2 found, 2 fixed, 0 unresolved | Reworded "Unreadable/missing input" Edge Case (exit-2 scoped to absent/unreadable dir or present-but-unreadable file; missing/empty tasks.md = out-of-scope not error; absent plan/spec tolerated); strengthened FR-010 graceful-degradation. |
+| api-contracts | 36 (CHK026–061) | 3 found, 3 fixed, 1 → consensus | Fixed schema-vs-prose drift (signals.items had closed 7-enum but US1 reads belong in signals[]). US1 token spelling LOCKED via consensus → `change-shape:additive-multi-seam` / `change-shape:modify-heavy`; schema enum closed to 9 tokens. |
 
 ---
 

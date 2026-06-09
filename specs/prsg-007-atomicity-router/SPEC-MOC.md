@@ -26,6 +26,8 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [data-model.md](data-model.md)
 - [research.md](research.md)
 - [contracts/routing-decision.schema.json](contracts/routing-decision.schema.json)
+- [checklists/api-contracts.md](checklists/api-contracts.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

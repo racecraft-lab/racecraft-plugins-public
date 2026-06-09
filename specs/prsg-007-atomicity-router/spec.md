@@ -114,10 +114,16 @@ releasable and carries the CI-green warning.
 
 ### Edge Cases
 
-- **Unreadable or missing input**: When a requested input file (`tasks.md`, `plan.md`, or
-  `spec.md`) is missing or unreadable, the classifier reports a usage/input error rather
-  than emitting a route, and signals this through its non-success exit status (never a
-  block of the workflow).
+- **Unreadable or missing input**: The classifier reports a usage/input error (non-success
+  exit status, never a block) only for genuine read failures: (a) the feature directory is
+  absent or unreadable, or (b) a *present* input file (`tasks.md`, `plan.md`, or `spec.md`)
+  cannot be read. A **missing or empty `tasks.md` is NOT an error** — it short-circuits to
+  the `out-of-scope` route with a success exit (see "Conflicting signals / precedence" below
+  and FR-003), because absence of tasks means there is nothing in scope to classify, not that
+  the input could not be read. A merely-*absent* (not unreadable) `plan.md` or `spec.md` is
+  likewise tolerated: the detector that would read it degrades gracefully (it contributes no
+  signal), so absence of an optional artifact never errors or blocks. Only a file that is
+  present-but-unreadable is a read failure.
 - **No discernible signal at all**: When none of the detectors find a decisive signal, the
   classifier abstains to the default route `one-navigable-PR` — it never auto-splits and
   never blocks.
@@ -132,6 +138,11 @@ releasable and carries the CI-green warning.
 - **Contextual probe signal present but shallow**: When a flag-system, release-cadence, or
   consumer-locality signal is detected, it is surfaced only as an advisory hint and does
   not, on its own, force a split — the three fully-implemented detectors decide the route.
+- **Advisory probe cannot run / errors internally**: An advisory probe that cannot run or
+  fails internally degrades silently — it emits no hint and MUST NOT produce a failure, a
+  non-success exit, or a block. An empty `hints[]` is a normal successful outcome; advisory
+  probes can never change the success/error outcome (only the three decisive detectors and
+  the input-shape check can), so no input can cause the classifier to block (FR-010, FR-012).
 
 ## Requirements *(mandatory)*
 
@@ -212,8 +223,11 @@ releasable and carries the CI-green warning.
 
 - **FR-010**: The classifier MUST emit the flag-system probe, release-cadence, and
   consumer-locality detectors as **advisory hints only** — surfaced in the result but not
-  deeply implemented, and not, on their own, sufficient to force a split. (Deep
-  implementation of these three probes is out of scope for this spec — see Out of Scope.)
+  deeply implemented, and not, on their own, sufficient to force a split. Each advisory probe
+  MUST degrade gracefully: a probe that cannot run or fails internally emits no hint and MUST
+  NOT cause a failure, a non-success exit, or a block — an empty `hints[]` is a normal
+  successful outcome (reinforcing FR-012's never-block guarantee). (Deep implementation of
+  these three probes is out of scope for this spec — see Out of Scope.)
 
 #### Output, advisory contract, and recording
 
@@ -231,10 +245,12 @@ releasable and carries the CI-green warning.
   the L4 fixtures. Decisive tokens: `hard-atomic:exported-symbol-rename`,
   `hard-atomic:global-version-pin`, `hard-atomic:destructive-migration`,
   `hard-atomic:mutual-exclusion-primitive`, `hard-atomic:out-of-tree-contract-break`,
-  `releasability:destructive-migration`, `releasability:concurrency`, plus the US1 routing
-  reads for additive-multi-seam vs modify-heavy. The three advisory probes (flag-system,
-  release-cadence, consumer-locality) emit ONLY into `hints[]` and MUST NOT appear in
-  `signals[]` (FR-010); `warnings[]` carries only the human CI-green sentences.
+  `releasability:destructive-migration`, `releasability:concurrency`,
+  `change-shape:additive-multi-seam` (→ `split-PR`), and `change-shape:modify-heavy`
+  (→ `one-navigable-PR`). Abstain (no decisive signal) emits NO `change-shape:` token —
+  `signals[]` is empty and the route is `one-navigable-PR` (FR-006). The three advisory probes
+  (flag-system, release-cadence, consumer-locality) emit ONLY into `hints[]` and MUST NOT
+  appear in `signals[]` (FR-010); `warnings[]` carries only the human CI-green sentences.
 - **FR-012**: The classifier MUST be advisory-only and MUST NOT act as a gate: it MUST
   report success without blocking the workflow, and MUST signal only a usage/unreadable-input
   error condition as a non-success outcome (it MUST NOT emit a "blocked"/threshold-exceeded

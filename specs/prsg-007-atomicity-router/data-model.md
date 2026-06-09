@@ -58,12 +58,20 @@ The decisive tokens. PRSG-008 and the Layer-4 fixtures treat this as a closed co
 | `releasability:destructive-migration` | destructive migration | the destructive-migration CI-green sentence (Entity 3) |
 | `releasability:concurrency` | concurrency-sensitive change | the concurrency CI-green sentence (Entity 3) |
 
-### US1 routing reads (FR-011b)
+### US1 routing reads (FR-011b) — two tokens, namespace `change-shape:`
 
-The additive-multi-seam vs modify-heavy reading is the US1 routing signal. It is recorded
-in `signals[]` as a decisive finding (distinct from the three advisory probes, which go to
-`hints[]` only). Exact token spelling is fixed at implement time but MUST be stable and
-MUST NOT collide with the hard-atomic / releasability namespaces above.
+The additive-vs-modify reading (FR-005) is the US1 routing signal. Both tokens are recorded
+in `signals[]` as decisive findings (distinct from the three advisory probes, which go to
+`hints[]` only).
+
+| Token | Class | When emitted |
+|-------|-------|--------------|
+| `change-shape:additive-multi-seam` | proven additive multi-seam change | route → `split-PR` |
+| `change-shape:modify-heavy` | modify-heavy non-hard-atomic change | route → `one-navigable-PR` |
+
+Abstain (uncertain / no decisive signal) emits NO `change-shape:` token — `signals[]` is
+empty and the route is `one-navigable-PR` (FR-006). The `change-shape:` namespace does not
+collide with the reserved `hard-atomic:` / `releasability:` namespaces above.
 
 ### NOT in `signals[]`
 
@@ -92,9 +100,9 @@ field (spec Out of Scope) — it is recoverable from `route` + `signals` (FR-011
 
 | Change class | → route | → releasable | Decisive signal(s) |
 |--------------|---------|--------------|--------------------|
-| additive multi-seam | `split-PR` | true | US1 additive-multi-seam read |
+| additive multi-seam | `split-PR` | true | `change-shape:additive-multi-seam` |
 | single additive seam | `one-navigable-PR` or `single-atomic-PR` | true (unless also releasability-risk) | (single-seam read) |
-| modify-heavy (non-hard-atomic) | `one-navigable-PR` | true | US1 modify-heavy read (NEVER `branch-by-abstraction`) |
+| modify-heavy (non-hard-atomic) | `one-navigable-PR` | true | `change-shape:modify-heavy` (NEVER `branch-by-abstraction`) |
 | hard-atomic: rename | `single-atomic-PR` | true | `hard-atomic:exported-symbol-rename` |
 | hard-atomic: version pin | `single-atomic-PR` | true | `hard-atomic:global-version-pin` |
 | hard-atomic: destructive migration | `single-atomic-PR` | **false** | `hard-atomic:destructive-migration` + `releasability:destructive-migration` |
@@ -121,7 +129,8 @@ placeholder (Q11). The route is recorded ONLY in the workflow file — NOT in `S
 ## Validation rules summary (from requirements)
 
 - Exactly one `route` per successful run, from the five-value enum (SC-001).
-- `route == split-PR` ⇒ proven additive multi-seam, no hard-atomic signature (FR-003).
+- `route == split-PR` ⇒ proven additive multi-seam, no hard-atomic signature (FR-003); `signals[]` contains `change-shape:additive-multi-seam` (FR-011b).
+- modify-heavy + non-hard-atomic ⇒ `signals[]` contains `change-shape:modify-heavy`, `route == one-navigable-PR`; abstain (no decisive signal) emits no `change-shape:*` token (FR-006).
 - Any hard-atomic signature ⇒ `route == single-atomic-PR`, overriding split (FR-007, SC-003).
 - `releasable == false` ⇔ destructive-migration or concurrency class, with the matching
   canonical warning present (FR-008, SC-004); otherwise `releasable == true`, `warnings == []`
