@@ -412,6 +412,40 @@ Skip if GitHub MCP is not configured or the project uses a
 different tracker (Jira, Azure DevOps, etc. — those have
 their own extensions).
 
+**Atomicity Route (post-G5 — read-only, advisory, records the route):**
+After G5 passes, run the read-only atomicity classifier over the
+feature directory to decide whether the change can be split into
+multiple small PRs safely. Splittability is judged by structural
+seams (independent additive capabilities), not lines of code. The
+classifier emits ONE machine-readable decision to stdout and writes
+no file of its own; **the SKILL records that decision** into the
+workflow file's `## Atomicity Route` section. It is advisory-only —
+no outcome blocks the run.
+
+```bash
+# Single positional arg = the feature dir holding tasks.md/plan.md/spec.md.
+# Emits {route, releasable, signals[], hints[], warnings[]} (or {"error":…}).
+out=$("<SKILL_SCRIPTS>/atomicity-route.sh" "specs/<feature>")
+```
+
+Then record the four surfaced fields (`route`, `releasable`,
+`signals`, `warnings`) into the workflow file's `## Atomicity Route`
+section via the orchestrator's own `Edit`. Route values:
+`split-PR` (proven additive multi-seam), `one-navigable-PR` (default /
+abstain, or modify-heavy), `single-atomic-PR` (a hard-atomic signature
+overrides any split), or `out-of-scope` (empty/missing `tasks.md`).
+`releasable: false` carries a canonical "CI-green ≠ releasable"
+warning for a destructive-migration or concurrency-sensitive change.
+
+**FLAG — this wires NO PR emission and NO branch creation.** The
+classifier only records a route for downstream specs to read; actually
+emitting multiple PRs or creating branches is **out of scope here** and
+belongs to PRSG-008 (layer-planner) and PRSG-009 (multi-PR emission).
+The route is recorded ONLY in the workflow file — never in the spec map.
+The classifier makes no call to, and no edit of, the reviewability gate;
+combining this route with reviewability sizing to decide whether to
+*actually* split is a later concern, not this step's.
+
 **Commit:**
 `git add specs/ && git commit -m "feat(SPEC-XXX): complete tasks phase"`
 

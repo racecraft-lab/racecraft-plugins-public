@@ -616,6 +616,37 @@ with concrete Phase 7 task-group items in both `update_plan` and
 
 If any check fails, STOP and repair the plan/state before advancing.
 
+**Atomicity Route (post-G5 — read-only, advisory, records the route):**
+After the Tasks phase and G5 pass, run the read-only atomicity classifier
+over the feature directory to decide whether the change can be split into
+multiple small PRs safely. Splittability is judged by structural seams
+(independent additive capabilities), not lines of code. Run it with
+`exec_command` and capture the exit code so a non-zero exit can never
+abort the run:
+
+```text
+out = exec_command("<SKILL_SCRIPTS>/atomicity-route.sh specs/<feature>")
+# stdout is one decision object: {route, releasable, signals[], hints[],
+# warnings[]} on success, or {"error": <string>} with exit 2.
+```
+
+The classifier writes no file of its own — **the orchestrator records the
+decision** by editing the workflow file's `## Atomicity Route` section with
+`apply_patch`, surfacing the four fields `route`, `releasable`, `signals`,
+and `warnings`. Route values: `split-PR` (proven additive multi-seam),
+`one-navigable-PR` (default / abstain, or modify-heavy), `single-atomic-PR`
+(a hard-atomic signature overrides any split), or `out-of-scope`
+(empty/missing `tasks.md`). `releasable: false` carries a canonical
+"CI-green ≠ releasable" warning for a destructive-migration or
+concurrency-sensitive change. It is advisory-only — no outcome blocks the
+run, and it never edits or calls the reviewability gate.
+
+**FLAG — this wires NO PR emission and NO branch creation.** Recording the
+route here only hands a decision to the downstream layer-planner (PRSG-008)
+and multi-PR emission (PRSG-009) work; actually emitting multiple PRs or
+creating branches is out of scope for this step. The route is recorded ONLY
+in the workflow file — never in the spec map.
+
 **Post-implementation (after all 7 phases complete + G7 passes):**
 Items 10-20 are part of the same durable plan (Step 1.1's Canonical
 Post-Implementation Item List — `Post: Doctor Extension Check`
@@ -864,6 +895,15 @@ never from `.specify/scripts/bash/`.
   to set `CONFIDENCE_GATE_MODE` before G6.5.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` — Enforce
   setup, tasks, and pre-PR reviewability budgets (JSON)
+- `atomicity-route.sh <feature-dir>` — Read-only atomicity classifier:
+  given a feature's `tasks.md`/`plan.md`/`spec.md`, emit ONE routing
+  decision (`route` + `releasable` + `signals` + `hints` + `warnings`,
+  or `{"error":…}`) on stdout. Decides whether a change can be split into
+  multiple small PRs safely by structural seams (NOT LOC). Run after
+  Tasks/G5 with `exec_command`; the orchestrator records the decision into
+  the workflow file's `## Atomicity Route` section with `apply_patch` (the
+  script writes no file). Advisory-only (never blocks) and wires NO PR
+  emission/branch creation (PRSG-008/PRSG-009).
 - `estimate-reviewable-loc.sh <plan.md>` — Plan-phase reviewability
   budget: project production-LOC from `plan.md`'s declared file structure
   and emit a three-value `status` (`pass` / `over_budget` /
