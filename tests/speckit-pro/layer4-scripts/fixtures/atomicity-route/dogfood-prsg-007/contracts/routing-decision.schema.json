@@ -1,0 +1,77 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft-lab/racecraft-plugins-public/prsg-007/routing-decision.schema.json",
+  "title": "Atomicity router routing decision",
+  "description": "The single JSON object emitted by atomicity-route.sh on stdout. STABLE CONTRACT for PRSG-008 (FR-011a/FR-011b). Either a success object (route present) or an error object (error present), never both.",
+  "oneOf": [
+    {
+      "title": "Success decision",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "releasable", "signals", "hints", "warnings"],
+      "properties": {
+        "route": {
+          "type": "string",
+          "description": "Exactly one route. branch-by-abstraction is RESERVED and MUST NOT be emitted by the MVP (FR-001, SC-008).",
+          "enum": [
+            "split-PR",
+            "one-navigable-PR",
+            "single-atomic-PR",
+            "out-of-scope",
+            "branch-by-abstraction"
+          ]
+        },
+        "releasable": {
+          "type": "boolean",
+          "description": "false only for destructive-migration or concurrency classes (FR-008); true otherwise (FR-009). Independent of route."
+        },
+        "signals": {
+          "type": "array",
+          "description": "Decisive detector findings from the closed controlled vocabulary (FR-011b): the seven hard-atomic / releasability tokens plus the two US1 change-shape routing tokens. May be empty (abstain emits no signal).",
+          "items": {
+            "type": "string",
+            "enum": [
+              "hard-atomic:exported-symbol-rename",
+              "hard-atomic:global-version-pin",
+              "hard-atomic:destructive-migration",
+              "hard-atomic:mutual-exclusion-primitive",
+              "hard-atomic:out-of-tree-contract-break",
+              "releasability:destructive-migration",
+              "releasability:concurrency",
+              "change-shape:additive-multi-seam",
+              "change-shape:modify-heavy"
+            ]
+          }
+        },
+        "hints": {
+          "type": "array",
+          "description": "Advisory-probe output (flag-system, release-cadence, consumer-locality) only (FR-010). MUST NOT contain any signals[] token. May be empty.",
+          "items": { "type": "string" }
+        },
+        "warnings": {
+          "type": "array",
+          "description": "Canonical CI-green sentences only (FR-008). May be empty.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "destructive migration: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)",
+              "concurrency-sensitive change: a passing CI run does not prove this change is releasable (CI-green ≠ releasable)"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "title": "Error decision",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["error"],
+      "properties": {
+        "error": {
+          "type": "string",
+          "description": "Usage or unreadable-input message. Emitted with exit 2. No route key present (FR-011a, FR-012)."
+        }
+      }
+    }
+  ]
+}

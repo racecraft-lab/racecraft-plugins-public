@@ -370,24 +370,28 @@ assert_eq "$before_snap" "$after_snap" "directory contents (names + sha) unchang
 
 # ---------------------------------------------------------------------------
 # Dogfood self-check (T024, load-bearing per FR-007a; D4, D10; quickstart
-# "Dogfood self-check"). Run the FINISHED script against PRSG-007's OWN feature
-# dir and assert it does NOT spuriously self-classify off its own definitional
+# "Dogfood self-check"). Run the FINISHED script against a fixture snapshot of
+# PRSG-007's own feature dir and assert it does NOT spuriously self-classify off
+# its own definitional
 # vocabulary. PRSG-007's artifacts enumerate auth/payment/lock/mutex/rename and
 # concurrency keywords as the detectors' vocabulary, and saturate the corpus with
 # modify keywords (UPDATE/DELETE/DROP/CHECK) — so the CORRECT real output is
 # route=one-navigable-PR (modify-heavy), releasable=true, no releasability token.
 # This is encoded against the REAL output (verified by hand); if the firewall
-# ever regresses, this is the assertion that catches it. The feature dir is
-# resolved ABSOLUTELY from this test file's location (not cwd) so it holds under
-# any working directory.
+# ever regresses, this is the assertion that catches it. The fixture is resolved
+# ABSOLUTELY from this test file's location (not cwd) so it holds under any
+# working directory, and deliberately does not read the archived live spec dir.
 # ---------------------------------------------------------------------------
 REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-DOGFOOD_DIR="$REPO_ROOT/specs/prsg-007-atomicity-router"
+DOGFOOD_DIR="$FIXTURE_ROOT/dogfood-prsg-007"
 
 section "dogfood self-check: PRSG-007 classifies its own artifacts safely (T024, FR-007a)"
 
-set_test "dogfood feature dir exists (sanity — non-vacuous guard target)"
-if [ -d "$DOGFOOD_DIR" ]; then _pass; else _fail "expected PRSG-007 feature dir at $DOGFOOD_DIR"; fi
+set_test "dogfood fixture dir exists (sanity — non-vacuous guard target)"
+if [ -d "$DOGFOOD_DIR" ]; then _pass; else _fail "expected PRSG-007 fixture dir at $DOGFOOD_DIR"; fi
+
+set_test "dogfood fixture is decoupled from archived live specs/**"
+assert_not_contains "$DOGFOOD_DIR" "$REPO_ROOT/specs/" "dogfood regression input must be a test fixture"
 
 dogfood_out=$("$SCRIPT" "$DOGFOOD_DIR")
 dogfood_route=$(field_of "$dogfood_out" "route")
@@ -421,7 +425,7 @@ assert_not_contains "$dogfood_signals" "releasability:destructive-migration" "no
 # `branch-by-abstraction`, while a legal enum member, is separately asserted to be
 # absent from every emitted object (SC-008: reserved, never emitted by the MVP).
 # ---------------------------------------------------------------------------
-SCHEMA="$REPO_ROOT/specs/prsg-007-atomicity-router/contracts/routing-decision.schema.json"
+SCHEMA="$DOGFOOD_DIR/contracts/routing-decision.schema.json"
 
 # validate_against_schema <json> — exit 0 if <json> satisfies the success OR error
 # arm of the schema AND (for success objects) does NOT carry branch-by-abstraction;
