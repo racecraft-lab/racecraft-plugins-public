@@ -491,7 +491,7 @@ For each deterministic script behavior:
 |-------|-------|-----------|-------|
 | Foundation | T001-T003 | Complete | RED scaffold tests created; reviewability gate still `exception/pass` under upgrade exception |
 | Tier-1/Tier-0 | T001-T013 | Complete | `migrate-structure.sh` implemented with marker-gated generator delegation; `test-migrate-structure.sh` 69/69 passed and `test-generate-spec-index.sh` 76/76 passed |
-| Tier-2/register | Pending | Pending | |
+| Tier-2/register | T014-T017 | Tier-2 command complete | `relocate-process-artifacts.sh` implemented; `test-relocate-process-artifacts.sh` 104/104 passed; US3 suggestion/register work remains pending |
 | Polish | Pending | Pending | |
 
 ---

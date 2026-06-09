@@ -199,7 +199,7 @@ json_check "$output" \
 
 set_test "dry-run includes every root PROCESS allow-list family"
 json_check "$output" \
-  "all(any(i.get('action') == 'move' and i.get('source') == source and i.get('target') == target for i in data['items']) for source, target in [('specs/prsg-011-legacy/analysis.md', 'specs/prsg-011-legacy/.process/analysis.md'), ('specs/prsg-011-legacy/cleanup-report.md', 'specs/prsg-011-legacy/.process/cleanup-report.md'), ('specs/prsg-011-legacy/incident-report.md', 'specs/prsg-011-legacy/.process/incident-report.md'), ('specs/prsg-011-legacy/uat-notes.md', 'specs/prsg-011-legacy/.process/uat-notes.md'), ('specs/prsg-011-legacy/design-concept.md', 'specs/prsg-011-legacy/.process/design-concept.md'), ('specs/prsg-011-legacy/workflow.md', 'specs/prsg-011-legacy/.process/workflow.md')])" \
+  "('specs/prsg-011-legacy/analysis.md', 'specs/prsg-011-legacy/.process/analysis.md') in [(i.get('source'), i.get('target')) for i in data['items'] if i.get('action') == 'move'] and ('specs/prsg-011-legacy/cleanup-report.md', 'specs/prsg-011-legacy/.process/cleanup-report.md') in [(i.get('source'), i.get('target')) for i in data['items'] if i.get('action') == 'move'] and ('specs/prsg-011-legacy/incident-report.md', 'specs/prsg-011-legacy/.process/incident-report.md') in [(i.get('source'), i.get('target')) for i in data['items'] if i.get('action') == 'move'] and ('specs/prsg-011-legacy/uat-notes.md', 'specs/prsg-011-legacy/.process/uat-notes.md') in [(i.get('source'), i.get('target')) for i in data['items'] if i.get('action') == 'move'] and ('specs/prsg-011-legacy/design-concept.md', 'specs/prsg-011-legacy/.process/design-concept.md') in [(i.get('source'), i.get('target')) for i in data['items'] if i.get('action') == 'move'] and ('specs/prsg-011-legacy/workflow.md', 'specs/prsg-011-legacy/.process/workflow.md') in [(i.get('source'), i.get('target')) for i in data['items'] if i.get('action') == 'move']" \
   "missing one or more root PROCESS allow-list move items"
 
 set_test "dry-run does not move files outside the PROCESS allow-list"
@@ -239,7 +239,7 @@ json_check "$output" \
 
 set_test "dry-run protects all CONTRACT artifacts, including allow-list-like names under CONTRACT dirs"
 json_check "$output" \
-  "all(any(i.get('action') == 'protected_contract' and i.get('path') == path for i in data['items']) for path in ['specs/prsg-011-legacy/SPEC-MOC.md', 'specs/prsg-011-legacy/spec.md', 'specs/prsg-011-legacy/plan.md', 'specs/prsg-011-legacy/tasks.md', 'specs/prsg-011-legacy/research.md', 'specs/prsg-011-legacy/data-model.md', 'specs/prsg-011-legacy/quickstart.md', 'specs/prsg-011-legacy/contracts/analysis.md', 'specs/prsg-011-legacy/checklists/cleanup-report.md'])" \
+  "'specs/prsg-011-legacy/SPEC-MOC.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/spec.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/plan.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/tasks.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/research.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/data-model.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/quickstart.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/contracts/analysis.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract'] and 'specs/prsg-011-legacy/checklists/cleanup-report.md' in [i.get('path') for i in data['items'] if i.get('action') == 'protected_contract']" \
   "missing one or more CONTRACT protection items"
 
 set_test "dry-run reports already-normalized .process artifacts as no-op"
@@ -290,7 +290,7 @@ assert_dir_exists "$apply_expected_backup"
 
 set_test "apply itemizes backup creation"
 json_check "$apply_output" \
-  "any(i.get('action') == 'backup' and i.get('path') == data['backup']['path'] for i in data['items'])" \
+  "data['backup']['path'] in [i.get('path') for i in data['items'] if i.get('action') == 'backup']" \
   "missing backup item"
 
 set_test "apply moves spec-root PROCESS artifact"

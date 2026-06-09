@@ -68,10 +68,10 @@ Reviewability-Exception: upgrade
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Implement `relocate-process-artifacts.sh` mode parsing, required `--spec`, repo/spec path resolution, active-feature handling, candidate eligibility, and compact JSON envelope in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
-- [ ] T015 [US2] Implement PROCESS allow-list discovery, CONTRACT protection, already-normalized no-op reporting, missing/non-regular MOC block, and deterministic move-set sorting in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
-- [ ] T016 [US2] Implement evidence normalization, review-packet canonicalization, collision detection, and dual PROCESS anchors for matching docs-side design/workflow files including PRSG-001 deferred scaffold artifact cases in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
-- [ ] T017 [US2] Implement apply clean-tree block, forced backup, `git mv` moves, `SPEC-MOC.md` `structureVersion: 1` stamp, generator delegation, idempotent no-op, and post-backup recovery statuses in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
+- [x] T014 [US2] Implement `relocate-process-artifacts.sh` mode parsing, required `--spec`, repo/spec path resolution, active-feature handling, candidate eligibility, and compact JSON envelope in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
+- [x] T015 [US2] Implement PROCESS allow-list discovery, CONTRACT protection, already-normalized no-op reporting, missing/non-regular MOC block, and deterministic move-set sorting in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
+- [x] T016 [US2] Implement evidence normalization, review-packet canonicalization, collision detection, and dual PROCESS anchors for matching docs-side design/workflow files including PRSG-001 deferred scaffold artifact cases in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
+- [x] T017 [US2] Implement apply clean-tree block, forced backup, `git mv` moves, `SPEC-MOC.md` `structureVersion: 1` stamp, generator delegation, idempotent no-op, and post-backup recovery statuses in `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh`
 
 **Checkpoint**: User Story 2 is complete when relocation fixtures pass and the script never mutates dirty, in-flight, out-of-scope, missing-MOC, or collision states.
 

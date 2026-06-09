@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T02:42:40Z",
-  "active_step": "Phase 7: US2 Tier-2 Relocation (T014-T017)",
+  "updated_at": "2026-06-09T02:53:37Z",
+  "active_step": "Phase 7: US3 Suggestion Fixtures (T018-T021)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -171,11 +171,11 @@
     },
     {
       "step": "Phase 7: US2 Tier-2 Relocation (T014-T017)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: US3 Suggestion Fixtures (T018-T021)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: US3 Skill Guidance (T022-T027)",
