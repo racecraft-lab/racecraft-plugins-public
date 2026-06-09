@@ -3,8 +3,8 @@
 # Consumed by speckit-scaffold-spec via token substitution. All scaffold-time
 # tokens were resolved before writing this SPEC-MOC.md.
 #
-# up: MUST be a quoted relative markdown link — "[text](relative/path.md)", NEVER a
-#     [[wikilink]]. The () target is load-bearing: the stale-index lint parses the
+# up: MUST be a quoted relative markdown link — "[text](relative/path.md)", never a
+#     wiki-style link. The () target is load-bearing: the stale-index lint parses the
 #     relative []() target from this value and resolves it. From specs/<branch-name>/
 #     the existing roadmap resolves as ../../docs/ai/specs/<roadmap-filename>.md, so
 #     the ../../docs/ai/specs/ prefix is hardcoded and only the filename is tokenized.
