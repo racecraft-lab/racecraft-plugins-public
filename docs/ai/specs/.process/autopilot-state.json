@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T00:18:00Z",
-  "active_step": "Phase 2: Clarify - Migration CLI and backup model",
+  "updated_at": "2026-06-09T01:12:00Z",
+  "active_step": "Phase 3: Plan",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -83,31 +83,31 @@
     },
     {
       "step": "Phase 2: Clarify - Migration CLI and backup model",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Migration CLI and backup model Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - ID normalization and Tier-0 backfill",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - ID normalization and Tier-0 backfill Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Tier-2 allow-list and registration",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Tier-2 allow-list and registration Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - data-integrity",

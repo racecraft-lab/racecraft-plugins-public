@@ -41,8 +41,8 @@ Re-read it before each phase. The locked decisions from that interview:
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | 3 user stories, 22 functional requirements, 12 acceptance scenarios, 0 clarification markers |
-| Clarify | `/speckit-clarify` | In Progress | Running targeted sessions for the three pre-scoped implementation mechanics |
-| Plan | `/speckit-plan` | Pending | |
+| Clarify | `/speckit-clarify` | Complete | 3 sessions resolved; 5 consensus rows logged; 0 clarification markers |
+| Plan | `/speckit-plan` | In Progress | |
 | Checklist | `/speckit-checklist` | Pending | Recommended: data-integrity, error-handling, backward-compatibility, developer-experience |
 | Tasks | `/speckit-tasks` | Pending | Must preserve two internal vertical increments |
 | Analyze | `/speckit-analyze` | Pending | |
@@ -116,7 +116,7 @@ Verify against `.specify/memory/constitution.md` v1.1.0 before G1:
 - [ ] `migrate-structure.sh --apply` hard-fails on dirty trees before backup or mutation, applies idempotent Tier-1 repo edits, writes `.specify/structure-version.json` with `{"structureVersion":1}`, and drives Tier-0 navigation backfill.
 - [ ] Tier-0 backfill reuses or composes with `generate-spec-index.sh` to emit roadmap-MOC rows for completed/archived ID-normalizable specs without stamping or moving legacy spec files.
 - [ ] In-flight specs from `.specify/feature.json` are skipped in every tier and reported as frozen/in-flight in dry-run output.
-- [ ] `relocate-process-artifacts.sh` supports real `--dry-run` and `--apply`, forced backup, dirty-tree guard, idempotent re-run, `git mv`, link/index regeneration, and `structureVersion: 1` stamping only for Tier-2 thawed specs.
+- [ ] `relocate-process-artifacts.sh` supports real read-only `--dry-run` including on dirty trees, `--apply` with forced backup and clean-tree guard before mutation, idempotent re-run, `git mv`, link/index regeneration, and `structureVersion: 1` stamping only for Tier-2 thawed specs.
 - [ ] PROCESS relocation allow-list includes `retrospective.md`, `*-report.md`, `uat-*`, `pr-review-packet.md`, legacy `peer-review-*`, `cleanup-report.md`, `analysis.md`, `evidence/`, `verification-evidence.md` normalized into `evidence/verification-evidence.md`, `design-concept.md`, `*-design-concept.md`, `workflow.md`, and `*-workflow.md`.
 - [ ] CONTRACT artifacts stay visible: `spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/**`, `checklists/**`, and `SPEC-MOC.md`.
 - [ ] `speckit-upgrade` exposes the Tier-1/Tier-0 migration behavior; `speckit-scaffold-spec` and `speckit-autopilot` suggest, but never auto-run, the Tier-2 codemod when a thawed legacy spec has relocatable PROCESS files.
@@ -193,7 +193,7 @@ Fill in after running the command:
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 22 |
+| Functional Requirements | 26 |
 | User Stories | US1, US2, US3 |
 | Acceptance Criteria | 12 acceptance scenarios; 7 measurable success criteria |
 
@@ -232,9 +232,19 @@ Fill in after running the command:
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Migration CLI and backup model | Pending | |
-| 2 | ID normalization and Tier-0 backfill | Pending | |
-| 3 | Tier-2 allow-list and registration | Pending | |
+| 1 | Migration CLI and backup model | 5 | Resolved exact script invocation contracts, JSON report shape, outside-repo backup path, porcelain dirty-tree detection, and dirty-tree-safe Tier-2 dry-run |
+| 2 | ID normalization and Tier-0 backfill | 5 | Resolved Tier-0 link targets, active/archive discovery sources, repo-marker-gated generator behavior, strict `.specify/feature.json` parsing, and direct reuse of `moc-id-normalize.sh` |
+| 3 | Tier-2 allow-list and registration | 5 | Resolved dual-anchor relocation, root-only allow-list matching with CONTRACT precedence, evidence collision handling, existing-MOC stamping/generator delegation, and static suggestion-only scaffold/autopilot behavior |
+
+### Consensus Resolution Log
+
+| Phase | Item | Round | Routed Categories | Outcome | Analysts Used |
+|-------|------|-------|-------------------|---------|---------------|
+| Clarify Session 1 | Tier-2 dry-run dirty-tree behavior | 1 | spec | Allow read-only dirty-tree dry-run; clean-tree guard applies to `--apply` before backup or mutation | spec-context-analyst |
+| Clarify Session 2 | Tier-0 link targets for no-MOC or archive-memory specs | 1 | codebase, spec | Use home-note-relative target matrix: gated `SPEC-MOC.md`, legacy `spec.md`, archive memory section; skip and report when no durable target resolves | codebase-analyst, spec-context-analyst |
+| Clarify Session 2 | Tier-0 durability after `structureVersion` 1 | 1 | codebase, spec | Extend `generate-spec-index.sh` with repo-marker-gated legacy-row discovery; `migrate-structure.sh` creates or advances the marker and delegates generation; pre-marker behavior continues to skip legacy/non-version-marked specs | codebase-analyst, spec-context-analyst |
+| Clarify Session 2 | `.specify/feature.json` parse/match for frozen skips | 1 | codebase, spec | Missing file means no active frozen target; present invalid state is reported in dry-run and blocks every mutating mode; valid `feature_directory` canonicalizes under repo root and freezes candidates by exact path or existing namespace-aware `moc_id_match` only | codebase-analyst, spec-context-analyst |
+| Clarify Session 3 | Tier-2 design-concept/workflow anchor scope | 1 | codebase, spec | Use dual-anchor relocation: spec-root PROCESS files move under `<spec-dir>/.process/`; matching scaffold-time `docs/ai/specs/<SPEC-ID>-design-concept.md` and `<SPEC-ID>-workflow.md` move under `docs/ai/specs/.process/`; unrelated docs files do not move | codebase-analyst, spec-context-analyst |
 
 ---
 
@@ -260,12 +270,13 @@ Fill in after running the command:
 - `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`: reuse for generated index zones; do not duplicate whole-zone regen logic.
 - `speckit-pro/skills/speckit-scaffold-spec/SKILL.md` plus Codex mirror: add explicit suggested next action for thawed legacy specs with relocatable PROCESS files; never auto-run.
 - `speckit-pro/skills/speckit-autopilot/SKILL.md` plus Codex mirror and relevant phase references: same suggested next action behavior; never invoke the codemod autonomously.
-- Tests: add L4 fixtures for dry-run no-mutation, apply dirty-tree block, idempotency, move-set allow-list, evidence normalization, in-flight skip, and ID normalization. Add L3 skill behavior fixtures and L8 parity checks when mirrored skill prose changes.
+- Tests: add L4 fixtures for dry-run no-mutation, apply dirty-tree block, idempotency, move-set allow-list, dual-anchor design/workflow relocation, evidence normalization, in-flight skip, and ID normalization. Add L3 skill behavior fixtures and L8 parity checks when mirrored skill prose changes.
 
 ## Constraints
 - `migrate-structure.sh --dry-run`: read-only and allowed on dirty trees.
 - `migrate-structure.sh --apply`: clean tree required before backup/mutation.
-- `relocate-process-artifacts.sh --dry-run` and `--apply`: clean tree required before backup/mutation because Tier-2 reasons about git moves and target paths.
+- `relocate-process-artifacts.sh --dry-run`: read-only and allowed on dirty trees; it reports proposed git moves, target-path collisions, protected CONTRACT artifacts, generated-link/index updates, stamp decisions, and backup path without changing files.
+- `relocate-process-artifacts.sh --apply`: clean tree required before backup/mutation because Tier-2 performs git moves, target-path changes, stamps, and generated-link/index updates.
 - Every apply path creates a forced, non-skippable backup before mutation and prints the backup path.
 - Tier-0 touches only generated navigation zones; no file moves and no frontmatter stamps.
 - Tier-2 moves only PROCESS allow-list files; CONTRACT files remain in place.
@@ -276,7 +287,7 @@ Fill in after running the command:
 - Treat `.specify/structure-version.json` as a repo-level high-water marker:
   `{"structureVersion":1}` for the first migration; future migrations are 2+.
 - Treat SPEC-MOC `structureVersion: 1` as the per-spec version-gate carrier already used by lints and templates.
-- Keep script output deterministic enough for byte-stable fixtures. Prefer compact JSON or stable plain text for dry-run output; whichever is chosen must be documented in contracts/tests.
+- Keep script output deterministic enough for byte-stable fixtures. Use compact JSON reports for dry-run and apply output, documented in contracts/tests.
 - Do not parse `.gitattributes` from reviewability logic; PRSG-001 already decided the gate keeps its hardcoded `.process/` glob.
 ```
 
