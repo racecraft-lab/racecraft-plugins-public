@@ -1,0 +1,148 @@
+# Feature Specification: Retro-migration - Version Marker and State-Keyed Backfill/Relocate
+
+**Feature Branch**: `prsg-011-retro-migration`
+
+**Created**: 2026-06-08
+
+**Status**: Draft
+
+**Input**: User description: "Add a deterministic, operator-safe migration path that upgrades existing SpecKit project structure with a repo-level structure marker, Tier-0 navigation backfill, and an explicit Tier-2 PROCESS artifact relocation codemod for thawed legacy specs."
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - Run repository structure migration safely (Priority: P1)
+
+As a maintainer upgrading an existing SpecKit project, I can run `migrate-structure.sh --dry-run` to see ordered pending structure migrations without changing files, then run `migrate-structure.sh --apply` on a clean tree to establish the repository structure marker and Tier-0 navigation backfill.
+
+**Why this priority**: This is the minimum safe upgrade path. It gives existing projects the new repository structure contract without moving or stamping completed legacy specs.
+
+**Independent Test**: Can be fully tested against a fixture repository with historical specs by comparing workspace state before and after dry-run, then applying on a clean tree and verifying the marker plus navigation output.
+
+**Acceptance Scenarios**:
+
+1. **Given** an existing SpecKit project without `.specify/structure-version.json`, **When** the maintainer runs `migrate-structure.sh --dry-run`, **Then** the output lists pending Tier-1 repository edits and Tier-0 navigation backfill in a stable order and no files are changed.
+2. **Given** the same project on a clean tree, **When** the maintainer runs `migrate-structure.sh --apply`, **Then** the migration creates `.specify/structure-version.json` with `structureVersion` set to `1`, performs Tier-1 repository edits, and updates generated navigation for eligible historical specs.
+3. **Given** a dirty worktree, **When** the maintainer runs `migrate-structure.sh --apply`, **Then** the command fails before backup creation, file writes, index regeneration, or other mutations.
+4. **Given** a project already migrated to `structureVersion` 1, **When** the maintainer runs dry-run or apply again, **Then** the output reports the current no-op state and does not duplicate marker or navigation changes.
+
+---
+
+### User Story 2 - Relocate PROCESS artifacts for a thawed legacy spec (Priority: P2)
+
+As a maintainer thawing a legacy spec, I can run `relocate-process-artifacts.sh --dry-run` to preview the exact PROCESS artifacts that would move, then run `relocate-process-artifacts.sh --apply` on a clean tree to move only allowed PROCESS artifacts into `.process/`, stamp the spec MOC, regenerate links/index, and recover from the forced backup if needed.
+
+**Why this priority**: It completes the migration path for specs that are intentionally brought forward while preserving historical specs by default.
+
+**Independent Test**: Can be fully tested with a fixture legacy spec that contains both PROCESS and CONTRACT artifacts by validating the dry-run move set, apply results, backup path, stamp, and regenerated links.
+
+**Acceptance Scenarios**:
+
+1. **Given** a thawed legacy spec with relocatable PROCESS files, **When** the maintainer runs `relocate-process-artifacts.sh --dry-run`, **Then** the output lists every proposed move, skipped CONTRACT artifact, evidence normalization, generated-link update, and backup location without changing files.
+2. **Given** the thawed legacy spec on a clean tree, **When** the maintainer runs `relocate-process-artifacts.sh --apply`, **Then** the command creates a forced backup, moves only allowed PROCESS artifacts into `.process/`, stamps `SPEC-MOC.md` with `structureVersion: 1`, normalizes `verification-evidence.md` into `evidence/verification-evidence.md`, and regenerates links/index.
+3. **Given** the same spec after successful relocation, **When** the maintainer re-runs dry-run or apply, **Then** the command reports an idempotent no-op state and does not move or stamp anything again.
+4. **Given** a target path collision or partial failure, **When** relocation cannot complete safely, **Then** the command stops with a clear error, leaves recovery instructions that name the backup path, and does not continue with later moves.
+
+---
+
+### User Story 3 - Suggest Tier-2 codemod without auto-running it (Priority: P3)
+
+As a scaffold or autopilot operator, I see an explicit suggested next action when a thawed legacy spec has relocatable PROCESS files, while the scaffold/autopilot flow never executes the relocation codemod for me.
+
+**Why this priority**: Operators need discoverability for the migration path, but automatic file moves would be too risky inside scaffold/autopilot flows.
+
+**Independent Test**: Can be fully tested by running scaffold/autopilot fixtures for thawed, frozen, and already-migrated specs and checking the surfaced suggestion text plus absence of codemod side effects.
+
+**Acceptance Scenarios**:
+
+1. **Given** a thawed legacy spec with relocatable PROCESS files, **When** scaffold or autopilot evaluates the spec, **Then** it shows the exact Tier-2 dry-run command and apply follow-up as a suggested next action.
+2. **Given** an in-flight spec listed in `.specify/feature.json`, **When** scaffold or autopilot evaluates migration state, **Then** it reports the frozen/in-flight reason and does not suggest or run relocation.
+3. **Given** a thawed spec with no relocatable PROCESS artifacts, **When** scaffold or autopilot evaluates migration state, **Then** it reports no Tier-2 action is needed.
+4. **Given** any scaffold or autopilot run, **When** the Tier-2 codemod is suggested, **Then** no dry-run or apply command is executed automatically.
+
+### Edge Cases
+
+- Dry-run is executed on a dirty tree and must remain read-only.
+- Any mutation path is requested on a dirty tree and must fail before backup, file writes, moves, stamps, or generated-zone updates.
+- `.specify/feature.json` names an in-flight spec; that spec is skipped in every tier and reported as frozen/in-flight.
+- A historical spec can be ID-normalized for navigation but has no `SPEC-MOC.md`; Tier-0 must not stamp or move it and must report what was backfilled or skipped.
+- A legacy spec contains both `pr-review-packet.md` and `peer-review-*`; relocation must recognize both while keeping `pr-review-packet.md` as the canonical name.
+- A legacy spec contains `verification-evidence.md` and/or an existing `evidence/` directory; relocation must normalize without overwriting unrelated evidence.
+- A spec contains CONTRACT artifacts with names similar to PROCESS artifacts; CONTRACT artifacts must stay in place.
+- A migration is re-run after a completed or partially completed migration; output must be deterministic and safe to act on.
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-001**: The migration tooling MUST expose `migrate-structure.sh --dry-run` and `migrate-structure.sh --apply` as the repository-level structure migration entry points.
+- **FR-002**: `migrate-structure.sh --dry-run` MUST list pending Tier-1 repository edits, Tier-0 navigation backfill, skipped frozen specs, and no-op current-state items in deterministic order.
+- **FR-003**: All dry-run modes MUST be read-only and MUST be safe to run on a dirty worktree.
+- **FR-004**: All mutation modes MUST fail on a dirty worktree before backup creation, file writes, file moves, marker updates, generated-zone updates, or stamps.
+- **FR-005**: `migrate-structure.sh --apply` MUST create `.specify/structure-version.json` with `structureVersion` set to `1` when the repository has not already completed the first structure migration.
+- **FR-006**: `migrate-structure.sh --apply` MUST treat `structureVersion` 1 as current and MUST be idempotent when re-run after a successful migration.
+- **FR-007**: Tier-0 navigation backfill MUST include completed or archived historical specs when their spec IDs can be normalized and joined to the roadmap-MOC spine.
+- **FR-008**: Tier-0 navigation backfill MUST NOT stamp, move, rename, or otherwise mutate completed historical spec files outside generated navigation zones.
+- **FR-009**: Every migration tier MUST skip specs listed as in-flight by `.specify/feature.json` and MUST report a frozen/in-flight reason in dry-run output.
+- **FR-010**: The migration tooling MUST expose `relocate-process-artifacts.sh --dry-run` and `relocate-process-artifacts.sh --apply` as the explicit Tier-2 codemod entry points for thawed legacy specs.
+- **FR-011**: `relocate-process-artifacts.sh --dry-run` MUST report the exact proposed PROCESS move set, CONTRACT protections, marker stamp, generated-link/index updates, and backup path without changing files.
+- **FR-012**: `relocate-process-artifacts.sh --apply` MUST create a forced, non-skippable backup before the first mutation and MUST print the backup path in command output.
+- **FR-013**: Tier-2 relocation MUST move only PROCESS artifacts on the approved allow-list: `retrospective.md`, `*-report.md`, `uat-*`, `pr-review-packet.md`, legacy `peer-review-*`, `cleanup-report.md`, `analysis.md`, `evidence/`, `verification-evidence.md`, `design-concept.md`, `*-design-concept.md`, `workflow.md`, and `*-workflow.md`.
+- **FR-014**: Tier-2 relocation MUST keep CONTRACT artifacts in place, including `spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/**`, `checklists/**`, and `SPEC-MOC.md`.
+- **FR-015**: Tier-2 relocation MUST normalize a legacy `verification-evidence.md` file into `evidence/verification-evidence.md`.
+- **FR-016**: Tier-2 relocation MUST stamp only thawed migrated spec MOCs with `structureVersion: 1`; it MUST NOT stamp completed historical specs during Tier-0.
+- **FR-017**: Tier-2 relocation MUST regenerate affected links and generated indexes after a successful apply.
+- **FR-018**: Tier-2 relocation MUST be idempotent after successful completion and MUST report no-op state on repeat runs.
+- **FR-019**: Scaffold and autopilot flows MUST suggest the Tier-2 codemod when they detect a thawed legacy spec with relocatable PROCESS artifacts.
+- **FR-020**: Scaffold and autopilot flows MUST NOT automatically execute `relocate-process-artifacts.sh --dry-run` or `relocate-process-artifacts.sh --apply`.
+- **FR-021**: Operator-facing output MUST distinguish pending, applied, skipped frozen/in-flight, skipped out-of-scope, protected CONTRACT, and no-op current-state results.
+- **FR-022**: The implementation MUST preserve the two ordered internal increments: first Tier-1/Tier-0 repository migration, then Tier-2 relocation plus scaffold/autopilot registration.
+
+### Reviewability Budget *(mandatory)*
+
+- **Primary surface**: schema/migration
+- **Secondary surfaces, if any**: docs/process, harness/adapter
+- **Projected reviewable LOC**: approximately 440
+- **Projected production files**: 6-8
+- **Projected total files**: 15-22 including deterministic fixtures and parity coverage
+- **Budget result**: warning accepted
+- **Split decision**: Keep one spec because the repo marker, Tier-0 backfill, Tier-2 codemod, and operator suggestions are one migration feature. Tasks must preserve two internal vertical increments and implementation must revisit the split only if the accepted warning budget becomes unworkable.
+
+### PR Review Packet Requirements *(mandatory)*
+
+- PR description MUST include: what changed, why, non-goals, review order,
+  scope budget, traceability, verification evidence, known gaps, and rollback
+  or feature-flag notes.
+- Traceability MUST map each major requirement or success criterion to changed
+  files and verification evidence.
+- Deferred work MUST name the follow-up spec or issue.
+
+### Key Entities *(include if feature involves data)*
+
+- **Repository Structure Marker**: Repo-level structure state with current value `structureVersion` 1 for the first migration; future structure migrations use later values.
+- **Spec MOC Marker**: Per-spec frontmatter carrier for `structureVersion: 1`, stamped only when a legacy spec is explicitly thawed and Tier-2 relocation succeeds.
+- **Migration Tier**: Ordered migration unit: Tier-1 repository edits, Tier-0 navigation backfill, and Tier-2 per-spec PROCESS relocation.
+- **Artifact Classification**: The migration decision that classifies spec files as PROCESS artifacts that may move or CONTRACT artifacts that must remain visible.
+- **Migration Report**: Deterministic operator-facing output that records pending, applied, skipped, protected, no-op, backup, and recovery information.
+- **Forced Backup**: Non-optional restore point created before mutation so an operator can recover if relocation or repository migration fails.
+- **Frozen/In-Flight Spec**: A spec identified by `.specify/feature.json` that must be excluded from every migration tier until the operator thaws it.
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001**: In fixture runs, 100% of dry-run executions leave the workspace byte-for-byte unchanged while reporting pending, skipped, and no-op migration decisions.
+- **SC-002**: In fixture runs, 100% of mutation attempts on dirty worktrees fail before backup creation or mutation and return a clear operator-facing reason.
+- **SC-003**: After Tier-0 apply, 100% of ID-normalizable completed or archived historical specs not marked in-flight appear in generated roadmap-MOC navigation without receiving new stamps or file moves.
+- **SC-004**: In Tier-2 relocation fixtures, 100% of PROCESS allow-list artifacts move as declared, 0 CONTRACT artifacts move, and every migrated spec MOC carries `structureVersion: 1`.
+- **SC-005**: For legacy `verification-evidence.md` fixtures, 100% of successful Tier-2 applies produce `evidence/verification-evidence.md` without losing existing evidence content.
+- **SC-006**: Scaffold/autopilot behavior checks show the Tier-2 codemod suggestion for 100% of thawed legacy specs with relocatable PROCESS artifacts and 0 automatic codemod executions.
+- **SC-007**: Re-running apply after successful Tier-1/Tier-0 or Tier-2 migration reports a no-op current state in 100% of idempotency fixtures.
+
+## Assumptions
+
+- Existing projects may contain completed or archived SpecKit specs that predate PRSG-001 through PRSG-010.
+- Absence of `structureVersion` on a historical spec remains the legacy exemption signal until an operator explicitly thaws and migrates that spec.
+- `.specify/feature.json` is the authoritative in-flight spec state for migration skipping.
+- Non-SpecKit and date-named legacy namespaces remain outside v1 migration scope.
+- Operator-facing script names and flags are part of the product contract for this migration feature.
+- The accepted reviewability warning remains valid as long as tasks and implementation preserve the two ordered internal vertical increments.

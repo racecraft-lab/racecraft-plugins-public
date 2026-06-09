@@ -40,8 +40,8 @@ Re-read it before each phase. The locked decisions from that interview:
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | |
-| Clarify | `/speckit-clarify` | Pending | Use only if Specify leaves markers or the three focus areas below need narrowing |
+| Specify | `/speckit-specify` | Complete | 3 user stories, 22 functional requirements, 12 acceptance scenarios, 0 clarification markers |
+| Clarify | `/speckit-clarify` | In Progress | Running targeted sessions for the three pre-scoped implementation mechanics |
 | Plan | `/speckit-plan` | Pending | |
 | Checklist | `/speckit-checklist` | Pending | Recommended: data-integrity, error-handling, backward-compatibility, developer-experience |
 | Tasks | `/speckit-tasks` | Pending | Must preserve two internal vertical increments |
@@ -76,7 +76,23 @@ Verify against `.specify/memory/constitution.md` v1.1.0 before G1:
 | V. Conventional Commits | Setup and implementation commits use `type(scope): description` | Git log / PR title |
 | VI. KISS, Simplicity & YAGNI | Deterministic migration logic stays script-first; no agent or abstraction for one-off decisions | Plan review |
 
-**Constitution Check:** Pending.
+**Constitution Check:** Verified.
+
+**Autopilot Preflight:** Verified 2026-06-09.
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| Prerequisites | Verified | `check-prerequisites.sh` returned `all_pass=true`; branch `prsg-011-retro-migration`; worktree=true |
+| MCP availability | Fallbacks available | Missing: tavily-mcp, context7, RepoPrompt |
+| Command detection | Recorded | Build/typecheck/lint/test auto-detection returned `N/A`; workflow-specific gates remain authoritative |
+| Preset detection | Recorded | `speckit-pro-reviewability` preset active for spec/plan/tasks templates |
+| Extension detection | Recorded | archive, verify, verify-tasks, retrospective, speckit-utils, git enabled; review/cleanup not installed |
+| Archive sweep | Recorded | Current target `specs/prsg-011-retro-migration` excluded; cleanup disabled because no executable sweep script is vendored |
+| Constitution validation | Verified | `bash tests/speckit-pro/run-all.sh --layer 1` passed 887/887; `validate-scripts.sh` passed 83/83 |
+
+**PROJECT_COMMANDS:** BUILD=N/A; TYPECHECK=N/A; LINT=N/A; UNIT_TEST=N/A; INTEGRATION_TEST=N/A; FULL_VERIFY=N/A.
+
+**PRESET_CONVENTIONS:** Use `speckit-pro-reviewability` templates for spec, plan, and tasks; preserve reviewability declared-file structure and SPEC-MOC conventions.
 
 ---
 
@@ -177,14 +193,14 @@ Fill in after running the command:
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Expected: US1, US2, US3 |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 22 |
+| User Stories | US1, US2, US3 |
+| Acceptance Criteria | 12 acceptance scenarios; 7 measurable success criteria |
 
 ### Files Generated
 
-- [ ] `specs/prsg-011-retro-migration/spec.md`
-- [ ] `specs/prsg-011-retro-migration/checklists/requirements.md`
+- [x] `specs/prsg-011-retro-migration/spec.md`
+- [x] `specs/prsg-011-retro-migration/checklists/requirements.md`
 
 ---
 
