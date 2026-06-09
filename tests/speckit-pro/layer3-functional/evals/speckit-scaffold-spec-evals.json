@@ -1,0 +1,21 @@
+{
+  "skill_name": "speckit-scaffold-spec",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "When /speckit-pro:speckit-scaffold-spec prepares PRSG-011, it finds five legacy migration candidates: specs/prsg-011-legacy has root retrospective.md and verification-evidence.md with no structureVersion and is not active; specs/prsg-012-active is named by .specify/feature.json; specs/prsg-013-current already has SPEC-MOC.md structureVersion: 1 and only .process files; specs/prsg-014-empty has no relocatable PROCESS artifacts; and specs/team-123-legacy plus specs/2026-06-legacy are out of scope. What Tier-2 relocation guidance should setup surface, and what must it not do automatically?",
+      "expected_output": "Surfaces a suggestion only for the thawed eligible PRSG legacy spec, with the exact FR-026 dry-run command and clean-tree apply follow-up. Reports frozen/in-flight, already-current, no-candidate, and out-of-scope cases as suppression/no-op states. Explicitly states scaffold setup does not run relocate-process-artifacts.sh.",
+      "expectations": [
+        "Suggests Tier-2 relocation only for specs/prsg-011-legacy",
+        "Includes the exact dry-run command: speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/prsg-011-legacy --repo-root .",
+        "Includes the exact clean-tree apply follow-up: speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/prsg-011-legacy --repo-root .",
+        "States the apply command is a follow-up after operator review and a clean worktree, not part of scaffold execution",
+        "Reports specs/prsg-012-active as frozen/in-flight from .specify/feature.json and does not suggest relocation for it",
+        "Reports specs/prsg-013-current as already current or already normalized and does not suggest relocation for it",
+        "Reports specs/prsg-014-empty as no Tier-2 action needed because no relocatable PROCESS artifacts exist",
+        "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
+        "States that /speckit-pro:speckit-scaffold-spec does not execute relocate-process-artifacts.sh --dry-run or --apply automatically"
+      ]
+    }
+  ]
+}

@@ -45,6 +45,39 @@ readonly BACKLINKS_END='<!-- GENERATED:BACKLINKS:END -->'
 # NOT an ASCII dot, NOT a link.
 readonly PRS_SEP=$'\xc2\xb7'
 
+repo_structure_marker_current() {
+  local marker="$REPO_ROOT/.specify/structure-version.json"
+  [ -r "$marker" ] || return 1
+  jq -e '(.structureVersion | type == "number") and (.structureVersion >= 1) and (.structureVersion == (.structureVersion | floor))' \
+    "$marker" >/dev/null 2>&1
+}
+
+active_feature_rel() {
+  local feature="$REPO_ROOT/.specify/feature.json"
+  [ -r "$feature" ] || return 1
+  jq -er '.feature_directory | select(type == "string" and length > 0)' \
+    "$feature" 2>/dev/null || return 1
+}
+
+candidate_out_of_scope_reason() {
+  local id="$1" first
+  if [[ "$id" =~ ^[0-9]{4}($|-) ]]; then
+    printf 'date_named_legacy_namespace'
+    return 0
+  fi
+  first="${id%%-*}"
+  if [[ "$first" =~ ^[A-Za-z]+$ ]] && [ "$first" != "prsg" ] && [ "$first" != "PRSG" ] && [ "$first" != "spec" ] && [ "$first" != "SPEC" ]; then
+    printf 'non_speckit_namespace'
+    return 0
+  fi
+  return 1
+}
+
+slugify_heading() {
+  tr '[:upper:]' '[:lower:]' \
+    | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//'
+}
+
 # ── Internal-error trap (T008): set -E so the ERR trap fires inside functions too;
 # an unexpected `set -e` failure maps to an actionable stderr line + exit 2 (same
 # discipline as the PRSG-002 lints). Disarmed (`trap - ERR EXIT`) immediately before
@@ -151,6 +184,52 @@ render_index() {
     sortable+="$(printf '%s\t- [%s](../../../specs/%s/SPEC-MOC.md) %s %s' \
       "$norm" "$spec_id" "$(basename "$d")" "$PRS_SEP" "$status")"$'\n'
   done < <(find "$SPECS_DIR" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort)
+
+  if repo_structure_marker_current; then
+    local active_rel="" active_base=""
+    active_rel="$(active_feature_rel || true)"
+    [ -n "$active_rel" ] && active_base="$(basename "$active_rel")"
+
+    local branch reason target label
+    while IFS= read -r d; do
+      [ -n "$d" ] || continue
+      branch="$(basename "$d")"
+      moc="$d/SPEC-MOC.md"
+
+      [ -f "$moc" ] && moc_is_gated "$moc" && continue
+      reason="$(candidate_out_of_scope_reason "$branch" || true)"
+      [ -z "$reason" ] || continue
+      if [ -n "$active_base" ]; then
+        if [ "specs/$branch" = "$active_rel" ] || moc_id_match "$active_base" "$branch"; then
+          continue
+        fi
+      fi
+
+      target="../../../specs/$branch/spec.md"
+      label="$(printf '%s' "$branch" | tr '[:lower:]' '[:upper:]')"
+      norm="$(moc_normalize "$branch")"
+      sortable+="$(printf '%s\t- [%s](%s) %s %s' \
+        "$norm" "$label" "$target" "$PRS_SEP" "")"$'\n'
+    done < <(find "$SPECS_DIR" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort)
+
+    local memory="$REPO_ROOT/.specify/memory/spec.md"
+    if [ -f "$memory" ]; then
+      local heading slug
+      while IFS= read -r heading; do
+        heading="${heading### }"
+        heading="${heading## }"
+        [ -n "$heading" ] || continue
+        slug="$(printf '%s' "$heading" | slugify_heading)"
+        reason="$(candidate_out_of_scope_reason "$slug" || true)"
+        [ -z "$reason" ] || continue
+        norm="$(moc_normalize "$slug")"
+        label="$(printf '%s' "${slug%%-*}-${slug#*-}" | tr '[:lower:]' '[:upper:]')"
+        target="../../../.specify/memory/spec.md#$slug"
+        sortable+="$(printf '%s\t- [%s](%s) %s %s' \
+          "$norm" "$label" "$target" "$PRS_SEP" "")"$'\n'
+      done < <(grep -E '^##[[:space:]]+' "$memory" 2>/dev/null || true)
+    fi
+  fi
 
   [ -n "$sortable" ] || return 0     # no gated specs => empty INDEX (not an error)
 

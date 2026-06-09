@@ -1,0 +1,26 @@
+{
+  "fixture_id": "02-prsg-011-migration-guidance",
+  "description": "Exact tolerances for PRSG-011 mirrored migration guidance.",
+  "fields": {
+    "migration_guidance.row_count": {
+      "tolerance": "exact",
+      "rationale": "Both paths must preserve the same runtime guidance rows."
+    },
+    "migration_guidance.commands": {
+      "tolerance": "exact",
+      "rationale": "FR-026 and FR-028 command strings are operator-facing product contracts."
+    },
+    "tier2_matrix.action": {
+      "tolerance": "exact",
+      "rationale": "Suggestion versus suppression behavior must not differ across paths."
+    },
+    "tier2_matrix.reason": {
+      "tolerance": "exact",
+      "rationale": "Skip and no-op reasons are part of the operator contract."
+    },
+    "no_auto_run_guard.forbidden": {
+      "tolerance": "exact",
+      "rationale": "Scaffold and autopilot must never auto-run Tier-2 relocation."
+    }
+  }
+}

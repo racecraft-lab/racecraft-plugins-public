@@ -1,0 +1,50 @@
+{
+  "fixture_id": "02-prsg-011-migration-guidance",
+  "description": "Fields that MUST match between Path A (Agent Teams) and Path B (parallel-subagents fallback) for PRSG-011 migration guidance.",
+  "compare": [
+    {
+      "field": "migration_guidance.row_count",
+      "source": "workflow.md",
+      "section_selector": "## Migration Guidance Contract",
+      "extractor": "table_row_count",
+      "tolerance_key": "migration_guidance.row_count"
+    },
+    {
+      "field": "migration_guidance.dry_run",
+      "source": "workflow.md",
+      "section_selector": "## Migration Guidance Contract",
+      "extractor": "table_column:Dry Run",
+      "tolerance_key": "migration_guidance.commands"
+    },
+    {
+      "field": "migration_guidance.apply",
+      "source": "workflow.md",
+      "section_selector": "## Migration Guidance Contract",
+      "extractor": "table_column:Apply",
+      "tolerance_key": "migration_guidance.commands"
+    },
+    {
+      "field": "tier2_matrix.action",
+      "source": "workflow.md",
+      "section_selector": "## Tier-2 Suggestion Matrix",
+      "extractor": "table_column:Action",
+      "tolerance_key": "tier2_matrix.action"
+    },
+    {
+      "field": "tier2_matrix.reason",
+      "source": "workflow.md",
+      "section_selector": "## Tier-2 Suggestion Matrix",
+      "extractor": "table_column:Reason",
+      "tolerance_key": "tier2_matrix.reason"
+    },
+    {
+      "field": "no_auto_run_guard.forbidden",
+      "source": "workflow.md",
+      "section_selector": "## No Auto-Run Guard",
+      "extractor": "table_column:Forbidden",
+      "tolerance_key": "no_auto_run_guard.forbidden"
+    }
+  ],
+  "fail_fast": false,
+  "report_format": "field-level-diff"
+}

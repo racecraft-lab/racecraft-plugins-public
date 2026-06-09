@@ -99,6 +99,41 @@ tool call history.
 
 </hard_constraints>
 
+### 0.5 Static Tier-2 relocation suggestions only
+
+<hard_constraints>
+
+Autopilot may surface Tier-2 PROCESS relocation guidance for thawed legacy
+specs, but it must never execute the relocation codemod. Do not invoke
+`relocate-process-artifacts.sh --dry-run` or
+`relocate-process-artifacts.sh --apply` from any autopilot phase, subagent, or
+post-implementation step.
+
+</hard_constraints>
+
+At startup and when evaluating the active workflow target, inspect candidate
+state directly. Suggest relocation only for a thawed in-scope legacy spec that
+has root PROCESS allow-list artifacts or matching docs-side scaffold artifacts.
+
+For an eligible candidate, print the exact operator sequence with the concrete
+`specs/<spec-dir>` value:
+
+```text
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+```
+
+Describe `--apply` as a follow-up after dry-run review and a clean worktree.
+Suppress the suggestion and report the reason for:
+
+- `frozen/in-flight` specs named by `.specify/feature.json`
+- invalid active-feature state
+- already-current specs with `SPEC-MOC.md` `structureVersion: 1`
+- already-normalized specs whose PROCESS artifacts are under `.process/`
+- candidates with no relocatable PROCESS artifacts
+- out-of-scope `non_speckit_namespace` and `date_named_legacy_namespace`
+  candidates
+
 ### 1. Subagent per phase
 
 For each phase, spawn a **foreground subagent** via the Agent

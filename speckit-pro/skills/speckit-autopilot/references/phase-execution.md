@@ -192,6 +192,28 @@ TaskUpdate: → completed
 ⚠️ Use Agent() subagent, NOT Skill() directly — Skill() loads
 the command into your context and can kill the agent loop.
 
+### Static Tier-2 Relocation Suggestion
+
+During pre-flight, the parent may inspect the active workflow target and nearby
+legacy spec candidates for Tier-2 PROCESS relocation. This is static
+inspection/reporting only. It does not run
+`relocate-process-artifacts.sh`.
+
+Suggest relocation only for thawed in-scope legacy specs with relocatable
+PROCESS artifacts. For each eligible spec, print:
+
+```text
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .
+speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .
+```
+
+The `--apply` line is an operator follow-up after reviewing dry-run output and
+cleaning the worktree. The parent must suppress the suggestion for
+`frozen/in-flight`, invalid active-feature, already-current, already-normalized,
+no-candidate, `non_speckit_namespace`, and `date_named_legacy_namespace`
+cases. Record any surfaced suggestion or suppression note in the workflow log
+before Phase 1 continues.
+
 ### Phase 1: Specify
 
 Read the workflow file's `### Specify Prompt` section.

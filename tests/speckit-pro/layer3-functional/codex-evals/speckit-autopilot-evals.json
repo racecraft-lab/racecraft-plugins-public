@@ -370,6 +370,22 @@
         "Bounds wait_agent with a timeout so a stuck subagent cannot hang the orchestrator",
         "Before reporting completion, calls list_agents and close_agent on any thread still open from the run"
       ]
+    },
+    {
+      "id": 29,
+      "prompt": "During $speckit-autopilot startup, the workflow target has adjacent legacy candidates: specs/prsg-011-legacy has root analysis.md and uat-report.md with no structureVersion and is not named by .specify/feature.json; specs/prsg-012-active is the active in-flight feature; specs/prsg-013-current already carries SPEC-MOC.md structureVersion: 1 and its process files are already under .process/; specs/prsg-014-empty has only CONTRACT artifacts; specs/team-123-legacy and specs/2026-06-legacy are outside the SpecKit namespace. What should the autopilot report before continuing, and may it run the Tier-2 codemod itself?",
+      "expected_output": "Reports static Tier-2 guidance only for the thawed eligible PRSG legacy spec, including the exact dry-run command and clean-tree apply follow-up. Suppresses suggestions for frozen/in-flight, already-current, no-candidate, and out-of-scope candidates. Explicitly says Codex autopilot does not execute relocate-process-artifacts.sh automatically.",
+      "expectations": [
+        "Suggests Tier-2 relocation only for specs/prsg-011-legacy",
+        "Includes the exact dry-run command: speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/prsg-011-legacy --repo-root .",
+        "Includes the exact clean-tree apply follow-up: speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/prsg-011-legacy --repo-root .",
+        "States the apply command is a human/operator follow-up after reviewing dry-run output and cleaning the tree",
+        "Reports specs/prsg-012-active as frozen/in-flight and suppresses the Tier-2 suggestion",
+        "Reports specs/prsg-013-current as already current or already normalized and suppresses the Tier-2 suggestion",
+        "Reports specs/prsg-014-empty as no Tier-2 candidate because no relocatable PROCESS artifacts exist",
+        "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
+        "States that $speckit-autopilot must not invoke relocate-process-artifacts.sh --dry-run or --apply"
+      ]
     }
   ]
 }

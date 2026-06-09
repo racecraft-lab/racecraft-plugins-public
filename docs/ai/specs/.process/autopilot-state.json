@@ -1,0 +1,247 @@
+{
+  "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
+  "updated_at": "2026-06-09T03:33:53Z",
+  "active_step": "Complete",
+  "pr": {
+    "number": 132,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/132",
+    "isDraft": true,
+    "review_remediation": "Initial poll found no comments or reviews; CodeQL checks were pending."
+  },
+  "model_check": {
+    "parent_session": "Codex main session",
+    "status": "accepted",
+    "note": "No reduced-capability mini/fast tier is indicated in the active runtime; bundled SpecKit Pro agents are available at xhigh reasoning."
+  },
+  "preflight": {
+    "branch": "prsg-011-retro-migration",
+    "is_worktree": true,
+    "on_feature_branch": false,
+    "spec_directory": "specs/prsg-011-retro-migration",
+    "workflow_branch": "prsg-011-retro-migration",
+    "confidence_gate_mode": "advisory",
+    "mcp_servers": {
+      "status": "fallbacks_available",
+      "missing": [
+        "tavily-mcp",
+        "context7",
+        "RepoPrompt"
+      ]
+    },
+    "project_commands": {
+      "BUILD": "N/A",
+      "TYPECHECK": "N/A",
+      "LINT": "N/A",
+      "LINT_FIX": "N/A",
+      "UNIT_TEST": "N/A",
+      "INTEGRATION_TEST": "N/A",
+      "SINGLE_FILE_TEST": "N/A",
+      "SINGLE_FILE_INTEGRATION": "N/A",
+      "FULL_VERIFY": "N/A"
+    },
+    "preset_conventions": {
+      "has_presets": true,
+      "presets": [
+        "speckit-pro-reviewability"
+      ],
+      "templates": [
+        ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
+        ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+        ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
+      ]
+    },
+    "extensions": {
+      "archive": true,
+      "verify": true,
+      "verify-tasks": true,
+      "retrospective": true,
+      "speckit-utils": true,
+      "review": false,
+      "cleanup": false
+    },
+    "constitution_validation": {
+      "status": "verified",
+      "commands": [
+        "bash tests/speckit-pro/run-all.sh --layer 1",
+        "bash tests/speckit-pro/layer1-structural/validate-scripts.sh"
+      ]
+    }
+  },
+  "archive_sweep": {
+    "archive_extension_installed": true,
+    "cleanup_mode": "read-only-record",
+    "safeToApplyCleanup": false,
+    "excludedCurrentSpec": "specs/prsg-011-retro-migration",
+    "note": "Vendored archive extension exposes command documentation but no executable sweep script in this worktree. Startup sweep recorded all non-current specs as not proven cleanup-safe; no files were mutated."
+  },
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Migration CLI and backup model",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Migration CLI and backup model Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - ID normalization and Tier-0 backfill",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - ID normalization and Tier-0 backfill Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Tier-2 allow-list and registration",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Tier-2 allow-list and registration Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - backward-compatibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - backward-compatibility Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - developer-experience",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - developer-experience Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Setup and Reviewability (T001-T003)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Foundational Test Contracts (T004-T007)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: US1 Repository Migration (T008-T013)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: US2 Tier-2 Relocation (T014-T017)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: US3 Suggestion Fixtures (T018-T021)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: US3 Skill Guidance (T022-T027)",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Polish and Verification (T028-T034)",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "skipped"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "completed"
+    }
+  ]
+}
