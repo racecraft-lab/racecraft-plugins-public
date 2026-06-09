@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T02:31:00Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-09T02:48:00Z",
+  "active_step": "Phase 6: Analyze",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -143,11 +143,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -158,7 +158,31 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Setup and Reviewability (T001-T003)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Foundational Test Contracts (T004-T007)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US1 Repository Migration (T008-T013)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US2 Tier-2 Relocation (T014-T017)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US3 Suggestion Fixtures (T018-T021)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US3 Skill Guidance (T022-T027)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Polish and Verification (T028-T034)",
       "status": "pending"
     },
     {

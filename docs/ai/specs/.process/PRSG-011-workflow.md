@@ -44,8 +44,8 @@ Re-read it before each phase. The locked decisions from that interview:
 | Clarify | `/speckit-clarify` | Complete | 3 sessions resolved; 5 consensus rows logged; 0 clarification markers |
 | Plan | `/speckit-plan` | Complete | plan.md + research/data-model/quickstart + 3 contracts. Declared file operations filled; reviewability warning preserved with two internal vertical increments; G3 pass. |
 | Checklist | `/speckit-checklist` | Complete | 4 domains complete; 11 gaps found and remediated; G4 pass |
-| Tasks | `/speckit-tasks` | In Progress | Must preserve two internal vertical increments |
-| Analyze | `/speckit-analyze` | Pending | |
+| Tasks | `/speckit-tasks` | Complete | 34 tasks; 6 parallel-safe; reviewability gate exception/pass honored |
+| Analyze | `/speckit-analyze` | In Progress | |
 | Implement | `/speckit-implement` | Pending | |
 
 ### Phase Gates
@@ -418,10 +418,12 @@ Focus on PRSG-011 migration requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Expected: foundation, Tier-1/Tier-0, Tier-2/register, polish |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Expected: US1, US2, US3 |
+| Total Tasks | 34 |
+| Phases | Setup/reviewability, foundational RED contracts, US1 Tier-1/Tier-0, US2 Tier-2 relocation, US3 suggestion-only registration, polish |
+| Parallel Opportunities | 6 `[P]` tasks |
+| User Stories Covered | US1, US2, US3 |
+
+**Reviewability Checkpoint:** `reviewability-gate.sh tasks specs/prsg-011-retro-migration` returned `status=exception`, `pass=true`, `exception_class=upgrade`. Warnings/blockers are accepted under the explicit upgrade exception and two internal vertical increments remain preserved.
 
 ---
 
