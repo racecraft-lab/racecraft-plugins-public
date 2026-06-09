@@ -14,8 +14,10 @@
 The thing under test is a single committed, executable bash script — there is **nothing
 to build or install**. You only need a shell.
 
-1. **Prerequisites:** `bash` on your PATH. `jq` is optional and used only to pretty-print
-   the JSON output (`… | jq .`); the script works fine without it.
+1. **Prerequisites:** `bash` **and `jq`** on your PATH. `jq` is **required** — the script
+   builds every JSON object it prints (both the success object and the error object) with
+   `jq`, so it will not run without it. (Piping the output to `| jq .` for pretty-printing
+   is the only optional extra.)
 2. **Where to run:** all commands below are run from the worktree root —
    `.worktrees/prsg-007-atomicity-router/`. Open a terminal there.
 3. **The one command you'll repeat:** every acceptance test runs the classifier against a
