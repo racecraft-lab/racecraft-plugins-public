@@ -46,10 +46,10 @@ Stderr is reserved for shell-level usage or fatal diagnostics.
 | `spec_dir` | string or null | Repo-relative spec path for Tier-2; null for repo migration. |
 | `active_feature` | object | Parsed `.specify/feature.json` state. |
 | `dirty_tree` | object | Dirty-tree status from `git status --porcelain=v1 --untracked-files=all`. |
-| `backup` | object | Planned or created backup location. |
+| `backup` | object | Planned or created backup location; `created` is true only after the backup exists on disk. |
 | `status` | string | Overall command result. |
-| `items` | array | Deterministically ordered itemized decisions. |
-| `recovery` | object | Restore instructions when a backup exists or would exist. |
+| `items` | array | Deterministically ordered itemized decisions. Each item includes an `action`, a repo-relative path or target identifier when applicable, and a stable `reason` when the action needs operator interpretation. |
+| `recovery` | object | Restore instructions when a backup exists; post-backup failures must name `backup.path` in the hint. |
 
 ## Enumerations
 
@@ -69,6 +69,20 @@ Stderr is reserved for shell-level usage or fatal diagnostics.
 - `blocked_collision`
 - `blocked_missing_moc`
 - `blocked_usage`
+- `failed_backup`
+- `failed_marker_write`
+- `failed_move`
+- `failed_stamp`
+- `failed_generator`
+
+### `items[].reason`
+
+For `skipped_out_of_scope`, `reason` MUST be one of:
+
+- `non_speckit_namespace`: the first dash-delimited segment is all-alpha and is
+  not `prsg` or `spec`.
+- `date_named_legacy_namespace`: the basename or archive ID starts with `YYYY`,
+  `YYYY-MM`, or `YYYY-MM-DD` followed by end-of-string or `-`.
 
 ### `items[].action`
 
@@ -85,11 +99,17 @@ Stderr is reserved for shell-level usage or fatal diagnostics.
 - `backup`
 - `collision`
 - `recovery`
+- `failed_backup`
+- `failed_marker_write`
+- `failed_move`
+- `failed_stamp`
+- `failed_generator`
 
 ## Determinism Rules
 
 - Object keys are emitted in the stable order shown by this contract.
-- `items` are sorted by tier, then action, then repo-relative path.
+- `items` are sorted by tier, then action, then repo-relative path or target
+  identifier, then reason.
 - `dirty_tree.entries` preserve `git status --porcelain=v1` order after command
   output normalization.
 - Dry-run never creates the backup directory.
@@ -108,3 +128,18 @@ Missing `.specify/feature.json` is `absent` and does not block. Valid
 `feature_directory` freezes the matching spec and is reported as
 `skipped_frozen_in_flight`. Invalid active-feature state is reported by dry-run
 and blocks apply before backup or mutation.
+
+## Failure and Recovery Rules
+
+- Pre-mutation blocked statuses (`blocked_dirty_tree`,
+  `blocked_active_feature_invalid`, `blocked_collision`, `blocked_missing_moc`,
+  `blocked_usage`) never create a backup and report `recovery.available` as
+  false.
+- Backup creation failure reports `failed_backup`, keeps `backup.created` false,
+  and reports `recovery.available` as false.
+- Any failure after backup creation reports the stage-specific status
+  (`failed_marker_write`, `failed_move`, `failed_stamp`, or
+  `failed_generator`), keeps `backup.created` true, and reports
+  `recovery.available` as true with a restore hint that names `backup.path`.
+- After a post-backup failure, the command stops and does not continue later
+  moves, stamps, marker writes, or generated-zone updates.

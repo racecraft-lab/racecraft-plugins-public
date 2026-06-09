@@ -102,3 +102,22 @@ accepted reviewability warning.
 **Rejected alternative**: Split before planning. The split would create an
 artificial boundary between the marker/backfill contract and the relocation
 contract it unlocks.
+
+## Decision 8: Candidate Eligibility Before Normalization
+
+**Decision**: Apply a deterministic SpecKit candidate eligibility predicate
+before Tier-0 row rendering, Tier-2 move discovery, or scaffold/autopilot
+suggestion emission. `prsg` and `spec` namespace candidates plus legacy
+numeric/spec candidates that join to the roadmap-MOC spine stay eligible.
+Non-SpecKit alpha namespaces and date-first legacy namespaces are reported as
+`skipped_out_of_scope` with stable reasons.
+
+**Rationale**: `moc_normalize` is intentionally total, so unrelated names can
+still normalize to a namespace/suffix pair. A separate eligibility predicate
+preserves the existing normalizer and lint behavior while preventing unrelated
+legacy namespaces from becoming migration candidates by accident.
+
+**Rejected alternative**: Change `moc_normalize` to reject non-SpecKit or
+date-first inputs. That would broaden the impact beyond PRSG-011 and risk
+breaking existing MOC lint and generator callers that rely on total
+normalization.

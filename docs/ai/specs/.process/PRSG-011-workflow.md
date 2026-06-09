@@ -43,8 +43,8 @@ Re-read it before each phase. The locked decisions from that interview:
 | Specify | `/speckit-specify` | Complete | 3 user stories, 22 functional requirements, 12 acceptance scenarios, 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | 3 sessions resolved; 5 consensus rows logged; 0 clarification markers |
 | Plan | `/speckit-plan` | Complete | plan.md + research/data-model/quickstart + 3 contracts. Declared file operations filled; reviewability warning preserved with two internal vertical increments; G3 pass. |
-| Checklist | `/speckit-checklist` | Pending | Recommended: data-integrity, error-handling, backward-compatibility, developer-experience |
-| Tasks | `/speckit-tasks` | Pending | Must preserve two internal vertical increments |
+| Checklist | `/speckit-checklist` | Complete | 4 domains complete; 11 gaps found and remediated; G4 pass |
+| Tasks | `/speckit-tasks` | In Progress | Must preserve two internal vertical increments |
 | Analyze | `/speckit-analyze` | Pending | |
 | Implement | `/speckit-implement` | Pending | |
 
@@ -193,7 +193,7 @@ Fill in after running the command:
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 26 |
+| Functional Requirements | 29 |
 | User Stories | US1, US2, US3 |
 | Acceptance Criteria | 12 acceptance scenarios; 7 measurable success criteria |
 
@@ -374,10 +374,10 @@ Focus on PRSG-011 migration requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| data-integrity | Pending | Pending | |
-| error-handling | Pending | Pending | |
-| backward-compatibility | Pending | Pending | |
-| developer-experience | Pending | Pending | |
+| data-integrity | 22 | 4 found, 0 remaining | Canonicalized evidence/review packet relocation into `.process/`, added collision/no-overwrite rules, and verified no remaining markers |
+| error-handling | 22 | 4 found, 0 remaining | Generalized forced backups across apply modes, clarified idempotent no-op reruns, and added post-backup failure statuses/recovery |
+| backward-compatibility | 23 | 1 found, 0 remaining | Added deterministic out-of-scope handling for non-SpecKit/date-named namespaces and preserved marker-absence behavior |
+| developer-experience | 24 | 2 found, 0 remaining | Added exact `speckit-upgrade` migration sequence and explicit Claude/Codex parity requirements |
 
 ---
 

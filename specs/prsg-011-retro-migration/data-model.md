@@ -59,12 +59,28 @@ Spec directory or archive-memory target considered by Tier-0 or Tier-2.
 
 - **Fields**:
   - `id`: original ID or directory basename.
+  - `eligibility`: `eligible` or `out_of_scope`.
+  - `out_of_scope_reason`: `null`, `non_speckit_namespace`, or
+    `date_named_legacy_namespace`.
   - `normalized_id`: output of `moc_normalize`.
   - `path`: repo-relative target when on disk.
   - `state`: `version_gated`, `legacy_on_disk`, `archive_memory_only`,
     `frozen_in_flight`, `out_of_scope`, or `already_current`.
   - `link_target`: selected Tier-0 navigation target.
 - **Rules**:
+  - Candidate eligibility is evaluated before Tier-0 row rendering, Tier-2 move
+    discovery, and scaffold/autopilot suggestion emission.
+  - Current SpecKit candidates are eligible when the first dash-delimited segment
+    is `prsg` or `spec`.
+  - Legacy numeric/spec candidates remain eligible when they can join to the
+    roadmap-MOC spine under `moc_id_match` and are not date-first namespaces.
+  - Candidates whose first dash-delimited segment is all-alpha and not `prsg` or
+    `spec` are `out_of_scope` with reason `non_speckit_namespace`.
+  - Candidates whose basename or archive ID starts with `YYYY`, `YYYY-MM`, or
+    `YYYY-MM-DD` followed by end-of-string or `-` are `out_of_scope` with reason
+    `date_named_legacy_namespace`.
+  - Out-of-scope candidates do not receive Tier-0 rows, Tier-2 move candidates,
+    or scaffold/autopilot suggestions.
   - Version-gated specs link to `../../../specs/<dir>/SPEC-MOC.md`.
   - Legacy on-disk specs without a gated MOC link to
     `../../../specs/<dir>/spec.md`.
@@ -95,6 +111,11 @@ Classifies files under a thawed spec and matching docs-side process files.
   - `*-design-concept.md`
   - `workflow.md`
   - `*-workflow.md`
+- **Canonicalization rules**:
+  - `peer-review-*` is a legacy review-packet input alias only. The canonical
+    relocated review-packet target is `<spec-dir>/.process/pr-review-packet.md`.
+  - Legacy evidence sources canonicalize under the spec `.process` anchor, not
+    the visible spec root.
 - **CONTRACT protections**:
   - `spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`,
     `quickstart.md`, `contracts/**`, `checklists/**`, and `SPEC-MOC.md`.
@@ -114,6 +135,18 @@ One proposed or applied Tier-2 file move.
   - Matching docs-side `docs/ai/specs/<SPEC-ID>-design-concept.md` and
     `<SPEC-ID>-workflow.md` target `docs/ai/specs/.process/`.
   - CONTRACT protection wins over filename allow-list matches.
+  - Root `verification-evidence.md` and root
+    `evidence/verification-evidence.md` both target
+    `<spec-dir>/.process/evidence/verification-evidence.md`.
+  - Root `evidence/` targets `<spec-dir>/.process/evidence/` and preserves
+    contained evidence files unless a target path would be overwritten.
+  - Root `pr-review-packet.md` and exactly one legacy root `peer-review-*`
+    target `<spec-dir>/.process/pr-review-packet.md`; legacy basenames are not
+    preserved.
+  - Multiple source candidates for the same canonical evidence or
+    review-packet target are `collision`.
+  - Existing canonical `.process/**` targets with no root source are
+    `already_normalized`.
 
 ## BackupPlan
 
@@ -126,7 +159,9 @@ Restore point required before mutation.
 - **Rules**:
   - Dry-run reports the planned path without creating it.
   - Apply creates the backup after clean-tree validation and before the first
-    mutation.
+    pending mutation.
+  - Already-current apply reruns report no-op without creating a backup.
+  - Post-backup failures report the created backup path and restore hint.
   - Tests may override backup root and timestamp for deterministic fixtures.
 
 ## MigrationReport
@@ -148,8 +183,12 @@ One deterministic JSON object emitted by a migration script.
 - **Rules**:
   - Arrays are sorted in stable path/action order.
   - Reports distinguish pending, applied, absent active feature, invalid active
-    feature, frozen/in-flight, protected CONTRACT, dirty-tree apply-blocked,
-    backup, recovery, and no-op current-state results.
+    feature, frozen/in-flight, skipped out-of-scope with stable reason,
+    protected CONTRACT, dirty-tree apply-blocked, backup, recovery, no-op
+    current-state, and post-backup partial-failure results.
+  - Post-backup marker-write, move, stamp, and generator failures keep
+    `backup.created` true and require `recovery.available` with a restore hint
+    that names the backup path.
 
 ## OperatorSuggestion
 
@@ -163,5 +202,30 @@ Static scaffold/autopilot suggestion for Tier-2 relocation.
   - `auto_executed`: always `false`.
 - **Rules**:
   - Suggested only for thawed legacy specs with relocatable PROCESS artifacts.
+  - `dry_run_command` is
+    `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --dry-run --spec specs/<spec-dir> --repo-root .`.
+  - `apply_command` is
+    `speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh --apply --spec specs/<spec-dir> --repo-root .`.
   - Not suggested for valid in-flight specs, already-current specs, or specs
     without relocatable PROCESS artifacts.
+  - Not suggested for out-of-scope candidates with `non_speckit_namespace` or
+    `date_named_legacy_namespace` reasons.
+
+## UpgradeMigrationGuidance
+
+Static `speckit-upgrade` operator guidance for repository-level migration.
+
+- **Fields**:
+  - `dry_run_command`
+  - `apply_command`
+  - `precondition`
+  - `auto_executes_tier2`: always `false`.
+- **Rules**:
+  - `dry_run_command` is
+    `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .`.
+  - `apply_command` is
+    `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .`.
+  - `precondition` tells the operator to review pending/skipped/no-op dry-run
+    output and ensure a clean worktree before apply.
+  - Guidance preserves the existing `speckit-upgrade` backup/restore language
+    and does not run Tier-2 relocation automatically.

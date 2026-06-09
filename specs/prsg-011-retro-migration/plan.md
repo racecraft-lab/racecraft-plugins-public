@@ -37,11 +37,14 @@ repository scans remain simple sorted file-tree scans; dry-run leaves the
 workspace byte-for-byte unchanged.
 
 **Constraints**: Dry-run modes are read-only and allowed on dirty trees. Apply
-modes fail on dirty trees before backup or mutation. Every apply path creates a
-forced, non-skippable backup before mutation and prints the backup path. Tier-0
-does not move or stamp historical spec files. Tier-2 moves only approved PROCESS
-artifacts and keeps CONTRACT artifacts in place. `.specify/feature.json` is the
-only in-flight source and every tier skips valid in-flight specs.
+modes fail on dirty trees before backup or mutation. Every apply path with a
+pending mutation creates a forced, non-skippable backup before mutation and
+prints the backup path; already-current apply reruns report no-op without
+creating a backup. Post-backup partial failures must report the created backup
+path and restore hint. Tier-0 does not move or stamp historical spec files.
+Tier-2 moves only approved PROCESS artifacts and keeps CONTRACT artifacts in
+place. `.specify/feature.json` is the only in-flight source and every tier skips
+valid in-flight specs.
 
 **Scale/Scope**: Existing SpecKit repositories with multiple completed,
 archived, in-flight, or thawed legacy specs. Non-SpecKit and date-named legacy
@@ -182,29 +185,50 @@ clean-tree check and before mutation.
 ### Increment 1: Tier-1/Tier-0 Repository Migration
 
 1. Add `migrate-structure.sh` with exact mode parsing, repo root resolution,
-   active-feature tri-state validation, dirty-tree apply block, forced backup,
-   marker write, and delegation to `generate-spec-index.sh`.
+   active-feature tri-state validation, dirty-tree apply block, no-op detection
+   before backup, forced backup for pending mutations, marker write,
+   post-backup recovery reporting, and delegation to `generate-spec-index.sh`.
 2. Extend `generate-spec-index.sh` so roadmap-MOC INDEX rendering includes
-   ID-normalizable completed or archived historical specs only when repo
-   `.specify/structure-version.json` carries integer `structureVersion >= 1`.
+   eligible ID-normalizable completed or archived historical specs only when
+   repo `.specify/structure-version.json` carries integer
+   `structureVersion >= 1`, while reporting non-SpecKit alpha namespaces and
+   date-first legacy namespaces as `skipped_out_of_scope`.
 3. Add Layer 4 fixtures for dry-run no-mutation, dirty apply block, marker
    absent/malformed behavior, idempotency, frozen/in-flight skip, archive-memory
-   target selection, and ID normalization false-join protection.
+   target selection, ID normalization false-join protection, and out-of-scope
+   non-SpecKit/date-first namespace skip reporting with no Tier-0 row.
 
 ### Increment 2: Tier-2 Relocation and Operator Suggestions
 
 1. Add `relocate-process-artifacts.sh` with spec target resolution, active-feature
-   skip/block behavior, allow-list classification, CONTRACT protection, dual
-   PROCESS anchors, evidence normalization, collision detection, forced backup,
-   git moves, `SPEC-MOC.md` stamp, and index regeneration.
-2. Update `speckit-upgrade` to describe Tier-1/Tier-0 migration runner behavior
-   or operator handoff while preserving backup/restore language.
+   skip/block behavior, out-of-scope candidate no-op reporting, allow-list
+   classification, CONTRACT protection, dual PROCESS anchors, evidence
+   normalization into
+   `<spec-dir>/.process/evidence/verification-evidence.md`, review-packet
+   canonicalization into `<spec-dir>/.process/pr-review-packet.md`, collision
+   detection for competing legacy/canonical sources, no-op detection before
+   backup, forced backup for pending mutations, git moves, `SPEC-MOC.md` stamp,
+   post-backup recovery reporting, and index regeneration.
+2. Update `speckit-upgrade` and its Codex mirror to preserve the existing
+   backup/restore language and print the exact safe repository migration
+   sequence from FR-028: dry-run first
+   (`speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .`),
+   then clean-tree apply
+   (`speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .`)
+   after the operator reviews pending/skipped/no-op output.
 3. Update scaffold and autopilot skills plus Codex mirrors to statically detect
    thawed legacy specs with relocatable PROCESS artifacts and print the exact
-   Tier-2 dry-run and clean-tree apply follow-up. They must not execute either
-   relocation command.
-4. Add Layer 4 relocation fixtures, Layer 3 skill behavior fixtures, and Layer 8
-   parity checks for mirrored skill prose.
+   Tier-2 dry-run and clean-tree apply follow-up from FR-026. They must not
+   execute either relocation command or suggest relocation for out-of-scope
+   non-SpecKit/date-first namespaces.
+4. Keep every `skills/` operator-facing wording edit behavior-equivalent in the
+   matching `codex-skills/` mirror in the same implementation increment. Runtime
+   syntax may differ, but safe-command sequence, skip/no-op wording, and no-auto-run
+   guarantees must match.
+5. Add Layer 4 relocation fixtures, Layer 3 skill behavior fixtures, and Layer 8
+   parity checks for mirrored skill prose, including no move candidates, no
+   suggestions for out-of-scope namespaces, and the exact safe-command sequences
+   from FR-026/FR-028.
 
 ## Gate G3
 
