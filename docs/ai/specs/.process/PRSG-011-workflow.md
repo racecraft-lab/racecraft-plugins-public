@@ -537,6 +537,9 @@ For each deterministic script behavior:
 | Self-Review | Completed | See `## Self-Review` below. |
 | UAT Runbook Generation | Completed | `generate-uat-skeleton.sh` wrote `specs/prsg-011-retro-migration/.process/uat-runbook.md`; `uat-runbook-author` is not registered in this Codex session, so the parent rewrote the runbook into concrete acceptance commands and expected results. |
 | PR Body Generation | Completed | Generated with `generate-pr-body.sh` to `/private/tmp/prsg-011-speckit-pr-body.md` because this checkout is a linked worktree where `.git` is a file. Verified `speckit-pro-review-packet-source` marker and `## UAT Runbook` heading are present, then replaced only the top plain-English sections. |
+| PR Creation | Completed | Draft PR #132 opened: https://github.com/racecraft-lab/racecraft-plugins-public/pull/132 |
+| Review Remediation | Completed | Initial PR poll found no comments and no reviews. `validate-plugins` passed, PR matrix jobs were skipped, and CodeQL was still pending; no actionable remediation was available. |
+| Retrospective | Completed with parent fallback | Retrospective extension command was not callable in this Codex surface, so the parent wrote `specs/prsg-011-retro-migration/.process/retrospective.md`. |
 
 ## Self-Review
 

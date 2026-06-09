@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | prsg-011-retro-migration |
 | Branch | prsg-011-retro-migration |
-| PR | **PR:** <set on PR open> |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/132 |
 | Generated from | 2026-06-09T01:55:37Z |
 
 ## Env Setup

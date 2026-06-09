@@ -1,7 +1,13 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T03:32:00Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-06-09T03:33:53Z",
+  "active_step": "Complete",
+  "pr": {
+    "number": 132,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/132",
+    "isDraft": true,
+    "review_remediation": "Initial poll found no comments or reviews; CodeQL checks were pending."
+  },
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -227,15 +233,15 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed"
     }
   ]
 }
