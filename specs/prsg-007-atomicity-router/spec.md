@@ -196,15 +196,21 @@ releasable and carries the CI-green warning.
   Detection is tuned OVER-INCLUSIVE on purpose: a false positive only refuses a split
   (→ `single-atomic-PR`), the safe direction; a false negative is the dangerous one.
 - **FR-007a**: Keyword-based detection of the conceptual classes that have no path signal
-  (exported-symbol rename, global version pin, auth/payment/mutual-exclusion primitive) MUST
-  avoid false positives from a feature's own definitional vocabulary: (a) it MUST match on
-  word boundaries or a structural task-/story-line shape, NOT bare substrings (e.g. `lock`
-  MUST NOT fire on "block"); and (b) it MUST read these keyword classes from `tasks.md` +
+  (exported-symbol rename, global version pin, auth/payment/mutual-exclusion primitive, AND
+  the concurrency releasability class) MUST avoid false positives from a feature's own
+  definitional vocabulary: (a) it MUST match on word boundaries or a structural
+  task-/story-line shape AND a described ACTION/INTENT — e.g. "introduce a mutex", "add a lock
+  around", "fix a data race", "rename … to …" — NOT a bare class noun / topic mention (e.g.
+  `lock` MUST NOT fire on "block", and the word "concurrency" appearing as a topic MUST NOT
+  fire the concurrency probe); and (b) it MUST read these keyword classes from `tasks.md` +
   `plan.md` (the work description), NOT from `spec.md` (which may merely enumerate the class
   names as vocabulary). This is what makes the mandated dogfood self-check hold: running the
-  classifier on PRSG-007's own feature dir — whose artifacts enumerate auth/payment/lock as
-  vocabulary — MUST NOT yield a spurious `single-atomic-PR`. (The path-signalled classes —
-  destructive-migration, additive-vs-modify — continue to read all three artifacts.)
+  classifier on PRSG-007's own feature dir — whose artifacts enumerate
+  auth/payment/lock/mutex/concurrency as vocabulary but perform none of those actions — MUST
+  NOT yield a spurious `single-atomic-PR` NOR a spurious `releasable: false` +
+  `releasability:concurrency`. (The path-signalled classes — destructive-migration,
+  additive-vs-modify — continue to read all three artifacts, because their signal is a file
+  path / SQL verb, not a definitional keyword.)
 - **FR-008**: The classifier MUST detect destructive-migration and concurrency signatures
   and, for those classes, mark the result not releasable (`releasable: false`) AND append one
   canonical `warnings[]` sentence. Each releasability class emits a namespaced `signals[]`
@@ -215,7 +221,13 @@ releasable and carries the CI-green warning.
     does not prove this change is releasable (CI-green ≠ releasable)".
   Releasability is INDEPENDENT of the route: a change MAY be `single-atomic-PR` AND not
   releasable (a destructive migration is both). A false negative here is the dangerous
-  direction, so these probes are tuned over-inclusive.
+  direction, so these probes are tuned over-inclusive. Over-inclusion applies to genuine
+  change-intent signals (a real lock introduction, a data-race fix, an actual destructive
+  migration) — it does NOT license firing on topic-mention vocabulary: a spec/task that
+  enumerates concurrency keywords while *implementing a concurrency detector* contains no
+  concurrency-sensitive change. The concurrency probe is therefore governed by the
+  action-intent discipline of FR-007a(a), for the same reason the hard-atomic keyword classes
+  are.
 - **FR-009**: For changes with no releasability-risk signature, the classifier MUST mark
   the result releasable and attach no CI-green warning.
 

@@ -37,7 +37,7 @@ captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass. plan.md + research.md (10 decisions) + data-model.md (5 entities) + contracts/routing-decision.schema.json + quickstart.md (incl. dogfood self-check). 1 production file (atomicity-route.sh), ~400 LOC, within budget. reviewability-gate.sh untouched; duplicate-not-share (surface_for_path + is_excluded_generated, KEEP-IN-SYNC marker). Dogfood risk carried to Implement: detector must match action-intent, not topic-mention. |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass (0 open [Gap]/[Conflict]). error-handling + api-contracts domains; 5 gaps fixed across both; signals[] contract drift reconciled + US1 token spelling locked (`change-shape:*`). Schema valid, closed 9-token enum. |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass: 30 tasks, 10 fixture classes, Codex-mirror (T027) + dogfood (T024) + template (T025) tasks. Reviewability tasks-gate `block` is a documented coarse false-positive (excepted, see Tasks Results) — diff gate is binding. |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass (0 CRITICAL). 1 MEDIUM (concurrency releasability self-vocabulary hygiene) resolved via consensus → FR-007a/FR-008/T022/T024 edits. All 4 prior consensus rounds verified consistent across spec/plan/tasks/data-model/schema. |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -209,6 +209,7 @@ in tasks.md / plan.md / spec.md does each probe read?
 | Clarify S2 | Q3: releasability keyword sets | [domain] | domain (expand), spec-context (no drift), codebase (reuse FR-005 verbs + migration glob) | R1 | tokens/warnings faithful; **Plan must use expanded sets** — destructive: drop/truncate/purge/backfill/irreversible/data-migration/alter-table/rewrite; concurrency: +deadlock/mutex/semaphore/data-race/isolation/CAS. Apply KEEP-IN-SYNC marker on duplicated migration glob/verbs. |
 | Clarify S2 | Q5A: exported-symbol rename routing | [spec] | spec-context (unqualified), domain (unqualified), codebase (unqualified) | R1 | 3/3 high conf → **keep UNQUALIFIED**; research-doc 3-way split is ungreppable & superseded by locked spec. FR-007/SC-003 correct as-is — no change. |
 | Checklist (api-contracts) | US1 signals[] token spelling | [spec] | spec-context (lock now, high conf) | R1 (N=1) | **LOCK** `change-shape:additive-multi-seam` (→split-PR) + `change-shape:modify-heavy` (→one-navigable-PR); abstain emits no token. Applied to FR-011b, data-model Entity 2/4/validation, schema enum (now closed, 9 tokens). |
+| Analyze | M1: concurrency releasability self-vocabulary hygiene | [spec] | spec-context (extend hygiene, high conf) | R1 (N=1) | Extend FR-007a action-intent to concurrency probe; T024 dogfood now asserts `.releasable==true` + no spurious `releasability:*`. Destructive-migration path-gated → unaffected. Applied to FR-007a, FR-008, T022, T024. |
 
 ---
 
@@ -395,7 +396,20 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| M1 | MEDIUM | FR-007a detection hygiene omitted the concurrency releasability probe; PRSG-007's own docs say "concurrency" as vocabulary, so the router could spuriously self-emit `releasable:false` + `releasability:concurrency`, and T024 dogfood asserted only `.route` (not `.releasable`). | **Resolved (consensus [spec], N=1 high):** extended FR-007a action-intent hygiene to the concurrency probe; clarified FR-008 (over-inclusion = genuine intent, not topic-mention); updated T022 (action-intent + tasks/plan-only read); tightened T024 dogfood to assert `.releasable==true` + no spurious `releasability:*` tokens. Destructive-migration is path-gated → not affected (scope-corrected). |
+
+**G6:** ✅ pass — 0 CRITICAL (1 MEDIUM found and remediated via consensus).
+
+### Pre-Implement Confidence (synthesizer emit — end of Analyze)
+
+📊 Confidence: 0.92
+- Task understanding: 0.95
+- Approach clarity: 0.93
+- Requirements alignment: 0.94
+- Risk assessment: 0.88
+- Completeness: 0.92
+
+Basis: G0–G6 all green; 4 consensus rounds resolved (3 unanimous 3/3, 2 single-routed high-conf); JSON contract locked (9-token closed enum, schema valid); every FR/SC mapped to a task; dogfood self-check hardened. Lowest criterion = risk (0.88): production sits AT the ~400 reviewable-LOC warn line, so the PR-time diff gate is the binding backstop at implement.
 
 ---
 
