@@ -34,6 +34,30 @@ skills.
   detects when it's out of date and recommends the command, but
   does not run it for them.
 
+## PRSG-011 Structure Migration Guidance
+
+For existing projects, after integration upgrade and verification, tell the
+operator that repository structure migration is explicit and safe by default.
+It is not run automatically by this skill.
+
+Use this exact sequence:
+
+```bash
+speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --dry-run --repo-root .
+```
+
+Review the JSON report for pending, skipped, and no-op items. Clean the git tree
+if the report shows pending mutations and the worktree is dirty. Apply only
+when ready to mutate:
+
+```bash
+speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh --apply --repo-root .
+```
+
+The apply command creates a backup before repository marker writes or generated
+navigation updates. Tier-2 PROCESS relocation is a separate per-spec codemod and
+must never be auto-run by `$speckit-upgrade`.
+
 ## Input
 
 Accept optional integration keys as arguments:

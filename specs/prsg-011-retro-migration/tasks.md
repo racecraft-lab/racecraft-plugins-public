@@ -49,12 +49,12 @@ Reviewability-Exception: upgrade
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Implement `migrate-structure.sh` mode parsing, repo-root resolution, active-feature tri-state parsing, dirty-tree reporting, and compact JSON envelope in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
-- [ ] T009 [US1] Implement marker detection, no-op detection, forced backup planning/creation, marker write, failure status, and recovery fields in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
-- [ ] T010 [US1] Update marker-gated legacy roadmap-row discovery, one-row-per-file handling for multi-ID/gappy legacy inputs, durable target selection, out-of-scope namespace reporting, in-flight skip handling, no `.gitattributes` parser changes to reviewability logic, and helper reuse in `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
-- [ ] T011 [US1] Wire `migrate-structure.sh` to delegate generated-zone updates through `generate-spec-index.sh` without maintaining a second INDEX renderer in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
-- [ ] T012 [US1] Add repository migration dry-run/apply guidance, backup/restore wording, and no Tier-2 auto-run guarantee in `speckit-pro/skills/speckit-upgrade/SKILL.md`
-- [ ] T013 [US1] Mirror repository migration guidance and no Tier-2 auto-run guarantee in `speckit-pro/codex-skills/speckit-upgrade/SKILL.md`
+- [x] T008 [US1] Implement `migrate-structure.sh` mode parsing, repo-root resolution, active-feature tri-state parsing, dirty-tree reporting, and compact JSON envelope in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
+- [x] T009 [US1] Implement marker detection, no-op detection, forced backup planning/creation, marker write, failure status, and recovery fields in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
+- [x] T010 [US1] Update marker-gated legacy roadmap-row discovery, one-row-per-file handling for multi-ID/gappy legacy inputs, durable target selection, out-of-scope namespace reporting, in-flight skip handling, no `.gitattributes` parser changes to reviewability logic, and helper reuse in `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`
+- [x] T011 [US1] Wire `migrate-structure.sh` to delegate generated-zone updates through `generate-spec-index.sh` without maintaining a second INDEX renderer in `speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh`
+- [x] T012 [US1] Add repository migration dry-run/apply guidance, backup/restore wording, and no Tier-2 auto-run guarantee in `speckit-pro/skills/speckit-upgrade/SKILL.md`
+- [x] T013 [US1] Mirror repository migration guidance and no Tier-2 auto-run guarantee in `speckit-pro/codex-skills/speckit-upgrade/SKILL.md`
 
 **Checkpoint**: User Story 1 is complete when the repository migration fixtures pass and upgrade guidance exposes the exact FR-028 command sequence on both runtime surfaces.
 

@@ -463,7 +463,7 @@ assert_eq "True" "$(json_field "$apply_out" "backup.created")"
 
 set_test "apply itemizes backup creation"
 json_check "$apply_out" \
-  "any(i.get('action') == 'backup' and i.get('path') == data.get('backup', {}).get('path') for i in data.get('items', []))" \
+  "data.get('backup', {}).get('path') in [i.get('path') for i in data.get('items', []) if i.get('action') == 'backup']" \
   "expected backup item in apply output"
 
 set_test "apply writes repository structure marker"

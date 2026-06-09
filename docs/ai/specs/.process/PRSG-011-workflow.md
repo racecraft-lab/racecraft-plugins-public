@@ -490,7 +490,7 @@ For each deterministic script behavior:
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | Foundation | T001-T003 | Complete | RED scaffold tests created; reviewability gate still `exception/pass` under upgrade exception |
-| Tier-1/Tier-0 | T001-T007 | RED test contracts complete | `test-migrate-structure.sh` has 69 assertions and `test-relocate-process-artifacts.sh` has 104 assertions; both fail for missing implementation as expected |
+| Tier-1/Tier-0 | T001-T013 | Complete | `migrate-structure.sh` implemented with marker-gated generator delegation; `test-migrate-structure.sh` 69/69 passed and `test-generate-spec-index.sh` 76/76 passed |
 | Tier-2/register | Pending | Pending | |
 | Polish | Pending | Pending | |
 
