@@ -53,4 +53,3 @@ surfaces.
 | scaffold | must not invoke `relocate-process-artifacts.sh --apply` |
 | autopilot | must not invoke `relocate-process-artifacts.sh --dry-run` |
 | autopilot | must not invoke `relocate-process-artifacts.sh --apply` |
-

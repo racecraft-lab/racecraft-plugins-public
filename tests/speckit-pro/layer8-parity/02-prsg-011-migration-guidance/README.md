@@ -26,4 +26,3 @@ bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 
 ```
 
 Live mode is optional and token-costly, consistent with Layer 8.
-

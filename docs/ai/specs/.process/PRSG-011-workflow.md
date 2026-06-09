@@ -46,7 +46,7 @@ Re-read it before each phase. The locked decisions from that interview:
 | Checklist | `/speckit-checklist` | Complete | 4 domains complete; 11 gaps found and remediated; G4 pass |
 | Tasks | `/speckit-tasks` | Complete | 34 tasks; 6 parallel-safe; reviewability gate exception/pass honored |
 | Analyze | `/speckit-analyze` | Complete | 2 semantic findings remediated; G6 pass; confidence gate 0.94/pass |
-| Implement | `/speckit-implement` | In Progress | |
+| Implement | `/speckit-implement` | Complete | 34/34 tasks complete; post-implementation tail in progress |
 
 ### Phase Gates
 
@@ -112,15 +112,15 @@ Verify against `.specify/memory/constitution.md` v1.1.0 before G1:
 
 ### Success Criteria Summary
 
-- [ ] `migrate-structure.sh --dry-run` prints ordered pending migrations and mutates nothing, including on dirty trees.
-- [ ] `migrate-structure.sh --apply` hard-fails on dirty trees before backup or mutation, applies idempotent Tier-1 repo edits, writes `.specify/structure-version.json` with `{"structureVersion":1}`, and drives Tier-0 navigation backfill.
-- [ ] Tier-0 backfill reuses or composes with `generate-spec-index.sh` to emit roadmap-MOC rows for completed/archived ID-normalizable specs without stamping or moving legacy spec files.
-- [ ] In-flight specs from `.specify/feature.json` are skipped in every tier and reported as frozen/in-flight in dry-run output.
-- [ ] `relocate-process-artifacts.sh` supports real read-only `--dry-run` including on dirty trees, `--apply` with forced backup and clean-tree guard before mutation, idempotent re-run, `git mv`, link/index regeneration, and `structureVersion: 1` stamping only for Tier-2 thawed specs.
-- [ ] PROCESS relocation allow-list includes `retrospective.md`, `*-report.md`, `uat-*`, `pr-review-packet.md`, legacy `peer-review-*`, `cleanup-report.md`, `analysis.md`, `evidence/`, `verification-evidence.md` normalized into `evidence/verification-evidence.md`, `design-concept.md`, `*-design-concept.md`, `workflow.md`, and `*-workflow.md`.
-- [ ] CONTRACT artifacts stay visible: `spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/**`, `checklists/**`, and `SPEC-MOC.md`.
-- [ ] `speckit-upgrade` exposes the Tier-1/Tier-0 migration behavior; `speckit-scaffold-spec` and `speckit-autopilot` suggest, but never auto-run, the Tier-2 codemod when a thawed legacy spec has relocatable PROCESS files.
-- [ ] Tests cover Layer 1, Layer 3, Layer 4 dry-run/idempotency/move-set/ID-normalization fixtures, and Layer 8 Codex parity.
+- [x] `migrate-structure.sh --dry-run` prints ordered pending migrations and mutates nothing, including on dirty trees.
+- [x] `migrate-structure.sh --apply` hard-fails on dirty trees before backup or mutation, applies idempotent Tier-1 repo edits, writes `.specify/structure-version.json` with `{"structureVersion":1}`, and drives Tier-0 navigation backfill.
+- [x] Tier-0 backfill reuses or composes with `generate-spec-index.sh` to emit roadmap-MOC rows for completed/archived ID-normalizable specs without stamping or moving legacy spec files.
+- [x] In-flight specs from `.specify/feature.json` are skipped in every tier and reported as frozen/in-flight in dry-run output.
+- [x] `relocate-process-artifacts.sh` supports real read-only `--dry-run` including on dirty trees, `--apply` with forced backup and clean-tree guard before mutation, idempotent re-run, `git mv`, link/index regeneration, and `structureVersion: 1` stamping only for Tier-2 thawed specs.
+- [x] PROCESS relocation allow-list includes `retrospective.md`, `*-report.md`, `uat-*`, `pr-review-packet.md`, legacy `peer-review-*`, `cleanup-report.md`, `analysis.md`, `evidence/`, `verification-evidence.md` normalized into `evidence/verification-evidence.md`, `design-concept.md`, `*-design-concept.md`, `workflow.md`, and `*-workflow.md`.
+- [x] CONTRACT artifacts stay visible: `spec.md`, `plan.md`, `tasks.md`, `research.md`, `data-model.md`, `quickstart.md`, `contracts/**`, `checklists/**`, and `SPEC-MOC.md`.
+- [x] `speckit-upgrade` exposes the Tier-1/Tier-0 migration behavior; `speckit-scaffold-spec` and `speckit-autopilot` suggest, but never auto-run, the Tier-2 codemod when a thawed legacy spec has relocatable PROCESS files.
+- [x] Tests cover Layer 1, Layer 3, Layer 4 dry-run/idempotency/move-set/ID-normalization fixtures, and Layer 8 Codex parity.
 
 ---
 
@@ -521,6 +521,28 @@ For each deterministic script behavior:
 | `bash tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh speckit-scaffold-spec` | 8 evals discovered | Codex scaffold Tier-2 suggestion fixture included |
 | `bash tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh speckit-autopilot` | 29 evals discovered | Codex autopilot Tier-2 suggestion fixture included |
 | `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` | 6 passed, 0 failed, 0 skipped | Fixture 02 auto-discovered; live Layer 8 not run because it is opt-in and token-costly |
+| `git diff --check origin/main` | Passed | Working-tree diff is whitespace-clean after Layer 8 EOF cleanup |
+
+## Post-Implementation Results
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Doctor Extension Check | Completed with local Codex fallback | `.specify/templates` has 6 non-empty templates; `.claude/commands` has 9 speckit command docs; no non-executable `.specify/scripts/bash/*.sh`; constitution is present. `.codex/commands` is absent in this worktree, so no Codex extension command was directly invocable. |
+| Verify Implementation | Completed | Verification evidence table above; default deterministic suite passed 1958/1958. |
+| Verify Tasks Phantom Check | Completed | `rg -n "^- \[ \]" specs/prsg-011-retro-migration/tasks.md` found no unchecked tasks; task file maps all FR groups to completed task ranges. |
+| Code Review | Completed with parent fallback | Review extension was not installed. Parent review found no blocking code issues; fresh whitespace check initially found six Layer 8 trailing blank-line errors, now fixed in the working tree. |
+| Integration Suite | Completed | `bash tests/speckit-pro/run-all.sh` passed 1958/1958. |
+| Cleanup | Skipped | Cleanup extension was not installed during preflight; no cleanup command is available in this Codex surface. |
+| Reviewability Diff Gate | Completed | `reviewability-gate.sh diff origin/main...HEAD` returned `status=exception`, `pass=true`, `exception_class=upgrade`, 56 files, 0 reviewable LOC, and the ratified upgrade exception. |
+| Self-Review | Completed | See `## Self-Review` below. |
+| UAT Runbook Generation | Completed | `generate-uat-skeleton.sh` wrote `specs/prsg-011-retro-migration/.process/uat-runbook.md`; `uat-runbook-author` is not registered in this Codex session, so the parent rewrote the runbook into concrete acceptance commands and expected results. |
+
+## Self-Review
+
+1. **Tests executed?** Build/typecheck/lint are N/A for this plugin marketplace repo. The required test commands did run and exit zero: Layer 1 887/887, Layer 4 881/881, default suite 1958/1958, affected Layer 3 discovery checks, Layer 8 dry-run 6 passed, and `git diff --check origin/main` passed on 2026-06-09T03:24:16Z after the EOF cleanup.
+2. **Edge cases?** Covered. Repository migration non-happy paths are in `tests/speckit-pro/layer4-scripts/test-migrate-structure.sh:312` through schema/dry-run checks, `:405` through dirty-tree apply blocking, and `:473` through marker/backfill assertions. Tier-2 relocation non-happy paths are in `tests/speckit-pro/layer4-scripts/test-relocate-process-artifacts.sh:162` through schema checks, `:217` through evidence normalization, `:245` through already-normalized no-op, `:469` through collision handling, `:496` through frozen/out-of-scope coverage, and `:572` through dirty-tree blocking. Suggestion-only behavior is covered by Layer 3 Claude/Codex fixtures and Layer 8 fixture `02-prsg-011-migration-guidance`.
+3. **Requirements matched?** Covered. `specs/prsg-011-retro-migration/tasks.md` maps US1 to FR-001 through FR-009, FR-021 through FR-024, FR-027 through FR-032; US2 to FR-010 through FR-018, FR-021, FR-022, FR-025, FR-027; US3 to FR-019, FR-020, FR-026, FR-027, FR-029; and polish to verification and PR evidence. All T001-T034 rows are checked and implementation evidence is committed through `1d6b151`.
+4. **Follow-up?** No silent follow-up markers found. `rg -n "\[TODO\]|\[DEFERRED\]|\[OUT-OF-SCOPE\]|TODO|DEFERRED|OUT-OF-SCOPE" specs/prsg-011-retro-migration docs/ai/specs/.process/PRSG-011-workflow.md` returned no matches.
 
 ## PR Review Packet Draft
 
