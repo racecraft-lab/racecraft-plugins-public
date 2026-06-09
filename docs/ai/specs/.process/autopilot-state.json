@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T01:12:00Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-06-09T01:25:00Z",
+  "active_step": "Phase 4: Checklist - data-integrity",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -107,11 +107,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - data-integrity Consensus",

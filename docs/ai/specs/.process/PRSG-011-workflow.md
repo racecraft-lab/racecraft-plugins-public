@@ -42,7 +42,7 @@ Re-read it before each phase. The locked decisions from that interview:
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | 3 user stories, 22 functional requirements, 12 acceptance scenarios, 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | 3 sessions resolved; 5 consensus rows logged; 0 clarification markers |
-| Plan | `/speckit-plan` | In Progress | |
+| Plan | `/speckit-plan` | Complete | plan.md + research/data-model/quickstart + 3 contracts. Declared file operations filled; reviewability warning preserved with two internal vertical increments; G3 pass. |
 | Checklist | `/speckit-checklist` | Pending | Recommended: data-integrity, error-handling, backward-compatibility, developer-experience |
 | Tasks | `/speckit-tasks` | Pending | Must preserve two internal vertical increments |
 | Analyze | `/speckit-analyze` | Pending | |
@@ -295,11 +295,11 @@ Fill in after running the command:
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | |
-| `research.md` | Pending | Use only for unresolved implementation tradeoffs, not to re-litigate Grill Me decisions |
-| `data-model.md` | Pending | Likely useful for migration tiers, marker state, and artifact classification |
-| `contracts/` | Pending | Recommended for script CLIs and dry-run output |
-| `quickstart.md` | Pending | Recommended for operator migration flow |
+| `plan.md` | Complete | Uses speckit-pro-reviewability fields, declared file operations, accepted warning budget, and two-increment split decision |
+| `research.md` | Complete | Resolves helper reuse, repo-marker gating, compact JSON reports, backup ordering, dual anchors, and static suggestions |
+| `data-model.md` | Complete | Covers structure markers, active-feature state, migration tiers, artifact classification, move operations, backup plans, reports, and suggestions |
+| `contracts/` | Complete | 3 contracts: shared JSON report, repository migration CLI, Tier-2 relocation CLI |
+| `quickstart.md` | Complete | Operator dry-run/apply flows, recovery note, and focused verification commands |
 
 ---
 
