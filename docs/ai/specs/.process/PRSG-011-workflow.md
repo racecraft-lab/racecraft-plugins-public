@@ -533,9 +533,10 @@ For each deterministic script behavior:
 | Code Review | Completed with parent fallback | Review extension was not installed. Parent review found no blocking code issues; fresh whitespace check initially found six Layer 8 trailing blank-line errors, now fixed in the working tree. |
 | Integration Suite | Completed | `bash tests/speckit-pro/run-all.sh` passed 1958/1958. |
 | Cleanup | Skipped | Cleanup extension was not installed during preflight; no cleanup command is available in this Codex surface. |
-| Reviewability Diff Gate | Completed | `reviewability-gate.sh diff origin/main...HEAD` returned `status=exception`, `pass=true`, `exception_class=upgrade`, 56 files, 0 reviewable LOC, and the ratified upgrade exception. |
+| Reviewability Diff Gate | Completed | `reviewability-gate.sh diff origin/main...HEAD` returned `status=exception`, `pass=true`, `exception_class=upgrade`, 57 files, 0 reviewable LOC, and the ratified upgrade exception. |
 | Self-Review | Completed | See `## Self-Review` below. |
 | UAT Runbook Generation | Completed | `generate-uat-skeleton.sh` wrote `specs/prsg-011-retro-migration/.process/uat-runbook.md`; `uat-runbook-author` is not registered in this Codex session, so the parent rewrote the runbook into concrete acceptance commands and expected results. |
+| PR Body Generation | Completed | Generated with `generate-pr-body.sh` to `/private/tmp/prsg-011-speckit-pr-body.md` because this checkout is a linked worktree where `.git` is a file. Verified `speckit-pro-review-packet-source` marker and `## UAT Runbook` heading are present, then replaced only the top plain-English sections. |
 
 ## Self-Review
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-011-workflow.md",
-  "updated_at": "2026-06-09T03:28:00Z",
-  "active_step": "Post: PR Body Generation",
+  "updated_at": "2026-06-09T03:32:00Z",
+  "active_step": "Post: PR Creation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -223,11 +223,11 @@
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Review Remediation",
