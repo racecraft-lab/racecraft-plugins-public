@@ -232,7 +232,7 @@ fi
 # MODIFY_HEAVY = modify signals present (and not additive-dominant).
 addmod_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} ${SPEC:+"$SPEC"} 2>/dev/null || true)
 additive_hits=$(printf '%s' "$addmod_corpus" | grep -ciE 'CREATE[[:space:]]+TABLE|nullable' || true)
-modify_hits=$(printf '%s' "$addmod_corpus" | grep -coiE '\b(UPDATE|DELETE|DROP|CHECK)\b' || true)
+modify_hits=$(printf '%s' "$addmod_corpus" | grep -coiE '(^|[^[:alnum:]_])(UPDATE|DELETE|DROP|CHECK)([^[:alnum:]_]|$)' || true)
 if [ "${additive_hits:-0}" -gt 0 ] && [ "${modify_hits:-0}" -eq 0 ]; then
   ADDITIVE_DOMINANT=true
 elif [ "${modify_hits:-0}" -gt 0 ]; then
@@ -287,20 +287,29 @@ kw_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} 2>/dev/null || true)
 # on "block"; the `[^.…/`]` operand span additionally forbids a "…"/"/"-separated
 # enumeration between the verb and the stem.
 #
+# PORTABILITY: word boundaries are written as POSIX bracket classes
+# `(^|[^[:alnum:]_])` … `([^[:alnum:]_]|$)` — NOT `\b` — because `\b` is a GNU
+# extension that is not guaranteed in POSIX ERE (some BSD/busybox greps treat it
+# as a literal). Where a boundary sits next to a `{0,N}` operand gap, the leading
+# boundary is folded into ONE mandatory separator char drawn from the SAME class
+# the gap excludes (so it cannot re-admit a `.`/`/`/backtick the gap forbids), and
+# the optional inner gap ends in a non-word char — keeping behavior identical to
+# the old `\b` form on both GNU and BSD grep. Do NOT "simplify" these back to `\b`.
+#
 # exported-symbol rename: rename verb + a backtick identifier + "to"/arrow + a 2nd
 # backtick identifier (the concrete from→to operands).
-if printf '%s' "$kw_corpus" | grep -qiE '\brenam(e|ing)\b[^.`]{0,30}`[^`]+`[^.`]{0,40}(\bto\b|->|→)[^.`]{0,20}`[^`]+`'; then
+if printf '%s' "$kw_corpus" | grep -qiE '(^|[^[:alnum:]_])renam(e|ing)([^[:alnum:]_.`][^.`]{0,29})?`[^`]+`(([^.`]{0,39}[^[:alnum:]_.`])?to([^[:alnum:]_.`][^.`]{0,19})?|[^.`]{0,40}(->|→)[^.`]{0,20})`[^`]+`'; then
   HARD_ATOMIC=true
   SIGNALS+=("hard-atomic:exported-symbol-rename")
 fi
 # global version pin: bump/pin/upgrade verb + a real version digit (v20, 1.2.3).
-if printf '%s' "$kw_corpus" | grep -qiE '\b(bump|pin|upgrade|upgrading|bumping|pinning)\b[^.]{0,40}\bv?[0-9]+(\.[0-9]+)*\b'; then
+if printf '%s' "$kw_corpus" | grep -qiE '(^|[^[:alnum:]_])(bump|pin|upgrade|upgrading|bumping|pinning)[^[:alnum:]_.]([^.]{0,38}[^[:alnum:]_.])?v?[0-9]+(\.[0-9]+)*([^[:alnum:]_]|$)'; then
   HARD_ATOMIC=true
   SIGNALS+=("hard-atomic:global-version-pin")
 fi
 # mutual-exclusion / auth / payment primitive (ONE coarse class): an action verb +
 # a mutual-exclusion stem + a concrete object (no "…"/"/"-enumeration in between).
-if printf '%s' "$kw_corpus" | grep -qiE '\b(introduce|introducing|add|adding|acquire|wrap|enforce|implement|implementing)\b[^.…/`]{0,25}\b(distributed[ -])?(lock|mutex|auth|payment|acl|otp|kms|mfa|leader[ -]election|mutual[ -]exclusion)\b'; then
+if printf '%s' "$kw_corpus" | grep -qiE '(^|[^[:alnum:]_])(introduce|introducing|add|adding|acquire|wrap|enforce|implement|implementing)[^[:alnum:]_.…/`]([^.…/`]{0,23}[^[:alnum:]_.…/`])?(distributed[ -])?(lock|mutex|auth|payment|acl|otp|kms|mfa|leader[ -]election|mutual[ -]exclusion)([^[:alnum:]_]|$)'; then
   HARD_ATOMIC=true
   SIGNALS+=("hard-atomic:mutual-exclusion-primitive")
 fi
@@ -313,7 +322,7 @@ fi
 # change flags concurrency-releasability WITHOUT being mis-read as a hard-atomic
 # mutual-exclusion primitive (and vice versa). This is a releasability signal, NOT a
 # route signal — the route is decided by the other detectors (data-model Entity 4).
-if printf '%s' "$kw_corpus" | grep -qiE '\b(fix|fixing|introduce|resolve|resolving|guard|prevent|eliminate)\b[^.…/`]{0,25}\b(deadlock|mutex|semaphore|data[ -]race|race[ -]condition|isolation[ -]level|CAS|compare[ -]and[ -]swap)\b'; then
+if printf '%s' "$kw_corpus" | grep -qiE '(^|[^[:alnum:]_])(fix|fixing|introduce|resolve|resolving|guard|prevent|eliminate)[^[:alnum:]_.…/`]([^.…/`]{0,23}[^[:alnum:]_.…/`])?(deadlock|mutex|semaphore|data[ -]race|race[ -]condition|isolation[ -]level|CAS|compare[ -]and[ -]swap)([^[:alnum:]_]|$)'; then
   CONCURRENCY=true
 fi
 
@@ -330,7 +339,7 @@ path_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} ${SPEC:+"$SPEC"} 2>/dev/null || true
 # not fire. Each candidate path token is bucketed via surface_for_path (== schema/
 # migration) and screened by is_excluded_generated, keeping the taxonomy shared.
 while IFS= read -r line; do
-  printf '%s' "$line" | grep -qiE '\b(DROP|DELETE|TRUNCATE)\b' || continue
+  printf '%s' "$line" | grep -qiE '(^|[^[:alnum:]_])(DROP|DELETE|TRUNCATE)([^[:alnum:]_]|$)' || continue
   # any backtick path token on this line that buckets as schema/migration?
   while IFS= read -r tok; do
     [ -n "$tok" ] || continue
