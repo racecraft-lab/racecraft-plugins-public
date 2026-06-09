@@ -40,3 +40,9 @@ Add or update tests when changing command schemas, hook config, skill layout, or
 Follow the repo’s existing Conventional Commit pattern: `feat(skills): ...`, `fix(agents): ...`, `chore(evals): ...`. Keep scopes specific to the area changed.
 
 PRs should include a brief summary, affected plugin paths, test commands run, and sample output or screenshots when user-facing command behavior changes.
+
+## Recent SpecKit Archive Notes
+
+- PRSG-007 and PRSG-011 are archived in `.specify/memory/` as completed on 2026-06-09.
+- Do not remove `specs/prsg-007-atomicity-router` yet; Layer 4 dogfood/schema tests still read that live spec directory.
+- `.specify/feature.json` is transient local state. Do not commit a stale completed-spec pointer back to `main`.

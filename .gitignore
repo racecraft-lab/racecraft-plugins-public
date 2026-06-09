@@ -6,6 +6,7 @@
 .specify/presets/.cache/
 .specify/extensions/.cache/
 .specify/workflows/.cache/
+.specify/feature.json
 /.worktrees
 
 # Layer 7 live captures are transient; commit reduced parser-fixture.jsonl only.
