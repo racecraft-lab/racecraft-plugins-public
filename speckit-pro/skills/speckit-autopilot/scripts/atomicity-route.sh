@@ -347,9 +347,8 @@ if [ "$DM_PATH_VERB" = true ]; then
   SIGNALS+=("hard-atomic:destructive-migration")
 fi
 
-# out-of-tree contract break: a REAL versioned public path (/api/v<DIGIT>) OR an
-# API-bucket deliverable path co-located with a break/remove action. The real digit
-# is the discriminator — PRSG-007 mentions "/api/vN" (literal N) and bare
+# out-of-tree contract break: a REAL versioned public path (/api/v<DIGIT>). The real
+# digit is the discriminator — PRSG-007 mentions "/api/vN" (literal N) and bare
 # webhook/MCP as vocabulary, none of which carry a real version digit, so the
 # dogfood does not fire. (We deliberately do NOT fire on bare webhook/MCP keywords.)
 if printf '%s' "$path_corpus" | grep -qiE '/api/v[0-9]+'; then
