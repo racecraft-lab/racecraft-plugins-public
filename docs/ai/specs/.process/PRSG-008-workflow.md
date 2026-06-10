@@ -34,8 +34,8 @@ planner contract choices captured during setup.
 | Plan | `/speckit-plan` | Complete | Parser approach, contract artifacts, fixtures, and autopilot hook design created; G3 passed. |
 | Checklist | `/speckit-checklist` | Complete | api-contracts, error-handling, and data-integrity checklists complete; G4 passed. |
 | Tasks | `/speckit-tasks` | Complete | 45 TDD-first tasks generated across 7 phases; G5 passed. |
-| Analyze | `/speckit-analyze` | In Progress | Check design-concept/spec/plan/tasks consistency and downstream PRSG-009 contract safety. |
-| Implement | `/speckit-implement` | Pending | Implement via Layer 4 RED to GREEN, then L1/L4/L5 validation. |
+| Analyze | `/speckit-analyze` | Complete | Design-concept/spec/plan/tasks consistency checked; G6 passed after remediation. |
+| Implement | `/speckit-implement` | Complete | Layer 4 RED to GREEN completed; G7 and post-review validation passed. |
 
 ### Phase Gates
 
@@ -63,9 +63,9 @@ Verify against `.specify/memory/constitution.md` before G1:
 | IV. Test Coverage | New script has Layer 4 tests with realistic and malformed fixtures. | `bash tests/speckit-pro/run-all.sh --layer 4` |
 | VI. KISS / YAGNI | Planner is read-only, independent of `atomicity-route.sh`, and does not create PR branches or PR bodies. | Plan review + code review |
 
-**Constitution Check:** Initial spec gate verified at G1; script-safety and
-test-coverage checks remain pending until implementation creates
-`plan-layers.sh`.
+**Constitution Check:** Initial spec gate verified at G1. Script-safety and
+test-coverage checks passed at G7 with `bash -n`, Layer 4, Layer 1, and the
+default deterministic suite.
 
 ---
 
@@ -86,14 +86,14 @@ test-coverage checks remain pending until implementation creates
 
 ### Success Criteria Summary
 
-- [ ] `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh <feature-dir>` reads `<feature-dir>/tasks.md`, writes no files, emits stable JSON to stdout, and writes concise diagnostics to stderr.
-- [ ] Output includes ordered increments with semantic IDs (`foundation`, `us1`, `us2`, `polish`), ordered tasks, checkbox status, `[P]` parallel metadata, repo-relative file/test paths, source line numbers, dependencies, warnings, and advisory size metadata.
-- [ ] Missing required headings, invalid dependency references, dependency cycles, or impossible ordering fail with exit `1` and machine-readable JSON diagnostics.
-- [ ] Usage errors or unreadable inputs fail with exit `2`; successful plans exit `0`.
-- [ ] Planner stays independent from `atomicity-route.sh`; `speckit-autopilot` orchestrates planner execution after PRSG-007 routing and before implementation.
-- [ ] PRSG-008 creates no branches, PR bodies, restack metadata, or multi-PR topology; PRSG-009 owns emission.
-- [ ] Contract lives under `specs/prsg-008-layer-planner/contracts/plan-layers.output.md` plus a schema fixture.
-- [ ] Layer 4 tests cover at least one real SpecKit `tasks.md` fixture and malformed cases for missing headings, empty sections, cycles, invalid references, and path extraction.
+- [x] `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh <feature-dir>` reads `<feature-dir>/tasks.md`, writes no files, emits stable JSON to stdout, and writes concise diagnostics to stderr.
+- [x] Output includes ordered increments with semantic IDs (`foundation`, `us1`, `us2`, `polish`), ordered tasks, checkbox status, `[P]` parallel metadata, repo-relative file/test paths, source line numbers, dependencies, warnings, and advisory size metadata.
+- [x] Missing required headings, invalid dependency references, dependency cycles, or impossible ordering fail with exit `1` and machine-readable JSON diagnostics.
+- [x] Usage errors or unreadable inputs fail with exit `2`; successful plans exit `0`.
+- [x] Planner stays independent from `atomicity-route.sh`; `speckit-autopilot` orchestrates planner execution after PRSG-007 routing and before implementation.
+- [x] PRSG-008 creates no branches, PR bodies, restack metadata, or multi-PR topology; PRSG-009 owns emission.
+- [x] Contract lives under `specs/prsg-008-layer-planner/contracts/plan-layers.output.md` plus a schema fixture.
+- [x] Layer 4 tests cover at least one real SpecKit `tasks.md` fixture and malformed cases for missing headings, empty sections, cycles, invalid references, and path extraction.
 
 ---
 
@@ -556,6 +556,8 @@ footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
 | UAT Runbook Generation | Completed: `specs/prsg-008-layer-planner/.process/uat-runbook.md` generated and locally polished because `uat-runbook-author` is not registered in this Codex session. |
 | PR Body Generation | Completed: generated via `generate-pr-body.sh`, filled in plain-English sections, and verified `speckit-pro-review-packet-source` plus `## UAT Runbook`. |
 | PR Creation | Completed: https://github.com/racecraft-lab/racecraft-plugins-public/pull/138 |
+| Review Remediation | Completed: remediated 4 Copilot comments by fixing UAT diagnostic wording, contradictory-order details, longer cycle detection, and redundant `.` path normalization. Re-ran focused planner tests, Layer 4, Layer 1, privacy scan, and default suite. |
+| Retrospective | Completed: `specs/prsg-008-layer-planner/retrospective.md` records completion, review remediation, validation evidence, and follow-up lessons. |
 
 ## Self-Review
 

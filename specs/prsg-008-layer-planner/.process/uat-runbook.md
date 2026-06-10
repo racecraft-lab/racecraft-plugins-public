@@ -46,7 +46,8 @@ Run these from the repository root before walking the acceptance tests.
 ### User Story 3 - Diagnose Malformed Plans (Priority: P2)
 
 - [ ] Run `bash speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh tests/speckit-pro/layer4-scripts/fixtures/plan-layers/malformed-task > /tmp/prsg-008-malformed.json`; expect exit `1`.
-- [ ] Confirm `jq -r '.status,([.errors[].code]|sort|join(","))' /tmp/prsg-008-malformed.json` includes `invalid_plan`, `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task`.
+- [ ] Confirm `jq -r '.status' /tmp/prsg-008-malformed.json` prints `invalid_plan`.
+- [ ] Confirm `jq -r '[.errors[].code]|sort|join(",")' /tmp/prsg-008-malformed.json` includes `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task`.
 - [ ] Run `bash speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh tests/speckit-pro/layer4-scripts/fixtures/plan-layers/path-normalization > /tmp/prsg-008-paths.json`; expect exit `0` with warning diagnostics.
 
 <a id="us-4"></a>

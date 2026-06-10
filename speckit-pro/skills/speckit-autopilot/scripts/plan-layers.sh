@@ -126,6 +126,14 @@ json_array_from_values() {
   fi
 }
 
+json_array_from_ordered_values() {
+  if [ "$#" -eq 0 ]; then
+    printf '[]'
+  else
+    printf '%s\n' "$@" | jq -Rsc 'split("\n") | map(select(length > 0))'
+  fi
+}
+
 values_list_from_args() {
   if [ "$#" -eq 0 ]; then
     printf ''
@@ -328,7 +336,7 @@ normalize_reference() {
   token="$raw"
   [ -z "$token" ] && return
 
-  if [[ "$token" != /* && "$token" != *..* ]]; then
+  if [[ "$token" != /* && "$token" != *..* && "$token" != *"/./"* ]]; then
     NORMALIZED_REF="${token#./}"
     REF_INSIDE_ROOT=true
     return
@@ -720,7 +728,32 @@ order_position() {
   printf '%s\n' "-1"
 }
 
-known_order_json="$(json_array_from_values "${KNOWN_ORDER[@]}")"
+declare -a EXPECTED_ORDER=()
+declare -A TOPO_VISITING=()
+declare -A TOPO_VISITED=()
+
+topo_visit() {
+  local node="$1" dep
+  [ -n "${TOPO_VISITED[$node]-}" ] && return
+  [ -n "${TOPO_VISITING[$node]-}" ] && return
+
+  TOPO_VISITING[$node]=1
+  while IFS= read -r dep; do
+    [ -n "$dep" ] || continue
+    [ -n "${SECTION_EXISTS[$dep]-}" ] || continue
+    topo_visit "$dep"
+  done <<<"${DEPENDENCIES[$node]-}"
+  unset "TOPO_VISITING[$node]"
+  TOPO_VISITED[$node]=1
+  EXPECTED_ORDER+=("$node")
+}
+
+for inc_id in "${KNOWN_ORDER[@]}"; do
+  topo_visit "$inc_id"
+done
+
+known_order_json="$(json_array_from_ordered_values "${KNOWN_ORDER[@]}")"
+expected_order_json="$(json_array_from_ordered_values "${EXPECTED_ORDER[@]}")"
 for inc_id in "${SECTION_ORDER[@]}"; do
   inc_pos="$(order_position "$inc_id")"
   while IFS= read -r dep; do
@@ -728,7 +761,7 @@ for inc_id in "${SECTION_ORDER[@]}"; do
     [ -n "${SECTION_EXISTS[$dep]-}" ] || continue
     dep_pos="$(order_position "$dep")"
     if [ "$dep_pos" -gt "$inc_pos" ]; then
-      details="$(jq -cn --argjson expected_order "$known_order_json" --argjson observed_order "$known_order_json" \
+      details="$(jq -cn --argjson expected_order "$expected_order_json" --argjson observed_order "$known_order_json" \
         '{expected_order: $expected_order, observed_order: $observed_order}')"
       add_error "contradictory_increment_order" "Increment $inc_id is ordered before dependency $dep." "${SECTION_LINE[$inc_id]}" "$details"
       break
@@ -736,23 +769,59 @@ for inc_id in "${SECTION_ORDER[@]}"; do
   done <<<"${DEPENDENCIES[$inc_id]-}"
 done
 
-find_cycle() {
-  local node dep
-  for node in "${KNOWN_ORDER[@]}"; do
-    while IFS= read -r dep; do
-      [ -n "$dep" ] || continue
-      if [[ $'\n'"${DEPENDENCIES[$dep]-}"$'\n' == *$'\n'"$node"$'\n'* ]]; then
-        printf '%s\n%s\n%s\n' "$node" "$dep" "$node"
+declare -a CYCLE_STACK=()
+declare -a CYCLE_RESULT=()
+declare -A CYCLE_VISITING=()
+declare -A CYCLE_VISITED=()
+
+cycle_visit() {
+  local node="$1" dep idx stack_len
+  if [ -n "${CYCLE_VISITING[$node]-}" ]; then
+    CYCLE_RESULT=()
+    for idx in "${!CYCLE_STACK[@]}"; do
+      if [ "${CYCLE_STACK[$idx]}" = "$node" ]; then
+        CYCLE_RESULT=("${CYCLE_STACK[@]:$idx}" "$node")
         return 0
       fi
-    done <<<"${DEPENDENCIES[$node]-}"
+    done
+    return 0
+  fi
+  [ -n "${CYCLE_VISITED[$node]-}" ] && return 1
+
+  CYCLE_VISITING[$node]=1
+  CYCLE_STACK+=("$node")
+  while IFS= read -r dep; do
+    [ -n "$dep" ] || continue
+    [ -n "${SECTION_EXISTS[$dep]-}" ] || continue
+    if cycle_visit "$dep"; then
+      return 0
+    fi
+  done <<<"${DEPENDENCIES[$node]-}"
+
+  unset "CYCLE_VISITING[$node]"
+  stack_len="${#CYCLE_STACK[@]}"
+  if [ "$stack_len" -gt 0 ]; then
+    CYCLE_STACK=("${CYCLE_STACK[@]:0:$((stack_len - 1))}")
+  fi
+  CYCLE_VISITED[$node]=1
+  return 1
+}
+
+find_cycle() {
+  local node
+  for node in "${KNOWN_ORDER[@]}"; do
+    CYCLE_STACK=()
+    if cycle_visit "$node"; then
+      printf '%s\n' "${CYCLE_RESULT[@]}"
+      return 0
+    fi
   done
   return 1
 }
 
 if cycle_lines="$(find_cycle)"; then
   mapfile -t cycle_items <<<"$cycle_lines"
-  cycle_json="$(json_array_from_values "${cycle_items[@]}")"
+  cycle_json="$(json_array_from_ordered_values "${cycle_items[@]}")"
   first="${cycle_items[0]}"
   details="$(jq -cn --argjson cycle "$cycle_json" '{cycle: $cycle}')"
   add_error "dependency_cycle" "Dependency graph contains a cycle." "${SECTION_LINE[$first]}" "$details"

@@ -12,21 +12,28 @@
 
 - [ ] T003 [US2] Parse the US2 increment in tests/speckit-pro/layer4-scripts/test-plan-layers.sh
 
+## Phase 4: User Story 3 - Validate Longer Cycles (Priority: P2)
+
+- [ ] T004 [US3] Parse the US3 increment in tests/speckit-pro/layer4-scripts/test-plan-layers.sh
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
 
 - **Foundation**: No prerequisites.
 - **US1**: Depends on US2.
-- **US2**: Depends on US1.
+- **US2**: Depends on US3.
+- **US3**: Depends on US1.
 
 ### Incremental Delivery
 
 1. Complete Foundation: T001
 2. Complete US1: T002
 3. Complete US2: T003
+4. Complete US3: T004
 
 ### User Story Dependencies
 
 - **US1**: Depends on US2.
-- **US2**: Depends on US1.
+- **US2**: Depends on US3.
+- **US3**: Depends on US1.

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T04:09:00Z",
-  "active_step": "Post: Review Remediation",
+  "updated_at": "2026-06-10T04:25:11Z",
+  "active_step": "Complete",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -283,11 +283,13 @@
     },
     {
       "step": "Post: Review Remediation",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Remediated 4 Copilot comments: clarified UAT invalid-plan checks, emitted distinct contradictory-order expected/observed arrays, added DFS cycle detection for longer cycles, and normalized redundant ./ path segments. Re-ran focused planner tests 66/66, Layer 4 1029/1029, Layer 1 887/887, privacy scan 9/9, and default suite 2106/2106."
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Created specs/prsg-008-layer-planner/retrospective.md after review remediation; no spec changes proposed."
     }
   ]
 }
