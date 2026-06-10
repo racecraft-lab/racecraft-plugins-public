@@ -52,12 +52,14 @@ The reviewability estimator reads this block before `tasks.md` exists.
 - NEW tests/speckit-pro/layer4-scripts/test-plan-layers.sh
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/valid-real/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-headings/tasks.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-dependency/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/dependency-cycle/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-reference/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/empty-increment/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-references/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/checkbox-state/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/path-normalization/tasks.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/malformed-task/tasks.md
 
 ## Constitution Check
 
@@ -116,12 +118,14 @@ tests/
             └── plan-layers/
                 ├── valid-real/
                 ├── missing-headings/
+                ├── invalid-dependency/
                 ├── dependency-cycle/
                 ├── invalid-reference/
                 ├── empty-increment/
                 ├── missing-references/
                 ├── checkbox-state/
-                └── path-normalization/
+                ├── path-normalization/
+                └── malformed-task/
 ```
 
 **Structure Decision**: Keep the parser in the existing autopilot skill script

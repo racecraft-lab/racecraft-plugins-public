@@ -438,7 +438,21 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | | | |
+| A1 | Medium | SC-002 performance target had no explicit task coverage. | Added generated 200-task performance coverage to T003, T015, T042, and the Success Criteria Coverage table in `tasks.md`. |
+| A2 | Medium | `plan.md` fixture inventory omitted `invalid-dependency` and `malformed-task` fixtures required by `tasks.md`. | Added both fixture paths to declared file operations and the project tree in `plan.md`. |
+| A3 | High | Planner schema did not enforce status-specific invariants for `ok`, `invalid_plan`, and `input_error`. | Added contract Status Invariants and Draft-07 conditional schema constraints. |
+| A4 | Medium | Reviewability file-count projection in `spec.md` was stale versus the fixture-heavy plan. | Updated production and total file projections to match planned runtime/prose plus fixture/contract/test files. |
+
+**Analyze Result:** All findings remediated. G6 passed with `0 CRITICAL/HIGH`
+markers. Schema JSON parses with `jq empty`.
+
+📊 Confidence: 0.94
+
+- Task understanding: 0.95
+- Approach clarity: 0.94
+- Requirements alignment: 0.94
+- Risk assessment: 1.00
+- Completeness: 0.89
 
 ---
 

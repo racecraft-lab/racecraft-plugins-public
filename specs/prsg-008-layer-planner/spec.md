@@ -138,8 +138,8 @@ As `speckit-autopilot`, I need the planner to run after PRSG-007 route recording
 - **Primary surface**: harness/adapter
 - **Secondary surfaces, if any**: docs/process
 - **Projected reviewable LOC**: approximately 350 production LOC, excluding fixtures and generated artifacts
-- **Projected production files**: 2
-- **Projected total files**: 5-7
+- **Projected production files**: 3 runtime/prose surfaces (`plan-layers.sh`, Claude autopilot prose, Codex autopilot prose)
+- **Projected total files**: approximately 14-16, mostly contract, test, and fixture files that are intentional contract coverage and excluded from production reviewable LOC
 - **Budget result**: within budget
 - **Split decision**: This remains one spec because PRSG-008 is limited to a read-only planner contract and autopilot handoff. Branch creation, PR body generation, restacking, and stacked PR emission remain deferred to PRSG-009.
 

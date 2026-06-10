@@ -32,6 +32,16 @@ Every outcome emits one JSON object with these top-level fields:
 - `errors`: error diagnostics
 - `summary`: counts and concise result text
 
+## Status Invariants
+
+- `status=ok` maps to exit `0`; `errors` MUST be empty, `warnings` MAY be
+  present, and `increments` MUST contain at least one planned increment.
+- `status=invalid_plan` maps to exit `1`; `errors` MUST contain at least one
+  invalid-plan diagnostic for a readable `tasks.md` that violates this contract.
+- `status=input_error` maps to exit `2`; `errors` MUST contain at least one
+  input-error diagnostic and `increments` MUST be empty because no valid task
+  plan was available to parse.
+
 ## Increment Object
 
 Each increment includes:

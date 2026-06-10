@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T02:16:11Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-10T02:27:50Z",
+  "active_step": "Phase 7: Setup RED fixtures and contract harness (T001-T013)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -176,19 +176,24 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "summary": "4 findings remediated; 0 CRITICAL/HIGH findings remain."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Advisory confidence gate passed with composite 0.94 against threshold 0.90."
     },
     {
       "step": "Phase 7: Setup RED fixtures and contract harness (T001-T013)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Foundational RED assertions and script safety (T014-T020)",

@@ -21,8 +21,8 @@
 **Purpose**: Create the failing Layer 4 fixture and schema surface before implementing parser behavior.
 
 - [ ] T001 [P] Finalize the versioned planner envelope, exit-code mapping, diagnostic shape, and PRSG-009 non-goals in `specs/prsg-008-layer-planner/contracts/plan-layers.output.md`
-- [ ] T002 [P] Finalize the JSON Schema for status enums, semantic increment IDs, diagnostic code/detail constraints, warning/error severity separation, and advisory counts in `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json`
-- [ ] T003 Create the RED Layer 4 planner test harness with schema validation, stdout/stderr capture, exit-code assertions, determinism checks, and read-only snapshots in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [ ] T002 [P] Finalize the JSON Schema for status enums, status-specific `ok`/`invalid_plan`/`input_error` invariants, semantic increment IDs, diagnostic code/detail constraints, warning/error severity separation, and advisory counts in `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json`
+- [ ] T003 Create the RED Layer 4 planner test harness with schema validation, stdout/stderr capture, exit-code assertions, determinism checks, generated 200-task performance input, and read-only snapshots in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 - [ ] T004 [P] Add the valid real-task fixture with Foundation, user-story, Polish, dependency-order, incremental-delivery, `[P]`, file, and test references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/valid-real/tasks.md`
 - [ ] T005 [P] Add the missing required headings fixture for `missing_required_heading` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-headings/tasks.md`
 - [ ] T006 [P] Add the invalid dependency fixture for `unknown_increment` and contradictory dependency references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-dependency/tasks.md`
@@ -43,7 +43,7 @@
 **CRITICAL**: No parser implementation should begin until these tests fail for the expected reasons.
 
 - [ ] T014 Encode RED success assertions for valid JSON, schema conformance, `status=ok`, ordered increments, embedded tasks, source lines, checkbox status, `[P]`, and advisory counts in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T015 Encode RED determinism and no-write assertions for five repeated valid runs in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [ ] T015 Encode RED determinism, no-write, and generated 200-task under-1-second performance assertions for five repeated valid runs in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 - [ ] T016 Encode RED invalid-plan assertions for missing headings, invalid dependencies, dependency cycles, empty increments, duplicate IDs, contradictory order, and malformed task-like lines in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 - [ ] T017 Encode RED warning assertions for `reference_not_found` and `task_without_references` without failing otherwise valid plans in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 - [ ] T018 Encode RED input-error assertions for invalid invocation, missing feature directory, unreadable feature directory, missing `tasks.md`, unreadable `tasks.md`, structured stdout JSON, concise stderr, and exit `2` in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
@@ -112,7 +112,7 @@
 - [ ] T033 [US3] Implement `missing_required_heading`, `empty_increment`, `unknown_increment`, `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task` diagnostics with closed details payloads in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
 - [ ] T034 [US3] Implement deterministic `dependency_cycle` and `contradictory_increment_order` diagnostics with stable cycle/order details in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
 - [ ] T035 [US3] Implement `task_without_references` and `reference_not_found` warning diagnostics with severity `warning`, shared shape, concise stderr, and successful exit `0` in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T036 [US3] Validate every planner outcome against `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json` from `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [ ] T036 [US3] Validate every planner outcome and status-specific schema invariant against `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json` from `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 
 **Checkpoint**: User Story 3 handles valid, warning, invalid-plan, and input-error outcomes with one schema-backed envelope.
 
@@ -143,7 +143,7 @@
 **Purpose**: Verify the complete PRSG-008 slice and keep release notes scoped to planner behavior.
 
 - [ ] T041 [P] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` and executable-bit checks for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T042 [P] Run `bash tests/speckit-pro/run-all.sh --layer 4` and capture planner fixture coverage for `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [ ] T042 [P] Run `bash tests/speckit-pro/run-all.sh --layer 4` and capture planner fixture coverage plus the 200-task performance assertion for `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 - [ ] T043 [P] Run `bash tests/speckit-pro/run-all.sh --layer 1` to verify structural plugin packaging for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
 - [ ] T044 Run `bash tests/speckit-pro/run-all.sh` to verify the deterministic default suite from the repository root
 - [ ] T045 Update implementation evidence, FR traceability, validation commands, warning behavior, and PRSG-009 non-goals in `docs/ai/specs/.process/PRSG-008-workflow.md`
@@ -243,3 +243,15 @@ T038 and T040 can be edited in parallel if one executor owns Claude skill prose 
 | FR-016, FR-017, FR-017a, FR-017b, FR-018, FR-018a, FR-018b, FR-018c | T037-T040 |
 | FR-019 | T001, T020, T038-T040, T045 |
 
+## Success Criteria Coverage
+
+| Success Criterion | Covered by tasks | Verification focus |
+|-------------------|------------------|--------------------|
+| SC-001 | T015, T042 | Five repeated valid runs produce byte-identical JSON. |
+| SC-002 | T003, T015, T042 | Generated 200-task input completes in under 1 second on a typical development machine. |
+| SC-003 | T005-T008, T013, T016, T032-T034, T036 | Malformed-plan fixtures return exit `1`, structured JSON errors, and concise stderr. |
+| SC-004 | T018, T023 | Usage/input fixtures return exit `2`, structured JSON errors, and no repository writes. |
+| SC-005 | T009-T010, T017, T032, T035-T036 | Missing-reference fixtures return exit `0` with warning diagnostics. |
+| SC-006 | T011-T012, T014, T026-T031 | Emitted tasks retain source line and checkbox-state traceability. |
+| SC-007 | T037-T040 | Split-relevant autopilot runs stop before implementation on planner failure. |
+| SC-008 | T001, T020, T038-T040, T045 | PRSG-009 owns branch, PR body, restack, and multi-PR emission work. |
