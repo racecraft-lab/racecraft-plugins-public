@@ -128,13 +128,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T037 [US4] Add RED autopilot fixture or eval coverage for `split-PR` planner success, invalid-plan stop, input-error stop, warning carry-forward, and non-split skip behavior in `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`
+- [x] T037 [US4] Add RED autopilot fixture or eval coverage for `split-PR` planner success, invalid-plan stop, input-error stop, warning carry-forward, and non-split skip behavior in `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Wire the Claude autopilot flow to run `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh <feature-dir>` after post-G5 atomicity route recording and before Analyze or implementation when route is exactly `split-PR` in `speckit-pro/skills/speckit-autopilot/SKILL.md`
-- [ ] T039 [US4] Add Claude autopilot handling for planner exit `0`, warning carry-forward, full envelope persistence to `autopilot-state.json`, workflow `## Layer Plan` summary, invalid-plan fixed stop line, input-error stop message, and non-split skip behavior in `speckit-pro/skills/speckit-autopilot/SKILL.md`
-- [ ] T040 [US4] Mirror the same Codex autopilot layer-plan gate, state persistence, workflow summary, warning carry-forward, stop lines, and non-split skip behavior in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
+- [x] T038 [US4] Wire the Claude autopilot flow to run `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh <feature-dir>` after post-G5 atomicity route recording and before Analyze or implementation when route is exactly `split-PR` in `speckit-pro/skills/speckit-autopilot/SKILL.md`
+- [x] T039 [US4] Add Claude autopilot handling for planner exit `0`, warning carry-forward, full envelope persistence to `autopilot-state.json`, workflow `## Layer Plan` summary, invalid-plan fixed stop line, input-error stop message, and non-split skip behavior in `speckit-pro/skills/speckit-autopilot/SKILL.md`
+- [x] T040 [US4] Mirror the same Codex autopilot layer-plan gate, state persistence, workflow summary, warning carry-forward, stop lines, and non-split skip behavior in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
 
 **Checkpoint**: User Story 4 integrates the planner after atomicity routing and before implementation without adding PRSG-009 emission behavior.
 

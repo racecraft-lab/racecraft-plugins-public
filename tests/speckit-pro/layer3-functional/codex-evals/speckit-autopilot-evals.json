@@ -386,6 +386,24 @@
         "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
         "States that $speckit-autopilot must not invoke relocate-process-artifacts.sh --dry-run or --apply"
       ]
+    },
+    {
+      "id": 30,
+      "prompt": "Tasks just passed G5 and atomicity-route.sh returned route=split-PR for specs/prsg-008-layer-planner. Walk through the Codex autopilot layer-plan gate before Analyze or Implement starts. What command runs, what happens on exit 0 with warnings, what exact stop line appears on exit 1, what happens on exit 2, and what if the route is one-navigable-PR instead?",
+      "expected_output": "Explains that Codex autopilot runs plan-layers.sh only when the recorded atomicity route is exactly split-PR, before Analyze or Implement. Exit 0 persists the full versioned envelope under layer_plan in autopilot-state.json, writes a workflow ## Layer Plan summary, carries warnings forward, and continues. Exit 1 prints the fixed invalid_plan stop line and stops before implementation. Exit 2 stops with a distinct input_error message. Non-split routes skip the planner and record layer_plan.status=skipped.",
+      "expectations": [
+        "States that plan-layers.sh runs only when the recorded atomicity route is exactly split-PR",
+        "States that the planner runs after G5 atomicity routing and before Analyze or Implement",
+        "Names the command: <SKILL_SCRIPTS>/plan-layers.sh <feature_dir>",
+        "States that exit 0 persists the full versioned planner envelope under layer_plan in autopilot-state.json",
+        "States that exit 0 writes a concise workflow ## Layer Plan summary",
+        "States that planner warnings on exit 0 are carried forward into implementation context",
+        "Includes the exact invalid-plan stop line: STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.",
+        "States that exit 1 and exit 2 both stop before implementation",
+        "Distinguishes exit 2 as input_error with its own message and planner diagnostics",
+        "States that non-split routes such as one-navigable-PR skip the planner and record layer_plan.status=skipped",
+        "States that the planner gate creates no branches, PR bodies, restacks, or stacked-PR topology"
+      ]
     }
   ]
 }

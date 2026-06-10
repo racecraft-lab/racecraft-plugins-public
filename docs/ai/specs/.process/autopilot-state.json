@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T02:56:49Z",
-  "active_step": "Phase 7: US4 autopilot layer-plan gate (T037-T040)",
+  "updated_at": "2026-06-10T03:04:00Z",
+  "active_step": "Phase 7: Polish and validation (T041-T045)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -218,11 +218,12 @@
     },
     {
       "step": "Phase 7: US4 autopilot layer-plan gate (T037-T040)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Added Codex eval coverage and wired Claude/Codex autopilot instructions for split-route planner execution, non-split skip, persisted layer-plan envelope, warning carry-forward, and exit 1/2 stop behavior."
     },
     {
       "step": "Phase 7: Polish and validation (T041-T045)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",

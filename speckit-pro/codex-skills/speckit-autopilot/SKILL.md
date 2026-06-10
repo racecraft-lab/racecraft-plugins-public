@@ -678,6 +678,31 @@ and multi-PR emission (PRSG-009) work; actually emitting multiple PRs or
 creating branches is out of scope for this step. The route is recorded ONLY
 in the workflow file — never in the spec map.
 
+**Layer Plan (post-route, pre-Analyze/pre-Implement):**
+Immediately after recording the atomicity route, decide whether the
+PRSG-008 layer planner is required:
+
+- If `route != "split-PR"`, do not run the planner. Record
+  `layer_plan.status="skipped"` with the route reason in
+  `autopilot-state.json` and the workflow `## Layer Plan` section, then
+  continue.
+- If `route == "split-PR"`, run
+  `<SKILL_SCRIPTS>/plan-layers.sh <feature_dir>` with `exec_command`,
+  capturing stdout, stderr, and exit code before Analyze or Implement
+  can continue.
+- Exit `0`: parse stdout as the full versioned layer-plan envelope,
+  persist that full envelope under `layer_plan` in `autopilot-state.json`,
+  write a concise workflow `## Layer Plan` summary, carry any planner
+  warnings into implementation context, and continue.
+- Exit `1`: STOP before implementation and print exactly:
+  `STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
+  Then show planner diagnostics from stdout/stderr.
+- Exit `2`: STOP before implementation with a distinct `input_error`
+  message and include planner diagnostics from stdout/stderr.
+
+The planner is read-only. It creates no branches, PR bodies, stacked PR
+topology, or commits; PRSG-009 owns multi-PR emission.
+
 **Post-implementation (after all 7 phases complete + G7 passes):**
 Items 10-20 are part of the same durable plan (Step 1.1's Canonical
 Post-Implementation Item List — `Post: Doctor Extension Check`
@@ -935,6 +960,12 @@ never from `.specify/scripts/bash/`.
   the workflow file's `## Atomicity Route` section with `apply_patch` (the
   script writes no file). Advisory-only (never blocks) and wires NO PR
   emission/branch creation (PRSG-008/PRSG-009).
+- `plan-layers.sh <feature-dir>` — Read-only PRSG-008 layer planner:
+  emits one versioned JSON envelope (`ok`, `invalid_plan`, or
+  `input_error`) to stdout, concise diagnostics to stderr, and no repo
+  writes. Run after the atomicity route only when `route == split-PR`;
+  exit 0 continues with persisted layer context, while exit 1/2 stops
+  before implementation.
 - `estimate-reviewable-loc.sh <plan.md>` — Plan-phase reviewability
   budget: project production-LOC from `plan.md`'s declared file structure
   and emit a three-value `status` (`pass` / `over_budget` /

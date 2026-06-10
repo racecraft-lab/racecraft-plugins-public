@@ -390,8 +390,26 @@ for phase in PHASES starting from first_pending:
         and record the emitted JSON decision into the workflow
         file's "## Atomicity Route" section. READ-ONLY + ADVISORY —
         the script writes nothing and never blocks; the SKILL is
-        what records it. Wires NO PR emission or branch creation
-        (that is PRSG-008/PRSG-009).
+        what records it.
+    8d. After recording the atomicity route, run the layer planner only
+        when route is exactly `split-PR`, and always before Analyze or
+        Implement can continue:
+        - non-split routes: record `layer_plan.status=skipped` in
+          `autopilot-state.json` and the workflow "## Layer Plan" section,
+          then continue with route context.
+        - split route: run
+          `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh <feature-dir>`
+          and capture stdout, stderr, and exit code.
+        - exit 0: parse stdout as the full versioned layer-plan envelope,
+          persist it under `layer_plan` in `autopilot-state.json`, write a
+          concise workflow "## Layer Plan" summary, carry warnings into the
+          implementation context, then continue.
+        - exit 1: STOP before implementation and print exactly:
+          `STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
+          Then show planner diagnostics from stdout/stderr.
+        - exit 2: STOP before implementation with a distinct
+          `input_error` message and include planner diagnostics.
+        This wires NO PR emission or branch creation (PRSG-009 owns that).
     9. Advance
 ```
 
@@ -602,6 +620,12 @@ Always invoke via the full resolved path — never from `.specify/scripts/bash/`
   ADVISORY-only (never blocks) and wires NO PR emission/branch creation
   (PRSG-008/PRSG-009). See
   [Phase Execution §Phase 5: Tasks](./references/phase-execution.md#phase-5-tasks).
+- `plan-layers.sh <feature-dir>` — Read-only PRSG-008 layer planner:
+  emits one versioned JSON envelope (`ok`, `invalid_plan`, or
+  `input_error`) to stdout, concise diagnostics to stderr, and no repo
+  writes. Run after the atomicity route only when `route == split-PR`;
+  exit 0 continues with persisted layer context, while exit 1/2 stops
+  before implementation.
 - `estimate-reviewable-loc.sh <plan.md>` — Plan-phase reviewability
   budget: project production-LOC from `plan.md`'s declared file
   structure and emit a three-value `status` (`pass` / `over_budget` /
