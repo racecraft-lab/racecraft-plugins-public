@@ -39,7 +39,7 @@ Load-bearing decisions:
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Define multi-PR emission behavior and state contracts |
+| Specify | `/speckit-specify` | Complete | Created spec.md with 20 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Pending | Resolve schema, branch naming, and failure evidence details |
 | Plan | `/speckit-plan` | Pending | Map changes to autopilot post-implementation, PR body generation, scaffold branch topology, and restack helper |
 | Checklist | `/speckit-checklist` | Pending | Run focused checks for API/contracts, state management, error handling, and CI/release flow |
@@ -74,7 +74,7 @@ Load-bearing decisions:
 | Conventional Commits | Setup and implementation commits use conventional commit format | `git log --oneline -1` and CI PR title validation |
 | KISS, Simplicity & YAGNI | Consume PRSG-008 layer plans; do not add new review-routing heuristics in PRSG-009 | Plan review and Analyze phase |
 
-**Constitution Check:** Pending until Plan.
+**Constitution Check:** Initial preflight passed for Phase 1. Full Plan and Implementation constitution gates remain pending.
 
 ---
 
@@ -154,13 +154,13 @@ The current post-implementation flow flattens implementation output into one PR 
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | 3 seeded |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 20 |
+| User Stories | 3 |
+| Acceptance Criteria | 9 acceptance scenarios |
 
 ### Files Generated
 
-- [ ] `specs/prsg-009-multi-pr-emission/spec.md`
+- [x] `specs/prsg-009-multi-pr-emission/spec.md`
 
 ---
 
