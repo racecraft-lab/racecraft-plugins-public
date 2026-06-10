@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-009-workflow.md",
   "updated_at": "2026-06-10T22:59:34Z",
-  "active_step": "Phase 2: Clarify - State and Resume Contract",
+  "active_step": "Phase 3: Plan",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -93,31 +93,39 @@
     },
     {
       "step": "Phase 2: Clarify - State and Resume Contract",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted top-level multi_pr_emission state, persistence order, resume reconciliation, failed-slice evidence, and PRS manifest v2 pending consensus."
     },
     {
       "step": "Phase 2: Clarify - State and Resume Contract Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus selected .process/prs.json schemaVersion 2 for bounded MOC PR rows while keeping v1 compatibility."
     },
     {
       "step": "Phase 2: Clarify - Branch and PR Contract",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted slice branch naming, explicit base/head/body-file PR creation, optional slice packet input, and GitHub head/base reconciliation."
     },
     {
       "step": "Phase 2: Clarify - Branch and PR Contract Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus selected schema v2 SHA display as merged_sha when available, otherwise head_sha."
     },
     {
       "step": "Phase 2: Clarify - CI and Restack Contract",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted scoped verification evidence without Actions changes, structured command metadata, optional gh-stack restack/sync, fallback restack.sh, and full-suite evidence placement."
     },
     {
       "step": "Phase 2: Clarify - CI and Restack Contract Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 consensus selected scoped verification evidence over Actions changes and gh-stack only for safely detected restack/sync.",
+      "gate": "G2",
+      "gate_status": "passed"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - API/contracts",
@@ -222,6 +230,64 @@
     {
       "step": "Post: Retrospective",
       "status": "pending"
+    }
+  ],
+  "consensus_resolution_log": [
+    {
+      "phase": "Clarify Session 1",
+      "item": "PRS manifest schema",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Use .process/prs.json schemaVersion 2 for bounded reviewer-facing MOC rows; keep resume-only details in autopilot-state.json.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 2",
+      "item": "Open PR SHA display",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Use head_sha for open schemaVersion 2 PRS rows and prefer merged_sha after merge; do not overload merged_sha with open PR heads.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 3",
+      "item": "Scoped CI semantics",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Scoped CI means recorded scoped verification evidence; do not modify .github/workflows/pr-checks.yml in PRSG-009.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 3",
+      "item": "gh-stack usage",
+      "round": 1,
+      "routed_categories": [
+        "domain",
+        "codebase"
+      ],
+      "outcome": "Use gh-stack only when safely detected for restack/sync; explicit gh pr create remains the emission path.",
+      "analysts_used": [
+        "domain-researcher",
+        "codebase-analyst"
+      ]
     }
   ]
 }

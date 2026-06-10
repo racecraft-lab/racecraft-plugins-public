@@ -40,7 +40,7 @@ Load-bearing decisions:
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created spec.md with 20 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
-| Clarify | `/speckit-clarify` | Pending | Resolve schema, branch naming, and failure evidence details |
+| Clarify | `/speckit-clarify` | Complete | Resolved state, PRS manifest, branch/PR, scoped verification, and restack contracts; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | Pending | Map changes to autopilot post-implementation, PR body generation, scaffold branch topology, and restack helper |
 | Checklist | `/speckit-checklist` | Pending | Run focused checks for API/contracts, state management, error handling, and CI/release flow |
 | Tasks | `/speckit-tasks` | Pending | Generate small story-oriented tasks with Layer 4, Layer 7 if needed, and Layer 8 parity coverage |
@@ -52,7 +52,7 @@ Load-bearing decisions:
 | Gate | Checkpoint | Approval Criteria |
 |------|------------|-------------------|
 | G1 | After Specify | User stories cover Emit N PRs, MOC/restack, and branch topology/CI mapping |
-| G2 | After Clarify | State schema, branch naming, PR creation order, and failure recovery are explicit |
+| G2 | After Clarify | Passed: state schema, branch naming, PR creation order, CI/restack, and failure recovery are explicit |
 | G3 | After Plan | Architecture honors PRSG-008/003/001 dependencies and constitution gates |
 | G4 | After Checklist | All checklist gaps are resolved or explicitly scoped out |
 | G5 | After Tasks | Tasks cover implementation, docs, tests, parity, and verification |
@@ -192,9 +192,20 @@ The current post-implementation flow flattens implementation output into one PR 
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | State and resume contract | Pending | |
-| 2 | Branch and PR contract | Pending | |
-| 3 | CI and restack contract | Pending | |
+| 1 | State and resume contract | 5 | Accepted `multi_pr_emission` top-level state, PRS manifest schema v2 for reviewer rows, state-before-MOC persistence order, branch/PR reconciliation by expected head/base, and compact failed-slice evidence with logs by path. |
+| 2 | Branch and PR contract | 5 | Accepted `<feature-branch>/<NN>-<slice-id>` branch names, explicit PR base/head/body-file arguments, optional `--slice-packet`, GitHub head/base reconciliation, and schema v2 SHA display as `merged_sha` when available else `head_sha`. |
+| 3 | CI and restack contract | 5 | Accepted scoped verification evidence without Actions changes, structured `scoped_verification.commands[]`, optional `gh-stack` for safe restack/sync only, dry-run-first `restack.sh`, and full-suite evidence before emission plus after restack. |
+
+---
+
+## Consensus Resolution Log
+
+| Phase | Item | Round | Routed Categories | Outcome | Analysts Used |
+|-------|------|-------|-------------------|---------|---------------|
+| Clarify Session 1 | PRS manifest schema | 1 | codebase, spec | Use `.process/prs.json` schemaVersion 2 for bounded reviewer-facing MOC rows while keeping v1 backward-compatible; keep resume-only details in `autopilot-state.json`. | codebase-analyst, spec-context-analyst |
+| Clarify Session 2 | Open PR SHA display | 1 | codebase, spec | SchemaVersion 2 PRS rows display `head_sha` while open and prefer `merged_sha` after merge; open PR heads must not be written into `merged_sha`. | codebase-analyst, spec-context-analyst |
+| Clarify Session 3 | Scoped CI semantics | 1 | codebase, spec | Treat scoped CI as recorded scoped verification evidence in slice packets/PR bodies/MOC evidence pointers/workflow/state; do not modify `.github/workflows/pr-checks.yml` in PRSG-009. | codebase-analyst, spec-context-analyst |
+| Clarify Session 3 | gh-stack usage | 1 | domain, codebase | Use `gh-stack` only when safely detected for restack/sync of existing active stacks; keep explicit `gh pr create --base --head --body-file` as the emission path. | domain-researcher, codebase-analyst |
 
 ---
 
