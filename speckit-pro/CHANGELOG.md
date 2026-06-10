@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.11.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.10.0...speckit-pro-v2.11.0) (2026-06-10)
+
+
+### Features
+
+* **prsg-008:** add layer planner ([#138](https://github.com/racecraft-lab/racecraft-plugins-public/issues/138)) ([deccd8a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/deccd8a2a9916e11edfad43df8ceef95a756dc04))
+
+
+### Bug Fixes
+
+* **skills:** require picker-first grill-me interviews ([#141](https://github.com/racecraft-lab/racecraft-plugins-public/issues/141)) ([cd3624d](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cd3624dc4cab4abd0ffdd3969427268254530347))
+
 ## [2.10.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.9.0...speckit-pro-v2.10.0) (2026-06-09)
 
 
