@@ -3,15 +3,11 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
+CALLER_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
+REPO_ROOT="$CALLER_ROOT"
 
 json_value() {
-  python3 - "$1" <<'PY'
-import json
-import sys
-print(json.dumps(sys.argv[1]))
-PY
+  printf '%s' "$1" | jq -Rs .
 }
 
 normalize_for_display() {
@@ -110,6 +106,8 @@ if [ ! -d "$FEATURE_DIR" ] || [ ! -r "$FEATURE_DIR" ] || [ ! -x "$FEATURE_DIR" ]
   emit_input_error "feature_dir_unreadable" "Feature directory unreadable: $(normalize_for_display "$FEATURE_DIR")" "$FEATURE_DIR" "" "$details"
 fi
 
+REPO_ROOT="$(git -C "$FEATURE_DIR" rev-parse --show-toplevel 2>/dev/null || printf '%s\n' "$CALLER_ROOT")"
+
 if [ ! -e "$TASKS_FILE" ]; then
   details=$(jq -cn --arg tasks_file "$(normalize_for_display "$TASKS_FILE")" '{tasks_file: $tasks_file}')
   emit_input_error "tasks_file_missing" "tasks.md missing: $(normalize_for_display "$TASKS_FILE")" "$FEATURE_DIR" "$TASKS_FILE" "$details"
@@ -120,7 +118,7 @@ if [ ! -f "$TASKS_FILE" ] || [ ! -r "$TASKS_FILE" ]; then
   emit_input_error "tasks_file_unreadable" "tasks.md unreadable: $(normalize_for_display "$TASKS_FILE")" "$FEATURE_DIR" "$TASKS_FILE" "$details"
 fi
 
-python3 - "$REPO_ROOT" "$FEATURE_DIR" "$TASKS_FILE" <<'PY'
+planner_model=$(python3 - "$REPO_ROOT" "$FEATURE_DIR" "$TASKS_FILE" <<'PY'
 from __future__ import annotations
 
 import json
@@ -671,9 +669,7 @@ if status == "ok":
 else:
     message = f"Layer plan invalid: {len(errors)} error(s)."
 
-envelope = {
-    "tool": "plan-layers",
-    "contract_version": 1,
+model = {
     "status": status,
     "feature_dir": feature_rel,
     "tasks_file": tasks_rel,
@@ -689,11 +685,30 @@ envelope = {
     },
 }
 
-print(json.dumps(envelope, separators=(",", ":"), ensure_ascii=True))
-if errors:
-    print(f"plan-layers: invalid_plan: {len(errors)} error(s)", file=sys.stderr)
-    sys.exit(1)
-if warnings:
-    print(f"plan-layers: ok with {len(warnings)} warning(s)", file=sys.stderr)
-sys.exit(0)
+print(json.dumps(model, separators=(",", ":"), ensure_ascii=True))
 PY
+)
+
+jq -cn --argjson model "$planner_model" '{
+  tool: "plan-layers",
+  contract_version: 1,
+  status: $model.status,
+  feature_dir: $model.feature_dir,
+  tasks_file: $model.tasks_file,
+  increments: $model.increments,
+  warnings: $model.warnings,
+  errors: $model.errors,
+  summary: $model.summary
+}'
+
+status=$(printf '%s' "$planner_model" | jq -r '.status')
+error_count=$(printf '%s' "$planner_model" | jq -r '.summary.error_count')
+warning_count=$(printf '%s' "$planner_model" | jq -r '.summary.warning_count')
+if [ "$status" = "invalid_plan" ]; then
+  printf 'plan-layers: invalid_plan: %s error(s)\n' "$error_count" >&2
+  exit 1
+fi
+if [ "$warning_count" -gt 0 ]; then
+  printf 'plan-layers: ok with %s warning(s)\n' "$warning_count" >&2
+fi
+exit 0

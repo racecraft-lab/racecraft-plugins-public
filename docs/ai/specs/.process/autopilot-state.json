@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T03:15:00Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-06-10T03:29:47Z",
+  "active_step": "Post: Verify Implementation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -224,37 +224,42 @@
     {
       "step": "Phase 7: Polish and validation (T041-T045)",
       "status": "completed",
-      "summary": "Recorded validation evidence in the workflow. bash -n/executable checks passed; Layer 4 passed 1013/1013, Layer 1 passed 887/887, and default suite passed 2090/2090."
+      "summary": "Recorded validation evidence in the workflow. bash -n/executable checks passed; focused planner tests passed 52/52, Layer 4 passed 1015/1015, Layer 1 passed 887/887, and default suite passed 2092/2092."
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Doctor extension check passed with 5 PASS, 0 WARN, and 0 FAIL."
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "in_progress",
+      "summary": "Initial verify found one critical, one high, and two medium findings. Remediation moved public envelope emission to jq, normalized paths from the target feature repo root, added schema-backed output validation, and asserted the path-normalization fixture."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Verify-tasks report verified all 45 completed tasks with 0 flagged items."
     },
     {
       "step": "Post: Code Review",
-      "status": "pending",
+      "status": "skipped",
       "skip_reason": "review extension not installed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Default deterministic suite passed: bash tests/speckit-pro/run-all.sh reported 2092/2092."
     },
     {
       "step": "Post: Cleanup",
-      "status": "pending",
+      "status": "skipped",
       "skip_reason": "cleanup extension not installed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Diff gate passed via recorded infra exception: reviewable_loc=0, production_files=0, total_files=38, exception_honored=true."
     },
     {
       "step": "Post: Self-Review",

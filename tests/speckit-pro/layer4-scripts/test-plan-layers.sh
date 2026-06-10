@@ -144,7 +144,7 @@ story_re = re.compile(r"^us[1-9][0-9]*$")
 problems = []
 
 with open(schema_path, "r", encoding="utf-8") as handle:
-    json.load(handle)
+    schema = json.load(handle)
 
 try:
     with open(json_path, "r", encoding="utf-8") as handle:
@@ -152,6 +152,80 @@ try:
 except Exception as exc:
     print(f"invalid JSON: {exc}")
     sys.exit(1)
+
+def resolve_ref(ref):
+    current = schema
+    for part in ref.removeprefix("#/").split("/"):
+        current = current[part]
+    return current
+
+def matches_type(value, expected_type):
+    if expected_type == "null":
+        return value is None
+    if expected_type == "object":
+        return isinstance(value, dict)
+    if expected_type == "array":
+        return isinstance(value, list)
+    if expected_type == "string":
+        return isinstance(value, str)
+    if expected_type == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if expected_type == "boolean":
+        return isinstance(value, bool)
+    return True
+
+def validate_schema(value, node, path="$"):
+    local = []
+    if "$ref" in node:
+        local.extend(validate_schema(value, resolve_ref(node["$ref"]), path))
+    if "allOf" in node:
+        for index, child in enumerate(node["allOf"]):
+            local.extend(validate_schema(value, child, f"{path}.allOf[{index}]"))
+    if "oneOf" in node:
+        matches = [child for child in node["oneOf"] if not validate_schema(value, child, path)]
+        if len(matches) != 1:
+            local.append(f"{path}: oneOf matched {len(matches)} schemas")
+    if "if" in node and "then" in node and not validate_schema(value, node["if"], path):
+        local.extend(validate_schema(value, node["then"], path))
+    if "const" in node and value != node["const"]:
+        local.append(f"{path}: expected const {node['const']!r}")
+    if "enum" in node and value not in node["enum"]:
+        local.append(f"{path}: expected one of {node['enum']!r}")
+    if "type" in node:
+        types = node["type"] if isinstance(node["type"], list) else [node["type"]]
+        if not any(matches_type(value, typ) for typ in types):
+            local.append(f"{path}: expected type {node['type']!r}")
+            return local
+    if isinstance(value, dict):
+        required_keys = node.get("required", [])
+        for key in required_keys:
+            if key not in value:
+                local.append(f"{path}: missing required key {key}")
+        if node.get("additionalProperties") is False and "properties" in node:
+            extra = set(value) - set(node["properties"])
+            if extra:
+                local.append(f"{path}: unexpected keys {sorted(extra)!r}")
+        for key, child in node.get("properties", {}).items():
+            if key in value:
+                local.extend(validate_schema(value[key], child, f"{path}.{key}"))
+    if isinstance(value, list):
+        if "minItems" in node and len(value) < node["minItems"]:
+            local.append(f"{path}: expected at least {node['minItems']} item(s)")
+        if "maxItems" in node and len(value) > node["maxItems"]:
+            local.append(f"{path}: expected at most {node['maxItems']} item(s)")
+        if "items" in node:
+            for index, item in enumerate(value):
+                local.extend(validate_schema(item, node["items"], f"{path}[{index}]"))
+    if isinstance(value, int) and not isinstance(value, bool) and "minimum" in node and value < node["minimum"]:
+        local.append(f"{path}: expected >= {node['minimum']}")
+    if isinstance(value, str):
+        if "minLength" in node and len(value) < node["minLength"]:
+            local.append(f"{path}: expected length >= {node['minLength']}")
+        if "pattern" in node and re.search(node["pattern"], value) is None:
+            local.append(f"{path}: pattern mismatch {node['pattern']!r}")
+    return local
+
+problems.extend(validate_schema(data, schema))
 
 required = {
     "tool",
@@ -505,6 +579,29 @@ elif expectation == "missing-references":
     details = [item.get("details", {}) for item in warnings]
     require({"task_id": "T001", "increment_id": "foundation"} in details, "T001 task_without_references details mismatch")
     require({"task_id": "T002", "increment_id": "us1"} in details, "T002 task_without_references details mismatch")
+
+elif expectation == "path-normalization":
+    assert_common("ok")
+    increments = by_id(data.get("increments", []))
+    foundation = increments.get("foundation", {})
+    us1 = increments.get("us1", {})
+    require(foundation.get("files") == [contract_file], "foundation files must normalize and de-duplicate leading-dot references")
+    require(foundation.get("tests") == [], "foundation tests must remain empty")
+    require(us1.get("files") == [], "out-of-tree reference must not be emitted as a repo file")
+    require(us1.get("tests") == [test_file], "US1 test paths must normalize without leading ./")
+    tasks = {}
+    for increment in data.get("increments", []):
+        for task in increment.get("tasks", []):
+            tasks[task.get("id")] = task
+    assert_task(tasks.get("T001"), "T001", 5, "todo", False, None, "foundation", [contract_file], [])
+    assert_task(tasks.get("T002"), "T002", 6, "todo", False, None, "foundation", [contract_file], [])
+    assert_task(tasks.get("T003"), "T003", 10, "todo", False, "us1", "us1", [], [test_file])
+    assert_task(tasks.get("T004"), "T004", 11, "todo", False, "us1", "us1", [], [])
+    warnings = data.get("warnings", [])
+    reference_details = [item.get("details", {}) for item in warnings if item.get("code") == "reference_not_found"]
+    taskless_details = [item.get("details", {}) for item in warnings if item.get("code") == "task_without_references"]
+    require({"kind": "file", "reference": "../outside-worktree-plan.md", "task_id": "T004"} in reference_details, "out-of-tree warning details mismatch")
+    require({"task_id": "T004", "increment_id": "us1"} in taskless_details, "out-of-tree-only task should warn as reference-free")
 
 else:
     problem(f"unknown expectation: {expectation}")
@@ -861,6 +958,13 @@ assert_captured_exit "0"
 
 set_test "missing-references warning fixture remains status ok"
 assert_payload_expectation_file "$LAST_STDOUT" "missing-references" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-references"
+
+run_planner_capture "path-normalization" "$FIXTURE_ROOT/path-normalization"
+set_test "path-normalization warning fixture exits 0"
+assert_captured_exit "0"
+
+set_test "path-normalization normalizes, deduplicates, and warns for out-of-tree references"
+assert_payload_expectation_file "$LAST_STDOUT" "path-normalization" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/path-normalization"
 
 section "input errors (T018)"
 

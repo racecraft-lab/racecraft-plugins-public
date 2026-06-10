@@ -507,10 +507,10 @@ markers. Schema JSON parses with `jq empty`.
 |---------|--------|
 | `bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
 | `test -x speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
-| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Passed: `50/50` |
-| `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1013/1013` |
+| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Passed: `52/52` |
+| `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1015/1015` |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | Passed: `887/887` |
-| `bash tests/speckit-pro/run-all.sh` | Passed: `2090/2090` |
+| `bash tests/speckit-pro/run-all.sh` | Passed: `2092/2092` |
 
 ### Traceability
 
@@ -539,6 +539,18 @@ footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
 - [x] No workflow placeholders or unresolved contract tokens remain.
 - [x] The planner is read-only under fixture runs.
 - [x] PRSG-009 deferred branch/PR emission remains out of scope.
+
+### Post-Implementation Results
+
+| Item | Result |
+|------|--------|
+| Doctor Extension Check | Passed: 5 PASS, 0 WARN, 0 FAIL. |
+| Verify Implementation | Initial verify found one critical, one high, and two medium issues. Remediation moved public envelope emission to `jq`, normalized paths from the target feature repo root, added schema-backed output validation, and asserted the `path-normalization` fixture. |
+| Verify Tasks Phantom Check | Passed: 45/45 completed tasks verified; report written to `specs/prsg-008-layer-planner/verify-tasks-report.md`. |
+| Code Review | Skipped: review extension not installed. |
+| Integration Suite | Passed: `bash tests/speckit-pro/run-all.sh` reported `2092/2092`. |
+| Cleanup | Skipped: cleanup extension not installed. |
+| Reviewability Diff Gate | Passed via infra exception: `reviewable_loc=0`, `production_files=0`, `total_files=38`, `exception_honored=true`. |
 
 ---
 
