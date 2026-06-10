@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T04:03:56Z",
-  "active_step": "Post: PR Body Generation",
+  "updated_at": "2026-06-10T04:07:08Z",
+  "active_step": "Post: PR Creation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -259,7 +259,7 @@
     {
       "step": "Post: Reviewability Diff Gate",
       "status": "completed",
-      "summary": "Diff gate passed via recorded infra exception: reviewable_loc=0, production_files=0, total_files=39, exception_honored=true."
+      "summary": "Diff gate passed via recorded infra exception: reviewable_loc=0, production_files=0, total_files=40, exception_honored=true."
     },
     {
       "step": "Post: Self-Review",
@@ -273,7 +273,8 @@
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated the PR body with generate-pr-body.sh, filled the plain-English summary sections, and verified speckit-pro-review-packet-source plus ## UAT Runbook."
     },
     {
       "step": "Post: PR Creation",

@@ -551,9 +551,10 @@ footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
 | Code Review | Skipped: review extension not installed. |
 | Integration Suite | Passed: `bash tests/speckit-pro/run-all.sh` reported `2106/2106`. |
 | Cleanup | Skipped: cleanup extension not installed. |
-| Reviewability Diff Gate | Passed via infra exception: `reviewable_loc=0`, `production_files=0`, `total_files=39`, `exception_honored=true`. |
+| Reviewability Diff Gate | Passed via infra exception: `reviewable_loc=0`, `production_files=0`, `total_files=40`, `exception_honored=true`. |
 | Self-Review | Completed; see `## Self-Review`. |
 | UAT Runbook Generation | Completed: `specs/prsg-008-layer-planner/.process/uat-runbook.md` generated and locally polished because `uat-runbook-author` is not registered in this Codex session. |
+| PR Body Generation | Completed: generated via `generate-pr-body.sh`, filled in plain-English sections, and verified `speckit-pro-review-packet-source` plus `## UAT Runbook`. |
 
 ## Self-Review
 
