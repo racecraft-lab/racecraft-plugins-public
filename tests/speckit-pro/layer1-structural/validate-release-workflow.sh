@@ -34,11 +34,19 @@ else
 fi
 
 set_test "release workflow uses a versioned sync branch"
-if [[ "$CONTENT" == *'sync_branch="release/sync-speckit-pro-v${version}"'* \
-  && "$CONTENT" == *'git push --force origin "HEAD:${sync_branch}"'* ]]; then
+sync_branch_push_regex='^[[:space:]]*git push([[:space:]]|$).*HEAD:\$\{sync_branch\}'
+if [[ "$CONTENT" == *'sync_branch="release/sync-speckit-pro-v${version}"'* ]] \
+  && grep -Eq "$sync_branch_push_regex" "$WORKFLOW_FILE"; then
   _pass
 else
   _fail "expected release workflow to push a versioned release/sync-speckit-pro-vX.Y.Z branch"
+fi
+
+set_test "release workflow sync-branch push regex allows alternate push flags"
+if printf '%s\n' 'git push --force-with-lease origin "HEAD:${sync_branch}"' | grep -Eq "$sync_branch_push_regex"; then
+  _pass
+else
+  _fail "expected sync-branch push regex to allow valid push flag changes"
 fi
 
 set_test "release workflow sync PR title is conventional"
@@ -48,10 +56,24 @@ set_test "release workflow sync commit does not skip required PR checks"
 assert_not_contains "$CONTENT" '[skip ci]'
 
 set_test "release workflow does not direct-push generated sync changes to main"
-if grep -Eq '^[[:space:]]*git push[[:space:]]*$|git push origin main|HEAD:main' "$WORKFLOW_FILE"; then
+main_push_regex="^[[:space:]]*git push([[:space:]]|$).*([[:space:]\"':/])main([[:space:]\"':]|$)"
+if grep -Eq "$main_push_regex" "$WORKFLOW_FILE"; then
   _fail "release workflow must not push generated sync changes directly to main"
 else
   _pass
+fi
+
+set_test "release workflow main-push regex catches common protected-branch pushes"
+missed_main_pushes=$(printf '%s\n' \
+  'git push origin main' \
+  'git push origin HEAD:main' \
+  'git push --force origin HEAD:main' \
+  'git push origin refs/heads/main' \
+  | grep -Ev "$main_push_regex" || true)
+if [ -z "$missed_main_pushes" ]; then
+  _pass
+else
+  _fail "main-push regex missed: $missed_main_pushes"
 fi
 
 section "release.yml — YAML Syntax"
