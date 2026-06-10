@@ -439,7 +439,7 @@ if expectation == "valid-real":
             "test_reference_count": 1,
             "distinct_test_count": 1,
         },
-        [tasks_file, contract_file],
+        [contract_file, tasks_file],
         [test_file],
     )
     assert_increment(

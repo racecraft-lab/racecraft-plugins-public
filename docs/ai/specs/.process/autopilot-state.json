@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T02:27:50Z",
-  "active_step": "Phase 7: Setup RED fixtures and contract harness (T001-T013)",
+  "updated_at": "2026-06-10T02:56:49Z",
+  "active_step": "Phase 7: US4 autopilot layer-plan gate (T037-T040)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -193,27 +193,32 @@
     },
     {
       "step": "Phase 7: Setup RED fixtures and contract harness (T001-T013)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Created RED planner contracts, fixtures, and harness; initial RED evidence was test-plan-layers 6/15 passed before production script creation."
     },
     {
       "step": "Phase 7: Foundational RED assertions and script safety (T014-T020)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Expanded Layer 4 planner harness to 50 assertions; RED evidence was test-plan-layers 8/50 passed and Layer 4 failed only on the absent planner."
     },
     {
       "step": "Phase 7: US1 stable layer-plan envelope (T021-T025)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Created executable planner entrypoint, input-error envelopes, repo-relative source paths, stable status envelope, and read-only behavior."
     },
     {
       "step": "Phase 7: US2 ordered increment parser (T026-T031)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Implemented heading discovery, semantic increments, task extraction, dependency parsing, reference normalization, and advisory counts."
     },
     {
       "step": "Phase 7: US3 malformed-plan diagnostics (T032-T036)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Implemented structured invalid-plan and warning diagnostics; focused Layer 4 planner harness passed 50/50."
     },
     {
       "step": "Phase 7: US4 autopilot layer-plan gate (T037-T040)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Polish and validation (T041-T045)",

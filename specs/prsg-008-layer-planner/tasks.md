@@ -64,14 +64,14 @@
 
 ### Tests for User Story 1
 
-- [ ] T021 [US1] Confirm the RED success, determinism, read-only, input-error, and script-safety assertions fail before implementation in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T021 [US1] Confirm the RED success, determinism, read-only, input-error, and script-safety assertions fail before implementation in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 
 ### Implementation for User Story 1
 
-- [ ] T022 [US1] Create the executable Bash entrypoint with shebang, `set -euo pipefail`, strict arity handling, and no repository writes in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T023 [US1] Implement feature-directory and `tasks.md` readability validation with `input_error` envelopes, required diagnostic details, concise stderr summaries, and exit `2` in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T024 [US1] Implement repo-root discovery and repo-relative normalization for `feature_dir`, `tasks_file`, and `source.path` fields in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T025 [US1] Implement stable JSON envelope assembly with `jq`, closed status values, summary counts, stdout/stderr separation, and exit-code mapping in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T022 [US1] Create the executable Bash entrypoint with shebang, `set -euo pipefail`, strict arity handling, and no repository writes in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T023 [US1] Implement feature-directory and `tasks.md` readability validation with `input_error` envelopes, required diagnostic details, concise stderr summaries, and exit `2` in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T024 [US1] Implement repo-root discovery and repo-relative normalization for `feature_dir`, `tasks_file`, and `source.path` fields in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T025 [US1] Implement stable JSON envelope assembly with `jq`, closed status values, summary counts, stdout/stderr separation, and exit-code mapping in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
 
 **Checkpoint**: User Story 1 is independently testable with input-error and valid-envelope coverage.
 
@@ -85,15 +85,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T026 [US2] Confirm the RED parser assertions for heading discovery, dependency order, incremental delivery order, semantic increment IDs, task membership, `[P]`, and checkbox status fail before parser implementation in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T026 [US2] Confirm the RED parser assertions for heading discovery, dependency order, incremental delivery order, semantic increment IDs, task membership, `[P]`, and checkbox status fail before parser implementation in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Implement heading discovery for `## Dependencies & Execution Order`, `### Incremental Delivery`, Foundation, user-story, and Polish sections in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T028 [US2] Implement task extraction for checkbox state, task ID, title, source line, story label, semantic increment ID, and `[P]` metadata in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T029 [US2] Implement authoritative dependency and incremental-delivery parsing with deterministic `depends_on` ordering in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T030 [US2] Implement file/test reference extraction, worktree-relative normalization, duplicate removal, out-of-tree warning detection, and `LC_ALL=C` lexical ordering in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T031 [US2] Implement increment aggregation with embedded tasks, `files`, `tests`, and counts-only `advisory_size` in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T027 [US2] Implement heading discovery for `## Dependencies & Execution Order`, `### Incremental Delivery`, Foundation, user-story, and Polish sections in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T028 [US2] Implement task extraction for checkbox state, task ID, title, source line, story label, semantic increment ID, and `[P]` metadata in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T029 [US2] Implement authoritative dependency and incremental-delivery parsing with deterministic `depends_on` ordering in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T030 [US2] Implement file/test reference extraction, worktree-relative normalization, duplicate removal, out-of-tree warning detection, and `LC_ALL=C` lexical ordering in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T031 [US2] Implement increment aggregation with embedded tasks, `files`, `tests`, and counts-only `advisory_size` in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
 
 **Checkpoint**: User Story 2 produces ordered semantic increments with deterministic embedded task metadata.
 
@@ -107,14 +107,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T032 [US3] Confirm the RED invalid-plan and warning assertions fail for malformed, missing-reference, and task-without-reference fixtures in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T032 [US3] Confirm the RED invalid-plan and warning assertions fail for malformed, missing-reference, and task-without-reference fixtures in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Implement `missing_required_heading`, `empty_increment`, `unknown_increment`, `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task` diagnostics with closed details payloads in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T034 [US3] Implement deterministic `dependency_cycle` and `contradictory_increment_order` diagnostics with stable cycle/order details in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T035 [US3] Implement `task_without_references` and `reference_not_found` warning diagnostics with severity `warning`, shared shape, concise stderr, and successful exit `0` in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T036 [US3] Validate every planner outcome and status-specific schema invariant against `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json` from `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T033 [US3] Implement `missing_required_heading`, `empty_increment`, `unknown_increment`, `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task` diagnostics with closed details payloads in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T034 [US3] Implement deterministic `dependency_cycle` and `contradictory_increment_order` diagnostics with stable cycle/order details in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T035 [US3] Implement `task_without_references` and `reference_not_found` warning diagnostics with severity `warning`, shared shape, concise stderr, and successful exit `0` in `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T036 [US3] Validate every planner outcome and status-specific schema invariant against `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json` from `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
 
 **Checkpoint**: User Story 3 handles valid, warning, invalid-plan, and input-error outcomes with one schema-backed envelope.
 
