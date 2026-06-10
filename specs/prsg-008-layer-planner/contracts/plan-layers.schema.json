@@ -1,0 +1,320 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://racecraft.dev/speckit-pro/contracts/plan-layers.schema.json",
+  "title": "plan-layers output envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool",
+    "contract_version",
+    "status",
+    "feature_dir",
+    "tasks_file",
+    "increments",
+    "warnings",
+    "errors",
+    "summary"
+  ],
+  "properties": {
+    "tool": {
+      "const": "plan-layers"
+    },
+    "contract_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "invalid_plan",
+        "input_error"
+      ]
+    },
+    "feature_dir": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tasks_file": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "increments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/increment"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/diagnostic"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/diagnostic"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "increment_count",
+        "task_count",
+        "warning_count",
+        "error_count",
+        "message"
+      ],
+      "properties": {
+        "increment_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "task_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "definitions": {
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "line"
+      ],
+      "properties": {
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "heading": {
+          "type": "string"
+        }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "severity",
+        "message",
+        "source",
+        "details"
+      ],
+      "properties": {
+        "code": {
+          "enum": [
+            "missing_required_heading",
+            "empty_increment",
+            "unknown_increment",
+            "dependency_cycle",
+            "contradictory_increment_order",
+            "duplicate_increment_id",
+            "duplicate_task_id",
+            "malformed_task",
+            "task_without_references",
+            "reference_not_found"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    },
+    "advisory_size": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_count",
+        "file_reference_count",
+        "distinct_file_count",
+        "test_reference_count",
+        "distinct_test_count"
+      ],
+      "properties": {
+        "task_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "file_reference_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "distinct_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "test_reference_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "distinct_test_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "story",
+        "increment_id",
+        "status",
+        "parallel",
+        "source",
+        "files",
+        "tests"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "story": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "increment_id": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "todo",
+            "done"
+          ]
+        },
+        "parallel": {
+          "type": "boolean"
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "increment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "order",
+        "depends_on",
+        "source",
+        "tasks",
+        "files",
+        "tests",
+        "advisory_size"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "foundation",
+            "story",
+            "polish"
+          ]
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/task"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "advisory_size": {
+          "$ref": "#/definitions/advisory_size"
+        }
+      }
+    }
+  }
+}

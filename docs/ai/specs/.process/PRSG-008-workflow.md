@@ -31,8 +31,8 @@ planner contract choices captured during setup.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | `spec.md` and requirements checklist created; G1 passed with 0 clarification markers. |
 | Clarify | `/speckit-clarify` | Complete | JSON envelope, diagnostic codes, and autopilot hook behavior pinned; G2 passed. |
-| Plan | `/speckit-plan` | In Progress | Design parser, schema contract, fixtures, and autopilot integration point. |
-| Checklist | `/speckit-checklist` | Pending | Recommended domains: api-contracts, error-handling, data-integrity. |
+| Plan | `/speckit-plan` | Complete | Parser approach, contract artifacts, fixtures, and autopilot hook design created; G3 passed. |
+| Checklist | `/speckit-checklist` | In Progress | Recommended domains: api-contracts, error-handling, data-integrity. |
 | Tasks | `/speckit-tasks` | Pending | Generate TDD tasks for schema, fixtures, script, docs, and Codex parity. |
 | Analyze | `/speckit-analyze` | Pending | Check design-concept/spec/plan/tasks consistency and downstream PRSG-009 contract safety. |
 | Implement | `/speckit-implement` | Pending | Implement via Layer 4 RED to GREEN, then L1/L4/L5 validation. |
@@ -269,11 +269,13 @@ planner returns exit 1.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | |
-| `research.md` | Pending | Parser and schema decisions if needed. |
-| `data-model.md` | Pending | Increment, task, dependency edge, diagnostic objects. |
-| `contracts/plan-layers.output.md` | Pending | Schema-backed contract. |
-| `quickstart.md` | Pending | Manual planner runs and expected outputs. |
+| `plan.md` | Complete | Bash/JQ parser approach, declared file operations, constitution check, and autopilot handoff design. |
+| `research.md` | Complete | 8 parser, schema, diagnostics, fixture, and orchestration decisions. |
+| `data-model.md` | Complete | LayerPlan, Increment, Task, Diagnostic, and autopilot state model. |
+| `contracts/plan-layers.output.md` | Complete | Human-readable planner output contract. |
+| `contracts/plan-layers.schema.json` | Complete | Schema parsed successfully with `jq empty`. |
+| `quickstart.md` | Complete | Valid, deterministic, invalid, warning, input-error, and autopilot handoff scenarios. |
+| G3 | Passed | `validate-gate.sh G3 specs/prsg-008-layer-planner` passed; reviewability estimator returned `status=pass`. |
 
 ---
 
