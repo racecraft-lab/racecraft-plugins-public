@@ -130,7 +130,30 @@
       "then": {
         "properties": {
           "errors": {
-            "minItems": 1
+            "minItems": 1,
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/errorDiagnostic"
+                },
+                {
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "missing_required_heading",
+                        "empty_increment",
+                        "unknown_increment",
+                        "dependency_cycle",
+                        "contradictory_increment_order",
+                        "duplicate_increment_id",
+                        "duplicate_task_id",
+                        "malformed_task"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
           }
         }
       }
@@ -152,7 +175,27 @@
             "maxItems": 0
           },
           "errors": {
-            "minItems": 1
+            "minItems": 1,
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/errorDiagnostic"
+                },
+                {
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_invocation",
+                        "feature_dir_not_found",
+                        "feature_dir_unreadable",
+                        "tasks_file_missing",
+                        "tasks_file_unreadable"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
           }
         }
       }

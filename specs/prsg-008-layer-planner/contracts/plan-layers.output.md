@@ -145,6 +145,12 @@ Diagnostic `details` is machine-readable and closed per code:
 | `tasks_file_missing` | `tasks_file` |
 | `tasks_file_unreadable` | `tasks_file` |
 
+## PRSG-009 Non-goals
+
+PRSG-008 only emits a read-only layer plan. It MUST NOT create branches, write
+PR bodies, restack changes, push commits, or emit stacked-PR topology. PRSG-009
+owns branch creation, PR body generation, restacking, and multi-PR emission.
+
 ## Example Success Shape
 
 ```json

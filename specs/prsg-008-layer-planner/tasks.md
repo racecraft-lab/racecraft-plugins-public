@@ -20,19 +20,19 @@
 
 **Purpose**: Create the failing Layer 4 fixture and schema surface before implementing parser behavior.
 
-- [ ] T001 [P] Finalize the versioned planner envelope, exit-code mapping, diagnostic shape, and PRSG-009 non-goals in `specs/prsg-008-layer-planner/contracts/plan-layers.output.md`
-- [ ] T002 [P] Finalize the JSON Schema for status enums, status-specific `ok`/`invalid_plan`/`input_error` invariants, semantic increment IDs, diagnostic code/detail constraints, warning/error severity separation, and advisory counts in `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json`
-- [ ] T003 Create the RED Layer 4 planner test harness with schema validation, stdout/stderr capture, exit-code assertions, determinism checks, generated 200-task performance input, and read-only snapshots in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T004 [P] Add the valid real-task fixture with Foundation, user-story, Polish, dependency-order, incremental-delivery, `[P]`, file, and test references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/valid-real/tasks.md`
-- [ ] T005 [P] Add the missing required headings fixture for `missing_required_heading` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-headings/tasks.md`
-- [ ] T006 [P] Add the invalid dependency fixture for `unknown_increment` and contradictory dependency references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-dependency/tasks.md`
-- [ ] T007 [P] Add the dependency cycle fixture for stable `dependency_cycle.details.cycle` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/dependency-cycle/tasks.md`
-- [ ] T008 [P] Add the empty increment fixture for `empty_increment` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/empty-increment/tasks.md`
-- [ ] T009 [P] Add the missing file/test reference fixture for `reference_not_found` warning coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-reference/tasks.md`
-- [ ] T010 [P] Add the task-without-references fixture for `task_without_references` warning coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-references/tasks.md`
-- [ ] T011 [P] Add the checkbox preservation fixture for `[ ]`, `[x]`, `[X]`, and `[P]` metadata coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/checkbox-state/tasks.md`
-- [ ] T012 [P] Add the path normalization fixture for worktree-relative paths, duplicate references, leading `./`, and out-of-tree references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/path-normalization/tasks.md`
-- [ ] T013 [P] Add the duplicate ID and malformed checkbox fixture for `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/malformed-task/tasks.md`
+- [x] T001 [P] Finalize the versioned planner envelope, exit-code mapping, diagnostic shape, and PRSG-009 non-goals in `specs/prsg-008-layer-planner/contracts/plan-layers.output.md`
+- [x] T002 [P] Finalize the JSON Schema for status enums, status-specific `ok`/`invalid_plan`/`input_error` invariants, semantic increment IDs, diagnostic code/detail constraints, warning/error severity separation, and advisory counts in `specs/prsg-008-layer-planner/contracts/plan-layers.schema.json`
+- [x] T003 Create the RED Layer 4 planner test harness with schema validation, stdout/stderr capture, exit-code assertions, determinism checks, generated 200-task performance input, and read-only snapshots in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T004 [P] Add the valid real-task fixture with Foundation, user-story, Polish, dependency-order, incremental-delivery, `[P]`, file, and test references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/valid-real/tasks.md`
+- [x] T005 [P] Add the missing required headings fixture for `missing_required_heading` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-headings/tasks.md`
+- [x] T006 [P] Add the invalid dependency fixture for `unknown_increment` and contradictory dependency references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-dependency/tasks.md`
+- [x] T007 [P] Add the dependency cycle fixture for stable `dependency_cycle.details.cycle` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/dependency-cycle/tasks.md`
+- [x] T008 [P] Add the empty increment fixture for `empty_increment` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/empty-increment/tasks.md`
+- [x] T009 [P] Add the missing file/test reference fixture for `reference_not_found` warning coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-reference/tasks.md`
+- [x] T010 [P] Add the task-without-references fixture for `task_without_references` warning coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-references/tasks.md`
+- [x] T011 [P] Add the checkbox preservation fixture for `[ ]`, `[x]`, `[X]`, and `[P]` metadata coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/checkbox-state/tasks.md`
+- [x] T012 [P] Add the path normalization fixture for worktree-relative paths, duplicate references, leading `./`, and out-of-tree references in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/path-normalization/tasks.md`
+- [x] T013 [P] Add the duplicate ID and malformed checkbox fixture for `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task` coverage in `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/malformed-task/tasks.md`
 
 ---
 
