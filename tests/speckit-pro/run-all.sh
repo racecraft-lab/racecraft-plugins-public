@@ -142,6 +142,7 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-scripts.sh" \
     "$TESTS_DIR/layer1-structural/validate-curated-set.sh" \
     "$TESTS_DIR/layer1-structural/validate-pr-checks-sentinel.sh" \
+    "$TESTS_DIR/layer1-structural/validate-release-workflow.sh" \
     "$TESTS_DIR/layer1-structural/validate-process-gitattributes.sh" \
     "$TESTS_DIR/layer1-structural/validate-moc-orphan.sh" \
     "$TESTS_DIR/layer1-structural/validate-moc-stale-index.sh" \

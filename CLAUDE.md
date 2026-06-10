@@ -242,14 +242,14 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 
 3. **GitHub Release publication:** When the release PR is merged, release-please creates a GitHub Release with a version tag (e.g., `speckit-pro-v1.2.0`).
 
-4. **Marketplace sync:** The Release workflow detects the new release (via `steps.release.outputs['speckit-pro--release_created'] == 'true'`) and runs `scripts/sync-marketplace-versions.sh`. If `marketplace.json` changed, the workflow commits and pushes `chore: sync marketplace.json versions [skip ci]` directly to `main` as the `github-actions[bot]`. The `[skip ci]` trailer prevents a recursive Release workflow run.
+4. **Payload and marketplace sync:** The Release workflow detects the new release (via `steps.release.outputs['speckit-pro--release_created'] == 'true'`), rebuilds `dist/**`, and runs `scripts/sync-marketplace-versions.sh`. If generated payloads or marketplace files changed, the workflow pushes an automation branch named `release/sync-speckit-pro-v<X.Y.Z>` and opens or updates a PR titled `chore: sync plugin payloads and marketplace versions`.
 
 5. **End-user update:** Plugin consumers run the following to receive the updated version:
    ```
    /plugin marketplace update racecraft-plugins-public
    ```
 
-**Why the bot can push directly to `main`:** Branch protection is configured with `enforce_admins: false` (the default). On a personal repository, `GITHUB_TOKEN` has admin-equivalent permissions and bypasses the direct-push restriction when admin enforcement is disabled. The `permissions: contents: write` declaration in `release.yml` is also required — without it, `GITHUB_TOKEN` defaults to read-only and the push fails with 403. These are two independent controls: `enforce_admins: false` determines whether the push is permitted past branch protection; `permissions: contents: write` determines whether the token has write scope at all.
+**Why sync is PR-based:** `main` is protected and this repository lives under the `racecraft-lab` organization, so Release must not rely on a GitHub Actions token direct-pushing through required status checks. The generated sync PR follows the same branch-protection path as human changes. The `permissions: contents: write` and `pull-requests: write` declarations in `release.yml` are still required so the workflow can push the sync branch and create or update the PR.
 
 ## Adding a New Plugin to Release Automation
 
@@ -311,15 +311,15 @@ All commands below are written for this repository (`racecraft-lab/racecraft-plu
 
 ---
 
-### Scenario 1: Re-trigger marketplace sync after a failed or missing sync
+### Scenario 1: Re-trigger payload and marketplace sync after a failed or missing sync
 
-If the Release workflow ran but the marketplace sync did not complete (e.g., Actions runner error, push rejected):
+If the Release workflow ran but the payload or marketplace sync PR was not created or updated:
 
 ```bash
 gh workflow run release.yml --repo racecraft-lab/racecraft-plugins-public
 ```
 
-This manually triggers the Release workflow, which will re-run release-please (idempotent) and the marketplace sync step if `speckit-pro--release_created` is still true.
+This manually triggers the Release workflow, which will re-run release-please (idempotent) and the payload/marketplace sync step if `speckit-pro--release_created` is still true.
 
 ---
 
@@ -333,7 +333,8 @@ To override release-please's inferred version bump and pin a specific version:
 git commit -m "chore: force speckit-pro version
 
 Release-As: 1.2.0" speckit-pro/.claude-plugin/plugin.json
-git push origin main
+git push origin <release-as-branch>
+gh pr create --base main --head <release-as-branch> --title "chore: force speckit-pro version"
 ```
 
 The `Release-As: X.Y.Z` footer MUST appear in the git commit trailer (separated from the subject by a blank line). The commit MUST touch at least one file under `speckit-pro/` — a commit that touches no component files will not target any component. The footer overrides the inferred version in the next release-please PR.
@@ -346,32 +347,32 @@ Do not revert git history. Instead, push a fix commit and let release-please cre
 
 ```bash
 git commit -m "fix(speckit-pro): correct <description of the issue>"
-git push origin main
+git push origin <fix-branch>
+gh pr create --base main --head <fix-branch> --title "fix(speckit-pro): correct <description of the issue>"
 ```
 
 release-please will pick up the `fix:` commit and create a patch version bump PR (e.g., `1.1.0` → `1.1.1`). Merge that PR to publish the corrected release.
 
 ---
 
-### Scenario 4: `enforce_admins` drift blocks marketplace sync push
+### Scenario 4: Release sync PR creation fails
 
-**Symptom:** The marketplace sync `git push` in the Release workflow fails with a 403 "Protected branch" error, even though `GITHUB_TOKEN` has `contents: write` permissions in `release.yml`.
+**Symptom:** The Release workflow publishes a GitHub Release, then fails while pushing the generated sync branch or creating/updating the sync PR.
 
 **Detection:**
 ```bash
-gh api /repos/racecraft-lab/racecraft-plugins-public/branches/main/protection \
-  --jq '.enforce_admins.enabled'
+gh run view <run-id> --log-failed
 ```
 
-If the output is `true`, `enforce_admins` was accidentally enabled via the GitHub UI (Settings → Branches → Edit protection rule → "Do not allow bypassing the above settings").
+Look for the `Open payload and marketplace sync PR` step. A protected-branch rejection indicates the workflow regressed to direct-pushing `main`; a 403 on PR creation usually means `pull-requests: write` was removed or the workflow token permissions were restricted.
 
-**Recovery:** Re-run the Stage 1 branch protection setup command from `docs/ai/specs/cicd-release-pipeline-verification.md`. The `PUT` endpoint is a full overwrite and resets `enforce_admins: false`. Then re-trigger the Release workflow (Scenario 1).
+**Recovery:** Restore `.github/workflows/release.yml` so it pushes `release/sync-speckit-pro-v<X.Y.Z>` and opens/updates the sync PR, with both `contents: write` and `pull-requests: write` permissions. Then re-trigger the Release workflow (Scenario 1).
 
 ---
 
-### Scenario 5: Missing `permissions: contents: write` blocks marketplace sync push
+### Scenario 5: Missing release workflow write permissions blocks sync PR creation
 
-**Symptom:** The marketplace sync `git push` fails with 403, AND `enforce_admins.enabled` is confirmed `false` (Scenario 4 detection returns `false`).
+**Symptom:** The payload and marketplace sync step succeeds locally in the workflow, but the workflow fails when pushing the sync branch or opening/updating the PR.
 
 **Detection:**
 ```bash
@@ -379,7 +380,7 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/contents/.github/workflows/
   --jq '.content' | base64 -d | grep -A3 'permissions'
 ```
 
-If the `permissions: contents: write` block is absent from the output, the write scope was removed from `release.yml`.
+If either `contents: write` or `pull-requests: write` is absent from the output, the required workflow token permission was removed from `release.yml`.
 
 **Recovery:** Restore the `permissions:` block to `.github/workflows/release.yml`:
 ```yaml
@@ -388,7 +389,7 @@ permissions:
   pull-requests: write
 ```
 
-Commit as `fix: restore contents write permission in release workflow` and push. Then re-trigger the Release workflow (Scenario 1).
+Commit as `chore(release): restore sync PR workflow permissions` and push through a PR. Then re-trigger the Release workflow (Scenario 1).
 
 ---
 
@@ -401,7 +402,8 @@ Check whether release-please ran but found no releasable commits: navigate to Ac
 **Recovery:**
 ```bash
 git commit --allow-empty -m "fix: trigger release for speckit-pro"
-git push origin main
+git push origin <release-trigger-branch>
+gh pr create --base main --head <release-trigger-branch> --title "fix: trigger release for speckit-pro"
 ```
 
 This can be combined with `Release-As:` if a specific version is needed (see Scenario 2).
@@ -414,13 +416,15 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/contents/.claude-plugin/mar
   --jq '.content' | base64 -d
 ```
 
-Compare the version values against the GitHub Release tags. If they do not match, re-trigger the sync (Scenario 1). If re-triggering also fails, manually edit `.claude-plugin/marketplace.json` and push directly to `main`:
+Compare the version values against the GitHub Release tags. If they do not match, re-trigger the sync (Scenario 1). If re-triggering also fails, manually rebuild payloads, sync marketplace files, and open a PR:
 
 ```bash
-# Edit .claude-plugin/marketplace.json to set correct versions, then:
-git add .claude-plugin/marketplace.json
-git commit -m "chore: sync marketplace.json versions [skip ci]"
-git push origin main
+bash scripts/build-plugin-payloads.sh
+bash scripts/sync-marketplace-versions.sh
+git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json
+git commit -m "chore: sync plugin payloads and marketplace versions"
+git push origin <sync-branch>
+gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloads and marketplace versions"
 ```
 
 <!-- SPECKIT START -->

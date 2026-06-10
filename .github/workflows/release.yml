@@ -32,13 +32,50 @@ jobs:
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: bash scripts/sync-marketplace-versions.sh
 
-      - name: Commit and push payload and marketplace sync
+      - name: Open payload and marketplace sync PR
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
+
+          if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json; then
+            echo "No payload or marketplace sync changes."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if ! git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json; then
-            git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json
-            git commit -m "chore: sync plugin payloads and marketplace versions [skip ci]"
-            git push
+
+          version=$(jq -r '.version' speckit-pro/.claude-plugin/plugin.json)
+          sync_branch="release/sync-speckit-pro-v${version}"
+          sync_title="chore: sync plugin payloads and marketplace versions"
+
+          git switch -c "$sync_branch"
+          git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json
+          git commit -m "$sync_title"
+          git push --force origin "HEAD:${sync_branch}"
+
+          body_file="$(mktemp)"
+          cat > "$body_file" <<'BODY'
+          ## Summary
+          - Sync generated plugin payloads and marketplace versions after a release.
+          - Created by the Release workflow because `main` is protected.
+
+          ## Validation
+          - `bash scripts/build-plugin-payloads.sh`
+          - `bash scripts/sync-marketplace-versions.sh`
+          BODY
+
+          pr_number=$(gh pr list \
+            --state open \
+            --base main \
+            --head "$sync_branch" \
+            --json number \
+            --jq '.[0].number // empty')
+
+          if [ -n "$pr_number" ]; then
+            gh pr edit "$pr_number" --title "$sync_title" --body-file "$body_file"
+          else
+            gh pr create --base main --head "$sync_branch" --title "$sync_title" --body-file "$body_file"
           fi
