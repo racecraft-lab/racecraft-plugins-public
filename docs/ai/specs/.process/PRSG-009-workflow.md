@@ -41,7 +41,7 @@ Load-bearing decisions:
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created spec.md with 20 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Resolved state, PRS manifest, branch/PR, scoped verification, and restack contracts; G2 passed with 0 markers |
-| Plan | `/speckit-plan` | Pending | Map changes to autopilot post-implementation, PR body generation, scaffold branch topology, and restack helper |
+| Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and 4 JSON contracts; G3 passed |
 | Checklist | `/speckit-checklist` | Pending | Run focused checks for API/contracts, state management, error handling, and CI/release flow |
 | Tasks | `/speckit-tasks` | Pending | Generate small story-oriented tasks with Layer 4, Layer 7 if needed, and Layer 8 parity coverage |
 | Analyze | `/speckit-analyze` | Pending | Verify no drift from design concept and roadmap dependencies |
@@ -74,7 +74,7 @@ Load-bearing decisions:
 | Conventional Commits | Setup and implementation commits use conventional commit format | `git log --oneline -1` and CI PR title validation |
 | KISS, Simplicity & YAGNI | Consume PRSG-008 layer plans; do not add new review-routing heuristics in PRSG-009 | Plan review and Analyze phase |
 
-**Constitution Check:** Initial preflight passed for Phase 1. Full Plan and Implementation constitution gates remain pending.
+**Constitution Check:** Plan constitution check passed. Implementation constitution gates remain pending.
 
 ---
 
@@ -243,11 +243,21 @@ The current post-implementation flow flattens implementation output into one PR 
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow |
-| `research.md` | Pending | Restack and branch-stack tradeoffs if needed |
-| `data-model.md` | Pending | State envelope for slice PR records if useful |
-| `contracts/` | Pending | PR table, restack output, and per-slice PR body contracts |
-| `quickstart.md` | Pending | Operator flow for multi-PR emission and restack |
+| `plan.md` | Complete | Technical context, execution flow, declared file operations, and verification gates |
+| `research.md` | Complete | Restack, gh-stack, scoped verification, and PRS v2 tradeoffs |
+| `data-model.md` | Complete | Multi-PR emission state, slice packet, PRS v2, and restack entities |
+| `contracts/` | Complete | 4 JSON schemas: state, slice packet, PRS v2, restack output |
+| `quickstart.md` | Complete | Operator flow for emission, resume, scoped evidence, and restack |
+
+### Plan Reviewability Estimate
+
+| Field | Value |
+|-------|-------|
+| Status | pass |
+| Projected production LOC | 0 |
+| Declared production files | 0 |
+| Declared total entries | 6 |
+| Note | Advisory estimate under-counts plugin shell paths by current estimator rules; accepted because G3 is advisory-only and implementation verification owns actual diff risk. |
 
 ---
 

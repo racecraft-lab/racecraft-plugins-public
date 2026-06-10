@@ -428,7 +428,6 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 ```
 
 <!-- SPECKIT START -->
-For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the archived plan memory at
-.specify/memory/plan.md
+For PRSG-009 multi-PR emission planning context, read:
+specs/prsg-009-multi-pr-emission/plan.md
 <!-- SPECKIT END -->
