@@ -523,6 +523,12 @@ markers. Schema JSON parses with `jq empty`.
 | Autopilot handoff | Claude/Codex skill prose and Codex eval id 30 cover `split-PR` run, warning carry-forward, exit `1`/`2` stop, and non-split skip. |
 | PRSG-009 non-goals | Planner and skill prose explicitly avoid branch creation, PR body generation, restacking, and stacked-PR topology. |
 
+Reviewability-Exception: infra
+
+This exception is scoped to the fixture-heavy contract and package-mirror
+footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
+`production_files=0`; the block is total-file-count driven.
+
 ---
 
 ## Post-Implementation Checklist
