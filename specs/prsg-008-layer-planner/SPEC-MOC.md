@@ -27,6 +27,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [research.md](research.md)
 - [contracts/plan-layers.output.md](contracts/plan-layers.output.md)
 - [contracts/plan-layers.schema.json](contracts/plan-layers.schema.json)
+- [checklists/api-contracts.md](checklists/api-contracts.md)
+- [checklists/data-integrity.md](checklists/data-integrity.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

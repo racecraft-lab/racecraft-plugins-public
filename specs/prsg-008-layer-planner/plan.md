@@ -57,6 +57,7 @@ The reviewability estimator reads this block before `tasks.md` exists.
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/empty-increment/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-references/tasks.md
 - NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/checkbox-state/tasks.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/plan-layers/path-normalization/tasks.md
 
 ## Constitution Check
 
@@ -119,7 +120,8 @@ tests/
                 ├── invalid-reference/
                 ├── empty-increment/
                 ├── missing-references/
-                └── checkbox-state/
+                ├── checkbox-state/
+                └── path-normalization/
 ```
 
 **Structure Decision**: Keep the parser in the existing autopilot skill script
@@ -149,6 +151,14 @@ Autopilot integration belongs in the existing `speckit-autopilot` skill flow:
 - On exit `1`, stop before implementation with the fixed invalid-plan stop line from the spec and the planner diagnostics.
 - On exit `2`, stop before implementation with a distinct input-error message and the planner diagnostics.
 - For all other PRSG-007 routes, skip layer planning while preserving route warnings as context.
+
+Data-integrity normalization decisions:
+
+- Resolve the worktree anchor with `git -C "$feature_dir" rev-parse --show-toplevel`; all output paths are normalized relative to that root so a nested `.worktrees/...` checkout never leaks the parent checkout path.
+- Normalize references by removing leading `./` and redundant `.` segments before validation. Do not emit absolute paths or paths that remain outside the worktree root after normalization; report those as `reference_not_found` warnings with the original reference string.
+- De-duplicate `depends_on` by semantic increment ID, then emit dependencies in authoritative execution order. For `dependency_cycle`, choose the first affected increment in authoritative order and emit a single stable cycle path from that increment.
+- Treat `[ ]`, `[x]`, and `[X]` as the only supported checkbox states. Unsupported task-like checkbox states fail as `malformed_task` and never produce a third task status.
+- De-duplicate normalized `files` and `tests` arrays and emit them with `LC_ALL=C` lexical ordering so repeated runs cannot drift due to source-reference or filesystem enumeration order.
 
 ## Complexity Tracking
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T01:36:37Z",
-  "active_step": "Phase 4: Checklist - api-contracts",
+  "updated_at": "2026-06-10T02:06:40Z",
+  "active_step": "Phase 5: Tasks",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -126,31 +126,37 @@
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "30 checklist items; 4 initial API contract gaps remediated; 0 remaining."
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed",
+      "summary": "29 checklist items; 0 gaps."
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
-      "status": "pending"
+      "status": "completed",
+      "summary": "27 checklist items; 3 initial data-integrity gaps remediated; 0 remaining."
     },
     {
       "step": "Phase 4: Checklist - data-integrity Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

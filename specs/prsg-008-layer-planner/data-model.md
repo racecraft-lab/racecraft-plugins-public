@@ -42,6 +42,8 @@ Fields:
 
 Validation rules:
 
+- `id` must match `foundation`, `polish`, or `us<N>` where `<N>` is a positive
+  decimal integer with no leading zeroes.
 - Every declared increment must contain at least one parseable checkbox task.
 - Duplicate semantic increment IDs fail with `duplicate_increment_id`.
 - Unknown dependencies fail with `unknown_increment`.
@@ -66,6 +68,8 @@ Fields:
 
 Validation rules:
 
+- `story`, when present, must match the `us<N>` grammar; `increment_id` must
+  match the semantic increment ID grammar.
 - Duplicate task IDs fail with `duplicate_task_id`.
 - Checkbox task-like lines inside increment sections must match the supported
   grammar; malformed lines fail with `malformed_task`.
@@ -89,10 +93,27 @@ Validation rules:
 
 - Error codes are limited to `missing_required_heading`, `empty_increment`,
   `unknown_increment`, `dependency_cycle`, `contradictory_increment_order`,
-  `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task`.
+  `duplicate_increment_id`, `duplicate_task_id`, `malformed_task`,
+  `invalid_invocation`, `feature_dir_not_found`, `feature_dir_unreadable`,
+  `tasks_file_missing`, and `tasks_file_unreadable`.
 - Warning codes are limited to `task_without_references` and
   `reference_not_found`.
+- Invalid-plan and input-error codes must use severity `error`; warning codes
+  must use severity `warning`.
 - `reference_not_found.details.kind` must be `file` or `test`.
+- Per-code `details` payloads are closed and fixture-testable:
+  `missing_required_heading` requires `required_heading`; `empty_increment` and
+  `unknown_increment` require `increment_id`; `dependency_cycle` requires
+  `cycle`; `contradictory_increment_order` requires `expected_order` and
+  `observed_order`; `duplicate_increment_id` requires `increment_id`,
+  `first_source`, and `duplicate_source`; `duplicate_task_id` requires
+  `task_id`, `first_source`, and `duplicate_source`; `malformed_task` requires
+  `line_text`; `task_without_references` requires `task_id` and
+  `increment_id`; `reference_not_found` requires `kind`, `reference`, and
+  `task_id`; `invalid_invocation` requires `expected_args` and
+  `received_args`; `feature_dir_not_found` and `feature_dir_unreadable`
+  require `feature_dir`; `tasks_file_missing` and `tasks_file_unreadable`
+  require `tasks_file`.
 
 ## AutopilotLayerPlanState
 

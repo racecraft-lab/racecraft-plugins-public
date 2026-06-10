@@ -32,8 +32,8 @@ planner contract choices captured during setup.
 | Specify | `/speckit-specify` | Complete | `spec.md` and requirements checklist created; G1 passed with 0 clarification markers. |
 | Clarify | `/speckit-clarify` | Complete | JSON envelope, diagnostic codes, and autopilot hook behavior pinned; G2 passed. |
 | Plan | `/speckit-plan` | Complete | Parser approach, contract artifacts, fixtures, and autopilot hook design created; G3 passed. |
-| Checklist | `/speckit-checklist` | In Progress | Recommended domains: api-contracts, error-handling, data-integrity. |
-| Tasks | `/speckit-tasks` | Pending | Generate TDD tasks for schema, fixtures, script, docs, and Codex parity. |
+| Checklist | `/speckit-checklist` | Complete | api-contracts, error-handling, and data-integrity checklists complete; G4 passed. |
+| Tasks | `/speckit-tasks` | In Progress | Generate TDD tasks for schema, fixtures, script, docs, and Codex parity. |
 | Analyze | `/speckit-analyze` | Pending | Check design-concept/spec/plan/tasks consistency and downstream PRSG-009 contract safety. |
 | Implement | `/speckit-implement` | Pending | Implement via Layer 4 RED to GREEN, then L1/L4/L5 validation. |
 
@@ -325,9 +325,20 @@ Focus on PRSG-008 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | Pending | Pending | |
-| error-handling | Pending | Pending | |
-| data-integrity | Pending | Pending | |
+| api-contracts | 30 | 4 found, 4 fixed, 0 open | FR-010a, FR-014k, FR-014l, FR-014m |
+| error-handling | 29 | 0 found, 0 open | FR-014g, FR-014h, FR-015, FR-018 |
+| data-integrity | 27 | 3 found, 3 fixed, 0 open | FR-014n, FR-014o, FR-014p |
+
+### Addressing Gaps
+
+- API contract gaps were closed by adding input-error diagnostic codes, semantic
+  increment ID grammar, diagnostic severity constraints, and closed per-code
+  `details` payload requirements.
+- Data-integrity gaps were closed by adding deterministic `depends_on` and cycle
+  path ordering, supported checkbox-state rules, and repo-relative path
+  normalization rules based on the Git repository root.
+- Error-handling had no remaining gaps after review.
+- G4 passed with `0 [Gap]` markers in `spec.md` and `plan.md`.
 
 ---
 

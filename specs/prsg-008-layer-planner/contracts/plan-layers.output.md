@@ -47,6 +47,10 @@ Each increment includes:
 - `tests`: distinct repo-relative test references
 - `advisory_size`: counts only
 
+`id` and `depends_on[]` values must match the PRSG-008 v1 semantic increment
+ID grammar: `foundation`, `polish`, or `us<N>` where `<N>` is a positive
+decimal integer with no leading zeroes.
+
 `advisory_size` contains:
 
 - `task_count`
@@ -64,8 +68,8 @@ Each task includes:
 
 - `id`
 - `title`
-- `story`
-- `increment_id`
+- `story`: `null` or a `us<N>` story ID
+- `increment_id`: semantic increment ID matching the increment ID grammar
 - `status`: `todo` or `done`
 - `parallel`: boolean derived from `[P]`
 - `source`
@@ -93,12 +97,43 @@ Invalid-plan error codes:
 - `duplicate_task_id`
 - `malformed_task`
 
+Input-error codes:
+
+- `invalid_invocation`
+- `feature_dir_not_found`
+- `feature_dir_unreadable`
+- `tasks_file_missing`
+- `tasks_file_unreadable`
+
 Warning codes:
 
 - `task_without_references`
 - `reference_not_found`
 
 `reference_not_found.details.kind` is `file` or `test`.
+
+Diagnostic `severity` is tied to code class: invalid-plan and input-error codes
+use `error`, while warning codes use `warning`.
+
+Diagnostic `details` is machine-readable and closed per code:
+
+| Code | Required `details` keys |
+|------|--------------------------|
+| `missing_required_heading` | `required_heading` |
+| `empty_increment` | `increment_id` |
+| `unknown_increment` | `increment_id` |
+| `dependency_cycle` | `cycle` |
+| `contradictory_increment_order` | `expected_order`, `observed_order` |
+| `duplicate_increment_id` | `increment_id`, `first_source`, `duplicate_source` |
+| `duplicate_task_id` | `task_id`, `first_source`, `duplicate_source` |
+| `malformed_task` | `line_text` |
+| `task_without_references` | `task_id`, `increment_id` |
+| `reference_not_found` | `kind`, `reference`, `task_id` |
+| `invalid_invocation` | `expected_args`, `received_args` |
+| `feature_dir_not_found` | `feature_dir` |
+| `feature_dir_unreadable` | `feature_dir` |
+| `tasks_file_missing` | `tasks_file` |
+| `tasks_file_unreadable` | `tasks_file` |
 
 ## Example Success Shape
 
