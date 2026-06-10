@@ -2,8 +2,8 @@
 
 ## Phase 1: Foundation
 
-- [ ] T001 Normalize leading-dot paths in ./specs/prsg-008-layer-planner/contracts/plan-layers.output.md
-- [ ] T002 Deduplicate repeated references in specs/prsg-008-layer-planner/contracts/plan-layers.output.md, ./specs/prsg-008-layer-planner/contracts/plan-layers.output.md, and specs/./prsg-008-layer-planner/contracts/plan-layers.output.md
+- [ ] T001 Normalize leading-dot paths in ./speckit-pro/skills/speckit-autopilot/SKILL.md
+- [ ] T002 Deduplicate repeated references in speckit-pro/skills/speckit-autopilot/SKILL.md, ./speckit-pro/skills/speckit-autopilot/SKILL.md, and speckit-pro/./skills/speckit-autopilot/SKILL.md
 
 ## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)
 

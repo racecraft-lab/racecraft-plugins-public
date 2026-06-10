@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T04:25:11Z",
+  "updated_at": "2026-06-10T15:32:22Z",
   "active_step": "Complete",
   "model_check": {
     "parent_session": "Codex main session",
@@ -61,10 +61,10 @@
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "dry-run/report-only",
-    "safeToApplyCleanup": false,
-    "excludedCurrentSpec": "specs/prsg-008-layer-planner",
-    "note": "PRSG-007 and PRSG-011 were already archived and cleaned up in .specify/memory/archive-reports/2026-06-09-prsg-post-merge-hygiene.md. No active specs cleanup was applied for PRSG-008."
+    "cleanup_mode": "apply-cleanup",
+    "safeToApplyCleanup": true,
+    "excludedCurrentSpec": "None",
+    "note": "PRSG-008 was archived and cleaned up after PR #138 merged. Layer 4 planner tests were decoupled from the live spec schema before removing specs/prsg-008-layer-planner."
   },
   "atomicity_route": {
     "route": "one-navigable-PR",
@@ -290,6 +290,11 @@
       "step": "Post: Retrospective",
       "status": "completed",
       "summary": "Created specs/prsg-008-layer-planner/retrospective.md after review remediation; no spec changes proposed."
+    },
+    {
+      "step": "Post: Archive Cleanup",
+      "status": "completed",
+      "summary": "Archived PRSG-008 to .specify/memory, recorded recovery commands in .specify/memory/archive-reports/2026-06-10-prsg-008-post-merge-hygiene.md, decoupled Layer 4 planner tests from the live spec schema, and removed specs/prsg-008-layer-planner from active specs."
     }
   ]
 }

@@ -425,6 +425,6 @@ git push origin main
 
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
-shell commands, and other important information, read the current plan at
-specs/prsg-008-layer-planner/plan.md
+shell commands, and other important information, read the archived plan memory at
+.specify/memory/plan.md
 <!-- SPECKIT END -->

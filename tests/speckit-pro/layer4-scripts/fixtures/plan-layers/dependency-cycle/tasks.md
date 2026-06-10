@@ -2,7 +2,7 @@
 
 ## Phase 1: Foundation
 
-- [ ] T001 Define the planner contract in specs/prsg-008-layer-planner/contracts/plan-layers.output.md
+- [ ] T001 Define the planner contract in speckit-pro/skills/speckit-autopilot/SKILL.md
 
 ## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)
 

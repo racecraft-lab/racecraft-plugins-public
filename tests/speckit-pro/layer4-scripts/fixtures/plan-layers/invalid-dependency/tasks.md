@@ -2,7 +2,7 @@
 
 ## Phase 1: Foundation
 
-- [ ] T001 Prepare the planner schema in specs/prsg-008-layer-planner/contracts/plan-layers.schema.json
+- [ ] T001 Prepare the planner schema in speckit-pro/codex-skills/speckit-autopilot/SKILL.md
 
 ## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)
 

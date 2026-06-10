@@ -12,8 +12,8 @@ source "$(dirname "$0")/../lib/assertions.sh"
 TEST_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$TEST_DIR/../../.." && pwd)"
 SCRIPT="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
-SCHEMA="$REPO_ROOT/specs/prsg-008-layer-planner/contracts/plan-layers.schema.json"
 FIXTURE_ROOT="$TEST_DIR/fixtures/plan-layers"
+SCHEMA="$FIXTURE_ROOT/contracts/plan-layers.schema.json"
 
 SANDBOX=$(mktemp -d)
 RUN_DIR="$SANDBOX/runs"
@@ -441,9 +441,9 @@ def assert_increment(increment, increment_id, name, kind, order, depends_on, lin
 
 test_file = "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
 script_file = "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
-schema_file = "specs/prsg-008-layer-planner/contracts/plan-layers.schema.json"
-contract_file = "specs/prsg-008-layer-planner/contracts/plan-layers.output.md"
-tasks_file = "specs/prsg-008-layer-planner/tasks.md"
+schema_file = "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+contract_file = "speckit-pro/skills/speckit-autopilot/SKILL.md"
+tasks_file = "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
 
 if expectation == "valid-real":
     assert_common("ok")
@@ -473,7 +473,7 @@ if expectation == "valid-real":
             "test_reference_count": 1,
             "distinct_test_count": 1,
         },
-        [contract_file, schema_file],
+        [schema_file, contract_file],
         [test_file],
     )
     assert_increment(
@@ -493,7 +493,7 @@ if expectation == "valid-real":
             "test_reference_count": 1,
             "distinct_test_count": 1,
         },
-        [script_file, schema_file],
+        [schema_file, script_file],
         [test_file],
     )
     assert_increment(
@@ -826,7 +826,7 @@ generate_performance_fixture() {
     printf '# Tasks: Generated Layer Plan\n\n'
     printf '## Phase 1: Foundation\n\n'
     for index in $(seq 1 50); do
-      printf -- '- [ ] T%03d Prepare generated foundation file specs/prsg-008-layer-planner/contracts/plan-layers.output.md and test tests/speckit-pro/layer4-scripts/test-plan-layers.sh\n' "$index"
+      printf -- '- [ ] T%03d Prepare generated foundation file speckit-pro/skills/speckit-autopilot/SKILL.md and test tests/speckit-pro/layer4-scripts/test-plan-layers.sh\n' "$index"
     done
     printf '\n## Phase 2: User Story 1 - Generated Parser (Priority: P1)\n\n'
     for index in $(seq 51 150); do

@@ -2,8 +2,8 @@
 
 ## Phase 1: Foundation
 
-- [ ] T001 Preserve unchecked state in specs/prsg-008-layer-planner/contracts/plan-layers.schema.json
-- [x] T002 Preserve lowercase checked state in specs/prsg-008-layer-planner/contracts/plan-layers.output.md
+- [ ] T001 Preserve unchecked state in speckit-pro/codex-skills/speckit-autopilot/SKILL.md
+- [x] T002 Preserve lowercase checked state in speckit-pro/skills/speckit-autopilot/SKILL.md
 - [X] T003 Preserve uppercase checked state in tests/speckit-pro/layer4-scripts/test-plan-layers.sh
 
 ## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)

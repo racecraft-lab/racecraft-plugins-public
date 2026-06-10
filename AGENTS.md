@@ -44,5 +44,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 ## Recent SpecKit Archive Notes
 
 - PRSG-007 and PRSG-011 are archived in `.specify/memory/` as completed on 2026-06-09.
+- PRSG-008 is archived in `.specify/memory/` as completed on 2026-06-10.
 - `specs/prsg-007-atomicity-router` and `specs/prsg-011-retro-migration` were removed from active `specs/**` cleanup after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory.
+- `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup after the planner schema fixture was vendored under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/`.
 - `.specify/feature.json` is transient local state. Do not commit a stale completed-spec pointer back to `main`.
