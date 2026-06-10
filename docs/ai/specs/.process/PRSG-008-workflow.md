@@ -30,8 +30,8 @@ planner contract choices captured during setup.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | `spec.md` and requirements checklist created; G1 passed with 0 clarification markers. |
-| Clarify | `/speckit-clarify` | In Progress | Pin JSON field names, invalid-plan diagnostics, and advisory metadata fields. |
-| Plan | `/speckit-plan` | Pending | Design parser, schema contract, fixtures, and autopilot integration point. |
+| Clarify | `/speckit-clarify` | Complete | JSON envelope, diagnostic codes, and autopilot hook behavior pinned; G2 passed. |
+| Plan | `/speckit-plan` | In Progress | Design parser, schema contract, fixtures, and autopilot integration point. |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: api-contracts, error-handling, data-integrity. |
 | Tasks | `/speckit-tasks` | Pending | Generate TDD tasks for schema, fixtures, script, docs, and Codex parity. |
 | Analyze | `/speckit-analyze` | Pending | Check design-concept/spec/plan/tasks consistency and downstream PRSG-009 contract safety. |
@@ -211,9 +211,15 @@ planner returns exit 1.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | JSON contract and schema | Pending | |
-| 2 | Invalid-plan diagnostics | Pending | |
-| 3 | Autopilot hook point | Pending | |
+| 1 | JSON contract and schema | 5 | Accepted a single versioned envelope, embedded increment/task objects, shared diagnostic shape, `todo`/`done` task status enum, and counts-only advisory size metadata. |
+| 2 | Invalid-plan diagnostics | 5 | Required dependency and delivery headings; empty declared increments, duplicate IDs, malformed tasks, cycles, and contradictory/unknown ordering fail exit 1; missing refs remain warnings. |
+| 3 | Autopilot hook point | 5 | Planner runs immediately after post-G5 atomicity route recording and before Analyze only for route `split-PR`; successful envelopes persist to state, workflow gets a summary, and exit 1/2 stop before implementation. |
+
+### Consensus Resolution Log
+
+| Phase | Item | Round | Routed Categories | Outcome | Analysts Used |
+|-------|------|-------|-------------------|---------|---------------|
+| Clarify Session 1 | Advisory size metadata LOC hints vs counts only | 1 | `[spec, codebase]` | Counts-only metadata chosen for v1; no LOC hints, thresholds, or PRSG-006 verdict semantics. | spec-context-analyst, codebase-analyst |
 
 ---
 

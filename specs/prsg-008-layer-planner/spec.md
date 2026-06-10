@@ -77,8 +77,10 @@ As `speckit-autopilot`, I need the planner to run after PRSG-007 route recording
 - The supplied feature directory does not exist, is not readable, or does not contain `tasks.md`.
 - `tasks.md` is present but omits the explicit dependency or incremental delivery sections needed for authoritative ordering.
 - The declared increment order references an increment that has no matching task section.
+- A declared or present increment section contains no parseable checkbox tasks.
 - The task order contradicts the declared dependency or incremental delivery order.
 - Multiple sections map to the same semantic increment ID.
+- Multiple checkbox tasks use the same task identifier.
 - Tasks are checked, unchecked, or partially completed before planning.
 - Tasks include `[P]`, file references, test references, or no references at all.
 - File or test references appear to be missing even though the task plan is otherwise valid.
@@ -96,16 +98,31 @@ As `speckit-autopilot`, I need the planner to run after PRSG-007 route recording
 - **FR-006**: The planner MUST parse Foundation, user-story, and Polish work into ordered increments when those phases are present in `tasks.md`.
 - **FR-007**: The planner MUST use `## Dependencies & Execution Order` and `### Incremental Delivery` as the authoritative sources for increment ordering.
 - **FR-008**: The planner MUST validate the authoritative increment order against the order and membership of tasks in `tasks.md`.
-- **FR-009**: The planner MUST fail plans that are missing required ordering information, contain contradictory ordering, duplicate semantic increment IDs, or reference unknown increments.
+- **FR-009**: The planner MUST fail plans that are missing required ordering information, contain empty declared increments, contain contradictory ordering, duplicate semantic increment IDs, duplicate task IDs, malformed checkbox tasks, or reference unknown increments.
 - **FR-010**: The planner MUST use semantic increment IDs, including `foundation`, `us1`, `us2`, and `polish` where applicable.
 - **FR-011**: The planner MUST preserve each planned task's identifier, title, checkbox state, source line number, parallel marker state, and declared file or test references when present.
 - **FR-012**: The planner MUST preserve `[P]` as task metadata and MUST NOT create a separate parallel-work increment from it.
 - **FR-013**: The planner MUST report missing file or test references as warnings without failing an otherwise valid plan.
 - **FR-014**: The planner MUST define and publish a schema-backed output contract for successful plans, warnings, and structured errors.
+- **FR-014a**: The planner JSON MUST use one versioned top-level envelope for every outcome: `tool`, `contract_version`, `status`, `feature_dir`, `tasks_file`, `increments`, `warnings`, `errors`, and `summary`.
+- **FR-014b**: The `status` field MUST use the closed enum `ok`, `invalid_plan`, or `input_error`, mapping to exit codes `0`, `1`, and `2` respectively.
+- **FR-014c**: Each increment object MUST include `id`, `name`, `kind`, `order`, `depends_on`, `source`, embedded `tasks`, `files`, `tests`, and `advisory_size`.
+- **FR-014d**: Each task object MUST include `id`, `title`, `story`, `increment_id`, `status`, `parallel`, `source`, `files`, and `tests`; task `status` MUST use `todo` for unchecked tasks and `done` for checked tasks.
+- **FR-014e**: Warnings and errors MUST use the same diagnostic shape: `code`, `severity`, `message`, `source`, and `details`.
+- **FR-014f**: Advisory size metadata MUST be counts-only in PRSG-008 v1: task count, file-reference count, distinct-file count, test-reference count, and distinct-test count. The planner MUST NOT emit LOC hints, budget verdicts, thresholds, or PRSG-006 reviewability-gate semantics.
+- **FR-014g**: Invalid-plan diagnostic codes MUST be drawn from `missing_required_heading`, `empty_increment`, `unknown_increment`, `dependency_cycle`, `contradictory_increment_order`, `duplicate_increment_id`, `duplicate_task_id`, and `malformed_task`.
+- **FR-014h**: Warning diagnostic codes MUST be drawn from `task_without_references` and `reference_not_found`; `reference_not_found` details MUST identify `kind` as `file` or `test`.
+- **FR-014i**: A valid `tasks.md` MUST include both `## Dependencies & Execution Order` and `### Incremental Delivery`; missing either heading is `missing_required_heading`, status `invalid_plan`, exit `1`.
+- **FR-014j**: Inside increment sections, checkbox task-like lines MUST match the supported task grammar with task ID, checkbox state, optional `[P]`, and title. Non-task prose and non-task bullets MAY be ignored, but malformed task-like lines MUST fail as `malformed_task`.
 - **FR-015**: The planner MUST use exit code `0` for successful plans, `1` for invalid plans, and `2` for usage or input errors.
 - **FR-016**: The planner MUST remain independent from PRSG-007 routing logic and MUST NOT reclassify whether split planning is relevant.
-- **FR-017**: `speckit-autopilot` MUST run the planner after PRSG-007 route recording and before implementation when split planning is relevant.
+- **FR-017**: `speckit-autopilot` MUST run the planner immediately after PRSG-007 route recording after G5 and before Analyze when the recorded route is exactly `split-PR`.
+- **FR-017a**: `speckit-autopilot` MUST NOT require a layer plan for `one-navigable-PR`, `branch-by-abstraction`, `single-atomic-PR`, or `out-of-scope` routes, while preserving PRSG-007 releasability warnings as context.
+- **FR-017b**: On a successful planner run, `speckit-autopilot` MUST persist the full versioned layer-plan envelope in `autopilot-state.json`, record a concise summary in the workflow `## Layer Plan` section, and pass only the relevant increment context to implementation prompts.
 - **FR-018**: `speckit-autopilot` MUST stop before implementation and surface planner diagnostics when planner validation fails.
+- **FR-018a**: When the planner returns exit `1`, autopilot MUST emit this fixed stop line before diagnostics: `STOP: Layer planner returned invalid_plan (exit 1) for <feature-dir>; implementation has not started. Fix tasks.md using the planner diagnostics below, then rerun autopilot from the Layer Plan step.`
+- **FR-018b**: When the planner returns exit `2`, autopilot MUST stop before implementation with a distinct `input_error` message and include the planner diagnostics.
+- **FR-018c**: When the planner returns exit `0` with warnings, autopilot MUST continue and carry those warnings into the workflow/state implementation context.
 - **FR-019**: The feature MUST remain planner-only and MUST NOT create branches, generate PR bodies, restack changes, or emit multi-PR topology.
 - **FR-020**: The planner contract MUST be deterministic and fixture-testable across valid, warning, invalid-plan, and usage/input cases.
 
@@ -127,10 +144,10 @@ As `speckit-autopilot`, I need the planner to run after PRSG-007 route recording
 
 ### Key Entities *(include if feature involves data)*
 
-- **Layer Plan**: The complete planner result for a feature directory, including plan metadata, ordered increments, tasks, warnings, and contract version.
-- **Increment**: A semantic delivery unit such as `foundation`, `us1`, `us2`, or `polish`, with dependency order and member tasks.
-- **Task Reference**: A task extracted from `tasks.md`, including task ID, title, checkbox state, source line number, parallel marker state, and declared file or test references.
-- **Diagnostic**: A structured warning or error with a stable code, concise message, severity, and source context when available.
+- **Layer Plan**: The complete planner result for a feature directory, emitted as a versioned JSON envelope with `status`, input paths, ordered increments, warnings, errors, and a summary.
+- **Increment**: A semantic delivery unit such as `foundation`, `us1`, `us2`, or `polish`, with dependency order, source context, embedded tasks, aggregate file/test references, and counts-only advisory size metadata.
+- **Task Reference**: A task extracted from `tasks.md`, including task ID, title, story, semantic increment ID, checkbox-derived `todo` or `done` status, source line number, parallel marker state, and declared file or test references.
+- **Diagnostic**: A structured warning or error with a stable code, `warning` or `error` severity, concise message, source context, and machine-readable details.
 - **Planner Invocation**: The read-only request to plan one feature directory, including success, invalid-plan, and usage/input outcomes.
 
 ## Success Criteria *(mandatory)*
@@ -151,6 +168,8 @@ As `speckit-autopilot`, I need the planner to run after PRSG-007 route recording
 - `tasks.md` follows the existing SpecKit task-list structure closely enough for headings, checkboxes, task IDs, and user-story labels to be recognized.
 - Explicit dependency and incremental delivery sections are the source of truth when task prose could imply a different ordering.
 - PRSG-007 has already recorded whether split planning is relevant before autopilot considers running the planner.
+- Only PRSG-007's `split-PR` route requires a layer-plan handoff in PRSG-008.
 - Missing file and test references can be identified from references already written in task text; the planner does not infer ownership from neighboring tasks.
 - The output schema is versioned with the planner contract so PRSG-009 can consume it without guessing field meanings.
+- Counts-only advisory size metadata is enough for PRSG-009 to reason about slice shape; PRSG-006 remains the owner of LOC estimation and budget verdicts.
 - PRSG-009 will own branch creation, PR body generation, restacking, and stacked PR emission.

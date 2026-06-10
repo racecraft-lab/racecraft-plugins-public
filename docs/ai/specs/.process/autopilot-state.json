@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T01:01:42Z",
-  "active_step": "Phase 2: Clarify - JSON contract and schema",
+  "updated_at": "2026-06-10T01:20:30Z",
+  "active_step": "Phase 3: Plan",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -84,31 +84,37 @@
     },
     {
       "step": "Phase 2: Clarify - JSON contract and schema",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted one versioned JSON envelope, embedded increments/tasks, shared diagnostics, and closed status enums."
     },
     {
       "step": "Phase 2: Clarify - JSON contract and schema Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 spec/codebase consensus selected counts-only advisory size metadata; LOC hints and PRSG-006 budget semantics remain out of scope."
     },
     {
       "step": "Phase 2: Clarify - Invalid-plan diagnostics",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Pinned strict heading preconditions, invalid-plan diagnostic codes, warning codes, empty-increment behavior, and task grammar failure policy."
     },
     {
       "step": "Phase 2: Clarify - Invalid-plan diagnostics Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 2: Clarify - Autopilot hook point",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Pinned planner hook after post-G5 route recording, split-PR-only relevance, state/workflow carrier, and exit 1/2 stop behavior."
     },
     {
       "step": "Phase 2: Clarify - Autopilot hook point Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
