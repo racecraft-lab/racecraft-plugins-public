@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Pending: PRSG-009 (Phase 4 split-PR emission), PRSG-010 (Phase 5). Created 2026-06-03; status refreshed 2026-06-10.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission scaffolded (PRSG-009); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Pending: PRSG-010 (Phase 5). Created 2026-06-03; status refreshed 2026-06-10.
 
 ## Vision
 
@@ -207,7 +207,10 @@ that emits a routing decision into the workflow file before any emission is wire
 
 ---
 
-### PRSG-009 — Multi-PR emission (post-implementation rewrite)  · Phase 4 · P1
+### PRSG-009 — Multi-PR emission (post-implementation rewrite)  · Phase 4 · P1 · In Progress
+> Scaffolded 2026-06-10 on branch `prsg-009-multi-pr-emission`; workflow:
+> `docs/ai/specs/.process/PRSG-009-workflow.md`.
+
 **Why:** the actual behavior change — stop flattening; emit N PRs.
 
 - **US1 — Emit N PRs.** Rewrite post-implementation §3.2 from one `gh pr create` to N
