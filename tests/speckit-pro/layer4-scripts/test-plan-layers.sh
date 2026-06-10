@@ -273,6 +273,430 @@ PY
   fi
 }
 
+assert_payload_expectation_file() {
+  local json_file="$1"
+  local expectation="$2"
+  local expected_feature_dir="${3:-}"
+  local errors
+  errors=$(python3 - "$json_file" "$expectation" "$expected_feature_dir" <<'PY' 2>&1 || true
+import json
+import pathlib
+import sys
+
+json_path = pathlib.Path(sys.argv[1])
+expectation = sys.argv[2]
+expected_feature_dir = sys.argv[3]
+problems = []
+
+try:
+    data = json.loads(json_path.read_text(encoding="utf-8"))
+except Exception as exc:
+    print(f"invalid JSON: {exc}")
+    sys.exit(1)
+
+def problem(message):
+    problems.append(message)
+
+def require(condition, message):
+    if not condition:
+        problem(message)
+
+def by_id(items):
+    result = {}
+    for item in items:
+        if isinstance(item, dict) and "id" in item:
+            result[item["id"]] = item
+    return result
+
+def diagnostic_codes(field):
+    return [item.get("code") for item in data.get(field, []) if isinstance(item, dict)]
+
+def diagnostics_by_code(field, code):
+    return [item for item in data.get(field, []) if isinstance(item, dict) and item.get("code") == code]
+
+def assert_common(status):
+    require(data.get("status") == status, f"status must be {status}")
+    if expected_feature_dir:
+        require(data.get("feature_dir") == expected_feature_dir, "feature_dir must be repo-relative fixture path")
+        require(data.get("tasks_file") == f"{expected_feature_dir}/tasks.md", "tasks_file must be repo-relative tasks.md path")
+    summary = data.get("summary", {})
+    require(isinstance(summary, dict), "summary must be an object")
+    if isinstance(summary, dict):
+        require(summary.get("error_count") == len(data.get("errors", [])), "summary.error_count must match errors length")
+        require(summary.get("warning_count") == len(data.get("warnings", [])), "summary.warning_count must match warnings length")
+
+def assert_source(source, path, line, heading=None):
+    require(isinstance(source, dict), "source must be an object")
+    if not isinstance(source, dict):
+        return
+    require(source.get("path") == path, f"source.path must be {path}")
+    require(source.get("line") == line, f"source.line must be {line}")
+    if heading is not None:
+        require(source.get("heading") == heading, f"source.heading must be {heading}")
+
+def assert_task(task, task_id, line, status, parallel, story, increment_id, files, tests):
+    require(isinstance(task, dict), f"{task_id} task must be an object")
+    if not isinstance(task, dict):
+        return
+    require(task.get("id") == task_id, f"{task_id} id mismatch")
+    require(task.get("status") == status, f"{task_id} status must be {status}")
+    require(task.get("parallel") is parallel, f"{task_id} parallel marker mismatch")
+    require(task.get("story") == story, f"{task_id} story must be {story}")
+    require(task.get("increment_id") == increment_id, f"{task_id} increment_id must be {increment_id}")
+    assert_source(task.get("source"), f"{expected_feature_dir}/tasks.md", line)
+    require(task.get("files") == files, f"{task_id} files mismatch: {task.get('files')!r}")
+    require(task.get("tests") == tests, f"{task_id} tests mismatch: {task.get('tests')!r}")
+
+def assert_increment(increment, increment_id, name, kind, order, depends_on, line, heading, task_ids, advisory, files, tests):
+    require(isinstance(increment, dict), f"{increment_id} increment must be an object")
+    if not isinstance(increment, dict):
+        return
+    require(increment.get("id") == increment_id, f"{increment_id} id mismatch")
+    require(isinstance(increment.get("name"), str) and increment.get("name"), f"{increment_id} name must be non-empty")
+    require(increment.get("kind") == kind, f"{increment_id} kind mismatch")
+    require(increment.get("order") == order, f"{increment_id} order mismatch")
+    require(increment.get("depends_on") == depends_on, f"{increment_id} depends_on mismatch")
+    assert_source(increment.get("source"), f"{expected_feature_dir}/tasks.md", line, heading)
+    tasks = increment.get("tasks")
+    require(isinstance(tasks, list), f"{increment_id} tasks must be an array")
+    if isinstance(tasks, list):
+        require([task.get("id") for task in tasks if isinstance(task, dict)] == task_ids, f"{increment_id} task order mismatch")
+    require(increment.get("advisory_size") == advisory, f"{increment_id} advisory_size mismatch")
+    require(increment.get("files") == files, f"{increment_id} files mismatch")
+    require(increment.get("tests") == tests, f"{increment_id} tests mismatch")
+
+test_file = "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+script_file = "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
+schema_file = "specs/prsg-008-layer-planner/contracts/plan-layers.schema.json"
+contract_file = "specs/prsg-008-layer-planner/contracts/plan-layers.output.md"
+tasks_file = "specs/prsg-008-layer-planner/tasks.md"
+
+if expectation == "valid-real":
+    assert_common("ok")
+    require(data.get("warnings") == [], "valid-real warnings must be empty")
+    require(data.get("errors") == [], "valid-real errors must be empty")
+    increments = data.get("increments", [])
+    require([item.get("id") for item in increments if isinstance(item, dict)] == ["foundation", "us1", "us2", "polish"], "increments must be dependency ordered")
+    summary = data.get("summary", {})
+    require(summary.get("increment_count") == 4, "summary.increment_count must be 4")
+    require(summary.get("task_count") == 8, "summary.task_count must be 8")
+
+    inc = by_id(increments)
+    assert_increment(
+        inc.get("foundation"),
+        "foundation",
+        "Foundation",
+        "foundation",
+        0,
+        [],
+        3,
+        "## Phase 1: Foundation",
+        ["T001", "T002", "T003"],
+        {
+            "task_count": 3,
+            "file_reference_count": 2,
+            "distinct_file_count": 2,
+            "test_reference_count": 1,
+            "distinct_test_count": 1,
+        },
+        [contract_file, schema_file],
+        [test_file],
+    )
+    assert_increment(
+        inc.get("us1"),
+        "us1",
+        "User Story 1 - Emit Stable Plan",
+        "story",
+        1,
+        ["foundation"],
+        9,
+        "## Phase 2: User Story 1 - Emit Stable Plan (Priority: P1)",
+        ["T004", "T005"],
+        {
+            "task_count": 2,
+            "file_reference_count": 2,
+            "distinct_file_count": 2,
+            "test_reference_count": 1,
+            "distinct_test_count": 1,
+        },
+        [script_file, schema_file],
+        [test_file],
+    )
+    assert_increment(
+        inc.get("us2"),
+        "us2",
+        "User Story 2 - Parse Ordered Increments",
+        "story",
+        2,
+        ["us1"],
+        14,
+        "## Phase 3: User Story 2 - Parse Ordered Increments (Priority: P1)",
+        ["T006", "T007"],
+        {
+            "task_count": 2,
+            "file_reference_count": 2,
+            "distinct_file_count": 2,
+            "test_reference_count": 1,
+            "distinct_test_count": 1,
+        },
+        [tasks_file, contract_file],
+        [test_file],
+    )
+    assert_increment(
+        inc.get("polish"),
+        "polish",
+        "Polish and Validation",
+        "polish",
+        3,
+        ["us2"],
+        19,
+        "## Phase 4: Polish and Validation",
+        ["T008"],
+        {
+            "task_count": 1,
+            "file_reference_count": 1,
+            "distinct_file_count": 1,
+            "test_reference_count": 1,
+            "distinct_test_count": 1,
+        },
+        [tasks_file],
+        [test_file],
+    )
+
+    tasks = {}
+    for increment in increments:
+        for task in increment.get("tasks", []):
+            tasks[task.get("id")] = task
+    assert_task(tasks.get("T001"), "T001", 5, "todo", False, None, "foundation", [contract_file], [])
+    assert_task(tasks.get("T002"), "T002", 6, "todo", True, None, "foundation", [schema_file], [])
+    assert_task(tasks.get("T003"), "T003", 7, "done", False, None, "foundation", [], [test_file])
+    assert_task(tasks.get("T004"), "T004", 11, "todo", True, "us1", "us1", [script_file], [test_file])
+    assert_task(tasks.get("T005"), "T005", 12, "todo", False, "us1", "us1", [schema_file], [])
+    assert_task(tasks.get("T006"), "T006", 16, "todo", True, "us2", "us2", [tasks_file], [test_file])
+    assert_task(tasks.get("T007"), "T007", 17, "todo", False, "us2", "us2", [contract_file], [])
+    assert_task(tasks.get("T008"), "T008", 21, "todo", False, None, "polish", [tasks_file], [test_file])
+
+elif expectation == "checkbox-state":
+    assert_common("ok")
+    increments = data.get("increments", [])
+    tasks = {}
+    for increment in increments:
+        for task in increment.get("tasks", []):
+            tasks[task.get("id")] = task
+    assert_task(tasks.get("T001"), "T001", 5, "todo", False, None, "foundation", [schema_file], [])
+    assert_task(tasks.get("T002"), "T002", 6, "done", False, None, "foundation", [contract_file], [])
+    assert_task(tasks.get("T003"), "T003", 7, "done", False, None, "foundation", [], [test_file])
+    assert_task(tasks.get("T004"), "T004", 11, "todo", True, "us1", "us1", [script_file], [])
+
+elif expectation == "invalid-reference":
+    assert_common("ok")
+    require(data.get("errors") == [], "warning fixture must not emit errors")
+    codes = diagnostic_codes("warnings")
+    require(codes.count("reference_not_found") == 2, "invalid-reference must emit two reference_not_found warnings")
+    details = [item.get("details", {}) for item in diagnostics_by_code("warnings", "reference_not_found")]
+    require({"kind": "file", "reference": "speckit-pro/skills/speckit-autopilot/scripts/no-such-plan-layers-helper.sh", "task_id": "T002"} in details, "missing file warning details mismatch")
+    require({"kind": "test", "reference": "tests/speckit-pro/layer4-scripts/no-such-plan-layers-test.sh", "task_id": "T003"} in details, "missing test warning details mismatch")
+
+elif expectation == "missing-references":
+    assert_common("ok")
+    require(data.get("errors") == [], "missing-reference warning fixture must not emit errors")
+    warnings = diagnostics_by_code("warnings", "task_without_references")
+    require(len(warnings) == 2, "missing-references must warn for both reference-free tasks")
+    details = [item.get("details", {}) for item in warnings]
+    require({"task_id": "T001", "increment_id": "foundation"} in details, "T001 task_without_references details mismatch")
+    require({"task_id": "T002", "increment_id": "us1"} in details, "T002 task_without_references details mismatch")
+
+else:
+    problem(f"unknown expectation: {expectation}")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+PY
+)
+
+  if [ -z "$errors" ]; then
+    _pass
+  else
+    _fail "$expectation payload assertion failed: $errors"
+  fi
+}
+
+assert_error_payload_file() {
+  local json_file="$1"
+  local expected_status="$2"
+  local expected_codes_csv="$3"
+  local expected_feature_dir="${4:-}"
+  local errors
+  errors=$(python3 - "$json_file" "$expected_status" "$expected_codes_csv" "$expected_feature_dir" <<'PY' 2>&1 || true
+import json
+import sys
+
+json_path, expected_status, expected_codes_csv, expected_feature_dir = sys.argv[1:5]
+expected_codes = [code for code in expected_codes_csv.split(",") if code]
+problems = []
+
+try:
+    with open(json_path, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+except Exception as exc:
+    print(f"invalid JSON: {exc}")
+    sys.exit(1)
+
+if data.get("status") != expected_status:
+    problems.append(f"status must be {expected_status}, got {data.get('status')!r}")
+
+if expected_feature_dir:
+    if data.get("feature_dir") != expected_feature_dir:
+        problems.append("feature_dir mismatch")
+    if data.get("tasks_file") != f"{expected_feature_dir}/tasks.md":
+        problems.append("tasks_file mismatch")
+
+if expected_status == "input_error" and data.get("increments") != []:
+    problems.append("input_error increments must be empty")
+
+field = "errors"
+actual_codes = [item.get("code") for item in data.get(field, []) if isinstance(item, dict)]
+for expected_code in expected_codes:
+    if expected_code not in actual_codes:
+        problems.append(f"missing diagnostic code {expected_code}")
+
+summary = data.get("summary", {})
+if not isinstance(summary, dict):
+    problems.append("summary must be an object")
+else:
+    if summary.get("error_count") != len(data.get("errors", [])):
+        problems.append("summary.error_count must match errors length")
+    if summary.get("warning_count") != len(data.get("warnings", [])):
+        problems.append("summary.warning_count must match warnings length")
+
+for diagnostic in data.get("errors", []):
+    if not isinstance(diagnostic, dict):
+        problems.append("error diagnostic must be an object")
+        continue
+    if diagnostic.get("severity") != "error":
+        problems.append(f"{diagnostic.get('code')} severity must be error")
+    source = diagnostic.get("source", {})
+    if not isinstance(source, dict) or "path" not in source or "line" not in source:
+        problems.append(f"{diagnostic.get('code')} source must include path and line")
+    details = diagnostic.get("details")
+    if not isinstance(details, dict) or not details:
+        problems.append(f"{diagnostic.get('code')} details must be non-empty")
+
+if expected_status == "invalid_plan":
+    checks = {
+        "missing_required_heading": lambda d: "required_heading" in d,
+        "empty_increment": lambda d: d.get("increment_id") in {"foundation", "polish"} or str(d.get("increment_id", "")).startswith("us"),
+        "unknown_increment": lambda d: d.get("increment_id") == "us3",
+        "dependency_cycle": lambda d: isinstance(d.get("cycle"), list) and len(d.get("cycle")) >= 2,
+        "contradictory_increment_order": lambda d: set(d) == {"expected_order", "observed_order"},
+        "duplicate_increment_id": lambda d: {"increment_id", "first_source", "duplicate_source"} <= set(d),
+        "duplicate_task_id": lambda d: {"task_id", "first_source", "duplicate_source"} <= set(d),
+        "malformed_task": lambda d: "line_text" in d,
+    }
+elif expected_status == "input_error":
+    checks = {
+        "invalid_invocation": lambda d: set(d) == {"expected_args", "received_args"},
+        "feature_dir_not_found": lambda d: "feature_dir" in d,
+        "feature_dir_unreadable": lambda d: "feature_dir" in d,
+        "tasks_file_missing": lambda d: "tasks_file" in d,
+        "tasks_file_unreadable": lambda d: "tasks_file" in d,
+    }
+else:
+    checks = {}
+
+for expected_code in expected_codes:
+    diagnostics = [item for item in data.get("errors", []) if isinstance(item, dict) and item.get("code") == expected_code]
+    if not diagnostics:
+        continue
+    if expected_code in checks and not any(checks[expected_code](item.get("details", {})) for item in diagnostics):
+        problems.append(f"{expected_code} details mismatch")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+PY
+)
+
+  if [ -z "$errors" ]; then
+    _pass
+  else
+    _fail "$expected_status payload assertion failed: $errors"
+  fi
+}
+
+assert_stderr_concise_file() {
+  local stderr_file="$1"
+  local max_lines="${2:-3}"
+  local max_bytes="${3:-500}"
+  local line_count byte_count stderr_text
+  line_count=$(wc -l <"$stderr_file")
+  byte_count=$(wc -c <"$stderr_file")
+  stderr_text=$(cat "$stderr_file")
+  if [ "$line_count" -ge 1 ] &&
+    [ "$line_count" -le "$max_lines" ] &&
+    [ "$byte_count" -le "$max_bytes" ] &&
+    [[ "$stderr_text" != *"Traceback"* ]]; then
+    _pass
+  else
+    _fail "stderr must be 1-${max_lines} lines, <=${max_bytes} bytes, and free of stack traces"
+  fi
+}
+
+assert_script_safety_file() {
+  local script_file="$1"
+  local errors
+  errors=$(python3 - "$script_file" <<'PY' 2>&1 || true
+import pathlib
+import re
+import sys
+
+path = pathlib.Path(sys.argv[1])
+problems = []
+
+if not path.exists():
+    print(f"script not found: {path}")
+    sys.exit(1)
+
+text = path.read_text(encoding="utf-8")
+lines = text.splitlines()
+
+if not lines or lines[0] != "#!/usr/bin/env bash":
+    problems.append("script must start with #!/usr/bin/env bash")
+if "set -euo pipefail" not in text:
+    problems.append("script must enable set -euo pipefail")
+
+for line_no, line in enumerate(lines, start=1):
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#"):
+        continue
+    if re.search(r"\bgit\s+(add|branch|checkout|commit|merge|mv|push|rebase|reset|restore|stash|switch|tag)\b", stripped):
+        problems.append(f"line {line_no} uses a repository-mutating git command")
+    if re.search(r"\bgh\s+pr\s+(create|edit|merge|ready|review)\b", stripped):
+        problems.append(f"line {line_no} uses PR mutation")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+PY
+)
+
+  if [ -z "$errors" ]; then
+    _pass
+  else
+    _fail "script safety assertion failed: $errors"
+  fi
+}
+
+assert_bash_syntax_file() {
+  local script_file="$1"
+  if [ -f "$script_file" ] && bash -n "$script_file" >/dev/null 2>&1; then
+    _pass
+  else
+    _fail "script must pass bash -n"
+  fi
+}
+
 snapshot_tree() {
   local root="$1"
   python3 - "$root" <<'PY'
@@ -356,6 +780,9 @@ assert_valid_json_file "$LAST_STDOUT"
 set_test "valid-real stdout conforms to planner envelope schema"
 assert_plan_schema_file "$LAST_STDOUT"
 
+set_test "valid-real payload preserves ordered increments and advisory counts"
+assert_payload_expectation_file "$LAST_STDOUT" "valid-real" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/valid-real"
+
 set_test "valid-real stderr capture exists"
 assert_file_exists "$LAST_STDERR" "stderr capture"
 
@@ -363,27 +790,169 @@ set_test "valid-real fixture remains read-only"
 valid_snapshot_after=$(snapshot_tree "$FIXTURE_ROOT/valid-real")
 assert_snapshot_unchanged "$valid_snapshot_before" "$valid_snapshot_after"
 
-section "fixture exit-code front door (T005-T013)"
+section "checkbox status and parallel metadata (T014)"
+
+run_planner_capture "checkbox-state" "$FIXTURE_ROOT/checkbox-state"
+
+set_test "checkbox-state exits 0"
+assert_captured_exit "0"
+
+set_test "checkbox-state stdout is valid JSON"
+assert_valid_json_file "$LAST_STDOUT"
+
+set_test "checkbox-state stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
+set_test "checkbox-state preserves todo, done, [X], and [P] metadata"
+assert_payload_expectation_file "$LAST_STDOUT" "checkbox-state" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/checkbox-state"
+
+section "invalid-plan diagnostics (T016)"
 
 run_planner_capture "missing-headings" "$FIXTURE_ROOT/missing-headings"
 set_test "missing-headings exits 1"
 assert_captured_exit "1"
 
+set_test "missing-headings stdout is structured invalid_plan JSON"
+assert_valid_json_file "$LAST_STDOUT"
+
+set_test "missing-headings reports missing_required_heading"
+assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "missing_required_heading" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-headings"
+
+run_planner_capture "invalid-dependency" "$FIXTURE_ROOT/invalid-dependency"
+set_test "invalid-dependency exits 1"
+assert_captured_exit "1"
+
+set_test "invalid-dependency reports unknown_increment and contradictory order"
+assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "unknown_increment,contradictory_increment_order" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-dependency"
+
+run_planner_capture "dependency-cycle" "$FIXTURE_ROOT/dependency-cycle"
+set_test "dependency-cycle exits 1"
+assert_captured_exit "1"
+
+set_test "dependency-cycle reports dependency_cycle details"
+assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "dependency_cycle" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/dependency-cycle"
+
+run_planner_capture "empty-increment" "$FIXTURE_ROOT/empty-increment"
+set_test "empty-increment exits 1"
+assert_captured_exit "1"
+
+set_test "empty-increment reports empty_increment details"
+assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "empty_increment" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/empty-increment"
+
+run_planner_capture "malformed-task" "$FIXTURE_ROOT/malformed-task"
+set_test "malformed-task exits 1"
+assert_captured_exit "1"
+
+set_test "malformed-task reports duplicate IDs and malformed task"
+assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "duplicate_task_id,duplicate_increment_id,malformed_task" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/malformed-task"
+
+section "warning diagnostics (T017)"
+
 run_planner_capture "invalid-reference" "$FIXTURE_ROOT/invalid-reference"
 set_test "invalid-reference warning fixture exits 0"
 assert_captured_exit "0"
+
+set_test "invalid-reference warning fixture remains status ok"
+assert_payload_expectation_file "$LAST_STDOUT" "invalid-reference" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-reference"
+
+run_planner_capture "missing-references" "$FIXTURE_ROOT/missing-references"
+set_test "missing-references warning fixture exits 0"
+assert_captured_exit "0"
+
+set_test "missing-references warning fixture remains status ok"
+assert_payload_expectation_file "$LAST_STDOUT" "missing-references" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-references"
+
+section "input errors (T018)"
 
 run_planner_capture "invalid-invocation"
 set_test "no-argument invocation exits 2"
 assert_captured_exit "2"
 
-section "determinism and generated performance input (T003)"
+set_test "no-argument invocation emits structured input_error JSON"
+assert_error_payload_file "$LAST_STDOUT" "input_error" "invalid_invocation"
+
+set_test "no-argument invocation emits concise stderr"
+assert_stderr_concise_file "$LAST_STDERR"
+
+run_planner_capture "too-many-arguments" "$FIXTURE_ROOT/valid-real" "$FIXTURE_ROOT/checkbox-state"
+set_test "too-many-arguments exits 2"
+assert_captured_exit "2"
+
+set_test "too-many-arguments emits structured input_error JSON"
+assert_error_payload_file "$LAST_STDOUT" "input_error" "invalid_invocation"
+
+missing_feature="$SANDBOX/no-such-feature"
+run_planner_capture "missing-feature-dir" "$missing_feature"
+set_test "missing feature directory exits 2"
+assert_captured_exit "2"
+
+set_test "missing feature directory emits feature_dir_not_found"
+assert_error_payload_file "$LAST_STDOUT" "input_error" "feature_dir_not_found"
+
+unreadable_feature="$SANDBOX/unreadable-feature"
+mkdir -p "$unreadable_feature"
+chmod 000 "$unreadable_feature"
+run_planner_capture "unreadable-feature-dir" "$unreadable_feature"
+chmod 700 "$unreadable_feature"
+set_test "unreadable feature directory exits 2"
+assert_captured_exit "2"
+
+set_test "unreadable feature directory emits feature_dir_unreadable"
+assert_error_payload_file "$LAST_STDOUT" "input_error" "feature_dir_unreadable"
+
+missing_tasks_feature="$SANDBOX/missing-tasks-feature"
+mkdir -p "$missing_tasks_feature"
+run_planner_capture "missing-tasks-file" "$missing_tasks_feature"
+set_test "missing tasks.md exits 2"
+assert_captured_exit "2"
+
+set_test "missing tasks.md emits tasks_file_missing"
+assert_error_payload_file "$LAST_STDOUT" "input_error" "tasks_file_missing"
+
+unreadable_tasks_feature="$SANDBOX/unreadable-tasks-feature"
+mkdir -p "$unreadable_tasks_feature"
+printf '# Tasks: unreadable\n' >"$unreadable_tasks_feature/tasks.md"
+chmod 000 "$unreadable_tasks_feature/tasks.md"
+run_planner_capture "unreadable-tasks-file" "$unreadable_tasks_feature"
+chmod 600 "$unreadable_tasks_feature/tasks.md"
+set_test "unreadable tasks.md exits 2"
+assert_captured_exit "2"
+
+set_test "unreadable tasks.md emits tasks_file_unreadable"
+assert_error_payload_file "$LAST_STDOUT" "input_error" "tasks_file_unreadable"
+
+section "script safety (T019)"
+
+set_test "Planner script is executable"
+assert_file_executable "$SCRIPT" "plan-layers.sh"
+
+set_test "Planner script passes bash syntax validation"
+assert_bash_syntax_file "$SCRIPT"
+
+set_test "Planner script uses safe Bash entrypoint conventions"
+assert_script_safety_file "$SCRIPT"
+
+section "determinism and generated performance input (T015)"
 
 determinism_ok="true"
 first_stdout=""
+determinism_snapshot_before=$(snapshot_tree "$FIXTURE_ROOT/valid-real")
 for run in 1 2 3 4 5; do
   run_planner_capture "determinism-$run" "$FIXTURE_ROOT/valid-real"
   if [ "$(cat "$LAST_EXIT_FILE")" != "0" ]; then
+    determinism_ok="false"
+  fi
+  if ! python3 -m json.tool "$LAST_STDOUT" >/dev/null 2>&1; then
+    determinism_ok="false"
+  elif ! python3 - "$LAST_STDOUT" <<'PY' >/dev/null 2>&1
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    data = json.load(handle)
+assert data["status"] == "ok"
+assert data["summary"]["task_count"] == 8
+PY
+  then
     determinism_ok="false"
   fi
   if [ "$run" -eq 1 ]; then
@@ -392,6 +961,7 @@ for run in 1 2 3 4 5; do
     determinism_ok="false"
   fi
 done
+determinism_snapshot_after=$(snapshot_tree "$FIXTURE_ROOT/valid-real")
 
 set_test "valid-real emits byte-stable output across five runs"
 if [ "$determinism_ok" = "true" ]; then
@@ -399,6 +969,9 @@ if [ "$determinism_ok" = "true" ]; then
 else
   _fail "five runs must all exit 0 and produce identical stdout"
 fi
+
+set_test "valid-real remains read-only across five repeated runs"
+assert_snapshot_unchanged "$determinism_snapshot_before" "$determinism_snapshot_after"
 
 perf_feature="$SANDBOX/generated-200-task"
 generate_performance_fixture "$perf_feature"
@@ -408,6 +981,21 @@ elapsed_ms=$(cat "$LAST_ELAPSED_FILE")
 
 set_test "generated 200-task fixture exits 0"
 assert_captured_exit "0"
+
+set_test "generated 200-task stdout is valid status ok JSON"
+if python3 - "$LAST_STDOUT" <<'PY' >/dev/null 2>&1
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    data = json.load(handle)
+assert data["status"] == "ok"
+assert data["summary"]["task_count"] == 200
+PY
+then
+  _pass
+else
+  _fail "generated 200-task output must be status ok with 200 tasks"
+fi
 
 set_test "generated 200-task fixture completes under 1000ms"
 if [ "$elapsed_ms" -lt 1000 ]; then

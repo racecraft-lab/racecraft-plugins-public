@@ -8,6 +8,8 @@
 
 **Reviewability**: Keep runtime changes to the planner script plus scoped autopilot prose. Fixture volume is intentional contract coverage; do not expand into PRSG-009 branch, PR body, restack, or stacked-PR emission behavior.
 
+**Reviewability scope note (T020)**: `reviewability-gate.sh tasks specs/prsg-008-layer-planner` currently reports `status=block` for the full task plan (`reviewable_loc=1800`, `total_files=48`, `primary_surface_count=6`). Keep the implementation scope to one planner script plus scoped autopilot handoff prose, treat Layer 4 tests/fixtures as intentional contract coverage, and keep PRSG-009 branch, PR body, restack, and stacked-PR emission behavior out of scope.
+
 **Organization**: Tasks are grouped by independently testable user story, with Foundation work completing the RED fixtures and contract harness before any production parser logic.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -42,13 +44,13 @@
 
 **CRITICAL**: No parser implementation should begin until these tests fail for the expected reasons.
 
-- [ ] T014 Encode RED success assertions for valid JSON, schema conformance, `status=ok`, ordered increments, embedded tasks, source lines, checkbox status, `[P]`, and advisory counts in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T015 Encode RED determinism, no-write, and generated 200-task under-1-second performance assertions for five repeated valid runs in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T016 Encode RED invalid-plan assertions for missing headings, invalid dependencies, dependency cycles, empty increments, duplicate IDs, contradictory order, and malformed task-like lines in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T017 Encode RED warning assertions for `reference_not_found` and `task_without_references` without failing otherwise valid plans in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T018 Encode RED input-error assertions for invalid invocation, missing feature directory, unreadable feature directory, missing `tasks.md`, unreadable `tasks.md`, structured stdout JSON, concise stderr, and exit `2` in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T019 Add Bash safety and executable-bit assertions for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` to `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T020 Verify the planned runtime/test/docs scope against the speckit-pro-reviewability budget and record any required scope note in `specs/prsg-008-layer-planner/tasks.md`
+- [x] T014 Encode RED success assertions for valid JSON, schema conformance, `status=ok`, ordered increments, embedded tasks, source lines, checkbox status, `[P]`, and advisory counts in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T015 Encode RED determinism, no-write, and generated 200-task under-1-second performance assertions for five repeated valid runs in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T016 Encode RED invalid-plan assertions for missing headings, invalid dependencies, dependency cycles, empty increments, duplicate IDs, contradictory order, and malformed task-like lines in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T017 Encode RED warning assertions for `reference_not_found` and `task_without_references` without failing otherwise valid plans in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T018 Encode RED input-error assertions for invalid invocation, missing feature directory, unreadable feature directory, missing `tasks.md`, unreadable `tasks.md`, structured stdout JSON, concise stderr, and exit `2` in `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T019 Add Bash safety and executable-bit assertions for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` to `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T020 Verify the planned runtime/test/docs scope against the speckit-pro-reviewability budget and record any required scope note in `specs/prsg-008-layer-planner/tasks.md`
 
 **Checkpoint**: RED fixtures and Layer 4 assertions are committed in the task plan before production parser logic starts.
 
