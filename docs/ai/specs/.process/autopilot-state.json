@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T03:04:00Z",
-  "active_step": "Phase 7: Polish and validation (T041-T045)",
+  "updated_at": "2026-06-10T03:15:00Z",
+  "active_step": "Post: Doctor Extension Check",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -223,11 +223,12 @@
     },
     {
       "step": "Phase 7: Polish and validation (T041-T045)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Recorded validation evidence in the workflow. bash -n/executable checks passed; Layer 4 passed 1013/1013, Layer 1 passed 887/887, and default suite passed 2090/2090."
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",

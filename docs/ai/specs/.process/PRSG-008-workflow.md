@@ -414,6 +414,12 @@ implementation and surface the planner diagnostics.
 **Current run:** Skipped. The recorded route is `one-navigable-PR`, so
 `plan-layers.sh` is not required before Analyze/Implementation for this run.
 
+**Implemented behavior:** For future `split-PR` routes, autopilot now runs
+`plan-layers.sh` immediately after route recording and before Analyze or
+implementation. Exit `0` persists the full layer-plan envelope and carries
+warnings forward; exit `1`/`2` stops before implementation with planner
+diagnostics. Non-split routes keep the explicit skipped state.
+
 ---
 
 ## Phase 6: Analyze
@@ -490,21 +496,43 @@ markers. Schema JSON parses with `jq empty`.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | Pending | 0 | Contract and fixtures. |
-| Parser | Pending | 0 | CLI, headings, tasks, DAG, path/test extraction. |
-| Autopilot wiring | Pending | 0 | Run after atomicity route, before implementation. |
-| Polish | Pending | 0 | Docs, Codex mirror, validation. |
+| Foundation | T001-T020 | 20 | Contract, fixtures, and RED harness landed; RED evidence progressed from `6/15` to `8/50` before production script creation. |
+| Parser | T021-T036 | 16 | `plan-layers.sh` implements input errors, stable envelope, ordered increments, references, warnings, invalid-plan diagnostics, and schema-shaped output. |
+| Autopilot wiring | T037-T040 | 4 | Claude and Codex skill surfaces run planner only for `split-PR`; Codex eval id 30 covers stop/continue/skip behavior. |
+| Polish | T041-T045 | 5 | Validation evidence captured below; PRSG-009 branch/PR emission remains out of scope. |
+
+### Validation Evidence
+
+| Command | Result |
+|---------|--------|
+| `bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
+| `test -x speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
+| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Passed: `50/50` |
+| `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1013/1013` |
+| `bash tests/speckit-pro/run-all.sh --layer 1` | Passed: `887/887` |
+| `bash tests/speckit-pro/run-all.sh` | Passed: `2090/2090` |
+
+### Traceability
+
+| Requirement area | Evidence |
+|------------------|----------|
+| Stable planner envelope and read-only behavior | `plan-layers.sh`, contract schema, and `test-plan-layers.sh` valid/determinism/read-only assertions. |
+| Ordered increments and task metadata | `valid-real`, `checkbox-state`, and generated 200-task fixture assertions. |
+| Warning behavior | `invalid-reference` and `missing-references` fixtures exit `0` with structured warnings. |
+| Invalid-plan and input-error diagnostics | `missing-headings`, `invalid-dependency`, `dependency-cycle`, `empty-increment`, `malformed-task`, and input-error assertions. |
+| Autopilot handoff | Claude/Codex skill prose and Codex eval id 30 cover `split-PR` run, warning carry-forward, exit `1`/`2` stop, and non-split skip. |
+| PRSG-009 non-goals | Planner and skill prose explicitly avoid branch creation, PR body generation, restacking, and stacked-PR topology. |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] `plan-layers.sh` passes `bash -n` and is executable.
-- [ ] Layer 4 planner tests pass.
-- [ ] Layer 1 structural validation passes.
-- [ ] No workflow placeholders or unresolved contract tokens remain.
-- [ ] The planner is read-only under fixture runs.
-- [ ] PRSG-009 deferred branch/PR emission remains out of scope.
+- [x] `plan-layers.sh` passes `bash -n` and is executable.
+- [x] Layer 4 planner tests pass.
+- [x] Layer 1 structural validation passes.
+- [x] No workflow placeholders or unresolved contract tokens remain.
+- [x] The planner is read-only under fixture runs.
+- [x] PRSG-009 deferred branch/PR emission remains out of scope.
 
 ---
 

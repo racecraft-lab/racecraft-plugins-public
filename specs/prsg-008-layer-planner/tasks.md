@@ -144,11 +144,11 @@
 
 **Purpose**: Verify the complete PRSG-008 slice and keep release notes scoped to planner behavior.
 
-- [ ] T041 [P] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` and executable-bit checks for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T042 [P] Run `bash tests/speckit-pro/run-all.sh --layer 4` and capture planner fixture coverage plus the 200-task performance assertion for `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
-- [ ] T043 [P] Run `bash tests/speckit-pro/run-all.sh --layer 1` to verify structural plugin packaging for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
-- [ ] T044 Run `bash tests/speckit-pro/run-all.sh` to verify the deterministic default suite from the repository root
-- [ ] T045 Update implementation evidence, FR traceability, validation commands, warning behavior, and PRSG-009 non-goals in `docs/ai/specs/.process/PRSG-008-workflow.md`
+- [x] T041 [P] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` and executable-bit checks for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T042 [P] Run `bash tests/speckit-pro/run-all.sh --layer 4` and capture planner fixture coverage plus the 200-task performance assertion for `tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+- [x] T043 [P] Run `bash tests/speckit-pro/run-all.sh --layer 1` to verify structural plugin packaging for `speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh`
+- [x] T044 Run `bash tests/speckit-pro/run-all.sh` to verify the deterministic default suite from the repository root
+- [x] T045 Update implementation evidence, FR traceability, validation commands, warning behavior, and PRSG-009 non-goals in `docs/ai/specs/.process/PRSG-008-workflow.md`
 
 ---
 
