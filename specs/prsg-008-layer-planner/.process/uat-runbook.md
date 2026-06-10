@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | prsg-008-layer-planner |
 | Branch | prsg-008-layer-planner |
-| PR | Created after this runbook is committed |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/138 |
 | Generated from | 2026-06-10T02:24:18Z |
 
 

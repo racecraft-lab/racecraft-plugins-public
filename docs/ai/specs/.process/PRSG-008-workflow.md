@@ -555,6 +555,7 @@ footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
 | Self-Review | Completed; see `## Self-Review`. |
 | UAT Runbook Generation | Completed: `specs/prsg-008-layer-planner/.process/uat-runbook.md` generated and locally polished because `uat-runbook-author` is not registered in this Codex session. |
 | PR Body Generation | Completed: generated via `generate-pr-body.sh`, filled in plain-English sections, and verified `speckit-pro-review-packet-source` plus `## UAT Runbook`. |
+| PR Creation | Completed: https://github.com/racecraft-lab/racecraft-plugins-public/pull/138 |
 
 ## Self-Review
 

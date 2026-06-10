@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T04:07:08Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-06-10T04:09:00Z",
+  "active_step": "Post: Review Remediation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -278,11 +278,12 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Created PR https://github.com/racecraft-lab/racecraft-plugins-public/pull/138 using the generated PR body."
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Retrospective",
