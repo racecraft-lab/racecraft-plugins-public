@@ -33,8 +33,8 @@ planner contract choices captured during setup.
 | Clarify | `/speckit-clarify` | Complete | JSON envelope, diagnostic codes, and autopilot hook behavior pinned; G2 passed. |
 | Plan | `/speckit-plan` | Complete | Parser approach, contract artifacts, fixtures, and autopilot hook design created; G3 passed. |
 | Checklist | `/speckit-checklist` | Complete | api-contracts, error-handling, and data-integrity checklists complete; G4 passed. |
-| Tasks | `/speckit-tasks` | In Progress | Generate TDD tasks for schema, fixtures, script, docs, and Codex parity. |
-| Analyze | `/speckit-analyze` | Pending | Check design-concept/spec/plan/tasks consistency and downstream PRSG-009 contract safety. |
+| Tasks | `/speckit-tasks` | Complete | 45 TDD-first tasks generated across 7 phases; G5 passed. |
+| Analyze | `/speckit-analyze` | In Progress | Check design-concept/spec/plan/tasks consistency and downstream PRSG-009 contract safety. |
 | Implement | `/speckit-implement` | Pending | Implement via Layer 4 RED to GREEN, then L1/L4/L5 validation. |
 
 ### Phase Gates
@@ -372,10 +372,11 @@ Focus on PRSG-008 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 45 |
+| Phases | 7 |
+| Parallel Opportunities | 18 |
+| User Stories Covered | US1, US2, US3, US4 |
+| G5 | Passed: `validate-gate.sh G5 specs/prsg-008-layer-planner` found 45 tasks. |
 
 ---
 
@@ -390,10 +391,10 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/prsg-
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | Pending | Expected likely `split-PR` or `one-navigable-PR` depending on task seams. |
-| Releasable | Pending | `true` unless destructive/concurrency signatures appear. |
-| Signals | Pending | Detector findings from PRSG-007. |
-| Warnings | Pending | Release-safety warnings, if any. |
+| Route | `one-navigable-PR` | Planner execution is not required for this autopilot run because split planning is relevant only for `split-PR`. |
+| Releasable | `true` | No destructive or concurrency-sensitive release warning was emitted. |
+| Signals | `change-shape:modify-heavy` | PRSG-007 structural detector output. |
+| Warnings | `[]` | No release-safety warnings. |
 
 ---
 
@@ -409,6 +410,9 @@ bash speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh specs/prsg-008-
 Planner output is read-only JSON to stdout. If atomicity routing says split
 planning is relevant and this command exits `1`, autopilot must stop before
 implementation and surface the planner diagnostics.
+
+**Current run:** Skipped. The recorded route is `one-navigable-PR`, so
+`plan-layers.sh` is not required before Analyze/Implementation for this run.
 
 ---
 

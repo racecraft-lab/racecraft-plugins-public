@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T02:06:40Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-10T02:16:11Z",
+  "active_step": "Phase 6: Analyze",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -65,6 +65,19 @@
     "safeToApplyCleanup": false,
     "excludedCurrentSpec": "specs/prsg-008-layer-planner",
     "note": "PRSG-007 and PRSG-011 were already archived and cleaned up in .specify/memory/archive-reports/2026-06-09-prsg-post-merge-hygiene.md. No active specs cleanup was applied for PRSG-008."
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "Recorded route is one-navigable-PR; PRSG-008 planner handoff runs only for split-PR."
   },
   "plan": [
     {
@@ -156,11 +169,14 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "summary": "Generated 45 tasks across 7 phases with 18 parallel opportunities and US1-US4 coverage."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -171,7 +187,31 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Setup RED fixtures and contract harness (T001-T013)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Foundational RED assertions and script safety (T014-T020)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US1 stable layer-plan envelope (T021-T025)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US2 ordered increment parser (T026-T031)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US3 malformed-plan diagnostics (T032-T036)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US4 autopilot layer-plan gate (T037-T040)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Polish and validation (T041-T045)",
       "status": "pending"
     },
     {
