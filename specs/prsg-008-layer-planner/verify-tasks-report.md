@@ -44,9 +44,11 @@ Validation commands run:
 | `test -x speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
 | `bash speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh tests/speckit-pro/layer4-scripts/fixtures/plan-layers/valid-real` | Exit `0`, status `ok` JSON |
 | `speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/prsg-008-layer-planner` | Expected `status=block`, matching T020 note: `reviewable_loc=1800`, `total_files=48`, `primary_surface_count=6` |
-| `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1015/1015` |
+| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Passed: `66/66` |
+| `bash speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh specs/prsg-008-layer-planner` | Passed: `status=ok`, 6 increments, 45 tasks |
+| `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1029/1029` |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | Passed: `887/887` |
-| `bash tests/speckit-pro/run-all.sh` | Passed: `2092/2092` |
+| `bash tests/speckit-pro/run-all.sh` | Passed: `2106/2106` |
 
 ## Flagged Items
 

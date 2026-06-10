@@ -912,12 +912,18 @@ assert_captured_exit "1"
 set_test "missing-headings stdout is structured invalid_plan JSON"
 assert_valid_json_file "$LAST_STDOUT"
 
+set_test "missing-headings stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 set_test "missing-headings reports missing_required_heading"
 assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "missing_required_heading" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-headings"
 
 run_planner_capture "invalid-dependency" "$FIXTURE_ROOT/invalid-dependency"
 set_test "invalid-dependency exits 1"
 assert_captured_exit "1"
+
+set_test "invalid-dependency stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
 
 set_test "invalid-dependency reports unknown_increment and contradictory order"
 assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "unknown_increment,contradictory_increment_order" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-dependency"
@@ -926,6 +932,9 @@ run_planner_capture "dependency-cycle" "$FIXTURE_ROOT/dependency-cycle"
 set_test "dependency-cycle exits 1"
 assert_captured_exit "1"
 
+set_test "dependency-cycle stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 set_test "dependency-cycle reports dependency_cycle details"
 assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "dependency_cycle" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/dependency-cycle"
 
@@ -933,12 +942,18 @@ run_planner_capture "empty-increment" "$FIXTURE_ROOT/empty-increment"
 set_test "empty-increment exits 1"
 assert_captured_exit "1"
 
+set_test "empty-increment stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 set_test "empty-increment reports empty_increment details"
 assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "empty_increment" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/empty-increment"
 
 run_planner_capture "malformed-task" "$FIXTURE_ROOT/malformed-task"
 set_test "malformed-task exits 1"
 assert_captured_exit "1"
+
+set_test "malformed-task stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
 
 set_test "malformed-task reports duplicate IDs and malformed task"
 assert_error_payload_file "$LAST_STDOUT" "invalid_plan" "duplicate_task_id,duplicate_increment_id,malformed_task" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/malformed-task"
@@ -949,6 +964,9 @@ run_planner_capture "invalid-reference" "$FIXTURE_ROOT/invalid-reference"
 set_test "invalid-reference warning fixture exits 0"
 assert_captured_exit "0"
 
+set_test "invalid-reference stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 set_test "invalid-reference warning fixture remains status ok"
 assert_payload_expectation_file "$LAST_STDOUT" "invalid-reference" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/invalid-reference"
 
@@ -956,12 +974,18 @@ run_planner_capture "missing-references" "$FIXTURE_ROOT/missing-references"
 set_test "missing-references warning fixture exits 0"
 assert_captured_exit "0"
 
+set_test "missing-references stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 set_test "missing-references warning fixture remains status ok"
 assert_payload_expectation_file "$LAST_STDOUT" "missing-references" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/missing-references"
 
 run_planner_capture "path-normalization" "$FIXTURE_ROOT/path-normalization"
 set_test "path-normalization warning fixture exits 0"
 assert_captured_exit "0"
+
+set_test "path-normalization stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
 
 set_test "path-normalization normalizes, deduplicates, and warns for out-of-tree references"
 assert_payload_expectation_file "$LAST_STDOUT" "path-normalization" "tests/speckit-pro/layer4-scripts/fixtures/plan-layers/path-normalization"
@@ -975,6 +999,9 @@ assert_captured_exit "2"
 set_test "no-argument invocation emits structured input_error JSON"
 assert_error_payload_file "$LAST_STDOUT" "input_error" "invalid_invocation"
 
+set_test "no-argument invocation stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 set_test "no-argument invocation emits concise stderr"
 assert_stderr_concise_file "$LAST_STDERR"
 
@@ -985,6 +1012,9 @@ assert_captured_exit "2"
 set_test "too-many-arguments emits structured input_error JSON"
 assert_error_payload_file "$LAST_STDOUT" "input_error" "invalid_invocation"
 
+set_test "too-many-arguments stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 missing_feature="$SANDBOX/no-such-feature"
 run_planner_capture "missing-feature-dir" "$missing_feature"
 set_test "missing feature directory exits 2"
@@ -992,6 +1022,9 @@ assert_captured_exit "2"
 
 set_test "missing feature directory emits feature_dir_not_found"
 assert_error_payload_file "$LAST_STDOUT" "input_error" "feature_dir_not_found"
+
+set_test "missing feature directory stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
 
 unreadable_feature="$SANDBOX/unreadable-feature"
 mkdir -p "$unreadable_feature"
@@ -1004,6 +1037,9 @@ assert_captured_exit "2"
 set_test "unreadable feature directory emits feature_dir_unreadable"
 assert_error_payload_file "$LAST_STDOUT" "input_error" "feature_dir_unreadable"
 
+set_test "unreadable feature directory stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
+
 missing_tasks_feature="$SANDBOX/missing-tasks-feature"
 mkdir -p "$missing_tasks_feature"
 run_planner_capture "missing-tasks-file" "$missing_tasks_feature"
@@ -1012,6 +1048,9 @@ assert_captured_exit "2"
 
 set_test "missing tasks.md emits tasks_file_missing"
 assert_error_payload_file "$LAST_STDOUT" "input_error" "tasks_file_missing"
+
+set_test "missing tasks.md stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
 
 unreadable_tasks_feature="$SANDBOX/unreadable-tasks-feature"
 mkdir -p "$unreadable_tasks_feature"
@@ -1024,6 +1063,9 @@ assert_captured_exit "2"
 
 set_test "unreadable tasks.md emits tasks_file_unreadable"
 assert_error_payload_file "$LAST_STDOUT" "input_error" "tasks_file_unreadable"
+
+set_test "unreadable tasks.md stdout conforms to planner envelope schema"
+assert_plan_schema_file "$LAST_STDOUT"
 
 section "script safety (T019)"
 

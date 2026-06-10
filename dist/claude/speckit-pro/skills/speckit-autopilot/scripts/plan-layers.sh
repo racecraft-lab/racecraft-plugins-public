@@ -2,32 +2,137 @@
 # plan-layers.sh - Read-only PRSG-008 layer planner for SpecKit tasks.md files.
 
 set -euo pipefail
+shopt -s extglob
 
 CALLER_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)"
+CALLER_ROOT="$(cd "$CALLER_ROOT" && pwd -P)"
 REPO_ROOT="$CALLER_ROOT"
 
 json_value() {
   printf '%s' "$1" | jq -Rs .
 }
 
-normalize_for_display() {
-  python3 - "$REPO_ROOT" "$1" <<'PY'
-from pathlib import Path
-import os
-import sys
+trim() {
+  local value="$1"
+  value="${value##+([[:space:]])}"
+  value="${value%%+([[:space:]])}"
+  printf '%s' "$value"
+}
 
-root = Path(sys.argv[1]).resolve()
-raw = sys.argv[2]
-path = Path(raw)
-try:
-    resolved = path.resolve() if path.is_absolute() else (root / path).resolve()
-    if os.path.commonpath([str(root), str(resolved)]) == str(root):
-        print(resolved.relative_to(root).as_posix())
-    else:
-        print(path.as_posix())
-except Exception:
-    print(path.as_posix())
-PY
+trim_var() {
+  local -n ref="$1"
+  ref="${ref##+([[:space:]])}"
+  ref="${ref%%+([[:space:]])}"
+}
+
+absolute_path() {
+  local raw="$1" path dir base tail
+  if [[ "$raw" = /* ]]; then
+    path="$raw"
+  else
+    path="$REPO_ROOT/$raw"
+  fi
+
+  if [ -d "$path" ]; then
+    (cd "$path" && pwd -P)
+    return
+  fi
+
+  dir="$(dirname "$path")"
+  base="$(basename "$path")"
+  if [ -d "$dir" ]; then
+    printf '%s/%s\n' "$(cd "$dir" && pwd -P)" "$base"
+    return
+  fi
+
+  tail="$base"
+  while [ ! -d "$dir" ] && [ "$dir" != "/" ]; do
+    tail="$(basename "$dir")/$tail"
+    dir="$(dirname "$dir")"
+  done
+
+  if [ -d "$dir" ]; then
+    printf '%s/%s\n' "$(cd "$dir" && pwd -P)" "$tail"
+  else
+    printf '%s\n' "$path"
+  fi
+}
+
+normalize_for_display() {
+  local raw="$1" resolved
+  resolved="$(absolute_path "$raw")"
+  case "$resolved" in
+    "$REPO_ROOT")
+      printf '.\n'
+      ;;
+    "$REPO_ROOT"/*)
+      printf '%s\n' "${resolved#"$REPO_ROOT"/}"
+      ;;
+    *)
+      printf '%s\n' "$raw"
+      ;;
+  esac
+}
+
+source_json() {
+  local path="$1" line="${2:-}" heading="${3:-}" line_json
+  if [ -n "$line" ]; then
+    line_json="$line"
+  else
+    line_json=null
+  fi
+
+  if [ -n "$heading" ]; then
+    jq -cn --arg path "$path" --argjson line "$line_json" --arg heading "$heading" \
+      '{path: $path, line: $line, heading: $heading}'
+  else
+    jq -cn --arg path "$path" --argjson line "$line_json" \
+      '{path: $path, line: $line}'
+  fi
+}
+
+diagnostic_json() {
+  local code="$1" severity="$2" message="$3" line="$4" details_json="$5"
+  local src
+  src="$(source_json "$TASKS_REL" "$line")"
+  jq -cn \
+    --arg code "$code" \
+    --arg severity "$severity" \
+    --arg message "$message" \
+    --argjson source "$src" \
+    --argjson details "$details_json" \
+    '{
+      code: $code,
+      severity: $severity,
+      message: $message,
+      source: $source,
+      details: $details
+    }'
+}
+
+json_array_from_json_items() {
+  if [ "$#" -eq 0 ]; then
+    printf '[]'
+  else
+    printf '%s\n' "$@" | jq -s '.'
+  fi
+}
+
+json_array_from_values() {
+  if [ "$#" -eq 0 ]; then
+    printf '[]'
+  else
+    printf '%s\n' "$@" | jq -Rsc 'split("\n") | map(select(length > 0)) | unique | sort'
+  fi
+}
+
+values_list_from_args() {
+  if [ "$#" -eq 0 ]; then
+    printf ''
+  else
+    local IFS=$'\n'
+    printf '%s' "$*"
+  fi
 }
 
 emit_input_error() {
@@ -35,13 +140,13 @@ emit_input_error() {
   local feature_json tasks_json source_path_json
 
   if [ -n "$feature" ]; then
-    feature_json=$(json_value "$(normalize_for_display "$feature")")
+    feature_json="$(json_value "$(normalize_for_display "$feature")")"
   else
     feature_json=null
   fi
 
   if [ -n "$tasks" ]; then
-    tasks_json=$(json_value "$(normalize_for_display "$tasks")")
+    tasks_json="$(json_value "$(normalize_for_display "$tasks")")"
     source_path_json="$tasks_json"
   else
     tasks_json=null
@@ -89,7 +194,8 @@ emit_input_error() {
 }
 
 if [ "$#" -ne 1 ]; then
-  details=$(jq -cn --argjson received "$#" '{expected_args: 1, received_args: $received}')
+  details="$(jq -cn --argjson received "$#" '{expected_args: 1, received_args: $received}')"
+  TASKS_REL=null
   emit_input_error "invalid_invocation" "Usage: plan-layers.sh <feature-dir>" "" "" "$details"
 fi
 
@@ -97,613 +203,697 @@ FEATURE_DIR="$1"
 TASKS_FILE="$FEATURE_DIR/tasks.md"
 
 if [ ! -e "$FEATURE_DIR" ]; then
-  details=$(jq -cn --arg feature_dir "$(normalize_for_display "$FEATURE_DIR")" '{feature_dir: $feature_dir}')
+  details="$(jq -cn --arg feature_dir "$(normalize_for_display "$FEATURE_DIR")" '{feature_dir: $feature_dir}')"
+  TASKS_REL="$(normalize_for_display "$TASKS_FILE")"
   emit_input_error "feature_dir_not_found" "Feature directory not found: $(normalize_for_display "$FEATURE_DIR")" "$FEATURE_DIR" "" "$details"
 fi
 
 if [ ! -d "$FEATURE_DIR" ] || [ ! -r "$FEATURE_DIR" ] || [ ! -x "$FEATURE_DIR" ]; then
-  details=$(jq -cn --arg feature_dir "$(normalize_for_display "$FEATURE_DIR")" '{feature_dir: $feature_dir}')
+  details="$(jq -cn --arg feature_dir "$(normalize_for_display "$FEATURE_DIR")" '{feature_dir: $feature_dir}')"
+  TASKS_REL="$(normalize_for_display "$TASKS_FILE")"
   emit_input_error "feature_dir_unreadable" "Feature directory unreadable: $(normalize_for_display "$FEATURE_DIR")" "$FEATURE_DIR" "" "$details"
 fi
 
 REPO_ROOT="$(git -C "$FEATURE_DIR" rev-parse --show-toplevel 2>/dev/null || printf '%s\n' "$CALLER_ROOT")"
+REPO_ROOT="$(cd "$REPO_ROOT" && pwd -P)"
+FEATURE_REL="$(normalize_for_display "$FEATURE_DIR")"
+TASKS_REL="$(normalize_for_display "$TASKS_FILE")"
 
 if [ ! -e "$TASKS_FILE" ]; then
-  details=$(jq -cn --arg tasks_file "$(normalize_for_display "$TASKS_FILE")" '{tasks_file: $tasks_file}')
-  emit_input_error "tasks_file_missing" "tasks.md missing: $(normalize_for_display "$TASKS_FILE")" "$FEATURE_DIR" "$TASKS_FILE" "$details"
+  details="$(jq -cn --arg tasks_file "$TASKS_REL" '{tasks_file: $tasks_file}')"
+  emit_input_error "tasks_file_missing" "tasks.md missing: $TASKS_REL" "$FEATURE_DIR" "$TASKS_FILE" "$details"
 fi
 
 if [ ! -f "$TASKS_FILE" ] || [ ! -r "$TASKS_FILE" ]; then
-  details=$(jq -cn --arg tasks_file "$(normalize_for_display "$TASKS_FILE")" '{tasks_file: $tasks_file}')
-  emit_input_error "tasks_file_unreadable" "tasks.md unreadable: $(normalize_for_display "$TASKS_FILE")" "$FEATURE_DIR" "$TASKS_FILE" "$details"
+  details="$(jq -cn --arg tasks_file "$TASKS_REL" '{tasks_file: $tasks_file}')"
+  emit_input_error "tasks_file_unreadable" "tasks.md unreadable: $TASKS_REL" "$FEATURE_DIR" "$TASKS_FILE" "$details"
 fi
 
-planner_model=$(python3 - "$REPO_ROOT" "$FEATURE_DIR" "$TASKS_FILE" <<'PY'
-from __future__ import annotations
-
-import json
-import os
-import re
-import sys
-from pathlib import Path
-
-repo_root = Path(sys.argv[1]).resolve()
-feature_dir = Path(sys.argv[2]).resolve()
-tasks_file = Path(sys.argv[3]).resolve()
-
-
-def display_path(path: Path | str) -> str:
-    candidate = Path(path)
-    try:
-        resolved = candidate.resolve() if candidate.is_absolute() else (repo_root / candidate).resolve()
-        if os.path.commonpath([str(repo_root), str(resolved)]) == str(repo_root):
-            return resolved.relative_to(repo_root).as_posix()
-        return candidate.as_posix()
-    except Exception:
-        return candidate.as_posix()
-
-
-feature_rel = display_path(feature_dir)
-tasks_rel = display_path(tasks_file)
-lines = tasks_file.read_text(encoding="utf-8").splitlines()
-
-
-def source(line: int | None = None, heading: str | None = None, path: str | None = None) -> dict:
-    payload = {"path": tasks_rel if path is None else path, "line": line}
-    if heading is not None:
-        payload["heading"] = heading
-    return payload
-
-
-def diagnostic(code: str, severity: str, message: str, line: int | None, details: dict) -> dict:
-    return {
-        "code": code,
-        "severity": severity,
-        "message": message,
-        "source": source(line),
-        "details": details,
-    }
-
-
-errors: list[dict] = []
-warnings: list[dict] = []
-
-
-def label_to_id(label: str) -> str | None:
-    cleaned = re.sub(r"`|\*", "", label).strip()
-    cleaned = re.sub(r"\bunknown\b", "", cleaned, flags=re.IGNORECASE).strip()
-    if re.fullmatch(r"Foundation", cleaned, flags=re.IGNORECASE):
-        return "foundation"
-    if re.search(r"\bPolish\b", cleaned, flags=re.IGNORECASE):
-        return "polish"
-    match = re.search(r"\b(?:US|User Story)\s*([1-9][0-9]*)\b", cleaned, flags=re.IGNORECASE)
-    if match:
-        return f"us{match.group(1)}"
-    return None
-
-
-def increment_from_heading(line: str, line_no: int) -> dict | None:
-    text = line.strip()
-    if not text.startswith("## Phase "):
-        return None
-    if re.match(r"^## Phase [0-9]+:\s+Foundation\b", text):
-        return {
-            "id": "foundation",
-            "name": "Foundation",
-            "kind": "foundation",
-            "heading": text,
-            "line": line_no,
-            "tasks": [],
-        }
-    story = re.match(r"^## Phase [0-9]+:\s+User Story\s+([1-9][0-9]*)\s+-\s+(.+?)\s*(?:\((?:Priority|P):.*\))?\s*$", text)
-    if story:
-        number = story.group(1)
-        title = story.group(2).strip()
-        return {
-            "id": f"us{number}",
-            "name": f"User Story {number} - {title}",
-            "kind": "story",
-            "heading": text,
-            "line": line_no,
-            "tasks": [],
-        }
-    polish = re.match(r"^## Phase [0-9]+:\s+(.+Polish.+|Polish.+)$", text)
-    if polish:
-        return {
-            "id": "polish",
-            "name": polish.group(1).strip(),
-            "kind": "polish",
-            "heading": text,
-            "line": line_no,
-            "tasks": [],
-        }
-    return None
-
-
-sections: list[dict] = []
-section_by_id: dict[str, dict] = {}
-task_by_id: dict[str, dict] = {}
-current: dict | None = None
-
-supported_task = re.compile(r"^\s*-\s+\[( |x|X)\]\s+(T[0-9]{3,})\b(.*)$")
-task_like = re.compile(r"^\s*-\s+\[[^\]]+\]\s+T[0-9]{3,}\b")
-path_token = re.compile(r"`([^`]+)`|((?:\./|\.\./|[A-Za-z0-9_.-]+/)[A-Za-z0-9_./-]*[A-Za-z0-9_-](?:\.[A-Za-z0-9]+)?)")
-
-
-def clean_token(token: str) -> str:
-    return token.strip().strip("`'\"()[]{}<>,;:")
-
-
-def normalize_reference(raw: str) -> tuple[str | None, bool]:
-    token = clean_token(raw)
-    if not token:
-        return None, False
-    path = Path(token)
-    try:
-        resolved = (repo_root / path).resolve() if not path.is_absolute() else path.resolve()
-        if os.path.commonpath([str(repo_root), str(resolved)]) != str(repo_root):
-            return token, False
-        return resolved.relative_to(repo_root).as_posix(), True
-    except Exception:
-        return token, False
-
-
-def reference_kind(ref: str) -> str:
-    normalized = ref.lstrip("./")
-    if normalized.startswith("tests/") or "/tests/" in normalized or re.search(r"(^|/)test-[^/]+\.sh$", normalized):
-        return "test"
-    return "file"
-
-
-def extract_references(title: str, task_id: str, increment_id: str, line_no: int) -> tuple[list[str], list[str]]:
-    files: list[str] = []
-    tests: list[str] = []
-    seen_files: set[str] = set()
-    seen_tests: set[str] = set()
-
-    for match in path_token.finditer(title):
-        raw = match.group(1) or match.group(2) or ""
-        normalized, inside_root = normalize_reference(raw)
-        if not normalized:
-            continue
-        kind = reference_kind(normalized)
-        if not inside_root:
-            warnings.append(
-                diagnostic(
-                    "reference_not_found",
-                    "warning",
-                    f"{kind} reference is outside the worktree: {raw}",
-                    line_no,
-                    {"kind": kind, "reference": clean_token(raw), "task_id": task_id},
-                )
-            )
-            continue
-
-        target = repo_root / normalized
-        if not target.exists():
-            warnings.append(
-                diagnostic(
-                    "reference_not_found",
-                    "warning",
-                    f"{kind} reference not found: {normalized}",
-                    line_no,
-                    {"kind": kind, "reference": normalized, "task_id": task_id},
-                )
-            )
-
-        if kind == "test":
-            if normalized not in seen_tests:
-                seen_tests.add(normalized)
-                tests.append(normalized)
-        else:
-            if normalized not in seen_files:
-                seen_files.add(normalized)
-                files.append(normalized)
-
-    if not files and not tests:
-        warnings.append(
-            diagnostic(
-                "task_without_references",
-                "warning",
-                f"Task {task_id} has no file or test references.",
-                line_no,
-                {"task_id": task_id, "increment_id": increment_id},
-            )
-        )
-
-    return sorted(files), sorted(tests)
-
-
-def parse_task(line: str, line_no: int, section: dict) -> dict | None:
-    match = supported_task.match(line)
-    if not match:
-        if task_like.match(line):
-            errors.append(
-                diagnostic(
-                    "malformed_task",
-                    "error",
-                    "Task-like checkbox line uses unsupported syntax.",
-                    line_no,
-                    {"line_text": line.strip()},
-                )
-            )
-        return None
-
-    marker, task_id, rest = match.groups()
-    rest = rest.strip()
-    parallel = False
-    story = None
-    while True:
-        if rest.startswith("[P]"):
-            parallel = True
-            rest = rest[3:].strip()
-            continue
-        story_match = re.match(r"^\[US([1-9][0-9]*)\]\s*", rest, flags=re.IGNORECASE)
-        if story_match:
-            story = f"us{story_match.group(1)}"
-            rest = rest[story_match.end():].strip()
-            continue
-        break
-    if section["kind"] == "story" and story is None:
-        story = section["id"]
-
-    status = "done" if marker in {"x", "X"} else "todo"
-    files, tests = extract_references(rest, task_id, section["id"], line_no)
-    task = {
-        "id": task_id,
-        "title": rest,
-        "story": story,
-        "increment_id": section["id"],
-        "status": status,
-        "parallel": parallel,
-        "source": source(line_no),
-        "files": files,
-        "tests": tests,
-    }
-
-    if task_id in task_by_id:
-        errors.append(
-            diagnostic(
-                "duplicate_task_id",
-                "error",
-                f"Task ID {task_id} is duplicated.",
-                line_no,
-                {
-                    "task_id": task_id,
-                    "first_source": task_by_id[task_id]["source"],
-                    "duplicate_source": source(line_no),
-                },
-            )
-        )
-    else:
-        task_by_id[task_id] = task
-    return task
-
-
-for index, line in enumerate(lines, start=1):
-    heading = increment_from_heading(line, index)
-    if heading is not None:
-        current = heading
-        sections.append(current)
-        if heading["id"] in section_by_id:
-            errors.append(
-                diagnostic(
-                    "duplicate_increment_id",
-                    "error",
-                    f"Increment {heading['id']} is duplicated.",
-                    index,
-                    {
-                        "increment_id": heading["id"],
-                        "first_source": source(section_by_id[heading["id"]]["line"], section_by_id[heading["id"]]["heading"]),
-                        "duplicate_source": source(index, heading["heading"]),
-                    },
-                )
-            )
-        else:
-            section_by_id[heading["id"]] = heading
-        continue
-
-    if line.startswith("## "):
-        current = None
-        continue
-
-    if current is not None:
-        task = parse_task(line, index, current)
-        if task is not None:
-            current["tasks"].append(task)
-
-
-dependency_heading_present = any(line.strip() == "## Dependencies & Execution Order" for line in lines)
-delivery_heading_present = any(line.strip() == "### Incremental Delivery" for line in lines)
-if not dependency_heading_present:
-    errors.append(
-        diagnostic(
-            "missing_required_heading",
-            "error",
-            "Missing required dependency heading.",
-            None,
-            {"required_heading": "## Dependencies & Execution Order"},
-        )
-    )
-if not delivery_heading_present:
-    errors.append(
-        diagnostic(
-            "missing_required_heading",
-            "error",
-            "Missing required incremental delivery heading.",
-            None,
-            {"required_heading": "### Incremental Delivery"},
-        )
-    )
-
-
-def section_bounds(heading_text: str) -> tuple[int, int] | None:
-    start = None
-    for idx, line in enumerate(lines):
-        if line.strip() == heading_text:
-            start = idx + 1
-            break
-    if start is None:
-        return None
-    end = len(lines)
-    for idx in range(start, len(lines)):
-        stripped = lines[idx].strip()
-        if idx >= start and stripped.startswith("### ") and stripped != heading_text:
-            end = idx
-            break
-    return start, end
-
-
-delivery_order: list[str] = []
-delivery_bounds = section_bounds("### Incremental Delivery")
-if delivery_bounds:
-    for line in lines[delivery_bounds[0] : delivery_bounds[1]]:
-        match = re.match(r"^\s*[0-9]+\.\s+Complete\s+([^:]+):", line)
-        if not match:
-            continue
-        inc_id = label_to_id(match.group(1))
-        if inc_id and inc_id not in delivery_order:
-            delivery_order.append(inc_id)
-            if inc_id not in section_by_id:
-                errors.append(
-                    diagnostic(
-                        "unknown_increment",
-                        "error",
-                        f"Delivery order references unknown increment {inc_id}.",
-                        lines.index(line) + 1,
-                        {"increment_id": inc_id},
-                    )
-                )
-
-if not delivery_order:
-    delivery_order = [section["id"] for section in sections if section["id"] in section_by_id]
-
-for section in sections:
-    if section["id"] in section_by_id and not section["tasks"]:
-        errors.append(
-            diagnostic(
-                "empty_increment",
-                "error",
-                f"Increment {section['id']} has no parseable tasks.",
-                section["line"],
-                {"increment_id": section["id"]},
-            )
-        )
-
-dependencies: dict[str, list[str]] = {inc_id: [] for inc_id in section_by_id}
-for idx, line in enumerate(lines, start=1):
-    match = re.match(r"^\s*-\s+\*\*([^*]+)\*\*:\s+Depends on\s+(.+?)(?:\.|$)", line)
-    if not match:
-        continue
-    inc_id = label_to_id(match.group(1))
-    if inc_id is None:
-        continue
-    dep_text = match.group(2).strip()
-    if re.search(r"No prerequisites|Foundation only", dep_text, flags=re.IGNORECASE):
-        dependencies.setdefault(inc_id, [])
-        continue
-    found = [dep for dep in (label_to_id(part) for part in re.split(r",| and ", dep_text)) if dep]
-    if not found:
-        found = [f"us{num}" for num in re.findall(r"\bUS([1-9][0-9]*)\b", dep_text, flags=re.IGNORECASE)]
-        if re.search(r"\bFoundation\b", dep_text, flags=re.IGNORECASE):
-            found.insert(0, "foundation")
-        if re.search(r"\bPolish\b", dep_text, flags=re.IGNORECASE):
-            found.append("polish")
-    dep_list = dependencies.setdefault(inc_id, [])
-    for dep in found:
-        if dep not in section_by_id:
-            errors.append(
-                diagnostic(
-                    "unknown_increment",
-                    "error",
-                    f"Dependency references unknown increment {dep}.",
-                    idx,
-                    {"increment_id": dep},
-                )
-            )
-        if dep not in dep_list:
-            dep_list.append(dep)
-
-known_order = [inc for inc in delivery_order if inc in section_by_id]
-for inc_id in section_by_id:
-    if inc_id not in known_order:
-        known_order.append(inc_id)
-
-order_index = {inc_id: idx for idx, inc_id in enumerate(known_order)}
-for inc_id, deps in dependencies.items():
-    if inc_id not in order_index:
-        continue
-    for dep in deps:
-        if dep in order_index and order_index[dep] > order_index[inc_id]:
-            errors.append(
-                diagnostic(
-                    "contradictory_increment_order",
-                    "error",
-                    f"Increment {inc_id} is ordered before dependency {dep}.",
-                    section_by_id.get(inc_id, {}).get("line"),
-                    {"expected_order": [], "observed_order": known_order},
-                )
-            )
-            break
-
-
-def stable_topological_order() -> list[str]:
-    result: list[str] = []
-    temporary: set[str] = set()
-    permanent: set[str] = set()
-
-    def visit(node: str) -> None:
-        if node in permanent:
-            return
-        if node in temporary:
-            return
-        temporary.add(node)
-        for dep in dependencies.get(node, []):
-            if dep in section_by_id:
-                visit(dep)
-        temporary.remove(node)
-        permanent.add(node)
-        if node not in result:
-            result.append(node)
-
-    for node in known_order:
-        visit(node)
-    return result
-
-
-expected_order = stable_topological_order()
-for err in errors:
-    if err["code"] == "contradictory_increment_order":
-        err["details"]["expected_order"] = expected_order
-
-
-def find_cycle() -> list[str] | None:
-    visiting: list[str] = []
-    visited: set[str] = set()
-
-    def dfs(node: str) -> list[str] | None:
-        if node in visiting:
-            start = visiting.index(node)
-            return visiting[start:] + [node]
-        if node in visited:
-            return None
-        visiting.append(node)
-        for dep in dependencies.get(node, []):
-            if dep in section_by_id:
-                found = dfs(dep)
-                if found:
-                    return found
-        visiting.pop()
-        visited.add(node)
-        return None
-
-    for node in known_order:
-        found = dfs(node)
-        if found:
-            return found
-    return None
-
-
-cycle = find_cycle()
-if cycle:
-    first = cycle[0]
-    errors.append(
-        diagnostic(
-            "dependency_cycle",
-            "error",
-            "Dependency graph contains a cycle.",
-            section_by_id.get(first, {}).get("line"),
-            {"cycle": cycle},
-        )
-    )
-
-
-def aggregate(items: list[dict], key: str) -> list[str]:
-    values: list[str] = []
-    seen: set[str] = set()
-    for item in items:
-        for value in item[key]:
-            if value not in seen:
-                seen.add(value)
-                values.append(value)
-    return sorted(values)
-
-
-increments: list[dict] = []
-for inc_id in known_order:
-    section = section_by_id.get(inc_id)
-    if section is None:
-        continue
-    tasks = section["tasks"]
-    files_flat = [value for task in tasks for value in task["files"]]
-    tests_flat = [value for task in tasks for value in task["tests"]]
-    depends_on = [dep for dep in dependencies.get(inc_id, []) if dep in section_by_id and order_index.get(dep, 10**9) < order_index.get(inc_id, -1)]
-    dedup_depends: list[str] = []
-    for prior in known_order:
-        if prior in depends_on and prior not in dedup_depends:
-            dedup_depends.append(prior)
-    increments.append(
-        {
-            "id": inc_id,
-            "name": section["name"],
-            "kind": section["kind"],
-            "order": len(increments),
-            "depends_on": dedup_depends,
-            "source": source(section["line"], section["heading"]),
-            "tasks": tasks,
-            "files": aggregate(tasks, "files"),
-            "tests": aggregate(tasks, "tests"),
-            "advisory_size": {
-                "task_count": len(tasks),
-                "file_reference_count": len(files_flat),
-                "distinct_file_count": len(set(files_flat)),
-                "test_reference_count": len(tests_flat),
-                "distinct_test_count": len(set(tests_flat)),
-            },
-        }
-    )
-
-status = "invalid_plan" if errors else "ok"
-if status == "ok":
-    message = f"Planned {len(increments)} increment(s) with {sum(len(item['tasks']) for item in increments)} task(s)."
-else:
-    message = f"Layer plan invalid: {len(errors)} error(s)."
-
-model = {
-    "status": status,
-    "feature_dir": feature_rel,
-    "tasks_file": tasks_rel,
-    "increments": increments,
-    "warnings": warnings,
-    "errors": errors,
-    "summary": {
-        "increment_count": len(increments),
-        "task_count": sum(len(item["tasks"]) for item in increments),
-        "warning_count": len(warnings),
-        "error_count": len(errors),
-        "message": message,
-    },
+declare -a LINES=()
+mapfile -t LINES <"$TASKS_FILE"
+
+declare -a SECTION_ORDER=()
+declare -a ERRORS=()
+declare -a WARNINGS=()
+declare -A SECTION_EXISTS=()
+declare -A SECTION_KIND=()
+declare -A SECTION_NAME=()
+declare -A SECTION_LINE=()
+declare -A SECTION_HEADING=()
+declare -A SECTION_TASKS=()
+declare -A SECTION_MODE=()
+declare -A TASK_SEEN=()
+declare -A TASK_TITLE=()
+declare -A TASK_STORY=()
+declare -A TASK_INCREMENT=()
+declare -A TASK_STATUS=()
+declare -A TASK_PARALLEL=()
+declare -A TASK_LINE=()
+declare -A TASK_FILES_LIST=()
+declare -A TASK_TESTS_LIST=()
+declare -A DEPENDENCIES=()
+
+add_error() {
+  local code="$1" message="$2" line="$3" details_json="$4"
+  ERRORS+=("$(diagnostic_json "$code" "error" "$message" "$line" "$details_json")")
 }
 
-print(json.dumps(model, separators=(",", ":"), ensure_ascii=True))
-PY
-)
+add_warning() {
+  local code="$1" message="$2" line="$3" details_json="$4"
+  WARNINGS+=("$(diagnostic_json "$code" "warning" "$message" "$line" "$details_json")")
+}
 
-jq -cn --argjson model "$planner_model" '{
-  tool: "plan-layers",
-  contract_version: 1,
-  status: $model.status,
-  feature_dir: $model.feature_dir,
-  tasks_file: $model.tasks_file,
-  increments: $model.increments,
-  warnings: $model.warnings,
-  errors: $model.errors,
-  summary: $model.summary
-}'
+label_to_id() {
+  local label cleaned lower
+  label="$1"
+  cleaned="${label//\`/}"
+  cleaned="${cleaned//\*/}"
+  cleaned="$(trim "$cleaned")"
+  cleaned="$(trim "${cleaned//unknown/}")"
+  lower="${cleaned,,}"
 
-status=$(printf '%s' "$planner_model" | jq -r '.status')
-error_count=$(printf '%s' "$planner_model" | jq -r '.summary.error_count')
-warning_count=$(printf '%s' "$planner_model" | jq -r '.summary.warning_count')
+  if [[ "$lower" =~ ^(foundation|foundational|setup)([[:space:]].*)?$ ]]; then
+    printf 'foundation\n'
+    return
+  fi
+  if [[ "$cleaned" =~ [Pp]olish ]]; then
+    printf 'polish\n'
+    return
+  fi
+  if [[ "$cleaned" =~ (US|User[[:space:]]+Story)[[:space:]]*([1-9][0-9]*) ]]; then
+    printf 'us%s\n' "${BASH_REMATCH[2]}"
+    return
+  fi
+  return 1
+}
+
+clean_token() {
+  local token="$1"
+  clean_token_var token
+  printf '%s' "$token"
+}
+
+clean_token_var() {
+  local -n ref="$1"
+  ref="${ref//\`/}"
+  ref="${ref#\"}"
+  ref="${ref%\"}"
+  ref="${ref#\'}"
+  ref="${ref%\'}"
+  ref="${ref#(}"
+  ref="${ref%)}"
+  ref="${ref#[}"
+  ref="${ref%]}"
+  ref="${ref#<}"
+  ref="${ref%>}"
+  ref="${ref%,}"
+  ref="${ref%;}"
+  ref="${ref%:}"
+  ref="${ref%.}"
+}
+
+reference_kind() {
+  local ref="${1#./}"
+  if [[ "$ref" == tests/* || "$ref" == */tests/* || "$ref" =~ (^|/)test-[^/]+\.sh$ ]]; then
+    printf 'test\n'
+  else
+    printf 'file\n'
+  fi
+}
+
+normalize_reference() {
+  local raw="$1" token resolved
+  NORMALIZED_REF=""
+  REF_INSIDE_ROOT=false
+  token="$raw"
+  [ -z "$token" ] && return
+
+  if [[ "$token" != /* && "$token" != *..* ]]; then
+    NORMALIZED_REF="${token#./}"
+    REF_INSIDE_ROOT=true
+    return
+  fi
+
+  resolved="$(absolute_path "$token")"
+  case "$resolved" in
+    "$REPO_ROOT"/*)
+      NORMALIZED_REF="${resolved#"$REPO_ROOT"/}"
+      REF_INSIDE_ROOT=true
+      ;;
+    "$REPO_ROOT")
+      NORMALIZED_REF="."
+      REF_INSIDE_ROOT=true
+      ;;
+    *)
+      NORMALIZED_REF="$token"
+      REF_INSIDE_ROOT=false
+      ;;
+  esac
+}
+
+extract_references() {
+  local title="$1" task_id="$2" increment_id="$3" line_no="$4"
+  local word token kind target normalized
+  local -a tokens=()
+  local -a files=()
+  local -a tests=()
+  local -A seen_files=()
+  local -A seen_tests=()
+
+  for word in $title; do
+    token="$word"
+    token="${token//\`/}"
+    token="${token#\"}"
+    token="${token%\"}"
+    token="${token#\'}"
+    token="${token%\'}"
+    token="${token#(}"
+    token="${token%)}"
+    token="${token#[}"
+    token="${token%]}"
+    token="${token#<}"
+    token="${token%>}"
+    token="${token%,}"
+    token="${token%;}"
+    token="${token%:}"
+    token="${token%.}"
+    if [[ "$token" =~ ^(\./|\.\./|/|[A-Za-z0-9_.-]+/) && "$token" =~ \.[A-Za-z0-9]+$ ]]; then
+      tokens+=("$token")
+    fi
+  done
+
+  for token in "${tokens[@]}"; do
+    normalize_reference "$token"
+    normalized="$NORMALIZED_REF"
+    [ -z "$normalized" ] && continue
+    if [[ "${normalized#./}" == tests/* || "${normalized#./}" == */tests/* || "${normalized#./}" =~ (^|/)test-[^/]+\.sh$ ]]; then
+      kind=test
+    else
+      kind=file
+    fi
+
+    if [ "$REF_INSIDE_ROOT" != true ]; then
+      details="$(jq -cn --arg kind "$kind" --arg reference "$(clean_token "$token")" --arg task_id "$task_id" \
+        '{kind: $kind, reference: $reference, task_id: $task_id}')"
+      add_warning "reference_not_found" "$kind reference is outside the worktree: $(clean_token "$token")" "$line_no" "$details"
+      continue
+    fi
+
+    target="$REPO_ROOT/$normalized"
+    if [ ! -e "$target" ]; then
+      details="$(jq -cn --arg kind "$kind" --arg reference "$normalized" --arg task_id "$task_id" \
+        '{kind: $kind, reference: $reference, task_id: $task_id}')"
+      add_warning "reference_not_found" "$kind reference not found: $normalized" "$line_no" "$details"
+    fi
+
+    if [ "$kind" = "test" ]; then
+      if [ -z "${seen_tests[$normalized]-}" ]; then
+        seen_tests[$normalized]=1
+        tests+=("$normalized")
+      fi
+    else
+      if [ -z "${seen_files[$normalized]-}" ]; then
+        seen_files[$normalized]=1
+        files+=("$normalized")
+      fi
+    fi
+  done
+
+  if [ "${#files[@]}" -eq 0 ] && [ "${#tests[@]}" -eq 0 ]; then
+    details="$(jq -cn --arg task_id "$task_id" --arg increment_id "$increment_id" \
+      '{task_id: $task_id, increment_id: $increment_id}')"
+    add_warning "task_without_references" "Task $task_id has no file or test references." "$line_no" "$details"
+  fi
+
+  if [ "${#files[@]}" -eq 0 ]; then
+    EXTRACT_FILES_LIST=""
+  else
+    local IFS=$'\n'
+    EXTRACT_FILES_LIST="${files[*]}"
+  fi
+  if [ "${#tests[@]}" -eq 0 ]; then
+    EXTRACT_TESTS_LIST=""
+  else
+    local IFS=$'\n'
+    EXTRACT_TESTS_LIST="${tests[*]}"
+  fi
+}
+
+register_section() {
+  local id="$1" name="$2" kind="$3" line_no="$4" heading="$5" mode="$6"
+
+  if [ -n "${SECTION_EXISTS[$id]-}" ]; then
+    if [ "$id" = "foundation" ] && { [ "${SECTION_MODE[$id]}" = "foundation_alias" ] || [ "$mode" = "foundation_alias" ]; }; then
+      CURRENT_SECTION_ID="$id"
+      SECTION_MODE[$id]="foundation_alias"
+      return
+    fi
+
+    first_source="$(source_json "$TASKS_REL" "${SECTION_LINE[$id]}" "${SECTION_HEADING[$id]}")"
+    duplicate_source="$(source_json "$TASKS_REL" "$line_no" "$heading")"
+    details="$(jq -cn --arg increment_id "$id" --argjson first_source "$first_source" --argjson duplicate_source "$duplicate_source" \
+      '{increment_id: $increment_id, first_source: $first_source, duplicate_source: $duplicate_source}')"
+    add_error "duplicate_increment_id" "Increment $id is duplicated." "$line_no" "$details"
+    CURRENT_SECTION_ID=""
+    return
+  fi
+
+  SECTION_EXISTS[$id]=1
+  SECTION_KIND[$id]="$kind"
+  SECTION_NAME[$id]="$name"
+  SECTION_LINE[$id]="$line_no"
+  SECTION_HEADING[$id]="$heading"
+  SECTION_TASKS[$id]=""
+  SECTION_MODE[$id]="$mode"
+  DEPENDENCIES[$id]=""
+  SECTION_ORDER+=("$id")
+  CURRENT_SECTION_ID="$id"
+}
+
+parse_phase_heading() {
+  local line="$1" line_no="$2" title story_num story_title
+
+  [[ "$line" =~ ^##[[:space:]]+Phase[[:space:]]+[0-9]+:[[:space:]]+(.+)$ ]] || return 1
+  CURRENT_SECTION_ID=""
+  title="$(trim "${BASH_REMATCH[1]}")"
+
+  if [[ "${title,,}" =~ ^foundation([[:space:]].*)?$ ]]; then
+    register_section "foundation" "Foundation" "foundation" "$line_no" "$line" "foundation_canonical"
+    return 0
+  fi
+
+  if [[ "${title,,}" =~ ^(setup|foundational)([[:space:]].*)?$ ]]; then
+    register_section "foundation" "Foundation" "foundation" "$line_no" "$line" "foundation_alias"
+    return 0
+  fi
+
+  if [[ "$title" =~ ^User[[:space:]]+Story[[:space:]]+([1-9][0-9]*)[[:space:]]+-[[:space:]]+(.+)$ ]]; then
+    story_num="${BASH_REMATCH[1]}"
+    story_title="$(trim "${BASH_REMATCH[2]}")"
+    if [[ "$story_title" =~ ^(.+)[[:space:]]+\((Priority|P):.*\)$ ]]; then
+      story_title="$(trim "${BASH_REMATCH[1]}")"
+    fi
+    register_section "us${story_num}" "User Story ${story_num} - $story_title" "story" "$line_no" "$line" "canonical"
+    return 0
+  fi
+
+  if [[ "$title" =~ [Pp]olish ]]; then
+    register_section "polish" "$title" "polish" "$line_no" "$line" "canonical"
+    return 0
+  fi
+
+  return 1
+}
+
+parse_task_line() {
+  local line="$1" line_no="$2" section_id="$3"
+  local marker task_id rest status parallel story first_source duplicate_source details
+
+  if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+\[([ xX])\][[:space:]]+(T[0-9]{3,})(.*)$ ]]; then
+    marker="${BASH_REMATCH[1]}"
+    task_id="${BASH_REMATCH[2]}"
+    rest="${BASH_REMATCH[3]}"
+    while [[ "$rest" == " "* ]]; do
+      rest="${rest# }"
+    done
+  else
+    if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+\[[^]]+\][[:space:]]+T[0-9]{3,} ]]; then
+      details="$(jq -cn --arg line_text "$(trim "$line")" '{line_text: $line_text}')"
+      add_error "malformed_task" "Task-like checkbox line uses unsupported syntax." "$line_no" "$details"
+    fi
+    return
+  fi
+
+  parallel=false
+  story=""
+  while true; do
+    if [[ "$rest" == "[P]"* ]]; then
+      parallel=true
+      rest="${rest:3}"
+      while [[ "$rest" == " "* ]]; do
+        rest="${rest# }"
+      done
+      continue
+    fi
+    if [[ "$rest" =~ ^\[US([1-9][0-9]*)\][[:space:]]*(.*)$ ]]; then
+      story="us${BASH_REMATCH[1]}"
+      rest="${BASH_REMATCH[2]}"
+      continue
+    fi
+    break
+  done
+
+  if [ "${SECTION_KIND[$section_id]}" = "story" ] && [ -z "$story" ]; then
+    story="$section_id"
+  fi
+
+  if [[ "$marker" = "x" || "$marker" = "X" ]]; then
+    status=done
+  else
+    status=todo
+  fi
+
+  extract_references "$rest" "$task_id" "$section_id" "$line_no"
+  if [ -n "${TASK_SEEN[$task_id]-}" ]; then
+    first_source="$(source_json "$TASKS_REL" "${TASK_LINE[$task_id]}")"
+    duplicate_source="$(source_json "$TASKS_REL" "$line_no")"
+    details="$(jq -cn --arg task_id "$task_id" --argjson first_source "$first_source" --argjson duplicate_source "$duplicate_source" \
+      '{task_id: $task_id, first_source: $first_source, duplicate_source: $duplicate_source}')"
+    add_error "duplicate_task_id" "Task ID $task_id is duplicated." "$line_no" "$details"
+  else
+    TASK_SEEN[$task_id]=1
+  fi
+
+  TASK_TITLE[$task_id]="$rest"
+  TASK_STORY[$task_id]="$story"
+  TASK_INCREMENT[$task_id]="$section_id"
+  TASK_STATUS[$task_id]="$status"
+  TASK_PARALLEL[$task_id]="$parallel"
+  TASK_LINE[$task_id]="$line_no"
+  TASK_FILES_LIST[$task_id]="$EXTRACT_FILES_LIST"
+  TASK_TESTS_LIST[$task_id]="$EXTRACT_TESTS_LIST"
+  SECTION_TASKS[$section_id]="${SECTION_TASKS[$section_id]}$task_id"$'\n'
+}
+
+CURRENT_SECTION_ID=""
+for index in "${!LINES[@]}"; do
+  line_no=$((index + 1))
+  line="${LINES[$index]}"
+
+  if parse_phase_heading "$line" "$line_no"; then
+    continue
+  fi
+
+  if [[ "$line" == "## "* ]]; then
+    CURRENT_SECTION_ID=""
+    continue
+  fi
+
+  if [ -n "$CURRENT_SECTION_ID" ]; then
+    parse_task_line "$line" "$line_no" "$CURRENT_SECTION_ID"
+  fi
+done
+
+dependency_heading_present=false
+delivery_heading_present=false
+for line in "${LINES[@]}"; do
+  [ "$line" = "## Dependencies & Execution Order" ] && dependency_heading_present=true
+  [ "$line" = "### Incremental Delivery" ] && delivery_heading_present=true
+done
+
+if [ "$dependency_heading_present" != true ]; then
+  details="$(jq -cn '{required_heading: "## Dependencies & Execution Order"}')"
+  add_error "missing_required_heading" "Missing required dependency heading." "" "$details"
+fi
+if [ "$delivery_heading_present" != true ]; then
+  details="$(jq -cn '{required_heading: "### Incremental Delivery"}')"
+  add_error "missing_required_heading" "Missing required incremental delivery heading." "" "$details"
+fi
+
+declare -a DELIVERY_ORDER=()
+in_delivery=false
+for index in "${!LINES[@]}"; do
+  line_no=$((index + 1))
+  line="${LINES[$index]}"
+  stripped="$line"
+
+  if [ "$stripped" = "### Incremental Delivery" ]; then
+    in_delivery=true
+    continue
+  fi
+  if [ "$in_delivery" = true ] && [[ "$stripped" == "### "* ]]; then
+    in_delivery=false
+  fi
+  [ "$in_delivery" = true ] || continue
+
+  if [[ "$line" =~ ^[[:space:]]*[0-9]+\.[[:space:]]+Complete[[:space:]]+([^:]+): ]]; then
+    if inc_id="$(label_to_id "${BASH_REMATCH[1]}")"; then
+      already=false
+      for existing in "${DELIVERY_ORDER[@]}"; do
+        [ "$existing" = "$inc_id" ] && already=true
+      done
+      if [ "$already" = false ]; then
+        DELIVERY_ORDER+=("$inc_id")
+      fi
+      if [ -z "${SECTION_EXISTS[$inc_id]-}" ]; then
+        details="$(jq -cn --arg increment_id "$inc_id" '{increment_id: $increment_id}')"
+        add_error "unknown_increment" "Delivery order references unknown increment $inc_id." "$line_no" "$details"
+      fi
+    fi
+  fi
+done
+
+if [ "${#DELIVERY_ORDER[@]}" -eq 0 ]; then
+  DELIVERY_ORDER=("${SECTION_ORDER[@]}")
+fi
+
+for section_id in "${SECTION_ORDER[@]}"; do
+  if [ -z "$(trim "${SECTION_TASKS[$section_id]-}")" ]; then
+    details="$(jq -cn --arg increment_id "$section_id" '{increment_id: $increment_id}')"
+    add_error "empty_increment" "Increment $section_id has no parseable tasks." "${SECTION_LINE[$section_id]}" "$details"
+  fi
+done
+
+append_dependency() {
+  local inc_id="$1" dep="$2" existing
+  existing=$'\n'"${DEPENDENCIES[$inc_id]-}"$'\n'
+  if [[ "$existing" != *$'\n'"$dep"$'\n'* ]]; then
+    DEPENDENCIES[$inc_id]="${DEPENDENCIES[$inc_id]-}$dep"$'\n'
+  fi
+}
+
+for index in "${!LINES[@]}"; do
+  line_no=$((index + 1))
+  line="${LINES[$index]}"
+  if [[ "$line" =~ ^[[:space:]]*-[[:space:]]+\*\*([^*]+)\*\*:[[:space:]]+Depends[[:space:]]+on[[:space:]]+(.+)$ ]]; then
+    if ! inc_id="$(label_to_id "${BASH_REMATCH[1]}")"; then
+      continue
+    fi
+    dep_text="$(trim "${BASH_REMATCH[2]%.}")"
+    if [[ "$dep_text" =~ [Nn]o[[:space:]]+prerequisites || "$dep_text" =~ [Ff]oundation[[:space:]]+only ]]; then
+      DEPENDENCIES[$inc_id]="${DEPENDENCIES[$inc_id]-}"
+      continue
+    fi
+
+    declare -a found_deps=()
+    if [[ "$dep_text" =~ [Ff]oundation ]]; then
+      found_deps+=("foundation")
+    fi
+    while [[ "$dep_text" =~ (US|User[[:space:]]+Story)[[:space:]]*([1-9][0-9]*) ]]; do
+      found_deps+=("us${BASH_REMATCH[2]}")
+      dep_text="${dep_text#*"${BASH_REMATCH[0]}"}"
+    done
+    if [[ "$dep_text" =~ [Pp]olish ]]; then
+      found_deps+=("polish")
+    fi
+
+    for dep in "${found_deps[@]}"; do
+      if [ -z "${SECTION_EXISTS[$dep]-}" ]; then
+        details="$(jq -cn --arg increment_id "$dep" '{increment_id: $increment_id}')"
+        add_error "unknown_increment" "Dependency references unknown increment $dep." "$line_no" "$details"
+      fi
+      append_dependency "$inc_id" "$dep"
+    done
+  fi
+done
+
+declare -a KNOWN_ORDER=()
+for inc_id in "${DELIVERY_ORDER[@]}"; do
+  [ -n "${SECTION_EXISTS[$inc_id]-}" ] && KNOWN_ORDER+=("$inc_id")
+done
+for inc_id in "${SECTION_ORDER[@]}"; do
+  already=false
+  for existing in "${KNOWN_ORDER[@]}"; do
+    [ "$existing" = "$inc_id" ] && already=true
+  done
+  [ "$already" = false ] && KNOWN_ORDER+=("$inc_id")
+done
+
+order_position() {
+  local needle="$1" idx
+  for idx in "${!KNOWN_ORDER[@]}"; do
+    if [ "${KNOWN_ORDER[$idx]}" = "$needle" ]; then
+      printf '%s\n' "$idx"
+      return
+    fi
+  done
+  printf '%s\n' "-1"
+}
+
+known_order_json="$(json_array_from_values "${KNOWN_ORDER[@]}")"
+for inc_id in "${SECTION_ORDER[@]}"; do
+  inc_pos="$(order_position "$inc_id")"
+  while IFS= read -r dep; do
+    [ -n "$dep" ] || continue
+    [ -n "${SECTION_EXISTS[$dep]-}" ] || continue
+    dep_pos="$(order_position "$dep")"
+    if [ "$dep_pos" -gt "$inc_pos" ]; then
+      details="$(jq -cn --argjson expected_order "$known_order_json" --argjson observed_order "$known_order_json" \
+        '{expected_order: $expected_order, observed_order: $observed_order}')"
+      add_error "contradictory_increment_order" "Increment $inc_id is ordered before dependency $dep." "${SECTION_LINE[$inc_id]}" "$details"
+      break
+    fi
+  done <<<"${DEPENDENCIES[$inc_id]-}"
+done
+
+find_cycle() {
+  local node dep
+  for node in "${KNOWN_ORDER[@]}"; do
+    while IFS= read -r dep; do
+      [ -n "$dep" ] || continue
+      if [[ $'\n'"${DEPENDENCIES[$dep]-}"$'\n' == *$'\n'"$node"$'\n'* ]]; then
+        printf '%s\n%s\n%s\n' "$node" "$dep" "$node"
+        return 0
+      fi
+    done <<<"${DEPENDENCIES[$node]-}"
+  done
+  return 1
+}
+
+if cycle_lines="$(find_cycle)"; then
+  mapfile -t cycle_items <<<"$cycle_lines"
+  cycle_json="$(json_array_from_values "${cycle_items[@]}")"
+  first="${cycle_items[0]}"
+  details="$(jq -cn --argjson cycle "$cycle_json" '{cycle: $cycle}')"
+  add_error "dependency_cycle" "Dependency graph contains a cycle." "${SECTION_LINE[$first]}" "$details"
+fi
+
+declare -a INCREMENTS=()
+for inc_id in "${KNOWN_ORDER[@]}"; do
+  [ -n "${SECTION_EXISTS[$inc_id]-}" ] || continue
+  task_records=""
+  declare -a all_files=()
+  declare -a all_tests=()
+
+  while IFS= read -r task_id; do
+    [ -n "$task_id" ] || continue
+    files_record="${TASK_FILES_LIST[$task_id]//$'\n'/$'\037'}"
+    tests_record="${TASK_TESTS_LIST[$task_id]//$'\n'/$'\037'}"
+    task_records+="${task_id}"$'\t'"${TASK_TITLE[$task_id]}"$'\t'"${TASK_STORY[$task_id]}"$'\t'"${TASK_INCREMENT[$task_id]}"$'\t'"${TASK_STATUS[$task_id]}"$'\t'"${TASK_PARALLEL[$task_id]}"$'\t'"${TASK_LINE[$task_id]}"$'\t'"${files_record}"$'\t'"${tests_record}"$'\n'
+    while IFS= read -r value; do
+      [ -n "$value" ] && all_files+=("$value")
+    done <<<"${TASK_FILES_LIST[$task_id]}"
+    while IFS= read -r value; do
+      [ -n "$value" ] && all_tests+=("$value")
+    done <<<"${TASK_TESTS_LIST[$task_id]}"
+  done <<<"${SECTION_TASKS[$inc_id]-}"
+
+  task_items_json="$(printf '%s' "$task_records" | jq -Rn --arg tasks_file "$TASKS_REL" '
+    def split_list:
+      if . == "" then [] else split("\u001f") | map(select(length > 0)) | sort end;
+    [
+      inputs
+      | select(length > 0)
+      | split("\t") as $f
+      | {
+          id: $f[0],
+          title: $f[1],
+          story: (if $f[2] == "" then null else $f[2] end),
+          increment_id: $f[3],
+          status: $f[4],
+          parallel: ($f[5] == "true"),
+          source: {path: $tasks_file, line: ($f[6] | tonumber)},
+          files: ($f[7] | split_list),
+          tests: ($f[8] | split_list)
+        }
+    ]')"
+  files_json="$(json_array_from_values "${all_files[@]}")"
+  tests_json="$(json_array_from_values "${all_tests[@]}")"
+  source="$(source_json "$TASKS_REL" "${SECTION_LINE[$inc_id]}" "${SECTION_HEADING[$inc_id]}")"
+  depends=()
+  while IFS= read -r dep; do
+    [ -n "$dep" ] || continue
+    [ -n "${SECTION_EXISTS[$dep]-}" ] || continue
+    dep_pos="$(order_position "$dep")"
+    inc_pos="$(order_position "$inc_id")"
+    [ "$dep_pos" -lt "$inc_pos" ] && depends+=("$dep")
+  done <<<"${DEPENDENCIES[$inc_id]-}"
+  depends_json="$(json_array_from_values "${depends[@]}")"
+  file_ref_count="${#all_files[@]}"
+  test_ref_count="${#all_tests[@]}"
+
+  increment_json="$(jq -cn \
+    --arg id "$inc_id" \
+    --arg name "${SECTION_NAME[$inc_id]}" \
+    --arg kind "${SECTION_KIND[$inc_id]}" \
+    --argjson order "${#INCREMENTS[@]}" \
+    --argjson depends_on "$depends_json" \
+    --argjson source "$source" \
+    --argjson tasks "$task_items_json" \
+    --argjson files "$files_json" \
+    --argjson tests "$tests_json" \
+    --argjson task_count "$(printf '%s' "$task_items_json" | jq 'length')" \
+    --argjson file_reference_count "$file_ref_count" \
+    --argjson distinct_file_count "$(printf '%s' "$files_json" | jq 'length')" \
+    --argjson test_reference_count "$test_ref_count" \
+    --argjson distinct_test_count "$(printf '%s' "$tests_json" | jq 'length')" \
+    '{
+      id: $id,
+      name: $name,
+      kind: $kind,
+      order: $order,
+      depends_on: $depends_on,
+      source: $source,
+      tasks: $tasks,
+      files: $files,
+      tests: $tests,
+      advisory_size: {
+        task_count: $task_count,
+        file_reference_count: $file_reference_count,
+        distinct_file_count: $distinct_file_count,
+        test_reference_count: $test_reference_count,
+        distinct_test_count: $distinct_test_count
+      }
+    }')"
+  INCREMENTS+=("$increment_json")
+done
+
+increments_json="$(json_array_from_json_items "${INCREMENTS[@]}")"
+warnings_json="$(json_array_from_json_items "${WARNINGS[@]}")"
+errors_json="$(json_array_from_json_items "${ERRORS[@]}")"
+task_count="$(printf '%s' "$increments_json" | jq '[.[].tasks | length] | add // 0')"
+increment_count="$(printf '%s' "$increments_json" | jq 'length')"
+warning_count="${#WARNINGS[@]}"
+error_count="${#ERRORS[@]}"
+
+if [ "$error_count" -gt 0 ]; then
+  status="invalid_plan"
+  message="Layer plan invalid: $error_count error(s)."
+else
+  status="ok"
+  message="Planned $increment_count increment(s) with $task_count task(s)."
+fi
+
+jq -cn \
+  --arg status "$status" \
+  --arg feature_dir "$FEATURE_REL" \
+  --arg tasks_file "$TASKS_REL" \
+  --argjson increments "$increments_json" \
+  --argjson warnings "$warnings_json" \
+  --argjson errors "$errors_json" \
+  --argjson increment_count "$increment_count" \
+  --argjson task_count "$task_count" \
+  --argjson warning_count "$warning_count" \
+  --argjson error_count "$error_count" \
+  --arg message "$message" \
+  '{
+    tool: "plan-layers",
+    contract_version: 1,
+    status: $status,
+    feature_dir: $feature_dir,
+    tasks_file: $tasks_file,
+    increments: $increments,
+    warnings: $warnings,
+    errors: $errors,
+    summary: {
+      increment_count: $increment_count,
+      task_count: $task_count,
+      warning_count: $warning_count,
+      error_count: $error_count,
+      message: $message
+    }
+  }'
+
 if [ "$status" = "invalid_plan" ]; then
   printf 'plan-layers: invalid_plan: %s error(s)\n' "$error_count" >&2
   exit 1

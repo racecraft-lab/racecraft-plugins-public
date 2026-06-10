@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T03:29:47Z",
+  "updated_at": "2026-06-10T03:57:11Z",
   "active_step": "Post: Verify Implementation",
   "model_check": {
     "parent_session": "Codex main session",
@@ -224,7 +224,7 @@
     {
       "step": "Phase 7: Polish and validation (T041-T045)",
       "status": "completed",
-      "summary": "Recorded validation evidence in the workflow. bash -n/executable checks passed; focused planner tests passed 52/52, Layer 4 passed 1015/1015, Layer 1 passed 887/887, and default suite passed 2092/2092."
+      "summary": "Recorded validation evidence in the workflow. bash -n/executable checks passed; focused planner tests passed 66/66, direct live-feature planner run returned status=ok with 6 increments and 45 tasks, Layer 4 passed 1029/1029, Layer 1 passed 887/887, and default suite passed 2106/2106."
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -234,7 +234,7 @@
     {
       "step": "Post: Verify Implementation",
       "status": "in_progress",
-      "summary": "Initial verify found one critical, one high, and two medium findings. Remediation moved public envelope emission to jq, normalized paths from the target feature repo root, added schema-backed output validation, and asserted the path-normalization fixture."
+      "summary": "Initial verify found one critical, one high, and two medium findings. Follow-up verify found the Python helper still present, live PRSG-008 task planning failing, and non-happy-path schema validation incomplete. Remediation replaced the planner with Bash parsing plus jq JSON assembly, normalized paths from the target feature repo root, mapped Setup/Foundational task sections into Foundation, asserted path-normalization, and schema-validates invalid-plan, warning, path-normalization, and input-error outputs."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
@@ -249,7 +249,7 @@
     {
       "step": "Post: Integration Suite",
       "status": "completed",
-      "summary": "Default deterministic suite passed: bash tests/speckit-pro/run-all.sh reported 2092/2092."
+      "summary": "Default deterministic suite passed: bash tests/speckit-pro/run-all.sh reported 2106/2106."
     },
     {
       "step": "Post: Cleanup",

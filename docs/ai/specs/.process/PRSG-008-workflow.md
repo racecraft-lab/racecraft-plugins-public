@@ -507,10 +507,11 @@ markers. Schema JSON parses with `jq empty`.
 |---------|--------|
 | `bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
 | `test -x speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh` | Passed |
-| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Passed: `52/52` |
-| `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1015/1015` |
+| `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | Passed: `66/66` |
+| `bash speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh specs/prsg-008-layer-planner` | Passed: `status=ok`, 6 increments, 45 tasks |
+| `bash tests/speckit-pro/run-all.sh --layer 4` | Passed: `1029/1029` |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | Passed: `887/887` |
-| `bash tests/speckit-pro/run-all.sh` | Passed: `2092/2092` |
+| `bash tests/speckit-pro/run-all.sh` | Passed: `2106/2106` |
 
 ### Traceability
 
@@ -545,10 +546,10 @@ footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
 | Item | Result |
 |------|--------|
 | Doctor Extension Check | Passed: 5 PASS, 0 WARN, 0 FAIL. |
-| Verify Implementation | Initial verify found one critical, one high, and two medium issues. Remediation moved public envelope emission to `jq`, normalized paths from the target feature repo root, added schema-backed output validation, and asserted the `path-normalization` fixture. |
+| Verify Implementation | Initial verify found one critical, one high, and two medium issues. Follow-up verify found the Python helper still present, the live PRSG-008 tasks plan failing, and non-happy-path schema validation incomplete. Remediation replaced the planner with Bash parsing plus `jq` JSON assembly, normalized paths from the target feature repo root, taught Foundation to cover Setup/Foundational task sections, asserted `path-normalization`, and schema-validates invalid-plan, warning, path-normalization, and input-error outputs. |
 | Verify Tasks Phantom Check | Passed: 45/45 completed tasks verified; report written to `specs/prsg-008-layer-planner/verify-tasks-report.md`. |
 | Code Review | Skipped: review extension not installed. |
-| Integration Suite | Passed: `bash tests/speckit-pro/run-all.sh` reported `2092/2092`. |
+| Integration Suite | Passed: `bash tests/speckit-pro/run-all.sh` reported `2106/2106`. |
 | Cleanup | Skipped: cleanup extension not installed. |
 | Reviewability Diff Gate | Passed via infra exception: `reviewable_loc=0`, `production_files=0`, `total_files=38`, `exception_honored=true`. |
 
