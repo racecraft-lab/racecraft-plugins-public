@@ -29,8 +29,8 @@ planner contract choices captured during setup.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Define the planner contract, script behavior, and autopilot wiring. |
-| Clarify | `/speckit-clarify` | Pending | Pin JSON field names, invalid-plan diagnostics, and advisory metadata fields. |
+| Specify | `/speckit-specify` | Complete | `spec.md` and requirements checklist created; G1 passed with 0 clarification markers. |
+| Clarify | `/speckit-clarify` | In Progress | Pin JSON field names, invalid-plan diagnostics, and advisory metadata fields. |
 | Plan | `/speckit-plan` | Pending | Design parser, schema contract, fixtures, and autopilot integration point. |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: api-contracts, error-handling, data-integrity. |
 | Tasks | `/speckit-tasks` | Pending | Generate TDD tasks for schema, fixtures, script, docs, and Codex parity. |
@@ -63,7 +63,9 @@ Verify against `.specify/memory/constitution.md` before G1:
 | IV. Test Coverage | New script has Layer 4 tests with realistic and malformed fixtures. | `bash tests/speckit-pro/run-all.sh --layer 4` |
 | VI. KISS / YAGNI | Planner is read-only, independent of `atomicity-route.sh`, and does not create PR branches or PR bodies. | Plan review + code review |
 
-**Constitution Check:** Pending.
+**Constitution Check:** Initial spec gate verified at G1; script-safety and
+test-coverage checks remain pending until implementation creates
+`plan-layers.sh`.
 
 ---
 
@@ -158,8 +160,16 @@ script: given a feature directory, emit a deterministic JSON layer plan from
 
 ### Files Expected
 
-- `specs/prsg-008-layer-planner/spec.md`
-- `specs/prsg-008-layer-planner/checklists/requirements.md`
+- [x] `specs/prsg-008-layer-planner/spec.md`
+- [x] `specs/prsg-008-layer-planner/checklists/requirements.md`
+
+### Specify Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `spec.md` | Complete | 4 user stories, 20 functional requirements, 8 measurable success criteria. |
+| `checklists/requirements.md` | Complete | All quality and readiness checks passed. |
+| G1 | Passed | `validate-gate.sh G1 specs/prsg-008-layer-planner` returned pass with 0 markers. |
 
 ---
 

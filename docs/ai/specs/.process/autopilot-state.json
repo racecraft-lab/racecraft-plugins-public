@@ -1,31 +1,32 @@
 {
-  "workflow_file": "docs/ai/specs/.process/PRSG-007-workflow.md",
-  "updated_at": "2026-06-09T15:00:11Z",
-  "active_step": "Complete",
-  "pr": {
-    "number": 133,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/133",
-    "isDraft": false,
-    "merged_at": "2026-06-09T14:48:02Z",
-    "merge_sha": "c918f229aa8205b2b9d19ae1fbdd7af18a42c4d6",
-    "review_remediation": "Merged with all reported checks green."
-  },
+  "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
+  "updated_at": "2026-06-10T01:01:42Z",
+  "active_step": "Phase 2: Clarify - JSON contract and schema",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
-    "note": "No reduced-capability mini/fast tier is indicated in the active runtime; bundled SpecKit Pro agents are available at xhigh reasoning."
+    "note": "Autopilot was invoked in the main Codex session. Installed SpecKit Pro subagents are available through the Codex runtime at gpt-5.5 with xhigh reasoning."
   },
   "preflight": {
-    "branch": "prsg-007-atomicity-router",
+    "branch": "prsg-008-layer-planner",
     "is_worktree": true,
-    "on_feature_branch": true,
-    "spec_directory": "specs/prsg-007-atomicity-router",
-    "workflow_branch": "prsg-007-atomicity-router",
+    "on_feature_branch": false,
+    "spec_directory": "specs/prsg-008-layer-planner",
+    "workflow_branch": "prsg-008-layer-planner",
     "confidence_gate_mode": "advisory",
     "project_commands": {
-      "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh",
+      "BUILD": "N/A",
+      "TYPECHECK": "N/A",
+      "LINT": "N/A",
+      "LINT_FIX": "N/A",
+      "UNIT_TEST": "N/A",
+      "INTEGRATION_TEST": "N/A",
+      "SINGLE_FILE_TEST": "N/A",
+      "SINGLE_FILE_INTEGRATION": "N/A",
+      "FULL_VERIFY": "N/A",
       "STRUCTURAL": "bash tests/speckit-pro/run-all.sh --layer 1",
-      "SCRIPT_UNIT": "bash tests/speckit-pro/run-all.sh --layer 4"
+      "SCRIPT_UNIT": "bash tests/speckit-pro/run-all.sh --layer 4",
+      "DEFAULT_VERIFY": "bash tests/speckit-pro/run-all.sh"
     },
     "preset_conventions": {
       "has_presets": true,
@@ -43,19 +44,27 @@
       "cleanup": false
     },
     "constitution_validation": {
-      "status": "verified",
-      "commands": [
-        "bash tests/speckit-pro/run-all.sh --layer 1",
-        "bash tests/speckit-pro/run-all.sh --layer 4"
-      ]
+      "status": "deferred_for_new_script",
+      "note": "The PRSG-008 planner script is created during implementation. Constitution script-safety and test-coverage checks are enforced at G7 with bash -n, Layer 4, Layer 1, and the default suite."
+    },
+    "agent_availability": {
+      "phase-executor": "user",
+      "clarify-executor": "user",
+      "checklist-executor": "user",
+      "analyze-executor": "user",
+      "implement-executor": "user",
+      "codebase-analyst": "user",
+      "spec-context-analyst": "user",
+      "domain-researcher": "user",
+      "autopilot-fast-helper": "user"
     }
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "apply-cleanup",
-    "safeToApplyCleanup": true,
-    "excludedCurrentSpec": null,
-    "note": "Post-merge cleanup applied for PRSG-007 and PRSG-011 after PR #136 fixture-decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory. Active specs folders were removed; raw artifacts remain recoverable from recorded merge commits."
+    "cleanup_mode": "dry-run/report-only",
+    "safeToApplyCleanup": false,
+    "excludedCurrentSpec": "specs/prsg-008-layer-planner",
+    "note": "PRSG-007 and PRSG-011 were already archived and cleaned up in .specify/memory/archive-reports/2026-06-09-prsg-post-merge-hygiene.md. No active specs cleanup was applied for PRSG-008."
   },
   "plan": [
     {
@@ -68,43 +77,136 @@
     },
     {
       "step": "Phase 1: Specify",
-      "status": "completed"
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "passed",
+      "summary": "Created spec.md and requirements checklist; 0 NEEDS CLARIFICATION markers."
     },
     {
-      "step": "Phase 2: Clarify",
-      "status": "completed"
+      "step": "Phase 2: Clarify - JSON contract and schema",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 2: Clarify - JSON contract and schema Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Invalid-plan diagnostics",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Invalid-plan diagnostics Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Autopilot hook point",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Autopilot hook point Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed"
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist",
-      "status": "completed"
+      "step": "Phase 4: Checklist - api-contracts",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - api-contracts Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed"
+      "status": "pending"
     },
     {
-      "step": "Phase 7: Implement",
-      "status": "completed"
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed"
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending",
+      "skip_reason": "review extension not installed"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "pending",
+      "skip_reason": "cleanup extension not installed"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed"
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed"
+      "status": "pending"
     }
   ]
 }
