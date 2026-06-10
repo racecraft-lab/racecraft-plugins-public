@@ -199,14 +199,16 @@ knows to:
   this skill so step 6 can fold them into the workflow prompts
 
 Codex grill-me uses a picker-first HITL guard: it must call
-`request_user_input` for each Grill Me question whenever that tool is present in
-the active Codex tool list. Do not ask the Grill Me question as a normal
-assistant message, progress update, or final response while `request_user_input`
-is available. Free-text Q&A is a last-resort fallback only when the tool is
-absent or explicitly unavailable in the runtime. A nonzero shell `tty -s` result
-is not enough to stop a live Codex conversation. Do not try to drive grill-me
-from `codex exec` or any non-interactive runner — it will refuse and write
-nothing.
+`request_user_input` for each Grill Me question. In Codex Default mode this
+requires the `default_mode_request_user_input` feature to be enabled before the
+thread starts or resumes. Do not ask the Grill Me question as a normal assistant
+message, progress update, or final response. If `request_user_input` is absent
+or unavailable, stop setup and tell the user to run
+`codex features enable default_mode_request_user_input`, restart Codex or open a
+new thread, then rerun `$speckit-scaffold-spec <SPEC-ID>`. A nonzero shell
+`tty -s` result is not enough to stop a live Codex conversation, but a missing
+native picker is a config prerequisite failure. Do not try to drive grill-me from
+`codex exec` or any non-interactive runner — it will refuse and write nothing.
 
 If grill-me aborts (no interactive runtime), stop setup and report the
 condition. Do not synthesize design-concept content yourself.

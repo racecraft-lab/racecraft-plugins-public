@@ -53,17 +53,19 @@ one SPEC in the roadmap catalog. Preserve that 1:1 mapping.
 - **Lean is the goal.** Capture validated decisions, not discovery. Cut any
   section that does not reduce ambiguity. State the WHAT, not the HOW.
 
-## HITL guard — probe-then-fallback
+## HITL guard — native picker required
 
-Codex has no stable `is_interactive` API. Before the first question:
+Before the first question, verify Codex exposes the native ask-user-question
+surface:
 
-1. **Probe `request_user_input`** (available only when
-   `collaboration_modes = true` AND Plan mode). Wrap in try/catch. If it
-   succeeds, the human is present — use it for each question.
-2. **If unavailable in the live chat, fall back to a free-text Q&A loop** in the
-   chat stream. The user message that invoked `$speckit-prd` is sufficient HITL
-   evidence for the current turn. Do not treat "unavailable in Default mode" or
-   a nonzero `tty -s` as proof the chat is non-interactive.
+1. **Call `request_user_input`** for every question. In Codex Default mode this
+   requires `codex features enable default_mode_request_user_input` before the
+   thread starts or resumes.
+2. **If `request_user_input` is unavailable, stop instead of asking in
+   Markdown/free-text.** Tell the user to enable
+   `default_mode_request_user_input`, restart Codex or open a new thread, then
+   rerun `$speckit-prd`. The user message that invoked `$speckit-prd` is HITL
+   evidence, but it is not a substitute for the native picker UI.
 3. **Abort only for autonomous/background invocations** (`codex exec`, CI, cron,
    autopilot agents/subagents). Draft from supplied material only and mark every
    unvalidated decision as an Open Question, or abort and ask for an interactive
@@ -229,8 +231,9 @@ This Codex variant differs from the Claude Code variant
 (`speckit-pro/skills/speckit-prd/`) in three ways:
 
 1. **Interview tool.** Claude Code uses `AskUserQuestion` (always available);
-   Codex uses the probe-then-fallback above (`request_user_input` if Plan mode +
-   collaboration_modes; otherwise free-text Q&A).
+   Codex uses `request_user_input`. In Default mode, enable
+   `default_mode_request_user_input` before starting the thread; otherwise stop
+   instead of rendering Markdown questions.
 2. **Invocation syntax.** Claude Code: `/speckit-pro:speckit-prd`. Codex:
    `$speckit-prd`. Custom slash commands are deprecated in Codex.
 3. **No `commands/` directory.** Ships only as a skill.
