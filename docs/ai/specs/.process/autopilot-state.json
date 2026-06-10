@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-008-workflow.md",
-  "updated_at": "2026-06-10T03:57:11Z",
-  "active_step": "Post: Verify Implementation",
+  "updated_at": "2026-06-10T04:03:56Z",
+  "active_step": "Post: PR Body Generation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -233,8 +233,8 @@
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "in_progress",
-      "summary": "Initial verify found one critical, one high, and two medium findings. Follow-up verify found the Python helper still present, live PRSG-008 task planning failing, and non-happy-path schema validation incomplete. Remediation replaced the planner with Bash parsing plus jq JSON assembly, normalized paths from the target feature repo root, mapped Setup/Foundational task sections into Foundation, asserted path-normalization, and schema-validates invalid-plan, warning, path-normalization, and input-error outputs."
+      "status": "completed",
+      "summary": "Focused verify rerun passed with no remaining CRITICAL, HIGH, or MEDIUM findings. It confirmed no Python/json.dumps/python3 references in plan-layers.sh, live PRSG-008 planning status=ok, path normalization rooted at the target repo, asserted path-normalization coverage, and schema validation across invalid-plan, warning, path-normalization, and input-error outputs."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
@@ -259,15 +259,17 @@
     {
       "step": "Post: Reviewability Diff Gate",
       "status": "completed",
-      "summary": "Diff gate passed via recorded infra exception: reviewable_loc=0, production_files=0, total_files=38, exception_honored=true."
+      "summary": "Diff gate passed via recorded infra exception: reviewable_loc=0, production_files=0, total_files=39, exception_honored=true."
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Self-review recorded executed tests, edge-case coverage, FR/task traceability, and no TODO/DEFERRED/OUT-OF-SCOPE marker findings."
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated specs/prsg-008-layer-planner/.process/uat-runbook.md and locally polished it with concrete per-story commands. uat-runbook-author is not registered in this Codex session, so the author-agent pass was logged as unavailable."
     },
     {
       "step": "Post: PR Body Generation",

@@ -551,7 +551,31 @@ footprint for PRSG-008. The diff gate reports `reviewable_loc=0` and
 | Code Review | Skipped: review extension not installed. |
 | Integration Suite | Passed: `bash tests/speckit-pro/run-all.sh` reported `2106/2106`. |
 | Cleanup | Skipped: cleanup extension not installed. |
-| Reviewability Diff Gate | Passed via infra exception: `reviewable_loc=0`, `production_files=0`, `total_files=38`, `exception_honored=true`. |
+| Reviewability Diff Gate | Passed via infra exception: `reviewable_loc=0`, `production_files=0`, `total_files=39`, `exception_honored=true`. |
+| Self-Review | Completed; see `## Self-Review`. |
+| UAT Runbook Generation | Completed: `specs/prsg-008-layer-planner/.process/uat-runbook.md` generated and locally polished because `uat-runbook-author` is not registered in this Codex session. |
+
+## Self-Review
+
+1. **Tests executed?** Yes. Repository build/typecheck/lint/unit/integration
+   commands are not defined for this shell-test plugin repo. Executed and
+   passed: `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh`
+   (`66/66`), direct live-feature planner run (`status=ok`, 6 increments,
+   45 tasks), `bash tests/speckit-pro/run-all.sh --layer 4` (`1029/1029`),
+   `bash tests/speckit-pro/run-all.sh --layer 1` (`887/887`), privacy scan
+   (`9/9`), and `bash tests/speckit-pro/run-all.sh` (`2106/2106`).
+2. **Edge cases?** Covered. Schema and valid/read-only coverage is in
+   `tests/speckit-pro/layer4-scripts/test-plan-layers.sh:851`; checkbox and
+   `[P]` metadata at `:890`; invalid-plan diagnostics at `:906`; warning
+   diagnostics at `:961`; input errors at `:993`; script safety at `:1070`;
+   determinism, generated 200-task performance, and read-only checks at
+   `:1081`. Non-happy-path outputs now call the actual schema validator.
+3. **Requirements matched?** Yes. `tasks.md` maps every FR to completed
+   tasks in `specs/prsg-008-layer-planner/tasks.md:234`, and verify-tasks
+   reported 45/45 completed tasks verified with 0 flagged items.
+4. **Follow-up?** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]` markers were
+   found in `spec.md`, `plan.md`, `tasks.md`, or this workflow. PRSG-009
+   branch/PR emission remains the documented downstream non-goal.
 
 ---
 
