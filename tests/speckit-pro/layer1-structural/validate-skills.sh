@@ -6,7 +6,7 @@ source "$(dirname "$0")/../lib/assertions.sh"
 PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
 
 SKILLS_DIR="$PLUGIN_ROOT/skills"
-SKILLS=(speckit-autopilot speckit-coach speckit-install speckit-upgrade speckit-scaffold-spec speckit-status speckit-resolve-pr speckit-prd)
+SKILLS=(grill-me speckit-autopilot speckit-coach speckit-install speckit-upgrade speckit-scaffold-spec speckit-status speckit-resolve-pr speckit-prd)
 # Skills that require a populated references/ directory (heavy guidance skills with reference docs)
 SKILLS_REQUIRING_REFERENCES="speckit-autopilot speckit-coach"
 ALLOWED_KEYS="name description license allowed-tools metadata compatibility user-invocable disable-model-invocation argument-hint"
@@ -125,6 +125,26 @@ else:
     _pass
   else
     _fail "body is only $body_len chars (need > 100)"
+  fi
+
+  if [ "$skill" = "grill-me" ]; then
+    set_test "grill-me: Claude variant requires AskUserQuestion"
+    if [[ "$body" == *"Confirm \`AskUserQuestion\` is available in your tool list"* \
+      && "$body" == *"the only sanctioned interview mechanism in the Claude Code variant"* \
+      && "$body" == *"Call \`AskUserQuestion\` with the question"* ]]; then
+      _pass
+    else
+      _fail "expected Claude grill-me to require AskUserQuestion as the interview mechanism"
+    fi
+
+    set_test "grill-me: compatibility text does not document stale Codex free-text loop"
+    if [[ "$frontmatter" == *"AskUserQuestion tool support"* \
+      && "$frontmatter" == *"request_user_input when available"* \
+      && "$content" != *"uses a free-text Q&A loop instead"* ]]; then
+      _pass
+    else
+      _fail "expected grill-me compatibility text to avoid the obsolete Codex free-text-loop contract"
+    fi
   fi
 
   if [ "$skill" = "speckit-scaffold-spec" ]; then

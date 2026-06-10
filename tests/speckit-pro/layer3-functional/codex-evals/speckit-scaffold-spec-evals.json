@@ -4,11 +4,12 @@
     {
       "id": 1,
       "prompt": "Set up SPEC-009 from the technical roadmap so it is ready for the autopilot. I want the worktree branch created, the workflow template copied, and the prompts populated from the roadmap.",
-      "expected_output": "Explains or performs the setup flow by locating the roadmap entry, creating or reusing the worktree branch, running the $grill-me interview before writing the workflow file, generating the workflow file from the shared template enriched by the design concept, and stopping after both files are committed and pushed.",
+      "expected_output": "Explains or performs the setup flow by locating the roadmap entry, creating or reusing the worktree branch, running the $grill-me interview before writing the workflow file, generating the workflow file from the shared template enriched by the design concept, and stopping after both files are committed and pushed. In Codex, the Grill Me interview uses request_user_input for each multiple-choice question whenever that tool is present.",
       "expectations": [
         "Mentions locating the technical roadmap and the requested SPEC-ID entry",
         "Mentions creating or reusing a dedicated worktree branch",
         "Mentions running the $grill-me interview before writing the workflow file",
+        "States that Codex Grill Me questions must use request_user_input when the tool is available, not plain Markdown prompts",
         "Mentions producing a Design Concept doc at docs/ai/specs/SPEC-<ID>-design-concept.md",
         "Mentions copying the shared workflow template into docs/ai/specs/",
         "Mentions populating the workflow prompts from BOTH the roadmap scope AND the Design Concept doc",
@@ -76,7 +77,7 @@
     {
       "id": 7,
       "prompt": "I'm trying to run $speckit-scaffold-spec SPEC-009 inside a `codex exec` automation that has no TTY. The grill-me interview step is failing. Why, and what should setup do?",
-      "expected_output": "Reports that grill-me's HITL probe (request_user_input → tty -s → abort) failed because no interactive runtime was available, and stops the setup flow rather than fabricating design-concept content. Surfaces the condition to the user so they can re-run interactively.",
+      "expected_output": "Reports that grill-me could not access an interactive question surface or live chat in the automation runtime, and stops the setup flow rather than fabricating design-concept content. Surfaces the condition to the user so they can re-run interactively.",
       "expectations": [
         "States that grill-me requires an interactive runtime and aborts when none is detected",
         "States that setup is HITL-gated by design and must not synthesize design-concept content itself",

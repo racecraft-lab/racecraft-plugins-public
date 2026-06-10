@@ -4,7 +4,7 @@ description: "MANDATORY for SpecKit / Spec-Driven Development (SDD) pre-spec sco
 argument-hint: "e.g. 'interview me about this brief', 'grill me on the gamification overhaul', 'scope this transcript'"
 user-invocable: true
 license: MIT
-compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex variant in codex-skills/grill-me/ uses a free-text Q&A loop instead."
+compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex variant in codex-skills/grill-me/ uses request_user_input when available, with free-text fallback only when that tool is absent or unavailable."
 ---
 
 # Grill Me — Iterative Project Scoping Interview

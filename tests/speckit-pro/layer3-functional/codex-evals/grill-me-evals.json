@@ -4,9 +4,10 @@
     {
       "id": 1,
       "prompt": "I have a raw idea: 'Add a leaderboard to our learning platform that ranks users by points earned from completed lessons.' Walk every branch of the design tree, ask me one question at a time with your recommended answer, and produce a design concept doc when we're done. Save it to docs/ai/specs/leaderboard-design-concept.md.",
-      "expected_output": "Runs an interactive interview using the probe-then-fallback HITL guard (request_user_input if available; free-text Q&A otherwise) covering data model, scoring rules, retroactivity, UX surface, performance, privacy, and rollout. Each question presents the AI's recommended answer marked (Recommended) as the first option. After the interview, writes a design concept doc with frontmatter, Goals, Non-goals, full Q&A log, and Open Questions to the requested path.",
+      "expected_output": "Runs an interactive interview using the Codex picker-first HITL guard: request_user_input is used whenever it is present in the active tool list, with free-text Q&A only when that tool is absent or explicitly unavailable. Covers data model, scoring rules, retroactivity, UX surface, performance, privacy, and rollout. Each picker question presents the AI's recommended answer marked (Recommended) as the first option. After the interview, writes a design concept doc with frontmatter, Goals, Non-goals, full Q&A log, and Open Questions to the requested path.",
       "expectations": [
-        "Probes for an interactive runtime before asking any question (request_user_input or tty -s)",
+        "Uses request_user_input before asking any question when that tool is present in the active Codex tool list",
+        "Does not ask Grill Me questions as normal assistant messages, progress updates, or final responses while request_user_input is available",
         "Asks exactly one question per turn — no batched multi-question prompts",
         "Every question has the AI's recommendation as the first option, labeled with the suffix '(Recommended)'",
         "Walks at least 5 distinct design-tree branches (e.g., data model, scoring rules, UX, performance, privacy)",
@@ -41,12 +42,13 @@
     {
       "id": 4,
       "prompt": "Run grill-me on the topic 'redesign the user onboarding flow' and pay attention to how you format every question prompt. I want to verify the option structure.",
-      "expected_output": "Every question presents 2-3 plausible answers, with the AI's recommendation as the first option, labeled '<answer> (Recommended)'. When using request_user_input, options are passed in the structured-input schema; in free-text fallback, options are listed as A/B/C with the same labeling.",
+      "expected_output": "Every question presents 2-3 plausible answers, with the AI's recommendation as the first option, labeled '<answer> (Recommended)'. When request_user_input is present, options are passed in the structured-input schema; free-text A/B/C formatting is acceptable only when the tool is absent or explicitly unavailable.",
       "expectations": [
         "Every question presents between 2 and 3 explicit options",
         "The first option in every prompt is suffixed with '(Recommended)'",
         "The first option's description includes the AI's reasoning for why it's recommended",
-        "Each option label stays short enough to be readable in either the structured tool or the free-text fallback",
+        "Each option label stays short enough to be readable in the structured tool",
+        "Does not fall back to plain Markdown questions when request_user_input is available",
         "No question is multi-select — every question expects a single chosen answer"
       ]
     },

@@ -70,24 +70,27 @@ If autopilot's Clarify phase needs disambiguation, it uses
 `/speckit-clarify` with the multi-agent consensus protocol — NOT
 grill-me. These are different systems by design.
 
-### Self-check at activation — probe-then-fallback HITL guard
+### Self-check at activation — Codex picker-first HITL guard
 
 **Before asking your first question**, verify the runtime supports
 real-time human interaction. Codex does not expose a stable
-`is_interactive` API today, so use the following probe-then-fallback
-pattern:
+`is_interactive` API today, so use the following picker-first pattern:
 
-1. **Probe `request_user_input`** (available only when
-   `collaboration_modes = true` AND in Plan mode). Wrap the call in
-   try/catch. If it succeeds, the human is present — proceed with the
-   interview using `request_user_input` for each question.
+1. **Use `request_user_input` whenever it is present in the active tool
+   list.** This is the Codex ask-user-question surface. Do not ask a
+   Grill Me question as a normal assistant message, progress update, or
+   final response while this tool is available. Each interview turn must
+   call `request_user_input` with exactly one question, 2-3 mutually
+   exclusive options, and the recommended option first with the label
+   suffix `(Recommended)`.
 
-2. **If `request_user_input` is unavailable in the current live Codex
-   chat, continue with a free-text Q&A loop in the chat stream.** The
-   user message that invoked `$grill-me` or `$speckit-scaffold-spec` is
-   sufficient HITL evidence for the current turn. Do not treat
-   `request_user_input is unavailable in Default mode` or a nonzero
-   shell `tty -s` result as proof that the chat is non-interactive.
+2. **Use free-text Q&A only when `request_user_input` is absent from the
+   active tools or an attempted tool call fails because the tool is not
+   available in this runtime.** The user message that invoked
+   `$grill-me` or `$speckit-scaffold-spec` is sufficient HITL evidence
+   for the current turn. Do not choose free-text merely because the
+   session is in Default mode, because `tty -s` is nonzero, or because
+   prose is easier to format.
 
 3. **Abort only for autonomous or background invocations**: `codex exec`,
    CI, cron/automation, autopilot agents, or subagents that cannot receive
@@ -143,10 +146,10 @@ that file before activating. The high-level loop:
    b. Determine your recommended answer (consult the codebase, the
       constitution at `.specify/memory/constitution.md` if present,
       and industry best practices).
-   c. Use the structured-input mechanism the HITL probe confirmed
-      (either `request_user_input` or free-text Q&A in chat). State
-      the question, present the AI's recommendation as the first
-      option marked `(Recommended)`, then 1–2 alternatives.
+   c. Ask with `request_user_input` when that tool is present. State
+      the question in the tool payload, present the AI's recommendation
+      as the first option marked `(Recommended)`, then 1–2 alternatives.
+      Use free-text Q&A only under the fallback rule above.
    d. Record the user's selected answer (including any free-text
       override). Update your mental model.
    e. Continue until stop condition triggers.
@@ -202,10 +205,9 @@ independent triggers — one from the estimator, one from your own reading
 of the spec:
 
 - **Over the ceiling** (`status: "warn"`) **OR the spec is horizontally
-  sliced** — ask a split question using the same structured-input
-  mechanism the HITL probe confirmed (`request_user_input` in Plan mode,
-  otherwise a free-text Q&A turn in the chat) — *not* a new mechanism,
-  the same one every other question uses. The estimator only sizes; it
+  sliced** — ask a split question with `request_user_input` when present,
+  otherwise use the same fallback mechanism as the rest of the interview.
+  The estimator only sizes; it
   has no concept of layering, so *you* judge from the interview whether
   the spec cuts by layer ("all the models", then "all the UI") rather
   than end-to-end. When the estimator returned `warn`, recommend
@@ -278,8 +280,9 @@ This Codex variant differs from the Claude Code variant
 (`speckit-pro/skills/grill-me/`) in three ways:
 
 1. **Interview tool.** Claude Code uses `AskUserQuestion` (always
-   available); Codex uses a probe-then-fallback (`request_user_input`
-   if Plan mode + collaboration_modes; otherwise free-text Q&A).
+   available); Codex uses `request_user_input` whenever that tool is
+   present in the active runtime. Free-text Q&A is only a last-resort
+   fallback when the tool is absent or unavailable.
 2. **Invocation syntax.** Claude Code: `/speckit-pro:grill-me`. Codex:
    `$grill-me`. Custom slash commands are deprecated in Codex
    ([openai/codex#7480](https://github.com/openai/codex/issues/7480)).
@@ -298,7 +301,7 @@ Actions:
 1. Run the HITL probe (succeeds in interactive Codex session)
 2. Build initial mental model (read CLAUDE.md, .specify/memory/constitution.md)
 3. Identify branches: data model, scoring rules, retroactivity, UX, perf, privacy
-4. Loop on `request_user_input` (or free-text Q&A), one question per branch
+4. Loop on `request_user_input`, one question per branch
 5. Stop at natural endpoint
 6. Write `docs/ai/specs/leaderboard-design-concept.md`
 
@@ -329,16 +332,14 @@ Solution: Don't invoke grill-me from non-interactive contexts. If you
 need scoping in `codex exec`, use `$speckit-coach` for methodology
 guidance or fail the gate and surface to a human.
 
-### `request_user_input` works but only sometimes
+### Question appears as plain Markdown instead of a picker
 
-Cause: That tool requires `collaboration_modes = true` AND Plan mode.
-If the session is in a different mode, the probe fails and we fall
-through to the free-text loop — which is correct behavior.
+Cause: The skill asked the question in a normal assistant message even
+though `request_user_input` was present in the active tool list.
 
-Solution: If you specifically want structured Q&A, ensure your config
-sets `collaboration_modes = true` and run the session in Plan mode.
-Otherwise the free-text fallback is fine and matches the original
-Grill Me protocol.
+Solution: Retry the question by calling `request_user_input` with one
+question and 2-3 options. Free-text fallback is allowed only when the
+tool is absent or explicitly unavailable in the runtime.
 
 ### Interview hits the soft cap (30 questions) on every run
 

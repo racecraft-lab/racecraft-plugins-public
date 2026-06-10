@@ -6,17 +6,18 @@ Read this before activating the skill. The high-level mission is in
 
 This protocol mirrors the Claude Code variant
 (`../../../skills/grill-me/references/interview-protocol.md`) but
-substitutes Codex's interactive primitives for `AskUserQuestion`.
+substitutes Codex's `request_user_input` picker for `AskUserQuestion`.
 
 ## Activation Sequence
 
 1. **Run the HITL probe** (from `../SKILL.md`'s "Self-check at
    activation"). Choose the question-asking mechanism:
-   - **`request_user_input`** if available (Plan mode +
-     `collaboration_modes = true`).
-   - **Free-text Q&A in chat** when `request_user_input` is unavailable
-     but the skill was invoked by the current user conversation or by
-     `$speckit-scaffold-spec` in that conversation.
+   - **`request_user_input`** whenever it is present in the active tool
+     list. This is the default and required Codex question surface.
+   - **Free-text Q&A in chat** only when `request_user_input` is absent
+     from the active tools or an attempted tool call fails because the
+     tool is unavailable, while the skill was invoked by the current user
+     conversation or by `$speckit-scaffold-spec` in that conversation.
    - **Abort** only for autonomous/background invocations that cannot
      receive a direct user reply in the same conversation.
 
@@ -77,9 +78,26 @@ Alternative 2 (sometimes):
              I need" after the soft cap.
 ```
 
-When using `request_user_input`, provide the question + 2–3 options
-matching the template. When falling back to free-text Q&A, write the
-question and options in plain prose, e.g.:
+Default to `request_user_input`. Provide exactly one question and 2-3
+options matching this schema:
+
+```text
+request_user_input({
+  questions: [{
+    header: "<12 chars max>",
+    id: "<snake_case_id>",
+    question: "<single question>",
+    options: [
+      { label: "<choice> (Recommended)", description: "<reason/tradeoff>" },
+      { label: "<choice>", description: "<reason/tradeoff>" }
+    ]
+  }]
+})
+```
+
+Never end a turn with a Markdown question while `request_user_input` is
+available. When the picker is genuinely unavailable and the fallback is
+allowed, write the question and options in plain prose, e.g.:
 
 ```text
 Q12. Should gamification points apply retroactively to existing user accounts?

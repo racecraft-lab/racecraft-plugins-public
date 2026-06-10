@@ -198,12 +198,15 @@ knows to:
 - Surface the key answers (Goals, Non-goals, major design decisions) back to
   this skill so step 6 can fold them into the workflow prompts
 
-Codex grill-me uses a probe-then-fallback HITL guard: it tries
-`request_user_input` first (Plan mode + collaboration_modes), then uses
-free-text Q&A in the current chat when structured input is unavailable. A
-nonzero shell `tty -s` result is not enough to stop a live Codex conversation.
-Do not try to drive grill-me from `codex exec` or any non-interactive runner —
-it will refuse and write nothing.
+Codex grill-me uses a picker-first HITL guard: it must call
+`request_user_input` for each Grill Me question whenever that tool is present in
+the active Codex tool list. Do not ask the Grill Me question as a normal
+assistant message, progress update, or final response while `request_user_input`
+is available. Free-text Q&A is a last-resort fallback only when the tool is
+absent or explicitly unavailable in the runtime. A nonzero shell `tty -s` result
+is not enough to stop a live Codex conversation. Do not try to drive grill-me
+from `codex exec` or any non-interactive runner — it will refuse and write
+nothing.
 
 If grill-me aborts (no interactive runtime), stop setup and report the
 condition. Do not synthesize design-concept content yourself.
