@@ -28,6 +28,14 @@ section "pr-checks.yml — Release PR Dispatch"
 set_test "workflow_dispatch trigger is defined"
 assert_contains "$CONTENT" "workflow_dispatch:"
 
+set_test "dispatched PR checks identify the PR number"
+if [[ "$CONTENT" == *'run-name: "PR Checks #'* \
+  && "$CONTENT" == *"inputs.pr_number"* ]]; then
+  _pass
+else
+  _fail "expected workflow_dispatch runs to include the PR number in run-name"
+fi
+
 set_test "workflow_dispatch accepts PR check inputs"
 if [[ "$CONTENT" == *"pr_number:"* \
   && "$CONTENT" == *"pr_title:"* \

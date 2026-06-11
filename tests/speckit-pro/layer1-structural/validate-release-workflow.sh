@@ -17,6 +17,11 @@ CONTENT=$(cat "$WORKFLOW_FILE")
 set_test "release workflow uses release-please"
 assert_contains "$CONTENT" "googleapis/release-please-action@v5"
 
+set_test "release workflow pins checkout actions"
+checkout_pin='actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd'
+checkout_count=$(grep -Fc "$checkout_pin" "$WORKFLOW_FILE")
+assert_eq "2" "$checkout_count" "release workflow pinned checkout count"
+
 set_test "release workflow can dispatch PR checks"
 if grep -Fq "actions: write" "$WORKFLOW_FILE" \
   && grep -Fq "gh workflow run pr-checks.yml" "$WORKFLOW_FILE" \

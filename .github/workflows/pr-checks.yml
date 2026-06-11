@@ -14,6 +14,7 @@
 #   names are constrained to kebab-case by Constitution Principle I.
 
 name: PR Checks
+run-name: "PR Checks #${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}"
 
 on:
   pull_request:
