@@ -24,7 +24,8 @@ Reviewability-Exception: infra
 - Do not modify `.github/workflows/pr-checks.yml` for scoped CI.
 - Do not use `gh-stack` for required PR creation; keep explicit `gh pr create --base --head --body-file`.
 - Preserve Claude/Codex parity for mirrored behavior and refresh `dist/` mirrors when source plugin files change.
-- Layer 7 is not planned because no new agent or dispatch graph behavior is introduced.
+- Add developer-local Layer 3 functional eval coverage for the roadmap's multi-PR emission e2e expectation.
+- Layer 7 is not planned because no new agent or dispatch graph behavior is introduced; record the not-applicable evidence during Polish.
 
 ---
 
@@ -133,6 +134,9 @@ Reviewability-Exception: infra
 - [ ] T042 Run structural validation `bash tests/speckit-pro/run-all.sh --layer 1` and record results in `docs/ai/specs/.process/PRSG-009-workflow.md` (SC-006)
 - [ ] T043 Run script-unit validation `bash tests/speckit-pro/run-all.sh --layer 4` and record results in `docs/ai/specs/.process/PRSG-009-workflow.md` (SC-006)
 - [ ] T044 Run default verification `bash tests/speckit-pro/run-all.sh`, update PR review packet evidence in `docs/ai/specs/.process/PRSG-009-workflow.md`, and confirm no `.github/workflows/pr-checks.yml` or PRSG-010 heuristic changes were introduced (FR-002, FR-015b, SC-006)
+- [ ] T045 [P] Add developer-local Layer 3 functional eval coverage for PRSG-009 multi-PR emission in `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json` and `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`, asserting N ordered PRs from a PRSG-008 layer-plan fixture, no legacy flattened-PR fallback, and no new slicing heuristics (FR-001, FR-002, SC-001, SC-006)
+- [ ] T046 Run the PRSG-009 Layer 3 functional eval case when developer-local prerequisites are available, or record `DEV-LOCAL — not run here` with the case IDs and missing prerequisite reason in `docs/ai/specs/.process/PRSG-009-workflow.md`; also record that Layer 7 remains not applicable unless implementation introduces a new agent or dispatch graph behavior (SC-006)
+- [ ] T047 Record the `speckit-scaffold-spec` topology audit in `docs/ai/specs/.process/PRSG-009-workflow.md`: setup still creates/reuses one initial feature worktree branch, while Style B slice branches are emitted only by post-implementation `multi-pr-emission.sh`; confirm no scaffold-time review-routing or PRSG-010 backstop behavior was added (FR-002, FR-004, SC-006)
 
 ---
 
@@ -162,7 +166,7 @@ Reviewability-Exception: infra
 ### Parallel Opportunities
 
 - T001-T005 can run in parallel because they touch separate fixture/test surfaces.
-- T037, T038, and T040 can run in parallel after script behavior is stable.
+- T037, T038, T040, and T045 can run in parallel after script behavior is stable.
 - Different story implementation should not edit `multi-pr-emission.sh` concurrently unless split by clearly owned functions.
 
 ---
@@ -209,10 +213,10 @@ Task: "Add RED restack tests in tests/speckit-pro/layer4-scripts/test-restack.sh
 | US1 | T009-T016 | FR-001-FR-007a, FR-016c | Three-slice fixture emits ordered Style B stack with explicit PR args |
 | US2 | T017-T027 | FR-008-FR-011e, FR-015a-FR-015d, FR-019 | Interrupted emission resumes from durable state without duplicate PRs |
 | US3 | T028-T036 | FR-012-FR-018 | Scoped verification blocks failed slice PRs and restack preserves scope |
-| Polish | T037-T044 | FR-002, FR-015b, FR-020, SC-006 | Parity, structural, script-unit, and default suites pass |
+| Polish | T037-T047 | FR-001, FR-002, FR-004, FR-015b, FR-020, SC-001, SC-006 | Parity, structural, script-unit, developer-local L3, scaffold-spec topology audit, and default suites pass |
 
 ## Notes
 
 - `[P]` means different files or independent fixture sets with no dependency on incomplete work.
-- Layer 7 is intentionally absent because PRSG-009 does not add agent dispatch graph behavior.
+- Layer 7 is intentionally absent because PRSG-009 does not add agent dispatch graph behavior; T046 records the not-applicable evidence during Polish.
 - PRSG-010 review-routing heuristics are out of scope for all tasks.

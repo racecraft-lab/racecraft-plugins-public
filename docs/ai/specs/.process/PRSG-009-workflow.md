@@ -43,8 +43,8 @@ Load-bearing decisions:
 | Clarify | `/speckit-clarify` | Complete | Resolved state, PRS manifest, branch/PR, scoped verification, and restack contracts; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and 4 JSON contracts; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | 4 domains; ci-release-flow added 29 items, 4 gaps remediated, G4 passed by deterministic marker fallback |
-| Tasks | `/speckit-tasks` | Complete | 44 tasks, 5 phases, 8 [P], 3/3 user stories covered; Layer 4 and Layer 8 parity tasks included; Layer 7 not required |
-| Analyze | `/speckit-analyze` | Pending | Verify no drift from design concept and roadmap dependencies |
+| Tasks | `/speckit-tasks` | Complete | 47 tasks after Analyze remediation, 5 phases, 9 [P], 3/3 user stories covered; Layer 4, developer-local Layer 3, and Layer 8 parity tasks included; Layer 7 not required unless dispatch graph behavior changes |
+| Analyze | `/speckit-analyze` | Complete | 2 findings remediated (0C/1H/1M/0L); G6 passed with 0 marker findings |
 | Implement | `/speckit-implement` | Pending | Implement TDD-first with scoped tests and Codex parity |
 
 ### Phase Gates
@@ -377,11 +377,11 @@ Focus on PRSG-009 requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | 44 |
+| **Total Tasks** | 47 |
 | **Phases** | 5: Foundation, US1 emission, US2 durable PR/resume state, US3 scoped CI/restack, Polish |
-| **Parallel Opportunities** | 8 `[P]` tasks plus story-level coordination after Foundation |
+| **Parallel Opportunities** | 9 `[P]` tasks plus story-level coordination after Foundation |
 | **User Stories Covered** | 3/3 |
-| **Test Coverage Planned** | Layer 4 for changed scripts; Layer 8 parity for Claude/Codex mirrored references; Layer 7 not required |
+| **Test Coverage Planned** | Layer 4 for changed scripts; developer-local Layer 3 functional eval for multi-PR emission e2e behavior; Layer 8 parity for Claude/Codex mirrored references; Layer 7 not required unless implementation adds dispatch graph behavior |
 | **G5 Status** | Pass: tasks cover implementation, docs, tests, parity, and verification without PRSG-010 routing heuristics |
 
 ### Tasks Reviewability Gate
@@ -448,7 +448,23 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| F1 | HIGH | Roadmap required PRSG-009 e2e coverage (`L3` functional eval for N PRs on a fixture spec), but tasks only planned Layer 4, Layer 8, and default validation. | Added SC-006 Layer 3 wording; added plan Layer 3 verification gate; added tasks T045-T046 for Layer 3 eval fixture/run evidence and Layer 7 not-applicable evidence. |
+| F2 | MEDIUM | Roadmap listed `speckit-scaffold-spec` for branch topology, but plan/tasks did not explicitly account for that surface. | Added plan scaffold-spec topology boundary and task T047 to record the no-op audit: scaffold setup remains one initial worktree branch; Style B slice branches are emitted post-implementation by `multi-pr-emission.sh`; no PRSG-010 routing/backstop behavior. |
+| — | — | **0 CRITICAL, 0 HIGH remaining** → G6 PASS; marker counter reports 0 persisted findings after remediation. | Unresolved for consensus: NONE |
+
+### Analyze Verification
+
+- Prerequisite check passed with explicit PRSG override:
+  `SPECIFY_FEATURE=009-multi-pr-emission SPECIFY_FEATURE_DIRECTORY=specs/prsg-009-multi-pr-emission .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks`
+- Marker counter after remediation:
+  `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh findings specs/prsg-009-multi-pr-emission`
+  → `{"type":"findings","total":0,"critical":0,"high":0,"medium":0,"low":0}`
+- G6 gate:
+  `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G6 specs/prsg-009-multi-pr-emission`
+  → `{"gate":"G6","pass":true,"reason":"0 CRITICAL/HIGH findings","markers":0,"details":[]}`
+- Structural validation:
+  `bash tests/speckit-pro/run-all.sh --layer 1`
+  → `915/915 passed`
 
 ---
 

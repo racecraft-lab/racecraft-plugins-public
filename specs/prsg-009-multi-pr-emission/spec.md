@@ -219,7 +219,7 @@ As a maintainer, I want branch topology, scoped CI mapping, and restack behavior
 - **SC-003**: If a later slice fails scoped verification, zero PRs are opened for that failed slice and the failed command evidence is recorded in both durable workflow state surfaces.
 - **SC-004**: Each emitted slice PR includes review order, scope budget, declared file-operation scope, scoped verification evidence, traceability, non-goals, known gaps, rollback or restack notes, and a reference to full-suite evidence captured before emission.
 - **SC-005**: After a lower slice is squash-merged, remaining slice branches can be restacked or retargeted in documented order while preserving their declared review scope.
-- **SC-006**: Structural validation and script-unit tests cover the multi-PR emission contract, resume reconciliation, failed-slice stop behavior, optional `gh-stack` detection, fallback restack behavior, and Codex parity checks.
+- **SC-006**: Structural validation, script-unit tests, developer-local Layer 3 functional eval coverage, and Layer 8 parity checks cover the multi-PR emission contract, resume reconciliation, failed-slice stop behavior, optional `gh-stack` detection, fallback restack behavior, scaffold-spec topology boundary, and Codex parity checks.
 
 ## Assumptions
 

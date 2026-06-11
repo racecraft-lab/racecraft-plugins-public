@@ -29,7 +29,9 @@ checks, then atomically replace the target path.
 **Testing**: Shell test harness:
 `bash tests/speckit-pro/run-all.sh --layer 1`,
 `bash tests/speckit-pro/run-all.sh --layer 4`, and
-`bash tests/speckit-pro/run-all.sh`.
+`bash tests/speckit-pro/run-all.sh`. Developer-local coverage adds a Layer 3
+functional eval case for the multi-PR emission fixture and Layer 8 parity for
+Claude/Codex mirrored references.
 
 **Target Platform**: Local macOS/Linux shell environments used by the
 `speckit-pro` plugin.
@@ -124,6 +126,12 @@ an explicit no-op rationale and evidence path.
   error, `3` dirty worktree, and `4` `git`/`gh` failure. JSON stdout carries
   matching `status` and `exit_code`; stderr uses
   `restack.sh: <status>: <message>` diagnostics.
+- **Scaffold-spec topology boundary**: PRSG-009 records the roadmap
+  `speckit-scaffold-spec` branch-topology bullet as an explicit no-op audit.
+  Scaffold setup remains responsible for one initial feature worktree branch;
+  Style B slice branches are planned and emitted only by post-implementation
+  `multi-pr-emission.sh` after full implementation and verification. This keeps
+  PRSG-009 out of PRSG-010 review-routing/backstop behavior.
 
 ## State Management Decisions
 
@@ -255,6 +263,7 @@ contract schemas under [contracts/](contracts/).
 |------|---------|---------|
 | Structural | `bash tests/speckit-pro/run-all.sh --layer 1` | Validate plugin structure, script presence, and Codex parity. |
 | Script unit | `bash tests/speckit-pro/run-all.sh --layer 4` | Validate PR body packets, PRS v2 rendering, state uniqueness failures, candidate-write validation, empty/no-applicable scoped-test no-op evidence, later-slice failure isolation, emission stop/resume idempotency, `gh pr create` failure after branch creation, post-PR PRS/MOC persistence failure, closed-PR blocking, and restack exit/failure recovery contracts. |
+| Layer 3 functional eval | Developer-local PRSG-009 case in `tests/speckit-pro/layer3-functional/` | Validate the end-to-end multi-PR emission behavior on a fixture spec: N ordered PRs from the PRSG-008 layer plan, no legacy flattened PR fallback, and no new slicing heuristics. |
 | Default verify | `bash tests/speckit-pro/run-all.sh` | Final deterministic regression across Layers 1, 4, and 5. |
 | Layer 8 parity | `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` | Run only if implementation changes dispatch/parity fixture surfaces. |
 | Layer 7 integration | Not planned | Only required if dispatch graph behavior changes. |
