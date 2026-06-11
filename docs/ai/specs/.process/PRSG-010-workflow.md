@@ -35,11 +35,11 @@ Re-read it before each phase. The locked setup decisions:
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Seed from roadmap PRSG-010 plus the design concept decisions above |
-| Clarify | `/speckit-clarify` | Pending | Focus on re-slicing packet, O5 schema, and high-confidence probe evidence |
-| Plan | `/speckit-plan` | Pending | Plain bash + jq + Markdown; split-stack delivery expected |
-| Checklist | `/speckit-checklist` | Pending | Run error-handling, data-integrity, developer-experience, and backward-compatibility |
-| Tasks | `/speckit-tasks` | Pending | TDD-first, story-organized, split-PR-aware |
+| Specify | `/speckit-specify` | Complete | Seed from roadmap PRSG-010 plus the design concept decisions above |
+| Clarify | `/speckit-clarify` | Complete | Focus on re-slicing packet, O5 schema, and high-confidence probe evidence |
+| Plan | `/speckit-plan` | Complete | Plain bash + jq + Markdown; split-stack delivery expected |
+| Checklist | `/speckit-checklist` | Complete | Run error-handling, data-integrity, developer-experience, and backward-compatibility |
+| Tasks | `/speckit-tasks` | In Progress | TDD-first, story-organized, split-PR-aware |
 | Analyze | `/speckit-analyze` | Pending | Check roadmap/design/spec/plan/tasks consistency and PRSG-010 boundaries |
 | Implement | `/speckit-implement` | Pending | Execute as ordered split stack unless G5 routing says otherwise |
 
@@ -350,7 +350,7 @@ Focus on PRSG-010 requirements:
 | error-handling | 26 | 6 found, 6 remediated, 0 remaining | Final gate state, re-slicing packet, exception state, PR creation stop, weak probe fallback |
 | data-integrity | 24 | 5 found, 5 remediated, 0 remaining | O5 branch/path equality, rollup completeness, generated MOC ownership, router schema fixture validation |
 | developer-experience | 27 | 6 found, 6 remediated, 0 remaining | Operator steps, O5 default-boundary guidance, non-boilerplate exception education |
-| backward-compatibility | Pending | Pending | |
+| backward-compatibility | 24 | 4 found, 4 remediated, 0 remaining | Flat spec discovery, typed exception continuity, PRSG-007/008/009 compatibility, Claude/Codex mirror parity |
 
 ---
 

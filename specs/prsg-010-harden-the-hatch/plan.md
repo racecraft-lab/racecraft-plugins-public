@@ -30,7 +30,14 @@ workflow state JSON, and generated re-slicing packets
 **Testing**: `bash tests/speckit-pro/run-all.sh --layer 1`,
 `bash tests/speckit-pro/run-all.sh --layer 4`,
 `bash tests/speckit-pro/run-all.sh`, plus Layer 8 parity when mirrored skill
-prose changes
+prose changes. Focused backward-compatibility checks for PRSG-010 include
+`bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`,
+`bash tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh`,
+`bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`,
+`bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh`, and
+`bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` when the
+slice touches the corresponding flat-spec, typed-exception, PRSG-007,
+PRSG-008, or PRSG-009 compatibility surface.
 
 **Target Platform**: Claude Code and Codex plugin marketplace workflows on
 macOS/Linux shell environments
@@ -130,10 +137,33 @@ split stack rather than a single oversized PR.
 
 | Slice | Scope | Primary files | Verification |
 |-------|-------|---------------|--------------|
-| PRSG-010A | Final reviewability backstop and re-slicing packet | final backstop script, autopilot post-implementation references, backstop schemas | Layer 4 final-backstop fixtures covering concrete `operator_steps` for PRSG-007 reroute, PRSG-008 layer-plan regeneration, and PRSG-009 handoff selection, Layer 1 structural, default verify |
-| PRSG-010B | O5 parent manifest, flat child validation, status rollup guidance | O5 topology script, scaffold/status skills and Codex mirrors, O5 schema | Layer 4 O5 topology fixtures covering branch/path exact-match failures, mixed child states with every declared child emitted exactly once, generated `SPEC-MOC.md` zones regenerated only through `generate-spec-index.sh`, scaffold/status guidance assertions that normal split-PR remains default unless O4 cannot slice thin enough, Layer 8 parity, and Layer 1 structural |
-| PRSG-010C | Contextual routing probes and production routing schema | `atomicity-route.sh`, production routing schema, router fixtures | Layer 4 atomicity-router fixtures and schema validation for every router fixture output, including contextual-probe success, weak-evidence, and paired baseline-vs-weak-evidence fixtures that prove the conservative route is unchanged, no decisive contextual signal is emitted, and weak/conflicting evidence appears only as closed-enum hints |
-| PRSG-010D | Boilerplate removal, docs, parity, and review-packet polish | roadmap/templates, parity fixture, structural assertions | Layer 1 structural, Layer 8 parity, default verify, and negative checks that generated exception education names the valid classes/provenance rules without emitting a standalone valid pragma |
+| PRSG-010A | Final reviewability backstop and re-slicing packet | final backstop script, autopilot post-implementation references, backstop schemas | Layer 4 final-backstop fixtures covering concrete `operator_steps` for PRSG-007 reroute, PRSG-008 layer-plan regeneration, and PRSG-009 handoff selection, existing `test-reviewability-gate.sh` typed-exception fixtures preserved or intentionally updated with rationale, Layer 1 structural, default verify |
+| PRSG-010B | O5 parent manifest, flat child validation, status rollup guidance | O5 topology script, scaffold/status skills and Codex mirrors, O5 schema | Layer 4 O5 topology fixtures covering branch/path exact-match failures, mixed child states with every declared child emitted exactly once, generated `SPEC-MOC.md` zones regenerated only through `generate-spec-index.sh`, legacy/current flat `specs/*` scan regression using the existing spec-index fixtures, scaffold/status guidance assertions that normal split-PR remains default unless O4 cannot slice thin enough, Layer 8 parity, and Layer 1 structural |
+| PRSG-010C | Contextual routing probes and production routing schema | `atomicity-route.sh`, production routing schema, router fixtures | Layer 4 atomicity-router fixtures and schema validation for every router fixture output, including contextual-probe success, weak-evidence, paired baseline-vs-weak-evidence fixtures that prove the conservative route is unchanged, no decisive contextual signal is emitted, weak/conflicting evidence appears only as closed-enum hints, and existing PRSG-007 dogfood/contract fixtures remain valid unless an intentional fixture update is documented |
+| PRSG-010D | Boilerplate removal, docs, parity, and review-packet polish | roadmap/templates, parity fixture, structural assertions | Layer 1 structural, Layer 8 parity mapped to every changed Claude/Codex mirror surface, default verify, PRSG-008 `plan-layers` and PRSG-009 `multi-pr-emission` fixture compatibility evidence when referenced by final packet or review-packet polish, and negative checks that generated exception education names the valid classes/provenance rules without emitting a standalone valid pragma |
+
+### Backward Compatibility Guardrails
+
+- Flat spec discovery: O5 support must remain additive to the existing
+  `specs/*/SPEC-MOC.md` scan. Implementation must rerun the existing
+  `test-generate-spec-index.sh` fixture set and prove ordinary flat specs stay
+  byte-identical unless a change is explicitly documented as intentional.
+- Typed exceptions: the current `Reviewability-Exception: refactor|infra|upgrade`
+  positive fixtures and invalid-class/casing/trailing-prose negative fixtures
+  must keep passing. PRSG-010 may intentionally update generated-provenance or
+  code-fence cases, but each intentional fixture change must name the PRSG-010
+  provenance rule it implements.
+- PRSG-007/008/009 compatibility: PRSG-010 recovery metadata consumes existing
+  routing, layer-plan, and multi-PR contracts; it must not rewrite those
+  contracts. Rerun `test-atomicity-route.sh`, `test-plan-layers.sh`, and
+  `test-multi-pr-emission.sh` for slices that touch their inputs, outputs, or
+  handoff wording, and document any intentional fixture update in the task or
+  test name.
+- Mirror parity: every changed Claude skill/reference surface must either have
+  its Codex mirror updated in the same slice or be documented as a single
+  shared runtime-agnostic artifact. Evidence must include Layer 1 Codex parity
+  checks and the PRSG-010 Layer 8 parity fixture/dry-run with fields mapped to
+  the changed autopilot, scaffold, and status mirrors.
 
 ### PR Review Packet Source
 

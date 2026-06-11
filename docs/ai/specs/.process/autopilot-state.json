@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T17:49:38Z",
-  "active_step": "Phase 4: Checklist - backward-compatibility",
+  "updated_at": "2026-06-11T18:01:49Z",
+  "active_step": "Phase 5: Tasks",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -175,15 +175,20 @@
     },
     {
       "step": "Phase 4: Checklist - backward-compatibility",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "24 items; 4 gaps remediated; 0 [Gap] markers remaining. Tightened flat spec discovery, typed exception continuity, PRSG-007/008/009 compatibility, and Claude/Codex mirror parity evidence."
     },
     {
       "step": "Phase 4: Checklist - backward-compatibility Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress",
+      "gate": "G4",
+      "gate_status": "passed",
+      "summary": "All four Phase 4 checklists completed with no remaining active [Gap] markers."
     },
     {
       "step": "Phase 6: Analyze",
@@ -527,6 +532,26 @@
         "specs/prsg-010-harden-the-hatch/data-model.md",
         "specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json",
         "specs/prsg-010-harden-the-hatch/checklists/developer-experience.md"
+      ],
+      "validation": {
+        "markers": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
+        "contracts_jq": "passed",
+        "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
+        "diff_check": "clean",
+        "layer1": "915/915 passed",
+        "layer4": "1195/1195 passed",
+        "default_verify": "2300/2300 passed by checklist executor",
+        "consensus": "none unresolved"
+      }
+    },
+    "backward-compatibility": {
+      "status": "completed",
+      "items": 24,
+      "gaps_found": 4,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-010-harden-the-hatch/plan.md",
+        "specs/prsg-010-harden-the-hatch/checklists/backward-compatibility.md"
       ],
       "validation": {
         "markers": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
