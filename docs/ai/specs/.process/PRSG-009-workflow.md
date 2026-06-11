@@ -43,7 +43,7 @@ Load-bearing decisions:
 | Clarify | `/speckit-clarify` | Complete | Resolved state, PRS manifest, branch/PR, scoped verification, and restack contracts; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and 4 JSON contracts; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | 4 domains; ci-release-flow added 29 items, 4 gaps remediated, G4 passed by deterministic marker fallback |
-| Tasks | `/speckit-tasks` | Pending | Generate small story-oriented tasks with Layer 4, Layer 7 if needed, and Layer 8 parity coverage |
+| Tasks | `/speckit-tasks` | Complete | 44 tasks, 5 phases, 8 [P], 3/3 user stories covered; Layer 4 and Layer 8 parity tasks included; Layer 7 not required |
 | Analyze | `/speckit-analyze` | Pending | Verify no drift from design concept and roadmap dependencies |
 | Implement | `/speckit-implement` | Pending | Implement TDD-first with scoped tests and Codex parity |
 
@@ -377,29 +377,53 @@ Focus on PRSG-009 requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Pending |
-| **Parallel Opportunities** | Pending |
-| **User Stories Covered** | Pending |
+| **Total Tasks** | 44 |
+| **Phases** | 5: Foundation, US1 emission, US2 durable PR/resume state, US3 scoped CI/restack, Polish |
+| **Parallel Opportunities** | 8 `[P]` tasks plus story-level coordination after Foundation |
+| **User Stories Covered** | 3/3 |
+| **Test Coverage Planned** | Layer 4 for changed scripts; Layer 8 parity for Claude/Codex mirrored references; Layer 7 not required |
+| **G5 Status** | Pass: tasks cover implementation, docs, tests, parity, and verification without PRSG-010 routing heuristics |
+
+### Tasks Reviewability Gate
+
+- Initial gate result: `block` (`reviewable_loc=1760`, `total_files=71`).
+- Repair: accepted typed infra exception because PRSG-009 is SpecKit workflow infrastructure spanning shell tooling, fixtures, reviewer docs, and Claude/Codex parity mirrors under one durable state contract.
+- Exception pragma recorded in `plan.md` and `tasks.md`: `Reviewability-Exception: infra`.
 
 ---
 
 ## Atomicity Route
 
-The autopilot records the read-only atomicity classifier decision here after Tasks/G5. PRSG-009 itself must consume the PRSG-008 layer plan and must not add new routing heuristics.
+The autopilot recorded the read-only atomicity classifier decision after Tasks/G5. PRSG-009 itself must consume the PRSG-008 layer plan and must not add new routing heuristics.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, or `out-of-scope` |
-| **Releasable** | Pending | `true` or `false` based on release safety |
-| **Signals** | Pending | Decisive classifier findings |
-| **Warnings** | Pending | Release-safety warnings |
+| **Route** | `one-navigable-PR` | Default modify-heavy route; no new routing heuristics added |
+| **Releasable** | `true` | No destructive release-safety warning emitted |
+| **Signals** | `change-shape:modify-heavy` | Decisive classifier finding |
+| **Warnings** | None | No release-safety warnings |
 
-To produce the decision, run:
+Command:
 
 ```bash
 bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/prsg-009-multi-pr-emission
 ```
+
+Output:
+
+```json
+{"route":"one-navigable-PR","releasable":true,"signals":["change-shape:modify-heavy"],"hints":[],"warnings":[]}
+```
+
+---
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| **Status** | `skipped` |
+| **Reason** | Atomicity route was `one-navigable-PR`; PRSG-008 layer planner only runs for `split-PR` route. |
+| **Planner command** | Not run |
 
 ---
 

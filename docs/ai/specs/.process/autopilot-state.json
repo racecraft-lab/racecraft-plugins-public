@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-009-workflow.md",
-  "updated_at": "2026-06-10T23:39:41Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-11T00:24:34.162725Z",
+  "active_step": "Phase 6: Analyze",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -185,11 +185,14 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "summary": "Created tasks.md with 44 tasks across Foundation, US1, US2, US3, and Polish; tasks reviewability gate passed with honored infra exception; atomicity route one-navigable-PR; layer planner skipped."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -200,7 +203,23 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Implement - Foundation (T001-T008)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - US1 emission stack (T009-T016)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - US2 durable PR/resume state (T017-T027)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - US3 scoped CI/restack (T028-T036)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Polish/parity/final verification (T037-T044)",
       "status": "pending"
     },
     {
@@ -313,5 +332,44 @@
         "codebase-analyst"
       ]
     }
-  ]
+  ],
+  "phase5_tasks": {
+    "gate": "G5",
+    "gate_status": "passed",
+    "task_count": 44,
+    "phases": 5,
+    "parallel_opportunities": 8,
+    "user_stories_covered": "3/3",
+    "reviewability_gate": {
+      "status": "exception",
+      "pass": true,
+      "exception_honored": true,
+      "exception_class": "infra",
+      "reviewable_loc": 1760,
+      "total_files": 71,
+      "primary_surface_count": 6
+    },
+    "atomicity_route": {
+      "route": "one-navigable-PR",
+      "releasable": true,
+      "signals": [
+        "change-shape:modify-heavy"
+      ],
+      "hints": [],
+      "warnings": []
+    }
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "Atomicity route was one-navigable-PR; PRSG-008 layer planner only runs for split-PR route."
+  }
 }

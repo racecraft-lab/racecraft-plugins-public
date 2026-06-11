@@ -83,6 +83,12 @@ is at the warning boundary, but splitting the spec would separate emission,
 resume, PRS rendering, and restack contracts that must share one state model.
 Deferred deeper atomicity backstops remain in PRSG-010.
 
+Reviewability-Exception: infra
+
+The Tasks gate exception is scoped to SpecKit workflow infrastructure: shell
+tooling, fixtures, reviewer docs, and Claude/Codex parity mirrors must remain
+coordinated against the same durable emission-state contract.
+
 **PR review packet source**: The slice packet generated during emission supplies
 review order, branch/base refs, declared file scope, scoped verification
 evidence, traceability, known gaps, and restack/rollback notes. Full regression
