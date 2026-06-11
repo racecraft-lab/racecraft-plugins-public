@@ -29,10 +29,6 @@ repo_root_for_manifest() {
   esac
 }
 
-json_array() {
-  sed '/^$/d' | jq -R . | jq -s .
-}
-
 add_problem() {
   local code="$1" message="$2" path="${3:-}" child_id="${4:-}"
   jq -cn \
@@ -145,7 +141,7 @@ expected_manifest_path="$expected_parent_path/o5-parent-manifest.json"
 if [ -n "$parent_branch" ] && [ "$parent_path" != "$expected_parent_path" ]; then
   add_problem "parent_path_mismatch" "parent.path must equal specs/<parent.branch>" "$parent_path"
 fi
-if [ -n "$parent_path" ] && [ "$MANIFEST_REL" != "$expected_manifest_path" ]; then
+if [ -n "$parent_branch" ] && [ "$MANIFEST_REL" != "$expected_manifest_path" ]; then
   add_problem "manifest_location_mismatch" "manifest must live at specs/<parent.branch>/o5-parent-manifest.json" "$MANIFEST_REL"
 fi
 
