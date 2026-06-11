@@ -45,7 +45,7 @@ Load-bearing decisions:
 | Checklist | `/speckit-checklist` | Complete | 4 domains; ci-release-flow added 29 items, 4 gaps remediated, G4 passed by deterministic marker fallback |
 | Tasks | `/speckit-tasks` | Complete | 47 tasks after Analyze remediation, 5 phases, 9 [P], 3/3 user stories covered; Layer 4, developer-local Layer 3, and Layer 8 parity tasks included; Layer 7 not required unless dispatch graph behavior changes |
 | Analyze | `/speckit-analyze` | Complete | 2 findings remediated (0C/1H/1M/0L); G6 passed with 0 marker findings |
-| Implement | `/speckit-implement` | Pending | Implement TDD-first with scoped tests and Codex parity |
+| Implement | `/speckit-implement` | Complete | Implemented multi-PR emission, PR body slice packets, PRS v2 rendering, restack helper, Codex parity, and fixture-backed Layer 4/8 coverage; G7 passed |
 
 ### Phase Gates
 
@@ -74,7 +74,7 @@ Load-bearing decisions:
 | Conventional Commits | Setup and implementation commits use conventional commit format | `git log --oneline -1` and CI PR title validation |
 | KISS, Simplicity & YAGNI | Consume PRSG-008 layer plans; do not add new review-routing heuristics in PRSG-009 | Plan review and Analyze phase |
 
-**Constitution Check:** Plan constitution check passed. Implementation constitution gates remain pending.
+**Constitution Check:** Plan constitution check passed. Implementation constitution gates passed through Layer 1 structural checks, Layer 4 script coverage, Layer 8 parity dry-run, and the default deterministic suite.
 
 ---
 
@@ -730,6 +730,18 @@ No scaffold-time review-routing, slice branch emission, or PRSG-010 backstop beh
 
 ## Post-Implementation Checklist
 
+### Post Items 10-14 Evidence
+
+| Item | Result | Evidence |
+|------|--------|----------|
+| Doctor Extension Check | PASS | `$speckit-speckit-utils-doctor`; overall PASS, 0 FAIL, 0 WARN |
+| Verify Implementation | PASS | `$speckit-verify`; explicit feature-directory override used because branch name is non-standard |
+| Verify Tasks Phantom Check | PASS | `$speckit-verify-tasks --scope all`; 47 checked, 47 verified, 0 phantom findings; report at `specs/prsg-009-multi-pr-emission/verify-tasks-report.md` |
+| Code Review | SKIPPED | `review` extension not installed |
+| Integration Suite | PASS | `bash tests/speckit-pro/run-all.sh` -> 2292/2292 passed |
+| Cleanup | SKIPPED | `cleanup` extension not installed |
+
+
 - [x] All tasks marked complete in `tasks.md`.
 - [x] Layer 4 tests pass for changed scripts.
 - [x] Layer 8 parity passes for mirrored Codex/Claude surfaces.
@@ -738,6 +750,35 @@ No scaffold-time review-routing, slice branch emission, or PRSG-010 backstop beh
 - [x] Spec MOC generated PR table records successful slice PRs in fixture-backed PRSG-009 coverage.
 - [x] Failed slice behavior records evidence and stops before opening known-bad PRs.
 - [x] Manual verification notes recorded: live GitHub PR creation/restack was not exercised in this deterministic Phase 7 run; fixture-backed command capture and dry-run restack coverage passed.
+
+### Reviewability Diff Gate
+
+- Command: `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD`
+- Result: PASS as honored `Reviewability-Exception: infra` (`status=exception`, `reviewable_loc=0`, `production_files=0`, `total_files=69`, `primary_surface_count=6`).
+- Warnings: total files and primary surfaces exceed warning thresholds; accepted because PRSG-009 is coordinated SpecKit workflow infrastructure with mirrored dist/reference/test surfaces.
+
+
+### Self-Review
+
+1. **Tests executed?** PASS. This repo has no BUILD/TYPECHECK/LINT project commands; the shell verification that actually ran in this session is `bash tests/speckit-pro/run-all.sh` -> 2292/2292 passed, plus `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run` -> 6/6 passed.
+2. **Edge cases?** PASS. Non-happy paths are covered by focused Layer 4 tests: invalid/input-error layer plans and duplicate state keys (`tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:84`, `:97`, `:122`), invalid slice branches and undeclared changed files (`:148`, `:302`), single-slice no-flattening (`:269`), closed PR / PR-create / post-PR persistence recovery (`:540`, `:557`, `:611`), scoped verification no-op and failure blocking (`:619`, `:639`, `:719`), invalid slice packets (`tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh:154`), PRS v1/v2/head/merge behavior (`tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh:303`, `:311`, `:318`, `:320`, `:343`), and restack dry-run/apply/failure mapping (`tests/speckit-pro/layer4-scripts/test-restack.sh:209`, `:262`, `:287`, `:312`, `:330`, `:348`).
+3. **Requirements matched?** PASS. All FR-001 through FR-020 trace to completed tasks in `tasks.md`; `validate-gate.sh G7` reports all 47 tasks complete, and `verify-tasks-report.md` verified 47/47 with no phantom completions.
+4. **Follow-up?** PASS. No `TODO`, `DEFERRED`, or `OUT-OF-SCOPE` markers were found in `spec.md`, `plan.md`, `tasks.md`, or the workflow. Layer 3 live eval remains explicitly recorded as `DEV-LOCAL - not run here`; descriptor coverage was added for the case IDs.
+
+
+### UAT Runbook Generation
+
+- Generated: `specs/prsg-009-multi-pr-emission/.process/uat-runbook.md`
+- Author pass: rewritten into executable fixture-backed UAT steps for all three stories; no real GitHub PR creation required.
+- Check run by author: `bash tests/speckit-pro/run-all.sh --layer 1` -> 915/915 passed.
+
+
+### PR Body Generation
+
+- Command: `bash speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/prsg-009-multi-pr-emission "$(git rev-parse --git-dir)/speckit-pr-body.md" origin/main...HEAD`
+- Output: `.git/speckit-pr-body.md`, resolved through this worktree's actual git-dir because `.git` is a worktree pointer file.
+- Validation: required `speckit-pro-review-packet-source` marker and `## UAT Runbook` heading are present; only the top placeholder summary sections were replaced with plain-English reviewer text.
+
 
 ---
 
