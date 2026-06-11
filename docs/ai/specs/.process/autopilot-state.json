@@ -91,7 +91,7 @@
       "status": "completed",
       "gate": "G1",
       "gate_status": "passed",
-      "summary": "Created spec.md with 20 FRs, 3 user stories, 9 acceptance scenarios, 6 success criteria, and 0 NEEDS CLARIFICATION markers."
+      "summary": "Created spec.md with 23 FRs, 3 user stories, 9 acceptance scenarios, 8 success criteria, and 0 NEEDS CLARIFICATION markers."
     },
     {
       "step": "Phase 2: Clarify - Backstop and re-slicing packet",
@@ -277,10 +277,10 @@
     "gate_status": "passed",
     "spec_file": "specs/prsg-010-harden-the-hatch/spec.md",
     "quality_checklist": "specs/prsg-010-harden-the-hatch/checklists/requirements.md",
-    "functional_requirements": 20,
+    "functional_requirements": 23,
     "user_stories": 3,
     "acceptance_scenarios": 9,
-    "success_criteria": 6,
+    "success_criteria": 8,
     "needs_clarification_markers": 0,
     "validation": {
       "validate_gate_g1": "passed",
