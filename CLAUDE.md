@@ -205,7 +205,7 @@ If a PR ever lands on `main` with a non-public-readable title (squash merges use
 
 ## CI/CD Workflow
 
-The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and contains four jobs:
+The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-draft PR and can also be dispatched by release automation for release-please PR branches created with `GITHUB_TOKEN`. It contains four jobs:
 
 | Job | Description |
 |-----|-------------|
@@ -217,6 +217,8 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 **Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates all matrix results into one stable name that branch protection can require.
 
 **Docs-only PRs:** When a PR touches only documentation (no plugin directory and no `tests/<plugin>/` suite), `detect` outputs `[]`, `test` is skipped (job-level `if:` evaluates to false — GitHub treats a skipped job as passing, not pending), and `validate-plugins` also passes. Docs-only PRs are not blocked by the test matrix.
+
+**Release-please PRs:** GitHub suppresses normal `pull_request` workflow runs for PRs created or updated by `GITHUB_TOKEN`, so the Release workflow dispatches `PR Checks` manually after it syncs generated `dist/**` payloads onto the release PR branch.
 
 **Maintenance warning:** If any job in `pr-checks.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. A stale check name silently degrades protection: the renamed check never reports, the branch protection rule becomes vacuous, and PRs become mergeable without the check passing.
 
@@ -238,7 +240,7 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 
 1. **Conventional commit analysis:** After a PR is squash-merged to `main`, the Release workflow (`.github/workflows/release.yml`) runs. release-please scans new conventional commits and determines whether a release is warranted. Only `fix:`, `feat:`, and breaking-change commits trigger a release PR — `chore:` and `docs:` commits alone do not.
 
-2. **Release PR creation:** When releasable commits exist, release-please opens a PR updating `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json`. This PR accumulates further releasable commits until the maintainer merges it.
+2. **Release PR creation:** When releasable commits exist, release-please opens or updates a PR that bumps `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json` and `speckit-pro/.codex-plugin/plugin.json`. The Release workflow then checks out the release PR branch, rebuilds generated `dist/**` payload files, commits them back to that branch when needed, and dispatches `PR Checks` for the branch. This keeps release PR payloads current before the maintainer merges them.
 
 3. **GitHub Release publication:** When the release PR is merged, release-please creates a GitHub Release with a version tag (e.g., `speckit-pro-v1.2.0`).
 
@@ -249,7 +251,7 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
    /plugin marketplace update racecraft-plugins-public
    ```
 
-**Why sync is PR-based:** `main` is protected and this repository lives under the `racecraft-lab` organization, so Release must not rely on a GitHub Actions token direct-pushing through required status checks. The generated sync PR follows the same branch-protection path as human changes. The `permissions: contents: write` and `pull-requests: write` declarations in `release.yml` are still required so the workflow can push the sync branch and create or update the PR.
+**Why sync is PR-based:** `main` is protected and this repository lives under the `racecraft-lab` organization, so Release must not rely on a GitHub Actions token direct-pushing through required status checks. The generated sync PR follows the same branch-protection path as human changes. The `permissions: actions: write`, `contents: write`, and `pull-requests: write` declarations in `release.yml` are required so the workflow can dispatch PR checks, push release/sync branches, and create or update PRs.
 
 ## Adding a New Plugin to Release Automation
 
@@ -380,11 +382,12 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/contents/.github/workflows/
   --jq '.content' | base64 -d | grep -A3 'permissions'
 ```
 
-If either `contents: write` or `pull-requests: write` is absent from the output, the required workflow token permission was removed from `release.yml`.
+If `actions: write`, `contents: write`, or `pull-requests: write` is absent from the output, a required workflow token permission was removed from `release.yml`.
 
 **Recovery:** Restore the `permissions:` block to `.github/workflows/release.yml`:
 ```yaml
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 ```

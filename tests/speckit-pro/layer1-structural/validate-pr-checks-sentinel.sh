@@ -23,6 +23,35 @@ assert_contains "$CONTENT" "validate-plugins:"
 set_test "validate-plugins has name: validate-plugins"
 assert_contains "$CONTENT" "name: validate-plugins"
 
+section "pr-checks.yml — Release PR Dispatch"
+
+set_test "workflow_dispatch trigger is defined"
+assert_contains "$CONTENT" "workflow_dispatch:"
+
+set_test "workflow_dispatch accepts PR check inputs"
+if [[ "$CONTENT" == *"pr_number:"* \
+  && "$CONTENT" == *"pr_title:"* \
+  && "$CONTENT" == *"base_ref:"* ]]; then
+  _pass
+else
+  _fail "expected workflow_dispatch inputs for pr_number, pr_title, and base_ref"
+fi
+
+set_test "detect supports dispatched release PR checks"
+if [[ "$CONTENT" == *"github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false"* \
+  && "$CONTENT" == *"github.event_name == 'pull_request' && github.base_ref || inputs.base_ref"* ]]; then
+  _pass
+else
+  _fail "expected detect job to use workflow_dispatch base_ref input"
+fi
+
+set_test "title validation supports dispatched release PR checks"
+if [[ "$CONTENT" == *"github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title"* ]]; then
+  _pass
+else
+  _fail "expected title validation to use workflow_dispatch pr_title input"
+fi
+
 section "pr-checks.yml — Sentinel Job Dependencies"
 
 set_test "sentinel depends on detect job"

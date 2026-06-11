@@ -1,6 +1,9 @@
 # PR Checks — runs plugin test suites and validates PR metadata.
 #
 # Triggers on pull requests targeting any branch. Draft PRs are skipped.
+# Release automation can also dispatch the same checks for release-please PRs
+# created or updated with GITHUB_TOKEN, because those pull_request events are
+# suppressed by GitHub's recursive workflow guard.
 # Only plugins whose files changed (relative to the base branch) are tested.
 # PR titles must follow Conventional Commits format.
 #
@@ -15,6 +18,21 @@ name: PR Checks
 on:
   pull_request:
     types: [opened, reopened, synchronize, edited, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number to validate
+        required: true
+        type: string
+      pr_title:
+        description: Pull request title to validate
+        required: true
+        type: string
+      base_ref:
+        description: Base branch for changed-file detection
+        required: true
+        type: string
+        default: main
 
 # Top-level: no permissions granted by default.
 # Each job declares only what it needs (principle of least privilege).
@@ -30,7 +48,7 @@ defaults:
 jobs:
   detect:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions:
       contents: read
     outputs:
@@ -45,7 +63,7 @@ jobs:
       - name: Detect changed plugin directories
         id: changed
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
         run: |
           set -euo pipefail
 
@@ -121,13 +139,13 @@ jobs:
   # ───────────────────────────────────────────────────────────────────
   validate-pr-title:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.draft == false
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     permissions: {}
 
     steps:
       - name: Check Conventional Commits format
         env:
-          TITLE: ${{ github.event.pull_request.title }}
+          TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
         run: |
           set -euo pipefail
 

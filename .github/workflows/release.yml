@@ -6,6 +6,7 @@ on:
   workflow_dispatch: {}
 
 permissions:
+  actions: write
   contents: write
   pull-requests: write
 
@@ -20,6 +21,58 @@ jobs:
     steps:
       - id: release
         uses: googleapis/release-please-action@v5
+
+      - uses: actions/checkout@v6
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Sync release PR payloads
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          release_prs=$(gh pr list \
+            --state open \
+            --base main \
+            --label "autorelease: pending" \
+            --json number,headRefName,title)
+
+          if [ "$(printf '%s' "$release_prs" | jq 'length')" -eq 0 ]; then
+            echo "No open release-please PRs found."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          printf '%s\n' "$release_prs" | jq -c '.[]' | while IFS= read -r pr; do
+            pr_number=$(printf '%s' "$pr" | jq -r '.number')
+            branch=$(printf '%s' "$pr" | jq -r '.headRefName')
+            title=$(printf '%s' "$pr" | jq -r '.title')
+
+            echo "Syncing generated payloads for PR #${pr_number} (${branch})."
+            git fetch origin "$branch"
+            git switch --detach "origin/${branch}"
+
+            bash scripts/build-plugin-payloads.sh
+
+            if git diff --quiet -- dist; then
+              echo "Payloads already current for PR #${pr_number}."
+            else
+              git add dist
+              git commit -m "chore(speckit-pro): sync release payloads"
+              git push origin "HEAD:${branch}"
+            fi
+
+            gh workflow run pr-checks.yml \
+              --ref "$branch" \
+              -f pr_number="$pr_number" \
+              -f pr_title="$title" \
+              -f base_ref="main"
+          done
 
       - uses: actions/checkout@v6
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
