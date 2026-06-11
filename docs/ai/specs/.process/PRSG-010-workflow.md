@@ -488,8 +488,8 @@ Focus on:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | Pending | Pending | |
-| US1 hatch backstop | Pending | Pending | |
+| Foundation | T001-T006 | Complete | Verified corrected split-stack order, reviewed PRSG-010 contracts, confirmed declared file operations, and preserved constitution obligations for script safety/KISS/test-before-merge. |
+| US1 hatch backstop | T007-T023 | Complete | Added final reviewability backstop script, production state/re-slicing schemas, typed-exception provenance checks, Claude/Codex guidance, dist mirrors, and Layer 4 fixtures. Validation: `test-final-reviewability-backstop.sh` 31/31, `test-reviewability-gate.sh` 92/92, Layer 4 1230/1230. |
 | US3 contextual probes | Pending | Pending | |
 | US2 O5 scaffold/status | Pending | Pending | |
 | Polish | Pending | Pending | |

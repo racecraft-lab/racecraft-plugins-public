@@ -22,10 +22,10 @@
 
 **Purpose**: Confirm the generated task plan stays aligned with the PRSG-010 split plan before implementation starts.
 
-- [ ] T001 Verify the ordered PRSG-010A -> PRSG-010B -> PRSG-010C -> PRSG-010D split and per-slice reviewability budget in `specs/prsg-010-harden-the-hatch/plan.md`
-- [ ] T002 [P] Review final gate state fields for FR-001 through FR-009 in `specs/prsg-010-harden-the-hatch/contracts/final-reviewability-gate-state.schema.json`
-- [ ] T003 [P] Review re-slicing packet fields for FR-005 through FR-008 in `specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json`
-- [ ] T004 [P] Review O5 and routing contract fields for FR-010 through FR-022 in `specs/prsg-010-harden-the-hatch/contracts/o5-parent-manifest.schema.json` and `specs/prsg-010-harden-the-hatch/contracts/routing-decision.schema.json`
+- [x] T001 Verify the ordered PRSG-010A -> PRSG-010B -> PRSG-010C -> PRSG-010D split and per-slice reviewability budget in `specs/prsg-010-harden-the-hatch/plan.md`
+- [x] T002 [P] Review final gate state fields for FR-001 through FR-009 in `specs/prsg-010-harden-the-hatch/contracts/final-reviewability-gate-state.schema.json`
+- [x] T003 [P] Review re-slicing packet fields for FR-005 through FR-008 in `specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json`
+- [x] T004 [P] Review O5 and routing contract fields for FR-010 through FR-022 in `specs/prsg-010-harden-the-hatch/contracts/o5-parent-manifest.schema.json` and `specs/prsg-010-harden-the-hatch/contracts/routing-decision.schema.json`
 
 ---
 
@@ -35,8 +35,8 @@
 
 **Critical**: No implementation slice should begin until this phase confirms the planned files remain inside the reviewability budget and plugin structure.
 
-- [ ] T005 Validate that planned production, test, docs, and mirror paths still match the declared file operations in `specs/prsg-010-harden-the-hatch/plan.md`
-- [ ] T006 [P] Confirm script safety, KISS, and test-before-merge obligations from `.specify/memory/constitution.md` before creating `speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh` or `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`
+- [x] T005 Validate that planned production, test, docs, and mirror paths still match the declared file operations in `specs/prsg-010-harden-the-hatch/plan.md`
+- [x] T006 [P] Confirm script safety, KISS, and test-before-merge obligations from `.specify/memory/constitution.md` before creating `speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh` or `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`
 
 **Checkpoint**: Foundation ready. Proceed in ordered split-stack sequence unless a slice is explicitly split further.
 
@@ -50,29 +50,29 @@
 
 ### Tests for User Story 1
 
-- [ ] T007 [P] [US1] Add failing block-without-exception fixture for FR-001, FR-002, FR-005, and FR-007 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/block-no-exception/gate-result.json`
-- [ ] T008 [P] [US1] Add failing valid typed exception fixture for FR-003 and FR-009 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/valid-refactor-exception/exception.md`
-- [ ] T009 [P] [US1] Add failing generated-boilerplate rejection fixture for FR-004 and SC-003 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/generated-boilerplate/template.md`
-- [ ] T010 [P] [US1] Add failing gate-error fixture for FR-002 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/gate-error/gate-result.json`
-- [ ] T011 [US1] Write failing Layer 4 assertions for no PR body, no `gh pr create`, no `multi-pr-emission.sh`, state output, and packet output in `tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh`
-- [ ] T012 [P] [US1] Extend typed-exception compatibility assertions for invalid class, casing, trailing prose, and generated provenance in `tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh`
+- [x] T007 [P] [US1] Add failing block-without-exception fixture for FR-001, FR-002, FR-005, and FR-007 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/block-no-exception/gate-result.json`
+- [x] T008 [P] [US1] Add failing valid typed exception fixture for FR-003 and FR-009 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/valid-refactor-exception/exception.md`
+- [x] T009 [P] [US1] Add failing generated-boilerplate rejection fixture for FR-004 and SC-003 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/generated-boilerplate/template.md`
+- [x] T010 [P] [US1] Add failing gate-error fixture for FR-002 in `tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/gate-error/gate-result.json`
+- [x] T011 [US1] Write failing Layer 4 assertions for no PR body, no `gh pr create`, no `multi-pr-emission.sh`, state output, and packet output in `tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh`
+- [x] T012 [P] [US1] Extend typed-exception compatibility assertions for invalid class, casing, trailing prose, and generated provenance in `tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Add the production final gate state schema for FR-005 and FR-009 in `speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json`
-- [ ] T014 [P] [US1] Add the production re-slicing packet schema for FR-006 and FR-007 in `speckit-pro/skills/speckit-autopilot/contracts/reslicing-packet.schema.json`
-- [ ] T015 [US1] Implement the final reviewability backstop orchestration and schema validation in `speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh`
-- [ ] T016 [US1] Wire the stop-before-PR boundary into Claude autopilot post-implementation guidance in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
-- [ ] T017 [US1] Mirror the stop-before-PR boundary into Codex autopilot post-implementation guidance in `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md`
-- [ ] T018 [US1] Update Claude autopilot entry guidance so PR body generation and PR creation depend on the final backstop result in `speckit-pro/skills/speckit-autopilot/SKILL.md`
-- [ ] T019 [US1] Mirror the autopilot entry guidance in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
-- [ ] T020 [US1] Update phase execution guidance for resume/status handoff from `reslicing_required` state in `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
-- [ ] T021 [US1] Mirror the phase execution handoff guidance in `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
+- [x] T013 [P] [US1] Add the production final gate state schema for FR-005 and FR-009 in `speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json`
+- [x] T014 [P] [US1] Add the production re-slicing packet schema for FR-006 and FR-007 in `speckit-pro/skills/speckit-autopilot/contracts/reslicing-packet.schema.json`
+- [x] T015 [US1] Implement the final reviewability backstop orchestration and schema validation in `speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh`
+- [x] T016 [US1] Wire the stop-before-PR boundary into Claude autopilot post-implementation guidance in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
+- [x] T017 [US1] Mirror the stop-before-PR boundary into Codex autopilot post-implementation guidance in `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md`
+- [x] T018 [US1] Update Claude autopilot entry guidance so PR body generation and PR creation depend on the final backstop result in `speckit-pro/skills/speckit-autopilot/SKILL.md`
+- [x] T019 [US1] Mirror the autopilot entry guidance in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
+- [x] T020 [US1] Update phase execution guidance for resume/status handoff from `reslicing_required` state in `speckit-pro/skills/speckit-autopilot/references/phase-execution.md`
+- [x] T021 [US1] Mirror the phase execution handoff guidance in `speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md`
 
 ### Validation for User Story 1
 
-- [ ] T022 [US1] Run final backstop tests with `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh`
-- [ ] T023 [US1] Run typed-exception regression tests with `bash tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh`
+- [x] T022 [US1] Run final backstop tests with `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh`
+- [x] T023 [US1] Run typed-exception regression tests with `bash tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh`
 
 **Checkpoint**: PRSG-010A is independently testable when the backstop blocks unexcepted PR creation, honors valid typed exceptions, rejects generated boilerplate, and emits concrete PRSG-007/008/009 operator steps.
 

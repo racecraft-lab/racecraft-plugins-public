@@ -326,9 +326,15 @@ all workers directly; subagents do not spawn nested agents.
 Before creating or updating a PR after G7, the parent session runs:
 
 ```text
-skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD
+skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<feature>/.process/final-reviewability/gate-state.json --packet-output specs/<feature>/.process/final-reviewability/reslicing-packet.json ...
 skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
 ```
+
+Run `generate-pr-body.sh` only after the final backstop exits 0. Exit 1 is
+`reslicing_required`: do not generate a PR body, invoke any `gh pr create`
+variant, or run `multi-pr-emission.sh`; read the packet's `operator_steps` and
+resume from the named PRSG-007/008/009 phase. Exit 2 is a gate error: state is
+written, no packet is valid, and the run stops for operator repair.
 
 `generate-pr-body.sh` uses the host repository's pull request template if it
 exists, preserves unknown host-required sections, appends missing review-packet

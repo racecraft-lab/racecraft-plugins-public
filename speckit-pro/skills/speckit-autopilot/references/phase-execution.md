@@ -959,9 +959,9 @@ After G7 passes:
 Step 1: Run final verification suite (build, typecheck, lint, test)
 Step 2: Detect remote name: git remote -v
 Step 3: Push branch: git push -u <remote> <branch>
-Step 4: Run reviewability diff gate:
-  skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD
-Step 5: Generate PR body:
+Step 4: Run final reviewability backstop:
+  skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<number>-<name> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<number>-<name>/.process/final-reviewability/gate-state.json --packet-output specs/<number>-<name>/.process/final-reviewability/reslicing-packet.json ...
+Step 5: If the backstop proceeds, generate PR body:
   skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<number>-<name> .git/speckit-pr-body.md origin/main...HEAD
 Step 6: Create PR via gh CLI:
   gh pr create \
@@ -970,6 +970,15 @@ Step 6: Create PR via gh CLI:
 Step 7: Update workflow file with PR URL
 Step 8: Final commit: "feat(SPEC-XXX): open PR for review"
 ```
+
+The backstop is fail-closed at the PR boundary. Exit 0 means the final diff
+gate passed, warned, or honored a valid typed exception and PR preparation may
+continue. Exit 1 means `reslicing_required`: do not run `generate-pr-body.sh`,
+do not invoke any `gh pr create` variant, and do not run
+`multi-pr-emission.sh`; read the packet's `operator_steps` and
+`resume.resume_from` to route through PRSG-007, regenerate PRSG-008, or hand off
+to PRSG-009. Exit 2 is a gate error: state is written, no packet is valid, and
+the run stops for operator repair.
 
 ## Copilot Review Remediation Loop
 

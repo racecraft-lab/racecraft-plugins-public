@@ -30,9 +30,9 @@ in order; do not collapse or defer.
 | 13 | Code Review | review ext | `$speckit-review` |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
 | 15 | Cleanup | cleanup ext | `$speckit-cleanup` |
-| 16 | Reviewability Diff Gate | (none) | `reviewability-gate.sh diff origin/main...HEAD` |
-| 17 | PR Body Generation | (none) | `generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
-| 18 | PR Creation | (none) | single-PR path for non-split routes; `multi-pr-emission.sh` for split-PR routes |
+| 16 | Final Reviewability Backstop | (none) | `final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> ...` |
+| 17 | PR Body Generation | final backstop proceeded | `generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
+| 18 | PR Creation | final backstop proceeded | single-PR path for non-split routes; `multi-pr-emission.sh` for split-PR routes |
 | 19 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 20 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
 
@@ -116,9 +116,17 @@ background subagents as the fallback path. The 3-track structure
 Before creating or updating PRs after G7, the parent session runs:
 
 ```text
-skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD
+skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<feature>/.process/final-reviewability/gate-state.json --packet-output specs/<feature>/.process/final-reviewability/reslicing-packet.json ...
 skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
 ```
+
+`final-reviewability-backstop.sh` is the mandatory stop-before-PR boundary.
+It runs the diff gate, writes top-level `final_reviewability_gate` state, and
+returns 0 only for `pass`, `warn`, or honored typed-exception outcomes. If it
+returns 1, do not generate a PR body, do not invoke any `gh pr create` variant,
+and do not run `multi-pr-emission.sh`; read the `reslicing_required` packet and
+resume from the named PRSG-007/008/009 operator step. If it returns 2, stop as
+a gate error; no re-slicing packet is valid for that run.
 
 `generate-pr-body.sh` uses the host repository's pull request template if it
 exists, preserves unknown host-required sections, appends missing review-packet
@@ -176,9 +184,10 @@ Codex parent-session responsibilities:
 3. Read the persisted PRSG-008 layer plan from `autopilot-state.json` or the
    workflow evidence. It must be the exact `plan-layers.sh` envelope with
    `status=ok`.
-4. Run `skills/speckit-autopilot/scripts/multi-pr-emission.sh` with the layer
-   plan path, durable state path, feature branch, integration base, base SHA,
-   full verification evidence path, and optional changed-file scope evidence.
+4. After the final backstop proceeds, run
+   `skills/speckit-autopilot/scripts/multi-pr-emission.sh` with the layer plan
+   path, durable state path, feature branch, integration base, base SHA, full
+   verification evidence path, and optional changed-file scope evidence.
 5. Record each slice outcome in `update_plan`, `autopilot-state.json`, and the
    workflow evidence before advancing the next Post item.
 

@@ -834,15 +834,20 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    `uat-runbook-author` agent to rewrite the skeleton into plain,
    executable steps, then commit it. Both the script and the author step
    are fail-open (never block the PR) but NOT optional — they run.
-4. **3.2 PR Creation** — final verification, reviewability diff gate,
-   then build the PR body by running `generate-pr-body.sh` →
-   `.git/speckit-pr-body.md`, fill its **What changed / Why it matters /
-   Anything reviewers should know** sections in plain English (no internal
-   jargon; governance stays in the collapsed details block), and open the
-   PR with `--body-file .git/speckit-pr-body.md`. **Never write the body
-   from scratch or pass an inline `--body`** — the script is what embeds
-   the review packet and the `## UAT Runbook` section (which carries the
-   Self-Review findings).
+4. **3.2 PR Creation** — final verification, then run
+   `final-reviewability-backstop.sh` as the last boundary before any PR body
+   generation, `gh pr create` variant, or `multi-pr-emission.sh`. Only
+   `pass`, `warn`, or honored typed-exception outcomes may continue. An
+   unexcepted block writes `final_reviewability_gate` state plus a
+   `reslicing_required` packet and stops before PR preparation; a gate error
+   writes state and stops without a packet. After a proceed result, build the
+   PR body by running `generate-pr-body.sh` → `.git/speckit-pr-body.md`, fill
+   its **What changed / Why it matters / Anything reviewers should know**
+   sections in plain English (no internal jargon; governance stays in the
+   collapsed details block), and open the PR with
+   `--body-file .git/speckit-pr-body.md`. **Never write the body from scratch
+   or pass an inline `--body`** — the script is what embeds the review packet
+   and the `## UAT Runbook` section (which carries the Self-Review findings).
    Before `gh pr create`, confirm the body file carries the
    `speckit-pro-review-packet-source` marker and a `## UAT Runbook`
    heading; if either is missing, regenerate with the script once. Push,
@@ -951,6 +956,10 @@ never from `.specify/scripts/bash/`.
   to set `CONFIDENCE_GATE_MODE` before G6.5.
 - `reviewability-gate.sh <setup|tasks|diff> <path-or-range>` — Enforce
   setup, tasks, and pre-PR reviewability budgets (JSON)
+- `final-reviewability-backstop.sh --feature-dir <specs/feature> --feature-branch <branch> ...` —
+  Run the final diff gate before PR preparation, write top-level
+  `final_reviewability_gate` state, and write a re-slicing packet on
+  unexcepted blocks before any PR body, `gh pr create`, or multi-PR emission
 - `atomicity-route.sh <feature-dir>` — Read-only atomicity classifier:
   given a feature's `tasks.md`/`plan.md`/`spec.md`, emit ONE routing
   decision (`route` + `releasable` + `signals` + `hints` + `warnings`,

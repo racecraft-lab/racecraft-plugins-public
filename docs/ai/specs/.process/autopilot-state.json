@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T18:27:48Z",
-  "active_step": "Phase 7: Implement",
+  "updated_at": "2026-06-11T19:04:24Z",
+  "active_step": "Phase 7: Implement - PRSG-010B contextual router",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -216,8 +216,9 @@
       "summary": "Confidence gate returned NO_DATA in advisory mode with recommended action soft_skip; atomicity route returned one-navigable-PR, releasable true, signal change-shape:modify-heavy, and advisory contextual hints."
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "in_progress"
+      "step": "Phase 7: Implement - Split stack",
+      "status": "in_progress",
+      "summary": "Foundation and PRSG-010A final hatch are complete. Next implementation slice is PRSG-010B contextual router probes."
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -559,6 +560,128 @@
       "warnings": []
     },
     "note": "Current pre-implementation atomicity-route output is recorded as classifier evidence; implementation still follows the ordered split stack required by reviewability and Analyze."
+  },
+  "phase7_implementation": {
+    "status": "in_progress",
+    "split_stack": [
+      {
+        "slice": "foundation",
+        "status": "completed",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006"
+        ],
+        "summary": "Verified split-stack order, reviewed PRSG-010 contracts, confirmed declared file operations, and preserved constitution script-safety/test obligations."
+      },
+      {
+        "slice": "PRSG-010A final hatch",
+        "status": "completed",
+        "tasks": [
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015",
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023"
+        ],
+        "summary": "Added final-reviewability-backstop.sh, production gate-state and re-slicing schemas, typed-exception provenance enforcement, stop-before-PR guidance, fixtures, and run-all Layer 4 registration.",
+        "files_touched": {
+          "production": [
+            "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh",
+            "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh",
+            "speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json",
+            "speckit-pro/skills/speckit-autopilot/contracts/reslicing-packet.schema.json",
+            "speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
+            "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          ],
+          "mirrors": [
+            "speckit-pro/codex-skills/speckit-autopilot/",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/"
+          ],
+          "tests": [
+            "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
+            "tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh",
+            "tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/",
+            "tests/speckit-pro/run-all.sh"
+          ]
+        },
+        "validation": {
+          "final_backstop": "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh -> 31/31 passed",
+          "reviewability_gate": "bash tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh -> 92/92 passed",
+          "bash_n": "bash -n final-reviewability-backstop.sh test-final-reviewability-backstop.sh reviewability-gate.sh -> passed",
+          "layer4": "bash tests/speckit-pro/run-all.sh --layer 4 -> 1230/1230 passed"
+        }
+      },
+      {
+        "slice": "PRSG-010B contextual router",
+        "status": "pending",
+        "tasks": [
+          "T024",
+          "T025",
+          "T026",
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032"
+        ]
+      },
+      {
+        "slice": "PRSG-010C O5 manifest/status",
+        "status": "pending",
+        "tasks": [
+          "T033",
+          "T034",
+          "T035",
+          "T036",
+          "T037",
+          "T038",
+          "T039",
+          "T040",
+          "T041",
+          "T042",
+          "T043",
+          "T044",
+          "T045"
+        ]
+      },
+      {
+        "slice": "PRSG-010D docs/parity/polish",
+        "status": "pending",
+        "tasks": [
+          "T046",
+          "T047",
+          "T048",
+          "T049",
+          "T050",
+          "T051",
+          "T052",
+          "T053",
+          "T054",
+          "T055",
+          "T056",
+          "T057"
+        ]
+      }
+    ]
   },
   "phase4_checklists": {
     "error-handling": {

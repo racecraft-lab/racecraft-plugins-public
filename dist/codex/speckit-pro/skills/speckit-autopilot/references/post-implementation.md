@@ -330,11 +330,17 @@ opens one slice PR.
 4. Read the persisted layer plan from autopilot-state.json or the workflow
    evidence. It must be the exact PRSG-008 plan-layers.sh envelope with
    status=ok.
-5. Run the pre-PR reviewability gate:
-   `skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD`
-   must pass or return a documented transition exception. If it blocks, stop
-   and split the spec instead of creating the PR.
-6. Generate the base review packet:
+5. Run the final reviewability backstop:
+   `skills/speckit-autopilot/scripts/final-reviewability-backstop.sh ...`
+   with the feature dir, feature branch, diff range, final state path,
+   packet path, persisted PRSG-007 route/sizing result, PRSG-008 layer plan,
+   changed-files evidence, and full verification evidence. This MUST run before
+   `generate-pr-body.sh`, any `gh pr create` variant, or
+   `multi-pr-emission.sh`. Proceed only on `pass`, `warn`, or honored
+   typed-exception. On an unexcepted block, stop with
+   `final_reviewability_gate.status=block` plus a `reslicing_required` packet;
+   on gate error, stop with state only and no packet.
+6. Generate the base review packet only after the backstop proceeds:
    `skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<number>-<name> .git/speckit-pr-body.md origin/main...HEAD`
    The generator uses the host repository's pull request template when present
    and appends any missing review-packet sections. If no host template exists,
@@ -371,7 +377,8 @@ opens one slice PR.
      to say. An empty section is worse than no section.
 7. For split-PR routes, run multi-pr-emission.sh with the layer plan, durable
    state path, feature branch, integration base, base SHA, full verification
-   evidence path, and optional changed-file scope evidence.
+   evidence path, and optional changed-file scope evidence only after the
+   final backstop proceeds.
 8. For each planned slice, multi-pr-emission.sh creates the Style B branch
    topology and PR packet:
    - slice 1 base: <integration-base>
