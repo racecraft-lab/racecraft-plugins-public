@@ -7,12 +7,27 @@ Authoritative PRSG-008 output consumed by emission.
 Fields:
 - `source_path`: path to the layer-plan JSON or captured output.
 - `source_sha`: hash of the layer-plan input when available.
-- `layers[]`: ordered slice definitions.
+- `tool`: must be `plan-layers`.
+- `contract_version`: PRSG-008 output contract version.
+- `status`: `ok`, `invalid_plan`, or `input_error`.
+- `increments[]`: ordered PRSG-008 increment definitions.
+- `warnings[]`, `errors[]`, and `summary`: planner diagnostics and counts.
 - `generated_at`: timestamp from the planner or capture step.
+
+Consumed increment fields:
+- `id`: source for the PRSG-009 `slice_id` slug.
+- `order`: source for one-based review order after preserving planner order.
+- `depends_on`: stack dependency evidence.
+- `files[]`: declared file-operation scope.
+- `tests[]`: declared scoped-test candidates.
+- `advisory_size`: review-scope context copied into slice evidence.
 
 Rules:
 - Emission must preserve layer order.
 - Missing, unreadable, empty, or unparsable input blocks emission.
+- `status` values other than `ok` block before branch creation.
+- `status: ok` with warnings may proceed, but warnings are copied to emission
+  evidence and affected slice packets without changing membership.
 - PRSG-009 does not add or override layer membership.
 
 ## Slice Record
@@ -78,12 +93,20 @@ Fields:
 - `scoped_verification.commands[]`
 - `full_verification_evidence`
 - `traceability[]`
+- `known_gaps[]`
+- `warnings[]`
 - `restack_note`
 - `prs_row`
 
 Rules:
 - The packet is optional; existing positional PR body invocation remains valid.
 - Packet values should be copied from durable state/evidence, not recomputed.
+- Packet validation happens before the PR body output file is created or
+  overwritten. Invalid packets exit 2 with a deterministic stderr line beginning
+  `generate-pr-body.sh: invalid slice packet:`.
+- Valid packet rendering adds stable sections named `Slice summary`, `Review
+  order`, `Scope`, `Verification`, `Traceability`, `Restack or rollback`,
+  `Known gaps`, and `Full regression evidence`.
 
 ## PRS Manifest v2
 
@@ -98,6 +121,8 @@ Fields:
 
 Rules:
 - Schema v1 rendering remains supported.
+- Schema v2 renders as a link-free Markdown table with columns `Order`, `Slice`,
+  `PR`, `Status`, `Branch`, `Base`, `SHA`, `Scope`, and `Verification`.
 - Open rows display `head_sha`.
 - Merged rows prefer `merged_sha` when present.
 - Open PR head commits must not be written into `merged_sha`.
@@ -139,4 +164,10 @@ Fields:
 Rules:
 - Dry-run is default.
 - Mutation requires `--apply`.
+- Process exit codes are fixed: `0` success, `1` conflicts, `2` input error,
+  `3` dirty worktree, and `4` `git`/`gh` failure.
+- JSON stdout `status` and `exit_code` must match the process outcome.
+- Failure diagnostics go to stderr in `restack.sh: <status>: <message>` format
+  with no timestamps, colors, or host-specific absolute paths except paths
+  supplied by the operator.
 - Declared file-operation scope must not change during restack.

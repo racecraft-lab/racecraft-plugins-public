@@ -31,5 +31,42 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "success" } },
+        "required": ["status"]
+      },
+      "then": { "properties": { "exit_code": { "const": 0 } } }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "conflicts" } },
+        "required": ["status"]
+      },
+      "then": { "properties": { "exit_code": { "const": 1 } } }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "input_error" } },
+        "required": ["status"]
+      },
+      "then": { "properties": { "exit_code": { "const": 2 } } }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "dirty_worktree" } },
+        "required": ["status"]
+      },
+      "then": { "properties": { "exit_code": { "const": 3 } } }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "git_gh_failure" } },
+        "required": ["status"]
+      },
+      "then": { "properties": { "exit_code": { "const": 4 } } }
+    }
+  ],
   "additionalProperties": false
 }

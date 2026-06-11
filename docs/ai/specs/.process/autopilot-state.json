@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-009-workflow.md",
   "updated_at": "2026-06-10T23:39:41Z",
-  "active_step": "Phase 4: Checklist - API/contracts",
+  "active_step": "Phase 5: Tasks",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -143,39 +143,49 @@
     },
     {
       "step": "Phase 4: Checklist - API/contracts",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "30 items; 6 gaps remediated; 0 [Gap] markers remaining. count-markers.sh failed with jq --argjson error, rg fallback found 0 markers."
     },
     {
       "step": "Phase 4: Checklist - API/contracts Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - State-management",
-      "status": "pending"
+      "status": "completed",
+      "summary": "24 items; 6 gaps remediated; 0 [Gap] markers remaining. count-markers.sh failed with jq --argjson error, rg fallback found 0 markers."
     },
     {
       "step": "Phase 4: Checklist - State-management Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - Error-handling",
-      "status": "pending"
+      "status": "completed",
+      "summary": "24 items; 13 gaps remediated; 0 [Gap] markers remaining. count-markers.sh failed with jq --argjson error, rg fallback found 0 markers."
     },
     {
       "step": "Phase 4: Checklist - Error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - CI/release-flow",
-      "status": "pending"
+      "status": "completed",
+      "summary": "29 items; 4 gaps remediated; 0 [Gap] markers remaining. Layer 1 structural validation passed in executor report."
     },
     {
       "step": "Phase 4: Checklist - CI/release-flow Consensus",
-      "status": "pending"
+      "status": "completed",
+      "gate": "G4",
+      "gate_status": "passed",
+      "summary": "Executor returned no unresolved consensus items; G4 passed with 0 [Gap] markers."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

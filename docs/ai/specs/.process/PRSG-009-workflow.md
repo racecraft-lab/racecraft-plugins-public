@@ -42,7 +42,7 @@ Load-bearing decisions:
 | Specify | `/speckit-specify` | Complete | Created spec.md with 20 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Resolved state, PRS manifest, branch/PR, scoped verification, and restack contracts; G2 passed with 0 markers |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and 4 JSON contracts; G3 passed |
-| Checklist | `/speckit-checklist` | Pending | Run focused checks for API/contracts, state management, error handling, and CI/release flow |
+| Checklist | `/speckit-checklist` | Complete | 4 domains; ci-release-flow added 29 items, 4 gaps remediated, G4 passed by deterministic marker fallback |
 | Tasks | `/speckit-tasks` | Pending | Generate small story-oriented tasks with Layer 4, Layer 7 if needed, and Layer 8 parity coverage |
 | Analyze | `/speckit-analyze` | Pending | Verify no drift from design concept and roadmap dependencies |
 | Implement | `/speckit-implement` | Pending | Implement TDD-first with scoped tests and Codex parity |
@@ -54,7 +54,7 @@ Load-bearing decisions:
 | G1 | After Specify | User stories cover Emit N PRs, MOC/restack, and branch topology/CI mapping |
 | G2 | After Clarify | Passed: state schema, branch naming, PR creation order, CI/restack, and failure recovery are explicit |
 | G3 | After Plan | Architecture honors PRSG-008/003/001 dependencies and constitution gates |
-| G4 | After Checklist | All checklist gaps are resolved or explicitly scoped out |
+| G4 | After Checklist | Passed: all checklist gaps resolved; deterministic `rg` fallback found 0 `[Gap]` markers after `count-markers.sh` hit known `jq --argjson` failure |
 | G5 | After Tasks | Tasks cover implementation, docs, tests, parity, and verification |
 | G6 | After Analyze | No critical drift between roadmap, design concept, spec, plan, and tasks |
 | G7 | After Implementation | Relevant test layers pass and generated PR emission evidence is recorded |
@@ -327,10 +327,20 @@ Focus on PRSG-009 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | Pending | Pending | |
-| state-management | Pending | Pending | |
-| error-handling | Pending | Pending | |
-| ci-release-flow | Pending | Pending | |
+| api-contracts | 30 | 6 found / 6 remediated / 0 remaining | Spec, plan, data-model, quickstart, restack-output schema, slice-packet schema |
+| state-management | 24 | 6 found / 6 remediated / 0 remaining | Spec, plan, workflow evidence, PRS/state resume contract |
+| error-handling | 24 | 13 found / 13 remediated / 0 remaining | Spec, plan, GitHub CLI PR contract, PRSG-003 atomic MOC write precedent |
+| ci-release-flow | 29 | 4 found / 4 remediated / 0 remaining | Spec, plan, PRD AC-9.3, roadmap PRSG-009, GitHub CLI/GitHub Actions docs |
+
+### Checklist Notes
+
+- API/contracts: `count-markers.sh gaps specs/prsg-009-multi-pr-emission` failed with `jq: invalid JSON text passed to --argjson`; deterministic `rg` fallback found 0 `[Gap]` markers.
+- State-management: `count-markers.sh gaps specs/prsg-009-multi-pr-emission` failed with `jq: invalid JSON text passed to --argjson`; deterministic `rg` fallback found 0 `[Gap]` markers.
+- Error-handling: `count-markers.sh gaps specs/prsg-009-multi-pr-emission` failed with `jq: invalid JSON text passed to --argjson`; deterministic `rg` fallback found 0 `[Gap]` markers.
+- CI/release-flow: `count-markers.sh gaps specs/prsg-009-multi-pr-emission` failed with `jq: invalid JSON text passed to --argjson`; deterministic `rg` fallback found 0 `[Gap]` markers.
+- State-management: `count-markers.sh gaps specs/prsg-009-multi-pr-emission` failed with `jq: invalid JSON text passed to --argjson`; deterministic `grep`/`rg` fallback found 0 `[Gap]` markers after remediation.
+- Error-handling: `count-markers.sh gaps specs/prsg-009-multi-pr-emission` failed with `jq: invalid JSON text passed to --argjson`; deterministic `rg` fallback found 0 gap markers after remediation.
+- CI/release-flow: `count-markers.sh gaps specs/prsg-009-multi-pr-emission` failed with `jq: invalid JSON text passed to --argjson`; deterministic `rg` fallback found 0 `[Gap]` markers after remediation.
 
 ---
 

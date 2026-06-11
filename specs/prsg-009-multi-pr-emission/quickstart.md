@@ -35,6 +35,9 @@ bash tests/speckit-pro/run-all.sh --layer 4
 Expected result:
 - `generate-pr-body.sh` still supports existing positional invocation.
 - `generate-pr-body.sh --slice-packet <json-file>` renders slice review fields.
+- Invalid `--slice-packet` input exits 2, writes a deterministic
+  `generate-pr-body.sh: invalid slice packet:` stderr line, and leaves the
+  target PR body absent or unchanged.
 - `generate-spec-index.sh` renders PRS schema v1 and v2 rows.
 - `multi-pr-emission.sh` stops before PR creation on failed scoped verification.
 - `multi-pr-emission.sh` resumes without duplicating existing branches or PRs.
@@ -104,5 +107,9 @@ Expected result:
 - No mutation happens without `--apply`.
 - JSON stdout lists the remaining branch operations in deterministic order.
 - Diagnostics are written to stderr.
+- Exit code/status mapping is `0=success`, `1=conflicts`, `2=input_error`,
+  `3=dirty_worktree`, and `4=git_gh_failure`.
+- Failure diagnostics use `restack.sh: <status>: <message>` with deterministic,
+  plain stderr.
 - A fresh `bash tests/speckit-pro/run-all.sh` is required after applied restack
   before final/base merge evidence is considered current.

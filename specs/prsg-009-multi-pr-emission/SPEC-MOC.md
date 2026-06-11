@@ -37,5 +37,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [contracts/prs-v2.schema.json](contracts/prs-v2.schema.json)
 - [contracts/restack-output.schema.json](contracts/restack-output.schema.json)
 - [contracts/slice-packet.schema.json](contracts/slice-packet.schema.json)
+- [checklists/api-contracts.md](checklists/api-contracts.md)
+- [checklists/ci-release-flow.md](checklists/ci-release-flow.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/state-management.md](checklists/state-management.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
