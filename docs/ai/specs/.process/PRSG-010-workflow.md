@@ -411,10 +411,16 @@ read-only atomicity classifier and records its decision here.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | Pending | Expected to be `split-PR` if tasks preserve the setup decision |
-| **Releasable** | Pending | `true`, or `false` if a release-risk detector applies |
-| **Signals** | Pending | Decisive detector findings |
-| **Warnings** | Pending | Release-safety warnings |
+| **Route** | `one-navigable-PR` | Current pre-implementation classifier output; PRSG-010 remains planned as an ordered split stack from reviewability/analyze evidence |
+| **Releasable** | `true` | No release-risk detector applied |
+| **Signals** | `change-shape:modify-heavy` | Current decisive detector finding |
+| **Warnings** | `[]` | No release-safety warnings |
+| **Hints** | flag-system, release-cadence, and consumer-locality advisory hints | These are current shallow hints; PRSG-010B implements high-confidence contextual routing |
+
+Confidence gate:
+
+- `confidence-gate.sh docs/ai/specs/.process/PRSG-010-workflow.md` returned `NO_DATA` in advisory mode with recommended action `soft_skip`.
+- Implementation proceeds because the confidence gate is advisory and Analyze/G6 passed.
 
 Classifier command:
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T18:25:19Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-06-11T18:27:48Z",
+  "active_step": "Phase 7: Implement",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -212,11 +212,12 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Confidence gate returned NO_DATA in advisory mode with recommended action soft_skip; atomicity route returned one-navigable-PR, releasable true, signal change-shape:modify-heavy, and advisory contextual hints."
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -534,6 +535,30 @@
       "layer1": "915/915 passed",
       "consensus": "none unresolved"
     }
+  },
+  "phase6_5_confidence_gate": {
+    "status": "completed",
+    "confidence_gate": {
+      "pass": null,
+      "mode": "advisory",
+      "recommended_action": "soft_skip",
+      "reason": "no confidence emit found",
+      "input": "docs/ai/specs/.process/PRSG-010-workflow.md"
+    },
+    "atomicity_route": {
+      "route": "one-navigable-PR",
+      "releasable": true,
+      "signals": [
+        "change-shape:modify-heavy"
+      ],
+      "hints": [
+        "flag-system signal seen (advisory only; TODO deepen in PRSG-010 US3)",
+        "release-cadence signal seen (advisory only; TODO deepen in PRSG-010 US3)",
+        "consumer-locality signal seen (advisory only; TODO deepen in PRSG-010 US3)"
+      ],
+      "warnings": []
+    },
+    "note": "Current pre-implementation atomicity-route output is recorded as classifier evidence; implementation still follows the ordered split stack required by reviewability and Analyze."
   },
   "phase4_checklists": {
     "error-handling": {
