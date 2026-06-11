@@ -160,9 +160,9 @@ set_test "modify-heavy emits change-shape:modify-heavy in signals[]"
 signals=$(array_of "$output" "signals")
 assert_contains "$signals" "'change-shape:modify-heavy'" "decisive modify token in signals[]"
 
-set_test "modify-heavy never routes branch-by-abstraction (reserved, SC-008)"
+set_test "modify-heavy never routes branch-by-abstraction"
 route=$(field_of "$output" "route")
-assert_not_contains "$route" "branch-by-abstraction" "reserved enum is never emitted"
+assert_not_contains "$route" "branch-by-abstraction" "modify-heavy alone must not use branch-by-abstraction"
 
 set_test "modify-heavy is releasable with no warning (FR-009, SC-008)"
 assert_json_field "$output" "releasable" "True" "modify-heavy is releasable"
@@ -362,9 +362,9 @@ set_test "concurrency carries the concurrency CI-green sentence in warnings[]"
 warnings=$(array_of "$output" "warnings")
 assert_contains "$warnings" "$WARN_CONCURRENCY" "exact concurrency warning string in warnings[]"
 
-set_test "concurrency never routes branch-by-abstraction (reserved, SC-008)"
+set_test "concurrency never routes branch-by-abstraction"
 route=$(field_of "$output" "route")
-assert_not_contains "$route" "branch-by-abstraction" "reserved enum is never emitted"
+assert_not_contains "$route" "branch-by-abstraction" "concurrency risk must not use branch-by-abstraction"
 
 # A hard-atomic fixture with NO releasability risk: releasable:true, empty warnings (FR-009).
 set_test "hard-atomic-rename is releasable with no CI-green warning (FR-009)"
@@ -537,6 +537,8 @@ if obj["route"] not in route_enum:
 if not isinstance(obj["releasable"], bool):
     fail("releasable must be boolean")
 sig_enum = props["signals"]["items"]["enum"]
+if not isinstance(obj["signals"], list) or not all(isinstance(s, str) for s in obj["signals"]):
+    fail("signals must be a string array")
 for s in obj["signals"]:
     if s not in sig_enum:
         fail(f"signal '{s}' not in controlled vocabulary")
@@ -547,6 +549,8 @@ for h in obj["hints"]:
     if h not in hints_enum:
         fail(f"hint '{h}' not in controlled vocabulary")
 warn_enum = props["warnings"]["items"]["enum"]
+if not isinstance(obj["warnings"], list) or not all(isinstance(w, str) for w in obj["warnings"]):
+    fail("warnings must be a string array")
 for w in obj["warnings"]:
     if w not in warn_enum:
         fail(f"warning '{w}' is not a canonical CI-green sentence")

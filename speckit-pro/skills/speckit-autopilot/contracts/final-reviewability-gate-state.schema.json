@@ -101,6 +101,17 @@
     },
     {
       "if": {
+        "properties": { "status": { "enum": ["pass", "warn"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "reslicing_packet_path": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": {
         "properties": { "status": { "const": "error" } },
         "required": ["status"]
       },
