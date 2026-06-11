@@ -123,16 +123,17 @@ for skill in "${SKILLS[@]}"; do
   fi
 
   if [ "$skill" = "speckit-scaffold-spec" ]; then
-    set_test "speckit-scaffold-spec: Codex Grill Me requires request_user_input picker when available"
+    set_test "speckit-scaffold-spec: Codex Grill Me requires native picker config"
     if [[ "$body" == *"picker-first HITL guard"* \
       && "$body" == *"request_user_input"* \
-      && "$body" == *"Do not ask the Grill Me question as a normal"* \
-      && "$body" == *"assistant message, progress update, or final response"* \
-      && "$body" == *"Free-text Q&A is a last-resort fallback only"* \
-      && "$body" == *"absent or explicitly unavailable in the runtime"* ]]; then
+      && "$body" == *"default_mode_request_user_input"* \
+      && "$body" == *"Do not ask the Grill Me question as a normal assistant"* \
+      && "$body" == *"If \`request_user_input\` is absent"* \
+      && "$body" == *"unavailable, stop setup"* \
+      && "$body" == *"codex features enable default_mode_request_user_input"* ]]; then
       _pass
     else
-      _fail "expected scaffold to require request_user_input picker-first Grill Me behavior"
+      _fail "expected scaffold to require native request_user_input config and forbid Markdown fallback"
     fi
   fi
 
@@ -140,16 +141,17 @@ for skill in "${SKILLS[@]}"; do
     protocol_content=""
     [ -f "$SKILL_DIR/references/interview-protocol.md" ] && protocol_content=$(cat "$SKILL_DIR/references/interview-protocol.md")
 
-    set_test "grill-me: Codex picker-first guard forbids Markdown questions when request_user_input exists"
+    set_test "grill-me: Codex picker-first guard requires default-mode request_user_input"
     if [[ "$body" == *"Codex picker-first HITL guard"* \
       && "$body" == *"Use \`request_user_input\` whenever it is present in the active tool"* \
+      && "$body" == *"default_mode_request_user_input"* \
       && "$body" == *"Do not ask a"* \
       && "$body" == *"Grill Me question as a normal assistant message"* \
-      && "$body" == *"Use free-text Q&A only when"* \
-      && "$protocol_content" == *"Never end a turn with a Markdown question while \`request_user_input\` is"* ]]; then
+      && "$body" == *"stop instead of asking in Markdown/free-text"* \
+      && "$protocol_content" == *"Never end a turn with a Markdown question"* ]]; then
       _pass
     else
-      _fail "expected grill-me to require request_user_input and forbid Markdown fallback while tool is available"
+      _fail "expected grill-me to require default-mode request_user_input and forbid Markdown fallback"
     fi
   fi
 

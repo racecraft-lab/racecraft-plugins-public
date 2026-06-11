@@ -72,9 +72,11 @@ grill-me. These are different systems by design.
 
 ### Self-check at activation — Codex picker-first HITL guard
 
-**Before asking your first question**, verify the runtime supports
-real-time human interaction. Codex does not expose a stable
-`is_interactive` API today, so use the following picker-first pattern:
+**Before asking your first question**, verify the runtime exposes the
+native Codex ask-user-question surface. In Codex Default mode this
+requires the `default_mode_request_user_input` feature to be enabled
+(`codex features enable default_mode_request_user_input`) before starting
+or resuming the thread.
 
 1. **Use `request_user_input` whenever it is present in the active tool
    list.** This is the Codex ask-user-question surface. Do not ask a
@@ -84,15 +86,15 @@ real-time human interaction. Codex does not expose a stable
    exclusive options, and the recommended option first with the label
    suffix `(Recommended)`.
 
-2. **Use free-text Q&A only when `request_user_input` is absent from the
-   active tools or an attempted tool call fails because the tool is not
-   available in this runtime.** The user message that invoked
-   `$grill-me` or `$speckit-scaffold-spec` is sufficient HITL evidence
-   for the current turn. Do not choose free-text merely because the
-   session is in Default mode, because `tty -s` is nonzero, or because
-   prose is easier to format.
+2. **If `request_user_input` is absent or a call fails because the tool is
+   unavailable, stop instead of asking in Markdown/free-text.** Tell the
+   user to run `codex features enable default_mode_request_user_input`,
+   restart Codex or open a new thread, then rerun `$grill-me` or
+   `$speckit-scaffold-spec <SPEC-ID>`. Do not render A/B/C options in a
+   normal assistant message. This is a Codex feature/config prerequisite,
+   not a reason to degrade the Grill Me interview.
 
-3. **Abort only for autonomous or background invocations**: `codex exec`,
+3. **Abort for autonomous or background invocations**: `codex exec`,
    CI, cron/automation, autopilot agents, or subagents that cannot receive
    a direct user reply in the same conversation. Use this message:
 
@@ -323,23 +325,28 @@ Result: Nothing written. Caller surfaces the ambiguity to the orchestrator.
 
 ## Troubleshooting
 
-### Skill aborts immediately with "could not confirm an interactive runtime"
+### Skill stops before the first question
 
-Cause: Both the `request_user_input` probe and the `tty -s` check
-failed. You're likely in `codex exec` mode or a CI/automation context.
+Cause: The native `request_user_input` picker is not exposed in this
+Codex thread. In Default mode, Codex needs the
+`default_mode_request_user_input` feature enabled before the thread starts
+or resumes. In `codex exec`, CI, or background contexts, no live user
+picker can be shown.
 
-Solution: Don't invoke grill-me from non-interactive contexts. If you
-need scoping in `codex exec`, use `$speckit-coach` for methodology
-guidance or fail the gate and surface to a human.
+Solution: In an interactive Codex app or CLI session, run
+`codex features enable default_mode_request_user_input`, restart Codex or
+open a new thread, then rerun the skill. In non-interactive contexts, use
+`$speckit-coach` for methodology guidance or fail the gate and surface to
+a human.
 
 ### Question appears as plain Markdown instead of a picker
 
-Cause: The skill asked the question in a normal assistant message even
-though `request_user_input` was present in the active tool list.
+Cause: The skill degraded to a normal assistant message instead of
+stopping when `request_user_input` was not available.
 
-Solution: Retry the question by calling `request_user_input` with one
-question and 2-3 options. Free-text fallback is allowed only when the
-tool is absent or explicitly unavailable in the runtime.
+Solution: Do not answer the Markdown question. Enable
+`default_mode_request_user_input`, restart Codex or open a new thread, and
+rerun the skill so the first question is asked through `request_user_input`.
 
 ### Interview hits the soft cap (30 questions) on every run
 

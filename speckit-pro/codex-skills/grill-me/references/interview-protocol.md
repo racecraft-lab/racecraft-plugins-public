@@ -11,13 +11,14 @@ substitutes Codex's `request_user_input` picker for `AskUserQuestion`.
 ## Activation Sequence
 
 1. **Run the HITL probe** (from `../SKILL.md`'s "Self-check at
-   activation"). Choose the question-asking mechanism:
+   activation"). The native picker is required:
    - **`request_user_input`** whenever it is present in the active tool
      list. This is the default and required Codex question surface.
-   - **Free-text Q&A in chat** only when `request_user_input` is absent
-     from the active tools or an attempted tool call fails because the
-     tool is unavailable, while the skill was invoked by the current user
-     conversation or by `$speckit-scaffold-spec` in that conversation.
+   - **Stop instead of using Markdown/free-text** when
+     `request_user_input` is absent from the active tools or an attempted
+     call fails because the tool is unavailable. Tell the user to run
+     `codex features enable default_mode_request_user_input`, restart
+     Codex or open a new thread, then rerun the skill.
    - **Abort** only for autonomous/background invocations that cannot
      receive a direct user reply in the same conversation.
 
@@ -95,9 +96,10 @@ request_user_input({
 })
 ```
 
-Never end a turn with a Markdown question while `request_user_input` is
-available. When the picker is genuinely unavailable and the fallback is
-allowed, write the question and options in plain prose, e.g.:
+Never end a turn with a Markdown question. When the picker is unavailable,
+stop with the `default_mode_request_user_input` remediation instruction
+from `../SKILL.md`. The following plain-prose shape is noncompliant in
+Codex and exists only as a negative example:
 
 ```text
 Q12. Should gamification points apply retroactively to existing user accounts?
