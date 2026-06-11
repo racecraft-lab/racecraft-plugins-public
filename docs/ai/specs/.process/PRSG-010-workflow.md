@@ -506,7 +506,23 @@ Focus on:
 - [x] Final diff-gate behavior is exercised with an unexcepted block fixture
 - [x] O5 parent/child status rollup is fixture-verified
 - [x] Contextual probes are fixture-verified for high-confidence and weak-evidence cases
-- [ ] PRSG-010 split-PR emission evidence is recorded
+- [x] PRSG-010 split-PR emission evidence is recorded
+
+### Split Publish Stack Evidence
+
+The original PRSG-010C publish boundary blocked on total file count, so the
+publish stack was resliced without changing final content. Each boundary now
+passes the final reviewability gate with `status=warn` and no blockers.
+
+| Branch | Base | Gate |
+|--------|------|------|
+| `prsg-010-foundation` | `origin/main` | warn, 21 files, no blockers |
+| `prsg-010a-backstop-core` | `prsg-010-foundation` | warn, 21 files, no blockers |
+| `prsg-010a-final-hatch` | `prsg-010a-backstop-core` | warn, 17 files, no blockers |
+| `prsg-010b-contextual-router` | `prsg-010a-final-hatch` | warn, 16 files, no blockers |
+| `prsg-010c1-o5-topology-core` | `prsg-010b-contextual-router` | warn, 23 files, no blockers |
+| `prsg-010c2-o5-status-guidance` | `prsg-010c1-o5-topology-core` | warn, 14 files, no blockers |
+| `prsg-010d-parity-polish` | `prsg-010c2-o5-status-guidance` | warn, 13 files, no blockers |
 
 ---
 

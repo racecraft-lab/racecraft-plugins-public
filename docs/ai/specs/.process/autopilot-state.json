@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T19:49:59Z",
+  "updated_at": "2026-06-11T20:05:00Z",
   "active_step": "Post: PR Body Generation",
   "model_check": {
     "parent_session": "Codex main session",
@@ -250,7 +250,7 @@
     {
       "step": "Post: Reviewability Diff Gate",
       "status": "completed",
-      "summary": "Cumulative diff gate returned status=exception and pass=true for origin/main...HEAD; total_files=111 remains above block threshold, but the branch includes an accepted refactor exception fixture and rejected generated/template/process provenance examples."
+      "summary": "Initial cumulative and PRSG-010C boundaries were too broad, so publish stack was resliced into foundation, A-core, A-guidance, B, C1, C2, and D. All publish boundaries now return status=warn pass=true with no blockers."
     },
     {
       "step": "Post: Self-Review",
@@ -262,7 +262,8 @@
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "pending",
+      "summary": "Use the resliced publish stack: prsg-010-foundation -> prsg-010a-backstop-core -> prsg-010a-final-hatch -> prsg-010b-contextual-router -> prsg-010c1-o5-topology-core -> prsg-010c2-o5-status-guidance -> prsg-010d-parity-polish."
     },
     {
       "step": "Post: PR Creation",
@@ -770,6 +771,60 @@
           "diff_check": "git diff --check origin/main...HEAD -> passed",
           "reviewability_gate": "bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD -> status=exception pass=true total_files=111"
         }
+      }
+    ]
+  },
+  "post_reviewability": {
+    "status": "completed",
+    "resliced_publish_stack": [
+      {
+        "branch": "prsg-010-foundation",
+        "base": "origin/main",
+        "gate": "warn",
+        "total_files": 21,
+        "blockers": 0
+      },
+      {
+        "branch": "prsg-010a-backstop-core",
+        "base": "prsg-010-foundation",
+        "gate": "warn",
+        "total_files": 21,
+        "blockers": 0
+      },
+      {
+        "branch": "prsg-010a-final-hatch",
+        "base": "prsg-010a-backstop-core",
+        "gate": "warn",
+        "total_files": 17,
+        "blockers": 0
+      },
+      {
+        "branch": "prsg-010b-contextual-router",
+        "base": "prsg-010a-final-hatch",
+        "gate": "warn",
+        "total_files": 16,
+        "blockers": 0
+      },
+      {
+        "branch": "prsg-010c1-o5-topology-core",
+        "base": "prsg-010b-contextual-router",
+        "gate": "warn",
+        "total_files": 23,
+        "blockers": 0
+      },
+      {
+        "branch": "prsg-010c2-o5-status-guidance",
+        "base": "prsg-010c1-o5-topology-core",
+        "gate": "warn",
+        "total_files": 14,
+        "blockers": 0
+      },
+      {
+        "branch": "prsg-010d-parity-polish",
+        "base": "prsg-010c2-o5-status-guidance",
+        "gate": "warn",
+        "total_files": 13,
+        "blockers": 0
       }
     ]
   },
