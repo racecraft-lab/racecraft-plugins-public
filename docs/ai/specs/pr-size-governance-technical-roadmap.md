@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Active: PRSG-010 scaffolded on branch `prsg-010-harden-the-hatch` (Phase 5). Created 2026-06-03; status refreshed 2026-06-11.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Active: PRSG-010 scaffolded on branch `prsg-010-harden-the-hatch` (Phase 5). Planned follow-on: PRSG-012 reviewer-ready PR packets. Created 2026-06-03; status refreshed 2026-06-11.
 
 ## Vision
 
@@ -34,6 +34,7 @@ instead of becoming a permanent split-brain repo.
 | Mechanical-only specs | **Accept + route to one-navigable-PR** (don't decline) |
 | No-flag cutovers | **Atomic PR + release-hold note** by default; *offer* an app-native runtime toggle |
 | Migration / back-compat | **Tiered retro-migration (PRSG-011)** — supersedes the earlier new-specs-only stance. PRSG-001–010 ship new-specs-only; PRSG-011 adds state-keyed backfill: Tier 1 repo-level (eager, version-gated), Tier 0 navigation index-backfill for completed specs, Tier 2 on-demand relocate codemod for the ~8 specs that have a `specs/<NNN>/` dir. In-flight specs (per `.specify/feature.json`) are **frozen**; legacy specs grandfathered by marker-absence |
+| PR packet ownership | **Generator-owned first draft + pre-create validation (PRSG-012)**. Both single-PR and split-PR paths generate explicit titles/bodies from deterministic evidence before `gh pr create`; humans or agents may refine only sanctioned prose fields |
 
 ## Sequencing principle (non-negotiable)
 
@@ -55,6 +56,8 @@ Phase 5 ─ Harden the hatch (PRSG-010)    ← ONLY after the small path exists
    ┊
 Phase 6 ─ Retro-migration (PRSG-011)     ← needs only PRSG-001/002/003; can land in
                                             parallel with Phases 3–5 once the spine exists
+   │
+Phase 7 ─ Reviewer-ready PR packets (PRSG-012) ← hardens title/body output after split-PR emission exists
 ```
 
 **Visibility expectation (set, don't fix):** the first *visible* drop in reviewable PR
@@ -297,12 +300,53 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
   PRSG-003 (index generator). **Budget:** ~450 LOC. **Tests:** L1, L3 (speckit-upgrade
   migration behavior), L4 (dry-run / idempotency / move-set + ID-norm fixtures), L8.
 
+---
+
+### PRSG-012 — Reviewer-ready PR packet contract  · Phase 7 · P1 · ⏳ Pending
+> Added 2026-06-11 after the PRSG-010 split-PR stack exposed a reviewer-experience
+> regression: PRs were small enough to review, but titles and descriptions were still
+> hard to understand without manual cleanup.
+
+**Why:** PRSG-009 made split PRs possible, and SPEC-006a/b added UAT runbook wiring,
+but the post-implementation PR packet is not yet enforced as a reviewer-ready contract.
+Generated PRs can still ship vague titles, incomplete bodies, stale placeholders, or
+patronizing labels unless a human repairs them after creation. PRSG-012 makes the
+title/body packet deterministic, neutral, and validated before any PR is opened.
+
+- **US1 — Explicit generated titles.** Both the single-PR path and split-PR path
+  generate conventional, specific PR titles before creation and call `gh pr create`
+  with `--title` plus `--body-file`. Titles must identify the user-visible or
+  operator-visible change, not only the internal slice code or branch name.
+- **US2 — Actionable body contract.** `generate-pr-body.sh` produces neutral
+  reviewer-facing sections: `Summary`, `What Changed`, `Why It Matters`,
+  `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
+  The body must not contain unfilled template comments, stale placeholders, or labels
+  such as `ELI5` or `Plain-English Summary`.
+- **US3 — Pre-create validator.** Add deterministic validation that runs before every
+  `gh pr create` path, including `multi-pr-emission.sh`. Invalid packets block before
+  PR creation and record exact remediation in workflow evidence; they do not create a
+  PR that reviewers have to decode after the fact.
+- **US4 — Safe prose refinement.** Scripts own the first draft from spec, plan,
+  slice packet, UAT runbook, and verification evidence. Human or agent refinement may
+  edit only explicit prose fields while preserving generated governance sections,
+  source markers, UAT content, traceability, and verification evidence.
+- **Grill-me decisions (2026-06-11):** pre-create gate over advisory check;
+  generator-owned draft over agent-authored draft; same contract for single-PR and
+  split-PR paths; actionable sections with neutral wording.
+- **Skills/files:** `speckit-autopilot/references/post-implementation.md`,
+  `speckit-autopilot/references/phase-execution.md`, `generate-pr-body.sh`,
+  `multi-pr-emission.sh`, slice packet/PR packet schemas, new PR packet validator.
+- **Deps:** PRSG-009 (split-PR emission), SPEC-006a/b (UAT runbook and PR-body wiring),
+  PRSG-010 (final backstop ordering). **Budget:** ~350 LOC. **Tests:** L4
+  validator/body fixtures, L3 functional eval for PR packet generation, L7 emission
+  replay, L8 Codex parity.
+
 ## Which skills/files change (matrix)
 
 | Skill / file | SPECs |
 |--------------|-------|
 | `speckit-scaffold-spec` | 001, 002, 009, 010, 011 |
-| `speckit-autopilot` (phase-execution / post-implementation) | 001, 003, 006, 007, 008, 009, 011 |
+| `speckit-autopilot` (phase-execution / post-implementation) | 001, 003, 006, 007, 008, 009, 011, 012 |
 | `speckit-prd` | 004, 005 |
 | `grill-me` | 005 |
 | `speckit-coach` | 004 |
@@ -310,7 +354,7 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
 | `speckit-upgrade` | 011 |
 | `reviewability-gate.sh` | 001, 006, 010 |
 | roadmap template | 006, 010 |
-| new scripts (`generate-spec-index.sh`, `atomicity-route.sh`, `plan-layers.sh`, `migrate-structure.sh`, `relocate-process-artifacts.sh`) | 003, 007, 008, 011 |
+| new scripts (`generate-spec-index.sh`, `atomicity-route.sh`, `plan-layers.sh`, `migrate-structure.sh`, `relocate-process-artifacts.sh`, PR packet validator) | 003, 007, 008, 011, 012 |
 | `.gitattributes` (new) · `.specify/structure-version.json` (new) | 001 · 011 |
 
 ## Cross-cutting requirements (apply to every SPEC)
@@ -321,7 +365,7 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
   fixtures** green; run `speckit-skill-reviewer` as a pre-commit gate. This applies to
   every catalog SPEC that touches a mirrored skill (at minimum `speckit-autopilot`,
   and any of `scaffold-spec`/`prd`/`coach`/`status`/`upgrade` that carry a Codex
-  variant) — i.e. **PRSG-001 through PRSG-011**. Add **L8** to those SPECs' test sets
+  variant) — i.e. **PRSG-001 through PRSG-012**. Add **L8** to those SPECs' test sets
   and treat the Codex mirror as part of each SPEC's deliverable, or parity tests fail
   around PRSG-002.
 - **Migration (PRSG-011) supersedes the earlier new-specs-only stance.** PRSG-001–010
@@ -377,6 +421,7 @@ Layers: **L1** structural · **L2** trigger eval (AI) · **L3** functional eval 
 | 009 | autopilot, scaffold-spec, gen-pr-body (behavior) | `plan-layers.sh` (reuse), `generate-pr-body.sh` (extend), `restack.sh` | L4, **L3** (e2e: N PRs on a fixture spec), L7, L8 |
 | 010 | gate, template, scaffold-spec (epic), status (rollup) | gate exit-code/re-slice wiring, `rollup-epic.sh` | L1, **L3**, L4, L8 |
 | 011 | speckit-upgrade (behavior); scaffold-spec/autopilot (codemod registration) | `migrate-structure.sh`, `relocate-process-artifacts.sh`, ID-norm helper | L1, **L3**, L4, L8 |
+| 012 | autopilot PR packet generation/validation | `generate-pr-body.sh` extension, PR packet validator, `multi-pr-emission.sh` title/body checks | L4, **L3**, L7, L8 |
 
 Rule of thumb visible in the table: SPECs that move logic into scripts (007/008/011)
 carry **L4 + L7**, not AI evals — the scripts-first payoff. SPECs that change skill
@@ -403,6 +448,10 @@ there.
   (lints suppressed by marker-absence). `migrate-structure.sh --dry-run` prints the
   ordered pending migrations and mutates nothing; the relocate codemod hard-fails on a
   dirty tree and is idempotent (re-run = no-op).
+- **Phase 7:** autopilot opens PRs only from validated reviewer-ready packets. Both
+  single-PR and split-PR paths generate explicit titles and structured bodies before
+  `gh pr create`; invalid, stale, placeholder-filled, or patronizing packets block
+  with remediation evidence.
 - **Every phase (gate):** all layers from the coverage table pass for each SPEC —
   CI-fast layers (L1/L4/L5) green in CI by default; Layer 7 replay (`--integration`) and
   Layer 8 parity are opt-in runs; and the AI evals (L2/L3, plus L6 where applicable) run
@@ -443,3 +492,5 @@ These are recorded with my recommended default; flag any you want changed:
 - N× reviewer/CI workload (mitigate: PRSG-005/006 right-sizing keeps N small).
 - Squash-only merge-conflict surfaces (marker file, central baselines) — mitigate:
   single-integer marker + in-band per-spec pragmas, per-spec atomic migration commits.
+- Small PRs that are still hard to review because their generated titles/bodies are
+  vague or patronizing (mitigate: PRSG-012 pre-create PR packet contract).
