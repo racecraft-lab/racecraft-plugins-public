@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T16:34:06Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-06-11T16:53:35Z",
+  "active_step": "Phase 4: Checklist - error-handling",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -127,11 +127,25 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G3",
+      "gate_status": "passed",
+      "reviewability_estimate": {
+        "status": "pass",
+        "projected": 0,
+        "declared_files": {
+          "production": 0,
+          "new": 14,
+          "modified": 16,
+          "total_entries": 30
+        },
+        "note": "Current estimator does not count plugin shell paths as production LOC; plan still records split required from the spec budget."
+      },
+      "summary": "Created plan, research, data model, quickstart, and 4 JSON contracts; split stack planned as PRSG-010A final hatch, PRSG-010B O5, PRSG-010C contextual router, PRSG-010D docs/parity/polish."
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
@@ -409,5 +423,45 @@
         "domain-researcher"
       ]
     }
-  ]
+  ],
+  "phase3_plan": {
+    "gate": "G3",
+    "gate_status": "passed",
+    "artifacts": [
+      "specs/prsg-010-harden-the-hatch/plan.md",
+      "specs/prsg-010-harden-the-hatch/research.md",
+      "specs/prsg-010-harden-the-hatch/data-model.md",
+      "specs/prsg-010-harden-the-hatch/quickstart.md",
+      "specs/prsg-010-harden-the-hatch/contracts/final-reviewability-gate-state.schema.json",
+      "specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json",
+      "specs/prsg-010-harden-the-hatch/contracts/o5-parent-manifest.schema.json",
+      "specs/prsg-010-harden-the-hatch/contracts/routing-decision.schema.json"
+    ],
+    "functional_requirements": 23,
+    "declared_file_operations": {
+      "total": 30,
+      "new": 14,
+      "modified": 16
+    },
+    "split_stack": [
+      "PRSG-010A final hatch",
+      "PRSG-010B O5 manifest/status",
+      "PRSG-010C contextual router",
+      "PRSG-010D docs/parity/polish"
+    ],
+    "reviewability_estimate": {
+      "status": "pass",
+      "projected": 0,
+      "note": "Estimator parsed the declared file operations; plugin-path heuristic reports 0 projected production LOC while the spec budget still requires split delivery."
+    },
+    "validation": {
+      "contracts_jq": "passed",
+      "validate_gate_g3": "passed",
+      "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
+      "layer1": "915/915 passed",
+      "layer4": "1195/1195 passed",
+      "default_verify": "2300/2300 passed",
+      "diff_check": "clean"
+    }
+  }
 }

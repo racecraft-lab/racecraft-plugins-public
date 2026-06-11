@@ -268,11 +268,18 @@ Fill this block during Plan with NEW/MODIFIED paths so `estimate-reviewable-loc.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | |
-| `research.md` | Pending | |
-| `data-model.md` | Pending | |
-| `contracts/` | Pending | re-slicing packet, O5 parent manifest, routing decision delta likely |
-| `quickstart.md` | Pending | |
+| `plan.md` | Complete | Split stack: PRSG-010A final hatch, PRSG-010B O5, PRSG-010C contextual router, PRSG-010D docs/parity/polish |
+| `research.md` | Complete | Records final backstop, O5, and contextual routing decisions |
+| `data-model.md` | Complete | Defines final gate state, re-slicing packet, O5 manifest/rollup, contextual evidence, and routing decision |
+| `contracts/` | Complete | 4 JSON contracts: final gate state, re-slicing packet, O5 parent manifest, routing decision |
+| `quickstart.md` | Complete | Fixture-backed verification path and split-stack review flow |
+
+Plan validation:
+
+- G3 validator passed with 0 unresolved markers.
+- `estimate-reviewable-loc.sh` parsed 30 declared file operations: 14 new, 16 modified, status `pass`, projected `0` under the current plugin-path heuristic.
+- Contract JSON parsing passed for all 4 generated schemas.
+- Layer 1 passed `915/915`; Layer 4 passed `1195/1195`; default suite passed `2300/2300` in the phase executor.
 
 ---
 

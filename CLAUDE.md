@@ -429,3 +429,10 @@ git commit -m "chore: sync plugin payloads and marketplace versions"
 git push origin <sync-branch>
 gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloads and marketplace versions"
 ```
+
+## Active Technologies
+- Bash 3.2+ compatible shell scripts, Markdown skills, YAML + `bash`, `jq`, `git`, `gh` at PR-emission boundaries, (prsg-010-harden-the-hatch)
+- Repository files only: feature artifacts, contract schemas, (prsg-010-harden-the-hatch)
+
+## Recent Changes
+- prsg-010-harden-the-hatch: Added Bash 3.2+ compatible shell scripts, Markdown skills, YAML + `bash`, `jq`, `git`, `gh` at PR-emission boundaries,
