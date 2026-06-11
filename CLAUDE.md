@@ -431,8 +431,8 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 ```
 
 ## Active Technologies
-- Bash 3.2+ compatible shell scripts, Markdown skills, YAML + `bash`, `jq`, `git`, `gh` at PR-emission boundaries, (prsg-010-harden-the-hatch)
-- Repository files only: feature artifacts, contract schemas, (prsg-010-harden-the-hatch)
+- Bash 4+ shell scripts, Markdown skills, YAML manifests, JSON Schema 2020-12 contracts, and `bash`, `jq`, `git`, `gh` at PR-emission boundaries (prsg-010-harden-the-hatch)
+- Repository files only: feature artifacts, contract schemas, workflow state JSON, and generated re-slicing packets (prsg-010-harden-the-hatch)
 
 ## Recent Changes
-- prsg-010-harden-the-hatch: Added Bash 3.2+ compatible shell scripts, Markdown skills, YAML + `bash`, `jq`, `git`, `gh` at PR-emission boundaries,
+- prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.
