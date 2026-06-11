@@ -1,0 +1,479 @@
+# SpecKit Workflow: PRSG-012 - Reviewer-ready PR packet contract
+
+**Template Version**: 1.0.0
+**Created**: 2026-06-11
+**Purpose**: Drive the autopilot through PRSG-012 so generated PR titles and bodies are deterministic, reviewer-ready, and validated before any PR is opened.
+
+---
+
+## Design Concept
+
+This workflow was enriched from a Grill Me interview run during `$speckit-scaffold-spec`.
+The full Q&A log, Goals, Non-goals, and Open Questions live at:
+
+```text
+docs/ai/specs/.process/PRSG-012-design-concept.md
+```
+
+The design concept is the source of truth for these scoping decisions:
+
+- Use one shared deterministic PR packet validator script.
+- Make the generated packet own the PR title.
+- Generate canonical reviewer sections directly.
+- Keep both `How To UAT` and the literal `## UAT Runbook` compatibility heading.
+- Allow edits only inside explicit editable prose fields.
+- Write validation failure JSON plus a workflow event.
+- Keep post-create auto-repair as a follow-up, not part of PRSG-012.
+
+---
+
+## Workflow Overview
+
+| Phase | Command | Status | Notes |
+|-------|---------|--------|-------|
+| Specify | `/speckit-specify` | Pending | Generate `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md` |
+| Clarify | `/speckit-clarify` | Pending | Use only if packet schema/title wording remains ambiguous |
+| Plan | `/speckit-plan` | Pending | Define scripts, schemas, failure evidence, and test matrix |
+| Checklist | `/speckit-checklist` | Pending | Run contract, error-handling, and reliability checks |
+| Tasks | `/speckit-tasks` | Pending | Organize by user story and validation boundary |
+| Analyze | `/speckit-analyze` | Pending | Check consistency against the design concept |
+| Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
+
+### Phase Gates
+
+| Gate | Checkpoint | Approval Criteria |
+|------|------------|-------------------|
+| G1 | After Specify | User stories cover generated titles, body contract, pre-create validation, and safe refinement |
+| G2 | After Clarify | Packet schema/title ambiguities resolved or explicitly deferred |
+| G3 | After Plan | Reviewability budget and test matrix approved |
+| G4 | After Checklist | All true gaps addressed or documented as non-goals |
+| G5 | After Tasks | Tasks map to every user story and validation path |
+| G6 | After Analyze | No CRITICAL issues |
+| G7 | After Implementation | L4 plus relevant L1/L3/L7/L8 evidence recorded |
+
+---
+
+## Prerequisites
+
+### Constitution Validation
+
+| Principle | Requirement | Verification |
+|-----------|-------------|--------------|
+| Plugin Structure Compliance | Keep plugin files under `speckit-pro/`; tests remain under `tests/speckit-pro/` | `bash tests/speckit-pro/run-all.sh --layer 1` |
+| Script Safety | New or changed shell scripts use `#!/usr/bin/env bash`, `set -euo pipefail`, quoted variables, and deterministic exits | `bash tests/speckit-pro/run-all.sh --layer 1` and Layer 4 script tests |
+| Test Coverage Before Merge | New deterministic validation logic has Layer 4 fixtures; skill behavior has L3/L8 coverage | L4, L3, L7, L8 evidence |
+| Conventional Commits | Setup and implementation commits use repo convention | `git log --oneline` and CI title check |
+| KISS, Simplicity & YAGNI | Prefer one shared validator script over duplicated call-site logic | Plan review |
+
+**Constitution Check:** Pending
+
+---
+
+## Specification Context
+
+| Field | Value |
+|-------|-------|
+| **Spec ID** | PRSG-012 |
+| **Name** | Reviewer-ready PR packet contract |
+| **Branch** | `prsg-012-reviewer-ready-pr-packet-contract` |
+| **Feature directory** | `specs/prsg-012-reviewer-ready-pr-packet-contract` |
+| **Design Concept** | `docs/ai/specs/.process/PRSG-012-design-concept.md` |
+| **Dependencies** | PRSG-009, SPEC-006a/b, PRSG-010 |
+| **Priority** | P1 |
+| **Reviewability estimate** | 245 reviewable LOC, one suggested slice, status `ok` |
+| **Required layers** | L4, L3, L7, L8; L1 for structural/parity safety |
+
+### Success Criteria Summary
+
+- Both single-PR and split-PR paths pass `--title` and `--body-file` to `gh pr create`.
+- Generated titles identify the reviewer-visible change, not just a branch or slice code.
+- Generated bodies include canonical sections: `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
+- Generated bodies keep the literal `## UAT Runbook` compatibility heading.
+- Invalid packets block before PR creation and write deterministic remediation evidence.
+- Safe refinement is limited to explicit editable prose fields.
+
+---
+
+## Phase 1: Specify
+
+**When to run:** At the start of PRSG-012. Output: `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`
+
+### Specify Prompt
+
+```bash
+/speckit-specify
+
+## Feature: Reviewer-ready PR packet contract
+
+### Problem Statement
+PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG-010 hardened the final reviewability backstop. The remaining reviewer-experience gap is that generated PR titles and descriptions can still be vague, incomplete, stale, or dependent on manual cleanup after creation. PRSG-012 makes the PR packet deterministic and validated before `gh pr create`.
+
+### Users
+- Maintainers reviewing autopilot-generated PRs.
+- Operators running `$speckit-autopilot` in single-PR or split-PR mode.
+- Future agents that need a stable packet contract before opening PRs.
+
+### User Stories
+1. As a reviewer, I see a specific conventional PR title that names the visible or operator-visible change.
+2. As a reviewer, I see a neutral structured body with Summary, What Changed, Why It Matters, How To Review, How To UAT, Verification, Scope, and Known Gaps.
+3. As an operator, invalid packets block before PR creation with exact remediation evidence.
+4. As a maintainer, I can refine sanctioned prose fields without damaging generated governance sections, source markers, UAT content, traceability, scope, or verification evidence.
+
+### Functional Requirements
+- Generate a packet-owned PR title for both single-PR and split-PR paths.
+- Pass `gh pr create --title <generated-title> --body-file <generated-body>` in every PR creation path.
+- Add one shared deterministic PR packet validator script invoked before every `gh pr create`.
+- Validate rendered title/body text, not only JSON schema shape.
+- Reject stale placeholders, unfilled template comments, missing source markers, missing required headings, missing verification/scope evidence, and banned labels such as `ELI5` or `Plain-English Summary`.
+- Keep the literal `## UAT Runbook` compatibility heading while adding the reviewer-facing `How To UAT` section.
+- Write validation JSON under the feature `.process` tree and append a concise workflow event when validation blocks.
+- Treat post-create auto-repair as a follow-up, not PRSG-012 scope.
+
+### Constraints
+- Bash plus `jq`; no new runtime dependencies.
+- Scripts-first: deterministic logic belongs in scripts with Layer 4 fixtures.
+- Preserve Codex parity for any mirrored autopilot skill/reference behavior.
+- Keep edits scoped to `speckit-pro/skills/speckit-autopilot`, contracts, tests, and generated docs needed for PRSG-012.
+- Do not weaken existing UAT runbook guarantees from SPEC-006a/b.
+
+### Out of Scope
+- Broad post-create repair of already-open PRs.
+- Agent-authored PR packet first drafts.
+- Removing host template support when it can safely coexist.
+- Replacing the existing UAT Runbook compatibility heading.
+```
+
+### Specify Results
+
+| Metric | Value |
+|--------|-------|
+| Functional Requirements | Fill after G1 |
+| User Stories | 4 target stories |
+| Acceptance Criteria | Fill after G1 |
+
+### Files Generated
+
+- [ ] `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`
+
+---
+
+## Phase 2: Clarify
+
+**When to run:** Only if Specify leaves packet schema, title generation, or failure evidence ambiguous.
+
+### Clarify Prompts
+
+#### Session 1: Packet Schema
+
+```bash
+/speckit-clarify Focus on PR packet schema: decide whether to extend `slice-packet.schema.json` directly or introduce a shared `pr-packet.schema.json`; define required fields for title, body file, section metadata, verification evidence, scope evidence, UAT source, source markers, and editable field boundaries.
+```
+
+#### Session 2: Title Generation
+
+```bash
+/speckit-clarify Focus on generated titles: define title sources for single PRs and slice PRs; keep conventional commit format; require plain-English descriptions; reject titles that only repeat branch names, slice ids, or internal codes.
+```
+
+#### Session 3: Safe Refinement
+
+```bash
+/speckit-clarify Focus on safe prose refinement: define the exact editable markers and validator behavior when a human or agent edits outside those fields.
+```
+
+### Clarify Results
+
+| Session | Focus Area | Questions | Key Outcomes |
+|---------|------------|-----------|--------------|
+| 1 | Packet schema | | |
+| 2 | Titles | | |
+| 3 | Safe refinement | | |
+
+---
+
+## Phase 3: Plan
+
+**When to run:** After spec is finalized. Output: `specs/prsg-012-reviewer-ready-pr-packet-contract/plan.md`
+
+### Plan Prompt
+
+```bash
+/speckit-plan
+
+## Tech Stack
+- Runtime: Bash 4+ shell scripts
+- Data: JSON Schema 2020-12 contracts and `jq`
+- Repo surfaces: Markdown skill/reference docs, shell scripts, Layer 4 shell fixtures, L3/L7/L8 eval fixtures
+- GitHub boundary: `gh pr create --title --body-file`
+
+## Architecture Notes
+- Add one shared validator script, likely `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`.
+- Extend or add contracts so a packet owns: generated title, body file path, source feature dir, required headings, verification evidence, scope evidence, UAT source, source marker, and editable prose fields.
+- Update `generate-pr-body.sh` so the generated body owns canonical reviewer sections directly: `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
+- Preserve a literal `## UAT Runbook` heading in the rendered body for SPEC-006a/b compatibility.
+- Update the single-PR post-implementation path to generate the packet, validate it, and create the PR with `--title` and `--body-file`.
+- Update `multi-pr-emission.sh` to write packet-owned titles for each slice, validate each packet, and block before the slice `gh pr create` when validation fails.
+- Validation failure writes deterministic JSON under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/` during this spec and under the target feature `.process` directory at runtime.
+- Post-create auto-repair is out of scope; record it as a future roadmap follow-up if it still matters after packet metadata stabilizes.
+
+## Constraints
+- Keep scripts deterministic and fixture-friendly.
+- Do not introduce dependencies beyond Bash, `jq`, `git`, and `gh`.
+- Do not break existing L3 expectations that PR bodies contain the source marker and UAT Runbook heading.
+- Preserve generated governance sections and source markers during safe prose refinement.
+
+## Reviewability Budget
+- Primary surface: docs/process plus Bash automation
+- Projected reviewable LOC: about 350, with advisory estimator at 245
+- Projected production files: likely 4-6
+- Projected total files: likely under 15
+- Budget result: within budget
+- Split decision: one spec, one slice
+```
+
+### Plan Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `plan.md` | Pending | Define validator architecture and packet schema |
+| `contracts/` | Pending | PR packet or slice packet schema updates |
+| `quickstart.md` | Pending | Include local packet validation examples if useful |
+
+---
+
+## Phase 4: Domain Checklists
+
+**When to run:** After Plan. Use enriched prompts; do not run bare domains.
+
+### Recommended Domains
+
+#### 1. API Contracts Checklist
+
+Why this domain: PRSG-012 defines a CLI/script contract plus JSON packet schemas consumed by multiple scripts.
+
+```bash
+/speckit-checklist api-contracts
+
+Focus on PRSG-012 requirements:
+- Required PR packet fields for title, body file, headings, scope, verification, UAT, source markers, and editable prose fields.
+- Compatibility between single-PR packets and split-PR slice packets.
+- Exact `gh pr create --title --body-file` call contract.
+- Pay special attention to: schema fields that are validated in JSON but not checked in rendered Markdown.
+```
+
+#### 2. Error Handling Checklist
+
+Why this domain: The validator is a pre-create blocker, so failures must be exact, recoverable, and non-destructive.
+
+```bash
+/speckit-checklist error-handling
+
+Focus on PRSG-012 requirements:
+- Missing, malformed, stale, or placeholder-filled packet behavior.
+- Validator exit codes and deterministic stderr.
+- Workflow evidence written before stopping.
+- Resume behavior after fixing an invalid packet.
+- Pay special attention to: blocking before `gh pr create` without losing earlier successful split PRs.
+```
+
+#### 3. Reliability Checklist
+
+Why this domain: Runtime evidence and generated packet metadata must remain durable across autopilot resume and split-PR emission.
+
+```bash
+/speckit-checklist reliability
+
+Focus on PRSG-012 requirements:
+- Deterministic validation JSON paths under `.process`.
+- Workflow event content and remediation quality.
+- Reuse of the shared validator across both PR creation paths.
+- Layer 4, Layer 3, Layer 7, and Layer 8 evidence expectations.
+- Pay special attention to: avoiding drift between Claude Code and Codex autopilot guidance.
+```
+
+### Checklist Results
+
+| Checklist | Items | Gaps | Spec References |
+|-----------|-------|------|-----------------|
+| api-contracts | | | |
+| error-handling | | | |
+| reliability | | | |
+
+---
+
+## Phase 5: Tasks
+
+**When to run:** After checklist gaps are resolved. Output: `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
+
+### Tasks Prompt
+
+```bash
+/speckit-tasks
+
+## Task Structure
+- Organize by user story, not by technical layer.
+- Start with failing Layer 4 fixtures for packet validation and title/body generation.
+- Keep each task independently verifiable.
+- Mark parallel-safe tasks with [P] only when they do not touch the same script or fixture.
+
+## Implementation Phases
+1. Foundation: packet schema/fixture shape and validator skeleton.
+2. User Story 1: generated packet-owned titles and `gh pr create --title`.
+3. User Story 2: canonical body sections and UAT compatibility.
+4. User Story 3: pre-create validator invocation, blocking behavior, and evidence.
+5. User Story 4: safe editable fields and validator protections.
+6. Polish: L3 functional eval updates, L7 replay, L8 Codex parity, and docs references.
+
+## Required Test Evidence
+- Layer 4 validator/body fixtures.
+- Layer 4 multi-pr-emission command assertions include `--title` and `--body-file`.
+- L3 functional eval covers generated title/body and pre-create validation.
+- L7 replay covers split PR packet validation before each slice PR.
+- L8 Codex parity covers mirrored autopilot guidance.
+```
+
+### Tasks Results
+
+| Metric | Value |
+|--------|-------|
+| Total Tasks | |
+| Phases | |
+| Parallel Opportunities | |
+| User Stories Covered | |
+
+---
+
+## Atomicity Route
+
+Fill after the Tasks phase by running:
+
+```bash
+bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/prsg-012-reviewer-ready-pr-packet-contract
+```
+
+Expected initial route: `one-navigable-PR`, unless Tasks introduces separable vertical slices.
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | | `true` unless the classifier finds release-sensitive behavior |
+| Signals | | Decisive detector findings |
+| Warnings | | Release-safety warnings |
+
+---
+
+## Phase 6: Analyze
+
+**When to run:** After tasks generation and before implementation.
+
+### Analyze Prompt
+
+```bash
+/speckit-analyze
+
+Focus on:
+1. Cross-artifact consistency between `spec.md`, `plan.md`, `tasks.md`, and `docs/ai/specs/.process/PRSG-012-design-concept.md`.
+2. The design concept decisions: shared validator script, packet-owned title, canonical sections, UAT compatibility, editable fields only, JSON plus workflow evidence, and post-create repair as follow-up only.
+3. Coverage gaps across both single-PR and split-PR paths.
+4. Whether any task weakens existing SPEC-006a/b UAT guarantees.
+5. Whether Codex parity and L8 evidence are explicitly covered.
+6. Whether any generated body section still allows stale placeholders, hidden template comments, or banned labels.
+```
+
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| | | | |
+
+---
+
+## Phase 7: Implement
+
+**When to run:** After Analyze has no CRITICAL issues.
+
+### Implement Prompt
+
+```bash
+/speckit-implement
+
+## Approach: TDD First
+
+For every deterministic behavior:
+1. RED: Add or update Layer 4 fixture assertions first.
+2. GREEN: Implement the smallest Bash or Markdown change that passes.
+3. REFACTOR: Simplify only inside touched surfaces.
+4. VERIFY: Run the smallest relevant test, then the full default suite before PR.
+
+## Pre-Implementation Setup
+1. Confirm branch: `git status --short --branch` should show `prsg-012-reviewer-ready-pr-packet-contract`.
+2. Confirm feature dir: `specs/prsg-012-reviewer-ready-pr-packet-contract`.
+3. Run baseline checks as needed:
+   - `bash tests/speckit-pro/run-all.sh --layer 4`
+   - `bash tests/speckit-pro/run-all.sh --layer 1`
+
+## Implementation Notes
+- Prefer one shared validator script over duplicated validation logic.
+- Keep `generate-pr-body.sh` responsible for rendering; keep validation in the validator.
+- `multi-pr-emission.sh` must stop before each slice `gh pr create` when the packet is invalid.
+- Single-PR post-implementation guidance must show `--title` and `--body-file`.
+- Keep generated governance sections and source markers outside editable prose fields.
+- Preserve `## UAT Runbook` compatibility while adding `How To UAT`.
+- Do not implement broad post-create auto-repair in PRSG-012.
+```
+
+### Implementation Progress
+
+| Phase | Tasks | Completed | Notes |
+|-------|-------|-----------|-------|
+| Foundation | | | |
+| User Story 1 | | | |
+| User Story 2 | | | |
+| User Story 3 | | | |
+| User Story 4 | | | |
+| Polish | | | |
+
+---
+
+## Post-Implementation Checklist
+
+- [ ] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
+- [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes if mirrored docs or contracts changed.
+- [ ] L3 functional eval evidence is recorded.
+- [ ] L7 replay evidence is recorded when split-PR dispatch behavior changes.
+- [ ] L8 Codex parity evidence is recorded.
+- [ ] Generated PR body contains required canonical sections and the `## UAT Runbook` compatibility heading.
+- [ ] Every PR creation path uses `gh pr create --title --body-file`.
+- [ ] Invalid packet fixture blocks before PR creation and writes JSON remediation evidence.
+- [ ] PR title is conventional and public-readable.
+
+---
+
+## Project Structure Reference
+
+```text
+speckit-pro/
+  skills/speckit-autopilot/
+    scripts/generate-pr-body.sh
+    scripts/multi-pr-emission.sh
+    scripts/validate-pr-packet.sh
+    contracts/
+    references/post-implementation.md
+    references/phase-execution.md
+    templates/pr-description-template.md
+tests/speckit-pro/
+  layer4-scripts/
+  layer3-functional/
+  layer7-integration/
+  layer8-parity/
+specs/prsg-012-reviewer-ready-pr-packet-contract/
+  SPEC-MOC.md
+  spec.md
+  plan.md
+  tasks.md
+  .process/
+```
+
+---
+
+Template based on SpecKit best practices. Populated for PRSG-012 from the PR-size governance roadmap and the PRSG-012 design concept doc.
