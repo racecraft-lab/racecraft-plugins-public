@@ -423,7 +423,7 @@ fi
 if printf '%s' "$context_corpus" | grep -qiE 'cutover|switch[ -]?over|rollout'; then
   release_cutover=true
 fi
-if [ "$release_cadence" = true ] && [ "$release_hold" = true ] && [ "$release_cutover" = true ] && [ "$CONTEXT_FLAG_GUARDED" != true ] && [ "$flag_raw" != true ]; then
+if [ "$release_cadence" = true ] && [ "$release_hold" = true ] && [ "$release_cutover" = true ] && [ "$CONTEXT_FLAG_GUARDED" != true ] && [ "$flag_mechanism" != true ]; then
   CONTEXT_RELEASE_HELD=true
   SIGNALS+=("context:release-cadence:release-held-cutover")
 elif [ "$release_raw" = true ]; then
