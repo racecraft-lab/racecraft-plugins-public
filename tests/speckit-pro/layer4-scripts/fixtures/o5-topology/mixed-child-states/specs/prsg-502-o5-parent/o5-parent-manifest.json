@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "o5_parent_manifest",
+  "parent": {
+    "id": "PRSG-502",
+    "branch": "prsg-502-o5-parent",
+    "path": "specs/prsg-502-o5-parent",
+    "title": "Mixed O5 parent"
+  },
+  "children": [
+    {"id": "PRSG-502A", "branch": "prsg-502a-blocked", "path": "specs/prsg-502a-blocked", "title": "Blocked child", "dependsOn": []},
+    {"id": "PRSG-502B", "branch": "prsg-502b-failed", "path": "specs/prsg-502b-failed", "title": "Failed child", "dependsOn": ["PRSG-502A"]},
+    {"id": "PRSG-502C", "branch": "prsg-502c-progress", "path": "specs/prsg-502c-progress", "title": "Progress child", "dependsOn": ["PRSG-502B"]},
+    {"id": "PRSG-502D", "branch": "prsg-502d-pending", "path": "specs/prsg-502d-pending", "title": "Pending child", "dependsOn": ["PRSG-502C"]},
+    {"id": "PRSG-502E", "branch": "prsg-502e-complete", "path": "specs/prsg-502e-complete", "title": "Complete child", "dependsOn": ["PRSG-502D"]},
+    {"id": "PRSG-502F", "branch": "prsg-502f-archived", "path": "specs/prsg-502f-archived", "title": "Archived child", "dependsOn": ["PRSG-502E"]},
+    {"id": "PRSG-502G", "branch": "prsg-502g-missing-state", "path": "specs/prsg-502g-missing-state", "title": "Missing-state child", "dependsOn": ["PRSG-502F"]}
+  ],
+  "sharedDesignConcept": "docs/ai/specs/.process/PRSG-502-design-concept.md",
+  "sharedRetrospective": "docs/ai/specs/.process/PRSG-502-retrospective.md",
+  "declaredRollupStatus": "complete"
+}

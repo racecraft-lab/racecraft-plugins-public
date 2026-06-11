@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "kind": "o5_parent_manifest",
+  "parent": {
+    "id": "PRSG-501",
+    "branch": "prsg-501-o5-parent",
+    "path": "specs/prsg-501-o5-parent",
+    "title": "Invalid O5 parent"
+  },
+  "children": [
+    {
+      "id": "PRSG-501A",
+      "branch": "prsg-501a-alpha",
+      "path": "specs/prsg-501a-alpha",
+      "title": "Alpha child",
+      "dependsOn": ["PRSG-501Z"]
+    },
+    {
+      "id": "PRSG-501A",
+      "branch": "prsg-501b-beta",
+      "path": "specs/prsg-501-o5-parent/prsg-501b-beta",
+      "title": "Nested duplicate child",
+      "dependsOn": ["PRSG-501C"]
+    },
+    {
+      "id": "PRSG-501C",
+      "branch": "prsg-501c-gamma",
+      "path": "specs/prsg-501c-gamma",
+      "title": "Gamma child",
+      "dependsOn": ["PRSG-501A"]
+    },
+    {
+      "id": "PRSG-501D",
+      "branch": "prsg-501d-missing",
+      "path": "specs/prsg-501d-missing",
+      "title": "Missing child",
+      "dependsOn": []
+    }
+  ],
+  "sharedDesignConcept": "docs/ai/specs/.process/PRSG-501-design-concept.md",
+  "sharedRetrospective": null,
+  "declaredRollupStatus": "complete"
+}
