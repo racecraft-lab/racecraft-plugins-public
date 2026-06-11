@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | prsg-009-multi-pr-emission |
 | Branch | prsg-009-multi-pr-emission |
-| PR | **PR:** <set on PR open> |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/145 |
 | Generated from | 2026-06-11T00:30:40Z |
 
 

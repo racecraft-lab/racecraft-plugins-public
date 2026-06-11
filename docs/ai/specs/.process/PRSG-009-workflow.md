@@ -780,21 +780,48 @@ No scaffold-time review-routing, slice branch emission, or PRSG-010 backstop beh
 - Validation: required `speckit-pro-review-packet-source` marker and `## UAT Runbook` heading are present; only the top placeholder summary sections were replaced with plain-English reviewer text.
 
 
+### PR Creation
+
+- Command: `gh pr create --base main --head prsg-009-multi-pr-emission --title "feat(speckit-pro): add multi-PR emission" --body-file "$(git rev-parse --git-dir)/speckit-pr-body.md" --draft`
+- Result: Draft PR #145 opened at `https://github.com/racecraft-lab/racecraft-plugins-public/pull/145`.
+- Initial check snapshot: `validate-plugins` succeeded; draft PR Checks jobs were skipped where configured; CodeQL checks were still in progress at creation time.
+
+
+### Review Remediation
+
+- Command: `gh pr view 145 --json url,number,state,title,headRefName,baseRefName,isDraft,reviewDecision,comments,reviews,statusCheckRollup`
+- Result: No comments or reviews were present immediately after PR creation; no remediation changes were required.
+
+
+### Retrospective
+
+- Extension prerequisite: `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` rejected branch `prsg-009-multi-pr-emission` because it expects a numeric feature-branch pattern.
+- Result: Manual retrospective generated from `spec.md`, `plan.md`, `tasks.md`, workflow evidence, and post verification artifacts.
+- Report: `specs/prsg-009-multi-pr-emission/retrospective.md`
+- Summary: 47/47 tasks complete; 58/58 requirement and success-criteria IDs implemented; spec adherence 100%; critical findings 0; minor findings 1 for the branch-name prerequisite limitation.
+
+
 ---
 
 ## Lessons Learned
 
 ### What Worked Well
 
-- Pending.
+- Keeping PRSG-009 anchored to the PRSG-008 layer-plan contract prevented scope drift into new slicing or routing heuristics.
+- Dry-run-first helpers with explicit apply modes made branch/PR mutation behavior reviewable before any real GitHub changes.
+- Post evidence was easier to audit when full-regression, scoped verification, verify-tasks, UAT, PR body, and retrospective artifacts each had a stable path.
 
 ### Challenges Encountered
 
-- Pending.
+- The retrospective extension prerequisite still expects numeric SpecKit branch names, so the PRSG branch required manual report generation.
+- Worktree `.git` is a pointer file, so PR body generation had to target the resolved `git rev-parse --git-dir` path instead of literal `.git/speckit-pr-body.md`.
+- The initial push failed under the active `fredrick-e84` GitHub account; switching temporarily to `fgabelmannjr` was required to push and create the PR.
 
 ### Patterns to Reuse
 
-- Pending.
+- Treat split-review emission as a post-implementation publication phase, not as scaffold-time branch creation.
+- Store bulky or transient evidence by path and keep durable state small, validated, and resume-oriented.
+- Keep Codex/Claude source mirrors and generated dist mirrors under explicit parity tests whenever plugin behavior changes.
 
 ---
 
