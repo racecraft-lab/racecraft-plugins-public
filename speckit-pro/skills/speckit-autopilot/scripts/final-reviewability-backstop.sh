@@ -17,13 +17,23 @@ STATE_SCHEMA="$CONTRACT_ROOT/final-reviewability-gate-state.schema.json"
 PACKET_SCHEMA="$CONTRACT_ROOT/reslicing-packet.schema.json"
 
 usage() {
-  printf 'Usage: final-reviewability-backstop.sh --feature-dir <specs/name> --feature-branch <branch> [--gate-result <json> --gate-exit-code <0|1|2> | --diff-range <range>] --state-output <json> --packet-output <json> [--layer-plan <json>] [--sizing-result <json>] [--changed-files <txt>] [--full-verification-evidence <path>]\n' >&2
+  printf 'Usage: final-reviewability-backstop.sh --feature-dir <specs/name> --feature-branch <branch> [--gate-result <json> --gate-exit-code <0|1|2> | --diff-range <range>] [--state-output <json>] [--packet-output <json>] [--layer-plan <json>] [--sizing-result <json>] [--changed-files <txt>] [--full-verification-evidence <path>]\n' >&2
+}
+
+json_escape() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  value="${value//$'\n'/\\n}"
+  value="${value//$'\r'/\\r}"
+  value="${value//$'\t'/\\t}"
+  printf '%s' "$value"
 }
 
 emit_input_error() {
-  local message="$1"
-  jq -cn --arg message "$message" \
-    '{script:"final-reviewability-backstop",status:"input_error",exit_code:2,message:$message}'
+  local message="$1" escaped
+  escaped="$(json_escape "$message")"
+  printf '{"script":"final-reviewability-backstop","status":"input_error","exit_code":2,"message":"%s"}\n' "$escaped"
   printf 'final-reviewability-backstop.sh: input_error: %s\n' "$message" >&2
   exit 2
 }
