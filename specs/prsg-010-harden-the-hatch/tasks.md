@@ -86,21 +86,21 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add guarded cutover fixture for FR-017 and FR-018 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/tasks.md`
-- [ ] T025 [P] [US3] Add release-held cutover fixture for FR-017 and FR-019 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/tasks.md`
-- [ ] T026 [P] [US3] Add weak evidence fixture for FR-021 and SC-006 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/tasks.md`
-- [ ] T027 [P] [US3] Add consumer-locality and conflict fixture coverage for FR-020 and FR-021 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-locality/tasks.md`
-- [ ] T028 [US3] Write failing contextual-probe assertions and schema checks in `tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`
+- [x] T024 [P] [US3] Add guarded cutover fixture for FR-017 and FR-018 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/tasks.md`
+- [x] T025 [P] [US3] Add release-held cutover fixture for FR-017 and FR-019 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/tasks.md`
+- [x] T026 [P] [US3] Add weak evidence fixture for FR-021 and SC-006 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/tasks.md`
+- [x] T027 [P] [US3] Add consumer-locality and conflict fixture coverage for FR-020 and FR-021 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-locality/tasks.md`
+- [x] T028 [US3] Write failing contextual-probe assertions and schema checks in `tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`
 
 ### Implementation for User Story 3
 
-- [ ] T029 [P] [US3] Add the production routing decision schema for FR-022 in `speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json`
-- [ ] T030 [US3] Implement high-confidence contextual probe routing while preserving hard-atomic and releasability precedence in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
-- [ ] T031 [US3] Ensure weak, conflicting, fixture-only, code-fence-only, and shallow keyword evidence emits only closed-enum hints in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
+- [x] T029 [P] [US3] Add the production routing decision schema for FR-022 in `speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json`
+- [x] T030 [US3] Implement high-confidence contextual probe routing while preserving hard-atomic and releasability precedence in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
+- [x] T031 [US3] Ensure weak, conflicting, fixture-only, code-fence-only, and shallow keyword evidence emits only closed-enum hints in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
 
 ### Validation for User Story 3
 
-- [ ] T032 [US3] Run contextual router and compatibility tests with `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`, `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh`, and `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [x] T032 [US3] Run contextual router and compatibility tests with `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`, `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh`, and `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 
 **Checkpoint**: PRSG-010B is independently testable when high-confidence context uses documented signal vocabulary, weak evidence leaves the conservative route unchanged, and PRSG-007/008/009 compatibility remains intact.
 

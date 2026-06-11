@@ -174,7 +174,7 @@ set_test "out-of-scope-empty fixture routes out-of-scope"
 output=$("$SCRIPT" "$FIXTURE_ROOT/out-of-scope-empty")
 assert_json_field "$output" "route" "out-of-scope" "empty/absent tasks.md → out-of-scope"
 
-section "US1: advisory probes emit into hints[] only, never signals[] (T015, FR-010/FR-011b)"
+section "US1: weak advisory probes emit into hints[] only, never signals[] (T015, FR-010/FR-011b)"
 
 # Regression lock for the three advisory probes (flag-system/release-cadence/
 # consumer-locality). Driven off a sandbox tasks.md (not a per-class fixture) so
@@ -190,11 +190,77 @@ output=$("$SCRIPT" "$hintdir")
 
 set_test "flag-system signal surfaces as an advisory hint"
 hints=$(array_of "$output" "hints")
-assert_contains "$hints" "flag-system" "flag keyword → hints[]"
+assert_contains "$hints" "'hint:flag-system:weak'" "weak flag keyword → closed hints[] token"
 
 set_test "advisory probe output never leaks into signals[] (FR-011b disjointness)"
 signals=$(array_of "$output" "signals")
 assert_not_contains "$signals" "flag-system" "advisory hint must not appear in signals[]"
+
+section "US3: contextual probes promote only high-confidence evidence (PRSG-010B)"
+
+set_test "guarded cutover routes one-navigable-PR"
+output=$("$SCRIPT" "$FIXTURE_ROOT/context-guarded-cutover")
+assert_json_field "$output" "route" "one-navigable-PR" "guarded cutover stays navigable unless additive split is proven"
+
+set_test "guarded cutover emits context:flag-system:guarded-cutover in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'context:flag-system:guarded-cutover'" "high-confidence flag signal in signals[]"
+
+set_test "guarded cutover does not emit weak flag hint"
+hints=$(array_of "$output" "hints")
+assert_not_contains "$hints" "hint:flag-system:weak" "high-confidence flag evidence must not be downgraded"
+
+set_test "release-held cutover routes single-atomic-PR"
+output=$("$SCRIPT" "$FIXTURE_ROOT/context-release-held")
+assert_json_field "$output" "route" "single-atomic-PR" "release-held cutover → single-atomic-PR"
+
+set_test "release-held cutover emits context:release-cadence:release-held-cutover in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'context:release-cadence:release-held-cutover'" "high-confidence release signal in signals[]"
+
+set_test "release-held cutover does not automatically set releasable false"
+assert_json_field "$output" "releasable" "True" "release-held alone remains releasable"
+assert_json_field "$output" "warnings" "[]" "release-held alone carries no CI-green warning"
+
+set_test "weak contextual evidence preserves conservative route"
+output=$("$SCRIPT" "$FIXTURE_ROOT/context-weak-evidence")
+assert_json_field "$output" "route" "one-navigable-PR" "weak context does not alter route"
+
+set_test "weak contextual evidence emits no decisive context signal"
+signals=$(array_of "$output" "signals")
+assert_not_contains "$signals" "context:" "weak context must not enter signals[]"
+assert_not_contains "$signals" "strategy:" "weak context must not enter signals[]"
+
+set_test "weak contextual evidence uses closed hint tokens"
+hints=$(array_of "$output" "hints")
+assert_contains "$hints" "'hint:flag-system:weak'" "weak flag hint"
+assert_contains "$hints" "'hint:release-cadence:weak'" "weak release hint"
+assert_contains "$hints" "'hint:consumer-locality:weak'" "weak consumer hint"
+
+set_test "all-in-tree consumer locality routes branch-by-abstraction"
+output=$("$SCRIPT" "$FIXTURE_ROOT/context-consumer-locality")
+assert_json_field "$output" "route" "branch-by-abstraction" "all-in-tree coexistence can use branch-by-abstraction"
+
+set_test "branch-by-abstraction emits consumer locality and strategy signals"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'context:consumer-locality:all-in-tree'" "all-in-tree signal"
+assert_contains "$signals" "'strategy:branch-by-abstraction'" "strategy signal"
+
+set_test "out-of-tree consumers keep the conservative route"
+output=$("$SCRIPT" "$FIXTURE_ROOT/context-consumer-out-of-tree")
+assert_json_field "$output" "route" "one-navigable-PR" "out-of-tree consumers prevent branch-by-abstraction"
+
+set_test "out-of-tree consumers emit context:consumer-locality:out-of-tree in signals[]"
+signals=$(array_of "$output" "signals")
+assert_contains "$signals" "'context:consumer-locality:out-of-tree'" "out-of-tree signal"
+assert_not_contains "$signals" "strategy:branch-by-abstraction" "out-of-tree evidence must not emit branch-by-abstraction strategy"
+
+set_test "conflicting consumer locality evidence emits only a conflict hint"
+output=$("$SCRIPT" "$FIXTURE_ROOT/context-conflict")
+signals=$(array_of "$output" "signals")
+hints=$(array_of "$output" "hints")
+assert_not_contains "$signals" "context:consumer-locality" "conflict must not promote consumer locality"
+assert_contains "$hints" "'hint:contextual-probe:conflict'" "conflict hint"
 
 # ---------------------------------------------------------------------------
 # US2 hard-atomic override + releasability assertions (T018, FR-007/FR-007a/
@@ -413,26 +479,24 @@ set_test "dogfood (4b): no releasability:destructive-migration token in signals[
 assert_not_contains "$dogfood_signals" "releasability:destructive-migration" "no spurious destructive-migration releasability token"
 
 # ---------------------------------------------------------------------------
-# Contract validation (T028, FR-001/FR-011a/SC-001/SC-008; quickstart "Contract
-# validation"). Validate EVERY emitted object — all ten success fixtures, the
-# error branch, and the dogfood run — against routing-decision.schema.json. The
+# Contract validation (T028/T029, FR-001/FR-011a/FR-022; quickstart "Contract
+# validation"). Validate EVERY emitted object — baseline PRSG-007 fixtures, the
+# new PRSG-010B contextual fixtures, the error branch, and the dogfood run —
+# against the production routing-decision.schema.json. The
 # validator is python-stdlib ONLY (no jsonschema dependency, matching the suite's
 # bash+jq+stdlib norm): it loads the schema, picks the success/error arm by key
 # presence, and enforces required keys, key-set equality (additionalProperties:
-# false), types, and the route/signals/warnings enum membership the schema
+# false), types, and the route/signals/hints/warnings enum membership the schema
 # declares. Membership is asserted POSITIVELY (route ∈ the five enum values), so a
-# parse failure or an empty string fails LOUD rather than passing vacuously — and
-# `branch-by-abstraction`, while a legal enum member, is separately asserted to be
-# absent from every emitted object (SC-008: reserved, never emitted by the MVP).
+# parse failure or an empty string fails LOUD rather than passing vacuously.
 # ---------------------------------------------------------------------------
-SCHEMA="$DOGFOOD_DIR/contracts/routing-decision.schema.json"
+SCHEMA="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json"
 
 # validate_against_schema <json> — exit 0 if <json> satisfies the success OR error
-# arm of the schema AND (for success objects) does NOT carry branch-by-abstraction;
-# prints a one-line reason and exits 1 otherwise. Stdlib only. The candidate JSON
-# is passed as the SCHEMA_OBJECT env var (not stdin) because the python program
-# itself arrives on stdin via the `python3 - <<'PY'` heredoc — they cannot share
-# the same stream.
+# arm of the schema; prints a one-line reason and exits 1 otherwise. Stdlib only.
+# The candidate JSON is passed as the SCHEMA_OBJECT env var (not stdin) because
+# the python program itself arrives on stdin via the `python3 - <<'PY'` heredoc —
+# they cannot share the same stream.
 validate_against_schema() {
   SCHEMA_OBJECT="$1" python3 - "$SCHEMA" <<'PY'
 import os, sys, json
@@ -476,32 +540,33 @@ sig_enum = props["signals"]["items"]["enum"]
 for s in obj["signals"]:
     if s not in sig_enum:
         fail(f"signal '{s}' not in controlled vocabulary")
+hints_enum = props["hints"]["items"]["enum"]
 if not isinstance(obj["hints"], list) or not all(isinstance(h, str) for h in obj["hints"]):
     fail("hints must be a string array")
+for h in obj["hints"]:
+    if h not in hints_enum:
+        fail(f"hint '{h}' not in controlled vocabulary")
 warn_enum = props["warnings"]["items"]["enum"]
 for w in obj["warnings"]:
     if w not in warn_enum:
         fail(f"warning '{w}' is not a canonical CI-green sentence")
-# SC-008: branch-by-abstraction is reserved and must NEVER be emitted.
-if obj["route"] == "branch-by-abstraction":
-    fail("route is the reserved branch-by-abstraction (MUST NOT be emitted)")
-if "branch-by-abstraction" in obj["signals"]:
-    fail("branch-by-abstraction must never appear in signals[]")
 sys.exit(0)
 PY
 }
 
-section "contract: every emitted object validates against routing-decision.schema.json (T028, SC-001/SC-008)"
+section "contract: every emitted object validates against production routing-decision.schema.json (T028/T029)"
 
 set_test "schema file exists (non-vacuous guard target)"
 assert_file_exists "$SCHEMA"
 
-# All ten per-class fixtures (one per change class) — each success object.
+# Baseline per-class fixtures plus PRSG-010B contextual fixtures — each success object.
 for fixture in \
   additive-multi-seam single-additive-seam modify-heavy out-of-scope-empty \
   hard-atomic-rename hard-atomic-version-pin hard-atomic-mutual-exclusion \
-  hard-atomic-out-of-tree-contract hard-atomic-destructive-migration concurrency; do
-  set_test "fixture $fixture emits a schema-valid object (no branch-by-abstraction)"
+  hard-atomic-out-of-tree-contract hard-atomic-destructive-migration concurrency \
+  context-guarded-cutover context-release-held context-weak-evidence \
+  context-consumer-locality context-consumer-out-of-tree context-conflict; do
+  set_test "fixture $fixture emits a schema-valid object"
   reason=0
   msg=$(validate_against_schema "$("$SCRIPT" "$FIXTURE_ROOT/$fixture")") || reason=$?
   if [ "$reason" -eq 0 ]; then _pass; else _fail "$fixture: $msg"; fi
@@ -512,7 +577,7 @@ reason=0
 msg=$(validate_against_schema "$("$SCRIPT" "$SANDBOX/does-not-exist" 2>/dev/null)") || reason=$?
 if [ "$reason" -eq 0 ]; then _pass; else _fail "error branch: $msg"; fi
 
-set_test "dogfood run emits a schema-valid object (no branch-by-abstraction)"
+set_test "dogfood run emits a schema-valid object"
 reason=0
 msg=$(validate_against_schema "$dogfood_out") || reason=$?
 if [ "$reason" -eq 0 ]; then _pass; else _fail "dogfood: $msg"; fi

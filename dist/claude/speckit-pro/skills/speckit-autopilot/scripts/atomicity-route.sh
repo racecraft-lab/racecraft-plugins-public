@@ -53,6 +53,17 @@ json_array() {
   sed '/^$/d' | jq -R . | jq -s .
 }
 
+corpus_without_code_fences() {
+  local file
+  for file in "$@"; do
+    [ -r "$file" ] || continue
+    awk '
+      /^[[:space:]]*```/ { fence = !fence; next }
+      !fence { print }
+    ' "$file"
+  done
+}
+
 # emit_error <message> — print the error object and exit 2 (FR-011a, FR-012).
 # No route key is present on the error path.
 emit_error() {
@@ -239,24 +250,20 @@ elif [ "${modify_hits:-0}" -gt 0 ]; then
   MODIFY_HEAVY=true
 fi
 
-# --- Detectors 3-5: advisory probes (T015, FR-010) — HINTS ONLY -------------
-# Flag-system, release-cadence, and consumer-locality are advisory ONLY: each
-# emits into hints[] (never signals[], FR-011b) and degrades silently — a probe
-# that finds nothing emits no hint, and an empty hints[] is a normal success
-# (FR-012, edge case "Advisory probe cannot run"). Each hint carries a TODO
-# naming its deferred full-depth home (PRSG-010 US3 owns deepening these). They
-# are deliberately SHALLOW keyword surfaces; do NOT promote them to decisive
-# detectors (out of scope, FR-010).
-probe_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} 2>/dev/null || true)
-if printf '%s' "$probe_corpus" | grep -qiE 'feature[ -]?flag|flag[ -]?system|LaunchDarkly|toggle'; then
-  HINTS+=("flag-system signal seen (advisory only; TODO deepen in PRSG-010 US3)")
-fi
-if printf '%s' "$probe_corpus" | grep -qiE 'release[ -]?cadence|release[ -]?train|ship[ -]?cadence|deploy[ -]?cadence'; then
-  HINTS+=("release-cadence signal seen (advisory only; TODO deepen in PRSG-010 US3)")
-fi
-if printf '%s' "$probe_corpus" | grep -qiE 'consumer[ -]?locality|all consumers|in[ -]?tree consumers|downstream consumers'; then
-  HINTS+=("consumer-locality signal seen (advisory only; TODO deepen in PRSG-010 US3)")
-fi
+# --- Contextual probe corpus (PRSG-010B, FR-017/FR-021) ---------------------
+# Contextual probes read tasks.md + plan.md only. The clean corpus removes
+# Markdown code fences so copy/paste snippets cannot become decisive evidence;
+# the raw corpus is retained only to downgrade code-fence-only mentions into
+# closed weak hints.
+raw_context_corpus=$(cat "$TASKS" ${PLAN:+"$PLAN"} 2>/dev/null || true)
+context_corpus=$(corpus_without_code_fences "$TASKS" ${PLAN:+"$PLAN"} 2>/dev/null || true)
+context_non_fixture_corpus=$(printf '%s\n' "$context_corpus" | grep -viE '(^|/)(tests?|fixtures?)(/|$)|fixtures/' || true)
+
+CONTEXT_FLAG_GUARDED=false
+CONTEXT_RELEASE_HELD=false
+CONTEXT_CONSUMER_BBA=false
+CONTEXT_CONSUMER_OUT_OF_TREE=false
+CONTEXT_CONFLICT=false
 
 # <<< DETECTOR INSERTION POINT (US2: hard-atomic keyword + path detectors) >>>
 
@@ -366,6 +373,106 @@ if printf '%s' "$path_corpus" | grep -qiE '/api/v[0-9]+'; then
 fi
 
 # ---------------------------------------------------------------------------
+# Contextual probes (PRSG-010B, FR-017..FR-022). These promote only deterministic
+# high-confidence evidence into signals[]. Weak, code-fence-only, fixture-only,
+# ambiguous, or conflicting evidence remains route-neutral closed-enum hints.
+# ---------------------------------------------------------------------------
+
+# Flag-system guarded cutover: repo-local flag/evaluation evidence + current
+# guard task + current guard test task. Test/fixture-only flag mentions do not
+# satisfy the repo-local mechanism or guard requirements.
+flag_raw=false
+flag_mechanism=false
+flag_guard=false
+flag_test=false
+if printf '%s' "$raw_context_corpus" | grep -qiE 'feature[ -]?flag|flag[ -]?system|flag evaluation|LaunchDarkly|toggle|feature_flags|featureFlags|[A-Za-z0-9_]+Flag'; then
+  flag_raw=true
+fi
+if printf '%s' "$context_non_fixture_corpus" | grep -qiE 'repo-local flag|feature[ -]?flag|flag[ -]?system|flag evaluation|LaunchDarkly|toggle|feature_flags|featureFlags|[A-Za-z0-9_]+Flag'; then
+  flag_mechanism=true
+fi
+if printf '%s' "$context_non_fixture_corpus" | grep -qiE '(guard|gate|wrap|protect|behind|evaluate)[^[:cntrl:]]{0,80}(flag|toggle|LaunchDarkly|[A-Za-z0-9_]+Flag)|(flag|toggle|LaunchDarkly|[A-Za-z0-9_]+Flag)[^[:cntrl:]]{0,80}(guard|gate|wrap|protect|behind|evaluate)'; then
+  flag_guard=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE '(test|tests|fixture|assert|coverage)[^[:cntrl:]]{0,80}(flag|guard|toggle|LaunchDarkly|[A-Za-z0-9_]+Flag)|(flag|guard|toggle|LaunchDarkly|[A-Za-z0-9_]+Flag)[^[:cntrl:]]{0,80}(test|tests|fixture|assert|coverage)'; then
+  flag_test=true
+fi
+if [ "$flag_mechanism" = true ] && [ "$flag_guard" = true ] && [ "$flag_test" = true ]; then
+  CONTEXT_FLAG_GUARDED=true
+  SIGNALS+=("context:flag-system:guarded-cutover")
+elif [ "$flag_raw" = true ]; then
+  HINTS+=("hint:flag-system:weak")
+fi
+
+# Release-held cutover: no decisive flag evidence, concrete cadence + hold +
+# cutover evidence. This affects route only; it does not by itself set
+# releasable=false.
+release_raw=false
+release_cadence=false
+release_hold=false
+release_cutover=false
+if printf '%s' "$raw_context_corpus" | grep -qiE 'release[ -]?(cadence|train|window|held|hold)|ship[ -]?cadence|deploy[ -]?cadence|cutover'; then
+  release_raw=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'release[ -]?(cadence|train|window)|ship[ -]?cadence|deploy[ -]?cadence'; then
+  release_cadence=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'release[ -]?held|release[ -]?hold|hold[^[:cntrl:]]{0,80}release|release[^[:cntrl:]]{0,80}hold|freeze'; then
+  release_hold=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'cutover|switch[ -]?over|rollout'; then
+  release_cutover=true
+fi
+if [ "$release_cadence" = true ] && [ "$release_hold" = true ] && [ "$release_cutover" = true ] && [ "$CONTEXT_FLAG_GUARDED" != true ] && [ "$flag_raw" != true ]; then
+  CONTEXT_RELEASE_HELD=true
+  SIGNALS+=("context:release-cadence:release-held-cutover")
+elif [ "$release_raw" = true ]; then
+  HINTS+=("hint:release-cadence:weak")
+fi
+
+# Consumer-locality: branch-by-abstraction requires all affected consumers
+# proven in-tree, coexistence behind an abstraction, migration and contract work,
+# and no hard-atomic or releasability risk. Proven out-of-tree consumers are
+# decisive context but route-conservative. Conflicts never enter signals[].
+consumer_raw=false
+consumer_all_in_tree=false
+consumer_out_of_tree=false
+consumer_coexist=false
+consumer_migration=false
+consumer_contract=false
+if printf '%s' "$raw_context_corpus" | grep -qiE 'consumer[ -]?locality|all affected consumers|all consumers|in[ -]?tree consumers|out[ -]?of[ -]?tree consumers|downstream consumers|outside the repo'; then
+  consumer_raw=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'all affected consumers (are )?in[ -]?tree|all consumers (are )?in[ -]?tree|in[ -]?tree consumers'; then
+  consumer_all_in_tree=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'out[ -]?of[ -]?tree consumers|outside the repo|external consumers|downstream consumers'; then
+  consumer_out_of_tree=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'coexist|behind an? abstraction|abstraction layer|branch[ -]?by[ -]?abstraction'; then
+  consumer_coexist=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'migration|migrate'; then
+  consumer_migration=true
+fi
+if printf '%s' "$context_corpus" | grep -qiE 'contract'; then
+  consumer_contract=true
+fi
+if [ "$consumer_all_in_tree" = true ] && [ "$consumer_out_of_tree" = true ]; then
+  CONTEXT_CONFLICT=true
+  HINTS+=("hint:contextual-probe:conflict")
+elif [ "$consumer_all_in_tree" = true ] && [ "$consumer_coexist" = true ] && [ "$consumer_migration" = true ] && [ "$consumer_contract" = true ] && [ "$HARD_ATOMIC" != true ] && [ "$DM_PATH_VERB" != true ] && [ "$CONCURRENCY" != true ]; then
+  CONTEXT_CONSUMER_BBA=true
+  SIGNALS+=("context:consumer-locality:all-in-tree")
+  SIGNALS+=("strategy:branch-by-abstraction")
+elif [ "$consumer_out_of_tree" = true ]; then
+  CONTEXT_CONSUMER_OUT_OF_TREE=true
+  SIGNALS+=("context:consumer-locality:out-of-tree")
+elif [ "$consumer_raw" = true ]; then
+  HINTS+=("hint:consumer-locality:weak")
+fi
+
+# ---------------------------------------------------------------------------
 # Routing dispatch (precedence, FR-003 / FR-007): hard-atomic override beats the
 # additive split signal, which beats the abstain floor. Resolved from flags so a
 # later detector cannot break precedence by reordering its own execution.
@@ -378,20 +485,27 @@ fi
 # detector flags (a later detector cannot break precedence by reordering its own
 # execution). Precedence:
 #   1. ANY hard-atomic signature → single-atomic-PR  (OVERRIDES split, FR-007/SC-003)
-#   2. proven additive multi-seam (multi-seam AND additive-dominant) → split-PR
-#   3. modify-heavy non-hard-atomic                                  → one-navigable-PR
-#   4. abstain (no decisive signal)                                  → one-navigable-PR (default)
+#   2. release-held cutover (no decisive flag)                       → single-atomic-PR
+#   3. all-in-tree consumer coexistence                              → branch-by-abstraction
+#   4. proven additive multi-seam (multi-seam AND additive-dominant) → split-PR
+#   5. guarded cutover or modify-heavy non-hard-atomic               → one-navigable-PR
+#   6. abstain (no decisive signal)                                  → one-navigable-PR (default)
 # The hard-atomic branch is PREPENDED INTO this chain (not a separate preceding
 # if-block) so the US1 split branch cannot re-set the route after the override.
-# Each hard-atomic class already pushed its own hard-atomic:* token above; the
-# override sets only the route here. NEVER branch-by-abstraction (reserved,
-# FR-001/SC-008). The split branch is gated on additive-dominance so an uncertain
-# or modify-heavy change can never auto-split (FR-006, SC-005).
+# Each hard-atomic/context class already pushed its own signal token above; the
+# dispatch sets only the route. The split branch remains above guarded cutover so
+# independent additive multi-seam evidence still proves split (FR-018).
 if [ "$HARD_ATOMIC" = true ]; then
   ROUTE="single-atomic-PR"
+elif [ "$CONTEXT_RELEASE_HELD" = true ]; then
+  ROUTE="single-atomic-PR"
+elif [ "$CONTEXT_CONSUMER_BBA" = true ]; then
+  ROUTE="branch-by-abstraction"
 elif [ "$MULTI_SEAM" = true ] && [ "$ADDITIVE_DOMINANT" = true ]; then
   ROUTE="split-PR"
   SIGNALS+=("change-shape:additive-multi-seam")
+elif [ "$CONTEXT_FLAG_GUARDED" = true ]; then
+  ROUTE="one-navigable-PR"
 elif [ "$MODIFY_HEAVY" = true ]; then
   ROUTE="one-navigable-PR"
   SIGNALS+=("change-shape:modify-heavy")

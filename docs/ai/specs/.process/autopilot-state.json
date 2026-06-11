@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T19:04:24Z",
-  "active_step": "Phase 7: Implement - PRSG-010B contextual router",
+  "updated_at": "2026-06-11T19:15:14Z",
+  "active_step": "Phase 7: Implement - PRSG-010C O5 manifest/status",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -218,7 +218,7 @@
     {
       "step": "Phase 7: Implement - Split stack",
       "status": "in_progress",
-      "summary": "Foundation and PRSG-010A final hatch are complete. Next implementation slice is PRSG-010B contextual router probes."
+      "summary": "Foundation, PRSG-010A final hatch, and PRSG-010B contextual router probes are complete. Next implementation slice is PRSG-010C O5 manifest/status."
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -631,7 +631,7 @@
       },
       {
         "slice": "PRSG-010B contextual router",
-        "status": "pending",
+        "status": "completed",
         "tasks": [
           "T024",
           "T025",
@@ -642,7 +642,35 @@
           "T030",
           "T031",
           "T032"
-        ]
+        ],
+        "summary": "Added high-confidence contextual router fixtures, production routing-decision schema, closed weak/conflict hints, and deterministic flag-system, release-held, consumer-locality, out-of-tree, and branch-by-abstraction routing behavior.",
+        "files_touched": {
+          "production": [
+            "speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
+            "speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json"
+          ],
+          "mirrors": [
+            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json"
+          ],
+          "tests": [
+            "tests/speckit-pro/layer4-scripts/test-atomicity-route.sh",
+            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/",
+            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/",
+            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/",
+            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-locality/",
+            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-out-of-tree/",
+            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-conflict/"
+          ]
+        },
+        "validation": {
+          "red": "bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh -> 78/109 passed, 31 expected PRSG-010B failures before implementation",
+          "atomicity_route": "bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh -> 109/109 passed",
+          "plan_layers": "bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh -> 66/66 passed",
+          "multi_pr_emission": "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 81/81 passed"
+        }
       },
       {
         "slice": "PRSG-010C O5 manifest/status",
