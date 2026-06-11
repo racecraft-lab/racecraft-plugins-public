@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T18:11:46Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-11T18:25:19Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -141,7 +141,7 @@
         },
         "note": "Current estimator does not count plugin shell paths as production LOC; plan still records split required from the spec budget."
       },
-      "summary": "Created plan, research, data model, quickstart, and 4 JSON contracts; split stack planned as PRSG-010A final hatch, PRSG-010B O5, PRSG-010C contextual router, PRSG-010D docs/parity/polish."
+      "summary": "Created plan, research, data model, quickstart, and 4 JSON contracts; Analyze later corrected split order to PRSG-010A final hatch, PRSG-010B contextual router, PRSG-010C O5, PRSG-010D docs/parity/polish."
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -193,15 +193,26 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "findings": {
+        "critical": 0,
+        "high": 1,
+        "medium": 1,
+        "low": 1,
+        "remaining": 0
+      },
+      "summary": "Remediated split-stack order drift, reviewability/file-operation drift, and workflow metadata drift; G6 passed with 0 CRITICAL/HIGH findings remaining."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Analyze returned no unresolved consensus items."
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
@@ -451,14 +462,14 @@
     ],
     "functional_requirements": 23,
     "declared_file_operations": {
-      "total": 30,
-      "new": 14,
-      "modified": 16
+      "total": 39,
+      "new": 21,
+      "modified": 18
     },
     "split_stack": [
       "PRSG-010A final hatch",
-      "PRSG-010B O5 manifest/status",
-      "PRSG-010C contextual router",
+      "PRSG-010B contextual router",
+      "PRSG-010C O5 manifest/status",
       "PRSG-010D docs/parity/polish"
     ],
     "reviewability_estimate": {
@@ -485,8 +496,8 @@
       "setup",
       "foundational",
       "PRSG-010A final hatch",
-      "PRSG-010B O5",
-      "PRSG-010C contextual router",
+      "PRSG-010B contextual router",
+      "PRSG-010C O5",
       "PRSG-010D docs/parity/polish"
     ],
     "validation": {
@@ -497,7 +508,32 @@
       "diff_check": "clean",
       "layer1": "915/915 passed"
     },
-    "summary": "Tasks are TDD-first, story/slice-aware, and preserve ordered split-stack delivery."
+    "summary": "Tasks are TDD-first, story/slice-aware, and preserve the corrected ordered split-stack delivery."
+  },
+  "phase6_analyze": {
+    "gate": "G6",
+    "gate_status": "passed",
+    "findings": {
+      "critical": 0,
+      "high": 1,
+      "medium": 1,
+      "low": 1,
+      "remaining": 0
+    },
+    "remediations": [
+      "Corrected split-stack order to PRSG-010A final hatch, PRSG-010B contextual router, PRSG-010C O5, PRSG-010D docs/parity/polish.",
+      "Updated projected total files to 39 before slicing and expanded declared file operations by slice.",
+      "Updated workflow metadata and Analyze results to current counts and validation status."
+    ],
+    "validation": {
+      "validate_gate_g6": "passed: 0 CRITICAL/HIGH findings, 0 markers",
+      "count_markers_findings": "0 total findings after remediation",
+      "generate_spec_index_check": "passed",
+      "contracts_jq": "passed",
+      "diff_check": "clean",
+      "layer1": "915/915 passed",
+      "consensus": "none unresolved"
+    }
   },
   "phase4_checklists": {
     "error-handling": {

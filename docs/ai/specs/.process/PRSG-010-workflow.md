@@ -40,7 +40,7 @@ Re-read it before each phase. The locked setup decisions:
 | Plan | `/speckit-plan` | Complete | Plain bash + jq + Markdown; split-stack delivery expected |
 | Checklist | `/speckit-checklist` | Complete | Run error-handling, data-integrity, developer-experience, and backward-compatibility |
 | Tasks | `/speckit-tasks` | Complete | TDD-first, story-organized, split-PR-aware |
-| Analyze | `/speckit-analyze` | In Progress | Check roadmap/design/spec/plan/tasks consistency and PRSG-010 boundaries |
+| Analyze | `/speckit-analyze` | Complete | 3 findings remediated; marker counter clean; G6 passed |
 | Implement | `/speckit-implement` | Pending | Execute as ordered split stack unless G5 routing says otherwise |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -153,10 +153,10 @@ fit the normal O4 split path.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 20 |
+| Functional Requirements | 23 |
 | User Stories | 3 |
 | Acceptance Criteria | 9 |
-| Success Criteria | 6 |
+| Success Criteria | 8 |
 | `[NEEDS CLARIFICATION]` markers | 0 |
 | Quality checklist | Passed |
 | Validation evidence | G1 validator passed; Layer 1 passed `915/915` |
@@ -268,7 +268,7 @@ Fill this block during Plan with NEW/MODIFIED paths so `estimate-reviewable-loc.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Complete | Split stack: PRSG-010A final hatch, PRSG-010B O5, PRSG-010C contextual router, PRSG-010D docs/parity/polish |
+| `plan.md` | Complete | Split stack: PRSG-010A final hatch, PRSG-010B contextual router, PRSG-010C O5, PRSG-010D docs/parity/polish |
 | `research.md` | Complete | Records final backstop, O5, and contextual routing decisions |
 | `data-model.md` | Complete | Defines final gate state, re-slicing packet, O5 manifest/rollup, contextual evidence, and routing decision |
 | `contracts/` | Complete | 4 JSON contracts: final gate state, re-slicing packet, O5 parent manifest, routing decision |
@@ -393,7 +393,7 @@ Focus on PRSG-010 requirements:
 | Total Tasks | 57 |
 | Phases | 6: setup, foundational, PRSG-010A, PRSG-010B, PRSG-010C, PRSG-010D |
 | Parallel Opportunities | 20 tasks marked `[P]` across setup, tests, contracts, fixtures, and parity setup |
-| User Stories Covered | US1 final hatch, US2 O5, US3 contextual router; PRSG-010D covers docs/parity/polish |
+| User Stories Covered | US1 final hatch, US3 contextual router, US2 O5; PRSG-010D covers docs/parity/polish |
 
 ### Tasks Validation
 
@@ -443,7 +443,9 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | High | Split-stack order drift: the design concept and Tasks prompt require hatch -> contextual probes -> O5 -> polish, but spec/plan/tasks had O5 before contextual routing. | Remediated in `spec.md`, `plan.md`, and `tasks.md`; PRSG-010B is now contextual routing and PRSG-010C is O5. |
+| A2 | Medium | Reviewability/file-operation drift: `plan.md` declared 30 file operations and the spec projected 28 total files, but `tasks.md` plans 39 changed/new files before slicing. | Remediated in `spec.md` and `plan.md`; projected total files now says 39 before slicing and `plan.md` enumerates the missing fixture/test paths by slice. |
+| A3 | Low | Workflow metadata drift: Specify/Plan summaries still showed 20 FRs, 6 success criteria, stale split-stack order, and pending analysis results after later checklist/task remediation. | Remediated in this workflow log; FR/SC counts, plan summary, Analyze status, and Analysis Results table are current. |
 
 ---
 

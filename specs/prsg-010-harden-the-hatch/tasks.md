@@ -6,9 +6,9 @@
 
 **Tests**: Required. PRSG-010 implementation is TDD-first: write or update the focused Layer 4 and parity tests before changing production scripts, schemas, skills, or docs.
 
-**Reviewability**: Split required. Do not ship PRSG-010 as one implementation PR. Preserve the ordered split stack: PRSG-010A final hatch, PRSG-010B O5, PRSG-010C contextual router, PRSG-010D docs/parity/polish. Each implementation slice targets 700 or fewer reviewable LOC and must remain independently reviewable.
+**Reviewability**: Split required. Do not ship PRSG-010 as one implementation PR. Preserve the ordered split stack: PRSG-010A final hatch, PRSG-010B contextual router, PRSG-010C O5, PRSG-010D docs/parity/polish. Each implementation slice targets 700 or fewer reviewable LOC and must remain independently reviewable.
 
-**Traceability**: Task descriptions include FR/SC coverage where practical. Phase 4 G4 checklist remediation coverage is carried through the no-PR backstop, O5 flat-topology checks, weak-context safety checks, generated-exception cleanup, and Claude/Codex parity tasks.
+**Traceability**: Task descriptions include FR/SC coverage where practical. Phase 4 G4 checklist remediation coverage is carried through the no-PR backstop, weak-context safety checks, O5 flat-topology checks, generated-exception cleanup, and Claude/Codex parity tasks.
 
 ## Format: `[ID] [P?] [Story] Description`
 
@@ -78,39 +78,7 @@
 
 ---
 
-## Phase 4: User Story 2 - Model Genuine Monster Epics Without Nested Specs (Priority: P2, Slice PRSG-010B)
-
-**Goal**: Add an O5 parent manifest and deterministic status/scaffold support for flat sibling child specs without changing the existing flat `specs/*` scan model.
-
-**Independent Test**: Run O5 topology fixtures and confirm valid parents roll up deterministically, invalid topology blocks rollup, and generated MOC zones remain owned by `generate-spec-index.sh`.
-
-### Tests for User Story 2
-
-- [ ] T024 [P] [US2] Add the valid flat-parent O5 fixture for FR-011 through FR-015 in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json`
-- [ ] T025 [P] [US2] Add invalid topology fixtures for missing child, duplicate child, nested child path, unknown dependency, later dependency, and cycle cases in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/invalid-topology/o5-parent-manifest.json`
-- [ ] T026 [P] [US2] Add mixed child state rollup fixture for blocked, failed, in-progress, pending, complete, archived, and missing-state rows in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/mixed-child-states/o5-parent-manifest.json`
-- [ ] T027 [US2] Write failing O5 topology and rollup assertions for FR-010 through FR-016 and SC-005 in `tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
-- [ ] T028 [P] [US2] Extend flat-spec scan regression coverage so ordinary `specs/*/SPEC-MOC.md` output stays stable in `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
-
-### Implementation for User Story 2
-
-- [ ] T029 [P] [US2] Add the production O5 parent manifest schema for FR-011 through FR-014 in `speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json`
-- [ ] T030 [US2] Implement O5 parent/child topology validation and deterministic rollup in `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`
-- [ ] T031 [US2] Update Claude scaffold guidance so normal PRSG-007/008/009 split-PR remains default and O5 is fallback only in `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
-- [ ] T032 [US2] Mirror scaffold O5 fallback guidance in `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
-- [ ] T033 [US2] Update Claude status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/skills/speckit-status/SKILL.md`
-- [ ] T034 [US2] Mirror status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/codex-skills/speckit-status/SKILL.md`
-
-### Validation for User Story 2
-
-- [ ] T035 [US2] Run O5 topology tests with `bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
-- [ ] T036 [US2] Run flat spec index regression tests with `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
-
-**Checkpoint**: PRSG-010B is independently testable when O5 uses flat sibling specs, invalid topology is actionable, status emits one row per declared child, and ordinary flat spec indexing remains compatible.
-
----
-
-## Phase 5: User Story 3 - Route From Strong Contextual Evidence Only (Priority: P3, Slice PRSG-010C)
+## Phase 4: User Story 3 - Route From Strong Contextual Evidence Only (Priority: P3, Slice PRSG-010B)
 
 **Goal**: Promote flag-system, release-cadence, and consumer-locality evidence only when deterministic high-confidence criteria are met; weak evidence remains advisory and conservative.
 
@@ -118,23 +86,55 @@
 
 ### Tests for User Story 3
 
-- [ ] T037 [P] [US3] Add guarded cutover fixture for FR-017 and FR-018 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/tasks.md`
-- [ ] T038 [P] [US3] Add release-held cutover fixture for FR-017 and FR-019 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/tasks.md`
-- [ ] T039 [P] [US3] Add weak evidence fixture for FR-021 and SC-006 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/tasks.md`
-- [ ] T040 [P] [US3] Add consumer-locality and conflict fixture coverage for FR-020 and FR-021 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-locality/tasks.md`
-- [ ] T041 [US3] Write failing contextual-probe assertions and schema checks in `tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`
+- [ ] T024 [P] [US3] Add guarded cutover fixture for FR-017 and FR-018 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/tasks.md`
+- [ ] T025 [P] [US3] Add release-held cutover fixture for FR-017 and FR-019 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/tasks.md`
+- [ ] T026 [P] [US3] Add weak evidence fixture for FR-021 and SC-006 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/tasks.md`
+- [ ] T027 [P] [US3] Add consumer-locality and conflict fixture coverage for FR-020 and FR-021 in `tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-locality/tasks.md`
+- [ ] T028 [US3] Write failing contextual-probe assertions and schema checks in `tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] Add the production routing decision schema for FR-022 in `speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json`
-- [ ] T043 [US3] Implement high-confidence contextual probe routing while preserving hard-atomic and releasability precedence in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
-- [ ] T044 [US3] Ensure weak, conflicting, fixture-only, code-fence-only, and shallow keyword evidence emits only closed-enum hints in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
+- [ ] T029 [P] [US3] Add the production routing decision schema for FR-022 in `speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json`
+- [ ] T030 [US3] Implement high-confidence contextual probe routing while preserving hard-atomic and releasability precedence in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
+- [ ] T031 [US3] Ensure weak, conflicting, fixture-only, code-fence-only, and shallow keyword evidence emits only closed-enum hints in `speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh`
 
 ### Validation for User Story 3
 
-- [ ] T045 [US3] Run contextual router and compatibility tests with `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`, `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh`, and `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [ ] T032 [US3] Run contextual router and compatibility tests with `bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh`, `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh`, and `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 
-**Checkpoint**: PRSG-010C is independently testable when high-confidence context uses documented signal vocabulary, weak evidence leaves the conservative route unchanged, and PRSG-007/008/009 compatibility remains intact.
+**Checkpoint**: PRSG-010B is independently testable when high-confidence context uses documented signal vocabulary, weak evidence leaves the conservative route unchanged, and PRSG-007/008/009 compatibility remains intact.
+
+---
+
+## Phase 5: User Story 2 - Model Genuine Monster Epics Without Nested Specs (Priority: P2, Slice PRSG-010C)
+
+**Goal**: Add an O5 parent manifest and deterministic status/scaffold support for flat sibling child specs without changing the existing flat `specs/*` scan model.
+
+**Independent Test**: Run O5 topology fixtures and confirm valid parents roll up deterministically, invalid topology blocks rollup, and generated MOC zones remain owned by `generate-spec-index.sh`.
+
+### Tests for User Story 2
+
+- [ ] T033 [P] [US2] Add the valid flat-parent O5 fixture for FR-011 through FR-015 in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json`
+- [ ] T034 [P] [US2] Add invalid topology fixtures for missing child, duplicate child, nested child path, unknown dependency, later dependency, and cycle cases in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/invalid-topology/o5-parent-manifest.json`
+- [ ] T035 [P] [US2] Add mixed child state rollup fixture for blocked, failed, in-progress, pending, complete, archived, and missing-state rows in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/mixed-child-states/o5-parent-manifest.json`
+- [ ] T036 [US2] Write failing O5 topology and rollup assertions for FR-010 through FR-016 and SC-005 in `tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
+- [ ] T037 [P] [US2] Extend flat-spec scan regression coverage so ordinary `specs/*/SPEC-MOC.md` output stays stable in `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
+
+### Implementation for User Story 2
+
+- [ ] T038 [P] [US2] Add the production O5 parent manifest schema for FR-011 through FR-014 in `speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json`
+- [ ] T039 [US2] Implement O5 parent/child topology validation and deterministic rollup in `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`
+- [ ] T040 [US2] Update Claude scaffold guidance so normal PRSG-007/008/009 split-PR remains default and O5 is fallback only in `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
+- [ ] T041 [US2] Mirror scaffold O5 fallback guidance in `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+- [ ] T042 [US2] Update Claude status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/skills/speckit-status/SKILL.md`
+- [ ] T043 [US2] Mirror status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/codex-skills/speckit-status/SKILL.md`
+
+### Validation for User Story 2
+
+- [ ] T044 [US2] Run O5 topology tests with `bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
+- [ ] T045 [US2] Run flat spec index regression tests with `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
+
+**Checkpoint**: PRSG-010C is independently testable when O5 uses flat sibling specs, invalid topology is actionable, status emits one row per declared child, and ordinary flat spec indexing remains compatible.
 
 ---
 
@@ -164,15 +164,15 @@
 - **Setup (Phase 1)**: No dependencies.
 - **Foundational (Phase 2)**: Depends on Setup and blocks all implementation slices.
 - **PRSG-010A / US1 (Phase 3)**: First implementation slice and MVP. Blocks later slices because it establishes the final backstop contract.
-- **PRSG-010B / US2 (Phase 4)**: Depends on PRSG-010A for shared status/re-slicing language, but O5 tests and fixtures can be prepared independently after Foundational.
-- **PRSG-010C / US3 (Phase 5)**: Depends on Foundational and should land after PRSG-010B in the stack to preserve review order.
+- **PRSG-010B / US3 (Phase 4)**: Depends on Foundational and should land after PRSG-010A in the stack to preserve design-concept review order.
+- **PRSG-010C / US2 (Phase 5)**: Depends on PRSG-010A for shared status/re-slicing language and should land after PRSG-010B in the stack; O5 tests and fixtures can still be prepared independently after Foundational.
 - **PRSG-010D / Polish (Phase 6)**: Depends on all selected implementation slices.
 
 ### User Story Dependencies
 
 - **User Story 1 (P1, PRSG-010A)**: MVP scope. No dependency on other user stories after Foundational.
-- **User Story 2 (P2, PRSG-010B)**: Depends on Foundational and should be reviewed after PRSG-010A.
-- **User Story 3 (P3, PRSG-010C)**: Depends on Foundational and should be reviewed after PRSG-010B.
+- **User Story 3 (P3, PRSG-010B)**: Depends on Foundational and should be reviewed after PRSG-010A.
+- **User Story 2 (P2, PRSG-010C)**: Depends on Foundational and should be reviewed after PRSG-010B.
 
 ### Within Each User Story
 
@@ -195,22 +195,22 @@ Task: "Add the production final gate state schema in speckit-pro/skills/speckit-
 Task: "Add the production re-slicing packet schema in speckit-pro/skills/speckit-autopilot/contracts/reslicing-packet.schema.json"
 ```
 
-### User Story 2 / PRSG-010B
-
-```bash
-Task: "Add valid O5 parent fixture in tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json"
-Task: "Add invalid O5 topology fixture in tests/speckit-pro/layer4-scripts/fixtures/o5-topology/invalid-topology/o5-parent-manifest.json"
-Task: "Add the production O5 parent manifest schema in speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json"
-Task: "Extend flat-spec scan regression coverage in tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
-```
-
-### User Story 3 / PRSG-010C
+### User Story 3 / PRSG-010B
 
 ```bash
 Task: "Add guarded cutover fixture in tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/tasks.md"
 Task: "Add release-held cutover fixture in tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/tasks.md"
 Task: "Add weak evidence fixture in tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/tasks.md"
 Task: "Add the production routing decision schema in speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json"
+```
+
+### User Story 2 / PRSG-010C
+
+```bash
+Task: "Add valid O5 parent fixture in tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json"
+Task: "Add invalid O5 topology fixture in tests/speckit-pro/layer4-scripts/fixtures/o5-topology/invalid-topology/o5-parent-manifest.json"
+Task: "Add the production O5 parent manifest schema in speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json"
+Task: "Extend flat-spec scan regression coverage in tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
 ```
 
 ---
@@ -227,8 +227,8 @@ Task: "Add the production routing decision schema in speckit-pro/skills/speckit-
 ### Incremental Delivery
 
 1. PRSG-010A: final backstop and re-slicing packet.
-2. PRSG-010B: O5 manifest, flat child validation, and status/scaffold guidance.
-3. PRSG-010C: contextual router probes and production routing schema.
+2. PRSG-010B: contextual router probes and production routing schema.
+3. PRSG-010C: O5 manifest, flat child validation, and status/scaffold guidance.
 4. PRSG-010D: docs, generated-exception cleanup, parity, and final verification.
 
 ### Final Verification Gate
@@ -252,11 +252,10 @@ git diff --check
 - Setup tasks: 4
 - Foundational tasks: 2
 - User Story 1 / PRSG-010A tasks: 17
-- User Story 2 / PRSG-010B tasks: 13
-- User Story 3 / PRSG-010C tasks: 9
+- User Story 3 / PRSG-010B tasks: 9
+- User Story 2 / PRSG-010C tasks: 13
 - Polish / PRSG-010D tasks: 12
 
 ## MVP Scope
 
 PRSG-010A / User Story 1 is the MVP. It is complete when an unexcepted final gate block cannot generate a PR body, cannot invoke any `gh pr create` variant, cannot invoke `multi-pr-emission.sh`, and records the state plus re-slicing packet required to resume through PRSG-007/008/009.
-

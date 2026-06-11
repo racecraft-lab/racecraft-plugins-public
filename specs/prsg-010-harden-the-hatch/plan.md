@@ -14,7 +14,7 @@ manifest model for flat sibling child specs, and promote contextual routing
 signals only when deterministic fixture-backed evidence is high confidence.
 
 Delivery is intentionally split as an ordered stack: final-gate backstop,
-O5 manifest/status support, contextual router probes, then docs/parity/polish.
+contextual router probes, O5 manifest/status support, then docs/parity/polish.
 
 ## Technical Context
 
@@ -58,40 +58,60 @@ criteria, and a planned four-slice implementation stack
 
 **Reviewability Budget**: Primary surface `harness/adapter`; secondary surfaces
 `docs/process` and `seed/config`; projected reviewable LOC 1,700 before slicing;
-projected production files 8; projected total files 28; budget result split
-required; split decision is an ordered stack with target slices at or under 700
-reviewable LOC.
+projected production files 8; projected total files 39 before slicing; budget
+result split required; split decision is an ordered stack with target slices at
+or under 700 reviewable LOC and independently reviewable file surfaces.
 
 ## Declared File Operations
 
+### PRSG-010A - Final Reviewability Backstop
+
 - NEW speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh
-- MODIFIED speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh
-- NEW speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh
 - NEW speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json
 - NEW speckit-pro/skills/speckit-autopilot/contracts/reslicing-packet.schema.json
-- NEW speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json
-- NEW speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json
 - MODIFIED speckit-pro/skills/speckit-autopilot/SKILL.md
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/post-implementation.md
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/phase-execution.md
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/block-no-exception/gate-result.json
+- NEW tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/valid-refactor-exception/exception.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/generated-boilerplate/template.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/gate-error/gate-result.json
+- NEW tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh
+- MODIFIED tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh
+
+### PRSG-010B - Contextual Router Probes
+
+- MODIFIED speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh
+- NEW speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json
+- MODIFIED tests/speckit-pro/layer4-scripts/test-atomicity-route.sh
+- NEW tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/tasks.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/tasks.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/tasks.md
+- NEW tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-locality/tasks.md
+
+### PRSG-010C - O5 Parent/Child Support
+
+- NEW speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh
+- NEW speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json
 - MODIFIED speckit-pro/skills/speckit-scaffold-spec/SKILL.md
 - MODIFIED speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md
 - MODIFIED speckit-pro/skills/speckit-status/SKILL.md
 - MODIFIED speckit-pro/codex-skills/speckit-status/SKILL.md
+- NEW tests/speckit-pro/layer4-scripts/test-o5-topology.sh
+- NEW tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json
+- NEW tests/speckit-pro/layer4-scripts/fixtures/o5-topology/invalid-topology/o5-parent-manifest.json
+- NEW tests/speckit-pro/layer4-scripts/fixtures/o5-topology/mixed-child-states/o5-parent-manifest.json
+- MODIFIED tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh
+
+### PRSG-010D - Docs, Templates, Parity, And Polish
+
 - MODIFIED docs/ai/specs/pr-size-governance-technical-roadmap.md
 - MODIFIED .specify/presets/speckit-pro-reviewability/templates/spec-template.md
 - MODIFIED .specify/templates/spec-template.md
 - MODIFIED tests/speckit-pro/layer1-structural/validate-scripts.sh
-- NEW tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh
-- NEW tests/speckit-pro/layer4-scripts/test-o5-topology.sh
-- MODIFIED tests/speckit-pro/layer4-scripts/test-atomicity-route.sh
-- NEW tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json
-- NEW tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/tasks.md
-- NEW tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/tasks.md
-- NEW tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/tasks.md
 - NEW tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/README.md
 - NEW tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/workflow.md
 
@@ -138,8 +158,8 @@ split stack rather than a single oversized PR.
 | Slice | Scope | Primary files | Verification |
 |-------|-------|---------------|--------------|
 | PRSG-010A | Final reviewability backstop and re-slicing packet | final backstop script, autopilot post-implementation references, backstop schemas | Layer 4 final-backstop fixtures covering concrete `operator_steps` for PRSG-007 reroute, PRSG-008 layer-plan regeneration, and PRSG-009 handoff selection, existing `test-reviewability-gate.sh` typed-exception fixtures preserved or intentionally updated with rationale, Layer 1 structural, default verify |
-| PRSG-010B | O5 parent manifest, flat child validation, status rollup guidance | O5 topology script, scaffold/status skills and Codex mirrors, O5 schema | Layer 4 O5 topology fixtures covering branch/path exact-match failures, mixed child states with every declared child emitted exactly once, generated `SPEC-MOC.md` zones regenerated only through `generate-spec-index.sh`, legacy/current flat `specs/*` scan regression using the existing spec-index fixtures, scaffold/status guidance assertions that normal split-PR remains default unless O4 cannot slice thin enough, Layer 8 parity, and Layer 1 structural |
-| PRSG-010C | Contextual routing probes and production routing schema | `atomicity-route.sh`, production routing schema, router fixtures | Layer 4 atomicity-router fixtures and schema validation for every router fixture output, including contextual-probe success, weak-evidence, paired baseline-vs-weak-evidence fixtures that prove the conservative route is unchanged, no decisive contextual signal is emitted, weak/conflicting evidence appears only as closed-enum hints, and existing PRSG-007 dogfood/contract fixtures remain valid unless an intentional fixture update is documented |
+| PRSG-010B | Contextual routing probes and production routing schema | `atomicity-route.sh`, production routing schema, router fixtures | Layer 4 atomicity-router fixtures and schema validation for every router fixture output, including contextual-probe success, weak-evidence, paired baseline-vs-weak-evidence fixtures that prove the conservative route is unchanged, no decisive contextual signal is emitted, weak/conflicting evidence appears only as closed-enum hints, and existing PRSG-007 dogfood/contract fixtures remain valid unless an intentional fixture update is documented |
+| PRSG-010C | O5 parent manifest, flat child validation, status rollup guidance | O5 topology script, scaffold/status skills and Codex mirrors, O5 schema | Layer 4 O5 topology fixtures covering branch/path exact-match failures, mixed child states with every declared child emitted exactly once, generated `SPEC-MOC.md` zones regenerated only through `generate-spec-index.sh`, legacy/current flat `specs/*` scan regression using the existing spec-index fixtures, scaffold/status guidance assertions that normal split-PR remains default unless O4 cannot slice thin enough, Layer 8 parity, and Layer 1 structural |
 | PRSG-010D | Boilerplate removal, docs, parity, and review-packet polish | roadmap/templates, parity fixture, structural assertions | Layer 1 structural, Layer 8 parity mapped to every changed Claude/Codex mirror surface, default verify, PRSG-008 `plan-layers` and PRSG-009 `multi-pr-emission` fixture compatibility evidence when referenced by final packet or review-packet polish, and negative checks that generated exception education names the valid classes/provenance rules without emitting a standalone valid pragma |
 
 ### Backward Compatibility Guardrails
@@ -170,7 +190,7 @@ split stack rather than a single oversized PR.
 PR body generation should draw from this plan, the spec, `tasks.md`, and the
 workflow evidence:
 
-- What changed: final backstop, O5 topology, contextual router probes, and
+- What changed: final backstop, contextual router probes, O5 topology, and
   generated-boilerplate cleanup.
 - Why: protect reviewer time, support monster-epic coordination, and keep
   routing deterministic.
@@ -178,8 +198,8 @@ workflow evidence:
   emission redesign, no old-spec migration.
 - Review order: PRSG-010A, PRSG-010B, PRSG-010C, PRSG-010D.
 - Scope budget: split required, each slice targets 700 or fewer reviewable LOC.
-- Traceability: map FR-001..FR-009 to PRSG-010A, FR-010..FR-016 to PRSG-010B,
-  FR-017..FR-022 to PRSG-010C, and FR-023 plus docs/parity to PRSG-010D.
+- Traceability: map FR-001..FR-009 to PRSG-010A, FR-017..FR-022 to PRSG-010B,
+  FR-010..FR-016 to PRSG-010C, and FR-023 plus docs/parity to PRSG-010D.
 - Verification: record the exact structural, script-unit, default, and parity
   commands run for each slice.
 - Known gaps: name only explicitly deferred follow-up specs or issues.

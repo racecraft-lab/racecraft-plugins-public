@@ -105,9 +105,9 @@ Maintainers of the atomicity router need flag-system, release-cadence, and consu
 - **Secondary surfaces, if any**: docs/process, seed/config
 - **Projected reviewable LOC**: 1,700 total before slicing; each implementation slice should target 700 or fewer reviewable LOC
 - **Projected production files**: 8
-- **Projected total files**: 28
+- **Projected total files**: 39 total before slicing; each implementation slice must stay independently reviewable
 - **Budget result**: split required
-- **Split decision**: Keep one PRSG-010 governing spec, but require implementation planning as an ordered stack: hatch backstop, O5 parent/child support, contextual routing probes, then docs/parity/polish.
+- **Split decision**: Keep one PRSG-010 governing spec, but require implementation planning as an ordered stack: hatch backstop, contextual routing probes, O5 parent/child support, then docs/parity/polish.
 
 ### PR Review Packet Requirements *(mandatory)*
 
