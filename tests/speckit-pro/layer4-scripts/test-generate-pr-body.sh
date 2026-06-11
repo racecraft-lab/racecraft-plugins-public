@@ -153,6 +153,18 @@ set_test "Invalid --slice-packet emits deterministic stderr prefix"
 packet_error=$(cat "$packet_stderr")
 assert_contains "$packet_error" "generate-pr-body.sh: invalid slice packet:"
 
+set_test "Missing jq for --slice-packet exits 2 with deterministic stderr"
+no_jq_bin="$FIXTURE_DIR/no-jq-bin"
+mkdir -p "$no_jq_bin"
+ln -s /usr/bin/dirname "$no_jq_bin/dirname"
+missing_jq_stderr="$FIXTURE_DIR/packet-missing-jq.stderr"
+result=0
+(cd "$repo" && env PATH="$no_jq_bin" /bin/bash "$SCRIPT" --slice-packet "$valid_packet" "$repo" "$feature" "$FIXTURE_DIR/missing-jq-output.md" HEAD >/dev/null 2>"$missing_jq_stderr") || result=$?
+assert_eq "2" "$result" "exit code"
+missing_jq_error=$(cat "$missing_jq_stderr")
+assert_contains "$missing_jq_error" "generate-pr-body.sh: invalid slice packet: jq is required"
+assert_not_contains "$missing_jq_error" "command not found"
+
 set_test "Invalid --slice-packet leaves existing output unchanged"
 assert_eq "keep existing body" "$(cat "$protected_file")" "protected PR body"
 

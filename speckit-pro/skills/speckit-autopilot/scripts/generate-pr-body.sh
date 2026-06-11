@@ -15,6 +15,10 @@ invalid_slice_packet() {
   exit 2
 }
 
+require_jq() {
+  command -v jq >/dev/null 2>&1 || invalid_slice_packet "jq is required"
+}
+
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 FALLBACK_TEMPLATE="$PLUGIN_ROOT/skills/speckit-autopilot/templates/pr-description-template.md"
@@ -63,6 +67,7 @@ if [ -n "$SLICE_PACKET" ]; then
   if [ ! -f "$SLICE_PACKET" ]; then
     invalid_slice_packet "file not found: $SLICE_PACKET"
   fi
+  require_jq
   if ! jq -e '
     type == "object"
     and (.slice_id | type == "string" and length > 0)

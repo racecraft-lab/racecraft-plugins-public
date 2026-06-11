@@ -96,6 +96,7 @@ state="$FIXTURE_ROOT/remaining-stack-state.json"
 manifest="$FIXTURE_ROOT/remaining-prs-manifest.json"
 two_state="$SANDBOX/two-remaining-stack-state.json"
 two_manifest="$SANDBOX/two-remaining-prs-manifest.json"
+float_state="$SANDBOX/float-review-order-state.json"
 
 cat > "$two_state" <<'EOF'
 {
@@ -187,6 +188,24 @@ cat > "$two_manifest" <<'EOF'
 }
 EOF
 
+cat > "$float_state" <<'EOF'
+{
+  "multi_pr_emission": {
+    "schema_version": 1,
+    "status": "emitting",
+    "slices": [
+      {
+        "slice_id": "foundation",
+        "review_order": 1.5,
+        "expected_branch": "prsg-009-multi-pr-emission/01-foundation",
+        "expected_base_branch": "main",
+        "status": "merged"
+      }
+    ]
+  }
+}
+EOF
+
 set_test "missing required --manifest exits 2"
 result=0
 run_restack output stderr_output "$SCRIPT" \
@@ -203,6 +222,19 @@ set_test "input error JSON exit_code matches process exit"
 json_check "$output" \
   "data['status'] == 'input_error' and data['exit_code'] == 2 and data['dry_run'] == True" \
   "input-error stdout should carry matching status/exit_code"
+
+set_test "non-integer state review_order exits 2"
+result=0
+run_restack output stderr_output "$SCRIPT" \
+  --state "$float_state" \
+  --manifest "$manifest" \
+  --base main \
+  --remote origin \
+  --start-after prsg-009-multi-pr-emission/01-foundation || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "non-integer state review_order emits deterministic stderr"
+assert_eq "restack.sh: input_error: invalid restack state shape" "$stderr_output" "stderr"
 
 section "dry-run default"
 

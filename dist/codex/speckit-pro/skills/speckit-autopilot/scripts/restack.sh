@@ -121,7 +121,7 @@ if ! jq -e '
   (.multi_pr_emission.slices | type == "array")
   and all(.multi_pr_emission.slices[];
     (.slice_id | type == "string")
-    and (.review_order | type == "number")
+    and (.review_order | type == "number" and . == floor and . >= 1)
     and (.expected_branch | type == "string")
     and (.expected_base_branch | type == "string")
     and (.status | type == "string")

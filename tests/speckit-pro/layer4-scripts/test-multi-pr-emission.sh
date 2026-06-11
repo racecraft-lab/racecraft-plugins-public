@@ -66,11 +66,18 @@ malformed_plan="$FIXTURE_ROOT/layer-plans/malformed.json"
 empty_state="$FIXTURE_ROOT/emission-state/empty-autopilot-state.json"
 duplicate_state="$FIXTURE_ROOT/emission-state/duplicate-slice-keys.json"
 full_evidence="$SANDBOX/specs/prsg-009-multi-pr-emission/.process/emission/full-regression.txt"
+custom_feature_plan="$SANDBOX/custom-feature-plan.json"
+custom_full_evidence="$SANDBOX/specs/prsg-999-custom-feature/.process/emission/full-regression.txt"
+wrong_feature_evidence="$SANDBOX/specs/prsg-009-multi-pr-emission/.process/emission/wrong-feature.txt"
 declared_changed_files="$SANDBOX/declared-changed-files.txt"
 scope_violation_files="$SANDBOX/scope-violation-files.txt"
 
 mkdir -p "$(dirname "$full_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-009 fixture' > "$full_evidence"
+mkdir -p "$(dirname "$custom_full_evidence")" "$(dirname "$wrong_feature_evidence")"
+printf '%s\n' 'DEFAULT_VERIFY passed for custom feature fixture' > "$custom_full_evidence"
+printf '%s\n' 'wrong feature evidence path' > "$wrong_feature_evidence"
+jq '.feature_dir = "specs/prsg-999-custom-feature"' "$valid_plan" > "$custom_feature_plan"
 cat > "$declared_changed_files" <<'EOF'
 tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
 speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
@@ -160,6 +167,34 @@ assert_eq "2" "$result" "exit code"
 
 set_test "invalid slice branch names do not write command capture"
 assert_file_not_exists "$bad_branch_candidate_dir/commands.candidate.json"
+
+set_test "full regression evidence path is derived from feature_dir"
+custom_candidate_dir="$SANDBOX/custom-feature-candidates"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --layer-plan "$custom_feature_plan" \
+  --state "$empty_state" \
+  --feature-branch prsg-999-custom-feature \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$custom_full_evidence" \
+  --candidate-dir "$custom_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "wrong feature evidence path exits 2"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --layer-plan "$custom_feature_plan" \
+  --state "$empty_state" \
+  --feature-branch prsg-999-custom-feature \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$wrong_feature_evidence" \
+  --candidate-dir "$SANDBOX/wrong-feature-candidates" || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "wrong feature evidence path names derived emission directory"
+assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: full verification evidence must be under specs/prsg-999-custom-feature/.process/emission/"
 
 section "candidate JSON writes"
 

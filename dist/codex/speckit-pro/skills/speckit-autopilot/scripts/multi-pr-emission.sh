@@ -225,14 +225,20 @@ if [ -n "$duplicate_slice" ]; then
   emit_input_error "duplicate state slice_id $duplicate_slice"
 fi
 
+FEATURE_DIR_REL="$(jq -r '.feature_dir // empty' "$LAYER_PLAN")"
+if [ -z "$FEATURE_DIR_REL" ]; then
+  FEATURE_DIR_REL="specs/$FEATURE_BRANCH"
+fi
+EXPECTED_EMISSION_DIR="$FEATURE_DIR_REL/.process/emission/"
+
 if [ -z "$FULL_VERIFICATION_EVIDENCE" ]; then
   emit_input_error "missing required option --full-verification-evidence"
 fi
 [ -r "$FULL_VERIFICATION_EVIDENCE" ] || emit_input_error "full verification evidence not readable: $FULL_VERIFICATION_EVIDENCE"
 case "$FULL_VERIFICATION_EVIDENCE" in
-  *"specs/prsg-009-multi-pr-emission/.process/emission/"*) ;;
+  *"$EXPECTED_EMISSION_DIR"*) ;;
   *)
-    emit_input_error "full verification evidence must be under specs/prsg-009-multi-pr-emission/.process/emission/"
+    emit_input_error "full verification evidence must be under $EXPECTED_EMISSION_DIR"
     ;;
 esac
 
@@ -255,11 +261,6 @@ if [ -n "$SCOPED_VERIFICATION_FIXTURE" ] && ! jq -e '
   )
 ' "$SCOPED_VERIFICATION_FIXTURE" >/dev/null 2>&1; then
   emit_input_error "invalid scoped verification fixture JSON"
-fi
-
-FEATURE_DIR_REL="$(jq -r '.feature_dir // empty' "$LAYER_PLAN")"
-if [ -z "$FEATURE_DIR_REL" ]; then
-  FEATURE_DIR_REL="specs/$FEATURE_BRANCH"
 fi
 
 plan_slices="$(
