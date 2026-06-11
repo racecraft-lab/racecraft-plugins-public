@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Spec MOC PRS manifest schema v2",
+  "type": "object",
+  "required": ["schemaVersion", "records"],
+  "properties": {
+    "schemaVersion": { "const": 2 },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["review_order", "slice_id", "branch", "base_branch", "declared_files", "verification_evidence", "status", "head_sha"],
+        "properties": {
+          "review_order": { "type": "integer", "minimum": 1 },
+          "slice_id": { "type": "string", "minLength": 1 },
+          "layer": { "type": "string" },
+          "branch": { "type": "string", "minLength": 1 },
+          "base_branch": { "type": "string", "minLength": 1 },
+          "pr_number": { "type": ["integer", "null"], "minimum": 1 },
+          "pr_url": { "type": ["string", "null"] },
+          "declared_files": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "verification_evidence": { "type": "string", "minLength": 1 },
+          "status": { "type": "string", "enum": ["pending", "opened", "merged", "closed", "failed"] },
+          "head_sha": { "type": "string", "minLength": 1 },
+          "merged_sha": { "type": ["string", "null"] }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

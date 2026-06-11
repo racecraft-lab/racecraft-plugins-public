@@ -276,6 +276,6 @@ planner tests passed from the fixture-backed schema.
 ### Cleanup Notes
 
 `specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup on
-2026-06-11 after the PRSG-009 contract schemas were vendored under
-`tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/` and the
-emitter's schema path reporting was repointed to those durable fixtures.
+2026-06-11 after the PRSG-009 contract schemas were preserved under
+`speckit-pro/skills/speckit-autopilot/contracts/` and the emitter's schema path
+reporting was repointed to payload-included contracts.

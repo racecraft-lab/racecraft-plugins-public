@@ -1,0 +1,118 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PRSG-009 multi_pr_emission state",
+  "type": "object",
+  "required": ["schema_version", "status", "source_layer_plan", "base_branch", "base_sha", "next_slice_id", "reconciled_at", "slices"],
+  "properties": {
+    "schema_version": { "type": "integer", "minimum": 1 },
+    "status": { "type": "string", "enum": ["pending", "emitting", "blocked", "complete"] },
+    "source_layer_plan": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha": { "type": "string" },
+        "generated_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "base_branch": { "type": "string", "minLength": 1 },
+    "base_sha": { "type": "string", "minLength": 1 },
+    "next_slice_id": { "type": ["string", "null"] },
+    "reconciled_at": { "type": "string" },
+    "slices": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/slice" }
+    },
+    "failed_slice": { "$ref": "#/definitions/failure" }
+  },
+  "additionalProperties": false,
+  "definitions": {
+    "slice": {
+      "type": "object",
+      "required": ["slice_id", "review_order", "expected_branch", "expected_base_branch", "declared_files", "declared_scoped_tests", "status"],
+      "properties": {
+        "slice_id": { "type": "string", "minLength": 1 },
+        "review_order": { "type": "integer", "minimum": 1 },
+        "expected_branch": { "type": "string", "minLength": 1 },
+        "expected_base_branch": { "type": "string", "minLength": 1 },
+        "head_sha": { "type": ["string", "null"] },
+        "declared_files": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "declared_scoped_tests": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "scoped_verification": { "$ref": "#/definitions/scoped_verification" },
+        "pr": { "$ref": "#/definitions/pr" },
+        "status": { "type": "string", "enum": ["pending", "branch_created", "verified", "pr_opened", "merged", "closed", "failed"] },
+        "last_error": { "$ref": "#/definitions/failure" }
+      },
+      "additionalProperties": false
+    },
+    "scoped_verification": {
+      "type": "object",
+      "required": ["commands"],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/command_record" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "command_record": {
+      "type": "object",
+      "required": ["command", "gate_type", "reason", "required", "evidence_path", "exit_status", "started_at", "finished_at"],
+      "properties": {
+        "command": { "type": "string", "minLength": 1 },
+        "gate_type": { "type": "string", "minLength": 1 },
+        "reason": { "type": "string", "minLength": 1 },
+        "required": { "type": "boolean" },
+        "evidence_path": { "type": "string", "minLength": 1 },
+        "exit_status": { "type": "integer" },
+        "started_at": { "type": "string" },
+        "finished_at": { "type": "string" },
+        "stdout_tail": { "type": "string" },
+        "stderr_tail": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "pr": {
+      "type": "object",
+      "properties": {
+        "number": { "type": "integer", "minimum": 1 },
+        "url": { "type": "string", "minLength": 1 },
+        "state": { "type": "string" },
+        "base_ref": { "type": "string" },
+        "head_ref": { "type": "string" },
+        "head_sha": { "type": "string" },
+        "merged_sha": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "failure": {
+      "type": "object",
+      "required": ["slice_id", "failed_at", "phase", "command", "exit_status", "evidence_path"],
+      "properties": {
+        "slice_id": { "type": "string", "minLength": 1 },
+        "failed_at": { "type": "string" },
+        "phase": { "type": "string", "minLength": 1 },
+        "command": { "type": "string", "minLength": 1 },
+        "exit_status": { "type": "integer" },
+        "evidence_path": { "type": "string", "minLength": 1 },
+        "stdout_tail": { "type": "string" },
+        "stderr_tail": { "type": "string" },
+        "head_sha": { "type": ["string", "null"] },
+        "declared_tests": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "retry_policy": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

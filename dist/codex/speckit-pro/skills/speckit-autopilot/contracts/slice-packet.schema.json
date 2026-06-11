@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PRSG-009 slice PR packet",
+  "type": "object",
+  "required": ["slice_id", "review_order", "total_slices", "base_branch", "head_branch", "declared_files", "scoped_verification", "full_verification_evidence", "prs_row"],
+  "properties": {
+    "slice_id": { "type": "string", "minLength": 1 },
+    "review_order": { "type": "integer", "minimum": 1 },
+    "total_slices": { "type": "integer", "minimum": 1 },
+    "base_branch": { "type": "string", "minLength": 1 },
+    "head_branch": { "type": "string", "minLength": 1 },
+    "declared_files": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "declared_tests": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "scoped_verification": {
+      "type": "object",
+      "required": ["commands"],
+      "properties": {
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["command", "gate_type", "reason", "required", "evidence_path", "exit_status", "started_at", "finished_at"],
+            "properties": {
+              "command": { "type": "string", "minLength": 1 },
+              "gate_type": { "type": "string", "minLength": 1 },
+              "reason": { "type": "string", "minLength": 1 },
+              "required": { "type": "boolean" },
+              "evidence_path": { "type": "string", "minLength": 1 },
+              "exit_status": { "type": "integer" },
+              "started_at": { "type": "string" },
+              "finished_at": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "full_verification_evidence": { "type": "string", "minLength": 1 },
+    "traceability": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["requirement", "files", "evidence"],
+        "properties": {
+          "requirement": { "type": "string", "minLength": 1 },
+          "files": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "evidence": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "known_gaps": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "restack_note": { "type": "string" },
+    "prs_row": { "$ref": "prs-v2.schema.json#/properties/records/items" }
+  },
+  "additionalProperties": false
+}

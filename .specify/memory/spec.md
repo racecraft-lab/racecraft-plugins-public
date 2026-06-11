@@ -345,7 +345,7 @@ provides dry-run-first restack recovery.
 ### Cleanup Note
 
 The active spec folder was removed from `specs/**` cleanup on 2026-06-11 after
-PR #145 merged and the PRSG-009 contract schemas were vendored under
-`tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/`.
+PR #145 merged and the PRSG-009 contract schemas were preserved under
+`speckit-pro/skills/speckit-autopilot/contracts/`.
 Recovery commands are recorded in
 `.specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md`.

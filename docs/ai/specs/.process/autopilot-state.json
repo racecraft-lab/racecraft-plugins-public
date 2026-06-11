@@ -81,7 +81,7 @@
     "archive_report": ".specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md",
     "merge_commit": "a3361d50e3dfc5463fb2d5dbb2737a3525637a32",
     "pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/145",
-    "note": "PRSG-009 is merged and archived. Active spec cleanup removed the completed source folder after schema contracts were vendored under tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/."
+    "note": "PRSG-009 is merged and archived. Active spec cleanup removed the completed source folder after schema contracts were preserved under speckit-pro/skills/speckit-autopilot/contracts/."
   },
   "plan": [
     {
@@ -306,7 +306,7 @@
     {
       "step": "Post: Archive Hygiene Cleanup",
       "status": "completed",
-      "summary": "PRSG-009 archived in .specify/memory; contract schemas vendored to Layer 4 fixtures; specs/prsg-009-multi-pr-emission removed from active specs after PR #145 merged."
+      "summary": "PRSG-009 archived in .specify/memory; contract schemas preserved in the autopilot skill payload; specs/prsg-009-multi-pr-emission removed from active specs after PR #145 merged."
     }
   ],
   "consensus_resolution_log": [
@@ -521,7 +521,7 @@
       "status": "completed",
       "archive_report": ".specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md",
       "cleanup_command": "git rm -r specs/prsg-009-multi-pr-emission",
-      "schema_fixture_path": "tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/",
+      "schema_contract_path": "speckit-pro/skills/speckit-autopilot/contracts/",
       "merge_commit": "a3361d50e3dfc5463fb2d5dbb2737a3525637a32",
       "post_cleanup_verification": "bash tests/speckit-pro/run-all.sh -> 2300/2300 passed",
       "pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/145"

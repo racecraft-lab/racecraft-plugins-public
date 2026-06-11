@@ -1,0 +1,984 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://racecraft.dev/speckit-pro/contracts/plan-layers.schema.json",
+  "title": "plan-layers output envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tool",
+    "contract_version",
+    "status",
+    "feature_dir",
+    "tasks_file",
+    "increments",
+    "warnings",
+    "errors",
+    "summary"
+  ],
+  "properties": {
+    "tool": {
+      "const": "plan-layers"
+    },
+    "contract_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "invalid_plan",
+        "input_error"
+      ]
+    },
+    "feature_dir": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "tasks_file": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "increments": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/increment"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/warningDiagnostic"
+      }
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/errorDiagnostic"
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "increment_count",
+        "task_count",
+        "warning_count",
+        "error_count",
+        "message"
+      ],
+      "properties": {
+        "increment_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "task_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warning_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "error_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "ok"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "increments": {
+            "minItems": 1
+          },
+          "errors": {
+            "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "invalid_plan"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "errors": {
+            "minItems": 1,
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/errorDiagnostic"
+                },
+                {
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "missing_required_heading",
+                        "empty_increment",
+                        "unknown_increment",
+                        "dependency_cycle",
+                        "contradictory_increment_order",
+                        "duplicate_increment_id",
+                        "duplicate_task_id",
+                        "malformed_task"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "input_error"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "then": {
+        "properties": {
+          "increments": {
+            "maxItems": 0
+          },
+          "errors": {
+            "minItems": 1,
+            "items": {
+              "allOf": [
+                {
+                  "$ref": "#/definitions/errorDiagnostic"
+                },
+                {
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_invocation",
+                        "feature_dir_not_found",
+                        "feature_dir_unreadable",
+                        "tasks_file_missing",
+                        "tasks_file_unreadable"
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "semantic_increment_id": {
+      "type": "string",
+      "pattern": "^(foundation|polish|us[1-9][0-9]*)$"
+    },
+    "story_id": {
+      "type": "string",
+      "pattern": "^us[1-9][0-9]*$"
+    },
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "line"
+      ],
+      "properties": {
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "line": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "heading": {
+          "type": "string"
+        }
+      }
+    },
+    "warningDiagnostic": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/diagnostic"
+        },
+        {
+          "properties": {
+            "severity": {
+              "const": "warning"
+            }
+          }
+        }
+      ]
+    },
+    "errorDiagnostic": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/diagnostic"
+        },
+        {
+          "properties": {
+            "severity": {
+              "const": "error"
+            }
+          }
+        }
+      ]
+    },
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "severity",
+        "message",
+        "source",
+        "details"
+      ],
+      "properties": {
+        "code": {
+          "enum": [
+            "missing_required_heading",
+            "empty_increment",
+            "unknown_increment",
+            "dependency_cycle",
+            "contradictory_increment_order",
+            "duplicate_increment_id",
+            "duplicate_task_id",
+            "malformed_task",
+            "invalid_invocation",
+            "feature_dir_not_found",
+            "feature_dir_unreadable",
+            "tasks_file_missing",
+            "tasks_file_unreadable",
+            "task_without_references",
+            "reference_not_found"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "warning",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "details": {
+          "type": "object"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "missing_required_heading",
+                  "empty_increment",
+                  "unknown_increment",
+                  "dependency_cycle",
+                  "contradictory_increment_order",
+                  "duplicate_increment_id",
+                  "duplicate_task_id",
+                  "malformed_task",
+                  "invalid_invocation",
+                  "feature_dir_not_found",
+                  "feature_dir_unreadable",
+                  "tasks_file_missing",
+                  "tasks_file_unreadable"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "severity": {
+                "const": "error"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "task_without_references",
+                  "reference_not_found"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "severity": {
+                "const": "warning"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "missing_required_heading"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/missing_required_heading_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "empty_increment"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/increment_id_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "unknown_increment"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/increment_id_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "dependency_cycle"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/dependency_cycle_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "contradictory_increment_order"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/contradictory_increment_order_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "duplicate_increment_id"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/duplicate_increment_id_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "duplicate_task_id"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/duplicate_task_id_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "malformed_task"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/malformed_task_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "task_without_references"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/task_without_references_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "reference_not_found"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/reference_not_found_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "const": "invalid_invocation"
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/invalid_invocation_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "feature_dir_not_found",
+                  "feature_dir_unreadable"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/feature_dir_details"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "code": {
+                "enum": [
+                  "tasks_file_missing",
+                  "tasks_file_unreadable"
+                ]
+              }
+            },
+            "required": [
+              "code"
+            ]
+          },
+          "then": {
+            "properties": {
+              "details": {
+                "$ref": "#/definitions/tasks_file_details"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "missing_required_heading_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_heading"
+      ],
+      "properties": {
+        "required_heading": {
+          "enum": [
+            "## Dependencies & Execution Order",
+            "### Incremental Delivery"
+          ]
+        }
+      }
+    },
+    "increment_id_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "increment_id"
+      ],
+      "properties": {
+        "increment_id": {
+          "$ref": "#/definitions/semantic_increment_id"
+        }
+      }
+    },
+    "dependency_cycle_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cycle"
+      ],
+      "properties": {
+        "cycle": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/semantic_increment_id"
+          }
+        }
+      }
+    },
+    "contradictory_increment_order_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_order",
+        "observed_order"
+      ],
+      "properties": {
+        "expected_order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/semantic_increment_id"
+          }
+        },
+        "observed_order": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/semantic_increment_id"
+          }
+        }
+      }
+    },
+    "duplicate_increment_id_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "increment_id",
+        "first_source",
+        "duplicate_source"
+      ],
+      "properties": {
+        "increment_id": {
+          "$ref": "#/definitions/semantic_increment_id"
+        },
+        "first_source": {
+          "$ref": "#/definitions/source"
+        },
+        "duplicate_source": {
+          "$ref": "#/definitions/source"
+        }
+      }
+    },
+    "duplicate_task_id_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "first_source",
+        "duplicate_source"
+      ],
+      "properties": {
+        "task_id": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "first_source": {
+          "$ref": "#/definitions/source"
+        },
+        "duplicate_source": {
+          "$ref": "#/definitions/source"
+        }
+      }
+    },
+    "malformed_task_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "line_text"
+      ],
+      "properties": {
+        "line_text": {
+          "$ref": "#/definitions/non_empty_string"
+        }
+      }
+    },
+    "task_without_references_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_id",
+        "increment_id"
+      ],
+      "properties": {
+        "task_id": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "increment_id": {
+          "$ref": "#/definitions/semantic_increment_id"
+        }
+      }
+    },
+    "reference_not_found_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "reference",
+        "task_id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "file",
+            "test"
+          ]
+        },
+        "reference": {
+          "$ref": "#/definitions/non_empty_string"
+        },
+        "task_id": {
+          "$ref": "#/definitions/non_empty_string"
+        }
+      }
+    },
+    "invalid_invocation_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_args",
+        "received_args"
+      ],
+      "properties": {
+        "expected_args": {
+          "const": 1
+        },
+        "received_args": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "feature_dir_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feature_dir"
+      ],
+      "properties": {
+        "feature_dir": {
+          "$ref": "#/definitions/non_empty_string"
+        }
+      }
+    },
+    "tasks_file_details": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tasks_file"
+      ],
+      "properties": {
+        "tasks_file": {
+          "$ref": "#/definitions/non_empty_string"
+        }
+      }
+    },
+    "advisory_size": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task_count",
+        "file_reference_count",
+        "distinct_file_count",
+        "test_reference_count",
+        "distinct_test_count"
+      ],
+      "properties": {
+        "task_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "file_reference_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "distinct_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "test_reference_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "distinct_test_count": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "story",
+        "increment_id",
+        "status",
+        "parallel",
+        "source",
+        "files",
+        "tests"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "story": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/definitions/story_id"
+            }
+          ]
+        },
+        "increment_id": {
+          "$ref": "#/definitions/semantic_increment_id"
+        },
+        "status": {
+          "enum": [
+            "todo",
+            "done"
+          ]
+        },
+        "parallel": {
+          "type": "boolean"
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "increment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "kind",
+        "order",
+        "depends_on",
+        "source",
+        "tasks",
+        "files",
+        "tests",
+        "advisory_size"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/semantic_increment_id"
+        },
+        "name": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "foundation",
+            "story",
+            "polish"
+          ]
+        },
+        "order": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/semantic_increment_id"
+          }
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "tasks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/task"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tests": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "advisory_size": {
+          "$ref": "#/definitions/advisory_size"
+        }
+      }
+    }
+  }
+}

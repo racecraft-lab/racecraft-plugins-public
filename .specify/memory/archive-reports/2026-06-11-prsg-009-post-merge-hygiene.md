@@ -12,7 +12,7 @@
 
 | Spec | Eligibility | Cleanup Mode | Reason |
 |------|-------------|--------------|--------|
-| `specs/prsg-009-multi-pr-emission` | archived in memory | cleanup applied | PR #145 is merged, provenance/recovery commands are recorded, PRSG-009 contracts are vendored under Layer 4 fixtures, and focused/full tests pass without the live spec folder |
+| `specs/prsg-009-multi-pr-emission` | archived in memory | cleanup applied | PR #145 is merged, provenance/recovery commands are recorded, PRSG-009 contracts are preserved under the autopilot skill payload, and focused/full tests pass without the live spec folder |
 
 ## Cleanup Preconditions
 
@@ -24,7 +24,7 @@
 - Merge commit: `a3361d50e3dfc5463fb2d5dbb2737a3525637a32`
 - Tree reference: `c65ad8ae716d3f8cae94ac28026159eebd12a101`
 - Final PR head commit: `74fb0eecec0b3bda8c0c180dddc025cbdd2d2f4a`
-- Fixture-decoupling prerequisite: PRSG-009 contracts copied to `tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/`, and `multi-pr-emission.sh` now reports those fixture paths.
+- Fixture-decoupling prerequisite: PRSG-009 contracts preserved under `speckit-pro/skills/speckit-autopilot/contracts/`, and `multi-pr-emission.sh` now reports payload-included contract paths.
 - Pre-cleanup guards:
   - `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` passed `81/81`
   - `bash tests/speckit-pro/layer4-scripts/test-restack.sh` passed `32/32`
@@ -79,8 +79,8 @@ git checkout a3361d50e3dfc5463fb2d5dbb2737a3525637a32 -- specs/prsg-009-multi-pr
 | `docs/ai/specs/.process/autopilot-state.json` | Recorded PRSG-009 archive cleanup completion |
 | `AGENTS.md` | Added PRSG-009 archive cleanup note |
 | `CLAUDE.md` | Removed stale active-spec plan pointer |
-| `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh` | Repointed schema path reporting to vendored fixture contracts |
-| `tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/` | Added durable PRSG-009 contract schema fixtures |
+| `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh` | Repointed schema path reporting to payload-included contracts |
+| `speckit-pro/skills/speckit-autopilot/contracts/` | Added durable PRSG-009 contract schemas |
 | `specs/prsg-009-multi-pr-emission/` | Removed from active `specs/**`; recovery commands recorded above |
 
 ## Feature Status

@@ -4,12 +4,19 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SKILL_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
-readonly STATE_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/multi-pr-emission-state.schema.json"
-readonly PRS_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/prs-v2.schema.json"
-readonly SLICE_PACKET_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/slice-packet.schema.json"
-readonly PLAN_LAYERS_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/plan-layers.schema.json"
+if [ -d "$REPO_ROOT/speckit-pro/skills/speckit-autopilot/contracts" ]; then
+  CONTRACT_ROOT="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/contracts"
+else
+  CONTRACT_ROOT="$SKILL_ROOT/contracts"
+fi
+readonly CONTRACT_ROOT
+readonly STATE_SCHEMA="$CONTRACT_ROOT/multi-pr-emission-state.schema.json"
+readonly PRS_SCHEMA="$CONTRACT_ROOT/prs-v2.schema.json"
+readonly SLICE_PACKET_SCHEMA="$CONTRACT_ROOT/slice-packet.schema.json"
+readonly PLAN_LAYERS_SCHEMA="$CONTRACT_ROOT/plan-layers.schema.json"
 
 usage() {
   printf 'Usage: multi-pr-emission.sh --layer-plan <json> --state <json> --feature-branch <branch> --base <branch> --base-sha <sha> [--full-verification-evidence <path>] [--changed-files <path>] [--candidate-dir <dir>] [--pr-fixture <json>] [--command-log <json>] [--scoped-verification-fixture <json>]\n' >&2

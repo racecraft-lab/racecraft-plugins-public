@@ -263,7 +263,7 @@ schema contract fixture under `tests/speckit-pro/layer4-scripts/fixtures/plan-la
 - **Task completion**: 47 / 47 tasks complete
 - **Archived**: 2026-06-11
 - **Status**: Completed
-- **Cleanup decision**: `safeToApplyCleanup=true`; source folder removed after PRSG-009 contracts were vendored under Layer 4 fixtures.
+- **Cleanup decision**: `safeToApplyCleanup=true`; source folder removed after PRSG-009 contracts were preserved under the autopilot skill payload.
 
 ### Summary of added behavior
 
@@ -304,11 +304,11 @@ git checkout a3361d50e3dfc5463fb2d5dbb2737a3525637a32 -- specs/prsg-009-multi-pr
 - **Cleanup applied**: 2026-06-11
 - **Cleanup branch**: `codex/prsg-009-archive-hygiene`
 - **Cleanup command**: `git rm -r specs/prsg-009-multi-pr-emission`
-- **Fixture-decoupling prerequisite**: PRSG-009 contract schemas now live at `tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/`, and `multi-pr-emission.sh` reports those fixture paths.
+- **Fixture-decoupling prerequisite**: PRSG-009 contract schemas now live at `speckit-pro/skills/speckit-autopilot/contracts/`, and `multi-pr-emission.sh` reports payload-included contract paths.
 - **safeToApplyCleanup**: `true`
 - **Removed from active specs**: `specs/prsg-009-multi-pr-emission`
 - **Recovery**: use the PRSG-009 `git show` / `git checkout` commands recorded above.
 
 The removed source folder was already archived in project memory. Layer 4
-multi-PR emission coverage remains active through the fixture-backed contract
+multi-PR emission coverage remains active through payload-included contract
 schemas and test fixtures under `tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/`.
