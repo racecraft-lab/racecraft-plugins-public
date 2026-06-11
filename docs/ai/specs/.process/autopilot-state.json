@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T20:05:00Z",
-  "active_step": "Post: PR Body Generation",
+  "updated_at": "2026-06-11T22:13:51Z",
+  "active_step": "Archive Cleanup Complete",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -69,12 +69,16 @@
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "dry-run-provenance-only",
-    "safeToApplyCleanup": false,
-    "excludedCurrentSpec": "specs/prsg-010-harden-the-hatch",
-    "eligible_previous_specs": [],
-    "cleanup_applied": [],
-    "note": "Startup sweep recorded archive extension state and excluded PRSG-010. Prior PRSG-007, PRSG-008, PRSG-009, and PRSG-011 cleanup is already recorded in project archive notes; no additional active specs cleanup was applied before Phase 1."
+    "cleanup_mode": "apply-cleanup",
+    "safeToApplyCleanup": true,
+    "excludedCurrentSpec": null,
+    "eligible_previous_specs": [
+      "specs/prsg-010-harden-the-hatch"
+    ],
+    "cleanup_applied": [
+      "specs/prsg-010-harden-the-hatch"
+    ],
+    "note": "Post-merge PRSG-010 archive cleanup recorded project-memory artifacts and removed the active spec folder after PRs #149-#155 merged and PRSG-010 contracts were preserved under speckit-pro/skills/speckit-autopilot/contracts/."
   },
   "plan": [
     {
@@ -222,7 +226,7 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "skipped: doctor not installed"
     },
     {
       "step": "Post: Verify Implementation",
@@ -254,28 +258,38 @@
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "summary": "PRSG-010 split PRs were reviewed and merged as PRs #149-#155."
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "No separate UAT runbook artifact was generated; verification evidence is captured in the workflow, merged PRs, and archive report."
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending",
-      "summary": "Use the resliced publish stack: prsg-010-foundation -> prsg-010a-backstop-core -> prsg-010a-final-hatch -> prsg-010b-contextual-router -> prsg-010c1-o5-topology-core -> prsg-010c2-o5-status-guidance -> prsg-010d-parity-polish."
+      "status": "completed",
+      "summary": "Resliced publish stack created PRs #149-#155: foundation, A-core, A-guidance, B contextual router, C1 O5 topology, C2 O5 guidance, and D parity/polish."
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "PRSG-010 publish stack merged into main through PRs #149-#155."
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Review comments and merge conflicts were resolved before all PRSG-010 slice PRs merged."
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "No separate retrospective artifact was generated before archive; this post-merge archive report records provenance, recovery, and cleanup evidence."
+    },
+    {
+      "step": "Post: Archive Cleanup",
+      "status": "completed",
+      "summary": "PRSG-010 archived to project memory and active spec folder removed after PRs #149-#155 merged."
     }
   ],
   "phase1_specify": {
