@@ -142,18 +142,18 @@
 
 **Purpose**: Remove generated exception boilerplate, complete docs/template parity, prove Claude/Codex mirror consistency, and run final verification.
 
-- [ ] T046 [P] Add PRSG-010 Layer 8 parity fixture overview for backstop, O5, routing, and generated-exception education in `tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/README.md`
-- [ ] T047 [P] Add PRSG-010 Layer 8 parity workflow fixture for Claude/Codex mirror checks in `tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/workflow.md`
-- [ ] T048 Update roadmap guidance for final backstop, O5 fallback, contextual router probes, and accepted exception provenance in `docs/ai/specs/pr-size-governance-technical-roadmap.md`
-- [ ] T049 Remove live copy-pasteable exception pragma examples while preserving accepted classes and provenance education in `.specify/presets/speckit-pro-reviewability/templates/spec-template.md` and `.specify/templates/spec-template.md`
-- [ ] T050 Update structural assertions for new scripts, contracts, executable bits, and generated-exception safety checks in `tests/speckit-pro/layer1-structural/validate-scripts.sh`
-- [ ] T051 Run Layer 8 parity checks for changed Claude/Codex surfaces with `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh`
-- [ ] T052 Run Layer 1 structural checks with `bash tests/speckit-pro/run-all.sh --layer 1`
-- [ ] T053 Run Layer 4 script tests with `bash tests/speckit-pro/run-all.sh --layer 4`
-- [ ] T054 Run default deterministic verification with `bash tests/speckit-pro/run-all.sh`
-- [ ] T055 Run generated spec index drift check with `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`
-- [ ] T056 Run whitespace and patch hygiene validation with `git diff --check`
-- [ ] T057 Confirm the PR review packet source includes what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback notes in `specs/prsg-010-harden-the-hatch/plan.md` and `specs/prsg-010-harden-the-hatch/tasks.md`
+- [x] T046 [P] Add PRSG-010 Layer 8 parity fixture overview for backstop, O5, routing, and generated-exception education in `tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/README.md`
+- [x] T047 [P] Add PRSG-010 Layer 8 parity workflow fixture for Claude/Codex mirror checks in `tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/workflow.md`
+- [x] T048 Update roadmap guidance for final backstop, O5 fallback, contextual router probes, and accepted exception provenance in `docs/ai/specs/pr-size-governance-technical-roadmap.md`
+- [x] T049 Remove live copy-pasteable exception pragma examples while preserving accepted classes and provenance education in `.specify/presets/speckit-pro-reviewability/templates/spec-template.md` and `.specify/templates/spec-template.md`
+- [x] T050 Update structural assertions for new scripts, contracts, executable bits, and generated-exception safety checks in `tests/speckit-pro/layer1-structural/validate-scripts.sh`
+- [x] T051 Run Layer 8 parity checks for changed Claude/Codex surfaces with `bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh`
+- [x] T052 Run Layer 1 structural checks with `bash tests/speckit-pro/run-all.sh --layer 1`
+- [x] T053 Run Layer 4 script tests with `bash tests/speckit-pro/run-all.sh --layer 4`
+- [x] T054 Run default deterministic verification with `bash tests/speckit-pro/run-all.sh`
+- [x] T055 Run generated spec index drift check with `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`
+- [x] T056 Run whitespace and patch hygiene validation with `git diff --check`
+- [x] T057 Confirm the PR review packet source includes what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback notes in `specs/prsg-010-harden-the-hatch/plan.md` and `specs/prsg-010-harden-the-hatch/tasks.md`
 
 ---
 
@@ -243,6 +243,12 @@ bash tests/speckit-pro/run-all.sh --layer 4
 bash tests/speckit-pro/run-all.sh
 git diff --check
 ```
+
+### PR Review Packet Confirmation
+
+Before PR body generation, confirm the review packet source in `plan.md` and
+this task file covers: what changed, why, non-goals, review order, scope budget,
+traceability, verification evidence, known gaps, and rollback/flag notes.
 
 ---
 

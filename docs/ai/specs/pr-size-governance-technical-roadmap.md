@@ -241,15 +241,29 @@ that emits a routing decision into the workflow file before any emission is wire
 **Why:** only now that the automatic small path exists is it safe to make the backstop
 real.
 
-- **US1 — Real backstop.** Remove the exception boilerplate from the roadmap template;
-  wire the diff-gate exit code (stop discarding it) as a backstop that triggers
-  **re-slicing** (route back through PRSG-007/008/009), not blind blocking.
-- **US2 — Monster-epics (O5).** Epic → child specs that SHARE one design-concept +
-  retrospective (thin per-child deltas, `depends-on` order); `speckit-status` rolls
-  children up. Reserved for genuine monsters O4 can't slice thin.
-- **US3 — Deepen the contextual atomicity probes.** Promote PRSG-007's advisory-hint stubs — flag-system, release-cadence, consumer-locality — from non-decisive hints to full-depth routing signals in `atomicity-route.sh`.
-- **Skills/files:** `reviewability-gate.sh`, `atomicity-route.sh`, roadmap template, `speckit-scaffold-spec` (epic schema), `speckit-status` (rollup).
-- **Deps:** ALL of Phases 1–4. **Budget:** ~400 LOC. **Tests:** L4, L1.
+- **US1 — Real backstop.** `final-reviewability-backstop.sh` records
+  `final_reviewability_gate`, stops before PR body generation, `gh pr create`,
+  or `multi-pr-emission.sh`, and writes a re-slicing packet with concrete
+  PRSG-007/008/009 operator steps. `reviewability-gate.sh` still honors explicit
+  typed exceptions, but only when the branch adds an exact operator-owned
+  `refactor`, `infra`, or `upgrade` pragma in review-visible CONTRACT Markdown;
+  generated zones, templates, `.process`, PR bodies, and code fences are rejected
+  as exception provenance.
+- **US2 — Monster-epics (O5).** O5 is a fallback after ordinary
+  PRSG-007/008/009 split planning cannot produce reviewable slices. The parent
+  manifest is `specs/<parent-branch>/o5-parent-manifest.json`; child specs remain
+  flat siblings under `specs/<child-branch>`, never nested under the parent.
+  `o5-topology.sh` validates topology first, emits one child status row per
+  manifest child in order, and reports declared rollup drift read-only.
+- **US3 — Deepen the contextual atomicity probes.** `atomicity-route.sh` promotes
+  deterministic high-confidence flag-system, release-held cutover, and
+  consumer-locality evidence into closed `signals[]`; weak, fixture-only,
+  code-fence-only, stale, or conflicting evidence stays route-neutral in closed
+  `hints[]`.
+- **Skills/files:** `final-reviewability-backstop.sh`, `reviewability-gate.sh`,
+  `atomicity-route.sh`, `o5-topology.sh`, roadmap/templates,
+  `speckit-scaffold-spec` (O5 fallback), `speckit-status` (rollup/re-slicing).
+- **Deps:** ALL of Phases 1–4. **Budget:** split stack. **Tests:** L4, L1, L8 dry-run.
 
 ---
 

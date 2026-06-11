@@ -113,6 +113,10 @@
 - **Projected total files**: [Estimate]
 - **Budget result**: [within budget | warning accepted | split required | transition exception]
 - **Split decision**: [Why this remains one spec, or the exact follow-up specs]
+- **Exception provenance, if any**: Typed reviewability exceptions are rare
+  operator-owned overrides. Accepted classes are refactor, infra, and upgrade,
+  but generated templates, generated zones, `.process` files, PR bodies, and
+  code fences are not valid provenance.
 
 ### PR Review Packet Requirements *(mandatory)*
 

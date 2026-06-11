@@ -13,8 +13,15 @@ SCRIPT_FILES=(
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/detect-commands.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/detect-presets.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/reviewability-gate.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/atomicity-route.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/o5-topology.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-spec-index.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-pr-body.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/plan-layers.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/restack.sh"
   "$PLUGIN_ROOT/skills/speckit-coach/scripts/ensure-reviewability-preset.sh"
   "$PLUGIN_ROOT/skills/speckit-coach/scripts/estimate-spec-size.sh"
   "$PLUGIN_ROOT/skills/speckit-coach/scripts/project-fixup.sh"
@@ -52,6 +59,29 @@ for SCRIPT_FILE in "${SCRIPT_FILES[@]}"; do
 
   set_test "${script}: has executable permission"
   assert_file_executable "$SCRIPT_FILE"
+done
+
+section "autopilot JSON contracts"
+
+CONTRACT_FILES=(
+  "$PLUGIN_ROOT/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/contracts/reslicing-packet.schema.json"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/contracts/routing-decision.schema.json"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json"
+)
+
+for CONTRACT_FILE in "${CONTRACT_FILES[@]}"; do
+  contract="${CONTRACT_FILE#$PLUGIN_ROOT/}"
+
+  set_test "${contract}: exists"
+  assert_file_exists "$CONTRACT_FILE"
+
+  set_test "${contract}: parses as JSON"
+  if jq empty "$CONTRACT_FILE" >/dev/null 2>&1; then
+    _pass
+  else
+    _fail "contract JSON parse failed"
+  fi
 done
 
 # FR-007: the estimator's per-file LOC constant and the gate's per-task ×40
@@ -120,6 +150,42 @@ assert_not_contains "$roadmap_content" "Reviewability-Exception: infra"
 set_test "technical-roadmap-template.md: no concrete 'upgrade' exception pragma (placeholder only)"
 assert_not_contains "$roadmap_content" "Reviewability-Exception: upgrade"
 
+section "spec templates generated-exception safety (PRSG-010)"
+
+REPO_ROOT="$(cd "$PLUGIN_ROOT/.." && pwd)"
+SPEC_TEMPLATES=(
+  "$REPO_ROOT/.specify/presets/speckit-pro-reviewability/templates/spec-template.md"
+  "$REPO_ROOT/.specify/templates/spec-template.md"
+)
+
+for SPEC_TEMPLATE in "${SPEC_TEMPLATES[@]}"; do
+  template_name="${SPEC_TEMPLATE#$REPO_ROOT/}"
+
+  set_test "${template_name}: exists"
+  assert_file_exists "$SPEC_TEMPLATE"
+
+  if [ ! -f "$SPEC_TEMPLATE" ]; then
+    continue
+  fi
+
+  template_content=$(cat "$SPEC_TEMPLATE")
+
+  set_test "${template_name}: names accepted exception classes"
+  assert_contains "$template_content" "refactor, infra, and upgrade"
+
+  set_test "${template_name}: explains invalid generated/template provenance"
+  assert_contains "$template_content" "generated templates"
+
+  set_test "${template_name}: no concrete refactor exception pragma"
+  assert_not_contains "$template_content" "Reviewability-Exception: refactor"
+
+  set_test "${template_name}: no concrete infra exception pragma"
+  assert_not_contains "$template_content" "Reviewability-Exception: infra"
+
+  set_test "${template_name}: no concrete upgrade exception pragma"
+  assert_not_contains "$template_content" "Reviewability-Exception: upgrade"
+done
+
 # FR-001/US1: the reviewability-preset plan-template's `## Declared File Operations`
 # stub is the sole author-facing source of the block the estimator parses. It MUST
 # demonstrate the `- ` list-marker format the parser requires
@@ -129,7 +195,7 @@ assert_not_contains "$roadmap_content" "Reviewability-Exception: upgrade"
 # preventive budget a no-op through its own delivery vehicle. Guard against that.
 section "reviewability-preset plan-template declared-files format (FR-001/US1)"
 
-PRESET_PLAN_TEMPLATE="$(cd "$PLUGIN_ROOT/.." && pwd)/.specify/presets/speckit-pro-reviewability/templates/plan-template.md"
+PRESET_PLAN_TEMPLATE="$REPO_ROOT/.specify/presets/speckit-pro-reviewability/templates/plan-template.md"
 
 set_test "reviewability-preset plan-template.md: exists"
 assert_file_exists "$PRESET_PLAN_TEMPLATE"

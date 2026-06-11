@@ -1,0 +1,36 @@
+{
+  "fixture_id": "03-prsg-010-backstop-o5-routing",
+  "description": "Fields that MUST match between Path A and Path B for PRSG-010 guidance parity.",
+  "compare": [
+    {
+      "field": "final_backstop.stop_boundary",
+      "source": "workflow.md",
+      "section_selector": "## Final Backstop Contract",
+      "extractor": "table_column:Stop Boundary",
+      "tolerance_key": "final_backstop.stop_boundary"
+    },
+    {
+      "field": "exception_education.rejected",
+      "source": "workflow.md",
+      "section_selector": "## Exception Education Contract",
+      "extractor": "table_column:Rejected Provenance",
+      "tolerance_key": "exception_education.rejected"
+    },
+    {
+      "field": "o5_contract.shape",
+      "source": "workflow.md",
+      "section_selector": "## O5 Contract",
+      "extractor": "table_column:O5 Shape",
+      "tolerance_key": "o5_contract.shape"
+    },
+    {
+      "field": "routing_contract.signal_or_hint",
+      "source": "workflow.md",
+      "section_selector": "## Contextual Routing Contract",
+      "extractor": "table_column:Signal Or Hint",
+      "tolerance_key": "routing_contract.signal_or_hint"
+    }
+  ],
+  "fail_fast": false,
+  "report_format": "field-level-diff"
+}

@@ -1,0 +1,22 @@
+{
+  "fixture_id": "03-prsg-010-backstop-o5-routing",
+  "description": "Exact tolerances for PRSG-010 mirrored backstop, O5, routing, and exception education guidance.",
+  "fields": {
+    "final_backstop.stop_boundary": {
+      "tolerance": "exact",
+      "rationale": "Stop-before-PR boundaries are operator-facing safety contracts."
+    },
+    "exception_education.rejected": {
+      "tolerance": "exact",
+      "rationale": "Generated/template provenance must be rejected consistently."
+    },
+    "o5_contract.shape": {
+      "tolerance": "exact",
+      "rationale": "O5 must remain flat and topology-first across surfaces."
+    },
+    "routing_contract.signal_or_hint": {
+      "tolerance": "exact",
+      "rationale": "Router JSON vocabulary is a closed contract."
+    }
+  }
+}

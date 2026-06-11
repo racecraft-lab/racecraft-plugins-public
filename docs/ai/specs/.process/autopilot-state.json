@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T19:28:15Z",
-  "active_step": "Phase 7: Implement - PRSG-010D docs/parity/polish",
+  "updated_at": "2026-06-11T19:40:12Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -217,8 +217,8 @@
     },
     {
       "step": "Phase 7: Implement - Split stack",
-      "status": "in_progress",
-      "summary": "Foundation, PRSG-010A final hatch, PRSG-010B contextual router probes, and PRSG-010C O5 manifest/status are complete. Next implementation slice is PRSG-010D docs/parity/polish."
+      "status": "completed",
+      "summary": "Foundation plus PRSG-010A final hatch, PRSG-010B contextual router probes, PRSG-010C O5 manifest/status, and PRSG-010D docs/parity/polish are complete."
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -226,11 +226,13 @@
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Validated JSON contracts and parity fixture data, spec-index freshness, diff hygiene, Layer 8 dry-run 3/3, Layer 1 970/970, Layer 4 1283/1283, and default deterministic suite 2443/2443."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Confirmed T001-T057 are checked complete in tasks.md after PRSG-010D polish."
     },
     {
       "step": "Post: Code Review",
@@ -238,7 +240,8 @@
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Default deterministic verification passed: bash tests/speckit-pro/run-all.sh -> 2443/2443."
     },
     {
       "step": "Post: Cleanup",
@@ -725,7 +728,7 @@
       },
       {
         "slice": "PRSG-010D docs/parity/polish",
-        "status": "pending",
+        "status": "completed",
         "tasks": [
           "T046",
           "T047",
@@ -739,7 +742,32 @@
           "T055",
           "T056",
           "T057"
-        ]
+        ],
+        "summary": "Added PRSG-010 Layer 8 parity fixture for backstop/O5/routing/template parity, updated roadmap and spec templates to document accepted exception provenance without live generated pragma examples, expanded structural checks for new scripts/contracts/templates, and recorded PR review packet coverage.",
+        "files_touched": {
+          "docs": [
+            "docs/ai/specs/pr-size-governance-technical-roadmap.md",
+            "specs/prsg-010-harden-the-hatch/tasks.md",
+            "docs/ai/specs/.process/PRSG-010-workflow.md"
+          ],
+          "templates": [
+            ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
+            ".specify/templates/spec-template.md"
+          ],
+          "tests": [
+            "tests/speckit-pro/layer1-structural/validate-scripts.sh",
+            "tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/"
+          ]
+        },
+        "validation": {
+          "json": "jq empty autopilot-state, PRSG-010 contracts, production contracts, dist contracts, and PRSG-010 Layer 8 parity fixture JSON -> passed",
+          "layer8": "bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-prsg-010-backstop-o5-routing -> 3/3 passed",
+          "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 970/970 passed",
+          "layer4": "bash tests/speckit-pro/run-all.sh --layer 4 -> 1283/1283 passed",
+          "default_verify": "bash tests/speckit-pro/run-all.sh -> 2443/2443 passed",
+          "spec_index": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check . -> current",
+          "diff_check": "git diff --check -> passed"
+        }
       }
     ]
   },
