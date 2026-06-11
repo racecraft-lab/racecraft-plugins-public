@@ -815,7 +815,7 @@ No scaffold-time review-routing, slice branch emission, or PRSG-010 backstop beh
 
 - The retrospective extension prerequisite still expects numeric SpecKit branch names, so the PRSG branch required manual report generation.
 - Worktree `.git` is a pointer file, so PR body generation had to target the resolved `git rev-parse --git-dir` path instead of literal `.git/speckit-pr-body.md`.
-- The initial push failed under the active `fredrick-e84` GitHub account; switching temporarily to `fgabelmannjr` was required to push and create the PR.
+- The initial push failed under the active GitHub credential; switching temporarily to an authorized repo account was required to push and create the PR.
 
 ### Patterns to Reuse
 
