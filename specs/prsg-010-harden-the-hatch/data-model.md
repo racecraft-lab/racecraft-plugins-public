@@ -107,6 +107,10 @@ Child entry fields:
 Validation rules:
 
 - Parent manifest lives at `specs/<parent-branch>/o5-parent-manifest.json`.
+- Parent `path` must equal `specs/<parent.branch>`.
+- Child `path` must equal `specs/<child.branch>`.
+- Branch/path equality is enforced by the topology validator because the JSON
+  Schema contract can only enforce the flat path shape.
 - Child paths must be flat siblings under `specs/`, not nested below the parent.
 - Child IDs are unique.
 - Dependencies must refer to known earlier children and must not form cycles.
@@ -127,6 +131,9 @@ Validation rules:
 
 - Child `SPEC-MOC.md` body links must include the parent manifest.
 - `up:` remains pointed at the roadmap, not the parent directory.
+- Generated `SPEC-MOC.md` zones remain owned by `generate-spec-index.sh`; O5
+  scaffold and status logic may update curated links, but must not hand-patch
+  generated backlink or index zones.
 - Child specs proceed through normal SpecKit phases.
 
 ## O5 Status Rollup
@@ -144,6 +151,8 @@ Validation rules:
 
 - Topology is validated before child status computation.
 - Child state is computed in manifest child order.
+- The `children` array must contain exactly one row for every declared child,
+  including failed, pending, blocked, archived, and missing-state children.
 - Optional declared rollup status is drift-checked only; it is never the source
   of truth.
 

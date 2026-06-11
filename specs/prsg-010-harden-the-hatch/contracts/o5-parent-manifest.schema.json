@@ -22,7 +22,11 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[A-Z]+-[0-9]+$" },
         "branch": { "type": "string", "pattern": "^[a-z0-9]+-[a-z0-9-]+$" },
-        "path": { "type": "string", "pattern": "^specs/[^/]+$" },
+        "path": {
+          "type": "string",
+          "pattern": "^specs/[^/]+$",
+          "description": "Flat parent spec path; the topology validator must require this to equal specs/<parent.branch>."
+        },
         "title": { "type": "string", "minLength": 1 }
       }
     },
@@ -51,7 +55,11 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[A-Z]+-[0-9]+[A-Z]$" },
         "branch": { "type": "string", "pattern": "^[a-z0-9]+-[0-9]+[a-z]-[a-z0-9-]+$" },
-        "path": { "type": "string", "pattern": "^specs/[^/]+$" },
+        "path": {
+          "type": "string",
+          "pattern": "^specs/[^/]+$",
+          "description": "Flat child spec path; the topology validator must require this to equal specs/<child.branch>."
+        },
         "title": { "type": "string", "minLength": 1 },
         "dependsOn": {
           "type": "array",

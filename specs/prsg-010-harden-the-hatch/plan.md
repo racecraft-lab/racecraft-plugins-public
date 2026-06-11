@@ -131,8 +131,8 @@ split stack rather than a single oversized PR.
 | Slice | Scope | Primary files | Verification |
 |-------|-------|---------------|--------------|
 | PRSG-010A | Final reviewability backstop and re-slicing packet | final backstop script, autopilot post-implementation references, backstop schemas | Layer 4 final-backstop fixtures, Layer 1 structural, default verify |
-| PRSG-010B | O5 parent manifest, flat child validation, status rollup guidance | O5 topology script, scaffold/status skills and Codex mirrors, O5 schema | Layer 4 O5 topology fixtures, Layer 8 parity, Layer 1 structural |
-| PRSG-010C | Contextual routing probes and production routing schema | `atomicity-route.sh`, production routing schema, router fixtures | Layer 4 atomicity-router fixtures and schema validation, including paired baseline-vs-weak-evidence fixtures that prove the conservative route is unchanged, no decisive contextual signal is emitted, and weak/conflicting evidence appears only as closed-enum hints |
+| PRSG-010B | O5 parent manifest, flat child validation, status rollup guidance | O5 topology script, scaffold/status skills and Codex mirrors, O5 schema | Layer 4 O5 topology fixtures covering branch/path exact-match failures, mixed child states with every declared child emitted exactly once, generated `SPEC-MOC.md` zones regenerated only through `generate-spec-index.sh`, Layer 8 parity, and Layer 1 structural |
+| PRSG-010C | Contextual routing probes and production routing schema | `atomicity-route.sh`, production routing schema, router fixtures | Layer 4 atomicity-router fixtures and schema validation for every router fixture output, including contextual-probe success, weak-evidence, and paired baseline-vs-weak-evidence fixtures that prove the conservative route is unchanged, no decisive contextual signal is emitted, and weak/conflicting evidence appears only as closed-enum hints |
 | PRSG-010D | Boilerplate removal, docs, parity, and review-packet polish | roadmap/templates, parity fixture, structural assertions | Layer 1 structural, Layer 8 parity, default verify |
 
 ### PR Review Packet Source

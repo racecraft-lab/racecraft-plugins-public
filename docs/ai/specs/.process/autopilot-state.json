@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T17:12:17Z",
-  "active_step": "Phase 4: Checklist - data-integrity",
+  "updated_at": "2026-06-11T17:35:57Z",
+  "active_step": "Phase 4: Checklist - developer-experience",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -155,15 +155,17 @@
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "24 items; 5 gaps remediated; 0 [Gap] markers remaining. Tightened O5 branch/path equality, rollup completeness, generated MOC ownership, and router fixture schema validation."
     },
     {
       "step": "Phase 4: Checklist - data-integrity Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Checklist executor stalled after generating the checklist; parent remediated explicit gaps locally and no unresolved consensus items remained."
     },
     {
       "step": "Phase 4: Checklist - developer-experience",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - developer-experience Consensus",
@@ -488,6 +490,29 @@
         "default_verify": "2300/2300 passed",
         "consensus": "none unresolved"
       }
+    },
+    "data-integrity": {
+      "status": "completed",
+      "items": 24,
+      "gaps_found": 5,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-010-harden-the-hatch/spec.md",
+        "specs/prsg-010-harden-the-hatch/plan.md",
+        "specs/prsg-010-harden-the-hatch/data-model.md",
+        "specs/prsg-010-harden-the-hatch/contracts/o5-parent-manifest.schema.json",
+        "specs/prsg-010-harden-the-hatch/checklists/data-integrity.md"
+      ],
+      "validation": {
+        "markers": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
+        "contracts_jq": "passed",
+        "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
+        "diff_check": "clean",
+        "layer1": "915/915 passed",
+        "layer4": "1195/1195 passed",
+        "consensus": "none unresolved"
+      },
+      "note": "The checklist-executor generated the checklist artifact but stalled before remediation; the parent closed the agent and remediated the explicit gaps locally."
     }
   }
 }
