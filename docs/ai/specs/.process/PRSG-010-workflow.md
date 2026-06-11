@@ -349,7 +349,7 @@ Focus on PRSG-010 requirements:
 |-----------|-------|------|-----------------|
 | error-handling | 26 | 6 found, 6 remediated, 0 remaining | Final gate state, re-slicing packet, exception state, PR creation stop, weak probe fallback |
 | data-integrity | 24 | 5 found, 5 remediated, 0 remaining | O5 branch/path equality, rollup completeness, generated MOC ownership, router schema fixture validation |
-| developer-experience | Pending | Pending | |
+| developer-experience | 27 | 6 found, 6 remediated, 0 remaining | Operator steps, O5 default-boundary guidance, non-boilerplate exception education |
 | backward-compatibility | Pending | Pending | |
 
 ---

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T17:35:57Z",
-  "active_step": "Phase 4: Checklist - developer-experience",
+  "updated_at": "2026-06-11T17:49:38Z",
+  "active_step": "Phase 4: Checklist - backward-compatibility",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -165,15 +165,17 @@
     },
     {
       "step": "Phase 4: Checklist - developer-experience",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "27 items; 6 gaps remediated; 0 [Gap] markers remaining. Tightened operator re-slicing steps, O5 default-boundary guidance, and non-boilerplate exception education."
     },
     {
       "step": "Phase 4: Checklist - developer-experience Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - backward-compatibility",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - backward-compatibility Consensus",
@@ -513,6 +515,29 @@
         "consensus": "none unresolved"
       },
       "note": "The checklist-executor generated the checklist artifact but stalled before remediation; the parent closed the agent and remediated the explicit gaps locally."
+    },
+    "developer-experience": {
+      "status": "completed",
+      "items": 27,
+      "gaps_found": 6,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-010-harden-the-hatch/spec.md",
+        "specs/prsg-010-harden-the-hatch/plan.md",
+        "specs/prsg-010-harden-the-hatch/data-model.md",
+        "specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json",
+        "specs/prsg-010-harden-the-hatch/checklists/developer-experience.md"
+      ],
+      "validation": {
+        "markers": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
+        "contracts_jq": "passed",
+        "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
+        "diff_check": "clean",
+        "layer1": "915/915 passed",
+        "layer4": "1195/1195 passed",
+        "default_verify": "2300/2300 passed by checklist executor",
+        "consensus": "none unresolved"
+      }
     }
   }
 }

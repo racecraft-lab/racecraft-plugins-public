@@ -71,6 +71,9 @@ Fields:
 - `layer_plan`: PRSG-008 layer-plan availability, status, path, and slice count
 - `handoff`: PRSG-009 command template and concrete required input paths
 - `suggested_slice_boundaries`: ordered slice suggestions
+- `operator_steps`: ordered concrete steps for the blocked operator, each with
+  PRSG phase, command template, required paths, when to use it, and expected
+  unblock condition
 - `resume`: human-readable and machine-readable next action fields
 
 Validation rules:
@@ -82,6 +85,11 @@ Validation rules:
 - `sizing`, `layer_plan`, and `handoff` must contain enough machine-readable
   PRSG-007/008/009 context to resume at re-routing or layer-plan regeneration
   without reconstructing prior workflow state from prose.
+- `operator_steps` must give a concrete command/path sequence and must make the
+  `resume.resume_from` choice understandable from packet evidence: rerun
+  PRSG-007 when route or sizing evidence is missing/stale, regenerate PRSG-008
+  when the layer plan is missing/invalid/stale, and hand off to PRSG-009 when
+  route and layer-plan evidence are valid but PR emission remains blocked.
 - Packet must be valid JSON and stable enough for status/resume reads.
 
 ## O5 Parent Manifest
