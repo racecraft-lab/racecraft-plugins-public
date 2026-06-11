@@ -39,8 +39,8 @@ Re-read it before each phase. The locked setup decisions:
 | Clarify | `/speckit-clarify` | Complete | Focus on re-slicing packet, O5 schema, and high-confidence probe evidence |
 | Plan | `/speckit-plan` | Complete | Plain bash + jq + Markdown; split-stack delivery expected |
 | Checklist | `/speckit-checklist` | Complete | Run error-handling, data-integrity, developer-experience, and backward-compatibility |
-| Tasks | `/speckit-tasks` | In Progress | TDD-first, story-organized, split-PR-aware |
-| Analyze | `/speckit-analyze` | Pending | Check roadmap/design/spec/plan/tasks consistency and PRSG-010 boundaries |
+| Tasks | `/speckit-tasks` | Complete | TDD-first, story-organized, split-PR-aware |
+| Analyze | `/speckit-analyze` | In Progress | Check roadmap/design/spec/plan/tasks consistency and PRSG-010 boundaries |
 | Implement | `/speckit-implement` | Pending | Execute as ordered split stack unless G5 routing says otherwise |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -390,10 +390,17 @@ Focus on PRSG-010 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 57 |
+| Phases | 6: setup, foundational, PRSG-010A, PRSG-010B, PRSG-010C, PRSG-010D |
+| Parallel Opportunities | 20 tasks marked `[P]` across setup, tests, contracts, fixtures, and parity setup |
+| User Stories Covered | US1 final hatch, US2 O5, US3 contextual router; PRSG-010D covers docs/parity/polish |
+
+### Tasks Validation
+
+- G5 validator passed: `{"gate":"G5","pass":true,"reason":"57 tasks found","markers":0,"task_count":57}`.
+- Generated spec index check passed.
+- Marker scan found 0 active `[Gap]`, `[NEEDS CLARIFICATION]`, or `[CRITICAL]` markers; matches were only gate/checklist wording.
+- Layer 1 passed `915/915`.
 
 ---
 

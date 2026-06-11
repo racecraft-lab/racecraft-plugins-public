@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T18:01:49Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-11T18:11:46Z",
+  "active_step": "Phase 6: Analyze",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -185,14 +185,15 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress",
-      "gate": "G4",
+      "status": "completed",
+      "gate": "G5",
       "gate_status": "passed",
-      "summary": "All four Phase 4 checklists completed with no remaining active [Gap] markers."
+      "task_count": 57,
+      "summary": "Generated tasks.md with 57 tasks across setup, foundational, PRSG-010A, PRSG-010B, PRSG-010C, and PRSG-010D; G5 passed with 0 markers."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -474,6 +475,29 @@
       "default_verify": "2300/2300 passed",
       "diff_check": "clean"
     }
+  },
+  "phase5_tasks": {
+    "gate": "G5",
+    "gate_status": "passed",
+    "tasks_file": "specs/prsg-010-harden-the-hatch/tasks.md",
+    "total_tasks": 57,
+    "phases": [
+      "setup",
+      "foundational",
+      "PRSG-010A final hatch",
+      "PRSG-010B O5",
+      "PRSG-010C contextual router",
+      "PRSG-010D docs/parity/polish"
+    ],
+    "validation": {
+      "validate_gate_g5": "passed: 57 tasks found, 0 markers",
+      "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
+      "marker_scan": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
+      "contracts_jq": "passed",
+      "diff_check": "clean",
+      "layer1": "915/915 passed"
+    },
+    "summary": "Tasks are TDD-first, story/slice-aware, and preserve ordered split-stack delivery."
   },
   "phase4_checklists": {
     "error-handling": {
