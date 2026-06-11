@@ -241,7 +241,7 @@
     {
       "step": "Post: Integration Suite",
       "status": "completed",
-      "summary": "Default deterministic verification passed: bash tests/speckit-pro/run-all.sh -> 2443/2443."
+      "summary": "Default deterministic verification passed: bash tests/speckit-pro/run-all.sh -> 2451/2451."
     },
     {
       "step": "Post: Cleanup",
@@ -769,7 +769,7 @@
           "default_verify": "bash tests/speckit-pro/run-all.sh -> 2451/2451 passed after rebase onto origin/main",
           "spec_index": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check . -> current",
           "diff_check": "git diff --check origin/main...HEAD -> passed",
-          "reviewability_gate": "bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD -> status=exception pass=true total_files=111"
+          "reviewability_gate": "bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/prsg-010c2-o5-status-guidance..HEAD -> status=warn pass=true total_files=13 blockers=0"
         }
       }
     ]
