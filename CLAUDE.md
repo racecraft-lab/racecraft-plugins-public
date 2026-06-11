@@ -426,8 +426,3 @@ git commit -m "chore: sync plugin payloads and marketplace versions"
 git push origin <sync-branch>
 gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloads and marketplace versions"
 ```
-
-<!-- SPECKIT START -->
-For PRSG-009 multi-PR emission planning context, read:
-specs/prsg-009-multi-pr-emission/plan.md
-<!-- SPECKIT END -->

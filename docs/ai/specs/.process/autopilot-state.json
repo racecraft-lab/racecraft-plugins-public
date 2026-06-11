@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-009-workflow.md",
-  "updated_at": "2026-06-11T01:57:46.841432Z",
-  "active_step": "Complete",
+  "updated_at": "2026-06-11T14:05:38Z",
+  "active_step": "Archive Hygiene Complete",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -71,9 +71,17 @@
     "archive_extension_installed": true,
     "cleanup_mode": "apply-cleanup",
     "safeToApplyCleanup": true,
-    "excludedCurrentSpec": "specs/prsg-009-multi-pr-emission",
-    "eligible_previous_specs": [],
-    "note": "Startup sweep excluded current PRSG-009. No cleanup was applied in this run; previously completed PRSG specs with cleanup evidence are already archived in .specify/memory."
+    "excludedCurrentSpec": null,
+    "eligible_previous_specs": [
+      "specs/prsg-009-multi-pr-emission"
+    ],
+    "cleanup_applied": [
+      "specs/prsg-009-multi-pr-emission"
+    ],
+    "archive_report": ".specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md",
+    "merge_commit": "a3361d50e3dfc5463fb2d5dbb2737a3525637a32",
+    "pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/145",
+    "note": "PRSG-009 is merged and archived. Active spec cleanup removed the completed source folder after schema contracts were vendored under tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/."
   },
   "plan": [
     {
@@ -294,6 +302,11 @@
       "step": "Post: Retrospective",
       "status": "completed",
       "summary": "Retrospective saved at specs/prsg-009-multi-pr-emission/retrospective.md; adherence 100%, critical findings 0."
+    },
+    {
+      "step": "Post: Archive Hygiene Cleanup",
+      "status": "completed",
+      "summary": "PRSG-009 archived in .specify/memory; contract schemas vendored to Layer 4 fixtures; specs/prsg-009-multi-pr-emission removed from active specs after PR #145 merged."
     }
   ],
   "consensus_resolution_log": [
@@ -503,6 +516,15 @@
       "critical_findings": 0,
       "minor_findings": 1,
       "summary": "Retrospective extension prerequisite rejected the PRSG branch name pattern, so the report was generated manually from spec, plan, tasks, workflow, and verification evidence."
+    },
+    "archive_cleanup": {
+      "status": "completed",
+      "archive_report": ".specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md",
+      "cleanup_command": "git rm -r specs/prsg-009-multi-pr-emission",
+      "schema_fixture_path": "tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/",
+      "merge_commit": "a3361d50e3dfc5463fb2d5dbb2737a3525637a32",
+      "post_cleanup_verification": "bash tests/speckit-pro/run-all.sh -> 2300/2300 passed",
+      "pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/145"
     }
   }
 }

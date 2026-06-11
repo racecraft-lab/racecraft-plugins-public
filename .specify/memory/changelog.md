@@ -240,3 +240,75 @@ git checkout deccd8a2a9916e11edfad43df8ceef95a756dc04 -- specs/prsg-008-layer-pl
 The removed source folder was already archived in project memory. Layer 4
 planner coverage remains active through fixture task files and the vendored
 schema contract fixture under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/`.
+
+---
+
+## Multi-PR emission (post-implementation rewrite)
+
+[Source: specs/prsg-009-multi-pr-emission]
+
+- **Feature**: Multi-PR emission (post-implementation rewrite)
+- **Roadmap ID**: PRSG-009 (PR-size governance roadmap)
+- **Branch**: `prsg-009-multi-pr-emission`
+- **Spec path**: `specs/prsg-009-multi-pr-emission/`
+- **PR URL**: https://github.com/racecraft-lab/racecraft-plugins-public/pull/145
+- **Merge commit**: `a3361d50e3dfc5463fb2d5dbb2737a3525637a32`
+- **Tree reference**: `c65ad8ae716d3f8cae94ac28026159eebd12a101`
+- **PR Checks run URL**: https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/27351131255
+- **Release run URL**: https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/27352284669
+- **CodeQL run URLs**: https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/27351042365; https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/27351042214; https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/27352282130
+- **Argos build/review URL**: N/A (no visual artifacts)
+- **Metadata gates**: Release=pass; CodeQL=pass; PR Checks=pass; test(speckit-pro)=pass; validate-plugins=pass; validate-pr-title=pass; detect=pass
+- **Artifact manifest**: specs/prsg-009-multi-pr-emission/SPEC-MOC.md
+- **Task completion**: 47 / 47 tasks complete
+- **Archived**: 2026-06-11
+- **Status**: Completed
+- **Cleanup decision**: `safeToApplyCleanup=true`; source folder removed after PRSG-009 contracts were vendored under Layer 4 fixtures.
+
+### Summary of added behavior
+
+Added deterministic multi-PR emission for SpecKit post-implementation flows:
+`multi-pr-emission.sh` consumes PRSG-008 layer plans and emits ordered Style B
+slice PRs; `generate-pr-body.sh` supports bounded slice packets; `generate-spec-index.sh`
+renders PRS schemaVersion 2 navigation rows; `restack.sh` provides dry-run-first
+restack recovery; and Claude/Codex post-implementation references describe the
+same scoped verification, resume, PRS, and restack contract.
+
+### Recovery Commands (raw spec artifacts)
+
+```text
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/spec.md
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/plan.md
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/tasks.md
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/contracts/multi-pr-emission-state.schema.json
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/contracts/prs-v2.schema.json
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/contracts/restack-output.schema.json
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/contracts/slice-packet.schema.json
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/.process/uat-runbook.md
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/retrospective.md
+git show a3361d50e3dfc5463fb2d5dbb2737a3525637a32:specs/prsg-009-multi-pr-emission/verify-tasks-report.md
+```
+
+To recover the entire directory at the merge commit:
+
+```text
+git checkout a3361d50e3dfc5463fb2d5dbb2737a3525637a32 -- specs/prsg-009-multi-pr-emission
+```
+
+---
+
+## PRSG-009 Archive Cleanup Application
+
+[Source: .specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md]
+
+- **Cleanup applied**: 2026-06-11
+- **Cleanup branch**: `codex/prsg-009-archive-hygiene`
+- **Cleanup command**: `git rm -r specs/prsg-009-multi-pr-emission`
+- **Fixture-decoupling prerequisite**: PRSG-009 contract schemas now live at `tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/`, and `multi-pr-emission.sh` reports those fixture paths.
+- **safeToApplyCleanup**: `true`
+- **Removed from active specs**: `specs/prsg-009-multi-pr-emission`
+- **Recovery**: use the PRSG-009 `git show` / `git checkout` commands recorded above.
+
+The removed source folder was already archived in project memory. Layer 4
+multi-PR emission coverage remains active through the fixture-backed contract
+schemas and test fixtures under `tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/`.

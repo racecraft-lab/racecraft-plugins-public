@@ -6,9 +6,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../../../.." && pwd)"
 
-readonly STATE_SCHEMA="$REPO_ROOT/specs/prsg-009-multi-pr-emission/contracts/multi-pr-emission-state.schema.json"
-readonly PRS_SCHEMA="$REPO_ROOT/specs/prsg-009-multi-pr-emission/contracts/prs-v2.schema.json"
-readonly SLICE_PACKET_SCHEMA="$REPO_ROOT/specs/prsg-009-multi-pr-emission/contracts/slice-packet.schema.json"
+readonly STATE_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/multi-pr-emission-state.schema.json"
+readonly PRS_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/prs-v2.schema.json"
+readonly SLICE_PACKET_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/slice-packet.schema.json"
 readonly PLAN_LAYERS_SCHEMA="$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/plan-layers.schema.json"
 
 usage() {

@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission scaffolded (PRSG-009); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Pending: PRSG-010 (Phase 5). Created 2026-06-03; status refreshed 2026-06-10.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Pending: PRSG-010 (Phase 5). Created 2026-06-03; status refreshed 2026-06-11.
 
 ## Vision
 
@@ -207,8 +207,8 @@ that emits a routing decision into the workflow file before any emission is wire
 
 ---
 
-### PRSG-009 — Multi-PR emission (post-implementation rewrite)  · Phase 4 · P1 · In Progress
-> Scaffolded 2026-06-10 on branch `prsg-009-multi-pr-emission`; workflow:
+### PRSG-009 — Multi-PR emission (post-implementation rewrite)  · Phase 4 · P1 · ✅ Complete (PR #145)
+> Completed 2026-06-11 via PR #145; workflow:
 > `docs/ai/specs/.process/PRSG-009-workflow.md`.
 
 **Why:** the actual behavior change — stop flattening; emit N PRs.
@@ -225,9 +225,12 @@ that emits a routing decision into the workflow file before any emission is wire
   once today): each slice PR's CI runs that **slice's scoped tests**; the **full
   regression suite gates only the base/last merge** — a later slice's tests cannot pass
   before its code merges, so they must not block earlier slice PRs.
-- **Skills/files:** `speckit-autopilot/references/post-implementation.md`, `generate-pr-body.sh`, `speckit-scaffold-spec` (branch topology).
+- **Skills/files:** `speckit-autopilot/references/post-implementation.md`, `generate-pr-body.sh`, `generate-spec-index.sh`, `multi-pr-emission.sh`, `restack.sh`.
 - **Deps:** PRSG-008, PRSG-003 (MOC PRs table), PRSG-001 (artifacts out of slice).
-  **Budget:** ~450 LOC. **Tests:** L4, L7 (dispatch graph if new agents), L8 (Codex parity).
+  **Budget:** ~450 LOC. **Tests:** L4, L3 descriptor coverage, L8 (Codex parity).
+  **Archive:** `specs/prsg-009-multi-pr-emission` was removed from active
+  `specs/**` after PR #145 merged; recovery is through merge commit
+  `a3361d50e3dfc5463fb2d5dbb2737a3525637a32`.
 
 ---
 
@@ -381,7 +384,8 @@ there.
 
 - **Phase 1:** a fresh autopilot run produces a PR whose diff **collapses** `.process/`
   in the GitHub UI (artifacts persist in-repo and stay linked). Note: file-count is
-  unchanged until splitting lands (PRSG-009) — collapse ≠ exclude.
+  unchanged before splitting is used; PRSG-009 supplies the splitting path, while
+  collapse still does not mean exclude.
 - **Phase 2:** scaffolding a multi-slice spec produces a navigable spec-MOC; lints fail
   on orphan/stale links in CI **only for version-stamped specs** (legacy specs exempt).
 - **Phase 3:** PRD interviews emit PR-sized SPECs; plan phase auto-approves under budget

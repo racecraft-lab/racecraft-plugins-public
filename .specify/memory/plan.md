@@ -225,3 +225,57 @@ directory and the cleanup gate recorded `safeToApplyCleanup=true`.
 2026-06-10 after the planner schema was vendored under
 `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/` and focused
 planner tests passed from the fixture-backed schema.
+
+---
+
+## Multi-PR emission (post-implementation rewrite)
+
+[Source: specs/prsg-009-multi-pr-emission]
+**Branch**: `prsg-009-multi-pr-emission` · **Status**: Completed · **Archived**: 2026-06-11
+
+### Dependencies & Versions
+
+- Bash + `jq`, `git`, and GitHub CLI (`gh`); no package manager, compiled build
+  step, Python runtime, or workflow CI changes in the shipped behavior.
+- Reuses PRSG-008 layer-plan JSON as the only slice source and the existing
+  `generate-spec-index.sh` sentinel generator for schema v2 PRS table rendering.
+- `gh-stack` is optional and only used when safely detected for an existing
+  active stack; explicit `gh pr create --base --head --body-file` remains the
+  required PR creation path.
+
+### Architecture / Approach
+
+- `multi-pr-emission.sh`: validates layer-plan/state inputs, prepares slice
+  branches and PR commands, writes candidate state/PRS/command JSON, supports
+  fixture-backed PR reconciliation, persists successful slice PR state, and
+  blocks on failed scoped verification before opening a PR.
+- `generate-pr-body.sh --slice-packet <json-file>`: preserves the legacy
+  positional path while adding reviewer-visible slice sections for scope,
+  verification, traceability, restack/rollback, known gaps, and full regression
+  evidence.
+- `generate-spec-index.sh`: renders PRS schemaVersion 2 rows with order, slice,
+  PR, status, branch, base, SHA, scope, and verification columns while keeping
+  schema v1 compatibility.
+- `restack.sh`: provides dry-run-first restack planning/apply behavior with
+  deterministic JSON stdout, stable stderr diagnostics, and exit codes for
+  success, conflicts, input error, dirty tree, and git/gh failure.
+- Claude and Codex post-implementation references were updated together so the
+  two runtime surfaces describe the same multi-PR emission contract.
+
+### Test Strategy
+
+- `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` passed `81/81`.
+- `bash tests/speckit-pro/layer4-scripts/test-restack.sh` passed `32/32`.
+- `bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` passed `44/44`.
+- `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh` passed `86/86`.
+- `bash tests/speckit-pro/run-all.sh` passed `2300/2300` after active spec cleanup.
+- PR #145 CI recorded successful PR Checks, CodeQL, Release, `test(speckit-pro)`,
+  `validate-plugins`, `validate-pr-title`, and `detect` for merge commit
+  `a3361d50e3dfc5463fb2d5dbb2737a3525637a32`.
+
+### Cleanup Notes
+
+`specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup on
+2026-06-11 after the PRSG-009 contract schemas were vendored under
+`tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/contracts/` and the
+emitter's schema path reporting was repointed to those durable fixtures.
