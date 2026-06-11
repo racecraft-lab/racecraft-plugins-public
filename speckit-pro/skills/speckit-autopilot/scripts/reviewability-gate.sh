@@ -97,6 +97,113 @@ match_exception_pragma() {
     | head -n1
 }
 
+exception_provenance_for_path() {
+  local path="$1"
+  case "$path" in
+    */.process/*|.process/*) echo "process" ;;
+    .specify/templates/*|.specify/presets/*/templates/*|*/templates/*|*template*) echo "template" ;;
+    generated/*|*/generated/*|dist/*|*/dist/*|build/*|*/build/*) echo "generated" ;;
+    *pr-description*|*pr-body*|*.github/PULL_REQUEST_TEMPLATE*|*.github/pull_request_template*) echo "pr-description" ;;
+    *) echo "contract" ;;
+  esac
+}
+
+line_in_code_fence() {
+  local path="$1" line="$2"
+  [ -f "$path" ] || return 1
+  awk -v target="$line" '
+    NR >= target { exit fences % 2 ? 0 : 1 }
+    /^[[:space:]]*```/ { fences += 1 }
+  ' "$path"
+}
+
+diff_added_markdown_lines() {
+  local range="$1"
+  git diff --unified=0 "$range" -- '*.md' 2>/dev/null | awk '
+    /^\+\+\+ b\// {
+      path=substr($0, 7)
+      next
+    }
+    /^\+\+\+ / {
+      path=""
+      next
+    }
+    /^@@ / {
+      if (match($0, /\+[0-9]+(,[0-9]+)?/)) {
+        start=substr($0, RSTART + 1, RLENGTH - 1)
+        split(start, parts, ",")
+        new_line=parts[1]
+      }
+      next
+    }
+    path != "" {
+      prefix=substr($0, 1, 1)
+      if (prefix == "+") {
+        print path "\t" new_line "\t" substr($0, 2)
+        new_line += 1
+      } else if (prefix == " ") {
+        new_line += 1
+      }
+    }
+  '
+}
+
+exception_evidence_from_diff() {
+  local range="$1" tmp
+  tmp="$(mktemp "${TMPDIR:-/tmp}/reviewability-exceptions.XXXXXX")"
+  while IFS=$'\t' read -r path line text; do
+    [ -n "${path:-}" ] || continue
+    case "$text" in
+      *Reviewability-Exception:*|*REVIEWABILITY-EXCEPTION:*) ;;
+      *) continue ;;
+    esac
+
+    local class provenance honored reason
+    class=$(printf '%s\n' "$text" | match_exception_pragma)
+    provenance=$(exception_provenance_for_path "$path")
+    if line_in_code_fence "$path" "$line"; then
+      provenance="code-fence"
+    fi
+
+    honored=false
+    if [ -n "$class" ] && [ "$provenance" = "contract" ]; then
+      honored=true
+      reason="accepted operator-owned typed exception"
+    elif [ -z "$class" ]; then
+      class_json=null
+      reason="rejected exception class or trailing prose"
+    else
+      reason="rejected exception provenance: $provenance"
+    fi
+
+    if [ -n "$class" ]; then
+      class_json=$(printf '%s' "$class" | jq -R .)
+    else
+      class_json=null
+    fi
+
+    jq -cn \
+      --arg path "$path" \
+      --argjson line "$line" \
+      --argjson class "$class_json" \
+      --arg provenance "$provenance" \
+      --argjson honored "$honored" \
+      --arg reason "$reason" \
+      '{
+        path: $path,
+        line: $line,
+        class: $class,
+        provenance: $provenance,
+        branch_added: true,
+        honored: $honored,
+        reason: $reason
+      }' >> "$tmp"
+  done < <(diff_added_markdown_lines "$range")
+
+  jq -s '{accepted: map(select(.honored == true)), rejected: map(select(.honored != true))}' "$tmp"
+  rm -f "$tmp"
+}
+
 # FR-009: a slice is greenfield iff every non-excluded changed path is git
 # add-status `A` (a modified non-excluded file — doc, test, config, or production
 # — disqualifies; a modified *excluded/generated* file such as a lockfile does
@@ -126,7 +233,7 @@ greenfield_from_diff() {
 }
 
 emit_result() {
-  local mode="$1" loc="$2" prod_files="$3" total_files="$4" surfaces_text="$5" exception_class="$6" greenfield="$7"
+  local mode="$1" loc="$2" prod_files="$3" total_files="$4" surfaces_text="$5" exception_class="$6" greenfield="$7" exception_evidence="${8:-}"
 
   # FR-009: greenfield (all-new slice) scales ONLY the two reviewable_loc
   # thresholds ×1.5 (warn 400→600, block 800→1200). The production_files,
@@ -166,7 +273,7 @@ emit_result() {
     exception_honored=true
   fi
 
-  local warnings_json blockers_json surfaces_json class_json
+  local warnings_json blockers_json surfaces_json class_json exception_evidence_json
   warnings_json=$(printf '%s\n' "${warnings[@]:-}" | sed '/^$/d' | json_array)
   blockers_json=$(printf '%s\n' "${blockers[@]:-}" | sed '/^$/d' | json_array)
   surfaces_json=$(printf '%s\n' "$surfaces_text" | sed '/^$/d' | sort -u | json_array)
@@ -174,6 +281,11 @@ emit_result() {
     class_json=$(printf '%s' "$exception_class" | jq -R .)
   else
     class_json=null
+  fi
+  if [ -n "$exception_evidence" ]; then
+    exception_evidence_json="$exception_evidence"
+  else
+    exception_evidence_json='{"accepted":[],"rejected":[]}'
   fi
 
   jq -cn \
@@ -189,6 +301,7 @@ emit_result() {
     --argjson block_loc "$block_loc" \
     --argjson exception_honored "$exception_honored" \
     --argjson exception_class "$class_json" \
+    --argjson exceptions "$exception_evidence_json" \
     --argjson warnings "$warnings_json" \
     --argjson blockers "$blockers_json" \
     '{
@@ -207,6 +320,7 @@ emit_result() {
       },
       exception_honored: $exception_honored,
       exception_class: $exception_class,
+      exceptions: $exceptions,
       warnings: $warnings,
       blockers: $blockers
     }'
@@ -296,7 +410,7 @@ measure_diff() {
     exit 2
   fi
 
-  local files_text surfaces_text numstat loc prod total exception_class greenfield
+  local files_text surfaces_text numstat loc prod total exception_class greenfield exception_evidence
   files_text=$(git diff --name-only "$range" --)
   numstat=$(git diff --numstat "$range" --)
   loc=$(printf '%s\n' "$numstat" | reviewable_loc_from_numstat)
@@ -306,15 +420,15 @@ measure_diff() {
     if is_production_file "$file" && ! is_excluded_generated "$file"; then echo "$file"; fi
   done | wc -l | tr -d ' ')
   surfaces_text=$(printf '%s\n' "$files_text" | while read -r file; do [ -n "$file" ] && surface_for_path "$file"; done || true)
-  # FR-012: read the pragma ONLY from ADDED (`+`) lines of committed Markdown in
-  # the diff range — never the PR description or commit messages (both mutable).
-  # `grep -v '^+++'` drops the unified-diff header so a +++ b/<file> path that
-  # resembles the pragma cannot self-satisfy the matcher; `sed 's/^+//'` strips the
-  # leading `+`. A pragma on a context/removed line is not an added line → no flip.
-  exception_class=$(git diff "$range" -- '*.md' 2>/dev/null | grep '^+' | grep -v '^+++' | sed 's/^+//' | match_exception_pragma || true)
+  # FR-012/PRSG-010A: read typed exceptions only from ADDED Markdown lines in
+  # review-visible, non-generated contract provenance. Template/process/generated
+  # paths and Markdown code fences are recorded as rejected evidence and never
+  # flip a final diff block to exception.
+  exception_evidence=$(exception_evidence_from_diff "$range")
+  exception_class=$(printf '%s' "$exception_evidence" | jq -r '.accepted[0].class // empty')
   greenfield=$(greenfield_from_diff "$range")
 
-  emit_result "diff" "$loc" "$prod" "$total" "$surfaces_text" "$exception_class" "$greenfield"
+  emit_result "diff" "$loc" "$prod" "$total" "$surfaces_text" "$exception_class" "$greenfield" "$exception_evidence"
 }
 
 case "$MODE" in

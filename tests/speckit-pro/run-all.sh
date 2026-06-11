@@ -217,6 +217,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
     "$TESTS_DIR/layer4-scripts/test-reviewability-gate.sh"
+    "$TESTS_DIR/layer4-scripts/test-final-reviewability-backstop.sh"
     "$TESTS_DIR/layer4-scripts/test-estimate-reviewable-loc.sh"
     "$TESTS_DIR/layer4-scripts/test-ensure-reviewability-preset.sh"
     "$TESTS_DIR/layer4-scripts/test-estimate-spec-size.sh"

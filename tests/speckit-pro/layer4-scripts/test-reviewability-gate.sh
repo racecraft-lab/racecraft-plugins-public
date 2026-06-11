@@ -405,6 +405,24 @@ bypass_check "upcased key (REVIEWABILITY-EXCEPTION)" "REVIEWABILITY-EXCEPTION: r
 bypass_check "trailing content (refactor # ok)"      "Reviewability-Exception: refactor # ok"
 bypass_check "no space after colon"                  "Reviewability-Exception:refactor"
 
+template_repo="$FIXTURE_DIR/template-provenance-repo"
+template_base=$(make_slice_repo "$template_repo" 9 1 ".specify/templates/spec-template.md" "Reviewability-Exception: refactor")
+
+set_test "Bypass: pragma in generated/template provenance -> stays block"
+result=0
+output=$(cd "$template_repo" && "$SCRIPT" diff "$template_base"...HEAD) || result=$?
+assert_eq "1" "$result" "exit code"
+assert_json_field "$output" "exception_honored" "False"
+
+code_fence_repo="$FIXTURE_DIR/code-fence-provenance-repo"
+code_fence_base=$(make_slice_repo "$code_fence_repo" 9 1 "docs/gov.md" $'```text\nReviewability-Exception: refactor\n```')
+
+set_test "Bypass: pragma inside Markdown code fence -> stays block"
+result=0
+output=$(cd "$code_fence_repo" && "$SCRIPT" diff "$code_fence_base"...HEAD) || result=$?
+assert_eq "1" "$result" "exit code"
+assert_json_field "$output" "exception_honored" "False"
+
 # Pragma only in the (mutable) PR body / commit message — never read by the gate.
 # Modelled as the pragma in the COMMIT MESSAGE, with no pragma in any tracked file.
 prbody_repo="$FIXTURE_DIR/prbody-repo"
@@ -555,21 +573,20 @@ output=$("$SCRIPT" tasks "$legacy_feature") || result=$?
 assert_eq "1" "$result" "exit code"
 assert_json_field "$output" "status" "block"
 
-section "diff mode — fenced-code pragma known limitation (recorded, not asserted-away)"
+section "diff mode — fenced-code pragma rejection (PRSG-010A)"
 
-# The matcher is line-scoped, not Markdown-aware: a valid pragma inside a fenced
-# code block in a committed .md WOULD flip the block. This documents the residual
-# (PRSG-010 will section-scope the scan); it is asserted as the CURRENT behavior,
-# not as the desired end state.
+# PRSG-010A closes the old line-scoped limitation: a valid-looking pragma inside
+# a fenced code block in committed Markdown is generated/prose evidence and must
+# not flip the block.
 fenced_repo="$FIXTURE_DIR/fenced-repo"
 fenced_md=$(printf '```\nReviewability-Exception: refactor\n```')
 fenced_base=$(make_slice_repo "$fenced_repo" 9 1 "docs/gov.md" "$fenced_md")
 
-set_test "Known limitation: fenced-code pragma WOULD flip (line-scoped matcher)"
+set_test "Fenced-code pragma stays block"
 result=0
 output=$(cd "$fenced_repo" && "$SCRIPT" diff "$fenced_base"...HEAD) || result=$?
-assert_eq "0" "$result" "exit code (documented residual — PRSG-010)"
-assert_json_field "$output" "exception_honored" "True"
+assert_eq "1" "$result" "exit code"
+assert_json_field "$output" "exception_honored" "False"
 section "diff mode — .process/ exclusion under the production-only metric (FR-008/FR-010, reconciled with PR #111)"
 
 # PRSG-006 makes reviewable_loc PRODUCTION-only (FR-008), superseding PR #111's

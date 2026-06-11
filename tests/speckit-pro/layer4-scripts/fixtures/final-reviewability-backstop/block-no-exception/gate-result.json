@@ -1,0 +1,44 @@
+{
+  "mode": "diff",
+  "status": "block",
+  "pass": false,
+  "reviewable_loc": 940,
+  "production_files": 9,
+  "total_files": 31,
+  "primary_surface_count": 2,
+  "primary_surfaces": [
+    "API",
+    "UI"
+  ],
+  "greenfield": false,
+  "thresholds": {
+    "warn": {
+      "reviewable_loc": 400,
+      "production_files": 6,
+      "total_files": 15,
+      "primary_surfaces": 1
+    },
+    "block": {
+      "reviewable_loc": 800,
+      "production_files": 8,
+      "total_files": 25,
+      "primary_surfaces": 1
+    }
+  },
+  "exception_honored": false,
+  "exception_class": null,
+  "warnings": [
+    "reviewable LOC 940 exceeds warn threshold 400",
+    "production files 9 exceeds warn threshold 6",
+    "total files 31 exceeds warn threshold 15"
+  ],
+  "blockers": [
+    "reviewable LOC 940 exceeds block threshold 800",
+    "production files 9 exceeds block threshold 8",
+    "total files 31 exceeds block threshold 25"
+  ],
+  "exceptions": {
+    "accepted": [],
+    "rejected": []
+  }
+}

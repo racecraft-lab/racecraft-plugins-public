@@ -1,0 +1,50 @@
+{
+  "mode": "diff",
+  "status": "exception",
+  "pass": true,
+  "reviewable_loc": 940,
+  "production_files": 9,
+  "total_files": 31,
+  "primary_surface_count": 2,
+  "primary_surfaces": [
+    "API",
+    "UI"
+  ],
+  "greenfield": false,
+  "thresholds": {
+    "warn": {
+      "reviewable_loc": 400,
+      "production_files": 6,
+      "total_files": 15,
+      "primary_surfaces": 1
+    },
+    "block": {
+      "reviewable_loc": 800,
+      "production_files": 8,
+      "total_files": 25,
+      "primary_surfaces": 1
+    }
+  },
+  "exception_honored": true,
+  "exception_class": "refactor",
+  "warnings": [
+    "reviewable LOC 940 exceeds warn threshold 400"
+  ],
+  "blockers": [
+    "reviewable LOC 940 exceeds block threshold 800"
+  ],
+  "exceptions": {
+    "accepted": [
+      {
+        "path": "speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md",
+        "line": 1,
+        "class": "refactor",
+        "provenance": "template",
+        "branch_added": true,
+        "honored": true,
+        "reason": "template boilerplate must not be honored"
+      }
+    ],
+    "rejected": []
+  }
+}
