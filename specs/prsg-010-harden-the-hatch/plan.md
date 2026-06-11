@@ -18,7 +18,7 @@ contextual router probes, O5 manifest/status support, then docs/parity/polish.
 
 ## Technical Context
 
-**Language/Version**: Bash 3.2+ compatible shell scripts, Markdown skills, YAML
+**Language/Version**: Bash 4+ shell scripts, Markdown skills, YAML
 manifests, and JSON Schema 2020-12 contracts
 
 **Primary Dependencies**: `bash`, `jq`, `git`, `gh` at PR-emission boundaries,

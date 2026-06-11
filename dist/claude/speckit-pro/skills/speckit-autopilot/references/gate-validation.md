@@ -343,11 +343,13 @@ before G7 can pass.
 - Test failures: Fix failing tests or implementation bugs
 - Missing integration tests: Spawn implement-executor
 
-**After G7 passes:** Run full integration suite (Step 3.1),
-then run `reviewability-gate.sh diff origin/main...HEAD`. If the final diff
-exceeds the block threshold without a ratified split exception, split before
-opening/updating the PR. Otherwise generate the PR review packet with
-`generate-pr-body.sh`, push branch, and create PR via `gh pr create --body-file`.
+**After G7 passes:** Run full integration suite (Step 3.1), then run
+`final-reviewability-backstop.sh` as the mandatory last boundary before PR body
+generation, any `gh pr create` variant, or `multi-pr-emission.sh`. For example:
+`skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD`.
+Only `pass`, `warn`, or an honored typed-exception outcome may continue. An
+unexcepted block or gate error stops PR preparation and records the
+`final_reviewability_gate` state plus re-slicing packet when applicable.
 
 **Failure Escalation:** If verification suite fails after 2 fix attempts, STOP. Present the specific failures to human.
 

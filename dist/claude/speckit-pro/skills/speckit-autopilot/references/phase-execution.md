@@ -454,10 +454,10 @@ Then record the four surfaced fields (`route`, `releasable`,
 `signals`, `warnings`) into the workflow file's `## Atomicity Route`
 section via the orchestrator's own `Edit`. Route values:
 `split-PR` (proven additive multi-seam), `one-navigable-PR` (default /
-abstain, or modify-heavy), `single-atomic-PR` (a hard-atomic signature
-overrides any split), or `out-of-scope` (empty/missing `tasks.md`). A
-fifth value, `branch-by-abstraction`, is reserved in the contract but
-never emitted by the MVP.
+abstain, guarded cutover, or modify-heavy), `single-atomic-PR`
+(hard-atomic or release-held cutover), `branch-by-abstraction`
+(all affected consumers are in-tree and coexistence/migration/contract
+evidence is complete), or `out-of-scope` (empty/missing `tasks.md`).
 `releasable: false` carries a canonical "CI-green ≠ releasable"
 warning for a destructive-migration or concurrency-sensitive change.
 
