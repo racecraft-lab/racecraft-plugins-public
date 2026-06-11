@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T16:53:35Z",
-  "active_step": "Phase 4: Checklist - error-handling",
+  "updated_at": "2026-06-11T17:12:17Z",
+  "active_step": "Phase 4: Checklist - data-integrity",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -145,15 +145,17 @@
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "26 items; 6 gaps remediated; 0 [Gap] markers remaining. Tightened final gate state, re-slicing packet, exception state, PR creation stop, and weak probe fallback evidence."
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - data-integrity Consensus",
@@ -462,6 +464,30 @@
       "layer4": "1195/1195 passed",
       "default_verify": "2300/2300 passed",
       "diff_check": "clean"
+    }
+  },
+  "phase4_checklists": {
+    "error-handling": {
+      "status": "completed",
+      "items": 26,
+      "gaps_found": 6,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-010-harden-the-hatch/spec.md",
+        "specs/prsg-010-harden-the-hatch/plan.md",
+        "specs/prsg-010-harden-the-hatch/data-model.md",
+        "specs/prsg-010-harden-the-hatch/contracts/final-reviewability-gate-state.schema.json",
+        "specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json",
+        "specs/prsg-010-harden-the-hatch/checklists/error-handling.md"
+      ],
+      "validation": {
+        "markers": "0 [Gap] markers by grep fallback after count-markers.sh jq --argjson failure",
+        "contracts_jq": "passed",
+        "layer1": "915/915 passed",
+        "layer4": "1195/1195 passed",
+        "default_verify": "2300/2300 passed",
+        "consensus": "none unresolved"
+      }
     }
   }
 }

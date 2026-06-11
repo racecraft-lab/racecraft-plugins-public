@@ -74,49 +74,84 @@
         "type": "string",
         "enum": ["pr-body-generation", "single-pr-create", "multi-pr-emission"]
       },
-      "contains": { "const": "pr-body-generation" },
+      "minItems": 3,
+      "allOf": [
+        { "contains": { "const": "pr-body-generation" } },
+        { "contains": { "const": "single-pr-create" } },
+        { "contains": { "const": "multi-pr-emission" } }
+      ],
       "uniqueItems": true
     },
     "no_pr_assertions": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["pr_created", "pr", "pr_body_generated", "single_pr_create_invoked", "multi_pr_emission_invoked"],
+      "required": ["pr_created", "pr", "pr_body_generated", "single_pr_create_invoked", "gh_pr_create_invoked", "multi_pr_emission_invoked"],
       "properties": {
         "pr_created": { "const": false },
         "pr": { "type": "null" },
         "pr_body_generated": { "const": false },
         "single_pr_create_invoked": { "const": false },
+        "gh_pr_create_invoked": { "const": false },
         "multi_pr_emission_invoked": { "const": false }
       }
     },
     "sizing": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["summary"],
+      "required": ["source", "summary", "route", "thresholds"],
       "properties": {
-        "summary": { "type": "string", "minLength": 1 }
+        "source": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string", "minLength": 1 },
+        "route": {
+          "type": "string",
+          "enum": [
+            "split-PR",
+            "one-navigable-PR",
+            "single-atomic-PR",
+            "out-of-scope",
+            "branch-by-abstraction"
+          ]
+        },
+        "thresholds": { "type": "object", "additionalProperties": true }
       }
     },
     "layer_plan": {
       "type": "object",
       "additionalProperties": true,
-      "required": ["available"],
+      "required": ["available", "status", "path", "slice_count"],
       "properties": {
         "available": { "type": "boolean" },
-        "path": { "type": ["string", "null"] }
+        "status": {
+          "type": "string",
+          "enum": ["available", "missing", "invalid", "needs-regeneration"]
+        },
+        "path": { "type": ["string", "null"] },
+        "slice_count": { "type": "integer", "minimum": 0 }
       }
     },
     "handoff": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["tool", "command_template", "required_inputs"],
+      "required": [
+        "tool",
+        "command_template",
+        "required_inputs",
+        "layer_plan_path",
+        "state_path",
+        "full_verification_evidence_path",
+        "changed_files_path"
+      ],
       "properties": {
         "tool": { "const": "multi-pr-emission.sh" },
         "command_template": { "type": "string", "minLength": 1 },
         "required_inputs": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
-        }
+        },
+        "layer_plan_path": { "type": "string", "minLength": 1 },
+        "state_path": { "type": "string", "minLength": 1 },
+        "full_verification_evidence_path": { "type": "string", "minLength": 1 },
+        "changed_files_path": { "type": "string", "minLength": 1 }
       }
     },
     "suggested_slice_boundaries": {
@@ -140,11 +175,16 @@
     "resume": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["status", "next_action", "operator_message"],
+      "required": ["status", "next_action", "operator_message", "resume_from", "blocked_until"],
       "properties": {
         "status": { "const": "reslicing_required" },
         "next_action": { "type": "string", "minLength": 1 },
-        "operator_message": { "type": "string", "minLength": 1 }
+        "operator_message": { "type": "string", "minLength": 1 },
+        "resume_from": {
+          "type": "string",
+          "enum": ["prsg-007-routing", "prsg-008-layer-planning", "prsg-009-multi-pr-emission"]
+        },
+        "blocked_until": { "type": "string", "minLength": 1 }
       }
     }
   },

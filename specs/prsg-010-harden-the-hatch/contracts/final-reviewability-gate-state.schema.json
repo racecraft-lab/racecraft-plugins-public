@@ -77,6 +77,21 @@
       },
       "then": {
         "properties": {
+          "exception": {
+            "type": "object",
+            "properties": {
+              "honored": { "const": false },
+              "class": { "type": "null" }
+            }
+          },
+          "blocked_operations": {
+            "type": "array",
+            "allOf": [
+              { "contains": { "const": "pr-body-generation" } },
+              { "contains": { "const": "single-pr-create" } },
+              { "contains": { "const": "multi-pr-emission" } }
+            ]
+          },
           "pr_created": { "const": false },
           "pr": { "type": "null" },
           "reslicing_packet_path": { "type": "string" }
@@ -91,8 +106,42 @@
       },
       "then": {
         "properties": {
+          "exception": {
+            "type": "object",
+            "properties": {
+              "honored": { "const": false },
+              "class": { "type": "null" }
+            }
+          },
           "pr_created": { "const": false },
           "pr": { "type": "null" },
+          "reslicing_packet_path": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "exception" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "exception": {
+            "type": "object",
+            "required": ["honored", "class", "evidence"],
+            "properties": {
+              "honored": { "const": true },
+              "class": {
+                "type": "string",
+                "enum": ["refactor", "infra", "upgrade"]
+              },
+              "evidence": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/exceptionEvidence" }
+              }
+            }
+          },
           "reslicing_packet_path": { "type": "null" }
         }
       }
@@ -107,8 +156,8 @@
         "path": { "type": "string", "minLength": 1 },
         "line": { "type": "integer", "minimum": 1 },
         "class": {
-          "type": "string",
-          "enum": ["refactor", "infra", "upgrade"]
+          "type": ["string", "null"],
+          "enum": ["refactor", "infra", "upgrade", null]
         },
         "provenance": {
           "type": "string",

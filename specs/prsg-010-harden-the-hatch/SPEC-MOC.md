@@ -38,6 +38,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [contracts/o5-parent-manifest.schema.json](contracts/o5-parent-manifest.schema.json)
 - [contracts/reslicing-packet.schema.json](contracts/reslicing-packet.schema.json)
 - [contracts/routing-decision.schema.json](contracts/routing-decision.schema.json)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

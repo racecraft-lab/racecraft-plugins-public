@@ -347,7 +347,7 @@ Focus on PRSG-010 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | Pending | Pending | |
+| error-handling | 26 | 6 found, 6 remediated, 0 remaining | Final gate state, re-slicing packet, exception state, PR creation stop, weak probe fallback |
 | data-integrity | Pending | Pending | |
 | developer-experience | Pending | Pending | |
 | backward-compatibility | Pending | Pending | |

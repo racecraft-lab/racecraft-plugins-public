@@ -11,17 +11,21 @@ Fields:
 - `exception`: exception evaluation summary
 - `blocked_operations`: ordered list of operations that did not run
 - `timestamp`: UTC ISO-8601 timestamp
-- `pr_created`: always `false` on unexcepted block
-- `pr`: always `null` on unexcepted block
+- `pr_created`: always `false` on unexcepted block or gate error
+- `pr`: always `null` on unexcepted block or gate error
 - `reslicing_packet_path`: repo-relative path to the recovery packet, or `null`
   for pass/warn/exception/error states
 
 Validation rules:
 
 - `block` without honored exception must set `pr_created: false`, `pr: null`,
+  `exception.honored: false`, all skipped PR operations in `blocked_operations`,
   and a non-null `reslicing_packet_path`.
-- `error` must not create a re-slicing packet.
-- `pass`, `warn`, and `exception` may proceed to PR preparation.
+- `error` must set `pr_created: false`, `pr: null`, `exception.honored: false`,
+  and must not create a re-slicing packet.
+- `exception` must set `exception.honored: true`, record the accepted class and
+  line-anchored evidence, and may proceed to PR preparation.
+- `pass` and `warn` may proceed to PR preparation without exception evidence.
 
 State transitions:
 
@@ -63,9 +67,9 @@ Fields:
 - `gate`: raw gate status, reason, thresholds, and metrics
 - `exceptions`: accepted and rejected exception evidence arrays
 - `blocked_operations`: no-PR assertions and skipped operation names
-- `sizing`: PRSG-007 sizing summary
-- `layer_plan`: PRSG-008 layer-plan path or summary when available
-- `handoff`: PRSG-009 command template and required inputs
+- `sizing`: PRSG-007 routing and sizing source, route, thresholds, and summary
+- `layer_plan`: PRSG-008 layer-plan availability, status, path, and slice count
+- `handoff`: PRSG-009 command template and concrete required input paths
 - `suggested_slice_boundaries`: ordered slice suggestions
 - `resume`: human-readable and machine-readable next action fields
 
@@ -73,7 +77,11 @@ Validation rules:
 
 - `blocked_operations` must include PR body generation, single PR creation, and
   multi-PR emission when those operations were skipped.
-- `pr_created` assertion must remain false.
+- `no_pr_assertions` must keep `pr_created`, PR body generation, all
+  `gh pr create` variants, and multi-PR emission false.
+- `sizing`, `layer_plan`, and `handoff` must contain enough machine-readable
+  PRSG-007/008/009 context to resume at re-routing or layer-plan regeneration
+  without reconstructing prior workflow state from prose.
 - Packet must be valid JSON and stable enough for status/resume reads.
 
 ## O5 Parent Manifest
