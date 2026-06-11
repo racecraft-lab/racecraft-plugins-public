@@ -52,7 +52,7 @@ from the parent scaffold — each child is scaffolded independently.
 Before presenting O5 as ready, validate the manifest with:
 
 ```text
-speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>")
 ```
 
 If topology is invalid, report the JSON `problems[]` and keep the operator on
