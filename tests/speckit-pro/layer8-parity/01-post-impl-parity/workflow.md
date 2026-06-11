@@ -30,15 +30,28 @@ for parity comparison.
 (Empty — autopilot populates this section during the post-impl run.
 The parity diff compares this section across Path A and Path B runs.)
 
+## Layer Plan
+
+The fixture represents a PRSG-008 split-PR route with three ordered
+reviewable slices. Live parity runs must consume that layer plan as the
+only ordering and membership source before multi-PR emission.
+
+## Multi-PR Emission Evidence
+
+(Empty — autopilot populates this section during the post-impl run.
+Layer 8 compares row count, status, review order, branch bases, and the
+durable schemaVersion 2 PRS manifest across Path A and Path B runs.)
+
 ## Notes
 
 This file is the test input for `tests/layer8-parity/01-post-impl-parity/`.
 It is NOT a real spec — it's the smallest viable workflow that exercises
-the post-impl parallel group + serial tail.
+the post-impl parallel group + serial tail plus ordered multi-PR emission.
 
 The `--from-phase post` flag (or equivalent) skips phases 1-7. Both
 Path A (teams) and Path B (parallel subagents) dispatch the same 3
 tracks (Doctor / Code Review / Verify-chain) and apply the serial tail
 (15 Cleanup → 16 Reviewability → 17 PR Body → 18 PR Create → 19 Loop
-→ 20 Retrospective). Parity requires equivalent outputs across the
-two paths.
+→ 20 Retrospective). PR creation emits N ordered Style B slice PRs from
+the PRSG-008 layer plan, with no legacy flattened-PR fallback and no new
+slicing heuristics. Parity requires equivalent outputs across the two paths.

@@ -104,11 +104,11 @@ Load-bearing decisions:
 
 ### Success Criteria Summary
 
-- [ ] Given a layer plan with multiple slices, post-implementation creates ordered PRs for each slice instead of one flattened PR.
-- [ ] Given a successful PR creation, the spec MOC generated PR table records the slice, PR number, and SHA before continuing.
-- [ ] Given a slice scoped-test failure, emission stops before opening that slice PR and records failure evidence.
-- [ ] Given a squash merge of an earlier slice, operators can restack the remaining stack with `gh-stack` or the fallback helper.
-- [ ] Given Codex mirrored surfaces change, Layer 8 parity remains green.
+- [x] Given a layer plan with multiple slices, post-implementation creates ordered PRs for each slice instead of one flattened PR.
+- [x] Given a successful PR creation, the spec MOC generated PR table records the slice, PR number, and SHA before continuing.
+- [x] Given a slice scoped-test failure, emission stops before opening that slice PR and records failure evidence.
+- [x] Given a squash merge of an earlier slice, operators can restack the remaining stack with `gh-stack` or the fallback helper.
+- [x] Given Codex mirrored surfaces change, Layer 8 parity remains green.
 
 ---
 
@@ -499,28 +499,245 @@ For each task:
 - Record PR emission state in both the workflow and `autopilot-state.json`.
 ```
 
+### Foundation Entry Checkpoint
+
+| Field | Value |
+|-------|-------|
+| Reviewability scope | Foundation slice T001-T008 only: fixtures, RED Layer 4 tests, safe script entry points, and workflow evidence. |
+| Reviewability boundary | No real branch creation, pushing, PR creation, scoped verification execution, PRS persistence, or restack mutation in this slice. |
+| PRSG-010 boundary | No review-routing heuristics, atomicity backstops, or monster-epic routing changes are part of PRSG-009 Foundation. |
+| Test posture | RED tests are added before script entry-point implementation; GREEN code remains explicit stubs and JSON contracts. |
+
 ### Implementation Progress
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation | Pending | 0 | |
-| 2 - US1 Emit N PRs | Pending | 0 | |
-| 3 - US2 MOC + restack records | Pending | 0 | |
-| 4 - US3 Branch topology + CI mapping | Pending | 0 | |
-| 5 - Polish | Pending | 0 | |
+| 1 - Foundation | Complete | 8 | Added fixtures, RED Layer 4 coverage, safe non-mutating script entry points, PR body packet validation, and PRS v2 rendering. |
+| 2 - US1 Emit N PRs | Complete | 8 | Added RED/green Layer 4 coverage for PRSG-008 layer-plan consumption, Style B branch/base planning, explicit PR command capture, warning preservation, declared scope guarding, and full regression evidence in slice packets. |
+| 3 - US2 MOC + restack records | Complete | 11 | Added slice-packet PR body rendering, PRS schema v2 table coverage, fixture-backed PR reconciliation, durable state/PRS/MOC/workflow persistence, closed-PR blocking, create-failure blocking, and post-PR persistence failure recovery. |
+| 4 - US3 Branch topology + CI mapping | Complete | 9 | Added scoped verification mapping/no-op evidence/failure isolation plus dry-run-first restack planning, apply, exit-code, and optional gh-stack inspection coverage. |
+| 5 - Polish | Complete | 11 | Updated Claude/Codex post-implementation references, refreshed dist mirrors, expanded Layer 8 parity and Layer 3 eval descriptors, recorded developer-local/L7/scaffold audit notes, and completed deterministic verification. |
+
+### US1 Implementation Evidence
+
+RED focused fixture:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+test-multi-pr-emission: 13/36 passed (23 failed)
+```
+
+GREEN focused fixture:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+test-multi-pr-emission: 36/36 passed
+```
+
+Layer 4 regression:
+
+```text
+bash tests/speckit-pro/run-all.sh --layer 4
+speckit-pro test suite: 1086/1086 passed
+L4: 1086/1086
+```
+
+### US2 Implementation Evidence
+
+RED focused fixtures:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh
+test-generate-pr-body: 32/41 passed (9 failed)
+
+bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh
+test-generate-spec-index: 85/86 passed (1 failed)
+
+bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+test-multi-pr-emission: 41/61 passed (20 failed)
+```
+
+GREEN focused fixtures:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh
+test-generate-pr-body: 41/41 passed
+
+bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh
+test-generate-spec-index: 86/86 passed
+
+bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+test-multi-pr-emission: 61/61 passed
+```
+
+US2 PRS/MOC/state fixture evidence:
+
+```text
+test-multi-pr-emission.sh verifies fixture-backed opened PR rows persist to
+autopilot-state.json, schemaVersion 2 prs.json, regenerated SPEC-MOC.md PRS
+table, workflow "US2 emission evidence", and command capture with explicit
+gh pr create --base --head --body-file.
+It also verifies resume by expected head/base, closed-unmerged PR blocking,
+gh pr create failure blocking, and post-PR PRS persistence failure without
+advancing next_slice_id.
+```
+
+Layer 4 regression:
+
+```text
+bash tests/speckit-pro/run-all.sh --layer 4
+speckit-pro test suite: 1125/1125 passed
+L4: 1125/1125
+```
+
+### US3 Implementation Evidence
+
+RED focused fixtures:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+test-multi-pr-emission: 63/78 passed (15 failed)
+
+bash tests/speckit-pro/layer4-scripts/test-restack.sh
+test-restack: 12/30 passed (18 failed)
+```
+
+GREEN focused fixtures:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+test-multi-pr-emission: 78/78 passed
+
+bash tests/speckit-pro/layer4-scripts/test-restack.sh
+test-restack: 30/30 passed
+```
+
+US3 scoped verification/restack fixture evidence:
+
+```text
+test-multi-pr-emission.sh verifies PRSG-008 test commands map to SCRIPT_UNIT
+scoped evidence, no declared/applicable tests create required no_scoped_tests
+evidence under .process/emission/<slice_id>/, and later scoped failure leaves
+earlier PR/PRS rows intact while blocking next_slice_id before failed PR create.
+
+test-restack.sh verifies dry-run branch order, --apply with fake git/gh shims,
+dirty/conflict/git-gh exit-code parity, deterministic stderr, scope preservation,
+and optional non-mutating gh-stack status inspection.
+```
+
+Layer 4 regression:
+
+```text
+bash tests/speckit-pro/run-all.sh --layer 4
+speckit-pro test suite: 1163/1163 passed
+L4: 1163/1163
+```
+
+### Foundation Implementation Evidence
+
+| Check | Result |
+|-------|--------|
+| RED focused tests | Verified failures before implementation: `test-generate-pr-body.sh` 27/30, `test-generate-spec-index.sh` 79/83, `test-multi-pr-emission.sh` 0/15, `test-restack.sh` 0/9. |
+| GREEN focused tests | `test-generate-pr-body.sh` 30/30, `test-generate-spec-index.sh` 83/83, `test-multi-pr-emission.sh` 15/15, `test-restack.sh` 9/9. |
+| REFACTOR verification | Focused tests stayed green after shell-hygiene cleanup. |
+| Layer 4 suite | `bash tests/speckit-pro/run-all.sh --layer 4` -> 1065/1065 passed. |
+| Layer 1 structural | `bash tests/speckit-pro/run-all.sh --layer 1` -> 915/915 passed. |
+| Scope boundary | No `.github/workflows/pr-checks.yml`, branch creation, push, PR creation, scoped verification execution, PRS persistence, restack mutation, or PRSG-010 routing/backstop behavior added. |
+
+### Polish Implementation Evidence
+
+RED focused reference contract:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh
+test-post-implementation-reference: 1/21 passed (20 failed)
+```
+
+GREEN focused reference contract:
+
+```text
+bash tests/speckit-pro/layer4-scripts/test-post-implementation-reference.sh
+test-post-implementation-reference: 24/24 passed
+```
+
+Layer 8 parity dry-run:
+
+```text
+bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run
+Layer 8 (parity): 6 passed, 0 failed, 0 skipped
+```
+
+Layer 1 structural validation:
+
+```text
+bash tests/speckit-pro/run-all.sh --layer 1
+speckit-pro test suite: 915/915 passed
+L1: 485/485
+L1: 430/430
+```
+
+Layer 4 script-unit validation:
+
+```text
+bash tests/speckit-pro/run-all.sh --layer 4
+speckit-pro test suite: 1187/1187 passed
+L4: 1187/1187
+```
+
+Default verification:
+
+```text
+bash tests/speckit-pro/run-all.sh
+speckit-pro test suite: 2292/2292 passed
+L1: 485/485
+L1: 430/430
+L4: 1187/1187
+L5: 190/190
+```
+
+Layer 3 developer-local eval coverage:
+
+```text
+DEV-LOCAL - not run here
+Case IDs: Claude speckit-autopilot eval id 24; Codex speckit-autopilot eval id 31.
+Reason: live functional eval execution is developer-local and was not invoked in this deterministic executor; the task also forbids live costly LLM evals. Descriptor JSON was parsed with jq.
+```
+
+Layer 7 dispatch-graph evidence:
+
+```text
+Not applicable. Phase 5 changed references, generated dist mirrors, parity fixtures, eval descriptors, and workflow evidence only; it introduced no new agent or dispatch graph behavior.
+```
+
+PR review packet and CI boundary evidence:
+
+```text
+The post-implementation references now require per-slice PR bodies generated from slice packets, explicit gh pr create --base --head --body-file commands, full regression evidence by path, scoped verification evidence, durable schemaVersion 2 PRS rows, and restack/rollback notes.
+git diff --name-only -- .github/workflows/pr-checks.yml specs/prsg-010 specs/prsg-010-routing specs/prsg-010-backstop
+<no output>
+Confirmed no .github/workflows/pr-checks.yml changes and no PRSG-010 heuristic/backstop path changes.
+```
+
+Scaffold topology audit:
+
+```text
+speckit-scaffold-spec still creates or reuses one initial feature worktree branch during setup (`.worktrees/<number>-<short-name>` / `<number>-<short-name>`).
+Style B slice branches are emitted only in post-implementation by `multi-pr-emission.sh` from the PRSG-008 layer plan.
+No scaffold-time review-routing, slice branch emission, or PRSG-010 backstop behavior was added.
+```
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] Layer 4 tests pass for changed scripts.
-- [ ] Layer 8 parity passes for mirrored Codex/Claude surfaces.
-- [ ] Layer 1 structural checks pass.
-- [ ] Full relevant suite passes before PR creation.
-- [ ] Spec MOC generated PR table records successful slice PRs.
-- [ ] Failed slice behavior records evidence and stops before opening known-bad PRs.
-- [ ] Manual verification notes are recorded when GitHub PR creation/restack behavior is exercised.
+- [x] All tasks marked complete in `tasks.md`.
+- [x] Layer 4 tests pass for changed scripts.
+- [x] Layer 8 parity passes for mirrored Codex/Claude surfaces.
+- [x] Layer 1 structural checks pass.
+- [x] Full relevant suite passes before PR creation.
+- [x] Spec MOC generated PR table records successful slice PRs in fixture-backed PRSG-009 coverage.
+- [x] Failed slice behavior records evidence and stops before opening known-bad PRs.
+- [x] Manual verification notes recorded: live GitHub PR creation/restack was not exercised in this deterministic Phase 7 run; fixture-backed command capture and dry-run restack coverage passed.
 
 ---
 

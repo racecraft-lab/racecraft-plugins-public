@@ -310,22 +310,36 @@ test count, pass/fail, regressions found.
 
 ## 3.2 PR Creation
 
+For specs whose atomicity route is `split-PR`, PR creation is multi-PR
+emission. The PRSG-008 `plan-layers.sh` output is the authoritative source of
+review order and slice membership. The post-implementation phase MUST NOT infer, reroute, or re-slice
+work from changed files, reviewability warnings, or fallback heuristics.
+
+For non-split routes, keep the existing single-PR behavior. For split-PR routes,
+the previous all-changes PR path is forbidden, even when the layer plan has only
+one slice. A one-slice plan still goes through the same emission contract and
+opens one slice PR.
+
 ```text
-1. Run final verification (BOTH test suites):
+1. Run final verification once for the completed implementation:
    <BUILD> && <TYPECHECK> && <LINT> && <UNIT_TEST> && <INTEGRATION_TEST>
    (use PROJECT_COMMANDS discovered in Step 0)
 2. Detect remote: git remote -v
-3. Push: git push -u <remote> <branch>
-4. Run the pre-PR reviewability gate:
+3. Capture the full-suite evidence path under
+   specs/<feature>/.process/emission/.
+4. Read the persisted layer plan from autopilot-state.json or the workflow
+   evidence. It must be the exact PRSG-008 plan-layers.sh envelope with
+   status=ok.
+5. Run the pre-PR reviewability gate:
    `skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD`
    must pass or return a documented transition exception. If it blocks, stop
    and split the spec instead of creating the PR.
-5. Generate the PR review packet:
+6. Generate the base review packet:
    `skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<number>-<name> .git/speckit-pr-body.md origin/main...HEAD`
    The generator uses the host repository's pull request template when present
    and appends any missing review-packet sections. If no host template exists,
    it uses the plugin fallback template.
-5b. Verify the body is script-generated (non-blocking self-check):
+6b. Verify the body is script-generated (non-blocking self-check):
    confirm `.git/speckit-pr-body.md` contains the
    `speckit-pro-review-packet-source` marker comment AND a `## UAT Runbook`
    heading. If either is missing, the body was hand-written or is stale —
@@ -334,7 +348,7 @@ test count, pass/fail, regressions found.
    `.git/speckit-pr-body.md`. If the marker is still absent after the
    re-run, log a loud warning to the workflow log and proceed (fail-open
    — this never blocks PR creation).
-5c. **Fill the body in plain English — write for a non-expert public reader.**
+6c. **Fill the body in plain English — write for a non-expert public reader.**
    The generator emits the structure with placeholder comments. Edit
    `.git/speckit-pr-body.md` in place to replace the `<!-- ... -->` comments
    under **What changed**, **Why it matters**, and **Anything reviewers should
@@ -355,16 +369,53 @@ test count, pass/fail, regressions found.
      generator produced them.
    - Omit **Anything reviewers should know** entirely if there is nothing real
      to say. An empty section is worse than no section.
-6. Create PR:
-   gh pr create \
-     --title "feat(SPEC-XXX): <Spec Name>" \
-     --body-file .git/speckit-pr-body.md
-7. Update workflow file with PR URL
-8. Commit: "feat(SPEC-XXX): open PR for review"
+7. For split-PR routes, run multi-pr-emission.sh with the layer plan, durable
+   state path, feature branch, integration base, base SHA, full verification
+   evidence path, and optional changed-file scope evidence.
+8. For each planned slice, multi-pr-emission.sh creates the Style B branch
+   topology and PR packet:
+   - slice 1 base: <integration-base>
+   - slice N base: <previous-slice-branch>
+   - PR command shape:
+     gh pr create --base <base> --head <head> --body-file <body-file>
+9. Each slice must pass or record scoped verification before PR creation. A
+   failing required scoped command must stop before `gh pr create`, record the
+   failed command, exit status, evidence path, stderr/stdout tail, and keep
+   `next_slice_id` on the blocked slice.
+10. After each successful slice PR, persist reviewer and resume surfaces before
+    the next slice starts:
+    - specs/<feature>/.process/prs.json with `schemaVersion: 2`
+    - specs/<feature>/SPEC-MOC.md regenerated from that manifest
+    - docs/ai/specs/.process/autopilot-state.json top-level
+      `multi_pr_emission` object
+    - workflow evidence naming slice_id, order, branch/base, head SHA, PR URL
+      or number, scoped verification evidence, PRS path, MOC regeneration
+      evidence, and resulting next_slice_id
+11. On resume, reconcile expected local/remote branches and GitHub PRs by
+    expected head/base before creating anything. Existing matching PRs are
+    authoritative for PR existence; malformed JSON or duplicate slice keys
+    block instead of guessing.
+12. A later slice failure must not rewind, invalidate, or mark earlier opened
+    slice PRs as blocked.
 ```
 
 If `gh` is not installed, push the branch and tell the user
-to create the PR manually.
+to create the missing slice PRs manually using the same explicit base/head/body
+shape.
+
+**Scoped CI boundary:** PRSG-009 scoped CI is recorded reviewer evidence in slice
+packets, PR bodies, `.process/prs.json`, workflow evidence, and
+`autopilot-state.json`. It MUST NOT modify `.github/workflows/pr-checks.yml`;
+the existing PR Checks workflow remains unchanged.
+
+**Restack after lower squash merges:** Use `gh-stack` only when it is installed
+and safe non-mutating inspection confirms an existing active stack. Otherwise
+use `skills/speckit-autopilot/scripts/restack.sh`, which is dry-run by default
+and requires `--apply` for mutation. Restack preserves each remaining slice's
+declared file scope, retargets the first remaining open slice to the integration
+base, retargets each later slice to the immediately preceding remaining slice
+branch, records recovery evidence on failure, and requires a fresh
+DEFAULT_VERIFY before final merge evidence is considered current.
 
 ## 3.3 Copilot Review Remediation Loop
 

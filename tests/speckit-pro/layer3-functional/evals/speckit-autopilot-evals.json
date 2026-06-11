@@ -292,6 +292,27 @@
         "Suppresses suggestions for specs/team-123-legacy with reason non_speckit_namespace and specs/2026-06-legacy with reason date_named_legacy_namespace",
         "States that /speckit-pro:speckit-autopilot must not invoke relocate-process-artifacts.sh --dry-run or --apply"
       ]
+    },
+    {
+      "id": 24,
+      "prompt": "A completed feature has a PRSG-008 split-PR layer plan fixture with three increments in order: foundation, us1, and us2. The implementation and full default verification already passed. Walk through what /speckit-pro:speckit-autopilot must do during post-implementation PR creation for PRSG-009 multi-PR emission. Include branch/base topology, scoped verification, durable PRS rows, resume behavior, failed-slice blocking, restack, and the routing boundary.",
+      "expected_output": "Explains that post-implementation consumes the PRSG-008 layer plan as the only slice source, runs multi-pr-emission.sh after full verification, emits three ordered Style B slice PRs with explicit gh pr create --base/--head/--body-file arguments, records schemaVersion 2 PRS rows and autopilot-state.json multi_pr_emission state after each slice, blocks before opening a failed slice PR, preserves earlier opened PRs on later failure, supports dry-run-first restack.sh after lower squash merges, and explicitly rejects any legacy flattened-PR fallback or new PRSG-009 slicing heuristics.",
+      "expectations": [
+        "States that PRSG-008 plan-layers.sh output is the authoritative ordering and membership source",
+        "States that PRSG-009 does not infer, reroute, or re-slice work and does not add PRSG-010 routing/backstop heuristics",
+        "Runs multi-pr-emission.sh only after implementation and full default verification have passed",
+        "Emits N ordered PRs from the fixture increments rather than one flattened all-changes PR",
+        "Describes Style B topology: first slice targets the integration base and each later slice targets the immediately preceding slice branch",
+        "Uses explicit gh pr create --base, --head, and --body-file arguments for every slice PR",
+        "Runs or records scoped verification per slice and carries the pre-emission full regression evidence by path instead of rerunning the full suite for every slice",
+        "Writes schemaVersion 2 .process/prs.json rows and regenerates the Spec MOC PR table after each successful PR before attempting the next slice",
+        "Persists top-level multi_pr_emission resume state in autopilot-state.json, including next_slice_id and slice statuses",
+        "On resume, reconciles expected branches and GitHub PRs by expected head/base before creating anything new",
+        "Stops before gh pr create when scoped verification fails for a slice and keeps next_slice_id on the blocked slice",
+        "States that a later failed slice does not rewind or invalidate earlier opened slice PRs",
+        "Describes restack.sh as dry-run by default, --apply for mutation, preserving declared slice scope after lower squash merges",
+        "States that PRSG-009 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
+      ]
     }
   ]
 }

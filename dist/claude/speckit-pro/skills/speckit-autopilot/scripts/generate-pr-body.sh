@@ -2,23 +2,89 @@
 # generate-pr-body.sh — Build a review-packet PR body from host templates.
 #
 # Usage:
-#   generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]
+#   generate-pr-body.sh [--slice-packet <json-file>] <repo-root> <feature-dir> <output-file> [diff-range]
 
 set -euo pipefail
 
-REPO_ROOT="${1:-}"
-FEATURE_DIR="${2:-}"
-OUTPUT_FILE="${3:-}"
-DIFF_RANGE="${4:-origin/main...HEAD}"
+usage() {
+  printf 'Usage: generate-pr-body.sh [--slice-packet <json-file>] <repo-root> <feature-dir> <output-file> [diff-range]\n' >&2
+}
 
-if [ -z "$REPO_ROOT" ] || [ -z "$FEATURE_DIR" ] || [ -z "$OUTPUT_FILE" ]; then
-  printf 'Usage: generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]\n' >&2
+invalid_slice_packet() {
+  printf 'generate-pr-body.sh: invalid slice packet: %s\n' "$1" >&2
   exit 2
-fi
+}
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PLUGIN_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 FALLBACK_TEMPLATE="$PLUGIN_ROOT/skills/speckit-autopilot/templates/pr-description-template.md"
+
+SLICE_PACKET=""
+ARGS=()
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --slice-packet)
+      if [ "$#" -lt 2 ] || [ -z "${2:-}" ]; then
+        invalid_slice_packet "missing path"
+      fi
+      SLICE_PACKET="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      while [ "$#" -gt 0 ]; do
+        ARGS+=("$1")
+        shift
+      done
+      ;;
+    --*)
+      usage
+      exit 2
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+REPO_ROOT="${ARGS[0]:-}"
+FEATURE_DIR="${ARGS[1]:-}"
+OUTPUT_FILE="${ARGS[2]:-}"
+DIFF_RANGE="${ARGS[3]:-origin/main...HEAD}"
+
+if [ -z "$REPO_ROOT" ] || [ -z "$FEATURE_DIR" ] || [ -z "$OUTPUT_FILE" ] || [ "${#ARGS[@]}" -gt 4 ]; then
+  usage
+  exit 2
+fi
+
+if [ -n "$SLICE_PACKET" ]; then
+  if [ ! -f "$SLICE_PACKET" ]; then
+    invalid_slice_packet "file not found: $SLICE_PACKET"
+  fi
+  if ! jq -e '
+    type == "object"
+    and (.slice_id | type == "string" and length > 0)
+    and (.review_order | type == "number" and . == floor and . >= 1)
+    and (.total_slices | type == "number" and . == floor and . >= 1)
+    and (.base_branch | type == "string" and length > 0)
+    and (.head_branch | type == "string" and length > 0)
+    and (.declared_files | type == "array" and all(.[]; type == "string" and length > 0))
+    and ((.declared_tests // []) | type == "array" and all(.[]; type == "string" and length > 0))
+    and (.scoped_verification | type == "object")
+    and (.scoped_verification.commands | type == "array")
+    and (.full_verification_evidence | type == "string" and length > 0)
+    and (.prs_row | type == "object")
+    and (.prs_row.slice_id | type == "string" and length > 0)
+    and (.prs_row.branch | type == "string" and length > 0)
+    and (.prs_row.base_branch | type == "string" and length > 0)
+    and (.prs_row.status | type == "string" and length > 0)
+    and (.prs_row.head_sha | type == "string" and length > 0)
+  ' "$SLICE_PACKET" >/dev/null 2>&1; then
+    invalid_slice_packet "schema validation failed: $SLICE_PACKET"
+  fi
+fi
 
 detect_host_template() {
   local root="$1"
@@ -137,6 +203,72 @@ append_missing_section() {
 for heading in "What changed" "Why it matters" "Anything reviewers should know"; do
   append_missing_section "$heading"
 done
+
+append_slice_packet_sections() {
+  local packet="$1"
+  {
+    printf '\n## Slice summary\n\n'
+    jq -r '
+      "- Slice: `" + .slice_id + "`",
+      "- PR row status: `" + .prs_row.status + "`",
+      "- Head branch: `" + .head_branch + "`",
+      "- Base branch: `" + .base_branch + "`"
+    ' "$packet"
+
+    printf '\n## Review order\n\n'
+    jq -r '"\(.review_order) of \(.total_slices)"' "$packet"
+
+    printf '\n## Scope\n\n'
+    jq -r '
+      if (.declared_files | length) == 0 then
+        "- No declared files recorded."
+      else
+        .declared_files[] | "- `" + . + "`"
+      end
+    ' "$packet"
+
+    printf '\n## Verification\n\n'
+    jq -r '
+      if (.scoped_verification.commands | length) == 0 then
+        "- No scoped verification commands recorded for this slice."
+      else
+        .scoped_verification.commands[]
+        | "- `" + .command + "` (" + .gate_type + ", exit " + (.exit_status | tostring) + ") — " + .evidence_path
+      end
+    ' "$packet"
+
+    printf '\n## Traceability\n\n'
+    jq -r '
+      if ((.traceability // []) | length) == 0 then
+        "- No traceability rows recorded."
+      else
+        (.traceability // [])[]
+        | "- " + .requirement
+          + ": files " + ((.files // []) | join(", "))
+          + "; evidence " + ((.evidence // []) | join(", "))
+      end
+    ' "$packet"
+
+    printf '\n## Restack or rollback\n\n'
+    jq -r '.restack_note // "Use the recorded branch/base order for restack or rollback."' "$packet"
+
+    printf '\n## Known gaps\n\n'
+    jq -r '
+      if ((.known_gaps // []) | length) == 0 then
+        "- None recorded."
+      else
+        (.known_gaps // [])[] | "- " + .
+      end
+    ' "$packet"
+
+    printf '\n## Full regression evidence\n\n'
+    jq -r '"- `" + .full_verification_evidence + "`"' "$packet"
+  } >> "$OUTPUT_FILE"
+}
+
+if [ -n "$SLICE_PACKET" ]; then
+  append_slice_packet_sections "$SLICE_PACKET"
+fi
 
 # Reviewer checklist & scope details — appended unconditionally as a collapsed
 # <details> block so governance numbers stay out of the reader's way (a reviewer

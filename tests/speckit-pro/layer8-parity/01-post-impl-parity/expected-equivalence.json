@@ -51,6 +51,39 @@
       "tolerance_key": "pr_body"
     },
     {
+      "field": "prs_manifest",
+      "source": "specs/parity-01-post-impl/.process/prs.json",
+      "tolerance_key": "prs_manifest"
+    },
+    {
+      "field": "workflow.multi_pr_emission.row_count",
+      "source": "workflow.md",
+      "section_selector": "## Multi-PR Emission Evidence",
+      "extractor": "table_row_count",
+      "tolerance_key": "workflow.multi_pr_emission.row_count"
+    },
+    {
+      "field": "workflow.multi_pr_emission.statuses",
+      "source": "workflow.md",
+      "section_selector": "## Multi-PR Emission Evidence",
+      "extractor": "table_column:Status",
+      "tolerance_key": "workflow.multi_pr_emission.statuses"
+    },
+    {
+      "field": "workflow.multi_pr_emission.review_order",
+      "source": "workflow.md",
+      "section_selector": "## Multi-PR Emission Evidence",
+      "extractor": "table_column:Order",
+      "tolerance_key": "workflow.multi_pr_emission.review_order"
+    },
+    {
+      "field": "workflow.multi_pr_emission.branch_bases",
+      "source": "workflow.md",
+      "section_selector": "## Multi-PR Emission Evidence",
+      "extractor": "table_column:Base",
+      "tolerance_key": "workflow.multi_pr_emission.branch_bases"
+    },
+    {
       "field": "consensus_resolution_log.row_count",
       "source": "workflow.md",
       "section_selector": "## Consensus Resolution Log",

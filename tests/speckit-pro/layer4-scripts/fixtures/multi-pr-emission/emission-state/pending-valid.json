@@ -1,0 +1,25 @@
+{
+  "multi_pr_emission": {
+    "schema_version": 1,
+    "status": "pending",
+    "source_layer_plan": {
+      "path": "tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/layer-plans/valid-three-slice.json"
+    },
+    "base_branch": "main",
+    "base_sha": "0123456789abcdef",
+    "next_slice_id": "foundation",
+    "reconciled_at": "",
+    "slices": [
+      {
+        "slice_id": "foundation",
+        "review_order": 1,
+        "expected_branch": "prsg-009-multi-pr-emission/01-foundation",
+        "expected_base_branch": "main",
+        "head_sha": null,
+        "declared_files": ["speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"],
+        "declared_scoped_tests": ["bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"],
+        "status": "pending"
+      }
+    ]
+  }
+}

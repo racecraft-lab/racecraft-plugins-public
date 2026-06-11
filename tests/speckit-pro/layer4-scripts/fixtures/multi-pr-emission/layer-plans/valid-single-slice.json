@@ -1,0 +1,40 @@
+{
+  "tool": "plan-layers",
+  "contract_version": 1,
+  "status": "ok",
+  "feature_dir": "specs/prsg-009-multi-pr-emission",
+  "tasks_file": "specs/prsg-009-multi-pr-emission/tasks.md",
+  "increments": [
+    {
+      "id": "us1",
+      "name": "Emit ordered slice PRs",
+      "kind": "story",
+      "order": 1,
+      "depends_on": [],
+      "source": { "path": "specs/prsg-009-multi-pr-emission/tasks.md", "line": 53, "heading": "Phase 2: US1" },
+      "tasks": [],
+      "files": [
+        "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+      ],
+      "tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+      ],
+      "advisory_size": {
+        "task_count": 8,
+        "file_reference_count": 8,
+        "distinct_file_count": 2,
+        "test_reference_count": 2,
+        "distinct_test_count": 1
+      }
+    }
+  ],
+  "warnings": [],
+  "errors": [],
+  "summary": {
+    "increment_count": 1,
+    "task_count": 8,
+    "warning_count": 0,
+    "error_count": 0,
+    "message": "1 increment planned"
+  }
+}

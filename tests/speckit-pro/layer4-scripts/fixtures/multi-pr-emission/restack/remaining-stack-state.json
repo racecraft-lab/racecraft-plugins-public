@@ -1,0 +1,31 @@
+{
+  "multi_pr_emission": {
+    "schema_version": 1,
+    "status": "emitting",
+    "source_layer_plan": { "path": "tests/speckit-pro/layer4-scripts/fixtures/multi-pr-emission/layer-plans/valid-three-slice.json" },
+    "base_branch": "main",
+    "base_sha": "0123456789abcdef",
+    "next_slice_id": "us1",
+    "reconciled_at": "",
+    "slices": [
+      {
+        "slice_id": "foundation",
+        "review_order": 1,
+        "expected_branch": "prsg-009-multi-pr-emission/01-foundation",
+        "expected_base_branch": "main",
+        "declared_files": ["docs/foundation.md"],
+        "declared_scoped_tests": [],
+        "status": "merged"
+      },
+      {
+        "slice_id": "us1",
+        "review_order": 2,
+        "expected_branch": "prsg-009-multi-pr-emission/02-us1",
+        "expected_base_branch": "prsg-009-multi-pr-emission/01-foundation",
+        "declared_files": ["docs/us1.md"],
+        "declared_scoped_tests": [],
+        "status": "pr_opened"
+      }
+    ]
+  }
+}

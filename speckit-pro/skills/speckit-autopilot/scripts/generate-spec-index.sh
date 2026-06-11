@@ -267,6 +267,72 @@ render_prs() {
     return 1
   fi
 
+  local schema_version
+  if ! jq -e '
+    if has("schemaVersion") then
+      (.schemaVersion | type == "number" and . == floor)
+    else
+      true
+    end
+  ' "$manifest" >/dev/null 2>&1; then
+    printf 'generate-spec-index.sh: malformed PRS manifest (schemaVersion must be an integer): %s\n' "$manifest" >&2
+    return 1
+  fi
+  if ! schema_version="$(jq -r 'if has("schemaVersion") then .schemaVersion else 1 end' "$manifest" 2>/dev/null)"; then
+    printf 'generate-spec-index.sh: malformed PRS manifest (invalid schemaVersion): %s\n' "$manifest" >&2
+    return 1
+  fi
+
+  if [ "$schema_version" = "2" ]; then
+    local v2_rows
+    if ! v2_rows="$(
+      jq -r '
+        def req_string($name):
+          if ((.[$name] | type) == "string" and (.[$name] | length) > 0) then .[$name] else error($name) end;
+        def req_int($name):
+          if ((.[$name] | type) == "number" and .[$name] == (.[$name] | floor)) then .[$name] else error($name) end;
+        .records
+        | sort_by(.review_order, .slice_id)
+        | .[]
+        | . as $row
+        | (req_int("review_order") | tostring) as $order
+        | req_string("slice_id") as $slice
+        | (if (.pr_number == null) then "pending"
+           elif ((.pr_number | type) == "number" and .pr_number == (.pr_number | floor)) then "PR#" + (.pr_number | tostring)
+           else error("pr_number") end) as $pr
+        | req_string("status") as $status
+        | req_string("branch") as $branch
+        | req_string("base_branch") as $base
+        | (if (.status == "merged" and (.merged_sha | type) == "string" and (.merged_sha | length) > 0)
+           then .merged_sha
+           else req_string("head_sha")
+           end) as $sha
+        | (if (.declared_files | type) == "array" then (.declared_files | join(", ")) else error("declared_files") end) as $scope
+        | req_string("verification_evidence") as $verification
+        | [$order, $slice, $pr, $status, $branch, $base, $sha, $scope, $verification]
+        | @tsv
+      ' "$manifest" 2>/dev/null
+    )"; then
+      printf 'generate-spec-index.sh: malformed PRS manifest (schemaVersion 2 record missing/wrong-typed field): %s\n' "$manifest" >&2
+      return 1
+    fi
+
+    [ -n "$v2_rows" ] || return 0
+    printf '| Order | Slice | PR | Status | Branch | Base | SHA | Scope | Verification |\n'
+    printf '|---|---|---|---|---|---|---|---|---|\n'
+    while IFS=$'\t' read -r order slice pr status branch base sha scope verification; do
+      [ -n "$order" ] || continue
+      printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+        "$order" "$slice" "$pr" "$status" "$branch" "$base" "$sha" "$scope" "$verification"
+    done <<<"$v2_rows"
+    return 0
+  fi
+
+  if [ "$schema_version" != "1" ]; then
+    printf 'generate-spec-index.sh: malformed PRS manifest (unsupported schemaVersion "%s"): %s\n' "$schema_version" "$manifest" >&2
+    return 1
+  fi
+
   # Emit tab-separated "<slice>\t<pr>\t<merged_sha>" rows. Each record must satisfy
   # the schema (prs-manifest.schema.md): slice string, pr INTEGER, merged_sha string.
   # A missing field OR a wrong type (e.g. "pr":"abc" or "pr":117.5) is the malformed

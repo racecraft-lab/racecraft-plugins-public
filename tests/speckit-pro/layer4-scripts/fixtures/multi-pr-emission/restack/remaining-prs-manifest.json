@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 2,
+  "records": [
+    {
+      "review_order": 1,
+      "slice_id": "foundation",
+      "branch": "prsg-009-multi-pr-emission/01-foundation",
+      "base_branch": "main",
+      "pr_number": 201,
+      "pr_url": "https://github.com/racecraft-lab/Paddock/pull/201",
+      "declared_files": ["docs/foundation.md"],
+      "verification_evidence": "specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log",
+      "status": "merged",
+      "head_sha": "headabc1",
+      "merged_sha": "mergeabc1"
+    },
+    {
+      "review_order": 2,
+      "slice_id": "us1",
+      "branch": "prsg-009-multi-pr-emission/02-us1",
+      "base_branch": "prsg-009-multi-pr-emission/01-foundation",
+      "pr_number": 202,
+      "pr_url": "https://github.com/racecraft-lab/Paddock/pull/202",
+      "declared_files": ["docs/us1.md"],
+      "verification_evidence": "specs/prsg-009-multi-pr-emission/.process/emission/us1/layer4.log",
+      "status": "opened",
+      "head_sha": "headabc2",
+      "merged_sha": null
+    }
+  ]
+}

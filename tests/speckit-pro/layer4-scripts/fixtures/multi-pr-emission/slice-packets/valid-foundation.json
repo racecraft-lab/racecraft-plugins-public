@@ -1,0 +1,53 @@
+{
+  "slice_id": "foundation",
+  "review_order": 1,
+  "total_slices": 3,
+  "base_branch": "main",
+  "head_branch": "prsg-009-multi-pr-emission/01-foundation",
+  "declared_files": [
+    "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+    "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+  ],
+  "declared_tests": [
+    "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+  ],
+  "scoped_verification": {
+    "commands": [
+      {
+        "command": "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "gate_type": "layer4",
+        "reason": "Foundation emission contract",
+        "required": true,
+        "evidence_path": "specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log",
+        "exit_status": 0,
+        "started_at": "2026-06-10T00:00:00Z",
+        "finished_at": "2026-06-10T00:00:01Z"
+      }
+    ]
+  },
+  "full_verification_evidence": "specs/prsg-009-multi-pr-emission/.process/emission/default-verify.log",
+  "traceability": [
+    {
+      "requirement": "FR-001a",
+      "files": ["speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"],
+      "evidence": ["specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log"]
+    }
+  ],
+  "known_gaps": [],
+  "warnings": [],
+  "restack_note": "No restack action is required for the first slice.",
+  "prs_row": {
+    "review_order": 1,
+    "slice_id": "foundation",
+    "layer": "foundation",
+    "branch": "prsg-009-multi-pr-emission/01-foundation",
+    "base_branch": "main",
+    "pr_number": 201,
+    "pr_url": "https://github.com/racecraft-lab/Paddock/pull/201",
+    "declared_files": ["speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"],
+    "verification_evidence": "specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log",
+    "status": "opened",
+    "head_sha": "headabc1",
+    "merged_sha": null
+  }
+}

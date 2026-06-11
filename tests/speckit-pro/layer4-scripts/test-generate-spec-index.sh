@@ -72,6 +72,9 @@ PRSMAL_ROOT="$FIX/prs-malformed";    PRSMAL_MOC="specs/prsg-908-prs-malformed/SP
 # the renderer must fail safe (exit 2), distinct from absent/empty (FR-016, D3).
 PRSBADSTR_ROOT="$FIX/prs-bad-pr-string";  PRSBADSTR_MOC="specs/prsg-916-prs-bad-string/SPEC-MOC.md"
 PRSBADFLT_ROOT="$FIX/prs-bad-pr-float";   PRSBADFLT_MOC="specs/prsg-917-prs-bad-float/SPEC-MOC.md"
+MPE_FIX="$HERE/fixtures/multi-pr-emission"
+PRSV1_ROOT="$MPE_FIX/prs-manifests/schema-v1-root"; PRSV1_MOC="specs/prsg-920-prs-v1/SPEC-MOC.md"
+PRSV2_ROOT="$MPE_FIX/prs-manifests/schema-v2-root"; PRSV2_MOC="specs/prsg-921-prs-v2/SPEC-MOC.md"
 # Symlinked-MOC fixture: a version-marked spec dir whose SPEC-MOC.md is built as a
 # symlink (to moc-target.md) at runtime. The generator must reject the non-regular
 # target (exit 2) and NOT replace the symlink (FR-016).
@@ -296,6 +299,49 @@ if [ "${#idx_117}" -lt "${#idx_142}" ]; then _pass; else _fail "PRS ordering: pr
 set_test "the PRS zone is link-free (no []() introduced by a record)"
 prs_zone_g="${moc_g_pop#*GENERATED:PRS:START}"; prs_zone_g="${prs_zone_g%%GENERATED:PRS:END*}"
 assert_not_contains "$prs_zone_g" "](" "PRS rows are plain text, never []() links (D3)"
+
+copy_g_v1="$(fresh_copy "$PRSV1_ROOT")"
+set_test "schemaVersion 1 prs.json remains backward-compatible"
+rc_gv1=0; "$GEN" "$copy_g_v1" >/dev/null 2>&1 || rc_gv1=$?
+assert_eq "0" "$rc_gv1" "schemaVersion 1 manifest must render"
+moc_g_v1="$(cat "$copy_g_v1/$PRSV1_MOC" 2>/dev/null || true)"
+set_test "schemaVersion 1 row keeps legacy plain-text format"
+assert_contains "$moc_g_v1" "PRSG-920 ${PRS_SEP} PR#220 ${PRS_SEP} v1abcde" "legacy v1 row"
+
+copy_g_v2="$(fresh_copy "$PRSV2_ROOT")"
+set_test "schemaVersion 2 prs.json renders successfully"
+rc_gv2=0; "$GEN" "$copy_g_v2" >/dev/null 2>&1 || rc_gv2=$?
+assert_eq "0" "$rc_gv2" "schemaVersion 2 manifest must render"
+moc_g_v2="$(cat "$copy_g_v2/$PRSV2_MOC" 2>/dev/null || true)"
+set_test "schemaVersion 2 emits the reviewer table columns"
+assert_contains "$moc_g_v2" "| Order | Slice | PR | Status | Branch | Base | SHA | Scope | Verification |"
+set_test "schemaVersion 2 open row displays head_sha"
+assert_contains "$moc_g_v2" "| 1 | foundation | PR#201 | opened | prsg-009-multi-pr-emission/01-foundation | main | headabc1 | docs/foundation.md, speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh | specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log |"
+set_test "schemaVersion 2 merged row prefers merged_sha"
+assert_contains "$moc_g_v2" "| 2 | us1 | PR#202 | merged | prsg-009-multi-pr-emission/02-us1 | prsg-009-multi-pr-emission/01-foundation | mergeabc2 | docs/us1.md | specs/prsg-009-multi-pr-emission/.process/emission/us1/layer4.log |"
+set_test "schemaVersion 2 PRS zone remains link-free"
+prs_zone_gv2="${moc_g_v2#*GENERATED:PRS:START}"; prs_zone_gv2="${prs_zone_gv2%%GENERATED:PRS:END*}"
+assert_not_contains "$prs_zone_gv2" "](" "v2 PRS rows are plain text/table cells, never markdown links"
+
+copy_g_v2str="$(fresh_copy "$PRSV2_ROOT")"
+tmp_v2str="$copy_g_v2str/specs/prsg-921-prs-v2/.process/prs.json.tmp"
+jq '.schemaVersion = "2"' "$copy_g_v2str/specs/prsg-921-prs-v2/.process/prs.json" > "$tmp_v2str"
+mv "$tmp_v2str" "$copy_g_v2str/specs/prsg-921-prs-v2/.process/prs.json"
+set_test "schemaVersion 2 manifests require numeric schemaVersion"
+rc_gv2str=0; "$GEN" "$copy_g_v2str" >/dev/null 2>&1 || rc_gv2str=$?
+assert_eq "2" "$rc_gv2str" "schemaVersion must be numeric 2, not string \"2\""
+
+copy_g_v2_open_merge="$(fresh_copy "$PRSV2_ROOT")"
+tmp_v2om="$copy_g_v2_open_merge/specs/prsg-921-prs-v2/.process/prs.json.tmp"
+jq '(.records[] | select(.slice_id == "foundation") | .merged_sha) = "openmerge-sha"' \
+  "$copy_g_v2_open_merge/specs/prsg-921-prs-v2/.process/prs.json" > "$tmp_v2om"
+mv "$tmp_v2om" "$copy_g_v2_open_merge/specs/prsg-921-prs-v2/.process/prs.json"
+set_test "schemaVersion 2 open rows ignore merged_sha and display head_sha"
+rc_gv2om=0; "$GEN" "$copy_g_v2_open_merge" >/dev/null 2>&1 || rc_gv2om=$?
+assert_eq "0" "$rc_gv2om" "open row with merged_sha should still render from head_sha"
+moc_g_v2om="$(cat "$copy_g_v2_open_merge/$PRSV2_MOC" 2>/dev/null || true)"
+set_test "schemaVersion 2 open row does not leak merged_sha"
+assert_not_contains "$moc_g_v2om" "openmerge-sha"
 
 # malformed: fail-safe exit 2, distinct from the absent/empty case above.
 copy_g_mal="$(fresh_copy "$PRSMAL_ROOT")"

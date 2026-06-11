@@ -98,6 +98,79 @@ assert_contains "$fallback_body" "<summary>Reviewer checklist"
 set_test "Fallback body includes review packet source marker"
 assert_contains "$fallback_body" "speckit-pro-review-packet-source"
 
+section "slice packet option validation"
+
+packet_fixture_root="$(cd "$(dirname "$0")/fixtures/multi-pr-emission/slice-packets" && pwd)"
+valid_packet="$packet_fixture_root/valid-foundation.json"
+invalid_packet="$packet_fixture_root/invalid-missing-slice-id.json"
+malformed_packet="$packet_fixture_root/malformed.json"
+missing_packet="$FIXTURE_DIR/missing-slice-packet.json"
+protected_file="$FIXTURE_DIR/protected-pr-body.md"
+printf 'keep existing body\n' > "$protected_file"
+
+set_test "Valid --slice-packet renders slice PR body sections"
+slice_body_file="$FIXTURE_DIR/pr-body-slice.md"
+result=0
+(cd "$repo" && "$SCRIPT" --slice-packet "$valid_packet" "$repo" "$feature" "$slice_body_file" HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+slice_body=$(cat "$slice_body_file")
+
+set_test "Slice packet body includes Slice summary"
+assert_contains "$slice_body" "## Slice summary"
+
+set_test "Slice packet body includes Review order"
+assert_contains "$slice_body" "## Review order"
+
+set_test "Slice packet body renders review order count"
+assert_contains "$slice_body" "1 of 3"
+
+set_test "Slice packet body includes Scope with declared files"
+assert_contains "$slice_body" "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+
+set_test "Slice packet body includes Verification with scoped evidence"
+assert_contains "$slice_body" "specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log"
+
+set_test "Slice packet body includes Traceability"
+assert_contains "$slice_body" "FR-001a"
+
+set_test "Slice packet body includes Restack or rollback"
+assert_contains "$slice_body" "## Restack or rollback"
+
+set_test "Slice packet body includes Known gaps"
+assert_contains "$slice_body" "## Known gaps"
+
+set_test "Slice packet body renders Full regression evidence"
+assert_contains "$slice_body" "specs/prsg-009-multi-pr-emission/.process/emission/default-verify.log"
+
+set_test "Invalid --slice-packet exits 2"
+packet_stderr="$FIXTURE_DIR/packet-invalid.stderr"
+result=0
+(cd "$repo" && "$SCRIPT" --slice-packet "$invalid_packet" "$repo" "$feature" "$protected_file" HEAD >/dev/null 2>"$packet_stderr") || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "Invalid --slice-packet emits deterministic stderr prefix"
+packet_error=$(cat "$packet_stderr")
+assert_contains "$packet_error" "generate-pr-body.sh: invalid slice packet:"
+
+set_test "Invalid --slice-packet leaves existing output unchanged"
+assert_eq "keep existing body" "$(cat "$protected_file")" "protected PR body"
+
+set_test "Malformed --slice-packet exits 2"
+malformed_stderr="$FIXTURE_DIR/packet-malformed.stderr"
+result=0
+(cd "$repo" && "$SCRIPT" --slice-packet "$malformed_packet" "$repo" "$feature" "$FIXTURE_DIR/malformed-output.md" HEAD >/dev/null 2>"$malformed_stderr") || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "Missing --slice-packet exits 2"
+missing_stderr="$FIXTURE_DIR/packet-missing.stderr"
+result=0
+(cd "$repo" && "$SCRIPT" --slice-packet "$missing_packet" "$repo" "$feature" "$FIXTURE_DIR/missing-output.md" HEAD >/dev/null 2>"$missing_stderr") || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "Missing --slice-packet leaves target absent"
+assert_file_not_exists "$FIXTURE_DIR/missing-output.md"
+
 section "host headings at alternate levels"
 
 cat > "$repo/.github/pull_request_template.md" <<'EOF'

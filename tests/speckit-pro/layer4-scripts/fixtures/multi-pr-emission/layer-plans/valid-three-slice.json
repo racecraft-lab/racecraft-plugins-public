@@ -1,0 +1,95 @@
+{
+  "tool": "plan-layers",
+  "contract_version": 1,
+  "status": "ok",
+  "feature_dir": "specs/prsg-009-multi-pr-emission",
+  "tasks_file": "specs/prsg-009-multi-pr-emission/tasks.md",
+  "increments": [
+    {
+      "id": "foundation",
+      "name": "Foundation",
+      "kind": "foundation",
+      "order": 0,
+      "depends_on": [],
+      "source": { "path": "specs/prsg-009-multi-pr-emission/tasks.md", "line": 34, "heading": "Phase 1: Foundation" },
+      "tasks": [],
+      "files": [
+        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+      ],
+      "tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+      ],
+      "advisory_size": {
+        "task_count": 8,
+        "file_reference_count": 8,
+        "distinct_file_count": 6,
+        "test_reference_count": 4,
+        "distinct_test_count": 4
+      }
+    },
+    {
+      "id": "us1",
+      "name": "Emit ordered slice PRs",
+      "kind": "story",
+      "order": 1,
+      "depends_on": ["foundation"],
+      "source": { "path": "specs/prsg-009-multi-pr-emission/tasks.md", "line": 53, "heading": "Phase 2: US1" },
+      "tasks": [],
+      "files": [
+        "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+      ],
+      "tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+      ],
+      "advisory_size": {
+        "task_count": 8,
+        "file_reference_count": 8,
+        "distinct_file_count": 2,
+        "test_reference_count": 2,
+        "distinct_test_count": 1
+      }
+    },
+    {
+      "id": "us2",
+      "name": "Persist PR table and resume evidence",
+      "kind": "story",
+      "order": 2,
+      "depends_on": ["us1"],
+      "source": { "path": "specs/prsg-009-multi-pr-emission/tasks.md", "line": 77, "heading": "Phase 3: US2" },
+      "tasks": [],
+      "files": [
+        "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+        "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh"
+      ],
+      "tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+        "bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
+      ],
+      "advisory_size": {
+        "task_count": 11,
+        "file_reference_count": 11,
+        "distinct_file_count": 4,
+        "test_reference_count": 3,
+        "distinct_test_count": 2
+      }
+    }
+  ],
+  "warnings": [
+    {
+      "code": "task_without_references",
+      "severity": "warning",
+      "message": "Foundation fixture keeps warnings without changing slice membership.",
+      "source": { "path": "specs/prsg-009-multi-pr-emission/tasks.md", "line": 36 },
+      "details": { "task_id": "T001", "increment_id": "foundation" }
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "increment_count": 3,
+    "task_count": 27,
+    "warning_count": 1,
+    "error_count": 0,
+    "message": "3 increments planned"
+  }
+}

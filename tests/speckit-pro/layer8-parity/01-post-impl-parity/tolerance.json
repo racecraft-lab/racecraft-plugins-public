@@ -34,6 +34,26 @@
       "tolerance": "byte-identical",
       "rationale": "PR body generation is deterministic post-implementation; bytes must match."
     },
+    "prs_manifest": {
+      "tolerance": "byte-identical",
+      "rationale": "The durable schemaVersion 2 PRS manifest is deterministic and must match across Claude and Codex paths."
+    },
+    "workflow.multi_pr_emission.row_count": {
+      "tolerance": "exact",
+      "rationale": "Both paths emit exactly one reviewer evidence row per planned PRSG-008 slice."
+    },
+    "workflow.multi_pr_emission.statuses": {
+      "tolerance": "exact",
+      "rationale": "Slice opened/blocked/merged/closed status must match across runtime paths for the same input."
+    },
+    "workflow.multi_pr_emission.review_order": {
+      "tolerance": "exact",
+      "rationale": "Both paths must preserve the PRSG-008 layer-plan order without adding slicing heuristics."
+    },
+    "workflow.multi_pr_emission.branch_bases": {
+      "tolerance": "exact",
+      "rationale": "Style B branch bases must match across paths: first slice targets the integration base and later slices target the previous slice branch."
+    },
     "consensus_resolution_log.row_count": {
       "tolerance": "tolerance-1",
       "rationale": "LLM non-determinism may produce ±1 row across runs due to consensus mode escape-hatch firing differently."

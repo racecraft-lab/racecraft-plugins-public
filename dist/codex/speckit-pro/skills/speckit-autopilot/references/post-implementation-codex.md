@@ -32,7 +32,7 @@ in order; do not collapse or defer.
 | 15 | Cleanup | cleanup ext | `$speckit-cleanup` |
 | 16 | Reviewability Diff Gate | (none) | `reviewability-gate.sh diff origin/main...HEAD` |
 | 17 | PR Body Generation | (none) | `generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
-| 18 | PR Creation | (none) | `git`, verified remote, `gh pr create --body-file` where available |
+| 18 | PR Creation | (none) | single-PR path for non-split routes; `multi-pr-emission.sh` for split-PR routes |
 | 19 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 20 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
 
@@ -113,7 +113,7 @@ background subagents as the fallback path. The 3-track structure
 
 ## PR Body Generation Workflow
 
-Before creating or updating a PR after G7, the parent session runs:
+Before creating or updating PRs after G7, the parent session runs:
 
 ```text
 skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD
@@ -154,6 +154,77 @@ edit of the generated body — everything below stays as generated. Style rules
   `speckit-pro-review-packet-source` marker** — leave both exactly as generated.
 - Omit **Anything reviewers should know** entirely if there is nothing real to
   say. An empty section is worse than no section.
+
+## Multi-PR Emission Workflow
+
+For specs whose atomicity route is `split-PR`, Post item 18 is multi-PR
+emission. The PRSG-008 `plan-layers.sh` output is the authoritative source of
+review order and slice membership. Codex MUST NOT infer, reroute, or re-slice
+work from changed files, reviewability warnings, or fallback heuristics.
+
+For non-split routes, keep the existing single-PR behavior. For split-PR routes,
+the previous all-changes PR path is forbidden, even when the layer plan has only
+one slice. A one-slice plan still goes through the same emission contract and
+opens one slice PR.
+
+Codex parent-session responsibilities:
+
+1. Keep every canonical `Post:` item in `update_plan` and
+   `autopilot-state.json` until it is completed or explicitly skipped.
+2. Run full verification once for the completed implementation and capture the
+   evidence path under `specs/<feature>/.process/emission/`.
+3. Read the persisted PRSG-008 layer plan from `autopilot-state.json` or the
+   workflow evidence. It must be the exact `plan-layers.sh` envelope with
+   `status=ok`.
+4. Run `skills/speckit-autopilot/scripts/multi-pr-emission.sh` with the layer
+   plan path, durable state path, feature branch, integration base, base SHA,
+   full verification evidence path, and optional changed-file scope evidence.
+5. Record each slice outcome in `update_plan`, `autopilot-state.json`, and the
+   workflow evidence before advancing the next Post item.
+
+For each planned slice, `multi-pr-emission.sh` creates the Style B branch
+topology and PR packet:
+
+```text
+slice 1 base: <integration-base>
+slice N base: <previous-slice-branch>
+gh pr create --base <base> --head <head> --body-file <body-file>
+```
+
+Each slice must pass or record scoped verification before PR creation. A failing
+required scoped command must stop before `gh pr create`, record the failed
+command, exit status, evidence path, stderr/stdout tail, and keep
+`next_slice_id` on the blocked slice. A later failed slice must not rewind,
+invalidate, or mark earlier opened slice PRs as blocked.
+
+After each successful slice PR, persist reviewer and resume surfaces before the
+next slice starts:
+
+- `specs/<feature>/.process/prs.json` with `schemaVersion: 2`
+- `specs/<feature>/SPEC-MOC.md` regenerated from that manifest
+- `docs/ai/specs/.process/autopilot-state.json` top-level
+  `multi_pr_emission` object
+- workflow evidence naming slice_id, order, branch/base, head SHA, PR URL or
+  number, scoped verification evidence, PRS path, MOC regeneration evidence,
+  and resulting `next_slice_id`
+
+On resume, reconcile expected local/remote branches and GitHub PRs by expected
+head/base before creating anything. Existing matching PRs are authoritative for
+PR existence; malformed JSON or duplicate slice keys block instead of guessing.
+
+**Scoped CI boundary:** PRSG-009 scoped CI is recorded reviewer evidence in slice
+packets, PR bodies, `.process/prs.json`, workflow evidence, and
+`autopilot-state.json`. It MUST NOT modify `.github/workflows/pr-checks.yml`;
+the existing PR Checks workflow remains unchanged.
+
+**Restack after lower squash merges:** Use `gh-stack` only when it is installed
+and safe non-mutating inspection confirms an existing active stack. Otherwise
+use `skills/speckit-autopilot/scripts/restack.sh`, which is dry-run by default
+and requires `--apply` for mutation. Restack preserves each remaining slice's
+declared file scope, retargets the first remaining open slice to the integration
+base, retargets each later slice to the immediately preceding remaining slice
+branch, records recovery evidence on failure, and requires a fresh
+DEFAULT_VERIFY before final merge evidence is considered current.
 
 ## Self-Review Before Finalizing
 

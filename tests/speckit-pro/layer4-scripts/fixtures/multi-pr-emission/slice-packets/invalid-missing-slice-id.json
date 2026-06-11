@@ -1,0 +1,22 @@
+{
+  "review_order": 1,
+  "total_slices": 3,
+  "base_branch": "main",
+  "head_branch": "prsg-009-multi-pr-emission/01-foundation",
+  "declared_files": ["speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"],
+  "scoped_verification": { "commands": [] },
+  "full_verification_evidence": "specs/prsg-009-multi-pr-emission/.process/emission/default-verify.log",
+  "prs_row": {
+    "review_order": 1,
+    "slice_id": "foundation",
+    "branch": "prsg-009-multi-pr-emission/01-foundation",
+    "base_branch": "main",
+    "pr_number": 201,
+    "pr_url": "https://github.com/racecraft-lab/Paddock/pull/201",
+    "declared_files": ["speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"],
+    "verification_evidence": "specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log",
+    "status": "opened",
+    "head_sha": "headabc1",
+    "merged_sha": null
+  }
+}

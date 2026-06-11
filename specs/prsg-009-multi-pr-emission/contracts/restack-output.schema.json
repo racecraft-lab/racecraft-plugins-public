@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "PRSG-009 restack output",
   "type": "object",
-  "required": ["dry_run", "status", "exit_code", "base", "remote", "operations"],
+  "required": ["dry_run", "status", "exit_code", "base", "remote", "scope_preserved", "gh_stack", "recovery_evidence", "operations"],
   "properties": {
     "dry_run": { "type": "boolean" },
     "status": {
@@ -13,6 +13,30 @@
     "base": { "type": "string", "minLength": 1 },
     "remote": { "type": "string", "minLength": 1 },
     "start_after": { "type": ["string", "null"] },
+    "scope_preserved": { "type": "boolean" },
+    "gh_stack": {
+      "type": "object",
+      "required": ["available", "inspected", "mutating"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "inspected": { "type": "boolean" },
+        "mutating": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "recovery_evidence": {
+      "type": ["object", "null"],
+      "properties": {
+        "retry_policy": { "type": "string" },
+        "failed_operation": {
+          "type": ["object", "null"]
+        },
+        "evidence_path": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": false
+    },
     "operations": {
       "type": "array",
       "items": {
@@ -25,7 +49,12 @@
           "new_base": { "type": "string", "minLength": 1 },
           "action": { "type": "string", "enum": ["rebase", "retarget", "skip"] },
           "applied": { "type": "boolean" },
-          "result": { "type": "string", "minLength": 1 }
+          "result": { "type": "string", "minLength": 1 },
+          "pr_number": { "type": ["integer", "null"], "minimum": 1 },
+          "declared_files": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 }
+          }
         },
         "additionalProperties": false
       }
