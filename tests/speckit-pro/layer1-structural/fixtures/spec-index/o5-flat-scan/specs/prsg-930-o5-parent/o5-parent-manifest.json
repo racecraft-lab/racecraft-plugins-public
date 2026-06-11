@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "kind": "o5_parent_manifest",
+  "parent": {
+    "id": "PRSG-930",
+    "branch": "prsg-930-o5-parent",
+    "path": "specs/prsg-930-o5-parent",
+    "title": "O5 flat scan parent"
+  },
+  "children": [
+    {
+      "id": "PRSG-930A",
+      "branch": "prsg-930a-child",
+      "path": "specs/prsg-930a-child",
+      "title": "Flat child",
+      "dependsOn": []
+    }
+  ],
+  "sharedDesignConcept": "docs/ai/specs/.process/PRSG-930-design-concept.md",
+  "sharedRetrospective": null,
+  "declaredRollupStatus": "pending"
+}

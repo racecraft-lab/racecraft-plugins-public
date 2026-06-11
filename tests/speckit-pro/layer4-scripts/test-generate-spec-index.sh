@@ -58,6 +58,7 @@ FIX="$HERE/../layer1-structural/fixtures/spec-index"
 # Per-case REPO_ROOTs (the dir handed to the generator) and the nested map path
 # under specs/<branch>/SPEC-MOC.md the assertions read after a run.
 CUR_ROOT="$FIX/current-empty";       CUR_MOC="specs/prsg-900-current/SPEC-MOC.md"
+O5SCAN_ROOT="$FIX/o5-flat-scan"
 STALE_ROOT="$FIX/stale-fill";        STALE_MOC="specs/prsg-901-stale/SPEC-MOC.md"
 INJECT_ROOT="$FIX/inject-missing-all"; INJECT_MOC="specs/prsg-902-inject/SPEC-MOC.md"
 TPL_ROOT="$FIX/template-born";       TPL_MOC="specs/prsg-902-template/SPEC-MOC.md"
@@ -162,6 +163,9 @@ section "(a) 3-way exit enum — current(0) / stale(1) / error(2), stale != erro
 # regenerates to all-empty -> zero diff -> --check exit 0.
 set_test "--check on a current map -> exit 0"
 run_gen out_cur 0 --check "$CUR_ROOT"
+
+set_test "--check on O5 flat parent/child maps ignores nested child dirs"
+run_gen out_o5 0 --check "$O5SCAN_ROOT"
 
 # stale: an in-scope MOC with empty zones but stub artifacts + populated prs.json
 # regenerates to NON-empty BACKLINKS/PRS -> --check exit 1.

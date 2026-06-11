@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T19:15:14Z",
-  "active_step": "Phase 7: Implement - PRSG-010C O5 manifest/status",
+  "updated_at": "2026-06-11T19:28:15Z",
+  "active_step": "Phase 7: Implement - PRSG-010D docs/parity/polish",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -218,7 +218,7 @@
     {
       "step": "Phase 7: Implement - Split stack",
       "status": "in_progress",
-      "summary": "Foundation, PRSG-010A final hatch, and PRSG-010B contextual router probes are complete. Next implementation slice is PRSG-010C O5 manifest/status."
+      "summary": "Foundation, PRSG-010A final hatch, PRSG-010B contextual router probes, and PRSG-010C O5 manifest/status are complete. Next implementation slice is PRSG-010D docs/parity/polish."
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -674,7 +674,7 @@
       },
       {
         "slice": "PRSG-010C O5 manifest/status",
-        "status": "pending",
+        "status": "completed",
         "tasks": [
           "T033",
           "T034",
@@ -689,7 +689,39 @@
           "T043",
           "T044",
           "T045"
-        ]
+        ],
+        "summary": "Added O5 parent manifest production schema, topology validation and rollup script, valid/invalid/mixed-state fixtures, flat spec-index scan regression, and scaffold/status O5 fallback plus topology-first rollup guidance across Claude, Codex, and dist mirrors.",
+        "files_touched": {
+          "production": [
+            "speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
+            "speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json",
+            "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "speckit-pro/skills/speckit-status/SKILL.md",
+            "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
+            "speckit-pro/codex-skills/speckit-status/SKILL.md"
+          ],
+          "mirrors": [
+            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json",
+            "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "dist/claude/speckit-pro/skills/speckit-status/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json",
+            "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-status/SKILL.md"
+          ],
+          "tests": [
+            "tests/speckit-pro/layer4-scripts/test-o5-topology.sh",
+            "tests/speckit-pro/layer4-scripts/fixtures/o5-topology/",
+            "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh",
+            "tests/speckit-pro/layer1-structural/fixtures/spec-index/o5-flat-scan/",
+            "tests/speckit-pro/run-all.sh"
+          ]
+        },
+        "validation": {
+          "o5_topology": "bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh -> 25/25 passed",
+          "generate_spec_index": "bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh -> 87/87 passed"
+        }
       },
       {
         "slice": "PRSG-010D docs/parity/polish",

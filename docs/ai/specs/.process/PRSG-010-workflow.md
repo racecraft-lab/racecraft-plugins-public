@@ -491,7 +491,7 @@ Focus on:
 | Foundation | T001-T006 | Complete | Verified corrected split-stack order, reviewed PRSG-010 contracts, confirmed declared file operations, and preserved constitution obligations for script safety/KISS/test-before-merge. |
 | US1 hatch backstop | T007-T023 | Complete | Added final reviewability backstop script, production state/re-slicing schemas, typed-exception provenance checks, Claude/Codex guidance, dist mirrors, and Layer 4 fixtures. Validation: `test-final-reviewability-backstop.sh` 31/31, `test-reviewability-gate.sh` 92/92, Layer 4 1230/1230. |
 | US3 contextual probes | T024-T032 | Complete | Added guarded cutover, release-held cutover, weak evidence, consumer-locality, out-of-tree, and conflict fixtures; promoted production routing schema; implemented closed contextual signals/hints while preserving hard-atomic and releasability precedence. Validation: `test-atomicity-route.sh` 109/109, `test-plan-layers.sh` 66/66, `test-multi-pr-emission.sh` 81/81. |
-| US2 O5 scaffold/status | Pending | Pending | |
+| US2 O5 scaffold/status | T033-T045 | Complete | Added O5 topology script/schema, valid/invalid/mixed-state fixtures, flat scan regression, scaffold fallback guidance, and status topology/re-slicing guidance across Claude/Codex/dist. Validation: `test-o5-topology.sh` 25/25, `test-generate-spec-index.sh` 87/87. |
 | Polish | Pending | Pending | |
 
 ---

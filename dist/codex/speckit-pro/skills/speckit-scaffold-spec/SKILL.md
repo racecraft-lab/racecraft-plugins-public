@@ -29,6 +29,31 @@ the design-concept doc and workflow file land under `docs/ai/specs/.process/`, a
 the UAT runbook lands under the feature's own `specs/<NNN>/.process/`. Nothing is
 deleted — every relocated file still exists and is readable at its `.process/` path.
 
+## O5 monster-epic fallback
+
+Normal PRSG-007/008/009 routing, layer planning, and split-PR emission remain
+the default path for oversized work. Describe or scaffold O5 only when the
+roadmap/design-concept evidence says ordinary O4 split planning cannot produce
+reviewable, independently ordered slices.
+
+O5 v1 uses a review-visible CONTRACT parent manifest at
+`specs/<parent-branch>/o5-parent-manifest.json`. Child specs stay flat siblings
+under `specs/<child-branch>`; never create nested
+`specs/<parent>/<child>` directories. Child `SPEC-MOC.md` frontmatter keeps
+`up:` pointed at the roadmap. Add only curated body links to the parent
+manifest and shared design concept; add retrospective links only after the
+retrospective exists. Do not create child branches or worktrees automatically
+from the parent scaffold — each child is scaffolded independently.
+
+Before presenting O5 as ready, validate the manifest with:
+
+```text
+speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>
+```
+
+If topology is invalid, report the JSON `problems[]` and keep the operator on
+normal re-slicing until the manifest is fixed.
+
 ## Tier-2 Legacy PROCESS Relocation Suggestions
 
 Scaffold may encounter thawed legacy specs that predate the `.process/`

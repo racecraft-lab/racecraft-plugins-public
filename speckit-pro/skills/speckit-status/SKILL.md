@@ -185,6 +185,29 @@ including the exit-`2` error path. The dashboard never runs the generator in
 write mode and never regenerates the maps itself; reporting staleness here is
 purely advisory.
 
+#### O5 Parent Rollup And Re-Slicing Status
+
+When a spec directory contains `o5-parent-manifest.json`, validate topology
+before reporting child status:
+
+```text
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>")
+```
+
+This script is read-only and emits one JSON rollup. If `topologyStatus` is
+`invalid`, show `computedStatus: invalid_topology` plus the actionable
+`problems[]`; do not compute or invent a child rollup from invalid topology.
+If valid, show exactly one child row per manifest child, in manifest order, and
+surface `computedStatus`, `declaredRollupStatus`, and `declaredStatusDrift`.
+Treat `declaredRollupStatus` as drift-check metadata only, never as the source
+of truth.
+
+Also surface final-gate re-slicing state when present in workflow or
+`autopilot-state.json`: a blocked `final_reviewability_gate` means PR creation
+has not started and status should point to the recorded re-slicing packet,
+blocked operations, and next PRSG-007/008/009 resume action instead of marking
+implementation complete.
+
 ### 5. Recommend Next Spec
 
 After the dashboard tables, add a `## Recommended Next` section

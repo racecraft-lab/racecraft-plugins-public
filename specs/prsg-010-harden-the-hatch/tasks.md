@@ -114,25 +114,25 @@
 
 ### Tests for User Story 2
 
-- [ ] T033 [P] [US2] Add the valid flat-parent O5 fixture for FR-011 through FR-015 in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json`
-- [ ] T034 [P] [US2] Add invalid topology fixtures for missing child, duplicate child, nested child path, unknown dependency, later dependency, and cycle cases in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/invalid-topology/o5-parent-manifest.json`
-- [ ] T035 [P] [US2] Add mixed child state rollup fixture for blocked, failed, in-progress, pending, complete, archived, and missing-state rows in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/mixed-child-states/o5-parent-manifest.json`
-- [ ] T036 [US2] Write failing O5 topology and rollup assertions for FR-010 through FR-016 and SC-005 in `tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
-- [ ] T037 [P] [US2] Extend flat-spec scan regression coverage so ordinary `specs/*/SPEC-MOC.md` output stays stable in `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
+- [x] T033 [P] [US2] Add the valid flat-parent O5 fixture for FR-011 through FR-015 in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/valid-parent/o5-parent-manifest.json`
+- [x] T034 [P] [US2] Add invalid topology fixtures for missing child, duplicate child, nested child path, unknown dependency, later dependency, and cycle cases in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/invalid-topology/o5-parent-manifest.json`
+- [x] T035 [P] [US2] Add mixed child state rollup fixture for blocked, failed, in-progress, pending, complete, archived, and missing-state rows in `tests/speckit-pro/layer4-scripts/fixtures/o5-topology/mixed-child-states/o5-parent-manifest.json`
+- [x] T036 [US2] Write failing O5 topology and rollup assertions for FR-010 through FR-016 and SC-005 in `tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
+- [x] T037 [P] [US2] Extend flat-spec scan regression coverage so ordinary `specs/*/SPEC-MOC.md` output stays stable in `tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
 
 ### Implementation for User Story 2
 
-- [ ] T038 [P] [US2] Add the production O5 parent manifest schema for FR-011 through FR-014 in `speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json`
-- [ ] T039 [US2] Implement O5 parent/child topology validation and deterministic rollup in `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`
-- [ ] T040 [US2] Update Claude scaffold guidance so normal PRSG-007/008/009 split-PR remains default and O5 is fallback only in `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
-- [ ] T041 [US2] Mirror scaffold O5 fallback guidance in `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
-- [ ] T042 [US2] Update Claude status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/skills/speckit-status/SKILL.md`
-- [ ] T043 [US2] Mirror status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/codex-skills/speckit-status/SKILL.md`
+- [x] T038 [P] [US2] Add the production O5 parent manifest schema for FR-011 through FR-014 in `speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json`
+- [x] T039 [US2] Implement O5 parent/child topology validation and deterministic rollup in `speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh`
+- [x] T040 [US2] Update Claude scaffold guidance so normal PRSG-007/008/009 split-PR remains default and O5 is fallback only in `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`
+- [x] T041 [US2] Mirror scaffold O5 fallback guidance in `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
+- [x] T042 [US2] Update Claude status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/skills/speckit-status/SKILL.md`
+- [x] T043 [US2] Mirror status guidance for topology-first O5 rollup and final-gate re-slicing status in `speckit-pro/codex-skills/speckit-status/SKILL.md`
 
 ### Validation for User Story 2
 
-- [ ] T044 [US2] Run O5 topology tests with `bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
-- [ ] T045 [US2] Run flat spec index regression tests with `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
+- [x] T044 [US2] Run O5 topology tests with `bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh`
+- [x] T045 [US2] Run flat spec index regression tests with `bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh`
 
 **Checkpoint**: PRSG-010C is independently testable when O5 uses flat sibling specs, invalid topology is actionable, status emits one row per declared child, and ordinary flat spec indexing remains compatible.
 
