@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T19:40:12Z",
-  "active_step": "Post: Reviewability Diff Gate",
+  "updated_at": "2026-06-11T19:49:59Z",
+  "active_step": "Post: PR Body Generation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -227,7 +227,7 @@
     {
       "step": "Post: Verify Implementation",
       "status": "completed",
-      "summary": "Validated JSON contracts and parity fixture data, spec-index freshness, diff hygiene, Layer 8 dry-run 3/3, Layer 1 970/970, Layer 4 1283/1283, and default deterministic suite 2443/2443."
+      "summary": "After rebasing onto origin/main, validated JSON contracts and parity fixture data, spec-index freshness, diff hygiene, Layer 8 dry-run 3/3, Layer 1 978/978, Layer 4 1283/1283, and default deterministic suite 2451/2451."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
@@ -249,7 +249,8 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Cumulative diff gate returned status=exception and pass=true for origin/main...HEAD; total_files=111 remains above block threshold, but the branch includes an accepted refactor exception fixture and rejected generated/template/process provenance examples."
     },
     {
       "step": "Post: Self-Review",
@@ -762,11 +763,12 @@
         "validation": {
           "json": "jq empty autopilot-state, PRSG-010 contracts, production contracts, dist contracts, and PRSG-010 Layer 8 parity fixture JSON -> passed",
           "layer8": "bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-prsg-010-backstop-o5-routing -> 3/3 passed",
-          "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 970/970 passed",
+          "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed after rebase onto origin/main",
           "layer4": "bash tests/speckit-pro/run-all.sh --layer 4 -> 1283/1283 passed",
-          "default_verify": "bash tests/speckit-pro/run-all.sh -> 2443/2443 passed",
+          "default_verify": "bash tests/speckit-pro/run-all.sh -> 2451/2451 passed after rebase onto origin/main",
           "spec_index": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check . -> current",
-          "diff_check": "git diff --check -> passed"
+          "diff_check": "git diff --check origin/main...HEAD -> passed",
+          "reviewability_gate": "bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD -> status=exception pass=true total_files=111"
         }
       }
     ]

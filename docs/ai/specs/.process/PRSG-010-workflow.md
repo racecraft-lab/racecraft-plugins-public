@@ -492,7 +492,7 @@ Focus on:
 | US1 hatch backstop | T007-T023 | Complete | Added final reviewability backstop script, production state/re-slicing schemas, typed-exception provenance checks, Claude/Codex guidance, dist mirrors, and Layer 4 fixtures. Validation: `test-final-reviewability-backstop.sh` 31/31, `test-reviewability-gate.sh` 92/92, Layer 4 1230/1230. |
 | US3 contextual probes | T024-T032 | Complete | Added guarded cutover, release-held cutover, weak evidence, consumer-locality, out-of-tree, and conflict fixtures; promoted production routing schema; implemented closed contextual signals/hints while preserving hard-atomic and releasability precedence. Validation: `test-atomicity-route.sh` 109/109, `test-plan-layers.sh` 66/66, `test-multi-pr-emission.sh` 81/81. |
 | US2 O5 scaffold/status | T033-T045 | Complete | Added O5 topology script/schema, valid/invalid/mixed-state fixtures, flat scan regression, scaffold fallback guidance, and status topology/re-slicing guidance across Claude/Codex/dist. Validation: `test-o5-topology.sh` 25/25, `test-generate-spec-index.sh` 87/87. |
-| Polish | T046-T057 | Complete | Added PRSG-010 Layer 8 parity fixture, roadmap/template provenance guidance, structural script/contract/template assertions, and PR review packet confirmation. Validation: Layer 8 dry-run 3/3, Layer 1 970/970, Layer 4 1283/1283, default 2443/2443, spec-index current, diff check clean. |
+| Polish | T046-T057 | Complete | Added PRSG-010 Layer 8 parity fixture, roadmap/template provenance guidance, structural script/contract/template assertions, and PR review packet confirmation. Validation after rebase onto `origin/main`: Layer 8 dry-run 3/3, Layer 1 978/978, Layer 4 1283/1283, default 2451/2451, spec-index current, diff check clean. |
 
 ---
 
@@ -503,9 +503,9 @@ Focus on:
 - [x] `bash tests/speckit-pro/run-all.sh --layer 4` passes
 - [x] `bash tests/speckit-pro/run-all.sh` passes
 - [x] Layer 8 parity dry-run passes if mirrored skill prose changed
-- [ ] Final diff-gate behavior is exercised with an unexcepted block fixture
-- [ ] O5 parent/child status rollup is fixture-verified
-- [ ] Contextual probes are fixture-verified for high-confidence and weak-evidence cases
+- [x] Final diff-gate behavior is exercised with an unexcepted block fixture
+- [x] O5 parent/child status rollup is fixture-verified
+- [x] Contextual probes are fixture-verified for high-confidence and weak-evidence cases
 - [ ] PRSG-010 split-PR emission evidence is recorded
 
 ---
