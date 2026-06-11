@@ -1,18 +1,18 @@
 {
-  "workflow_file": "docs/ai/specs/.process/PRSG-009-workflow.md",
-  "updated_at": "2026-06-11T14:05:38Z",
-  "active_step": "Archive Hygiene Complete",
+  "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
+  "updated_at": "2026-06-11T15:45:13Z",
+  "active_step": "Phase 2: Clarify - Backstop and re-slicing packet",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
     "note": "Autopilot was invoked in the main Codex session. Installed SpecKit Pro subagents are available through the Codex runtime at gpt-5.5 with xhigh reasoning."
   },
   "preflight": {
-    "branch": "prsg-009-multi-pr-emission",
+    "branch": "prsg-010-harden-the-hatch",
     "is_worktree": true,
     "on_feature_branch": false,
-    "spec_directory": "specs/prsg-009-multi-pr-emission",
-    "workflow_branch": "prsg-009-multi-pr-emission",
+    "spec_directory": "specs/prsg-010-harden-the-hatch",
+    "workflow_branch": "prsg-010-harden-the-hatch",
     "confidence_gate_mode": "advisory",
     "project_commands": {
       "BUILD": "N/A",
@@ -44,8 +44,8 @@
       "cleanup": false
     },
     "constitution_validation": {
-      "status": "pending_phase_validation",
-      "note": "Baseline repo validation passed during scaffold; phase gates will enforce constitution checks as artifacts are created."
+      "status": "passed",
+      "note": "Baseline Layer 1 passed 915/915 and Layer 4 passed 1195/1195 before Phase 1."
     },
     "agent_availability": {
       "phase-executor": "user",
@@ -69,19 +69,12 @@
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "apply-cleanup",
-    "safeToApplyCleanup": true,
-    "excludedCurrentSpec": null,
-    "eligible_previous_specs": [
-      "specs/prsg-009-multi-pr-emission"
-    ],
-    "cleanup_applied": [
-      "specs/prsg-009-multi-pr-emission"
-    ],
-    "archive_report": ".specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md",
-    "merge_commit": "a3361d50e3dfc5463fb2d5dbb2737a3525637a32",
-    "pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/145",
-    "note": "PRSG-009 is merged and archived. Active spec cleanup removed the completed source folder after schema contracts were preserved under speckit-pro/skills/speckit-autopilot/contracts/."
+    "cleanup_mode": "dry-run-provenance-only",
+    "safeToApplyCleanup": false,
+    "excludedCurrentSpec": "specs/prsg-010-harden-the-hatch",
+    "eligible_previous_specs": [],
+    "cleanup_applied": [],
+    "note": "Startup sweep recorded archive extension state and excluded PRSG-010. Prior PRSG-007, PRSG-008, PRSG-009, and PRSG-011 cleanup is already recorded in project archive notes; no additional active specs cleanup was applied before Phase 1."
   },
   "plan": [
     {
@@ -90,7 +83,8 @@
     },
     {
       "step": "Phase 0: Prerequisites",
-      "status": "completed"
+      "status": "completed",
+      "summary": "Preflight passed; confidence gate mode advisory; baseline Layer 1 915/915 and Layer 4 1195/1195 passed."
     },
     {
       "step": "Phase 1: Specify",
@@ -100,160 +94,96 @@
       "summary": "Created spec.md with 20 FRs, 3 user stories, 9 acceptance scenarios, 6 success criteria, and 0 NEEDS CLARIFICATION markers."
     },
     {
-      "step": "Phase 2: Clarify - State and Resume Contract",
-      "status": "completed",
-      "summary": "Accepted top-level multi_pr_emission state, persistence order, resume reconciliation, failed-slice evidence, and PRS manifest v2 pending consensus."
+      "step": "Phase 2: Clarify - Backstop and re-slicing packet",
+      "status": "in_progress"
     },
     {
-      "step": "Phase 2: Clarify - State and Resume Contract Consensus",
-      "status": "completed",
-      "summary": "Round 1 codebase/spec consensus selected .process/prs.json schemaVersion 2 for bounded MOC PR rows while keeping v1 compatibility."
+      "step": "Phase 2: Clarify - Backstop and re-slicing packet Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Branch and PR Contract",
-      "status": "completed",
-      "summary": "Accepted slice branch naming, explicit base/head/body-file PR creation, optional slice packet input, and GitHub head/base reconciliation."
+      "step": "Phase 2: Clarify - O5 parent/child schema and status rollup",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Branch and PR Contract Consensus",
-      "status": "completed",
-      "summary": "Round 1 codebase/spec consensus selected schema v2 SHA display as merged_sha when available, otherwise head_sha."
+      "step": "Phase 2: Clarify - O5 parent/child schema and status rollup Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - CI and Restack Contract",
-      "status": "completed",
-      "summary": "Accepted scoped verification evidence without Actions changes, structured command metadata, optional gh-stack restack/sync, fallback restack.sh, and full-suite evidence placement."
+      "step": "Phase 2: Clarify - High-confidence contextual probes",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - CI and Restack Contract Consensus",
-      "status": "completed",
-      "summary": "Round 1 consensus selected scoped verification evidence over Actions changes and gh-stack only for safely detected restack/sync.",
-      "gate": "G2",
-      "gate_status": "passed"
+      "step": "Phase 2: Clarify - High-confidence contextual probes Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed",
-      "gate": "G3",
-      "gate_status": "passed",
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 0,
-        "declared_files": {
-          "production": 0,
-          "new": 2,
-          "modified": 4,
-          "total_entries": 6
-        },
-        "note": "Advisory estimate; current estimator does not count plugin shell paths as production LOC."
-      },
-      "summary": "Created plan, research, data model, quickstart, and 4 JSON contracts."
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - API/contracts",
-      "status": "completed",
-      "summary": "30 items; 6 gaps remediated; 0 [Gap] markers remaining. count-markers.sh failed with jq --argjson error, rg fallback found 0 markers."
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - API/contracts Consensus",
-      "status": "completed",
-      "summary": "Executor returned no unresolved consensus items."
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - State-management",
-      "status": "completed",
-      "summary": "24 items; 6 gaps remediated; 0 [Gap] markers remaining. count-markers.sh failed with jq --argjson error, rg fallback found 0 markers."
+      "step": "Phase 4: Checklist - data-integrity",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - State-management Consensus",
-      "status": "completed",
-      "summary": "Executor returned no unresolved consensus items."
+      "step": "Phase 4: Checklist - data-integrity Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Error-handling",
-      "status": "completed",
-      "summary": "24 items; 13 gaps remediated; 0 [Gap] markers remaining. count-markers.sh failed with jq --argjson error, rg fallback found 0 markers."
+      "step": "Phase 4: Checklist - developer-experience",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Error-handling Consensus",
-      "status": "completed",
-      "summary": "Executor returned no unresolved consensus items."
+      "step": "Phase 4: Checklist - developer-experience Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - CI/release-flow",
-      "status": "completed",
-      "summary": "29 items; 4 gaps remediated; 0 [Gap] markers remaining. Layer 1 structural validation passed in executor report."
+      "step": "Phase 4: Checklist - backward-compatibility",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - CI/release-flow Consensus",
-      "status": "completed",
-      "gate": "G4",
-      "gate_status": "passed",
-      "summary": "Executor returned no unresolved consensus items; G4 passed with 0 [Gap] markers."
+      "step": "Phase 4: Checklist - backward-compatibility Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed",
-      "gate": "G5",
-      "gate_status": "passed",
-      "summary": "Created tasks.md with 44 tasks across Foundation, US1, US2, US3, and Polish; tasks reviewability gate passed with honored infra exception; atomicity route one-navigable-PR; layer planner skipped."
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed",
-      "gate": "G6",
-      "gate_status": "passed",
-      "summary": "2 findings remediated (0C/1H/1M/0L): added Layer 3 e2e coverage tasks and scaffold-spec topology audit task; 0 CRITICAL/HIGH remain."
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "summary": "Executor reported no unresolved consensus items."
+      "status": "pending"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "summary": "Advisory mode; Analyze gate passed and implementation may proceed."
+      "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Foundation (T001-T008)",
-      "status": "completed",
-      "summary": "T001-T008 complete; focused foundation tests, Layer 4, and Layer 1 passed in executor evidence."
-    },
-    {
-      "step": "Phase 7: Implement - US1 emission stack (T009-T016)",
-      "status": "completed",
-      "summary": "T009-T016 complete; ordered Style B branch/base planning and explicit PR creation command capture verified."
-    },
-    {
-      "step": "Phase 7: Implement - US2 durable PR/resume state (T017-T027)",
-      "status": "completed",
-      "summary": "T017-T027 complete; slice packets, PRS v2 rows, persistence, and resume behavior verified."
-    },
-    {
-      "step": "Phase 7: Implement - US3 scoped CI/restack (T028-T036)",
-      "status": "completed",
-      "summary": "T028-T036 complete; scoped verification failure/no-op evidence and restack behavior verified."
-    },
-    {
-      "step": "Phase 7: Implement - Polish/parity/final verification (T037-T047)",
-      "status": "completed",
-      "summary": "T037-T047 complete; references, dist mirrors, Layer 8, Layer 3 descriptors, and final verification recorded."
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "completed",
-      "summary": "speckit-utils doctor PASS; 0 FAIL, 0 WARN."
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed",
-      "summary": "speckit-verify PASS."
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed",
-      "summary": "47/47 tasks verified; no flagged phantom completions."
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
@@ -261,8 +191,7 @@
     },
     {
       "step": "Post: Integration Suite",
-      "status": "completed",
-      "summary": "bash tests/speckit-pro/run-all.sh -> 2292/2292 passed."
+      "status": "pending"
     },
     {
       "step": "Post: Cleanup",
@@ -270,261 +199,49 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "completed",
-      "summary": "reviewability-gate diff origin/main...HEAD passed as honored infra exception; total_files=69, production_files=0."
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "completed",
-      "summary": "Self-review completed: tests executed, edge cases mapped, requirements traced, no TODO/DEFERRED/OUT-OF-SCOPE markers."
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "completed",
-      "summary": "UAT runbook generated at specs/prsg-009-multi-pr-emission/.process/uat-runbook.md and rewritten into executable fixture-backed steps."
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "completed",
-      "summary": "Generated .git/speckit-pr-body.md via the resolved worktree git-dir; required review-packet marker and UAT Runbook heading are present; top placeholder sections were replaced with plain-English summary text."
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "completed",
-      "summary": "Opened draft PR #145: https://github.com/racecraft-lab/racecraft-plugins-public/pull/145"
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed",
-      "summary": "No PR comments or reviews were present immediately after creation; no remediation changes required."
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed",
-      "summary": "Retrospective saved at specs/prsg-009-multi-pr-emission/retrospective.md; adherence 100%, critical findings 0."
-    },
-    {
-      "step": "Post: Archive Hygiene Cleanup",
-      "status": "completed",
-      "summary": "PRSG-009 archived in .specify/memory; contract schemas preserved in the autopilot skill payload; specs/prsg-009-multi-pr-emission removed from active specs after PR #145 merged."
+      "status": "pending"
     }
   ],
-  "consensus_resolution_log": [
-    {
-      "phase": "Clarify Session 1",
-      "item": "PRS manifest schema",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "Use .process/prs.json schemaVersion 2 for bounded reviewer-facing MOC rows; keep resume-only details in autopilot-state.json.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 2",
-      "item": "Open PR SHA display",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "Use head_sha for open schemaVersion 2 PRS rows and prefer merged_sha after merge; do not overload merged_sha with open PR heads.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 3",
-      "item": "Scoped CI semantics",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "Scoped CI means recorded scoped verification evidence; do not modify .github/workflows/pr-checks.yml in PRSG-009.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 3",
-      "item": "gh-stack usage",
-      "round": 1,
-      "routed_categories": [
-        "domain",
-        "codebase"
-      ],
-      "outcome": "Use gh-stack only when safely detected for restack/sync; explicit gh pr create remains the emission path.",
-      "analysts_used": [
-        "domain-researcher",
-        "codebase-analyst"
-      ]
-    }
-  ],
-  "phase5_tasks": {
-    "gate": "G5",
+  "phase1_specify": {
+    "gate": "G1",
     "gate_status": "passed",
-    "task_count": 44,
-    "phases": 5,
-    "parallel_opportunities": 8,
-    "user_stories_covered": "3/3",
-    "reviewability_gate": {
-      "status": "exception",
-      "pass": true,
-      "exception_honored": true,
-      "exception_class": "infra",
-      "reviewable_loc": 1760,
-      "total_files": 71,
-      "primary_surface_count": 6
-    },
-    "atomicity_route": {
-      "route": "one-navigable-PR",
-      "releasable": true,
-      "signals": [
-        "change-shape:modify-heavy"
-      ],
-      "hints": [],
-      "warnings": []
-    }
-  },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
-    ],
-    "hints": [],
-    "warnings": []
-  },
-  "layer_plan": {
-    "status": "skipped",
-    "reason": "Atomicity route was one-navigable-PR; PRSG-008 layer planner only runs for split-PR route."
-  },
-  "phase6_analyze": {
-    "gate": "G6",
-    "gate_status": "passed",
-    "findings": {
-      "critical": 0,
-      "high": 1,
-      "medium": 1,
-      "low": 0,
-      "total": 2
-    },
-    "remaining_critical_high": 0,
-    "summary": "Remediated Layer 3 roadmap coverage and scaffold-spec topology audit drift; no consensus unresolved.",
+    "spec_file": "specs/prsg-010-harden-the-hatch/spec.md",
+    "quality_checklist": "specs/prsg-010-harden-the-hatch/checklists/requirements.md",
+    "functional_requirements": 20,
+    "user_stories": 3,
+    "acceptance_scenarios": 9,
+    "success_criteria": 6,
+    "needs_clarification_markers": 0,
     "validation": {
-      "validate_gate_g6": "passed",
-      "marker_scan": "0 CRITICAL/HIGH markers",
-      "layer1_executor_report": "915/915 passed",
-      "diff_check": "clean"
-    }
-  },
-  "phase7_implement": {
-    "gate": "G7",
-    "gate_status": "passed",
-    "tasks_total": 47,
-    "tasks_done": 47,
-    "summary": "Implemented PRSG-009 multi-PR emission scripts, PR body slice packets, PRS v2 rendering, scoped verification evidence, dry-run-first restack, references, parity descriptors, and verification evidence.",
-    "validation": {
-      "validate_gate_g7": "passed",
-      "layer8_dry_run": "6/6 passed",
-      "default_verify": "2292/2292 passed",
-      "diff_check": "clean",
-      "github_workflows_changed": false
-    }
-  },
-  "post_implementation": {
-    "doctor": {
-      "status": "passed",
-      "summary": "speckit-utils doctor PASS; overall 0 FAIL, 0 WARN"
+      "validate_gate_g1": "passed",
+      "marker_scan": "0 NEEDS CLARIFICATION, 0 Gap, 0 CRITICAL in spec.md",
+      "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 915/915 passed",
+      "quality_checklist": "all items checked"
     },
-    "verify": {
-      "status": "passed",
-      "summary": "speckit-verify PASS"
-    },
-    "verify_tasks": {
-      "status": "passed",
-      "tasks_checked": 47,
-      "verified": 47,
-      "phantom_findings": 0,
-      "report": "specs/prsg-009-multi-pr-emission/verify-tasks-report.md"
-    },
-    "code_review": {
-      "status": "skipped",
-      "reason": "review extension not installed"
-    },
-    "integration_suite": {
-      "status": "passed",
-      "command": "bash tests/speckit-pro/run-all.sh",
-      "summary": "2292/2292 passed"
-    },
-    "cleanup": {
-      "status": "skipped",
-      "reason": "cleanup extension not installed"
-    },
-    "reviewability_diff_gate": {
-      "mode": "diff",
-      "status": "exception",
-      "pass": true,
-      "reviewable_loc": 0,
-      "production_files": 0,
-      "total_files": 69,
-      "primary_surface_count": 6,
-      "exception_honored": true,
-      "exception_class": "infra"
-    },
-    "self_review": {
-      "status": "completed",
-      "tests_executed": "bash tests/speckit-pro/run-all.sh -> 2292/2292 passed; Layer 8 dry-run -> 6/6 passed; no BUILD/TYPECHECK/LINT project commands exist for this shell-only repo.",
-      "edge_case_gaps": 0,
-      "requirements_orphans": 0,
-      "follow_up_markers": 0
-    },
-    "uat_runbook": {
-      "status": "completed",
-      "path": "specs/prsg-009-multi-pr-emission/.process/uat-runbook.md",
-      "summary": "Generated skeleton and rewrote into executable fixture-backed UAT steps; author check ran Layer 1 -> 915/915 passed."
-    },
-    "pr_body_generation": {
-      "status": "completed",
-      "path": ".git/speckit-pr-body.md (resolved through git rev-parse --git-dir for this worktree)",
-      "summary": "Generated PR body, verified the required speckit-pro-review-packet-source marker and UAT Runbook heading, and replaced only the top human summary placeholders."
-    },
-    "pr_creation": {
-      "status": "completed",
-      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/145",
-      "number": 145,
-      "is_draft": true,
-      "base": "main",
-      "head": "prsg-009-multi-pr-emission"
-    },
-    "review_remediation": {
-      "status": "completed",
-      "summary": "gh pr view reported no comments or reviews immediately after creation; no remediation was needed."
-    },
-    "retrospective": {
-      "status": "completed",
-      "path": "specs/prsg-009-multi-pr-emission/retrospective.md",
-      "completion_rate": 100,
-      "spec_adherence": 100,
-      "critical_findings": 0,
-      "minor_findings": 1,
-      "summary": "Retrospective extension prerequisite rejected the PRSG branch name pattern, so the report was generated manually from spec, plan, tasks, workflow, and verification evidence."
-    },
-    "archive_cleanup": {
-      "status": "completed",
-      "archive_report": ".specify/memory/archive-reports/2026-06-11-prsg-009-post-merge-hygiene.md",
-      "cleanup_command": "git rm -r specs/prsg-009-multi-pr-emission",
-      "schema_contract_path": "speckit-pro/skills/speckit-autopilot/contracts/",
-      "merge_commit": "a3361d50e3dfc5463fb2d5dbb2737a3525637a32",
-      "post_cleanup_verification": "bash tests/speckit-pro/run-all.sh -> 2300/2300 passed",
-      "pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/145"
-    }
+    "summary": "Phase 1 Specify generated the PRSG-010 feature spec and completed quality validation."
   }
 }

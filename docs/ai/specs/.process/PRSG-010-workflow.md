@@ -72,7 +72,8 @@ Verify against `.specify/memory/constitution.md` before G1:
 | Test Coverage Before Merge | New deterministic behavior has Layer 4 fixtures; mirrored skill prose has Layer 1/Codex parity and Layer 8 when required | `bash tests/speckit-pro/run-all.sh`, plus Layer 8 dry-run if mirrored skill prose changes |
 | KISS / YAGNI | No broad tree-shape rewrite for O5 v1; no speculative low-confidence routing | Plan and Analyze review |
 
-**Constitution Check:** Pending
+**Constitution Check:** Verified 2026-06-11. Baseline Layer 1 passed
+`915/915`; Layer 4 passed `1195/1195`.
 
 ---
 
@@ -152,14 +153,19 @@ fit the normal O4 split path.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 20 |
+| User Stories | 3 |
+| Acceptance Criteria | 9 |
+| Success Criteria | 6 |
+| `[NEEDS CLARIFICATION]` markers | 0 |
+| Quality checklist | Passed |
+| Validation evidence | G1 validator passed; Layer 1 passed `915/915` |
 
 ### Files Generated
 
-- [ ] `specs/prsg-010-harden-the-hatch/spec.md`
+- [x] `specs/prsg-010-harden-the-hatch/spec.md`
 - [x] `specs/prsg-010-harden-the-hatch/SPEC-MOC.md`
+- [x] `specs/prsg-010-harden-the-hatch/checklists/requirements.md`
 
 ---
 
