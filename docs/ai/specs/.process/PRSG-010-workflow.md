@@ -197,9 +197,22 @@ fit the normal O4 split path.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Backstop and re-slicing packet | Pending | Pending |
-| 2 | O5 parent/child schema and status rollup | Pending | Pending |
-| 3 | High-confidence contextual probes | Pending | Pending |
+| 1 | Backstop and re-slicing packet | 5 | Accepted gate outcome matrix, stop-before-any-emission rule, top-level `final_reviewability_gate` state, JSON re-slicing packet fields, and consensus-backed exception provenance rule. |
+| 2 | O5 parent/child schema and status rollup | 5 | Accepted `o5-parent-manifest.json` as CONTRACT data, `PRSG-010A`/`prsg-010a-*` child naming, curated child MOC body links, independent child scaffolds, and computed read-only status rollup. |
+| 3 | High-confidence contextual probes | 5 | Accepted high-confidence flag, release-cadence, and branch-by-abstraction thresholds; weak evidence stays hint-only; router schema remains flat and extends existing signal enums while closing `hints[]`. |
+
+### Clarify Session 1 Consensus
+
+| Item | Round | Routed Categories | Outcome | Analysts Used |
+|------|-------|-------------------|---------|---------------|
+| Operator-owned typed exception provenance | 1 | codebase, spec | A valid exception is an exact branch-added Markdown pragma in a committed, review-visible, non-generated CONTRACT artifact; `.process`, templates, generated zones/boilerplate, PR bodies, commit messages, code fences, and mutable/generated provenance are rejected and recorded in failed-gate evidence. | codebase-analyst, spec-context-analyst |
+| O5 parent manifest contract | 1 | codebase, spec | The parent manifest lives at `specs/<parent-branch>/o5-parent-manifest.json` as review-visible CONTRACT data with `schemaVersion: 1`, ordered children, shared links, nullable retrospective, and optional declared rollup status. | codebase-analyst, spec-context-analyst |
+| O5 flat child naming and order | 1 | codebase, spec | Child IDs use `PRSG-010A`-style suffixes with paths/branches like `specs/prsg-010a-<slug>`; `children[]` order is authoritative and `depends_on[]` can reference only earlier sibling IDs. | codebase-analyst, spec-context-analyst |
+| O5 shared MOC links | 1 | codebase, spec | Child `SPEC-MOC.md` keeps `up:` pointed at the roadmap and adds curated body links to parent manifest and shared design concept; retrospective links are added only after the target exists. | codebase-analyst, spec-context-analyst |
+| O5 status rollup | 1 | codebase, spec | `speckit-status` validates topology first, computes child states read-only in manifest order, applies precedence `invalid topology > blocked/failed > in_progress > pending > complete`, and reports drift against optional declared status. | codebase-analyst, spec-context-analyst |
+| High-confidence flag-system routing | 1 | codebase, spec, domain | Repo-local flag/evaluation evidence plus current guard/test tasks emits `context:flag-system:guarded-cutover` and routes non-hard-atomic guarded cutovers to `one-navigable-PR`, without overriding hard-atomic or proven additive split evidence. | codebase-analyst, spec-context-analyst, domain-researcher |
+| No-flag release-cadence routing | 1 | codebase, spec, domain | Proven no-flag release-held cutovers emit `context:release-cadence:release-held-cutover` and route `single-atomic-PR`; this does not automatically set `releasable:false`. | codebase-analyst, spec-context-analyst, domain-researcher |
+| Router schema vocabulary | 1 | codebase, spec, domain | Keep flat routing JSON, promote or add production `routing-decision.schema.json`, extend existing PRSG-007 signal enums, and close `hints[]` with stable tokens for weak/conflicting contextual evidence. | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 

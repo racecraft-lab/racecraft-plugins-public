@@ -75,26 +75,29 @@ Maintainers of the atomicity router need flag-system, release-cadence, and consu
 
 ### Functional Requirements
 
-- **FR-001**: Autopilot MUST run the final reviewability diff gate after implementation verification and before any action that creates or updates a pull request for the current feature.
-- **FR-002**: When the final diff gate returns a blocking result and no valid typed exception exists, autopilot MUST stop before PR creation.
-- **FR-003**: A valid exception MUST be limited to an explicit operator-owned `Reviewability-Exception: refactor`, `Reviewability-Exception: infra`, or `Reviewability-Exception: upgrade` entry.
-- **FR-004**: Generated roadmap, workflow, template, and PR-description content MUST NOT include live copy-pasteable exception boilerplate that can be mistaken for an operator-owned override.
-- **FR-005**: The unexcepted block path MUST record the gate result, gate reason, review surface metrics, exception status, blocked operation, and timestamp in the run state.
-- **FR-006**: The unexcepted block path MUST produce a re-slicing packet that names the feature, the failed gate evidence, the relevant PRSG-007 sizing result, PRSG-008 layer-planning route, PRSG-009 multi-PR handoff, suggested slice boundaries, and resume guidance.
-- **FR-007**: The blocked run state MUST make clear that no pull request URL, number, or head/base PR record was created for the blocked operation.
+- **FR-001**: Autopilot MUST run the final reviewability diff gate after implementation verification and before any action that generates a PR body, creates or updates a single pull request, or invokes multi-PR emission for the current feature.
+- **FR-002**: When the final diff gate returns `pass`, `warn`, or `exception`, autopilot MAY proceed to PR preparation; when it returns `block` or exit 1 without an honored exception, autopilot MUST stop before PR creation; when it exits 2 or cannot produce a valid result, autopilot MUST stop as a gate error without creating a re-slicing packet.
+- **FR-003**: A valid exception MUST be a branch-added, line-anchored, case-sensitive Markdown line matching `Reviewability-Exception: refactor`, `Reviewability-Exception: infra`, or `Reviewability-Exception: upgrade` in a committed, review-visible, non-generated CONTRACT artifact.
+- **FR-004**: Generated roadmap, workflow, template, and PR-description content MUST NOT include live copy-pasteable exception boilerplate that can be mistaken for an operator-owned override, and exception-like text from `.process/` EXHAUST artifacts, templates, generated zones, generated boilerplate, PR descriptions, commit messages, code fences, or other mutable/generated provenance MUST NOT be honored.
+- **FR-005**: The unexcepted block path MUST record a top-level `final_reviewability_gate` state object containing status, gate result, gate reason, review surface metrics, exception status, blocked operations, timestamp, `pr_created: false`, `pr: null`, and the re-slicing packet path.
+- **FR-006**: The unexcepted block path MUST produce a JSON re-slicing packet containing schema version, feature and branch metadata, diff metadata, raw gate metrics, blockers and thresholds, accepted and rejected exception evidence with path/line/provenance/reason, no-PR assertions, PRSG-007 sizing summary, PRSG-008 layer-plan summary or path, PRSG-009 handoff command template, suggested slice boundaries, and resume guidance.
+- **FR-007**: The blocked run state MUST make clear that no pull request URL, number, head/base PR record, PR body generation, single `gh pr create`, or `multi-pr-emission.sh` invocation was created for the blocked operation.
 - **FR-008**: Status surfaces MUST show the final gate block as an actionable re-slicing state rather than as an advisory warning.
 - **FR-009**: When a valid typed exception is honored, the run state and review packet MUST record the exception class, provenance, and gate result that required the exception.
 - **FR-010**: Scaffold/status flows MUST support an O5 parent manifest reserved for monster epics that cannot fit the normal O4 split path.
-- **FR-011**: The O5 parent manifest MUST capture parent identifier, title, child spec identifiers, flat child paths, dependency order, shared design concept link, shared retrospective link, and current rollup status.
-- **FR-012**: O5 child specs MUST remain flat siblings under `specs/` and MUST link back to their O5 parent manifest.
+- **FR-011**: The O5 parent manifest MUST live at `specs/<parent-branch>/o5-parent-manifest.json` as review-visible CONTRACT data with `schemaVersion: 1`, `kind: "o5_parent_manifest"`, parent identifier, parent path, title, ordered child entries, shared design concept link, nullable shared retrospective link, and optional declared rollup status.
+- **FR-012**: O5 child specs MUST remain flat siblings under `specs/`, use child identifiers such as `PRSG-010A` with paths like `specs/prsg-010a-<slug>`, and link back to their parent manifest from curated `SPEC-MOC.md` body links while keeping `up:` pointed at the roadmap.
 - **FR-013**: O5 v1 MUST NOT require or introduce nested `specs/<parent>/<child>` scanning.
-- **FR-014**: O5 validation MUST detect missing child specs, duplicate child identifiers, unsupported nested child paths, and circular dependency order.
-- **FR-015**: Status rollup for an O5 parent MUST be deterministic across repeated runs and MUST preserve the declared child dependency order.
+- **FR-014**: O5 validation MUST detect missing child specs, duplicate child identifiers, unsupported nested child paths, unknown dependency references, dependencies that point to later children, and circular dependency order.
+- **FR-015**: Status rollup for an O5 parent MUST validate topology first, compute child state from committed workflow, MOC, and archive evidence in manifest child order, use precedence `invalid topology > blocked/failed > in_progress > pending > complete`, and report drift when optional declared rollup status disagrees with the computed read-only result.
 - **FR-016**: PRSG-010 MUST NOT migrate old specs into the O5 model.
-- **FR-017**: Atomicity routing MUST evaluate flag-system, release-cadence, and consumer-locality evidence as contextual probes with explicit high-confidence criteria.
-- **FR-018**: Contextual probes MUST become decisive routing signals only when deterministic evidence meets the high-confidence criteria for the specific probe.
-- **FR-019**: Weak, stale, ambiguous, fixture-only, or shallow keyword evidence MUST preserve the existing conservative route and may only appear as an advisory hint or warning.
-- **FR-020**: PRSG-010 delivery MUST be planned as an ordered split-PR stack unless the router classifies the final task plan otherwise.
+- **FR-017**: Atomicity routing MUST evaluate flag-system, release-cadence, and consumer-locality evidence as contextual probes with explicit high-confidence criteria while preserving hard-atomic and releasability precedence.
+- **FR-018**: Flag-system evidence MUST become decisive only when the task evidence proves a repo-local flag or evaluation mechanism plus current guard and test tasks for the guarded cutover; the router MUST emit `context:flag-system:guarded-cutover` and route non-hard-atomic guarded cutovers to `one-navigable-PR` unless independent additive multi-seam evidence still proves `split-PR`.
+- **FR-019**: Release-cadence evidence MUST become decisive only for no-flag release-held cutovers with concrete release-cadence and release-hold evidence; the router MUST emit `context:release-cadence:release-held-cutover` and route to `single-atomic-PR` without automatically setting `releasable: false`.
+- **FR-020**: Consumer-locality evidence MAY emit `branch-by-abstraction` only when all affected consumers are proven in-tree, old and new behavior can coexist behind an abstraction, migration and contract tasks are complete, and no hard-atomic or releasability risk applies.
+- **FR-021**: Weak, stale, ambiguous, fixture-only, code-fence-only, conflicting, or shallow keyword evidence MUST preserve the existing conservative route, MUST NOT appear in `signals[]`, and may only appear as closed-enum `hints[]` tokens such as `hint:flag-system:weak`, `hint:release-cadence:weak`, `hint:consumer-locality:weak`, or `hint:contextual-probe:conflict`.
+- **FR-022**: PRSG-010 MUST promote or add a production `routing-decision.schema.json` contract that keeps the flat `route`, `releasable`, `signals`, `hints`, and `warnings` JSON shape, extends the existing PRSG-007 signal enum rather than replacing it, and closes `hints[]` with a stable enum.
+- **FR-023**: PRSG-010 delivery MUST be planned as an ordered split-PR stack unless the router classifies the final task plan otherwise.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -120,10 +123,10 @@ Maintainers of the atomicity router need flag-system, release-cadence, and consu
 - **Final Gate Result**: The reviewability decision recorded at the last boundary before PR creation, including status, metrics, reason, and exception evaluation.
 - **Reviewability Exception**: An explicit operator-owned typed override using one of the preserved classes: refactor, infra, or upgrade.
 - **Re-slicing Packet**: The actionable recovery artifact written when an oversized unexcepted diff is blocked before PR creation.
-- **O5 Parent Manifest**: A monster-epic coordination record that lists flat sibling child specs, dependency order, shared links, and rollup status.
-- **O5 Child Spec**: A normal flat spec directory linked to an O5 parent manifest and ordered relative to its sibling child specs.
+- **O5 Parent Manifest**: A review-visible `o5-parent-manifest.json` CONTRACT artifact that lists flat sibling child specs, dependency order, shared links, and optional declared rollup status.
+- **O5 Child Spec**: A normal flat spec directory such as `specs/prsg-010a-<slug>` with an identifier such as `PRSG-010A`, linked to an O5 parent manifest and ordered relative to sibling child specs.
 - **Contextual Probe Evidence**: Deterministic observations used to decide whether flag-system, release-cadence, or consumer-locality context is strong enough to affect routing.
-- **Routing Decision**: The final atomicity-route outcome that distinguishes decisive signals, advisory hints, warnings, and conservative fallback behavior.
+- **Routing Decision**: The final atomicity-route outcome that distinguishes decisive signals, closed-enum advisory hints, warnings, and conservative fallback behavior.
 
 ## Success Criteria *(mandatory)*
 
@@ -134,7 +137,7 @@ Maintainers of the atomicity router need flag-system, release-cadence, and consu
 - **SC-003**: Generated workflow, roadmap, and template artifacts contain zero live copy-pasteable exception override lines.
 - **SC-004**: A maintainer can identify the next re-slicing action from a blocked run in under 5 minutes using the recorded packet and status output.
 - **SC-005**: O5 parent rollup output is stable across repeated runs for the same parent/child inputs.
-- **SC-006**: Contextual probe fixtures demonstrate that weak evidence changes the decisive route 0% of the time, while high-confidence evidence uses the documented signal vocabulary 100% of the time.
+- **SC-006**: Contextual probe fixtures demonstrate that weak evidence changes the decisive route 0% of the time, while high-confidence evidence uses the documented signal or strategy vocabulary 100% of the time.
 
 ## Assumptions
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T15:45:13Z",
-  "active_step": "Phase 2: Clarify - Backstop and re-slicing packet",
+  "updated_at": "2026-06-11T16:34:06Z",
+  "active_step": "Phase 3: Plan",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -95,31 +95,39 @@
     },
     {
       "step": "Phase 2: Clarify - Backstop and re-slicing packet",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted final gate outcome matrix, stop-before-any-emission rule, top-level final_reviewability_gate state, JSON re-slicing packet fields, and consensus-backed exception provenance rule."
     },
     {
       "step": "Phase 2: Clarify - Backstop and re-slicing packet Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus accepted exact branch-added Markdown pragmas in non-generated review-visible CONTRACT artifacts only, with accepted and rejected provenance recorded."
     },
     {
       "step": "Phase 2: Clarify - O5 parent/child schema and status rollup",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted o5-parent-manifest.json as CONTRACT data, PRSG-010A/prsg-010a-* child naming, curated child MOC body links, independent child scaffolds, and computed read-only status rollup."
     },
     {
       "step": "Phase 2: Clarify - O5 parent/child schema and status rollup Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus accepted the manifest-first, flat-child, read-only rollup architecture with schema caveats for root JSON CONTRACT protection and child-state mapping."
     },
     {
       "step": "Phase 2: Clarify - High-confidence contextual probes",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted high-confidence flag, release-cadence, and branch-by-abstraction thresholds; weak evidence remains hint-only; router schema stays flat and extends existing enums while closing hints[]."
     },
     {
       "step": "Phase 2: Clarify - High-confidence contextual probes Consensus",
-      "status": "pending"
+      "status": "completed",
+      "gate": "G2",
+      "gate_status": "passed",
+      "summary": "Round 1 codebase/spec/domain consensus accepted guarded-cutover, release-held cutover, and production routing schema vocabulary decisions."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
@@ -243,5 +251,163 @@
       "quality_checklist": "all items checked"
     },
     "summary": "Phase 1 Specify generated the PRSG-010 feature spec and completed quality validation."
-  }
+  },
+  "clarify_results": [
+    {
+      "session": "Backstop and re-slicing packet",
+      "questions": 5,
+      "status": "completed",
+      "outcomes": [
+        "Final diff-gate matrix is pass/warn/exception proceed, block/exit 1 without honored exception stops with re-slicing, and exit 2 stops as gate error without re-slicing.",
+        "The unexcepted block path stops immediately after recording state and packet, before PR body generation, single PR creation, or multi-PR emission.",
+        "Blocked state is recorded in a top-level final_reviewability_gate object and downstream PR steps are not treated as started.",
+        "The re-slicing packet is a JSON contract with gate evidence, exception evidence, PRSG-007/008/009 recovery guidance, suggested slice boundaries, and resume instructions.",
+        "Operator-owned typed exceptions must be exact branch-added Markdown pragmas in committed, review-visible, non-generated CONTRACT artifacts."
+      ]
+    },
+    {
+      "session": "O5 parent/child schema and status rollup",
+      "questions": 5,
+      "status": "completed",
+      "outcomes": [
+        "The O5 parent manifest lives at specs/<parent-branch>/o5-parent-manifest.json as review-visible CONTRACT data with schemaVersion 1.",
+        "Child IDs use PRSG-010A-style suffixes with paths and branches like specs/prsg-010a-<slug>; manifest children[] order is authoritative.",
+        "Child MOCs keep up: pointed at the roadmap and add curated body links to parent manifest and shared design concept; retrospective links wait until the target exists.",
+        "O5 parent scaffold does not create child branches or worktrees automatically; each child is scaffolded independently as a flat sibling.",
+        "Status validates topology first and computes read-only rollup in manifest child order, reporting drift against optional declared_rollup_status."
+      ]
+    },
+    {
+      "session": "High-confidence contextual probes",
+      "questions": 5,
+      "status": "completed",
+      "outcomes": [
+        "Flag-system evidence is decisive only with repo-local flag/evaluation evidence plus current guard and test tasks; it emits context:flag-system:guarded-cutover and routes guarded non-hard-atomic cutovers to one-navigable-PR.",
+        "No-flag release-held cutovers emit context:release-cadence:release-held-cutover and route single-atomic-PR without automatically setting releasable:false.",
+        "Branch-by-abstraction may emit only with all in-tree consumers, coexistence behind abstraction, complete migration/contract tasks, and no hard-atomic or releasability risk.",
+        "Weak, stale, conflicting, fixture-only, code-fence-only, or shallow evidence remains route-neutral and hint-only.",
+        "PRSG-010 promotes or adds production routing-decision.schema.json, extends existing PRSG-007 signal enums, and closes hints[] with stable enum tokens."
+      ]
+    }
+  ],
+  "consensus_resolution_log": [
+    {
+      "phase": "Clarify Session 1",
+      "item": "Operator-owned typed exception provenance",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Accept only exact branch-added Markdown pragmas in committed, review-visible, non-generated CONTRACT artifacts; reject .process, templates, generated zones/boilerplate, PR bodies, commit messages, code fences, and mutable/generated provenance, recording accepted and rejected candidates with path, line, provenance, and reason.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 2",
+      "item": "O5 parent manifest contract",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Use specs/<parent-branch>/o5-parent-manifest.json as review-visible CONTRACT data with schemaVersion 1, kind o5_parent_manifest, parent metadata, ordered children, shared design concept, nullable retrospective, and optional declared_rollup_status.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 2",
+      "item": "O5 flat child naming and order",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Use PRSG-010A-style child IDs and specs/prsg-010a-<slug> paths or branches. children[] order is authoritative; depends_on[] may reference only earlier sibling child IDs and invalid topology covers duplicates, unknown refs, later refs, nested paths, and cycles.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 2",
+      "item": "O5 shared MOC links",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Keep child SPEC-MOC up: pointed at the roadmap. Add curated relative body links outside generated zones to the parent manifest and shared design concept, and add retrospective links only after the target exists.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 2",
+      "item": "O5 status rollup",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "speckit-status validates manifest topology first, computes child states from workflow/MOC/archive evidence in manifest order, applies precedence invalid topology > blocked/failed > in_progress > pending > complete, and reports drift if optional declared_rollup_status disagrees with computed read-only status.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 3",
+      "item": "High-confidence flag-system routing",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec",
+        "domain"
+      ],
+      "outcome": "Require repo-local flag/evaluation evidence plus current guard and test tasks; emit context:flag-system:guarded-cutover and route non-hard-atomic guarded cutovers to one-navigable-PR unless proven additive multi-seam evidence still warrants split-PR.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst",
+        "domain-researcher"
+      ]
+    },
+    {
+      "phase": "Clarify Session 3",
+      "item": "No-flag release-cadence routing",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec",
+        "domain"
+      ],
+      "outcome": "Proven no-flag release-held cutovers emit context:release-cadence:release-held-cutover and route single-atomic-PR without automatically setting releasable:false.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst",
+        "domain-researcher"
+      ]
+    },
+    {
+      "phase": "Clarify Session 3",
+      "item": "Router schema vocabulary",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec",
+        "domain"
+      ],
+      "outcome": "Keep flat route/releasable/signals/hints/warnings JSON, promote or add production routing-decision.schema.json, extend existing PRSG-007 signal enums with context/strategy tokens, and close hints[] with stable enum tokens for weak/conflicting contextual evidence.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst",
+        "domain-researcher"
+      ]
+    }
+  ]
 }
