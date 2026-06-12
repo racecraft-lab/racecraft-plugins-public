@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T22:55:00Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-06-12T23:05:00Z",
+  "active_step": "Done",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -323,16 +323,19 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "in_progress",
-      "summary": "Existing PR will be updated after final commit and push."
+      "status": "completed",
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/163",
+      "summary": "Existing PR #163 updated with pushed branch, title, and generated review-packet body."
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Initial remote check found PR #163 mergeable with no review decision yet; CI jobs were still pending."
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "Retrospective extension is installed, but this Codex surface exposes only the Claude slash-command file; no executable Codex retrospective command was available."
     }
   ],
   "pr_marker_plan": {
@@ -596,5 +599,12 @@
     "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
     "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
     "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  },
+  "pr": {
+    "number": 163,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/163",
+    "state": "OPEN",
+    "mergeable": "MERGEABLE",
+    "title": "docs(DOC-001): choose static docs framework and IA"
   }
 }

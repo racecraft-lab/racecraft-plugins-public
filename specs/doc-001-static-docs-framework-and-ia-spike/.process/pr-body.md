@@ -114,7 +114,7 @@ Advisory only — these checkboxes block nothing.
 git revert <SHA>; see plan.md for data-migration considerations
 
 <!-- speckit-pro-review-packet-source
-template: /Users/fredrickgabelmann/.codex/worktrees/4440/racecraft-plugins-public/.worktrees/001-static-docs-framework-and-ia-spike/speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md
+template: speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md
 feature_dir: specs/doc-001-static-docs-framework-and-ia-spike
 diff_range: origin/main...HEAD
 reviewability: {"mode":"diff","status":"block","pass":false,"reviewable_loc":0,"production_files":0,"total_files":30,"primary_surface_count":3,"primary_surfaces":["docs/process","scheduler/runtime","seed/config"],"greenfield":false,"thresholds":{"warn":{"reviewable_loc":400,"production_files":6,"total_files":15,"primary_surfaces":1},"block":{"reviewable_loc":800,"production_files":8,"total_files":25,"primary_surfaces":1}},"exception_honored":false,"exception_class":null,"exceptions":{"accepted":[],"rejected":[]},"warnings":["total files 30 exceeds warn threshold 15","primary surfaces 3 exceeds warn threshold 1"],"blockers":["total files 30 exceeds block threshold 25"]}

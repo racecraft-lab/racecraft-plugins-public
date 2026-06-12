@@ -455,6 +455,9 @@ Focus on:
 | Marker emission packet | Dry-run validation passed with 4 marker slices and no branch or PR mutations |
 | UAT runbook | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md`; author-agent rewrite unavailable, fail-open with parent self-review notes |
 | PR body | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md` with review-packet marker and UAT section |
+| PR update | Existing PR updated: https://github.com/racecraft-lab/racecraft-plugins-public/pull/163 |
+| Review remediation | Initial remote check found PR mergeable with CI still pending; no review decision recorded |
+| Retrospective | Skipped in Codex surface; retrospective extension is installed but only exposes a Claude slash-command file here |
 
 ---
 
