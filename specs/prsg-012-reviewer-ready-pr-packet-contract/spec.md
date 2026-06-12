@@ -102,10 +102,13 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **FR-010**: The validator MUST reject rendered packets missing required rendered source/provenance markers for generated packet content and evidence sources. The legacy `speckit-pro-review-packet-source` HTML comment MAY remain for backward compatibility, but MUST NOT satisfy protected source-marker validation.
 - **FR-011**: The validator MUST reject rendered packets missing verification evidence or scope evidence.
 - **FR-012**: The validator MUST reject banned labels including `ELI5` and `Plain-English Summary`.
-- **FR-013**: Validation failures MUST block before PR creation and report remediation evidence that names the failed rule, packet target, affected section, and relevant text excerpt when available.
-- **FR-014**: Validation results MUST be written as one JSON record per packet under the target feature `.process/pr-packets/<packet_id>/validation.json` path, with status, packet identity, mode, title/body paths or values, rule outcomes, failure details, remediation evidence, PR-blocked status, and timestamps.
+- **FR-013**: Validation failures MUST block before PR creation and report remediation evidence that names the failed rule, packet target, affected section or field, and relevant text excerpt or hash evidence when available.
+- **FR-014**: Validation results MUST be written as one JSON record per packet under the target feature `.process/pr-packets/<packet_id>/validation.json` path, with status, packet identity, mode, title/body paths or values, rule outcomes, failure details, remediation evidence, `pr_blocked`, and timestamps.
 - **FR-015**: Blocking validation failures MUST append a concise workflow event that records the blocked packet and remediation evidence location.
-- **FR-016**: The packet contract MUST allow sanctioned prose refinements only inside explicit editable blocks under `Summary`, `What Changed`, and `Why It Matters`. The validator MUST reject edits that remove or corrupt `How To Review`, `How To UAT`, `Verification`, `Scope`, `Known Gaps`, traceability, source markers, UAT content, or generated governance/evidence content.
+- **FR-016**: The packet contract MUST allow sanctioned prose refinements only inside full-line editable HTML comment marker pairs under `Summary`, `What Changed`, and `Why It Matters`. Field IDs MUST use exact markers such as `<!-- speckit-pro-editable:summary:start -->` and `<!-- speckit-pro-editable:summary:end -->`, mirrored in packet JSON.
+- **FR-016A**: The packet contract MUST store a normalized protected-body fingerprint with editable blocks elided. The validator MUST reject any non-editable body change when the protected fingerprint no longer matches.
+- **FR-016B**: The validator MUST allow only structural editable-boundary comments and the legacy `speckit-pro-review-packet-source` compatibility comment. It MUST reject unknown HTML comments, template placeholder comments, and stale template comments outside code fences.
+- **FR-016C**: Host PR template content MAY coexist only after or outside the protected canonical packet block; host content MUST NOT bury, replace, duplicate, or weaken PRSG-012 canonical sections or protected evidence.
 - **FR-017**: Host PR template support MAY coexist only when the final rendered packet still satisfies the packet contract.
 - **FR-018**: PRSG-012 MUST treat post-create auto-repair of already-open PRs as out of scope.
 
@@ -140,11 +143,12 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 
 ### Key Entities *(include if feature involves data)*
 
-- **PR Packet**: A rendered PR title and body for one PR target, including schema version, packet identity, mode, target, structured generated-title metadata, body file, required sections, UAT content, rendered source/provenance markers, scope evidence, verification evidence, known-gap language, editable field boundaries, and validation result path. PRSG-012 uses a shared `pr-packet.schema.json` for both single-PR and split-PR flows; split packets keep `slice-packet.schema.json` as slice evidence/source input and include slice identity or the source slice packet path.
+- **PR Packet**: A rendered PR title and body for one PR target, including schema version, packet identity, mode, target, structured generated-title metadata, body file, required sections, UAT content, rendered source/provenance markers, scope evidence, verification evidence, known-gap language, editable field boundaries, protected-body fingerprint, and validation result path. PRSG-012 uses a shared `pr-packet.schema.json` for both single-PR and split-PR flows; split packets keep `slice-packet.schema.json` as slice evidence/source input and include slice identity or the source slice packet path.
 - **Generated Title Metadata**: Structured title data with final `value`, conventional commit `type`, `scope`, public-readable `description`, source evidence, and rejected candidates. Single-PR title descriptions come from the feature/spec display title normalized into an action phrase. Split-PR title descriptions come from PR marker `source_boundary.section` in marker mode, or the layer-plan increment name in legacy layer-plan mode. Slice IDs remain metadata and are never title description text.
 - **Packet Validation Result**: A JSON record describing pass or fail status, evaluated rules, packet identity, mode, title value or path, body file, failures, remediation evidence, whether PR creation was blocked, and timestamps.
 - **Workflow Event**: A concise process log entry written when validation blocks a packet before PR creation.
-- **Sanctioned Prose Field**: A maintainer-editable narrative field that may be refined without changing protected governance or evidence sections.
+- **Sanctioned Prose Field**: A maintainer-editable narrative field bounded by exact full-line `speckit-pro-editable:<field>:start` and `speckit-pro-editable:<field>:end` HTML comment markers, mirrored in packet JSON, and limited to `summary`, `what_changed`, and `why_it_matters`.
+- **Protected Body Fingerprint**: A normalized hash of the rendered body with sanctioned editable blocks elided. It detects any change to protected canonical sections, source markers, UAT content, traceability, scope, verification evidence, known gaps, or generated governance content.
 
 ## Success Criteria *(mandatory)*
 
@@ -165,6 +169,8 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - Split-PR title descriptions come from persisted PR marker `source_boundary.section` values in marker mode, or from layer-plan increment names in legacy layer-plan mode. Slice IDs, branch names, and file paths are metadata only and never title description text.
 - A required source marker is an explicit rendered marker outside HTML comments, code fences, generated fixtures, `.process` artifacts, generated zones, and other non-rendered or non-provenance text.
 - The legacy HTML comment marker `speckit-pro-review-packet-source` may remain for backward compatibility with existing self-checks, but it does not satisfy PRSG-012 protected source-marker validation.
-- Sanctioned prose fields are limited to explicit editable blocks under `Summary`, `What Changed`, and `Why It Matters`; generated governance and evidence fields remain validator-protected.
+- Sanctioned prose fields are limited to exact full-line editable marker pairs under `Summary`, `What Changed`, and `Why It Matters`; generated governance and evidence fields remain validator-protected.
+- Host PR template content is appended only after or outside the protected canonical packet block and cannot satisfy required canonical sections or protected evidence by itself.
+- Validation failures for edits outside sanctioned fields exit `1`, write packet validation JSON with `pr_blocked: true`, and append workflow evidence. Usage or malformed input errors exit `2`.
 - Validation JSON for this feature is written per packet under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/<packet_id>/validation.json`, with an optional aggregate index for a run.
 - PRSG-012 covers generation and validation before PR creation only; repair of already-open PRs is deferred to a later feature if needed.

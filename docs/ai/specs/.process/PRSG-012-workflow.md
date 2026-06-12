@@ -32,8 +32,8 @@ The design concept is the source of truth for these scoping decisions:
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Generated `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`; G1 passed with 0 clarification markers |
-| Clarify | `/speckit-clarify` | In Progress | Session 1 packet schema clarification started after G1 |
-| Plan | `/speckit-plan` | Pending | Define scripts, schemas, failure evidence, and test matrix |
+| Clarify | `/speckit-clarify` | Complete | G2 passed with packet schema, title generation, and safe-refinement decisions recorded |
+| Plan | `/speckit-plan` | In Progress | Define scripts, schemas, failure evidence, and test matrix |
 | Checklist | `/speckit-checklist` | Pending | Run contract, error-handling, and reliability checks |
 | Tasks | `/speckit-tasks` | Pending | Organize by user story and validation boundary |
 | Analyze | `/speckit-analyze` | Pending | Check consistency against the design concept |
@@ -188,7 +188,7 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 |---------|------------|-----------|--------------|
 | 1 | Packet schema | 5 | Add a shared `pr-packet.schema.json`; keep `slice-packet.schema.json` as split-slice evidence/source input. Required packet fields: schema version, packet id, mode, target, generated title, body file, required sections, verification evidence, scope evidence, UAT source, rendered source/provenance markers, editable fields, validation result path, and split slice identity or source slice packet path. Validation JSON is one record per packet under `.process/pr-packets/<packet_id>/validation.json`. Legacy `speckit-pro-review-packet-source` HTML comments are compatibility-only and do not satisfy protected source-marker validation. Editable prose is limited to explicit blocks under `Summary`, `What Changed`, and `Why It Matters`. |
 | 2 | Titles | 5 | Generated PR packet titles use `<type>(<scope>): <plain-English description>`. Implementation packets default to `feat(speckit-pro):`; only explicit packet metadata may override type or scope. Valid types are `feat`, `fix`, `chore`, `docs`, `refactor`, and `test`. Single-PR title descriptions come from the feature/spec display title normalized into an action phrase. Split-PR title descriptions come from PR marker `source_boundary.section`, falling back to layer-plan increment names for legacy layer-plan mode. The structured `generated_title` object owns the final value, type, scope, description, source evidence, and rejected candidates. Descriptions must name the visible or operator-visible change in public-readable language and must not contain branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, placeholders, unexpanded variables, or banned labels. |
-| 3 | Safe refinement | | |
+| 3 | Safe refinement | 5 | Use exact full-line editable HTML comment marker pairs under `Summary`, `What Changed`, and `Why It Matters`, such as `<!-- speckit-pro-editable:summary:start -->` and `<!-- speckit-pro-editable:summary:end -->`, mirrored in packet JSON. Store a normalized protected-body fingerprint with editable blocks elided and fail validation when any non-editable content changes. Allow only editable-boundary comments and the legacy `speckit-pro-review-packet-source` compatibility comment; reject unknown or stale template comments outside code fences. Canonical PRSG-012 packet sections render first; host template content may appear only outside the protected packet block. Outside-field edits fail before PR creation with validation JSON, `pr_blocked: true`, rule ids, affected section/field, excerpt or hash evidence, remediation text, and exit `1`; usage/input errors exit `2`. |
 
 ---
 
@@ -212,6 +212,8 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 - Add a shared `pr-packet.schema.json` so a packet owns: structured generated-title metadata, body file path, source feature dir, required headings, verification evidence, scope evidence, UAT source, rendered source/provenance markers, editable prose fields, validation result path, and split slice identity when applicable. Keep `slice-packet.schema.json` as slice evidence/source input.
 - `generated_title` is an object with final `value`, conventional commit `type`, `scope`, public-readable `description`, source evidence, and rejected candidates. Implementation packets default to `feat(speckit-pro):`; type/scope overrides come only from explicit packet metadata.
 - Single-PR title descriptions come from the feature/spec display title normalized into an action phrase. Split-PR title descriptions come from PR marker `source_boundary.section`, falling back to layer-plan increment names in legacy layer-plan mode. Branch names, spec ids, slice ids, task ids, and file paths remain metadata only.
+- Safe prose refinement uses exact full-line editable marker pairs under `Summary`, `What Changed`, and `Why It Matters`; field ids are mirrored in packet JSON. Validation compares a protected-body fingerprint with editable blocks elided and fails when protected sections change.
+- Host PR template content may coexist only outside the protected canonical packet block; it cannot replace or satisfy required packet-owned sections.
 - Update `generate-pr-body.sh` so the generated body owns canonical reviewer sections directly: `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
 - Preserve a literal `## UAT Runbook` heading in the rendered body for SPEC-006a/b compatibility.
 - Update the single-PR post-implementation path to generate the packet, validate it, and create the PR with `--title` and `--body-file`.
@@ -225,6 +227,7 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 - Do not break existing L3 expectations that PR bodies contain the legacy `speckit-pro-review-packet-source` compatibility marker and UAT Runbook heading.
 - Preserve generated governance sections, rendered source/provenance markers, and compatibility markers during safe prose refinement.
 - Validate rendered title descriptions strictly enough to reject any post-colon branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, stale placeholders, unexpanded variables, or banned labels.
+- Allow only structural editable-boundary comments and the legacy compatibility marker; reject unknown HTML comments and stale template comments outside code fences.
 
 ## Reviewability Budget
 - Primary surface: docs/process plus Bash automation
@@ -490,3 +493,4 @@ Template based on SpecKit best practices. Populated for PRSG-012 from the PR-siz
 | Clarify Session 1 | Safe editable fields | 1 | codebase, spec | Accepted: only explicit editable blocks under `Summary`, `What Changed`, and `Why It Matters` are sanctioned prose fields; protect `How To Review`, `How To UAT`, `Verification`, `Scope`, `Known Gaps`, traceability, source markers, UAT content, and generated governance/evidence content. | codebase-analyst, spec-context-analyst |
 | Clarify Session 2 | Conventional title prefix | 1 | codebase, spec | Accepted: generated titles render as `<type>(<scope>): <plain-English description>`; implementation packets default to `feat(speckit-pro):`; only explicit packet metadata can override type/scope, and overrides must use allowed conventional commit values. | codebase-analyst, spec-context-analyst |
 | Clarify Session 2 | Internal-code rejection | 1 | codebase, spec | Accepted: the post-colon description must be public-readable plain English and must reject any branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, stale placeholders, unexpanded variables, or banned labels, even when mixed with otherwise readable words. | codebase-analyst, spec-context-analyst |
+| Clarify Session 3 | Safe refinement details | skipped | none | Executor returned no unresolved consensus items. Accepted exact full-line editable marker pairs, protected-body fingerprint comparison, allowlisted structural comments, canonical packet block before host template content, and fail-before-create validation JSON for outside-field edits. | clarify-executor |

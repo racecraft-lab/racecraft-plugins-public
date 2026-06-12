@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T14:55:29Z",
-  "active_step": "Phase 2: Clarify - Safe Refinement",
+  "updated_at": "2026-06-12T15:13:01Z",
+  "active_step": "Phase 3: Plan",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -116,15 +116,17 @@
     },
     {
       "step": "Phase 2: Clarify - Safe Refinement",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted exact full-line editable marker pairs, packet JSON mirrored field ids, protected-body fingerprint with editable blocks elided, allowlisted structural comments, canonical packet block before host template content, and fail-before-create validation JSON for outside-field edits."
     },
     {
       "step": "Phase 2: Clarify - Safe Refinement Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
