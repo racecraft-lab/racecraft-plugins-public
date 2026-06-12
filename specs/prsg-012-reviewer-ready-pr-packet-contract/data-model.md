@@ -27,8 +27,8 @@ Represents one rendered PR target before creation.
 
 - `target.base_branch` and `target.head_branch` are required for every packet and are the only target values used for `gh pr create --base` and `--head`.
 - `body_file` must be a repo-relative rendered Markdown path; absolute paths, parent-directory traversal, directories, and non-Markdown paths are invalid.
-- `generated_title.value` must render as `<type>(<scope>): <plain-English description>`.
-- Title descriptions must not contain branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, stale placeholders, unexpanded variables, file paths, or banned labels.
+- `generated_title.value` must render as `<type>(<scope>): <plain-English description>`, with spec-backed packets using the active spec id as scope when available.
+- Title descriptions must not contain branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, stale placeholders, unexpanded variables, file paths, or banned labels. PRSG/SPEC identifiers are allowed only in the scope before the colon.
 - Body must include rendered Markdown `## Summary`, `## What Changed`, `## Why It Matters`, `## How To Review`, `## How To UAT`, `## Verification`, `## Scope`, and `## Known Gaps` headings in that order inside the canonical packet block, plus literal `## UAT Runbook` compatibility content.
 - Verification evidence, scope evidence, source markers, and provenance markers are required.
 - Scope evidence must include changed-file scope in addition to reviewability budget and non-goals.

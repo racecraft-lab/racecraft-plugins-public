@@ -9,9 +9,9 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/02-us1"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): Generate packet-owned conventional PR titles",
+    "value": "feat(PRSG-012): Generate packet-owned conventional PR titles",
     "type": "feat",
-    "scope": "speckit-pro",
+    "scope": "PRSG-012",
     "description": "Generate packet-owned conventional PR titles",
     "source_evidence": {
       "kind": "marker_source_boundary",

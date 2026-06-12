@@ -1,14 +1,14 @@
 ## Summary
 
-This PR implements: Block invalid PR packets before creation.
+This PR covers one reviewer-ready slice: Block invalid PR packets before creation.
 
 ## What Changed
 
-- Implemented the declared change: Block invalid PR packets before creation.
-- Published the changed-file scope and verification evidence expected for this review.
+- Builds the generated PR title and reviewer-readable body for this slice.
+- Keeps detailed validation records in packet files instead of putting logs and paths in the PR description.
 
 ## Why It Matters
 
-Reviewers get a strict plain-English description first, with exact technical evidence available in the packet.
+Reviewers can scan the PR quickly and open implementation files only when they want more detail.
 
-Source: specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/candidate/marker-packets/us3.json
+Source: generated PR packet.

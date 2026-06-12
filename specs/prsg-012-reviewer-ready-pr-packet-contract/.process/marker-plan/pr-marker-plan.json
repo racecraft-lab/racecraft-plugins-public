@@ -22,6 +22,7 @@
         "start_task_id": "T001",
         "end_task_id": "T009"
       },
+      "title_description": "Add reviewer packet validation contract",
       "task_ids": [
         "T001",
         "T002",
@@ -97,6 +98,7 @@
         "start_task_id": "T010",
         "end_task_id": "T017"
       },
+      "title_description": "Generate packet-owned conventional PR titles",
       "task_ids": [
         "T010",
         "T011",
@@ -168,6 +170,7 @@
         "start_task_id": "T018",
         "end_task_id": "T024"
       },
+      "title_description": "Render plain-English reviewer PR body evidence",
       "task_ids": [
         "T018",
         "T019",
@@ -234,6 +237,7 @@
         "start_task_id": "T025",
         "end_task_id": "T034"
       },
+      "title_description": "Block invalid PR packets before creation",
       "task_ids": [
         "T025",
         "T026",
@@ -312,6 +316,7 @@
         "start_task_id": "T035",
         "end_task_id": "T041"
       },
+      "title_description": "Protect editable PR body prose",
       "task_ids": [
         "T035",
         "T036",

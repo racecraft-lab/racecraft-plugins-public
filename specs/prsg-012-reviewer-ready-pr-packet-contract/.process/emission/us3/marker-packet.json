@@ -9,9 +9,9 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/04-us3"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): Block invalid PR packets before creation",
+    "value": "feat(PRSG-012): Block invalid PR packets before creation",
     "type": "feat",
-    "scope": "speckit-pro",
+    "scope": "PRSG-012",
     "description": "Block invalid PR packets before creation",
     "source_evidence": {
       "kind": "marker_source_boundary",

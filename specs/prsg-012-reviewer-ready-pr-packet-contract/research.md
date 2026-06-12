@@ -22,7 +22,7 @@
 
 **Rationale**: Single-PR descriptions should come from the feature/spec display title normalized into an action phrase. Split-PR descriptions should come from PR marker `source_boundary.section`, falling back to layer-plan increment names only in legacy layer-plan mode. Slice IDs remain metadata.
 
-**Alternatives considered**: A generic title such as `feat(speckit-pro): update autopilot` was rejected because it does not name the visible change. Using branch names or PRSG identifiers was rejected by the public-readable title requirement.
+**Alternatives considered**: A generic title such as `feat(speckit-pro): update autopilot` was rejected because it does not name the visible change. Using branch names or PRSG/SPEC identifiers as the description was rejected by the public-readable title requirement; spec identifiers belong only in the conventional title scope.
 
 ## Decision: Generate canonical reviewer body sections directly
 

@@ -111,6 +111,20 @@ repo_relative_path() {
   esac
 }
 
+conventional_scope_from_feature_dir() {
+  local feature_dir_rel="$1" base spec_suffix
+  base="${feature_dir_rel%/}"
+  base="${base##*/}"
+  if [[ "$base" =~ ^[Pp][Rr][Ss][Gg]-([0-9]+)(-|$) ]]; then
+    printf 'PRSG-%s\n' "${BASH_REMATCH[1]}"
+  elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'SPEC-%s\n' "$spec_suffix"
+  else
+    printf 'speckit-pro\n'
+  fi
+}
+
 protected_body_sha() {
   local path="$1"
   awk '
@@ -346,6 +360,7 @@ else
   fi
 fi
 EXPECTED_EMISSION_DIR="$FEATURE_DIR_REL/.process/emission/"
+TITLE_SCOPE="$(conventional_scope_from_feature_dir "$FEATURE_DIR_REL")"
 
 if [ -z "$FULL_VERIFICATION_EVIDENCE" ]; then
   emit_input_error "missing required option --full-verification-evidence"
@@ -532,6 +547,7 @@ if [ "$MARKER_MODE" = true ]; then
       --arg feature_branch "$FEATURE_BRANCH" \
       --arg base_branch "$BASE_BRANCH" \
       --arg feature_dir "$FEATURE_DIR_REL" \
+      --arg title_scope "$TITLE_SCOPE" \
       --arg marker_split_evidence "$MARKER_SPLIT_RESULT" \
       --arg route "$EMISSION_ROUTE" \
       --slurpfile plan "$MARKER_PLAN" \
@@ -598,20 +614,13 @@ if [ "$MARKER_MODE" = true ]; then
           | gsub("\\s+$"; "");
         def has_action_verb:
           test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
-        def public_title_description($id; $source_title; $files):
+        def public_title_description($id; $source_title; $files; $explicit_title):
+          (($explicit_title // "") | title_clean) as $explicit
+          | if $explicit != "" then $explicit
+          else
           (($source_title // $id) | title_clean) as $clean
           | (($files // []) | join(" ")) as $paths
-          | if ($paths | contains("pr-packet.schema.json")) or (($paths | contains("validate-pr-packet.sh")) and ($paths | contains("fixtures/pr-packet"))) then
-              "Add reviewer packet validation contract"
-            elif ($clean | test("Specific Conventional PR Titles"; "i")) then
-              "Generate packet-owned conventional PR titles"
-            elif ($clean | test("Structured Reviewer Body"; "i")) then
-              "Render plain-English reviewer PR body evidence"
-            elif ($clean | test("Pre-create Validation Block"; "i")) then
-              "Block invalid PR packets before creation"
-            elif ($clean | test("Safe Prose Refinement"; "i")) then
-              "Protect editable PR body prose"
-            elif ($paths | contains("marker-plan")) then
+          | if ($paths | contains("marker-plan")) then
               "Add marker split emission fixtures"
             elif ($paths | contains("multi-pr-emission-state.schema.json")) then
               "Record marker split emission state"
@@ -627,7 +636,8 @@ if [ "$MARKER_MODE" = true ]; then
               "Add split PR emission foundation"
             else
               "Describe reviewer-visible change"
-            end;
+            end
+          end;
 
         ($plan[0].markers | sort_by(.review_order)) as $markers
         | ($plan[0].warnings // []) as $plan_warnings
@@ -667,12 +677,12 @@ if [ "$MARKER_MODE" = true ]; then
                   | ($review_order | zpad($width)) as $label
                   | (marker_files($marker)) as $declared_files
                   | (($marker.source_boundary.section // $marker.id)) as $source_title
-                  | (public_title_description($marker.id; $source_title; $declared_files)) as $title_description
+                  | (public_title_description($marker.id; $source_title; $declared_files; ($marker.title_description // ""))) as $title_description
                   | {
                       source_id: $marker.id,
                       source_title: $source_title,
                       title_description: $title_description,
-                      generated_title: ("feat(speckit-pro): " + $title_description),
+                      generated_title: ("feat(" + $title_scope + "): " + $title_description),
                       slice_id: $marker.id,
                       marker_id: $marker.id,
                       source_marker_ids: [$marker.id],
@@ -718,6 +728,7 @@ else
     --arg feature_branch "$FEATURE_BRANCH" \
     --arg base_branch "$BASE_BRANCH" \
     --arg feature_dir "$FEATURE_DIR_REL" \
+    --arg title_scope "$TITLE_SCOPE" \
     --slurpfile plan "$LAYER_PLAN" '
       def slug:
         ascii_downcase
@@ -785,20 +796,13 @@ else
         | gsub("\\s+$"; "");
       def has_action_verb:
         test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
-      def public_title_description($id; $source_title; $files):
+      def public_title_description($id; $source_title; $files; $explicit_title):
+        (($explicit_title // "") | title_clean) as $explicit
+        | if $explicit != "" then $explicit
+        else
         (($source_title // $id) | title_clean) as $clean
         | (($files // []) | join(" ")) as $paths
-        | if ($paths | contains("pr-packet.schema.json")) or (($paths | contains("validate-pr-packet.sh")) and ($paths | contains("fixtures/pr-packet"))) then
-            "Add reviewer packet validation contract"
-          elif ($clean | test("Specific Conventional PR Titles"; "i")) then
-            "Generate packet-owned conventional PR titles"
-          elif ($clean | test("Structured Reviewer Body"; "i")) then
-            "Render plain-English reviewer PR body evidence"
-          elif ($clean | test("Pre-create Validation Block"; "i")) then
-            "Block invalid PR packets before creation"
-          elif ($clean | test("Safe Prose Refinement"; "i")) then
-            "Protect editable PR body prose"
-          elif ($paths | contains("marker-plan")) then
+        | if ($paths | contains("marker-plan")) then
             "Add marker split emission fixtures"
           elif ($paths | contains("multi-pr-emission-state.schema.json")) then
             "Record marker split emission state"
@@ -814,7 +818,8 @@ else
             "Add split PR emission foundation"
           else
             "Describe reviewer-visible change"
-          end;
+          end
+        end;
 
       ($plan[0].increments) as $increments
       | ($plan[0].warnings) as $warnings
@@ -829,12 +834,12 @@ else
               | ($inc.id | slug) as $slice_id
               | ($review_order | zpad($width)) as $label
               | (($inc.name // $inc.id) as $source_title
-                | (public_title_description($inc.id; $source_title; ($inc.files // []))) as $title_description
+                | (public_title_description($inc.id; $source_title; ($inc.files // []); ($inc.title_description // ""))) as $title_description
                 | {
                   source_id: $inc.id,
                   source_title: $source_title,
                   title_description: $title_description,
-                  generated_title: ("feat(speckit-pro): " + $title_description),
+                  generated_title: ("feat(" + $title_scope + "): " + $title_description),
                   slice_id: $slice_id,
                   review_order: $review_order,
                   branch: "\($feature_branch)/\($label)-\($slice_id)",
@@ -1033,6 +1038,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
       --argjson scope_guard "$scope_guard" \
       --arg candidate_dir "$CANDIDATE_DIR" \
       --arg emission_mode "$EMISSION_MODE" \
+      --arg title_scope "$TITLE_SCOPE" \
       --arg validator "$SCRIPT_DIR/validate-pr-packet.sh" '
         def body_file($slice_id): "\($candidate_dir)/pr-bodies/\($slice_id).md";
         def packet_file($slice_id):
@@ -1040,7 +1046,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
           else "\($candidate_dir)/slice-packets/\($slice_id).json"
           end;
         def generated_title($slice):
-          $slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
+          $slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
         def validate_op($slice):
           if $emission_mode == "marker" then []
           else [
@@ -1116,6 +1122,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
         --argjson slice "$slice_json" \
         --arg body_file "$body_file" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+        --arg title_scope "$TITLE_SCOPE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$(printf '%s' "$plan_slices" | jq 'length')" '
           {
@@ -1129,9 +1136,9 @@ if [ -n "$CANDIDATE_DIR" ]; then
               head_branch: $slice.branch
             },
             generated_title: {
-              value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
               type: "feat",
-              scope: "speckit-pro",
+              scope: $title_scope,
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
                 source_evidence: {
                   kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
@@ -1194,13 +1201,13 @@ if [ -n "$CANDIDATE_DIR" ]; then
     write_json_atomic "$packet_path" "$packet_json"
     {
       printf '## Summary\n\n'
-      printf 'This PR implements: %s.\n\n' "$title_description"
+      printf 'This PR covers one reviewer-ready slice: %s.\n\n' "$title_description"
       printf '## What Changed\n\n'
-      printf -- '- Implemented the declared change: %s.\n' "$title_description"
-      printf -- '- Published the changed-file scope and verification evidence expected for this review.\n\n'
+      printf -- '- Builds the generated PR title and reviewer-readable body for this slice.\n'
+      printf -- '- Keeps detailed validation records in packet files instead of putting logs and paths in the PR description.\n\n'
       printf '## Why It Matters\n\n'
-      printf 'Reviewers get a strict plain-English description first, with exact technical evidence available in the packet.\n\n'
-      printf 'Source: %s\n' "$packet_path"
+      printf 'Reviewers can scan the PR quickly and open implementation files only when they want more detail.\n\n'
+      printf 'Source: generated PR packet.\n'
     } > "$body_file"
   done < <(printf '%s' "$plan_slices" | jq -c '.[]')
 fi
@@ -1754,6 +1761,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
         --argjson slice "$slice_json" \
         --arg body_file "$body_file_rel" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+        --arg title_scope "$TITLE_SCOPE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$total_slices" '
           {
@@ -1767,9 +1775,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
               head_branch: $slice.branch
             },
             generated_title: {
-              value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
               type: "feat",
-              scope: "speckit-pro",
+              scope: $title_scope,
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
                 source_evidence: {
                   kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
@@ -1849,6 +1857,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
           --arg slice_packet "$slice_packet_rel" \
           --arg body_sha "$body_sha" \
           --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+          --arg title_scope "$TITLE_SCOPE" \
           '
             {
               schema_version: "1.0.0",
@@ -1860,9 +1869,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
               },
               source_feature_dir: $source_feature_dir,
               generated_title: {
-                value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+                value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
                 type: "feat",
-                scope: "speckit-pro",
+                scope: $title_scope,
                 description: ($slice.title_description // $slice.source_title // $slice.slice_id),
                 source_evidence: {
                   kind: "split_source_boundary",

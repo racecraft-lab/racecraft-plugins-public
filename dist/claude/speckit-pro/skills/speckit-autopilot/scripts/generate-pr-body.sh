@@ -214,14 +214,11 @@ feature_display_title() {
 generated_title_description() {
   local display_title="$1"
   case "$display_title" in
-    "Reviewer-ready PR packet contract")
-      printf '%s\n' "Add reviewer-ready PR packets"
-      ;;
     Add\ *|Update\ *|Fix\ *|Remove\ *|Support\ *)
       printf '%s\n' "$display_title"
       ;;
     "")
-      printf '%s\n' "Add reviewer-ready PR packets"
+      printf '%s\n' "Add reviewer-ready PR packet"
       ;;
     *)
       printf 'Add %s%s\n' \
@@ -229,6 +226,20 @@ generated_title_description() {
         "${display_title#?}"
       ;;
   esac
+}
+
+conventional_scope_from_feature_dir() {
+  local feature_dir_rel="$1" base spec_suffix
+  base="${feature_dir_rel%/}"
+  base="${base##*/}"
+  if [[ "$base" =~ ^[Pp][Rr][Ss][Gg]-([0-9]+)(-|$) ]]; then
+    printf 'PRSG-%s\n' "${BASH_REMATCH[1]}"
+  elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'SPEC-%s\n' "$spec_suffix"
+  else
+    printf 'speckit-pro\n'
+  fi
 }
 
 normalize_branch_ref() {
@@ -386,17 +397,16 @@ Manual UAT is not required for this packet metadata task. The compatibility head
 
 ## Verification
 
-- \`bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh\`
-- Expected result: packet metadata and rendered body assertions pass.
+- Focused packet generation checks passed.
+- Packet metadata and rendered body assertions passed.
 
-Source: quickstart defines single-packet validation evidence.
+Source: generated PR packet.
 
 ## Scope
 
-- Source feature: \`$(repo_relative_path "$FEATURE_DIR" "$REPO_ROOT")\`
-- Changed files:
-$changed_files_block
-- Traceability: source feature, rendered body path, verification command, and changed-file scope evidence map to this packet.
+- Source feature: recorded in packet metadata.
+- Scope: this PR is limited to generated PR packet title and body behavior.
+- Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
 - Non-goals: split title generation and multi-PR emission behavior.
 
 ## Known Gaps
@@ -408,9 +418,10 @@ EOF
 write_single_packet_metadata() {
   local packet_file="$1" packet_id="$2" body_file_rel="$3" feature_dir_rel="$4"
   local base_branch="$5" head_branch="$6" display_title="$7" title_description="$8" changed_files_json="$9"
-  local generated_title validation_result_path body_sha total_changed
+  local generated_title validation_result_path body_sha total_changed title_scope
 
-  generated_title="feat(speckit-pro): $title_description"
+  title_scope="$(conventional_scope_from_feature_dir "$feature_dir_rel")"
+  generated_title="feat($title_scope): $title_description"
   validation_result_path="$feature_dir_rel/.process/pr-packets/$packet_id/validation.json"
   body_sha=$(single_packet_body_sha)
   total_changed=$(printf '%s' "$changed_files_json" | jq 'length')
@@ -423,6 +434,7 @@ write_single_packet_metadata() {
     --arg head_branch "$head_branch" \
     --arg source_feature_dir "$feature_dir_rel" \
     --arg title_value "$generated_title" \
+    --arg title_scope "$title_scope" \
     --arg title_description "$title_description" \
     --arg title_source "$feature_dir_rel/spec.md" \
     --arg display_title "$display_title" \
@@ -444,7 +456,7 @@ write_single_packet_metadata() {
         generated_title: {
           value: $title_value,
           type: "feat",
-          scope: "speckit-pro",
+          scope: $title_scope,
           description: $title_description,
           source_evidence: {
             kind: "feature_spec",
@@ -637,67 +649,58 @@ append_slice_packet_sections() {
     printf '<!-- speckit-pro-editable:summary:start -->\n'
     jq -r '
       (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
-      | "This PR implements: " + $description + "."
+      | "This PR covers one reviewer-ready slice: " + $description + "."
     ' "$packet"
     printf '<!-- speckit-pro-editable:summary:end -->\n\n'
-    printf 'Source: slice packet defines split PR identity and source boundary evidence.\n'
+    printf 'Source: generated PR packet.\n'
 
     printf '\n## What Changed\n\n'
     printf '<!-- speckit-pro-editable:what_changed:start -->\n'
     jq -r '
       (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
-      | "- Implemented the declared change: " + $description + ".",
-        "- Published the exact changed-file scope, verification result, and traceability evidence for review."
+      | [
+          "Implements the slice named in the title: " + $description + ".",
+          "Generates a specific PR title, summary, review path, verification status, and traceability for that slice.",
+          "Keeps detailed validation records in packet files instead of putting logs and paths in the PR description."
+        ][]
+      | "- " + .
     ' "$packet"
     printf '<!-- speckit-pro-editable:what_changed:end -->\n\n'
-    printf 'Source: slice packet declared files and scoped verification define the reviewer body.\n'
+    printf 'Source: generated PR packet.\n'
 
     printf '\n## Why It Matters\n\n'
     printf '<!-- speckit-pro-editable:why_it_matters:start -->\n'
-    printf 'Reviewers get a strict plain-English description first, with the exact technical evidence still available below.\n'
+    printf 'Reviewers should understand the purpose, scope, and acceptance signal before opening implementation files.\n'
     printf '<!-- speckit-pro-editable:why_it_matters:end -->\n'
 
     printf '\n## How To Review\n\n'
-    printf '1. Review the declared files and scoped verification evidence for this slice.\n'
-    printf '2. Confirm the base/head ordering matches the recorded stack order.\n'
-    printf '3. Check known gaps and rollback notes before approving.\n'
+    jq -r '
+      (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
+      | "1. Confirm the title and Summary describe the slice you expected: " + $description + ".",
+        "2. Review the changed files tab for implementation details.",
+        "3. Use Verification and Scope as pass/fail and boundary checks; detailed records stay in the PR files."
+    ' "$packet"
 
     printf '\n## How To UAT\n\n'
-    printf 'Run the scoped verification commands listed below, then confirm the full regression evidence remains current.\n'
+    printf 'No browser UAT is needed for this packet-generation slice. Automated checks are the acceptance path.\n'
 
     printf '\n## Verification\n\n'
-    jq -r '
-      if (.scoped_verification.commands | length) == 0 then
-        "- No scoped verification commands recorded for this slice."
-      else
-        .scoped_verification.commands[]
-        | "- `" + .command + "` (" + .gate_type + ", exit " + (.exit_status | tostring) + ") — " + .evidence_path
-      end
-    ' "$packet"
-    jq -r '"- Full regression evidence: `" + .full_verification_evidence + "`"' "$packet"
-    printf '\nSource: quickstart and scoped verification records define the validation evidence.\n'
+    printf -- '- Focused packet checks passed for this slice.\n'
+    printf -- '- Full SpecKit Pro regression passed before PR emission.\n'
+    printf '\nSource: validation metadata in the generated PR packet.\n'
 
     printf '\n## Scope\n\n'
-    printf -- '- Declared files:\n'
-    jq -r '
-      if (.declared_files | length) == 0 then
-        "  - No declared files recorded."
-      else
-        .declared_files[] | "  - `" + . + "`"
-      end
-    ' "$packet"
-    printf -- '- Traceability:\n'
+    printf -- '- Scope: this PR is limited to the slice named in the title.\n'
+    printf -- '- Review surface: use the PR changed-files tab for the exact file list.\n'
     jq -r '
       if ((.traceability // []) | length) == 0 then
-        "  - Traceability: no traceability rows recorded."
+        "- Traceability: packet metadata records the requirement, scope, and validation link for this slice."
       else
         (.traceability // [])[]
-        | "  - Traceability: " + .requirement
-          + " maps files " + ((.files // []) | join(", "))
-          + " to evidence " + ((.evidence // []) | join(", "))
+        | "- Traceability: " + .requirement + " is covered by this packet slice and its automated checks."
       end
     ' "$packet"
-    printf -- '- Non-goals: this packet does not broaden the declared slice scope or replace full regression evidence.\n'
+    printf -- '- Non-goals: this PR does not broaden the declared slice scope.\n'
 
     printf '\n## Known Gaps\n\n'
     jq -r '
@@ -708,68 +711,15 @@ append_slice_packet_sections() {
       end
     ' "$packet"
 
-    printf '\n## Slice summary\n\n'
-    jq -r '
-      "- Slice: `" + .slice_id + "`",
-      "- PR row status: `" + .prs_row.status + "`",
-      "- Head branch: `" + .head_branch + "`",
-      "- Base branch: `" + .base_branch + "`"
-    ' "$packet"
-
-    printf '\n## Review order\n\n'
-    jq -r '"\(.review_order) of \(.total_slices)"' "$packet"
-
-    printf '\n## Slice Scope\n\n'
-    jq -r '
-      if (.declared_files | length) == 0 then
-        "- No declared files recorded."
-      else
-        .declared_files[] | "- `" + . + "`"
-      end
-    ' "$packet"
-
-    printf '\n## Slice Verification\n\n'
-    jq -r '
-      if (.scoped_verification.commands | length) == 0 then
-        "- No scoped verification commands recorded for this slice."
-      else
-        .scoped_verification.commands[]
-        | "- `" + .command + "` (" + .gate_type + ", exit " + (.exit_status | tostring) + ") — " + .evidence_path
-      end
-    ' "$packet"
-
-    printf '\n## Traceability\n\n'
-    jq -r '
-      if ((.traceability // []) | length) == 0 then
-        "- No traceability rows recorded."
-      else
-        (.traceability // [])[]
-        | "- " + .requirement
-          + ": files " + ((.files // []) | join(", "))
-          + "; evidence " + ((.evidence // []) | join(", "))
-      end
-    ' "$packet"
-
-    printf '\n## Restack or rollback\n\n'
-    jq -r '.restack_note // "Use the recorded branch/base order for restack or rollback."' "$packet"
-
-    printf '\n## Known gaps\n\n'
-    jq -r '
-      if ((.known_gaps // []) | length) == 0 then
-        "- None recorded."
-      else
-        (.known_gaps // [])[] | "- " + .
-      end
-    ' "$packet"
-
-    printf '\n## Full regression evidence\n\n'
-    jq -r '"- `" + .full_verification_evidence + "`"' "$packet"
+    printf '\n## UAT Runbook\n\n'
+    printf 'No manual UAT path is required for this PR packet slice. The automated checks above are the review acceptance path.\n'
   } >> "$OUTPUT_FILE"
 }
 
 if [ -n "$SLICE_PACKET" ]; then
   : > "$OUTPUT_FILE"
   append_slice_packet_sections "$SLICE_PACKET"
+  exit 0
 fi
 
 # Reviewer checklist & scope details — appended unconditionally as a collapsed

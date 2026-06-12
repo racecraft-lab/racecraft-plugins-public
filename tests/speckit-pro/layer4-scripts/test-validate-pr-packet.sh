@@ -280,6 +280,50 @@ assert_success_json "valid-single" "single" \
   "feat(speckit-pro): Add reviewer-ready PR packets" \
   "$valid_single_body"
 
+valid_prsg_scope_rel="$PACKET_FIXTURE_REL/valid-prsg-scope.json"
+jq \
+  --arg packet_id "valid-prsg-scope" \
+  --arg title "feat(PRSG-012): Add reviewer-ready PR packets" \
+  --arg scope "PRSG-012" \
+  --arg result "$(validation_result_rel valid-prsg-scope)" \
+  '.packet_id = $packet_id
+    | .generated_title.value = $title
+    | .generated_title.scope = $scope
+    | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$valid_prsg_scope_rel"
+
+run_validator_capture "valid-prsg-scope" "$valid_prsg_scope_rel"
+
+set_test "valid PRSG-scoped packet exits 0"
+assert_captured_exit "0"
+
+assert_success_json "valid-prsg-scope" "single" \
+  "feat(PRSG-012): Add reviewer-ready PR packets" \
+  "$valid_single_body"
+
+valid_spec_scope_rel="$PACKET_FIXTURE_REL/valid-spec-scope.json"
+jq \
+  --arg packet_id "valid-spec-scope" \
+  --arg title "feat(SPEC-014C): Add future title contract" \
+  --arg scope "SPEC-014C" \
+  --arg description "Add future title contract" \
+  --arg result "$(validation_result_rel valid-spec-scope)" \
+  '.packet_id = $packet_id
+    | .generated_title.value = $title
+    | .generated_title.scope = $scope
+    | .generated_title.description = $description
+    | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$valid_spec_scope_rel"
+
+run_validator_capture "valid-spec-scope" "$valid_spec_scope_rel"
+
+set_test "valid future SPEC-scoped packet exits 0"
+assert_captured_exit "0"
+
+assert_success_json "valid-spec-scope" "single" \
+  "feat(SPEC-014C): Add future title contract" \
+  "$valid_single_body"
+
 valid_split="$PACKET_FIXTURE_REL/valid-split.json"
 valid_split_body="$PACKET_FIXTURE_REL/bodies/valid-split.md"
 run_validator_capture "valid-split" "$valid_split"
@@ -411,11 +455,13 @@ assert_no_pr_create_attempts
 generic_title_rel="$PACKET_FIXTURE_REL/invalid-generic-title.json"
 jq \
   --arg packet_id "invalid-generic-title" \
-  --arg title "feat(speckit-pro): User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP" \
+  --arg title "feat(PRSG-012): User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP" \
+  --arg scope "PRSG-012" \
   --arg description "User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP" \
   --arg result "$(validation_result_rel invalid-generic-title)" \
   '.packet_id = $packet_id
     | .generated_title.value = $title
+    | .generated_title.scope = $scope
     | .generated_title.description = $description
     | .validation_result_path = $result' \
   "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$generic_title_rel"

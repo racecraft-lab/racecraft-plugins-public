@@ -9,9 +9,9 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/05-us4"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): Protect editable PR body prose",
+    "value": "feat(PRSG-012): Protect editable PR body prose",
     "type": "feat",
-    "scope": "speckit-pro",
+    "scope": "PRSG-012",
     "description": "Protect editable PR body prose",
     "source_evidence": {
       "kind": "marker_source_boundary",

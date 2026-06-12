@@ -9,9 +9,9 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/03-us2"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): Render plain-English reviewer PR body evidence",
+    "value": "feat(PRSG-012): Render plain-English reviewer PR body evidence",
     "type": "feat",
-    "scope": "speckit-pro",
+    "scope": "PRSG-012",
     "description": "Render plain-English reviewer PR body evidence",
     "source_evidence": {
       "kind": "marker_source_boundary",

@@ -37,8 +37,8 @@ Layer 4: Script Unit Tests
   PASS test-estimate-reviewable-loc (51/51)
   PASS test-ensure-reviewability-preset (19/19)
   PASS test-estimate-spec-size (39/39)
-  PASS test-generate-pr-body (74/74)
-  PASS test-validate-pr-packet (180/180)
+  PASS test-generate-pr-body (82/82)
+  PASS test-validate-pr-packet (204/204)
   PASS test-post-implementation-reference (24/24)
   PASS test-reviewability-marker-guidance (45/45)
   PASS test-generate-uat-skeleton (60/60)
@@ -60,7 +60,7 @@ Layer 4: Script Unit Tests
   PASS test-atomicity-route (109/109)
   PASS test-o5-topology (25/25)
   PASS test-plan-layers (85/85)
-  PASS test-multi-pr-emission (148/148)
+  PASS test-multi-pr-emission (153/153)
   PASS test-restack (32/32)
 
 Layer 5: Agent Tool Scoping
@@ -68,8 +68,8 @@ Layer 5: Agent Tool Scoping
   PASS validate-tool-scoping (190/190)
 
 ════════════════════════════════════════
-speckit-pro test suite: 2816/2816 passed
+speckit-pro test suite: 2853/2853 passed
   L1: 548/548
   L1: 430/430
-  L4: 1648/1648
+  L4: 1685/1685
   L5: 190/190

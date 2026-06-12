@@ -294,7 +294,7 @@ validate_editable_fields() {
     and .[2].end_marker == "<!-- speckit-pro-editable:why_it_matters:end -->"
   ' "body.editable_fields" "editable_fields" \
     "Editable fields must be exactly summary, what_changed, and why_it_matters with full-line marker pairs." \
-    "Regenerate editable field metadata from the canonical PRSG-012 packet renderer."
+    "Regenerate editable field metadata from the canonical packet renderer."
 }
 
 validate_body_file() {
@@ -421,7 +421,7 @@ validate_body_file() {
 }
 
 validate_public_text() {
-  local packet="$1" title description source_summary uat_text evidence_summaries marker_text packet_id split_slice
+  local packet="$1" title description source_summary uat_text evidence_summaries marker_text packet_id split_slice title_public_text
   title="$(jq_get "$packet" '.generated_title.value')"
   description="$(jq_get "$packet" '.generated_title.description')"
   source_summary="$(jq_get "$packet" '.generated_title.source_evidence.summary')"
@@ -431,7 +431,12 @@ validate_public_text() {
   packet_id="$(jq_get "$packet" '.packet_id')"
   split_slice="$(jq_get "$packet" '.split_slice.slice_id')"
 
-  for item in "$title" "$description" "$source_summary" "$uat_text" "$evidence_summaries" "$marker_text"; do
+  title_public_text="$title"
+  case "$title_public_text" in
+    *": "*) title_public_text="${title_public_text#*: }" ;;
+  esac
+
+  for item in "$title_public_text" "$description" "$source_summary" "$uat_text" "$evidence_summaries" "$marker_text"; do
     if contains_banned_text "$item"; then
       add_failure "text.banned_or_placeholder" "generated_title/body_evidence" \
         "Packet contains stale placeholder, internal code, hidden comment, example text, or banned label." \
@@ -500,7 +505,7 @@ validate_packet() {
     "mode must be single or split." "Set mode to single for one PR or split for slice PR emission."
   require_jq_true "$packet" '
     .generated_title.value
-    | test("^[a-z]+\\([a-z][a-z0-9-]*\\): [A-Za-z]")
+    | test("^[a-z]+\\([A-Za-z][A-Za-z0-9-]*\\): [A-Za-z]")
   ' "title.format" "generated_title.value" \
     "generated_title.value must be a conventional title with public-readable description." \
     "Regenerate the title from packet metadata using <type>(<scope>): <description>."
@@ -508,10 +513,10 @@ validate_packet() {
     "title.type" "generated_title.type" \
     "generated_title.type must be an allowed conventional commit type." \
     "Use feat, fix, chore, docs, refactor, or test."
-  require_jq_true "$packet" '(.generated_title.scope | test("^[a-z][a-z0-9-]*$"))' \
+  require_jq_true "$packet" '(.generated_title.scope | test("^([a-z][a-z0-9-]*|[A-Z]+-[A-Z0-9][A-Z0-9-]*)$"))' \
     "title.scope" "generated_title.scope" \
-    "generated_title.scope must be a public lowercase conventional commit scope." \
-    "Use an explicit allowed packet metadata scope such as speckit-pro."
+    "generated_title.scope must be a public conventional commit scope or spec id." \
+    "Use an explicit allowed packet metadata scope such as a spec id or speckit-pro."
   require_jq_true "$packet" '
     .generated_title as $title
     | $title.value

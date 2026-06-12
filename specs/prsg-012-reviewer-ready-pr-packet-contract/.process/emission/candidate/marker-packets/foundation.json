@@ -9,9 +9,9 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/01-foundation"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): Add reviewer packet validation contract",
+    "value": "feat(PRSG-012): Add reviewer packet validation contract",
     "type": "feat",
-    "scope": "speckit-pro",
+    "scope": "PRSG-012",
     "description": "Add reviewer packet validation contract",
     "source_evidence": {
       "kind": "marker_source_boundary",

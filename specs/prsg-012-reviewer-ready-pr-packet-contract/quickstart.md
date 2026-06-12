@@ -25,7 +25,7 @@ export PATH="${SPECIFY_CLI_BIN:-$HOME/.local/share/uv/tools/specify-cli/bin}:$PA
 
 Expected outcome:
 
-- The title renders as `feat(speckit-pro): <plain-English action phrase>`.
+- The title renders as `feat(PRSG-012): <plain-English action phrase>` for this spec. Future spec-backed packets use their own derived spec scope, and non-spec plugin packets may fall back to `feat(speckit-pro):`.
 - The body contains `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
 - The body still contains the literal `## UAT Runbook` heading.
 - Validation status is `passed`.

@@ -140,6 +140,10 @@
         "source_boundary": {
           "$ref": "#/$defs/source_boundary"
         },
+        "title_description": {
+          "type": "string",
+          "minLength": 1
+        },
         "task_ids": {
           "type": "array",
           "items": {
