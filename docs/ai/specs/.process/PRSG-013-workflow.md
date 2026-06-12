@@ -49,8 +49,8 @@ captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 3 user stories, 16 FRs, 9 acceptance scenarios, G1 passed |
 | Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions complete, 2 consensus items resolved, G2 passed |
-| Plan | `/speckit-plan` | 🔄 In Progress | |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Plan | `/speckit-plan` | ✅ Complete | plan, research, data model, quickstart, 2 contracts; G3 passed |
+| Checklist | `/speckit-checklist` | 🔄 In Progress | state-management active |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -283,11 +283,12 @@ Use these markers in spec.md for traceability through later phases:
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (if needed) |
-| `data-model.md` | ⏳ | Entities and types |
-| `contracts/` | ⏳ | API specifications |
-| `quickstart.md` | ⏳ | Developer onboarding |
+| `plan.md` | ✅ | Technical context, declared file operations, constitution gates, marker split strategy |
+| `research.md` | ✅ | Decisions for marker state, safe subdivision, gate semantics, final backstop, and verification |
+| `data-model.md` | ✅ | Reviewability finding, marker plan, marker, safe task cluster, marker evidence, emission packet |
+| `contracts/` | ✅ | `pr-marker-plan.schema.json`, `marker-split-result.schema.json` |
+| `quickstart.md` | ✅ | Developer validation flow |
+| G3 Gate | ✅ | `validate-gate.sh G3` passed with 0 unresolved markers; generated JSON schemas pass `jq empty` |
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-013-workflow.md",
-  "updated_at": "2026-06-12T02:18:09Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-06-12T02:32:16Z",
+  "active_step": "Phase 4: Checklist - state-management",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -100,8 +100,8 @@
     {"step": "Phase 2: Clarify - Subdivision and Hazard Focus Consensus", "status": "completed", "summary": "Round 1 codebase/spec consensus agreed hazard collapse triggers only for single-atomic-PR or releasable:false, not one-navigable-PR alone."},
     {"step": "Phase 2: Clarify - Gate Boundary Focus", "status": "completed", "summary": "Accepted parseable reviewability results as marker input, post-G5 block JSON capture/continue, correctness stop boundaries, final backstop marker_split proceed behavior, and final-backstop evidence flow into marker packets."},
     {"step": "Phase 2: Clarify - Gate Boundary Focus Consensus", "status": "completed", "summary": "Round 1 codebase/spec consensus agreed final full-diff size block with a current valid pr_marker_plan should return marker_split and exit 0; invalid marker plans remain correctness stops."},
-    {"step": "Phase 3: Plan", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - state-management", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "completed", "gate": "G3", "gate_status": "passed", "reviewability_estimate": {"status": "pass", "projected": 0, "declared_files": {"production": 0, "new": 1, "modified": 17, "total_entries": 18}}, "summary": "Created plan, research, data model, quickstart, and 2 JSON contracts; G3 passed with 0 unresolved markers."},
+    {"step": "Phase 4: Checklist - state-management", "status": "in_progress"},
     {"step": "Phase 4: Checklist - state-management Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},
@@ -220,5 +220,34 @@
         "spec-context-analyst"
       ]
     }
-  ]
+  ],
+  "phase3_plan": {
+    "gate": "G3",
+    "gate_status": "passed",
+    "artifacts": [
+      "specs/prsg-013-reviewability-markers/plan.md",
+      "specs/prsg-013-reviewability-markers/research.md",
+      "specs/prsg-013-reviewability-markers/data-model.md",
+      "specs/prsg-013-reviewability-markers/quickstart.md",
+      "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json",
+      "specs/prsg-013-reviewability-markers/contracts/marker-split-result.schema.json"
+    ],
+    "declared_file_operations": {
+      "total": 18,
+      "new": 1,
+      "modified": 17
+    },
+    "reviewability_estimate": {
+      "status": "pass",
+      "projected": 0,
+      "note": "Estimator does not count plugin shell/guidance paths as production LOC; the plan still records a warning-accepted reviewability budget and requires marker-based split evidence."
+    },
+    "validation": {
+      "validate_gate_g3": "passed",
+      "contracts_jq": "passed",
+      "placeholder_scan": "0 active TODO/TBD/FAIL/NEEDS CLARIFICATION/Gap/CRITICAL markers in plan artifacts",
+      "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed by plan executor"
+    },
+    "summary": "Phase 3 Plan produced the PRSG-013 technical plan and marker/final-backstop contract schemas."
+  }
 }
