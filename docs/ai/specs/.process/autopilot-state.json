@@ -1,156 +1,26 @@
 {
-  "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T20:02:12Z",
-  "active_step": "Post: PR Body Generation",
-  "model_check": {
-    "parent_session": "Codex main session",
-    "status": "accepted",
-    "note": "Autopilot was invoked in the main Codex session. SpecKit Pro subagents are installed and exposed by the Codex runtime at gpt-5.5 with xhigh reasoning."
-  },
-  "preflight": {
-    "branch": "prsg-012-reviewer-ready-pr-packet-contract",
-    "is_worktree": true,
-    "on_feature_branch": false,
-    "spec_directory": "specs/prsg-012-reviewer-ready-pr-packet-contract",
-    "workflow_branch": "prsg-012-reviewer-ready-pr-packet-contract",
-    "confidence_gate_mode": "advisory",
-    "project_commands": {
-      "BUILD": "N/A",
-      "TYPECHECK": "N/A",
-      "LINT": "N/A",
-      "LINT_FIX": "N/A",
-      "UNIT_TEST": "N/A",
-      "INTEGRATION_TEST": "N/A",
-      "SINGLE_FILE_TEST": "N/A",
-      "SINGLE_FILE_INTEGRATION": "N/A",
-      "FULL_VERIFY": "N/A",
-      "STRUCTURAL": "bash tests/speckit-pro/run-all.sh --layer 1",
-      "SCRIPT_UNIT": "bash tests/speckit-pro/run-all.sh --layer 4",
-      "DEFAULT_VERIFY": "bash tests/speckit-pro/run-all.sh"
-    },
-    "preset_conventions": {
-      "has_presets": true,
-      "presets": [
-        "speckit-pro-reviewability"
-      ]
-    },
-    "extensions": {
-      "archive": true,
-      "verify": true,
-      "verify_tasks": true,
-      "retrospective": true,
-      "speckit_utils": true,
-      "review": false,
-      "cleanup": false
-    },
-    "constitution_validation": {
-      "status": "passed",
-      "note": "Baseline Layer 1 passed 978/978 and Layer 4 passed 1419/1419 before Phase 1. Layer 4 initially exposed one committed absolute local path in an archive report; the path was replaced with <repo-root> and privacy scan passed 9/9 before rerunning Layer 4."
-    },
-    "agent_availability": {
-      "phase-executor": "user",
-      "clarify-executor": "user",
-      "checklist-executor": "user",
-      "analyze-executor": "user",
-      "implement-executor": "user",
-      "codebase-analyst": "user",
-      "spec-context-analyst": "user",
-      "domain-researcher": "user",
-      "autopilot-fast-helper": "user"
-    },
-    "mcp_servers": {
-      "status": "fallbacks_available",
-      "missing": [
-        "tavily-mcp",
-        "context7",
-        "RepoPrompt"
-      ]
-    }
-  },
-  "archive_sweep": {
-    "archive_extension_installed": true,
-    "cleanup_mode": "apply-cleanup",
-    "safeToApplyCleanup": true,
-    "excludedCurrentSpec": "specs/prsg-012-reviewer-ready-pr-packet-contract",
-    "eligible_previous_specs": [],
-    "cleanup_applied": [],
-    "note": "Archive state was refreshed from the post-merge PRSG-005/PRSG-013 cleanup on main. Current target PRSG-012 is excluded; no additional eligible previous spec cleanup was applied before Phase 1."
-  },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
-    ],
-    "hints": [],
-    "warnings": []
-  },
-  "layer_plan": {
-    "status": "skipped",
-    "reason": "atomicity route one-navigable-PR"
-  },
-  "confidence_gate": {
-    "mode": "advisory",
-    "status": "soft_skip",
-    "exit_code": 1,
-    "pass": null,
-    "composite": null,
-    "threshold": 0.9,
-    "reason": "no confidence emit found",
-    "recommended_action": "soft_skip"
-  },
-  "pr_marker_plan": {
-    "schema_version": "pr-marker-plan.v1",
-    "kind": "pr_marker_plan",
-    "feature_id": "prsg-012-reviewer-ready-pr-packet-contract",
-    "status": "emission_ready",
-    "source_fingerprint": {
-      "feature_spec_sha": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
-      "plan_declared_scope_sha": "555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
-      "tasks_sha": "51dde76432d2326bff72d6bbd86ce1451ebf39a35bd1ba2bc42f6f1047a5c9d7",
-      "reviewability_sha": "f440668daa09459968775005ef51c6ef32cddf58b37a335995edc99c035e8768",
-      "hazard_route_sha": "57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
-    },
-    "markers": [
+  "multi_pr_emission": {
+    "schema_version": 2,
+    "status": "blocked",
+    "emission_mode": "marker",
+    "route": "marker_split",
+    "base_branch": "main",
+    "base_sha": "3118e81162104bfd081d01755c00c205a8eab061",
+    "next_slice_id": "foundation",
+    "reconciled_at": "2026-06-10T00:00:00Z",
+    "slices": [
       {
-        "id": "foundation",
+        "slice_id": "foundation",
         "review_order": 1,
-        "kind": "foundation",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "Foundation",
-          "story_id": null,
-          "start_task_id": "T001",
-          "end_task_id": "T009"
-        },
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006",
-          "T007",
-          "T008",
-          "T009"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
+        "expected_branch": "prsg-012-reviewer-ready-pr-packet-contract/01-foundation",
+        "expected_base_branch": "main",
+        "head_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3",
         "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md"
-          }
+          "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+          "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+          "specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md"
         ],
-        "declared_tests": [
+        "declared_scoped_tests": [
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-split.md",
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json",
@@ -162,311 +32,341 @@
           "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
           "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh"
         ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "foundation",
-          "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-split.md",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-split.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
         },
-        "hazards": [
-          "change-shape:modify-heavy"
+        "status": "failed",
+        "marker_id": "foundation",
+        "source_marker_ids": [
+          "foundation"
         ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "commit_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3",
-          "head_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
+        "source_marker_checkpoints": [
+          "docs/ai/specs/.process/PRSG-012-workflow.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json",
+        "last_error": {
+          "slice_id": "foundation",
+          "failed_at": "2026-06-10T00:00:00Z",
+          "phase": "git_branch",
+          "command": "git branch failed for slice foundation",
+          "exit_status": 2,
+          "evidence_path": ""
+        }
       },
       {
-        "id": "us1",
+        "slice_id": "us1",
         "review_order": 2,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP",
-          "story_id": 1,
-          "start_task_id": "T010",
-          "end_task_id": "T017"
-        },
-        "task_ids": [
-          "T010",
-          "T011",
-          "T012",
-          "T013",
-          "T014",
-          "T015",
-          "T016",
-          "T017"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
+        "expected_branch": "prsg-012-reviewer-ready-pr-packet-contract/02-us1",
+        "expected_base_branch": "prsg-012-reviewer-ready-pr-packet-contract/01-foundation",
+        "head_sha": "59bed4113474cde5001fe01205f6fc2d9e4e3443",
         "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
-          }
+          "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+          "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+          "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh",
+          "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
         ],
-        "declared_tests": [
+        "declared_scoped_tests": [
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json",
           "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
           "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
         ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us1",
-          "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us1/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us1/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us1/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
         },
-        "hazards": [
-          "change-shape:modify-heavy"
+        "status": "pending",
+        "marker_id": "us1",
+        "source_marker_ids": [
+          "us1"
         ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "commit_sha": "59bed4113474cde5001fe01205f6fc2d9e4e3443",
-          "head_sha": "59bed4113474cde5001fe01205f6fc2d9e4e3443"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
+        "source_marker_checkpoints": [
+          "docs/ai/specs/.process/PRSG-012-workflow.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
       },
       {
-        "id": "us2",
+        "slice_id": "us2",
         "review_order": 3,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 2 - Structured Reviewer Body",
-          "story_id": 2,
-          "start_task_id": "T018",
-          "end_task_id": "T024"
-        },
-        "task_ids": [
-          "T018",
-          "T019",
-          "T020",
-          "T021",
-          "T022",
-          "T023",
-          "T024"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
+        "expected_branch": "prsg-012-reviewer-ready-pr-packet-contract/03-us2",
+        "expected_base_branch": "prsg-012-reviewer-ready-pr-packet-contract/02-us1",
+        "head_sha": "bffb2d9eeb1ec466566bf1a628d56fa078b34dd5",
         "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md"
-          }
+          "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+          "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+          "speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md"
         ],
-        "declared_tests": [
+        "declared_scoped_tests": [
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
           "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
           "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh"
         ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us2",
-          "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us2/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us2/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us2/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
         },
-        "hazards": [
-          "change-shape:modify-heavy"
+        "status": "pending",
+        "marker_id": "us2",
+        "source_marker_ids": [
+          "us2"
         ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "commit_sha": "bffb2d9eeb1ec466566bf1a628d56fa078b34dd5",
-          "head_sha": "bffb2d9eeb1ec466566bf1a628d56fa078b34dd5"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
+        "source_marker_checkpoints": [
+          "docs/ai/specs/.process/PRSG-012-workflow.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
       },
       {
-        "id": "us3",
+        "slice_id": "us3",
         "review_order": 4,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 3 - Pre-create Validation Block",
-          "story_id": 3,
-          "start_task_id": "T025",
-          "end_task_id": "T034"
-        },
-        "task_ids": [
-          "T025",
-          "T026",
-          "T027",
-          "T028",
-          "T029",
-          "T030",
-          "T031",
-          "T032",
-          "T033",
-          "T034"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
+        "expected_branch": "prsg-012-reviewer-ready-pr-packet-contract/04-us3",
+        "expected_base_branch": "prsg-012-reviewer-ready-pr-packet-contract/03-us2",
+        "head_sha": "50d413174da5018b0aa5053227df51b52bb50f48",
         "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": ".process/prs.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs/ai/specs/.process/PRSG-012-workflow.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
-          }
+          ".process/prs.json",
+          "docs/ai/specs/.process/PRSG-012-workflow.md",
+          "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+          "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh",
+          "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
         ],
-        "declared_tests": [
+        "declared_scoped_tests": [
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args",
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json",
           "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
           "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh"
         ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us3",
-          "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
         },
-        "hazards": [
-          "change-shape:modify-heavy"
+        "status": "pending",
+        "marker_id": "us3",
+        "source_marker_ids": [
+          "us3"
         ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "commit_sha": "50d413174da5018b0aa5053227df51b52bb50f48",
-          "head_sha": "50d413174da5018b0aa5053227df51b52bb50f48"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
+        "source_marker_checkpoints": [
+          "docs/ai/specs/.process/PRSG-012-workflow.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
       },
       {
-        "id": "us4",
+        "slice_id": "us4",
         "review_order": 5,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 4 - Safe Prose Refinement",
-          "story_id": 4,
-          "start_task_id": "T035",
-          "end_task_id": "T041"
-        },
-        "task_ids": [
-          "T035",
-          "T036",
-          "T037",
-          "T038",
-          "T039",
-          "T040",
-          "T041"
-        ],
-        "folded_polish_task_ids": [
-          "T042",
-          "T043",
-          "T044",
-          "T045",
-          "T046",
-          "T047",
-          "T048",
-          "T049",
-          "T050",
-          "T051",
-          "T052",
-          "T053",
-          "T054",
-          "T055",
-          "T056"
-        ],
-        "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
+        "expected_branch": "prsg-012-reviewer-ready-pr-packet-contract/05-us4",
+        "expected_base_branch": "prsg-012-reviewer-ready-pr-packet-contract/04-us3",
+        "head_sha": "f29ba3aa94af3f67216037b2f67fa914b0b6d00d",
         "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
-          }
+          "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+          "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md",
+          "speckit-pro/skills/speckit-autopilot/SKILL.md",
+          "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+          "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+          "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
         ],
-        "declared_tests": [
+        "declared_scoped_tests": [
           "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
           "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
           "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single-edited.md",
@@ -482,338 +382,67 @@
           "tests/speckit-pro/layer8-parity/01-post-impl-parity/workflow.md",
           "tests/speckit-pro/run-all.sh"
         ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us4",
-          "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single-edited.md",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us4/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us4/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us4/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/run-all.sh",
+              "gate_type": "DEFAULT_VERIFY",
+              "reason": "PRSG-013 declared marker test mapped to DEFAULT_VERIFY",
+              "required": true,
+              "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us4/default-verify.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
         },
-        "hazards": [
-          "change-shape:modify-heavy"
+        "status": "pending",
+        "marker_id": "us4",
+        "source_marker_ids": [
+          "us4"
         ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
-          "commit_sha": "f29ba3aa94af3f67216037b2f67fa914b0b6d00d",
-          "head_sha": "f29ba3aa94af3f67216037b2f67fa914b0b6d00d"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
+        "source_marker_checkpoints": [
+          "docs/ai/specs/.process/PRSG-012-workflow.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
       }
     ],
-    "warnings": [
-      {
-        "code": "reviewability_size_warning",
-        "severity": "warning",
-        "message": "Reviewability sizing result is marker-planning input.",
-        "source": "reviewability",
-        "details": {
-          "status": "block",
-          "mode": "tasks",
-          "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
-        }
-      }
-    ],
-    "updated_at": "2026-06-12T20:02:12Z"
-  },
-  "plan": [
-    {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
-      "status": "completed",
-      "summary": "Archive extension enabled; current PRSG-012 target excluded; no additional eligible previous spec cleanup applied."
+    "source_marker_plan": {
+      "path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/pr-marker-plan.json"
     },
-    {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed",
-      "summary": "Preflight passed; confidence gate mode advisory; branch rebased onto origin/main; baseline Layer 1 978/978 and Layer 4 1419/1419 passed."
-    },
-    {
-      "step": "Phase 1: Specify",
-      "status": "completed",
-      "gate": "G1",
-      "gate_status": "passed",
-      "summary": "Created spec.md and requirements checklist with 18 functional requirements, 4 user stories, 13 acceptance scenarios, and 0 NEEDS CLARIFICATION markers."
-    },
-    {
-      "step": "Phase 2: Clarify - Packet Schema",
-      "status": "completed",
-      "summary": "Accepted shared pr-packet.schema.json, required packet fields, per-packet validation JSON path, compatibility-only legacy HTML marker semantics, and Summary/What Changed/Why It Matters editable-field boundaries."
-    },
-    {
-      "step": "Phase 2: Clarify - Packet Schema Consensus",
-      "status": "completed",
-      "summary": "Round 1 codebase/spec consensus accepted rendered source/provenance markers outside comments/code fences/generated fixtures and explicit editable prose blocks limited to Summary, What Changed, and Why It Matters."
-    },
-    {
-      "step": "Phase 2: Clarify - Title Generation",
-      "status": "completed",
-      "summary": "Accepted structured generated_title metadata, feat(speckit-pro) default for implementation packets, explicit metadata-only type/scope overrides, single-PR display-title source, split PR marker/layer-plan title sources, and strict public-readable post-colon description validation."
-    },
-    {
-      "step": "Phase 2: Clarify - Title Generation Consensus",
-      "status": "completed",
-      "summary": "Round 1 codebase/spec consensus accepted conventional title defaults and rejected any internal codes in title descriptions, even when mixed with readable words."
-    },
-    {
-      "step": "Phase 2: Clarify - Safe Refinement",
-      "status": "completed",
-      "summary": "Accepted exact full-line editable marker pairs, packet JSON mirrored field ids, protected-body fingerprint with editable blocks elided, allowlisted structural comments, canonical packet block before host template content, and fail-before-create validation JSON for outside-field edits."
-    },
-    {
-      "step": "Phase 2: Clarify - Safe Refinement Consensus",
-      "status": "completed",
-      "summary": "Executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed",
-      "gate": "G3",
-      "gate_status": "passed",
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 0,
-        "declared_files": {
-          "production": 0,
-          "new": 8,
-          "modified": 6,
-          "total_entries": 14
-        },
-        "note": "Planner records about 350 projected reviewable LOC and the advisory estimator returned pass; current estimator did not count plugin shell paths as production LOC."
-      },
-      "summary": "Created plan.md, research.md, data-model.md, quickstart.md, and contracts/pr-packet.schema.json. G3 passed with 0 unresolved markers."
-    },
-    {
-      "step": "Phase 4: Checklist - api-contracts",
-      "status": "completed",
-      "summary": "16 items; 6 gaps remediated; 0 markers remaining. Added PR target requirements, body path constraints, changed-file scope, split-only conditionals, rendered heading order validation, and exact editable-field constraints."
-    },
-    {
-      "step": "Phase 4: Checklist - api-contracts Consensus",
-      "status": "completed",
-      "summary": "Checklist executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed",
-      "summary": "16 items; 5 gaps remediated; 0 markers remaining. Added input-error behavior, schema vs validation error classes, deterministic stderr, stale-result-safe resume, and split-PR partial failure preservation."
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "completed",
-      "summary": "Checklist executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 4: Checklist - reliability",
-      "status": "completed",
-      "summary": "18 items; 3 gaps remediated; 0 markers remaining. Added durable workflow-event sink/idempotency/remediation fields, exact L4/L3/L7/L8 evidence expectations, and Claude/Codex parity plus single-copy validator/schema boundaries. Also fixed count-markers.sh zero-match JSON handling in source and dist mirrors."
-    },
-    {
-      "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "completed",
-      "summary": "Checklist executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed",
-      "gate": "G5",
-      "gate_status": "passed",
-      "task_count": 56,
-      "parallel_opportunities": 5,
-      "reviewability_gate": {
-        "status": "block",
-        "classification": "size-only marker input",
-        "reviewable_loc": 2240,
-        "production_files": 1,
-        "total_files": 73,
-        "primary_surface_count": 5
-      },
-      "summary": "Generated tasks.md with 56 tasks across Foundation, US1-US4, and Polish. G5 passed. Reviewability size-only block recorded as pr_marker_plan evidence."
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed",
-      "gate": "G6",
-      "gate_status": "passed",
-      "summary": "5 findings remediated in tasks.md (0 critical, 2 high, 2 medium, 1 low). Marker counter clean after rerun."
-    },
-    {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "summary": "No unresolved consensus items; no consensus dispatch required."
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "summary": "Advisory confidence gate returned NO_DATA because no synthesizer confidence emit was present; recorded as soft-skip and continued."
-    },
-    {
-      "step": "Phase 7: Foundation (T001-T009)",
-      "status": "completed",
-      "summary": "T001-T009 complete. Added valid/invalid packet fixtures, validator contract tests, runtime pr-packet schema, executable validate-pr-packet.sh, and recorded the size-only reviewability checkpoint."
-    },
-    {
-      "step": "Phase 7: US1 generated titles (T010-T017)",
-      "status": "completed",
-      "summary": "T010-T017 complete. Added title-token fixtures, generated single and split packet titles, validated type/scope metadata, passed generated titles to split PR creation, and updated single-PR packet guidance."
-    },
-    {
-      "step": "Phase 7: US2 reviewer body (T018-T024)",
-      "status": "completed",
-      "summary": "T018-T024 complete. Added reviewer body evidence assertions, confirmed valid body fixture coverage, rendered traceability in single-packet bodies, validated stale body text and traceability, preserved UAT compatibility, and kept generator/validator tests green."
-    },
-    {
-      "step": "Phase 7: US3 validation gate (T025-T034)",
-      "status": "completed",
-      "summary": "T025-T034 complete. Added input-error and split partial-failure fixtures, expanded validator and multi-PR tests, derived validation-result paths, wrote no-path input envelopes, superseded workflow events, generated canonical split bodies, and gated layer split PR creation on freshly passed packet validation."
-    },
-    {
-      "step": "Phase 7: US4 safe refinement (T035-T041)",
-      "status": "completed",
-      "summary": "T035-T041 complete. Added sanctioned-edit and protected-edit fixtures, enforced editable marker boundaries, canonical protected-body fingerprints with editable elision, unknown comment rejection, host content coexistence outside the canonical packet block, and documented safe prose refinement limits."
-    },
-    {
-      "step": "Phase 7: Polish evidence and parity (T042-T056)",
-      "status": "completed",
-      "summary": "T042-T056 complete. Updated Claude and Codex Layer 3 evals, Layer 7 replay fixture prompt/expected/README/parser evidence, Layer 8 parity workflow/equivalence/tolerance docs, primary autopilot guidance, Codex mirror guidance, and Codex post-implementation reference for generated PR packet validation before PR creation. Verification passed: Layer 1 978/978, Layer 4 1622/1622, default deterministic suite 2790/2790."
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "skipped: speckit-utils doctor command not installed for Codex runtime",
-      "completed_at": "2026-06-12T19:53:06Z",
-      "evidence": ".specify/extensions contains speckit-utils doctor, but .codex/commands is absent and command exists only under .claude/commands"
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "skipped: verify command not installed for Codex runtime",
-      "completed_at": "2026-06-12T19:53:06Z",
-      "evidence": ".specify/extensions contains verify, but .codex/commands is absent and command exists only under .claude/commands"
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "skipped: verify-tasks command not installed for Codex runtime",
-      "completed_at": "2026-06-12T19:53:06Z",
-      "evidence": ".specify/extensions contains verify-tasks, but .codex/commands is absent and command exists only under .claude/commands"
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "skipped: review not installed for Codex runtime",
-      "completed_at": "2026-06-12T19:53:06Z"
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "completed",
-      "completed_at": "2026-06-12T19:53:06Z",
-      "evidence": "bash tests/speckit-pro/run-all.sh => speckit-pro test suite 2790/2790 passed"
-    },
-    {
-      "step": "Post: Cleanup",
-      "status": "skipped: cleanup not installed for Codex runtime",
-      "completed_at": "2026-06-12T19:53:06Z"
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "completed",
-      "started_at": "2026-06-12T19:53:06Z",
-      "completed_at": "2026-06-12T19:54:25Z",
-      "evidence": "final-reviewability-backstop outcome=marker_split; marker plan valid and fingerprint matched"
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "completed",
-      "started_at": "2026-06-12T19:54:25Z",
-      "completed_at": "2026-06-12T19:56:40Z",
-      "evidence": "Self-Review block recorded in docs/ai/specs/.process/PRSG-012-workflow.md"
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "completed",
-      "started_at": "2026-06-12T19:56:40Z",
-      "completed_at": "2026-06-12T19:58:10Z",
-      "evidence": "Skeleton generated at specs/prsg-012-reviewer-ready-pr-packet-contract/.process/uat-runbook.md; uat-runbook-author unavailable in Codex runtime, fail-open skeleton retained"
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "in_progress",
-      "started_at": "2026-06-12T19:58:10Z"
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "pending"
-    }
-  ],
-  "current_source_fingerprint": {
-    "feature_spec_sha": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
-    "plan_declared_scope_sha": "555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
-    "tasks_sha": "51dde76432d2326bff72d6bbd86ce1451ebf39a35bd1ba2bc42f6f1047a5c9d7",
-    "reviewability_sha": "f440668daa09459968775005ef51c6ef32cddf58b37a335995edc99c035e8768",
-    "hazard_route_sha": "57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
-  },
-  "pr_marker_plan_current_source_fingerprint": {
-    "feature_spec_sha": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
-    "plan_declared_scope_sha": "555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
-    "tasks_sha": "51dde76432d2326bff72d6bbd86ce1451ebf39a35bd1ba2bc42f6f1047a5c9d7",
-    "reviewability_sha": "f440668daa09459968775005ef51c6ef32cddf58b37a335995edc99c035e8768",
-    "hazard_route_sha": "57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
-  },
-  "post_implementation": {
-    "codex_extension_availability": {
-      "checked_at": "2026-06-12T19:53:06Z",
-      "codex_commands_dir": "absent",
-      "claude_commands_dir": "present",
-      "skipped_items": [
-        "Post: Doctor Extension Check",
-        "Post: Verify Implementation",
-        "Post: Verify Tasks Phantom Check",
-        "Post: Code Review",
-        "Post: Cleanup"
-      ]
-    },
-    "integration_suite": {
-      "status": "completed",
-      "completed_at": "2026-06-12T19:53:06Z",
-      "command": "bash tests/speckit-pro/run-all.sh",
-      "result": "speckit-pro test suite: 2790/2790 passed"
-    },
-    "final_reviewability_backstop": {
-      "status": "completed",
-      "completed_at": "2026-06-12T19:54:25Z",
-      "command": "bash speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/prsg-012-reviewer-ready-pr-packet-contract --feature-branch prsg-012-reviewer-ready-pr-packet-contract --diff-range origin/main...HEAD --state-output specs/prsg-012-reviewer-ready-pr-packet-contract/.process/final-reviewability/gate-state.json --packet-output specs/prsg-012-reviewer-ready-pr-packet-contract/.process/final-reviewability/reslicing-packet.json --autopilot-state docs/ai/specs/.process/autopilot-state.json --full-verification-evidence docs/ai/specs/.process/PRSG-012-workflow.md",
-      "outcome": "marker_split",
-      "gate_state_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/final-reviewability/gate-state.json",
-      "marker_split_evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
-    },
-    "self_review": {
-      "status": "completed",
-      "completed_at": "2026-06-12T19:56:40Z",
-      "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md"
-    },
-    "uat_runbook_generation": {
-      "status": "completed",
-      "completed_at": "2026-06-12T19:58:10Z",
-      "runbook_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/uat-runbook.md",
-      "skeleton_command": "UAT_PROJECT_COMMANDS=<json> bash speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md specs/prsg-012-reviewer-ready-pr-packet-contract/.process/uat-runbook.md --workflow-file docs/ai/specs/.process/PRSG-012-workflow.md",
-      "author_agent_status": "skipped: uat-runbook-author not installed for Codex runtime"
-    },
-    "marker_plan_repair": {
-      "status": "completed",
-      "completed_at": "2026-06-12T20:02:12Z",
-      "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/pr-marker-plan.json",
-      "summary": "Removed non-file placeholder declared path specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/<packet_id>/validation.json from us3 marker scope before emission."
+    "marker_split_result": {
+      "path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
     }
   }
 }
