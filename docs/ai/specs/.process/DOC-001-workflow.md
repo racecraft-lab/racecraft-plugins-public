@@ -36,7 +36,7 @@ The design concept is the source of truth for these setup decisions:
 | Checklist | `/speckit-checklist` | Complete | Completed documentation-quality, accessibility, and error-handling; G4 passed with 0 `[Gap]` markers |
 | Tasks | `/speckit-tasks` | Complete | Created 28 research-only tasks across 5 phases; G5 passed; atomicity route is one navigable PR |
 | Analyze | `/speckit-analyze` | Complete | 0 findings; DOC-FR-001 task coverage, live-source refresh tasks, route-level Diataxis IA, and no-implementation boundary verified; G6 passed |
-| Implement | `/speckit-implement` | In Progress | Write `docs/ai/research/interactive-documentation-framework-spike.md` |
+| Implement | `/speckit-implement` | Complete | Research report complete; T001-T028 complete; G7 passed |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -410,25 +410,51 @@ Focus on:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Research artifact setup | Pending | Pending | |
-| Candidate comparison | Pending | Pending | |
-| IA skeleton | Pending | Pending | |
-| Recommendation | Pending | Pending | |
-| Verification | Pending | Pending | |
+| Research artifact setup | T001-T004 | 4/4 | Report shell, source evidence convention, local inputs, and scope boundary recorded |
+| Candidate comparison | T005-T014 | 10/10 | Official sources refreshed; candidate matrix, support classes, scoring, and tradeoffs recorded |
+| IA skeleton | T015-T018 | 4/4 | 11 route records, command handoff, DOC-002 consumption, and fallback rules recorded |
+| Recommendation | T019-T022 | 4/4 | Docusaurus/MDX selected; alternatives rejected/deferred; FR/SC traceability added |
+| Verification | T023-T028 | 6/6 | Diff-scope scan, IA coverage, Layer 1, default suite, and PR review packet notes recorded |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] `docs/ai/research/interactive-documentation-framework-spike.md` exists.
-- [ ] The research record recommends one default stack for DOC-002.
-- [ ] Rejected alternatives have concrete reasons.
-- [ ] GitHub Pages hosting from this repo is addressed.
-- [ ] Minimum package manager, build, and test commands are identified.
-- [ ] IA skeleton is route-level and Diataxis-organized.
-- [ ] No product/plugin behavior files changed.
-- [ ] No site scaffold, package files, lockfiles, or CI workflows were added.
-- [ ] Relevant validation commands are recorded.
+- [x] `docs/ai/research/interactive-documentation-framework-spike.md` exists.
+- [x] The research record recommends one default stack for DOC-002.
+- [x] Rejected alternatives have concrete reasons.
+- [x] GitHub Pages hosting from this repo is addressed.
+- [x] Minimum package manager, build, and test commands are identified.
+- [x] IA skeleton is route-level and Diataxis-organized.
+- [x] No product/plugin behavior files changed.
+- [x] No site scaffold, package files, lockfiles, or CI workflows were added.
+- [x] Relevant validation commands are recorded.
+
+---
+
+## Self-Review
+
+| Question | Finding |
+|----------|---------|
+| Does the implementation satisfy the spec? | Yes. The research report recommends Docusaurus/MDX, compares all required candidates, includes the DOC-002 command handoff, and records the route-level IA skeleton. |
+| Did DOC-001 stay inside its research-only boundary? | Yes. Forbidden-surface scans found 0 package, lockfile, site config, CI, generated payload, README migration, or plugin behavior changes. |
+| Is verification sufficient for this docs/process spike? | Yes. Layer 1 passed `978/978`, the default deterministic suite passed `2587/2587`, G7 passed, and final reviewability proceeded with marker evidence. |
+| What remains risky or deferred? | DOC-002 must refresh Docusaurus/GitHub Pages docs before scaffolding; DOC-010 owns search, accessibility, responsive, deep-link, and docs validation hardening after the site exists. |
+
+## Post-Implementation Evidence
+
+| Item | Result |
+|------|--------|
+| Doctor extension check | `specify extension list` passed; verify, verify-tasks, checkpoint, retrospective, speckit-utils, git, and archive extensions are enabled |
+| Verify implementation | G7 passed with all 28 tasks complete |
+| Verify tasks phantom check | 28/28 tasks checked; no unchecked task markers remain |
+| Code review extension | Skipped; review extension is not installed |
+| Integration suite | `bash tests/speckit-pro/run-all.sh` passed `2587/2587` |
+| Cleanup extension | Skipped; cleanup extension is not installed and archive sweep was dry-run/no-op |
+| Final reviewability backstop | Proceeded with `outcome=marker_split`; marker plan valid for `foundation`, `us1`, `us2`, `us3` |
+| Marker emission packet | Dry-run validation passed with 4 marker slices and no branch or PR mutations |
+| UAT runbook | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md`; author-agent rewrite unavailable, fail-open with parent self-review notes |
+| PR body | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md` with review-packet marker and UAT section |
 
 ---
 

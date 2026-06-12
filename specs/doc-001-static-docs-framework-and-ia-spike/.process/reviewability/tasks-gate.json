@@ -2,6 +2,7 @@
   "mode": "tasks",
   "status": "block",
   "pass": false,
+  "is_size_only": true,
   "reviewable_loc": 1120,
   "production_files": 0,
   "total_files": 35,

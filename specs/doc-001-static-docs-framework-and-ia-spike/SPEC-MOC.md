@@ -33,6 +33,13 @@ roadmap.
 - [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [.process/atomicity-route.json](.process/atomicity-route.json)
+- [.process/emission/full-verification-evidence.md](.process/emission/full-verification-evidence.md)
+- [.process/final-reviewability/changed-files.txt](.process/final-reviewability/changed-files.txt)
+- [.process/final-reviewability/gate-state.json](.process/final-reviewability/gate-state.json)
+- [.process/marker-plan/final-marker-split-result.json](.process/marker-plan/final-marker-split-result.json)
+- [.process/marker-plan/pr-marker-plan.json](.process/marker-plan/pr-marker-plan.json)
+- [.process/pr-body.md](.process/pr-body.md)
 - [.process/reviewability/tasks-gate.json](.process/reviewability/tasks-gate.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

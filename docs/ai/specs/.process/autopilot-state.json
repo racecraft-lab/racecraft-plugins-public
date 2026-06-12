@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T22:12:00Z",
-  "active_step": "Phase 7: Foundation - Research Artifact Structure (T001-T004)",
+  "updated_at": "2026-06-12T22:45:00Z",
+  "active_step": "Post: PR Creation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -241,67 +241,90 @@
     },
     {
       "step": "Phase 7: Foundation - Research Artifact Structure (T001-T004)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "T001-T004 complete. Research report shell, official-source retrieval convention, local source inputs, and no-implementation boundary are recorded."
     },
     {
       "step": "Phase 7: Candidate Comparison (T005-T014)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "T005-T014 complete. Official Docusaurus, VitePress, Astro/Starlight, GitHub Pages, and W3C sources refreshed; candidate matrix, support classes, scoring, and tradeoffs recorded."
     },
     {
       "step": "Phase 7: IA Skeleton and DOC-002 Command Handoff (T015-T018)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "T015-T018 complete. IA skeleton covers 11 route labels with required fields; DOC-002 command handoff and fallback rules recorded."
     },
     {
       "step": "Phase 7: Recommendation Record (T019-T022)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "T019-T022 complete. Docusaurus/MDX selected as default, alternatives rejected/deferred with evidence bounds, and FR/SC traceability recorded."
     },
     {
       "step": "Phase 7: Verification and Scope Boundary (T023-T028)",
-      "status": "pending"
+      "status": "completed",
+      "gate": "G7",
+      "gate_status": "passed",
+      "verification": {
+        "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed",
+        "default_suite": "bash tests/speckit-pro/run-all.sh -> 2587/2587 passed",
+        "forbidden_surface_scan": "0 matches in branch and post-scaffold DOC-001 diff scopes"
+      },
+      "summary": "T023-T028 complete. Diff-scope scan, IA coverage, verification commands, traceability, and PR review packet source notes are recorded in the research report."
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed",
+      "summary": "specify extension list passed; verify, verify-tasks, checkpoint, retrospective, speckit-utils, git, and archive extensions are enabled."
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Research report, traceability, scope boundary, and G7 validation passed."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "summary": "tasks.md has 28/28 tasks checked and no remaining unchecked task markers; report evidence maps completed task groups to changed files and verification."
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "Review extension is not installed in this workspace; no dedicated review command available."
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "summary": "bash tests/speckit-pro/run-all.sh passed 2587/2587."
     },
     {
       "step": "Post: Cleanup",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "Cleanup extension is not installed; archive sweep already ran dry-run/no-op and current DOC-001 target is excluded."
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "summary": "final-reviewability-backstop.sh proceeded with outcome marker_split; full diff gate warned on 23 files and 3 primary surfaces; marker plan valid with foundation, us1, us2, us3."
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Self-review recorded in DOC-001 workflow and UAT runbook."
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "generate-uat-skeleton.sh wrote specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md; uat-runbook-author subagent is unavailable in this Codex surface, so the author rewrite step was fail-open with parent self-review notes added."
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "generate-pr-body.sh wrote specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md; top sections were filled and the body contains the review-packet marker and UAT section."
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "in_progress",
+      "summary": "Existing PR will be updated after final commit and push."
     },
     {
       "step": "Post: Review Remediation",
@@ -311,5 +334,267 @@
       "step": "Post: Retrospective",
       "status": "pending"
     }
-  ]
+  ],
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "doc-001-static-docs-framework-and-ia-spike",
+    "status": "emission_ready",
+    "source_fingerprint": {
+      "feature_spec_sha": "106a2c8d3564561a85ebdb9077908b7d5af86b1fa48be36e5d1a9630f82a8881",
+      "plan_declared_scope_sha": "bc47711664f7de4ec246a62cf3e4d9446002b6d9db267e2d48b9609f8adac694",
+      "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
+      "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
+      "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+    },
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "Foundation",
+          "story_id": null,
+          "start_task_id": "T001",
+          "end_task_id": "T004"
+        },
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/DOC-001-design-concept.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/prd-interactive-documentation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/roadmap-interactive-documentation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-001-static-docs-framework-and-ia-spike/spec.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "marker",
+          "scope": "foundation",
+          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Candidate Comparison",
+          "story_id": 1,
+          "start_task_id": "T005",
+          "end_task_id": "T014"
+        },
+        "task_ids": [
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "marker",
+          "scope": "us1",
+          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - IA Skeleton and DOC-002 Command Handoff",
+          "story_id": 2,
+          "start_task_id": "T015",
+          "end_task_id": "T018"
+        },
+        "task_ids": [
+          "T015",
+          "T016",
+          "T017",
+          "T018"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "marker",
+          "scope": "us2",
+          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Verification and Scope Boundary",
+          "story_id": 3,
+          "start_task_id": "T023",
+          "end_task_id": "T028"
+        },
+        "task_ids": [
+          "T023",
+          "T024",
+          "T025",
+          "T026",
+          "T027",
+          "T028"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/run-all.sh"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "marker",
+          "scope": "us3",
+          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": ""
+        }
+      }
+    ],
+    "created_at": "2026-06-12T22:35:00Z",
+    "updated_at": "2026-06-12T22:35:00Z"
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "106a2c8d3564561a85ebdb9077908b7d5af86b1fa48be36e5d1a9630f82a8881",
+    "plan_declared_scope_sha": "bc47711664f7de4ec246a62cf3e4d9446002b6d9db267e2d48b9609f8adac694",
+    "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
+    "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
+    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  },
+  "pr_marker_plan_current_source_fingerprint": {
+    "feature_spec_sha": "106a2c8d3564561a85ebdb9077908b7d5af86b1fa48be36e5d1a9630f82a8881",
+    "plan_declared_scope_sha": "bc47711664f7de4ec246a62cf3e4d9446002b6d9db267e2d48b9609f8adac694",
+    "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
+    "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
+    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  }
 }

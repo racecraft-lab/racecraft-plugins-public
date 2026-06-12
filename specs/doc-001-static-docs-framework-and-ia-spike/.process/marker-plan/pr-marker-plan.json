@@ -1,0 +1,248 @@
+{
+  "schema_version": "pr-marker-plan.v1",
+  "kind": "pr_marker_plan",
+  "feature_id": "doc-001-static-docs-framework-and-ia-spike",
+  "status": "emission_ready",
+  "source_fingerprint": {
+    "feature_spec_sha": "106a2c8d3564561a85ebdb9077908b7d5af86b1fa48be36e5d1a9630f82a8881",
+    "plan_declared_scope_sha": "bc47711664f7de4ec246a62cf3e4d9446002b6d9db267e2d48b9609f8adac694",
+    "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
+    "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
+    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  },
+  "markers": [
+    {
+      "id": "foundation",
+      "review_order": 1,
+      "kind": "foundation",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "Foundation",
+        "story_id": null,
+        "start_task_id": "T001",
+        "end_task_id": "T004"
+      },
+      "task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/.process/DOC-001-design-concept.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/prd-interactive-documentation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/roadmap-interactive-documentation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-001-static-docs-framework-and-ia-spike/spec.md"
+        }
+      ],
+      "declared_tests": [],
+      "reviewability": {
+        "status": "block",
+        "mode": "marker",
+        "scope": "foundation",
+        "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us1",
+      "review_order": 2,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 1 - Candidate Comparison",
+        "story_id": 1,
+        "start_task_id": "T005",
+        "end_task_id": "T014"
+      },
+      "task_ids": [
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        }
+      ],
+      "declared_tests": [],
+      "reviewability": {
+        "status": "block",
+        "mode": "marker",
+        "scope": "us1",
+        "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us2",
+      "review_order": 3,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 2 - IA Skeleton and DOC-002 Command Handoff",
+        "story_id": 2,
+        "start_task_id": "T015",
+        "end_task_id": "T018"
+      },
+      "task_ids": [
+        "T015",
+        "T016",
+        "T017",
+        "T018"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        }
+      ],
+      "declared_tests": [],
+      "reviewability": {
+        "status": "block",
+        "mode": "marker",
+        "scope": "us2",
+        "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us3",
+      "review_order": 4,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 3 - Verification and Scope Boundary",
+        "story_id": 3,
+        "start_task_id": "T023",
+        "end_task_id": "T028"
+      },
+      "task_ids": [
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/research/interactive-documentation-framework-spike.md"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/run-all.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "marker",
+        "scope": "us3",
+        "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    }
+  ],
+  "warnings": [
+    {
+      "code": "reviewability_size_warning",
+      "severity": "warning",
+      "message": "Reviewability sizing result is marker-planning input.",
+      "source": "reviewability",
+      "details": {
+        "status": "block",
+        "mode": "tasks",
+        "evidence_path": ""
+      }
+    }
+  ],
+  "created_at": "2026-06-12T22:35:00Z",
+  "updated_at": "2026-06-12T22:35:00Z"
+}

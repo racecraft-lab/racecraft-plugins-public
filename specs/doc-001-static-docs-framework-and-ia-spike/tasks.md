@@ -20,10 +20,10 @@
 
 **Purpose**: Create the report shell, source register, and research-only guardrails before evidence gathering.
 
-- [ ] T001 Create `docs/ai/research/interactive-documentation-framework-spike.md` with sections for recommendation, source evidence, candidate matrix, IA skeleton, command handoff, fallback rules, DOC-002 consumption, scope boundary, and verification notes
-- [ ] T002 Add the official-source list and retrieval-date convention for framework/platform claims in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T003 Add local source-input references from `docs/prd-interactive-documentation.md`, `docs/roadmap-interactive-documentation.md`, `docs/ai/specs/.process/DOC-001-design-concept.md`, and `specs/doc-001-static-docs-framework-and-ia-spike/spec.md` to `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T004 Record the DOC-001 research-only boundary and forbidden implementation surfaces in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T001 Create `docs/ai/research/interactive-documentation-framework-spike.md` with sections for recommendation, source evidence, candidate matrix, IA skeleton, command handoff, fallback rules, DOC-002 consumption, scope boundary, and verification notes
+- [x] T002 Add the official-source list and retrieval-date convention for framework/platform claims in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T003 Add local source-input references from `docs/prd-interactive-documentation.md`, `docs/roadmap-interactive-documentation.md`, `docs/ai/specs/.process/DOC-001-design-concept.md`, and `specs/doc-001-static-docs-framework-and-ia-spike/spec.md` to `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T004 Record the DOC-001 research-only boundary and forbidden implementation surfaces in `docs/ai/research/interactive-documentation-framework-spike.md`
 
 **Checkpoint**: Research report structure and source list are ready for independent evidence refresh.
 
@@ -37,16 +37,16 @@
 
 ### Research Deliverable: Source Refresh and Candidate Scoring
 
-- [ ] T005 [P] [US1] Refresh official Docusaurus/MDX source evidence for static output, GitHub Pages deployment, MDX/React interactivity, versioning, search, broken-link handling, accessibility posture, and package/build/test command roles in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T006 [P] [US1] Refresh official VitePress source evidence for static output, GitHub Pages deployment, Vue/Markdown interactivity, versioning support, search, link checking, accessibility posture, and package/build/test command roles in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T007 [P] [US1] Refresh official Astro/Starlight source evidence for static output, GitHub Pages deployment, MDX/component interactivity, versioning support, search, link checking, accessibility posture, and package/build/test command roles in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T008 [P] [US1] Refresh official GitHub Pages hosting evidence for repository-hosted static HTML/CSS/JS, build publication, and same-repository deployment assumptions in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T009 [P] [US1] Compare search support classes across Docusaurus/MDX, VitePress, Astro/Starlight, and repo-native fallback in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T010 [P] [US1] Compare accessibility and static or keyboard-usable fallback support across Docusaurus/MDX, VitePress, Astro/Starlight, and repo-native fallback in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T011 [P] [US1] Compare versioning, link checking, docs-as-code workflow fit, and maintenance load across all candidates in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T012 [P] [US1] Record package manager, setup, install, dev preview, production build, static preview, minimum validation/test, and deployment command roles for each framework candidate in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T013 [US1] Score each candidate against hard blockers, high-weight tradeoffs, medium-weight tradeoffs, and maintenance tie-breakers in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T014 [US1] Record support class values for each candidate criterion as built-in, official, community, third-party paid, external/manual, unsupported, or unknown in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T005 [P] [US1] Refresh official Docusaurus/MDX source evidence for static output, GitHub Pages deployment, MDX/React interactivity, versioning, search, broken-link handling, accessibility posture, and package/build/test command roles in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T006 [P] [US1] Refresh official VitePress source evidence for static output, GitHub Pages deployment, Vue/Markdown interactivity, versioning support, search, link checking, accessibility posture, and package/build/test command roles in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T007 [P] [US1] Refresh official Astro/Starlight source evidence for static output, GitHub Pages deployment, MDX/component interactivity, versioning support, search, link checking, accessibility posture, and package/build/test command roles in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T008 [P] [US1] Refresh official GitHub Pages hosting evidence for repository-hosted static HTML/CSS/JS, build publication, and same-repository deployment assumptions in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T009 [P] [US1] Compare search support classes across Docusaurus/MDX, VitePress, Astro/Starlight, and repo-native fallback in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T010 [P] [US1] Compare accessibility and static or keyboard-usable fallback support across Docusaurus/MDX, VitePress, Astro/Starlight, and repo-native fallback in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T011 [P] [US1] Compare versioning, link checking, docs-as-code workflow fit, and maintenance load across all candidates in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T012 [P] [US1] Record package manager, setup, install, dev preview, production build, static preview, minimum validation/test, and deployment command roles for each framework candidate in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T013 [US1] Score each candidate against hard blockers, high-weight tradeoffs, medium-weight tradeoffs, and maintenance tie-breakers in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T014 [US1] Record support class values for each candidate criterion as built-in, official, community, third-party paid, external/manual, unsupported, or unknown in `docs/ai/research/interactive-documentation-framework-spike.md`
 
 **Checkpoint**: Candidate comparison is complete enough to support a recommendation.
 
@@ -60,16 +60,16 @@
 
 ### Research Deliverable: Route-Level Diataxis IA Skeleton
 
-- [ ] T015 [US2] Write the route-level Diataxis IA skeleton covering Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T016 [US2] Add route path, primary Diataxis mode, optional secondary modes, target audience, route purpose, source evidence, success criterion, `shell_owner_doc`, and `full_content_owner_doc` for every IA route in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T017 [US2] Record the selected stack's report-only package manager plus setup, install, development preview, production build, local static preview, minimum validation/test, and deployment command roles for DOC-002 in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T018 [US2] Record DOC-002 consumption guidance, script-name normalization guidance, and selected-stack hard-blocker fallback rules in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T015 [US2] Write the route-level Diataxis IA skeleton covering Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T016 [US2] Add route path, primary Diataxis mode, optional secondary modes, target audience, route purpose, source evidence, success criterion, `shell_owner_doc`, and `full_content_owner_doc` for every IA route in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T017 [US2] Record the selected stack's report-only package manager plus setup, install, development preview, production build, local static preview, minimum validation/test, and deployment command roles for DOC-002 in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T018 [US2] Record DOC-002 consumption guidance, script-name normalization guidance, and selected-stack hard-blocker fallback rules in `docs/ai/research/interactive-documentation-framework-spike.md`
 
 **Checkpoint**: IA and command handoff are ready for DOC-002.
 
 ---
 
-## Phase 4: User Story 1 - Recommendation Record (Priority: P1)
+## Phase 4: Recommendation Record (Priority: P1)
 
 **Goal**: A maintainer can identify one default stack and understand rejected alternatives quickly.
 
@@ -77,10 +77,10 @@
 
 ### Research Deliverable: Default Stack and Rejected Alternatives
 
-- [ ] T019 [US1] Choose one default static docs stack for DOC-002 or record a hard blocker in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T020 [US1] Record rejection or deferral rationale for each non-selected alternative in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T021 [US1] Record known tradeoffs for search, versioning, link checking, accessibility, and maintenance burden in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T022 [US1] Map FR-001 through FR-006 and SC-001, SC-002, SC-004, and SC-006 to evidence in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T019 [US1] Choose one default static docs stack for DOC-002 or record a hard blocker in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T020 [US1] Record rejection or deferral rationale for each non-selected alternative in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T021 [US1] Record known tradeoffs for search, versioning, link checking, accessibility, and maintenance burden in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T022 [US1] Map FR-001 through FR-006 and SC-001, SC-002, SC-004, and SC-006 to evidence in `docs/ai/research/interactive-documentation-framework-spike.md`
 
 **Checkpoint**: Recommendation is complete and traceable.
 
@@ -94,12 +94,12 @@
 
 ### Research Deliverable: Verification Evidence
 
-- [ ] T023 [US3] Verify no site scaffold, package files, lockfiles, site config, prototype components, CI workflows, marketplace files, generated payloads, README/plugin README migration files, or plugin behavior files were modified by inspecting `git diff --name-only` and recording the result in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T024 [US3] Validate the IA skeleton covers all 11 required route labels with no placeholder route fields and record the result in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T025 [US3] Validate the report maps FR-007 through FR-011 and SC-003 through SC-005 to changed files and verification evidence in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T026 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` from the repository root and record the structural validation result in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T027 [US3] Run `bash tests/speckit-pro/run-all.sh` from the repository root and record the default deterministic verification result in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [ ] T028 [US3] Add PR review packet source notes covering what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T023 [US3] Verify no site scaffold, package files, lockfiles, site config, prototype components, CI workflows, marketplace files, generated payloads, README/plugin README migration files, or plugin behavior files were modified by inspecting `git diff --name-only` and recording the result in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T024 [US3] Validate the IA skeleton covers all 11 required route labels with no placeholder route fields and record the result in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T025 [US3] Validate the report maps FR-007 through FR-011 and SC-003 through SC-005 to changed files and verification evidence in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T026 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` from the repository root and record the structural validation result in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T027 [US3] Run `bash tests/speckit-pro/run-all.sh` from the repository root and record the default deterministic verification result in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T028 [US3] Add PR review packet source notes covering what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback in `docs/ai/research/interactive-documentation-framework-spike.md`
 
 **Checkpoint**: DOC-001 is ready for review as a research-only spike.
 

@@ -52,6 +52,15 @@ Search-provider availability, package-manager preference, and local-search prefe
 | [W3C WAI evaluating accessibility](https://www.w3.org/WAI/test-evaluate/) | 2026-06-12 | WAI recommends evaluating accessibility early and throughout development; tools help, but knowledgeable human evaluation is still required. |
 | [WAI-ARIA APG keyboard interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/) | 2026-06-12 | Interactive widgets need predictable keyboard operation and focus behavior. |
 
+## Local Source Inputs
+
+| Source | Use in this spike |
+|---|---|
+| `docs/prd-interactive-documentation.md` | Required routes, product outcomes, install/reference/troubleshooting/security/contribution coverage, and no-local-command-execution guardrails. |
+| `docs/roadmap-interactive-documentation.md` | DOC-002 through DOC-010 ownership, sequencing, and acceptance handoff. |
+| `docs/ai/specs/.process/DOC-001-design-concept.md` | Grill Me decisions for one default stack recommendation, IA skeleton scope, live-source refresh, and research-only output boundary. |
+| `specs/doc-001-static-docs-framework-and-ia-spike/spec.md` | Formal DOC-001 requirements, acceptance scenarios, forbidden surfaces, and success criteria. |
+
 ## Support Class Legend and Evidence Bounds
 
 Use these support-class labels when reading the matrix:
@@ -188,7 +197,7 @@ DOC-002 should consume this report as the stack and IA decision record:
 
 ## Scope Boundary Evidence
 
-DOC-001 is complete only if the diff remains limited to this research report and SpecKit planning artifacts under `specs/doc-001-static-docs-framework-and-ia-spike/**`.
+DOC-001 implementation is complete only if it remains research-only and avoids site/package/plugin behavior changes. The PR branch also contains the source PRD/roadmap scaffold that enabled DOC-001; the DOC-001 implementation output is the research report plus SpecKit artifacts.
 
 Forbidden DOC-001 changes include:
 
@@ -196,6 +205,41 @@ Forbidden DOC-001 changes include:
 - `.github/workflows/**`
 - `.claude-plugin/**`, `.agents/plugins/**`, `dist/**`, or marketplace/generated payload files
 - `README.md`, `speckit-pro/README.md`, plugin behavior files, hooks, skills, agents, or scripts
+
+Verification on 2026-06-12:
+
+| Check | Result |
+|---|---|
+| Branch diff scope | `git diff --name-only origin/main...HEAD` listed 23 files: PRD/roadmap scaffold, this research report, and DOC-001 SpecKit artifacts. |
+| Post-scaffold DOC-001 scope | `git diff --name-only origin/doc-001-static-docs-framework-and-ia-spike...HEAD` listed 17 files: this research report plus DOC-001 process/spec/checklist/task artifacts. |
+| Forbidden surface scan | Both diff scopes returned 0 matches for package files, lockfiles, site configs, generated site directories, CI workflows, README migrations, marketplace/generated payload files, and plugin behavior files. |
+| IA route coverage | 11 required route labels are present in the IA skeleton with route path, Diataxis mode, audience, purpose, source evidence, success criterion, shell owner, and full content owner. |
+| Structural validation | `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978`. |
+| Default deterministic suite | `bash tests/speckit-pro/run-all.sh` passed `2587/2587`. |
+
+## Traceability
+
+| Requirement / criterion | Evidence |
+|---|---|
+| FR-001, FR-002, FR-003, FR-004, FR-005 | `Live Source Evidence`, `Support Class Legend and Evidence Bounds`, `Candidate Matrix`, and `Candidate Decisions` compare Docusaurus/MDX, VitePress, Astro/Starlight, and repo-native fallback with retrieval dates and support classes. |
+| FR-006, SC-004 | `Recommended Package and Commands for DOC-002` names `pnpm` and report-only setup, install, preview, build, validation, static preview, and deployment command roles. |
+| FR-007, FR-008, SC-003 | `IA Skeleton for DOC-002` records all 11 route labels and every required route field with no placeholder values. |
+| FR-009 | This file is the required spike report: `docs/ai/research/interactive-documentation-framework-spike.md`. |
+| FR-010, FR-011, SC-005 | `Scope Boundary Evidence` records the final diff checks and confirms 0 forbidden implementation surfaces changed. |
+| SC-001, SC-002, SC-006 | The matrix covers 4 candidates across more than 10 dimensions; `Decision` and `Candidate Decisions` make the default/rejected options reviewable; source evidence uses the 2026-06-12 retrieval date. |
+
+## PR Review Packet Source Notes
+
+Use these notes when updating the PR body:
+
+- **What changed**: Added the interactive documentation PRD/roadmap scaffold, DOC-001 SpecKit artifacts, and this research decision record.
+- **Why**: DOC-002 needs an approved static docs framework and route-level IA before creating package files, site config, shell routes, or CI.
+- **Non-goals**: No docs-site scaffold, package files, lockfiles, site config, CI workflow, README migration, interactive widgets, marketplace/generated payloads, or plugin behavior changes.
+- **Review order**: Start with `docs/ai/research/interactive-documentation-framework-spike.md`, then review `specs/doc-001-static-docs-framework-and-ia-spike/spec.md`, `plan.md`, `tasks.md`, and the checklist files.
+- **Scope budget**: Research/process-only branch; task-gate size warning is recorded in `specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json` and final reviewability must remain a backstop.
+- **Verification evidence**: Layer 1 passed `978/978`; default deterministic suite passed `2587/2587`; diff-scope scan found 0 forbidden implementation surfaces.
+- **Known gaps**: DOC-002 owns concrete Docusaurus scaffold/config decisions and DOC-010 owns deterministic docs validation, accessibility, responsive checks, search hardening, and deep-link policy.
+- **Rollback**: Revert the DOC-001 commits to remove the research/spec artifacts; no runtime or package state is introduced by this spike.
 
 ## Known Gaps and Follow-Ups
 
