@@ -13,7 +13,7 @@ Use this guide during implementation to prove that autopilot creates only valida
 - `specify` available on PATH when running SpecKit commands:
 
 ```bash
-export PATH=/Users/fredrickgabelmann/.local/share/uv/tools/specify-cli/bin:$PATH
+export PATH="${SPECIFY_CLI_BIN:-$HOME/.local/share/uv/tools/specify-cli/bin}:$PATH"
 ```
 
 ## Scenario 1: Single-PR packet passes validation
@@ -53,6 +53,7 @@ Expected outcome:
 - Validation status is `failed`.
 - `pr_blocked` is `true`.
 - Remediation evidence names the title rule, packet target, and rejected text.
+- Workflow evidence is appended to `docs/ai/specs/.process/PRSG-012-workflow.md` with the packet id, validation result path, deterministic stderr line, remediation summary, and resume boundary.
 - No `gh pr create` command is attempted.
 
 ## Scenario 4: Missing body evidence blocks before PR creation
@@ -65,6 +66,7 @@ Expected outcome:
 - Validation status is `failed`.
 - The failure names the missing section or field.
 - The validation JSON includes the body path and remediation evidence.
+- Workflow evidence is appended to `docs/ai/specs/.process/PRSG-012-workflow.md` with a deterministic event id that can be superseded on retry.
 - PR creation is blocked before any networked GitHub action.
 
 ## Scenario 5: Safe prose refinement is allowed
@@ -98,6 +100,7 @@ Expected outcome:
 - The validator exits `2`.
 - The validation result uses `error_class: input_error`, `exit_code: 2`, and `pr_blocked: true`.
 - Stderr is one deterministic line in the documented `validate-pr-packet.sh: input_error: ...` shape.
+- Workflow evidence uses the synthetic input-error identity and records either the input-error validation result path or `no-path`.
 - No `gh pr create` command is attempted.
 
 ## Scenario 8: Split-PR resume preserves earlier opened PRs
@@ -109,11 +112,11 @@ Expected outcome:
 Expected outcome:
 
 - Packet 2 writes failed validation JSON with resume evidence pointing to packet 2.
-- Existing packet 1 PR evidence remains in `.process/prs.json`, the Spec MOC PRS table, workflow evidence, and `autopilot-state.json`.
+- Existing packet 1 PR evidence remains in `.process/prs.json`, the Spec MOC PRS table, `docs/ai/specs/.process/PRSG-012-workflow.md`, and `autopilot-state.json`.
 - Resume reconciles the existing packet 1 PR before retrying packet 2.
 - No duplicate `gh pr create` command is attempted for packet 1.
 
-## Verification Commands
+## Default Verification Commands
 
 ```bash
 bash tests/speckit-pro/run-all.sh --layer 1
@@ -126,6 +129,21 @@ Expected outcome:
 - Layer 1 passes structural validation.
 - Layer 4 passes validator, PR body, input-error, resume, and multi-PR emission fixture tests.
 - The default deterministic suite passes without requiring AI-eval layers.
+
+## Extended Evidence Commands
+
+```bash
+bash tests/speckit-pro/layer3-functional/run-functional-evals.sh speckit-autopilot
+bash tests/speckit-pro/layer3-functional/run-functional-evals-codex.sh speckit-autopilot
+bash tests/speckit-pro/layer7-integration/run-dispatch-fixtures.sh 18-post-impl-parallel-subagents
+bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 01-post-impl-parity
+```
+
+Expected outcome:
+
+- Layer 3 Claude Code and Codex eval expectations include packet generation, validation before PR creation, `--title`/`--body-file` usage, deterministic blocked evidence, and no post-create repair fallback.
+- Layer 7 replay evidence covers post-implementation ordering: render packet, validate packet, append workflow event on failure, and call `gh pr create` only after a passing validation result.
+- Layer 8 dry-run validates the post-implementation parity fixture structure; live parity remains developer-local and opt-in because it runs full autopilot paths.
 
 ## Contract References
 

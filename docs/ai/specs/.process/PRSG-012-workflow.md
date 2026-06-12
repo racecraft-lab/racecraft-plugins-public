@@ -34,8 +34,8 @@ The design concept is the source of truth for these scoping decisions:
 | Specify | `/speckit-specify` | Complete | Generated `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | G2 passed with packet schema, title generation, and safe-refinement decisions recorded |
 | Plan | `/speckit-plan` | Complete | Generated plan/research/data model/contract/quickstart; G3 passed |
-| Checklist | `/speckit-checklist` | In Progress | API contracts and error handling complete; starting reliability checklist |
-| Tasks | `/speckit-tasks` | Pending | Organize by user story and validation boundary |
+| Checklist | `/speckit-checklist` | Complete | API contracts, error handling, and reliability checklists complete; G4 passed |
+| Tasks | `/speckit-tasks` | In Progress | Organize by user story and validation boundary |
 | Analyze | `/speckit-analyze` | Pending | Check consistency against the design concept |
 | Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
 
@@ -304,7 +304,7 @@ Focus on PRSG-012 requirements:
 |-----------|-------|------|-----------------|
 | api-contracts | 16 | 6 remediated; 0 remaining | Added required PR target, constrained body paths, required changed-file scope, split-only conditionals, rendered heading order validation, and exact editable field constraints |
 | error-handling | 16 | 5 remediated; 0 remaining | Added input-error handling, malformed packet distinctions, deterministic stderr, stale-result-safe resume, and split-PR partial-success preservation |
-| reliability | | | |
+| reliability | 18 | 3 remediated; 0 remaining | Added durable workflow-event sink/idempotency/remediation fields, exact L4/L3/L7/L8 evidence expectations, and Claude/Codex parity plus single-copy validator/schema boundaries |
 
 ---
 

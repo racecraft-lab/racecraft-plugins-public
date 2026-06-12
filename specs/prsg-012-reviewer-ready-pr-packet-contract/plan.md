@@ -16,7 +16,7 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 
 **Storage**: Repository files plus deterministic per-feature process output under `.process/pr-packets/<packet_id>/validation.json`; no database
 
-**Testing**: Layer 1 structural validation; Layer 4 shell script unit tests; default deterministic suite; L3/L7/L8 fixture updates where packet behavior is represented
+**Testing**: Layer 1 structural validation; Layer 4 shell script unit tests; Layer 3 Claude Code and Codex functional eval fixture updates; Layer 7 replay/integration fixture coverage for packet validation ordering; Layer 8 parity fixture coverage for Claude Code/Codex guidance equivalence; default deterministic suite
 
 **Target Platform**: macOS/Linux shell execution inside the `speckit-pro` plugin workflow
 
@@ -28,7 +28,7 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 
 **Scale/Scope**: Single-PR and split-PR autopilot packet generation paths; one spec, one slice; validation writes one JSON record per packet
 
-**Reviewability Budget**: Primary surface is docs/process plus Bash automation; projected reviewable LOC about 350 with advisory estimator at 245; projected production files 4-6; projected total files about 15-21 after input-error and resume fixtures; budget result within budget; split decision is one spec, one slice
+**Reviewability Budget**: Primary surface is docs/process plus Bash automation; projected reviewable LOC about 350 with advisory estimator at 245; projected production/reference files 6-8; projected total files about 20-24 after input-error, resume, functional-eval, integration, and parity fixture edits; budget result within block threshold with a bounded total-file warning; split decision is one spec, one slice
 
 ## Declared File Operations
 
@@ -36,7 +36,10 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 - NEW speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh
 - MODIFIED speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh
 - MODIFIED speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+- MODIFIED speckit-pro/skills/speckit-autopilot/SKILL.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/post-implementation.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md
 - NEW tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh
 - MODIFIED tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh
@@ -49,6 +52,16 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 - NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args
 - NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json
 - NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json
+- MODIFIED tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json
+- MODIFIED tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json
+- MODIFIED tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/README.md
+- MODIFIED tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/expected.json
+- MODIFIED tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/parser-fixture.jsonl
+- MODIFIED tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/prompt.txt
+- MODIFIED tests/speckit-pro/layer8-parity/01-post-impl-parity/README.md
+- MODIFIED tests/speckit-pro/layer8-parity/01-post-impl-parity/workflow.md
+- MODIFIED tests/speckit-pro/layer8-parity/01-post-impl-parity/tolerance.json
+- MODIFIED tests/speckit-pro/layer8-parity/01-post-impl-parity/expected-equivalence.json
 
 ## Constitution Check
 
@@ -63,7 +76,7 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 | V. Conventional Commits | PASS | Packet-owned title metadata enforces `<type>(<scope>): <plain-English description>` before PR creation. |
 | VI. KISS, Simplicity & YAGNI | PASS | One shared schema and one validator replace post-create repair; no new dependencies or speculative repair system. |
 
-Reviewability gate: PASS. The plan stays below warning thresholds with about 350 projected reviewable LOC, 4-6 production files, and about 15-21 total files after input-error and resume fixtures. No typed reviewability exception is required.
+Reviewability gate: PASS with bounded warning. The plan stays below block thresholds with about 350 projected reviewable LOC, 6-8 production/reference files, and about 20-24 total files after input-error, resume, functional-eval, integration, and parity fixture edits. No typed reviewability exception is required because the additional files extend existing evidence fixtures for one vertical packet contract.
 
 PR review packet source for this spec: title/body packet generation, pre-create validation, safe prose refinement boundaries, UAT compatibility, scope/verification evidence, validation result JSON, and split-packet identity. Non-goals: post-create auto-repair and broad host-template migration.
 
@@ -80,38 +93,77 @@ specs/prsg-012-reviewer-ready-pr-packet-contract/
 ├── contracts/
 │   └── pr-packet.schema.json
 └── checklists/
-    └── requirements.md
+    ├── requirements.md
+    └── reliability.md
 ```
 
 ### Source Code (repository root)
 
 ```text
 speckit-pro/
-└── skills/
+├── skills/
+│   └── speckit-autopilot/
+│       ├── contracts/
+│       │   ├── pr-packet.schema.json
+│       │   └── slice-packet.schema.json
+│       ├── references/
+│       │   └── post-implementation.md
+│       ├── scripts/
+│       │   ├── generate-pr-body.sh
+│       │   ├── multi-pr-emission.sh
+│       │   └── validate-pr-packet.sh
+│       └── templates/
+│           └── pr-description-template.md
+└── codex-skills/
     └── speckit-autopilot/
-        ├── contracts/
-        │   ├── pr-packet.schema.json
-        │   └── slice-packet.schema.json
-        ├── references/
-        │   └── post-implementation.md
-        ├── scripts/
-        │   ├── generate-pr-body.sh
-        │   ├── multi-pr-emission.sh
-        │   └── validate-pr-packet.sh
-        └── templates/
-            └── pr-description-template.md
+        ├── SKILL.md
+        └── references/
+            └── post-implementation-codex.md
 
 tests/
 └── speckit-pro/
-    └── layer4-scripts/
-        ├── test-generate-pr-body.sh
-        ├── test-multi-pr-emission.sh
-        ├── test-validate-pr-packet.sh
-        └── fixtures/
-            └── pr-packet/
+    ├── layer3-functional/
+    │   ├── evals/
+    │   │   └── speckit-autopilot-evals.json
+    │   └── codex-evals/
+    │       └── speckit-autopilot-evals.json
+    ├── layer4-scripts/
+    │   ├── test-generate-pr-body.sh
+    │   ├── test-multi-pr-emission.sh
+    │   ├── test-validate-pr-packet.sh
+    │   └── fixtures/
+    │       └── pr-packet/
+    ├── layer7-integration/
+    │   └── dispatch-fixtures/
+    │       └── 18-post-impl-parallel-subagents/
+    └── layer8-parity/
+        └── 01-post-impl-parity/
 ```
 
-**Structure Decision**: Use the existing `speckit-autopilot` contract/script/template/reference layout and repo-level Layer 4 shell tests. The new `pr-packet.schema.json` becomes the shared rendered packet contract, while existing `slice-packet.schema.json` remains slice evidence/source input.
+**Structure Decision**: Use the existing `speckit-autopilot` contract/script/template/reference layout and repo-level Layer 4 shell tests. The new `pr-packet.schema.json` becomes the shared rendered packet contract, while existing `slice-packet.schema.json` remains slice evidence/source input. Codex-facing guidance stays as mirrored documentation only; it references the shared primary schema and validator instead of carrying duplicate copies.
+
+## Reliability Evidence Plan
+
+Workflow failure evidence:
+
+- Blocking packet validation failures append reader-facing evidence to `docs/ai/specs/.process/<workflow-id>-workflow.md`; PRSG-012 uses `docs/ai/specs/.process/PRSG-012-workflow.md`.
+- The validation JSON under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/<packet_id>/validation.json` remains authoritative. The workflow event mirrors the failure in operator-readable form.
+- Each event uses a deterministic event id derived from packet or input identity, validation result path, and blocked status. Retries update or supersede that event instead of adding ambiguous duplicates.
+- Event content must include packet or input id, mode and target when known, validation result path or `no-path`, deterministic stderr line, failed rule or reason, remediation summary, resume boundary, `pr_blocked`, and prior successful split PR references when relevant.
+
+Shared validator reuse:
+
+- The single-PR post-implementation path and the split-PR `multi-pr-emission.sh` path both invoke `validate-pr-packet.sh` before any `gh pr create` attempt.
+- PR creation call sites may consume only the validator exit code and validation JSON; they must not duplicate rendered-title, rendered-body, protected-fingerprint, input-error, or remediation-rule logic.
+- A passing validation result is the only path to `gh pr create --base <base_branch> --head <head_branch> --title <generated-title> --body-file <body_file>`.
+
+Layer evidence:
+
+- Layer 4: `test-validate-pr-packet.sh`, `test-generate-pr-body.sh`, and `test-multi-pr-emission.sh` cover valid single packets, valid split packets, invalid title tokens, missing body evidence, protected edit rejection, malformed input errors, deterministic stderr, workflow event emission, and split partial-failure resume.
+- Layer 3: `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json` and `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json` include expectations that autopilot describes packet generation, validation before PR creation, `--title`/`--body-file` usage, deterministic blocked evidence, and no post-create repair fallback.
+- Layer 7: `tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/` extends the existing post-implementation dispatch fixture to capture the packet ordering contract: packet render, validator call, workflow evidence on failure, then PR creation only after pass; split packets validate before each slice PR.
+- Layer 8: `tests/speckit-pro/layer8-parity/01-post-impl-parity/` extends the existing post-implementation parity fixture to compare Claude Code and Codex guidance for equivalent packet validation ordering, repo-relative evidence paths, blocked-remediation language, and absence of duplicate validator or schema copies.
+- Developer-local evidence commands are documented in `quickstart.md`; default verification remains Layer 1, Layer 4, and the default deterministic suite.
 
 ## Complexity Tracking
 

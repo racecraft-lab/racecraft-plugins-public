@@ -150,11 +150,28 @@ Concise process log entry appended when validation blocks a packet.
 **Fields**
 
 - `event`: Packet validation event name.
-- `packet_id`: Packet that failed.
-- `validation_result_path`: Path to remediation JSON.
+- `event_id`: Deterministic id derived from packet or input identity, validation result path, and blocked status.
+- `workflow_path`: Active workflow file path under `docs/ai/specs/.process/<workflow-id>-workflow.md`.
+- `packet_id`: Packet that failed, or synthetic input-error identity when packet metadata cannot be trusted.
+- `mode`: Packet mode when known.
+- `target`: PR target when known.
+- `validation_result_path`: Repo-relative path to remediation JSON, or `no-path` when no repository file can be safely written.
 - `stderr_line`: Deterministic stderr line emitted for the failure.
+- `failed_rule_or_reason`: Failed validator rule or input-error reason.
+- `remediation_summary`: Short operator-readable action needed to unblock PR creation.
+- `pr_blocked`: Boolean indicating PR creation was blocked.
 - `resume_from_packet_id`: Packet where the next run resumes, when blocked.
+- `prior_successful_prs`: Split PR records already opened before a later packet blocked.
 - `summary`: Short operator-readable failure summary.
+
+**Validation Rules**
+
+- Workflow events are appended to the active workflow file, not to arbitrary feature-local files.
+- Paths inside the event must be repo-relative.
+- `event_id` makes retries idempotent: reruns for the same packet/input, validation result path, and blocked status must supersede or update the same event instead of creating ambiguous duplicates.
+- Workflow events are reader-facing evidence only; the packet validation JSON remains authoritative machine-readable evidence.
+- Failed rendered-content validation events must include packet identity, mode, target, validation result path, stderr line, failed rule, remediation summary, `pr_blocked: true`, and resume boundary.
+- Input-error events may omit mode and target only when the packet input could not be parsed or trusted; they still include the synthetic identity, stderr line, reason, remediation summary, `pr_blocked: true`, and `validation_result_path` or `no-path`.
 
 ## Relationships
 

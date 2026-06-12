@@ -62,6 +62,6 @@
 
 ## Decision: Keep one spec and one review slice
 
-**Rationale**: Title generation, body rendering, validation, and PR creation gating all depend on the same packet contract. The projected reviewable LOC is about 350, the advisory estimator is 245, production files are expected to stay at 4-6, and total files should remain under 15.
+**Rationale**: Title generation, body rendering, validation, and PR creation gating all depend on the same packet contract. The projected reviewable LOC is about 350, the advisory estimator is 245, production/reference files are expected to stay at 6-8, and total files should remain under the block threshold by extending existing Layer 7 and Layer 8 post-implementation fixture surfaces instead of creating separate fixture families.
 
 **Alternatives considered**: Splitting title validation from body validation was rejected because both must run before the same PR creation boundary and share packet evidence.

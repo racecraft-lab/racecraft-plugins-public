@@ -45,9 +45,14 @@ count_in_dir() {
 }
 
 list_in_file() {
-  local file="$1" pattern="$2"
+  local file="$1" pattern="$2" matches
   if [ -f "$file" ]; then
-    grep -n "$pattern" "$file" 2>/dev/null | head -20 | jq -R . | jq -s '.' || echo "[]"
+    matches=$(grep -n "$pattern" "$file" 2>/dev/null || true)
+    if [ -n "$matches" ]; then
+      printf '%s\n' "$matches" | head -20 | jq -R . | jq -s '.'
+    else
+      echo "[]"
+    fi
   else
     echo "[]"
   fi

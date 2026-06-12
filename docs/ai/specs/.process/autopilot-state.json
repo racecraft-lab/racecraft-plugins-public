@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T16:23:42Z",
-  "active_step": "Phase 4: Checklist - reliability",
+  "updated_at": "2026-06-12T16:54:34Z",
+  "active_step": "Phase 5: Tasks",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -164,15 +164,17 @@
     },
     {
       "step": "Phase 4: Checklist - reliability",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "18 items; 3 gaps remediated; 0 markers remaining. Added durable workflow-event sink/idempotency/remediation fields, exact L4/L3/L7/L8 evidence expectations, and Claude/Codex parity plus single-copy validator/schema boundaries. Also fixed count-markers.sh zero-match JSON handling in source and dist mirrors."
     },
     {
       "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

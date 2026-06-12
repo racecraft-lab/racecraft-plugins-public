@@ -114,19 +114,21 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **FR-015C**: Validator stderr MUST be deterministic and fixture-comparable. Each failed run MUST emit one concise line in the form `validate-pr-packet.sh: <error_class>: <packet_or_input_id>: <rule_or_reason>: <validation_result_path_or_no-path>` with no timestamps, absolute paths, random temporary names, or host-specific wording.
 - **FR-015D**: Resume after a blocked packet MUST revalidate the current rendered packet and MUST NOT treat stale failed `validation.json` content as authoritative. A passing rerun MUST overwrite or supersede the prior failed result at the packet's validation path, set `pr_blocked: false`, and allow PR creation only from the newly passed result.
 - **FR-015E**: In split-PR mode, if a later packet fails after earlier slice PRs were opened, the failure MUST preserve earlier successful PR evidence in `.process/prs.json`, the Spec MOC PRS table, workflow evidence, and `autopilot-state.json`; MUST NOT close, relabel, retarget, or recreate earlier PRs; MUST set the resume boundary to the failed packet or slice; and MUST reconcile existing PR records before retrying so resume cannot create duplicate PRs.
+- **FR-015F**: Blocking workflow events MUST be appended to the active workflow file under `docs/ai/specs/.process/<workflow-id>-workflow.md`; for PRSG-012 this is `docs/ai/specs/.process/PRSG-012-workflow.md`. Each event MUST use a deterministic event id derived from packet or input identity, validation result path, and blocked status so retries can supersede the same event instead of creating ambiguous duplicates. The event MUST use repo-relative paths and include packet or input id, mode when known, PR target when known, validation result path or `no-path`, deterministic stderr line, failed rule or reason, remediation summary, resume boundary, `pr_blocked`, and prior successful split PR references when relevant. The validation JSON remains the authoritative machine-readable record; the workflow event is reader-facing process evidence.
 - **FR-016**: The packet contract MUST allow sanctioned prose refinements only inside full-line editable HTML comment marker pairs under `Summary`, `What Changed`, and `Why It Matters`. Field IDs MUST use exact markers such as `<!-- speckit-pro-editable:summary:start -->` and `<!-- speckit-pro-editable:summary:end -->`, mirrored in packet JSON.
 - **FR-016A**: The packet contract MUST store a normalized protected-body fingerprint with editable blocks elided. The validator MUST reject any non-editable body change when the protected fingerprint no longer matches.
 - **FR-016B**: The validator MUST allow only structural editable-boundary comments and the legacy `speckit-pro-review-packet-source` compatibility comment. It MUST reject unknown HTML comments, template placeholder comments, and stale template comments outside code fences.
 - **FR-016C**: Host PR template content MAY coexist only after or outside the protected canonical packet block; host content MUST NOT bury, replace, duplicate, or weaken PRSG-012 canonical sections or protected evidence.
 - **FR-017**: Host PR template support MAY coexist only when the final rendered packet still satisfies the packet contract.
 - **FR-018**: PRSG-012 MUST treat post-create auto-repair of already-open PRs as out of scope.
+- **FR-019**: PRSG-012 MUST update Claude Code and Codex autopilot guidance in lockstep for packet generation, validation, and PR creation behavior. The shared validator and packet schema MUST remain single-copy under `speckit-pro/skills/speckit-autopilot/`; Codex-facing guidance references those shared artifacts by path and MUST NOT introduce duplicate validator or schema copies.
 
 ### Constraints
 
 - No new runtime dependencies beyond the repository's existing shell and JSON-processing tooling.
 - Deterministic packet generation and validation logic belongs in reusable scripts with fixture-backed validation.
 - Existing UAT runbook guarantees from SPEC-006a/b must not be weakened.
-- Codex-facing mirrored autopilot behavior must preserve parity with the primary autopilot contract.
+- Codex-facing mirrored autopilot behavior must preserve parity with the primary autopilot contract. PRSG-012 guidance changes must name both the primary Claude Code surfaces and their Codex mirrors when behavior is mirrored.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -138,9 +140,9 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **Primary surface**: harness/adapter
 - **Secondary surfaces, if any**: contracts, docs/process
 - **Projected reviewable LOC**: 500-900 excluding generated fixtures and validation result output
-- **Projected production files**: 5-8
-- **Projected total files**: 15-21
-- **Budget result**: within budget
+- **Projected production/reference files**: 6-8
+- **Projected total files**: 20-24
+- **Budget result**: within block threshold with a bounded total-file warning from extending existing evidence fixtures
 - **Split decision**: Keep as one spec because title generation, body rendering, validation, and PR creation gating share one reviewer packet contract. Fixture and documentation updates can be reviewed in the same vertical slice without splitting the behavior.
 
 ### PR Review Packet Requirements *(mandatory)*
@@ -149,13 +151,14 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - Traceability MUST map each major requirement or success criterion to changed files and verification evidence.
 - Deferred work MUST name the follow-up spec or issue.
 - Validation evidence for PRSG-012 MUST show both passing packets and blocked packets across single-PR and split-PR flows.
+- Validation evidence for PRSG-012 MUST identify required Layer 4 script fixtures, Layer 3 functional eval expectations for Claude Code and Codex, Layer 7 replay/integration fixture expectations, and Layer 8 parity fixture expectations.
 
 ### Key Entities *(include if feature involves data)*
 
 - **PR Packet**: A rendered PR title and body for one PR target, including schema version, packet identity, mode, explicit `base_branch`/`head_branch` target, structured generated-title metadata, body file, required sections, UAT content, rendered source/provenance markers, scope evidence with changed files, verification evidence, known-gap language, editable field boundaries, protected-body fingerprint, and validation result path. PRSG-012 uses a shared `pr-packet.schema.json` for both single-PR and split-PR flows; split packets keep `slice-packet.schema.json` as slice evidence/source input and include slice identity or the source slice packet path. Single-PR packets MUST NOT carry split-only `split_slice` evidence.
 - **Generated Title Metadata**: Structured title data with final `value`, conventional commit `type`, `scope`, public-readable `description`, source evidence, and rejected candidates. Single-PR title descriptions come from the feature/spec display title normalized into an action phrase. Split-PR title descriptions come from PR marker `source_boundary.section` in marker mode, or the layer-plan increment name in legacy layer-plan mode. Slice IDs remain metadata and are never title description text.
 - **Packet Validation Result**: A JSON record describing pass or fail status, error class, exit code, deterministic stderr line, evaluated rules, packet identity or synthetic input-error identity, mode when known, title value or path when available, body file when available, failures, remediation evidence, whether PR creation was blocked, stale-result/resume policy, prior successful split PR references when relevant, and timestamps.
-- **Workflow Event**: A concise process log entry written when validation blocks a packet before PR creation, including the blocked packet or input-error identity, validation result path, deterministic stderr line, and resume boundary when one exists.
+- **Workflow Event**: A concise process log entry appended to the active workflow file when validation blocks a packet before PR creation, including a deterministic event id, blocked packet or input-error identity, validation result path or `no-path`, deterministic stderr line, failed rule or reason, remediation summary, PR blocked status, resume boundary when one exists, and prior successful split PR references when relevant.
 - **Sanctioned Prose Field**: A maintainer-editable narrative field bounded by exact full-line `speckit-pro-editable:<field>:start` and `speckit-pro-editable:<field>:end` HTML comment markers, mirrored in packet JSON, and limited to `summary`, `what_changed`, and `why_it_matters`.
 - **Protected Body Fingerprint**: A normalized hash of the rendered body with sanctioned editable blocks elided. It detects any change to protected canonical sections, source markers, UAT content, traceability, scope, verification evidence, known gaps, or generated governance content.
 
@@ -171,6 +174,7 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **SC-006**: No valid generated packet requires manual cleanup after rendering before PR creation.
 - **SC-007**: 100% of seeded missing, unreadable, invalid-JSON, and schema-invalid packet inputs exit `2`, emit deterministic `input_error` stderr, write input-error evidence when a feature directory is known, and make zero PR creation attempts.
 - **SC-008**: 100% of seeded split-PR partial-failure examples preserve earlier opened PR records and resume from the failed packet after correction without duplicate `gh pr create` attempts.
+- **SC-009**: PRSG-012 implementation evidence names and updates the expected Layer 4 script tests, Layer 3 Claude Code and Codex functional eval fixtures, Layer 7 replay/integration fixtures, and Layer 8 parity fixtures for packet validation before PR creation.
 
 ## Assumptions
 
