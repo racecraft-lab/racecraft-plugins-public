@@ -488,8 +488,8 @@ For every deterministic behavior:
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | Foundation | T001-T009 | 9/9 | Added packet fixtures, validator contract tests, runtime schema, executable validator, and reviewability checkpoint |
-| User Story 1 | T010-T017 | 0/8 | In progress |
-| User Story 2 | | | |
+| User Story 1 | T010-T017 | 8/8 | Generated and validated packet-owned single/split PR titles |
+| User Story 2 | T018-T024 | 0/7 | In progress |
 | User Story 3 | | | |
 | User Story 4 | | | |
 | Polish | | | |

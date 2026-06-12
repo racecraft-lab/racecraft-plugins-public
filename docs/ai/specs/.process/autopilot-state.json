@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T18:21:38Z",
-  "active_step": "Phase 7: US1 generated titles (T010-T017)",
+  "updated_at": "2026-06-12T18:44:55Z",
+  "active_step": "Phase 7: US2 reviewer body (T018-T024)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -180,7 +180,7 @@
         "source_boundary": {
           "section": "Phase 2: User Story 1 - Specific Conventional PR Titles"
         },
-        "checkpoint": "pending",
+        "checkpoint": "completed",
         "pr_mapping": "pending",
         "packet_validation": "pending"
       },
@@ -425,11 +425,12 @@
     },
     {
       "step": "Phase 7: US1 generated titles (T010-T017)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "T010-T017 complete. Added title-token fixtures, generated single and split packet titles, validated type/scope metadata, passed generated titles to split PR creation, and updated single-PR packet guidance."
     },
     {
       "step": "Phase 7: US2 reviewer body (T018-T024)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: US3 validation gate (T025-T034)",
