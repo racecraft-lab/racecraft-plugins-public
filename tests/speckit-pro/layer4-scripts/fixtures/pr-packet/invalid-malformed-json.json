@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "invalid-malformed-json",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract"
+  },
+  "generated_title": {
+    "value": "feat(speckit-pro): Malformed packet should fail parsing",
+  }

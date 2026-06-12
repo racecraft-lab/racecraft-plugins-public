@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "invalid-missing-evidence",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "prsg-012-reviewer-ready-pr-packet-contract"
+  },
+  "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+  "generated_title": {
+    "value": "feat(speckit-pro): Add reviewer packet validation",
+    "type": "feat",
+    "scope": "speckit-pro",
+    "description": "Add reviewer packet validation",
+    "source_evidence": {
+      "kind": "feature_spec",
+      "source": "specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md",
+      "summary": "Feature title normalized into a public action phrase."
+    },
+    "rejected_candidates": [
+      {
+        "value": "prsg-012-reviewer-ready-pr-packet-contract",
+        "reason": "Uses the branch name instead of reviewer-facing prose."
+      }
+    ]
+  },
+  "body_file": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Known Gaps"
+  ],
+  "scope_evidence": {
+    "reviewable_loc": 0,
+    "production_files": 0,
+    "total_files": 1,
+    "budget_result": "within_budget",
+    "changed_files": [],
+    "non_goals": []
+  },
+  "uat": {
+    "how_to_uat": "Inspect the fixture once validator assertions exist.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": ""
+  },
+  "editable_fields": [
+    {
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->",
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->"
+    },
+    {
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->",
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->"
+    },
+    {
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->",
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->"
+    }
+  ],
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "value": "1111111111111111111111111111111111111111111111111111111111111111",
+    "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ]
+  },
+  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/invalid-missing-evidence/validation.json"
+}
