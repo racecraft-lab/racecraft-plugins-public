@@ -561,6 +561,9 @@ if [ "$MARKER_MODE" = true ]; then
                   | ($review_order | zpad($width)) as $label
                   | {
                       source_id: $marker.id,
+                      source_title: ($marker.source_boundary.section // $marker.id),
+                      title_description: ($marker.source_boundary.section // $marker.id),
+                      generated_title: ("feat(speckit-pro): " + ($marker.source_boundary.section // $marker.id)),
                       slice_id: $marker.id,
                       marker_id: $marker.id,
                       source_marker_ids: [$marker.id],
@@ -676,8 +679,13 @@ else
               | ($idx + 1) as $review_order
               | ($inc.id | slug) as $slice_id
               | ($review_order | zpad($width)) as $label
-              | {
+              | (($inc.name // $inc.id) as $source_title
+                | (if $source_title == "Foundation" then "Add foundation slice" else $source_title end) as $title_description
+                | {
                   source_id: $inc.id,
+                  source_title: $source_title,
+                  title_description: $title_description,
+                  generated_title: ("feat(speckit-pro): " + $title_description),
                   slice_id: $slice_id,
                   review_order: $review_order,
                   branch: "\($feature_branch)/\($label)-\($slice_id)",
@@ -695,7 +703,7 @@ else
                         | .message
                       )
                   )
-                }
+                })
             )
         ) as $slices
       | $slices
@@ -860,6 +868,8 @@ if [ -n "$CANDIDATE_DIR" ]; then
       --argjson scope_guard "$scope_guard" \
       --arg candidate_dir "$CANDIDATE_DIR" '
         def body_file($slice_id): "\($candidate_dir)/pr-bodies/\($slice_id).md";
+        def generated_title($slice):
+          $slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
         {
           schema_version: 1,
           dry_run: true,
@@ -890,8 +900,9 @@ if [ -n "$CANDIDATE_DIR" ]; then
                       action: "gh_pr_create",
                       branch: $slice.branch,
                       base_branch: $slice.base_branch,
+                      title: generated_title($slice),
                       body_file: body_file($slice.slice_id),
-                      command: ["gh", "pr", "create", "--base", $slice.base_branch, "--head", $slice.branch, "--body-file", body_file($slice.slice_id)]
+                      command: ["gh", "pr", "create", "--base", $slice.base_branch, "--head", $slice.branch, "--body-file", body_file($slice.slice_id), "--title", generated_title($slice)]
                     }
                   ]
               )
@@ -916,6 +927,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
     packet_json="$(
       jq -n \
         --argjson slice "$slice_json" \
+        --arg body_file "$body_file" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$(printf '%s' "$plan_slices" | jq 'length')" '
@@ -925,6 +937,32 @@ if [ -n "$CANDIDATE_DIR" ]; then
             total_slices: $total_slices,
             base_branch: $slice.base_branch,
             head_branch: $slice.branch,
+            target: {
+              base_branch: $slice.base_branch,
+              head_branch: $slice.branch
+            },
+            generated_title: {
+              value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              type: "feat",
+              scope: "speckit-pro",
+              description: ($slice.title_description // $slice.source_title // $slice.slice_id),
+              source_evidence: {
+                kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
+                source: ($slice.source_id // $slice.slice_id),
+                summary: "Split packet title derived from the source boundary or layer-plan increment name."
+              },
+              rejected_candidates: [
+                {
+                  value: $slice.branch,
+                  reason: "Branch names remain metadata and are not public title descriptions."
+                },
+                {
+                  value: $slice.slice_id,
+                  reason: "Slice ids remain metadata and are not public title descriptions."
+                }
+              ]
+            },
+            body_file: $body_file,
             declared_files: $slice.declared_files,
             declared_tests: $slice.declared_tests,
             scoped_verification: $slice.scoped_verification,
@@ -1157,12 +1195,13 @@ if [ -z "$CANDIDATE_DIR" ]; then
   }
 
   record_create_command() {
-    local slice_json="$1" body_file="$2"
+    local slice_json="$1" body_file="$2" title="$3"
     command_log_json="$(
       jq -n \
         --argjson log "$command_log_json" \
         --argjson slice "$slice_json" \
-        --arg body_file "$body_file" '
+        --arg body_file "$body_file" \
+        --arg title "$title" '
           $log
           | .operations += [
               {
@@ -1171,8 +1210,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
                 action: "gh_pr_create",
                 branch: $slice.branch,
                 base_branch: $slice.base_branch,
+                title: $title,
                 body_file: $body_file,
-                command: ["gh", "pr", "create", "--base", $slice.base_branch, "--head", $slice.branch, "--body-file", $body_file]
+                command: ["gh", "pr", "create", "--base", $slice.base_branch, "--head", $slice.branch, "--body-file", $body_file, "--title", $title]
               }
             ]
         '
@@ -1247,10 +1287,10 @@ if [ -z "$CANDIDATE_DIR" ]; then
   }
 
   live_create_pr() {
-    local slice_id="$1" head_branch="$2" base_branch="$3" body_file="$4" created_ref
+    local slice_id="$1" head_branch="$2" base_branch="$3" body_file="$4" title="$5" created_ref
     created_ref="$(
       cd "$persist_root" &&
-      gh pr create --base "$base_branch" --head "$head_branch" --title "$FEATURE_BRANCH: $slice_id" --body-file "$body_file"
+      gh pr create --base "$base_branch" --head "$head_branch" --body-file "$body_file" --title "$title"
     )" || return 1
     [ -n "$created_ref" ] || return 1
     (
@@ -1492,6 +1532,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
     packet_json="$(
       jq -n \
         --argjson slice "$slice_json" \
+        --arg body_file "$body_file" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$total_slices" '
@@ -1501,6 +1542,32 @@ if [ -z "$CANDIDATE_DIR" ]; then
             total_slices: $total_slices,
             base_branch: $slice.base_branch,
             head_branch: $slice.branch,
+            target: {
+              base_branch: $slice.base_branch,
+              head_branch: $slice.branch
+            },
+            generated_title: {
+              value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              type: "feat",
+              scope: "speckit-pro",
+              description: ($slice.title_description // $slice.source_title // $slice.slice_id),
+              source_evidence: {
+                kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
+                source: ($slice.source_id // $slice.slice_id),
+                summary: "Split packet title derived from the source boundary or layer-plan increment name."
+              },
+              rejected_candidates: [
+                {
+                  value: $slice.branch,
+                  reason: "Branch names remain metadata and are not public title descriptions."
+                },
+                {
+                  value: $slice.slice_id,
+                  reason: "Slice ids remain metadata and are not public title descriptions."
+                }
+              ]
+            },
+            body_file: $body_file,
             declared_files: $slice.declared_files,
             declared_tests: $slice.declared_tests,
             scoped_verification: $slice.scoped_verification,
@@ -1544,6 +1611,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
     )"
     persist_json_atomic "$packet_path" "$packet_json" || emit_input_error "slice packet persistence failed: $packet_path"
     "$SCRIPT_DIR/generate-pr-body.sh" --slice-packet "$packet_path" "$persist_root" "$feature_dir_abs" "$body_file" "$BASE_SHA...HEAD" >/dev/null
+    pr_title="$(printf '%s' "$packet_json" | jq -r '.generated_title.value')"
 
     record_scoped_commands "$slice_json" "$scoped_json"
     write_scoped_evidence_files "$scoped_json"
@@ -1609,9 +1677,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
     pr_source="existing"
 
     if [ -z "$pr_json" ]; then
-      record_create_command "$slice_json" "$body_file"
+      record_create_command "$slice_json" "$body_file" "$pr_title"
       if [ "$LIVE" = true ]; then
-        pr_json="$(live_create_pr "$slice_id" "$head_branch" "$base_branch" "$body_file")" || \
+        pr_json="$(live_create_pr "$slice_id" "$head_branch" "$base_branch" "$body_file" "$pr_title")" || \
           block_with_state "$slice_id" "gh_pr_create" "gh pr create failed for slice $slice_id" "failed" 4
       else
         create_failure="$(
