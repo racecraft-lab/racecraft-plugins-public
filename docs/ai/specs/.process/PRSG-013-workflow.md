@@ -572,7 +572,7 @@ Before starting any task:
 | Plan status | `emission_ready` |
 | Markers | `foundation`, `us1`, `us2`, `us3` |
 | Warning | `reviewability_size_warning`: sizing result is marker-planning input |
-| Final backstop | `status=proceed`, `outcome=marker_split` from final `warn` plus current marker plan |
+| Final backstop | `status=proceed`, `outcome=marker_split` from committed full-diff `block` plus current marker plan |
 | Emission dry-run | `docs/ai/specs/.process/PRSG-013-marker-emission-dry-run.json` |
 
 | Marker | Review Order | Scope | Tasks | Checkpoint |
@@ -593,13 +593,24 @@ Before starting any task:
 | `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh` | ✅ 55/55 |
 | `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` | ✅ 116/116 |
 | `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh` | ✅ 45/45 |
-| `final-reviewability-backstop.sh` with current `pr_marker_plan` | ✅ `marker_split`; no PR side effects |
-| `multi-pr-emission.sh` marker dry-run | ✅ 4 marker packets: `foundation`, `us1`, `us2`, `us3`; no branch/PR mutation |
+| `final-reviewability-backstop.sh` with current `pr_marker_plan` | ✅ Committed full diff is size-blocked (`117` files) but returns `marker_split`; no PR side effects |
+| `multi-pr-emission.sh` marker dry-run | ✅ 4 marker packets: `foundation`, `us1`, `us2`, `us3`; `mutation.branches=false`, `mutation.pull_requests=false` |
 | UAT runbook | ✅ `specs/prsg-013-reviewability-markers/.process/uat-runbook.md` |
 | `bash tests/speckit-pro/run-all.sh --layer 3` | ✅ 0/0; eval files and manual helpers enumerated |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | ✅ 978/978 |
 | `bash tests/speckit-pro/run-all.sh` | ✅ 2574/2574 |
 | `bash tests/speckit-pro/run-all.sh --all` | ⚠️ Started; deterministic layers passed through Layer 5, then live Layer 7 emitted no output for several minutes and was interrupted. Not used as completion gate. |
+
+---
+
+## Self-Review
+
+| Question | Answer |
+|----------|--------|
+| Tests executed? | Yes. `bash tests/speckit-pro/run-all.sh` passed `2574/2574`; targeted marker/backstop/emission tests passed; `jq empty`, `bash -n`, and `git diff --check` passed. No separate build/typecheck/lint commands exist for this shell/Markdown plugin repo. |
+| Edge cases? | Covered by Layer 4 fixtures for malformed reviewability JSON, stale fingerprints, missing/malformed marker plans, non-size blockers, safe subdivision, no-safe-boundary warnings, hazard collapse, placeholder packet paths, marker order mismatch, and scope mismatch. |
+| Requirements matched? | `tasks.md` marks `45/45` tasks complete. `verify-tasks-report.md` found `44` verified tasks and `1` weak inspection-only task, with `0` partial or not-found tasks. FR-001 through FR-018 are covered by the task matrix and validation evidence above. |
+| Follow-up? | No `TODO`, `DEFERRED`, or `OUT-OF-SCOPE` markers were found in spec, plan, tasks, or this workflow. Live marker-scoped branch/PR mutation remains follow-up work because `multi-pr-emission.sh` currently validates packets and command capture with no branch or PR mutation. |
 
 ---
 
@@ -613,8 +624,10 @@ Before starting any task:
 - [x] Layer 8 parity is covered by `validate-codex-parity` and the Layer 8 helper tests included in the default suite
 - [x] Workflow evidence records reviewability sizing as marker input, not implementation stop
 - [x] UAT runbook generated with marker/backstop/emission checks
-- [ ] PR created and reviewed
-- [ ] Merged to main branch
+- [x] PR body generated at `/private/tmp/PRSG-013-speckit-pr-body.md` with `speckit-pro-review-packet-source` and `## UAT Runbook`
+- [x] PR creation evaluated and skipped by safety boundary: final backstop returned `marker_split`, while `multi-pr-emission.sh` currently reports no branch/PR mutation; no single all-changes PR was opened
+- [x] Review remediation skipped because no PR was opened
+- [x] Merge not attempted; branch awaits marker-capable PR emission follow-up
 
 ---
 
