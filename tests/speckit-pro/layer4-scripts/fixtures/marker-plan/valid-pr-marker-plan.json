@@ -1,0 +1,176 @@
+{
+  "schema_version": "pr-marker-plan.v1",
+  "kind": "pr_marker_plan",
+  "feature_id": "prsg-013-reviewability-markers",
+  "status": "emission_ready",
+  "source_fingerprint": {
+    "feature_spec_sha": "spec-sha",
+    "plan_declared_scope_sha": "scope-sha",
+    "tasks_sha": "tasks-sha",
+    "reviewability_sha": "reviewability-sha",
+    "hazard_route_sha": "hazard-sha"
+  },
+  "markers": [
+    {
+      "id": "foundation",
+      "review_order": 1,
+      "kind": "foundation",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "Foundation",
+        "story_id": null,
+        "start_task_id": "T004",
+        "end_task_id": "T004"
+      },
+      "task_ids": ["T004"],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "NEW",
+          "path": "tests/speckit-pro/layer4-scripts/fixtures/marker-plan/valid-pr-marker-plan.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+        }
+      ],
+      "declared_tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+      ],
+      "reviewability": {
+        "status": "warn",
+        "mode": "marker",
+        "scope": "foundation",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/foundation-reviewability.json"
+      },
+      "hazards": [],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md"
+      },
+      "emission_mapping": {
+        "status": "marker_split",
+        "packet_path": ""
+      },
+      "warnings": [
+        {
+          "code": "FOUNDATION_SIZE_WARN",
+          "severity": "warning",
+          "message": "Foundation marker is close to the reviewability budget.",
+          "source": "marker-plan",
+          "details": {
+            "marker_id": "foundation"
+          }
+        }
+      ]
+    },
+    {
+      "id": "us1",
+      "review_order": 2,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 1",
+        "story_id": 1,
+        "start_task_id": "T027",
+        "end_task_id": "T032"
+      },
+      "task_ids": ["T027", "T028", "T029", "T032"],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        }
+      ],
+      "declared_tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+      ],
+      "reviewability": {
+        "status": "pass",
+        "mode": "marker",
+        "scope": "us1",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us1-reviewability.json"
+      },
+      "hazards": [],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us1-checkpoint.md"
+      },
+      "emission_mapping": {
+        "status": "marker_split",
+        "packet_path": ""
+      },
+      "warnings": []
+    },
+    {
+      "id": "us2-part1",
+      "review_order": 3,
+      "kind": "user_story_part",
+      "parent_marker_id": "us2",
+      "source_boundary": {
+        "section": "User Story 2",
+        "story_id": 2,
+        "start_task_id": "T033",
+        "end_task_id": "T035"
+      },
+      "task_ids": ["T033", "T034", "T035"],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/multi-pr-emission-state.schema.json"
+        }
+      ],
+      "declared_tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+      ],
+      "reviewability": {
+        "status": "warn",
+        "mode": "marker",
+        "scope": "us2-part1",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/marker-plan/us2-part1-reviewability.json"
+      },
+      "hazards": ["schema-only marker remains reviewable"],
+      "subdivision": {
+        "status": "safe_split",
+        "details": {
+          "parent_marker_id": "us2"
+        }
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/markers/us2-part1-checkpoint.md"
+      },
+      "emission_mapping": {
+        "status": "marker_split",
+        "packet_path": ""
+      },
+      "warnings": []
+    }
+  ],
+  "warnings": [
+    {
+      "code": "FULL_DIFF_SIZE_BLOCK",
+      "severity": "warning",
+      "message": "Final full diff is oversized, but marker evidence is current.",
+      "source": "final-reviewability-backstop",
+      "details": {
+        "outcome": "marker_split"
+      }
+    }
+  ],
+  "created_at": "2026-06-10T00:00:00Z",
+  "updated_at": "2026-06-10T00:00:00Z"
+}

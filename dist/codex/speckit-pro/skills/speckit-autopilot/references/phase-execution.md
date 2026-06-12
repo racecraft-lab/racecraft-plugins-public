@@ -416,6 +416,29 @@ TaskUpdate: → completed
 
 ⚠️ Use Agent() subagent, NOT Skill() directly.
 
+**Post-G5 reviewability capture (guarded):**
+After G5 and Verify Tasks pass, run the task reviewability gate without letting
+the script's compatibility exit code abort the run:
+
+```bash
+code=0
+out=$("<SKILL_SCRIPTS>/reviewability-gate.sh" tasks "specs/<feature>") || code=$?
+```
+
+Parse stdout as JSON and record stdout, stderr, exit code, gate
+status/mode/exit/evidence path, and a repo-relative evidence path in the
+workflow file. If the result is `pass`, `warn`, or an honored typed exception,
+continue normally. If the result is a valid current size-only `status=block`
+for `mode=tasks`, continue into marker planning and later marker emission; it is
+not a manual re-slicing stop and MUST NOT ask the operator to rewrite task
+boundaries solely for size.
+
+Correctness stops remain blocking: malformed/stale marker state, failed
+verification, invalid packet, unsafe output, unusable gate evidence, invalid
+JSON, unreadable artifacts, missing reviewability status/mode, stale
+fingerprints, or any non-size safety finding. These stops fire before Analyze or
+Implement.
+
 **Optional: Tasks to GitHub Issues:**
 If the project uses GitHub Issues for tracking and the GitHub
 MCP server is available, export tasks to issues:
@@ -469,6 +492,23 @@ The route is recorded ONLY in the workflow file — never in the spec map.
 The classifier makes no call to, and no edit of, the reviewability gate;
 combining this route with reviewability sizing to decide whether to
 *actually* split is a later concern, not this step's.
+
+**PR Marker Plan (post-route, pre-Analyze/pre-Implement):**
+When the captured reviewability result is marker-planning input, create or
+refresh top-level `pr_marker_plan` state before Analyze or Implement can
+continue. The marker plan derives from the current task structure, captured
+reviewability finding, plan-declared file/test scope, and recorded hazard route.
+Persist it in `autopilot-state.json` and mirror the same schema version, source
+fingerprint, ordered marker IDs, review order, checkpoints, warnings, final
+marker_split placeholder, packet validation placeholder, and PR mappings
+placeholder in the workflow file. `tasks.md` remains the task source, not
+authoritative marker state.
+
+On resume, validate the source fingerprint before reusing checkpoints or
+emission evidence. A changed fingerprint, malformed/stale marker state, missing
+marker membership, changed order, or changed fold target clears affected
+checkpoint/emission evidence or stops when the boundary requires current marker
+state.
 
 **Commit:**
 `git add specs/ && git commit -m "feat(SPEC-XXX): complete tasks phase"`
@@ -599,6 +639,14 @@ Phase 7 uses **task-level dispatch**: the orchestrator parses
 tasks.md and dispatches each task (or parallel group) to the
 best-fit agent. This replaces the monolithic implement-executor
 pattern.
+
+When top-level `pr_marker_plan` is available and current, Phase 7 executes,
+checkpoints, and records evidence in marker order. Each marker's tasks run in
+the marker's `review_order`; within one marker, keep the existing task-order and
+`[P]` parallel rules. After a marker completes, record a checkpoint with the
+marker ID, ordered task IDs, test/verification evidence path, fingerprint
+status, checkpoints, warnings, and any blocked/fixed tasks. Do not infer a new
+marker order from changed files or reviewability warnings.
 
 **Why task-level:** Subagents cannot spawn other subagents
 (Claude Code platform constraint). The flat orchestrator-worker
@@ -972,13 +1020,23 @@ Step 8: Final commit: "feat(SPEC-XXX): open PR for review"
 ```
 
 The backstop is fail-closed at the PR boundary. Exit 0 means the final diff
-gate passed, warned, or honored a valid typed exception and PR preparation may
-continue. Exit 1 means `reslicing_required`: do not run `generate-pr-body.sh`,
-do not invoke any `gh pr create` variant, and do not run
-`multi-pr-emission.sh`; read the packet's `operator_steps` and
-`resume.resume_from` to route through PRSG-007, regenerate PRSG-008, or hand off
-to PRSG-009. Exit 2 is a gate error: state is written, no packet is valid, and
-the run stops for operator repair.
+gate passed, warned, honored a valid typed exception, or produced final
+`marker_split` with a current `pr_marker_plan`; PR preparation may continue.
+When a current `pr_marker_plan` exists, PR preparation continues through
+marker emission even if the final full-diff result is only `pass` or `warn`.
+A full-diff size block with current marker evidence also proceeds to marker
+emission and is not a manual re-slicing stop. Exit 1 means `reslicing_required`
+only for unexcepted
+correctness or missing-marker cases: do not run `generate-pr-body.sh`, do not
+invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh`; read
+the packet's `operator_steps` and `resume.resume_from` to route through PRSG-007,
+regenerate PRSG-008, or hand off to PRSG-009. Exit 2 is a gate error: state is
+written, no packet is valid, and the run stops for operator repair.
+
+For marker-aware PR preparation, record gate status/mode/exit/evidence path,
+fingerprint status, ordered marker IDs, checkpoints, warnings, final
+marker_split or marker-plan-ready handoff, packet validation, and PR mappings
+before PR side effects.
 
 ## Copilot Review Remediation Loop
 

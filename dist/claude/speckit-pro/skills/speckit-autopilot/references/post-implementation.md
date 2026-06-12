@@ -336,10 +336,24 @@ opens one slice PR.
    packet path, persisted PRSG-007 route/sizing result, PRSG-008 layer plan,
    changed-files evidence, and full verification evidence. This MUST run before
    `generate-pr-body.sh`, any `gh pr create` variant, or
-   `multi-pr-emission.sh`. Proceed only on `pass`, `warn`, or honored
-   typed-exception. On an unexcepted block, stop with
+   `multi-pr-emission.sh`. Proceed only on `pass`, `warn`, honored
+   typed-exception, or final `marker_split` when the current `pr_marker_plan`
+   is valid. If a current `pr_marker_plan` exists, marker-based PR emission is
+   the downstream PR path after any successful final backstop result; do not
+   fall back to a single all-changes PR just because the final full-diff gate is
+   `pass` or `warn`. A valid current size-only final block also continues into
+   marker emission; it is not a manual re-slicing stop. On an unexcepted
+   correctness block, stop with
    `final_reviewability_gate.status=block` plus a `reslicing_required` packet;
-   on gate error, stop with state only and no packet.
+   on gate error, stop with state only and no packet. Correctness stops include
+   malformed/stale marker state, failed verification, invalid packet, unsafe
+   output, unusable gate evidence, invalid JSON, missing status/mode, and stale
+   fingerprints.
+5b. For a marker-aware proceed result, record gate
+   status/mode/exit/evidence path, fingerprint status, ordered marker IDs,
+   checkpoints, warnings, final marker_split or marker-plan-ready handoff,
+   packet validation, and PR mappings before any PR side effect. All evidence
+   paths must be repo-relative.
 6. Generate the base review packet only after the backstop proceeds:
    `skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<number>-<name> .git/speckit-pr-body.md origin/main...HEAD`
    The generator uses the host repository's pull request template when present
@@ -375,10 +389,13 @@ opens one slice PR.
      generator produced them.
    - Omit **Anything reviewers should know** entirely if there is nothing real
      to say. An empty section is worse than no section.
-7. For split-PR routes, run multi-pr-emission.sh with the layer plan, durable
-   state path, feature branch, integration base, base SHA, full verification
-   evidence path, and optional changed-file scope evidence only after the
-   final backstop proceeds.
+7. For split-PR routes, marker_split final-backstop outcomes, or any current
+   `pr_marker_plan` marked emission-ready, run multi-pr-emission.sh with the
+   layer/marker plan evidence, durable state path,
+   feature branch, integration base, base SHA, full verification evidence path,
+   and optional changed-file scope evidence only after the final backstop
+   proceeds. The emitted packets must validate against the marker evidence
+   before PR body generation, `gh pr create`, or equivalent PR side effects.
 8. For each planned slice, multi-pr-emission.sh creates the Style B branch
    topology and PR packet:
    - slice 1 base: <integration-base>

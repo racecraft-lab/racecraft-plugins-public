@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "status": "validated",
+  "mutation": {
+    "branches": false,
+    "pull_requests": false
+  },
+  "emission": {
+    "slice_count": 4,
+    "marker_count": 4,
+    "mode": "marker",
+    "route": "marker_split",
+    "dry_run": true
+  },
+  "slices": [
+    {
+      "slice_id": "foundation",
+      "marker_id": "foundation",
+      "review_order": 1,
+      "expected_branch": "prsg-013-reviewability-markers/01-foundation",
+      "expected_base_branch": "main"
+    },
+    {
+      "slice_id": "us1",
+      "marker_id": "us1",
+      "review_order": 2,
+      "expected_branch": "prsg-013-reviewability-markers/02-us1",
+      "expected_base_branch": "prsg-013-reviewability-markers/01-foundation"
+    },
+    {
+      "slice_id": "us2",
+      "marker_id": "us2",
+      "review_order": 3,
+      "expected_branch": "prsg-013-reviewability-markers/03-us2",
+      "expected_base_branch": "prsg-013-reviewability-markers/02-us1"
+    },
+    {
+      "slice_id": "us3",
+      "marker_id": "us3",
+      "review_order": 4,
+      "expected_branch": "prsg-013-reviewability-markers/04-us3",
+      "expected_base_branch": "prsg-013-reviewability-markers/03-us2"
+    }
+  ],
+  "pr_create_commands": [
+    {
+      "slice_id": "foundation",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "main",
+        "--head",
+        "prsg-013-reviewability-markers/01-foundation",
+        "--body-file",
+        "/tmp/prsg-013-marker-emission/pr-bodies/foundation.md"
+      ]
+    },
+    {
+      "slice_id": "us1",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "prsg-013-reviewability-markers/01-foundation",
+        "--head",
+        "prsg-013-reviewability-markers/02-us1",
+        "--body-file",
+        "/tmp/prsg-013-marker-emission/pr-bodies/us1.md"
+      ]
+    },
+    {
+      "slice_id": "us2",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "prsg-013-reviewability-markers/02-us1",
+        "--head",
+        "prsg-013-reviewability-markers/03-us2",
+        "--body-file",
+        "/tmp/prsg-013-marker-emission/pr-bodies/us2.md"
+      ]
+    },
+    {
+      "slice_id": "us3",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "prsg-013-reviewability-markers/03-us2",
+        "--head",
+        "prsg-013-reviewability-markers/04-us3",
+        "--body-file",
+        "/tmp/prsg-013-marker-emission/pr-bodies/us3.md"
+      ]
+    }
+  ]
+}

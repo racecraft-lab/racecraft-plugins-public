@@ -1,12 +1,38 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "PRSG-009 multi_pr_emission state",
+  "title": "PRSG-009/PRSG-013 multi_pr_emission state",
   "type": "object",
-  "required": ["schema_version", "status", "source_layer_plan", "base_branch", "base_sha", "next_slice_id", "reconciled_at", "slices"],
+  "required": ["schema_version", "status", "base_branch", "base_sha", "next_slice_id", "reconciled_at", "slices"],
+  "anyOf": [
+    { "required": ["source_layer_plan"] },
+    { "required": ["source_marker_plan", "marker_split_result"] }
+  ],
   "properties": {
     "schema_version": { "type": "integer", "minimum": 1 },
     "status": { "type": "string", "enum": ["pending", "emitting", "blocked", "complete"] },
+    "emission_mode": { "type": "string", "enum": ["layer", "marker"] },
+    "route": { "type": "string", "enum": ["layer_plan", "marker_split", "hazard_collapsed"] },
     "source_layer_plan": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha": { "type": "string" },
+        "generated_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "source_marker_plan": {
+      "type": "object",
+      "required": ["path"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha": { "type": "string" },
+        "generated_at": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "marker_split_result": {
       "type": "object",
       "required": ["path"],
       "properties": {
@@ -24,6 +50,10 @@
       "type": "array",
       "items": { "$ref": "#/definitions/slice" }
     },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/warning" }
+    },
     "failed_slice": { "$ref": "#/definitions/failure" }
   },
   "additionalProperties": false,
@@ -33,6 +63,18 @@
       "required": ["slice_id", "review_order", "expected_branch", "expected_base_branch", "declared_files", "declared_scoped_tests", "status"],
       "properties": {
         "slice_id": { "type": "string", "minLength": 1 },
+        "marker_id": { "type": "string", "minLength": 1 },
+        "source_marker_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "source_marker_checkpoints": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "route": { "type": "string", "enum": ["marker_split", "hazard_collapsed"] },
+        "marker_split_evidence": { "type": "string", "minLength": 1 },
         "review_order": { "type": "integer", "minimum": 1 },
         "expected_branch": { "type": "string", "minLength": 1 },
         "expected_base_branch": { "type": "string", "minLength": 1 },
@@ -46,6 +88,11 @@
           "items": { "type": "string", "minLength": 1 }
         },
         "scoped_verification": { "$ref": "#/definitions/scoped_verification" },
+        "emission_mapping": { "$ref": "#/definitions/emission_mapping" },
+        "warnings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/warning" }
+        },
         "pr": { "$ref": "#/definitions/pr" },
         "status": { "type": "string", "enum": ["pending", "branch_created", "verified", "pr_opened", "merged", "closed", "failed"] },
         "last_error": { "$ref": "#/definitions/failure" }
@@ -90,6 +137,33 @@
         "head_ref": { "type": "string" },
         "head_sha": { "type": "string" },
         "merged_sha": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "emission_mapping": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["pending", "marker_split", "emitted", "hazard_collapsed"] },
+        "packet_path": { "type": "string" },
+        "source_marker_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "pr_number": { "type": ["integer", "null"], "minimum": 1 },
+        "pr_url": { "type": ["string", "null"] }
+      },
+      "additionalProperties": false
+    },
+    "warning": {
+      "type": "object",
+      "required": ["code", "severity", "message", "source", "details"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+        "message": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "details": { "type": "object" }
       },
       "additionalProperties": false
     },

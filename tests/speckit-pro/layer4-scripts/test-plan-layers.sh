@@ -14,6 +14,8 @@ REPO_ROOT="$(cd "$TEST_DIR/../../.." && pwd)"
 SCRIPT="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
 FIXTURE_ROOT="$TEST_DIR/fixtures/plan-layers"
 SCHEMA="$FIXTURE_ROOT/contracts/plan-layers.schema.json"
+MARKER_FIXTURE_ROOT="$TEST_DIR/fixtures/marker-plan"
+MARKER_SCHEMA="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
 
 SANDBOX=$(mktemp -d)
 RUN_DIR="$SANDBOX/runs"
@@ -42,6 +44,31 @@ run_planner_capture() {
   start_ns=$(monotonic_ns)
   set +e
   bash "$SCRIPT" "$@" >"$LAST_STDOUT" 2>"$LAST_STDERR"
+  exit_code=$?
+  set -e
+  end_ns=$(monotonic_ns)
+
+  printf '%s\n' "$exit_code" >"$LAST_EXIT_FILE"
+  printf '%s\n' "$(((end_ns - start_ns) / 1000000))" >"$LAST_ELAPSED_FILE"
+}
+
+run_marker_planner_capture() {
+  local name="$1"
+  local feature_dir="$2"
+  local reviewability_result="$3"
+  local hazard_route="$4"
+  local state_file="$5"
+  local marker_output="$6"
+
+  LAST_STDOUT="$RUN_DIR/$name.stdout"
+  LAST_STDERR="$RUN_DIR/$name.stderr"
+  LAST_EXIT_FILE="$RUN_DIR/$name.exit"
+  LAST_ELAPSED_FILE="$RUN_DIR/$name.elapsed_ms"
+
+  local start_ns end_ns exit_code
+  start_ns=$(monotonic_ns)
+  set +e
+  bash "$SCRIPT" marker-plan "$feature_dir" "$reviewability_result" "$hazard_route" "$state_file" "$marker_output" >"$LAST_STDOUT" 2>"$LAST_STDERR"
   exit_code=$?
   set -e
   end_ns=$(monotonic_ns)
@@ -90,6 +117,90 @@ PY
     _pass
   else
     _fail "contract schema must declare PRSG-008 planner invariants"
+  fi
+}
+
+assert_marker_schema_contract_file() {
+  local schema_file="$1"
+  local errors
+  errors=$(python3 - "$schema_file" <<'PY' 2>&1 || true
+import json
+import sys
+
+schema_path = sys.argv[1]
+with open(schema_path, "r", encoding="utf-8") as handle:
+    schema = json.load(handle)
+
+problems = []
+required = set(schema.get("required", []))
+expected_required = {
+    "schema_version",
+    "kind",
+    "feature_id",
+    "status",
+    "source_fingerprint",
+    "markers",
+    "warnings",
+}
+if required != expected_required:
+    problems.append(f"top-level required mismatch: {sorted(required)!r}")
+if schema.get("properties", {}).get("schema_version", {}).get("const") != "pr-marker-plan.v1":
+    problems.append("schema_version const mismatch")
+if schema.get("properties", {}).get("kind", {}).get("const") != "pr_marker_plan":
+    problems.append("kind const mismatch")
+status_enum = schema.get("properties", {}).get("status", {}).get("enum", [])
+for status in ("planned", "collapsed", "stale", "invalid"):
+    if status not in status_enum:
+        problems.append(f"missing status {status}")
+
+defs = schema.get("$defs", {})
+fingerprint = defs.get("source_fingerprint", {})
+fingerprint_required = set(fingerprint.get("required", []))
+if fingerprint_required != {
+    "feature_spec_sha",
+    "plan_declared_scope_sha",
+    "tasks_sha",
+    "reviewability_sha",
+    "hazard_route_sha",
+}:
+    problems.append(f"fingerprint required mismatch: {sorted(fingerprint_required)!r}")
+
+marker_required = set(defs.get("marker", {}).get("required", []))
+for key in (
+    "id",
+    "review_order",
+    "kind",
+    "parent_marker_id",
+    "source_boundary",
+    "task_ids",
+    "folded_polish_task_ids",
+    "folded_polish_target_reason",
+    "declared_files",
+    "declared_tests",
+    "reviewability",
+    "hazards",
+    "subdivision",
+    "implementation_checkpoint",
+    "emission_mapping",
+    "warnings",
+):
+    if key not in marker_required:
+        problems.append(f"marker missing required key {key}")
+
+warning_required = set(defs.get("warning", {}).get("required", []))
+if warning_required != {"code", "severity", "message", "source", "details"}:
+    problems.append("warning object contract mismatch")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+PY
+)
+
+  if [ -z "$errors" ]; then
+    _pass
+  else
+    _fail "marker schema contract failed: $errors"
   fi
 }
 
@@ -619,6 +730,222 @@ PY
   fi
 }
 
+assert_marker_result_and_plan_file() {
+  local stdout_file="$1"
+  local plan_file="$2"
+  local scenario="$3"
+  local feature_dir="$4"
+  local reviewability_file="$5"
+  local hazard_file="$6"
+  local expected_output_path="$7"
+  local errors
+  errors=$(python3 - "$stdout_file" "$plan_file" "$scenario" "$REPO_ROOT" "$feature_dir" "$reviewability_file" "$hazard_file" "$expected_output_path" <<'PY' 2>&1 || true
+import hashlib
+import json
+import pathlib
+import re
+import sys
+
+stdout_path = pathlib.Path(sys.argv[1])
+plan_path = pathlib.Path(sys.argv[2])
+scenario = sys.argv[3]
+repo_root = pathlib.Path(sys.argv[4])
+feature_dir = pathlib.Path(sys.argv[5])
+reviewability_file = pathlib.Path(sys.argv[6])
+hazard_file = pathlib.Path(sys.argv[7])
+expected_output_path = sys.argv[8]
+problems = []
+
+def problem(message):
+    problems.append(message)
+
+def require(condition, message):
+    if not condition:
+        problems.append(message)
+
+def load(path):
+    with open(path, "r", encoding="utf-8") as handle:
+        return json.load(handle)
+
+def sha(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def rel(path):
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(repo_root.resolve()).as_posix()
+    except ValueError:
+        return str(path)
+
+def by_id(items):
+    return {item.get("id"): item for item in items if isinstance(item, dict)}
+
+try:
+    result = load(stdout_path)
+except Exception as exc:
+    print(f"invalid stdout JSON: {exc}")
+    sys.exit(1)
+try:
+    plan = load(plan_path)
+except Exception as exc:
+    print(f"invalid marker plan JSON: {exc}")
+    sys.exit(1)
+
+require(result.get("tool") == "plan-layers", "result tool mismatch")
+require(result.get("contract_version") == 2, "marker mode must use contract_version 2")
+require(result.get("mode") == "marker-plan", "result mode must be marker-plan")
+require(result.get("status") == "ok", "result status must be ok")
+require(result.get("feature_dir") == rel(feature_dir), "result feature_dir mismatch")
+require(result.get("marker_plan_file") == expected_output_path, "result marker_plan_file mismatch")
+require(result.get("errors") == [], "ok result errors must be empty")
+
+require(plan.get("schema_version") == "pr-marker-plan.v1", "plan schema_version mismatch")
+require(plan.get("kind") == "pr_marker_plan", "plan kind mismatch")
+require(plan.get("feature_id") == feature_dir.name, "plan feature_id must use feature directory basename")
+require(isinstance(plan.get("warnings"), list), "plan warnings must be an array")
+require(result.get("marker_ids") == [marker.get("id") for marker in plan.get("markers", [])], "result marker_ids must mirror plan order")
+
+fingerprint = plan.get("source_fingerprint", {})
+expected_fingerprint = {
+    "feature_spec_sha": sha(feature_dir / "spec.md"),
+    "plan_declared_scope_sha": sha(feature_dir / "plan.md"),
+    "tasks_sha": sha(feature_dir / "tasks.md"),
+    "reviewability_sha": sha(reviewability_file),
+    "hazard_route_sha": sha(hazard_file),
+}
+require(fingerprint == expected_fingerprint, "source_fingerprint must match current spec/plan/tasks/reviewability/hazard inputs")
+for key, value in fingerprint.items():
+    require(re.fullmatch(r"[0-9a-f]{64}", value or "") is not None, f"{key} must be sha256 hex")
+
+markers = plan.get("markers", [])
+ids = [marker.get("id") for marker in markers if isinstance(marker, dict)]
+orders = [marker.get("review_order") for marker in markers if isinstance(marker, dict)]
+require(orders == list(range(1, len(markers) + 1)), "review_order must be one-based and match marker array order")
+for marker in markers:
+    require(marker.get("implementation_checkpoint", {}).get("status") == "pending", f"{marker.get('id')} checkpoint must start pending")
+    require(marker.get("emission_mapping", {}).get("status") in {"pending", "hazard_collapsed"}, f"{marker.get('id')} emission status mismatch")
+    require(marker.get("reviewability", {}).get("mode") == "tasks", f"{marker.get('id')} reviewability mode mismatch")
+
+marker_map = by_id(markers)
+
+if scenario == "canonical":
+    require(plan.get("status") == "planned", "canonical status must be planned")
+    require(ids == ["foundation", "us1", "us2"], f"canonical marker order mismatch: {ids!r}")
+    require("polish" not in ids, "polish must not create a cleanup-only marker")
+    require(marker_map["foundation"].get("task_ids") == ["T001", "T002"], "foundation task_ids mismatch")
+    require(marker_map["us1"].get("task_ids") == ["T003", "T004"], "us1 task_ids mismatch")
+    require(marker_map["us2"].get("task_ids") == ["T005", "T006"], "us2 task_ids mismatch")
+    require(marker_map["us2"].get("folded_polish_task_ids") == ["T007"], "polish task must fold into last non-polish marker")
+    require(marker_map["us2"].get("folded_polish_target_reason") == "nearest_preceding_non_polish_scope", "polish fold reason mismatch")
+    require(marker_map["us2"].get("declared_tests") == ["tests/speckit-pro/layer4-scripts/test-plan-layers.sh"], "folded polish test must join us2 declared tests")
+    warning_codes = [item.get("code") for item in plan.get("warnings", [])]
+    require("reviewability_size_warning" in warning_codes, "warn reviewability result must become structured plan warning")
+    require(result.get("summary", {}).get("hazard_collapsed") is False, "canonical must not hazard-collapse")
+
+elif scenario == "safe-subdivision":
+    require(plan.get("status") == "planned", "safe-subdivision status must be planned")
+    require(ids == ["foundation", "us1-part1", "us1-part2"], f"safe subdivision marker order mismatch: {ids!r}")
+    require("us1" not in ids, "subdivided parent us1 must not emit as a separate marker")
+    require(marker_map["us1-part1"].get("parent_marker_id") == "us1", "part1 parent mismatch")
+    require(marker_map["us1-part2"].get("parent_marker_id") == "us1", "part2 parent mismatch")
+    require(marker_map["us1-part1"].get("kind") == "user_story_part", "part1 kind mismatch")
+    require(marker_map["us1-part2"].get("kind") == "user_story_part", "part2 kind mismatch")
+    require(marker_map["us1-part1"].get("task_ids") == ["T002", "T003"], "part1 task ids mismatch")
+    require(marker_map["us1-part2"].get("task_ids") == ["T004", "T005"], "part2 task ids mismatch")
+    for marker_id in ("us1-part1", "us1-part2"):
+        require(marker_map[marker_id].get("subdivision", {}).get("status") == "safe_split", f"{marker_id} subdivision status mismatch")
+    warning_codes = [item.get("code") for item in plan.get("warnings", [])]
+    require("reviewability_size_warning" in warning_codes, "safe split must preserve reviewability size warning")
+
+elif scenario == "no-safe-boundary":
+    require(plan.get("status") == "planned", "no-safe-boundary status must remain planned")
+    require(ids == ["foundation", "us1"], f"no-safe marker order mismatch: {ids!r}")
+    us1 = marker_map["us1"]
+    require(us1.get("subdivision", {}).get("status") == "no_safe_boundary", "us1 subdivision must be no_safe_boundary")
+    marker_warning_codes = [item.get("code") for item in us1.get("warnings", [])]
+    require("no_safe_boundary" in marker_warning_codes, "us1 must carry no_safe_boundary marker warning")
+    plan_warning_codes = [item.get("code") for item in plan.get("warnings", [])]
+    require("no_safe_boundary" in plan_warning_codes, "plan must carry no_safe_boundary warning")
+
+elif scenario == "hazard-collapse":
+    require(plan.get("status") == "collapsed", "hazard-collapse plan status must be collapsed")
+    require(ids == ["foundation", "us1", "us2"], f"hazard collapse must preserve original marker order: {ids!r}")
+    require("full-spec" not in ids, "planning must preserve original markers instead of inventing full-spec")
+    require(result.get("summary", {}).get("hazard_collapsed") is True, "stdout summary must report hazard collapse")
+    plan_warning_codes = [item.get("code") for item in plan.get("warnings", [])]
+    require("hazard_collapse_required" in plan_warning_codes, "hazard collapse warning missing")
+    for marker in markers:
+        require(marker.get("emission_mapping", {}).get("status") == "hazard_collapsed", f"{marker.get('id')} emission must be hazard_collapsed")
+        require(marker.get("emission_mapping", {}).get("source_marker_ids") == ids, f"{marker.get('id')} source_marker_ids mismatch")
+
+else:
+    problem(f"unknown scenario: {scenario}")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+PY
+)
+
+  if [ -z "$errors" ]; then
+    _pass
+  else
+    _fail "$scenario marker plan assertion failed: $errors"
+  fi
+}
+
+assert_marker_error_result_file() {
+  local stdout_file="$1"
+  local expected_status="$2"
+  local expected_code="$3"
+  local output_file="$4"
+  local errors
+  errors=$(python3 - "$stdout_file" "$expected_status" "$expected_code" <<'PY' 2>&1 || true
+import json
+import sys
+
+stdout_path, expected_status, expected_code = sys.argv[1:4]
+problems = []
+
+try:
+    with open(stdout_path, "r", encoding="utf-8") as handle:
+        data = json.load(handle)
+except Exception as exc:
+    print(f"invalid stdout JSON: {exc}")
+    sys.exit(1)
+
+if data.get("tool") != "plan-layers":
+    problems.append("tool mismatch")
+if data.get("contract_version") != 2:
+    problems.append("contract_version mismatch")
+if data.get("mode") != "marker-plan":
+    problems.append("mode mismatch")
+if data.get("status") != expected_status:
+    problems.append(f"status must be {expected_status}, got {data.get('status')!r}")
+if data.get("marker_ids") != []:
+    problems.append("error result marker_ids must be empty")
+codes = [item.get("code") for item in data.get("errors", []) if isinstance(item, dict)]
+if expected_code not in codes:
+    problems.append(f"missing expected code {expected_code}; got {codes!r}")
+summary = data.get("summary", {})
+if not isinstance(summary, dict) or summary.get("error_count") != len(data.get("errors", [])):
+    problems.append("summary error_count mismatch")
+
+if problems:
+    print("; ".join(problems))
+    sys.exit(1)
+PY
+)
+
+  if [ -z "$errors" ]; then
+    _pass
+  else
+    _fail "marker error assertion failed: $errors"
+  fi
+
+  assert_file_not_exists "$output_file" "marker error path must not write a candidate plan"
+}
+
 assert_error_payload_file() {
   local json_file="$1"
   local expected_status="$2"
@@ -862,6 +1189,105 @@ assert_schema_contract_file "$SCHEMA"
 
 set_test "Planner script is discoverable"
 assert_file_exists "$SCRIPT" "plan-layers.sh path"
+
+section "marker-plan schema and marker-aware mode (PRSG-013 T002-T008, T016-T026)"
+
+set_test "PR marker plan schema JSON is well formed"
+if python3 -m json.tool "$MARKER_SCHEMA" >/dev/null 2>&1; then
+  _pass
+else
+  _fail "pr-marker-plan.schema.json must parse as JSON"
+fi
+
+set_test "PR marker plan schema declares durable marker invariants"
+assert_marker_schema_contract_file "$MARKER_SCHEMA"
+
+canonical_feature="$MARKER_FIXTURE_ROOT/canonical"
+canonical_reviewability="$canonical_feature/reviewability-result.json"
+canonical_hazard="$canonical_feature/hazard-route.json"
+canonical_state="$canonical_feature/state.json"
+canonical_output="$RUN_DIR/canonical-pr-marker-plan.json"
+canonical_snapshot_before=$(snapshot_tree "$MARKER_FIXTURE_ROOT")
+canonical_state_before=$(python3 -m json.tool "$canonical_state")
+run_marker_planner_capture "marker-canonical" "$canonical_feature" "$canonical_reviewability" "$canonical_hazard" "$canonical_state" "$canonical_output"
+
+set_test "marker-aware canonical fixture exits 0"
+assert_captured_exit "0"
+
+set_test "marker-aware canonical stdout is valid JSON"
+assert_valid_json_file "$LAST_STDOUT"
+
+set_test "marker-aware canonical writes candidate marker plan only at requested output path"
+assert_file_exists "$canonical_output" "canonical marker plan output"
+
+set_test "marker-aware canonical derives Foundation/user-story markers and folds Polish"
+assert_marker_result_and_plan_file "$LAST_STDOUT" "$canonical_output" "canonical" "$canonical_feature" "$canonical_reviewability" "$canonical_hazard" "$canonical_output"
+
+set_test "marker-aware canonical leaves fixtures and current state read-only"
+canonical_snapshot_after=$(snapshot_tree "$MARKER_FIXTURE_ROOT")
+canonical_state_after=$(python3 -m json.tool "$canonical_state")
+if [ "$canonical_snapshot_before" = "$canonical_snapshot_after" ] && [ "$canonical_state_before" = "$canonical_state_after" ]; then
+  _pass
+else
+  _fail "marker planning must not mutate fixture inputs or current state"
+fi
+
+safe_feature="$MARKER_FIXTURE_ROOT/safe-subdivision"
+safe_reviewability="$safe_feature/reviewability-result.json"
+safe_hazard="$safe_feature/hazard-route.json"
+safe_state="$safe_feature/state.json"
+safe_output="$RUN_DIR/safe-subdivision-pr-marker-plan.json"
+run_marker_planner_capture "marker-safe-subdivision" "$safe_feature" "$safe_reviewability" "$safe_hazard" "$safe_state" "$safe_output"
+
+set_test "marker-aware safe-subdivision fixture exits 0"
+assert_captured_exit "0"
+
+set_test "marker-aware safe-subdivision creates ordered user-story part markers"
+assert_marker_result_and_plan_file "$LAST_STDOUT" "$safe_output" "safe-subdivision" "$safe_feature" "$safe_reviewability" "$safe_hazard" "$safe_output"
+
+no_safe_feature="$MARKER_FIXTURE_ROOT/no-safe-boundary"
+no_safe_reviewability="$no_safe_feature/reviewability-result.json"
+no_safe_hazard="$no_safe_feature/hazard-route.json"
+no_safe_state="$no_safe_feature/state.json"
+no_safe_output="$RUN_DIR/no-safe-boundary-pr-marker-plan.json"
+run_marker_planner_capture "marker-no-safe-boundary" "$no_safe_feature" "$no_safe_reviewability" "$no_safe_hazard" "$no_safe_state" "$no_safe_output"
+
+set_test "marker-aware no-safe-boundary fixture exits 0"
+assert_captured_exit "0"
+
+set_test "marker-aware no-safe-boundary keeps story marker with structured warning"
+assert_marker_result_and_plan_file "$LAST_STDOUT" "$no_safe_output" "no-safe-boundary" "$no_safe_feature" "$no_safe_reviewability" "$no_safe_hazard" "$no_safe_output"
+
+hazard_feature="$MARKER_FIXTURE_ROOT/hazard-collapse"
+hazard_reviewability="$hazard_feature/reviewability-result.json"
+hazard_route="$hazard_feature/hazard-route.json"
+hazard_state="$hazard_feature/state.json"
+hazard_output="$RUN_DIR/hazard-collapse-pr-marker-plan.json"
+run_marker_planner_capture "marker-hazard-collapse" "$hazard_feature" "$hazard_reviewability" "$hazard_route" "$hazard_state" "$hazard_output"
+
+set_test "marker-aware hazard-collapse fixture exits 0"
+assert_captured_exit "0"
+
+set_test "marker-aware hazard-collapse preserves source markers with collapsed emission warning"
+assert_marker_result_and_plan_file "$LAST_STDOUT" "$hazard_output" "hazard-collapse" "$hazard_feature" "$hazard_reviewability" "$hazard_route" "$hazard_output"
+
+malformed_output="$RUN_DIR/malformed-reviewability-pr-marker-plan.json"
+run_marker_planner_capture "marker-malformed-reviewability" "$canonical_feature" "$MARKER_FIXTURE_ROOT/malformed-reviewability/reviewability-result.json" "$canonical_hazard" "$canonical_state" "$malformed_output"
+
+set_test "marker-aware malformed reviewability evidence exits 1"
+assert_captured_exit "1"
+
+set_test "marker-aware malformed reviewability evidence is a correctness stop"
+assert_marker_error_result_file "$LAST_STDOUT" "invalid_plan" "malformed_reviewability_result" "$malformed_output"
+
+stale_output="$RUN_DIR/stale-state-pr-marker-plan.json"
+run_marker_planner_capture "marker-stale-state" "$canonical_feature" "$canonical_reviewability" "$canonical_hazard" "$MARKER_FIXTURE_ROOT/stale-state/state.json" "$stale_output"
+
+set_test "marker-aware stale marker fingerprint exits 1"
+assert_captured_exit "1"
+
+set_test "marker-aware stale marker fingerprint is rejected before writing a candidate"
+assert_marker_error_result_file "$LAST_STDOUT" "invalid_plan" "stale_marker_fingerprint" "$stale_output"
 
 section "valid fixture capture, schema, and read-only checks (T003-T004)"
 

@@ -142,9 +142,12 @@ time) to prevent conflicting spec edits.
 2. For each FR-XXX, verify it appears in tasks.md
 3. Verify task dependency ordering makes sense (no forward references)
 4. Verify [P] markers are only on genuinely parallel-safe tasks
-5. Run `reviewability-gate.sh tasks specs/<feature>` and block implementation
-   if generated tasks exceed the reviewability block threshold without a
-   ratified split exception.
+5. Run `reviewability-gate.sh tasks specs/<feature>` with guarded capture:
+   capture stdout, stderr, exit code, gate status/mode/exit/evidence path, and
+   the repo-relative evidence path before deciding whether to proceed.
+6. Apply the post-G5 reviewability proceed/stop matrix below. A valid current
+   size-only `status=block` continues into marker planning and later marker
+   emission; it is not a manual re-slicing stop.
 ```
 
 **Auto-Fix:** For each unmapped FR:
@@ -153,6 +156,40 @@ time) to prevent conflicting spec edits.
 - Ensure it has the correct FR reference marker
 
 **Failure Escalation:** If coverage gaps persist after 2 attempts, STOP. Present the unmapped FRs with the relevant spec sections.
+
+#### Post-G5 Reviewability Capture Matrix
+
+Autopilot owns the interpretation of the task-mode gate output. Preserve the
+existing script contract for lower-level callers, but do not collapse every
+nonzero task gate exit into a manual stop.
+
+**Proceed inputs:**
+
+- `pass`, `warn`, or honored typed `exception` with valid JSON and current
+  evidence.
+- A valid current size-only `status=block` where `mode=tasks`, the JSON is
+  parseable, the evidence is tied to the current feature, and no correctness or
+  safety issue is present. This proceeds to marker planning, not operator
+  re-slicing. Persist the sizing result so marker emission can use it later.
+
+**Correctness stops:**
+
+- malformed/stale marker state
+- failed verification
+- invalid packet
+- unsafe output
+- unusable gate evidence
+- invalid JSON or unreadable task/plan artifacts
+- missing reviewability status or mode
+- stale fingerprints, including drift in the spec, plan-declared file/test
+  scope, tasks, reviewability evidence, or hazard decision
+- any non-size correctness or safety block
+
+For every proceed decision, record evidence prompts in the workflow file:
+gate status/mode/exit/evidence path, reason the block is size-only, fingerprint
+status, ordered marker IDs when available, checkpoints, warnings, final
+marker_split, packet validation, and PR mappings. All paths in examples and
+workflow evidence must be repo-relative, not absolute runtime paths.
 
 ### G6 — After Analyze
 

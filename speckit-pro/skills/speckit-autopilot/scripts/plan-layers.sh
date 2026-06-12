@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# plan-layers.sh - Read-only PRSG-008 layer planner for SpecKit tasks.md files.
+# plan-layers.sh - Read-only layer and marker planner for SpecKit tasks.md files.
 
 set -euo pipefail
 shopt -s extglob
@@ -147,6 +147,10 @@ emit_input_error() {
   local code="$1" message="$2" feature="${3:-}" tasks="${4:-}" details_json="$5"
   local feature_json tasks_json source_path_json
 
+  if [ "${MODE:-legacy}" = "marker-plan" ]; then
+    emit_marker_problem "input_error" "$code" "$message" "$feature" "$tasks" "$details_json" "2"
+  fi
+
   if [ -n "$feature" ]; then
     feature_json="$(json_value "$(normalize_for_display "$feature")")"
   else
@@ -201,13 +205,100 @@ emit_input_error() {
   exit 2
 }
 
-if [ "$#" -ne 1 ]; then
+emit_marker_problem() {
+  local status="$1" code="$2" message="$3" feature="${4:-}" tasks="${5:-}" details_json="$6" exit_code="$7"
+  local feature_json tasks_json output_json source_path_json
+
+  if [ -n "$feature" ]; then
+    feature_json="$(json_value "$(normalize_for_display "$feature")")"
+  else
+    feature_json=null
+  fi
+
+  if [ -n "$tasks" ]; then
+    tasks_json="$(json_value "$(normalize_for_display "$tasks")")"
+    source_path_json="$tasks_json"
+  else
+    tasks_json=null
+    if [ -n "$feature" ]; then
+      source_path_json="$feature_json"
+    else
+      source_path_json=null
+    fi
+  fi
+
+  if [ -n "${MARKER_OUTPUT_FILE:-}" ]; then
+    output_json="$(json_value "$(normalize_for_display "$MARKER_OUTPUT_FILE")")"
+  else
+    output_json=null
+  fi
+
+  jq -cn \
+    --arg status "$status" \
+    --arg code "$code" \
+    --arg message "$message" \
+    --argjson feature_dir "$feature_json" \
+    --argjson tasks_file "$tasks_json" \
+    --argjson marker_plan_file "$output_json" \
+    --argjson source_path "$source_path_json" \
+    --argjson details "$details_json" \
+    '{
+      tool: "plan-layers",
+      contract_version: 2,
+      mode: "marker-plan",
+      status: $status,
+      feature_dir: $feature_dir,
+      tasks_file: $tasks_file,
+      marker_plan_file: $marker_plan_file,
+      marker_ids: [],
+      warnings: [],
+      errors: [
+        {
+          code: $code,
+          severity: "error",
+          message: $message,
+          source: {path: $source_path, line: null},
+          details: $details
+        }
+      ],
+      summary: {
+        marker_count: 0,
+        warning_count: 0,
+        error_count: 1,
+        hazard_collapsed: false,
+        message: $message
+      }
+    }'
+  printf 'plan-layers: %s: %s\n' "$status" "$message" >&2
+  exit "$exit_code"
+}
+
+MODE=legacy
+REVIEWABILITY_RESULT_FILE=""
+HAZARD_ROUTE_FILE=""
+STATE_FILE=""
+MARKER_OUTPUT_FILE=""
+
+if [ "$#" -eq 1 ]; then
+  FEATURE_DIR="$1"
+elif [ "${1:-}" = "marker-plan" ]; then
+  MODE="marker-plan"
+  if [ "$#" -ne 6 ]; then
+    details="$(jq -cn --argjson received "$#" '{expected_args: 6, received_args: $received}')"
+    TASKS_REL=null
+    emit_marker_problem "input_error" "invalid_invocation" "Usage: plan-layers.sh marker-plan <feature-dir> <reviewability-result.json> <hazard-route.json> <state.json> <marker-plan-output.json>" "" "" "$details" "2"
+  fi
+  FEATURE_DIR="$2"
+  REVIEWABILITY_RESULT_FILE="$3"
+  HAZARD_ROUTE_FILE="$4"
+  STATE_FILE="$5"
+  MARKER_OUTPUT_FILE="$6"
+else
   details="$(jq -cn --argjson received "$#" '{expected_args: 1, received_args: $received}')"
   TASKS_REL=null
   emit_input_error "invalid_invocation" "Usage: plan-layers.sh <feature-dir>" "" "" "$details"
 fi
 
-FEATURE_DIR="$1"
 TASKS_FILE="$FEATURE_DIR/tasks.md"
 
 if [ ! -e "$FEATURE_DIR" ]; then
@@ -931,6 +1022,377 @@ if [ "$error_count" -gt 0 ]; then
 else
   status="ok"
   message="Planned $increment_count increment(s) with $task_count task(s)."
+fi
+
+if [ "$MODE" = "marker-plan" ]; then
+  marker_plan_path_display="$(normalize_for_display "$MARKER_OUTPUT_FILE")"
+
+  emit_marker_validation_error() {
+    local code="$1" text="$2" details_json="$3"
+    emit_marker_problem "invalid_plan" "$code" "$text" "$FEATURE_DIR" "$TASKS_FILE" "$details_json" "1"
+  }
+
+  emit_marker_input_path_error() {
+    local code="$1" text="$2" details_json="$3"
+    emit_marker_problem "input_error" "$code" "$text" "$FEATURE_DIR" "$TASKS_FILE" "$details_json" "2"
+  }
+
+  hash_file() {
+    shasum -a 256 "$1" | awk '{print $1}'
+  }
+
+  if [ "$status" = "invalid_plan" ]; then
+    jq -cn \
+      --arg feature_dir "$FEATURE_REL" \
+      --arg tasks_file "$TASKS_REL" \
+      --arg marker_plan_file "$marker_plan_path_display" \
+      --argjson warnings "$warnings_json" \
+      --argjson errors "$errors_json" \
+      --argjson warning_count "$warning_count" \
+      --argjson error_count "$error_count" \
+      --arg message "$message" \
+      '{
+        tool: "plan-layers",
+        contract_version: 2,
+        mode: "marker-plan",
+        status: "invalid_plan",
+        feature_dir: $feature_dir,
+        tasks_file: $tasks_file,
+        marker_plan_file: $marker_plan_file,
+        marker_ids: [],
+        warnings: $warnings,
+        errors: $errors,
+        summary: {
+          marker_count: 0,
+          warning_count: $warning_count,
+          error_count: $error_count,
+          hazard_collapsed: false,
+          message: $message
+        }
+      }'
+    printf 'plan-layers: invalid_plan: %s error(s)\n' "$error_count" >&2
+    exit 1
+  fi
+
+  SPEC_FILE="$FEATURE_DIR/spec.md"
+  PLAN_FILE="$FEATURE_DIR/plan.md"
+  if [ ! -f "$SPEC_FILE" ] || [ ! -r "$SPEC_FILE" ]; then
+    details="$(jq -cn --arg spec_file "$(normalize_for_display "$SPEC_FILE")" '{spec_file: $spec_file}')"
+    emit_marker_input_path_error "feature_spec_unreadable" "Feature spec is missing or unreadable: $(normalize_for_display "$SPEC_FILE")" "$details"
+  fi
+  if [ ! -f "$PLAN_FILE" ] || [ ! -r "$PLAN_FILE" ]; then
+    details="$(jq -cn --arg plan_file "$(normalize_for_display "$PLAN_FILE")" '{plan_file: $plan_file}')"
+    emit_marker_input_path_error "feature_plan_unreadable" "Feature plan is missing or unreadable: $(normalize_for_display "$PLAN_FILE")" "$details"
+  fi
+
+  if [ ! -f "$REVIEWABILITY_RESULT_FILE" ] || [ ! -r "$REVIEWABILITY_RESULT_FILE" ]; then
+    details="$(jq -cn --arg reviewability_result "$(normalize_for_display "$REVIEWABILITY_RESULT_FILE")" '{reviewability_result: $reviewability_result}')"
+    emit_marker_input_path_error "reviewability_result_unreadable" "Reviewability result is missing or unreadable: $(normalize_for_display "$REVIEWABILITY_RESULT_FILE")" "$details"
+  fi
+  if [ ! -f "$HAZARD_ROUTE_FILE" ] || [ ! -r "$HAZARD_ROUTE_FILE" ]; then
+    details="$(jq -cn --arg hazard_route "$(normalize_for_display "$HAZARD_ROUTE_FILE")" '{hazard_route: $hazard_route}')"
+    emit_marker_input_path_error "hazard_route_unreadable" "Hazard route is missing or unreadable: $(normalize_for_display "$HAZARD_ROUTE_FILE")" "$details"
+  fi
+  if [ ! -f "$STATE_FILE" ] || [ ! -r "$STATE_FILE" ]; then
+    details="$(jq -cn --arg state_file "$(normalize_for_display "$STATE_FILE")" '{state_file: $state_file}')"
+    emit_marker_input_path_error "state_file_unreadable" "Current state is missing or unreadable: $(normalize_for_display "$STATE_FILE")" "$details"
+  fi
+
+  output_parent="$(dirname "$MARKER_OUTPUT_FILE")"
+  if [ ! -d "$output_parent" ] || [ ! -w "$output_parent" ]; then
+    details="$(jq -cn --arg marker_plan_file "$marker_plan_path_display" '{marker_plan_file: $marker_plan_file}')"
+    emit_marker_input_path_error "marker_plan_output_unwritable" "Marker plan output directory is not writable: $(normalize_for_display "$output_parent")" "$details"
+  fi
+
+  if ! jq -e . "$REVIEWABILITY_RESULT_FILE" >/dev/null 2>&1; then
+    details="$(jq -cn --arg reviewability_result "$(normalize_for_display "$REVIEWABILITY_RESULT_FILE")" '{reviewability_result: $reviewability_result}')"
+    emit_marker_validation_error "malformed_reviewability_result" "Reviewability result is not valid JSON." "$details"
+  fi
+  if ! jq -e . "$HAZARD_ROUTE_FILE" >/dev/null 2>&1; then
+    details="$(jq -cn --arg hazard_route "$(normalize_for_display "$HAZARD_ROUTE_FILE")" '{hazard_route: $hazard_route}')"
+    emit_marker_validation_error "malformed_hazard_route" "Hazard route is not valid JSON." "$details"
+  fi
+  if ! jq -e . "$STATE_FILE" >/dev/null 2>&1; then
+    details="$(jq -cn --arg state_file "$(normalize_for_display "$STATE_FILE")" '{state_file: $state_file}')"
+    emit_marker_validation_error "malformed_current_state" "Current state is not valid JSON." "$details"
+  fi
+
+  FEATURE_ID="$(basename "$(absolute_path "$FEATURE_DIR")")"
+  reviewability_status="$(jq -r '.status // empty' "$REVIEWABILITY_RESULT_FILE")"
+  reviewability_mode="$(jq -r '.mode // empty' "$REVIEWABILITY_RESULT_FILE")"
+  reviewability_feature="$(jq -r '.feature_id // empty' "$REVIEWABILITY_RESULT_FILE")"
+  reviewability_size_only="$(jq -r 'if has("is_size_only") then .is_size_only else empty end' "$REVIEWABILITY_RESULT_FILE")"
+  case "$reviewability_status" in
+    pass|warn|exception|block) ;;
+    *)
+      details="$(jq -cn --arg status "$reviewability_status" '{status: $status}')"
+      emit_marker_validation_error "malformed_reviewability_result" "Reviewability result has an unsupported or missing status." "$details"
+      ;;
+  esac
+  if [ "$reviewability_mode" != "tasks" ]; then
+    details="$(jq -cn --arg mode "$reviewability_mode" '{mode: $mode, expected_mode: "tasks"}')"
+    emit_marker_validation_error "malformed_reviewability_result" "Reviewability result mode must be tasks." "$details"
+  fi
+  if [ -n "$reviewability_feature" ] && [ "$reviewability_feature" != "$FEATURE_ID" ]; then
+    details="$(jq -cn --arg feature_id "$reviewability_feature" --arg expected_feature_id "$FEATURE_ID" '{feature_id: $feature_id, expected_feature_id: $expected_feature_id}')"
+    emit_marker_validation_error "stale_reviewability_result" "Reviewability result belongs to a different feature." "$details"
+  fi
+  if [ "$reviewability_status" = "block" ] && [ "$reviewability_size_only" != "true" ]; then
+    details="$(jq -cn --arg status "$reviewability_status" --arg is_size_only "${reviewability_size_only:-}" '{status: $status, is_size_only: $is_size_only}')"
+    emit_marker_validation_error "non_size_reviewability_block" "Reviewability block is not marked as size-only marker input." "$details"
+  fi
+
+  hazard_route="$(jq -r '.route // empty' "$HAZARD_ROUTE_FILE")"
+  hazard_releasable="$(jq -r 'if has("releasable") then .releasable else empty end' "$HAZARD_ROUTE_FILE")"
+  if [ -z "$hazard_route" ] || { [ "$hazard_releasable" != "true" ] && [ "$hazard_releasable" != "false" ]; }; then
+    details="$(jq -cn --arg route "$hazard_route" --arg releasable "$hazard_releasable" '{route: $route, releasable: $releasable}')"
+    emit_marker_validation_error "malformed_hazard_route" "Hazard route must include route and boolean releasable fields." "$details"
+  fi
+
+  hazard_collapsed=false
+  if [ "$hazard_route" = "single-atomic-PR" ] || [ "$hazard_releasable" = "false" ]; then
+    hazard_collapsed=true
+  fi
+
+  fingerprint_json="$(jq -cn \
+    --arg feature_spec_sha "$(hash_file "$SPEC_FILE")" \
+    --arg plan_declared_scope_sha "$(hash_file "$PLAN_FILE")" \
+    --arg tasks_sha "$(hash_file "$TASKS_FILE")" \
+    --arg reviewability_sha "$(hash_file "$REVIEWABILITY_RESULT_FILE")" \
+    --arg hazard_route_sha "$(hash_file "$HAZARD_ROUTE_FILE")" \
+    '{
+      feature_spec_sha: $feature_spec_sha,
+      plan_declared_scope_sha: $plan_declared_scope_sha,
+      tasks_sha: $tasks_sha,
+      reviewability_sha: $reviewability_sha,
+      hazard_route_sha: $hazard_route_sha
+    }')"
+
+  state_stale="$(jq -r -n \
+    --slurpfile state "$STATE_FILE" \
+    --arg feature_id "$FEATURE_ID" \
+    --argjson fingerprint "$fingerprint_json" \
+    '($state[0].pr_marker_plan? // null) as $plan
+      | if (($plan | type) == "object" and ($plan.feature_id // "") == $feature_id and (($plan.source_fingerprint // {}) != $fingerprint))
+        then "true"
+        else "false"
+        end')"
+  if [ "$state_stale" = "true" ]; then
+    details="$(jq -cn --arg feature_id "$FEATURE_ID" --argjson expected_fingerprint "$fingerprint_json" '{feature_id: $feature_id, expected_fingerprint: $expected_fingerprint}')"
+    emit_marker_validation_error "stale_marker_fingerprint" "Existing marker plan fingerprint is stale for current inputs." "$details"
+  fi
+
+  marker_plan_json="$(jq -cn \
+    --arg feature_id "$FEATURE_ID" \
+    --argjson increments "$increments_json" \
+    --argjson source_fingerprint "$fingerprint_json" \
+    --slurpfile reviewability "$REVIEWABILITY_RESULT_FILE" \
+    --slurpfile hazard "$HAZARD_ROUTE_FILE" \
+    --argjson hazard_collapsed "$hazard_collapsed" \
+    '
+    $reviewability[0] as $review
+    | $hazard[0] as $hazard_route
+    | def unique_sorted: unique | sort;
+    def story_number($id):
+      if ($id | test("^us[0-9]+")) then ($id | capture("^us(?<n>[0-9]+)") | .n | tonumber) else null end;
+    def task_ids($tasks): [$tasks[]?.id];
+    def files_for($tasks): [$tasks[]?.files[]?] | unique_sorted;
+    def tests_for($tasks): [$tasks[]?.tests[]?] | unique_sorted;
+    def file_ops($files): [$files[]? | {operation: "MODIFIED", path: .}];
+    def boundary($inc; $tasks): {
+      section: $inc.name,
+      story_id: story_number($inc.id),
+      start_task_id: ($tasks[0].id // ""),
+      end_task_id: ($tasks[-1].id // "")
+    };
+    def warning($code; $message; $source; $details): {
+      code: $code,
+      severity: "warning",
+      message: $message,
+      source: $source,
+      details: $details
+    };
+    def marker_reviewability($scope): {
+      status: $review.status,
+      mode: $review.mode,
+      scope: $scope,
+      evidence_path: ($review.evidence_path // "")
+    };
+    def marker($inc; $id; $kind; $parent; $tasks; $subdivision_status; $subdivision_details; $marker_warnings): {
+      id: $id,
+      review_order: 0,
+      kind: $kind,
+      parent_marker_id: $parent,
+      source_boundary: boundary($inc; $tasks),
+      task_ids: task_ids($tasks),
+      folded_polish_task_ids: [],
+      folded_polish_target_reason: "",
+      declared_files: file_ops(files_for($tasks)),
+      declared_tests: tests_for($tasks),
+      reviewability: marker_reviewability($id),
+      hazards: (($hazard_route.signals // []) + ($hazard_route.warnings // [])),
+      subdivision: {
+        status: $subdivision_status,
+        details: $subdivision_details
+      },
+      implementation_checkpoint: {
+        status: "pending"
+      },
+      emission_mapping: {
+        status: "pending"
+      },
+      warnings: $marker_warnings
+    };
+    def disjoint($left; $right):
+      ((($left - $right) | length) == ($left | length)) and ((($right - $left) | length) == ($right | length));
+    def has_shared_signal($tasks):
+      any($tasks[]?; (.title // "" | test("shared|hazard|migration|atomic"; "i")));
+    def can_safe_split($tasks):
+      ($tasks | length) >= 4
+      and (has_shared_signal($tasks) | not)
+      and (($tasks | length) / 2 | floor) as $mid
+      | ($tasks[0:$mid]) as $left
+      | ($tasks[$mid:]) as $right
+      | ($left | length) > 0
+        and ($right | length) > 0
+        and disjoint(files_for($left); files_for($right))
+        and disjoint(tests_for($left); tests_for($right));
+    def story_is_oversized($inc):
+      (($review.marker_estimates[$inc.id].status? // "") == "block") or (($review.marker_estimates[$inc.id].oversized? // false) == true);
+    def story_markers($inc):
+      $inc.tasks as $tasks
+      | if story_is_oversized($inc) then
+          if can_safe_split($tasks) then
+            (($tasks | length) / 2 | floor) as $mid
+            | [
+                marker($inc; ($inc.id + "-part1"); "user_story_part"; $inc.id; $tasks[0:$mid]; "safe_split"; {parent_marker_id: $inc.id, part: 1}; []),
+                marker($inc; ($inc.id + "-part2"); "user_story_part"; $inc.id; $tasks[$mid:]; "safe_split"; {parent_marker_id: $inc.id, part: 2}; [])
+              ]
+          else
+            warning(
+              "no_safe_boundary";
+              "Oversized user story has no safe internal marker boundary.";
+              "plan-layers";
+              {marker_id: $inc.id, task_ids: task_ids($tasks)}
+            ) as $warn
+            | [
+                marker($inc; $inc.id; "user_story"; null; $tasks; "no_safe_boundary"; {reason: "shared_or_overlapping_scope"}; [$warn])
+              ]
+          end
+        else
+          [marker($inc; $inc.id; "user_story"; null; $tasks; "none"; {}; [])]
+        end;
+    def fold_polish($markers; $polish_tasks):
+      if (($polish_tasks | length) == 0) or (($markers | length) == 0) then
+        $markers
+      else
+        ($markers | length) as $count
+        | [range(0; $count) as $index
+          | if $index == ($count - 1) then
+              $markers[$index]
+              | .folded_polish_task_ids = task_ids($polish_tasks)
+              | .folded_polish_target_reason = "nearest_preceding_non_polish_scope"
+              | .declared_files = ((.declared_files + file_ops(files_for($polish_tasks))) | unique_by(.path))
+              | .declared_tests = ((.declared_tests + tests_for($polish_tasks)) | unique_sorted)
+            else
+              $markers[$index]
+            end]
+      end;
+    (
+      [$increments[] | select(.kind == "foundation") | marker(.; "foundation"; "foundation"; null; .tasks; "none"; {}; [])]
+      + [$increments[] | select(.kind == "story") | story_markers(.)[]]
+    ) as $base_markers
+    | [$increments[] | select(.kind == "polish") | .tasks[]?] as $polish_tasks
+    | fold_polish($base_markers; $polish_tasks) as $folded_markers
+    | [range(0; ($folded_markers | length)) as $index | $folded_markers[$index] + {review_order: ($index + 1)}] as $ordered_markers
+    | ($ordered_markers | map(.id)) as $source_marker_ids
+    | (if $hazard_collapsed then
+        $ordered_markers | map(.emission_mapping = {status: "hazard_collapsed", source_marker_ids: $source_marker_ids})
+      else
+        $ordered_markers
+      end) as $final_markers
+    | (
+        [
+          if (($review.status == "warn") or ($review.status == "block")) then
+            warning(
+              "reviewability_size_warning";
+              "Reviewability sizing result is marker-planning input.";
+              "reviewability";
+              {status: $review.status, mode: $review.mode, evidence_path: ($review.evidence_path // "")}
+            )
+          else empty end
+        ]
+        + [$final_markers[].warnings[]? | select(.code == "no_safe_boundary")]
+        + [
+          if $hazard_collapsed then
+            warning(
+              "hazard_collapse_required";
+              "Hazard route requires collapsed PR emission while preserving marker evidence.";
+              "hazard-route";
+              {route: $hazard_route.route, releasable: $hazard_route.releasable, source_marker_ids: $source_marker_ids}
+            )
+          else empty end
+        ]
+      ) as $plan_warnings
+    | {
+        schema_version: "pr-marker-plan.v1",
+        kind: "pr_marker_plan",
+        feature_id: $feature_id,
+        status: (if $hazard_collapsed then "collapsed" else "planned" end),
+        source_fingerprint: $source_fingerprint,
+        markers: $final_markers,
+        warnings: $plan_warnings
+      }')"
+
+  if ! printf '%s\n' "$marker_plan_json" | jq -e . >/dev/null 2>&1; then
+    details="$(jq -cn '{reason: "generated marker plan did not parse"}')"
+    emit_marker_validation_error "malformed_marker_plan" "Generated marker plan is not valid JSON." "$details"
+  fi
+
+  printf '%s\n' "$marker_plan_json" >"$MARKER_OUTPUT_FILE"
+
+  marker_ids_json="$(printf '%s\n' "$marker_plan_json" | jq '[.markers[].id]')"
+  marker_warnings_json="$(printf '%s\n' "$marker_plan_json" | jq '.warnings')"
+  marker_count="$(printf '%s\n' "$marker_plan_json" | jq '.markers | length')"
+  marker_warning_count="$(printf '%s\n' "$marker_plan_json" | jq '.warnings | length')"
+  marker_message="Planned $marker_count PR marker(s)."
+  if [ "$hazard_collapsed" = true ]; then
+    marker_message="Planned $marker_count PR marker(s) with hazard-collapsed emission."
+  fi
+
+  jq -cn \
+    --arg feature_dir "$FEATURE_REL" \
+    --arg tasks_file "$TASKS_REL" \
+    --arg marker_plan_file "$marker_plan_path_display" \
+    --argjson marker_ids "$marker_ids_json" \
+    --argjson warnings "$marker_warnings_json" \
+    --argjson marker_count "$marker_count" \
+    --argjson warning_count "$marker_warning_count" \
+    --argjson hazard_collapsed "$hazard_collapsed" \
+    --arg message "$marker_message" \
+    '{
+      tool: "plan-layers",
+      contract_version: 2,
+      mode: "marker-plan",
+      status: "ok",
+      feature_dir: $feature_dir,
+      tasks_file: $tasks_file,
+      marker_plan_file: $marker_plan_file,
+      marker_ids: $marker_ids,
+      warnings: $warnings,
+      errors: [],
+      summary: {
+        marker_count: $marker_count,
+        warning_count: $warning_count,
+        error_count: 0,
+        hazard_collapsed: $hazard_collapsed,
+        message: $message
+      }
+    }'
+  if [ "$marker_warning_count" -gt 0 ]; then
+    printf 'plan-layers: marker-plan ok with %s warning(s)\n' "$marker_warning_count" >&2
+  fi
+  exit 0
 fi
 
 jq -cn \

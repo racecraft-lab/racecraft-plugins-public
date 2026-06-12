@@ -1,0 +1,36 @@
+{
+  "status": "proceed",
+  "outcome": "marker_split",
+  "mode": "final",
+  "full_diff": {
+    "reviewability_status": "block",
+    "evidence_path": "specs/prsg-013-reviewability-markers/.process/emission/final-reviewability.json"
+  },
+  "marker_plan": {
+    "valid": true,
+    "fingerprint_matched": true,
+    "marker_count": 3
+  },
+  "emission": {
+    "route": "hazard_collapsed",
+    "markers": [
+      {
+        "id": "full-spec",
+        "review_order": 1,
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/full-spec/marker-packet.json"
+      }
+    ]
+  },
+  "warnings": [
+    {
+      "code": "HAZARD_COLLAPSE",
+      "severity": "warning",
+      "message": "Route is not releasable as independent PRs.",
+      "source": "atomicity-route",
+      "details": {
+        "route": "one-navigable-PR",
+        "releasable": false
+      }
+    }
+  ]
+}

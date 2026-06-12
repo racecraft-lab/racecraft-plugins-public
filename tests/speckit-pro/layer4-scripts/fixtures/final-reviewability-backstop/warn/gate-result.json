@@ -1,0 +1,42 @@
+{
+  "mode": "diff",
+  "status": "warn",
+  "pass": true,
+  "reviewable_loc": 0,
+  "production_files": 0,
+  "total_files": 19,
+  "primary_surface_count": 5,
+  "primary_surfaces": [
+    "API",
+    "docs/process",
+    "scheduler/runtime",
+    "schema/migration",
+    "seed/config"
+  ],
+  "greenfield": false,
+  "thresholds": {
+    "warn": {
+      "reviewable_loc": 400,
+      "production_files": 6,
+      "total_files": 15,
+      "primary_surfaces": 1
+    },
+    "block": {
+      "reviewable_loc": 800,
+      "production_files": 8,
+      "total_files": 25,
+      "primary_surfaces": 1
+    }
+  },
+  "exception_honored": false,
+  "exception_class": null,
+  "exceptions": {
+    "accepted": [],
+    "rejected": []
+  },
+  "warnings": [
+    "total files 19 exceeds warn threshold 15",
+    "primary surfaces 5 exceeds warn threshold 1"
+  ],
+  "blockers": []
+}

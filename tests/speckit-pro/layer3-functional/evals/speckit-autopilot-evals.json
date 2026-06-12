@@ -313,6 +313,27 @@
         "Describes restack.sh as dry-run by default, --apply for mutation, preserving declared slice scope after lower squash merges",
         "States that PRSG-009 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"
       ]
+    },
+    {
+      "id": 25,
+      "prompt": "During /speckit-pro:speckit-autopilot, G5 has passed and reviewability-gate.sh tasks returned valid JSON with mode=tasks, status=block, and the only reason is size. The evidence path is specs/prsg-013-reviewability-markers/.process/reviewability/tasks-gate.json and the current marker plan fingerprint matches the spec, plan-declared file/test scope, tasks, reviewability evidence, and hazard route. Later, the final backstop sees the full diff is still too large. Should autopilot stop for manual re-slicing, rewrite tasks.md, or continue? Walk through the required marker evidence and the correctness stops that still block.",
+      "expected_output": "Continues through the valid current size-only block with marker evidence and no manual re-slicing stop. Treats the G5 status=block as marker-planning input, persists top-level pr_marker_plan in autopilot-state.json, mirrors workflow evidence rather than authoring marker state in tasks.md, executes and checkpoints implementation in ordered marker IDs, and at the final backstop proceeds with final marker_split and marker-based PR emission. Records gate status/mode/exit/evidence path, fingerprint status, ordered marker IDs, checkpoints, warnings, final marker_split, packet validation, and PR mappings using repo-relative paths. Still stops on malformed/stale marker state, failed verification, invalid packet, unsafe output, unusable gate evidence, invalid JSON, unreadable artifacts, missing status/mode, stale fingerprints, or non-size safety findings.",
+      "expectations": [
+        "States that a valid current size-only block continues and is not a manual re-slicing stop",
+        "States there is no manual re-slicing stop and tasks.md must not be rewritten as authoritative marker state",
+        "Treats the task-mode status=block JSON as marker-planning input despite a nonzero compatibility exit",
+        "Persists top-level pr_marker_plan in autopilot-state.json and mirrors workflow evidence",
+        "Uses repo-relative evidence paths, not absolute runtime paths",
+        "Requires gate status/mode/exit/evidence path in the recorded evidence",
+        "Requires fingerprint status tied to spec, plan-declared file/test scope, tasks, reviewability evidence, and hazard route",
+        "Requires ordered marker IDs and marker-order checkpoints",
+        "Requires structured warnings",
+        "Requires final marker_split evidence at the final backstop",
+        "Requires packet validation before PR body generation or gh pr create",
+        "Requires emitted PR mappings when PRs are opened",
+        "Preserves correctness stops for malformed/stale marker state, failed verification, invalid packet, unsafe output, unusable gate evidence, invalid JSON, missing status/mode, stale fingerprints, and non-size safety findings",
+        "Explains that marker emission follows the persisted marker plan instead of inferring new boundaries from changed files or warnings"
+      ]
     }
   ]
 }

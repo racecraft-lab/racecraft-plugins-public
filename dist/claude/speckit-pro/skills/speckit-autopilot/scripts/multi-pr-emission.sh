@@ -19,7 +19,7 @@ readonly SLICE_PACKET_SCHEMA="$CONTRACT_ROOT/slice-packet.schema.json"
 readonly PLAN_LAYERS_SCHEMA="$CONTRACT_ROOT/plan-layers.schema.json"
 
 usage() {
-  printf 'Usage: multi-pr-emission.sh --layer-plan <json> --state <json> --feature-branch <branch> --base <branch> --base-sha <sha> [--full-verification-evidence <path>] [--changed-files <path>] [--candidate-dir <dir>] [--pr-fixture <json>] [--command-log <json>] [--scoped-verification-fixture <json>]\n' >&2
+  printf 'Usage: multi-pr-emission.sh (--layer-plan <json> | --marker-plan <json> --marker-split-result <json>) --state <json> --feature-branch <branch> --base <branch> --base-sha <sha> [--full-verification-evidence <path>] [--changed-files <path>] [--candidate-dir <dir>] [--pr-fixture <json>] [--command-log <json>] [--scoped-verification-fixture <json>]\n' >&2
 }
 
 emit_input_error() {
@@ -92,6 +92,8 @@ persist_text_atomic() {
 }
 
 LAYER_PLAN=""
+MARKER_PLAN=""
+MARKER_SPLIT_RESULT=""
 STATE_FILE=""
 FEATURE_BRANCH=""
 BASE_BRANCH=""
@@ -108,6 +110,16 @@ while [ "$#" -gt 0 ]; do
     --layer-plan)
       [ "$#" -ge 2 ] || emit_input_error "missing value for --layer-plan"
       LAYER_PLAN="$2"
+      shift 2
+      ;;
+    --marker-plan)
+      [ "$#" -ge 2 ] || emit_input_error "missing value for --marker-plan"
+      MARKER_PLAN="$2"
+      shift 2
+      ;;
+    --marker-split-result)
+      [ "$#" -ge 2 ] || emit_input_error "missing value for --marker-split-result"
+      MARKER_SPLIT_RESULT="$2"
       shift 2
       ;;
     --state)
@@ -173,16 +185,32 @@ done
 
 require_jq
 
-[ -n "$LAYER_PLAN" ] || emit_input_error "missing required option --layer-plan"
+MARKER_MODE=false
+if [ -n "$MARKER_PLAN" ] || [ -n "$MARKER_SPLIT_RESULT" ]; then
+  MARKER_MODE=true
+fi
+
+if [ "$MARKER_MODE" = true ]; then
+  [ -n "$MARKER_PLAN" ] || emit_input_error "missing required option --marker-plan"
+  [ -n "$MARKER_SPLIT_RESULT" ] || emit_input_error "missing required option --marker-split-result"
+  [ -z "$LAYER_PLAN" ] || emit_input_error "use either --layer-plan or marker-aware options, not both"
+else
+  [ -n "$LAYER_PLAN" ] || emit_input_error "missing required option --layer-plan"
+fi
 [ -n "$STATE_FILE" ] || emit_input_error "missing required option --state"
 [ -n "$FEATURE_BRANCH" ] || emit_input_error "missing required option --feature-branch"
 [ -n "$BASE_BRANCH" ] || emit_input_error "missing required option --base"
 [ -n "$BASE_SHA" ] || emit_input_error "missing required option --base-sha"
 
-[ -r "$LAYER_PLAN" ] || emit_input_error "layer plan not readable: $LAYER_PLAN"
+if [ "$MARKER_MODE" = true ]; then
+  [ -r "$MARKER_PLAN" ] || emit_input_error "marker plan not readable: $MARKER_PLAN"
+  [ -r "$MARKER_SPLIT_RESULT" ] || emit_input_error "marker split result not readable: $MARKER_SPLIT_RESULT"
+else
+  [ -r "$LAYER_PLAN" ] || emit_input_error "layer plan not readable: $LAYER_PLAN"
+fi
 [ -r "$STATE_FILE" ] || emit_input_error "state not readable: $STATE_FILE"
 
-if ! jq -e '
+if [ "$MARKER_MODE" != true ] && ! jq -e '
   type == "object"
   and .tool == "plan-layers"
   and (.contract_version | type == "number")
@@ -195,12 +223,14 @@ if ! jq -e '
   emit_input_error "invalid layer plan JSON"
 fi
 
-plan_status="$(jq -r '.status' "$LAYER_PLAN")"
-if [ "$plan_status" != "ok" ]; then
-  emit_input_error "layer plan status $plan_status"
+if [ "$MARKER_MODE" != true ]; then
+  plan_status="$(jq -r '.status' "$LAYER_PLAN")"
+  if [ "$plan_status" != "ok" ]; then
+    emit_input_error "layer plan status $plan_status"
+  fi
 fi
 
-if ! jq -e '
+if [ "$MARKER_MODE" != true ] && ! jq -e '
   (.increments | length > 0)
   and (.errors | length == 0)
   and all(.increments[];
@@ -232,9 +262,13 @@ if [ -n "$duplicate_slice" ]; then
   emit_input_error "duplicate state slice_id $duplicate_slice"
 fi
 
-FEATURE_DIR_REL="$(jq -r '.feature_dir // empty' "$LAYER_PLAN")"
-if [ -z "$FEATURE_DIR_REL" ]; then
+if [ "$MARKER_MODE" = true ]; then
   FEATURE_DIR_REL="specs/$FEATURE_BRANCH"
+else
+  FEATURE_DIR_REL="$(jq -r '.feature_dir // empty' "$LAYER_PLAN")"
+  if [ -z "$FEATURE_DIR_REL" ]; then
+    FEATURE_DIR_REL="specs/$FEATURE_BRANCH"
+  fi
 fi
 EXPECTED_EMISSION_DIR="$FEATURE_DIR_REL/.process/emission/"
 
@@ -270,7 +304,293 @@ if [ -n "$SCOPED_VERIFICATION_FIXTURE" ] && ! jq -e '
   emit_input_error "invalid scoped verification fixture JSON"
 fi
 
-plan_slices="$(
+EMISSION_MODE="layer"
+EMISSION_ROUTE="layer_plan"
+MARKER_SOURCE_COUNT=0
+
+if [ "$MARKER_MODE" = true ]; then
+  EMISSION_MODE="marker"
+
+  if ! jq -e '
+    type == "object"
+    and .schema_version == "pr-marker-plan.v1"
+    and .kind == "pr_marker_plan"
+    and (.feature_id | type == "string" and length > 0)
+    and (.status | type == "string" and length > 0)
+    and (.source_fingerprint | type == "object")
+    and (.markers | type == "array" and length > 0)
+    and (.warnings | type == "array")
+    and all(.markers[];
+      (.id | type == "string" and length > 0)
+      and (.review_order | type == "number" and . == floor and . >= 1)
+      and (.kind | type == "string" and length > 0)
+      and (.declared_files | type == "array")
+      and all(.declared_files[]; (.operation | type == "string") and (.path | type == "string" and length > 0))
+      and (.declared_tests | type == "array")
+      and all(.declared_tests[]; type == "string" and length > 0)
+      and (.implementation_checkpoint | type == "object")
+      and (.implementation_checkpoint.status == "complete")
+      and (.implementation_checkpoint.evidence_path | type == "string" and length > 0)
+      and (.warnings | type == "array")
+    )
+  ' "$MARKER_PLAN" >/dev/null 2>&1; then
+    emit_input_error "invalid marker plan JSON"
+  fi
+
+  marker_status="$(jq -r '.status' "$MARKER_PLAN")"
+  if [ "$marker_status" != "emission_ready" ]; then
+    emit_input_error "marker plan status $marker_status"
+  fi
+
+  if ! jq -e '
+    .markers
+    | to_entries
+    | all(.[]; .value.review_order == (.key + 1))
+  ' "$MARKER_PLAN" >/dev/null 2>&1; then
+    emit_input_error "marker plan review_order must match marker array order"
+  fi
+
+  duplicate_marker="$(
+    jq -r '
+      .markers
+      | group_by(.id)
+      | map(select(length > 1))
+      | .[0][0].id // empty
+    ' "$MARKER_PLAN"
+  )"
+  if [ -n "$duplicate_marker" ]; then
+    emit_input_error "duplicate marker_id $duplicate_marker"
+  fi
+
+  placeholder_marker="$(
+    jq -r '
+      [
+        .markers[]
+        | select(
+            any((.declared_files // [])[]; (.path | test("(<[^>]+>|TODO|TBD|placeholder)"; "i")))
+            or any((.declared_tests // [])[]; test("(<[^>]+>|TODO|TBD|placeholder)"; "i"))
+          )
+        | .id
+      ][0] // empty
+    ' "$MARKER_PLAN"
+  )"
+  if [ -n "$placeholder_marker" ]; then
+    emit_input_error "invalid marker packet shape: placeholder declared file path for $placeholder_marker"
+  fi
+
+  if ! jq -e '
+    type == "object"
+    and .status == "proceed"
+    and .outcome == "marker_split"
+    and .mode == "final"
+    and (.full_diff | type == "object")
+    and (.full_diff.reviewability_status | type == "string")
+    and (.marker_plan.valid == true)
+    and (.marker_plan.fingerprint_matched == true)
+    and (.emission | type == "object")
+    and (.emission.route as $route | (["marker_split", "hazard_collapsed", "single_pr"] | index($route)) != null)
+    and (.emission.markers | type == "array" and length > 0)
+    and (.warnings | type == "array")
+  ' "$MARKER_SPLIT_RESULT" >/dev/null 2>&1; then
+    emit_input_error "invalid marker split result JSON"
+  fi
+
+  EMISSION_ROUTE="$(jq -r '.emission.route' "$MARKER_SPLIT_RESULT")"
+  if [ "$EMISSION_ROUTE" = "single_pr" ]; then
+    EMISSION_ROUTE="hazard_collapsed"
+  fi
+
+  if [ "$EMISSION_ROUTE" = "hazard_collapsed" ]; then
+    if ! jq -e '
+      [
+        .warnings[]?.details?
+        | select((.route == "single-atomic-PR") or (.releasable == false))
+      ]
+      | length > 0
+    ' "$MARKER_SPLIT_RESULT" >/dev/null 2>&1; then
+      emit_input_error "hazard collapse missing atomicity evidence"
+    fi
+  else
+    unknown_marker="$(
+      jq -nr \
+        --slurpfile plan "$MARKER_PLAN" \
+        --slurpfile split "$MARKER_SPLIT_RESULT" '
+          ($plan[0].markers | map(.id)) as $ids
+          | [
+              $split[0].emission.markers[]?.id as $id
+              | select(($ids | index($id)) | not)
+              | $id
+            ][0] // empty
+        '
+    )"
+    if [ -n "$unknown_marker" ]; then
+      emit_input_error "marker split result references unknown marker $unknown_marker"
+    fi
+
+    order_mismatch="$(
+      jq -nr \
+        --slurpfile plan "$MARKER_PLAN" \
+        --slurpfile split "$MARKER_SPLIT_RESULT" '
+          ($plan[0].markers | map({key: .id, value: .review_order}) | from_entries) as $orders
+          | [
+              $split[0].emission.markers[]?
+              | select(($orders[.id] != null) and ($orders[.id] != .review_order))
+              | .id
+            ][0] // empty
+        '
+    )"
+    if [ -n "$order_mismatch" ]; then
+      emit_input_error "marker split result review_order mismatch for $order_mismatch"
+    fi
+
+    plan_marker_count="$(jq '.markers | length' "$MARKER_PLAN")"
+    split_marker_count="$(jq '.emission.markers | length' "$MARKER_SPLIT_RESULT")"
+    if [ "$plan_marker_count" != "$split_marker_count" ]; then
+      emit_input_error "marker split result marker count mismatch"
+    fi
+  fi
+
+  MARKER_SOURCE_COUNT="$(jq '.markers | length' "$MARKER_PLAN")"
+
+  plan_slices="$(
+    jq -n \
+      --arg feature_branch "$FEATURE_BRANCH" \
+      --arg base_branch "$BASE_BRANCH" \
+      --arg feature_dir "$FEATURE_DIR_REL" \
+      --arg marker_split_evidence "$MARKER_SPLIT_RESULT" \
+      --arg route "$EMISSION_ROUTE" \
+      --slurpfile plan "$MARKER_PLAN" \
+      --slurpfile split "$MARKER_SPLIT_RESULT" '
+        def zpad($width):
+          tostring as $s
+          | if ($s | length) >= $width then $s
+            else ([range(0; $width - ($s | length))] | map("0") | join("")) + $s
+            end;
+        def gate_type($command):
+          if ($command | test("tests/speckit-pro/layer4-scripts/")) then "SCRIPT_UNIT"
+          elif ($command | test("run-all[.]sh --layer 1")) then "STRUCTURAL"
+          elif ($command | test("run-all[.]sh")) then "DEFAULT_VERIFY"
+          else ""
+          end;
+        def evidence_name($gate):
+          if $gate == "STRUCTURAL" then "layer1.log"
+          elif $gate == "SCRIPT_UNIT" then "layer4.log"
+          elif $gate == "DEFAULT_VERIFY" then "default-verify.log"
+          elif $gate == "no_scoped_tests" then "no_scoped_tests.txt"
+          else "scoped-verification.log"
+          end;
+        def scoped_commands($slice):
+          (
+            ($slice.declared_tests // [])
+            | map(
+                . as $command
+                | (gate_type($command)) as $gate
+                | select($gate != "")
+                | {
+                    command: $command,
+                    gate_type: $gate,
+                    reason: "PRSG-013 declared marker test mapped to \($gate)",
+                    required: true,
+                    evidence_path: "\($feature_dir)/.process/emission/\($slice.slice_id)/\(evidence_name($gate))",
+                    exit_status: 0,
+                    started_at: "2026-06-10T00:00:00Z",
+                    finished_at: "2026-06-10T00:00:01Z"
+                  }
+              )
+          ) as $commands
+          | if ($commands | length) > 0 then $commands
+            else [
+              {
+                command: "<none>",
+                gate_type: "no_scoped_tests",
+                reason: "No declared scoped tests or applicable project command; full regression evidence remains required.",
+                required: true,
+                evidence_path: "\($feature_dir)/.process/emission/\($slice.slice_id)/no_scoped_tests.txt",
+                exit_status: 0,
+                started_at: "2026-06-10T00:00:00Z",
+                finished_at: "2026-06-10T00:00:01Z"
+              }
+            ]
+            end;
+        def marker_files($marker): [($marker.declared_files // [])[] | .path];
+        def marker_warnings($markers): [($markers[] | (.warnings // []))[]];
+
+        ($plan[0].markers | sort_by(.review_order)) as $markers
+        | ($plan[0].warnings // []) as $plan_warnings
+        | ($split[0].warnings // []) as $split_warnings
+        | (($route == "hazard_collapsed") as $collapse
+          | if $collapse then
+              [
+                {
+                  source_id: "full-spec",
+                  slice_id: "full-spec",
+                  marker_id: "full-spec",
+                  source_marker_ids: ($markers | map(.id)),
+                  source_marker_checkpoints: ($markers | map(.implementation_checkpoint.evidence_path)),
+                  route: "hazard_collapsed",
+                  review_order: 1,
+                  branch: "\($feature_branch)/01-full-spec",
+                  depends_on: [],
+                  declared_files: ([$markers[] | marker_files(.)[]] | unique),
+                  declared_tests: ([$markers[].declared_tests[]] | unique),
+                  advisory_size: {},
+                  marker_split_evidence: $marker_split_evidence,
+                  implementation_checkpoint_evidence: ($markers | map(.implementation_checkpoint.evidence_path) | join(",")),
+                  warnings: ($split_warnings + $plan_warnings + marker_warnings($markers)),
+                  final_marker_split_warnings: $split_warnings
+                }
+              ]
+            else
+              (($markers | length | tostring | length) as $digits | if $digits < 2 then 2 else $digits end) as $width
+              | $markers
+              | to_entries
+              | map(
+                  .key as $idx
+                  | .value as $marker
+                  | ($idx + 1) as $review_order
+                  | ($review_order | zpad($width)) as $label
+                  | {
+                      source_id: $marker.id,
+                      slice_id: $marker.id,
+                      marker_id: $marker.id,
+                      source_marker_ids: [$marker.id],
+                      source_marker_checkpoints: [$marker.implementation_checkpoint.evidence_path],
+                      route: "marker_split",
+                      review_order: $marker.review_order,
+                      branch: "\($feature_branch)/\($label)-\($marker.id)",
+                      depends_on: [],
+                      declared_files: marker_files($marker),
+                      declared_tests: ($marker.declared_tests // []),
+                      advisory_size: {},
+                      marker_split_evidence: $marker_split_evidence,
+                      implementation_checkpoint_evidence: $marker.implementation_checkpoint.evidence_path,
+                      reviewability: $marker.reviewability,
+                      warnings: (($marker.warnings // []) + $split_warnings + $plan_warnings),
+                      final_marker_split_warnings: $split_warnings
+                    }
+                )
+            end
+        ) as $slices
+        | $slices
+        | to_entries
+        | map(
+            .key as $idx
+            | .value
+                | . + {
+                    base_branch: (
+                      if $idx == 0 then $base_branch
+                      else $slices[$idx - 1].branch
+                      end
+                    ),
+                    scoped_verification: {
+                      commands: scoped_commands(.)
+                    }
+                  }
+          )
+      '
+  )"
+else
+  plan_slices="$(
   jq -n \
     --arg feature_branch "$FEATURE_BRANCH" \
     --arg base_branch "$BASE_BRANCH" \
@@ -384,7 +704,8 @@ plan_slices="$(
                 }
         )
     '
-)"
+  )"
+fi
 
 empty_slug="$(printf '%s' "$plan_slices" | jq -r 'map(select(.slice_id == "")) | .[0].source_id // empty')"
 if [ -n "$empty_slug" ]; then
@@ -436,6 +757,9 @@ if [ -n "$CHANGED_FILES" ]; then
       '
   )"
   if [ -n "$scope_violation" ]; then
+    if [ "$MARKER_MODE" = true ]; then
+      emit_input_error "changed file outside declared marker scope: $scope_violation"
+    fi
     emit_input_error "changed file outside declared slice scope: $scope_violation"
   fi
 fi
@@ -468,14 +792,19 @@ if [ -n "$CANDIDATE_DIR" ]; then
   candidate_state="$(
     jq -n \
       --arg source_path "$LAYER_PLAN" \
+      --arg marker_plan_path "$MARKER_PLAN" \
+      --arg marker_split_result "$MARKER_SPLIT_RESULT" \
+      --arg emission_mode "$EMISSION_MODE" \
+      --arg route "$EMISSION_ROUTE" \
       --arg base_branch "$BASE_BRANCH" \
       --arg base_sha "$BASE_SHA" \
       --argjson slices "$plan_slices" '
         {
             multi_pr_emission: {
-              schema_version: 1,
+              schema_version: (if $emission_mode == "marker" then 2 else 1 end),
               status: "pending",
-              source_layer_plan: {path: $source_path},
+              emission_mode: $emission_mode,
+              route: $route,
               base_branch: $base_branch,
               base_sha: $base_sha,
               next_slice_id: ($slices[0].slice_id // null),
@@ -494,10 +823,23 @@ if [ -n "$CANDIDATE_DIR" ]; then
                         scoped_verification: .scoped_verification,
                         status: "pending"
                       }
+                    + (if ((.marker_id? // "") != "") then {
+                        marker_id: .marker_id,
+                        source_marker_ids: (.source_marker_ids // [.marker_id]),
+                        source_marker_checkpoints: (.source_marker_checkpoints // []),
+                        route: (.route // $route),
+                        marker_split_evidence: (.marker_split_evidence // $marker_split_result)
+                      } else {} end)
                   )
               )
             }
           }
+        | if $source_path != "" then
+            .multi_pr_emission.source_layer_plan = {path: $source_path}
+          else
+            .multi_pr_emission.source_marker_plan = {path: $marker_plan_path}
+            | .multi_pr_emission.marker_split_result = {path: $marker_split_result}
+          end
       '
   )"
   candidate_prs="$(jq -n '{schemaVersion: 2, records: []}')"
@@ -551,10 +893,14 @@ if [ -n "$CANDIDATE_DIR" ]; then
   write_json_atomic "$candidate_prs_path" "$candidate_prs"
   write_json_atomic "$candidate_commands_path" "$candidate_commands"
 
-  mkdir -p "$CANDIDATE_DIR/slice-packets" "$CANDIDATE_DIR/pr-bodies"
+  packet_dir_name="slice-packets"
+  if [ "$MARKER_MODE" = true ]; then
+    packet_dir_name="marker-packets"
+  fi
+  mkdir -p "$CANDIDATE_DIR/$packet_dir_name" "$CANDIDATE_DIR/pr-bodies"
   while IFS= read -r slice_json; do
     slice_id="$(printf '%s' "$slice_json" | jq -r '.slice_id')"
-    packet_path="$CANDIDATE_DIR/slice-packets/$slice_id.json"
+    packet_path="$CANDIDATE_DIR/$packet_dir_name/$slice_id.json"
     body_file="$CANDIDATE_DIR/pr-bodies/$slice_id.md"
     packet_json="$(
       jq -n \
@@ -597,6 +943,16 @@ if [ -n "$CANDIDATE_DIR" ]; then
               merged_sha: null
             }
           }
+          + (if (($slice.marker_id? // "") != "") then {
+              marker_id: $slice.marker_id,
+              source_marker_ids: ($slice.source_marker_ids // [$slice.marker_id]),
+              source_marker_checkpoints: ($slice.source_marker_checkpoints // []),
+              route: ($slice.route // "marker_split"),
+              marker_split_evidence: ($slice.marker_split_evidence // ""),
+              implementation_checkpoint_evidence: ($slice.implementation_checkpoint_evidence // ""),
+              final_marker_split_warnings: ($slice.final_marker_split_warnings // []),
+              rollback_or_flags: "Use the recorded marker/base order for rollback or feature-flag review."
+            } else {} end)
         '
     )"
     write_json_atomic "$packet_path" "$packet_json"
@@ -926,34 +1282,54 @@ if [ -z "$CANDIDATE_DIR" ]; then
   state_json="$(
     jq -n \
       --arg source_path "$LAYER_PLAN" \
+      --arg marker_plan_path "$MARKER_PLAN" \
+      --arg marker_split_result "$MARKER_SPLIT_RESULT" \
+      --arg emission_mode "$EMISSION_MODE" \
+      --arg route "$EMISSION_ROUTE" \
       --arg base_branch "$BASE_BRANCH" \
       --arg base_sha "$BASE_SHA" \
       --argjson slices "$plan_slices" '
         {
           multi_pr_emission: {
-            schema_version: 1,
+            schema_version: (if $emission_mode == "marker" then 2 else 1 end),
             status: "emitting",
-            source_layer_plan: {path: $source_path},
+            emission_mode: $emission_mode,
+            route: $route,
             base_branch: $base_branch,
             base_sha: $base_sha,
             next_slice_id: ($slices[0].slice_id // null),
             reconciled_at: "2026-06-10T00:00:00Z",
             slices: (
               $slices
-              | map({
-                  slice_id: .slice_id,
-                  review_order: .review_order,
-                  expected_branch: .branch,
-                  expected_base_branch: .base_branch,
-                  head_sha: null,
-                  declared_files: .declared_files,
-                  declared_scoped_tests: .declared_tests,
-                  scoped_verification: .scoped_verification,
-                  status: "pending"
-                })
+              | map(
+                  {
+                    slice_id: .slice_id,
+                    review_order: .review_order,
+                    expected_branch: .branch,
+                    expected_base_branch: .base_branch,
+                    head_sha: null,
+                    declared_files: .declared_files,
+                    declared_scoped_tests: .declared_tests,
+                    scoped_verification: .scoped_verification,
+                    status: "pending"
+                  }
+                  + (if ((.marker_id? // "") != "") then {
+                      marker_id: .marker_id,
+                      source_marker_ids: (.source_marker_ids // [.marker_id]),
+                      source_marker_checkpoints: (.source_marker_checkpoints // []),
+                      route: (.route // $route),
+                      marker_split_evidence: (.marker_split_evidence // $marker_split_result)
+                    } else {} end)
+                )
             )
           }
         }
+        | if $source_path != "" then
+            .multi_pr_emission.source_layer_plan = {path: $source_path}
+          else
+            .multi_pr_emission.source_marker_plan = {path: $marker_plan_path}
+            | .multi_pr_emission.marker_split_result = {path: $marker_split_result}
+          end
       '
   )"
 
@@ -967,7 +1343,11 @@ if [ -z "$CANDIDATE_DIR" ]; then
     scoped_json="$(resolve_scoped_json "$slice_json" "$slice_id")"
     slice_json="$(printf '%s' "$slice_json" | jq --argjson scoped "$scoped_json" '.scoped_verification = $scoped')"
     packet_dir="$feature_dir_abs/.process/emission/$slice_id"
-    packet_path="$packet_dir/slice-packet.json"
+    packet_file_name="slice-packet.json"
+    if [ "$MARKER_MODE" = true ]; then
+      packet_file_name="marker-packet.json"
+    fi
+    packet_path="$packet_dir/$packet_file_name"
     body_file="$packet_dir/pr-body.md"
     mkdir -p "$packet_dir"
 
@@ -1012,6 +1392,16 @@ if [ -z "$CANDIDATE_DIR" ]; then
               merged_sha: null
             }
           }
+          + (if (($slice.marker_id? // "") != "") then {
+              marker_id: $slice.marker_id,
+              source_marker_ids: ($slice.source_marker_ids // [$slice.marker_id]),
+              source_marker_checkpoints: ($slice.source_marker_checkpoints // []),
+              route: ($slice.route // "marker_split"),
+              marker_split_evidence: ($slice.marker_split_evidence // ""),
+              implementation_checkpoint_evidence: ($slice.implementation_checkpoint_evidence // ""),
+              final_marker_split_warnings: ($slice.final_marker_split_warnings // []),
+              rollback_or_flags: "Use the recorded marker/base order for rollback or feature-flag review."
+            } else {} end)
         '
     )"
     persist_json_atomic "$packet_path" "$packet_json" || emit_input_error "slice packet persistence failed: $packet_path"
@@ -1183,6 +1573,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
 
   jq -cn \
     --argjson slice_count "$(printf '%s' "$plan_slices" | jq 'length')" \
+    --arg emission_mode "$EMISSION_MODE" \
+    --arg route "$EMISSION_ROUTE" \
+    --argjson marker_count "$MARKER_SOURCE_COUNT" \
     --arg state "$STATE_FILE" \
     --arg prs "$prs_path" \
     --arg moc "$moc_path" \
@@ -1191,7 +1584,13 @@ if [ -z "$CANDIDATE_DIR" ]; then
       script: "multi-pr-emission",
       status: "persisted",
       mutation: {branches: false, pull_requests: false},
-      emission: {slice_count: $slice_count, dry_run: false},
+      emission: {
+        slice_count: $slice_count,
+        marker_count: $marker_count,
+        mode: $emission_mode,
+        route: $route,
+        dry_run: false
+      },
       persisted_files: {state: $state, prs_manifest: $prs, spec_moc: $moc, workflow: $workflow}
     }'
   exit 0
@@ -1207,7 +1606,10 @@ jq -cn \
   --arg candidate_state "$candidate_state_path" \
   --arg candidate_prs "$candidate_prs_path" \
   --arg candidate_commands "$candidate_commands_path" \
+  --arg emission_mode "$EMISSION_MODE" \
+  --arg route "$EMISSION_ROUTE" \
   --argjson slice_count "$slice_count" \
+  --argjson marker_count "$MARKER_SOURCE_COUNT" \
   '{
     script: "multi-pr-emission",
     status: "validated",
@@ -1220,6 +1622,9 @@ jq -cn \
     },
     emission: {
       slice_count: $slice_count,
+      marker_count: $marker_count,
+      mode: $emission_mode,
+      route: $route,
       dry_run: true
     },
     candidate_files: {

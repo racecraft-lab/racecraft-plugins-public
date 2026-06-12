@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-013-workflow.md",
-  "updated_at": "2026-06-12T03:50:45Z",
-  "active_step": "Phase 7: Implement - T001",
+  "updated_at": "2026-06-12T04:17:51Z",
+  "active_step": "Post: Doctor Extension Check",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -91,42 +91,194 @@
     "note": "Archive extension archive v1.1.0 is installed. Discovery completed as dry-run evidence only; no files were deleted, moved, or edited by Archive Sweep."
   },
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed", "summary": "Archive extension installed; dry-run discovery completed; current target excluded; no cleanup applied."},
-    {"step": "Phase 0: Prerequisites", "status": "completed", "summary": "Preflight passed; confidence gate mode advisory; reviewability setup gate passed; Layer 1 structural validation passed 978/978."},
-    {"step": "Phase 1: Specify", "status": "completed", "gate": "G1", "gate_status": "passed", "summary": "Created spec.md with 3 user stories, 16 functional requirements, 9 acceptance scenarios, and 0 NEEDS CLARIFICATION markers."},
-    {"step": "Phase 2: Clarify - Marker Schema Focus", "status": "completed", "summary": "Accepted top-level pr_marker_plan state, stable marker IDs, one-based marker order, mandatory marker fields, Polish folding, and resume fingerprint behavior."},
-    {"step": "Phase 2: Clarify - Marker Schema Focus Consensus", "status": "completed", "summary": "Clarify executor returned no unresolved consensus items."},
-    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus", "status": "completed", "summary": "Accepted safe task-cluster boundaries, no-boundary warning behavior, structured warning fields, marker-order checkpoints during hazard collapse, and the hazard-collapse predicate."},
-    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus Consensus", "status": "completed", "summary": "Round 1 codebase/spec consensus agreed hazard collapse triggers only for single-atomic-PR or releasable:false, not one-navigable-PR alone."},
-    {"step": "Phase 2: Clarify - Gate Boundary Focus", "status": "completed", "summary": "Accepted parseable reviewability results as marker input, post-G5 block JSON capture/continue, correctness stop boundaries, final backstop marker_split proceed behavior, and final-backstop evidence flow into marker packets."},
-    {"step": "Phase 2: Clarify - Gate Boundary Focus Consensus", "status": "completed", "summary": "Round 1 codebase/spec consensus agreed final full-diff size block with a current valid pr_marker_plan should return marker_split and exit 0; invalid marker plans remain correctness stops."},
-    {"step": "Phase 3: Plan", "status": "completed", "gate": "G3", "gate_status": "passed", "reviewability_estimate": {"status": "pass", "projected": 0, "declared_files": {"production": 0, "new": 1, "modified": 17, "total_entries": 18}}, "summary": "Created plan, research, data model, quickstart, and 2 JSON contracts; G3 passed with 0 unresolved markers."},
-    {"step": "Phase 4: Checklist - state-management", "status": "completed", "summary": "26 items; 6 gaps remediated; 0 [Gap] markers remaining. Tightened fingerprint scope, resume behavior, workflow/state parity, subdivision parent semantics, and Polish folding rationale."},
-    {"step": "Phase 4: Checklist - state-management Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
-    {"step": "Phase 4: Checklist - error-handling", "status": "completed", "summary": "28 items; 4 gaps remediated; 0 [Gap] markers remaining. Added guarded task-gate capture, allowlisted size-only block handling, closed stop/proceed matrix, and packet validation-before-side-effect rules."},
-    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
-    {"step": "Phase 4: Checklist - api-contracts", "status": "completed", "summary": "33 items; 5 gaps remediated; 0 [Gap] markers remaining. Added marker-aware plan-layers API contracts, repo-relative evidence roots, final marker_split handoff, marker-aware multi-PR packet shape, and schema/fixture assertions."},
-    {"step": "Phase 4: Checklist - api-contracts Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
-    {"step": "Phase 4: Checklist - llm-integration", "status": "completed", "summary": "29 items; 5 gaps remediated; 0 [Gap] markers remaining. Added guidance evidence prompts, marker-order checkpoint evidence, no manual re-slicing stops for size alone, mirror parity coverage, and reportable marker evidence fields."},
-    {"step": "Phase 4: Checklist - llm-integration Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
-    {"step": "Phase 5: Tasks", "status": "completed", "gate": "G5", "gate_status": "passed", "summary": "Generated tasks.md with 45 tasks across 5 phases, 19 parallel opportunities, and coverage for US1, US2, and US3."},
-    {"step": "Phase 6: Analyze", "status": "completed", "summary": "Analyze found 0 findings after one pass; no remediation or consensus was required."},
-    {"step": "Phase 6: Analyze - Consensus", "status": "completed", "summary": "Analyze executor returned no unresolved consensus items."},
-    {"step": "Phase 6.5: Confidence Gate", "status": "completed", "gate": "G6.5", "gate_status": "soft_skip", "summary": "Advisory confidence gate returned NO_DATA because no synthesizer confidence emit was present; implementation continues."},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "in_progress"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Cleanup", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed",
+      "summary": "Archive extension installed; dry-run discovery completed; current target excluded; no cleanup applied."
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed",
+      "summary": "Preflight passed; confidence gate mode advisory; reviewability setup gate passed; Layer 1 structural validation passed 978/978."
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "passed",
+      "summary": "Created spec.md with 3 user stories, 16 functional requirements, 9 acceptance scenarios, and 0 NEEDS CLARIFICATION markers."
+    },
+    {
+      "step": "Phase 2: Clarify - Marker Schema Focus",
+      "status": "completed",
+      "summary": "Accepted top-level pr_marker_plan state, stable marker IDs, one-based marker order, mandatory marker fields, Polish folding, and resume fingerprint behavior."
+    },
+    {
+      "step": "Phase 2: Clarify - Marker Schema Focus Consensus",
+      "status": "completed",
+      "summary": "Clarify executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 2: Clarify - Subdivision and Hazard Focus",
+      "status": "completed",
+      "summary": "Accepted safe task-cluster boundaries, no-boundary warning behavior, structured warning fields, marker-order checkpoints during hazard collapse, and the hazard-collapse predicate."
+    },
+    {
+      "step": "Phase 2: Clarify - Subdivision and Hazard Focus Consensus",
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus agreed hazard collapse triggers only for single-atomic-PR or releasable:false, not one-navigable-PR alone."
+    },
+    {
+      "step": "Phase 2: Clarify - Gate Boundary Focus",
+      "status": "completed",
+      "summary": "Accepted parseable reviewability results as marker input, post-G5 block JSON capture/continue, correctness stop boundaries, final backstop marker_split proceed behavior, and final-backstop evidence flow into marker packets."
+    },
+    {
+      "step": "Phase 2: Clarify - Gate Boundary Focus Consensus",
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus agreed final full-diff size block with a current valid pr_marker_plan should return marker_split and exit 0; invalid marker plans remain correctness stops."
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed",
+      "gate": "G3",
+      "gate_status": "passed",
+      "reviewability_estimate": {
+        "status": "pass",
+        "projected": 0,
+        "declared_files": {
+          "production": 0,
+          "new": 1,
+          "modified": 17,
+          "total_entries": 18
+        }
+      },
+      "summary": "Created plan, research, data model, quickstart, and 2 JSON contracts; G3 passed with 0 unresolved markers."
+    },
+    {
+      "step": "Phase 4: Checklist - state-management",
+      "status": "completed",
+      "summary": "26 items; 6 gaps remediated; 0 [Gap] markers remaining. Tightened fingerprint scope, resume behavior, workflow/state parity, subdivision parent semantics, and Polish folding rationale."
+    },
+    {
+      "step": "Phase 4: Checklist - state-management Consensus",
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "completed",
+      "summary": "28 items; 4 gaps remediated; 0 [Gap] markers remaining. Added guarded task-gate capture, allowlisted size-only block handling, closed stop/proceed matrix, and packet validation-before-side-effect rules."
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - api-contracts",
+      "status": "completed",
+      "summary": "33 items; 5 gaps remediated; 0 [Gap] markers remaining. Added marker-aware plan-layers API contracts, repo-relative evidence roots, final marker_split handoff, marker-aware multi-PR packet shape, and schema/fixture assertions."
+    },
+    {
+      "step": "Phase 4: Checklist - api-contracts Consensus",
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - llm-integration",
+      "status": "completed",
+      "summary": "29 items; 5 gaps remediated; 0 [Gap] markers remaining. Added guidance evidence prompts, marker-order checkpoint evidence, no manual re-slicing stops for size alone, mirror parity coverage, and reportable marker evidence fields."
+    },
+    {
+      "step": "Phase 4: Checklist - llm-integration Consensus",
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "summary": "Generated tasks.md with 45 tasks across 5 phases, 19 parallel opportunities, and coverage for US1, US2, and US3."
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed",
+      "summary": "Analyze found 0 findings after one pass; no remediation or consensus was required."
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "completed",
+      "summary": "Analyze executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed",
+      "gate": "G6.5",
+      "gate_status": "soft_skip",
+      "summary": "Advisory confidence gate returned NO_DATA because no synthesizer confidence emit was present; implementation continues."
+    },
+    {
+      "step": "Phase 7: Implement",
+      "status": "completed",
+      "summary": "Completed 45/45 tasks. Generated PRSG-013 marker plan with foundation, us1, us2, and us3 markers; Polish tasks folded into us3; deterministic validation passed.",
+      "gate": "G7",
+      "gate_status": "passed"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "completed",
+      "summary": "Generated specs/prsg-013-reviewability-markers/.process/uat-runbook.md with concrete marker/backstop/emission checks."
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
   ],
   "phase1_specify": {
     "gate": "G1",
@@ -397,5 +549,933 @@
     "reason": "no confidence emit found",
     "recommended_action": "soft_skip",
     "command": "bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh docs/ai/specs/.process/PRSG-013-workflow.md --mode advisory"
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "prsg-013-reviewability-markers",
+    "status": "emission_ready",
+    "source_fingerprint": {
+      "feature_spec_sha": "8629d25719a70151e41e445a148bb37903fc766ef1433b9410c93eb139a3bae4",
+      "plan_declared_scope_sha": "98d68e68e51f14b8d5b78cd5c99f82ff26eaebdbd2410acdd4a3a8845afefd35",
+      "tasks_sha": "0e6ad0831c3824c156a784469e4d966867424dbfa4676c8bec0ccfa04f3ae6cd",
+      "reviewability_sha": "fa42c1fce8681232113dc108d91eb2e1cf5536b8fca895421fdd52dd4e05fcaa",
+      "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+    },
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "Foundation",
+          "story_id": null,
+          "start_task_id": "T001",
+          "end_task_id": "T006"
+        },
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/prsg-013-reviewability-markers/contracts/*.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "foundation",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+          "completed_at": "2026-06-12T04:17:51Z",
+          "completed_task_ids": [
+            "T001",
+            "T002",
+            "T003",
+            "T004",
+            "T005",
+            "T006"
+          ],
+          "summary": "Foundation schema, fixtures, and baseline script contract inspection completed.",
+          "validation": [
+            "jq empty specs/prsg-013-reviewability-markers/contracts/*.schema.json",
+            "jq empty speckit-pro/skills/speckit-autopilot/contracts/*.schema.json"
+          ]
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Continue Through Reviewability Sizing",
+          "story_id": 1,
+          "start_task_id": "T007",
+          "end_task_id": "T015"
+        },
+        "task_ids": [
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
+          "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us1",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+          "completed_at": "2026-06-12T04:17:51Z",
+          "completed_task_ids": [
+            "T007",
+            "T008",
+            "T009",
+            "T010",
+            "T011",
+            "T012",
+            "T013",
+            "T014",
+            "T015"
+          ],
+          "summary": "Size-only task/final reviewability findings continue as marker input while malformed or stale evidence still stops.",
+          "validation": [
+            "bash -n speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh",
+            "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh -> 55/55"
+          ]
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - Emit Scoped PRs From Durable Markers",
+          "story_id": 2,
+          "start_task_id": "T016",
+          "end_task_id": "T026"
+        },
+        "task_ids": [
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us2",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+          "completed_at": "2026-06-12T04:17:51Z",
+          "completed_task_ids": [
+            "T016",
+            "T017",
+            "T018",
+            "T019",
+            "T020",
+            "T021",
+            "T022",
+            "T023",
+            "T024",
+            "T025",
+            "T026"
+          ],
+          "summary": "Durable marker planning derives Foundation/user-story scopes, source fingerprints, Polish folding, and safe subdivision warnings.",
+          "validation": [
+            "bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh",
+            "bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh -> 85/85"
+          ]
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Verify Marker Planning And Emission Behavior",
+          "story_id": 3,
+          "start_task_id": "T027",
+          "end_task_id": "T036"
+        },
+        "task_ids": [
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T035",
+          "T036"
+        ],
+        "folded_polish_task_ids": [
+          "T037",
+          "T038",
+          "T039",
+          "T040",
+          "T041",
+          "T042",
+          "T043",
+          "T044",
+          "T045"
+        ],
+        "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/PRSG-013-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/autopilot-state.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/*.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/contracts/multi-pr-emission-state.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/prsg-013-reviewability-markers/contracts/marker-split-result.schema.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+          "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+          "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+          "tests/speckit-pro/run-all.sh"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us3",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+          "completed_at": "2026-06-12T04:17:51Z",
+          "completed_task_ids": [
+            "T027",
+            "T028",
+            "T029",
+            "T030",
+            "T031",
+            "T032",
+            "T033",
+            "T034",
+            "T035",
+            "T036",
+            "T037",
+            "T038",
+            "T039",
+            "T040",
+            "T041",
+            "T042",
+            "T043",
+            "T044",
+            "T045"
+          ],
+          "summary": "Marker-aware PR packets, hazard collapse, guidance parity, eval registration, and deterministic validation completed; Polish tasks folded into US3 marker evidence.",
+          "validation": [
+            "bash -n speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh",
+            "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 116/116",
+            "bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh -> 45/45",
+            "bash tests/speckit-pro/run-all.sh --layer 3 -> 0/0 registration evidence",
+            "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978",
+            "bash tests/speckit-pro/run-all.sh -> 2574/2574"
+          ]
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+        }
+      }
+    ],
+    "updated_at": "2026-06-12T04:17:51Z",
+    "created_at": "2026-06-12T04:17:51Z"
+  },
+  "phase7_implementation": {
+    "status": "completed",
+    "completed_at": "2026-06-12T04:17:51Z",
+    "tasks_file": "specs/prsg-013-reviewability-markers/tasks.md",
+    "total_tasks": 45,
+    "completed_tasks": 45,
+    "marker_plan_file": "docs/ai/specs/.process/PRSG-013-pr-marker-plan.json",
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "task_count": 6,
+        "folded_polish_task_ids": [],
+        "checkpoint_status": "complete",
+        "emission_status": "pending"
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "task_count": 9,
+        "folded_polish_task_ids": [],
+        "checkpoint_status": "complete",
+        "emission_status": "pending"
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "task_count": 11,
+        "folded_polish_task_ids": [],
+        "checkpoint_status": "complete",
+        "emission_status": "pending"
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "task_count": 10,
+        "folded_polish_task_ids": [
+          "T037",
+          "T038",
+          "T039",
+          "T040",
+          "T041",
+          "T042",
+          "T043",
+          "T044",
+          "T045"
+        ],
+        "checkpoint_status": "complete",
+        "emission_status": "pending"
+      }
+    ],
+    "validation": {
+      "jq_empty": "passed",
+      "bash_n": "passed",
+      "targeted_layer4": {
+        "plan_layers": "85/85",
+        "final_reviewability_backstop": "55/55",
+        "multi_pr_emission": "116/116",
+        "reviewability_marker_guidance": "45/45"
+      },
+      "layer1": "978/978 passed",
+      "default_suite": "2574/2574 passed",
+      "layer3": "0/0 passed; eval files and manual helpers enumerated",
+      "all_layers": "started; deterministic layers passed through Layer 5 and live Layer 7 produced no output for several minutes, so run was interrupted and not used as a completion gate",
+      "final_reviewability_backstop": "status=proceed outcome=marker_split from final warn with current marker plan",
+      "marker_emission_dry_run": "4/4 marker-scoped packets validated; branches/pull_requests mutation=false"
+    },
+    "summary": "Implemented non-stopping reviewability markers across marker planning, final backstop, marker-aware PR emission, guidance parity, and tests."
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "8629d25719a70151e41e445a148bb37903fc766ef1433b9410c93eb139a3bae4",
+    "plan_declared_scope_sha": "98d68e68e51f14b8d5b78cd5c99f82ff26eaebdbd2410acdd4a3a8845afefd35",
+    "tasks_sha": "0e6ad0831c3824c156a784469e4d966867424dbfa4676c8bec0ccfa04f3ae6cd",
+    "reviewability_sha": "fa42c1fce8681232113dc108d91eb2e1cf5536b8fca895421fdd52dd4e05fcaa",
+    "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+  },
+  "final_reviewability_gate": {
+    "schemaVersion": 1,
+    "kind": "final_reviewability_gate",
+    "status": "proceed",
+    "outcome": "marker_split",
+    "mode": "final",
+    "gate_result": "warn",
+    "gate_reason": "total files 19 exceeds warn threshold 15; primary surfaces 5 exceeds warn threshold 1",
+    "metrics": {
+      "reviewable_loc": 0,
+      "production_files": 0,
+      "total_files": 19,
+      "primary_surface_count": 5,
+      "primary_surfaces": [
+        "API",
+        "docs/process",
+        "scheduler/runtime",
+        "schema/migration",
+        "seed/config"
+      ],
+      "greenfield": false,
+      "thresholds": {
+        "warn": {
+          "reviewable_loc": 400,
+          "production_files": 6,
+          "total_files": 15,
+          "primary_surfaces": 1
+        },
+        "block": {
+          "reviewable_loc": 800,
+          "production_files": 8,
+          "total_files": 25,
+          "primary_surfaces": 1
+        }
+      },
+      "warnings": [
+        "total files 19 exceeds warn threshold 15",
+        "primary surfaces 5 exceeds warn threshold 1"
+      ],
+      "blockers": []
+    },
+    "exception": {
+      "honored": false,
+      "class": null,
+      "evidence": []
+    },
+    "blocked_operations": [],
+    "timestamp": "2026-06-12T04:17:51Z",
+    "pr_created": false,
+    "pr": null,
+    "reslicing_packet_path": null,
+    "marker_split_evidence_path": "docs/ai/specs/.process/PRSG-013-final-marker-split-result.json",
+    "full_diff": {
+      "reviewability_status": "warn",
+      "gate_exit_code": 0,
+      "reason": "total files 19 exceeds warn threshold 15; primary surfaces 5 exceeds warn threshold 1",
+      "metrics": {
+        "reviewable_loc": 0,
+        "production_files": 0,
+        "total_files": 19,
+        "primary_surface_count": 5,
+        "primary_surfaces": [
+          "API",
+          "docs/process",
+          "scheduler/runtime",
+          "schema/migration",
+          "seed/config"
+        ],
+        "greenfield": false,
+        "thresholds": {
+          "warn": {
+            "reviewable_loc": 400,
+            "production_files": 6,
+            "total_files": 15,
+            "primary_surfaces": 1
+          },
+          "block": {
+            "reviewable_loc": 800,
+            "production_files": 8,
+            "total_files": 25,
+            "primary_surfaces": 1
+          }
+        },
+        "warnings": [
+          "total files 19 exceeds warn threshold 15",
+          "primary surfaces 5 exceeds warn threshold 1"
+        ],
+        "blockers": []
+      },
+      "evidence_path": "docs/ai/specs/.process/PRSG-013-final-reviewability-gate-result.json"
+    },
+    "marker_plan": {
+      "valid": true,
+      "fingerprint_matched": true,
+      "marker_count": 4,
+      "marker_order": [
+        "foundation",
+        "us1",
+        "us2",
+        "us3"
+      ],
+      "status": "emission_ready",
+      "evidence_path": "docs/ai/specs/.process/autopilot-state.json",
+      "source_fingerprint": {
+        "feature_spec_sha": "8629d25719a70151e41e445a148bb37903fc766ef1433b9410c93eb139a3bae4",
+        "plan_declared_scope_sha": "98d68e68e51f14b8d5b78cd5c99f82ff26eaebdbd2410acdd4a3a8845afefd35",
+        "tasks_sha": "0e6ad0831c3824c156a784469e4d966867424dbfa4676c8bec0ccfa04f3ae6cd",
+        "reviewability_sha": "fa42c1fce8681232113dc108d91eb2e1cf5536b8fca895421fdd52dd4e05fcaa",
+        "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+      }
+    },
+    "emission": {
+      "route": "marker_split",
+      "markers": [
+        {
+          "id": "foundation",
+          "review_order": 1,
+          "source_marker_ids": [
+            "foundation"
+          ],
+          "packet_path": null,
+          "declared_files": [
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "specs/prsg-013-reviewability-markers/contracts/*.schema.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json"
+            }
+          ],
+          "declared_tests": [],
+          "warnings": []
+        },
+        {
+          "id": "us1",
+          "review_order": 2,
+          "source_marker_ids": [
+            "us1"
+          ],
+          "packet_path": null,
+          "declared_files": [
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+            }
+          ],
+          "declared_tests": [
+            "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
+            "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+          ],
+          "warnings": []
+        },
+        {
+          "id": "us2",
+          "review_order": 3,
+          "source_marker_ids": [
+            "us2"
+          ],
+          "packet_path": null,
+          "declared_files": [
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
+            }
+          ],
+          "declared_tests": [
+            "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+          ],
+          "warnings": []
+        },
+        {
+          "id": "us3",
+          "review_order": 4,
+          "source_marker_ids": [
+            "us3"
+          ],
+          "packet_path": null,
+          "declared_files": [
+            {
+              "operation": "MODIFIED",
+              "path": "docs/ai/specs/.process/PRSG-013-workflow.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "docs/ai/specs/.process/autopilot-state.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/contracts/*.schema.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/contracts/multi-pr-emission-state.schema.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "specs/prsg-013-reviewability-markers/contracts/marker-split-result.schema.json"
+            },
+            {
+              "operation": "MODIFIED",
+              "path": "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json"
+            }
+          ],
+          "declared_tests": [
+            "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+            "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+            "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+            "tests/speckit-pro/run-all.sh"
+          ],
+          "warnings": []
+        }
+      ]
+    },
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+        }
+      },
+      {
+        "code": "MARKER_PLAN_READY",
+        "severity": "warning",
+        "message": "Current marker plan is valid; PR emission should use marker-scoped packets after the final backstop.",
+        "source": "final-reviewability-backstop",
+        "details": {
+          "feature_dir": "specs/prsg-013-reviewability-markers"
+        }
+      }
+    ],
+    "no_pr_assertions": {
+      "pr_created": false,
+      "pr": null,
+      "pr_body_generated": false,
+      "single_pr_create_invoked": false,
+      "gh_pr_create_invoked": false,
+      "multi_pr_emission_invoked": false
+    }
+  },
+  "marker_emission_dry_run": {
+    "schema_version": 1,
+    "status": "validated",
+    "mutation": {
+      "branches": false,
+      "pull_requests": false
+    },
+    "emission": {
+      "slice_count": 4,
+      "marker_count": 4,
+      "mode": "marker",
+      "route": "marker_split",
+      "dry_run": true
+    },
+    "slices": [
+      {
+        "slice_id": "foundation",
+        "marker_id": "foundation",
+        "review_order": 1,
+        "expected_branch": "prsg-013-reviewability-markers/01-foundation",
+        "expected_base_branch": "main"
+      },
+      {
+        "slice_id": "us1",
+        "marker_id": "us1",
+        "review_order": 2,
+        "expected_branch": "prsg-013-reviewability-markers/02-us1",
+        "expected_base_branch": "prsg-013-reviewability-markers/01-foundation"
+      },
+      {
+        "slice_id": "us2",
+        "marker_id": "us2",
+        "review_order": 3,
+        "expected_branch": "prsg-013-reviewability-markers/03-us2",
+        "expected_base_branch": "prsg-013-reviewability-markers/02-us1"
+      },
+      {
+        "slice_id": "us3",
+        "marker_id": "us3",
+        "review_order": 4,
+        "expected_branch": "prsg-013-reviewability-markers/04-us3",
+        "expected_base_branch": "prsg-013-reviewability-markers/03-us2"
+      }
+    ],
+    "pr_create_commands": [
+      {
+        "slice_id": "foundation",
+        "command": [
+          "gh",
+          "pr",
+          "create",
+          "--base",
+          "main",
+          "--head",
+          "prsg-013-reviewability-markers/01-foundation",
+          "--body-file",
+          "/tmp/prsg-013-marker-emission/pr-bodies/foundation.md"
+        ]
+      },
+      {
+        "slice_id": "us1",
+        "command": [
+          "gh",
+          "pr",
+          "create",
+          "--base",
+          "prsg-013-reviewability-markers/01-foundation",
+          "--head",
+          "prsg-013-reviewability-markers/02-us1",
+          "--body-file",
+          "/tmp/prsg-013-marker-emission/pr-bodies/us1.md"
+        ]
+      },
+      {
+        "slice_id": "us2",
+        "command": [
+          "gh",
+          "pr",
+          "create",
+          "--base",
+          "prsg-013-reviewability-markers/02-us1",
+          "--head",
+          "prsg-013-reviewability-markers/03-us2",
+          "--body-file",
+          "/tmp/prsg-013-marker-emission/pr-bodies/us2.md"
+        ]
+      },
+      {
+        "slice_id": "us3",
+        "command": [
+          "gh",
+          "pr",
+          "create",
+          "--base",
+          "prsg-013-reviewability-markers/03-us2",
+          "--head",
+          "prsg-013-reviewability-markers/04-us3",
+          "--body-file",
+          "/tmp/prsg-013-marker-emission/pr-bodies/us3.md"
+        ]
+      }
+    ]
+  },
+  "uat_runbook": {
+    "status": "generated",
+    "path": "specs/prsg-013-reviewability-markers/.process/uat-runbook.md",
+    "summary": "Concrete UAT steps cover marker planning, final marker_split handoff, and marker emission dry-run."
   }
 }

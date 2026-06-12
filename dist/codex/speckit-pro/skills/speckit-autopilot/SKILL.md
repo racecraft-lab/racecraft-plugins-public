@@ -643,9 +643,20 @@ with concrete Phase 7 task-group items in both `update_plan` and
 - at least one concrete Phase 7 item exists
 - each concrete Phase 7 item names task IDs from tasks.md
 - `<SKILL_SCRIPTS>/reviewability-gate.sh tasks <feature_dir>` does
-  not return an unexcepted `block`
+  not return an unexcepted correctness block. Capture stdout, stderr,
+  exit code, gate status/mode/exit/evidence path, and repo-relative evidence
+  path. A valid current size-only `block` continues into marker planning and
+  marker emission; it is not a manual re-slicing stop.
 
 If any check fails, STOP and repair the plan/state before advancing.
+
+Persist marker planning state when reviewability evidence requires it:
+top-level `pr_marker_plan` in `autopilot-state.json`, mirrored workflow
+evidence, and repo-relative evidence paths. `tasks.md` is not authoritative
+marker state. Preserve correctness stops for malformed/stale marker state,
+failed verification, invalid packet, unsafe output, unusable gate evidence,
+invalid JSON, missing status/mode, stale fingerprints, and non-size safety
+findings.
 
 **Atomicity Route (post-G5 — read-only, advisory, records the route):**
 After the Tasks phase and G5 pass, run the read-only atomicity classifier
@@ -837,10 +848,13 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
 4. **3.2 PR Creation** — final verification, then run
    `final-reviewability-backstop.sh` as the last boundary before any PR body
    generation, `gh pr create` variant, or `multi-pr-emission.sh`. Only
-   `pass`, `warn`, or honored typed-exception outcomes may continue. An
-   unexcepted block writes `final_reviewability_gate` state plus a
-   `reslicing_required` packet and stops before PR preparation; a gate error
-   writes state and stops without a packet. After a proceed result, build the
+   `pass`, `warn`, honored typed-exception outcomes, or final `marker_split`
+   with a valid current `pr_marker_plan` may continue. A full-diff size block
+   with current marker evidence proceeds to marker-based PR emission; it is not
+   a manual re-slicing stop. An unexcepted correctness block writes
+   `final_reviewability_gate` state plus a `reslicing_required` packet and
+   stops before PR preparation; a gate error writes state and stops without a
+   packet. After a proceed result, build the
    PR body by running `generate-pr-body.sh` → `.git/speckit-pr-body.md`, fill
    its **What changed / Why it matters / Anything reviewers should know**
    sections in plain English (no internal jargon; governance stays in the
@@ -852,6 +866,9 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    `speckit-pro-review-packet-source` marker and a `## UAT Runbook`
    heading; if either is missing, regenerate with the script once. Push,
    create PR, update workflow file.
+   Required evidence prompts: gate status/mode/exit/evidence path,
+   fingerprint status, ordered marker IDs, checkpoints, warnings, final
+   marker_split, packet validation, and PR mappings.
 5. **3.3 Review Remediation** — schedule a polling loop to monitor
    and resolve Copilot/human review comments every 5 minutes
 

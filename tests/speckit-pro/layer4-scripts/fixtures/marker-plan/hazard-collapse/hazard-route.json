@@ -1,0 +1,9 @@
+{
+  "route": "single-atomic-PR",
+  "releasable": true,
+  "signals": [
+    "hard-atomic:rename"
+  ],
+  "hints": [],
+  "warnings": []
+}

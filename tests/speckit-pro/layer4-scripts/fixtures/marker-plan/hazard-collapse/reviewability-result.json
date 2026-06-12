@@ -1,0 +1,15 @@
+{
+  "status": "warn",
+  "mode": "tasks",
+  "feature_id": "hazard-collapse",
+  "scope": "feature",
+  "reason": "feature is over the preferred single-PR size",
+  "is_size_only": true,
+  "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/hazard-collapse.json",
+  "metrics": {
+    "reviewable_loc": 860,
+    "production_files": 2,
+    "total_files": 4
+  },
+  "marker_estimates": {}
+}

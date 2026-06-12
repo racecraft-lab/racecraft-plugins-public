@@ -1,0 +1,15 @@
+{
+  "status": "warn",
+  "mode": "tasks",
+  "feature_id": "canonical",
+  "scope": "feature",
+  "reason": "feature is over the preferred single-PR size",
+  "is_size_only": true,
+  "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/canonical.json",
+  "metrics": {
+    "reviewable_loc": 920,
+    "production_files": 3,
+    "total_files": 6
+  },
+  "marker_estimates": {}
+}

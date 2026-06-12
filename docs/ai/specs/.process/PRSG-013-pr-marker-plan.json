@@ -1,0 +1,431 @@
+{
+  "schema_version": "pr-marker-plan.v1",
+  "kind": "pr_marker_plan",
+  "feature_id": "prsg-013-reviewability-markers",
+  "status": "emission_ready",
+  "source_fingerprint": {
+    "feature_spec_sha": "8629d25719a70151e41e445a148bb37903fc766ef1433b9410c93eb139a3bae4",
+    "plan_declared_scope_sha": "98d68e68e51f14b8d5b78cd5c99f82ff26eaebdbd2410acdd4a3a8845afefd35",
+    "tasks_sha": "0e6ad0831c3824c156a784469e4d966867424dbfa4676c8bec0ccfa04f3ae6cd",
+    "reviewability_sha": "fa42c1fce8681232113dc108d91eb2e1cf5536b8fca895421fdd52dd4e05fcaa",
+    "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+  },
+  "markers": [
+    {
+      "id": "foundation",
+      "review_order": 1,
+      "kind": "foundation",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "Foundation",
+        "story_id": null,
+        "start_task_id": "T001",
+        "end_task_id": "T006"
+      },
+      "task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-marker-plan.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/prsg-013-reviewability-markers/contracts/*.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json"
+        }
+      ],
+      "declared_tests": [],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "foundation",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "completed_at": "2026-06-12T04:17:51Z",
+        "completed_task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006"
+        ],
+        "summary": "Foundation schema, fixtures, and baseline script contract inspection completed.",
+        "validation": [
+          "jq empty specs/prsg-013-reviewability-markers/contracts/*.schema.json",
+          "jq empty speckit-pro/skills/speckit-autopilot/contracts/*.schema.json"
+        ]
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us1",
+      "review_order": 2,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 1 - Continue Through Reviewability Sizing",
+        "story_id": 1,
+        "start_task_id": "T007",
+        "end_task_id": "T015"
+      },
+      "task_ids": [
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
+        "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us1",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "completed_at": "2026-06-12T04:17:51Z",
+        "completed_task_ids": [
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015"
+        ],
+        "summary": "Size-only task/final reviewability findings continue as marker input while malformed or stale evidence still stops.",
+        "validation": [
+          "bash -n speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh",
+          "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh -> 55/55"
+        ]
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us2",
+      "review_order": 3,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 2 - Emit Scoped PRs From Durable Markers",
+        "story_id": 2,
+        "start_task_id": "T016",
+        "end_task_id": "T026"
+      },
+      "task_ids": [
+        "T016",
+        "T017",
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer4-scripts/test-plan-layers.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us2",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "completed_at": "2026-06-12T04:17:51Z",
+        "completed_task_ids": [
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026"
+        ],
+        "summary": "Durable marker planning derives Foundation/user-story scopes, source fingerprints, Polish folding, and safe subdivision warnings.",
+        "validation": [
+          "bash -n speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh",
+          "bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh -> 85/85"
+        ]
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us3",
+      "review_order": 4,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 3 - Verify Marker Planning And Emission Behavior",
+        "story_id": 3,
+        "start_task_id": "T027",
+        "end_task_id": "T036"
+      },
+      "task_ids": [
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034",
+        "T035",
+        "T036"
+      ],
+      "folded_polish_task_ids": [
+        "T037",
+        "T038",
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045"
+      ],
+      "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/.process/PRSG-013-workflow.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/.process/autopilot-state.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/*.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/multi-pr-emission-state.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/prsg-013-reviewability-markers/contracts/marker-split-result.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "tests/speckit-pro/run-all.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us3",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-workflow.md",
+        "completed_at": "2026-06-12T04:17:51Z",
+        "completed_task_ids": [
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T035",
+          "T036",
+          "T037",
+          "T038",
+          "T039",
+          "T040",
+          "T041",
+          "T042",
+          "T043",
+          "T044",
+          "T045"
+        ],
+        "summary": "Marker-aware PR packets, hazard collapse, guidance parity, eval registration, and deterministic validation completed; Polish tasks folded into US3 marker evidence.",
+        "validation": [
+          "bash -n speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh",
+          "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 116/116",
+          "bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh -> 45/45",
+          "bash tests/speckit-pro/run-all.sh --layer 3 -> 0/0 registration evidence",
+          "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978",
+          "bash tests/speckit-pro/run-all.sh -> 2574/2574"
+        ]
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    }
+  ],
+  "warnings": [
+    {
+      "code": "reviewability_size_warning",
+      "severity": "warning",
+      "message": "Reviewability sizing result is marker-planning input.",
+      "source": "reviewability",
+      "details": {
+        "status": "block",
+        "mode": "tasks",
+        "evidence_path": "docs/ai/specs/.process/PRSG-013-reviewability-result.json"
+      }
+    }
+  ],
+  "updated_at": "2026-06-12T04:17:51Z",
+  "created_at": "2026-06-12T04:17:51Z"
+}

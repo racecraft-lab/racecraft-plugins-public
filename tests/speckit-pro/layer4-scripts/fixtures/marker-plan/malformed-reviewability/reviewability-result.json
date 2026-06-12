@@ -1,0 +1,7 @@
+{
+  "status": "block",
+  "feature_id": "canonical",
+  "scope": "feature",
+  "reason": "missing required mode field",
+  "is_size_only": true
+}

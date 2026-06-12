@@ -17,7 +17,7 @@ STATE_SCHEMA="$CONTRACT_ROOT/final-reviewability-gate-state.schema.json"
 PACKET_SCHEMA="$CONTRACT_ROOT/reslicing-packet.schema.json"
 
 usage() {
-  printf 'Usage: final-reviewability-backstop.sh --feature-dir <specs/name> --feature-branch <branch> [--gate-result <json> --gate-exit-code <0|1|2> | --diff-range <range>] [--state-output <json>] [--packet-output <json>] [--layer-plan <json>] [--sizing-result <json>] [--changed-files <txt>] [--full-verification-evidence <path>]\n' >&2
+  printf 'Usage: final-reviewability-backstop.sh --feature-dir <specs/name> --feature-branch <branch> [--gate-result <json> --gate-exit-code <0|1|2> | --diff-range <range>] [--state-output <json>] [--packet-output <json>] [--layer-plan <json>] [--sizing-result <json>] [--changed-files <txt>] [--full-verification-evidence <path>] [--marker-plan <json> | --autopilot-state <json>] [--source-fingerprint <json>] [--marker-split-output <json>]\n' >&2
 }
 
 json_escape() {
@@ -74,6 +74,13 @@ repo_relative_path() {
     return
   fi
   case "$raw" in
+    /*) ;;
+    *)
+      printf '%s\n' "${raw#./}"
+      return
+      ;;
+  esac
+  case "$raw" in
     "$REPO_ROOT"/*)
       printf '%s\n' "${raw#"$REPO_ROOT"/}"
       return
@@ -104,6 +111,100 @@ json_file_or_empty_object() {
   else
     printf '{}'
   fi
+}
+
+source_fingerprint_shape_is_valid() {
+  local json="$1"
+  printf '%s' "$json" | jq -e '
+    type == "object"
+    and (. as $root
+      | all([ "feature_spec_sha", "plan_declared_scope_sha", "tasks_sha", "reviewability_sha", "hazard_route_sha" ][]; (($root[.] // "") | type == "string" and length > 0)))
+  ' >/dev/null
+}
+
+marker_plan_shape_is_valid() {
+  local json="$1"
+  printf '%s' "$json" | jq -e '
+    def warning_shape:
+      type == "object"
+      and (.code | type == "string" and length > 0)
+      and (.severity | IN("info", "warning", "error"))
+      and (.message | type == "string" and length > 0)
+      and (.source | type == "string" and length > 0)
+      and (.details | type == "object");
+    type == "object"
+    and .schema_version == "pr-marker-plan.v1"
+    and .kind == "pr_marker_plan"
+    and (.feature_id | type == "string" and length > 0)
+    and (.status | IN("planned", "checkpointing", "emission_ready", "emitted", "collapsed", "stale", "invalid"))
+    and (.source_fingerprint | type == "object")
+    and (.source_fingerprint.feature_spec_sha | type == "string" and length > 0)
+    and (.source_fingerprint.plan_declared_scope_sha | type == "string" and length > 0)
+    and (.source_fingerprint.tasks_sha | type == "string" and length > 0)
+    and (.source_fingerprint.reviewability_sha | type == "string" and length > 0)
+    and (.source_fingerprint.hazard_route_sha | type == "string" and length > 0)
+    and (.markers | type == "array" and length > 0)
+    and ([.markers[].review_order] == [range(1; ((.markers | length) + 1))])
+    and all(.markers[];
+      (.id | type == "string" and test("^(foundation|us[0-9]+(-part[0-9]+)?|full-spec)$"))
+      and (.review_order | type == "number" and . >= 1)
+      and (.kind | IN("foundation", "user_story", "user_story_part", "full_spec"))
+      and ((.parent_marker_id == null) or (.parent_marker_id | type == "string" and test("^us[0-9]+$")))
+      and (.source_boundary | type == "object")
+      and (.source_boundary.section | type == "string" and length > 0)
+      and (.source_boundary.start_task_id | type == "string" and length > 0)
+      and (.source_boundary.end_task_id | type == "string" and length > 0)
+      and (.task_ids | type == "array" and length > 0)
+      and (.folded_polish_task_ids | type == "array")
+      and (.folded_polish_target_reason | type == "string")
+      and (.declared_files | type == "array")
+      and all(.declared_files[]; (.operation | IN("NEW", "MODIFIED", "DELETED")) and (.path | type == "string" and length > 0))
+      and (.declared_tests | type == "array")
+      and (.reviewability | type == "object")
+      and (.reviewability.status | IN("pass", "warn", "exception", "block", "not_estimated"))
+      and (.reviewability.mode | type == "string" and length > 0)
+      and (.reviewability.scope | type == "string" and length > 0)
+      and (.hazards | type == "array")
+      and (.subdivision | type == "object")
+      and (.subdivision.status | IN("none", "safe_split", "no_safe_boundary", "hazard_collapsed"))
+      and (.subdivision.details | type == "object")
+      and (.implementation_checkpoint | type == "object")
+      and (.implementation_checkpoint.status | IN("pending", "complete"))
+      and (.emission_mapping | type == "object")
+      and (.emission_mapping.status | IN("pending", "marker_split", "emitted", "hazard_collapsed"))
+      and (.warnings | type == "array")
+      and all(.warnings[]; warning_shape)
+    )
+    and (.warnings | type == "array")
+    and all(.warnings[]; warning_shape)
+  ' >/dev/null
+}
+
+gate_block_is_size_only() {
+  local gate_file="$1"
+  jq -e '
+    (.status // "") == "block"
+    and ((.blockers // []) | type == "array")
+    and ((.blockers // []) | length > 0)
+    and all((.blockers // [])[]; test("reviewable[[:space:]]+LOC|production[[:space:]]+files|total[[:space:]]+files|primary[[:space:]]+surface|changed[[:space:]]+files|size"; "i"))
+  ' "$gate_file" >/dev/null
+}
+
+structured_warning() {
+  local code="$1" severity="$2" message="$3" source="$4" details_json="$5"
+  jq -cn \
+    --arg code "$code" \
+    --arg severity "$severity" \
+    --arg message "$message" \
+    --arg source "$source" \
+    --argjson details "$details_json" \
+    '{
+      code: $code,
+      severity: $severity,
+      message: $message,
+      source: $source,
+      details: $details
+    }'
 }
 
 changed_file_count() {
@@ -206,15 +307,53 @@ gate_reason() {
 state_shape_is_valid() {
   local json="$1"
   printf '%s' "$json" | jq -e '
-    type == "object"
-    and .schemaVersion == 1
-    and .kind == "final_reviewability_gate"
-    and (.status | IN("pass", "warn", "exception", "block", "error"))
-    and (.metrics | type == "object")
-    and (.exception | type == "object")
-    and (.blocked_operations | type == "array")
-    and .pr_created == false
-    and .pr == null
+    def base:
+      type == "object"
+      and .schemaVersion == 1
+      and .kind == "final_reviewability_gate"
+      and (.metrics | type == "object")
+      and (.exception | type == "object")
+      and (.blocked_operations | type == "array")
+      and .pr_created == false
+      and .pr == null;
+    def legacy:
+      base
+      and (.status | IN("pass", "warn", "exception", "block", "error"))
+      and (.gate_result | type == "string" and length > 0)
+      and (.gate_reason | type == "string" and length > 0)
+      and has("timestamp")
+      and has("reslicing_packet_path");
+    def warning_shape:
+      type == "object"
+      and (.code | type == "string" and length > 0)
+      and (.severity | IN("info", "warning", "error"))
+      and (.message | type == "string" and length > 0)
+      and (.source | type == "string" and length > 0)
+      and (.details | type == "object");
+    def marker_aware:
+      base
+      and (.status | IN("proceed", "stop"))
+      and (.outcome | IN("marker_split", "correctness_stop"))
+      and .mode == "final"
+      and (.gate_result | type == "string" and length > 0)
+      and (.gate_reason | type == "string" and length > 0)
+      and has("timestamp")
+      and has("reslicing_packet_path")
+      and (.full_diff | type == "object")
+      and (.full_diff.reviewability_status | IN("pass", "warn", "exception", "block", "error"))
+      and (.marker_plan | type == "object")
+      and (.marker_plan.valid | type == "boolean")
+      and (.marker_plan.fingerprint_matched | type == "boolean")
+      and (.emission | type == "object")
+      and (.emission.route | IN("marker_split", "hazard_collapsed", "single_pr"))
+      and (.emission.markers | type == "array")
+      and (.warnings | type == "array")
+      and all(.warnings[]; warning_shape)
+      and (.no_pr_assertions | type == "object")
+      and .no_pr_assertions.pr_created == false
+      and .no_pr_assertions.gh_pr_create_invoked == false
+      and .no_pr_assertions.multi_pr_emission_invoked == false;
+    legacy or marker_aware
   ' >/dev/null
 }
 
@@ -235,6 +374,250 @@ packet_shape_is_valid() {
   ' >/dev/null
 }
 
+handle_marker_aware_block() {
+  local exception_state_json="$1"
+  local result_status="stop"
+  local result_outcome="correctness_stop"
+  local result_exit=1
+  local marker_plan_json=""
+  local expected_fingerprint_json="{}"
+  local marker_plan_valid=false
+  local fingerprint_matched=false
+  local marker_plan_status="missing"
+  local marker_count=0
+  local marker_order_json="[]"
+  local marker_source_fingerprint_json="{}"
+  local markers_json="[]"
+  local marker_warnings_json="[]"
+  local route="marker_split"
+  local warning_json
+  local warning_code="MARKER_PLAN_MISSING"
+  local warning_message="Marker-aware final backstop requires a current pr_marker_plan before PR emission."
+  local marker_plan_rel=""
+  local marker_split_rel
+  local gate_evidence_rel
+  local blocked_ops_json='["pr-body-generation","single-pr-create","multi-pr-emission"]'
+  local result_blocked_ops_json="$blocked_ops_json"
+
+  [ -n "$MARKER_SPLIT_OUTPUT" ] || MARKER_SPLIT_OUTPUT="$FEATURE_DIR/.process/marker-plan/final-marker-split-result.json"
+
+  marker_split_rel="$(repo_relative_path "$MARKER_SPLIT_OUTPUT")"
+  gate_evidence_rel="$(repo_relative_path "$GATE_TMP")"
+
+  if [ "$final_status" = "error" ]; then
+    warning_code="FINAL_GATE_ERROR"
+    warning_message="Final reviewability gate evidence is unusable, so marker-scoped PR emission cannot proceed."
+  elif [ "$final_status" = "block" ] && ! gate_block_is_size_only "$GATE_TMP"; then
+    warning_code="FINAL_DIFF_NOT_SIZE_ONLY"
+    warning_message="Final diff block is not a size-only reviewability block, so marker-scoped PR emission cannot proceed."
+  else
+    if [ -n "$MARKER_PLAN" ]; then
+      marker_plan_rel="$(repo_relative_path "$MARKER_PLAN")"
+      if [ ! -r "$MARKER_PLAN" ]; then
+        warning_code="MARKER_PLAN_MISSING"
+        warning_message="Marker plan is missing or unreadable."
+      else
+        marker_plan_json="$(jq -c . "$MARKER_PLAN" 2>/dev/null || true)"
+      fi
+    elif [ -n "$AUTOPILOT_STATE" ]; then
+      marker_plan_rel="$(repo_relative_path "$AUTOPILOT_STATE")"
+      if [ ! -r "$AUTOPILOT_STATE" ]; then
+        warning_code="MARKER_PLAN_MISSING"
+        warning_message="Autopilot state is missing or unreadable."
+      else
+        marker_plan_json="$(jq -c '.pr_marker_plan // empty' "$AUTOPILOT_STATE" 2>/dev/null || true)"
+        if [ -z "$marker_plan_json" ]; then
+          warning_code="MARKER_PLAN_MISSING"
+          warning_message="Autopilot state does not contain top-level pr_marker_plan."
+        fi
+      fi
+    fi
+
+    if [ -n "$marker_plan_json" ]; then
+      if ! marker_plan_shape_is_valid "$marker_plan_json"; then
+        warning_code="MARKER_PLAN_MALFORMED"
+        warning_message="Marker plan is malformed or missing required marker evidence."
+      else
+        marker_plan_status="$(printf '%s' "$marker_plan_json" | jq -r '.status')"
+        marker_count="$(printf '%s' "$marker_plan_json" | jq -r '.markers | length')"
+        marker_order_json="$(printf '%s' "$marker_plan_json" | jq -c '[.markers | sort_by(.review_order)[] | .id]')"
+        marker_source_fingerprint_json="$(printf '%s' "$marker_plan_json" | jq -c '.source_fingerprint')"
+        marker_warnings_json="$(printf '%s' "$marker_plan_json" | jq -c '(.warnings // []) + ([.markers[].warnings[]?] // [])')"
+        markers_json="$(
+          printf '%s' "$marker_plan_json" | jq -c '
+            [.markers | sort_by(.review_order)[] | {
+              id,
+              review_order,
+              source_marker_ids: (.emission_mapping.source_marker_ids // [.id]),
+              packet_path: (.emission_mapping.packet_path // null),
+              declared_files,
+              declared_tests,
+              warnings
+            }]
+          '
+        )"
+        route="$(
+          printf '%s' "$marker_plan_json" | jq -r '
+            if .status == "collapsed" or any(.markers[]; .id == "full-spec" or .emission_mapping.status == "hazard_collapsed") then
+              "hazard_collapsed"
+            else
+              "marker_split"
+            end
+          '
+        )"
+
+        if [ "$marker_plan_status" = "stale" ]; then
+          warning_code="MARKER_PLAN_STALE"
+          warning_message="Marker plan is stale and cannot be used for final PR emission."
+        elif [ "$marker_plan_status" = "invalid" ]; then
+          warning_code="MARKER_PLAN_MALFORMED"
+          warning_message="Marker plan is marked invalid and cannot be used for final PR emission."
+        elif [ "$marker_plan_status" != "emission_ready" ] && [ "$marker_plan_status" != "collapsed" ]; then
+          warning_code="MARKER_PLAN_NOT_EMISSION_READY"
+          warning_message="Marker plan is not emission-ready."
+        else
+          if [ -n "$SOURCE_FINGERPRINT" ]; then
+            if [ -r "$SOURCE_FINGERPRINT" ]; then
+              expected_fingerprint_json="$(jq -c . "$SOURCE_FINGERPRINT" 2>/dev/null || true)"
+            fi
+          elif [ -n "$AUTOPILOT_STATE" ] && [ -r "$AUTOPILOT_STATE" ]; then
+            expected_fingerprint_json="$(jq -c '.current_source_fingerprint // .pr_marker_plan_current_source_fingerprint // empty' "$AUTOPILOT_STATE" 2>/dev/null || true)"
+          fi
+
+          if ! source_fingerprint_shape_is_valid "$expected_fingerprint_json"; then
+            warning_code="MARKER_PLAN_FINGERPRINT_MISSING"
+            warning_message="Current source fingerprint is missing or malformed."
+          elif printf '%s' "$marker_plan_json" | jq -e --argjson expected "$expected_fingerprint_json" '.source_fingerprint == $expected' >/dev/null; then
+            result_status="proceed"
+            result_outcome="marker_split"
+            result_exit=0
+            marker_plan_valid=true
+            fingerprint_matched=true
+            result_blocked_ops_json='[]'
+            if [ "$final_status" = "block" ]; then
+              warning_code="FINAL_DIFF_SIZE_BLOCKED"
+              warning_message="Final diff is size-blocked, but the current marker plan is valid for scoped PR emission."
+            else
+              warning_code="MARKER_PLAN_READY"
+              warning_message="Current marker plan is valid; PR emission should use marker-scoped packets after the final backstop."
+            fi
+          else
+            marker_plan_valid=true
+            warning_code="MARKER_PLAN_FINGERPRINT_MISMATCH"
+            warning_message="Marker plan source fingerprint does not match the current source fingerprint."
+          fi
+        fi
+      fi
+    fi
+  fi
+
+  warning_json="$(structured_warning "$warning_code" "$(if [ "$result_status" = "proceed" ]; then printf 'warning'; else printf 'error'; fi)" "$warning_message" "final-reviewability-backstop" '{"feature_dir":"'"$FEATURE_DIR"'"}')"
+  marker_warnings_json="$(jq -cn --argjson marker_warnings "$marker_warnings_json" --argjson warning "$warning_json" '$marker_warnings + [$warning]')"
+
+  marker_plan_summary_json="$(
+    jq -cn \
+      --argjson valid "$marker_plan_valid" \
+      --argjson fingerprint_matched "$fingerprint_matched" \
+      --argjson marker_count "$marker_count" \
+      --argjson marker_order "$marker_order_json" \
+      --arg status "$marker_plan_status" \
+      --arg evidence_path "$marker_plan_rel" \
+      --argjson source_fingerprint "$marker_source_fingerprint_json" \
+      '{
+        valid: $valid,
+        fingerprint_matched: $fingerprint_matched,
+        marker_count: $marker_count,
+        marker_order: $marker_order,
+        status: $status,
+        evidence_path: (if $evidence_path == "" then null else $evidence_path end),
+        source_fingerprint: $source_fingerprint
+      }'
+  )"
+
+  marker_result_json="$(
+    jq -cn \
+      --arg status "$result_status" \
+      --arg outcome "$result_outcome" \
+      --arg reviewability_status "$final_status" \
+      --argjson gate_exit_code "${GATE_EXIT_CODE:-1}" \
+      --arg gate_reason "$reason" \
+      --arg evidence_path "$gate_evidence_rel" \
+      --argjson metrics "$metrics_json" \
+      --argjson marker_plan "$marker_plan_summary_json" \
+      --arg route "$route" \
+      --argjson markers "$markers_json" \
+      --argjson warnings "$marker_warnings_json" \
+      '{
+        status: $status,
+        outcome: $outcome,
+        mode: "final",
+        full_diff: {
+          reviewability_status: $reviewability_status,
+          gate_exit_code: $gate_exit_code,
+          reason: $gate_reason,
+          metrics: $metrics,
+          evidence_path: $evidence_path
+        },
+        marker_plan: $marker_plan,
+        emission: {
+          route: $route,
+          markers: $markers
+        },
+        warnings: $warnings
+      }'
+  )"
+
+  state_json="$(
+    jq -cn \
+      --arg status "$result_status" \
+      --arg outcome "$result_outcome" \
+      --arg gate_result "${raw_status:-block}" \
+      --arg gate_reason "$reason" \
+      --argjson metrics "$metrics_json" \
+      --argjson exception "$exception_state_json" \
+      --argjson blocked_operations "$result_blocked_ops_json" \
+      --arg timestamp "$TIMESTAMP" \
+      --arg marker_split_evidence_path "$marker_split_rel" \
+      --argjson marker_result "$marker_result_json" \
+      '{
+        schemaVersion: 1,
+        kind: "final_reviewability_gate",
+        status: $status,
+        outcome: $outcome,
+        mode: "final",
+        gate_result: $gate_result,
+        gate_reason: $gate_reason,
+        metrics: $metrics,
+        exception: $exception,
+        blocked_operations: $blocked_operations,
+        timestamp: $timestamp,
+        pr_created: false,
+        pr: null,
+        reslicing_packet_path: null,
+        marker_split_evidence_path: $marker_split_evidence_path,
+        full_diff: $marker_result.full_diff,
+        marker_plan: $marker_result.marker_plan,
+        emission: $marker_result.emission,
+        warnings: $marker_result.warnings,
+        no_pr_assertions: {
+          pr_created: false,
+          pr: null,
+          pr_body_generated: false,
+          single_pr_create_invoked: false,
+          gh_pr_create_invoked: false,
+          multi_pr_emission_invoked: false
+        }
+      }'
+  )"
+
+  state_shape_is_valid "$state_json" || emit_input_error "assembled marker-aware final gate state failed shape validation"
+  write_json_atomic "$STATE_OUTPUT" "$state_json"
+  write_json_atomic "$MARKER_SPLIT_OUTPUT" "$marker_result_json"
+
+  printf '%s\n' "$state_json"
+  exit "$result_exit"
+}
+
 GATE_RESULT=""
 GATE_EXIT_CODE=""
 DIFF_RANGE="origin/main...HEAD"
@@ -251,6 +634,10 @@ LAYER_PLAN=""
 SIZING_RESULT=""
 CHANGED_FILES=""
 FULL_VERIFICATION_EVIDENCE=""
+MARKER_PLAN=""
+AUTOPILOT_STATE=""
+SOURCE_FINGERPRINT=""
+MARKER_SPLIT_OUTPUT=""
 TIMESTAMP=""
 
 while [ "$#" -gt 0 ]; do
@@ -271,6 +658,10 @@ while [ "$#" -gt 0 ]; do
     --sizing-result) [ "$#" -ge 2 ] || emit_input_error "missing value for --sizing-result"; SIZING_RESULT="$2"; shift 2 ;;
     --changed-files) [ "$#" -ge 2 ] || emit_input_error "missing value for --changed-files"; CHANGED_FILES="$2"; shift 2 ;;
     --full-verification-evidence) [ "$#" -ge 2 ] || emit_input_error "missing value for --full-verification-evidence"; FULL_VERIFICATION_EVIDENCE="$2"; shift 2 ;;
+    --marker-plan) [ "$#" -ge 2 ] || emit_input_error "missing value for --marker-plan"; MARKER_PLAN="$2"; shift 2 ;;
+    --autopilot-state) [ "$#" -ge 2 ] || emit_input_error "missing value for --autopilot-state"; AUTOPILOT_STATE="$2"; shift 2 ;;
+    --source-fingerprint) [ "$#" -ge 2 ] || emit_input_error "missing value for --source-fingerprint"; SOURCE_FINGERPRINT="$2"; shift 2 ;;
+    --marker-split-output) [ "$#" -ge 2 ] || emit_input_error "missing value for --marker-split-output"; MARKER_SPLIT_OUTPUT="$2"; shift 2 ;;
     --timestamp) [ "$#" -ge 2 ] || emit_input_error "missing value for --timestamp"; TIMESTAMP="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) usage; emit_input_error "unknown argument $1" ;;
@@ -369,6 +760,15 @@ exception_state_json="$(
     end
   '
 )"
+
+marker_aware_requested=false
+if [ -n "$MARKER_PLAN" ] || [ -n "$AUTOPILOT_STATE" ] || [ -n "$SOURCE_FINGERPRINT" ] || [ -n "$MARKER_SPLIT_OUTPUT" ]; then
+  marker_aware_requested=true
+fi
+
+if [ "$marker_aware_requested" = "true" ]; then
+  handle_marker_aware_block "$exception_state_json"
+fi
 
 state_json="$(
   jq -cn \

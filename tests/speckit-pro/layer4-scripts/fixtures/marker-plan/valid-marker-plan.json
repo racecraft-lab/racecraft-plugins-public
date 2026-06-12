@@ -1,0 +1,204 @@
+{
+  "schema_version": "pr-marker-plan.v1",
+  "kind": "pr_marker_plan",
+  "feature_id": "PRSG-013",
+  "status": "emission_ready",
+  "source_fingerprint": {
+    "feature_spec_sha": "spec-sha-prsg-013",
+    "plan_declared_scope_sha": "plan-scope-sha-prsg-013",
+    "tasks_sha": "tasks-sha-prsg-013",
+    "reviewability_sha": "task-reviewability-sha-prsg-013",
+    "hazard_route_sha": "hazard-route-sha-prsg-013"
+  },
+  "markers": [
+    {
+      "id": "foundation",
+      "review_order": 1,
+      "kind": "foundation",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "Foundation",
+        "story_id": null,
+        "start_task_id": "T004",
+        "end_task_id": "T004"
+      },
+      "task_ids": [
+        "T004"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "No polish tasks fold into Foundation.",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh"
+        }
+      ],
+      "declared_tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh"
+      ],
+      "reviewability": {
+        "status": "warn",
+        "mode": "marker",
+        "scope": "foundation",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/foundation.json"
+      },
+      "hazards": [],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/foundation.json"
+      },
+      "emission_mapping": {
+        "status": "pending",
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/foundation/packet.json"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us1",
+      "review_order": 2,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 1",
+        "story_id": 1,
+        "start_task_id": "T009",
+        "end_task_id": "T015"
+      },
+      "task_ids": [
+        "T009",
+        "T010",
+        "T012",
+        "T013",
+        "T014",
+        "T015"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "No polish tasks fold into US1.",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh"
+        }
+      ],
+      "declared_tests": [
+        "bash -n speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh",
+        "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "marker",
+        "scope": "us1",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us1.json"
+      },
+      "hazards": [],
+      "subdivision": {
+        "status": "no_safe_boundary",
+        "details": {
+          "reason": "Final backstop work must stay together."
+        }
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/us1.json"
+      },
+      "emission_mapping": {
+        "status": "pending",
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/us1/packet.json"
+      },
+      "warnings": [
+        {
+          "code": "MARKER_SIZE_WARNING",
+          "severity": "warning",
+          "message": "US1 remains oversized but has no safe internal split.",
+          "source": "marker-plan",
+          "details": {
+            "marker_id": "us1"
+          }
+        }
+      ]
+    },
+    {
+      "id": "us2",
+      "review_order": 3,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 2",
+        "story_id": 2,
+        "start_task_id": "T016",
+        "end_task_id": "T018"
+      },
+      "task_ids": [
+        "T016",
+        "T017",
+        "T018"
+      ],
+      "folded_polish_task_ids": [
+        "T040"
+      ],
+      "folded_polish_target_reason": "Polish task T040 touches the same declared final-backstop test surface.",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "tests/speckit-pro/layer4-scripts/fixtures/marker-plan/valid-marker-plan.json"
+        }
+      ],
+      "declared_tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh"
+      ],
+      "reviewability": {
+        "status": "pass",
+        "mode": "marker",
+        "scope": "us2",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/us2.json"
+      },
+      "hazards": [],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/us2.json"
+      },
+      "emission_mapping": {
+        "status": "pending",
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/us2/packet.json"
+      },
+      "warnings": []
+    }
+  ],
+  "warnings": [
+    {
+      "code": "FINAL_DIFF_SIZE_BLOCKED",
+      "severity": "warning",
+      "message": "The full final diff is size-blocked; emit scoped PRs from persisted markers.",
+      "source": "marker-plan",
+      "details": {
+        "marker_ids": [
+          "foundation",
+          "us1",
+          "us2"
+        ]
+      }
+    }
+  ],
+  "created_at": "2026-06-11T12:00:00Z",
+  "updated_at": "2026-06-11T12:00:00Z"
+}

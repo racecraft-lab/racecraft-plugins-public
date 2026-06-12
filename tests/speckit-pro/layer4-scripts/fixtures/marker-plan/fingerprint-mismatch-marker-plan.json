@@ -1,0 +1,61 @@
+{
+  "schema_version": "pr-marker-plan.v1",
+  "kind": "pr_marker_plan",
+  "feature_id": "PRSG-013",
+  "status": "emission_ready",
+  "source_fingerprint": {
+    "feature_spec_sha": "spec-sha-prsg-013",
+    "plan_declared_scope_sha": "plan-scope-sha-prsg-013",
+    "tasks_sha": "tasks-sha-prsg-013",
+    "reviewability_sha": "old-task-reviewability-sha-prsg-013",
+    "hazard_route_sha": "hazard-route-sha-prsg-013"
+  },
+  "markers": [
+    {
+      "id": "foundation",
+      "review_order": 1,
+      "kind": "foundation",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "Foundation",
+        "story_id": null,
+        "start_task_id": "T004",
+        "end_task_id": "T004"
+      },
+      "task_ids": [
+        "T004"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "No polish tasks fold into Foundation.",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh"
+        }
+      ],
+      "declared_tests": [
+        "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh"
+      ],
+      "reviewability": {
+        "status": "warn",
+        "mode": "marker",
+        "scope": "foundation"
+      },
+      "hazards": [],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "specs/prsg-013-reviewability-markers/.process/checkpoints/foundation.json"
+      },
+      "emission_mapping": {
+        "status": "pending",
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/foundation/packet.json"
+      },
+      "warnings": []
+    }
+  ],
+  "warnings": []
+}

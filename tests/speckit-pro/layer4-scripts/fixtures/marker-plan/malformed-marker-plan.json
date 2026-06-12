@@ -1,0 +1,9 @@
+{
+  "schema_version": "pr-marker-plan.v1",
+  "kind": "pr_marker_plan",
+  "feature_id": "PRSG-013",
+  "status": "emission_ready",
+  "source_fingerprint": {},
+  "markers": [],
+  "warnings": []
+}

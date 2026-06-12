@@ -1,0 +1,17 @@
+{
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "canonical",
+    "status": "planned",
+    "source_fingerprint": {
+      "feature_spec_sha": "stale-feature-spec",
+      "plan_declared_scope_sha": "stale-plan",
+      "tasks_sha": "stale-tasks",
+      "reviewability_sha": "stale-reviewability",
+      "hazard_route_sha": "stale-hazard"
+    },
+    "markers": [],
+    "warnings": []
+  }
+}

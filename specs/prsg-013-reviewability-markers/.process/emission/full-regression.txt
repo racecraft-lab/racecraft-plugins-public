@@ -1,0 +1,9 @@
+PRSG-013 deterministic validation evidence:
+- jq/schema checks passed
+- bash syntax checks passed
+- targeted Layer 4 marker tests passed
+- Layer 3 eval registration passed 0/0
+- Layer 1 structural validation passed 978/978
+- default deterministic suite passed 2571/2571
+
+See docs/ai/specs/.process/PRSG-013-workflow.md for command details.

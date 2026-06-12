@@ -32,7 +32,7 @@ in order; do not collapse or defer.
 | 15 | Cleanup | cleanup ext | `$speckit-cleanup` |
 | 16 | Final Reviewability Backstop | (none) | `final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> ...` |
 | 17 | PR Body Generation | final backstop proceeded | `generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
-| 18 | PR Creation | final backstop proceeded | single-PR path for non-split routes; `multi-pr-emission.sh` for split-PR routes |
+| 18 | PR Creation | final backstop proceeded | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission.sh` for split-PR routes or marker-ready plans |
 | 19 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 20 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
 
@@ -122,11 +122,23 @@ skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git
 
 `final-reviewability-backstop.sh` is the mandatory stop-before-PR boundary.
 It runs the diff gate, writes top-level `final_reviewability_gate` state, and
-returns 0 only for `pass`, `warn`, or honored typed-exception outcomes. If it
-returns 1, do not generate a PR body, do not invoke any `gh pr create` variant,
-and do not run `multi-pr-emission.sh`; read the `reslicing_required` packet and
-resume from the named PRSG-007/008/009 operator step. If it returns 2, stop as
-a gate error; no re-slicing packet is valid for that run.
+returns 0 only for `pass`, `warn`, honored typed-exception outcomes, or final
+`marker_split` when a valid current `pr_marker_plan` is present. If a current
+`pr_marker_plan` exists, marker-based PR emission is the downstream PR path
+after any successful final backstop result; do not fall back to a single
+all-changes PR just because the final full-diff gate is `pass` or `warn`. A
+valid current size-only block also continues into marker emission; it is not a
+manual re-slicing stop. If it returns 1 for an unexcepted
+correctness block or missing/stale marker plan, do not generate a PR body, do
+not invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh`;
+read the `reslicing_required` packet and resume from the named PRSG-007/008/009
+operator step. If it returns 2, stop as a gate error; no re-slicing packet is
+valid for that run.
+
+For marker-aware PR preparation, record gate status/mode/exit/evidence path,
+fingerprint status, ordered marker IDs, checkpoints, warnings, final
+marker_split or marker-plan-ready handoff, packet validation, and PR mappings
+before PR side effects. All evidence paths must be repo-relative.
 
 `generate-pr-body.sh` uses the host repository's pull request template if it
 exists, preserves unknown host-required sections, appends missing review-packet
@@ -170,10 +182,11 @@ emission. The PRSG-008 `plan-layers.sh` output is the authoritative source of
 review order and slice membership. Codex MUST NOT infer, reroute, or re-slice
 work from changed files, reviewability warnings, or fallback heuristics.
 
-For non-split routes, keep the existing single-PR behavior. For split-PR routes,
-the previous all-changes PR path is forbidden, even when the layer plan has only
-one slice. A one-slice plan still goes through the same emission contract and
-opens one slice PR.
+For non-split routes with no current `pr_marker_plan`, keep the existing
+single-PR behavior. For split-PR routes or any current `pr_marker_plan` marked
+emission-ready, the previous all-changes PR path is forbidden, even when the
+layer/marker plan has only one slice. A one-slice plan still goes through the
+same emission contract and opens one slice PR.
 
 Codex parent-session responsibilities:
 
@@ -185,9 +198,11 @@ Codex parent-session responsibilities:
    workflow evidence. It must be the exact `plan-layers.sh` envelope with
    `status=ok`.
 4. After the final backstop proceeds, run
-   `skills/speckit-autopilot/scripts/multi-pr-emission.sh` with the layer plan
-   path, durable state path, feature branch, integration base, base SHA, full
-   verification evidence path, and optional changed-file scope evidence.
+   `skills/speckit-autopilot/scripts/multi-pr-emission.sh` with the layer or
+   marker plan path, durable state path, feature branch, integration base, base
+   SHA, full verification evidence path, and optional changed-file scope
+   evidence. Marker packets must validate against current marker evidence
+   before PR body generation, `gh pr create`, or equivalent PR side effects.
 5. Record each slice outcome in `update_plan`, `autopilot-state.json`, and the
    workflow evidence before advancing the next Post item.
 

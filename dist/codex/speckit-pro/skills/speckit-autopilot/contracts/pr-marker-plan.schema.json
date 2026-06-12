@@ -1,0 +1,383 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.local/speckit-pro/pr-marker-plan.schema.json",
+  "title": "PR Marker Plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "feature_id",
+    "status",
+    "source_fingerprint",
+    "markers",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "pr-marker-plan.v1"
+    },
+    "kind": {
+      "const": "pr_marker_plan"
+    },
+    "feature_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "enum": [
+        "planned",
+        "checkpointing",
+        "emission_ready",
+        "emitted",
+        "collapsed",
+        "stale",
+        "invalid"
+      ]
+    },
+    "source_fingerprint": {
+      "$ref": "#/$defs/source_fingerprint"
+    },
+    "markers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/marker"
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/warning"
+      }
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "updated_at": {
+      "type": "string"
+    }
+  },
+  "$defs": {
+    "source_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "feature_spec_sha",
+        "plan_declared_scope_sha",
+        "tasks_sha",
+        "reviewability_sha",
+        "hazard_route_sha"
+      ],
+      "properties": {
+        "feature_spec_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan_declared_scope_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tasks_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewability_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "hazard_route_sha": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "marker": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "review_order",
+        "kind",
+        "parent_marker_id",
+        "source_boundary",
+        "task_ids",
+        "folded_polish_task_ids",
+        "folded_polish_target_reason",
+        "declared_files",
+        "declared_tests",
+        "reviewability",
+        "hazards",
+        "subdivision",
+        "implementation_checkpoint",
+        "emission_mapping",
+        "warnings"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^(foundation|us[0-9]+(-part[0-9]+)?|full-spec)$"
+        },
+        "review_order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "kind": {
+          "enum": [
+            "foundation",
+            "user_story",
+            "user_story_part",
+            "full_spec"
+          ]
+        },
+        "parent_marker_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^us[0-9]+$"
+        },
+        "source_boundary": {
+          "$ref": "#/$defs/source_boundary"
+        },
+        "task_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "folded_polish_task_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "folded_polish_target_reason": {
+          "type": "string"
+        },
+        "declared_files": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/file_operation"
+          }
+        },
+        "declared_tests": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reviewability": {
+          "$ref": "#/$defs/reviewability"
+        },
+        "hazards": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "subdivision": {
+          "$ref": "#/$defs/subdivision"
+        },
+        "implementation_checkpoint": {
+          "$ref": "#/$defs/checkpoint"
+        },
+        "emission_mapping": {
+          "$ref": "#/$defs/emission_mapping"
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/warning"
+          }
+        }
+      }
+    },
+    "source_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "section",
+        "start_task_id",
+        "end_task_id"
+      ],
+      "properties": {
+        "section": {
+          "type": "string",
+          "minLength": 1
+        },
+        "story_id": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "start_task_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "end_task_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "file_operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "path"
+      ],
+      "properties": {
+        "operation": {
+          "enum": [
+            "NEW",
+            "MODIFIED",
+            "DELETED"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "reviewability": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status",
+        "mode",
+        "scope"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "warn",
+            "exception",
+            "block",
+            "not_estimated"
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "minLength": 1
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_path": {
+          "type": "string"
+        }
+      }
+    },
+    "subdivision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "details"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "none",
+            "safe_split",
+            "no_safe_boundary",
+            "hazard_collapsed"
+          ]
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    },
+    "checkpoint": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pending",
+            "complete"
+          ]
+        },
+        "evidence_path": {
+          "type": "string"
+        }
+      }
+    },
+    "emission_mapping": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "status"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "pending",
+            "marker_split",
+            "emitted",
+            "hazard_collapsed"
+          ]
+        },
+        "packet_path": {
+          "type": "string"
+        },
+        "pr_number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "pr_url": {
+          "type": "string"
+        }
+      }
+    },
+    "warning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "severity",
+        "message",
+        "source",
+        "details"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "severity": {
+          "enum": [
+            "info",
+            "warning",
+            "error"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

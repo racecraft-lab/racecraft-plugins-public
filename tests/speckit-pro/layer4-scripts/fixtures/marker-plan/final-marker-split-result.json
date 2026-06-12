@@ -1,0 +1,45 @@
+{
+  "status": "proceed",
+  "outcome": "marker_split",
+  "mode": "final",
+  "full_diff": {
+    "reviewability_status": "block",
+    "evidence_path": "specs/prsg-013-reviewability-markers/.process/emission/final-reviewability.json"
+  },
+  "marker_plan": {
+    "valid": true,
+    "fingerprint_matched": true,
+    "marker_count": 3
+  },
+  "emission": {
+    "route": "marker_split",
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/foundation/marker-packet.json"
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/us1/marker-packet.json"
+      },
+      {
+        "id": "us2-part1",
+        "review_order": 3,
+        "packet_path": "specs/prsg-013-reviewability-markers/.process/emission/us2-part1/marker-packet.json"
+      }
+    ]
+  },
+  "warnings": [
+    {
+      "code": "FINAL_SIZE_BLOCK",
+      "severity": "warning",
+      "message": "Final full diff is oversized, but marker packets are scoped.",
+      "source": "final-reviewability-backstop",
+      "details": {
+        "outcome": "marker_split"
+      }
+    }
+  ]
+}

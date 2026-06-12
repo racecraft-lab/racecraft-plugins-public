@@ -1,0 +1,21 @@
+{
+  "status": "block",
+  "mode": "tasks",
+  "feature_id": "safe-subdivision",
+  "scope": "feature",
+  "reason": "US1 exceeds task-count reviewability budget",
+  "is_size_only": true,
+  "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/safe-subdivision.json",
+  "metrics": {
+    "reviewable_loc": 980,
+    "production_files": 3,
+    "total_files": 5
+  },
+  "marker_estimates": {
+    "us1": {
+      "status": "block",
+      "reason": "story exceeds reviewable task budget",
+      "max_tasks": 2
+    }
+  }
+}

@@ -23,7 +23,16 @@
     "kind": { "const": "final_reviewability_gate" },
     "status": {
       "type": "string",
-      "enum": ["pass", "warn", "exception", "block", "error"]
+      "enum": ["pass", "warn", "exception", "block", "error", "proceed", "stop"]
+    },
+    "outcome": {
+      "type": "string",
+      "enum": ["marker_split", "correctness_stop"]
+    },
+    "mode": { "const": "final" },
+    "marker_split_evidence_path": {
+      "type": "string",
+      "pattern": "^(specs|docs|\\.specify|speckit-pro|tests)/"
     },
     "gate_result": { "type": "string", "minLength": 1 },
     "gate_reason": { "type": "string", "minLength": 1 },
@@ -67,6 +76,111 @@
     "reslicing_packet_path": {
       "type": ["string", "null"],
       "pattern": "^(specs|docs|\\.specify|speckit-pro)/"
+    },
+    "full_diff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewability_status", "gate_exit_code", "reason", "metrics", "evidence_path"],
+      "properties": {
+        "reviewability_status": {
+          "type": "string",
+          "enum": ["pass", "warn", "exception", "block", "error"]
+        },
+        "gate_exit_code": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": { "type": "string", "minLength": 1 },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "evidence_path": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "marker_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valid", "fingerprint_matched", "marker_count", "marker_order", "status", "evidence_path", "source_fingerprint"],
+      "properties": {
+        "valid": { "type": "boolean" },
+        "fingerprint_matched": { "type": "boolean" },
+        "marker_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "marker_order": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence_path": {
+          "type": ["string", "null"]
+        },
+        "source_fingerprint": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "emission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["route", "markers"],
+      "properties": {
+        "route": {
+          "type": "string",
+          "enum": ["marker_split", "hazard_collapsed", "single_pr"]
+        },
+        "markers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["id", "review_order"],
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "review_order": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "packet_path": {
+                "type": ["string", "null"]
+              }
+            }
+          }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/markerWarning" }
+    },
+    "no_pr_assertions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pr_created",
+        "pr",
+        "pr_body_generated",
+        "single_pr_create_invoked",
+        "gh_pr_create_invoked",
+        "multi_pr_emission_invoked"
+      ],
+      "properties": {
+        "pr_created": { "const": false },
+        "pr": { "type": "null" },
+        "pr_body_generated": { "const": false },
+        "single_pr_create_invoked": { "const": false },
+        "gh_pr_create_invoked": { "const": false },
+        "multi_pr_emission_invoked": { "const": false }
+      }
     }
   },
   "allOf": [
@@ -156,6 +270,57 @@
           "reslicing_packet_path": { "type": "null" }
         }
       }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "proceed" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["outcome", "mode", "full_diff", "marker_plan", "emission", "warnings", "marker_split_evidence_path", "no_pr_assertions"],
+        "properties": {
+          "outcome": { "const": "marker_split" },
+          "blocked_operations": {
+            "type": "array",
+            "maxItems": 0
+          },
+          "reslicing_packet_path": { "type": "null" },
+          "marker_plan": {
+            "type": "object",
+            "properties": {
+              "valid": { "const": true },
+              "fingerprint_matched": { "const": true },
+              "marker_count": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "const": "stop" } },
+        "required": ["status"]
+      },
+      "then": {
+        "required": ["outcome", "mode", "full_diff", "marker_plan", "emission", "warnings", "marker_split_evidence_path", "no_pr_assertions"],
+        "properties": {
+          "outcome": { "const": "correctness_stop" },
+          "blocked_operations": {
+            "type": "array",
+            "allOf": [
+              { "contains": { "const": "pr-body-generation" } },
+              { "contains": { "const": "single-pr-create" } },
+              { "contains": { "const": "multi-pr-emission" } }
+            ]
+          },
+          "pr_created": { "const": false },
+          "pr": { "type": "null" },
+          "reslicing_packet_path": { "type": "null" }
+        }
+      }
     }
   ],
   "$defs": {
@@ -177,6 +342,24 @@
         "branch_added": { "type": "boolean" },
         "honored": { "type": "boolean" },
         "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "markerWarning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "severity", "message", "source", "details"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error"]
+        },
+        "message": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
       }
     }
   }

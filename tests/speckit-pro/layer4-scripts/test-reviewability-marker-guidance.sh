@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+# test-reviewability-marker-guidance.sh - PRSG-013 guidance parity checks.
+
+set -euo pipefail
+
+TEST_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$TEST_DIR/../../.." && pwd)"
+
+# shellcheck source=../lib/assertions.sh
+source "$TEST_DIR/../lib/assertions.sh"
+
+CLAUDE_SKILL="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/SKILL.md"
+CLAUDE_GATE="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
+CLAUDE_PHASE="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/references/phase-execution.md"
+CLAUDE_POST="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+CLAUDE_WORKFLOW="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/references/workflow-file-protocol.md"
+CODEX_SKILL="$REPO_ROOT/speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+CODEX_PHASE="$REPO_ROOT/speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md"
+CODEX_POST="$REPO_ROOT/speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+CLAUDE_EVALS="$REPO_ROOT/tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json"
+CODEX_EVALS="$REPO_ROOT/tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json"
+
+claude_skill_body="$(cat "$CLAUDE_SKILL")"
+claude_gate_body="$(cat "$CLAUDE_GATE")"
+claude_phase_body="$(cat "$CLAUDE_PHASE")"
+claude_post_body="$(cat "$CLAUDE_POST")"
+claude_workflow_body="$(cat "$CLAUDE_WORKFLOW")"
+codex_skill_body="$(cat "$CODEX_SKILL")"
+codex_phase_body="$(cat "$CODEX_PHASE")"
+codex_post_body="$(cat "$CODEX_POST")"
+claude_evals_body="$(cat "$CLAUDE_EVALS")"
+codex_evals_body="$(cat "$CODEX_EVALS")"
+
+claude_combined="$claude_skill_body
+$claude_gate_body
+$claude_phase_body
+$claude_post_body
+$claude_workflow_body"
+codex_combined="$codex_skill_body
+$codex_phase_body
+$codex_post_body"
+evals_combined="$claude_evals_body
+$codex_evals_body"
+
+section "PRSG-013 reviewability marker guidance contract"
+
+set_test "Claude guidance says valid current size-only block continues to marker planning"
+assert_contains "$claude_combined" "valid current size-only"
+set_test "Claude guidance says size-only block is not a manual re-slicing stop"
+assert_contains "$claude_combined" "not a manual re-slicing stop"
+set_test "Claude guidance sends size-only block into marker planning"
+assert_contains "$claude_combined" "marker planning"
+set_test "Claude guidance sends size-only block into marker emission"
+assert_contains "$claude_combined" "marker emission"
+
+set_test "Codex guidance mirrors valid size-only continuation"
+assert_contains "$codex_combined" "valid current size-only"
+set_test "Codex guidance mirrors no manual re-slicing stop"
+assert_contains "$codex_combined" "not a manual re-slicing stop"
+set_test "Codex guidance mirrors marker planning"
+assert_contains "$codex_combined" "marker planning"
+set_test "Codex guidance mirrors marker emission"
+assert_contains "$codex_combined" "marker emission"
+
+set_test "Guidance preserves malformed/stale marker correctness stops"
+assert_contains "$claude_combined" "malformed/stale marker state"
+set_test "Guidance preserves failed verification stop"
+assert_contains "$claude_combined" "failed verification"
+set_test "Guidance preserves invalid packet stop"
+assert_contains "$claude_combined" "invalid packet"
+set_test "Guidance preserves unsafe output stop"
+assert_contains "$claude_combined" "unsafe output"
+set_test "Guidance preserves unusable gate evidence stop"
+assert_contains "$claude_combined" "unusable gate evidence"
+
+set_test "Codex guidance preserves malformed/stale marker correctness stops"
+assert_contains "$codex_combined" "malformed/stale marker state"
+set_test "Codex guidance preserves failed verification stop"
+assert_contains "$codex_combined" "failed verification"
+set_test "Codex guidance preserves invalid packet stop"
+assert_contains "$codex_combined" "invalid packet"
+set_test "Codex guidance preserves unsafe output stop"
+assert_contains "$codex_combined" "unsafe output"
+set_test "Codex guidance preserves unusable gate evidence stop"
+assert_contains "$codex_combined" "unusable gate evidence"
+
+set_test "Claude evidence prompts include gate status/mode/exit/evidence path"
+assert_contains "$claude_combined" "gate status/mode/exit/evidence path"
+set_test "Claude evidence prompts include fingerprint status"
+assert_contains "$claude_combined" "fingerprint status"
+set_test "Claude evidence prompts include ordered marker IDs"
+assert_contains "$claude_combined" "ordered marker IDs"
+set_test "Claude evidence prompts include checkpoints"
+assert_contains "$claude_combined" "checkpoints"
+set_test "Claude evidence prompts include warnings"
+assert_contains "$claude_combined" "warnings"
+set_test "Claude evidence prompts include final marker_split"
+assert_contains "$claude_combined" "final marker_split"
+set_test "Claude evidence prompts include packet validation"
+assert_contains "$claude_combined" "packet validation"
+set_test "Claude evidence prompts include PR mappings"
+assert_contains "$claude_combined" "PR mappings"
+
+set_test "Codex evidence prompts include gate status/mode/exit/evidence path"
+assert_contains "$codex_combined" "gate status/mode/exit/evidence path"
+set_test "Codex evidence prompts include fingerprint status"
+assert_contains "$codex_combined" "fingerprint status"
+set_test "Codex evidence prompts include ordered marker IDs"
+assert_contains "$codex_combined" "ordered marker IDs"
+set_test "Codex evidence prompts include checkpoints"
+assert_contains "$codex_combined" "checkpoints"
+set_test "Codex evidence prompts include warnings"
+assert_contains "$codex_combined" "warnings"
+set_test "Codex evidence prompts include final marker_split"
+assert_contains "$codex_combined" "final marker_split"
+set_test "Codex evidence prompts include packet validation"
+assert_contains "$codex_combined" "packet validation"
+set_test "Codex evidence prompts include PR mappings"
+assert_contains "$codex_combined" "PR mappings"
+
+set_test "Workflow guidance persists pr_marker_plan outside tasks.md"
+assert_contains "$claude_workflow_body" 'top-level `pr_marker_plan`'
+set_test "Workflow guidance forbids authoritative marker state in tasks.md"
+assert_contains "$claude_workflow_body" 'not authoritative marker state in `tasks.md`'
+set_test "Workflow guidance requires repo-relative evidence paths"
+assert_contains "$claude_workflow_body" "repo-relative"
+
+set_test "Layer 3 Claude eval covers size-only marker continuation"
+assert_contains "$claude_evals_body" "valid current size-only block"
+set_test "Layer 3 Claude eval rejects manual re-slicing stop"
+assert_contains "$claude_evals_body" "no manual re-slicing stop"
+set_test "Layer 3 Claude eval requires marker evidence"
+assert_contains "$claude_evals_body" "marker evidence"
+set_test "Layer 3 Codex eval covers size-only marker continuation"
+assert_contains "$codex_evals_body" "valid current size-only block"
+set_test "Layer 3 Codex eval rejects manual re-slicing stop"
+assert_contains "$codex_evals_body" "no manual re-slicing stop"
+set_test "Layer 3 Codex eval requires marker evidence"
+assert_contains "$codex_evals_body" "marker evidence"
+
+set_test "Paired evals require final marker_split"
+assert_contains "$evals_combined" "final marker_split"
+set_test "Paired evals require PR mappings"
+assert_contains "$evals_combined" "PR mappings"
+
+test_summary

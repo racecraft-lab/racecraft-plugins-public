@@ -1,0 +1,21 @@
+{
+  "status": "block",
+  "mode": "tasks",
+  "feature_id": "no-safe-boundary",
+  "scope": "feature",
+  "reason": "US1 exceeds task-count reviewability budget",
+  "is_size_only": true,
+  "evidence_path": "specs/prsg-013-reviewability-markers/.process/reviewability/no-safe-boundary.json",
+  "metrics": {
+    "reviewable_loc": 1040,
+    "production_files": 2,
+    "total_files": 4
+  },
+  "marker_estimates": {
+    "us1": {
+      "status": "block",
+      "reason": "story exceeds reviewable task budget",
+      "max_tasks": 2
+    }
+  }
+}

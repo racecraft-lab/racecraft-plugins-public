@@ -307,8 +307,16 @@ reviewability task gate:
 skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/<feature>
 ```
 
-If the gate returns `block` without a ratified split exception, stop before
-implementation and split the spec.
+Run the gate with guarded capture so a compatibility nonzero exit cannot abort
+the parent session before it inspects stdout. Record stdout, stderr, exit code,
+gate status/mode/exit/evidence path, and a repo-relative evidence path. If the
+gate returns `pass`, `warn`, or an honored typed exception, continue. If the
+gate returns a valid current size-only `status=block`, continue into marker
+planning and later marker emission; it is not a manual re-slicing stop.
+Correctness stops remain blocking: malformed/stale marker state, failed
+verification, invalid packet, unsafe output, unusable gate evidence, invalid
+JSON, unreadable artifacts, missing reviewability status/mode, stale
+fingerprints, or any non-size safety finding.
 
 - no `Phase 7: Implement - Pending task decomposition` item remains
 - one or more concrete `Phase 7:` items exist
@@ -317,9 +325,30 @@ implementation and split the spec.
 If any check fails, repair both state stores and print the corrected checklist
 summary before continuing.
 
+When reviewability evidence is marker-planning input, persist top-level
+`pr_marker_plan` in `autopilot-state.json` and mirror the same schema version,
+source fingerprint, fingerprint status, ordered marker IDs, review order,
+checkpoints, warnings, final marker_split placeholder, packet validation
+placeholder, and PR mappings placeholder in the workflow evidence. `tasks.md`
+stays the task source; it is not authoritative marker state. Use repo-relative
+evidence paths.
+
+On resume, validate the marker-plan fingerprint against the current spec,
+plan-declared file/test scope, tasks, reviewability evidence, and hazard route.
+Missing, malformed, stale, or fingerprint-mismatched marker plans are
+correctness stops at marker-required boundaries.
+
 Use `implement-executor` for test and implementation tasks unless Step 0.11
 found a more specific project implementation agent. The parent session dispatches
 all workers directly; subagents do not spawn nested agents.
+
+When a current `pr_marker_plan` is available, execute, checkpoint, and record
+Phase 7 evidence in marker order. Run each marker's tasks according to
+`markers[].review_order`; keep normal task dependency and `[P]` parallel rules
+inside a marker. After each marker completes, record marker ID, ordered task IDs,
+verification evidence path, fingerprint status, checkpoints, warnings, and any
+blocked/fixed tasks. Do not infer a new marker order from changed files or
+reviewability warnings.
 
 ## PR Body Generation
 
@@ -330,11 +359,22 @@ skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir s
 skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
 ```
 
-Run `generate-pr-body.sh` only after the final backstop exits 0. Exit 1 is
-`reslicing_required`: do not generate a PR body, invoke any `gh pr create`
-variant, or run `multi-pr-emission.sh`; read the packet's `operator_steps` and
-resume from the named PRSG-007/008/009 phase. Exit 2 is a gate error: state is
-written, no packet is valid, and the run stops for operator repair.
+Run `generate-pr-body.sh` only after the final backstop exits 0. Exit 0 includes
+`pass`, `warn`, honored typed exception, and final `marker_split` with a current
+`pr_marker_plan`. When a current `pr_marker_plan` exists, PR preparation
+continues through marker emission even if the final full-diff result is only
+`pass` or `warn`. A full-diff size block with current marker evidence also
+proceeds to marker emission and is not a manual re-slicing stop. Exit 1 is
+`reslicing_required` only for unexcepted correctness or missing-marker cases:
+do not generate a PR body, invoke any `gh pr create` variant, or run
+`multi-pr-emission.sh`; read the packet's `operator_steps` and resume from the
+named PRSG-007/008/009 phase. Exit 2 is a gate error: state is written, no
+packet is valid, and the run stops for operator repair.
+
+For marker-aware PR preparation, record gate status/mode/exit/evidence path,
+fingerprint status, ordered marker IDs, checkpoints, warnings, final
+marker_split or marker-plan-ready handoff, packet validation, and PR mappings
+before PR side effects.
 
 `generate-pr-body.sh` uses the host repository's pull request template if it
 exists, preserves unknown host-required sections, appends missing review-packet

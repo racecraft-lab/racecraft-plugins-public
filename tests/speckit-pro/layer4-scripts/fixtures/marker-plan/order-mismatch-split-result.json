@@ -1,0 +1,32 @@
+{
+  "status": "proceed",
+  "outcome": "marker_split",
+  "mode": "final",
+  "full_diff": {
+    "reviewability_status": "block",
+    "evidence_path": "specs/prsg-013-reviewability-markers/.process/emission/final-reviewability.json"
+  },
+  "marker_plan": {
+    "valid": true,
+    "fingerprint_matched": true,
+    "marker_count": 3
+  },
+  "emission": {
+    "route": "marker_split",
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1
+      },
+      {
+        "id": "us1",
+        "review_order": 9
+      },
+      {
+        "id": "us2-part1",
+        "review_order": 3
+      }
+    ]
+  },
+  "warnings": []
+}
