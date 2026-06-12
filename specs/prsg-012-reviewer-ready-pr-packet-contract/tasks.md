@@ -64,7 +64,7 @@
 
 - [x] T018 [US2] Add body heading order, source marker, UAT, traceability, verification, scope, and Known Gaps assertions in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
 - [x] T019 [US2] Add validator assertions for missing, duplicated, and out-of-order headings; headings satisfied only by packet JSON, host template content, code fences, comments, generated fixtures, `.process` files, or generated zones; stale placeholders; unexpanded variables; example text; banned labels; missing source markers; missing traceability mappings; missing verification evidence; and missing scope evidence in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
-- [ ] T020 [P] [US2] Add body fixture coverage for required canonical sections, traceability mappings, UAT compatibility, and source/verification/scope evidence in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md`
+- [x] T020 [P] [US2] Add body fixture coverage for required canonical sections, traceability mappings, UAT compatibility, and source/verification/scope evidence in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md`
 
 ### Implementation for User Story 2
 
