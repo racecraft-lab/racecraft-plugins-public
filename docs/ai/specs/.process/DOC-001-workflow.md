@@ -32,8 +32,8 @@ The design concept is the source of truth for these setup decisions:
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created spec with 3 user stories, 11 functional requirements, 6 success criteria, and 0 `[NEEDS CLARIFICATION]` markers |
 | Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; G2 passed with 0 clarification markers and no consensus items |
-| Plan | `/speckit-plan` | In Progress | Planning research matrix and IA skeleton deliverable |
-| Checklist | `/speckit-checklist` | Pending | Recommended domains: documentation-quality, accessibility, error-handling |
+| Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and early research decision record; G3 passed; reviewability estimate passed with 0 projected production LOC |
+| Checklist | `/speckit-checklist` | In Progress | Running documentation-quality checklist first |
 | Tasks | `/speckit-tasks` | Pending | Research-only spike tasks; no site scaffold or package files |
 | Analyze | `/speckit-analyze` | Pending | Verify no implementation creep and traceability to PRD/roadmap/design concept |
 | Implement | `/speckit-implement` | Pending | Write `docs/ai/research/interactive-documentation-framework-spike.md` |
@@ -218,9 +218,11 @@ Racecraft needs a static documentation site, but the repository currently has no
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Research matrix approach and IA skeleton contract |
-| `research.md` | Pending | Candidate framework evidence and final recommendation |
-| `quickstart.md` | Pending | Reviewer commands and inspection checklist if useful |
+| `plan.md` | Complete | Research matrix approach, IA skeleton contract, and DOC-002 handoff |
+| `research.md` | Complete | Candidate framework evidence and final recommendation captured as SpecKit research |
+| `data-model.md` | Complete | Framework Candidate, Evaluation Criterion, IA Route, Source Evidence, Command Recommendation, and Spike Report entities |
+| `quickstart.md` | Complete | Reviewer validation checklist for report, IA skeleton, scope boundary, and DOC-002 handoff |
+| `contracts/` | N/A | No API, CLI, service, schema, or runtime interface exposed by DOC-001 |
 
 ---
 
