@@ -242,6 +242,13 @@ assert_failure_json() {
   fi
 }
 
+assert_failure_rule() {
+  local rule_id="$1"
+  assert_json_file_check "$LAST_STDOUT" \
+    "any(f.get('rule_id') == '$rule_id' for f in data['failures'])" \
+    "failure JSON should include rule_id $rule_id"
+}
+
 section "script presence"
 
 set_test "validate-pr-packet.sh exists"
@@ -318,6 +325,89 @@ assert_captured_stderr_contains "$invalid_missing_result" "validation failure re
 assert_failure_json "invalid-missing-evidence" "validation_failure" "1" "$invalid_missing_result"
 
 set_test "invalid missing evidence makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+invalid_body_rel="$PACKET_FIXTURE_REL/invalid-body-content.json"
+invalid_body_body_rel="$PACKET_FIXTURE_REL/bodies/invalid-body-content.md"
+invalid_body_json="$TEST_REPO/$invalid_body_rel"
+invalid_body_body="$TEST_REPO/$invalid_body_body_rel"
+mkdir -p "$(dirname "$invalid_body_body")"
+cat > "$invalid_body_body" <<'EOF'
+<!-- speckit-pro-review-packet-source: tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-body-content.json -->
+
+## Summary
+
+<!-- speckit-pro-editable:summary:start -->
+Plain-English Summary: TODO replace {{SUMMARY}}.
+<!-- speckit-pro-editable:summary:end -->
+
+## Summary
+
+Duplicate heading should fail canonical heading validation.
+
+## What Changed
+
+<!-- speckit-pro-editable:what_changed:start -->
+<!-- TODO: hidden template comment must not survive rendering -->
+Example: replace this text before opening a PR.
+<!-- speckit-pro-editable:what_changed:end -->
+
+## Why It Matters
+
+<!-- speckit-pro-editable:why_it_matters:start -->
+Reviewer evidence is incomplete.
+<!-- speckit-pro-editable:why_it_matters:end -->
+
+## How To Review
+
+Inspect the invalid fixture.
+
+## How To UAT
+
+Placeholder UAT text.
+
+## UAT Runbook
+
+Compatibility heading is present.
+
+## Scope
+
+Changed files are missing.
+
+## Known Gaps
+
+Verification, source markers, and traceability are missing.
+EOF
+jq \
+  --arg packet_id "invalid-body-content" \
+  --arg body "$invalid_body_body_rel" \
+  --arg result "$(validation_result_rel invalid-body-content)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$invalid_body_json"
+
+invalid_body_result="$(validation_result_rel invalid-body-content)"
+reset_gh_capture
+run_validator_capture "invalid-body-content" "$invalid_body_rel"
+
+set_test "invalid body content exits 1"
+assert_captured_exit "1"
+
+set_test "invalid body content stderr identifies validation failure"
+assert_captured_stderr_contains "validate-pr-packet.sh: validation_failure: invalid-body-content:" \
+  "validation failure stderr"
+
+assert_failure_json "invalid-body-content" "validation_failure" "1" "$invalid_body_result"
+
+set_test "invalid body content reports heading order rule"
+assert_failure_rule "body.heading_order"
+
+set_test "invalid body content reports stale body text rule"
+assert_failure_rule "body.banned_or_placeholder"
+
+set_test "invalid body content reports traceability rule"
+assert_failure_rule "body.traceability"
+
+set_test "invalid body content makes no PR creation attempts"
 assert_no_pr_create_attempts
 
 section "input errors"
