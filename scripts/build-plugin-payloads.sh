@@ -17,6 +17,7 @@ import re
 import shutil
 import sys
 from pathlib import Path
+from typing import Optional
 
 repo = Path(sys.argv[1]).resolve()
 source = repo / "speckit-pro"
@@ -48,20 +49,20 @@ def copy_path(src: Path, dst: Path) -> None:
         shutil.copy2(src, dst)
 
 
-def copy_required(src_name: str, dst_root: Path, dst_name: str | None = None) -> None:
+def copy_required(src_name: str, dst_root: Path, dst_name: Optional[str] = None) -> None:
     src = source / src_name
     if not src.exists():
         raise SystemExit(f"required source path missing: {src}")
     copy_path(src, dst_root / (dst_name or src_name))
 
 
-def copy_optional(src_name: str, dst_root: Path, dst_name: str | None = None) -> None:
+def copy_optional(src_name: str, dst_root: Path, dst_name: Optional[str] = None) -> None:
     src = source / src_name
     if src.exists():
         copy_path(src, dst_root / (dst_name or src_name))
 
 
-def copy_repo_optional(src_name: str, dst_root: Path, dst_name: str | None = None) -> None:
+def copy_repo_optional(src_name: str, dst_root: Path, dst_name: Optional[str] = None) -> None:
     src = repo / src_name
     if src.exists():
         copy_path(src, dst_root / (dst_name or src_name))
