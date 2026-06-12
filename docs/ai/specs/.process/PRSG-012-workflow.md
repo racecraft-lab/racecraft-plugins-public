@@ -33,8 +33,8 @@ The design concept is the source of truth for these scoping decisions:
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Generated `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | G2 passed with packet schema, title generation, and safe-refinement decisions recorded |
-| Plan | `/speckit-plan` | In Progress | Define scripts, schemas, failure evidence, and test matrix |
-| Checklist | `/speckit-checklist` | Pending | Run contract, error-handling, and reliability checks |
+| Plan | `/speckit-plan` | Complete | Generated plan/research/data model/contract/quickstart; G3 passed |
+| Checklist | `/speckit-checklist` | In Progress | Starting API contracts checklist |
 | Tasks | `/speckit-tasks` | Pending | Organize by user story and validation boundary |
 | Analyze | `/speckit-analyze` | Pending | Check consistency against the design concept |
 | Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
@@ -242,9 +242,9 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Define validator architecture and packet schema |
-| `contracts/` | Pending | PR packet or slice packet schema updates |
-| `quickstart.md` | Pending | Include local packet validation examples if useful |
+| `plan.md` | Complete | Defines shared validator architecture, rendered packet schema, and one-slice reviewability plan |
+| `contracts/` | Complete | Added `contracts/pr-packet.schema.json` for rendered packet metadata |
+| `quickstart.md` | Complete | Includes local packet validation examples and verification commands |
 
 ---
 

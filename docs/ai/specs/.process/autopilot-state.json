@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T15:13:01Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-06-12T15:50:49Z",
+  "active_step": "Phase 4: Checklist - api-contracts",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -126,11 +126,25 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G3",
+      "gate_status": "passed",
+      "reviewability_estimate": {
+        "status": "pass",
+        "projected": 0,
+        "declared_files": {
+          "production": 0,
+          "new": 8,
+          "modified": 6,
+          "total_entries": 14
+        },
+        "note": "Planner records about 350 projected reviewable LOC and the advisory estimator returned pass; current estimator did not count plugin shell paths as production LOC."
+      },
+      "summary": "Created plan.md, research.md, data-model.md, quickstart.md, and contracts/pr-packet.schema.json. G3 passed with 0 unresolved markers."
     },
     {
       "step": "Phase 4: Checklist - api-contracts",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - api-contracts Consensus",
