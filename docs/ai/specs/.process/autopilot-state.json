@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T14:40:55Z",
-  "active_step": "Phase 2: Clarify - Title Generation",
+  "updated_at": "2026-06-12T14:55:29Z",
+  "active_step": "Phase 2: Clarify - Safe Refinement",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -106,15 +106,17 @@
     },
     {
       "step": "Phase 2: Clarify - Title Generation",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted structured generated_title metadata, feat(speckit-pro) default for implementation packets, explicit metadata-only type/scope overrides, single-PR display-title source, split PR marker/layer-plan title sources, and strict public-readable post-colon description validation."
     },
     {
       "step": "Phase 2: Clarify - Title Generation Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus accepted conventional title defaults and rejected any internal codes in title descriptions, even when mixed with readable words."
     },
     {
       "step": "Phase 2: Clarify - Safe Refinement",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Safe Refinement Consensus",

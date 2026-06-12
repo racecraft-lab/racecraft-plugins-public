@@ -90,11 +90,13 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 
 - **FR-001**: The system MUST generate a packet-owned PR title for the single-PR path.
 - **FR-002**: The system MUST generate a packet-owned PR title for each split-PR path.
-- **FR-003**: Every generated PR title MUST follow conventional commit form and name the visible or operator-visible change.
+- **FR-003**: Every generated PR title MUST render as `<type>(<scope>): <plain-English description>` and name the visible or operator-visible change. Implementation packets MUST default to `feat(speckit-pro):`; only explicit packet title metadata MAY override type or scope, and overrides MUST use an allowed conventional commit type and a valid public scope.
+- **FR-003A**: The title generator and validator MUST NOT infer type, scope, or description from branch names, spec IDs, slice IDs, task IDs, file paths, or free-form PR body text.
+- **FR-003B**: The title description after the colon MUST be public-readable plain English and MUST NOT contain internal identifiers or control tokens, including branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, stale placeholders, unexpanded variables, or banned labels. Validation MUST reject any such token in the description, not only descriptions made solely of internal codes.
 - **FR-004**: Every PR creation path MUST use the generated title and generated body file as the PR title and body inputs.
 - **FR-005**: A shared deterministic PR packet validator MUST run before every PR creation attempt.
 - **FR-006**: The validator MUST evaluate rendered title and body text after packet rendering, not only schema or source data shape.
-- **FR-007**: The validator MUST reject stale placeholders, unfilled template comments, unexpanded variables, and example text that remains in the rendered packet.
+- **FR-007**: The validator MUST reject stale placeholders, unfilled template comments, unexpanded variables, example text, branch-derived descriptions, slice-id-only descriptions, internal code tokens, and invalid conventional commit prefixes that remain in the rendered packet.
 - **FR-008**: The validator MUST reject rendered bodies missing any required reviewer-facing heading: Summary, What Changed, Why It Matters, How To Review, How To UAT, Verification, Scope, or Known Gaps.
 - **FR-009**: Rendered bodies MUST keep the literal `## UAT Runbook` compatibility heading while also providing the reviewer-facing How To UAT section.
 - **FR-010**: The validator MUST reject rendered packets missing required rendered source/provenance markers for generated packet content and evidence sources. The legacy `speckit-pro-review-packet-source` HTML comment MAY remain for backward compatibility, but MUST NOT satisfy protected source-marker validation.
@@ -138,7 +140,8 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 
 ### Key Entities *(include if feature involves data)*
 
-- **PR Packet**: A rendered PR title and body for one PR target, including schema version, packet identity, mode, target, generated title, body file, required sections, UAT content, rendered source/provenance markers, scope evidence, verification evidence, known-gap language, editable field boundaries, and validation result path. PRSG-012 uses a shared `pr-packet.schema.json` for both single-PR and split-PR flows; split packets keep `slice-packet.schema.json` as slice evidence/source input and include slice identity or the source slice packet path.
+- **PR Packet**: A rendered PR title and body for one PR target, including schema version, packet identity, mode, target, structured generated-title metadata, body file, required sections, UAT content, rendered source/provenance markers, scope evidence, verification evidence, known-gap language, editable field boundaries, and validation result path. PRSG-012 uses a shared `pr-packet.schema.json` for both single-PR and split-PR flows; split packets keep `slice-packet.schema.json` as slice evidence/source input and include slice identity or the source slice packet path.
+- **Generated Title Metadata**: Structured title data with final `value`, conventional commit `type`, `scope`, public-readable `description`, source evidence, and rejected candidates. Single-PR title descriptions come from the feature/spec display title normalized into an action phrase. Split-PR title descriptions come from PR marker `source_boundary.section` in marker mode, or the layer-plan increment name in legacy layer-plan mode. Slice IDs remain metadata and are never title description text.
 - **Packet Validation Result**: A JSON record describing pass or fail status, evaluated rules, packet identity, mode, title value or path, body file, failures, remediation evidence, whether PR creation was blocked, and timestamps.
 - **Workflow Event**: A concise process log entry written when validation blocks a packet before PR creation.
 - **Sanctioned Prose Field**: A maintainer-editable narrative field that may be refined without changing protected governance or evidence sections.
@@ -157,6 +160,9 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 ## Assumptions
 
 - Existing SPEC-006a/b UAT runbook wiring remains the source of UAT content for generated packets.
+- Generated title metadata stores the final title value plus type, scope, description, source evidence, and rejected candidates. `gh pr create --title` receives only the final rendered title value.
+- Single-PR title descriptions come from the feature/spec display title in the spec, workflow, or roadmap, normalized into a short action phrase. If no public-readable phrase can be produced, validation blocks instead of falling back to branch names or spec codes.
+- Split-PR title descriptions come from persisted PR marker `source_boundary.section` values in marker mode, or from layer-plan increment names in legacy layer-plan mode. Slice IDs, branch names, and file paths are metadata only and never title description text.
 - A required source marker is an explicit rendered marker outside HTML comments, code fences, generated fixtures, `.process` artifacts, generated zones, and other non-rendered or non-provenance text.
 - The legacy HTML comment marker `speckit-pro-review-packet-source` may remain for backward compatibility with existing self-checks, but it does not satisfy PRSG-012 protected source-marker validation.
 - Sanctioned prose fields are limited to explicit editable blocks under `Summary`, `What Changed`, and `Why It Matters`; generated governance and evidence fields remain validator-protected.
