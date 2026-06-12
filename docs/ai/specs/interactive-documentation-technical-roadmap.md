@@ -1,6 +1,6 @@
 # Racecraft Interactive Documentation Implementation Roadmap
 
-> SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC-SPEC catalog.
+> SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
 > Status: Ready for SPEC decomposition. Created 2026-06-12.
@@ -11,14 +11,14 @@ The feature is decomposed into 10 specifications across 6 dependency tiers:
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
-| 1 | DOC-SPEC-001 | Static docs framework and IA spike | Sequential |
-| 2 | DOC-SPEC-002 | Unified landing and IA shell | Sequential |
-| 3 | DOC-SPEC-003, DOC-SPEC-004 | Claude and Codex install paths | Parallel |
-| 4 | DOC-SPEC-005, DOC-SPEC-006 | First-run tutorial and safe interactive aids | Parallel |
-| 5 | DOC-SPEC-007, DOC-SPEC-008, DOC-SPEC-009 | Reference, troubleshooting/trust, maintainer workflow | Parallel |
-| 6 | DOC-SPEC-010 | Search, accessibility, deep links, docs validation | Sequential hardening |
+| 1 | DOC-001 | Static docs framework and IA spike | Sequential |
+| 2 | DOC-002 | Unified landing and IA shell | Sequential |
+| 3 | DOC-003, DOC-004 | Claude and Codex install paths | Parallel |
+| 4 | DOC-005, DOC-006 | First-run tutorial and safe interactive aids | Parallel |
+| 5 | DOC-007, DOC-008, DOC-009 | Reference, troubleshooting/trust, maintainer workflow | Parallel |
+| 6 | DOC-010 | Search, accessibility, deep links, docs validation | Sequential hardening |
 
-**Execution Order:** DOC-SPEC-001 -> DOC-SPEC-002 -> DOC-SPEC-003/DOC-SPEC-004 -> DOC-SPEC-005/DOC-SPEC-006 -> DOC-SPEC-007/DOC-SPEC-008/DOC-SPEC-009 -> DOC-SPEC-010
+**Execution Order:** DOC-001 -> DOC-002 -> DOC-003/DOC-004 -> DOC-005/DOC-006 -> DOC-007/DOC-008/DOC-009 -> DOC-010
 
 ## Reviewability Contract
 
@@ -27,50 +27,50 @@ Every spec is a thin documentation-product slice. The `Projected reviewable LOC`
 ## Dependency Graph
 
 ```text
-DOC-SPEC-001
+DOC-001
   |
   v
-DOC-SPEC-002
+DOC-002
   |-----------|
   v           v
-DOC-SPEC-003 DOC-SPEC-004
+DOC-003 DOC-004
   | \       / |
   |  v     v  |
-  | DOC-SPEC-005
+  | DOC-005
   |      |
   v      v
-DOC-SPEC-006
+DOC-006
   |
   v
-DOC-SPEC-007 -> DOC-SPEC-008
+DOC-007 -> DOC-008
         \       /
          v     v
-       DOC-SPEC-009
+       DOC-009
           |
           v
-       DOC-SPEC-010
+       DOC-010
 ```
 
 ## Progress Tracking
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| DOC-SPEC-001 | Static docs framework and IA spike | Pending | DOC-SPEC-001-workflow.md | Specify |
-| DOC-SPEC-002 | Unified landing page and IA shell | Pending | DOC-SPEC-002-workflow.md | Blocked by DOC-SPEC-001 |
-| DOC-SPEC-003 | Claude Code marketplace installation path | Pending | DOC-SPEC-003-workflow.md | Blocked by DOC-SPEC-002 |
-| DOC-SPEC-004 | Codex marketplace installation path | Pending | DOC-SPEC-004-workflow.md | Blocked by DOC-SPEC-002 |
-| DOC-SPEC-005 | First successful workflow tutorial | Pending | DOC-SPEC-005-workflow.md | Blocked by DOC-SPEC-003, DOC-SPEC-004 |
-| DOC-SPEC-006 | Safe interactive selector and validation aids | Pending | DOC-SPEC-006-workflow.md | Blocked by DOC-SPEC-002, DOC-SPEC-003, DOC-SPEC-004 |
-| DOC-SPEC-007 | Command, workflow, manifest, and file-layout reference | Pending | DOC-SPEC-007-workflow.md | Blocked by DOC-SPEC-003, DOC-SPEC-004 |
-| DOC-SPEC-008 | Troubleshooting, security, trust, update, rollback | Pending | DOC-SPEC-008-workflow.md | Blocked by DOC-SPEC-007 |
-| DOC-SPEC-009 | Maintainer and contributor release workflow | Pending | DOC-SPEC-009-workflow.md | Blocked by DOC-SPEC-007 |
-| DOC-SPEC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-SPEC-010-workflow.md | Blocked by DOC-SPEC-001, DOC-SPEC-002, DOC-SPEC-006 |
+| DOC-001 | Static docs framework and IA spike | Pending | DOC-001-workflow.md | Specify |
+| DOC-002 | Unified landing page and IA shell | Pending | DOC-002-workflow.md | Blocked by DOC-001 |
+| DOC-003 | Claude Code marketplace installation path | Pending | DOC-003-workflow.md | Blocked by DOC-002 |
+| DOC-004 | Codex marketplace installation path | Pending | DOC-004-workflow.md | Blocked by DOC-002 |
+| DOC-005 | First successful workflow tutorial | Pending | DOC-005-workflow.md | Blocked by DOC-003, DOC-004 |
+| DOC-006 | Safe interactive selector and validation aids | Pending | DOC-006-workflow.md | Blocked by DOC-002, DOC-003, DOC-004 |
+| DOC-007 | Command, workflow, manifest, and file-layout reference | Pending | DOC-007-workflow.md | Blocked by DOC-003, DOC-004 |
+| DOC-008 | Troubleshooting, security, trust, update, rollback | Pending | DOC-008-workflow.md | Blocked by DOC-007 |
+| DOC-009 | Maintainer and contributor release workflow | Pending | DOC-009-workflow.md | Blocked by DOC-007 |
+| DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Blocked by DOC-001, DOC-002, DOC-006 |
 
 ## Specification Sections
 
-### DOC-SPEC-001: Static docs framework and IA spike
+### DOC-001: Static docs framework and IA spike
 
-**Priority:** P1 | **Depends On:** None | **Enables:** DOC-SPEC-002
+**Priority:** P1 | **Depends On:** None | **Enables:** DOC-002
 
 **Goal:** Select the static docs-site stack and IA foundation with evidence.
 
@@ -94,9 +94,9 @@ Budget result: spike, LOC not applicable
 - `docs/roadmap-interactive-documentation.md` - Prompt-requested roadmap.
 - `docs/ai/research/interactive-documentation-framework-spike.md` - Likely spike output.
 
-### DOC-SPEC-002: Unified landing page and IA shell
+### DOC-002: Unified landing page and IA shell
 
-**Priority:** P1 | **Depends On:** DOC-SPEC-001 | **Enables:** DOC-SPEC-003, DOC-SPEC-004, DOC-SPEC-006, DOC-SPEC-010
+**Priority:** P1 | **Depends On:** DOC-001 | **Enables:** DOC-003, DOC-004, DOC-006, DOC-010
 
 **Goal:** Create the static docs shell, landing page, nav, and task-first IA.
 
@@ -116,12 +116,12 @@ Budget result: within budget
 - Interactive widgets beyond basic navigation.
 
 **Key Files:**
-- Future site config and docs content paths from DOC-SPEC-001.
+- Future site config and docs content paths from DOC-001.
 - `README.md` and `speckit-pro/README.md` as source evidence.
 
-### DOC-SPEC-003: Claude Code marketplace installation path
+### DOC-003: Claude Code marketplace installation path
 
-**Priority:** P1 | **Depends On:** DOC-SPEC-002 | **Enables:** DOC-SPEC-005, DOC-SPEC-007, DOC-SPEC-008
+**Priority:** P1 | **Depends On:** DOC-002 | **Enables:** DOC-005, DOC-007, DOC-008
 
 **Goal:** Ship Claude-specific install/update/remove and invocation docs.
 
@@ -147,9 +147,9 @@ Budget result: within budget
 - `speckit-pro/agents/`
 - `speckit-pro/hooks/hooks.json`
 
-### DOC-SPEC-004: Codex marketplace installation path
+### DOC-004: Codex marketplace installation path
 
-**Priority:** P1 | **Depends On:** DOC-SPEC-002 | **Enables:** DOC-SPEC-005, DOC-SPEC-007, DOC-SPEC-008
+**Priority:** P1 | **Depends On:** DOC-002 | **Enables:** DOC-005, DOC-007, DOC-008
 
 **Goal:** Ship Codex-specific install/update/remove and custom-agent registration docs.
 
@@ -176,9 +176,9 @@ Budget result: within budget
 - `speckit-pro/codex-agents/`
 - `speckit-pro/codex-hooks.json`
 
-### DOC-SPEC-005: First successful workflow tutorial and lifecycle explainer
+### DOC-005: First successful workflow tutorial and lifecycle explainer
 
-**Priority:** P1 | **Depends On:** DOC-SPEC-003, DOC-SPEC-004 | **Enables:** DOC-SPEC-006, DOC-SPEC-008
+**Priority:** P1 | **Depends On:** DOC-003, DOC-004 | **Enables:** DOC-006, DOC-008
 
 **Goal:** Guide a user through one successful `speckit-pro` workflow.
 
@@ -206,9 +206,9 @@ Budget result: within budget
 - `speckit-pro/skills/speckit-autopilot/SKILL.md`
 - Codex skill mirrors.
 
-### DOC-SPEC-006: Safe interactive selector and validation aids
+### DOC-006: Safe interactive selector and validation aids
 
-**Priority:** P1 | **Depends On:** DOC-SPEC-002, DOC-SPEC-003, DOC-SPEC-004 | **Enables:** DOC-SPEC-010
+**Priority:** P1 | **Depends On:** DOC-002, DOC-003, DOC-004 | **Enables:** DOC-010
 
 **Goal:** Add safe interactive docs aids without executing local plugin workflows.
 
@@ -230,14 +230,14 @@ Budget result: within budget
 - Auto-editing user config.
 
 **Key Files:**
-- Site component paths from DOC-SPEC-001.
+- Site component paths from DOC-001.
 - `.claude-plugin/marketplace.json`
 - `.agents/plugins/marketplace.json`
 - Source/dist plugin manifests.
 
-### DOC-SPEC-007: Command, workflow, manifest, and file-layout reference
+### DOC-007: Command, workflow, manifest, and file-layout reference
 
-**Priority:** P2 | **Depends On:** DOC-SPEC-003, DOC-SPEC-004 | **Enables:** DOC-SPEC-008, DOC-SPEC-009
+**Priority:** P2 | **Depends On:** DOC-003, DOC-004 | **Enables:** DOC-008, DOC-009
 
 **Goal:** Provide stable reference pages for all plugin and repo surfaces.
 
@@ -265,9 +265,9 @@ Budget result: within budget
 - `scripts/`
 - `tests/speckit-pro/`
 
-### DOC-SPEC-008: Troubleshooting, security, trust, update, rollback
+### DOC-008: Troubleshooting, security, trust, update, rollback
 
-**Priority:** P1 | **Depends On:** DOC-SPEC-003, DOC-SPEC-004, DOC-SPEC-007 | **Enables:** DOC-SPEC-010
+**Priority:** P1 | **Depends On:** DOC-003, DOC-004, DOC-007 | **Enables:** DOC-010
 
 **Goal:** Help users diagnose failures and evaluate plugin trust boundaries.
 
@@ -293,9 +293,9 @@ Budget result: within budget
 - `speckit-pro/hooks/hooks.json`
 - Marketplace and plugin manifests.
 
-### DOC-SPEC-009: Maintainer and contributor release workflow
+### DOC-009: Maintainer and contributor release workflow
 
-**Priority:** P1 | **Depends On:** DOC-SPEC-007 | **Enables:** DOC-SPEC-010
+**Priority:** P1 | **Depends On:** DOC-007 | **Enables:** DOC-010
 
 **Goal:** Give contributors a release-ready checklist for docs/plugin changes.
 
@@ -322,9 +322,9 @@ Budget result: within budget
 - `scripts/build-plugin-payloads.sh`
 - `scripts/sync-marketplace-versions.sh`
 
-### DOC-SPEC-010: Search, accessibility, deep links, docs validation
+### DOC-010: Search, accessibility, deep links, docs validation
 
-**Priority:** P2 | **Depends On:** DOC-SPEC-001, DOC-SPEC-002, DOC-SPEC-006 | **Enables:** Feature complete
+**Priority:** P2 | **Depends On:** DOC-001, DOC-002, DOC-006 | **Enables:** Feature complete
 
 **Goal:** Harden the docs site so it is findable, accessible, linkable, responsive, and validated in CI.
 
@@ -344,7 +344,7 @@ Budget result: within budget
 - Live install tests in CI.
 
 **Key Files:**
-- Site config and docs validation config from DOC-SPEC-001.
+- Site config and docs validation config from DOC-001.
 - `.github/workflows/pr-checks.yml` if docs CI is added.
 - Existing validation scripts where reusable.
 
@@ -363,4 +363,3 @@ Budget result: within budget
 - Prompt roadmap: [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md)
 - Traceability matrix: [../../traceability-interactive-documentation.md](../../traceability-interactive-documentation.md)
 - Roadmap-MOC home note: [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-

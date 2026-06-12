@@ -306,7 +306,7 @@ Analytics implementation is out of scope until the docs stack and hosting path a
 ### Assumptions
 
 - Static docs should be hosted from this repository, not a separate marketing repo.
-- Docusaurus/MDX is a leading candidate, but not selected until DOC-SPEC-001 completes.
+- Docusaurus/MDX is a leading candidate, but not selected until DOC-001 completes.
 - Safe interactive docs are acceptable if every interaction degrades to static content.
 - Detailed implementation tasks belong in later Spec Kit phases, not this PRD.
 
@@ -344,13 +344,13 @@ Cut sections that only restate background, duplicate another artifact, or descri
 
 | Feature | Acceptance criteria | SPEC | Depends on | Priority |
 |---|---|---|---|---|
-| DOC-FR-001 Static docs framework and IA spike | AC-1.* | DOC-SPEC-001 | None | P1 |
-| DOC-FR-002 Unified landing page and IA shell | AC-2.* | DOC-SPEC-002 | DOC-SPEC-001 | P1 |
-| DOC-FR-003 Claude Code marketplace installation path | AC-3.* | DOC-SPEC-003 | DOC-SPEC-002 | P1 |
-| DOC-FR-004 Codex marketplace installation path | AC-4.* | DOC-SPEC-004 | DOC-SPEC-002 | P1 |
-| DOC-FR-005 First successful workflow tutorial | AC-5.* | DOC-SPEC-005 | DOC-SPEC-003, DOC-SPEC-004 | P1 |
-| DOC-FR-006 Safe interactive selector and validation aids | AC-6.* | DOC-SPEC-006 | DOC-SPEC-002, DOC-SPEC-003, DOC-SPEC-004 | P1 |
-| DOC-FR-007 Command, workflow, manifest, and file-layout reference | AC-7.* | DOC-SPEC-007 | DOC-SPEC-003, DOC-SPEC-004 | P2 |
-| DOC-FR-008 Troubleshooting, security, trust, update, rollback | AC-8.* | DOC-SPEC-008 | DOC-SPEC-003, DOC-SPEC-004, DOC-SPEC-007 | P1 |
-| DOC-FR-009 Maintainer and contributor release workflow | AC-9.* | DOC-SPEC-009 | DOC-SPEC-007 | P1 |
-| DOC-FR-010 Search, accessibility, deep links, docs validation | AC-10.* | DOC-SPEC-010 | DOC-SPEC-001, DOC-SPEC-002, DOC-SPEC-006 | P2 |
+| DOC-FR-001 Static docs framework and IA spike | AC-1.* | DOC-001 | None | P1 |
+| DOC-FR-002 Unified landing page and IA shell | AC-2.* | DOC-002 | DOC-001 | P1 |
+| DOC-FR-003 Claude Code marketplace installation path | AC-3.* | DOC-003 | DOC-002 | P1 |
+| DOC-FR-004 Codex marketplace installation path | AC-4.* | DOC-004 | DOC-002 | P1 |
+| DOC-FR-005 First successful workflow tutorial | AC-5.* | DOC-005 | DOC-003, DOC-004 | P1 |
+| DOC-FR-006 Safe interactive selector and validation aids | AC-6.* | DOC-006 | DOC-002, DOC-003, DOC-004 | P1 |
+| DOC-FR-007 Command, workflow, manifest, and file-layout reference | AC-7.* | DOC-007 | DOC-003, DOC-004 | P2 |
+| DOC-FR-008 Troubleshooting, security, trust, update, rollback | AC-8.* | DOC-008 | DOC-003, DOC-004, DOC-007 | P1 |
+| DOC-FR-009 Maintainer and contributor release workflow | AC-9.* | DOC-009 | DOC-007 | P1 |
+| DOC-FR-010 Search, accessibility, deep links, docs validation | AC-10.* | DOC-010 | DOC-001, DOC-002, DOC-006 | P2 |
