@@ -241,6 +241,14 @@ validate_public_text() {
       return
     fi
   done
+
+  local head_branch
+  head_branch="$(jq_get "$packet" '.target.head_branch')"
+  if [ -n "$head_branch" ] && { [[ "$title" == *"$head_branch"* ]] || [[ "$description" == *"$head_branch"* ]]; }; then
+    add_failure "title.branch_ref" "generated_title" \
+      "Generated title text must not contain the packet head branch." \
+      "Use public-readable source-boundary prose for generated_title.description."
+  fi
 }
 
 validate_packet() {
@@ -277,6 +285,17 @@ validate_packet() {
     "title.type" "generated_title.type" \
     "generated_title.type must be an allowed conventional commit type." \
     "Use feat, fix, chore, docs, refactor, or test."
+  require_jq_true "$packet" '(.generated_title.scope | test("^[a-z][a-z0-9-]*$"))' \
+    "title.scope" "generated_title.scope" \
+    "generated_title.scope must be a public lowercase conventional commit scope." \
+    "Use an explicit allowed packet metadata scope such as speckit-pro."
+  require_jq_true "$packet" '
+    .generated_title as $title
+    | $title.value
+    | startswith($title.type + "(" + $title.scope + "): ")
+  ' "title.metadata_consistency" "generated_title" \
+    "generated_title.value must use the explicit generated_title.type and generated_title.scope metadata." \
+    "Regenerate the title from metadata instead of accepting candidate-only type or scope overrides."
   require_jq_true "$packet" '(.verification_evidence // []) | length > 0' \
     "evidence.verification" "verification_evidence" \
     "Packet must include verification evidence." \

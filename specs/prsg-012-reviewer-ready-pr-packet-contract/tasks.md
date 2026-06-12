@@ -48,7 +48,7 @@
 
 - [x] T013 [US1] Generate single-PR `generated_title` metadata from the feature display title in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
 - [x] T014 [US1] Generate split-PR `generated_title` metadata from marker source boundaries or layer-plan increment names in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
-- [ ] T015 [US1] Implement conventional title validation, explicit metadata-only type/scope override validation, and banned-token rejection in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [x] T015 [US1] Implement conventional title validation, explicit metadata-only type/scope override validation, and banned-token rejection in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
 - [x] T016 [US1] Pass generated packet target, title, and body values to split PR creation with `gh pr create --base --head --title --body-file` in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
 - [ ] T017 [US1] Update single-PR creation guidance to use generated packet target, title, and body values in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
 
