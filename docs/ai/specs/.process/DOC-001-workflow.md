@@ -35,8 +35,8 @@ The design concept is the source of truth for these setup decisions:
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and early research decision record; G3 passed; reviewability estimate passed with 0 projected production LOC |
 | Checklist | `/speckit-checklist` | Complete | Completed documentation-quality, accessibility, and error-handling; G4 passed with 0 `[Gap]` markers |
 | Tasks | `/speckit-tasks` | Complete | Created 28 research-only tasks across 5 phases; G5 passed; atomicity route is one navigable PR |
-| Analyze | `/speckit-analyze` | In Progress | Verify no implementation creep and traceability to PRD/roadmap/design concept |
-| Implement | `/speckit-implement` | Pending | Write `docs/ai/research/interactive-documentation-framework-spike.md` |
+| Analyze | `/speckit-analyze` | Complete | 0 findings; DOC-FR-001 task coverage, live-source refresh tasks, route-level Diataxis IA, and no-implementation boundary verified; G6 passed |
+| Implement | `/speckit-implement` | In Progress | Write `docs/ai/research/interactive-documentation-framework-spike.md` |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -370,7 +370,16 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| N/A | N/A | No findings. `spec.md`, `plan.md`, `tasks.md`, PRD, roadmaps, and DOC-001 design concept are consistent for Phase 6. | G6 passed with marker counts C:0/H:0/M:0/L:0. |
+
+### Confidence Gate
+
+| Field | Value |
+|-------|-------|
+| Mode | Advisory |
+| Threshold | 0.90 |
+| Result | Soft-skip |
+| Reason | `confidence-gate.sh` returned `NO_DATA` because no synthesizer confidence emit was present; no unresolved findings require consensus |
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T21:45:00Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-12T22:12:00Z",
+  "active_step": "Phase 7: Foundation - Research Artifact Structure (T001-T004)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -215,19 +215,33 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "marker_counts": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "summary": "Analyze found 0 findings. Cross-artifact consistency, DOC-FR-001 acceptance-criterion task coverage, explicit live-source refresh tasks, route-level Diataxis IA scope, and the no-implementation boundary are verified."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved findings; consensus not required."
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed",
+      "mode": "advisory",
+      "threshold": 0.9,
+      "result": "soft_skip",
+      "reason": "confidence-gate.sh returned NO_DATA because no synthesizer confidence emit was present; no unresolved findings require consensus."
     },
     {
       "step": "Phase 7: Foundation - Research Artifact Structure (T001-T004)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Candidate Comparison (T005-T014)",
