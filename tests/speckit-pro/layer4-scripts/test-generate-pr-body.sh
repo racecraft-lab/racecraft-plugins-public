@@ -458,4 +458,25 @@ assert_contains "$generated_body" "<!-- speckit-pro-editable:why_it_matters:star
 set_test "Rendered body preserves UAT Runbook compatibility heading"
 assert_contains "$generated_body" "## UAT Runbook"
 
+set_test "Rendered body includes feature source marker"
+assert_contains "$generated_body" "Source: feature specification defines reviewer-ready PR packet behavior."
+
+set_test "Rendered body includes schema source marker"
+assert_contains "$generated_body" "Source: schema contract defines editable field markers."
+
+set_test "Rendered body includes quickstart verification source marker"
+assert_contains "$generated_body" "Source: quickstart defines single-packet validation evidence."
+
+set_test "Rendered body includes traceability mapping"
+assert_contains "$generated_body" "Traceability:"
+
+set_test "Rendered body includes verification command evidence"
+assert_contains "$generated_body" "bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh"
+
+set_test "Rendered body includes changed-file scope evidence"
+assert_contains "$generated_body" "Changed files:"
+
+set_test "Rendered body includes Known Gaps section content"
+assert_contains "$generated_body" "No known gaps"
+
 test_summary
