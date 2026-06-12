@@ -113,10 +113,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T038 [US4] Render exact full-line editable marker pairs for `summary`, `what_changed`, and `why_it_matters` in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
-- [ ] T039 [US4] Store editable field metadata and protected body fingerprints with editable blocks elided in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
-- [ ] T040 [US4] Reject protected body changes, malformed editable boundaries, unknown HTML comments, stale template comments, and host template interference in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-- [ ] T041 [US4] Document sanctioned editable fields and protected governance limits in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
+- [x] T038 [US4] Render exact full-line editable marker pairs for `summary`, `what_changed`, and `why_it_matters` in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
+- [x] T039 [US4] Store editable field metadata and protected body fingerprints with editable blocks elided in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
+- [x] T040 [US4] Reject protected body changes, malformed editable boundaries, unknown HTML comments, stale template comments, and host template interference in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [x] T041 [US4] Document sanctioned editable fields and protected governance limits in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
 
 **Checkpoint**: US4 is complete when sanctioned prose edits pass and protected evidence edits fail with deterministic remediation evidence.
 

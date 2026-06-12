@@ -372,13 +372,18 @@ opens one slice PR.
    `.git/speckit-pr-body.md`. If the marker is still absent after the
    re-run, log a loud warning to the workflow log and proceed (fail-open
    — this never blocks PR creation).
-6c. **Fill the body in plain English — write for a non-expert public reader.**
-   The generator emits the structure with placeholder comments. Edit
-   `.git/speckit-pr-body.md` in place to replace the `<!-- ... -->` comments
-   under **What changed**, **Why it matters**, and **Anything reviewers should
-   know** with real content drawn from `spec.md`, `plan.md`, and the diff. This
-   is the ONE sanctioned edit of the generated body — everything below stays
-   as generated. Style rules (the PR page is the public face of the plugin):
+6c. **Refine only sanctioned prose fields — write for a non-expert public reader.**
+   The generator emits exact full-line editable marker pairs for `summary`,
+   `what_changed`, and `why_it_matters`. Edit only the prose between these
+   marker pairs:
+   `<!-- speckit-pro-editable:summary:start -->` / `<!-- speckit-pro-editable:summary:end -->`,
+   `<!-- speckit-pro-editable:what_changed:start -->` / `<!-- speckit-pro-editable:what_changed:end -->`,
+   and `<!-- speckit-pro-editable:why_it_matters:start -->` /
+   `<!-- speckit-pro-editable:why_it_matters:end -->`.
+   The validator elides those three regions before checking the protected-body
+   fingerprint, so sanctioned prose edits pass while changes to generated
+   source markers, UAT content, traceability, scope, verification evidence,
+   known gaps, headings, or unknown HTML comments fail. Style rules:
    - **Lead with what the change does, in human terms.** A reader who has never
      seen this repo should understand it at a glance.
    - **No internal jargon.** Drop requirement IDs (`FR-009`), internal layer
@@ -388,11 +393,11 @@ opens one slice PR.
      `<details>Reviewer checklist &amp; scope details</details>` block to
      top-level headings, and do NOT pad it — the auto-filled numbers plus a
      one-line rollback are enough.
-   - **Do not touch the `## UAT Runbook` section or the
-     `speckit-pro-review-packet-source` marker** — leave both exactly as the
-     generator produced them.
-   - Omit **Anything reviewers should know** entirely if there is nothing real
-     to say. An empty section is worse than no section.
+   - **Do not touch protected generated sections** such as `How To Review`,
+     `How To UAT`, `Verification`, `Scope`, `Known Gaps`, `## UAT Runbook`, or
+     the `speckit-pro-review-packet-source` marker.
+   - Do not add template comments, hidden TODOs, or ad hoc HTML comments; they
+     are treated as stale generated-body content and block PR creation.
 6d. Validate the packet before any single-PR create attempt:
    `skills/speckit-autopilot/scripts/validate-pr-packet.sh .git/speckit-pr-packet.json`
    Continue only when this just-run validator invocation exits 0 and writes a

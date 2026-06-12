@@ -291,11 +291,43 @@ single_packet_changed_files_json() {
   fi
 }
 
+protected_body_sha() {
+  local body_file="$1"
+  awk '
+    function trim(s) { sub(/[ \t\r]+$/, "", s); return s }
+    {
+      line=trim($0)
+      if (!in_block && line == "## Summary") in_block=1
+      if (!in_block) next
+      if (seen_known_gaps && known_gaps_body_seen && line == "") exit
+      if (seen_known_gaps && line ~ /^#{1,6}[[:space:]]+/) exit
+
+      if (line == "<!-- speckit-pro-editable:summary:start -->") {
+        field="summary"; in_edit=1; print line; print "<elided:summary>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:what_changed:start -->") {
+        field="what_changed"; in_edit=1; print line; print "<elided:what_changed>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:why_it_matters:start -->") {
+        field="why_it_matters"; in_edit=1; print line; print "<elided:why_it_matters>"; next
+      }
+      if (in_edit && line == "<!-- speckit-pro-editable:" field ":end -->") {
+        in_edit=0; field=""; print line; next
+      }
+      if (in_edit) next
+
+      print line
+      if (line == "## Known Gaps") seen_known_gaps=1
+      else if (seen_known_gaps && line != "") known_gaps_body_seen=1
+    }
+  ' "$body_file"
+}
+
 single_packet_body_sha() {
   if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$OUTPUT_FILE" | awk '{print $1}'
+    protected_body_sha "$OUTPUT_FILE" | shasum -a 256 | awk '{print $1}'
   else
-    jq -n -r --rawfile body "$OUTPUT_FILE" '$body | @base64' | awk '{printf "%064d\n", 0}'
+    protected_body_sha "$OUTPUT_FILE" | jq -R -s -r '@base64' | awk '{printf "%064d\n", 0}'
   fi
 }
 
@@ -496,7 +528,7 @@ write_single_packet_metadata() {
         protected_body_fingerprint: {
           algorithm: "sha256",
           value: $body_sha,
-          normalization: "sha256 of the rendered body as emitted by generate-pr-body.sh; editable elision is finalized by the protected-fingerprint task.",
+          normalization: "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
           elided_fields: [
             "summary",
             "what_changed",
@@ -567,6 +599,27 @@ append_missing_section() {
 for heading in "What changed" "Why it matters" "Anything reviewers should know"; do
   append_missing_section "$heading"
 done
+
+strip_html_comments_in_place() {
+  local file="$1" tmp
+  tmp="$(mktemp)"
+  awk '
+    BEGIN { in_comment=0 }
+    {
+      line=$0
+      if (in_comment) {
+        if (line ~ /-->/) in_comment=0
+        next
+      }
+      if (line ~ /<!--/) {
+        if (line !~ /-->/) in_comment=1
+        next
+      }
+      print
+    }
+  ' "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
 
 append_slice_packet_sections() {
   local packet="$1"
@@ -702,6 +755,7 @@ append_slice_packet_sections() {
 }
 
 if [ -n "$SLICE_PACKET" ]; then
+  strip_html_comments_in_place "$OUTPUT_FILE"
   append_slice_packet_sections "$SLICE_PACKET"
 fi
 

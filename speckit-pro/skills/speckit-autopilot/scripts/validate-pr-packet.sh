@@ -218,6 +218,44 @@ contains_banned_text() {
   [[ "$value" =~ (ELI5|Plain-English[[:space:]]Summary|TODO|PRSG-[0-9]+|SPEC-[0-9A-Za-z_-]+|FR-[0-9A-Za-z_-]+|SC-[0-9A-Za-z_-]+|L[0-9]+|\{\{|\}\}|\$\{|<!--[[:space:]]*[^>]*-->|Example:) ]]
 }
 
+protected_body_sha() {
+  local path="$1"
+  awk '
+    function trim(s) { sub(/[ \t\r]+$/, "", s); return s }
+    {
+      line=trim($0)
+      if (!in_block && line == "## Summary") in_block=1
+      if (!in_block) next
+      if (seen_known_gaps && known_gaps_body_seen && line == "") exit
+      if (seen_known_gaps && line ~ /^#{1,6}[[:space:]]+/) exit
+
+      if (line == "<!-- speckit-pro-editable:summary:start -->") {
+        field="summary"; in_edit=1; print line; print "<elided:summary>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:what_changed:start -->") {
+        field="what_changed"; in_edit=1; print line; print "<elided:what_changed>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:why_it_matters:start -->") {
+        field="why_it_matters"; in_edit=1; print line; print "<elided:why_it_matters>"; next
+      }
+      if (in_edit && line == "<!-- speckit-pro-editable:" field ":end -->") {
+        in_edit=0; field=""; print line; next
+      }
+      if (in_edit) next
+
+      print line
+      if (line == "## Known Gaps") seen_known_gaps=1
+      else if (seen_known_gaps && line != "") known_gaps_body_seen=1
+    }
+  ' "$path" | {
+    if command -v shasum >/dev/null 2>&1; then
+      shasum -a 256 | awk '{print $1}'
+    else
+      awk '{printf "%064d\n", 0}'
+    fi
+  }
+}
+
 validate_required_headings() {
   local packet="$1"
   require_jq_true "$packet" '
@@ -255,7 +293,7 @@ validate_editable_fields() {
 }
 
 validate_body_file() {
-  local body_file="$1" body_abs="$REPO_ROOT/$body_file"
+  local body_file="$1" packet="$2" body_abs="$REPO_ROOT/$body_file"
   if [ -z "$body_file" ]; then
     add_failure "body.path" "body_file" "body_file is required." "Write a rendered PR body and record its repo-relative path."
     return
@@ -294,6 +332,43 @@ validate_body_file() {
       "Regenerate the body from finalized packet evidence before PR creation."
   fi
 
+  local field start_count end_count start_line end_line
+  for field in summary what_changed why_it_matters; do
+    start_count="$(grep -Fxc "<!-- speckit-pro-editable:$field:start -->" "$body_abs" || true)"
+    end_count="$(grep -Fxc "<!-- speckit-pro-editable:$field:end -->" "$body_abs" || true)"
+    start_line="$(grep -Fn "<!-- speckit-pro-editable:$field:start -->" "$body_abs" | head -1 | cut -d: -f1 || true)"
+    end_line="$(grep -Fn "<!-- speckit-pro-editable:$field:end -->" "$body_abs" | head -1 | cut -d: -f1 || true)"
+    if [ "$start_count" != "1" ] || [ "$end_count" != "1" ] || [ -z "$start_line" ] || [ -z "$end_line" ] || [ "$start_line" -ge "$end_line" ]; then
+      add_failure "body.editable_boundaries" "body_file" \
+        "Editable field markers are missing, duplicated, malformed, or out of order." \
+        "Regenerate exact full-line editable marker pairs for summary, what_changed, and why_it_matters."
+      break
+    fi
+  done
+
+  if awk '
+    BEGIN { legacy=0; bad=0 }
+    {
+      line=$0
+      sub(/[ \t\r]+$/, "", line)
+      if (legacy) {
+        if (line == "-->") legacy=0
+        next
+      }
+      if (line ~ /^<!-- speckit-pro-review-packet-source/) {
+        if (line !~ /-->$/) legacy=1
+        next
+      }
+      if (line ~ /^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):(start|end) -->$/) next
+      if (line ~ /<!--/) { bad=1; exit }
+    }
+    END { exit bad ? 0 : 1 }
+  ' "$body_abs"; then
+    add_failure "body.unknown_comment" "body_file" \
+      "Rendered body contains an unknown or stale HTML comment outside allowed packet markers." \
+      "Remove template comments and keep only editable-boundary comments plus the legacy packet-source marker."
+  fi
+
   if ! grep -Fq "Traceability:" "$body_abs"; then
     add_failure "body.traceability" "body_file" \
       "Rendered body is missing traceability evidence." \
@@ -315,6 +390,15 @@ validate_body_file() {
         "Regenerate the body with canonical sections, editable markers, UAT compatibility, and source evidence."
     fi
   done
+
+  local expected_fingerprint actual_fingerprint
+  expected_fingerprint="$(jq_get "$packet" '.protected_body_fingerprint.value')"
+  actual_fingerprint="$(protected_body_sha "$body_abs")"
+  if [ -n "$expected_fingerprint" ] && [ "$actual_fingerprint" != "$expected_fingerprint" ]; then
+    add_failure "body.protected_fingerprint" "body_file" \
+      "Protected body fingerprint changed outside sanctioned editable prose fields." \
+      "Restore generated governance/evidence sections or regenerate the packet after intentional protected changes."
+  fi
 }
 
 validate_public_text() {
@@ -442,7 +526,7 @@ validate_packet() {
 
   validate_required_headings "$packet"
   validate_editable_fields "$packet"
-  validate_body_file "$body_file"
+  validate_body_file "$body_file" "$packet"
   validate_public_text "$packet"
 
   if [ -s "$failures_file" ]; then

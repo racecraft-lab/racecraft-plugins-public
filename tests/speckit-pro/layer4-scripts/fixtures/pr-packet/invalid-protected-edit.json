@@ -105,7 +105,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "c0a54e5984816899ad791ec53d3e872c3f71a7ffeef60764fb85bd8a1bc60ebd",
+    "value": "f0a4e1862bdf1e6b59e6e8ca82675d5dfcb01878b3ebf5a8b5d239613bbd9394",
     "normalization": "LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

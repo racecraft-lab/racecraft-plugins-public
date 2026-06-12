@@ -111,6 +111,44 @@ repo_relative_path() {
   esac
 }
 
+protected_body_sha() {
+  local path="$1"
+  awk '
+    function trim(s) { sub(/[ \t\r]+$/, "", s); return s }
+    {
+      line=trim($0)
+      if (!in_block && line == "## Summary") in_block=1
+      if (!in_block) next
+      if (seen_known_gaps && known_gaps_body_seen && line == "") exit
+      if (seen_known_gaps && line ~ /^#{1,6}[[:space:]]+/) exit
+
+      if (line == "<!-- speckit-pro-editable:summary:start -->") {
+        field="summary"; in_edit=1; print line; print "<elided:summary>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:what_changed:start -->") {
+        field="what_changed"; in_edit=1; print line; print "<elided:what_changed>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:why_it_matters:start -->") {
+        field="why_it_matters"; in_edit=1; print line; print "<elided:why_it_matters>"; next
+      }
+      if (in_edit && line == "<!-- speckit-pro-editable:" field ":end -->") {
+        in_edit=0; field=""; print line; next
+      }
+      if (in_edit) next
+
+      print line
+      if (line == "## Known Gaps") seen_known_gaps=1
+      else if (seen_known_gaps && line != "") known_gaps_body_seen=1
+    }
+  ' "$path" | {
+    if command -v shasum >/dev/null 2>&1; then
+      shasum -a 256 | awk '{print $1}'
+    else
+      awk '{printf "%064d\n", 0}'
+    fi
+  }
+}
+
 sha256_file() {
   local path="$1"
   if command -v shasum >/dev/null 2>&1; then
@@ -1693,7 +1731,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
     if [ "$MARKER_MODE" != true ]; then
       body_file_rel="$(repo_relative_path "$body_file" "$persist_root")"
       slice_packet_rel="$(repo_relative_path "$packet_path" "$persist_root")"
-      body_sha="$(sha256_file "$body_file")"
+      body_sha="$(protected_body_sha "$body_file")"
       pr_packet_json="$(
         jq -n \
           --argjson slice "$slice_json" \
@@ -1810,7 +1848,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
               protected_body_fingerprint: {
                 algorithm: "sha256",
                 value: $body_sha,
-                normalization: "sha256 of rendered body; editable elision is enforced by the safe-refinement task.",
+                normalization: "canonical packet block only; LF line endings; trailing whitespace trimmed; editable block bodies replaced by <elided:field_id> before sha256.",
                 elided_fields: [
                   "summary",
                   "what_changed",
