@@ -29,7 +29,7 @@
       }
     ]
   },
-  "body_file": "/Users/fredrickgabelmann/.codex/worktrees/7a80/racecraft-plugins-public/.worktrees/012-reviewer-ready-pr-packet-contract/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/pr-body.md",
+  "body_file": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/pr-body.md",
   "declared_files": [
     "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
     "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",

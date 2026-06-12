@@ -521,7 +521,10 @@ For every deterministic behavior:
 | Reviewability Diff Gate | Complete | Final reviewability backstop returned `outcome=marker_split`; full diff remains size-blocked, but the current marker plan is valid, fingerprint-matched, and emission-ready. Evidence: `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/final-reviewability/gate-state.json` and `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json`. |
 | Self-Review | Complete | Four-question audit recorded below; no follow-up gaps found. |
 | UAT Runbook Generation | Complete | Skeleton generated at `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/uat-runbook.md`; `uat-runbook-author` is not installed in this Codex runtime, so the deterministic skeleton is retained fail-open. |
-| PR Body Generation | In Progress | Non-mutating marker emission generated 5 candidate marker packets and command evidence under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/candidate/`; live persistent body generation is pending clean-worktree emission. |
+| PR Body Generation | Complete | Live marker emission generated 5 slice PR bodies under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/<slice>/pr-body.md`; each body contains the `speckit-pro-review-packet-source` marker and `## UAT Runbook` heading. |
+| PR Creation | Complete | Live marker emission opened stacked PRs #164-#168 and persisted `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/prs.json`, `SPEC-MOC.md`, and `docs/ai/specs/.process/autopilot-state.json`. |
+| Review Remediation | Complete | `gh pr view` and PR review-comment API checks found no issue comments, reviews, or inline review comments on #164-#168. Generated PR bodies and marker packets were scrubbed of local absolute paths, and PR descriptions #164-#168 were updated. Final local verification passed with `bash tests/speckit-pro/run-all.sh` at 2790/2790. PRs #164-#167 still have failing full-suite GitHub PR Checks because the repo workflow runs the complete speckit-pro suite against partial stack slices; scoped slice verification is recorded in each PR packet. PR #168, the top-of-stack PR, is green. |
+| Retrospective | Skipped | Codex command not installed: `.codex/commands` is absent; command exists only under `.claude/commands/speckit.retrospective.analyze.md`. |
 
 ### Self-Review
 
@@ -570,3 +573,10 @@ Template based on SpecKit best practices. Populated for PRSG-012 from the PR-siz
 | Clarify Session 2 | Conventional title prefix | 1 | codebase, spec | Accepted: generated titles render as `<type>(<scope>): <plain-English description>`; implementation packets default to `feat(speckit-pro):`; only explicit packet metadata can override type/scope, and overrides must use allowed conventional commit values. | codebase-analyst, spec-context-analyst |
 | Clarify Session 2 | Internal-code rejection | 1 | codebase, spec | Accepted: the post-colon description must be public-readable plain English and must reject any branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, stale placeholders, unexpanded variables, or banned labels, even when mixed with otherwise readable words. | codebase-analyst, spec-context-analyst |
 | Clarify Session 3 | Safe refinement details | skipped | none | Executor returned no unresolved consensus items. Accepted exact full-line editable marker pairs, protected-body fingerprint comparison, allowlisted structural comments, canonical packet block before host template content, and fail-before-create validation JSON for outside-field edits. | clarify-executor |
+
+### US2 emission evidence
+- Opened PR#164 for `foundation` (prsg-012-reviewer-ready-pr-packet-contract/01-foundation -> main).
+- Opened PR#165 for `us1` (prsg-012-reviewer-ready-pr-packet-contract/02-us1 -> prsg-012-reviewer-ready-pr-packet-contract/01-foundation).
+- Opened PR#166 for `us2` (prsg-012-reviewer-ready-pr-packet-contract/03-us2 -> prsg-012-reviewer-ready-pr-packet-contract/02-us1).
+- Opened PR#167 for `us3` (prsg-012-reviewer-ready-pr-packet-contract/04-us3 -> prsg-012-reviewer-ready-pr-packet-contract/03-us2).
+- Opened PR#168 for `us4` (prsg-012-reviewer-ready-pr-packet-contract/05-us4 -> prsg-012-reviewer-ready-pr-packet-contract/04-us3).

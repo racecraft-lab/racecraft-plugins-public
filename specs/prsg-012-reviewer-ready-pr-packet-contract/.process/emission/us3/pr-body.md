@@ -8,7 +8,7 @@
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-Adds reviewer-ready split PR packet evidence for `foundation`.
+Adds reviewer-ready split PR packet evidence for `us3`.
 <!-- speckit-pro-editable:summary:end -->
 
 Source: slice packet defines split PR identity and source boundary evidence.
@@ -16,7 +16,7 @@ Source: slice packet defines split PR identity and source boundary evidence.
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- Prepared `prsg-012-reviewer-ready-pr-packet-contract/01-foundation` for review against `main`.
+- Prepared `prsg-012-reviewer-ready-pr-packet-contract/04-us3` for review against `prsg-012-reviewer-ready-pr-packet-contract/03-us2`.
 - Rendered scoped verification, declared files, traceability, and known-gap evidence before PR creation.
 <!-- speckit-pro-editable:what_changed:end -->
 
@@ -40,16 +40,10 @@ Run the scoped verification commands listed below, then confirm the full regress
 
 ## Verification
 
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-split.md` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-split.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
+- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
+- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
+- `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
+- `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
 - Full regression evidence: `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log`
 
 Source: quickstart and scoped verification records define the validation evidence.
@@ -57,11 +51,13 @@ Source: quickstart and scoped verification records define the validation evidenc
 ## Scope
 
 - Declared files:
-  - `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`
+  - `.process/prs.json`
+  - `docs/ai/specs/.process/PRSG-012-workflow.md`
+  - `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
+  - `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
   - `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-  - `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
 - Traceability:
-  - Traceability: FR-010 maps files speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh, specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md to evidence specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log
+  - Traceability: FR-010 maps files .process/prs.json, docs/ai/specs/.process/PRSG-012-workflow.md, speckit-pro/skills/speckit-autopilot/references/post-implementation.md, speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh to evidence specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log
 - Non-goals: this packet does not broaden the declared slice scope or replace full regression evidence.
 
 ## Known Gaps
@@ -70,37 +66,33 @@ No known gaps for this split packet.
 
 ## Slice summary
 
-- Slice: `foundation`
+- Slice: `us3`
 - PR row status: `pending`
-- Head branch: `prsg-012-reviewer-ready-pr-packet-contract/01-foundation`
-- Base branch: `main`
+- Head branch: `prsg-012-reviewer-ready-pr-packet-contract/04-us3`
+- Base branch: `prsg-012-reviewer-ready-pr-packet-contract/03-us2`
 
 ## Review order
 
-1 of 5
+4 of 5
 
 ## Slice Scope
 
-- `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`
+- `.process/prs.json`
+- `docs/ai/specs/.process/PRSG-012-workflow.md`
+- `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
+- `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
 - `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-- `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
 
 ## Slice Verification
 
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-split.md` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-split.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
-- `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/foundation/layer4.log
+- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
+- `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
+- `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
+- `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh` (SCRIPT_UNIT, exit 0) — specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/us3/layer4.log
 
 ## Traceability
 
-- FR-010: files speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh, specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md; evidence specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log
+- FR-010: files .process/prs.json, docs/ai/specs/.process/PRSG-012-workflow.md, speckit-pro/skills/speckit-autopilot/references/post-implementation.md, speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh; evidence specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log
 
 ## Restack or rollback
 

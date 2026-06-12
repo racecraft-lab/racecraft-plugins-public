@@ -1,12 +1,137 @@
 {
+  "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
+  "updated_at": "2026-06-12T20:23:02Z",
+  "active_step": "Complete",
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 7: Implement",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "skipped",
+      "reason": "doctor command not installed for Codex runtime"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "skipped",
+      "reason": "verify command not installed for Codex runtime"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "skipped",
+      "reason": "verify-tasks command not installed for Codex runtime"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "skipped",
+      "reason": "review command not installed for Codex runtime"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "skipped",
+      "reason": "cleanup command not installed for Codex runtime"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "completed"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "skipped",
+      "reason": "retrospective command not installed for Codex runtime"
+    }
+  ],
+  "post_review_remediation": {
+    "checked_at": "2026-06-12T20:16:16Z",
+    "pull_requests": [
+      164,
+      165,
+      166,
+      167,
+      168
+    ],
+    "issue_comments": 0,
+    "inline_review_comments": 0,
+    "reviews": 0,
+    "review_remediation_required": false,
+    "pr_bodies_sanitized": true,
+    "pr_bodies_updated_at": "2026-06-12T20:23:02Z",
+    "final_local_verification": "bash tests/speckit-pro/run-all.sh passed 2790/2790 after sanitizing generated PR bodies and marker packets.",
+    "ci_note": "PRs #164-#167 have failing full-suite GitHub PR Checks because the repository workflow runs the complete speckit-pro suite against partial stack slices; scoped slice verification is recorded in each PR packet. PR #168, the top-of-stack PR, is green."
+  },
+  "post_retrospective": {
+    "status": "skipped",
+    "reason": ".codex/commands is absent; retrospective command exists only under .claude/commands/speckit.retrospective.analyze.md"
+  },
   "multi_pr_emission": {
     "schema_version": 2,
-    "status": "blocked",
+    "status": "complete",
     "emission_mode": "marker",
     "route": "marker_split",
     "base_branch": "main",
     "base_sha": "3118e81162104bfd081d01755c00c205a8eab061",
-    "next_slice_id": "foundation",
+    "next_slice_id": null,
     "reconciled_at": "2026-06-10T00:00:00Z",
     "slices": [
       {
@@ -136,7 +261,7 @@
             }
           ]
         },
-        "status": "failed",
+        "status": "pr_opened",
         "marker_id": "foundation",
         "source_marker_ids": [
           "foundation"
@@ -146,13 +271,14 @@
         ],
         "route": "marker_split",
         "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json",
-        "last_error": {
-          "slice_id": "foundation",
-          "failed_at": "2026-06-10T00:00:00Z",
-          "phase": "git_branch",
-          "command": "git branch failed for slice foundation",
-          "exit_status": 2,
-          "evidence_path": ""
+        "pr": {
+          "number": 164,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/164",
+          "state": "opened",
+          "base_ref": "main",
+          "head_ref": "prsg-012-reviewer-ready-pr-packet-contract/01-foundation",
+          "head_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3",
+          "merged_sha": null
         }
       },
       {
@@ -206,7 +332,7 @@
             }
           ]
         },
-        "status": "pending",
+        "status": "pr_opened",
         "marker_id": "us1",
         "source_marker_ids": [
           "us1"
@@ -215,7 +341,16 @@
           "docs/ai/specs/.process/PRSG-012-workflow.md"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json",
+        "pr": {
+          "number": 165,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/165",
+          "state": "opened",
+          "base_ref": "prsg-012-reviewer-ready-pr-packet-contract/01-foundation",
+          "head_ref": "prsg-012-reviewer-ready-pr-packet-contract/02-us1",
+          "head_sha": "59bed4113474cde5001fe01205f6fc2d9e4e3443",
+          "merged_sha": null
+        }
       },
       {
         "slice_id": "us2",
@@ -267,7 +402,7 @@
             }
           ]
         },
-        "status": "pending",
+        "status": "pr_opened",
         "marker_id": "us2",
         "source_marker_ids": [
           "us2"
@@ -276,7 +411,16 @@
           "docs/ai/specs/.process/PRSG-012-workflow.md"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json",
+        "pr": {
+          "number": 166,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/166",
+          "state": "opened",
+          "base_ref": "prsg-012-reviewer-ready-pr-packet-contract/02-us1",
+          "head_ref": "prsg-012-reviewer-ready-pr-packet-contract/03-us2",
+          "head_sha": "bffb2d9eeb1ec466566bf1a628d56fa078b34dd5",
+          "merged_sha": null
+        }
       },
       {
         "slice_id": "us3",
@@ -341,7 +485,7 @@
             }
           ]
         },
-        "status": "pending",
+        "status": "pr_opened",
         "marker_id": "us3",
         "source_marker_ids": [
           "us3"
@@ -350,7 +494,16 @@
           "docs/ai/specs/.process/PRSG-012-workflow.md"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json",
+        "pr": {
+          "number": 167,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/167",
+          "state": "opened",
+          "base_ref": "prsg-012-reviewer-ready-pr-packet-contract/03-us2",
+          "head_ref": "prsg-012-reviewer-ready-pr-packet-contract/04-us3",
+          "head_sha": "50d413174da5018b0aa5053227df51b52bb50f48",
+          "merged_sha": null
+        }
       },
       {
         "slice_id": "us4",
@@ -426,7 +579,7 @@
             }
           ]
         },
-        "status": "pending",
+        "status": "pr_opened",
         "marker_id": "us4",
         "source_marker_ids": [
           "us4"
@@ -435,7 +588,16 @@
           "docs/ai/specs/.process/PRSG-012-workflow.md"
         ],
         "route": "marker_split",
-        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
+        "marker_split_evidence": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json",
+        "pr": {
+          "number": 168,
+          "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/168",
+          "state": "opened",
+          "base_ref": "prsg-012-reviewer-ready-pr-packet-contract/04-us3",
+          "head_ref": "prsg-012-reviewer-ready-pr-packet-contract/05-us4",
+          "head_sha": "f29ba3aa94af3f67216037b2f67fa914b0b6d00d",
+          "merged_sha": null
+        }
       }
     ],
     "source_marker_plan": {
