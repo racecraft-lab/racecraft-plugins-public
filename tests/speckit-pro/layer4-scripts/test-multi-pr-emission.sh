@@ -37,6 +37,64 @@ PY
   fi
 }
 
+assert_pr_create_uses_packet() {
+  local commands_json="$1" packet_json="$2" slice_id="$3" msg="$4"
+  local commands_file="$SANDBOX/pr-create-commands.$RANDOM.json"
+  local packet_file="$SANDBOX/pr-create-packet.$RANDOM.json"
+  printf '%s' "$commands_json" > "$commands_file"
+  printf '%s' "$packet_json" > "$packet_file"
+  if python3 - "$commands_file" "$packet_file" "$slice_id" >/dev/null 2>&1 <<'PY'
+import json
+import sys
+
+commands_path, packet_path, slice_id = sys.argv[1:4]
+with open(commands_path, encoding="utf-8") as fh:
+    commands = json.load(fh)
+with open(packet_path, encoding="utf-8") as fh:
+    packet = json.load(fh)
+
+ops = [
+    op for op in commands["operations"]
+    if op.get("action") == "gh_pr_create" and op.get("slice_id") == slice_id
+]
+if len(ops) != 1:
+    raise SystemExit(1)
+
+command = ops[0].get("command")
+if not isinstance(command, list):
+    raise SystemExit(1)
+
+def flag_value(flag):
+    indexes = [idx for idx, value in enumerate(command[:-1]) if value == flag]
+    if len(indexes) != 1:
+        raise SystemExit(1)
+    value = command[indexes[0] + 1]
+    if not isinstance(value, str) or value == "":
+        raise SystemExit(1)
+    return value
+
+expected = {
+    "--base": packet["target"]["base_branch"],
+    "--head": packet["target"]["head_branch"],
+    "--title": packet["generated_title"]["value"],
+    "--body-file": packet["body_file"],
+}
+
+for flag, expected_value in expected.items():
+    actual = flag_value(flag)
+    if flag == "--body-file":
+        if actual != expected_value and not actual.endswith("/" + expected_value):
+            raise SystemExit(1)
+    elif actual != expected_value:
+        raise SystemExit(1)
+PY
+  then
+    _pass
+  else
+    _fail "$msg"
+  fi
+}
+
 run_emission() {
   local out_var="$1" err_var="$2"
   shift 2
@@ -258,6 +316,7 @@ prs_json="$(cat "$candidate_prs" 2>/dev/null || true)"
 commands_json="$(cat "$candidate_commands" 2>/dev/null || true)"
 foundation_packet_json="$(cat "$foundation_packet" 2>/dev/null || true)"
 us1_packet_json="$(cat "$us1_packet" 2>/dev/null || true)"
+us2_packet_json="$(cat "$us2_packet" 2>/dev/null || true)"
 
 set_test "candidate state is resume-safe and non-mutating"
 json_check "$state_json" \
@@ -288,6 +347,18 @@ set_test "candidate command capture uses explicit gh pr create base head body-fi
 json_check "$commands_json" \
   "[op['command'][0:8] for op in data['operations'] if op['action'] == 'gh_pr_create'] == [['gh', 'pr', 'create', '--base', 'main', '--head', 'prsg-009-multi-pr-emission/01-foundation', '--body-file'], ['gh', 'pr', 'create', '--base', 'prsg-009-multi-pr-emission/01-foundation', '--head', 'prsg-009-multi-pr-emission/02-us1', '--body-file'], ['gh', 'pr', 'create', '--base', 'prsg-009-multi-pr-emission/02-us1', '--head', 'prsg-009-multi-pr-emission/03-us2', '--body-file']]" \
   "gh pr create must pass explicit --base --head --body-file"
+
+set_test "candidate foundation PR create command uses packet target title and body"
+assert_pr_create_uses_packet "$commands_json" "$foundation_packet_json" "foundation" \
+  "foundation gh pr create should use packet --base, --head, --title, and --body-file values"
+
+set_test "candidate us1 PR create command uses packet target title and body"
+assert_pr_create_uses_packet "$commands_json" "$us1_packet_json" "us1" \
+  "us1 gh pr create should use packet --base, --head, --title, and --body-file values"
+
+set_test "candidate us2 PR create command uses packet target title and body"
+assert_pr_create_uses_packet "$commands_json" "$us2_packet_json" "us2" \
+  "us2 gh pr create should use packet --base, --head, --title, and --body-file values"
 
 set_test "candidate command capture records declared scope guard"
 json_check "$commands_json" \
@@ -335,6 +406,7 @@ assert_eq "0" "$result" "exit code"
 
 single_state_json="$(cat "$single_candidate_dir/multi-pr-emission-state.candidate.json" 2>/dev/null || true)"
 single_commands_json="$(cat "$single_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+single_packet_json="$(cat "$single_candidate_dir/slice-packets/us1.json" 2>/dev/null || true)"
 
 set_test "single-slice state uses same Style B contract"
 json_check "$single_state_json" \
@@ -345,6 +417,10 @@ set_test "single-slice command capture has one explicit PR create"
 json_check "$single_commands_json" \
   "[op['command'][0:8] for op in data['operations'] if op['action'] == 'gh_pr_create'] == [['gh', 'pr', 'create', '--base', 'main', '--head', 'prsg-009-multi-pr-emission/01-us1', '--body-file']]" \
   "single-slice emission should still use explicit --base --head --body-file"
+
+set_test "single-slice PR create command uses packet target title and body"
+assert_pr_create_uses_packet "$single_commands_json" "$single_packet_json" "us1" \
+  "single-slice gh pr create should use packet --base, --head, --title, and --body-file values"
 
 section "declared file-scope guard"
 

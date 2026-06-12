@@ -25,7 +25,7 @@
 - [x] T003 Create failing invalid packet fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json`, `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json`, and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json`, covering title/body stale placeholders, unexpanded variables, hidden template comments, example text, schema-invalid shape, and banned labels
 - [x] T004 Add failing validator fixture assertions for pass, validation failure, and input error cases in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
 - [x] T005 Add failing title/body generation assertions for generated packet metadata and rendered body paths in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
-- [ ] T006 Add failing PR emission command assertions for `gh pr create --base`, `--head`, `--title`, and `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [x] T006 Add failing PR emission command assertions for `gh pr create --base`, `--head`, `--title`, and `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 - [ ] T007 Copy the planned packet schema into the shared runtime contract at `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`
 - [ ] T008 Create the executable validator skeleton with input parsing, deterministic exit-code branches, and JSON output path handling in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
 - [ ] T009 Verify the reviewability budget against the planned file scope and record any split decision in `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
