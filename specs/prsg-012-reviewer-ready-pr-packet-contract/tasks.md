@@ -42,7 +42,7 @@
 
 - [x] T010 [US1] Extend title fixtures for branch/spec/slice-token rejection and explicit metadata-only type/scope override validation in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json`
 - [x] T011 [US1] Assert single-PR generated title metadata defaults to `feat(speckit-pro):` in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
-- [ ] T012 [US1] Assert split-PR `gh pr create` calls include packet target values through `--base`/`--head`, packet title values through `--title`, and rendered body files through `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [x] T012 [US1] Assert split-PR `gh pr create` calls include packet target values through `--base`/`--head`, packet title values through `--title`, and rendered body files through `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 
 ### Implementation for User Story 1
 
