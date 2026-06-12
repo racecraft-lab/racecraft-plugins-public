@@ -35,8 +35,8 @@ The design concept is the source of truth for these scoping decisions:
 | Clarify | `/speckit-clarify` | Complete | G2 passed with packet schema, title generation, and safe-refinement decisions recorded |
 | Plan | `/speckit-plan` | Complete | Generated plan/research/data model/contract/quickstart; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | API contracts, error handling, and reliability checklists complete; G4 passed |
-| Tasks | `/speckit-tasks` | In Progress | Organize by user story and validation boundary |
-| Analyze | `/speckit-analyze` | Pending | Check consistency against the design concept |
+| Tasks | `/speckit-tasks` | Complete | Generated 56 tasks across Foundation, US1-US4, and Polish; G5 passed |
+| Analyze | `/speckit-analyze` | In Progress | Check consistency against the design concept |
 | Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
 
 ### Phase Gates
@@ -343,10 +343,10 @@ Focus on PRSG-012 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | |
-| Phases | |
-| Parallel Opportunities | |
-| User Stories Covered | |
+| Total Tasks | 56 |
+| Phases | Foundation, US1, US2, US3, US4, Polish |
+| Parallel Opportunities | 5 |
+| User Stories Covered | US1-US4 plus required evidence |
 
 ---
 
@@ -362,10 +362,43 @@ Expected initial route: `one-navigable-PR`, unless Tasks introduces separable ve
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | | `true` unless the classifier finds release-sensitive behavior |
-| Signals | | Decisive detector findings |
-| Warnings | | Release-safety warnings |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | `true` | `true` unless the classifier finds release-sensitive behavior |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings |
+| Warnings | none | Release-safety warnings |
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| Status | skipped |
+| Reason | Atomicity route is `one-navigable-PR`; PRSG-008 layer planning runs only for `split-PR` routes |
+
+## Reviewability Marker Plan
+
+| Field | Value |
+|-------|-------|
+| Status | marker input recorded |
+| Gate | `reviewability-gate.sh tasks` |
+| Gate Status | `block` |
+| Exit Code | 1 |
+| Reviewable LOC | 2240 |
+| Production Files | 1 |
+| Total Files | 69 |
+| Primary Surface Count | 5 |
+| Warnings | reviewable LOC 2240 exceeds warn threshold 400; total files 69 exceeds warn threshold 15; primary surfaces 5 exceeds warn threshold 1 |
+| Blockers | reviewable LOC 2240 exceeds block threshold 800; total files 69 exceeds block threshold 25 |
+
+Planned marker order:
+
+1. `M1` Foundation: T001-T009
+2. `M2` US1 generated titles: T010-T017
+3. `M3` US2 reviewer body: T018-T024
+4. `M4` US3 validation gate: T025-T034
+5. `M5` US4 safe refinement: T035-T041
+6. `M6` Polish evidence and parity: T042-T056
+
+Marker split, packet validation, and PR mappings remain pending until post-implementation PR preparation.
 
 ---
 

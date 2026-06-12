@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T16:54:34Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-12T17:14:55Z",
+  "active_step": "Phase 6: Analyze",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -75,6 +75,208 @@
     "eligible_previous_specs": [],
     "cleanup_applied": [],
     "note": "Archive state was refreshed from the post-merge PRSG-005/PRSG-013 cleanup on main. Current target PRSG-012 is excluded; no additional eligible previous spec cleanup was applied before Phase 1."
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route one-navigable-PR"
+  },
+  "pr_marker_plan": {
+    "schema_version": "1.0",
+    "status": "current",
+    "created_at": "2026-06-12T17:14:55Z",
+    "source": "reviewability-gate tasks",
+    "feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
+    "source_fingerprint": {
+      "head_sha": "8187cb61e745eccd2ff64b40ffb890621938bc46",
+      "spec_sha256": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
+      "plan_sha256": "7e017ef7414fbd09a57e83cd8742d11bd24ed5b0f80f4e5f9b4265f0b4e6b8ff",
+      "tasks_sha256": "e9b3b150227aba4287f59c226badc78a1f14a6b06663639c6eef7fcc8642d118"
+    },
+    "fingerprint_status": "current",
+    "reviewability_gate": {
+      "mode": "tasks",
+      "status": "block",
+      "exit_code": 1,
+      "pass": false,
+      "reviewable_loc": 2240,
+      "production_files": 1,
+      "total_files": 69,
+      "primary_surface_count": 5,
+      "warnings": [
+        "reviewable LOC 2240 exceeds warn threshold 400",
+        "total files 69 exceeds warn threshold 15",
+        "primary surfaces 5 exceeds warn threshold 1"
+      ],
+      "blockers": [
+        "reviewable LOC 2240 exceeds block threshold 800",
+        "total files 69 exceeds block threshold 25"
+      ],
+      "repo_relative_evidence_path": null
+    },
+    "hazard_route": {
+      "route": "one-navigable-PR",
+      "releasable": true,
+      "signals": [
+        "change-shape:modify-heavy"
+      ],
+      "warnings": []
+    },
+    "markers": [
+      {
+        "id": "M1",
+        "name": "Foundation",
+        "review_order": 1,
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009"
+        ],
+        "source_boundary": {
+          "section": "Phase 1: Foundation - Contract, Fixtures, and Validator Skeleton"
+        },
+        "checkpoint": "pending",
+        "pr_mapping": "pending",
+        "packet_validation": "pending"
+      },
+      {
+        "id": "M2",
+        "name": "US1 generated titles",
+        "review_order": 2,
+        "task_ids": [
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015",
+          "T016",
+          "T017"
+        ],
+        "source_boundary": {
+          "section": "Phase 2: User Story 1 - Specific Conventional PR Titles"
+        },
+        "checkpoint": "pending",
+        "pr_mapping": "pending",
+        "packet_validation": "pending"
+      },
+      {
+        "id": "M3",
+        "name": "US2 reviewer body",
+        "review_order": 3,
+        "task_ids": [
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024"
+        ],
+        "source_boundary": {
+          "section": "Phase 3: User Story 2 - Structured Reviewer Body"
+        },
+        "checkpoint": "pending",
+        "pr_mapping": "pending",
+        "packet_validation": "pending"
+      },
+      {
+        "id": "M4",
+        "name": "US3 validation gate",
+        "review_order": 4,
+        "task_ids": [
+          "T025",
+          "T026",
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034"
+        ],
+        "source_boundary": {
+          "section": "Phase 4: User Story 3 - Pre-create Validation Block"
+        },
+        "checkpoint": "pending",
+        "pr_mapping": "pending",
+        "packet_validation": "pending"
+      },
+      {
+        "id": "M5",
+        "name": "US4 safe refinement",
+        "review_order": 5,
+        "task_ids": [
+          "T035",
+          "T036",
+          "T037",
+          "T038",
+          "T039",
+          "T040",
+          "T041"
+        ],
+        "source_boundary": {
+          "section": "Phase 5: User Story 4 - Safe Prose Refinement"
+        },
+        "checkpoint": "pending",
+        "pr_mapping": "pending",
+        "packet_validation": "pending"
+      },
+      {
+        "id": "M6",
+        "name": "Polish evidence and parity",
+        "review_order": 6,
+        "task_ids": [
+          "T042",
+          "T043",
+          "T044",
+          "T045",
+          "T046",
+          "T047",
+          "T048",
+          "T049",
+          "T050",
+          "T051",
+          "T052",
+          "T053",
+          "T054",
+          "T055",
+          "T056"
+        ],
+        "source_boundary": {
+          "section": "Phase 6: Polish - Functional Evals, Replay, Parity, and Docs"
+        },
+        "checkpoint": "pending",
+        "pr_mapping": "pending",
+        "packet_validation": "pending"
+      }
+    ],
+    "ordered_marker_ids": [
+      "M1",
+      "M2",
+      "M3",
+      "M4",
+      "M5",
+      "M6"
+    ],
+    "final_marker_split": "pending",
+    "packet_validation": "pending",
+    "pr_mappings": "pending"
   },
   "plan": [
     {
@@ -174,11 +376,24 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "task_count": 56,
+      "parallel_opportunities": 5,
+      "reviewability_gate": {
+        "status": "block",
+        "classification": "size-only marker input",
+        "reviewable_loc": 2240,
+        "production_files": 1,
+        "total_files": 69,
+        "primary_surface_count": 5
+      },
+      "summary": "Generated tasks.md with 56 tasks across Foundation, US1-US4, and Polish. G5 passed. Reviewability size-only block recorded as pr_marker_plan evidence."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -189,7 +404,27 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Foundation (T001-T009)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US1 generated titles (T010-T017)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US2 reviewer body (T018-T024)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US3 validation gate (T025-T034)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US4 safe refinement (T035-T041)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Polish evidence and parity (T042-T056)",
       "status": "pending"
     },
     {
