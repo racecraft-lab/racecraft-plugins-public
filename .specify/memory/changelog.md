@@ -391,3 +391,105 @@ git checkout 8b59fe55128ee2a835c64003662ce0674cac4edf -- specs/prsg-010-harden-t
 The removed source folder was already archived in project memory. Layer 4
 coverage remains active through payload-included contract schemas and fixtures
 under `tests/speckit-pro/layer4-scripts/fixtures/`.
+
+---
+
+## Vertical-slice sizing heuristics in PRD/grill-me
+
+[Source: specs/prsg-005-slice-sizing-heuristics]
+
+- **Feature**: Vertical-slice sizing heuristics in PRD/grill-me
+- **Roadmap ID**: PRSG-005 (PR-size governance roadmap)
+- **Branch**: `prsg-005-slice-sizing-heuristics`
+- **Spec path**: `specs/prsg-005-slice-sizing-heuristics/`
+- **PR URL**: https://github.com/racecraft-lab/racecraft-plugins-public/pull/120
+- **Merge commit**: `a4e930bc8989b84910b8840abb193f91bb1ae5b9`
+- **Tree reference**: `c3dd8a196dde9f1ddb987560f7bd95573500a373`
+- **Final PR head commit**: `6bc94585626ce0e6195f93c31acd0cf2fb86f6c5`
+- **Artifact manifest**: specs/prsg-005-slice-sizing-heuristics/SPEC-MOC.md
+- **Task completion**: 20 / 23 tasks complete; remaining Layer 2, Layer 3, and
+  Layer 8 follow-ups were developer-local evidence items, not merge blockers.
+- **Archived**: 2026-06-12
+- **Status**: Completed
+- **Cleanup decision**: `safeToApplyCleanup=true`; source folder removed after
+  PR #120 merge provenance and recovery commands were recorded.
+
+### Summary of added behavior
+
+Added advisory vertical-slice sizing at PRD and grill-me scoping time, with one
+shared SPIDR/INVEST/vertical-slicing reference, one shared deterministic
+estimator, and mirrored Claude/Codex skill behavior.
+
+### Recovery Commands (raw spec artifacts)
+
+```text
+git show a4e930bc8989b84910b8840abb193f91bb1ae5b9:specs/prsg-005-slice-sizing-heuristics/spec.md
+git show a4e930bc8989b84910b8840abb193f91bb1ae5b9:specs/prsg-005-slice-sizing-heuristics/plan.md
+git show a4e930bc8989b84910b8840abb193f91bb1ae5b9:specs/prsg-005-slice-sizing-heuristics/tasks.md
+git show a4e930bc8989b84910b8840abb193f91bb1ae5b9:specs/prsg-005-slice-sizing-heuristics/data-model.md
+git show a4e930bc8989b84910b8840abb193f91bb1ae5b9:specs/prsg-005-slice-sizing-heuristics/quickstart.md
+git show a4e930bc8989b84910b8840abb193f91bb1ae5b9:specs/prsg-005-slice-sizing-heuristics/SPEC-MOC.md
+git show a4e930bc8989b84910b8840abb193f91bb1ae5b9:specs/prsg-005-slice-sizing-heuristics/contracts/estimate-spec-size.md
+git checkout a4e930bc8989b84910b8840abb193f91bb1ae5b9 -- specs/prsg-005-slice-sizing-heuristics
+```
+
+---
+
+## Non-stopping reviewability markers
+
+[Source: specs/prsg-013-reviewability-markers]
+
+- **Feature**: Non-stopping reviewability markers
+- **Roadmap ID**: PRSG-013 (PR-size governance roadmap)
+- **Branch**: `prsg-013-reviewability-markers`
+- **Spec path**: `specs/prsg-013-reviewability-markers/`
+- **PR URL**: https://github.com/racecraft-lab/racecraft-plugins-public/pull/157
+- **Merge commit**: `6af4e714077c8ebc9fa71466bee2461bc8652930`
+- **Tree reference**: `d97e2bce53b322f14cf5808e86697c1bdd27c7a6`
+- **Final PR head commit**: `cb719a078b9fa0e928ada6a7680c56f44408c06e`
+- **Artifact manifest**: specs/prsg-013-reviewability-markers/SPEC-MOC.md
+- **Task completion**: 45 / 45 tasks complete.
+- **Archived**: 2026-06-12
+- **Status**: Completed
+- **Cleanup decision**: `safeToApplyCleanup=true`; source folder removed after
+  PR #157 merge provenance and recovery commands were recorded.
+
+### Summary of added behavior
+
+Turned reviewability sizing blocks into PR-marker inputs instead of
+implementation stops, persisted marker plans with source fingerprints, added
+marker-aware final backstop and multi-PR emission paths, and recorded guidance
+for marker-ordered implementation and evidence.
+
+### Recovery Commands (raw spec artifacts)
+
+```text
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/spec.md
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/plan.md
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/tasks.md
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/research.md
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/data-model.md
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/quickstart.md
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/SPEC-MOC.md
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/contracts/marker-split-result.schema.json
+git show 6af4e714077c8ebc9fa71466bee2461bc8652930:specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json
+git checkout 6af4e714077c8ebc9fa71466bee2461bc8652930 -- specs/prsg-013-reviewability-markers
+```
+
+---
+
+## PRSG-005 and PRSG-013 Archive Cleanup Application
+
+[Source: .specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md]
+
+- **Cleanup applied**: 2026-06-12
+- **Cleanup branch**: `codex/spec-hygiene-prsg-013-005`
+- **Cleanup command**: `git rm -r specs/prsg-005-slice-sizing-heuristics specs/prsg-013-reviewability-markers`
+- **safeToApplyCleanup**: `true`
+- **Removed from active specs**: `specs/prsg-005-slice-sizing-heuristics`, `specs/prsg-013-reviewability-markers`
+- **Recovery**: use the `git show` / `git checkout` commands recorded above.
+
+The removed source folders were already merged and archived in project memory.
+PRSG-005 behavior remains covered through shipped skill guidance and estimator
+tests; PRSG-013 behavior remains covered through payload-included schemas and
+Layer 4 marker fixtures.

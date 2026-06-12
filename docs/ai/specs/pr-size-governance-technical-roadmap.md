@@ -160,6 +160,9 @@ index, authored once cheaply during the PRD interview.
 ---
 
 ### PRSG-005 — Vertical-slice sizing heuristics in PRD/grill-me  · Phase 3 · P1 · ✅ Complete (PR #120)
+> Archived 2026-06-12; active `specs/prsg-005-slice-sizing-heuristics`
+> removed after archive provenance and recovery commands were recorded.
+
 **Why:** attack the root cause at the cheapest moment — specs born PR-sized.
 
 - **US1 — Slicing heuristics.** Bake SPIDR + INVEST + vertical-slicing guidance into
@@ -325,6 +328,8 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
 > reviewability sizing could stop implementation instead of shaping scoped PR
 > emission. Workflow:
 > `docs/ai/specs/.process/PRSG-013-workflow.md`.
+> Archived 2026-06-12; active `specs/prsg-013-reviewability-markers`
+> removed after archive provenance and recovery commands were recorded.
 
 **Why:** Reviewability sizing is supposed to make reviewable PRs by construction,
 not stop autopilot after a valid spec has reached Tasks. The correct behavior is to

@@ -415,3 +415,93 @@ PRs #149-#155 merged and the PRSG-010 production contracts were preserved under
 `speckit-pro/skills/speckit-autopilot/contracts/`.
 Recovery commands are recorded in
 `.specify/memory/archive-reports/2026-06-11-prsg-010-post-merge-hygiene.md`.
+
+---
+
+## Vertical-slice sizing heuristics in PRD/grill-me
+
+[Source: specs/prsg-005-slice-sizing-heuristics]
+**Branch**: `prsg-005-slice-sizing-heuristics` · **Status**: Completed · **Archived**: 2026-06-12
+
+### Summary
+
+PRSG-005 makes right-sized specs more likely at the earliest scoping moment. It
+adds shared SPIDR, INVEST, and vertical-slicing guidance, a deterministic
+advisory estimator, and mirrored Claude/Codex updates for `speckit-prd` and
+`grill-me` so roadmap entries and grilled specs are born as thin vertical
+slices.
+
+### User Stories
+
+- **US1 - Catalog-level decomposition in speckit-prd.** The PRD skill decomposes
+  raw ideas into thin vertical roadmap entries, populates the existing
+  `Projected reviewable LOC` field from the estimator, and keeps over-ceiling
+  findings advisory.
+- **US2 - Per-spec validation and split in grill-me.** The grill-me skill runs
+  the same estimator for a single spec, recommends vertical splits for oversized
+  or horizontal scope, and records the selected split in the design concept.
+
+### Functional Requirements
+
+- Shared SPIDR, INVEST, and vertical-slicing guidance lives in one reference
+  document, with only short inline summaries in the skill entrypoints.
+- The estimator is deterministic, bash plus `jq`, and emits only `ok` or `warn`.
+- `warn`, missing estimator output, malformed size signals, and spike slices
+  remain advisory and never block the interview or downstream workflow.
+- Claude and Codex skill mirrors preserve behavior equivalence without
+  duplicating the estimator or the reference guidance.
+
+### Cleanup Note
+
+The active spec folder was removed from `specs/**` cleanup on 2026-06-12 after
+PR #120 merged and archive provenance/recovery commands were recorded.
+Recovery commands are recorded in
+`.specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md`.
+
+---
+
+## Non-stopping reviewability markers
+
+[Source: specs/prsg-013-reviewability-markers]
+**Branch**: `prsg-013-reviewability-markers` · **Status**: Completed · **Archived**: 2026-06-12
+
+### Summary
+
+PRSG-013 fixes the reviewability sizing product bug: autopilot no longer stops
+implementation for size alone. Parseable size warnings and size-only blocks are
+recorded as durable PR marker evidence, implementation proceeds in marker
+order, and final PR emission can consume the marker plan to create bounded
+Foundation or user-story scoped PRs.
+
+### User Stories
+
+- **US1 - Continue through reviewability sizing.** Post-task and final
+  reviewability size findings become marker-planning input, while malformed
+  evidence and correctness failures still stop.
+- **US2 - Emit scoped PRs from durable markers.** Marker planning derives
+  stable Foundation and user-story boundaries from `tasks.md`, folds small
+  Polish work, and records structured warnings for unsafe subdivisions.
+- **US3 - Verify marker planning and emission behavior.** Deterministic
+  fixtures and functional eval coverage validate non-stopping behavior,
+  marker persistence, implementation ordering, hazard collapse, and Claude/Codex
+  guidance parity.
+
+### Functional Requirements
+
+- `plan-layers.sh` records marker-aware plans with source fingerprints,
+  marker order, folded Polish tasks, safe subdivision, and stale-plan rejection.
+- `final-reviewability-backstop.sh` returns `marker_split` for a valid current
+  marker plan when the full diff is size-blocked.
+- `multi-pr-emission.sh` validates marker packets before PR side effects and
+  supports both scoped marker packets and hazard-collapsed full-spec packets.
+- Autopilot guidance requires future runs to checkpoint and record evidence in
+  marker order instead of treating size-only reviewability findings as manual
+  re-slicing stops.
+
+### Cleanup Note
+
+The active spec folder was removed from `specs/**` cleanup on 2026-06-12 after
+PR #157 merged and PRSG-013 contracts/fixtures were preserved under the
+autopilot skill payload and test fixtures.
+Recovery commands are recorded in
+`.specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md`.

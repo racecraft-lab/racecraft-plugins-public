@@ -330,3 +330,82 @@ reporting was repointed to payload-included contracts.
 `specs/prsg-010-harden-the-hatch` was removed from active `specs/**` cleanup on
 2026-06-11 after PRs #149-#155 merged and the PRSG-010 contract schemas were
 preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
+
+---
+
+## Vertical-slice sizing heuristics in PRD/grill-me
+
+[Source: specs/prsg-005-slice-sizing-heuristics]
+**Branch**: `prsg-005-slice-sizing-heuristics` · **Status**: Completed · **Archived**: 2026-06-12
+
+### Dependencies & Versions
+
+- Bash plus `jq`; no package manager or compiled build step.
+- Applies to Claude and Codex `speckit-prd` and `grill-me` skill mirrors.
+- Feeds the existing roadmap `Projected reviewable LOC` field without adding a
+  new roadmap schema.
+
+### Architecture / Approach
+
+- `estimate-spec-size.sh` provides the shared deterministic advisory estimator.
+- `slicing-heuristics.md` is the single source of truth for SPIDR, INVEST, and
+  vertical-slicing guidance.
+- `speckit-prd` applies the guidance at catalog-authoring time.
+- `grill-me` applies the same sizing branch to single-spec scoping and records
+  the chosen split for later scaffold/autopilot phases.
+
+### Test Strategy
+
+- PR #120 passed PR Checks, CodeQL, `test(speckit-pro)`,
+  `validate-plugins`, `validate-pr-title`, and `detect`.
+- Task evidence records `20/23` implementation tasks complete, with Layer 2,
+  Layer 3, and Layer 8 developer-local follow-ups intentionally not required as
+  merge blockers.
+- Post-cleanup verification is recorded in
+  `.specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md`.
+
+### Cleanup Notes
+
+`specs/prsg-005-slice-sizing-heuristics` was removed from active `specs/**`
+cleanup on 2026-06-12 after PR #120 merged and archive recovery commands were
+recorded.
+
+---
+
+## Non-stopping reviewability markers
+
+[Source: specs/prsg-013-reviewability-markers]
+**Branch**: `prsg-013-reviewability-markers` · **Status**: Completed · **Archived**: 2026-06-12
+
+### Dependencies & Versions
+
+- Bash plus `jq`, `git`, and GitHub CLI at PR-emission boundaries.
+- Builds on PRSG-008 layer planning, PRSG-009 multi-PR emission, and PRSG-010
+  final reviewability backstop ordering.
+- Preserves Claude and Codex autopilot guidance parity.
+
+### Architecture / Approach
+
+- `plan-layers.sh` adds marker-aware planning and persisted source
+  fingerprints.
+- `final-reviewability-backstop.sh` consumes valid marker plans and returns a
+  `marker_split` proceed outcome for full-diff size blocks.
+- `multi-pr-emission.sh` validates marker packets, emits scoped marker packets,
+  and supports hazard-collapsed full-spec output.
+- Workflow/state evidence records marker order, checkpoint expectations,
+  warnings, final backstop evidence, and PR-emission mapping.
+
+### Test Strategy
+
+- PR #157 passed PR Checks, CodeQL, `test(speckit-pro)`,
+  `validate-plugins`, `validate-pr-title` after title repair, and `detect`.
+- Autopilot evidence records the default deterministic suite passing
+  `2587/2587` before merge.
+- Post-cleanup verification is recorded in
+  `.specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md`.
+
+### Cleanup Notes
+
+`specs/prsg-013-reviewability-markers` was removed from active `specs/**`
+cleanup on 2026-06-12 after PR #157 merged and PRSG-013 contracts/fixtures were
+preserved under the autopilot payload and Layer 4 fixtures.

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-013-workflow.md",
-  "updated_at": "2026-06-12T05:01:23Z",
-  "active_step": "complete: PR creation skipped by marker-split safety boundary",
+  "updated_at": "2026-06-12T13:45:00Z",
+  "active_step": "archived: PRSG-005 and PRSG-013 post-merge hygiene applied",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -69,26 +69,19 @@
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "dry-run",
-    "safeToApplyCleanup": false,
-    "excludedCurrentSpec": "specs/prsg-013-reviewability-markers",
+    "cleanup_mode": "apply-cleanup",
+    "safeToApplyCleanup": true,
+    "excludedCurrentSpec": null,
     "eligible_previous_specs": [
-      "specs/prsg-002-moc-templates",
-      "specs/prsg-003-spec-index",
-      "specs/prsg-004-roadmap-moc-home-note",
-      "specs/prsg-006-reviewability-budget",
-      "specs/006a-uat-skeleton",
-      "specs/004-integration-verification"
+      "specs/prsg-005-slice-sizing-heuristics",
+      "specs/prsg-013-reviewability-markers"
     ],
-    "cleanup_applied": [],
-    "warnings": [
-      "Worktree is dirty before cleanup because autopilot-state.json is being updated for this run.",
-      "Active branch is prsg-013-reviewability-markers, not the safe cleanup base main.",
-      "--apply-cleanup was not supplied.",
-      "Current target spec was excluded.",
-      "PRSG-005 has implementation evidence but no local PR/merge evidence found."
+    "cleanup_applied": [
+      "specs/prsg-005-slice-sizing-heuristics",
+      "specs/prsg-013-reviewability-markers"
     ],
-    "note": "Archive extension archive v1.1.0 is installed. Discovery completed as dry-run evidence only; no files were deleted, moved, or edited by Archive Sweep."
+    "warnings": [],
+    "note": "Archive extension archive v1.1.0 is installed. Post-merge cleanup applied on main-derived branch codex/spec-hygiene-prsg-013-005 after PR #120 and PR #157 merge provenance and recovery commands were recorded."
   },
   "plan": [
     {
@@ -1923,5 +1916,20 @@
       },
       "evidence": "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 129/129"
     }
+  },
+  "archive_cleanup": {
+    "status": "completed",
+    "applied_at": "2026-06-12",
+    "cleanup_branch": "codex/spec-hygiene-prsg-013-005",
+    "report": ".specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md",
+    "removed_specs": [
+      "specs/prsg-005-slice-sizing-heuristics",
+      "specs/prsg-013-reviewability-markers"
+    ],
+    "preserved_process_artifacts": [
+      "docs/ai/specs/.process/PRSG-005-workflow.md",
+      "docs/ai/specs/.process/PRSG-013-workflow.md"
+    ],
+    "recovery": "Use git show/git checkout commands in the archive report."
   }
 }
