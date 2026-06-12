@@ -37,7 +37,7 @@ The design concept is the source of truth for these scoping decisions:
 | Checklist | `/speckit-checklist` | Complete | API contracts, error handling, and reliability checklists complete; G4 passed |
 | Tasks | `/speckit-tasks` | Complete | Generated 56 tasks across Foundation, US1-US4, and Polish; G5 passed |
 | Analyze | `/speckit-analyze` | Complete | 5 findings remediated in `tasks.md`; marker counter clean; G6 passed |
-| Implement | `/speckit-implement` | In Progress | Phase 7 US4 safe refinement active after completing Foundation, US1, US2, and US3 |
+| Implement | `/speckit-implement` | In Progress | Phase 7 Polish active after completing Foundation and US1-US4 |
 
 ### Phase Gates
 
@@ -491,8 +491,8 @@ For every deterministic behavior:
 | User Story 1 | T010-T017 | 8/8 | Generated and validated packet-owned single/split PR titles |
 | User Story 2 | T018-T024 | 7/7 | Reviewer body evidence, UAT compatibility, traceability, source/scope/verification checks, and stale body text validation complete |
 | User Story 3 | T025-T034 | 10/10 | Packet validation result paths, no-path input errors, workflow events, and split PR pre-create validation gate complete |
-| User Story 4 | T035-T041 | 0/7 | In progress |
-| Polish | | | |
+| User Story 4 | T035-T041 | 7/7 | Safe prose refinement markers, protected fingerprints, comment rejection, and guidance complete |
+| Polish | T042-T056 | 0/15 | In progress |
 
 ---
 

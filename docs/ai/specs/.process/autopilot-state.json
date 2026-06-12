@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T19:08:27Z",
-  "active_step": "Phase 7: US4 safe refinement (T035-T041)",
+  "updated_at": "2026-06-12T19:19:58Z",
+  "active_step": "Phase 7: Polish evidence and parity (T042-T056)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -243,7 +243,7 @@
         "source_boundary": {
           "section": "Phase 5: User Story 4 - Safe Prose Refinement"
         },
-        "checkpoint": "pending",
+        "checkpoint": "completed",
         "pr_mapping": "pending",
         "packet_validation": "pending"
       },
@@ -440,11 +440,12 @@
     },
     {
       "step": "Phase 7: US4 safe refinement (T035-T041)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "T035-T041 complete. Added sanctioned-edit and protected-edit fixtures, enforced editable marker boundaries, canonical protected-body fingerprints with editable elision, unknown comment rejection, host content coexistence outside the canonical packet block, and documented safe prose refinement limits."
     },
     {
       "step": "Phase 7: Polish evidence and parity (T042-T056)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
