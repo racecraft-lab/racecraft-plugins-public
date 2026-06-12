@@ -34,8 +34,8 @@ The design concept is the source of truth for these setup decisions:
 | Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; G2 passed with 0 clarification markers and no consensus items |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and early research decision record; G3 passed; reviewability estimate passed with 0 projected production LOC |
 | Checklist | `/speckit-checklist` | Complete | Completed documentation-quality, accessibility, and error-handling; G4 passed with 0 `[Gap]` markers |
-| Tasks | `/speckit-tasks` | In Progress | Generating research-only spike tasks; no site scaffold or package files |
-| Analyze | `/speckit-analyze` | Pending | Verify no implementation creep and traceability to PRD/roadmap/design concept |
+| Tasks | `/speckit-tasks` | Complete | Created 28 research-only tasks across 5 phases; G5 passed; atomicity route is one navigable PR |
+| Analyze | `/speckit-analyze` | In Progress | Verify no implementation creep and traceability to PRD/roadmap/design concept |
 | Implement | `/speckit-implement` | Pending | Write `docs/ai/research/interactive-documentation-framework-spike.md` |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -316,10 +316,12 @@ Focus on DOC-001 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 28 |
+| Phases | 5 |
+| Parallel Opportunities | 8 |
+| User Stories Covered | 3 user stories; 11 functional requirements |
+| G5 Validation | Passed; 28 tasks detected |
+| Reviewability Task Gate | Size-only block captured at `specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json`; continue through final reviewability backstop |
 
 ---
 
@@ -335,10 +337,17 @@ Expected initial route: `one-navigable-PR`, because this is a research-only spik
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | | `true` unless classifier finds release-sensitive behavior |
-| Signals | | Decisive detector findings |
-| Warnings | | Release-safety warnings |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | `true` | `true` unless classifier finds release-sensitive behavior |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings |
+| Warnings | None | Release-safety warnings |
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| Status | Skipped |
+| Reason | Atomicity route is `one-navigable-PR`; PRSG-008 layer planning only applies to `split-PR` routes |
 
 ---
 

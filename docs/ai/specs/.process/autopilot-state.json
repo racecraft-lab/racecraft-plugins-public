@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T21:36:00Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-12T21:45:00Z",
+  "active_step": "Phase 6: Analyze",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -185,11 +185,37 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "task_count": 28,
+      "phase_count": 5,
+      "parallel_opportunities": 8,
+      "atomicity_route": {
+        "route": "one-navigable-PR",
+        "releasable": true,
+        "signals": [
+          "change-shape:modify-heavy"
+        ],
+        "warnings": []
+      },
+      "layer_plan": {
+        "status": "skipped",
+        "reason": "Atomicity route is one-navigable-PR; PRSG-008 layer planning applies only to split-PR routes."
+      },
+      "reviewability_task_gate": {
+        "status": "block",
+        "pass": false,
+        "reviewable_loc": 1120,
+        "production_files": 0,
+        "total_files": 35,
+        "interpretation": "Size-only task-gate block captured for final reviewability backstop; no production-file or release-safety blocker."
+      },
+      "summary": "Created tasks.md with 28 research-only tasks across 5 phases, 8 parallel-safe opportunities, 3 user stories covered, and no site scaffold/package/config/plugin behavior tasks."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -200,7 +226,23 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Foundation - Research Artifact Structure (T001-T004)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Candidate Comparison (T005-T014)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: IA Skeleton and DOC-002 Command Handoff (T015-T018)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Recommendation Record (T019-T022)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Verification and Scope Boundary (T023-T028)",
       "status": "pending"
     },
     {
