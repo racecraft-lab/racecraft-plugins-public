@@ -141,7 +141,7 @@ bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 
 
 Expected outcome:
 
-- Layer 3 Claude Code and Codex eval expectations include packet generation, validation before PR creation, `--title`/`--body-file` usage, deterministic blocked evidence, and no post-create repair fallback.
+- Layer 3 Claude Code and Codex eval expectations include packet generation, validation before PR creation, `--base`/`--head`/`--title`/`--body-file` usage, deterministic blocked evidence, and no post-create repair fallback.
 - Layer 7 replay evidence covers post-implementation ordering: render packet, validate packet, append workflow event on failure, and call `gh pr create` only after a passing validation result.
 - Layer 8 dry-run validates the post-implementation parity fixture structure; live parity remains developer-local and opt-in because it runs full autopilot paths.
 

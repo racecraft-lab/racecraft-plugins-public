@@ -6,7 +6,7 @@
 
 ## Summary
 
-Autopilot will render packet-owned PR titles and PR bodies for both single-PR and split-PR flows, validate the rendered packet before any `gh pr create`, and pass PR creation only through the packet target plus `--title` and `--body-file`. The implementation centers on one shared packet schema, one shared Bash validator, direct generation of canonical reviewer sections, fixture-backed validation of allowed prose edits versus protected governance evidence, deterministic diagnostics for malformed inputs, and resume-safe split-PR blocking that preserves earlier opened PRs.
+Autopilot will render packet-owned PR titles and PR bodies for both single-PR and split-PR flows, validate the rendered packet before any `gh pr create`, and pass PR creation only through the packet target plus `--base`, `--head`, `--title`, and `--body-file`. The implementation centers on one shared packet schema, one shared Bash validator, direct generation of canonical reviewer sections, fixture-backed validation of allowed prose edits versus protected governance evidence, deterministic diagnostics for malformed inputs, and resume-safe split-PR blocking that preserves earlier opened PRs.
 
 ## Technical Context
 
@@ -160,7 +160,7 @@ Shared validator reuse:
 Layer evidence:
 
 - Layer 4: `test-validate-pr-packet.sh`, `test-generate-pr-body.sh`, and `test-multi-pr-emission.sh` cover valid single packets, valid split packets, invalid title tokens, missing body evidence, protected edit rejection, malformed input errors, deterministic stderr, workflow event emission, and split partial-failure resume.
-- Layer 3: `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json` and `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json` include expectations that autopilot describes packet generation, validation before PR creation, `--title`/`--body-file` usage, deterministic blocked evidence, and no post-create repair fallback.
+- Layer 3: `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json` and `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json` include expectations that autopilot describes packet generation, validation before PR creation, `--base`/`--head`/`--title`/`--body-file` usage, deterministic blocked evidence, and no post-create repair fallback.
 - Layer 7: `tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/` extends the existing post-implementation dispatch fixture to capture the packet ordering contract: packet render, validator call, workflow evidence on failure, then PR creation only after pass; split packets validate before each slice PR.
 - Layer 8: `tests/speckit-pro/layer8-parity/01-post-impl-parity/` extends the existing post-implementation parity fixture to compare Claude Code and Codex guidance for equivalent packet validation ordering, repo-relative evidence paths, blocked-remediation language, and absence of duplicate validator or schema copies.
 - Developer-local evidence commands are documented in `quickstart.md`; default verification remains Layer 1, Layer 4, and the default deterministic suite.

@@ -22,10 +22,10 @@
 
 - [ ] T001 Create failing valid single-packet Layer 4 fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json` and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md`
 - [ ] T002 Create failing valid split-packet Layer 4 fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-split.json` and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-split.md`
-- [ ] T003 Create failing invalid packet fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json`, `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json`, and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json`
+- [ ] T003 Create failing invalid packet fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json`, `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json`, and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json`, covering title/body stale placeholders, unexpanded variables, hidden template comments, example text, schema-invalid shape, and banned labels
 - [ ] T004 Add failing validator fixture assertions for pass, validation failure, and input error cases in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
 - [ ] T005 Add failing title/body generation assertions for generated packet metadata and rendered body paths in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
-- [ ] T006 Add failing PR emission command assertions for `gh pr create --title` and `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [ ] T006 Add failing PR emission command assertions for `gh pr create --base`, `--head`, `--title`, and `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 - [ ] T007 Copy the planned packet schema into the shared runtime contract at `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`
 - [ ] T008 Create the executable validator skeleton with input parsing, deterministic exit-code branches, and JSON output path handling in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
 - [ ] T009 Verify the reviewability budget against the planned file scope and record any split decision in `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
@@ -40,17 +40,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T010 [US1] Extend title fixtures for branch/spec/slice-token rejection in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json`
+- [ ] T010 [US1] Extend title fixtures for branch/spec/slice-token rejection and explicit metadata-only type/scope override validation in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json`
 - [ ] T011 [US1] Assert single-PR generated title metadata defaults to `feat(speckit-pro):` in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
-- [ ] T012 [US1] Assert split-PR `gh pr create` calls include packet title values through `--title` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [ ] T012 [US1] Assert split-PR `gh pr create` calls include packet target values through `--base`/`--head`, packet title values through `--title`, and rendered body files through `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 
 ### Implementation for User Story 1
 
 - [ ] T013 [US1] Generate single-PR `generated_title` metadata from the feature display title in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
 - [ ] T014 [US1] Generate split-PR `generated_title` metadata from marker source boundaries or layer-plan increment names in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
-- [ ] T015 [US1] Implement conventional title validation and banned-token rejection in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-- [ ] T016 [US1] Pass generated packet titles to split PR creation with `gh pr create --title` in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
-- [ ] T017 [US1] Update single-PR creation guidance to use generated packet titles in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
+- [ ] T015 [US1] Implement conventional title validation, explicit metadata-only type/scope override validation, and banned-token rejection in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [ ] T016 [US1] Pass generated packet target, title, and body values to split PR creation with `gh pr create --base --head --title --body-file` in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
+- [ ] T017 [US1] Update single-PR creation guidance to use generated packet target, title, and body values in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
 
 **Checkpoint**: US1 is complete when packet title fixtures pass and no PR creation path derives titles from branch names, spec IDs, slice IDs, task IDs, file paths, or body prose.
 
@@ -62,16 +62,16 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [US2] Add body heading order, source marker, UAT, verification, scope, and Known Gaps assertions in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
-- [ ] T019 [US2] Add validator assertions for missing headings, duplicate headings, banned labels, missing source markers, missing verification evidence, and missing scope evidence in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
-- [ ] T020 [P] [US2] Add body fixture coverage for required canonical sections in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md`
+- [ ] T018 [US2] Add body heading order, source marker, UAT, traceability, verification, scope, and Known Gaps assertions in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
+- [ ] T019 [US2] Add validator assertions for missing, duplicated, and out-of-order headings; headings satisfied only by packet JSON, host template content, code fences, comments, generated fixtures, `.process` files, or generated zones; stale placeholders; unexpanded variables; example text; banned labels; missing source markers; missing traceability mappings; missing verification evidence; and missing scope evidence in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
+- [ ] T020 [P] [US2] Add body fixture coverage for required canonical sections, traceability mappings, UAT compatibility, and source/verification/scope evidence in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md`
 
 ### Implementation for User Story 2
 
 - [ ] T021 [US2] Render `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps` in stable order in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
 - [ ] T022 [US2] Preserve the literal `## UAT Runbook` compatibility heading and UAT source evidence in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
-- [ ] T023 [US2] Render source markers, verification evidence, scope evidence, non-goals, and known-gap language in `speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md`
-- [ ] T024 [US2] Validate canonical body headings, banned labels, source markers, verification evidence, scope evidence, and UAT compatibility in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [ ] T023 [US2] Render source markers, traceability mappings, verification evidence, scope evidence, non-goals, and known-gap language in `speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md`
+- [ ] T024 [US2] Validate canonical body heading order and canonical-block ownership, stale placeholders, unexpanded variables, example text, banned labels, source markers, traceability mappings, verification evidence, scope evidence, and UAT compatibility in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
 
 **Checkpoint**: US2 is complete when valid rendered bodies pass and missing or stale reviewer evidence blocks before PR creation.
 
@@ -83,19 +83,19 @@
 
 ### Tests for User Story 3
 
-- [ ] T025 [US3] Add input-error fixture arguments for missing and unreadable packet inputs in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args`
+- [ ] T025 [US3] Add input-error fixture arguments for missing, unreadable, directory-valued, invalid-JSON, schema-invalid, and no-feature-dir packet inputs in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args`
 - [ ] T026 [US3] Add split partial-failure resume fixture in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json`
-- [ ] T027 [US3] Assert deterministic validation JSON, stderr lines, exit codes, and workflow event evidence in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
-- [ ] T028 [US3] Assert split PR emission validates before each slice PR, blocks invalid packets, preserves prior PR evidence, and does not duplicate earlier PRs in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [ ] T027 [US3] Assert deterministic validation JSON, stdout `input_error` envelopes with `no-path` when no feature directory can be derived, stderr lines, exit codes, zero `gh pr create` attempts, deterministic workflow event ids, and workflow event supersede behavior in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
+- [ ] T028 [US3] Assert split PR emission validates before each slice PR, blocks invalid packets, preserves prior PR evidence, ignores stale failed validation records as authorization, and does not duplicate earlier PRs in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 
 ### Implementation for User Story 3
 
-- [ ] T029 [US3] Write validation results under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/<packet_id>/validation.json` from `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-- [ ] T030 [US3] Emit deterministic failed-run stderr lines and distinguish `validation_failure` exit `1` from `input_error` exit `2` in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-- [ ] T031 [US3] Append blocking workflow events to `docs/ai/specs/.process/PRSG-012-workflow.md` from `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-- [ ] T032 [US3] Invoke `validate-pr-packet.sh` before each split `gh pr create` call in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
-- [ ] T033 [US3] Preserve `.process/prs.json`, Spec MOC PRS table, workflow evidence, and `autopilot-state.json` references during split partial failure handling in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
-- [ ] T034 [US3] Update single-PR post-implementation guidance to require validation before `gh pr create --base --head --title --body-file` in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
+- [ ] T029 [US3] Write validation results under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/<packet_id>/validation.json` from `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`, or emit the same `input_error` JSON envelope to stdout with `validation_result_path: "no-path"` when no target feature directory can be derived
+- [ ] T030 [US3] Emit deterministic failed-run stderr lines and distinguish `validation_failure` exit `1` from `input_error` exit `2`, including the `validation_result_path_or_no-path` field, in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [ ] T031 [US3] Append or supersede blocking workflow events with deterministic event ids in `docs/ai/specs/.process/PRSG-012-workflow.md` from `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [ ] T032 [US3] Invoke `validate-pr-packet.sh` before each split `gh pr create --base --head --title --body-file` call in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
+- [ ] T033 [US3] Preserve `.process/prs.json`, Spec MOC PRS table, workflow evidence, and `autopilot-state.json` references during split partial failure handling, then reconcile existing PR records before retry so corrected packets cannot duplicate earlier PRs, in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
+- [ ] T034 [US3] Update single-PR post-implementation guidance to require current packet validation before `gh pr create --base --head --title --body-file` and to use only newly passed validation results in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
 
 **Checkpoint**: US3 is complete when all invalid packets block before PR creation and valid packets are the only path to `gh pr create --base --head --title --body-file`.
 
@@ -109,13 +109,13 @@
 
 - [ ] T035 [US4] Add sanctioned prose edit fixture coverage in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single-edited.md`
 - [ ] T036 [US4] Add protected edit rejection fixture in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json`
-- [ ] T037 [US4] Assert editable boundary comments, protected fingerprint elision, unknown comment rejection, and host template coexistence in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
+- [ ] T037 [US4] Assert editable boundary comments, protected fingerprint elision, unknown comment rejection, stale template comment rejection, and host template coexistence outside the protected canonical packet block in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
 
 ### Implementation for User Story 4
 
 - [ ] T038 [US4] Render exact full-line editable marker pairs for `summary`, `what_changed`, and `why_it_matters` in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
 - [ ] T039 [US4] Store editable field metadata and protected body fingerprints with editable blocks elided in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
-- [ ] T040 [US4] Reject protected body changes, malformed editable boundaries, unknown HTML comments, and host template interference in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [ ] T040 [US4] Reject protected body changes, malformed editable boundaries, unknown HTML comments, stale template comments, and host template interference in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
 - [ ] T041 [US4] Document sanctioned editable fields and protected governance limits in `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`
 
 **Checkpoint**: US4 is complete when sanctioned prose edits pass and protected evidence edits fail with deterministic remediation evidence.
@@ -124,14 +124,14 @@
 
 **Purpose**: Update higher-layer evidence and mirrored guidance after the runtime and Layer 4 contract pass.
 
-- [ ] T042 [P] Update Claude Code Layer 3 functional eval expectations for generated title/body and pre-create validation in `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json`
-- [ ] T043 [P] Update Codex Layer 3 functional eval expectations for generated title/body and pre-create validation in `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`
+- [ ] T042 [P] Update Claude Code Layer 3 functional eval expectations for generated title/body, explicit `--base --head --title --body-file`, pre-create validation, and no post-create repair fallback in `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json`
+- [ ] T043 [P] Update Codex Layer 3 functional eval expectations for generated title/body, explicit `--base --head --title --body-file`, pre-create validation, and no post-create repair fallback in `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`
 - [ ] T044 Update Layer 7 replay fixture ordering for split PR packet validation before each slice PR in `tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/prompt.txt`
 - [ ] T045 Update Layer 7 replay expected packet validation evidence in `tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/expected.json`
 - [ ] T046 [P] Update Layer 7 replay documentation for reviewer-ready packet validation in `tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/README.md`
 - [ ] T047 Update Layer 7 parser fixture evidence for packet validation before PR creation in `tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/parser-fixture.jsonl`
-- [ ] T048 Update Layer 8 parity workflow expectations for mirrored autopilot guidance in `tests/speckit-pro/layer8-parity/01-post-impl-parity/workflow.md`
-- [ ] T049 Update Layer 8 parity expected equivalence for shared schema and validator references in `tests/speckit-pro/layer8-parity/01-post-impl-parity/expected-equivalence.json`
+- [ ] T048 Update Layer 8 parity workflow expectations for mirrored autopilot guidance, explicit PR target/title/body arguments, and pre-create validation ordering in `tests/speckit-pro/layer8-parity/01-post-impl-parity/workflow.md`
+- [ ] T049 Update Layer 8 parity expected equivalence for shared schema and validator references, no duplicate Codex validator/schema copies, and no post-create repair fallback in `tests/speckit-pro/layer8-parity/01-post-impl-parity/expected-equivalence.json`
 - [ ] T050 [P] Update Layer 8 parity documentation and tolerance notes in `tests/speckit-pro/layer8-parity/01-post-impl-parity/README.md` and `tests/speckit-pro/layer8-parity/01-post-impl-parity/tolerance.json`
 - [ ] T051 Update primary autopilot guidance for packet generation, validation, and PR creation behavior in `speckit-pro/skills/speckit-autopilot/SKILL.md`
 - [ ] T052 Update Codex mirrored autopilot guidance without duplicating schema or validator copies in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
@@ -176,8 +176,8 @@
 ## Parallel Example: Higher-layer Evidence
 
 ```bash
-Task: "Update Claude Code Layer 3 functional eval expectations for generated title/body and pre-create validation in tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json"
-Task: "Update Codex Layer 3 functional eval expectations for generated title/body and pre-create validation in tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json"
+Task: "Update Claude Code Layer 3 functional eval expectations for generated title/body, explicit --base/--head/--title/--body-file use, and pre-create validation in tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json"
+Task: "Update Codex Layer 3 functional eval expectations for generated title/body, explicit --base/--head/--title/--body-file use, and pre-create validation in tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json"
 ```
 
 ## Implementation Strategy

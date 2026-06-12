@@ -23,7 +23,7 @@
 
 ## PR Creation Boundary
 
-- [x] CHK010 Is every PR creation path required to use `gh pr create --title <generated-title> --body-file <generated-body>` before reviewers see the PR? [Completeness, Spec FR-004/FR-005, Plan Summary, Quickstart]
+- [x] CHK010 Is every PR creation path required to use `gh pr create --base <base_branch> --head <head_branch> --title <generated-title> --body-file <generated-body>` before reviewers see the PR? [Completeness, Spec FR-004/FR-005, Plan Summary, Quickstart]
 - [x] CHK011 Are validation failures required to block before PR creation and write packet-specific remediation JSON? [Completeness, Spec FR-013/FR-014, Data Model Validation Result]
 
 ## Rendered Markdown Contract

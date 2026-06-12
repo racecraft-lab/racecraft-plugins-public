@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T17:14:55Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-12T17:32:39Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -96,10 +96,10 @@
     "source": "reviewability-gate tasks",
     "feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
     "source_fingerprint": {
-      "head_sha": "8187cb61e745eccd2ff64b40ffb890621938bc46",
+      "head_sha": "73206712cc403dfa354fb86ff9a717cc77015ce4",
       "spec_sha256": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
-      "plan_sha256": "7e017ef7414fbd09a57e83cd8742d11bd24ed5b0f80f4e5f9b4265f0b4e6b8ff",
-      "tasks_sha256": "e9b3b150227aba4287f59c226badc78a1f14a6b06663639c6eef7fcc8642d118"
+      "plan_sha256": "555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
+      "tasks_sha256": "fc29a183e4a6c72a963d30708c361b0ad15a728c942eafcacd6b75421cb8ad74"
     },
     "fingerprint_status": "current",
     "reviewability_gate": {
@@ -109,16 +109,16 @@
       "pass": false,
       "reviewable_loc": 2240,
       "production_files": 1,
-      "total_files": 69,
+      "total_files": 73,
       "primary_surface_count": 5,
       "warnings": [
         "reviewable LOC 2240 exceeds warn threshold 400",
-        "total files 69 exceeds warn threshold 15",
+        "total files 73 exceeds warn threshold 15",
         "primary surfaces 5 exceeds warn threshold 1"
       ],
       "blockers": [
         "reviewable LOC 2240 exceeds block threshold 800",
-        "total files 69 exceeds block threshold 25"
+        "total files 73 exceeds block threshold 25"
       ],
       "repo_relative_evidence_path": null
     },
@@ -386,18 +386,22 @@
         "classification": "size-only marker input",
         "reviewable_loc": 2240,
         "production_files": 1,
-        "total_files": 69,
+        "total_files": 73,
         "primary_surface_count": 5
       },
       "summary": "Generated tasks.md with 56 tasks across Foundation, US1-US4, and Polish. G5 passed. Reviewability size-only block recorded as pr_marker_plan evidence."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "summary": "5 findings remediated in tasks.md (0 critical, 2 high, 2 medium, 1 low). Marker counter clean after rerun."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items; no consensus dispatch required."
     },
     {
       "step": "Phase 6.5: Confidence Gate",

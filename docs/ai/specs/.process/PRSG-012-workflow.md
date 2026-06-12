@@ -36,7 +36,7 @@ The design concept is the source of truth for these scoping decisions:
 | Plan | `/speckit-plan` | Complete | Generated plan/research/data model/contract/quickstart; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | API contracts, error handling, and reliability checklists complete; G4 passed |
 | Tasks | `/speckit-tasks` | Complete | Generated 56 tasks across Foundation, US1-US4, and Polish; G5 passed |
-| Analyze | `/speckit-analyze` | In Progress | Check consistency against the design concept |
+| Analyze | `/speckit-analyze` | Complete | 5 findings remediated in `tasks.md`; marker counter clean; G6 passed |
 | Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
 
 ### Phase Gates
@@ -85,7 +85,7 @@ The design concept is the source of truth for these scoping decisions:
 
 ### Success Criteria Summary
 
-- Both single-PR and split-PR paths pass `--title` and `--body-file` to `gh pr create`.
+- Both single-PR and split-PR paths pass `--base`, `--head`, `--title`, and `--body-file` to `gh pr create`.
 - Generated titles identify the reviewer-visible change, not just a branch or slice code.
 - Generated bodies include canonical sections: `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
 - Generated bodies keep the literal `## UAT Runbook` compatibility heading.
@@ -121,7 +121,7 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 
 ### Functional Requirements
 - Generate a packet-owned PR title for both single-PR and split-PR paths.
-- Pass `gh pr create --title <generated-title> --body-file <generated-body>` in every PR creation path.
+- Pass `gh pr create --base <base_branch> --head <head_branch> --title <generated-title> --body-file <generated-body>` in every PR creation path.
 - Add one shared deterministic PR packet validator script invoked before every `gh pr create`.
 - Validate rendered title/body text, not only JSON schema shape.
 - Reject stale placeholders, unfilled template comments, missing source markers, missing required headings, missing verification/scope evidence, and banned labels such as `ELI5` or `Plain-English Summary`.
@@ -205,7 +205,7 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 - Runtime: Bash 4+ shell scripts
 - Data: JSON Schema 2020-12 contracts and `jq`
 - Repo surfaces: Markdown skill/reference docs, shell scripts, Layer 4 shell fixtures, L3/L7/L8 eval fixtures
-- GitHub boundary: `gh pr create --title --body-file`
+- GitHub boundary: `gh pr create --base --head --title --body-file`
 
 ## Architecture Notes
 - Add one shared validator script, likely `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`.
@@ -264,7 +264,7 @@ Why this domain: PRSG-012 defines a CLI/script contract plus JSON packet schemas
 Focus on PRSG-012 requirements:
 - Required PR packet fields for title, body file, headings, scope, verification, UAT, source markers, and editable prose fields.
 - Compatibility between single-PR packets and split-PR slice packets.
-- Exact `gh pr create --title --body-file` call contract.
+- Exact `gh pr create --base --head --title --body-file` call contract.
 - Pay special attention to: schema fields that are validated in JSON but not checked in rendered Markdown.
 ```
 
@@ -325,7 +325,7 @@ Focus on PRSG-012 requirements:
 
 ## Implementation Phases
 1. Foundation: packet schema/fixture shape and validator skeleton.
-2. User Story 1: generated packet-owned titles and `gh pr create --title`.
+2. User Story 1: generated packet-owned titles and `gh pr create --base --head --title --body-file`.
 3. User Story 2: canonical body sections and UAT compatibility.
 4. User Story 3: pre-create validator invocation, blocking behavior, and evidence.
 5. User Story 4: safe editable fields and validator protections.
@@ -333,7 +333,7 @@ Focus on PRSG-012 requirements:
 
 ## Required Test Evidence
 - Layer 4 validator/body fixtures.
-- Layer 4 multi-pr-emission command assertions include `--title` and `--body-file`.
+- Layer 4 multi-pr-emission command assertions include `--base`, `--head`, `--title`, and `--body-file`.
 - L3 functional eval covers generated title/body and pre-create validation.
 - L7 replay covers split PR packet validation before each slice PR.
 - L8 Codex parity covers mirrored autopilot guidance.
@@ -424,7 +424,13 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | HIGH | Several artifacts narrowed PR creation coverage to `--title`/`--body-file`, while `spec.md` FR-004A and `plan.md` require packet target binding through `gh pr create --base --head --title --body-file` for every PR creation path. | Amended T006, T012, T016, T017, T032, T034, T042, T043, T048, and T049 so tests, split emission, single guidance, L3, and L8 all preserve explicit packet target/title/body arguments; aligned the remaining checklist, quickstart, plan, and workflow references with the full command contract. |
+| A2 | HIGH | `tasks.md` did not explicitly cover every FR-015A input-error variant or the no-feature-dir `stdout`/`no-path` fallback. | Amended T003, T025, T027, T029, and T030 to cover directory-valued, schema-invalid, missing/unreadable, invalid-JSON, no-feature-dir inputs, deterministic `input_error` JSON/stderr, `no-path`, and zero `gh pr create` attempts. |
+| A3 | MEDIUM | Body validation tasks were too implicit for FR-007, FR-008A, FR-016B, and the PR review packet traceability requirement: stale placeholders, unexpanded variables, example text, hidden/template comments, non-canonical heading sources, out-of-order headings, and traceability mappings needed explicit test/validator coverage. | Amended T003, T018, T019, T020, T023, T024, T037, and T040 to require those fixtures and validator checks directly. |
+| A4 | MEDIUM | Resume and workflow-event tasks mentioned evidence emission but not deterministic event-id superseding or the rule that stale failed validation results cannot authorize PR creation after a corrected rerun. | Amended T027, T028, T031, T033, and T034 to require event-id superseding, current-packet revalidation, stale-result rejection, existing-PR reconciliation, and use of newly passed validation results only. |
+| A5 | LOW | Phase 6 workflow metadata still showed Analyze in progress with an empty Analysis Results table after remediation. | Updated this workflow log to mark Analyze complete, record all findings/resolutions, and align required test evidence with the full packet target/title/body PR creation contract. |
+
+**G6:** pass - 0 CRITICAL findings; 5 findings remediated; deterministic marker counter reports 0 remaining finding markers.
 
 ---
 
@@ -486,7 +492,7 @@ For every deterministic behavior:
 - [ ] L7 replay evidence is recorded when split-PR dispatch behavior changes.
 - [ ] L8 Codex parity evidence is recorded.
 - [ ] Generated PR body contains required canonical sections and the `## UAT Runbook` compatibility heading.
-- [ ] Every PR creation path uses `gh pr create --title --body-file`.
+- [ ] Every PR creation path uses `gh pr create --base --head --title --body-file`.
 - [ ] Invalid packet fixture blocks before PR creation and writes JSON remediation evidence.
 - [ ] PR title is conventional and public-readable.
 
