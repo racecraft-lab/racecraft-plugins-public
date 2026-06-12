@@ -360,9 +360,9 @@ opens one slice PR.
    generated conventional title, rendered body path, validation result path,
    reviewer headings, editable fields, scope, verification, and UAT evidence.
    The rendered body path in the packet is the only body file that may be
-   passed to PR creation. The generator uses the host repository's pull request
-   template when present and appends any missing review-packet sections. If no
-   host template exists, it uses the plugin fallback template.
+   passed to PR creation. With `--packet-output`, the generator replaces the
+   template body with the canonical packet-owned reviewer body. The packet body
+   preserves only the sanctioned editable fields and reviewer sections.
 6b. Verify the body is script-generated (non-blocking self-check):
    confirm `.git/speckit-pr-body.md` contains the
    `speckit-pro-review-packet-source` marker comment AND a `## UAT Runbook`

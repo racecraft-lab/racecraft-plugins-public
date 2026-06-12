@@ -115,6 +115,14 @@ assert_file_exists "$SCRIPT"
 set_test "multi-pr-emission.sh is executable"
 assert_file_executable "$SCRIPT"
 
+script_source=$(cat "$SCRIPT")
+
+set_test "Emitter does not hardcode current PRSG-012 marker title descriptions"
+assert_not_contains "$script_source" "Generate packet-owned conventional PR titles"
+
+set_test "Emitter does not hardcode current PRSG-012 reviewer-body title"
+assert_not_contains "$script_source" "Render plain-English reviewer PR body evidence"
+
 section "layer-plan and state validation"
 
 valid_plan="$FIXTURE_ROOT/layer-plans/valid-three-slice.json"
@@ -128,20 +136,29 @@ full_evidence="$SANDBOX/specs/prsg-009-multi-pr-emission/.process/emission/full-
 marker_full_evidence="$SANDBOX/specs/prsg-013-reviewability-markers/.process/emission/full-regression.txt"
 custom_feature_plan="$SANDBOX/custom-feature-plan.json"
 custom_full_evidence="$SANDBOX/specs/prsg-999-custom-feature/.process/emission/full-regression.txt"
+spec_future_plan="$SANDBOX/spec-future-plan.json"
+spec_future_evidence="$SANDBOX/specs/spec-014c-future-title-contract/.process/emission/full-regression.txt"
 wrong_feature_evidence="$SANDBOX/specs/prsg-009-multi-pr-emission/.process/emission/wrong-feature.txt"
 declared_changed_files="$SANDBOX/declared-changed-files.txt"
 scope_violation_files="$SANDBOX/scope-violation-files.txt"
 marker_declared_changed_files="$SANDBOX/marker-declared-changed-files.txt"
 marker_scope_violation_files="$SANDBOX/marker-scope-violation-files.txt"
+prsg012_marker_plan="$REPO_ROOT/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/pr-marker-plan.json"
+prsg012_split_result="$REPO_ROOT/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
+prsg012_full_evidence="$SANDBOX/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log"
 
 mkdir -p "$(dirname "$full_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-009 fixture' > "$full_evidence"
 mkdir -p "$(dirname "$marker_full_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-013 marker fixture' > "$marker_full_evidence"
-mkdir -p "$(dirname "$custom_full_evidence")" "$(dirname "$wrong_feature_evidence")"
+mkdir -p "$(dirname "$prsg012_full_evidence")"
+printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-012 marker title fixture' > "$prsg012_full_evidence"
+mkdir -p "$(dirname "$custom_full_evidence")" "$(dirname "$spec_future_evidence")" "$(dirname "$wrong_feature_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for custom feature fixture' > "$custom_full_evidence"
+printf '%s\n' 'DEFAULT_VERIFY passed for future SPEC fixture' > "$spec_future_evidence"
 printf '%s\n' 'wrong feature evidence path' > "$wrong_feature_evidence"
 jq '.feature_dir = "specs/prsg-999-custom-feature"' "$valid_plan" > "$custom_feature_plan"
+jq '.feature_dir = "specs/spec-014c-future-title-contract"' "$valid_plan" > "$spec_future_plan"
 cat > "$declared_changed_files" <<'EOF'
 tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
 speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
@@ -254,6 +271,31 @@ run_emission output stderr_output "$SCRIPT" \
   --full-verification-evidence "$custom_full_evidence" \
   --candidate-dir "$custom_candidate_dir" || result=$?
 assert_eq "0" "$result" "exit code"
+
+set_test "future SPEC dry run derives title scope from feature_dir"
+spec_future_candidate_dir="$SANDBOX/spec-future-candidates"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --layer-plan "$spec_future_plan" \
+  --state "$empty_state" \
+  --feature-branch spec-014c-future-title-contract \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$spec_future_evidence" \
+  --candidate-dir "$spec_future_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+spec_future_commands_json="$(cat "$spec_future_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+
+set_test "future SPEC dry run uses derived SPEC scope for every PR title"
+json_check "$spec_future_commands_json" \
+  "len([op for op in data['operations'] if op['action'] == 'gh_pr_create']) == 3 and all(op['title'].startswith('feat(SPEC-014C): ') for op in data['operations'] if op['action'] == 'gh_pr_create')" \
+  "future SPEC dry run should use SPEC-014C title scope"
+
+set_test "future SPEC dry run does not use current or fallback scope"
+json_check "$spec_future_commands_json" \
+  "not any(('PRSG-012' in op.get('title', '') or 'feat(speckit-pro):' in op.get('title', '')) for op in data['operations'] if op['action'] == 'gh_pr_create')" \
+  "future SPEC dry run should not use PRSG-012 or plugin fallback title scope"
 
 set_test "wrong feature evidence path exits 2"
 result=0
@@ -462,6 +504,9 @@ unreleasable_split_result="$MARKER_FIXTURE_ROOT/hazard-unreleasable-split-result
 navigable_split_result="$MARKER_FIXTURE_ROOT/navigable-releasable-split-result.json"
 mismatched_split_result="$MARKER_FIXTURE_ROOT/mismatched-marker-split-result.json"
 order_mismatch_split_result="$MARKER_FIXTURE_ROOT/order-mismatch-split-result.json"
+missing_source_boundary_marker_plan="$SANDBOX/missing-source-boundary-marker-plan.json"
+jq '(.markers[] | select(.id == "us1") | .source_boundary) = {}' \
+  "$valid_marker_plan" > "$missing_source_boundary_marker_plan"
 
 marker_candidate_dir="$SANDBOX/marker-candidates"
 
@@ -524,6 +569,45 @@ set_test "marker-aware stdout identifies marker mode and marker count"
 json_check "$output" \
   "data['script'] == 'multi-pr-emission' and data['status'] == 'validated' and data['emission']['mode'] == 'marker' and data['emission']['route'] == 'marker_split' and data['emission']['marker_count'] == 3" \
   "stdout should describe marker-aware dry-run result"
+
+section "PRSG-012 marker title regression"
+
+prsg012_candidate_dir="$SANDBOX/prsg012-marker-candidates"
+
+set_test "PRSG-012 marker dry run normalizes generic story labels into public titles"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$prsg012_marker_plan" \
+  --marker-split-result "$prsg012_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-012-reviewer-ready-pr-packet-contract \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$prsg012_full_evidence" \
+  --candidate-dir "$prsg012_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+prsg012_commands_json="$(cat "$prsg012_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+prsg012_us1_body="$(cat "$prsg012_candidate_dir/pr-bodies/us1.md" 2>/dev/null || true)"
+
+set_test "PRSG-012 marker commands use strict plain-English titles"
+json_check "$prsg012_commands_json" \
+  "[op['title'] for op in data['operations'] if op['action'] == 'gh_pr_create'] == ['feat(PRSG-012): Add reviewer packet validation contract', 'feat(PRSG-012): Generate packet-owned conventional PR titles', 'feat(PRSG-012): Render plain-English reviewer PR body evidence', 'feat(PRSG-012): Block invalid PR packets before creation', 'feat(PRSG-012): Protect editable PR body prose']" \
+  "PRSG-012 marker PR titles should name the actual reviewer-visible change"
+
+set_test "PRSG-012 marker commands reject raw foundation/story labels"
+json_check "$prsg012_commands_json" \
+  "not any(('Foundation' in op.get('title', '') or 'User Story' in op.get('title', '') or 'Priority:' in op.get('title', '') or op.get('title', '').endswith(': us1')) for op in data['operations'] if op['action'] == 'gh_pr_create')" \
+  "PRSG-012 marker PR titles must not expose raw marker labels"
+
+set_test "PRSG-012 marker candidate body explains the change"
+assert_contains "$prsg012_us1_body" "This PR covers one reviewer-ready slice: Generate packet-owned conventional PR titles."
+
+set_test "PRSG-012 marker candidate body omits packet-mechanics prose"
+assert_not_contains "$prsg012_us1_body" 'Prepared `'
+
+set_test "PRSG-012 marker candidate body does not start with empty host headings"
+assert_not_contains "$prsg012_us1_body" "# What changed"
 
 set_test "single-atomic hazard collapses marker emission to one full-spec packet"
 single_atomic_candidate_dir="$SANDBOX/single-atomic-marker-candidates"
@@ -634,6 +718,22 @@ run_emission output stderr_output "$SCRIPT" \
 assert_eq "2" "$result" "exit code"
 assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: invalid marker packet shape: placeholder declared file path for foundation"
 assert_file_not_exists "$placeholder_marker_candidate_dir/commands.candidate.json"
+
+set_test "marker title emission requires source boundary sections"
+missing_source_boundary_candidate_dir="$SANDBOX/missing-source-boundary-marker-candidates"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$missing_source_boundary_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-013-reviewability-markers \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$marker_full_evidence" \
+  --candidate-dir "$missing_source_boundary_candidate_dir" || result=$?
+assert_eq "2" "$result" "exit code"
+assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: marker source_boundary.section is required for us1"
+assert_file_not_exists "$missing_source_boundary_candidate_dir/commands.candidate.json"
 
 set_test "marker split result with unknown marker stops before side effects"
 mismatched_marker_candidate_dir="$SANDBOX/mismatched-marker-candidates"
@@ -1422,7 +1522,7 @@ invalid_packet_full_evidence="$invalid_packet_repo/specs/prsg-009-multi-pr-emiss
 invalid_packet_fixture="$SANDBOX/pr-fixture-invalid-packet.json"
 invalid_packet_commands="$SANDBOX/pr-commands-invalid-packet.json"
 write_pr_fixture "$invalid_packet_fixture" success
-jq '.increments[1].name = "PRSG-009 internal slice"' "$valid_plan" > "$invalid_packet_plan"
+jq '.increments[1].files = []' "$valid_plan" > "$invalid_packet_plan"
 
 set_test "invalid split packet blocks before that slice PR creation"
 result=0

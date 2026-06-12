@@ -111,6 +111,58 @@ repo_relative_path() {
   esac
 }
 
+conventional_scope_from_feature_dir() {
+  local feature_dir_rel="$1" base spec_suffix
+  base="${feature_dir_rel%/}"
+  base="${base##*/}"
+  if [[ "$base" =~ ^[Pp][Rr][Ss][Gg]-([0-9]+)(-|$) ]]; then
+    printf 'PRSG-%s\n' "${BASH_REMATCH[1]}"
+  elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'SPEC-%s\n' "$spec_suffix"
+  else
+    printf 'speckit-pro\n'
+  fi
+}
+
+protected_body_sha() {
+  local path="$1"
+  awk '
+    function trim(s) { sub(/[ \t\r]+$/, "", s); return s }
+    {
+      line=trim($0)
+      if (!in_block && line == "## Summary") in_block=1
+      if (!in_block) next
+      if (seen_known_gaps && known_gaps_body_seen && line == "") exit
+      if (seen_known_gaps && line ~ /^#{1,6}[[:space:]]+/) exit
+
+      if (line == "<!-- speckit-pro-editable:summary:start -->") {
+        field="summary"; in_edit=1; print line; print "<elided:summary>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:what_changed:start -->") {
+        field="what_changed"; in_edit=1; print line; print "<elided:what_changed>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:why_it_matters:start -->") {
+        field="why_it_matters"; in_edit=1; print line; print "<elided:why_it_matters>"; next
+      }
+      if (in_edit && line == "<!-- speckit-pro-editable:" field ":end -->") {
+        in_edit=0; field=""; print line; next
+      }
+      if (in_edit) next
+
+      print line
+      if (line == "## Known Gaps") seen_known_gaps=1
+      else if (seen_known_gaps && line != "") known_gaps_body_seen=1
+    }
+  ' "$path" | {
+    if command -v shasum >/dev/null 2>&1; then
+      shasum -a 256 | awk '{print $1}'
+    else
+      awk '{printf "%064d\n", 0}'
+    fi
+  }
+}
+
 sha256_file() {
   local path="$1"
   if command -v shasum >/dev/null 2>&1; then
@@ -308,6 +360,7 @@ else
   fi
 fi
 EXPECTED_EMISSION_DIR="$FEATURE_DIR_REL/.process/emission/"
+TITLE_SCOPE="$(conventional_scope_from_feature_dir "$FEATURE_DIR_REL")"
 
 if [ -z "$FULL_VERIFICATION_EVIDENCE" ]; then
   emit_input_error "missing required option --full-verification-evidence"
@@ -397,6 +450,17 @@ if [ "$MARKER_MODE" = true ]; then
   )"
   if [ -n "$duplicate_marker" ]; then
     emit_input_error "duplicate marker_id $duplicate_marker"
+  fi
+
+  missing_source_boundary="$(
+    jq -r '
+      .markers[]
+      | select(((.source_boundary.section // "") | strings | length) == 0)
+      | .id
+    ' "$MARKER_PLAN" | head -1
+  )"
+  if [ -n "$missing_source_boundary" ]; then
+    emit_input_error "marker source_boundary.section is required for $missing_source_boundary"
   fi
 
   placeholder_marker="$(
@@ -494,6 +558,7 @@ if [ "$MARKER_MODE" = true ]; then
       --arg feature_branch "$FEATURE_BRANCH" \
       --arg base_branch "$BASE_BRANCH" \
       --arg feature_dir "$FEATURE_DIR_REL" \
+      --arg title_scope "$TITLE_SCOPE" \
       --arg marker_split_evidence "$MARKER_SPLIT_RESULT" \
       --arg route "$EMISSION_ROUTE" \
       --slurpfile plan "$MARKER_PLAN" \
@@ -551,6 +616,39 @@ if [ "$MARKER_MODE" = true ]; then
             end;
         def marker_files($marker): [($marker.declared_files // [])[] | .path];
         def marker_warnings($markers): [($markers[] | (.warnings // []))[]];
+        def title_clean:
+          gsub("\\s*\\(Priority:[^)]+\\)"; "")
+          | gsub("\\s+MVP$"; "")
+          | gsub("^User Story [0-9]+\\s*-\\s*"; "")
+          | gsub("^User Story [0-9]+$"; "")
+          | gsub("^\\s+"; "")
+          | gsub("\\s+$"; "");
+        def has_action_verb:
+          test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
+        def public_title_description($id; $source_title; $files; $explicit_title):
+          (($explicit_title // "") | title_clean) as $explicit
+          | if $explicit != "" then $explicit
+          else
+          (($source_title // $id) | title_clean) as $clean
+          | (($files // []) | join(" ")) as $paths
+          | if ($paths | contains("marker-plan")) then
+              "Add marker split emission fixtures"
+            elif ($paths | contains("multi-pr-emission-state.schema.json")) then
+              "Record marker split emission state"
+            elif ($paths | contains("generate-spec-index.sh")) then
+              "Persist PR table and resume evidence"
+            elif ($paths | contains("multi-pr-emission.sh")) then
+              "Emit ordered slice PRs"
+            elif ($paths | contains("generate-pr-body.sh")) then
+              "Render reviewer PR body evidence"
+            elif ($clean | has_action_verb) then
+              $clean
+            elif ($id == "foundation") then
+              "Add split PR emission foundation"
+            else
+              "Describe reviewer-visible change"
+            end
+          end;
 
         ($plan[0].markers | sort_by(.review_order)) as $markers
         | ($plan[0].warnings // []) as $plan_warnings
@@ -588,11 +686,14 @@ if [ "$MARKER_MODE" = true ]; then
                   | .value as $marker
                   | ($idx + 1) as $review_order
                   | ($review_order | zpad($width)) as $label
+                  | (marker_files($marker)) as $declared_files
+                  | ($marker.source_boundary.section) as $source_title
+                  | (public_title_description($marker.id; $source_title; $declared_files; ($marker.title_description // ""))) as $title_description
                   | {
                       source_id: $marker.id,
-                      source_title: ($marker.source_boundary.section // $marker.id),
-                      title_description: ($marker.source_boundary.section // $marker.id),
-                      generated_title: ("feat(speckit-pro): " + ($marker.source_boundary.section // $marker.id)),
+                      source_title: $source_title,
+                      title_description: $title_description,
+                      generated_title: ("feat(" + $title_scope + "): " + $title_description),
                       slice_id: $marker.id,
                       marker_id: $marker.id,
                       source_marker_ids: [$marker.id],
@@ -601,7 +702,7 @@ if [ "$MARKER_MODE" = true ]; then
                       review_order: $marker.review_order,
                       branch: "\($feature_branch)/\($label)-\($marker.id)",
                       depends_on: [],
-                      declared_files: marker_files($marker),
+                      declared_files: $declared_files,
                       declared_tests: ($marker.declared_tests // []),
                       advisory_size: {},
                       marker_split_evidence: $marker_split_evidence,
@@ -638,6 +739,7 @@ else
     --arg feature_branch "$FEATURE_BRANCH" \
     --arg base_branch "$BASE_BRANCH" \
     --arg feature_dir "$FEATURE_DIR_REL" \
+    --arg title_scope "$TITLE_SCOPE" \
     --slurpfile plan "$LAYER_PLAN" '
       def slug:
         ascii_downcase
@@ -696,6 +798,40 @@ else
           ]
           end;
 
+      def title_clean:
+        gsub("\\s*\\(Priority:[^)]+\\)"; "")
+        | gsub("\\s+MVP$"; "")
+        | gsub("^User Story [0-9]+\\s*-\\s*"; "")
+        | gsub("^User Story [0-9]+$"; "")
+        | gsub("^\\s+"; "")
+        | gsub("\\s+$"; "");
+      def has_action_verb:
+        test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
+      def public_title_description($id; $source_title; $files; $explicit_title):
+        (($explicit_title // "") | title_clean) as $explicit
+        | if $explicit != "" then $explicit
+        else
+        (($source_title // $id) | title_clean) as $clean
+        | (($files // []) | join(" ")) as $paths
+        | if ($paths | contains("marker-plan")) then
+            "Add marker split emission fixtures"
+          elif ($paths | contains("multi-pr-emission-state.schema.json")) then
+            "Record marker split emission state"
+          elif ($paths | contains("generate-spec-index.sh")) then
+            "Persist PR table and resume evidence"
+          elif ($paths | contains("multi-pr-emission.sh")) then
+            "Emit ordered slice PRs"
+          elif ($paths | contains("generate-pr-body.sh")) then
+            "Render reviewer PR body evidence"
+          elif ($clean | has_action_verb) then
+            $clean
+          elif ($id == "foundation") then
+            "Add split PR emission foundation"
+          else
+            "Describe reviewer-visible change"
+          end
+        end;
+
       ($plan[0].increments) as $increments
       | ($plan[0].warnings) as $warnings
       | (($increments | length | tostring | length) as $digits | if $digits < 2 then 2 else $digits end) as $width
@@ -709,12 +845,12 @@ else
               | ($inc.id | slug) as $slice_id
               | ($review_order | zpad($width)) as $label
               | (($inc.name // $inc.id) as $source_title
-                | (if $source_title == "Foundation" then "Add foundation slice" else $source_title end) as $title_description
+                | (public_title_description($inc.id; $source_title; ($inc.files // []); ($inc.title_description // ""))) as $title_description
                 | {
                   source_id: $inc.id,
                   source_title: $source_title,
                   title_description: $title_description,
-                  generated_title: ("feat(speckit-pro): " + $title_description),
+                  generated_title: ("feat(" + $title_scope + "): " + $title_description),
                   slice_id: $slice_id,
                   review_order: $review_order,
                   branch: "\($feature_branch)/\($label)-\($slice_id)",
@@ -769,6 +905,22 @@ duplicate_plan_slice="$(
 )"
 if [ -n "$duplicate_plan_slice" ]; then
   emit_input_error "duplicate planned slice_id $duplicate_plan_slice"
+fi
+
+generic_title_slice="$(
+  printf '%s' "$plan_slices" | jq -r '
+    map(
+      select(
+        ((.title_description // "") | test("^(Foundation|User Story|US[0-9]+|us[0-9]+|full-spec|slice|Describe reviewer-visible change)$"; "i"))
+        or ((.title_description // "") | test("\\(Priority:|\\bMVP\\b|foundation slice"; "i"))
+        or ((.generated_title // "") | test(": (Foundation|User Story|US[0-9]+|us[0-9]+|full-spec|slice|Describe reviewer-visible change)(\\b|$)"; "i"))
+      )
+    )
+    | .[0].slice_id // empty
+  '
+)"
+if [ -n "$generic_title_slice" ]; then
+  emit_input_error "unable to derive public PR title for slice $generic_title_slice"
 fi
 
 while IFS= read -r branch_name; do
@@ -897,6 +1049,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
       --argjson scope_guard "$scope_guard" \
       --arg candidate_dir "$CANDIDATE_DIR" \
       --arg emission_mode "$EMISSION_MODE" \
+      --arg title_scope "$TITLE_SCOPE" \
       --arg validator "$SCRIPT_DIR/validate-pr-packet.sh" '
         def body_file($slice_id): "\($candidate_dir)/pr-bodies/\($slice_id).md";
         def packet_file($slice_id):
@@ -904,7 +1057,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
           else "\($candidate_dir)/slice-packets/\($slice_id).json"
           end;
         def generated_title($slice):
-          $slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
+          $slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
         def validate_op($slice):
           if $emission_mode == "marker" then []
           else [
@@ -972,6 +1125,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
   mkdir -p "$CANDIDATE_DIR/$packet_dir_name" "$CANDIDATE_DIR/pr-bodies"
   while IFS= read -r slice_json; do
     slice_id="$(printf '%s' "$slice_json" | jq -r '.slice_id')"
+    title_description="$(printf '%s' "$slice_json" | jq -r '.title_description // "Prepare reviewer-ready split PR evidence"')"
     packet_path="$CANDIDATE_DIR/$packet_dir_name/$slice_id.json"
     body_file="$CANDIDATE_DIR/pr-bodies/$slice_id.md"
     packet_json="$(
@@ -979,6 +1133,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
         --argjson slice "$slice_json" \
         --arg body_file "$body_file" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+        --arg title_scope "$TITLE_SCOPE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$(printf '%s' "$plan_slices" | jq 'length')" '
           {
@@ -992,15 +1147,15 @@ if [ -n "$CANDIDATE_DIR" ]; then
               head_branch: $slice.branch
             },
             generated_title: {
-              value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
               type: "feat",
-              scope: "speckit-pro",
+              scope: $title_scope,
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
-              source_evidence: {
-                kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
-                source: ($slice.source_id // $slice.slice_id),
-                summary: "Split packet title derived from the source boundary or layer-plan increment name."
-              },
+                source_evidence: {
+                  kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
+                  source: ($slice.source_id // $slice.slice_id),
+                  summary: "Source label and declared file scope normalized into a strict plain-English reviewer title."
+                },
               rejected_candidates: [
                 {
                   value: $slice.branch,
@@ -1056,9 +1211,14 @@ if [ -n "$CANDIDATE_DIR" ]; then
     )"
     write_json_atomic "$packet_path" "$packet_json"
     {
-      printf '# Slice PR body placeholder\n\n'
-      printf 'slice_id: %s\n' "$slice_id"
-      printf 'slice_packet: %s\n' "$packet_path"
+      printf '## Summary\n\n'
+      printf 'This PR covers one reviewer-ready slice: %s.\n\n' "$title_description"
+      printf '## What Changed\n\n'
+      printf -- '- Builds the generated PR title and reviewer-readable body for this slice.\n'
+      printf -- '- Keeps detailed validation records in packet files instead of putting logs and paths in the PR description.\n\n'
+      printf '## Why It Matters\n\n'
+      printf 'Reviewers can scan the PR quickly and open implementation files only when they want more detail.\n\n'
+      printf 'Source: generated PR packet.\n'
     } > "$body_file"
   done < <(printf '%s' "$plan_slices" | jq -c '.[]')
 fi
@@ -1601,6 +1761,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
     fi
     packet_path="$packet_dir/$packet_file_name"
     body_file="$packet_dir/pr-body.md"
+    body_file_rel="$(repo_relative_path "$body_file" "$persist_root")"
     pr_packet_path="$packet_dir/pr-packet.json"
     pr_packet_rel="$(repo_relative_path "$pr_packet_path" "$persist_root")"
     validation_result_path="$FEATURE_DIR_REL/.process/pr-packets/$slice_id/validation.json"
@@ -1609,8 +1770,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
     packet_json="$(
       jq -n \
         --argjson slice "$slice_json" \
-        --arg body_file "$body_file" \
+        --arg body_file "$body_file_rel" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+        --arg title_scope "$TITLE_SCOPE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$total_slices" '
           {
@@ -1624,15 +1786,15 @@ if [ -z "$CANDIDATE_DIR" ]; then
               head_branch: $slice.branch
             },
             generated_title: {
-              value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
               type: "feat",
-              scope: "speckit-pro",
+              scope: $title_scope,
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
-              source_evidence: {
-                kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
-                source: ($slice.source_id // $slice.slice_id),
-                summary: "Split packet title derived from the source boundary or layer-plan increment name."
-              },
+                source_evidence: {
+                  kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
+                  source: ($slice.source_id // $slice.slice_id),
+                  summary: "Source label and declared file scope normalized into a strict plain-English reviewer title."
+                },
               rejected_candidates: [
                 {
                   value: $slice.branch,
@@ -1687,13 +1849,15 @@ if [ -z "$CANDIDATE_DIR" ]; then
         '
     )"
     persist_json_atomic "$packet_path" "$packet_json" || emit_input_error "slice packet persistence failed: $packet_path"
-    "$SCRIPT_DIR/generate-pr-body.sh" --slice-packet "$packet_path" "$persist_root" "$feature_dir_abs" "$body_file" "$BASE_SHA...HEAD" >/dev/null
+    (
+      cd "$persist_root" &&
+      "$SCRIPT_DIR/generate-pr-body.sh" --slice-packet "$packet_path" "$persist_root" "$FEATURE_DIR_REL" "$body_file" "$BASE_SHA...HEAD" >/dev/null
+    )
     pr_title="$(printf '%s' "$packet_json" | jq -r '.generated_title.value')"
 
     if [ "$MARKER_MODE" != true ]; then
-      body_file_rel="$(repo_relative_path "$body_file" "$persist_root")"
       slice_packet_rel="$(repo_relative_path "$packet_path" "$persist_root")"
-      body_sha="$(sha256_file "$body_file")"
+      body_sha="$(protected_body_sha "$body_file")"
       pr_packet_json="$(
         jq -n \
           --argjson slice "$slice_json" \
@@ -1704,6 +1868,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
           --arg slice_packet "$slice_packet_rel" \
           --arg body_sha "$body_sha" \
           --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+          --arg title_scope "$TITLE_SCOPE" \
           '
             {
               schema_version: "1.0.0",
@@ -1715,14 +1880,14 @@ if [ -z "$CANDIDATE_DIR" ]; then
               },
               source_feature_dir: $source_feature_dir,
               generated_title: {
-                value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+                value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
                 type: "feat",
-                scope: "speckit-pro",
+                scope: $title_scope,
                 description: ($slice.title_description // $slice.source_title // $slice.slice_id),
                 source_evidence: {
                   kind: "split_source_boundary",
                   source: ($slice.source_id // $slice.slice_id),
-                  summary: "Split source boundary normalized into a public action phrase."
+                  summary: "Source label and declared file scope normalized into a strict plain-English reviewer title."
                 },
                 rejected_candidates: [
                   {
@@ -1810,7 +1975,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
               protected_body_fingerprint: {
                 algorithm: "sha256",
                 value: $body_sha,
-                normalization: "sha256 of rendered body; editable elision is enforced by the safe-refinement task.",
+                normalization: "canonical packet block only; LF line endings; trailing whitespace trimmed; editable block bodies replaced by <elided:field_id> before sha256.",
                 elided_fields: [
                   "summary",
                   "what_changed",

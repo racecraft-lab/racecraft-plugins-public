@@ -1,0 +1,597 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/pr-packet.schema.json",
+  "title": "SpecKit Pro PR Packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "packet_id",
+    "mode",
+    "target",
+    "source_feature_dir",
+    "generated_title",
+    "body_file",
+    "required_headings",
+    "verification_evidence",
+    "scope_evidence",
+    "uat",
+    "source_markers",
+    "editable_fields",
+    "protected_body_fingerprint",
+    "validation_result_path"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^1\\.0\\.0$"
+    },
+    "packet_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9._-]*$"
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["single", "split"]
+    },
+    "target": {
+      "$ref": "#/$defs/pr_target"
+    },
+    "source_feature_dir": {
+      "type": "string",
+      "pattern": "^specs/[^/]+$"
+    },
+    "generated_title": {
+      "$ref": "#/$defs/generated_title"
+    },
+    "body_file": {
+      "type": "string",
+      "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*\\.md$"
+    },
+    "required_headings": {
+      "type": "array",
+      "prefixItems": [
+        { "const": "Summary" },
+        { "const": "What Changed" },
+        { "const": "Why It Matters" },
+        { "const": "How To Review" },
+        { "const": "How To UAT" },
+        { "const": "Verification" },
+        { "const": "Scope" },
+        { "const": "Known Gaps" }
+      ],
+      "minItems": 8,
+      "maxItems": 8
+    },
+    "verification_evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/evidence"
+      }
+    },
+    "scope_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reviewable_loc", "production_files", "total_files", "budget_result", "changed_files", "non_goals"],
+      "properties": {
+        "reviewable_loc": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "production_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "total_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "budget_result": {
+          "type": "string",
+          "enum": ["within_budget", "warning", "blocked", "exception"]
+        },
+        "changed_files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*$"
+          }
+        },
+        "non_goals": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "uat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["how_to_uat", "uat_runbook_heading", "uat_source"],
+      "properties": {
+        "how_to_uat": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uat_runbook_heading": {
+          "const": "## UAT Runbook"
+        },
+        "uat_source": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "source_markers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["marker_id", "rendered_text", "source"],
+        "properties": {
+          "marker_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "rendered_text": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "editable_fields": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "allOf": [
+            { "$ref": "#/$defs/editable_field" },
+            { "properties": { "field_id": { "const": "summary" } } }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/editable_field" },
+            { "properties": { "field_id": { "const": "what_changed" } } }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/editable_field" },
+            { "properties": { "field_id": { "const": "why_it_matters" } } }
+          ]
+        }
+      ],
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "protected_body_fingerprint": {
+      "$ref": "#/$defs/protected_body_fingerprint"
+    },
+    "validation_result_path": {
+      "type": "string",
+      "pattern": "^specs/[^/]+/\\.process/pr-packets/[^/]+/validation\\.json$"
+    },
+    "split_slice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slice_id", "source_boundary", "source_packet"],
+      "properties": {
+        "slice_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_boundary": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["section"],
+          "properties": {
+            "section": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "source_packet": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "validation_result": {
+      "$ref": "#/$defs/validation_result"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "mode": { "const": "split" } },
+        "required": ["mode"]
+      },
+      "then": {
+        "required": ["split_slice"]
+      },
+      "else": {
+        "not": {
+          "required": ["split_slice"]
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "pr_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_branch", "head_branch"],
+      "properties": {
+        "base_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_branch": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "generated_title": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "type", "scope", "description", "source_evidence", "rejected_candidates"],
+      "properties": {
+        "value": {
+          "type": "string",
+          "pattern": "^[a-z]+\\([a-z][a-z0-9-]*\\): [A-Za-z][A-Za-z0-9 ,.'()/-]+$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["feat", "fix", "chore", "docs", "refactor", "test"]
+        },
+        "scope": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 8
+        },
+        "source_evidence": {
+          "$ref": "#/$defs/evidence"
+        },
+        "rejected_candidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "reason"],
+            "properties": {
+              "value": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "source", "summary"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "string"
+        }
+      }
+    },
+    "editable_field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_id", "heading", "start_marker", "end_marker"],
+      "properties": {
+        "field_id": {
+          "type": "string",
+          "enum": ["summary", "what_changed", "why_it_matters"]
+        },
+        "heading": {
+          "type": "string",
+          "enum": ["Summary", "What Changed", "Why It Matters"]
+        },
+        "start_marker": {
+          "type": "string",
+          "pattern": "^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):start -->$"
+        },
+        "end_marker": {
+          "type": "string",
+          "pattern": "^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):end -->$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "field_id": { "const": "summary" } },
+            "required": ["field_id"]
+          },
+          "then": {
+            "properties": {
+              "heading": { "const": "Summary" },
+              "start_marker": { "const": "<!-- speckit-pro-editable:summary:start -->" },
+              "end_marker": { "const": "<!-- speckit-pro-editable:summary:end -->" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "field_id": { "const": "what_changed" } },
+            "required": ["field_id"]
+          },
+          "then": {
+            "properties": {
+              "heading": { "const": "What Changed" },
+              "start_marker": { "const": "<!-- speckit-pro-editable:what_changed:start -->" },
+              "end_marker": { "const": "<!-- speckit-pro-editable:what_changed:end -->" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "field_id": { "const": "why_it_matters" } },
+            "required": ["field_id"]
+          },
+          "then": {
+            "properties": {
+              "heading": { "const": "Why It Matters" },
+              "start_marker": { "const": "<!-- speckit-pro-editable:why_it_matters:start -->" },
+              "end_marker": { "const": "<!-- speckit-pro-editable:why_it_matters:end -->" }
+            }
+          }
+        }
+      ]
+    },
+    "protected_body_fingerprint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "value", "normalization", "elided_fields"],
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "enum": ["sha256"]
+        },
+        "value": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "normalization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "elided_fields": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["summary", "what_changed", "why_it_matters"]
+          }
+        }
+      }
+    },
+    "validation_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "error_class",
+        "exit_code",
+        "stderr_line",
+        "packet_id",
+        "mode",
+        "target",
+        "status",
+        "title_value",
+        "body_file",
+        "rule_outcomes",
+        "failures",
+        "remediation_evidence",
+        "pr_blocked",
+        "timestamp"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "string",
+          "pattern": "^1\\.0\\.0$"
+        },
+        "error_class": {
+          "type": "string",
+          "enum": ["none", "validation_failure", "input_error"]
+        },
+        "exit_code": {
+          "type": "integer",
+          "enum": [0, 1, 2]
+        },
+        "stderr_line": {
+          "type": "string"
+        },
+        "packet_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mode": {
+          "type": ["string", "null"],
+          "enum": ["single", "split", null]
+        },
+        "target": {
+          "oneOf": [
+            { "$ref": "#/$defs/pr_target" },
+            { "type": "null" }
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed"]
+        },
+        "title_value": {
+          "type": ["string", "null"]
+        },
+        "body_file": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*\\.md$"
+            },
+            { "type": "null" }
+          ]
+        },
+        "rule_outcomes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule", "status"],
+            "properties": {
+              "rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "status": {
+                "type": "string",
+                "enum": ["passed", "failed"]
+              },
+              "evidence": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "failures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["rule", "field", "message"],
+            "properties": {
+              "rule": {
+                "type": "string",
+                "minLength": 1
+              },
+              "field": {
+                "type": "string",
+                "minLength": 1
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1
+              },
+              "excerpt": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "remediation_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pr_blocked": {
+          "type": "boolean"
+        },
+        "resume": {
+          "$ref": "#/$defs/resume_evidence"
+        },
+        "prior_successful_prs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pr_reference"
+          }
+        },
+        "timestamp": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "resume_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resume_from_packet_id", "blocked_until", "stale_result_policy"],
+      "properties": {
+        "resume_from_packet_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resume_from_slice_id": {
+          "type": ["string", "null"]
+        },
+        "blocked_until": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stale_result_policy": {
+          "const": "revalidate_current_rendered_packet"
+        },
+        "prior_successful_prs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pr_reference"
+          }
+        }
+      }
+    },
+    "pr_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slice_id", "number", "url", "base_branch", "head_branch"],
+      "properties": {
+        "slice_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_sha": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}
