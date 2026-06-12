@@ -11,5 +11,6 @@
 <!-- Short bullets: caveats, non-goals, deferred follow-ups, or known gaps.
      Omit this section entirely if there are none. -->
 
-<!-- The "Reviewer checklist & scope details" block and the "UAT Runbook" section
-     are appended automatically by generate-pr-body.sh. Do not add them by hand. -->
+<!-- generate-pr-body.sh appends source markers, traceability, verification,
+     scope and non-goal evidence, known-gap language, reviewer checklist details,
+     and the UAT Runbook section automatically. Do not add them by hand. -->

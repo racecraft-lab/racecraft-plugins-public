@@ -1,0 +1,429 @@
+{
+  "schema_version": "pr-marker-plan.v1",
+  "kind": "pr_marker_plan",
+  "feature_id": "prsg-012-reviewer-ready-pr-packet-contract",
+  "status": "emission_ready",
+  "source_fingerprint": {
+    "feature_spec_sha": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
+    "plan_declared_scope_sha": "555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
+    "tasks_sha": "51dde76432d2326bff72d6bbd86ce1451ebf39a35bd1ba2bc42f6f1047a5c9d7",
+    "reviewability_sha": "f440668daa09459968775005ef51c6ef32cddf58b37a335995edc99c035e8768",
+    "hazard_route_sha": "57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
+  },
+  "markers": [
+    {
+      "id": "foundation",
+      "review_order": 1,
+      "kind": "foundation",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "Foundation",
+        "story_id": null,
+        "start_task_id": "T001",
+        "end_task_id": "T009"
+      },
+      "title_description": "Add reviewer packet validation contract",
+      "task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005",
+        "T006",
+        "T007",
+        "T008",
+        "T009"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-split.md",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-split.json",
+        "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "foundation",
+        "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "commit_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3",
+        "head_sha": "f9c4ad69066055bd3c85521d62c8c87fe17db1f3"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us1",
+      "review_order": 2,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP",
+        "story_id": 1,
+        "start_task_id": "T010",
+        "end_task_id": "T017"
+      },
+      "title_description": "Generate packet-owned conventional PR titles",
+      "task_ids": [
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015",
+        "T016",
+        "T017"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json",
+        "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us1",
+        "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "commit_sha": "59bed4113474cde5001fe01205f6fc2d9e4e3443",
+        "head_sha": "59bed4113474cde5001fe01205f6fc2d9e4e3443"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us2",
+      "review_order": 3,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 2 - Structured Reviewer Body",
+        "story_id": 2,
+        "start_task_id": "T018",
+        "end_task_id": "T024"
+      },
+      "title_description": "Render plain-English reviewer PR body evidence",
+      "task_ids": [
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
+        "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+        "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us2",
+        "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "commit_sha": "bffb2d9eeb1ec466566bf1a628d56fa078b34dd5",
+        "head_sha": "bffb2d9eeb1ec466566bf1a628d56fa078b34dd5"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us3",
+      "review_order": 4,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 3 - Pre-create Validation Block",
+        "story_id": 3,
+        "start_task_id": "T025",
+        "end_task_id": "T034"
+      },
+      "title_description": "Block invalid PR packets before creation",
+      "task_ids": [
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030",
+        "T031",
+        "T032",
+        "T033",
+        "T034"
+      ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": ".process/prs.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/.process/PRSG-012-workflow.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json",
+        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us3",
+        "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "commit_sha": "50d413174da5018b0aa5053227df51b52bb50f48",
+        "head_sha": "50d413174da5018b0aa5053227df51b52bb50f48"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us4",
+      "review_order": 5,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 4 - Safe Prose Refinement",
+        "story_id": 4,
+        "start_task_id": "T035",
+        "end_task_id": "T041"
+      },
+      "title_description": "Protect editable PR body prose",
+      "task_ids": [
+        "T035",
+        "T036",
+        "T037",
+        "T038",
+        "T039",
+        "T040",
+        "T041"
+      ],
+      "folded_polish_task_ids": [
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T046",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T051",
+        "T052",
+        "T053",
+        "T054",
+        "T055",
+        "T056"
+      ],
+      "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh"
+        }
+      ],
+      "declared_tests": [
+        "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single-edited.md",
+        "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json",
+        "tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh",
+        "tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/README.md",
+        "tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/expected.json",
+        "tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/parser-fixture.jsonl",
+        "tests/speckit-pro/layer7-integration/dispatch-fixtures/18-post-impl-parallel-subagents/prompt.txt",
+        "tests/speckit-pro/layer8-parity/01-post-impl-parity/README.md",
+        "tests/speckit-pro/layer8-parity/01-post-impl-parity/expected-equivalence.json",
+        "tests/speckit-pro/layer8-parity/01-post-impl-parity/tolerance.json",
+        "tests/speckit-pro/layer8-parity/01-post-impl-parity/workflow.md",
+        "tests/speckit-pro/run-all.sh"
+      ],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us4",
+        "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "verification_evidence_path": "docs/ai/specs/.process/PRSG-012-workflow.md",
+        "commit_sha": "f29ba3aa94af3f67216037b2f67fa914b0b6d00d",
+        "head_sha": "f29ba3aa94af3f67216037b2f67fa914b0b6d00d"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    }
+  ],
+  "warnings": [
+    {
+      "code": "reviewability_size_warning",
+      "severity": "warning",
+      "message": "Reviewability sizing result is marker-planning input.",
+      "source": "reviewability",
+      "details": {
+        "status": "block",
+        "mode": "tasks",
+        "evidence_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/reviewability/tasks-gate.json"
+      }
+    }
+  ],
+  "updated_at": "2026-06-12T20:02:12Z"
+}

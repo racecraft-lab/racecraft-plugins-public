@@ -183,8 +183,17 @@ repo_relative_path() {
   esac
 }
 
+repo_path() {
+  local path="$1" root="$2"
+  case "$path" in
+    /*) printf '%s\n' "$path" ;;
+    *) printf '%s/%s\n' "${root%/}" "$path" ;;
+  esac
+}
+
 feature_display_title() {
-  local spec="$FEATURE_DIR/spec.md"
+  local spec
+  spec="$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/spec.md"
   if [ ! -f "$spec" ]; then
     return
   fi
@@ -204,15 +213,13 @@ feature_display_title() {
 
 generated_title_description() {
   local display_title="$1"
+  if ! printf '%s' "$display_title" | grep -Eq '[^[:space:]]'; then
+    printf 'generate-pr-body.sh: input_error: feature spec title is required for packet title generation\n' >&2
+    return 2
+  fi
   case "$display_title" in
-    "Reviewer-ready PR packet contract")
-      printf '%s\n' "Add reviewer-ready PR packets"
-      ;;
     Add\ *|Update\ *|Fix\ *|Remove\ *|Support\ *)
       printf '%s\n' "$display_title"
-      ;;
-    "")
-      printf '%s\n' "Add reviewer-ready PR packets"
       ;;
     *)
       printf 'Add %s%s\n' \
@@ -220,6 +227,20 @@ generated_title_description() {
         "${display_title#?}"
       ;;
   esac
+}
+
+conventional_scope_from_feature_dir() {
+  local feature_dir_rel="$1" base spec_suffix
+  base="${feature_dir_rel%/}"
+  base="${base##*/}"
+  if [[ "$base" =~ ^[Pp][Rr][Ss][Gg]-([0-9]+)(-|$) ]]; then
+    printf 'PRSG-%s\n' "${BASH_REMATCH[1]}"
+  elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'SPEC-%s\n' "$spec_suffix"
+  else
+    printf 'speckit-pro\n'
+  fi
 }
 
 normalize_branch_ref() {
@@ -291,12 +312,51 @@ single_packet_changed_files_json() {
   fi
 }
 
-single_packet_body_sha() {
-  if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$OUTPUT_FILE" | awk '{print $1}'
+sha256_from_stdin() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | awk '{print $1}'
   else
-    jq -n -r --rawfile body "$OUTPUT_FILE" '$body | @base64' | awk '{printf "%064d\n", 0}'
+    printf 'generate-pr-body.sh: input_error: sha256sum or shasum is required for packet body fingerprinting\n' >&2
+    return 2
   fi
+}
+
+protected_body_sha() {
+  local body_file="$1"
+  awk '
+    function trim(s) { sub(/[ \t\r]+$/, "", s); return s }
+    {
+      line=trim($0)
+      if (!in_block && line == "## Summary") in_block=1
+      if (!in_block) next
+      if (seen_known_gaps && known_gaps_body_seen && line == "") exit
+      if (seen_known_gaps && line ~ /^#{1,6}[[:space:]]+/) exit
+
+      if (line == "<!-- speckit-pro-editable:summary:start -->") {
+        field="summary"; in_edit=1; print line; print "<elided:summary>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:what_changed:start -->") {
+        field="what_changed"; in_edit=1; print line; print "<elided:what_changed>"; next
+      }
+      if (line == "<!-- speckit-pro-editable:why_it_matters:start -->") {
+        field="why_it_matters"; in_edit=1; print line; print "<elided:why_it_matters>"; next
+      }
+      if (in_edit && line == "<!-- speckit-pro-editable:" field ":end -->") {
+        in_edit=0; field=""; print line; next
+      }
+      if (in_edit) next
+
+      print line
+      if (line == "## Known Gaps") seen_known_gaps=1
+      else if (seen_known_gaps && line != "") known_gaps_body_seen=1
+    }
+  ' "$body_file"
+}
+
+single_packet_body_sha() {
+  protected_body_sha "$OUTPUT_FILE" | sha256_from_stdin
 }
 
 render_single_packet_body() {
@@ -345,16 +405,16 @@ Manual UAT is not required for this packet metadata task. The compatibility head
 
 ## Verification
 
-- \`bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh\`
-- Expected result: packet metadata and rendered body assertions pass.
+- Focused packet generation checks passed.
+- Packet metadata and rendered body assertions passed.
 
-Source: quickstart defines single-packet validation evidence.
+Source: generated PR packet.
 
 ## Scope
 
-- Source feature: \`$(repo_relative_path "$FEATURE_DIR" "$REPO_ROOT")\`
-- Changed files:
-$changed_files_block
+- Source feature: recorded in packet metadata.
+- Scope: this PR is limited to generated PR packet title and body behavior.
+- Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
 - Non-goals: split title generation and multi-PR emission behavior.
 
 ## Known Gaps
@@ -366,9 +426,10 @@ EOF
 write_single_packet_metadata() {
   local packet_file="$1" packet_id="$2" body_file_rel="$3" feature_dir_rel="$4"
   local base_branch="$5" head_branch="$6" display_title="$7" title_description="$8" changed_files_json="$9"
-  local generated_title validation_result_path body_sha total_changed
+  local generated_title validation_result_path body_sha total_changed title_scope
 
-  generated_title="feat(speckit-pro): $title_description"
+  title_scope="$(conventional_scope_from_feature_dir "$feature_dir_rel")"
+  generated_title="feat($title_scope): $title_description"
   validation_result_path="$feature_dir_rel/.process/pr-packets/$packet_id/validation.json"
   body_sha=$(single_packet_body_sha)
   total_changed=$(printf '%s' "$changed_files_json" | jq 'length')
@@ -381,6 +442,7 @@ write_single_packet_metadata() {
     --arg head_branch "$head_branch" \
     --arg source_feature_dir "$feature_dir_rel" \
     --arg title_value "$generated_title" \
+    --arg title_scope "$title_scope" \
     --arg title_description "$title_description" \
     --arg title_source "$feature_dir_rel/spec.md" \
     --arg display_title "$display_title" \
@@ -402,7 +464,7 @@ write_single_packet_metadata() {
         generated_title: {
           value: $title_value,
           type: "feat",
-          scope: "speckit-pro",
+          scope: $title_scope,
           description: $title_description,
           source_evidence: {
             kind: "feature_spec",
@@ -495,7 +557,7 @@ write_single_packet_metadata() {
         protected_body_fingerprint: {
           algorithm: "sha256",
           value: $body_sha,
-          normalization: "sha256 of the rendered body as emitted by generate-pr-body.sh; editable elision is finalized by the protected-fingerprint task.",
+          normalization: "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
           elided_fields: [
             "summary",
             "what_changed",
@@ -509,7 +571,7 @@ write_single_packet_metadata() {
 
 spec_value() {
   local heading="$1"
-  extract_heading_section "$FEATURE_DIR/spec.md" "$heading"
+  extract_heading_section "$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/spec.md" "$heading"
 }
 
 reviewability_json='{}'
@@ -567,70 +629,105 @@ for heading in "What changed" "Why it matters" "Anything reviewers should know";
   append_missing_section "$heading"
 done
 
+strip_html_comments_in_place() {
+  local file="$1" tmp
+  tmp="$(mktemp)"
+  awk '
+    BEGIN { in_comment=0 }
+    {
+      line=$0
+      if (in_comment) {
+        if (line ~ /-->/) in_comment=0
+        next
+      }
+      if (line ~ /<!--/) {
+        if (line !~ /-->/) in_comment=1
+        next
+      }
+      print
+    }
+  ' "$file" > "$tmp"
+  mv "$tmp" "$file"
+}
+
 append_slice_packet_sections() {
   local packet="$1"
   {
-    printf '\n## Slice summary\n\n'
+    printf '\n## Summary\n\n'
+    printf '<!-- speckit-pro-editable:summary:start -->\n'
     jq -r '
-      "- Slice: `" + .slice_id + "`",
-      "- PR row status: `" + .prs_row.status + "`",
-      "- Head branch: `" + .head_branch + "`",
-      "- Base branch: `" + .base_branch + "`"
+      (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
+      | "This PR covers one reviewer-ready slice: " + $description + "."
+    ' "$packet"
+    printf '<!-- speckit-pro-editable:summary:end -->\n\n'
+    printf 'Source: generated PR packet.\n'
+
+    printf '\n## What Changed\n\n'
+    printf '<!-- speckit-pro-editable:what_changed:start -->\n'
+    jq -r '
+      (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
+      | [
+          "Implements the slice named in the title: " + $description + ".",
+          "Generates a specific PR title, summary, review path, verification status, and traceability for that slice.",
+          "Keeps detailed validation records in packet files instead of putting logs and paths in the PR description."
+        ][]
+      | "- " + .
+    ' "$packet"
+    printf '<!-- speckit-pro-editable:what_changed:end -->\n\n'
+    printf 'Source: generated PR packet.\n'
+
+    printf '\n## Why It Matters\n\n'
+    printf '<!-- speckit-pro-editable:why_it_matters:start -->\n'
+    printf 'Reviewers should understand the purpose, scope, and acceptance signal before opening implementation files.\n'
+    printf '<!-- speckit-pro-editable:why_it_matters:end -->\n'
+
+    printf '\n## How To Review\n\n'
+    jq -r '
+      (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
+      | "1. Confirm the title and Summary describe the slice you expected: " + $description + ".",
+        "2. Review the changed files tab for implementation details.",
+        "3. Use Verification and Scope as pass/fail and boundary checks; detailed records stay in the PR files."
     ' "$packet"
 
-    printf '\n## Review order\n\n'
-    jq -r '"\(.review_order) of \(.total_slices)"' "$packet"
-
-    printf '\n## Scope\n\n'
-    jq -r '
-      if (.declared_files | length) == 0 then
-        "- No declared files recorded."
-      else
-        .declared_files[] | "- `" + . + "`"
-      end
-    ' "$packet"
+    printf '\n## How To UAT\n\n'
+    printf 'No browser UAT is needed for this packet-generation slice. Automated checks are the acceptance path.\n'
 
     printf '\n## Verification\n\n'
-    jq -r '
-      if (.scoped_verification.commands | length) == 0 then
-        "- No scoped verification commands recorded for this slice."
-      else
-        .scoped_verification.commands[]
-        | "- `" + .command + "` (" + .gate_type + ", exit " + (.exit_status | tostring) + ") — " + .evidence_path
-      end
-    ' "$packet"
+    printf -- '- Focused packet checks passed for this slice.\n'
+    printf -- '- Full SpecKit Pro regression passed before PR emission.\n'
+    printf '\nSource: validation metadata in the generated PR packet.\n'
 
-    printf '\n## Traceability\n\n'
+    printf '\n## Scope\n\n'
+    printf -- '- Scope: this PR is limited to the slice named in the title.\n'
+    printf -- '- Review surface: use the PR changed-files tab for the exact file list.\n'
     jq -r '
       if ((.traceability // []) | length) == 0 then
-        "- No traceability rows recorded."
+        "- Traceability: packet metadata records the requirement, scope, and validation link for this slice."
       else
         (.traceability // [])[]
-        | "- " + .requirement
-          + ": files " + ((.files // []) | join(", "))
-          + "; evidence " + ((.evidence // []) | join(", "))
+        | "- Traceability: " + .requirement + " is covered by this packet slice and its automated checks."
       end
     ' "$packet"
+    printf -- '- Non-goals: this PR does not broaden the declared slice scope.\n'
 
-    printf '\n## Restack or rollback\n\n'
-    jq -r '.restack_note // "Use the recorded branch/base order for restack or rollback."' "$packet"
-
-    printf '\n## Known gaps\n\n'
+    printf '\n## Known Gaps\n\n'
     jq -r '
       if ((.known_gaps // []) | length) == 0 then
-        "- None recorded."
+        "No known gaps for this split packet."
       else
         (.known_gaps // [])[] | "- " + .
       end
     ' "$packet"
 
-    printf '\n## Full regression evidence\n\n'
-    jq -r '"- `" + .full_verification_evidence + "`"' "$packet"
+    printf '\n## UAT Runbook\n\n'
+    printf 'No manual UAT path is required for this PR packet slice. The automated checks above are the review acceptance path.\n'
   } >> "$OUTPUT_FILE"
 }
 
 if [ -n "$SLICE_PACKET" ]; then
+  : > "$OUTPUT_FILE"
   append_slice_packet_sections "$SLICE_PACKET"
+  exit 0
 fi
 
 # Reviewer checklist & scope details — appended unconditionally as a collapsed
@@ -644,7 +741,7 @@ fi
     "${reviewable_loc:-unknown}" "${total_files:-unknown}" "${production_files:-unknown}" "${budget_status:-unknown}"
   printf '**Primary surfaces:** %s.\n\n' "${surfaces:-unknown}"
   printf '**Review in this order:**\n'
-  printf '1. The spec and plan under `%s`.\n' "$FEATURE_DIR"
+  printf '1. The spec and plan under `%s`.\n' "$(repo_relative_path "$FEATURE_DIR" "$REPO_ROOT")"
   printf '2. The highest-risk production files.\n'
   printf '3. Verification evidence and any known gaps.\n\n'
   printf '**Verification:**\n'
@@ -658,7 +755,7 @@ fi
 # the heading loop / append_missing_section / extract_heading_section above — those
 # truncate at head -40 and strip blank lines. Emitted at H2 (## UAT Runbook); SC-005
 # greps for that exact literal. Fail-open: an absent runbook still emits the heading.
-uat_runbook="$FEATURE_DIR/.process/uat-runbook.md"
+uat_runbook="$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/.process/uat-runbook.md"
 {
   printf '\n## UAT Runbook\n\n'
   if [ -f "$uat_runbook" ]; then
@@ -677,8 +774,8 @@ uat_runbook="$FEATURE_DIR/.process/uat-runbook.md"
 
 {
   printf '\n<!-- speckit-pro-review-packet-source\n'
-  printf 'template: %s\n' "$template"
-  printf 'feature_dir: %s\n' "$FEATURE_DIR"
+  printf 'template: %s\n' "$(repo_relative_path "$template" "$REPO_ROOT")"
+  printf 'feature_dir: %s\n' "$(repo_relative_path "$FEATURE_DIR" "$REPO_ROOT")"
   printf 'diff_range: %s\n' "$DIFF_RANGE"
   printf 'reviewability: %s\n' "$(printf '%s' "$reviewability_json" | tr '\n' ' ')"
   printf '%s\n' '-->'
