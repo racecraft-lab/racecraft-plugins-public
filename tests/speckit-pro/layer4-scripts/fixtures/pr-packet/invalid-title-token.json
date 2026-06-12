@@ -29,6 +29,54 @@
       {
         "value": "Plain-English Summary",
         "reason": "Banned labels must not be promoted into titles."
+      },
+      {
+        "value": "refs/heads/prsg-012-reviewer-ready-pr-packet-contract",
+        "reason": "Branch refs must not be promoted into title descriptions."
+      },
+      {
+        "value": "prsg-012-reviewer-ready-pr-packet-contract",
+        "reason": "Branch names must not be promoted into title descriptions."
+      },
+      {
+        "value": "PRSG-012 reviewer packet contract",
+        "reason": "Spec identifiers must not be promoted into public title descriptions."
+      },
+      {
+        "value": "SPEC-012 reviewer packet contract",
+        "reason": "SPEC tokens must not be promoted into public title descriptions."
+      },
+      {
+        "value": "packet-validation",
+        "reason": "Slice ids must not replace reviewer-facing title descriptions."
+      },
+      {
+        "value": "slice-01-packet-validation",
+        "reason": "Slice tokens must not replace reviewer-facing title descriptions."
+      },
+      {
+        "value": "T010 title fixture coverage",
+        "reason": "Task ids must not be promoted into public title descriptions."
+      },
+      {
+        "value": "US1 title metadata",
+        "reason": "Story ids must not be promoted into public title descriptions."
+      },
+      {
+        "value": "docs(speckit-pro): Add reviewer-ready PR packets",
+        "reason": "Candidate-only type overrides must be rejected; only explicit generated_title.type metadata may override the default type."
+      },
+      {
+        "value": "feat(autopilot): Add reviewer-ready PR packets",
+        "reason": "Candidate-only scope overrides must be rejected; only explicit generated_title.scope metadata may override the default scope."
+      },
+      {
+        "value": "feature(speckit-pro): Add reviewer-ready PR packets",
+        "reason": "Unsupported conventional types must be rejected even when offered as override metadata."
+      },
+      {
+        "value": "feat(PRSG-012): Add reviewer-ready PR packets",
+        "reason": "Spec-derived scopes must be rejected because overrides must use valid public scopes."
       }
     ]
   },
