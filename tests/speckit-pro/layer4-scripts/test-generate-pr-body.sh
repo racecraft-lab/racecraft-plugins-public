@@ -148,7 +148,7 @@ set_test "Does not emit governance as a top-level heading"
 assert_not_contains "$body" "# Scope Budget"
 
 set_test "Records host template source"
-assert_contains "$body" "template: $repo/.github/pull_request_template.md"
+assert_contains "$body" "template: .github/pull_request_template.md"
 
 section "fallback template"
 
@@ -170,6 +170,19 @@ assert_contains "$fallback_body" "<summary>Reviewer checklist"
 set_test "Fallback body includes review packet source marker"
 assert_contains "$fallback_body" "speckit-pro-review-packet-source"
 
+section "generic future title support"
+
+script_source=$(cat "$SCRIPT")
+
+set_test "Generator does not special-case current PRSG-012 display title"
+assert_not_contains "$script_source" "Reviewer-ready PR packet contract"
+
+set_test "Slice renderer does not special-case current PRSG-012 slice title"
+assert_not_contains "$script_source" "Add reviewer packet validation contract"
+
+set_test "Slice renderer does not special-case PRSG-012 title-emission slice"
+assert_not_contains "$script_source" "Generate packet-owned conventional PR titles"
+
 section "slice packet option validation"
 
 packet_fixture_root="$(cd "$(dirname "$0")/fixtures/multi-pr-emission/slice-packets" && pwd)"
@@ -188,32 +201,32 @@ assert_eq "0" "$result" "exit code"
 
 slice_body=$(cat "$slice_body_file")
 
-set_test "Slice packet body includes Slice summary"
-assert_contains "$slice_body" "## Slice summary"
+set_test "Slice packet body opens with reviewer-readable summary"
+assert_contains "$slice_body" "This PR covers one reviewer-ready slice:"
 
-set_test "Slice packet body includes Review order"
-assert_contains "$slice_body" "## Review order"
+set_test "Slice packet body omits raw packet appendix headings"
+assert_not_contains "$slice_body" "## Slice summary"
 
-set_test "Slice packet body renders review order count"
-assert_contains "$slice_body" "1 of 3"
+set_test "Slice packet body omits review-order appendix"
+assert_not_contains "$slice_body" "## Review order"
 
-set_test "Slice packet body includes Scope with declared files"
-assert_contains "$slice_body" "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+set_test "Slice packet body avoids raw declared file paths"
+assert_not_contains "$slice_body" "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
 
-set_test "Slice packet body includes Verification with scoped evidence"
-assert_contains "$slice_body" "specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log"
+set_test "Slice packet body avoids raw verification evidence paths"
+assert_not_contains "$slice_body" "specs/prsg-009-multi-pr-emission/.process/emission/foundation/layer4.log"
 
-set_test "Slice packet body includes Traceability"
-assert_contains "$slice_body" "FR-001a"
+set_test "Slice packet body keeps high-level traceability"
+assert_contains "$slice_body" "Traceability:"
 
-set_test "Slice packet body includes Restack or rollback"
-assert_contains "$slice_body" "## Restack or rollback"
+set_test "Slice packet body omits restack appendix"
+assert_not_contains "$slice_body" "## Restack or rollback"
 
 set_test "Slice packet body includes Known gaps"
-assert_contains "$slice_body" "## Known gaps"
+assert_contains "$slice_body" "## Known Gaps"
 
-set_test "Slice packet body renders Full regression evidence"
-assert_contains "$slice_body" "specs/prsg-009-multi-pr-emission/.process/emission/default-verify.log"
+set_test "Slice packet body omits full regression evidence path"
+assert_not_contains "$slice_body" "specs/prsg-009-multi-pr-emission/.process/emission/default-verify.log"
 
 set_test "Invalid --slice-packet exits 2"
 packet_stderr="$FIXTURE_DIR/packet-invalid.stderr"
@@ -406,13 +419,13 @@ set_test "Generated packet records target head branch"
 assert_json_file_value "$packet_output" "target.head_branch" "prsg-012-reviewer-ready-pr-packet-contract"
 
 set_test "Generated packet owns a reviewer-ready title"
-assert_json_file_value "$packet_output" "generated_title.value" "feat(speckit-pro): Add reviewer-ready PR packets"
+assert_json_file_value "$packet_output" "generated_title.value" "feat(PRSG-012): Add reviewer-ready PR packet contract"
 
 set_test "Generated packet records title type"
 assert_json_file_value "$packet_output" "generated_title.type" "feat"
 
 set_test "Generated packet records title scope"
-assert_json_file_value "$packet_output" "generated_title.scope" "speckit-pro"
+assert_json_file_value "$packet_output" "generated_title.scope" "PRSG-012"
 
 set_test "Generated packet records title source evidence"
 assert_json_file_value "$packet_output" "generated_title.source_evidence.kind" "feature_spec"
@@ -457,5 +470,60 @@ assert_contains "$generated_body" "<!-- speckit-pro-editable:why_it_matters:star
 
 set_test "Rendered body preserves UAT Runbook compatibility heading"
 assert_contains "$generated_body" "## UAT Runbook"
+
+set_test "Rendered body includes feature source marker"
+assert_contains "$generated_body" "Source: feature specification defines reviewer-ready PR packet behavior."
+
+set_test "Rendered body includes schema source marker"
+assert_contains "$generated_body" "Source: schema contract defines editable field markers."
+
+set_test "Rendered body uses packet source marker for verification"
+assert_contains "$generated_body" "Source: generated PR packet."
+
+set_test "Rendered body includes traceability mapping"
+assert_contains "$generated_body" "Traceability:"
+
+set_test "Rendered body omits raw verification command evidence"
+assert_not_contains "$generated_body" "bash tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh"
+
+set_test "Rendered body omits raw changed-file scope evidence"
+assert_not_contains "$generated_body" "Changed files:"
+
+set_test "Rendered body includes Known Gaps section content"
+assert_contains "$generated_body" "No known gaps"
+
+section "future spec generated packet metadata"
+
+future_feature_rel="specs/spec-014c-future-title-contract"
+future_feature="$packet_repo/$future_feature_rel"
+future_packet_output_rel="$PR_PACKET_FIXTURE_REL/future-spec-single.json"
+future_body_output_rel="$PR_PACKET_FIXTURE_REL/bodies/future-spec-single.md"
+future_packet_output="$packet_repo/$future_packet_output_rel"
+future_body_output="$packet_repo/$future_body_output_rel"
+mkdir -p "$future_feature" "$(dirname "$future_packet_output")" "$(dirname "$future_body_output")"
+cat > "$future_feature/spec.md" <<'EOF'
+# Feature Specification: Future title contract
+EOF
+cat > "$future_feature/plan.md" <<'EOF'
+# Plan
+Primary surface: docs/future
+EOF
+
+set_test "Generator writes future SPEC-scoped packet metadata"
+result=0
+(cd "$packet_repo" && "$SCRIPT" --packet-output "$future_packet_output" "$packet_repo" "$future_feature" "$future_body_output" main...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "Future generated packet uses derived SPEC scope"
+assert_json_file_value "$future_packet_output" "generated_title.scope" "SPEC-014C"
+
+set_test "Future generated packet title uses derived SPEC scope"
+assert_json_file_value "$future_packet_output" "generated_title.value" "feat(SPEC-014C): Add future title contract"
+
+set_test "Future generated packet does not use current spec scope"
+assert_not_contains "$(cat "$future_packet_output")" "PRSG-012"
+
+set_test "Future generated packet does not fall back to plugin scope"
+assert_not_contains "$(cat "$future_packet_output")" "feat(speckit-pro):"
 
 test_summary
