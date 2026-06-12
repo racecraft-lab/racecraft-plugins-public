@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T18:44:55Z",
-  "active_step": "Phase 7: US2 reviewer body (T018-T024)",
+  "updated_at": "2026-06-12T18:51:36Z",
+  "active_step": "Phase 7: US3 validation gate (T025-T034)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -200,7 +200,7 @@
         "source_boundary": {
           "section": "Phase 3: User Story 2 - Structured Reviewer Body"
         },
-        "checkpoint": "pending",
+        "checkpoint": "completed",
         "pr_mapping": "pending",
         "packet_validation": "pending"
       },
@@ -430,11 +430,12 @@
     },
     {
       "step": "Phase 7: US2 reviewer body (T018-T024)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "T018-T024 complete. Added reviewer body evidence assertions, confirmed valid body fixture coverage, rendered traceability in single-packet bodies, validated stale body text and traceability, preserved UAT compatibility, and kept generator/validator tests green."
     },
     {
       "step": "Phase 7: US3 validation gate (T025-T034)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: US4 safe refinement (T035-T041)",
