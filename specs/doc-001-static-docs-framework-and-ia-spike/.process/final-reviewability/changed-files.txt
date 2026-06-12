@@ -9,7 +9,14 @@ docs/prd-interactive-documentation.md
 docs/roadmap-interactive-documentation.md
 docs/traceability-interactive-documentation.md
 specs/doc-001-static-docs-framework-and-ia-spike/.process/atomicity-route.json
+specs/doc-001-static-docs-framework-and-ia-spike/.process/emission/full-verification-evidence.md
+specs/doc-001-static-docs-framework-and-ia-spike/.process/final-reviewability/changed-files.txt
+specs/doc-001-static-docs-framework-and-ia-spike/.process/final-reviewability/gate-state.json
+specs/doc-001-static-docs-framework-and-ia-spike/.process/marker-plan/final-marker-split-result.json
+specs/doc-001-static-docs-framework-and-ia-spike/.process/marker-plan/pr-marker-plan.json
+specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md
 specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json
+specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md
 specs/doc-001-static-docs-framework-and-ia-spike/SPEC-MOC.md
 specs/doc-001-static-docs-framework-and-ia-spike/checklists/accessibility.md
 specs/doc-001-static-docs-framework-and-ia-spike/checklists/documentation-quality.md

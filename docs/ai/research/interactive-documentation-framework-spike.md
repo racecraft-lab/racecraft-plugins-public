@@ -210,8 +210,8 @@ Verification on 2026-06-12:
 
 | Check | Result |
 |---|---|
-| Branch diff scope | `git diff --name-only origin/main...HEAD` listed 23 files: PRD/roadmap scaffold, this research report, and DOC-001 SpecKit artifacts. |
-| Post-scaffold DOC-001 scope | `git diff --name-only origin/doc-001-static-docs-framework-and-ia-spike...HEAD` listed 17 files: this research report plus DOC-001 process/spec/checklist/task artifacts. |
+| Branch diff scope | `git diff --name-only origin/main...HEAD` listed 30 files: PRD/roadmap scaffold, this research report, DOC-001 SpecKit artifacts, and final process evidence. |
+| Post-scaffold DOC-001 scope | `git diff --name-only origin/doc-001-static-docs-framework-and-ia-spike...HEAD` listed 24 files: this research report plus DOC-001 process/spec/checklist/task artifacts and final process evidence. |
 | Forbidden surface scan | Both diff scopes returned 0 matches for package files, lockfiles, site configs, generated site directories, CI workflows, README migrations, marketplace/generated payload files, and plugin behavior files. |
 | IA route coverage | 11 required route labels are present in the IA skeleton with route path, Diataxis mode, audience, purpose, source evidence, success criterion, shell owner, and full content owner. |
 | Structural validation | `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978`. |
@@ -236,7 +236,7 @@ Use these notes when updating the PR body:
 - **Why**: DOC-002 needs an approved static docs framework and route-level IA before creating package files, site config, shell routes, or CI.
 - **Non-goals**: No docs-site scaffold, package files, lockfiles, site config, CI workflow, README migration, interactive widgets, marketplace/generated payloads, or plugin behavior changes.
 - **Review order**: Start with `docs/ai/research/interactive-documentation-framework-spike.md`, then review `specs/doc-001-static-docs-framework-and-ia-spike/spec.md`, `plan.md`, `tasks.md`, and the checklist files.
-- **Scope budget**: Research/process-only branch; task-gate size warning is recorded in `specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json` and final reviewability must remain a backstop.
+- **Scope budget**: Research/process-only branch; task-gate size warning is recorded in `specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json`, and the final size-only block proceeds through marker evidence.
 - **Verification evidence**: Layer 1 passed `978/978`; default deterministic suite passed `2587/2587`; diff-scope scan found 0 forbidden implementation surfaces.
 - **Known gaps**: DOC-002 owns concrete Docusaurus scaffold/config decisions and DOC-010 owns deterministic docs validation, accessibility, responsive checks, search hardening, and deep-link policy.
 - **Rollback**: Revert the DOC-001 commits to remove the research/spec artifacts; no runtime or package state is introduced by this spike.

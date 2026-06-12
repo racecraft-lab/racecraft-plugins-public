@@ -451,7 +451,7 @@ Focus on:
 | Code review extension | Skipped; review extension is not installed |
 | Integration suite | `bash tests/speckit-pro/run-all.sh` passed `2587/2587` |
 | Cleanup extension | Skipped; cleanup extension is not installed and archive sweep was dry-run/no-op |
-| Final reviewability backstop | Proceeded with `outcome=marker_split`; marker plan valid for `foundation`, `us1`, `us2`, `us3` |
+| Final reviewability backstop | Proceeded with `outcome=marker_split`; final diff was a size-only 30-file block and marker plan is valid for `foundation`, `us1`, `us2`, `us3` |
 | Marker emission packet | Dry-run validation passed with 4 marker slices and no branch or PR mutations |
 | UAT runbook | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md`; author-agent rewrite unavailable, fail-open with parent self-review notes |
 | PR body | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md` with review-packet marker and UAT section |

@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T22:45:00Z",
+  "updated_at": "2026-06-12T22:55:00Z",
   "active_step": "Post: PR Creation",
   "model_check": {
     "parent_session": "Codex main session",
@@ -304,7 +304,7 @@
     {
       "step": "Post: Reviewability Diff Gate",
       "status": "completed",
-      "summary": "final-reviewability-backstop.sh proceeded with outcome marker_split; full diff gate warned on 23 files and 3 primary surfaces; marker plan valid with foundation, us1, us2, us3."
+      "summary": "final-reviewability-backstop.sh proceeded with outcome marker_split; final diff was a size-only 30-file block; marker plan valid with foundation, us1, us2, us3."
     },
     {
       "step": "Post: Self-Review",
