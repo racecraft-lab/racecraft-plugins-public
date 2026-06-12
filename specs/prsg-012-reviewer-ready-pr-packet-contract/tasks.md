@@ -28,7 +28,7 @@
 - [x] T006 Add failing PR emission command assertions for `gh pr create --base`, `--head`, `--title`, and `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 - [x] T007 Copy the planned packet schema into the shared runtime contract at `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`
 - [x] T008 Create the executable validator skeleton with input parsing, deterministic exit-code branches, and JSON output path handling in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
-- [ ] T009 Verify the reviewability budget against the planned file scope and record any split decision in `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
+- [x] T009 Verify the reviewability budget against the planned file scope and record any split decision in `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
 
 **Checkpoint**: Layer 4 fixtures fail for the missing validator, generated title/body packet fields, and PR create command arguments.
 
@@ -207,3 +207,4 @@ Task: "Update Codex Layer 3 functional eval expectations for generated title/bod
 - The shared validator and packet schema stay under `speckit-pro/skills/speckit-autopilot/`.
 - Codex-facing guidance references the shared primary schema and validator; it must not introduce duplicate copies.
 - Post-create PR auto-repair remains out of scope for PRSG-012.
+- Foundation reviewability checkpoint: `reviewability-gate.sh tasks specs/prsg-012-reviewer-ready-pr-packet-contract` still reports the recorded size-only task-plan block (`reviewable_loc=2240`, `total_files=73`). Atomicity remains `one-navigable-PR`; no split layer plan is required, and marker-plan evidence remains the downstream PR preparation path.
