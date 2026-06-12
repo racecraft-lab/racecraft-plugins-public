@@ -218,6 +218,11 @@ contains_banned_text() {
   [[ "$value" =~ (ELI5|Plain-English[[:space:]]Summary|TODO|PRSG-[0-9]+|SPEC-[0-9A-Za-z_-]+|FR-[0-9A-Za-z_-]+|SC-[0-9A-Za-z_-]+|L[0-9]+|\{\{|\}\}|\$\{|<!--[[:space:]]*[^>]*-->|Example:) ]]
 }
 
+contains_generic_title_text() {
+  local value="$1"
+  printf '%s\n' "$value" | grep -Eiq '(^|: )[[:space:]]*(Foundation|User[[:space:]]+Story|US[0-9]+|us[0-9]+|full-spec|slice)([[:space:]:-]|$)|\(Priority:|(^|[^A-Za-z])MVP([^A-Za-z]|$)|foundation[[:space:]]+slice|Describe reviewer-visible change'
+}
+
 protected_body_sha() {
   local path="$1"
   awk '
@@ -298,6 +303,14 @@ validate_body_file() {
     add_failure "body.path" "body_file" "body_file is required." "Write a rendered PR body and record its repo-relative path."
     return
   fi
+  case "$body_file" in
+    /*|../*|*/../*|*/..|..)
+      add_failure "body.path" "body_file" \
+        "Rendered body file path must be repo-relative and stay inside the repository: $body_file" \
+        "Regenerate the packet with a repo-relative body_file path that does not contain parent-directory traversal."
+      return
+      ;;
+  esac
   if [ ! -f "$body_abs" ]; then
     add_failure "body.path" "body_file" "Rendered body file is missing: $body_file" "Regenerate the rendered PR body before validation."
     return
@@ -330,6 +343,12 @@ validate_body_file() {
     add_failure "body.banned_or_placeholder" "body_file" \
       "Rendered body contains stale placeholder, hidden TODO, unexpanded variable, or example text." \
       "Regenerate the body from finalized packet evidence before PR creation."
+  fi
+
+  if grep -Eiq 'Adds reviewer-ready split PR packet evidence for|Prepared `[^`]+` for review against|Slice PR body placeholder|^slice_id:|^slice_packet:' "$body_abs"; then
+    add_failure "body.generic_packet_prose" "body_file" \
+      "Rendered body describes packet mechanics instead of the reviewer-visible change." \
+      "Rewrite Summary, What Changed, and Why It Matters in strict plain English that names the actual change and preserves technical evidence below."
   fi
 
   local field start_count end_count start_line end_line
@@ -402,13 +421,15 @@ validate_body_file() {
 }
 
 validate_public_text() {
-  local packet="$1" title description source_summary uat_text evidence_summaries marker_text
+  local packet="$1" title description source_summary uat_text evidence_summaries marker_text packet_id split_slice
   title="$(jq_get "$packet" '.generated_title.value')"
   description="$(jq_get "$packet" '.generated_title.description')"
   source_summary="$(jq_get "$packet" '.generated_title.source_evidence.summary')"
   uat_text="$(jq_get "$packet" '.uat.how_to_uat')"
   evidence_summaries="$(jq -r '(.verification_evidence // [])[]?.summary // empty' "$packet" 2>/dev/null || true)"
   marker_text="$(jq -r '(.source_markers // [])[]?.rendered_text // empty' "$packet" 2>/dev/null || true)"
+  packet_id="$(jq_get "$packet" '.packet_id')"
+  split_slice="$(jq_get "$packet" '.split_slice.slice_id')"
 
   for item in "$title" "$description" "$source_summary" "$uat_text" "$evidence_summaries" "$marker_text"; do
     if contains_banned_text "$item"; then
@@ -418,6 +439,19 @@ validate_public_text() {
       return
     fi
   done
+
+  if contains_generic_title_text "$title" || contains_generic_title_text "$description"; then
+    add_failure "title.public_description" "generated_title.description" \
+      "Generated title description is a generic workflow label instead of a public action phrase." \
+      "Regenerate the title as strict plain English that names the actual reviewer-visible change."
+  fi
+
+  if { [ -n "$packet_id" ] && { [ "$description" = "$packet_id" ] || [[ "$title" == *": $packet_id" ]]; }; } \
+    || { [ -n "$split_slice" ] && { [ "$description" = "$split_slice" ] || [[ "$title" == *": $split_slice" ]]; }; }; then
+    add_failure "title.slice_ref" "generated_title.description" \
+      "Generated title description must not be only a packet id or slice id." \
+      "Use the packet id or slice id only as metadata; the title must name the public change."
+  fi
 
   local head_branch
   head_branch="$(jq_get "$packet" '.target.head_branch')"

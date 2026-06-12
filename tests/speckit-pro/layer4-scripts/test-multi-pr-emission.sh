@@ -133,11 +133,16 @@ declared_changed_files="$SANDBOX/declared-changed-files.txt"
 scope_violation_files="$SANDBOX/scope-violation-files.txt"
 marker_declared_changed_files="$SANDBOX/marker-declared-changed-files.txt"
 marker_scope_violation_files="$SANDBOX/marker-scope-violation-files.txt"
+prsg012_marker_plan="$REPO_ROOT/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/pr-marker-plan.json"
+prsg012_split_result="$REPO_ROOT/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json"
+prsg012_full_evidence="$SANDBOX/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log"
 
 mkdir -p "$(dirname "$full_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-009 fixture' > "$full_evidence"
 mkdir -p "$(dirname "$marker_full_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-013 marker fixture' > "$marker_full_evidence"
+mkdir -p "$(dirname "$prsg012_full_evidence")"
+printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-012 marker title fixture' > "$prsg012_full_evidence"
 mkdir -p "$(dirname "$custom_full_evidence")" "$(dirname "$wrong_feature_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for custom feature fixture' > "$custom_full_evidence"
 printf '%s\n' 'wrong feature evidence path' > "$wrong_feature_evidence"
@@ -524,6 +529,45 @@ set_test "marker-aware stdout identifies marker mode and marker count"
 json_check "$output" \
   "data['script'] == 'multi-pr-emission' and data['status'] == 'validated' and data['emission']['mode'] == 'marker' and data['emission']['route'] == 'marker_split' and data['emission']['marker_count'] == 3" \
   "stdout should describe marker-aware dry-run result"
+
+section "PRSG-012 marker title regression"
+
+prsg012_candidate_dir="$SANDBOX/prsg012-marker-candidates"
+
+set_test "PRSG-012 marker dry run normalizes generic story labels into public titles"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$prsg012_marker_plan" \
+  --marker-split-result "$prsg012_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-012-reviewer-ready-pr-packet-contract \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$prsg012_full_evidence" \
+  --candidate-dir "$prsg012_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+prsg012_commands_json="$(cat "$prsg012_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+prsg012_us1_body="$(cat "$prsg012_candidate_dir/pr-bodies/us1.md" 2>/dev/null || true)"
+
+set_test "PRSG-012 marker commands use strict plain-English titles"
+json_check "$prsg012_commands_json" \
+  "[op['title'] for op in data['operations'] if op['action'] == 'gh_pr_create'] == ['feat(speckit-pro): Add reviewer packet validation contract', 'feat(speckit-pro): Generate packet-owned conventional PR titles', 'feat(speckit-pro): Render plain-English reviewer PR body evidence', 'feat(speckit-pro): Block invalid PR packets before creation', 'feat(speckit-pro): Protect editable PR body prose']" \
+  "PRSG-012 marker PR titles should name the actual reviewer-visible change"
+
+set_test "PRSG-012 marker commands reject raw foundation/story labels"
+json_check "$prsg012_commands_json" \
+  "not any(('Foundation' in op.get('title', '') or 'User Story' in op.get('title', '') or 'Priority:' in op.get('title', '') or op.get('title', '').endswith(': us1')) for op in data['operations'] if op['action'] == 'gh_pr_create')" \
+  "PRSG-012 marker PR titles must not expose raw marker labels"
+
+set_test "PRSG-012 marker candidate body explains the change"
+assert_contains "$prsg012_us1_body" "This PR implements: Generate packet-owned conventional PR titles."
+
+set_test "PRSG-012 marker candidate body omits packet-mechanics prose"
+assert_not_contains "$prsg012_us1_body" 'Prepared `'
+
+set_test "PRSG-012 marker candidate body does not start with empty host headings"
+assert_not_contains "$prsg012_us1_body" "# What changed"
 
 set_test "single-atomic hazard collapses marker emission to one full-spec packet"
 single_atomic_candidate_dir="$SANDBOX/single-atomic-marker-candidates"
@@ -1422,7 +1466,7 @@ invalid_packet_full_evidence="$invalid_packet_repo/specs/prsg-009-multi-pr-emiss
 invalid_packet_fixture="$SANDBOX/pr-fixture-invalid-packet.json"
 invalid_packet_commands="$SANDBOX/pr-commands-invalid-packet.json"
 write_pr_fixture "$invalid_packet_fixture" success
-jq '.increments[1].name = "PRSG-009 internal slice"' "$valid_plan" > "$invalid_packet_plan"
+jq '.increments[1].files = []' "$valid_plan" > "$invalid_packet_plan"
 
 set_test "invalid split packet blocks before that slice PR creation"
 result=0

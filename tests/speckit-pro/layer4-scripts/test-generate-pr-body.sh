@@ -148,7 +148,7 @@ set_test "Does not emit governance as a top-level heading"
 assert_not_contains "$body" "# Scope Budget"
 
 set_test "Records host template source"
-assert_contains "$body" "template: $repo/.github/pull_request_template.md"
+assert_contains "$body" "template: .github/pull_request_template.md"
 
 section "fallback template"
 

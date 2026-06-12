@@ -9,14 +9,14 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/02-us1"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP",
+    "value": "feat(speckit-pro): Generate packet-owned conventional PR titles",
     "type": "feat",
     "scope": "speckit-pro",
-    "description": "User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP",
+    "description": "Generate packet-owned conventional PR titles",
     "source_evidence": {
       "kind": "marker_source_boundary",
       "source": "us1",
-      "summary": "Split packet title derived from the source boundary or layer-plan increment name."
+      "summary": "Source label and declared file scope normalized into a strict plain-English reviewer title."
     },
     "rejected_candidates": [
       {

@@ -408,6 +408,33 @@ assert_failure_json "invalid-title-token" "validation_failure" "1" "$invalid_tit
 set_test "invalid title token makes no PR creation attempts"
 assert_no_pr_create_attempts
 
+generic_title_rel="$PACKET_FIXTURE_REL/invalid-generic-title.json"
+jq \
+  --arg packet_id "invalid-generic-title" \
+  --arg title "feat(speckit-pro): User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP" \
+  --arg description "User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP" \
+  --arg result "$(validation_result_rel invalid-generic-title)" \
+  '.packet_id = $packet_id
+    | .generated_title.value = $title
+    | .generated_title.description = $description
+    | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$generic_title_rel"
+
+generic_title_result="$(validation_result_rel invalid-generic-title)"
+reset_gh_capture
+run_validator_capture "invalid-generic-title" "$generic_title_rel"
+
+set_test "invalid generic title exits 1"
+assert_captured_exit "1"
+
+assert_failure_json "invalid-generic-title" "validation_failure" "1" "$generic_title_result"
+
+set_test "invalid generic title reports public description rule"
+assert_failure_rule "title.public_description"
+
+set_test "invalid generic title makes no PR creation attempts"
+assert_no_pr_create_attempts
+
 invalid_missing_result="$(validation_result_rel invalid-missing-evidence)"
 reset_gh_capture
 run_validator_capture "invalid-missing-evidence" "$PACKET_FIXTURE_REL/invalid-missing-evidence.json"
@@ -508,6 +535,35 @@ set_test "invalid body content reports traceability rule"
 assert_failure_rule "body.traceability"
 
 set_test "invalid body content makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+generic_body_rel="$PACKET_FIXTURE_REL/invalid-generic-body.json"
+generic_body_body_rel="$PACKET_FIXTURE_REL/bodies/invalid-generic-body.md"
+cp "$TEST_REPO/$valid_edited_body_rel" "$TEST_REPO/$generic_body_body_rel"
+cat >> "$TEST_REPO/$generic_body_body_rel" <<'EOF'
+
+Prepared `prsg-012-reviewer-ready-pr-packet-contract/02-us1` for review against `prsg-012-reviewer-ready-pr-packet-contract/01-foundation`.
+EOF
+jq \
+  --arg packet_id "invalid-generic-body" \
+  --arg body "$generic_body_body_rel" \
+  --arg result "$(validation_result_rel invalid-generic-body)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$generic_body_rel"
+
+generic_body_result="$(validation_result_rel invalid-generic-body)"
+reset_gh_capture
+run_validator_capture "invalid-generic-body" "$generic_body_rel"
+
+set_test "invalid generic body exits 1"
+assert_captured_exit "1"
+
+assert_failure_json "invalid-generic-body" "validation_failure" "1" "$generic_body_result"
+
+set_test "invalid generic body reports packet prose rule"
+assert_failure_rule "body.generic_packet_prose"
+
+set_test "invalid generic body makes no PR creation attempts"
 assert_no_pr_create_attempts
 
 workflow_fixture="$TEST_REPO/docs/ai/specs/.process/PRSG-012-workflow.md"

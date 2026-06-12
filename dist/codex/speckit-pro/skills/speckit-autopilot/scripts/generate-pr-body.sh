@@ -183,8 +183,17 @@ repo_relative_path() {
   esac
 }
 
+repo_path() {
+  local path="$1" root="$2"
+  case "$path" in
+    /*) printf '%s\n' "$path" ;;
+    *) printf '%s/%s\n' "${root%/}" "$path" ;;
+  esac
+}
+
 feature_display_title() {
-  local spec="$FEATURE_DIR/spec.md"
+  local spec
+  spec="$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/spec.md"
   if [ ! -f "$spec" ]; then
     return
   fi
@@ -542,7 +551,7 @@ write_single_packet_metadata() {
 
 spec_value() {
   local heading="$1"
-  extract_heading_section "$FEATURE_DIR/spec.md" "$heading"
+  extract_heading_section "$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/spec.md" "$heading"
 }
 
 reviewability_json='{}'
@@ -626,22 +635,26 @@ append_slice_packet_sections() {
   {
     printf '\n## Summary\n\n'
     printf '<!-- speckit-pro-editable:summary:start -->\n'
-    jq -r '"Adds reviewer-ready split PR packet evidence for `" + .slice_id + "`."' "$packet"
+    jq -r '
+      (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
+      | "This PR implements: " + $description + "."
+    ' "$packet"
     printf '<!-- speckit-pro-editable:summary:end -->\n\n'
     printf 'Source: slice packet defines split PR identity and source boundary evidence.\n'
 
     printf '\n## What Changed\n\n'
     printf '<!-- speckit-pro-editable:what_changed:start -->\n'
     jq -r '
-      "- Prepared `" + .head_branch + "` for review against `" + .base_branch + "`.",
-      "- Rendered scoped verification, declared files, traceability, and known-gap evidence before PR creation."
+      (.generated_title.description // .title_description // .source_title // "Prepare reviewer-ready split PR evidence") as $description
+      | "- Implemented the declared change: " + $description + ".",
+        "- Published the exact changed-file scope, verification result, and traceability evidence for review."
     ' "$packet"
     printf '<!-- speckit-pro-editable:what_changed:end -->\n\n'
     printf 'Source: slice packet declared files and scoped verification define the reviewer body.\n'
 
     printf '\n## Why It Matters\n\n'
     printf '<!-- speckit-pro-editable:why_it_matters:start -->\n'
-    printf 'Reviewers can inspect the exact split scope and validation evidence before the PR is opened.\n'
+    printf 'Reviewers get a strict plain-English description first, with the exact technical evidence still available below.\n'
     printf '<!-- speckit-pro-editable:why_it_matters:end -->\n'
 
     printf '\n## How To Review\n\n'
@@ -755,7 +768,7 @@ append_slice_packet_sections() {
 }
 
 if [ -n "$SLICE_PACKET" ]; then
-  strip_html_comments_in_place "$OUTPUT_FILE"
+  : > "$OUTPUT_FILE"
   append_slice_packet_sections "$SLICE_PACKET"
 fi
 
@@ -770,7 +783,7 @@ fi
     "${reviewable_loc:-unknown}" "${total_files:-unknown}" "${production_files:-unknown}" "${budget_status:-unknown}"
   printf '**Primary surfaces:** %s.\n\n' "${surfaces:-unknown}"
   printf '**Review in this order:**\n'
-  printf '1. The spec and plan under `%s`.\n' "$FEATURE_DIR"
+  printf '1. The spec and plan under `%s`.\n' "$(repo_relative_path "$FEATURE_DIR" "$REPO_ROOT")"
   printf '2. The highest-risk production files.\n'
   printf '3. Verification evidence and any known gaps.\n\n'
   printf '**Verification:**\n'
@@ -784,7 +797,7 @@ fi
 # the heading loop / append_missing_section / extract_heading_section above — those
 # truncate at head -40 and strip blank lines. Emitted at H2 (## UAT Runbook); SC-005
 # greps for that exact literal. Fail-open: an absent runbook still emits the heading.
-uat_runbook="$FEATURE_DIR/.process/uat-runbook.md"
+uat_runbook="$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/.process/uat-runbook.md"
 {
   printf '\n## UAT Runbook\n\n'
   if [ -f "$uat_runbook" ]; then
@@ -803,8 +816,8 @@ uat_runbook="$FEATURE_DIR/.process/uat-runbook.md"
 
 {
   printf '\n<!-- speckit-pro-review-packet-source\n'
-  printf 'template: %s\n' "$template"
-  printf 'feature_dir: %s\n' "$FEATURE_DIR"
+  printf 'template: %s\n' "$(repo_relative_path "$template" "$REPO_ROOT")"
+  printf 'feature_dir: %s\n' "$(repo_relative_path "$FEATURE_DIR" "$REPO_ROOT")"
   printf 'diff_range: %s\n' "$DIFF_RANGE"
   printf 'reviewability: %s\n' "$(printf '%s' "$reviewability_json" | tr '\n' ' ')"
   printf '%s\n' '-->'

@@ -589,6 +589,45 @@ if [ "$MARKER_MODE" = true ]; then
             end;
         def marker_files($marker): [($marker.declared_files // [])[] | .path];
         def marker_warnings($markers): [($markers[] | (.warnings // []))[]];
+        def title_clean:
+          gsub("\\s*\\(Priority:[^)]+\\)"; "")
+          | gsub("\\s+MVP$"; "")
+          | gsub("^User Story [0-9]+\\s*-\\s*"; "")
+          | gsub("^User Story [0-9]+$"; "")
+          | gsub("^\\s+"; "")
+          | gsub("\\s+$"; "");
+        def has_action_verb:
+          test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
+        def public_title_description($id; $source_title; $files):
+          (($source_title // $id) | title_clean) as $clean
+          | (($files // []) | join(" ")) as $paths
+          | if ($paths | contains("pr-packet.schema.json")) or (($paths | contains("validate-pr-packet.sh")) and ($paths | contains("fixtures/pr-packet"))) then
+              "Add reviewer packet validation contract"
+            elif ($clean | test("Specific Conventional PR Titles"; "i")) then
+              "Generate packet-owned conventional PR titles"
+            elif ($clean | test("Structured Reviewer Body"; "i")) then
+              "Render plain-English reviewer PR body evidence"
+            elif ($clean | test("Pre-create Validation Block"; "i")) then
+              "Block invalid PR packets before creation"
+            elif ($clean | test("Safe Prose Refinement"; "i")) then
+              "Protect editable PR body prose"
+            elif ($paths | contains("marker-plan")) then
+              "Add marker split emission fixtures"
+            elif ($paths | contains("multi-pr-emission-state.schema.json")) then
+              "Record marker split emission state"
+            elif ($paths | contains("generate-spec-index.sh")) then
+              "Persist PR table and resume evidence"
+            elif ($paths | contains("multi-pr-emission.sh")) then
+              "Emit ordered slice PRs"
+            elif ($paths | contains("generate-pr-body.sh")) then
+              "Render reviewer PR body evidence"
+            elif ($clean | has_action_verb) then
+              $clean
+            elif ($id == "foundation") then
+              "Add split PR emission foundation"
+            else
+              "Describe reviewer-visible change"
+            end;
 
         ($plan[0].markers | sort_by(.review_order)) as $markers
         | ($plan[0].warnings // []) as $plan_warnings
@@ -626,11 +665,14 @@ if [ "$MARKER_MODE" = true ]; then
                   | .value as $marker
                   | ($idx + 1) as $review_order
                   | ($review_order | zpad($width)) as $label
+                  | (marker_files($marker)) as $declared_files
+                  | (($marker.source_boundary.section // $marker.id)) as $source_title
+                  | (public_title_description($marker.id; $source_title; $declared_files)) as $title_description
                   | {
                       source_id: $marker.id,
-                      source_title: ($marker.source_boundary.section // $marker.id),
-                      title_description: ($marker.source_boundary.section // $marker.id),
-                      generated_title: ("feat(speckit-pro): " + ($marker.source_boundary.section // $marker.id)),
+                      source_title: $source_title,
+                      title_description: $title_description,
+                      generated_title: ("feat(speckit-pro): " + $title_description),
                       slice_id: $marker.id,
                       marker_id: $marker.id,
                       source_marker_ids: [$marker.id],
@@ -639,7 +681,7 @@ if [ "$MARKER_MODE" = true ]; then
                       review_order: $marker.review_order,
                       branch: "\($feature_branch)/\($label)-\($marker.id)",
                       depends_on: [],
-                      declared_files: marker_files($marker),
+                      declared_files: $declared_files,
                       declared_tests: ($marker.declared_tests // []),
                       advisory_size: {},
                       marker_split_evidence: $marker_split_evidence,
@@ -734,6 +776,46 @@ else
           ]
           end;
 
+      def title_clean:
+        gsub("\\s*\\(Priority:[^)]+\\)"; "")
+        | gsub("\\s+MVP$"; "")
+        | gsub("^User Story [0-9]+\\s*-\\s*"; "")
+        | gsub("^User Story [0-9]+$"; "")
+        | gsub("^\\s+"; "")
+        | gsub("\\s+$"; "");
+      def has_action_verb:
+        test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
+      def public_title_description($id; $source_title; $files):
+        (($source_title // $id) | title_clean) as $clean
+        | (($files // []) | join(" ")) as $paths
+        | if ($paths | contains("pr-packet.schema.json")) or (($paths | contains("validate-pr-packet.sh")) and ($paths | contains("fixtures/pr-packet"))) then
+            "Add reviewer packet validation contract"
+          elif ($clean | test("Specific Conventional PR Titles"; "i")) then
+            "Generate packet-owned conventional PR titles"
+          elif ($clean | test("Structured Reviewer Body"; "i")) then
+            "Render plain-English reviewer PR body evidence"
+          elif ($clean | test("Pre-create Validation Block"; "i")) then
+            "Block invalid PR packets before creation"
+          elif ($clean | test("Safe Prose Refinement"; "i")) then
+            "Protect editable PR body prose"
+          elif ($paths | contains("marker-plan")) then
+            "Add marker split emission fixtures"
+          elif ($paths | contains("multi-pr-emission-state.schema.json")) then
+            "Record marker split emission state"
+          elif ($paths | contains("generate-spec-index.sh")) then
+            "Persist PR table and resume evidence"
+          elif ($paths | contains("multi-pr-emission.sh")) then
+            "Emit ordered slice PRs"
+          elif ($paths | contains("generate-pr-body.sh")) then
+            "Render reviewer PR body evidence"
+          elif ($clean | has_action_verb) then
+            $clean
+          elif ($id == "foundation") then
+            "Add split PR emission foundation"
+          else
+            "Describe reviewer-visible change"
+          end;
+
       ($plan[0].increments) as $increments
       | ($plan[0].warnings) as $warnings
       | (($increments | length | tostring | length) as $digits | if $digits < 2 then 2 else $digits end) as $width
@@ -747,7 +829,7 @@ else
               | ($inc.id | slug) as $slice_id
               | ($review_order | zpad($width)) as $label
               | (($inc.name // $inc.id) as $source_title
-                | (if $source_title == "Foundation" then "Add foundation slice" else $source_title end) as $title_description
+                | (public_title_description($inc.id; $source_title; ($inc.files // []))) as $title_description
                 | {
                   source_id: $inc.id,
                   source_title: $source_title,
@@ -807,6 +889,22 @@ duplicate_plan_slice="$(
 )"
 if [ -n "$duplicate_plan_slice" ]; then
   emit_input_error "duplicate planned slice_id $duplicate_plan_slice"
+fi
+
+generic_title_slice="$(
+  printf '%s' "$plan_slices" | jq -r '
+    map(
+      select(
+        ((.title_description // "") | test("^(Foundation|User Story|US[0-9]+|us[0-9]+|full-spec|slice|Describe reviewer-visible change)$"; "i"))
+        or ((.title_description // "") | test("\\(Priority:|\\bMVP\\b|foundation slice"; "i"))
+        or ((.generated_title // "") | test(": (Foundation|User Story|US[0-9]+|us[0-9]+|full-spec|slice|Describe reviewer-visible change)(\\b|$)"; "i"))
+      )
+    )
+    | .[0].slice_id // empty
+  '
+)"
+if [ -n "$generic_title_slice" ]; then
+  emit_input_error "unable to derive public PR title for slice $generic_title_slice"
 fi
 
 while IFS= read -r branch_name; do
@@ -1010,6 +1108,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
   mkdir -p "$CANDIDATE_DIR/$packet_dir_name" "$CANDIDATE_DIR/pr-bodies"
   while IFS= read -r slice_json; do
     slice_id="$(printf '%s' "$slice_json" | jq -r '.slice_id')"
+    title_description="$(printf '%s' "$slice_json" | jq -r '.title_description // "Prepare reviewer-ready split PR evidence"')"
     packet_path="$CANDIDATE_DIR/$packet_dir_name/$slice_id.json"
     body_file="$CANDIDATE_DIR/pr-bodies/$slice_id.md"
     packet_json="$(
@@ -1034,11 +1133,11 @@ if [ -n "$CANDIDATE_DIR" ]; then
               type: "feat",
               scope: "speckit-pro",
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
-              source_evidence: {
-                kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
-                source: ($slice.source_id // $slice.slice_id),
-                summary: "Split packet title derived from the source boundary or layer-plan increment name."
-              },
+                source_evidence: {
+                  kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
+                  source: ($slice.source_id // $slice.slice_id),
+                  summary: "Source label and declared file scope normalized into a strict plain-English reviewer title."
+                },
               rejected_candidates: [
                 {
                   value: $slice.branch,
@@ -1094,9 +1193,14 @@ if [ -n "$CANDIDATE_DIR" ]; then
     )"
     write_json_atomic "$packet_path" "$packet_json"
     {
-      printf '# Slice PR body placeholder\n\n'
-      printf 'slice_id: %s\n' "$slice_id"
-      printf 'slice_packet: %s\n' "$packet_path"
+      printf '## Summary\n\n'
+      printf 'This PR implements: %s.\n\n' "$title_description"
+      printf '## What Changed\n\n'
+      printf -- '- Implemented the declared change: %s.\n' "$title_description"
+      printf -- '- Published the changed-file scope and verification evidence expected for this review.\n\n'
+      printf '## Why It Matters\n\n'
+      printf 'Reviewers get a strict plain-English description first, with exact technical evidence available in the packet.\n\n'
+      printf 'Source: %s\n' "$packet_path"
     } > "$body_file"
   done < <(printf '%s' "$plan_slices" | jq -c '.[]')
 fi
@@ -1639,6 +1743,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
     fi
     packet_path="$packet_dir/$packet_file_name"
     body_file="$packet_dir/pr-body.md"
+    body_file_rel="$(repo_relative_path "$body_file" "$persist_root")"
     pr_packet_path="$packet_dir/pr-packet.json"
     pr_packet_rel="$(repo_relative_path "$pr_packet_path" "$persist_root")"
     validation_result_path="$FEATURE_DIR_REL/.process/pr-packets/$slice_id/validation.json"
@@ -1647,7 +1752,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
     packet_json="$(
       jq -n \
         --argjson slice "$slice_json" \
-        --arg body_file "$body_file" \
+        --arg body_file "$body_file_rel" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$total_slices" '
@@ -1666,11 +1771,11 @@ if [ -z "$CANDIDATE_DIR" ]; then
               type: "feat",
               scope: "speckit-pro",
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
-              source_evidence: {
-                kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
-                source: ($slice.source_id // $slice.slice_id),
-                summary: "Split packet title derived from the source boundary or layer-plan increment name."
-              },
+                source_evidence: {
+                  kind: (if (($slice.marker_id? // "") != "") then "marker_source_boundary" else "layer_plan_increment" end),
+                  source: ($slice.source_id // $slice.slice_id),
+                  summary: "Source label and declared file scope normalized into a strict plain-English reviewer title."
+                },
               rejected_candidates: [
                 {
                   value: $slice.branch,
@@ -1725,11 +1830,13 @@ if [ -z "$CANDIDATE_DIR" ]; then
         '
     )"
     persist_json_atomic "$packet_path" "$packet_json" || emit_input_error "slice packet persistence failed: $packet_path"
-    "$SCRIPT_DIR/generate-pr-body.sh" --slice-packet "$packet_path" "$persist_root" "$feature_dir_abs" "$body_file" "$BASE_SHA...HEAD" >/dev/null
+    (
+      cd "$persist_root" &&
+      "$SCRIPT_DIR/generate-pr-body.sh" --slice-packet "$packet_path" "$persist_root" "$FEATURE_DIR_REL" "$body_file" "$BASE_SHA...HEAD" >/dev/null
+    )
     pr_title="$(printf '%s' "$packet_json" | jq -r '.generated_title.value')"
 
     if [ "$MARKER_MODE" != true ]; then
-      body_file_rel="$(repo_relative_path "$body_file" "$persist_root")"
       slice_packet_rel="$(repo_relative_path "$packet_path" "$persist_root")"
       body_sha="$(protected_body_sha "$body_file")"
       pr_packet_json="$(
@@ -1760,7 +1867,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
                 source_evidence: {
                   kind: "split_source_boundary",
                   source: ($slice.source_id // $slice.slice_id),
-                  summary: "Split source boundary normalized into a public action phrase."
+                  summary: "Source label and declared file scope normalized into a strict plain-English reviewer title."
                 },
                 rejected_candidates: [
                   {

@@ -9,14 +9,14 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/04-us3"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): User Story 3 - Pre-create Validation Block",
+    "value": "feat(speckit-pro): Block invalid PR packets before creation",
     "type": "feat",
     "scope": "speckit-pro",
-    "description": "User Story 3 - Pre-create Validation Block",
+    "description": "Block invalid PR packets before creation",
     "source_evidence": {
       "kind": "marker_source_boundary",
       "source": "us3",
-      "summary": "Split packet title derived from the source boundary or layer-plan increment name."
+      "summary": "Source label and declared file scope normalized into a strict plain-English reviewer title."
     },
     "rejected_candidates": [
       {

@@ -1,14 +1,8 @@
-# What changed
-
-# Why it matters
-
-# Anything reviewers should know
-
 
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-Adds reviewer-ready split PR packet evidence for `foundation`.
+This PR implements: Add reviewer packet validation contract.
 <!-- speckit-pro-editable:summary:end -->
 
 Source: slice packet defines split PR identity and source boundary evidence.
@@ -16,8 +10,8 @@ Source: slice packet defines split PR identity and source boundary evidence.
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- Prepared `prsg-012-reviewer-ready-pr-packet-contract/01-foundation` for review against `main`.
-- Rendered scoped verification, declared files, traceability, and known-gap evidence before PR creation.
+- Implemented the declared change: Add reviewer packet validation contract.
+- Published the exact changed-file scope, verification result, and traceability evidence for review.
 <!-- speckit-pro-editable:what_changed:end -->
 
 Source: slice packet declared files and scoped verification define the reviewer body.
@@ -25,7 +19,7 @@ Source: slice packet declared files and scoped verification define the reviewer 
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-Reviewers can inspect the exact split scope and validation evidence before the PR is opened.
+Reviewers get a strict plain-English description first, with the exact technical evidence still available below.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review
@@ -117,7 +111,7 @@ Style B incremental stack: first slice targets the integration base and later sl
 <details>
 <summary>Reviewer checklist &amp; scope details</summary>
 
-**Size:** 0 reviewable lines across 96 files (0 production). Budget: block.
+**Size:** 0 reviewable lines across 105 files (0 production). Budget: block.
 **Primary surfaces:** API, docs/process, other, scheduler/runtime, schema/migration, seed/config.
 
 **Review in this order:**
@@ -229,5 +223,5 @@ git revert <SHA>; see plan.md for data-migration considerations
 template: speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md
 feature_dir: specs/prsg-012-reviewer-ready-pr-packet-contract
 diff_range: 3118e81162104bfd081d01755c00c205a8eab061...HEAD
-reviewability: {"mode":"diff","status":"block","pass":false,"reviewable_loc":0,"production_files":0,"total_files":96,"primary_surface_count":6,"primary_surfaces":["API","docs/process","other","scheduler/runtime","schema/migration","seed/config"],"greenfield":false,"thresholds":{"warn":{"reviewable_loc":400,"production_files":6,"total_files":15,"primary_surfaces":1},"block":{"reviewable_loc":800,"production_files":8,"total_files":25,"primary_surfaces":1}},"exception_honored":false,"exception_class":null,"exceptions":{"accepted":[],"rejected":[]},"warnings":["total files 96 exceeds warn threshold 15","primary surfaces 6 exceeds warn threshold 1"],"blockers":["total files 96 exceeds block threshold 25"]}
+reviewability: {"mode":"diff","status":"block","pass":false,"reviewable_loc":0,"production_files":0,"total_files":105,"primary_surface_count":6,"primary_surfaces":["API","docs/process","other","scheduler/runtime","schema/migration","seed/config"],"greenfield":false,"thresholds":{"warn":{"reviewable_loc":400,"production_files":6,"total_files":15,"primary_surfaces":1},"block":{"reviewable_loc":800,"production_files":8,"total_files":25,"primary_surfaces":1}},"exception_honored":false,"exception_class":null,"exceptions":{"accepted":[],"rejected":[]},"warnings":["total files 105 exceeds warn threshold 15","primary surfaces 6 exceeds warn threshold 1"],"blockers":["total files 105 exceeds block threshold 25"]}
 -->

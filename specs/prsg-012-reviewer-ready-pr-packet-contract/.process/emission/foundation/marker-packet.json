@@ -9,14 +9,14 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/01-foundation"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): Foundation",
+    "value": "feat(speckit-pro): Add reviewer packet validation contract",
     "type": "feat",
     "scope": "speckit-pro",
-    "description": "Foundation",
+    "description": "Add reviewer packet validation contract",
     "source_evidence": {
       "kind": "marker_source_boundary",
       "source": "foundation",
-      "summary": "Split packet title derived from the source boundary or layer-plan increment name."
+      "summary": "Source label and declared file scope normalized into a strict plain-English reviewer title."
     },
     "rejected_candidates": [
       {

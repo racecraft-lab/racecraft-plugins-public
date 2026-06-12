@@ -9,14 +9,14 @@
     "head_branch": "prsg-012-reviewer-ready-pr-packet-contract/03-us2"
   },
   "generated_title": {
-    "value": "feat(speckit-pro): User Story 2 - Structured Reviewer Body",
+    "value": "feat(speckit-pro): Render plain-English reviewer PR body evidence",
     "type": "feat",
     "scope": "speckit-pro",
-    "description": "User Story 2 - Structured Reviewer Body",
+    "description": "Render plain-English reviewer PR body evidence",
     "source_evidence": {
       "kind": "marker_source_boundary",
       "source": "us2",
-      "summary": "Split packet title derived from the source boundary or layer-plan increment name."
+      "summary": "Source label and declared file scope normalized into a strict plain-English reviewer title."
     },
     "rejected_candidates": [
       {
