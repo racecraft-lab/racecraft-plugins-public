@@ -404,6 +404,9 @@
       "additionalProperties": false,
       "required": [
         "schema_version",
+        "error_class",
+        "exit_code",
+        "stderr_line",
         "packet_id",
         "mode",
         "target",
@@ -421,28 +424,46 @@
           "type": "string",
           "pattern": "^1\\.0\\.0$"
         },
+        "error_class": {
+          "type": "string",
+          "enum": ["none", "validation_failure", "input_error"]
+        },
+        "exit_code": {
+          "type": "integer",
+          "enum": [0, 1, 2]
+        },
+        "stderr_line": {
+          "type": "string"
+        },
         "packet_id": {
           "type": "string",
           "minLength": 1
         },
         "mode": {
-          "type": "string",
-          "enum": ["single", "split"]
+          "type": ["string", "null"],
+          "enum": ["single", "split", null]
         },
         "target": {
-          "$ref": "#/$defs/pr_target"
+          "oneOf": [
+            { "$ref": "#/$defs/pr_target" },
+            { "type": "null" }
+          ]
         },
         "status": {
           "type": "string",
           "enum": ["passed", "failed"]
         },
         "title_value": {
-          "type": "string",
-          "minLength": 1
+          "type": ["string", "null"]
         },
         "body_file": {
-          "type": "string",
-          "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*\\.md$"
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*\\.md$"
+            },
+            { "type": "null" }
+          ]
         },
         "rule_outcomes": {
           "type": "array",
@@ -500,9 +521,75 @@
         "pr_blocked": {
           "type": "boolean"
         },
+        "resume": {
+          "$ref": "#/$defs/resume_evidence"
+        },
+        "prior_successful_prs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pr_reference"
+          }
+        },
         "timestamp": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "resume_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["resume_from_packet_id", "blocked_until", "stale_result_policy"],
+      "properties": {
+        "resume_from_packet_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resume_from_slice_id": {
+          "type": ["string", "null"]
+        },
+        "blocked_until": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stale_result_policy": {
+          "const": "revalidate_current_rendered_packet"
+        },
+        "prior_successful_prs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pr_reference"
+          }
+        }
+      }
+    },
+    "pr_reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slice_id", "number", "url", "base_branch", "head_branch"],
+      "properties": {
+        "slice_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_sha": {
+          "type": ["string", "null"]
         }
       }
     }

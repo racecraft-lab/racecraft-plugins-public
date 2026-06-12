@@ -6,7 +6,7 @@
 
 ## Summary
 
-Autopilot will render packet-owned PR titles and PR bodies for both single-PR and split-PR flows, validate the rendered packet before any `gh pr create`, and pass PR creation only through the packet target plus `--title` and `--body-file`. The implementation centers on one shared packet schema, one shared Bash validator, direct generation of canonical reviewer sections, and fixture-backed validation of allowed prose edits versus protected governance evidence.
+Autopilot will render packet-owned PR titles and PR bodies for both single-PR and split-PR flows, validate the rendered packet before any `gh pr create`, and pass PR creation only through the packet target plus `--title` and `--body-file`. The implementation centers on one shared packet schema, one shared Bash validator, direct generation of canonical reviewer sections, fixture-backed validation of allowed prose edits versus protected governance evidence, deterministic diagnostics for malformed inputs, and resume-safe split-PR blocking that preserves earlier opened PRs.
 
 ## Technical Context
 
@@ -22,13 +22,13 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 
 **Project Type**: Claude Code/Codex plugin automation with Markdown workflow docs, shell scripts, JSON contracts, and shell fixtures
 
-**Performance Goals**: Packet validation completes locally before networked PR creation; invalid packets make zero `gh pr create` attempts; validation output is deterministic for fixture comparison
+**Performance Goals**: Packet validation completes locally before networked PR creation; invalid packets and malformed packet inputs make zero `gh pr create` attempts; validation stdout/stderr and JSON output are deterministic for fixture comparison
 
-**Constraints**: No new runtime dependencies beyond Bash, `jq`, `git`, and `gh`; keep scripts deterministic and fixture-friendly; preserve the legacy `speckit-pro-review-packet-source` marker and literal `## UAT Runbook` heading; reject internal title tokens, stale placeholders, unknown HTML comments outside code fences, and host template content that replaces the canonical packet block
+**Constraints**: No new runtime dependencies beyond Bash, `jq`, `git`, and `gh`; keep scripts deterministic and fixture-friendly; preserve the legacy `speckit-pro-review-packet-source` marker and literal `## UAT Runbook` heading; reject internal title tokens, stale placeholders, unknown HTML comments outside code fences, and host template content that replaces the canonical packet block; use distinct exit `1` validation failures and exit `2` input errors with one deterministic stderr line
 
 **Scale/Scope**: Single-PR and split-PR autopilot packet generation paths; one spec, one slice; validation writes one JSON record per packet
 
-**Reviewability Budget**: Primary surface is docs/process plus Bash automation; projected reviewable LOC about 350 with advisory estimator at 245; projected production files 4-6; projected total files under 15; budget result within budget; split decision is one spec, one slice
+**Reviewability Budget**: Primary surface is docs/process plus Bash automation; projected reviewable LOC about 350 with advisory estimator at 245; projected production files 4-6; projected total files about 15-21 after input-error and resume fixtures; budget result within budget; split decision is one spec, one slice
 
 ## Declared File Operations
 
@@ -46,6 +46,9 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 - NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json
 - NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json
 - NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json
+- NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args
+- NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json
+- NEW tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json
 
 ## Constitution Check
 
@@ -60,7 +63,7 @@ Autopilot will render packet-owned PR titles and PR bodies for both single-PR an
 | V. Conventional Commits | PASS | Packet-owned title metadata enforces `<type>(<scope>): <plain-English description>` before PR creation. |
 | VI. KISS, Simplicity & YAGNI | PASS | One shared schema and one validator replace post-create repair; no new dependencies or speculative repair system. |
 
-Reviewability gate: PASS. The plan stays below warning thresholds with about 350 projected reviewable LOC, 4-6 production files, and fewer than 15 total files. No typed reviewability exception is required.
+Reviewability gate: PASS. The plan stays below warning thresholds with about 350 projected reviewable LOC, 4-6 production files, and about 15-21 total files after input-error and resume fixtures. No typed reviewability exception is required.
 
 PR review packet source for this spec: title/body packet generation, pre-create validation, safe prose refinement boundaries, UAT compatibility, scope/verification evidence, validation result JSON, and split-packet identity. Non-goals: post-create auto-repair and broad host-template migration.
 
@@ -125,6 +128,11 @@ Research is captured in [research.md](research.md). Key decisions:
 - Generate canonical reviewer sections directly, while preserving the literal `## UAT Runbook` heading for SPEC-006a/b compatibility.
 - Allow prose refinement only inside exact full-line editable marker pairs under `Summary`, `What Changed`, and `Why It Matters`.
 - Store deterministic validation JSON under the target feature `.process/pr-packets/<packet_id>/validation.json`.
+- Treat missing, unreadable, invalid-JSON, and schema-invalid packet inputs as `input_error` records with exit `2`, a stable synthetic `_input-error-<hash>` identity when packet metadata is unavailable, and zero PR creation attempts.
+- Treat rendered-content validation failures as exit `1` `validation_failure` records that trust parsed packet metadata, write packet-specific remediation evidence, and append workflow evidence before stopping.
+- Emit one deterministic stderr line for every failed validator run so Layer 4 fixtures can compare diagnostics without timestamps, absolute paths, or host-specific text.
+- On resume, always revalidate the current rendered packet and overwrite or supersede stale failed validation evidence before allowing PR creation.
+- In split-PR mode, preserve prior successful PR records from PRSG-009 state surfaces, set the resume boundary to the failed packet, and reconcile existing PRs before retrying so a corrected packet does not duplicate earlier `gh pr create` calls.
 - Keep post-create auto-repair out of scope.
 
 ## Phase 1 Design Results

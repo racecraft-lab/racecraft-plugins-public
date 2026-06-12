@@ -88,6 +88,31 @@ Expected outcome:
 - Validation status is `failed`.
 - Remediation evidence points to the protected invariant that changed.
 
+## Scenario 7: Missing or malformed packet input is an input error
+
+1. Run validation with a missing packet path, unreadable packet path, invalid JSON file, and schema-invalid packet file.
+2. Inspect stdout, stderr, and any validation result path created under `.process/pr-packets/_input-error-<stable-hash>/validation.json`.
+
+Expected outcome:
+
+- The validator exits `2`.
+- The validation result uses `error_class: input_error`, `exit_code: 2`, and `pr_blocked: true`.
+- Stderr is one deterministic line in the documented `validate-pr-packet.sh: input_error: ...` shape.
+- No `gh pr create` command is attempted.
+
+## Scenario 8: Split-PR resume preserves earlier opened PRs
+
+1. Seed a split run where packet 1 has already opened a PR and packet 2 fails validation.
+2. Confirm state before fixing packet 2.
+3. Fix packet 2 and rerun validation/emission from the failed packet.
+
+Expected outcome:
+
+- Packet 2 writes failed validation JSON with resume evidence pointing to packet 2.
+- Existing packet 1 PR evidence remains in `.process/prs.json`, the Spec MOC PRS table, workflow evidence, and `autopilot-state.json`.
+- Resume reconciles the existing packet 1 PR before retrying packet 2.
+- No duplicate `gh pr create` command is attempted for packet 1.
+
 ## Verification Commands
 
 ```bash
@@ -99,7 +124,7 @@ bash tests/speckit-pro/run-all.sh
 Expected outcome:
 
 - Layer 1 passes structural validation.
-- Layer 4 passes validator, PR body, and multi-PR emission fixture tests.
+- Layer 4 passes validator, PR body, input-error, resume, and multi-PR emission fixture tests.
 - The default deterministic suite passes without requiring AI-eval layers.
 
 ## Contract References

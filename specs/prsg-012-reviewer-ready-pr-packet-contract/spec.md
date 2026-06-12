@@ -83,6 +83,8 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - Known Gaps has no open gaps; the body must still say so explicitly rather than omit the section.
 - A source marker appears only inside a code fence, HTML comment, generated fixture, or non-rendered area.
 - One split packet fails validation while other split packets pass.
+- The packet file path is missing, unreadable, points to a directory, contains invalid JSON, or fails the packet schema before a `packet_id` can be trusted.
+- A split-PR run has already opened one or more earlier slice PRs when a later packet fails validation.
 
 ## Requirements *(mandatory)*
 
@@ -105,8 +107,13 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **FR-011**: The validator MUST reject rendered packets missing verification evidence or scope evidence.
 - **FR-012**: The validator MUST reject banned labels including `ELI5` and `Plain-English Summary`.
 - **FR-013**: Validation failures MUST block before PR creation and report remediation evidence that names the failed rule, packet target, affected section or field, and relevant text excerpt or hash evidence when available.
-- **FR-014**: Validation results MUST be written as one JSON record per packet under the target feature `.process/pr-packets/<packet_id>/validation.json` path, with status, packet identity, mode, PR target, title/body paths or values, rule outcomes, failure details, remediation evidence, `pr_blocked`, and timestamps.
+- **FR-014**: Validation results MUST be written as one JSON record per packet under the target feature `.process/pr-packets/<packet_id>/validation.json` path, with status, error class, exit code, deterministic stderr line, packet identity, mode, PR target, title/body paths or values, rule outcomes, failure details, remediation evidence, `pr_blocked`, resume boundary when blocked, and timestamps.
 - **FR-015**: Blocking validation failures MUST append a concise workflow event that records the blocked packet and remediation evidence location.
+- **FR-015A**: Missing, unreadable, directory-valued, invalid-JSON, or schema-invalid packet inputs MUST be treated as `input_error` failures, exit `2`, make zero `gh pr create` attempts, and emit deterministic diagnostics. When the target feature directory can be derived, the validator MUST write an input-error validation JSON record under `.process/pr-packets/_input-error-<stable-hash>/validation.json`; when it cannot be derived, the validator MUST emit the same `input_error` JSON envelope to stdout and the deterministic stderr line without mutating repository files.
+- **FR-015B**: Rendered-content validation failures MUST be distinguished from input errors: validation failures exit `1`, use `error_class: validation_failure`, include packet-specific remediation evidence, and write workflow evidence before stopping; input errors exit `2`, use `error_class: input_error`, and report the bad input path or schema failure without trusting packet-owned fields that did not parse or validate.
+- **FR-015C**: Validator stderr MUST be deterministic and fixture-comparable. Each failed run MUST emit one concise line in the form `validate-pr-packet.sh: <error_class>: <packet_or_input_id>: <rule_or_reason>: <validation_result_path_or_no-path>` with no timestamps, absolute paths, random temporary names, or host-specific wording.
+- **FR-015D**: Resume after a blocked packet MUST revalidate the current rendered packet and MUST NOT treat stale failed `validation.json` content as authoritative. A passing rerun MUST overwrite or supersede the prior failed result at the packet's validation path, set `pr_blocked: false`, and allow PR creation only from the newly passed result.
+- **FR-015E**: In split-PR mode, if a later packet fails after earlier slice PRs were opened, the failure MUST preserve earlier successful PR evidence in `.process/prs.json`, the Spec MOC PRS table, workflow evidence, and `autopilot-state.json`; MUST NOT close, relabel, retarget, or recreate earlier PRs; MUST set the resume boundary to the failed packet or slice; and MUST reconcile existing PR records before retrying so resume cannot create duplicate PRs.
 - **FR-016**: The packet contract MUST allow sanctioned prose refinements only inside full-line editable HTML comment marker pairs under `Summary`, `What Changed`, and `Why It Matters`. Field IDs MUST use exact markers such as `<!-- speckit-pro-editable:summary:start -->` and `<!-- speckit-pro-editable:summary:end -->`, mirrored in packet JSON.
 - **FR-016A**: The packet contract MUST store a normalized protected-body fingerprint with editable blocks elided. The validator MUST reject any non-editable body change when the protected fingerprint no longer matches.
 - **FR-016B**: The validator MUST allow only structural editable-boundary comments and the legacy `speckit-pro-review-packet-source` compatibility comment. It MUST reject unknown HTML comments, template placeholder comments, and stale template comments outside code fences.
@@ -132,7 +139,7 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **Secondary surfaces, if any**: contracts, docs/process
 - **Projected reviewable LOC**: 500-900 excluding generated fixtures and validation result output
 - **Projected production files**: 5-8
-- **Projected total files**: 12-18
+- **Projected total files**: 15-21
 - **Budget result**: within budget
 - **Split decision**: Keep as one spec because title generation, body rendering, validation, and PR creation gating share one reviewer packet contract. Fixture and documentation updates can be reviewed in the same vertical slice without splitting the behavior.
 
@@ -147,8 +154,8 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 
 - **PR Packet**: A rendered PR title and body for one PR target, including schema version, packet identity, mode, explicit `base_branch`/`head_branch` target, structured generated-title metadata, body file, required sections, UAT content, rendered source/provenance markers, scope evidence with changed files, verification evidence, known-gap language, editable field boundaries, protected-body fingerprint, and validation result path. PRSG-012 uses a shared `pr-packet.schema.json` for both single-PR and split-PR flows; split packets keep `slice-packet.schema.json` as slice evidence/source input and include slice identity or the source slice packet path. Single-PR packets MUST NOT carry split-only `split_slice` evidence.
 - **Generated Title Metadata**: Structured title data with final `value`, conventional commit `type`, `scope`, public-readable `description`, source evidence, and rejected candidates. Single-PR title descriptions come from the feature/spec display title normalized into an action phrase. Split-PR title descriptions come from PR marker `source_boundary.section` in marker mode, or the layer-plan increment name in legacy layer-plan mode. Slice IDs remain metadata and are never title description text.
-- **Packet Validation Result**: A JSON record describing pass or fail status, evaluated rules, packet identity, mode, title value or path, body file, failures, remediation evidence, whether PR creation was blocked, and timestamps.
-- **Workflow Event**: A concise process log entry written when validation blocks a packet before PR creation.
+- **Packet Validation Result**: A JSON record describing pass or fail status, error class, exit code, deterministic stderr line, evaluated rules, packet identity or synthetic input-error identity, mode when known, title value or path when available, body file when available, failures, remediation evidence, whether PR creation was blocked, stale-result/resume policy, prior successful split PR references when relevant, and timestamps.
+- **Workflow Event**: A concise process log entry written when validation blocks a packet before PR creation, including the blocked packet or input-error identity, validation result path, deterministic stderr line, and resume boundary when one exists.
 - **Sanctioned Prose Field**: A maintainer-editable narrative field bounded by exact full-line `speckit-pro-editable:<field>:start` and `speckit-pro-editable:<field>:end` HTML comment markers, mirrored in packet JSON, and limited to `summary`, `what_changed`, and `why_it_matters`.
 - **Protected Body Fingerprint**: A normalized hash of the rendered body with sanctioned editable blocks elided. It detects any change to protected canonical sections, source markers, UAT content, traceability, scope, verification evidence, known gaps, or generated governance content.
 
@@ -162,6 +169,8 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **SC-004**: A reviewer can identify what changed, why it matters, review order, UAT path, verification evidence, scope, and known gaps from a generated PR body in under 2 minutes.
 - **SC-005**: 100% of sanctioned prose refinement examples retain protected governance evidence and pass validation.
 - **SC-006**: No valid generated packet requires manual cleanup after rendering before PR creation.
+- **SC-007**: 100% of seeded missing, unreadable, invalid-JSON, and schema-invalid packet inputs exit `2`, emit deterministic `input_error` stderr, write input-error evidence when a feature directory is known, and make zero PR creation attempts.
+- **SC-008**: 100% of seeded split-PR partial-failure examples preserve earlier opened PR records and resume from the failed packet after correction without duplicate `gh pr create` attempts.
 
 ## Assumptions
 
@@ -176,5 +185,9 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - Sanctioned prose fields are limited to exact full-line editable marker pairs under `Summary`, `What Changed`, and `Why It Matters`; generated governance and evidence fields remain validator-protected.
 - Host PR template content is appended only after or outside the protected canonical packet block and cannot satisfy required canonical sections or protected evidence by itself.
 - Validation failures for edits outside sanctioned fields exit `1`, write packet validation JSON with `pr_blocked: true`, and append workflow evidence. Usage or malformed input errors exit `2`.
+- Validation failures and input errors use deterministic stderr as a fixture contract; machine-readable JSON remains the authoritative evidence.
+- Input-error validation records use a stable synthetic packet id only when packet-owned `packet_id` cannot be trusted.
+- Resume always validates current rendered packet content before PR creation; cached failed validation results are evidence, not permission or denial.
+- Split-PR resume relies on existing PRSG-009 state surfaces (`.process/prs.json`, Spec MOC PRS table, workflow evidence, and `autopilot-state.json`) to identify already opened PRs before retrying a blocked packet.
 - Validation JSON for this feature is written per packet under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/<packet_id>/validation.json`, with an optional aggregate index for a run.
 - PRSG-012 covers generation and validation before PR creation only; repair of already-open PRs is deferred to a later feature if needed.

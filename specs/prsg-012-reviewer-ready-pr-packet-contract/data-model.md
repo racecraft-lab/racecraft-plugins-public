@@ -35,6 +35,7 @@ Represents one rendered PR target before creation.
 - Unknown HTML comments are rejected outside code fences except editable-boundary comments and the legacy `speckit-pro-review-packet-source` compatibility marker.
 - Host PR template content may appear only outside the protected canonical packet block.
 - `split_slice` is required for split packets and invalid for single packets.
+- Missing, unreadable, invalid-JSON, or schema-invalid packet inputs are `input_error` failures, not rendered-content validation failures; they exit `2`, use a synthetic `_input-error-<stable-hash>` identity when `packet_id` is unavailable, and make zero PR creation attempts.
 
 ## Generated Title Metadata
 
@@ -98,6 +99,9 @@ Deterministic validation output for one packet.
 **Fields**
 
 - `schema_version`: Validation record contract version.
+- `error_class`: `none`, `validation_failure`, or `input_error`.
+- `exit_code`: Validator exit code: `0` for pass, `1` for rendered-content validation failure, or `2` for usage/input error.
+- `stderr_line`: Deterministic one-line diagnostic emitted for failed runs.
 - `packet_id`: Packet identifier.
 - `mode`: `single` or `split`.
 - `target`: PR target evaluated by validation.
@@ -108,13 +112,36 @@ Deterministic validation output for one packet.
 - `failures`: Failed rules and affected fields or sections.
 - `remediation_evidence`: Human-readable evidence path, excerpt, or hash detail.
 - `pr_blocked`: Boolean indicating whether PR creation must stop.
+- `resume`: Resume boundary and stale-result policy when validation blocks.
+- `prior_successful_prs`: Split-PR references already opened before a later packet blocked.
 - `timestamp`: Deterministic or runtime timestamp for the validation event.
 
 **Validation Rules**
 
 - Failed validation sets `pr_blocked` to `true` and exits before PR creation.
-- Usage or malformed input errors exit separately from validation failures.
+- Usage or malformed input errors use `error_class: input_error`, exit `2`, and do not trust packet-owned fields that failed to parse or validate.
+- Rendered-content validation failures use `error_class: validation_failure`, exit `1`, and include packet-specific rule outcomes and remediation evidence.
+- Passed validation uses `error_class: none`, exit `0`, and sets `pr_blocked` to `false`.
 - Split mode writes one result per packet so one failed slice can be identified without hiding other slice outcomes.
+- A resume run must revalidate the current rendered packet; stale failed validation records are evidence only and cannot continue blocking after a new passing result supersedes them.
+
+## Packet Resume Evidence
+
+Durable recovery context written when validation blocks a packet.
+
+**Fields**
+
+- `resume_from_packet_id`: Packet or synthetic input-error identity where processing must resume.
+- `resume_from_slice_id`: Split slice identity when the blocked packet belongs to a split PR.
+- `blocked_until`: Human-readable condition for unblocking, such as fixing a malformed packet or restoring missing evidence.
+- `stale_result_policy`: Fixed policy: revalidate current rendered packet before PR creation.
+- `prior_successful_prs`: Ordered split PR records that were opened before the block, including slice id, PR number, URL, base branch, head branch, and head SHA when known.
+
+**Validation Rules**
+
+- Resume evidence is required for failed validation results that block PR creation.
+- Split-PR resume evidence must preserve earlier successful PR references and must not require closing, relabeling, retargeting, or recreating those PRs.
+- The next run must reconcile `prior_successful_prs` with PRSG-009 state surfaces before attempting `gh pr create` for the corrected packet.
 
 ## Workflow Event
 
@@ -125,6 +152,8 @@ Concise process log entry appended when validation blocks a packet.
 - `event`: Packet validation event name.
 - `packet_id`: Packet that failed.
 - `validation_result_path`: Path to remediation JSON.
+- `stderr_line`: Deterministic stderr line emitted for the failure.
+- `resume_from_packet_id`: Packet where the next run resumes, when blocked.
 - `summary`: Short operator-readable failure summary.
 
 ## Relationships
@@ -148,6 +177,11 @@ draft packet
   -> validation failed
   -> PR creation blocked
   -> validation JSON and workflow event written
+  -> packet fixed
+  -> rendered packet revalidated from current content
+  -> stale failure superseded
+  -> validation passed
+  -> eligible for gh pr create --base --head --title --body-file
 
 rendered packet
   -> sanctioned prose edited
@@ -158,4 +192,13 @@ rendered packet
   -> protected content edited
   -> protected fingerprint mismatch
   -> validation failed
+
+split packet N
+  -> validation passed
+  -> PR opened and recorded in PRSG-009 state
+  -> split packet N+1 validation failed
+  -> prior PR evidence preserved and resume boundary set to packet N+1
+  -> packet N+1 fixed and revalidated
+  -> existing PR records reconciled
+  -> PR creation resumes at packet N+1 without duplicating packet N
 ```

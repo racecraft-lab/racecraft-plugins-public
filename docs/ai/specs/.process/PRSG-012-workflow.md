@@ -34,7 +34,7 @@ The design concept is the source of truth for these scoping decisions:
 | Specify | `/speckit-specify` | Complete | Generated `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | G2 passed with packet schema, title generation, and safe-refinement decisions recorded |
 | Plan | `/speckit-plan` | Complete | Generated plan/research/data model/contract/quickstart; G3 passed |
-| Checklist | `/speckit-checklist` | In Progress | API contracts complete; starting error-handling checklist |
+| Checklist | `/speckit-checklist` | In Progress | API contracts and error handling complete; starting reliability checklist |
 | Tasks | `/speckit-tasks` | Pending | Organize by user story and validation boundary |
 | Analyze | `/speckit-analyze` | Pending | Check consistency against the design concept |
 | Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
@@ -233,7 +233,7 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 - Primary surface: docs/process plus Bash automation
 - Projected reviewable LOC: about 350, with advisory estimator at 245
 - Projected production files: likely 4-6
-- Projected total files: likely under 15
+- Projected total files: about 15-21 after input-error and resume fixtures
 - Budget result: within budget
 - Split decision: one spec, one slice
 ```
@@ -303,7 +303,7 @@ Focus on PRSG-012 requirements:
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
 | api-contracts | 16 | 6 remediated; 0 remaining | Added required PR target, constrained body paths, required changed-file scope, split-only conditionals, rendered heading order validation, and exact editable field constraints |
-| error-handling | | | |
+| error-handling | 16 | 5 remediated; 0 remaining | Added input-error handling, malformed packet distinctions, deterministic stderr, stale-result-safe resume, and split-PR partial-success preservation |
 | reliability | | | |
 
 ---
@@ -423,6 +423,9 @@ For every deterministic behavior:
 - Prefer one shared validator script over duplicated validation logic.
 - Keep `generate-pr-body.sh` responsible for rendering; keep validation in the validator.
 - `multi-pr-emission.sh` must stop before each slice `gh pr create` when the packet is invalid.
+- Missing, unreadable, invalid-JSON, and schema-invalid packet inputs must exit `2` as deterministic `input_error` diagnostics and make zero PR creation attempts.
+- Rendered-content validation failures must exit `1`, write packet validation JSON plus workflow evidence before stopping, and emit one deterministic stderr line.
+- Split-PR resume must preserve earlier opened PR evidence and continue from the failed packet after revalidation, without duplicate `gh pr create` attempts for already-opened slices.
 - Single-PR post-implementation guidance must show `--title` and `--body-file`.
 - Keep generated governance sections and source markers outside editable prose fields.
 - Preserve `## UAT Runbook` compatibility while adding `How To UAT`.

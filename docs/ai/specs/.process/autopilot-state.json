@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T16:06:00Z",
-  "active_step": "Phase 4: Checklist - error-handling",
+  "updated_at": "2026-06-12T16:23:42Z",
+  "active_step": "Phase 4: Checklist - reliability",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -154,15 +154,17 @@
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "16 items; 5 gaps remediated; 0 markers remaining. Added input-error behavior, schema vs validation error classes, deterministic stderr, stale-result-safe resume, and split-PR partial failure preservation."
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - reliability",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - reliability Consensus",
