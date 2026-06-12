@@ -55,7 +55,7 @@
 ## Verification
 
 - `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978`.
-- `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check /Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/racecraft-plugins-public` reported `spec-index: index current`.
+- `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check <repo-root>` reported `spec-index: index current`.
 - `jq empty docs/ai/specs/.process/autopilot-state.json .specify/extensions/.cache/catalog.json .specify/extensions/.cache/catalog-metadata.json` passed.
 - `git diff --check` passed.
 - `bash tests/speckit-pro/run-all.sh` passed `2587/2587`.
