@@ -23,9 +23,16 @@ FAKE_BIN="$SANDBOX/bin"
 GH_CAPTURE="$RUN_DIR/gh-calls.log"
 trap 'rm -rf "$SANDBOX"' EXIT
 
-mkdir -p "$RUN_DIR" "$FAKE_BIN" "$TEST_REPO/tests/speckit-pro/layer4-scripts/fixtures" "$TEST_REPO/specs"
+mkdir -p "$RUN_DIR" "$FAKE_BIN" "$TEST_REPO/tests/speckit-pro/layer4-scripts/fixtures" "$TEST_REPO/specs" "$TEST_REPO/docs/ai/specs/.process"
 cp -R "$FIXTURE_ROOT" "$TEST_REPO/tests/speckit-pro/layer4-scripts/fixtures/pr-packet"
 cp -R "$REPO_ROOT/$FEATURE_DIR_REL" "$TEST_REPO/specs/"
+cat > "$TEST_REPO/docs/ai/specs/.process/PRSG-012-workflow.md" <<'EOF'
+# PRSG-012 Workflow Fixture
+
+## Phase 7: Implement
+EOF
+printf '{}\n' > "$TEST_REPO/$PACKET_FIXTURE_REL/unreadable-packet.json"
+chmod 000 "$TEST_REPO/$PACKET_FIXTURE_REL/unreadable-packet.json" 2>/dev/null || true
 
 cat > "$FAKE_BIN/gh" <<'EOF'
 #!/usr/bin/env bash
@@ -408,6 +415,103 @@ set_test "invalid body content reports traceability rule"
 assert_failure_rule "body.traceability"
 
 set_test "invalid body content makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+workflow_fixture="$TEST_REPO/docs/ai/specs/.process/PRSG-012-workflow.md"
+
+set_test "invalid body content writes deterministic workflow event"
+assert_contains "$(cat "$workflow_fixture" 2>/dev/null || true)" "speckit-pro-pr-packet-validation:event-id=invalid-body-content"
+
+run_validator_capture "invalid-body-content-repeat" "$invalid_body_rel"
+
+set_test "invalid body content repeat still exits 1"
+assert_captured_exit "1"
+
+set_test "invalid body content supersedes previous workflow event"
+event_count=$(grep -Fc "speckit-pro-pr-packet-validation:event-id=invalid-body-content" "$workflow_fixture" 2>/dev/null || true)
+assert_eq "1" "$event_count" "workflow event count"
+
+set_test "input-error fixture args file exists"
+assert_file_exists "$TEST_REPO/$PACKET_FIXTURE_REL/invalid-missing-packet.args"
+
+section "input errors from packet paths"
+
+missing_packet_rel="$PACKET_FIXTURE_REL/missing-packet.json"
+reset_gh_capture
+run_validator_capture "missing-packet-file" "$missing_packet_rel"
+
+set_test "missing packet file exits 2"
+assert_captured_exit "2"
+
+set_test "missing packet file stderr records no-path"
+assert_captured_stderr_contains "no-path" "missing packet no-path"
+
+assert_failure_json "missing-packet" "input_error" "2" "no-path"
+
+set_test "missing packet file makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+unreadable_packet_rel="$PACKET_FIXTURE_REL/unreadable-packet.json"
+reset_gh_capture
+run_validator_capture "unreadable-packet-file" "$unreadable_packet_rel"
+
+set_test "unreadable packet exits 2"
+assert_captured_exit "2"
+
+set_test "unreadable packet stderr records no-path"
+assert_captured_stderr_contains "no-path" "unreadable packet no-path"
+
+assert_failure_json "unreadable-packet" "input_error" "2" "no-path"
+
+set_test "unreadable packet makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+directory_packet_rel="$PACKET_FIXTURE_REL"
+reset_gh_capture
+run_validator_capture "directory-packet-path" "$directory_packet_rel"
+
+set_test "directory packet path exits 2"
+assert_captured_exit "2"
+
+set_test "directory packet path stderr records no-path"
+assert_captured_stderr_contains "no-path" "directory packet no-path"
+
+assert_failure_json "pr-packet" "input_error" "2" "no-path"
+
+set_test "directory packet path makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+invalid_no_feature_result="no-path"
+reset_gh_capture
+run_validator_capture "invalid-no-feature-dir" "$PACKET_FIXTURE_REL/invalid-no-feature-dir.json"
+
+set_test "invalid no-feature-dir packet exits 2"
+assert_captured_exit "2"
+
+set_test "invalid no-feature-dir stderr records no-path"
+assert_captured_stderr_contains "no-path" "no-feature-dir no-path"
+
+assert_failure_json "invalid-no-feature-dir" "input_error" "2" "$invalid_no_feature_result"
+
+set_test "invalid no-feature-dir makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+schema_invalid_result="$(validation_result_rel invalid-schema-with-feature-dir)"
+reset_gh_capture
+run_validator_capture "invalid-schema-with-feature-dir" "$PACKET_FIXTURE_REL/invalid-schema-with-feature-dir.json"
+
+set_test "schema-invalid packet with feature dir exits 1"
+assert_captured_exit "1"
+
+set_test "schema-invalid packet with feature dir writes derived result path"
+assert_file_exists "$TEST_REPO/$schema_invalid_result"
+
+assert_failure_json "invalid-schema-with-feature-dir" "validation_failure" "1" "$schema_invalid_result"
+
+set_test "schema-invalid packet reports required field rule"
+assert_failure_rule "packet.required"
+
+set_test "schema-invalid packet makes no PR creation attempts"
 assert_no_pr_create_attempts
 
 section "input errors"

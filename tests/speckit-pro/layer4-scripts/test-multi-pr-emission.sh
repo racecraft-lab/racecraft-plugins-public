@@ -26,7 +26,7 @@ with open(sys.argv[1], encoding="utf-8") as fh:
     data = json.load(fh)
 
 expr = sys.argv[2]
-safe_builtins = {"any": any, "all": all, "len": len, "list": list, "sorted": sorted}
+safe_builtins = {"any": any, "all": all, "len": len, "list": list, "range": range, "sorted": sorted}
 if not eval(expr, {"__builtins__": safe_builtins}, {"data": data}):
     raise SystemExit(1)
 PY
@@ -340,8 +340,13 @@ json_check "$prs_json" \
 
 set_test "candidate command capture preserves branch push PR operation order"
 json_check "$commands_json" \
-  "[op['action'] for op in data['operations']] == ['git_branch', 'git_push', 'gh_pr_create', 'git_branch', 'git_push', 'gh_pr_create', 'git_branch', 'git_push', 'gh_pr_create']" \
-  "dry-run operation capture should preserve branch/push/PR ordering per slice"
+  "[op['action'] for op in data['operations']] == ['git_branch', 'git_push', 'validate_pr_packet', 'gh_pr_create', 'git_branch', 'git_push', 'validate_pr_packet', 'gh_pr_create', 'git_branch', 'git_push', 'validate_pr_packet', 'gh_pr_create']" \
+  "dry-run operation capture should preserve branch/push/validate/PR ordering per slice"
+
+set_test "candidate command capture validates each packet before PR creation"
+json_check "$commands_json" \
+  "all(data['operations'][i - 1]['action'] == 'validate_pr_packet' and data['operations'][i - 1]['slice_id'] == data['operations'][i]['slice_id'] for i in range(len(data['operations'])) if data['operations'][i]['action'] == 'gh_pr_create')" \
+  "dry-run operation capture should place validate_pr_packet immediately before each gh pr create"
 
 set_test "candidate command capture uses explicit gh pr create base head body-file"
 json_check "$commands_json" \
@@ -1094,6 +1099,11 @@ json_check "$persist_commands_json" \
   "[op['command'][0:8] for op in data['operations'] if op['action'] == 'gh_pr_create'] == [['gh', 'pr', 'create', '--base', 'main', '--head', 'prsg-009-multi-pr-emission/01-foundation', '--body-file'], ['gh', 'pr', 'create', '--base', 'prsg-009-multi-pr-emission/01-foundation', '--head', 'prsg-009-multi-pr-emission/02-us1', '--body-file'], ['gh', 'pr', 'create', '--base', 'prsg-009-multi-pr-emission/02-us1', '--head', 'prsg-009-multi-pr-emission/03-us2', '--body-file']]" \
   "persistent mode should preserve explicit PR create command shape"
 
+set_test "successful emission validates each layer packet before gh pr create"
+json_check "$persist_commands_json" \
+  "all(data['operations'][i - 1]['action'] == 'validate_pr_packet' and data['operations'][i - 1]['slice_id'] == data['operations'][i]['slice_id'] for i in range(len(data['operations'])) if data['operations'][i]['action'] == 'gh_pr_create')" \
+  "persistent layer emission should validate the packet immediately before PR creation"
+
 set_test "successful emission leaves no sibling temp files"
 temp_files="$(find "$persist_repo" -name '.tmp.*' -o -name '.spec-index.*' 2>/dev/null | LC_ALL=C sort || true)"
 assert_eq "" "$temp_files" "same-directory temp writes should be cleaned up"
@@ -1248,6 +1258,9 @@ json_check "$persist_fail_state_json" \
   "post-PR persistence failure should not lose opened PR metadata or advance"
 assert_contains "$stderr_output" "persistence failed after PR opened for slice foundation"
 
+set_test "split partial-failure resume fixture exists"
+assert_file_exists "$REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json"
+
 section "US3 scoped verification evidence"
 
 set_test "candidate slice packet maps PRSG-008 tests to SCRIPT_UNIT scoped verification"
@@ -1398,5 +1411,56 @@ set_test "failed scoped verification workflow evidence names blocked next_slice_
 assert_contains "$scoped_fail_workflow_body" 'Failed scoped verification for `us1`'
 assert_contains "$scoped_fail_workflow_body" 'next_slice_id: `us1`'
 assert_contains "$stderr_output" "multi-pr-emission.sh: blocked: scoped verification failed for slice us1"
+
+invalid_packet_repo="$SANDBOX/invalid-packet-repo"
+make_persist_repo "$invalid_packet_repo"
+invalid_packet_plan="$SANDBOX/invalid-packet-plan.json"
+invalid_packet_state="$invalid_packet_repo/docs/ai/specs/.process/autopilot-state.json"
+invalid_packet_prs="$invalid_packet_repo/specs/prsg-009-multi-pr-emission/.process/prs.json"
+invalid_packet_workflow="$invalid_packet_repo/docs/ai/specs/.process/PRSG-009-workflow.md"
+invalid_packet_full_evidence="$invalid_packet_repo/specs/prsg-009-multi-pr-emission/.process/emission/full-regression.txt"
+invalid_packet_fixture="$SANDBOX/pr-fixture-invalid-packet.json"
+invalid_packet_commands="$SANDBOX/pr-commands-invalid-packet.json"
+write_pr_fixture "$invalid_packet_fixture" success
+jq '.increments[1].name = "PRSG-009 internal slice"' "$valid_plan" > "$invalid_packet_plan"
+
+set_test "invalid split packet blocks before that slice PR creation"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --layer-plan "$invalid_packet_plan" \
+  --state "$invalid_packet_state" \
+  --feature-branch prsg-009-multi-pr-emission \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$invalid_packet_full_evidence" \
+  --pr-fixture "$invalid_packet_fixture" \
+  --command-log "$invalid_packet_commands" || result=$?
+assert_eq "2" "$result" "exit code"
+
+invalid_packet_state_json="$(cat "$invalid_packet_state" 2>/dev/null || true)"
+invalid_packet_prs_json="$(cat "$invalid_packet_prs" 2>/dev/null || true)"
+invalid_packet_commands_json="$(cat "$invalid_packet_commands" 2>/dev/null || true)"
+invalid_packet_workflow_body="$(cat "$invalid_packet_workflow" 2>/dev/null || true)"
+
+set_test "invalid split packet preserves earlier PR evidence"
+json_check "$invalid_packet_state_json" \
+  "data['multi_pr_emission']['status'] == 'blocked' and data['multi_pr_emission']['next_slice_id'] == 'us1' and data['multi_pr_emission']['slices'][0]['status'] == 'pr_opened' and data['multi_pr_emission']['slices'][0]['pr']['number'] == 301 and data['multi_pr_emission']['slices'][1]['status'] == 'failed' and data['multi_pr_emission']['slices'][1]['last_error']['phase'] == 'pr_packet_validation' and 'pr' not in data['multi_pr_emission']['slices'][1]" \
+  "invalid packet validation should block at us1 without losing the foundation PR"
+
+set_test "invalid split packet leaves PRS manifest with earlier slice only"
+json_check "$invalid_packet_prs_json" \
+  "[r['slice_id'] for r in data['records']] == ['foundation'] and data['records'][0]['status'] == 'opened'" \
+  "PRS should retain earlier opened slice rows only after packet validation failure"
+
+set_test "invalid split packet does not duplicate earlier PRs or create failed-slice PR"
+json_check "$invalid_packet_commands_json" \
+  "[op['slice_id'] for op in data['operations'] if op['action'] == 'gh_pr_create'] == ['foundation'] and [op['slice_id'] for op in data['operations'] if op['action'] == 'validate_pr_packet'] == ['foundation', 'us1']" \
+  "packet validation failure should validate failed slice but skip its gh pr create"
+
+set_test "invalid split packet workflow event is recorded"
+assert_contains "$invalid_packet_workflow_body" "speckit-pro-pr-packet-validation:event-id=us1"
+
+set_test "invalid split packet stderr identifies validation block"
+assert_contains "$stderr_output" "validate-pr-packet.sh failed for slice us1"
 
 test_summary

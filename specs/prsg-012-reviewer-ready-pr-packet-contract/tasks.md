@@ -83,10 +83,10 @@
 
 ### Tests for User Story 3
 
-- [ ] T025 [US3] Add input-error fixture arguments for missing, unreadable, directory-valued, invalid-JSON, schema-invalid, and no-feature-dir packet inputs in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args`
-- [ ] T026 [US3] Add split partial-failure resume fixture in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json`
-- [ ] T027 [US3] Assert deterministic validation JSON, stdout `input_error` envelopes with `no-path` when no feature directory can be derived, stderr lines, exit codes, zero `gh pr create` attempts, deterministic workflow event ids, and workflow event supersede behavior in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
-- [ ] T028 [US3] Assert split PR emission validates before each slice PR, blocks invalid packets, preserves prior PR evidence, ignores stale failed validation records as authorization, and does not duplicate earlier PRs in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [x] T025 [US3] Add input-error fixture arguments for missing, unreadable, directory-valued, invalid-JSON, schema-invalid, and no-feature-dir packet inputs in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-packet.args`
+- [x] T026 [US3] Add split partial-failure resume fixture in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/split-partial-failure-state.json`
+- [x] T027 [US3] Assert deterministic validation JSON, stdout `input_error` envelopes with `no-path` when no feature directory can be derived, stderr lines, exit codes, zero `gh pr create` attempts, deterministic workflow event ids, and workflow event supersede behavior in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
+- [x] T028 [US3] Assert split PR emission validates before each slice PR, blocks invalid packets, preserves prior PR evidence, ignores stale failed validation records as authorization, and does not duplicate earlier PRs in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 
 ### Implementation for User Story 3
 
