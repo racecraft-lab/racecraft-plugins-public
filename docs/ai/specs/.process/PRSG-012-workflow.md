@@ -487,8 +487,8 @@ For every deterministic behavior:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | | | |
-| User Story 1 | | | |
+| Foundation | T001-T009 | 9/9 | Added packet fixtures, validator contract tests, runtime schema, executable validator, and reviewability checkpoint |
+| User Story 1 | T010-T017 | 0/8 | In progress |
 | User Story 2 | | | |
 | User Story 3 | | | |
 | User Story 4 | | | |
