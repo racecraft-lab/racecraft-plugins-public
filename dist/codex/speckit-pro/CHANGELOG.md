@@ -1,5 +1,22 @@
 # Changelog
 
+## [2.12.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.11.0...speckit-pro-v2.12.0) (2026-06-12)
+
+
+### Features
+
+* **prsg-010:** add final backstop core ([#150](https://github.com/racecraft-lab/racecraft-plugins-public/issues/150)) ([6a9cbe2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6a9cbe2d73043c8443f550d6423a4f726caebfaa))
+* **prsg-010b:** route split PRs from strong evidence ([#152](https://github.com/racecraft-lab/racecraft-plugins-public/issues/152)) ([965a3ff](https://github.com/racecraft-lab/racecraft-plugins-public/commit/965a3ff95ed1fefdb45c93f654bc5d9594b26258))
+* **prsg-010c:** validate O5 monster-epic topology ([#153](https://github.com/racecraft-lab/racecraft-plugins-public/issues/153)) ([d29502a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d29502a0e40109a3c09506f34fea6d4d3fb5dc8a))
+* **PRSG-013:** bootstrap reviewability markers ([#157](https://github.com/racecraft-lab/racecraft-plugins-public/issues/157)) ([6af4e71](https://github.com/racecraft-lab/racecraft-plugins-public/commit/6af4e714077c8ebc9fa71466bee2461bc8652930))
+* **speckit-pro:** add multi-PR emission ([#145](https://github.com/racecraft-lab/racecraft-plugins-public/issues/145)) ([a3361d5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a3361d50e3dfc5463fb2d5dbb2737a3525637a32))
+
+
+### Bug Fixes
+
+* **skills:** require Codex native question UI ([#143](https://github.com/racecraft-lab/racecraft-plugins-public/issues/143)) ([8dddbd3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/8dddbd3ae6a1c4b2cbe02189b5e45e3177466285))
+* **speckit-pro:** report payload schema paths ([#147](https://github.com/racecraft-lab/racecraft-plugins-public/issues/147)) ([f172c12](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f172c12dd1a3d7e72deacfaa48eb18b0ad45a5f5))
+
 ## [2.11.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.10.0...speckit-pro-v2.11.0) (2026-06-10)
 
 
