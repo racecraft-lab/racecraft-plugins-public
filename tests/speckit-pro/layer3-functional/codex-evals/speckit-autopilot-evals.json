@@ -80,16 +80,18 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, cleanup, reviewability diff gate, self-review, UAT runbook generation, PR body generation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
+      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, cleanup, reviewability diff gate, self-review, UAT runbook generation, PR packet/body generation, pre-create PR packet validation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
       "expectations": [
         "Lists verify implementation as a post-implementation step",
         "Lists code review as a post-implementation step",
         "Lists integration test suite verification",
         "Lists Self-Review (4-question audit) as an always-required built-in step before PR body generation",
         "Lists UAT Runbook Generation — generate-uat-skeleton.sh writes and commits uat-runbook.md — as an always-required built-in step before PR body generation",
-        "Lists PR body generation via generate-pr-body.sh, with the PR opened using --body-file (not an inline or hand-written body)",
-        "Lists PR creation with the gh CLI",
+        "Lists PR packet/body generation via generate-pr-body.sh --packet-output, including packet-owned generated title and body file fields",
+        "Lists pre-create packet validation via validate-pr-packet.sh after body generation and before any gh pr create",
+        "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
         "Lists the parent-session review remediation loop",
+        "States invalid packets block before PR creation; no post-create auto-repair fallback is used",
         "Distinguishes which steps require extensions (verify, review, cleanup, retrospective) vs built-in (integration tests, reviewability diff gate, self-review, UAT runbook generation, PR body generation, PR creation, review loop)"
       ]
     },
@@ -345,14 +347,16 @@
     {
       "id": 27,
       "prompt": "The Codex autopilot has finished Post: Self-Review and is about to open the PR. Walk through exactly how the parent session produces the PR body and guarantees the UAT runbook reaches the human reviewer. Name the scripts it runs, the order, what it commits, how it invokes gh pr create, and what it does if the generated body is missing the review-packet marker.",
-      "expected_output": "States the parent session runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md and commits it, then runs generate-pr-body.sh to produce .git/speckit-pr-body.md, and opens the PR with gh pr create --body-file .git/speckit-pr-body.md — never a hand-written or inline --body. The generated body always contains a ## UAT Runbook section because the generator emits the heading even when the runbook file is absent. Before creating the PR it confirms the body carries the speckit-pro-review-packet-source marker and a ## UAT Runbook heading; if either is missing it regenerates once. Post: UAT Runbook Generation transitions through update_plan + autopilot-state.json like every canonical Post item; it is fail-open (a nonzero exit never blocks the PR) but mandatory.",
+      "expected_output": "States the parent session runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md and commits it, then runs generate-pr-body.sh --packet-output to produce .git/speckit-pr-packet.json plus .git/speckit-pr-body.md. It validates the just-rendered packet with validate-pr-packet.sh before PR creation and opens the PR only with gh pr create --base --head --title --body-file values read from the packet — never a hand-written body, inline --body, or branch-derived title. The generated body always contains a ## UAT Runbook section because the generator emits the heading even when the runbook file is absent. If the marker, UAT heading, protected sections, or packet evidence are missing, validation blocks before PR creation and writes remediation evidence; there is no post-create repair fallback. Post: UAT Runbook Generation transitions through update_plan + autopilot-state.json like every canonical Post item; it is fail-open (a nonzero exit never blocks PR creation) yet mandatory.",
       "expectations": [
         "Parent session runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md before PR body generation",
         "Commits the uat-runbook.md artifact (e.g. docs(SPEC-XXX): add UAT runbook)",
-        "Runs generate-pr-body.sh to produce .git/speckit-pr-body.md",
-        "Opens the PR with gh pr create --body-file .git/speckit-pr-body.md — explicitly NOT a hand-written body or an inline --body",
+        "Runs generate-pr-body.sh --packet-output to produce .git/speckit-pr-packet.json and .git/speckit-pr-body.md",
+        "Runs validate-pr-packet.sh against the current packet and requires a fresh passing result before PR creation",
+        "Opens the PR with gh pr create --base --head --title --body-file using packet fields — explicitly NOT a hand-written body, inline --body, or branch-derived title",
         "States the generated PR body always contains a ## UAT Runbook section because generate-pr-body.sh emits the heading even when the runbook file is absent",
-        "Describes the non-blocking self-check: if .git/speckit-pr-body.md lacks the speckit-pro-review-packet-source marker or the ## UAT Runbook heading, regenerate with the script once",
+        "States missing marker, UAT heading, protected packet sections, or stale evidence blocks before gh pr create with validation remediation output",
+        "States there is no post-create auto-repair fallback for invalid packets",
         "States Post: UAT Runbook Generation appears in update_plan and autopilot-state.json and is fail-open (never blocks PR creation) yet mandatory — not an optional step"
       ]
     },
@@ -408,7 +412,7 @@
     {
       "id": 31,
       "prompt": "A Codex autopilot run has finished Phase 7 and full verification for a feature whose PRSG-008 layer-plan fixture has three ordered increments: foundation, us1, and us2. Describe the post-implementation PR creation behavior required by PRSG-009 multi-PR emission. Include update_plan/autopilot-state.json handling, branch/base topology, scoped verification evidence, durable PRS rows, resume, failed-slice blocking, restack, and what must not change.",
-      "expected_output": "Explains that Codex keeps the canonical Post plan active, uses the PRSG-008 layer plan as the only slice source, runs multi-pr-emission.sh after full verification, emits three ordered Style B slice PRs with explicit gh pr create --base/--head/--body-file arguments, updates update_plan plus autopilot-state.json multi_pr_emission state, writes schemaVersion 2 PRS rows and MOC reviewer navigation after each successful PR, blocks before opening failed slice PRs, reconciles on resume by expected head/base, uses dry-run-first restack.sh after lower squash merges, and does not add a legacy flattened-PR fallback, new slicing heuristics, PRSG-010 routing/backstop behavior, or .github/workflows/pr-checks.yml changes.",
+      "expected_output": "Explains that Codex keeps the canonical Post plan active, uses the PRSG-008 layer plan as the only slice source, runs multi-pr-emission.sh after full verification, validates each generated packet before PR creation, emits three ordered Style B slice PRs with explicit gh pr create --base/--head/--title/--body-file arguments, updates update_plan plus autopilot-state.json multi_pr_emission state, writes schemaVersion 2 PRS rows and MOC reviewer navigation after each successful PR, blocks before opening failed slice PRs, reconciles on resume by expected head/base, uses dry-run-first restack.sh after lower squash merges, and does not add a legacy flattened-PR fallback, new slicing heuristics, PRSG-010 routing/backstop behavior, or .github/workflows/pr-checks.yml changes.",
       "expectations": [
         "States that all canonical Post items remain in update_plan and autopilot-state.json until completed or explicitly skipped",
         "States that PRSG-008 plan-layers.sh output is the authoritative ordering and membership source",
@@ -416,12 +420,13 @@
         "Runs multi-pr-emission.sh only after implementation and full default verification have passed",
         "Emits N ordered PRs from the fixture increments rather than one flattened all-changes PR",
         "Describes Style B topology: first slice targets the integration base and each later slice targets the immediately preceding slice branch",
-        "Uses explicit gh pr create --base, --head, and --body-file arguments for every slice PR",
+        "Uses explicit gh pr create --base, --head, --title, and --body-file arguments from the generated packet for every slice PR",
+        "Runs validate-pr-packet.sh before every slice gh pr create and treats stale validation JSON as evidence only",
         "Runs or records scoped verification per slice and carries the pre-emission full regression evidence by path instead of rerunning the full suite for every slice",
         "Writes schemaVersion 2 .process/prs.json rows and regenerates the Spec MOC PR table after each successful PR before attempting the next slice",
         "Persists top-level multi_pr_emission resume state in autopilot-state.json, including next_slice_id and slice statuses",
         "On resume, reconciles expected branches and GitHub PRs by expected head/base before creating anything new",
-        "Stops before gh pr create when scoped verification fails for a slice and keeps next_slice_id on the blocked slice",
+        "Stops before gh pr create when scoped verification or packet validation fails for a slice and keeps next_slice_id on the blocked slice",
         "States that a later failed slice does not rewind or invalidate earlier opened slice PRs",
         "Describes restack.sh as dry-run by default, --apply for mutation, preserving declared slice scope after lower squash merges",
         "States that PRSG-009 scoped CI is recorded evidence and must not modify .github/workflows/pr-checks.yml"

@@ -363,15 +363,15 @@ opens one slice PR.
    passed to PR creation. The generator uses the host repository's pull request
    template when present and appends any missing review-packet sections. If no
    host template exists, it uses the plugin fallback template.
-6b. Verify the body is script-generated (non-blocking self-check):
+6b. Verify the body is script-generated before validation:
    confirm `.git/speckit-pr-body.md` contains the
    `speckit-pro-review-packet-source` marker comment AND a `## UAT Runbook`
    heading. If either is missing, the body was hand-written or is stale —
    re-run the step-5 command once. NEVER open the PR with a body written
    from scratch or an inline `--body`; the body MUST be the packet-owned
-   `.git/speckit-pr-body.md`. If the marker is still absent after the
-   re-run, log a loud warning to the workflow log and proceed (fail-open
-   — this never blocks PR creation).
+   `.git/speckit-pr-body.md`. If the marker or UAT heading is still absent
+   after the re-run, continue to packet validation and let the shared validator
+   write remediation evidence and block before PR creation.
 6c. **Refine only sanctioned prose fields — write for a non-expert public reader.**
    The generator emits exact full-line editable marker pairs for `summary`,
    `what_changed`, and `why_it_matters`. Edit only the prose between these

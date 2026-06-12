@@ -20,6 +20,10 @@ The fixture asserts:
 - All 3 occur in a single assistant message (background fan-out, not
   sequential await)
 - No forbidden spawns (subagents do not spawn other Agents)
+- The parent-owned serial tail keeps reviewer-ready packet ordering after
+  the parallel group: final backstop before packet generation, fresh
+  `validate-pr-packet.sh` before every `gh pr create --base --head --title
+  --body-file`, and no post-create repair fallback for invalid packets
 
 Live validation of the Agent Teams path is deferred to Layer 8
 parity fixtures (see `tests/layer8-parity/README.md`).

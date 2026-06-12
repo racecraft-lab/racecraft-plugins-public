@@ -492,7 +492,7 @@ For every deterministic behavior:
 | User Story 2 | T018-T024 | 7/7 | Reviewer body evidence, UAT compatibility, traceability, source/scope/verification checks, and stale body text validation complete |
 | User Story 3 | T025-T034 | 10/10 | Packet validation result paths, no-path input errors, workflow events, and split PR pre-create validation gate complete |
 | User Story 4 | T035-T041 | 7/7 | Safe prose refinement markers, protected fingerprints, comment rejection, and guidance complete |
-| Polish | T042-T056 | 0/15 | In progress |
+| Polish | T042-T056 | 12/15 | L3 evals, L7 replay fixture, L8 parity fixture, primary guidance, Codex mirror guidance, and Codex post-implementation reference updated; final verification gates pending |
 
 ---
 
@@ -500,9 +500,9 @@ For every deterministic behavior:
 
 - [ ] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
 - [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes if mirrored docs or contracts changed.
-- [ ] L3 functional eval evidence is recorded.
-- [ ] L7 replay evidence is recorded when split-PR dispatch behavior changes.
-- [ ] L8 Codex parity evidence is recorded.
+- [x] L3 functional eval evidence is recorded.
+- [x] L7 replay evidence is recorded when split-PR dispatch behavior changes.
+- [x] L8 Codex parity evidence is recorded.
 - [ ] Generated PR body contains required canonical sections and the `## UAT Runbook` compatibility heading.
 - [ ] Every PR creation path uses `gh pr create --base --head --title --body-file`.
 - [ ] Invalid packet fixture blocks before PR creation and writes JSON remediation evidence.

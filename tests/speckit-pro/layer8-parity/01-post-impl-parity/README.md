@@ -27,6 +27,15 @@ The test:
    `tolerance.json`. PASS if all required fields match within
    tolerance; FAIL with field-level diff otherwise.
 
+The PRSG-012 packet contract is part of the parity surface. Both paths
+must render the same `.git/speckit-pr-packet.json`, use the shared
+`speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`,
+validate with the shared
+`speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`,
+and write the same packet validation JSON before any PR creation side
+effect. Codex guidance must reference those shared artifacts rather than
+introducing duplicate Codex-only schema or validator copies.
+
 ## Mode
 
 This fixture is **live-mode only** — the whole point is to verify that
@@ -50,4 +59,6 @@ fixture invocation.
 **Scaffolded.** Live execution logic is intentionally deferred in
 `run-parity-fixtures.sh` — implementing it requires LLM token budget
 approval and tested infrastructure for `claude -p` invocation. The
-fixture structure validates today via dry-run.
+fixture structure validates today via dry-run, including packet/body
+artifact paths, validator evidence, explicit PR create argument parity,
+and the no post-create repair fallback invariant.

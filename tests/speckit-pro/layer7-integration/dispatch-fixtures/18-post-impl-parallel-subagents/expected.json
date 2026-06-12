@@ -12,6 +12,18 @@
   "must_not_have_forbidden_spawns": true,
   "min_dispatch_count": 3,
   "max_dispatch_count": 5,
+  "post_impl_packet_validation": {
+    "parent_serial_tail": true,
+    "requires_final_backstop_before_packet_generation": true,
+    "requires_validate_pr_packet_before_pr_create": true,
+    "requires_explicit_pr_create_args": [
+      "--base",
+      "--head",
+      "--title",
+      "--body-file"
+    ],
+    "forbids_post_create_repair_fallback": true
+  },
   "must_not_invoke_skill": [
     "grill-me"
   ]

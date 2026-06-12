@@ -34,6 +34,14 @@
       "tolerance": "byte-identical",
       "rationale": "PR body generation is deterministic post-implementation; bytes must match."
     },
+    "pr_packet": {
+      "tolerance": "byte-identical",
+      "rationale": "The generated PR packet owns target branches, generated title, rendered body file, schema reference, and validation result path; Path A and Path B must render identical packet metadata."
+    },
+    "pr_packet_validation": {
+      "tolerance": "byte-identical",
+      "rationale": "Both paths use the same shared validate-pr-packet.sh script and must write the same pre-create validation result before PR creation."
+    },
     "prs_manifest": {
       "tolerance": "byte-identical",
       "rationale": "The durable schemaVersion 2 PRS manifest is deterministic and must match across Claude and Codex paths."

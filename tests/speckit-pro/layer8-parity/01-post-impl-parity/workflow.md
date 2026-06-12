@@ -42,6 +42,12 @@ only ordering and membership source before multi-PR emission.
 Layer 8 compares row count, status, review order, branch bases, and the
 durable schemaVersion 2 PRS manifest across Path A and Path B runs.)
 
+## PR Packet Validation Evidence
+
+(Empty — autopilot populates this section during the post-impl run.
+Layer 8 compares the generated PR packet, shared validator result, and
+pre-create ordering across Path A and Path B runs.)
+
 ## Notes
 
 This file is the test input for `tests/layer8-parity/01-post-impl-parity/`.
@@ -52,6 +58,12 @@ The `--from-phase post` flag (or equivalent) skips phases 1-7. Both
 Path A (teams) and Path B (parallel subagents) dispatch the same 3
 tracks (Doctor / Code Review / Verify-chain) and apply the serial tail
 (15 Cleanup → 16 Reviewability → 17 PR Body → 18 PR Create → 19 Loop
-→ 20 Retrospective). PR creation emits N ordered Style B slice PRs from
-the PRSG-008 layer plan, with no legacy flattened-PR fallback and no new
-slicing heuristics. Parity requires equivalent outputs across the two paths.
+→ 20 Retrospective). The serial tail runs the final reviewability
+backstop before packet generation, renders `.git/speckit-pr-packet.json`
+and `.git/speckit-pr-body.md`, validates the current packet with the
+shared `validate-pr-packet.sh`, then creates PRs only with explicit
+`gh pr create --base --head --title --body-file` packet fields. PR
+creation emits N ordered Style B slice PRs from the PRSG-008 layer plan,
+with no legacy flattened-PR fallback, no new slicing heuristics, and no
+post-create packet repair fallback. Parity requires equivalent outputs
+across the two paths.

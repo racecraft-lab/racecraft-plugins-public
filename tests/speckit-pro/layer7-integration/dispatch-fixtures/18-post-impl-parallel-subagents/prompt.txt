@@ -12,7 +12,14 @@ subagents in ONE assistant message:
 - Track B: "SPEC-FIXTURE-POSTIMPL Code Review" — general-purpose
 - Track C: "SPEC-FIXTURE-POSTIMPL Verify Chain" — general-purpose
           (this subagent runs verify -> verify-tasks -> integration
-           sequentially inside its own context)
+           sequentially inside its own context, then reports the
+           verification evidence path consumed by the parent serial tail)
+
+After the three subagents return, the parent-owned serial tail must keep
+reviewer-ready PR packet ordering intact: final-reviewability backstop
+precedes packet generation, generated packets are validated with
+validate-pr-packet.sh, and every split slice validates before its own
+gh pr create --base --head --title --body-file call.
 
 All three Agent calls go in the SAME assistant message with
 run_in_background: true. Do not dispatch them sequentially.

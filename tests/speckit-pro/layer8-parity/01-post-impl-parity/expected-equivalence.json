@@ -51,6 +51,16 @@
       "tolerance_key": "pr_body"
     },
     {
+      "field": "pr_packet",
+      "source": ".git/speckit-pr-packet.json",
+      "tolerance_key": "pr_packet"
+    },
+    {
+      "field": "pr_packet_validation",
+      "source": "specs/parity-01-post-impl/.process/pr-packets/speckit-pr-packet/validation.json",
+      "tolerance_key": "pr_packet_validation"
+    },
+    {
       "field": "prs_manifest",
       "source": "specs/parity-01-post-impl/.process/prs.json",
       "tolerance_key": "prs_manifest"
@@ -91,6 +101,18 @@
       "tolerance_key": "consensus_resolution_log.row_count"
     }
   ],
+  "required_invariants": {
+    "shared_packet_schema": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json",
+    "shared_packet_validator": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+    "codex_duplicate_schema_or_validator": false,
+    "requires_explicit_pr_create_args": [
+      "--base",
+      "--head",
+      "--title",
+      "--body-file"
+    ],
+    "post_create_packet_repair_fallback": false
+  },
   "fail_fast": false,
   "report_format": "field-level-diff"
 }
