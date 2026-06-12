@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_NAME="validate-pr-packet.sh"
-REPO_ROOT="$(pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -47,22 +47,15 @@ persist_text_atomic() {
 add_failure() {
   local rule_id="$1" affected_field="$2" message="$3" remediation="$4"
   jq -cn \
-    --arg rule_id "$rule_id" \
-    --arg affected_field "$affected_field" \
+    --arg rule "$rule_id" \
+    --arg field "$affected_field" \
     --arg message "$message" \
     '{
-      rule_id: $rule_id,
-      severity: "error",
-      affected_field: $affected_field,
+      rule: $rule,
+      field: $field,
       message: $message
     }' >> "$failures_file"
-  jq -cn \
-    --arg rule_id "$rule_id" \
-    --arg remediation "$remediation" \
-    '{
-      rule_id: $rule_id,
-      remediation: $remediation
-    }' >> "$remediation_file"
+  printf '[%s] %s\n' "$rule_id" "$remediation" | jq -R . >> "$remediation_file"
 }
 
 jq_get() {
@@ -149,6 +142,9 @@ emit_result() {
   local body_file="$7"
   local validation_result_path="$8"
   local pr_blocked="$9"
+  local stderr_line="${10:-}"
+  local target_base="${11:-}"
+  local target_head="${12:-}"
 
   local failures_json remediation_json output_file
   failures_json="$(json_array_from_jsonl "$failures_file")"
@@ -162,25 +158,43 @@ emit_result() {
     --arg status "$status" \
     --arg error_class "$error_class" \
     --argjson exit_code "$exit_code" \
+    --arg stderr_line "$stderr_line" \
+    --arg target_base "$target_base" \
+    --arg target_head "$target_head" \
     --arg title_value "$title_value" \
     --arg body_file "$body_file" \
-    --arg validation_result_path "$validation_result_path" \
+    --arg timestamp "1970-01-01T00:00:00Z" \
     --argjson pr_blocked "$pr_blocked" \
     --argjson failures "$failures_json" \
     --argjson remediation_evidence "$remediation_json" \
     '{
       schema_version: $schema_version,
-      packet_id: $packet_id,
-      mode: $mode,
-      status: $status,
       error_class: $error_class,
       exit_code: $exit_code,
-      title_value: $title_value,
-      body_file: $body_file,
-      validation_result_path: $validation_result_path,
+      stderr_line: $stderr_line,
+      packet_id: $packet_id,
+      mode: (if $mode == "" then null else $mode end),
+      target: (
+        if $target_base == "" and $target_head == "" then
+          null
+        else
+          {base_branch: $target_base, head_branch: $target_head}
+        end
+      ),
+      status: $status,
+      title_value: (if $title_value == "" then null else $title_value end),
+      body_file: (if $body_file == "" then null else $body_file end),
+      rule_outcomes: (
+        if ($failures | length) > 0 then
+          $failures | map({rule: .rule, status: "failed", evidence: .field})
+        else
+          [{rule: "packet.validation", status: "passed", evidence: "no failures"}]
+        end
+      ),
       pr_blocked: $pr_blocked,
       failures: $failures,
-      remediation_evidence: $remediation_evidence
+      remediation_evidence: $remediation_evidence,
+      timestamp: $timestamp
     }' > "$output_file"
 
   if [ -n "$validation_result_path" ] && [ "$validation_result_path" != "no-path" ]; then
@@ -193,9 +207,11 @@ emit_result() {
 
 emit_input_error() {
   local packet_id="$1" message="$2"
+  local stderr_line
   add_failure "input.error" "packet" "$message" "Provide a readable JSON PR packet with a feature-local validation_result_path."
-  emit_result "failed" "input_error" 2 "$packet_id" "" "" "" "no-path" true
-  printf '%s: input_error: %s: %s (no-path)\n' "$SCRIPT_NAME" "$packet_id" "$message" >&2
+  stderr_line="$SCRIPT_NAME: input_error: $packet_id: input.error: no-path"
+  emit_result "failed" "input_error" 2 "$packet_id" "" "" "" "no-path" true "$stderr_line"
+  printf '%s\n' "$stderr_line" >&2
   exit 2
 }
 
@@ -480,11 +496,13 @@ validate_packet() {
   validation_result_path="$(derive_validation_result_path "$packet" "$packet_id")"
 
   if [ "$validation_result_path" = "no-path" ]; then
+    local stderr_line
     add_failure "input.no_feature_dir" "source_feature_dir" \
       "Unable to derive a feature-local validation result path." \
       "Provide source_feature_dir or validation_result_path under specs/<feature>/.process/pr-packets/<packet_id>/validation.json."
-    emit_result "failed" "input_error" 2 "$packet_id" "$mode" "$title_value" "$body_file" "no-path" true
-    printf '%s: input_error: %s: unable to derive validation result path (no-path)\n' "$SCRIPT_NAME" "$packet_id" >&2
+    stderr_line="$SCRIPT_NAME: input_error: $packet_id: input.no_feature_dir: no-path"
+    emit_result "failed" "input_error" 2 "$packet_id" "$mode" "$title_value" "$body_file" "no-path" true "$stderr_line" "$(jq_get "$packet" '.target.base_branch')" "$(jq_get "$packet" '.target.head_branch')"
+    printf '%s\n' "$stderr_line" >&2
     exit 2
   fi
 
@@ -569,13 +587,16 @@ validate_packet() {
   validate_public_text "$packet"
 
   if [ -s "$failures_file" ]; then
+    local stderr_line rules
+    rules="$(jq -r -s 'map(.rule) | unique | join(",")' "$failures_file")"
     upsert_workflow_event "$packet" "$packet_id" "$validation_result_path"
-    emit_result "failed" "validation_failure" 1 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" true
-    printf '%s: validation_failure: %s: %s\n' "$SCRIPT_NAME" "$packet_id" "$validation_result_path" >&2
+    stderr_line="$SCRIPT_NAME: validation_failure: $packet_id: ${rules:-validation.failed}: $validation_result_path"
+    emit_result "failed" "validation_failure" 1 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" true "$stderr_line" "$(jq_get "$packet" '.target.base_branch')" "$(jq_get "$packet" '.target.head_branch')"
+    printf '%s\n' "$stderr_line" >&2
     exit 1
   fi
 
-  emit_result "passed" "none" 0 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" false
+  emit_result "passed" "none" 0 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" false "" "$(jq_get "$packet" '.target.base_branch')" "$(jq_get "$packet" '.target.head_branch')"
   exit 0
 }
 

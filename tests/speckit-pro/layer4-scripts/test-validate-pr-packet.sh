@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# test-validate-pr-packet.sh - PRSG-012 failing contract tests for PR packet validation.
-#
-# This harness intentionally lands before validate-pr-packet.sh exists. Until
-# T008 creates the validator, the script presence and behavior assertions fail
-# with real missing-executable evidence.
+# test-validate-pr-packet.sh - PRSG-012 contract tests for PR packet validation.
 
 set -euo pipefail
 
@@ -138,7 +134,7 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as handle:
     data = json.load(handle)
 
-safe_builtins = {"any": any, "all": all, "len": len, "list": list, "sorted": sorted}
+safe_builtins = {"any": any, "all": all, "isinstance": isinstance, "len": len, "list": list, "sorted": sorted, "str": str}
 if not eval(sys.argv[2], {"__builtins__": safe_builtins}, {"data": data}):
     raise SystemExit(1)
 PY
@@ -210,6 +206,11 @@ assert_success_json() {
   set_test "$packet_id stdout records pr_blocked false"
   assert_json_file_field "$LAST_STDOUT" "pr_blocked" "False"
 
+  set_test "$packet_id stdout matches validation_result schema shape"
+  assert_json_file_check "$LAST_STDOUT" \
+    "'validation_result_path' not in data and data['stderr_line'] == '' and data['target']['base_branch'] and data['target']['head_branch'] and len(data['rule_outcomes']) >= 1 and data['timestamp']" \
+    "success JSON should use validation_result contract fields"
+
   set_test "$packet_id validation result file exists"
   assert_file_exists "$result_file"
 
@@ -236,6 +237,11 @@ assert_failure_json() {
   assert_json_file_check "$LAST_STDOUT" "len(data['failures']) >= 1 and len(data['remediation_evidence']) >= 1" \
     "failure JSON should include at least one failure and remediation item"
 
+  set_test "$packet_id stdout matches validation_result schema shape"
+  assert_json_file_check "$LAST_STDOUT" \
+    "'validation_result_path' not in data and 'target' in data and data['stderr_line'] and len(data['rule_outcomes']) >= 1 and data['timestamp'] and all(isinstance(item, str) for item in data['remediation_evidence']) and all('rule_id' not in f and 'affected_field' not in f and 'rule' in f and 'field' in f and 'message' in f for f in data['failures'])" \
+    "failure JSON should use validation_result contract fields"
+
   if [ "$result_path" != "no-path" ]; then
     set_test "$packet_id validation result file exists"
     assert_file_exists "$TEST_REPO/$result_path"
@@ -244,16 +250,17 @@ assert_failure_json() {
     assert_json_files_equivalent "$LAST_STDOUT" "$TEST_REPO/$result_path" \
       "stdout and validation result file should match"
   else
-    set_test "$packet_id stdout records no-path result"
-    assert_json_file_field "$LAST_STDOUT" "validation_result_path" "no-path"
+    set_test "$packet_id stdout records no-path in stderr_line"
+    assert_json_file_check "$LAST_STDOUT" "data['stderr_line'].endswith(': no-path')" \
+      "input-error JSON should carry no-path in stderr_line"
   fi
 }
 
 assert_failure_rule() {
   local rule_id="$1"
   assert_json_file_check "$LAST_STDOUT" \
-    "any(f.get('rule_id') == '$rule_id' for f in data['failures'])" \
-    "failure JSON should include rule_id $rule_id"
+    "any(f.get('rule') == '$rule_id' for f in data['failures'])" \
+    "failure JSON should include rule $rule_id"
 }
 
 section "script presence"
