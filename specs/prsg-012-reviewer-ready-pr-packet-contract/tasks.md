@@ -23,7 +23,7 @@
 - [x] T001 Create failing valid single-packet Layer 4 fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json` and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md`
 - [x] T002 Create failing valid split-packet Layer 4 fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-split.json` and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-split.md`
 - [x] T003 Create failing invalid packet fixtures in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-title-token.json`, `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-missing-evidence.json`, and `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json`, covering title/body stale placeholders, unexpanded variables, hidden template comments, example text, schema-invalid shape, and banned labels
-- [ ] T004 Add failing validator fixture assertions for pass, validation failure, and input error cases in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
+- [x] T004 Add failing validator fixture assertions for pass, validation failure, and input error cases in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
 - [ ] T005 Add failing title/body generation assertions for generated packet metadata and rendered body paths in `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh`
 - [ ] T006 Add failing PR emission command assertions for `gh pr create --base`, `--head`, `--title`, and `--body-file` in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 - [ ] T007 Copy the planned packet schema into the shared runtime contract at `speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json`
