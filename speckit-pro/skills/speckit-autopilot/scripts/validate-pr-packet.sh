@@ -26,6 +26,24 @@ json_quote() {
   jq -Rn --arg value "$1" '$value'
 }
 
+persist_text_atomic() {
+  local target="$1" content="$2" dir tmp
+  dir="$(dirname "$target")"
+  mkdir -p "$dir" || return 1
+  if [ -e "$target" ] && [ ! -f "$target" ]; then
+    return 1
+  fi
+  tmp="$(mktemp "$dir/.tmp.$(basename "$target").XXXXXX")" || return 1
+  printf '%s\n' "$content" > "$tmp" || {
+    rm -f "$tmp"
+    return 1
+  }
+  mv -f "$tmp" "$target" || {
+    rm -f "$tmp"
+    return 1
+  }
+}
+
 add_failure() {
   local rule_id="$1" affected_field="$2" message="$3" remediation="$4"
   jq -cn \
@@ -56,6 +74,69 @@ packet_id_from_path() {
   local path="$1" base
   base="$(basename "$path")"
   printf '%s\n' "${base%.json}"
+}
+
+derive_validation_result_path() {
+  local packet="$1" packet_id="$2" configured source_feature_dir
+  configured="$(jq_get "$packet" '.validation_result_path')"
+  if [[ "$configured" == specs/*/.process/pr-packets/*/validation.json ]]; then
+    printf '%s\n' "$configured"
+    return
+  fi
+
+  source_feature_dir="$(jq_get "$packet" '.source_feature_dir')"
+  if [[ "$source_feature_dir" == specs/* ]] && [ -n "$packet_id" ]; then
+    printf '%s/.process/pr-packets/%s/validation.json\n' "$source_feature_dir" "$packet_id"
+    return
+  fi
+
+  printf '%s\n' "no-path"
+}
+
+workflow_id_from_feature_dir() {
+  local feature_dir="$1" feature_slug
+  feature_slug="${feature_dir#specs/}"
+  if [[ "$feature_slug" =~ ^([A-Za-z]+)-([0-9]+) ]]; then
+    printf '%s-%s\n' "${BASH_REMATCH[1]^^}" "${BASH_REMATCH[2]}"
+  elif [[ "$feature_slug" =~ ^([0-9]+) ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+  else
+    printf '%s\n' "$feature_slug"
+  fi
+}
+
+feature_dir_from_result_path() {
+  local result_path="$1"
+  if [[ "$result_path" =~ ^(specs/[^/]+)/\.process/pr-packets/[^/]+/validation\.json$ ]]; then
+    printf '%s\n' "${BASH_REMATCH[1]}"
+  fi
+}
+
+upsert_workflow_event() {
+  local packet="$1" packet_id="$2" validation_result_path="$3"
+  local feature_dir workflow_id workflow_path rules marker event current filtered next
+  feature_dir="$(jq_get "$packet" '.source_feature_dir')"
+  if [ -z "$feature_dir" ]; then
+    feature_dir="$(feature_dir_from_result_path "$validation_result_path")"
+  fi
+  [ -n "$feature_dir" ] || return 0
+
+  workflow_id="$(workflow_id_from_feature_dir "$feature_dir")"
+  workflow_path="$REPO_ROOT/docs/ai/specs/.process/${workflow_id}-workflow.md"
+  [ -f "$workflow_path" ] || return 0
+
+  rules="$(jq -r -s 'map(.rule_id) | unique | join(",")' "$failures_file")"
+  marker="<!-- speckit-pro-pr-packet-validation:event-id=$packet_id -->"
+  event="- $marker Blocked PR packet validation for \`$packet_id\`; result \`$validation_result_path\`; rules: \`${rules:-unknown}\`."
+  current="$(cat "$workflow_path" 2>/dev/null || true)"
+  filtered="$(printf '%s\n' "$current" | awk -v marker="$marker" 'index($0, marker) == 0 { print }')"
+
+  if [[ "$filtered" == *"### PR packet validation events"* ]]; then
+    next="${filtered}"$'\n'"${event}"
+  else
+    next="${filtered}"$'\n\n'"### PR packet validation events"$'\n'"${event}"
+  fi
+  persist_text_atomic "$workflow_path" "$next" >/dev/null 2>&1 || true
 }
 
 emit_result() {
@@ -102,7 +183,7 @@ emit_result() {
       remediation_evidence: $remediation_evidence
     }' > "$output_file"
 
-  if [ "$validation_result_path" != "no-path" ]; then
+  if [ -n "$validation_result_path" ] && [ "$validation_result_path" != "no-path" ]; then
     mkdir -p "$(dirname "$REPO_ROOT/$validation_result_path")"
     cp "$output_file" "$REPO_ROOT/$validation_result_path"
   fi
@@ -267,10 +348,22 @@ validate_packet() {
   local packet="$1"
   local packet_id mode title_value body_file validation_result_path
   packet_id="$(jq_get "$packet" '.packet_id')"
+  if [ -z "$packet_id" ]; then
+    packet_id="$(packet_id_from_path "$packet")"
+  fi
   mode="$(jq_get "$packet" '.mode')"
   title_value="$(jq_get "$packet" '.generated_title.value')"
   body_file="$(jq_get "$packet" '.body_file')"
-  validation_result_path="$(jq_get "$packet" '.validation_result_path')"
+  validation_result_path="$(derive_validation_result_path "$packet" "$packet_id")"
+
+  if [ "$validation_result_path" = "no-path" ]; then
+    add_failure "input.no_feature_dir" "source_feature_dir" \
+      "Unable to derive a feature-local validation result path." \
+      "Provide source_feature_dir or validation_result_path under specs/<feature>/.process/pr-packets/<packet_id>/validation.json."
+    emit_result "failed" "input_error" 2 "$packet_id" "$mode" "$title_value" "$body_file" "no-path" true
+    printf '%s: input_error: %s: unable to derive validation result path (no-path)\n' "$SCRIPT_NAME" "$packet_id" >&2
+    exit 2
+  fi
 
   require_nonempty "$packet_id" "packet_id"
   require_nonempty "$mode" "mode"
@@ -353,6 +446,7 @@ validate_packet() {
   validate_public_text "$packet"
 
   if [ -s "$failures_file" ]; then
+    upsert_workflow_event "$packet" "$packet_id" "$validation_result_path"
     emit_result "failed" "validation_failure" 1 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" true
     printf '%s: validation_failure: %s: %s\n' "$SCRIPT_NAME" "$packet_id" "$validation_result_path" >&2
     exit 1
