@@ -31,8 +31,8 @@ The design concept is the source of truth for these scoping decisions:
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Generate `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md` |
-| Clarify | `/speckit-clarify` | Pending | Use only if packet schema/title wording remains ambiguous |
+| Specify | `/speckit-specify` | Complete | Generated `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`; G1 passed with 0 clarification markers |
+| Clarify | `/speckit-clarify` | In Progress | Session 1 packet schema clarification started after G1 |
 | Plan | `/speckit-plan` | Pending | Define scripts, schemas, failure evidence, and test matrix |
 | Checklist | `/speckit-checklist` | Pending | Run contract, error-handling, and reliability checks |
 | Tasks | `/speckit-tasks` | Pending | Organize by user story and validation boundary |
@@ -65,7 +65,7 @@ The design concept is the source of truth for these scoping decisions:
 | Conventional Commits | Setup and implementation commits use repo convention | `git log --oneline` and CI title check |
 | KISS, Simplicity & YAGNI | Prefer one shared validator script over duplicated call-site logic | Plan review |
 
-**Constitution Check:** Pending
+**Constitution Check:** Verified 2026-06-12. Baseline `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978`; baseline `bash tests/speckit-pro/run-all.sh --layer 4` passed `1419/1419`.
 
 ---
 
@@ -147,13 +147,14 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Fill after G1 |
-| User Stories | 4 target stories |
-| Acceptance Criteria | Fill after G1 |
+| Functional Requirements | 18 |
+| User Stories | 4 |
+| Acceptance Criteria | 13 acceptance scenarios |
 
 ### Files Generated
 
-- [ ] `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`
+- [x] `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`
+- [x] `specs/prsg-012-reviewer-ready-pr-packet-contract/checklists/requirements.md`
 
 ---
 
