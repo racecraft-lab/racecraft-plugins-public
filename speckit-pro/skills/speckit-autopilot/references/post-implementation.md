@@ -395,8 +395,12 @@ opens one slice PR.
      to say. An empty section is worse than no section.
 6d. Validate the packet before any single-PR create attempt:
    `skills/speckit-autopilot/scripts/validate-pr-packet.sh .git/speckit-pr-packet.json`
-   Continue only when the validator exits 0. A validation failure exits 1,
-   writes packet-specific remediation JSON to the packet's
+   Continue only when this just-run validator invocation exits 0 and writes a
+   matching `status: "passed"` result to the packet's current
+   `validation_result_path`. Never treat a pre-existing validation JSON file as
+   authorization to create a PR; stale passed or failed records are evidence
+   only until the current packet is validated again. A validation failure exits
+   1, writes packet-specific remediation JSON to the packet's
    `validation_result_path`, appends workflow evidence, and blocks before PR
    creation. An input error exits 2 and must also stop before PR creation.
 6e. Create the single PR from packet fields, never from branch-derived title

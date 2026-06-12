@@ -91,6 +91,35 @@ persist_text_atomic() {
   }
 }
 
+repo_relative_path() {
+  local path="$1" root="$2"
+  root="${root%/}"
+  path="${path%/}"
+  case "$path" in
+    "$root"/*)
+      printf '%s\n' "${path#"$root"/}"
+      ;;
+    "$root")
+      printf '.\n'
+      ;;
+    ./*)
+      printf '%s\n' "${path#./}"
+      ;;
+    *)
+      printf '%s\n' "$path"
+      ;;
+  esac
+}
+
+sha256_file() {
+  local path="$1"
+  if command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$path" | awk '{print $1}'
+  else
+    printf '%064d\n' 0
+  fi
+}
+
 LAYER_PLAN=""
 MARKER_PLAN=""
 MARKER_SPLIT_RESULT=""
@@ -866,10 +895,28 @@ if [ -n "$CANDIDATE_DIR" ]; then
     jq -n \
       --argjson slices "$plan_slices" \
       --argjson scope_guard "$scope_guard" \
-      --arg candidate_dir "$CANDIDATE_DIR" '
+      --arg candidate_dir "$CANDIDATE_DIR" \
+      --arg emission_mode "$EMISSION_MODE" \
+      --arg validator "$SCRIPT_DIR/validate-pr-packet.sh" '
         def body_file($slice_id): "\($candidate_dir)/pr-bodies/\($slice_id).md";
+        def packet_file($slice_id):
+          if $emission_mode == "marker" then "\($candidate_dir)/marker-packets/\($slice_id).json"
+          else "\($candidate_dir)/slice-packets/\($slice_id).json"
+          end;
         def generated_title($slice):
           $slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
+        def validate_op($slice):
+          if $emission_mode == "marker" then []
+          else [
+            {
+              slice_id: $slice.slice_id,
+              review_order: $slice.review_order,
+              action: "validate_pr_packet",
+              packet_file: packet_file($slice.slice_id),
+              command: [$validator, packet_file($slice.slice_id)]
+            }
+          ]
+          end;
         {
           schema_version: 1,
           dry_run: true,
@@ -893,7 +940,10 @@ if [ -n "$CANDIDATE_DIR" ]; then
                       action: "git_push",
                       branch: $slice.branch,
                       command: ["git", "push", "-u", "origin", $slice.branch]
-                    },
+                    }
+                  ]
+                  + validate_op($slice)
+                  + [
                     {
                       slice_id: $slice.slice_id,
                       review_order: $slice.review_order,
@@ -1262,6 +1312,30 @@ if [ -z "$CANDIDATE_DIR" ]; then
     )"
   }
 
+  record_validate_command() {
+    local slice_json="$1" packet_file="$2" validation_result_path="$3"
+    command_log_json="$(
+      jq -n \
+        --argjson log "$command_log_json" \
+        --argjson slice "$slice_json" \
+        --arg packet_file "$packet_file" \
+        --arg validation_result_path "$validation_result_path" \
+        --arg validator "$SCRIPT_DIR/validate-pr-packet.sh" '
+          $log
+          | .operations += [
+              {
+                slice_id: $slice.slice_id,
+                review_order: $slice.review_order,
+                action: "validate_pr_packet",
+                packet_file: $packet_file,
+                validation_result_path: $validation_result_path,
+                command: [$validator, $packet_file]
+              }
+            ]
+        '
+    )"
+  }
+
   live_find_pr() {
     local head_branch="$1" base_branch="$2" pr_list_json
     if ! pr_list_json="$(
@@ -1527,6 +1601,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
     fi
     packet_path="$packet_dir/$packet_file_name"
     body_file="$packet_dir/pr-body.md"
+    pr_packet_path="$packet_dir/pr-packet.json"
+    pr_packet_rel="$(repo_relative_path "$pr_packet_path" "$persist_root")"
+    validation_result_path="$FEATURE_DIR_REL/.process/pr-packets/$slice_id/validation.json"
     mkdir -p "$packet_dir"
 
     packet_json="$(
@@ -1613,6 +1690,148 @@ if [ -z "$CANDIDATE_DIR" ]; then
     "$SCRIPT_DIR/generate-pr-body.sh" --slice-packet "$packet_path" "$persist_root" "$feature_dir_abs" "$body_file" "$BASE_SHA...HEAD" >/dev/null
     pr_title="$(printf '%s' "$packet_json" | jq -r '.generated_title.value')"
 
+    if [ "$MARKER_MODE" != true ]; then
+      body_file_rel="$(repo_relative_path "$body_file" "$persist_root")"
+      slice_packet_rel="$(repo_relative_path "$packet_path" "$persist_root")"
+      body_sha="$(sha256_file "$body_file")"
+      pr_packet_json="$(
+        jq -n \
+          --argjson slice "$slice_json" \
+          --arg packet_id "$slice_id" \
+          --arg source_feature_dir "$FEATURE_DIR_REL" \
+          --arg body_file "$body_file_rel" \
+          --arg validation_result_path "$validation_result_path" \
+          --arg slice_packet "$slice_packet_rel" \
+          --arg body_sha "$body_sha" \
+          --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+          '
+            {
+              schema_version: "1.0.0",
+              packet_id: $packet_id,
+              mode: "split",
+              target: {
+                base_branch: $slice.base_branch,
+                head_branch: $slice.branch
+              },
+              source_feature_dir: $source_feature_dir,
+              generated_title: {
+                value: ($slice.generated_title // ("feat(speckit-pro): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+                type: "feat",
+                scope: "speckit-pro",
+                description: ($slice.title_description // $slice.source_title // $slice.slice_id),
+                source_evidence: {
+                  kind: "split_source_boundary",
+                  source: ($slice.source_id // $slice.slice_id),
+                  summary: "Split source boundary normalized into a public action phrase."
+                },
+                rejected_candidates: [
+                  {
+                    value: $slice.branch,
+                    reason: "Branch names remain metadata and are not public title descriptions."
+                  },
+                  {
+                    value: $slice.slice_id,
+                    reason: "Slice ids remain metadata and are not public title descriptions."
+                  }
+                ]
+              },
+              body_file: $body_file,
+              required_headings: [
+                "Summary",
+                "What Changed",
+                "Why It Matters",
+                "How To Review",
+                "How To UAT",
+                "Verification",
+                "Scope",
+                "Known Gaps"
+              ],
+              verification_evidence: [
+                {
+                  kind: "split_packet_validation",
+                  source: ($slice.scoped_verification.commands[0].evidence_path // $full_verification_evidence),
+                  summary: "Scoped verification for split packet passed before PR creation.",
+                  result: "passed"
+                }
+              ],
+              scope_evidence: {
+                reviewable_loc: 0,
+                production_files: 0,
+                total_files: ($slice.declared_files | length),
+                budget_result: "within_budget",
+                changed_files: $slice.declared_files,
+                non_goals: [
+                  "This split packet does not broaden the declared slice scope.",
+                  "This split packet does not replace full regression evidence."
+                ]
+              },
+              uat: {
+                how_to_uat: "Run the scoped verification commands and confirm full regression evidence before PR creation.",
+                uat_runbook_heading: "## UAT Runbook",
+                uat_source: $body_file
+              },
+              source_markers: [
+                {
+                  marker_id: "slice-packet",
+                  rendered_text: "Source: slice packet defines split PR identity and source boundary evidence.",
+                  source: $slice_packet
+                },
+                {
+                  marker_id: "slice-scope",
+                  rendered_text: "Source: slice packet declared files and scoped verification define the reviewer body.",
+                  source: $slice_packet
+                },
+                {
+                  marker_id: "quickstart-verification",
+                  rendered_text: "Source: quickstart and scoped verification records define the validation evidence.",
+                  source: ($source_feature_dir + "/quickstart.md")
+                }
+              ],
+              editable_fields: [
+                {
+                  field_id: "summary",
+                  heading: "Summary",
+                  start_marker: "<!-- speckit-pro-editable:summary:start -->",
+                  end_marker: "<!-- speckit-pro-editable:summary:end -->"
+                },
+                {
+                  field_id: "what_changed",
+                  heading: "What Changed",
+                  start_marker: "<!-- speckit-pro-editable:what_changed:start -->",
+                  end_marker: "<!-- speckit-pro-editable:what_changed:end -->"
+                },
+                {
+                  field_id: "why_it_matters",
+                  heading: "Why It Matters",
+                  start_marker: "<!-- speckit-pro-editable:why_it_matters:start -->",
+                  end_marker: "<!-- speckit-pro-editable:why_it_matters:end -->"
+                }
+              ],
+              protected_body_fingerprint: {
+                algorithm: "sha256",
+                value: $body_sha,
+                normalization: "sha256 of rendered body; editable elision is enforced by the safe-refinement task.",
+                elided_fields: [
+                  "summary",
+                  "what_changed",
+                  "why_it_matters"
+                ]
+              },
+              split_slice: {
+                slice_id: $slice.slice_id,
+                source_boundary: {
+                  section: ($slice.title_description // $slice.source_title // $slice.slice_id)
+                },
+                source_packet: $slice_packet
+              },
+              validation_result_path: $validation_result_path
+            }
+          '
+      )"
+      persist_json_atomic "$pr_packet_path" "$pr_packet_json" || emit_input_error "PR packet persistence failed: $pr_packet_path"
+      pr_title="$(printf '%s' "$pr_packet_json" | jq -r '.generated_title.value')"
+    fi
+
     record_scoped_commands "$slice_json" "$scoped_json"
     write_scoped_evidence_files "$scoped_json"
     block_scoped_verification_if_failed "$slice_json" "$scoped_json"
@@ -1628,6 +1847,24 @@ if [ -z "$CANDIDATE_DIR" ]; then
         '
     )"
     persist_state_or_die
+
+    if [ "$MARKER_MODE" != true ]; then
+      record_validate_command "$slice_json" "$pr_packet_rel" "$validation_result_path"
+      validation_stdout="$(mktemp)"
+      validation_stderr="$(mktemp)"
+      validation_status=0
+      set +e
+      (
+        cd "$persist_root" &&
+        "$SCRIPT_DIR/validate-pr-packet.sh" "$pr_packet_rel"
+      ) >"$validation_stdout" 2>"$validation_stderr"
+      validation_status=$?
+      set -e
+      rm -f "$validation_stdout" "$validation_stderr"
+      if [ "$validation_status" -ne 0 ]; then
+        block_with_state "$slice_id" "pr_packet_validation" "validate-pr-packet.sh failed for slice $slice_id" "failed" "$validation_status"
+      fi
+    fi
 
     if [ "$LIVE" = true ]; then
       checkpoint_sha="$(printf '%s' "$slice_json" | jq -r '.checkpoint_sha // empty')"

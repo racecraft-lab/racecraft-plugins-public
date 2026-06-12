@@ -345,7 +345,7 @@ json_check "$commands_json" \
 
 set_test "candidate command capture validates each packet before PR creation"
 json_check "$commands_json" \
-  "all(data['operations'][i - 1]['action'] == 'validate_pr_packet' and data['operations'][i - 1]['slice_id'] == data['operations'][i]['slice_id'] for i in range(len(data['operations'])) if data['operations'][i]['action'] == 'gh_pr_create')" \
+  "data['operations'][2]['action'] == 'validate_pr_packet' and data['operations'][3]['action'] == 'gh_pr_create' and data['operations'][2]['slice_id'] == data['operations'][3]['slice_id'] and data['operations'][6]['action'] == 'validate_pr_packet' and data['operations'][7]['action'] == 'gh_pr_create' and data['operations'][6]['slice_id'] == data['operations'][7]['slice_id'] and data['operations'][10]['action'] == 'validate_pr_packet' and data['operations'][11]['action'] == 'gh_pr_create' and data['operations'][10]['slice_id'] == data['operations'][11]['slice_id']" \
   "dry-run operation capture should place validate_pr_packet immediately before each gh pr create"
 
 set_test "candidate command capture uses explicit gh pr create base head body-file"
@@ -1101,7 +1101,7 @@ json_check "$persist_commands_json" \
 
 set_test "successful emission validates each layer packet before gh pr create"
 json_check "$persist_commands_json" \
-  "all(data['operations'][i - 1]['action'] == 'validate_pr_packet' and data['operations'][i - 1]['slice_id'] == data['operations'][i]['slice_id'] for i in range(len(data['operations'])) if data['operations'][i]['action'] == 'gh_pr_create')" \
+  "data['operations'][1]['action'] == 'validate_pr_packet' and data['operations'][2]['action'] == 'gh_pr_create' and data['operations'][1]['slice_id'] == data['operations'][2]['slice_id'] and data['operations'][4]['action'] == 'validate_pr_packet' and data['operations'][5]['action'] == 'gh_pr_create' and data['operations'][4]['slice_id'] == data['operations'][5]['slice_id'] and data['operations'][8]['action'] == 'validate_pr_packet' and data['operations'][9]['action'] == 'gh_pr_create' and data['operations'][8]['slice_id'] == data['operations'][9]['slice_id']" \
   "persistent layer emission should validate the packet immediately before PR creation"
 
 set_test "successful emission leaves no sibling temp files"

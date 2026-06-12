@@ -571,6 +571,77 @@ done
 append_slice_packet_sections() {
   local packet="$1"
   {
+    printf '\n## Summary\n\n'
+    printf '<!-- speckit-pro-editable:summary:start -->\n'
+    jq -r '"Adds reviewer-ready split PR packet evidence for `" + .slice_id + "`."' "$packet"
+    printf '<!-- speckit-pro-editable:summary:end -->\n\n'
+    printf 'Source: slice packet defines split PR identity and source boundary evidence.\n'
+
+    printf '\n## What Changed\n\n'
+    printf '<!-- speckit-pro-editable:what_changed:start -->\n'
+    jq -r '
+      "- Prepared `" + .head_branch + "` for review against `" + .base_branch + "`.",
+      "- Rendered scoped verification, declared files, traceability, and known-gap evidence before PR creation."
+    ' "$packet"
+    printf '<!-- speckit-pro-editable:what_changed:end -->\n\n'
+    printf 'Source: slice packet declared files and scoped verification define the reviewer body.\n'
+
+    printf '\n## Why It Matters\n\n'
+    printf '<!-- speckit-pro-editable:why_it_matters:start -->\n'
+    printf 'Reviewers can inspect the exact split scope and validation evidence before the PR is opened.\n'
+    printf '<!-- speckit-pro-editable:why_it_matters:end -->\n'
+
+    printf '\n## How To Review\n\n'
+    printf '1. Review the declared files and scoped verification evidence for this slice.\n'
+    printf '2. Confirm the base/head ordering matches the recorded stack order.\n'
+    printf '3. Check known gaps and rollback notes before approving.\n'
+
+    printf '\n## How To UAT\n\n'
+    printf 'Run the scoped verification commands listed below, then confirm the full regression evidence remains current.\n'
+
+    printf '\n## Verification\n\n'
+    jq -r '
+      if (.scoped_verification.commands | length) == 0 then
+        "- No scoped verification commands recorded for this slice."
+      else
+        .scoped_verification.commands[]
+        | "- `" + .command + "` (" + .gate_type + ", exit " + (.exit_status | tostring) + ") — " + .evidence_path
+      end
+    ' "$packet"
+    jq -r '"- Full regression evidence: `" + .full_verification_evidence + "`"' "$packet"
+    printf '\nSource: quickstart and scoped verification records define the validation evidence.\n'
+
+    printf '\n## Scope\n\n'
+    printf -- '- Declared files:\n'
+    jq -r '
+      if (.declared_files | length) == 0 then
+        "  - No declared files recorded."
+      else
+        .declared_files[] | "  - `" + . + "`"
+      end
+    ' "$packet"
+    printf -- '- Traceability:\n'
+    jq -r '
+      if ((.traceability // []) | length) == 0 then
+        "  - Traceability: no traceability rows recorded."
+      else
+        (.traceability // [])[]
+        | "  - Traceability: " + .requirement
+          + " maps files " + ((.files // []) | join(", "))
+          + " to evidence " + ((.evidence // []) | join(", "))
+      end
+    ' "$packet"
+    printf -- '- Non-goals: this packet does not broaden the declared slice scope or replace full regression evidence.\n'
+
+    printf '\n## Known Gaps\n\n'
+    jq -r '
+      if ((.known_gaps // []) | length) == 0 then
+        "No known gaps for this split packet."
+      else
+        (.known_gaps // [])[] | "- " + .
+      end
+    ' "$packet"
+
     printf '\n## Slice summary\n\n'
     jq -r '
       "- Slice: `" + .slice_id + "`",
@@ -582,7 +653,7 @@ append_slice_packet_sections() {
     printf '\n## Review order\n\n'
     jq -r '"\(.review_order) of \(.total_slices)"' "$packet"
 
-    printf '\n## Scope\n\n'
+    printf '\n## Slice Scope\n\n'
     jq -r '
       if (.declared_files | length) == 0 then
         "- No declared files recorded."
@@ -591,7 +662,7 @@ append_slice_packet_sections() {
       end
     ' "$packet"
 
-    printf '\n## Verification\n\n'
+    printf '\n## Slice Verification\n\n'
     jq -r '
       if (.scoped_verification.commands | length) == 0 then
         "- No scoped verification commands recorded for this slice."
