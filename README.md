@@ -1,128 +1,153 @@
-# Racecraft Plugins for Claude Code and Codex
+# Racecraft Plugins Public
 
-A curated directory of open-source plugins from [Racecraft Lab](https://github.com/racecraft-lab) for both Claude Code and Codex.
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+![Platforms: Claude Code and Codex](https://img.shields.io/badge/platforms-Claude%20Code%20%2B%20Codex-blue)
+![Marketplace: public](https://img.shields.io/badge/marketplace-public-lightgrey)
 
-> **⚠️ Important:** Make sure you trust a plugin before installing, updating, or using it. Racecraft Lab maintains these plugins but cannot guarantee they will work in all environments or that they won't change. See each plugin's README for more information.
+Racecraft Plugins Public is the open-source plugin marketplace from
+[Racecraft Lab](https://github.com/racecraft-lab). It currently publishes
+[SpecKit Pro](./speckit-pro/README.md) for both Claude Code and Codex.
 
-## Structure
+The short version: install this marketplace if you want Racecraft-maintained
+agent workflows you can inspect, version, and update through your coding-agent
+plugin system.
 
-- **`/speckit-pro`** - Authoring source for SpecKit Pro
-- **`/dist/claude/speckit-pro`** - Generated Claude Code install payload
-- **`/dist/codex/speckit-pro`** - Generated Codex install payload
+> **Trust check:** Plugins can change how an agent reads files, writes files,
+> launches tools, or delegates work. Review the plugin README and source before
+> installing or updating.
 
-## Installation
+## Should I Install This?
 
-This repository ships both plugin surfaces:
+| You are... | Install if... | Skip for now if... |
+|---|---|---|
+| Evaluating Racecraft plugins | You want to inspect and install public Racecraft plugins from one place. | You only need a one-off prompt or local personal workflow. |
+| Using Spec-Driven Development | You want a guided Spec Kit workflow with scoping, planning, gates, and implementation support. | Your change is tiny enough for a direct manual edit. |
+| Maintaining plugins | You want examples of dual Claude Code and Codex plugin packaging. | You do not need marketplace distribution or generated payloads. |
 
-- Claude Code marketplace metadata in [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json)
-- Codex marketplace metadata in [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json)
+## Available Plugins
+
+| Plugin | What it does | Best first step |
+|---|---|---|
+| [SpecKit Pro](./speckit-pro/README.md) | Adds Racecraft workflows around GitHub Spec Kit: coaching, scoping interviews, spec scaffolding, autopilot execution, status, and PR review resolution. | Read the [SpecKit Pro decision guide](./speckit-pro/README.md#should-i-install-speckit-pro). |
+
+## Install The Marketplace
+
+This repository exposes the same marketplace through two runtime surfaces:
+
+| Runtime | Marketplace metadata | Install payload |
+|---|---|---|
+| Claude Code | [`.claude-plugin/marketplace.json`](./.claude-plugin/marketplace.json) | [`dist/claude/speckit-pro`](./dist/claude/speckit-pro/) |
+| Codex | [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json) | [`dist/codex/speckit-pro`](./dist/codex/speckit-pro/) |
 
 ### Claude Code
 
-Add the marketplace:
+Add the marketplace, then install the plugin:
 
 ```text
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
-```
-
-Install the plugin:
-
-```text
 /plugin install speckit-pro@racecraft-plugins-public
 ```
 
-You can also browse it in `/plugin > Discover`.
+You can also browse installed and available plugins from Claude Code's
+`/plugin` UI.
 
 ### Codex
 
-For repo-scoped Codex installs, open this repository in Codex and use the built-in plugin directory:
+Open this repository in Codex, then open the plugin directory:
 
 ```text
 codex
 /plugins
 ```
 
-Codex reads the repo marketplace from [`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json).
+Codex reads the repo-scoped marketplace from
+[`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json). After
+installing SpecKit Pro, run the plugin's Codex install skill so its bundled
+custom-agent templates are copied into Codex's agent registry:
 
-After the plugin is installed in Codex, run `@SpecKit Pro` -> `install` or `$install` to copy the bundled custom-agent templates into `.codex/agents/` or `~/.codex/agents/`, then restart Codex again so those installed agents are registered.
-
-For personal installs, follow the official Codex plugin docs: copy the generated Codex payload from `dist/codex/speckit-pro/` to `~/.codex/plugins/<plugin-name>`, point `~/.agents/plugins/marketplace.json` at that directory with a `./`-prefixed relative path, restart Codex so the plugin appears, then run the install skill and restart Codex again to load the installed agents. Do not copy the mixed authoring tree at `speckit-pro/` directly. Official references:
-
-- [Codex plugins](https://developers.openai.com/codex/plugins)
-- [Install a local plugin manually](https://developers.openai.com/codex/plugins/build#install-a-local-plugin-manually)
-- [Marketplace metadata](https://developers.openai.com/codex/plugins/build#marketplace-metadata)
-
-SpecKit Pro ships its Codex orchestration guidance as skill packages. The
-Codex skills own their local `agents/openai.yaml` metadata sidecars, matching
-the official skills layout. Those sidecars are not custom-agent manifests. The
-official
-[Codex plugins](https://developers.openai.com/codex/plugins/build) docs support
-bundled skills, apps, and MCP server config, while the official
-[Codex subagents](https://developers.openai.com/codex/subagents) docs still
-register custom agents from `.codex/agents/` or `~/.codex/agents/`. SpecKit Pro
-therefore keeps a Codex-only `install` skill that copies its bundled
-`codex-agents/*.toml` templates into those runtime paths.
-
-## Contributing
-
-We welcome contributions from the community. See each plugin's README for details on its structure and requirements.
-
-To submit a new plugin or improve an existing one:
-
-1. Fork this repository
-2. Create your plugin following the [standard structure](#plugin-structure)
-3. Add your plugin to `.claude-plugin/marketplace.json` for Claude Code and `.agents/plugins/marketplace.json` for Codex
-4. Submit a pull request
-
-Pull request titles must follow [Conventional Commits](https://www.conventionalcommits.org/) format (e.g., `feat(plugin-name): add new feature`). This drives automated versioning via [release-please](https://github.com/googleapis/release-please).
-
-## Plugin Structure
-
-Each plugin keeps one cross-platform authoring source:
-
-```
-plugin-name/
-├── .codex-plugin/
-│   └── plugin.json      # Codex source metadata
-├── .claude-plugin/
-│   └── plugin.json      # Claude Code source metadata
-├── commands/            # Slash commands (optional)
-├── codex-skills/        # Codex skill entrypoints plus skill-owned sidecars (optional)
-│   └── */agents/        # `openai.yaml` skill metadata sidecars
-├── codex-agents/        # Bundled Codex custom-agent TOML templates (optional)
-├── agents/              # Claude Code agent definitions (optional)
-├── skills/              # Skill definitions (optional)
-├── hooks/               # Event hooks (optional)
-└── README.md            # Documentation
+```text
+@SpecKit Pro -> install
 ```
 
-Release packaging generates self-contained install roots:
+or:
 
-```
-dist/
-├── claude/plugin-name/  # Claude-visible content only
-└── codex/plugin-name/   # Codex-visible content only
+```text
+$install
 ```
 
-Run `bash scripts/build-plugin-payloads.sh` after changing plugin source files,
-then commit the updated `dist/**` payloads with the source change.
+Restart Codex after that install step so the custom agents are registered.
 
-The test suite is intentionally **not** inside any install payload — the suite
-lives at the repo root in `tests/<plugin>/` (e.g. `tests/speckit-pro/`) to keep
-it out of installs:
+For personal Codex installs, follow the official local-plugin layout and point
+your personal marketplace at the generated Codex payload, not the mixed authoring
+tree:
 
+```text
+dist/codex/speckit-pro/
 ```
-tests/
-└── plugin-name/         # 5-layer test suite (run-all.sh) — sibling of the plugin, never shipped
-```
+
+## How This Repo Is Organized
+
+| Path | Purpose | Edit directly? |
+|---|---|---|
+| [`speckit-pro/`](./speckit-pro/) | Source of truth for SpecKit Pro across Claude Code and Codex. | Yes |
+| [`dist/claude/speckit-pro/`](./dist/claude/speckit-pro/) | Generated Claude Code install payload. | No, regenerate |
+| [`dist/codex/speckit-pro/`](./dist/codex/speckit-pro/) | Generated Codex install payload. | No, regenerate |
+| [`tests/speckit-pro/`](./tests/speckit-pro/) | Shell test suite for structure, scripts, tool scoping, and generated payloads. | Yes |
+| [`scripts/build-plugin-payloads.sh`](./scripts/build-plugin-payloads.sh) | Rebuilds platform-specific payloads from source. | Yes |
+
+## Contributor Path
+
+Use this lane when changing documentation, skills, agents, hooks, scripts, or
+marketplace packaging.
+
+1. Edit source files under `speckit-pro/` or this root README.
+2. Rebuild generated install payloads:
+
+   ```bash
+   bash scripts/build-plugin-payloads.sh
+   ```
+
+3. Run the default validation suite:
+
+   ```bash
+   bash tests/speckit-pro/run-all.sh
+   ```
+
+4. For structural-only changes, this narrower check is useful while iterating:
+
+   ```bash
+   bash tests/speckit-pro/run-all.sh --layer 1
+   ```
+
+5. Open a PR with a Conventional Commit title, for example:
+
+   ```text
+   docs(speckit-pro): clarify plugin install paths
+   ```
+
+### What Not To Edit Directly
+
+- Do not hand-edit `dist/**` payload files except to inspect a generated result.
+  Regenerate them from source.
+- Do not install `speckit-pro/` directly as a Codex personal plugin. Use
+  `dist/codex/speckit-pro/`.
+- Do not change marketplace versions manually as part of normal docs work.
+  Release automation owns version synchronization.
+
+## Official Platform Docs
+
+The README install and packaging guidance is grounded in these official docs:
+
+| Platform | Docs |
+|---|---|
+| Claude Code | [Create plugins](https://code.claude.com/docs/en/plugins), [Plugin marketplaces](https://code.claude.com/docs/en/plugin-marketplaces), [Plugins reference](https://code.claude.com/docs/en/plugins-reference) |
+| Codex | [Plugins](https://developers.openai.com/codex/plugins), [Build plugins](https://developers.openai.com/codex/plugins/build), [Skills](https://developers.openai.com/codex/skills), [Subagents](https://developers.openai.com/codex/subagents) |
+| Spec Kit | [Docs](https://github.github.io/spec-kit/), [Installation](https://github.github.io/spec-kit/installation.html), [Quick start](https://github.github.io/spec-kit/quickstart.html), [GitHub repo](https://github.com/github/spec-kit) |
+
+Repo-specific behavior is grounded in the checked-in manifests, payload builder,
+tests, and plugin source.
 
 ## License
 
-This repository is licensed under the [MIT License](./LICENSE). See each plugin's README for additional details.
-
-## Documentation
-
-For more information on developing plugins for each platform:
-
-- [Claude Code plugin docs](https://code.claude.com/docs/en/plugins)
-- [Codex plugin docs](https://developers.openai.com/codex/plugins/build)
+This repository is licensed under the [MIT License](./LICENSE). See each plugin
+README for plugin-specific details.
