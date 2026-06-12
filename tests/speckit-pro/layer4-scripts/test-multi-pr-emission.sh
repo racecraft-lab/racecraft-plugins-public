@@ -504,6 +504,9 @@ unreleasable_split_result="$MARKER_FIXTURE_ROOT/hazard-unreleasable-split-result
 navigable_split_result="$MARKER_FIXTURE_ROOT/navigable-releasable-split-result.json"
 mismatched_split_result="$MARKER_FIXTURE_ROOT/mismatched-marker-split-result.json"
 order_mismatch_split_result="$MARKER_FIXTURE_ROOT/order-mismatch-split-result.json"
+missing_source_boundary_marker_plan="$SANDBOX/missing-source-boundary-marker-plan.json"
+jq '(.markers[] | select(.id == "us1") | .source_boundary) = {}' \
+  "$valid_marker_plan" > "$missing_source_boundary_marker_plan"
 
 marker_candidate_dir="$SANDBOX/marker-candidates"
 
@@ -715,6 +718,22 @@ run_emission output stderr_output "$SCRIPT" \
 assert_eq "2" "$result" "exit code"
 assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: invalid marker packet shape: placeholder declared file path for foundation"
 assert_file_not_exists "$placeholder_marker_candidate_dir/commands.candidate.json"
+
+set_test "marker title emission requires source boundary sections"
+missing_source_boundary_candidate_dir="$SANDBOX/missing-source-boundary-marker-candidates"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$missing_source_boundary_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-013-reviewability-markers \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$marker_full_evidence" \
+  --candidate-dir "$missing_source_boundary_candidate_dir" || result=$?
+assert_eq "2" "$result" "exit code"
+assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: marker source_boundary.section is required for us1"
+assert_file_not_exists "$missing_source_boundary_candidate_dir/commands.candidate.json"
 
 set_test "marker split result with unknown marker stops before side effects"
 mismatched_marker_candidate_dir="$SANDBOX/mismatched-marker-candidates"

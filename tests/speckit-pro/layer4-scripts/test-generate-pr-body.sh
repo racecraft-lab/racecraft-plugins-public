@@ -11,6 +11,12 @@ PLUGIN_ROOT="$REPO_ROOT/speckit-pro"
 SCRIPT="$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-pr-body.sh"
 PRSG_012_FEATURE_REL="specs/prsg-012-reviewer-ready-pr-packet-contract"
 PR_PACKET_FIXTURE_REL="tests/speckit-pro/layer4-scripts/fixtures/pr-packet"
+script_source="$(cat "$SCRIPT")"
+
+section "script contract"
+
+set_test "Generator does not fall back to an all-zero packet body fingerprint"
+assert_not_contains "$script_source" "%064d"
 
 assert_json_file_value() {
   local json_file="$1" field="$2" expected="$3" msg="${4:-}"
@@ -525,5 +531,29 @@ assert_not_contains "$(cat "$future_packet_output")" "PRSG-012"
 
 set_test "Future generated packet does not fall back to plugin scope"
 assert_not_contains "$(cat "$future_packet_output")" "feat(speckit-pro):"
+
+missing_title_feature_rel="specs/spec-014d-missing-title"
+missing_title_feature="$packet_repo/$missing_title_feature_rel"
+missing_title_packet_output_rel="$PR_PACKET_FIXTURE_REL/missing-title-single.json"
+missing_title_body_output_rel="$PR_PACKET_FIXTURE_REL/bodies/missing-title-single.md"
+missing_title_packet_output="$packet_repo/$missing_title_packet_output_rel"
+missing_title_body_output="$packet_repo/$missing_title_body_output_rel"
+missing_title_stderr="$FIXTURE_DIR/missing-title.stderr"
+mkdir -p "$missing_title_feature" "$(dirname "$missing_title_packet_output")" "$(dirname "$missing_title_body_output")"
+cat > "$missing_title_feature/spec.md" <<'EOF'
+This spec intentionally has no Markdown title.
+EOF
+cat > "$missing_title_feature/plan.md" <<'EOF'
+# Plan
+Primary surface: docs/missing-title
+EOF
+
+set_test "Generator rejects packet metadata when the feature title is missing"
+result=0
+(cd "$packet_repo" && "$SCRIPT" --packet-output "$missing_title_packet_output" "$packet_repo" "$missing_title_feature" "$missing_title_body_output" main...HEAD) 2>"$missing_title_stderr" || result=$?
+assert_eq "2" "$result" "exit code"
+
+set_test "Missing feature title failure is explicit"
+assert_contains "$(cat "$missing_title_stderr")" "feature spec title is required"
 
 test_summary

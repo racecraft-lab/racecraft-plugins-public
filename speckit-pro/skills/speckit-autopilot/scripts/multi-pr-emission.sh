@@ -452,6 +452,17 @@ if [ "$MARKER_MODE" = true ]; then
     emit_input_error "duplicate marker_id $duplicate_marker"
   fi
 
+  missing_source_boundary="$(
+    jq -r '
+      .markers[]
+      | select(((.source_boundary.section // "") | strings | length) == 0)
+      | .id
+    ' "$MARKER_PLAN" | head -1
+  )"
+  if [ -n "$missing_source_boundary" ]; then
+    emit_input_error "marker source_boundary.section is required for $missing_source_boundary"
+  fi
+
   placeholder_marker="$(
     jq -r '
       [
@@ -676,7 +687,7 @@ if [ "$MARKER_MODE" = true ]; then
                   | ($idx + 1) as $review_order
                   | ($review_order | zpad($width)) as $label
                   | (marker_files($marker)) as $declared_files
-                  | (($marker.source_boundary.section // $marker.id)) as $source_title
+                  | ($marker.source_boundary.section) as $source_title
                   | (public_title_description($marker.id; $source_title; $declared_files; ($marker.title_description // ""))) as $title_description
                   | {
                       source_id: $marker.id,

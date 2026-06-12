@@ -213,12 +213,13 @@ feature_display_title() {
 
 generated_title_description() {
   local display_title="$1"
+  if ! printf '%s' "$display_title" | grep -Eq '[^[:space:]]'; then
+    printf 'generate-pr-body.sh: input_error: feature spec title is required for packet title generation\n' >&2
+    return 2
+  fi
   case "$display_title" in
     Add\ *|Update\ *|Fix\ *|Remove\ *|Support\ *)
       printf '%s\n' "$display_title"
-      ;;
-    "")
-      printf '%s\n' "Add reviewer-ready PR packet"
       ;;
     *)
       printf 'Add %s%s\n' \
@@ -311,6 +312,17 @@ single_packet_changed_files_json() {
   fi
 }
 
+sha256_from_stdin() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | awk '{print $1}'
+  else
+    printf 'generate-pr-body.sh: input_error: sha256sum or shasum is required for packet body fingerprinting\n' >&2
+    return 2
+  fi
+}
+
 protected_body_sha() {
   local body_file="$1"
   awk '
@@ -344,11 +356,7 @@ protected_body_sha() {
 }
 
 single_packet_body_sha() {
-  if command -v shasum >/dev/null 2>&1; then
-    protected_body_sha "$OUTPUT_FILE" | shasum -a 256 | awk '{print $1}'
-  else
-    protected_body_sha "$OUTPUT_FILE" | jq -R -s -r '@base64' | awk '{printf "%064d\n", 0}'
-  fi
+  protected_body_sha "$OUTPUT_FILE" | sha256_from_stdin
 }
 
 render_single_packet_body() {

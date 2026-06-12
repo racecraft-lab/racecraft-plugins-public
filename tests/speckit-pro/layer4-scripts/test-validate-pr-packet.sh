@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
-# test-validate-pr-packet.sh - PRSG-012 failing contract tests for PR packet validation.
-#
-# This harness intentionally lands before validate-pr-packet.sh exists. Until
-# T008 creates the validator, the script presence and behavior assertions fail
-# with real missing-executable evidence.
+# test-validate-pr-packet.sh - PRSG-012 contract tests for PR packet validation.
 
 set -euo pipefail
 
@@ -32,7 +28,10 @@ cat > "$TEST_REPO/docs/ai/specs/.process/PRSG-012-workflow.md" <<'EOF'
 ## Phase 7: Implement
 EOF
 printf '{}\n' > "$TEST_REPO/$PACKET_FIXTURE_REL/unreadable-packet.json"
-chmod 000 "$TEST_REPO/$PACKET_FIXTURE_REL/unreadable-packet.json" 2>/dev/null || true
+chmod 000 "$TEST_REPO/$PACKET_FIXTURE_REL/unreadable-packet.json" 2>/dev/null || {
+  printf 'test setup failed: unable to make unreadable packet fixture\n' >&2
+  exit 1
+}
 
 cat > "$FAKE_BIN/gh" <<'EOF'
 #!/usr/bin/env bash
@@ -138,7 +137,7 @@ import sys
 with open(sys.argv[1], encoding="utf-8") as handle:
     data = json.load(handle)
 
-safe_builtins = {"any": any, "all": all, "len": len, "list": list, "sorted": sorted}
+safe_builtins = {"any": any, "all": all, "isinstance": isinstance, "len": len, "list": list, "sorted": sorted, "str": str}
 if not eval(sys.argv[2], {"__builtins__": safe_builtins}, {"data": data}):
     raise SystemExit(1)
 PY
@@ -210,6 +209,11 @@ assert_success_json() {
   set_test "$packet_id stdout records pr_blocked false"
   assert_json_file_field "$LAST_STDOUT" "pr_blocked" "False"
 
+  set_test "$packet_id stdout matches validation_result schema shape"
+  assert_json_file_check "$LAST_STDOUT" \
+    "'validation_result_path' not in data and data['stderr_line'] == '' and data['target']['base_branch'] and data['target']['head_branch'] and len(data['rule_outcomes']) >= 1 and data['timestamp']" \
+    "success JSON should use validation_result contract fields"
+
   set_test "$packet_id validation result file exists"
   assert_file_exists "$result_file"
 
@@ -236,6 +240,11 @@ assert_failure_json() {
   assert_json_file_check "$LAST_STDOUT" "len(data['failures']) >= 1 and len(data['remediation_evidence']) >= 1" \
     "failure JSON should include at least one failure and remediation item"
 
+  set_test "$packet_id stdout matches validation_result schema shape"
+  assert_json_file_check "$LAST_STDOUT" \
+    "'validation_result_path' not in data and 'target' in data and data['stderr_line'] and len(data['rule_outcomes']) >= 1 and data['timestamp'] and all(isinstance(item, str) for item in data['remediation_evidence']) and all('rule_id' not in f and 'affected_field' not in f and 'rule' in f and 'field' in f and 'message' in f for f in data['failures'])" \
+    "failure JSON should use validation_result contract fields"
+
   if [ "$result_path" != "no-path" ]; then
     set_test "$packet_id validation result file exists"
     assert_file_exists "$TEST_REPO/$result_path"
@@ -244,16 +253,24 @@ assert_failure_json() {
     assert_json_files_equivalent "$LAST_STDOUT" "$TEST_REPO/$result_path" \
       "stdout and validation result file should match"
   else
-    set_test "$packet_id stdout records no-path result"
-    assert_json_file_field "$LAST_STDOUT" "validation_result_path" "no-path"
+    set_test "$packet_id stdout records no-path in stderr_line"
+    assert_json_file_check "$LAST_STDOUT" "data['stderr_line'].endswith(': no-path')" \
+      "input-error JSON should carry no-path in stderr_line"
   fi
 }
 
 assert_failure_rule() {
   local rule_id="$1"
   assert_json_file_check "$LAST_STDOUT" \
-    "any(f.get('rule_id') == '$rule_id' for f in data['failures'])" \
-    "failure JSON should include rule_id $rule_id"
+    "any(f.get('rule') == '$rule_id' for f in data['failures'])" \
+    "failure JSON should include rule $rule_id"
+}
+
+assert_no_failure_rule() {
+  local rule_id="$1"
+  assert_json_file_check "$LAST_STDOUT" \
+    "not any(f.get('rule') == '$rule_id' for f in data['failures'])" \
+    "failure JSON should not include rule $rule_id"
 }
 
 section "script presence"
@@ -379,6 +396,21 @@ run_validator_capture "valid-host-coexist" "$host_coexist_rel"
 set_test "host template content outside canonical packet block exits 0"
 assert_captured_exit "0"
 
+indented_source_rel="$PACKET_FIXTURE_REL/valid-indented-source-marker.json"
+indented_source_body_rel="$PACKET_FIXTURE_REL/bodies/valid-indented-source-marker.md"
+sed '1s/^/  /' "$TEST_REPO/$valid_edited_body_rel" > "$TEST_REPO/$indented_source_body_rel"
+jq \
+  --arg packet_id "valid-indented-source-marker" \
+  --arg body "$indented_source_body_rel" \
+  --arg result "$(validation_result_rel valid-indented-source-marker)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$indented_source_rel"
+
+run_validator_capture "valid-indented-source-marker" "$indented_source_rel"
+
+set_test "indented legacy packet source marker exits 0"
+assert_captured_exit "0"
+
 invalid_protected_result="$(validation_result_rel invalid-protected-edit)"
 reset_gh_capture
 run_validator_capture "invalid-protected-edit" "$PACKET_FIXTURE_REL/invalid-protected-edit.json"
@@ -431,6 +463,28 @@ assert_captured_exit "1"
 set_test "invalid unknown comment reports comment rule"
 assert_failure_rule "body.unknown_comment"
 
+unterminated_source_rel="$PACKET_FIXTURE_REL/invalid-unterminated-source-marker.json"
+unterminated_source_body_rel="$PACKET_FIXTURE_REL/bodies/invalid-unterminated-source-marker.md"
+{
+  printf '%s\n' '<!-- speckit-pro-review-packet-source'
+  tail -n +2 "$TEST_REPO/$valid_edited_body_rel"
+} > "$TEST_REPO/$unterminated_source_body_rel"
+jq \
+  --arg packet_id "invalid-unterminated-source-marker" \
+  --arg body "$unterminated_source_body_rel" \
+  --arg result "$(validation_result_rel invalid-unterminated-source-marker)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$unterminated_source_rel"
+
+reset_gh_capture
+run_validator_capture "invalid-unterminated-source-marker" "$unterminated_source_rel"
+
+set_test "unterminated legacy packet source marker exits 1"
+assert_captured_exit "1"
+
+set_test "unterminated legacy packet source marker reports comment rule"
+assert_failure_rule "body.unknown_comment"
+
 section "rendered-content validation failures"
 
 invalid_title_result="$(validation_result_rel invalid-title-token)"
@@ -479,6 +533,33 @@ set_test "invalid generic title reports public description rule"
 assert_failure_rule "title.public_description"
 
 set_test "invalid generic title makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+git_ref_title_rel="$PACKET_FIXTURE_REL/invalid-git-ref-title.json"
+jq \
+  --arg packet_id "invalid-git-ref-title" \
+  --arg title "feat(PRSG-012): Update refs/heads/internal-branch packet title" \
+  --arg description "Update refs/heads/internal-branch packet title" \
+  --arg result "$(validation_result_rel invalid-git-ref-title)" \
+  '.packet_id = $packet_id
+    | .generated_title.value = $title
+    | .generated_title.description = $description
+    | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$git_ref_title_rel"
+
+git_ref_title_result="$(validation_result_rel invalid-git-ref-title)"
+reset_gh_capture
+run_validator_capture "invalid-git-ref-title" "$git_ref_title_rel"
+
+set_test "invalid git ref title exits 1"
+assert_captured_exit "1"
+
+assert_failure_json "invalid-git-ref-title" "validation_failure" "1" "$git_ref_title_result"
+
+set_test "invalid git ref title reports banned public text"
+assert_failure_rule "text.banned_or_placeholder"
+
+set_test "invalid git ref title makes no PR creation attempts"
 assert_no_pr_create_attempts
 
 invalid_missing_result="$(validation_result_rel invalid-missing-evidence)"
@@ -581,6 +662,90 @@ set_test "invalid body content reports traceability rule"
 assert_failure_rule "body.traceability"
 
 set_test "invalid body content makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+hidden_evidence_rel="$PACKET_FIXTURE_REL/invalid-hidden-evidence.json"
+hidden_evidence_body_rel="$PACKET_FIXTURE_REL/bodies/invalid-hidden-evidence.md"
+hidden_evidence_json="$TEST_REPO/$hidden_evidence_rel"
+hidden_evidence_body="$TEST_REPO/$hidden_evidence_body_rel"
+mkdir -p "$(dirname "$hidden_evidence_body")"
+cat > "$hidden_evidence_body" <<'EOF'
+<!-- speckit-pro-review-packet-source: tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-hidden-evidence.json -->
+
+## Summary
+
+<!-- speckit-pro-editable:summary:start -->
+Adds reviewer-facing packet validation.
+<!-- speckit-pro-editable:summary:end -->
+
+```md
+## Summary
+Source: hidden inside fenced code.
+Traceability: hidden inside fenced code.
+```
+
+## What Changed
+
+<!-- speckit-pro-editable:what_changed:start -->
+- Validates only reviewer-visible evidence.
+<!-- speckit-pro-editable:what_changed:end -->
+
+## Why It Matters
+
+<!-- speckit-pro-editable:why_it_matters:start -->
+Reviewers can scan the rendered body without hidden evidence satisfying the contract.
+<!-- speckit-pro-editable:why_it_matters:end -->
+
+## How To Review
+
+Inspect the visible body content.
+
+## How To UAT
+
+Run the packet validator fixture.
+
+## UAT Runbook
+
+Manual UAT is not required for this fixture.
+
+## Verification
+
+- Focused packet validation fixture.
+
+## Scope
+
+- Reviewable LOC: fixture-only evidence.
+
+## Known Gaps
+
+No known gaps.
+EOF
+jq \
+  --arg packet_id "invalid-hidden-evidence" \
+  --arg body "$hidden_evidence_body_rel" \
+  --arg result "$(validation_result_rel invalid-hidden-evidence)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$hidden_evidence_json"
+
+hidden_evidence_result="$(validation_result_rel invalid-hidden-evidence)"
+reset_gh_capture
+run_validator_capture "invalid-hidden-evidence" "$hidden_evidence_rel"
+
+set_test "invalid hidden evidence exits 1"
+assert_captured_exit "1"
+
+assert_failure_json "invalid-hidden-evidence" "validation_failure" "1" "$hidden_evidence_result"
+
+set_test "hidden fenced traceability does not satisfy rendered evidence"
+assert_failure_rule "body.traceability"
+
+set_test "hidden fenced source does not satisfy rendered evidence"
+assert_failure_rule "body.required_content"
+
+set_test "fenced headings do not affect canonical heading order"
+assert_no_failure_rule "body.heading_order"
+
+set_test "invalid hidden evidence makes no PR creation attempts"
 assert_no_pr_create_attempts
 
 generic_body_rel="$PACKET_FIXTURE_REL/invalid-generic-body.json"
@@ -689,6 +854,27 @@ assert_captured_stderr_contains "no-path" "no-feature-dir no-path"
 assert_failure_json "invalid-no-feature-dir" "input_error" "2" "$invalid_no_feature_result"
 
 set_test "invalid no-feature-dir makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+mismatched_result_rel="$PACKET_FIXTURE_REL/invalid-mismatched-result-path.json"
+jq \
+  --arg packet_id "invalid-mismatched-result-path" \
+  --arg result "$FEATURE_DIR_REL/.process/pr-packets/other-packet/validation.json" \
+  '.packet_id = $packet_id | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$mismatched_result_rel"
+
+reset_gh_capture
+run_validator_capture "invalid-mismatched-result-path" "$mismatched_result_rel"
+
+set_test "mismatched validation result path exits 2"
+assert_captured_exit "2"
+
+set_test "mismatched validation result path stderr records no-path"
+assert_captured_stderr_contains "no-path" "mismatched result no-path"
+
+assert_failure_json "invalid-mismatched-result-path" "input_error" "2" "no-path"
+
+set_test "mismatched validation result path makes no PR creation attempts"
 assert_no_pr_create_attempts
 
 schema_invalid_result="$(validation_result_rel invalid-schema-with-feature-dir)"

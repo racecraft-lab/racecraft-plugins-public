@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SCRIPT_NAME="validate-pr-packet.sh"
-REPO_ROOT="$(pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
@@ -47,22 +47,15 @@ persist_text_atomic() {
 add_failure() {
   local rule_id="$1" affected_field="$2" message="$3" remediation="$4"
   jq -cn \
-    --arg rule_id "$rule_id" \
-    --arg affected_field "$affected_field" \
+    --arg rule "$rule_id" \
+    --arg field "$affected_field" \
     --arg message "$message" \
     '{
-      rule_id: $rule_id,
-      severity: "error",
-      affected_field: $affected_field,
+      rule: $rule,
+      field: $field,
       message: $message
     }' >> "$failures_file"
-  jq -cn \
-    --arg rule_id "$rule_id" \
-    --arg remediation "$remediation" \
-    '{
-      rule_id: $rule_id,
-      remediation: $remediation
-    }' >> "$remediation_file"
+  printf '[%s] %s\n' "$rule_id" "$remediation" | jq -R . >> "$remediation_file"
 }
 
 jq_get() {
@@ -77,16 +70,16 @@ packet_id_from_path() {
 }
 
 derive_validation_result_path() {
-  local packet="$1" packet_id="$2" configured source_feature_dir
+  local packet="$1" packet_id="$2" configured source_feature_dir derived
   configured="$(jq_get "$packet" '.validation_result_path')"
-  if [[ "$configured" == specs/*/.process/pr-packets/*/validation.json ]]; then
-    printf '%s\n' "$configured"
-    return
-  fi
-
   source_feature_dir="$(jq_get "$packet" '.source_feature_dir')"
   if [[ "$source_feature_dir" == specs/* ]] && [ -n "$packet_id" ]; then
-    printf '%s/.process/pr-packets/%s/validation.json\n' "$source_feature_dir" "$packet_id"
+    derived="$source_feature_dir/.process/pr-packets/$packet_id/validation.json"
+    if [ -n "$configured" ] && [ "$configured" != "$derived" ]; then
+      printf '%s\n' "no-path"
+      return
+    fi
+    printf '%s\n' "$derived"
     return
   fi
 
@@ -149,6 +142,9 @@ emit_result() {
   local body_file="$7"
   local validation_result_path="$8"
   local pr_blocked="$9"
+  local stderr_line="${10:-}"
+  local target_base="${11:-}"
+  local target_head="${12:-}"
 
   local failures_json remediation_json output_file
   failures_json="$(json_array_from_jsonl "$failures_file")"
@@ -162,25 +158,43 @@ emit_result() {
     --arg status "$status" \
     --arg error_class "$error_class" \
     --argjson exit_code "$exit_code" \
+    --arg stderr_line "$stderr_line" \
+    --arg target_base "$target_base" \
+    --arg target_head "$target_head" \
     --arg title_value "$title_value" \
     --arg body_file "$body_file" \
-    --arg validation_result_path "$validation_result_path" \
+    --arg timestamp "1970-01-01T00:00:00Z" \
     --argjson pr_blocked "$pr_blocked" \
     --argjson failures "$failures_json" \
     --argjson remediation_evidence "$remediation_json" \
     '{
       schema_version: $schema_version,
-      packet_id: $packet_id,
-      mode: $mode,
-      status: $status,
       error_class: $error_class,
       exit_code: $exit_code,
-      title_value: $title_value,
-      body_file: $body_file,
-      validation_result_path: $validation_result_path,
+      stderr_line: $stderr_line,
+      packet_id: $packet_id,
+      mode: (if $mode == "" then null else $mode end),
+      target: (
+        if $target_base == "" and $target_head == "" then
+          null
+        else
+          {base_branch: $target_base, head_branch: $target_head}
+        end
+      ),
+      status: $status,
+      title_value: (if $title_value == "" then null else $title_value end),
+      body_file: (if $body_file == "" then null else $body_file end),
+      rule_outcomes: (
+        if ($failures | length) > 0 then
+          $failures | map({rule: .rule, status: "failed", evidence: .field})
+        else
+          [{rule: "packet.validation", status: "passed", evidence: "no failures"}]
+        end
+      ),
       pr_blocked: $pr_blocked,
       failures: $failures,
-      remediation_evidence: $remediation_evidence
+      remediation_evidence: $remediation_evidence,
+      timestamp: $timestamp
     }' > "$output_file"
 
   if [ -n "$validation_result_path" ] && [ "$validation_result_path" != "no-path" ]; then
@@ -193,9 +207,11 @@ emit_result() {
 
 emit_input_error() {
   local packet_id="$1" message="$2"
+  local stderr_line
   add_failure "input.error" "packet" "$message" "Provide a readable JSON PR packet with a feature-local validation_result_path."
-  emit_result "failed" "input_error" 2 "$packet_id" "" "" "" "no-path" true
-  printf '%s: input_error: %s: %s (no-path)\n' "$SCRIPT_NAME" "$packet_id" "$message" >&2
+  stderr_line="$SCRIPT_NAME: input_error: $packet_id: input.error: no-path"
+  emit_result "failed" "input_error" 2 "$packet_id" "" "" "" "no-path" true "$stderr_line"
+  printf '%s\n' "$stderr_line" >&2
   exit 2
 }
 
@@ -215,7 +231,7 @@ require_jq_true() {
 
 contains_banned_text() {
   local value="$1"
-  [[ "$value" =~ (ELI5|Plain-English[[:space:]]Summary|TODO|PRSG-[0-9]+|SPEC-[0-9A-Za-z_-]+|FR-[0-9A-Za-z_-]+|SC-[0-9A-Za-z_-]+|L[0-9]+|\{\{|\}\}|\$\{|<!--[[:space:]]*[^>]*-->|Example:) ]]
+  [[ "$value" =~ (ELI5|Plain-English[[:space:]]Summary|TODO|refs/heads/|refs/remotes/|refs/tags/|PRSG-[0-9]+|SPEC-[0-9A-Za-z_-]+|FR-[0-9A-Za-z_-]+|SC-[0-9A-Za-z_-]+|L[0-9]+|\{\{|\}\}|\$\{|<!--[[:space:]]*[^>]*-->|Example:) ]]
 }
 
 contains_generic_title_text() {
@@ -252,13 +268,18 @@ protected_body_sha() {
       if (line == "## Known Gaps") seen_known_gaps=1
       else if (seen_known_gaps && line != "") known_gaps_body_seen=1
     }
-  ' "$path" | {
-    if command -v shasum >/dev/null 2>&1; then
-      shasum -a 256 | awk '{print $1}'
-    else
-      awk '{printf "%064d\n", 0}'
-    fi
-  }
+  ' "$path" | sha256_from_stdin
+}
+
+sha256_from_stdin() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum | awk '{print $1}'
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 | awk '{print $1}'
+  else
+    printf '%s\n' "sha256sum or shasum is required for packet body fingerprinting" >&2
+    return 2
+  fi
 }
 
 validate_required_headings() {
@@ -297,6 +318,34 @@ validate_editable_fields() {
     "Regenerate editable field metadata from the canonical packet renderer."
 }
 
+write_visible_markdown() {
+  local input="$1" output="$2"
+  awk '
+    BEGIN { in_fence=0; in_comment=0 }
+    {
+      line=$0
+      trimmed=line
+      sub(/^[ \t]+/, "", trimmed)
+      sub(/[ \t\r]+$/, "", trimmed)
+
+      if (in_comment) {
+        if (trimmed ~ /-->/) in_comment=0
+        next
+      }
+      if (!in_fence && trimmed ~ /^<!--/) {
+        if (trimmed !~ /-->/) in_comment=1
+        next
+      }
+      if (trimmed ~ /^(```|~~~)/) {
+        in_fence = !in_fence
+        next
+      }
+      if (in_fence) next
+      print line
+    }
+  ' "$input" > "$output"
+}
+
 validate_body_file() {
   local body_file="$1" packet="$2" body_abs="$REPO_ROOT/$body_file"
   if [ -z "$body_file" ]; then
@@ -316,7 +365,10 @@ validate_body_file() {
     return
   fi
 
-  local expected headings
+  local visible_body expected headings
+  visible_body="$tmp_dir/body-visible.md"
+  write_visible_markdown "$body_abs" "$visible_body"
+
   expected="Summary|What Changed|Why It Matters|How To Review|How To UAT|Verification|Scope|Known Gaps"
   headings="$(
     awk '
@@ -331,7 +383,7 @@ validate_body_file() {
           printf "%s", heading
         }
       }
-    ' "$body_abs"
+    ' "$visible_body"
   )"
   if [ "$headings" != "$expected" ]; then
     add_failure "body.heading_order" "body_file" \
@@ -345,7 +397,7 @@ validate_body_file() {
       "Regenerate the body from finalized packet evidence before PR creation."
   fi
 
-  if grep -Eiq 'Adds reviewer-ready split PR packet evidence for|Prepared `[^`]+` for review against|Slice PR body placeholder|^slice_id:|^slice_packet:' "$body_abs"; then
+  if grep -Eiq 'Adds reviewer-ready split PR packet evidence for|Prepared `[^`]+` for review against|Slice PR body placeholder|^slice_id:|^slice_packet:' "$visible_body"; then
     add_failure "body.generic_packet_prose" "body_file" \
       "Rendered body describes packet mechanics instead of the reviewer-visible change." \
       "Rewrite Summary, What Changed, and Why It Matters in strict plain English that names the actual change and preserves technical evidence below."
@@ -370,25 +422,27 @@ validate_body_file() {
     {
       line=$0
       sub(/[ \t\r]+$/, "", line)
+      trimmed=line
+      sub(/^[ \t]+/, "", trimmed)
       if (legacy) {
-        if (line == "-->") legacy=0
+        if (trimmed == "-->") legacy=0
         next
       }
-      if (line ~ /^<!-- speckit-pro-review-packet-source/) {
-        if (line !~ /-->$/) legacy=1
+      if (trimmed ~ /^<!--[[:space:]]*speckit-pro-review-packet-source/) {
+        if (trimmed !~ /-->$/) legacy=1
         next
       }
       if (line ~ /^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):(start|end) -->$/) next
       if (line ~ /<!--/) { bad=1; exit }
     }
-    END { exit bad ? 0 : 1 }
+    END { if (legacy) bad=1; exit bad ? 0 : 1 }
   ' "$body_abs"; then
     add_failure "body.unknown_comment" "body_file" \
       "Rendered body contains an unknown or stale HTML comment outside allowed packet markers." \
       "Remove template comments and keep only editable-boundary comments plus the legacy packet-source marker."
   fi
 
-  if ! grep -Fq "Traceability:" "$body_abs"; then
+  if ! grep -Fq "Traceability:" "$visible_body"; then
     add_failure "body.traceability" "body_file" \
       "Rendered body is missing traceability evidence." \
       "Render a Traceability line that maps source evidence, verification, and scope to the packet."
@@ -400,10 +454,16 @@ validate_body_file() {
     "<!-- speckit-pro-editable:what_changed:start -->" \
     "<!-- speckit-pro-editable:what_changed:end -->" \
     "<!-- speckit-pro-editable:why_it_matters:start -->" \
-    "<!-- speckit-pro-editable:why_it_matters:end -->" \
-    "## UAT Runbook" \
-    "Source:"; do
+    "<!-- speckit-pro-editable:why_it_matters:end -->"; do
     if ! grep -Fq "$marker" "$body_abs"; then
+      add_failure "body.required_content" "body_file" \
+        "Rendered body is missing required content: $marker" \
+        "Regenerate the body with canonical sections, editable markers, UAT compatibility, and source evidence."
+    fi
+  done
+
+  for marker in "## UAT Runbook" "Source:"; do
+    if ! grep -Fq "$marker" "$visible_body"; then
       add_failure "body.required_content" "body_file" \
         "Rendered body is missing required content: $marker" \
         "Regenerate the body with canonical sections, editable markers, UAT compatibility, and source evidence."
@@ -480,11 +540,13 @@ validate_packet() {
   validation_result_path="$(derive_validation_result_path "$packet" "$packet_id")"
 
   if [ "$validation_result_path" = "no-path" ]; then
+    local stderr_line
     add_failure "input.no_feature_dir" "source_feature_dir" \
       "Unable to derive a feature-local validation result path." \
       "Provide source_feature_dir or validation_result_path under specs/<feature>/.process/pr-packets/<packet_id>/validation.json."
-    emit_result "failed" "input_error" 2 "$packet_id" "$mode" "$title_value" "$body_file" "no-path" true
-    printf '%s: input_error: %s: unable to derive validation result path (no-path)\n' "$SCRIPT_NAME" "$packet_id" >&2
+    stderr_line="$SCRIPT_NAME: input_error: $packet_id: input.no_feature_dir: no-path"
+    emit_result "failed" "input_error" 2 "$packet_id" "$mode" "$title_value" "$body_file" "no-path" true "$stderr_line" "$(jq_get "$packet" '.target.base_branch')" "$(jq_get "$packet" '.target.head_branch')"
+    printf '%s\n' "$stderr_line" >&2
     exit 2
   fi
 
@@ -569,13 +631,16 @@ validate_packet() {
   validate_public_text "$packet"
 
   if [ -s "$failures_file" ]; then
+    local stderr_line rules
+    rules="$(jq -r -s 'map(.rule) | unique | join(",")' "$failures_file")"
     upsert_workflow_event "$packet" "$packet_id" "$validation_result_path"
-    emit_result "failed" "validation_failure" 1 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" true
-    printf '%s: validation_failure: %s: %s\n' "$SCRIPT_NAME" "$packet_id" "$validation_result_path" >&2
+    stderr_line="$SCRIPT_NAME: validation_failure: $packet_id: ${rules:-validation.failed}: $validation_result_path"
+    emit_result "failed" "validation_failure" 1 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" true "$stderr_line" "$(jq_get "$packet" '.target.base_branch')" "$(jq_get "$packet" '.target.head_branch')"
+    printf '%s\n' "$stderr_line" >&2
     exit 1
   fi
 
-  emit_result "passed" "none" 0 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" false
+  emit_result "passed" "none" 0 "$packet_id" "$mode" "$title_value" "$body_file" "$validation_result_path" false "" "$(jq_get "$packet" '.target.base_branch')" "$(jq_get "$packet" '.target.head_branch')"
   exit 0
 }
 
