@@ -662,6 +662,118 @@ EOF
   git -C "$root" init >/dev/null 2>&1
 }
 
+make_live_marker_success_repo() {
+  local root="$1" remote="$2"
+  make_marker_persist_repo "$root"
+  git -C "$root" config user.email "test@test"
+  git -C "$root" config user.name "SpecKit Test"
+  git -C "$root" config commit.gpgsign false
+  git -C "$root" checkout -q -b main
+  git -C "$root" add -A
+  git -C "$root" commit -q -m "base fixture"
+
+  git -C "$root" checkout -q -b fixture-feature
+  mkdir -p "$root/specs/prsg-013-reviewability-markers/.process/markers"
+
+  printf '%s\n' 'foundation checkpoint complete' > "$root/specs/prsg-013-reviewability-markers/.process/markers/foundation-checkpoint.md"
+  git -C "$root" add -A
+  git -C "$root" commit -q -m "foundation checkpoint"
+  git -C "$root" tag marker-foundation
+
+  printf '%s\n' 'us1 checkpoint complete' > "$root/specs/prsg-013-reviewability-markers/.process/markers/us1-checkpoint.md"
+  git -C "$root" add -A
+  git -C "$root" commit -q -m "us1 checkpoint"
+  git -C "$root" tag marker-us1
+
+  printf '%s\n' 'us2 part1 checkpoint complete' > "$root/specs/prsg-013-reviewability-markers/.process/markers/us2-part1-checkpoint.md"
+  git -C "$root" add -A
+  git -C "$root" commit -q -m "us2 part1 checkpoint"
+  git -C "$root" tag marker-us2-part1
+
+  git -C "$root" checkout -q main
+  git init --bare "$remote" >/dev/null 2>&1
+  git -C "$root" remote add origin "$remote"
+  git -C "$root" push -u origin main >/dev/null 2>&1
+}
+
+write_fake_live_gh() {
+  local bin_dir="$1"
+  mkdir -p "$bin_dir"
+  cat > "$bin_dir/gh" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+log="${FAKE_GH_LOG:?}"
+repo="${FAKE_GH_REPO:-$PWD}"
+
+if [ "${1:-}" != "pr" ]; then
+  printf 'unsupported gh command\n' >&2
+  exit 1
+fi
+
+subcommand="${2:-}"
+shift 2
+
+case "$subcommand" in
+  list)
+    printf '[]\n'
+    ;;
+  create)
+    base=""
+    head=""
+    title=""
+    body_file=""
+    while [ "$#" -gt 0 ]; do
+      case "$1" in
+        --base) base="${2:-}"; shift 2 ;;
+        --head) head="${2:-}"; shift 2 ;;
+        --title) title="${2:-}"; shift 2 ;;
+        --body-file) body_file="${2:-}"; shift 2 ;;
+        *) shift ;;
+      esac
+    done
+    [ -n "$base" ] && [ -n "$head" ] && [ -n "$body_file" ] || exit 1
+    count=0
+    if [ -f "$log" ]; then
+      count="$(wc -l < "$log" | tr -d ' ')"
+    fi
+    number=$((900 + count + 1))
+    url="https://github.example/pr/$number"
+    jq -cn \
+      --arg base "$base" \
+      --arg head "$head" \
+      --arg title "$title" \
+      --arg body_file "$body_file" \
+      --arg url "$url" \
+      --argjson number "$number" \
+      '{number:$number,url:$url,state:"OPEN",base:$base,head:$head,title:$title,body_file:$body_file}' >> "$log"
+    printf '%s\n' "$url"
+    ;;
+  view)
+    ref="${1:-}"
+    [ -n "$ref" ] || exit 1
+    record="$(jq -c --arg url "$ref" 'select(.url == $url)' "$log" | tail -1)"
+    [ -n "$record" ] || exit 1
+    number="$(printf '%s' "$record" | jq -r '.number')"
+    url="$(printf '%s' "$record" | jq -r '.url')"
+    head="$(printf '%s' "$record" | jq -r '.head')"
+    head_sha="$(git -C "$repo" rev-parse "$head")"
+    jq -cn \
+      --argjson number "$number" \
+      --arg url "$url" \
+      --arg state "OPEN" \
+      --arg headRefOid "$head_sha" \
+      '{number:$number,url:$url,state:$state,headRefOid:$headRefOid}'
+    ;;
+  *)
+    printf 'unsupported gh pr command: %s\n' "$subcommand" >&2
+    exit 1
+    ;;
+esac
+EOF
+  chmod +x "$bin_dir/gh"
+}
+
 set_test "live marker emission requires checkpoint SHAs before branch mutation"
 live_marker_repo="$SANDBOX/live-marker-repo"
 make_marker_persist_repo "$live_marker_repo"
@@ -679,6 +791,90 @@ run_emission output stderr_output "$SCRIPT" \
   --live || result=$?
 assert_eq "2" "$result" "exit code"
 assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: --live requires checkpoint_sha for slice foundation"
+
+set_test "live marker emission creates marker branches and PRs from checkpoint SHAs"
+live_success_repo="$SANDBOX/live-marker-success-repo"
+live_success_remote="$SANDBOX/live-marker-success-remote.git"
+make_live_marker_success_repo "$live_success_repo" "$live_success_remote"
+live_success_state="$live_success_repo/docs/ai/specs/.process/autopilot-state.json"
+live_success_evidence="$live_success_repo/specs/prsg-013-reviewability-markers/.process/emission/full-regression.txt"
+live_success_prs="$live_success_repo/specs/prsg-013-reviewability-markers/.process/prs.json"
+live_success_commands="$SANDBOX/live-marker-success-commands.json"
+live_success_marker_plan="$SANDBOX/live-marker-plan-with-shas.json"
+live_success_fake_bin="$SANDBOX/live-marker-fake-bin"
+live_success_gh_log="$SANDBOX/live-marker-gh-create.jsonl"
+write_fake_live_gh "$live_success_fake_bin"
+live_base_sha="$(git -C "$live_success_repo" rev-parse main)"
+live_foundation_sha="$(git -C "$live_success_repo" rev-parse marker-foundation)"
+live_us1_sha="$(git -C "$live_success_repo" rev-parse marker-us1)"
+live_us2_sha="$(git -C "$live_success_repo" rev-parse marker-us2-part1)"
+jq \
+  --arg foundation_sha "$live_foundation_sha" \
+  --arg us1_sha "$live_us1_sha" \
+  --arg us2_sha "$live_us2_sha" '
+    .markers |= map(
+      if .id == "foundation" then .implementation_checkpoint.head_sha = $foundation_sha
+      elif .id == "us1" then .implementation_checkpoint.head_sha = $us1_sha
+      elif .id == "us2-part1" then .implementation_checkpoint.head_sha = $us2_sha
+      else . end
+    )
+  ' "$valid_marker_plan" > "$live_success_marker_plan"
+
+result=0
+run_emission output stderr_output env \
+  PATH="$live_success_fake_bin:$PATH" \
+  FAKE_GH_LOG="$live_success_gh_log" \
+  FAKE_GH_REPO="$live_success_repo" \
+  "$SCRIPT" \
+  --marker-plan "$live_success_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$live_success_state" \
+  --feature-branch prsg-013-reviewability-markers \
+  --base main \
+  --base-sha "$live_base_sha" \
+  --full-verification-evidence "$live_success_evidence" \
+  --command-log "$live_success_commands" \
+  --live || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "live marker emission reports branch and pull-request mutation"
+json_check "$output" \
+  "data['status'] == 'persisted' and data['mutation']['branches'] == True and data['mutation']['pull_requests'] == True and data['emission']['mode'] == 'marker' and data['emission']['marker_count'] == 3" \
+  "live marker emission should report live branch and PR mutation"
+
+set_test "live marker emission pushes each marker branch to its checkpoint SHA"
+remote_foundation_sha="$(git -C "$live_success_remote" rev-parse refs/heads/prsg-013-reviewability-markers/01-foundation)"
+remote_us1_sha="$(git -C "$live_success_remote" rev-parse refs/heads/prsg-013-reviewability-markers/02-us1)"
+remote_us2_sha="$(git -C "$live_success_remote" rev-parse refs/heads/prsg-013-reviewability-markers/03-us2-part1)"
+if [ "$remote_foundation_sha" = "$live_foundation_sha" ] && [ "$remote_us1_sha" = "$live_us1_sha" ] && [ "$remote_us2_sha" = "$live_us2_sha" ]; then
+  _pass
+else
+  _fail "marker branches should point at their checkpoint SHAs"
+fi
+
+live_success_gh_json="$(jq -s '.' "$live_success_gh_log" 2>/dev/null || printf '[]')"
+set_test "live marker emission creates PRs with marker branch bases"
+json_check "$live_success_gh_json" \
+  "[r['head'] for r in data] == ['prsg-013-reviewability-markers/01-foundation', 'prsg-013-reviewability-markers/02-us1', 'prsg-013-reviewability-markers/03-us2-part1'] and [r['base'] for r in data] == ['main', 'prsg-013-reviewability-markers/01-foundation', 'prsg-013-reviewability-markers/02-us1']" \
+  "live gh create calls should preserve marker branch/base order"
+
+live_success_state_json="$(cat "$live_success_state" 2>/dev/null || true)"
+set_test "live marker emission completes state with opened PRs"
+json_check "$live_success_state_json" \
+  "data['multi_pr_emission']['status'] == 'complete' and data['multi_pr_emission']['next_slice_id'] is None and [s['status'] for s in data['multi_pr_emission']['slices']] == ['pr_opened', 'pr_opened', 'pr_opened'] and [s['head_sha'] for s in data['multi_pr_emission']['slices']] == ['$live_foundation_sha', '$live_us1_sha', '$live_us2_sha']" \
+  "live state should complete with checkpoint-backed opened PRs"
+
+live_success_prs_json="$(cat "$live_success_prs" 2>/dev/null || true)"
+set_test "live marker emission writes PRS manifest with checkpoint heads"
+json_check "$live_success_prs_json" \
+  "data['schemaVersion'] == 2 and [r['slice_id'] for r in data['records']] == ['foundation', 'us1', 'us2-part1'] and [r['head_sha'] for r in data['records']] == ['$live_foundation_sha', '$live_us1_sha', '$live_us2_sha'] and [r['pr_number'] for r in data['records']] == [901, 902, 903]" \
+  "live PRS manifest should preserve checkpoint head SHAs"
+
+live_success_commands_json="$(cat "$live_success_commands" 2>/dev/null || true)"
+set_test "live marker emission records git and gh operations"
+json_check "$live_success_commands_json" \
+  "len([op for op in data['operations'] if op['action'] == 'git_branch']) == 3 and len([op for op in data['operations'] if op['action'] == 'git_push']) == 3 and len([op for op in data['operations'] if op['action'] == 'gh_pr_create']) == 3" \
+  "live command log should record branch, push, and PR create operations"
 
 section "US2 persistence and resume reconciliation"
 

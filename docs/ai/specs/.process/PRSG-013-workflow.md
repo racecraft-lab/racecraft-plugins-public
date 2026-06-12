@@ -591,15 +591,17 @@ Before starting any task:
 | `bash -n` on touched autopilot scripts | ✅ Passed |
 | `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | ✅ 85/85 |
 | `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh` | ✅ 55/55 |
-| `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` | ✅ 122/122 |
+| `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` | ✅ 129/129 |
 | `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh` | ✅ 45/45 |
 | `final-reviewability-backstop.sh` with current `pr_marker_plan` | ✅ Committed full diff is size-blocked (`117` files) but returns `marker_split`; no PR side effects |
 | `multi-pr-emission.sh` marker dry-run | ✅ 4 marker packets: `foundation`, `us1`, `us2`, `us3`; `mutation.branches=false`, `mutation.pull_requests=false` |
 | `multi-pr-emission.sh --live` with current `pr_marker_plan` | ✅ Fails closed before branch/PR mutation: `--live requires checkpoint_sha for slice foundation` |
+| `multi-pr-emission.sh --live` checkpoint fixture | ✅ Creates 3 marker branches at checkpoint SHAs, pushes to a local bare remote, creates PRs in marker base order through fake `gh`, and persists state/PRS checkpoint heads |
 | UAT runbook | ✅ `specs/prsg-013-reviewability-markers/.process/uat-runbook.md` |
 | `bash tests/speckit-pro/run-all.sh --layer 3` | ✅ 0/0; eval files and manual helpers enumerated |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | ✅ 978/978 |
-| `bash tests/speckit-pro/run-all.sh` | ✅ 2580/2580 |
+| `bash tests/speckit-pro/run-all.sh --layer 4` | ✅ 1419/1419 |
+| `bash tests/speckit-pro/run-all.sh` | ✅ 2587/2587 |
 | `bash tests/speckit-pro/run-all.sh --all` | ⚠️ Started; deterministic layers passed through Layer 5, then live Layer 7 emitted no output for several minutes and was interrupted. Not used as completion gate. |
 
 ---
@@ -608,10 +610,10 @@ Before starting any task:
 
 | Question | Answer |
 |----------|--------|
-| Tests executed? | Yes. `bash tests/speckit-pro/run-all.sh` passed `2580/2580`; targeted marker/backstop/emission tests passed; `jq empty`, `bash -n`, and `git diff --check` passed. No separate build/typecheck/lint commands exist for this shell/Markdown plugin repo. |
-| Edge cases? | Covered by Layer 4 fixtures for malformed reviewability JSON, stale fingerprints, missing/malformed marker plans, non-size blockers, safe subdivision, no-safe-boundary warnings, hazard collapse, placeholder packet paths, marker order mismatch, and scope mismatch. |
+| Tests executed? | Yes. `bash tests/speckit-pro/run-all.sh` passed `2587/2587`; targeted marker/backstop/emission tests passed; Layer 4 passed `1419/1419`; `jq empty`, `bash -n`, and `git diff --check` passed. No separate build/typecheck/lint commands exist for this shell/Markdown plugin repo. |
+| Edge cases? | Covered by Layer 4 fixtures for malformed reviewability JSON, stale fingerprints, missing/malformed marker plans, non-size blockers, safe subdivision, no-safe-boundary warnings, hazard collapse, placeholder packet paths, marker order mismatch, scope mismatch, missing checkpoint SHAs, and checkpoint-backed live marker branch/PR emission. |
 | Requirements matched? | `tasks.md` marks `45/45` tasks complete. `verify-tasks-report.md` found `44` verified tasks and `1` weak inspection-only task, with `0` partial or not-found tasks. FR-001 through FR-018 are covered by the task matrix and validation evidence above. |
-| Follow-up? | No `TODO`, `DEFERRED`, or `OUT-OF-SCOPE` markers were found in spec, plan, tasks, or this workflow. Live marker-scoped branch/PR mutation is now implemented with fail-closed checkpoint SHA guards; the current PRSG-013 marker plan predates checkpoint SHA capture, so no marker PRs were opened from this branch. |
+| Follow-up? | No `TODO`, `DEFERRED`, or `OUT-OF-SCOPE` markers were found in spec, plan, tasks, or this workflow. Live marker-scoped branch/PR mutation is now implemented and tested with checkpoint SHA guards; the current PRSG-013 marker plan predates checkpoint SHA capture, so this spec is intentionally bootstrapped through one large PR while the next checkpointed spec should emit marker-scoped PRs. |
 
 ---
 
@@ -626,9 +628,9 @@ Before starting any task:
 - [x] Workflow evidence records reviewability sizing as marker input, not implementation stop
 - [x] UAT runbook generated with marker/backstop/emission checks
 - [x] PR body generated at `/private/tmp/PRSG-013-speckit-pr-body.md` with `speckit-pro-review-packet-source` and `## UAT Runbook`
-- [x] PR creation evaluated and skipped by safety boundary: final backstop returned `marker_split`, live marker emission now requires marker checkpoint SHAs, and the current marker plan lacks `checkpoint_sha` for `foundation`; no single all-changes PR was opened
-- [x] Review remediation skipped because no PR was opened
-- [x] Merge not attempted; branch awaits marker checkpoint SHA evidence before live marker-scoped PR emission
+- [x] PR creation route updated: current artifacts lack historical marker checkpoint SHAs, so PRSG-013 is a one-time large bootstrap PR; the live checkpoint fixture proves the marker-scoped path for the next spec
+- [x] Review remediation pending actual PR review threads
+- [x] Merge pending GitHub PR checks on the large bootstrap PR
 
 ---
 

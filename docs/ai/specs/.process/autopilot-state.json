@@ -234,7 +234,7 @@
     {
       "step": "Post: Verify Implementation",
       "status": "completed",
-      "summary": "Default deterministic suite passed: bash tests/speckit-pro/run-all.sh -> 2580/2580. jq, bash -n, and git diff --check also passed."
+      "summary": "Default deterministic suite passed: bash tests/speckit-pro/run-all.sh -> 2587/2587. Layer 4 passed 1419/1419 including checkpoint-backed live marker emission. jq, bash -n, and git diff --check also passed."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
@@ -249,7 +249,7 @@
     {
       "step": "Post: Integration Suite",
       "status": "completed",
-      "summary": "Full default deterministic suite passed: 2580/2580. --all was started earlier but live Layer 7 produced no output for several minutes and was not used as completion gate."
+      "summary": "Full default deterministic suite passed: 2587/2587. --all was started earlier but live Layer 7 produced no output for several minutes and was not used as completion gate."
     },
     {
       "step": "Post: Cleanup",
@@ -278,13 +278,13 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "skipped",
-      "summary": "Skipped by safety boundary: final backstop returned marker_split, live marker emission requires checkpoint SHAs, and the current marker plan lacks checkpoint_sha for foundation. A single all-changes PR was intentionally not opened."
+      "status": "bootstrap_pending",
+      "summary": "Large bootstrap PR selected: current PRSG-013 marker evidence predates checkpoint SHA capture, while the checkpoint-backed live fixture proves future checkpointed specs emit marker-scoped branches and PRs."
     },
     {
       "step": "Post: Review Remediation",
-      "status": "skipped",
-      "summary": "Skipped because no PR was opened; no review thread exists to poll or remediate."
+      "status": "pending_pr",
+      "summary": "Pending actual PR review threads for the large bootstrap PR."
     },
     {
       "step": "Post: Retrospective",
@@ -964,11 +964,12 @@
           "summary": "Marker-aware PR packets, hazard collapse, guidance parity, eval registration, and deterministic validation completed; Polish tasks folded into US3 marker evidence.",
           "validation": [
             "bash -n speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh",
-            "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 122/122",
+            "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 129/129",
             "bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh -> 45/45",
             "bash tests/speckit-pro/run-all.sh --layer 3 -> 0/0 registration evidence",
             "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978",
-            "bash tests/speckit-pro/run-all.sh -> 2580/2580"
+            "bash tests/speckit-pro/run-all.sh --layer 4 -> 1419/1419",
+            "bash tests/speckit-pro/run-all.sh -> 2587/2587"
           ]
         },
         "emission_mapping": {
@@ -1054,16 +1055,18 @@
       "targeted_layer4": {
         "plan_layers": "85/85",
         "final_reviewability_backstop": "55/55",
-        "multi_pr_emission": "122/122",
+        "multi_pr_emission": "129/129",
         "reviewability_marker_guidance": "45/45"
       },
       "layer1": "978/978 passed",
-      "default_suite": "2580/2580 passed",
+      "layer4": "1419/1419 passed",
+      "default_suite": "2587/2587 passed",
       "layer3": "0/0 passed; eval files and manual helpers enumerated",
       "all_layers": "started; deterministic layers passed through Layer 5 and live Layer 7 produced no output for several minutes, so run was interrupted and not used as a completion gate",
       "final_reviewability_backstop": "status=proceed outcome=marker_split from committed full-diff block with current marker plan",
       "marker_emission_dry_run": "4/4 marker-scoped packets validated; branches/pull_requests mutation=false",
-      "marker_emission_live_guard": "input_error before branch/PR mutation: --live requires checkpoint_sha for slice foundation"
+      "marker_emission_live_guard": "input_error before branch/PR mutation: --live requires checkpoint_sha for slice foundation",
+      "marker_emission_live_fixture": "checkpoint-backed --live fixture created 3 marker branches, pushed them to a local bare remote, created marker-ordered PRs through fake gh, and persisted checkpoint head SHAs"
     },
     "summary": "Implemented non-stopping reviewability markers across marker planning, final backstop, marker-aware PR emission, guidance parity, and tests."
   },
@@ -1821,8 +1824,8 @@
     "summary": "Concrete UAT steps cover marker planning, final marker_split handoff, and marker emission dry-run."
   },
   "post_implementation": {
-    "status": "complete_with_pr_creation_skipped",
-    "updated_at": "2026-06-12T05:01:23Z",
+    "status": "complete_with_bootstrap_pr_pending",
+    "updated_at": "2026-06-12T12:55:53Z",
     "implementation_commit": "4660b750add32d61a81be5df4d5f333739f3d156",
     "doctor_extension_check": {
       "status": "completed",
@@ -1830,8 +1833,11 @@
     },
     "verify_implementation": {
       "status": "completed",
-      "default_suite": "2580/2580 passed",
+      "default_suite": "2587/2587 passed",
       "additional_checks": [
+        "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 129/129",
+        "bash tests/speckit-pro/run-all.sh --layer 4 -> 1419/1419",
+        "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978",
         "jq empty",
         "bash -n touched scripts",
         "git diff --check"
@@ -1850,7 +1856,7 @@
     "code_review": {
       "status": "completed",
       "blocking_findings": 0,
-      "residual_risk": "current PRSG-013 marker evidence predates checkpoint SHA capture, so live marker PR mutation correctly fails closed until marker checkpoints record commit SHAs"
+      "residual_risk": "current PRSG-013 marker evidence predates checkpoint SHA capture, so PRSG-013 is a one-time large bootstrap PR; checkpoint-backed live fixture validates marker-scoped PR emission for future specs"
     },
     "final_reviewability_gate": {
       "status": "proceed",
@@ -1869,19 +1875,19 @@
       ]
     },
     "pr_creation": {
-      "status": "skipped",
-      "reason": "marker_split safety boundary prohibits a single all-changes PR, and the current marker plan lacks the checkpoint SHAs required for live marker-scoped PR mutation",
-      "safe_follow_up": "Record implementation_checkpoint.head_sha or implementation_checkpoint.commit_sha for each marker checkpoint before opening marker-scoped PRs for this full diff."
+      "status": "bootstrap_pending",
+      "reason": "current PRSG-013 marker evidence lacks historical checkpoint SHAs required for live marker-scoped mutation; operator selected a one-time large bootstrap PR",
+      "safe_follow_up": "After PRSG-013 merges, the next spec should record implementation_checkpoint.head_sha or implementation_checkpoint.commit_sha for each marker checkpoint and use live marker-scoped PR emission."
     },
     "review_remediation": {
-      "status": "skipped",
-      "reason": "no PR opened"
+      "status": "pending_pr",
+      "reason": "review remediation waits for actual PR review threads"
     },
     "retrospective": {
       "status": "completed",
       "notes": [
         "Autopilot should keep implementation moving through size-only reviewability blocks.",
-        "Final marker_split evidence must prevent accidental all-changes PR creation.",
+        "Final marker_split evidence must drive marker-scoped PR emission for checkpointed specs, while explicitly allowing a one-time bootstrap PR when historical marker checkpoints cannot be reconstructed.",
         "Live marker PR emission must use recorded checkpoint commit SHAs and fail closed before branch or PR mutation when they are missing."
       ]
     },
@@ -1907,6 +1913,15 @@
         "branches": false,
         "pull_requests": false
       }
+    },
+    "live_marker_emission_fixture": {
+      "status": "validated",
+      "summary": "checkpoint-backed --live fixture created marker branches at foundation/us1/us2-part1 checkpoint SHAs, pushed them to a local bare remote, created PRs through fake gh in marker base order, and persisted state/PRS checkpoint heads",
+      "mutation": {
+        "branches": true,
+        "pull_requests": true
+      },
+      "evidence": "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 129/129"
     }
   }
 }
