@@ -355,6 +355,7 @@ Source: quickstart defines single-packet validation evidence.
 - Source feature: \`$(repo_relative_path "$FEATURE_DIR" "$REPO_ROOT")\`
 - Changed files:
 $changed_files_block
+- Traceability: source feature, rendered body path, verification command, and changed-file scope evidence map to this packet.
 - Non-goals: split title generation and multi-PR emission behavior.
 
 ## Known Gaps

@@ -68,10 +68,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Render `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps` in stable order in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
-- [ ] T022 [US2] Preserve the literal `## UAT Runbook` compatibility heading and UAT source evidence in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
-- [ ] T023 [US2] Render source markers, traceability mappings, verification evidence, scope evidence, non-goals, and known-gap language in `speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md`
-- [ ] T024 [US2] Validate canonical body heading order and canonical-block ownership, stale placeholders, unexpanded variables, example text, banned labels, source markers, traceability mappings, verification evidence, scope evidence, and UAT compatibility in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
+- [x] T021 [US2] Render `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps` in stable order in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
+- [x] T022 [US2] Preserve the literal `## UAT Runbook` compatibility heading and UAT source evidence in `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`
+- [x] T023 [US2] Render source markers, traceability mappings, verification evidence, scope evidence, non-goals, and known-gap language in `speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md`
+- [x] T024 [US2] Validate canonical body heading order and canonical-block ownership, stale placeholders, unexpanded variables, example text, banned labels, source markers, traceability mappings, verification evidence, scope evidence, and UAT compatibility in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
 
 **Checkpoint**: US2 is complete when valid rendered bodies pass and missing or stale reviewer evidence blocks before PR creation.
 

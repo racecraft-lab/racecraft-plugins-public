@@ -207,6 +207,18 @@ validate_body_file() {
       "Render Summary, What Changed, Why It Matters, How To Review, How To UAT, Verification, Scope, and Known Gaps in order."
   fi
 
+  if grep -Eq 'Plain-English[[:space:]]+Summary|TODO|\{\{|\}\}|\$\{|<!--[[:space:]]*TODO|Example:' "$body_abs"; then
+    add_failure "body.banned_or_placeholder" "body_file" \
+      "Rendered body contains stale placeholder, hidden TODO, unexpanded variable, or example text." \
+      "Regenerate the body from finalized packet evidence before PR creation."
+  fi
+
+  if ! grep -Fq "Traceability:" "$body_abs"; then
+    add_failure "body.traceability" "body_file" \
+      "Rendered body is missing traceability evidence." \
+      "Render a Traceability line that maps source evidence, verification, and scope to the packet."
+  fi
+
   for marker in \
     "<!-- speckit-pro-editable:summary:start -->" \
     "<!-- speckit-pro-editable:summary:end -->" \
