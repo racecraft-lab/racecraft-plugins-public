@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 5 hatch hardening done (PRSG-010 ✅ PRs #149-#155); Phase 6 retro-migration done (PRSG-011 ✅ PR #132). Active: PRSG-013 reviewability markers in progress as a prerequisite; PRSG-012 reviewer-ready PR packets paused until PRSG-013 lands. Created 2026-06-03; status refreshed 2026-06-12.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 5 hatch hardening done (PRSG-010 ✅ PRs #149-#155); Phase 6 retro-migration done (PRSG-011 ✅ PR #132); Phase 7a reviewability markers done (PRSG-013 ✅ PR #157). Active: PRSG-012 reviewer-ready PR packets ready to resume; PRSG-014 gh-stack integration planned as optional stack-manager hardening. Created 2026-06-03; status refreshed 2026-06-12.
 
 ## Vision
 
@@ -36,6 +36,7 @@ instead of becoming a permanent split-brain repo.
 | Migration / back-compat | **Tiered retro-migration (PRSG-011)** — supersedes the earlier new-specs-only stance. PRSG-001–010 ship new-specs-only; PRSG-011 adds state-keyed backfill: Tier 1 repo-level (eager, version-gated), Tier 0 navigation index-backfill for completed specs, Tier 2 on-demand relocate codemod for the ~8 specs that have a `specs/<NNN>/` dir. In-flight specs (per `.specify/feature.json`) are **frozen**; legacy specs grandfathered by marker-absence |
 | Reviewability sizing behavior | **Non-stopping marker input (PRSG-013)**. Reviewability budget failures never stop autopilot implementation; post-Tasks and final backstop results create/update persisted PR markers at Foundation/user-story boundaries, with hazard collapse or story-internal subdivision as needed |
 | PR packet ownership | **Generator-owned first draft + pre-create validation (PRSG-012)**. Both single-PR and split-PR paths generate explicit titles/bodies from deterministic evidence before `gh pr create`; humans or agents may refine only sanctioned prose fields |
+| Stack manager integration | **Explicit GitHub bases remain canonical; gh-stack is opportunistic (PRSG-014).** `gh pr create/edit --base --head` remains the fallback path. If `gh-stack` is installed and the repo/stack topology is supported, autopilot may use it for stack-aware create/sync/restack while preserving deterministic evidence and fallback behavior |
 
 ## Sequencing principle (non-negotiable)
 
@@ -60,6 +61,7 @@ Phase 6 ─ Retro-migration (PRSG-011)     ← needs only PRSG-001/002/003; can 
    │
 Phase 7a ─ Non-stopping reviewability markers (PRSG-013) ← turns sizing blocks into PR-marker inputs
 Phase 7b ─ Reviewer-ready PR packets (PRSG-012) ← hardens title/body output after scoped PR emission exists
+Phase 7c ─ Optional gh-stack integration (PRSG-014) ← uses gh-stack when supported; explicit gh fallback stays required
 ```
 
 **Visibility expectation (set, don't fix):** the first *visible* drop in reviewable PR
@@ -318,7 +320,7 @@ gated-safety pattern (`--dry-run`/`--apply`, `git show` recovery, no history rew
 
 ---
 
-### PRSG-013 — Non-stopping reviewability markers  · Phase 7a · P1 · 🔄 In Progress
+### PRSG-013 — Non-stopping reviewability markers  · Phase 7a · P1 · ✅ Complete (PR #157)
 > Added 2026-06-12 after PRSG-012 autopilot task generation exposed a product bug:
 > reviewability sizing could stop implementation instead of shaping scoped PR
 > emission. Workflow:
@@ -355,11 +357,11 @@ Foundation setup slice or a user story.
 
 ---
 
-### PRSG-012 — Reviewer-ready PR packet contract  · Phase 7b · P1 · ⏸ Paused pending PRSG-013
+### PRSG-012 — Reviewer-ready PR packet contract  · Phase 7b · P1 · ▶ Ready after PRSG-013
 > Added 2026-06-11 after the PRSG-010 split-PR stack exposed a reviewer-experience
 > regression: PRs were small enough to review, but titles and descriptions were still
 > hard to understand without manual cleanup.
-> Paused 2026-06-12 until PRSG-013 lands; reviewer-ready packet validation should run
+> Ready 2026-06-12 after PRSG-013 landed; reviewer-ready packet validation should run
 > on scoped PR packets created from persisted markers, not a flattened full-spec diff.
 
 **Why:** PRSG-009 made split PRs possible, and SPEC-006a/b added UAT runbook wiring,
@@ -397,12 +399,50 @@ title/body packet deterministic, neutral, and validated before any PR is opened.
   validator/body fixtures, L3 functional eval for PR packet generation, L7 emission
   replay, L8 Codex parity.
 
+---
+
+### PRSG-014 — Optional gh-stack stack manager integration  · Phase 7c · P2 · 🧭 Planned
+> Added 2026-06-12 after PRSG-013 proved explicit branch/base PR emission works,
+> but left stack-manager tooling as a shallow optional inspection path.
+
+**Why:** PRSG-009 and PRSG-013 correctly stack emitted PRs by passing explicit
+`--base`/`--head` branches to `gh pr create`, and `restack.sh` can retarget later
+PRs with `gh pr edit --base`. When a repository already supports `gh-stack`,
+autopilot should use that native stack manager to reduce manual restack/sync burden.
+That integration must remain opportunistic: unsupported repos, missing extensions,
+or ambiguous stack topology must fall back to the deterministic explicit-`gh` path.
+
+- **US1 — Repo support detection.** Add deterministic support detection for
+  `gh-stack`: command availability, usable status output, repo compatibility,
+  branch topology compatibility, and safe dry-run semantics. Persist
+  `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`, and the selected
+  stack manager in emission/restack evidence.
+- **US2 — Stack-aware emission.** When support detection passes, use `gh-stack` for
+  stack creation/sync/submission where the installed version supports it, while
+  preserving the PRSG-013 marker order, branch names, explicit base topology, and
+  PRSG-012 title/body validation if PRSG-012 has landed. If detection fails, emit
+  the same stack through `gh pr create --base --head --body-file`.
+- **US3 — Stack-aware restack.** Prefer `gh-stack` for post-squash restack/sync when
+  it can preserve the recorded PRS manifest and marker order. Fallback remains
+  `restack.sh --apply`, which retargets remaining PRs with `gh pr edit --base`.
+- **US4 — Evidence and safety.** Every gh-stack path must record the command plan,
+  version/support outcome, selected fallback reason, and PR/branch topology. A
+  gh-stack failure must block with recoverable state or fall back only before any
+  irreversible mutation.
+- **Skills/files:** `speckit-autopilot/references/post-implementation.md`,
+  `multi-pr-emission.sh`, `restack.sh`, optional new `detect-stack-manager.sh`,
+  emission/restack schemas, Layer 4 fixtures with fake `gh-stack` and fake `gh`.
+- **Deps:** PRSG-009 (multi-PR emission), PRSG-013 (marker checkpoints and live
+  marker emission). **Budget:** ~300 LOC. **Tests:** L4 supported/unsupported
+  `gh-stack` detection and fallback fixtures, L7 live-safe replay, L8 Codex parity
+  for operator guidance.
+
 ## Which skills/files change (matrix)
 
 | Skill / file | SPECs |
 |--------------|-------|
 | `speckit-scaffold-spec` | 001, 002, 009, 010, 011 |
-| `speckit-autopilot` (phase-execution / post-implementation) | 001, 003, 006, 007, 008, 009, 011, 012, 013 |
+| `speckit-autopilot` (phase-execution / post-implementation) | 001, 003, 006, 007, 008, 009, 011, 012, 013, 014 |
 | `speckit-prd` | 004, 005 |
 | `grill-me` | 005 |
 | `speckit-coach` | 004 |
@@ -410,7 +450,7 @@ title/body packet deterministic, neutral, and validated before any PR is opened.
 | `speckit-upgrade` | 011 |
 | `reviewability-gate.sh` | 001, 006, 010 |
 | roadmap template | 006, 010 |
-| new/extended scripts (`generate-spec-index.sh`, `atomicity-route.sh`, `plan-layers.sh`, `migrate-structure.sh`, `relocate-process-artifacts.sh`, `final-reviewability-backstop.sh`, `multi-pr-emission.sh`, PR packet validator) | 003, 007, 008, 011, 012, 013 |
+| new/extended scripts (`generate-spec-index.sh`, `atomicity-route.sh`, `plan-layers.sh`, `migrate-structure.sh`, `relocate-process-artifacts.sh`, `final-reviewability-backstop.sh`, `multi-pr-emission.sh`, `restack.sh`, PR packet validator, optional stack-manager detector) | 003, 007, 008, 009, 011, 012, 013, 014 |
 | `.gitattributes` (new) · `.specify/structure-version.json` (new) | 001 · 011 |
 
 ## Cross-cutting requirements (apply to every SPEC)
@@ -421,7 +461,7 @@ title/body packet deterministic, neutral, and validated before any PR is opened.
   fixtures** green; run `speckit-skill-reviewer` as a pre-commit gate. This applies to
   every catalog SPEC that touches a mirrored skill (at minimum `speckit-autopilot`,
   and any of `scaffold-spec`/`prd`/`coach`/`status`/`upgrade` that carry a Codex
-  variant) — i.e. **PRSG-001 through PRSG-013**. Add **L8** to those SPECs' test sets
+  variant) — i.e. **PRSG-001 through PRSG-014**. Add **L8** to those SPECs' test sets
   and treat the Codex mirror as part of each SPEC's deliverable, or parity tests fail
   around PRSG-002.
 - **Migration (PRSG-011) supersedes the earlier new-specs-only stance.** PRSG-001–010
@@ -479,6 +519,7 @@ Layers: **L1** structural · **L2** trigger eval (AI) · **L3** functional eval 
 | 011 | speckit-upgrade (behavior); scaffold-spec/autopilot (codemod registration) | `migrate-structure.sh`, `relocate-process-artifacts.sh`, ID-norm helper | L1, **L3**, L4, L8 |
 | 012 | autopilot PR packet generation/validation | `generate-pr-body.sh` extension, PR packet validator, `multi-pr-emission.sh` title/body checks | L4, **L3**, L7, L8 |
 | 013 | autopilot marker planning/non-stopping reviewability handling | marker-plan derivation, guarded `reviewability-gate.sh` handling, final backstop marker consumption, `multi-pr-emission.sh` marker mapping | L4, **L3**, L8 |
+| 014 | autopilot stack manager selection/restack guidance | `detect-stack-manager.sh` or equivalent helper, `multi-pr-emission.sh` gh-stack path, `restack.sh` gh-stack path | L4, L7, L8 |
 
 Rule of thumb visible in the table: SPECs that move logic into scripts (007/008/011)
 carry **L4 + L7**, not AI evals — the scripts-first payoff. SPECs that change skill
