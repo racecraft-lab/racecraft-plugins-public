@@ -28,7 +28,7 @@ Top-level durable marker state stored as `pr_marker_plan` in `autopilot-state.js
 - `kind`: `pr_marker_plan`.
 - `feature_id`: Current feature/spec ID.
 - `status`: `planned`, `checkpointing`, `emission_ready`, `emitted`, `collapsed`, `stale`, or `invalid`.
-- `source_fingerprint`: Fingerprint object tying markers to the current spec, tasks, reviewability finding, and hazard decision.
+- `source_fingerprint`: Fingerprint object tying markers to the current spec, plan-declared file/test scope, tasks, reviewability finding, and hazard decision.
 - `markers`: Ordered array of PR Marker entities.
 - `warnings`: Structured warnings at plan scope.
 - `created_at` / `updated_at`: ISO-8601 timestamps.
@@ -40,8 +40,9 @@ Top-level durable marker state stored as `pr_marker_plan` in `autopilot-state.js
 
 **Validation Rules**
 - `markers[]` order and one-based `review_order` must agree.
-- `source_fingerprint` must match the current feature inputs on resume and final emission.
+- `source_fingerprint` must match the current feature inputs on resume and final emission, including plan-declared file/test scope.
 - Missing, malformed, stale, or fingerprint-mismatched marker plans are correctness stops at final emission.
+- Workflow evidence must mirror the same schema version, source fingerprint, ordered marker IDs, review order, warnings, checkpoints, and emission mappings as `autopilot-state.json`.
 
 ## Entity: PR Marker
 
@@ -51,9 +52,11 @@ One planned review scope.
 - `id`: `foundation`, `us<N>`, `us<N>-part<M>`, or `full-spec`.
 - `review_order`: One-based integer.
 - `kind`: `foundation`, `user_story`, `user_story_part`, or `full_spec`.
+- `parent_marker_id`: `null` for normal markers, or `us<N>` for subdivided `us<N>-part<M>` child markers.
 - `source_boundary`: Source section, user story number, and first/last task IDs.
 - `task_ids`: Ordered task IDs included in this marker.
 - `folded_polish_task_ids`: Ordered Polish task IDs folded into this marker.
+- `folded_polish_target_reason`: Structured explanation of why Polish tasks folded into this marker.
 - `declared_files`: File operations declared for the marker.
 - `declared_tests`: Tests declared for the marker.
 - `reviewability`: Marker-level Reviewability Finding.
@@ -67,8 +70,10 @@ One planned review scope.
 - Marker IDs must be stable for unchanged source boundaries.
 - `foundation` is present only when Foundation tasks exist.
 - One marker exists per user story before safe subdivision.
-- Polish cannot create a cleanup-only marker; it must fold into a non-Polish marker.
+- Safe subdivision replaces the parent `us<N>` marker with ordered `us<N>-part<M>` child markers for scoped emission; the parent marker is not emitted separately.
+- Polish cannot create a cleanup-only marker; it must fold into the nearest preceding eligible non-Polish marker, or the next eligible non-Polish marker when no preceding marker owns the dependency and declared file/test scope.
 - `full-spec` appears only as the hazard-collapsed emission marker.
+- Existing checkpoint and emission evidence can be preserved on resume only when marker ID, source boundary, task IDs, folded Polish task IDs, and source fingerprint still match.
 
 ## Entity: Safe Task Cluster
 
@@ -98,7 +103,10 @@ Workflow/state evidence explaining marker planning and later implementation/emis
 
 **Fields**
 - `marker_id`
+- `schema_version`
+- `source_fingerprint`
 - `source_tasks`
+- `review_order`
 - `reviewability_status`
 - `hazards`
 - `verification`
@@ -112,6 +120,7 @@ Workflow/state evidence explaining marker planning and later implementation/emis
 - Warnings use `code`, `severity`, `message`, `source`, and `details`.
 - Evidence must be renderable into PR packet warnings.
 - Evidence must link back to the marker plan fingerprint.
+- Evidence must not maintain marker IDs, review order, warning objects, or emission mappings that differ from `autopilot-state.json`.
 
 ## Entity: Emission Packet
 

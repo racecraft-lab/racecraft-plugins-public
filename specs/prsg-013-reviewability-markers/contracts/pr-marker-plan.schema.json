@@ -64,12 +64,17 @@
       "additionalProperties": false,
       "required": [
         "feature_spec_sha",
+        "plan_declared_scope_sha",
         "tasks_sha",
         "reviewability_sha",
         "hazard_route_sha"
       ],
       "properties": {
         "feature_spec_sha": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan_declared_scope_sha": {
           "type": "string",
           "minLength": 1
         },
@@ -94,9 +99,11 @@
         "id",
         "review_order",
         "kind",
+        "parent_marker_id",
         "source_boundary",
         "task_ids",
         "folded_polish_task_ids",
+        "folded_polish_target_reason",
         "declared_files",
         "declared_tests",
         "reviewability",
@@ -123,6 +130,13 @@
             "full_spec"
           ]
         },
+        "parent_marker_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^us[0-9]+$"
+        },
         "source_boundary": {
           "$ref": "#/$defs/source_boundary"
         },
@@ -139,6 +153,9 @@
             "type": "string",
             "minLength": 1
           }
+        },
+        "folded_polish_target_reason": {
+          "type": "string"
         },
         "declared_files": {
           "type": "array",

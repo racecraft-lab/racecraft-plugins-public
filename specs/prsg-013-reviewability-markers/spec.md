@@ -75,26 +75,28 @@ As an autopilot maintainer, I can verify marker planning, persistence, implement
 - **FR-002**: Autopilot MUST continue toward implementation when post-task reviewability sizing returns a warning or valid size-only `status=block` JSON, even if the underlying gate command exits nonzero for caller compatibility.
 - **FR-003**: Autopilot MUST convert reviewability sizing findings into a PR marker plan after task generation.
 - **FR-004**: The PR marker plan MUST derive its default boundaries from the task structure's Foundation and user-story sections.
-- **FR-005**: The marker plan MUST include a Foundation marker when shared setup work exists and MUST fold small Polish work into the nearest appropriate non-Polish marker rather than creating a separate cleanup-only PR marker.
-- **FR-006**: The marker plan MUST be persisted as top-level `pr_marker_plan` state in `autopilot-state.json` and workflow evidence without rewriting `tasks.md` as the authoritative marker store.
-- **FR-007**: Each persisted marker MUST identify its stable marker ID, one-based review order, marker kind, source task boundary, task IDs, folded Polish task IDs, intended review scope, declared files, declared tests, reviewability sizing status, hazard notes, subdivision notes, implementation checkpoint, and emission mapping.
-- **FR-008**: If a user-story marker exceeds the reviewability budget, autopilot MUST subdivide within that story when safe task-cluster boundaries exist. A safe task cluster is a contiguous task group inside the same user story with no dependency edge crossing the boundary, complete declared files and tests, no shared mutation or hazard signal, and preserved task order.
+- **FR-005**: The marker plan MUST include a Foundation marker when shared setup work exists and MUST fold small Polish work into the nearest appropriate non-Polish marker rather than creating a separate cleanup-only PR marker. Polish folding MUST prefer the last preceding non-Polish marker whose dependencies and declared file/test scope cover the cleanup; if no preceding marker can own it, it MUST fold into the next eligible non-Polish marker and record the fold target and reason.
+- **FR-006**: The marker plan MUST be persisted as top-level `pr_marker_plan` state in `autopilot-state.json` and workflow evidence without rewriting `tasks.md` as the authoritative marker store. Workflow evidence MUST mirror the same schema version, source fingerprint, ordered marker IDs, review order, statuses, warnings, and evidence paths used by `autopilot-state.json`; human-readable workflow summaries MUST be derived from that mirrored state, not maintained as a parallel source of truth.
+- **FR-007**: Each persisted marker MUST identify its stable marker ID, one-based review order, marker kind, source task boundary, parent marker ID when subdivided, task IDs, folded Polish task IDs, folded Polish target reason, intended review scope, declared files, declared tests, reviewability sizing status, hazard notes, subdivision notes, implementation checkpoint, and emission mapping.
+- **FR-008**: If a user-story marker exceeds the reviewability budget, autopilot MUST subdivide within that story when safe task-cluster boundaries exist. A safe task cluster is a contiguous task group inside the same user story with no dependency edge crossing the boundary, complete declared files and tests, no shared mutation or hazard signal, and preserved task order. Safe subdivision replaces the parent `us<N>` marker in the emitted marker sequence with ordered `us<N>-part<M>` child markers; the parent marker MUST NOT also emit a PR packet unless hazard collapse maps all source markers into `full-spec`.
 - **FR-009**: If an oversized user-story marker has no safe internal boundary, autopilot MUST continue with the original story marker and record an explicit structured reviewability warning.
 - **FR-010**: If hard-atomic or release-sensitive hazards require one PR, autopilot MUST collapse PR emission to one PR while preserving marker evidence and continuing implementation. Hazard collapse is triggered only when the recorded Atomicity Route has `route == single-atomic-PR` or `releasable == false`; `one-navigable-PR` with `releasable == true` MUST NOT trigger hazard collapse by itself.
 - **FR-011**: The Implement phase MUST execute, checkpoint, and record evidence in PR-marker order when markers are available.
 - **FR-012**: The final pre-PR reviewability backstop MUST consume the persisted marker plan for scoped PR emission instead of stopping on full-diff size alone. When the full diff is size-blocked and the current `pr_marker_plan` is valid, the backstop MUST emit a marker-aware proceed outcome named `marker_split`, exit successfully, and pass its evidence to marker-based PR emission.
 - **FR-013**: The stable `reviewability-gate.sh tasks` contract MUST remain compatible unless planning proves that a compatibility-safe mode is necessary; autopilot owns the captured stdout/exit-code interpretation for valid task-mode `status=block` JSON.
-- **FR-014**: Correctness and safety stops MUST remain authoritative for malformed plans, failed verification, invalid PR packets, unsafe output, unusable gate evidence, invalid JSON, unreadable task or plan artifacts, missing reviewability status or mode, stale fingerprints, and malformed marker plans.
-- **FR-015**: Codex mirror guidance MUST remain behaviorally equivalent when mirrored autopilot guidance is touched.
-- **FR-016**: Verification MUST cover marker planning, state persistence, implementation ordering, hazard collapse, marker-based PR emission, and non-stopping reviewability handling.
+- **FR-014**: Correctness and safety stops MUST remain authoritative for malformed plans, failed verification, invalid PR packets, unsafe output, unusable gate evidence, invalid JSON, unreadable task or plan artifacts, missing reviewability status or mode, stale fingerprints, and malformed marker plans. Marker-plan fingerprints MUST cover the current spec, plan-declared file/test scope, task document, reviewability evidence, and hazard decision so plan-scope drift cannot reuse stale marker evidence.
+- **FR-015**: Codex mirror guidance MUST remain behaviorally equivalent when mirrored autopilot guidance is touched. Parity is semantic equivalence, not byte-identical prose: Claude and Codex guidance may use runtime-specific voice and mechanics, but MUST preserve the same non-stopping size-only block rule, the same correctness-stop boundaries, the same final `marker_split` handoff, and the same required evidence fields.
+- **FR-016**: Verification MUST cover marker planning, state persistence, implementation ordering, hazard collapse, marker-based PR emission, non-stopping reviewability handling, and Claude/Codex guidance parity for the non-stopping decision matrix.
+- **FR-017**: Agent-facing autopilot guidance MUST state that a valid, current, size-only reviewability `status=block` is not a manual stop condition. The guidance MUST instruct future agents to continue implementation by persisting marker evidence, checkpointing in marker order, and using marker-based PR emission. It MUST NOT instruct agents to stop, ask the operator to manually re-slice, rewrite task boundaries, or wait for manual re-scope solely because the full feature or final diff is too large.
+- **FR-018**: Agent-facing evidence prompts MUST require future agents to record the proof of every non-stopping size-only block decision: captured reviewability status/mode/exit code/evidence path, the reason it is size-only, marker-plan schema version and evidence path, source-fingerprint validation result, ordered marker IDs, per-marker checkpoint evidence, structured warning objects, final-backstop `marker_split` evidence path, marker-packet validation status, and emitted PR mapping when present.
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: harness/adapter
 - **Secondary surfaces, if any**: docs/process, scheduler/runtime
 - **Projected reviewable LOC**: 700-1,200
-- **Projected production files**: 6-10
-- **Projected total files**: 12-18
+- **Projected production files**: 7-11
+- **Projected total files**: 13-19
 - **Budget result**: warning accepted
 - **Split decision**: Keep PRSG-013 as one prerequisite spec because the behavior spans one product outcome, but require implementation PR markers for Foundation, each user story, and safe in-story subdivisions when a story is oversized.
 - **Exception provenance, if any**: None. This is not a typed reviewability exception; the spec requires marker-based PR emission evidence rather than a single oversized PR.
@@ -104,15 +106,16 @@ As an autopilot maintainer, I can verify marker planning, persistence, implement
 - PR description MUST include: what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes.
 - Traceability MUST map each major requirement or success criterion to changed files and verification evidence.
 - Marker warnings MUST be rendered into PR packet warnings while preserving structured warning evidence in state.
+- Marker-aware PR packets MUST be validated before PR body generation, `gh pr create`, or any equivalent PR side effect; invalid, stale, placeholder-filled, or marker-mismatched packets MUST stop rather than being converted into PR-body warnings.
 - Deferred work MUST name the follow-up spec or issue.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Reviewability Finding**: A parseable sizing result from task or final reviewability checks, including status, reason, mode, scope, metrics, evidence path, and whether the finding is marker-planning input or correctness-blocking evidence.
-- **PR Marker Plan**: The top-level `pr_marker_plan` state for the current feature, including schema version, kind, status, source fingerprint, and an ordered marker array.
-- **PR Marker**: A single review scope derived from Foundation, a user story, a safe in-story subdivision, or a hazard-collapsed full-spec scope. Stable IDs are `foundation`, `us<N>`, `us<N>-part<M>`, or `full-spec` for hazard collapse.
+- **PR Marker Plan**: The top-level `pr_marker_plan` state for the current feature, including schema version, kind, status, source fingerprint, ordered marker array, warnings, and workflow-evidence mirror.
+- **PR Marker**: A single review scope derived from Foundation, a user story, a safe in-story subdivision, or a hazard-collapsed full-spec scope. Stable IDs are `foundation`, `us<N>`, `us<N>-part<M>`, or `full-spec` for hazard collapse; subdivided child markers carry `parent_marker_id=us<N>` and replace the parent marker for scoped emission.
 - **Safe Task Cluster**: A contiguous group of tasks inside one user story that can be reviewed independently because dependencies, declared files, tests, and hazard signals do not cross the boundary.
-- **Marker Evidence**: Workflow and state evidence that explains each marker's source tasks, reviewability status, hazards, verification, final-backstop status, metrics, evidence path, emitted PR mapping, and structured warnings with `code`, `severity`, `message`, `source`, and `details`.
+- **Marker Evidence**: Workflow and state evidence that explains each marker's source tasks, reviewability status, hazards, verification, final-backstop status, metrics, evidence path, emitted PR mapping, and structured warnings with `code`, `severity`, `message`, `source`, and `details`. Workflow evidence and state evidence must use the same marker IDs, one-based review order, source fingerprint, warning objects, and emission mapping values.
 - **Emission Packet**: The final PR creation payload associated with one marker or with one hazard-collapsed PR. A scoped packet carries its marker's final-backstop `marker_split` evidence and warning objects; a hazard-collapsed packet maps back to the original marker IDs and their implementation checkpoints.
 
 ## Success Criteria *(mandatory)*
@@ -126,6 +129,7 @@ As an autopilot maintainer, I can verify marker planning, persistence, implement
 - **SC-005**: In oversized-story fixtures with safe internal boundaries, marker planning creates at least two ordered sub-markers inside that story; without safe boundaries, it records a warning and continues.
 - **SC-006**: Deterministic script-level coverage and one functional eval pass for marker planning, persistence, implementation ordering, emission behavior, and non-stopping reviewability handling.
 - **SC-007**: Correctness-stop fixtures continue to stop in 100% of cases for malformed plans, failed verification, invalid PR packets, unsafe output, unusable gate evidence, stale marker fingerprints, missing marker plans at final emission, or malformed marker state.
+- **SC-008**: Paired Claude and Codex autopilot guidance coverage passes for the same valid size-only block scenario, proving both runtimes continue with marker evidence and neither runtime reintroduces a manual re-slicing stop for size alone.
 
 ## Assumptions
 
@@ -136,5 +140,6 @@ As an autopilot maintainer, I can verify marker planning, persistence, implement
 - A full live dogfood PR emission run is useful evidence but is not required proof for this spec.
 - Existing lower-level reviewability gate callers may continue depending on the current task-mode exit-code contract.
 - Marker ordering is determined by the ordered `markers[]` array and one-based `review_order`, not by JSON object key order.
-- On resume, unchanged marker IDs may preserve implementation and emission evidence, but stale marker plans are replaced when task, reviewability, or hazard-decision fingerprints change.
+- On resume, marker implementation and emission evidence may be preserved only when the marker ID, source boundary, task IDs, folded Polish task IDs, and source fingerprint still match. Any changed source fingerprint, marker membership, order, or fold target clears checkpoint/emission evidence for affected markers and replaces stale marker plans before implementation or PR emission continues.
 - Marker plans are created before implementation; final PR emission does not invent review boundaries if the current marker plan is absent or invalid.
+- Claude and Codex guidance may differ in UI mechanics and wording, but they must expose the same proceed/stop matrix and evidence requirements for PRSG-013 reviewability marker handling.

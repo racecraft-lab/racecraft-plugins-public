@@ -36,6 +36,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [research.md](research.md)
 - [contracts/marker-split-result.schema.json](contracts/marker-split-result.schema.json)
 - [contracts/pr-marker-plan.schema.json](contracts/pr-marker-plan.schema.json)
+- [checklists/api-contracts.md](checklists/api-contracts.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/llm-integration.md](checklists/llm-integration.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/state-management.md](checklists/state-management.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

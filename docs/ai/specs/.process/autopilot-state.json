@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-013-workflow.md",
-  "updated_at": "2026-06-12T02:32:16Z",
-  "active_step": "Phase 4: Checklist - state-management",
+  "updated_at": "2026-06-12T03:34:32Z",
+  "active_step": "Phase 5: Tasks",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -101,15 +101,15 @@
     {"step": "Phase 2: Clarify - Gate Boundary Focus", "status": "completed", "summary": "Accepted parseable reviewability results as marker input, post-G5 block JSON capture/continue, correctness stop boundaries, final backstop marker_split proceed behavior, and final-backstop evidence flow into marker packets."},
     {"step": "Phase 2: Clarify - Gate Boundary Focus Consensus", "status": "completed", "summary": "Round 1 codebase/spec consensus agreed final full-diff size block with a current valid pr_marker_plan should return marker_split and exit 0; invalid marker plans remain correctness stops."},
     {"step": "Phase 3: Plan", "status": "completed", "gate": "G3", "gate_status": "passed", "reviewability_estimate": {"status": "pass", "projected": 0, "declared_files": {"production": 0, "new": 1, "modified": 17, "total_entries": 18}}, "summary": "Created plan, research, data model, quickstart, and 2 JSON contracts; G3 passed with 0 unresolved markers."},
-    {"step": "Phase 4: Checklist - state-management", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - state-management Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
-    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - api-contracts", "status": "pending"},
-    {"step": "Phase 4: Checklist - api-contracts Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - llm-integration", "status": "pending"},
-    {"step": "Phase 4: Checklist - llm-integration Consensus", "status": "pending"},
-    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 4: Checklist - state-management", "status": "completed", "summary": "26 items; 6 gaps remediated; 0 [Gap] markers remaining. Tightened fingerprint scope, resume behavior, workflow/state parity, subdivision parent semantics, and Polish folding rationale."},
+    {"step": "Phase 4: Checklist - state-management Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
+    {"step": "Phase 4: Checklist - error-handling", "status": "completed", "summary": "28 items; 4 gaps remediated; 0 [Gap] markers remaining. Added guarded task-gate capture, allowlisted size-only block handling, closed stop/proceed matrix, and packet validation-before-side-effect rules."},
+    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
+    {"step": "Phase 4: Checklist - api-contracts", "status": "completed", "summary": "33 items; 5 gaps remediated; 0 [Gap] markers remaining. Added marker-aware plan-layers API contracts, repo-relative evidence roots, final marker_split handoff, marker-aware multi-PR packet shape, and schema/fixture assertions."},
+    {"step": "Phase 4: Checklist - api-contracts Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
+    {"step": "Phase 4: Checklist - llm-integration", "status": "completed", "summary": "29 items; 5 gaps remediated; 0 [Gap] markers remaining. Added guidance evidence prompts, marker-order checkpoint evidence, no manual re-slicing stops for size alone, mirror parity coverage, and reportable marker evidence fields."},
+    {"step": "Phase 4: Checklist - llm-integration Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
+    {"step": "Phase 5: Tasks", "status": "in_progress"},
     {"step": "Phase 6: Analyze", "status": "pending"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
@@ -249,5 +249,92 @@
       "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed by plan executor"
     },
     "summary": "Phase 3 Plan produced the PRSG-013 technical plan and marker/final-backstop contract schemas."
+  },
+  "phase4_checklists": {
+    "state-management": {
+      "status": "completed",
+      "checklist_file": "specs/prsg-013-reviewability-markers/checklists/state-management.md",
+      "items": 26,
+      "gaps_found": 6,
+      "gaps_fixed": 6,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-013-reviewability-markers/spec.md",
+        "specs/prsg-013-reviewability-markers/plan.md",
+        "specs/prsg-013-reviewability-markers/data-model.md",
+        "specs/prsg-013-reviewability-markers/contracts/pr-marker-plan.schema.json",
+        "specs/prsg-013-reviewability-markers/checklists/state-management.md"
+      ],
+      "validation": {
+        "gap_scan": "0 [Gap] markers by parent rg fallback",
+        "contracts_jq": "passed",
+        "layer1": "978/978 passed by checklist executor",
+        "default_verify": "2451/2451 passed by checklist executor"
+      },
+      "consensus": "none unresolved",
+      "known_tool_issue": "count-markers.sh fails on zero-gap states with jq invalid JSON text passed to --argjson; fallback rg confirmed zero [Gap] markers."
+    },
+    "error-handling": {
+      "status": "completed",
+      "checklist_file": "specs/prsg-013-reviewability-markers/checklists/error-handling.md",
+      "items": 28,
+      "gaps_found": 4,
+      "gaps_fixed": 4,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-013-reviewability-markers/spec.md",
+        "specs/prsg-013-reviewability-markers/plan.md",
+        "specs/prsg-013-reviewability-markers/checklists/error-handling.md"
+      ],
+      "validation": {
+        "count_markers_all": "{\"gaps\":0,\"clarifications\":0,\"critical\":0,\"high\":0,\"medium\":0,\"low\":0}",
+        "gap_scan": "0 [Gap] markers by parent rg fallback",
+        "layer1": "978/978 passed by checklist executor"
+      },
+      "consensus": "none unresolved",
+      "known_tool_issue": "count-markers.sh gaps still hits the known zero-spec-gap jq edge; all mode and rg confirmed zero gaps."
+    },
+    "api-contracts": {
+      "status": "completed",
+      "checklist_file": "specs/prsg-013-reviewability-markers/checklists/api-contracts.md",
+      "items": 33,
+      "gaps_found": 5,
+      "gaps_fixed": 5,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-013-reviewability-markers/plan.md",
+        "specs/prsg-013-reviewability-markers/checklists/api-contracts.md",
+        "docs/ai/specs/.process/PRSG-013-workflow.md"
+      ],
+      "validation": {
+        "prerequisites": "SPECIFY_FEATURE=013-reviewability-markers .specify/scripts/bash/check-prerequisites.sh --json passed by checklist executor",
+        "gap_scan": "0 [Gap] markers by parent rg fallback",
+        "count_markers_all": "{\"gaps\":0,\"clarifications\":0,\"critical\":0,\"high\":0,\"medium\":0,\"low\":0}",
+        "layer1": "978/978 passed by checklist executor"
+      },
+      "consensus": "none unresolved",
+      "known_tool_issue": "count-markers.sh gaps still hits the known zero-spec-gap jq edge; all mode and rg confirmed zero gaps."
+    },
+    "llm-integration": {
+      "status": "completed",
+      "checklist_file": "specs/prsg-013-reviewability-markers/checklists/llm-integration.md",
+      "items": 29,
+      "gaps_found": 5,
+      "gaps_fixed": 5,
+      "gaps_remaining": 0,
+      "files_modified": [
+        "specs/prsg-013-reviewability-markers/spec.md",
+        "specs/prsg-013-reviewability-markers/plan.md",
+        "specs/prsg-013-reviewability-markers/checklists/llm-integration.md"
+      ],
+      "validation": {
+        "gap_scan": "0 [Gap] markers across spec.md, plan.md, and checklists by checklist executor fallback",
+        "diff_check": "passed by checklist executor",
+        "layer1": "978/978 passed by checklist executor",
+        "validate_gate_g4": "passed: 0 [Gap] markers"
+      },
+      "consensus": "none unresolved",
+      "known_tool_issue": "check-prerequisites.sh --json failed in checklist executor because branch prsg-013-reviewability-markers does not match SpecKit numeric branch pattern; executor used explicit feature dir. count-markers.sh gaps still hits the known zero-spec-gap jq edge."
+    }
   }
 }

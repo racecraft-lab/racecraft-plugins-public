@@ -386,11 +386,11 @@ Focus on Non-stopping reviewability markers requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| state-management | | | |
-| error-handling | | | |
-| api-contracts | | | |
-| llm-integration | | | |
-| **Total** | | | |
+| state-management | 26 | 6 found / 0 remaining | Tightened fingerprint scope, resume behavior, workflow/state parity, subdivision parent semantics, and Polish folding rationale. |
+| error-handling | 28 | 4 found / 0 remaining | Added guarded task-gate capture, allowlisted size-only block handling, closed stop/proceed matrix, and packet validation-before-side-effect rules. |
+| api-contracts | 33 | 5 found / 0 remaining | Added marker-aware script API contracts, repo-relative evidence roots, final `marker_split` handoff, marker-aware multi-PR packet shape, and schema/fixture assertions. |
+| llm-integration | 29 | 5 found / 0 remaining | Added agent guidance evidence prompts, marker-order checkpoint evidence, explicit no manual re-slicing stops for size alone, Claude/Codex mirror parity coverage, and reportable marker evidence fields. |
+| **Total** | 116 | 20 found / 0 remaining | All selected checklist domains complete with zero remaining gaps. |
 
 ### Addressing Gaps
 
