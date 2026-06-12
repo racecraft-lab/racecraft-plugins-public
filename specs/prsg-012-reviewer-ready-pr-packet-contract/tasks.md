@@ -136,9 +136,9 @@
 - [x] T051 Update primary autopilot guidance for packet generation, validation, and PR creation behavior in `speckit-pro/skills/speckit-autopilot/SKILL.md`
 - [x] T052 Update Codex mirrored autopilot guidance without duplicating schema or validator copies in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
 - [x] T053 Update Codex post-implementation reference for packet validation parity in `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md`
-- [ ] T054 Run structural validation through `bash tests/speckit-pro/run-all.sh --layer 1` using `tests/speckit-pro/run-all.sh`
-- [ ] T055 Run Layer 4 script validation through `bash tests/speckit-pro/run-all.sh --layer 4` using `tests/speckit-pro/run-all.sh`
-- [ ] T056 Run default deterministic verification through `bash tests/speckit-pro/run-all.sh` using `tests/speckit-pro/run-all.sh`
+- [x] T054 Run structural validation through `bash tests/speckit-pro/run-all.sh --layer 1` using `tests/speckit-pro/run-all.sh`
+- [x] T055 Run Layer 4 script validation through `bash tests/speckit-pro/run-all.sh --layer 4` using `tests/speckit-pro/run-all.sh`
+- [x] T056 Run default deterministic verification through `bash tests/speckit-pro/run-all.sh` using `tests/speckit-pro/run-all.sh`
 
 **Checkpoint**: Polish is complete when Layer 3, Layer 7, Layer 8, primary guidance, Codex guidance, and deterministic verification all reflect the same packet contract.
 

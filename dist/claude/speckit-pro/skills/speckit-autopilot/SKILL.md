@@ -533,17 +533,15 @@ detailed procedures in `references/post-implementation.md`:
    correctness block writes
    `final_reviewability_gate` state plus a `reslicing_required` packet and
    stops before PR preparation; a gate error writes state and stops without a
-   packet. After a proceed result, build the
-   PR body by running `generate-pr-body.sh` → `.git/speckit-pr-body.md`, fill
-   its **What changed / Why it matters / Anything reviewers should know**
-   sections in plain English (no internal jargon; governance stays in the
-   collapsed details block), and open the PR with
-   `--body-file .git/speckit-pr-body.md`. **Never write the body from scratch
-   or pass an inline `--body`** — the script is what embeds the review packet
-   and the `## UAT Runbook` section (which carries the Self-Review findings).
-   Before `gh pr create`, confirm the body file carries the
-   `speckit-pro-review-packet-source` marker and a `## UAT Runbook`
-   heading; if either is missing, regenerate with the script once. Push,
+   packet. After a proceed result, build the PR packet/body by running
+   `generate-pr-body.sh --packet-output .git/speckit-pr-packet.json` →
+   `.git/speckit-pr-body.md`, refine only sanctioned editable prose fields,
+   then run the shared `validate-pr-packet.sh` against the just-rendered
+   packet. Continue only on a fresh passing validation result. Open the PR
+   with packet fields through
+   `gh pr create --base --head --title --body-file`; never derive the title
+   from the branch, write the body from scratch, pass inline `--body`, reuse
+   stale validation JSON, or repair invalid packets after creation. Push,
    create PR, update workflow file.
    Required evidence prompts: gate status/mode/exit/evidence path,
    fingerprint status, ordered marker IDs, checkpoints, warnings, final
@@ -649,9 +647,13 @@ Always invoke via the full resolved path — never from `.specify/scripts/bash/`
   (verdict in `status`); only a usage/IO error exits non-zero. Wired
   into the Plan phase advisory-and-never-crash (see
   [Phase Execution §Phase 3: Plan](./references/phase-execution.md#phase-3-plan)).
-- `generate-pr-body.sh <repo-root> <feature-dir> <output-file> [diff-range]` —
+- `generate-pr-body.sh [--packet-output <json-file>] <repo-root> <feature-dir> <output-file> [diff-range]` —
   Generate a PR review packet from the host repository PR template when present,
   or from the bundled fallback template
+- `validate-pr-packet.sh <packet-json>` — Validate generated PR packet metadata
+  and rendered body evidence before any `gh pr create`; exit 0 permits PR
+  creation, exit 1 writes packet remediation evidence, and exit 2 reports an
+  input error
 - `generate-uat-skeleton.sh <spec-path> <output-path> [--workflow-file <path>]` —
   Render a deterministic UAT runbook skeleton from `spec.md` (Env Setup formatted
   from the `UAT_PROJECT_COMMANDS` env var). Exit 0/2/1; silent stdout. Run after

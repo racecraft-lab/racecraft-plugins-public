@@ -37,7 +37,7 @@ The design concept is the source of truth for these scoping decisions:
 | Checklist | `/speckit-checklist` | Complete | API contracts, error handling, and reliability checklists complete; G4 passed |
 | Tasks | `/speckit-tasks` | Complete | Generated 56 tasks across Foundation, US1-US4, and Polish; G5 passed |
 | Analyze | `/speckit-analyze` | Complete | 5 findings remediated in `tasks.md`; marker counter clean; G6 passed |
-| Implement | `/speckit-implement` | In Progress | Phase 7 Polish active after completing Foundation and US1-US4 |
+| Implement | `/speckit-implement` | Complete | Foundation, US1-US4, Polish evidence, and deterministic verification complete |
 
 ### Phase Gates
 
@@ -442,7 +442,7 @@ Focus on:
 | Status | soft-skip |
 | Reason | No synthesizer confidence emit found |
 | Threshold | 0.90 |
-| Action | Continue to Phase 7 |
+| Action | Continue to Post-Implementation |
 
 ---
 
@@ -492,21 +492,21 @@ For every deterministic behavior:
 | User Story 2 | T018-T024 | 7/7 | Reviewer body evidence, UAT compatibility, traceability, source/scope/verification checks, and stale body text validation complete |
 | User Story 3 | T025-T034 | 10/10 | Packet validation result paths, no-path input errors, workflow events, and split PR pre-create validation gate complete |
 | User Story 4 | T035-T041 | 7/7 | Safe prose refinement markers, protected fingerprints, comment rejection, and guidance complete |
-| Polish | T042-T056 | 12/15 | L3 evals, L7 replay fixture, L8 parity fixture, primary guidance, Codex mirror guidance, and Codex post-implementation reference updated; final verification gates pending |
+| Polish | T042-T056 | 15/15 | L3 evals, L7 replay fixture, L8 parity fixture, primary guidance, Codex mirror guidance, Codex post-implementation reference, and deterministic verification complete |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes if mirrored docs or contracts changed.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 1` passes if mirrored docs or contracts changed.
 - [x] L3 functional eval evidence is recorded.
 - [x] L7 replay evidence is recorded when split-PR dispatch behavior changes.
 - [x] L8 Codex parity evidence is recorded.
-- [ ] Generated PR body contains required canonical sections and the `## UAT Runbook` compatibility heading.
-- [ ] Every PR creation path uses `gh pr create --base --head --title --body-file`.
-- [ ] Invalid packet fixture blocks before PR creation and writes JSON remediation evidence.
-- [ ] PR title is conventional and public-readable.
+- [x] Generated PR body contains required canonical sections and the `## UAT Runbook` compatibility heading.
+- [x] Every PR creation path uses `gh pr create --base --head --title --body-file`.
+- [x] Invalid packet fixture blocks before PR creation and writes JSON remediation evidence.
+- [x] PR title is conventional and public-readable.
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T19:31:30Z",
-  "active_step": "Phase 7: Polish evidence and parity (T042-T056)",
+  "updated_at": "2026-06-12T19:44:32Z",
+  "active_step": "Post: Doctor Extension Check",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -271,7 +271,7 @@
         "source_boundary": {
           "section": "Phase 6: Polish - Functional Evals, Replay, Parity, and Docs"
         },
-        "checkpoint": "in_progress",
+        "checkpoint": "completed",
         "pr_mapping": "pending",
         "packet_validation": "pending"
       }
@@ -445,12 +445,12 @@
     },
     {
       "step": "Phase 7: Polish evidence and parity (T042-T056)",
-      "status": "in_progress",
-      "summary": "T042-T053 complete. Updated Claude and Codex Layer 3 evals, Layer 7 replay fixture prompt/expected/README/parser evidence, Layer 8 parity workflow/equivalence/tolerance docs, primary autopilot guidance, Codex mirror guidance, and Codex post-implementation reference for generated PR packet validation before PR creation. T054-T056 verification gates remain pending."
+      "status": "completed",
+      "summary": "T042-T056 complete. Updated Claude and Codex Layer 3 evals, Layer 7 replay fixture prompt/expected/README/parser evidence, Layer 8 parity workflow/equivalence/tolerance docs, primary autopilot guidance, Codex mirror guidance, and Codex post-implementation reference for generated PR packet validation before PR creation. Verification passed: Layer 1 978/978, Layer 4 1622/1622, default deterministic suite 2790/2790."
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",

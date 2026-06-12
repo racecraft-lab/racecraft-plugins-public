@@ -234,7 +234,7 @@ topology and PR packet:
 slice 1 base: <integration-base>
 slice N base: <previous-slice-branch>
 marker-aware live head: <recorded marker checkpoint commit>
-gh pr create --base <base> --head <head> --title <packet-title> --body-file <body-file>
+gh pr create --base <base> --head <head> --body-file <body-file> --title <packet-title>
 ```
 
 Each slice must pass or record scoped verification before PR creation. A failing

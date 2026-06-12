@@ -31,8 +31,8 @@ in order; do not collapse or defer.
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
 | 15 | Cleanup | cleanup ext | `$speckit-cleanup` |
 | 16 | Final Reviewability Backstop | (none) | `final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> ...` |
-| 17 | PR Body Generation | final backstop proceeded | `generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
-| 18 | PR Creation | final backstop proceeded | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission.sh` for split-PR routes or marker-ready plans |
+| 17 | PR Packet/Body Generation | final backstop proceeded | `generate-pr-body.sh --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
+| 18 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission.sh` for split-PR routes or marker-ready plans |
 | 19 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
 | 20 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
 
@@ -117,7 +117,8 @@ Before creating or updating PRs after G7, the parent session runs:
 
 ```text
 skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<feature>/.process/final-reviewability/gate-state.json --packet-output specs/<feature>/.process/final-reviewability/reslicing-packet.json ...
-skills/speckit-autopilot/scripts/generate-pr-body.sh "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
+skills/speckit-autopilot/scripts/generate-pr-body.sh --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
+skills/speckit-autopilot/scripts/validate-pr-packet.sh .git/speckit-pr-packet.json
 ```
 
 `final-reviewability-backstop.sh` is the mandatory stop-before-PR boundary.
@@ -140,27 +141,22 @@ fingerprint status, ordered marker IDs, checkpoints, warnings, final
 marker_split or marker-plan-ready handoff, packet validation, and PR mappings
 before PR side effects. All evidence paths must be repo-relative.
 
-`generate-pr-body.sh` uses the host repository's pull request template if it
-exists, preserves unknown host-required sections, appends missing review-packet
-sections, and falls back to the bundled template when the host has none. Use
-`gh pr create --body-file .git/speckit-pr-body.md`, not an inline placeholder.
+`generate-pr-body.sh --packet-output` uses the host repository's pull request
+template if it exists, preserves unknown host-required sections, appends
+missing review-packet sections, and falls back to the bundled template when the
+host has none. It writes packet-owned metadata for target base/head, generated
+conventional title, rendered body path, shared schema reference, validation
+result path, editable fields, scope, verification, and UAT evidence.
 
-**Non-blocking self-check before `gh pr create`:** confirm
-`.git/speckit-pr-body.md` carries the `speckit-pro-review-packet-source`
-marker comment AND a `## UAT Runbook` heading. If either is missing, the body
-was hand-written or is stale — re-run `generate-pr-body.sh` once. NEVER open
-the PR with a body written from scratch or an inline `--body`; the body MUST be
-the generator output. If the marker is still absent after the re-run, log a loud
-warning to the workflow log and proceed (fail-open — this never blocks PR
-creation).
+**Refine only sanctioned prose fields — write for a non-expert public reader.**
+The generator emits exact full-line editable marker pairs for `summary`,
+`what_changed`, and `why_it_matters`. Edit only the prose between these marker
+pairs. The shared validator elides those three regions before checking the
+protected-body fingerprint, so sanctioned prose edits pass while changes to
+generated source markers, UAT content, traceability, scope, verification
+evidence, known gaps, headings, or unknown HTML comments fail.
 
-**Fill the body in plain English — write for a non-expert public reader.** The
-generator emits the structure with placeholder comments. Edit
-`.git/speckit-pr-body.md` in place to replace the `<!-- ... -->` comments under
-**What changed**, **Why it matters**, and **Anything reviewers should know** with
-real content from `spec.md`, `plan.md`, and the diff. This is the ONE sanctioned
-edit of the generated body — everything below stays as generated. Style rules
-(the PR page is the public face of the plugin):
+Style rules:
 
 - **Lead with what the change does, in human terms.** A reader who has never
   seen this repo should understand it at a glance.
@@ -170,10 +166,31 @@ edit of the generated body — everything below stays as generated. Style rules
 - **Keep governance terse and collapsed.** Do NOT promote the
   `<details>Reviewer checklist &amp; scope details</details>` block to top-level
   headings, and do NOT pad it.
-- **Do not touch the `## UAT Runbook` section or the
-  `speckit-pro-review-packet-source` marker** — leave both exactly as generated.
-- Omit **Anything reviewers should know** entirely if there is nothing real to
-  say. An empty section is worse than no section.
+- **Do not touch protected generated sections** such as `How To Review`,
+  `How To UAT`, `Verification`, `Scope`, `Known Gaps`, `## UAT Runbook`, or
+  the `speckit-pro-review-packet-source` marker.
+- Do not add template comments, hidden TODOs, or ad hoc HTML comments; they
+  are treated as stale generated-body content and block PR creation.
+
+Validate the current packet before any single-PR create attempt. Continue only
+when this just-run `validate-pr-packet.sh` invocation exits 0 and writes a
+matching `status: "passed"` result to the packet's current
+`validation_result_path`. Never treat a pre-existing validation JSON file as
+authorization to create a PR; stale passed or failed records are evidence only
+until the current packet is validated again. Validation failure exits 1,
+writes packet-specific remediation JSON, appends workflow evidence, and blocks
+before PR creation. Input error exits 2 and must also stop before PR creation.
+
+Create the single PR from packet fields, never from branch-derived title text
+or hand-written body content:
+
+```bash
+gh pr create \
+  --base "$(jq -r '.target.base_branch' .git/speckit-pr-packet.json)" \
+  --head "$(jq -r '.target.head_branch' .git/speckit-pr-packet.json)" \
+  --title "$(jq -r '.generated_title.value' .git/speckit-pr-packet.json)" \
+  --body-file "$(jq -r '.body_file' .git/speckit-pr-packet.json)"
+```
 
 ## Multi-PR Emission Workflow
 
@@ -217,13 +234,16 @@ topology and PR packet:
 slice 1 base: <integration-base>
 slice N base: <previous-slice-branch>
 marker-aware live head: <recorded marker checkpoint commit>
-gh pr create --base <base> --head <head> --body-file <body-file>
+gh pr create --base <base> --head <head> --body-file <body-file> --title <packet-title>
 ```
 
 Each slice must pass or record scoped verification before PR creation. A failing
 required scoped command must stop before `gh pr create`, record the failed
 command, exit status, evidence path, stderr/stdout tail, and keep
-`next_slice_id` on the blocked slice. A later failed slice must not rewind,
+`next_slice_id` on the blocked slice. Each generated slice packet must also
+pass the shared `validate-pr-packet.sh` before `gh pr create`; a validation
+failure writes packet remediation evidence and blocks on the same slice without
+opening or repairing a PR. A later failed slice must not rewind,
 invalidate, or mark earlier opened slice PRs as blocked.
 
 After each successful slice PR, persist reviewer and resume surfaces before the
