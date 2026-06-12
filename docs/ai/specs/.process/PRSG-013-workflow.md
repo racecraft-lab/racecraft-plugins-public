@@ -47,8 +47,8 @@ captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | 3 user stories, 16 FRs, 9 acceptance scenarios, G1 passed |
+| Clarify | `/speckit-clarify` | 🔄 In Progress | Marker Schema Focus active |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -86,7 +86,17 @@ Each phase requires **human review and approval** before proceeding:
 | Test Coverage Before Merge | PRSG-013 requires deterministic L4 coverage and L3 functional proof of the autopilot no-stop behavior. | Targeted L4 tests, L3 functional eval evidence, then `bash tests/speckit-pro/run-all.sh` |
 | KISS, Simplicity & YAGNI | Keep marker storage and subdivision logic explicit; avoid a new abstraction layer unless the plan proves it removes real complexity. | Plan Complexity Tracking plus code review |
 
-**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+**Constitution Check:** ✅ Verified
+
+### Autopilot Preflight Evidence
+
+| Check | Result | Notes |
+|-------|--------|-------|
+| Archive Sweep | ✅ Dry-run complete | Current target `specs/prsg-013-reviewability-markers` excluded; no cleanup applied. |
+| Reviewability setup gate | ✅ Passed | `reviewability-gate.sh setup docs/ai/specs/.process/PRSG-013-workflow.md` returned `status=pass`. |
+| Layer 1 baseline | ✅ Passed | `bash tests/speckit-pro/run-all.sh --layer 1` returned `978/978 passed`. |
+| Confidence gate mode | ✅ Advisory | Resolved by `resolve-confidence-mode.sh`. |
+| Installed agents | ✅ Available | Required SpecKit Pro Codex agents found in `~/.codex/agents`. |
 
 ---
 
@@ -169,13 +179,15 @@ need predictable PR boundaries without manual re-slicing.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Fill after Specify |
-| User Stories | Expect 3 core stories: non-stopping gates, durable markers, marker-ordered emission |
-| Acceptance Criteria | Seed from the success criteria above |
+| Functional Requirements | 16 |
+| User Stories | 3 core stories: non-stopping gates, durable markers, marker-ordered emission |
+| Acceptance Criteria | 9 acceptance scenarios; 7 measurable success criteria |
+| G1 Gate | ✅ Passed: `spec.md` exists with 0 `[NEEDS CLARIFICATION]` markers |
 
 ### Files Generated
 
-- [ ] `specs/prsg-013-reviewability-markers/spec.md`
+- [x] `specs/prsg-013-reviewability-markers/spec.md`
+- [x] `specs/prsg-013-reviewability-markers/checklists/requirements.md`
 
 ### SpecKit Traceability Markers
 

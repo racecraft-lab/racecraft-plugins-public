@@ -1,18 +1,18 @@
 {
-  "workflow_file": "docs/ai/specs/.process/PRSG-010-workflow.md",
-  "updated_at": "2026-06-11T22:13:51Z",
-  "active_step": "Archive Cleanup Complete",
+  "workflow_file": "docs/ai/specs/.process/PRSG-013-workflow.md",
+  "updated_at": "2026-06-12T01:52:02Z",
+  "active_step": "Phase 2: Clarify - Marker Schema Focus",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
     "note": "Autopilot was invoked in the main Codex session. Installed SpecKit Pro subagents are available through the Codex runtime at gpt-5.5 with xhigh reasoning."
   },
   "preflight": {
-    "branch": "prsg-010-harden-the-hatch",
+    "branch": "prsg-013-reviewability-markers",
     "is_worktree": true,
     "on_feature_branch": false,
-    "spec_directory": "specs/prsg-010-harden-the-hatch",
-    "workflow_branch": "prsg-010-harden-the-hatch",
+    "spec_directory": "specs/prsg-013-reviewability-markers",
+    "workflow_branch": "prsg-013-reviewability-markers",
     "confidence_gate_mode": "advisory",
     "project_commands": {
       "BUILD": "N/A",
@@ -45,7 +45,7 @@
     },
     "constitution_validation": {
       "status": "passed",
-      "note": "Baseline Layer 1 passed 915/915 and Layer 4 passed 1195/1195 before Phase 1."
+      "note": "Reviewability setup gate passed and Layer 1 structural validation passed 978/978 before Phase 1."
     },
     "agent_availability": {
       "phase-executor": "user",
@@ -69,867 +69,85 @@
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "apply-cleanup",
-    "safeToApplyCleanup": true,
-    "excludedCurrentSpec": null,
+    "cleanup_mode": "dry-run",
+    "safeToApplyCleanup": false,
+    "excludedCurrentSpec": "specs/prsg-013-reviewability-markers",
     "eligible_previous_specs": [
-      "specs/prsg-010-harden-the-hatch"
+      "specs/prsg-002-moc-templates",
+      "specs/prsg-003-spec-index",
+      "specs/prsg-004-roadmap-moc-home-note",
+      "specs/prsg-006-reviewability-budget",
+      "specs/006a-uat-skeleton",
+      "specs/004-integration-verification"
     ],
-    "cleanup_applied": [
-      "specs/prsg-010-harden-the-hatch"
+    "cleanup_applied": [],
+    "warnings": [
+      "Worktree is dirty before cleanup because autopilot-state.json is being updated for this run.",
+      "Active branch is prsg-013-reviewability-markers, not the safe cleanup base main.",
+      "--apply-cleanup was not supplied.",
+      "Current target spec was excluded.",
+      "PRSG-005 has implementation evidence but no local PR/merge evidence found."
     ],
-    "note": "Post-merge PRSG-010 archive cleanup recorded project-memory artifacts and removed the active spec folder after PRs #149-#155 merged and PRSG-010 contracts were preserved under speckit-pro/skills/speckit-autopilot/contracts/."
+    "note": "Archive extension archive v1.1.0 is installed. Discovery completed as dry-run evidence only; no files were deleted, moved, or edited by Archive Sweep."
   },
   "plan": [
-    {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed",
-      "summary": "Preflight passed; confidence gate mode advisory; baseline Layer 1 915/915 and Layer 4 1195/1195 passed."
-    },
-    {
-      "step": "Phase 1: Specify",
-      "status": "completed",
-      "gate": "G1",
-      "gate_status": "passed",
-      "summary": "Created spec.md with 23 FRs, 3 user stories, 9 acceptance scenarios, 8 success criteria, and 0 NEEDS CLARIFICATION markers."
-    },
-    {
-      "step": "Phase 2: Clarify - Backstop and re-slicing packet",
-      "status": "completed",
-      "summary": "Accepted final gate outcome matrix, stop-before-any-emission rule, top-level final_reviewability_gate state, JSON re-slicing packet fields, and consensus-backed exception provenance rule."
-    },
-    {
-      "step": "Phase 2: Clarify - Backstop and re-slicing packet Consensus",
-      "status": "completed",
-      "summary": "Round 1 codebase/spec consensus accepted exact branch-added Markdown pragmas in non-generated review-visible CONTRACT artifacts only, with accepted and rejected provenance recorded."
-    },
-    {
-      "step": "Phase 2: Clarify - O5 parent/child schema and status rollup",
-      "status": "completed",
-      "summary": "Accepted o5-parent-manifest.json as CONTRACT data, PRSG-010A/prsg-010a-* child naming, curated child MOC body links, independent child scaffolds, and computed read-only status rollup."
-    },
-    {
-      "step": "Phase 2: Clarify - O5 parent/child schema and status rollup Consensus",
-      "status": "completed",
-      "summary": "Round 1 codebase/spec consensus accepted the manifest-first, flat-child, read-only rollup architecture with schema caveats for root JSON CONTRACT protection and child-state mapping."
-    },
-    {
-      "step": "Phase 2: Clarify - High-confidence contextual probes",
-      "status": "completed",
-      "summary": "Accepted high-confidence flag, release-cadence, and branch-by-abstraction thresholds; weak evidence remains hint-only; router schema stays flat and extends existing enums while closing hints[]."
-    },
-    {
-      "step": "Phase 2: Clarify - High-confidence contextual probes Consensus",
-      "status": "completed",
-      "gate": "G2",
-      "gate_status": "passed",
-      "summary": "Round 1 codebase/spec/domain consensus accepted guarded-cutover, release-held cutover, and production routing schema vocabulary decisions."
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed",
-      "gate": "G3",
-      "gate_status": "passed",
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 0,
-        "declared_files": {
-          "production": 0,
-          "new": 14,
-          "modified": 16,
-          "total_entries": 30
-        },
-        "note": "Current estimator does not count plugin shell paths as production LOC; plan still records split required from the spec budget."
-      },
-      "summary": "Created plan, research, data model, quickstart, and 4 JSON contracts; Analyze later corrected split order to PRSG-010A final hatch, PRSG-010B contextual router, PRSG-010C O5, PRSG-010D docs/parity/polish."
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed",
-      "summary": "26 items; 6 gaps remediated; 0 [Gap] markers remaining. Tightened final gate state, re-slicing packet, exception state, PR creation stop, and weak probe fallback evidence."
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "completed",
-      "summary": "Executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 4: Checklist - data-integrity",
-      "status": "completed",
-      "summary": "24 items; 5 gaps remediated; 0 [Gap] markers remaining. Tightened O5 branch/path equality, rollup completeness, generated MOC ownership, and router fixture schema validation."
-    },
-    {
-      "step": "Phase 4: Checklist - data-integrity Consensus",
-      "status": "completed",
-      "summary": "Checklist executor stalled after generating the checklist; parent remediated explicit gaps locally and no unresolved consensus items remained."
-    },
-    {
-      "step": "Phase 4: Checklist - developer-experience",
-      "status": "completed",
-      "summary": "27 items; 6 gaps remediated; 0 [Gap] markers remaining. Tightened operator re-slicing steps, O5 default-boundary guidance, and non-boilerplate exception education."
-    },
-    {
-      "step": "Phase 4: Checklist - developer-experience Consensus",
-      "status": "completed",
-      "summary": "Executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 4: Checklist - backward-compatibility",
-      "status": "completed",
-      "summary": "24 items; 4 gaps remediated; 0 [Gap] markers remaining. Tightened flat spec discovery, typed exception continuity, PRSG-007/008/009 compatibility, and Claude/Codex mirror parity evidence."
-    },
-    {
-      "step": "Phase 4: Checklist - backward-compatibility Consensus",
-      "status": "completed",
-      "summary": "Executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed",
-      "gate": "G5",
-      "gate_status": "passed",
-      "task_count": 57,
-      "summary": "Generated tasks.md with 57 tasks across setup, foundational, PRSG-010A, PRSG-010B, PRSG-010C, and PRSG-010D; G5 passed with 0 markers."
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed",
-      "gate": "G6",
-      "gate_status": "passed",
-      "findings": {
-        "critical": 0,
-        "high": 1,
-        "medium": 1,
-        "low": 1,
-        "remaining": 0
-      },
-      "summary": "Remediated split-stack order drift, reviewability/file-operation drift, and workflow metadata drift; G6 passed with 0 CRITICAL/HIGH findings remaining."
-    },
-    {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "summary": "Analyze returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "summary": "Confidence gate returned NO_DATA in advisory mode with recommended action soft_skip; atomicity route returned one-navigable-PR, releasable true, signal change-shape:modify-heavy, and advisory contextual hints."
-    },
-    {
-      "step": "Phase 7: Implement - Split stack",
-      "status": "completed",
-      "summary": "Foundation plus PRSG-010A final hatch, PRSG-010B contextual router probes, PRSG-010C O5 manifest/status, and PRSG-010D docs/parity/polish are complete."
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "skipped: doctor not installed"
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "completed",
-      "summary": "After rebasing onto origin/main, validated JSON contracts and parity fixture data, spec-index freshness, diff hygiene, Layer 8 dry-run 3/3, Layer 1 978/978, Layer 4 1283/1283, and default deterministic suite 2451/2451."
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed",
-      "summary": "Confirmed T001-T057 are checked complete in tasks.md after PRSG-010D polish."
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "skipped: review not installed"
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "completed",
-      "summary": "Default deterministic verification passed: bash tests/speckit-pro/run-all.sh -> 2451/2451."
-    },
-    {
-      "step": "Post: Cleanup",
-      "status": "skipped: cleanup not installed"
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "completed",
-      "summary": "Initial cumulative and PRSG-010C boundaries were too broad, so publish stack was resliced into foundation, A-core, A-guidance, B, C1, C2, and D. All publish boundaries now return status=warn pass=true with no blockers."
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "completed",
-      "summary": "PRSG-010 split PRs were reviewed and merged as PRs #149-#155."
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "skipped",
-      "summary": "No separate UAT runbook artifact was generated; verification evidence is captured in the workflow, merged PRs, and archive report."
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "completed",
-      "summary": "Resliced publish stack created PRs #149-#155: foundation, A-core, A-guidance, B contextual router, C1 O5 topology, C2 O5 guidance, and D parity/polish."
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "completed",
-      "summary": "PRSG-010 publish stack merged into main through PRs #149-#155."
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "completed",
-      "summary": "Review comments and merge conflicts were resolved before all PRSG-010 slice PRs merged."
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "skipped",
-      "summary": "No separate retrospective artifact was generated before archive; this post-merge archive report records provenance, recovery, and cleanup evidence."
-    },
-    {
-      "step": "Post: Archive Cleanup",
-      "status": "completed",
-      "summary": "PRSG-010 archived to project memory and active spec folder removed after PRs #149-#155 merged."
-    }
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed", "summary": "Archive extension installed; dry-run discovery completed; current target excluded; no cleanup applied."},
+    {"step": "Phase 0: Prerequisites", "status": "completed", "summary": "Preflight passed; confidence gate mode advisory; reviewability setup gate passed; Layer 1 structural validation passed 978/978."},
+    {"step": "Phase 1: Specify", "status": "completed", "gate": "G1", "gate_status": "passed", "summary": "Created spec.md with 3 user stories, 16 functional requirements, 9 acceptance scenarios, and 0 NEEDS CLARIFICATION markers."},
+    {"step": "Phase 2: Clarify - Marker Schema Focus", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - Marker Schema Focus Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Gate Boundary Focus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Gate Boundary Focus Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - state-management", "status": "pending"},
+    {"step": "Phase 4: Checklist - state-management Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
+    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - api-contracts", "status": "pending"},
+    {"step": "Phase 4: Checklist - api-contracts Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - llm-integration", "status": "pending"},
+    {"step": "Phase 4: Checklist - llm-integration Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Cleanup", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ],
   "phase1_specify": {
     "gate": "G1",
     "gate_status": "passed",
-    "spec_file": "specs/prsg-010-harden-the-hatch/spec.md",
-    "quality_checklist": "specs/prsg-010-harden-the-hatch/checklists/requirements.md",
-    "functional_requirements": 23,
+    "spec_file": "specs/prsg-013-reviewability-markers/spec.md",
+    "quality_checklist": "specs/prsg-013-reviewability-markers/checklists/requirements.md",
+    "functional_requirements": 16,
     "user_stories": 3,
     "acceptance_scenarios": 9,
-    "success_criteria": 8,
+    "success_criteria": 7,
     "needs_clarification_markers": 0,
     "validation": {
       "validate_gate_g1": "passed",
-      "marker_scan": "0 NEEDS CLARIFICATION, 0 Gap, 0 CRITICAL in spec.md",
-      "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 915/915 passed",
-      "quality_checklist": "all items checked"
+      "marker_scan": "0 NEEDS CLARIFICATION markers in spec.md; checklist reference matched only quality-checklist wording.",
+      "quality_checklist": "16/16 checked"
     },
-    "summary": "Phase 1 Specify generated the PRSG-010 feature spec and completed quality validation."
-  },
-  "clarify_results": [
-    {
-      "session": "Backstop and re-slicing packet",
-      "questions": 5,
-      "status": "completed",
-      "outcomes": [
-        "Final diff-gate matrix is pass/warn/exception proceed, block/exit 1 without honored exception stops with re-slicing, and exit 2 stops as gate error without re-slicing.",
-        "The unexcepted block path stops immediately after recording state and packet, before PR body generation, single PR creation, or multi-PR emission.",
-        "Blocked state is recorded in a top-level final_reviewability_gate object and downstream PR steps are not treated as started.",
-        "The re-slicing packet is a JSON contract with gate evidence, exception evidence, PRSG-007/008/009 recovery guidance, suggested slice boundaries, and resume instructions.",
-        "Operator-owned typed exceptions must be exact branch-added Markdown pragmas in committed, review-visible, non-generated CONTRACT artifacts."
-      ]
-    },
-    {
-      "session": "O5 parent/child schema and status rollup",
-      "questions": 5,
-      "status": "completed",
-      "outcomes": [
-        "The O5 parent manifest lives at specs/<parent-branch>/o5-parent-manifest.json as review-visible CONTRACT data with schemaVersion 1.",
-        "Child IDs use PRSG-010A-style suffixes with paths and branches like specs/prsg-010a-<slug>; manifest children[] order is authoritative.",
-        "Child MOCs keep up: pointed at the roadmap and add curated body links to parent manifest and shared design concept; retrospective links wait until the target exists.",
-        "O5 parent scaffold does not create child branches or worktrees automatically; each child is scaffolded independently as a flat sibling.",
-        "Status validates topology first and computes read-only rollup in manifest child order, reporting drift against optional declared_rollup_status."
-      ]
-    },
-    {
-      "session": "High-confidence contextual probes",
-      "questions": 5,
-      "status": "completed",
-      "outcomes": [
-        "Flag-system evidence is decisive only with repo-local flag/evaluation evidence plus current guard and test tasks; it emits context:flag-system:guarded-cutover and routes guarded non-hard-atomic cutovers to one-navigable-PR.",
-        "No-flag release-held cutovers emit context:release-cadence:release-held-cutover and route single-atomic-PR without automatically setting releasable:false.",
-        "Branch-by-abstraction may emit only with all in-tree consumers, coexistence behind abstraction, complete migration/contract tasks, and no hard-atomic or releasability risk.",
-        "Weak, stale, conflicting, fixture-only, code-fence-only, or shallow evidence remains route-neutral and hint-only.",
-        "PRSG-010 promotes or adds production routing-decision.schema.json, extends existing PRSG-007 signal enums, and closes hints[] with stable enum tokens."
-      ]
-    }
-  ],
-  "consensus_resolution_log": [
-    {
-      "phase": "Clarify Session 1",
-      "item": "Operator-owned typed exception provenance",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "Accept only exact branch-added Markdown pragmas in committed, review-visible, non-generated CONTRACT artifacts; reject .process, templates, generated zones/boilerplate, PR bodies, commit messages, code fences, and mutable/generated provenance, recording accepted and rejected candidates with path, line, provenance, and reason.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 2",
-      "item": "O5 parent manifest contract",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "Use specs/<parent-branch>/o5-parent-manifest.json as review-visible CONTRACT data with schemaVersion 1, kind o5_parent_manifest, parent metadata, ordered children, shared design concept, nullable retrospective, and optional declared_rollup_status.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 2",
-      "item": "O5 flat child naming and order",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "Use PRSG-010A-style child IDs and specs/prsg-010a-<slug> paths or branches. children[] order is authoritative; depends_on[] may reference only earlier sibling child IDs and invalid topology covers duplicates, unknown refs, later refs, nested paths, and cycles.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 2",
-      "item": "O5 shared MOC links",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "Keep child SPEC-MOC up: pointed at the roadmap. Add curated relative body links outside generated zones to the parent manifest and shared design concept, and add retrospective links only after the target exists.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 2",
-      "item": "O5 status rollup",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec"
-      ],
-      "outcome": "speckit-status validates manifest topology first, computes child states from workflow/MOC/archive evidence in manifest order, applies precedence invalid topology > blocked/failed > in_progress > pending > complete, and reports drift if optional declared_rollup_status disagrees with computed read-only status.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst"
-      ]
-    },
-    {
-      "phase": "Clarify Session 3",
-      "item": "High-confidence flag-system routing",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec",
-        "domain"
-      ],
-      "outcome": "Require repo-local flag/evaluation evidence plus current guard and test tasks; emit context:flag-system:guarded-cutover and route non-hard-atomic guarded cutovers to one-navigable-PR unless proven additive multi-seam evidence still warrants split-PR.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst",
-        "domain-researcher"
-      ]
-    },
-    {
-      "phase": "Clarify Session 3",
-      "item": "No-flag release-cadence routing",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec",
-        "domain"
-      ],
-      "outcome": "Proven no-flag release-held cutovers emit context:release-cadence:release-held-cutover and route single-atomic-PR without automatically setting releasable:false.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst",
-        "domain-researcher"
-      ]
-    },
-    {
-      "phase": "Clarify Session 3",
-      "item": "Router schema vocabulary",
-      "round": 1,
-      "routed_categories": [
-        "codebase",
-        "spec",
-        "domain"
-      ],
-      "outcome": "Keep flat route/releasable/signals/hints/warnings JSON, promote or add production routing-decision.schema.json, extend existing PRSG-007 signal enums with context/strategy tokens, and close hints[] with stable enum tokens for weak/conflicting contextual evidence.",
-      "analysts_used": [
-        "codebase-analyst",
-        "spec-context-analyst",
-        "domain-researcher"
-      ]
-    }
-  ],
-  "phase3_plan": {
-    "gate": "G3",
-    "gate_status": "passed",
-    "artifacts": [
-      "specs/prsg-010-harden-the-hatch/plan.md",
-      "specs/prsg-010-harden-the-hatch/research.md",
-      "specs/prsg-010-harden-the-hatch/data-model.md",
-      "specs/prsg-010-harden-the-hatch/quickstart.md",
-      "specs/prsg-010-harden-the-hatch/contracts/final-reviewability-gate-state.schema.json",
-      "specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json",
-      "specs/prsg-010-harden-the-hatch/contracts/o5-parent-manifest.schema.json",
-      "specs/prsg-010-harden-the-hatch/contracts/routing-decision.schema.json"
+    "planning_carry_forward": [
+      "[spec] Exact persisted marker object schema remains for Plan/contracts.",
+      "[codebase] Exact oversized-story subdivision heuristic remains for Plan fixtures.",
+      "[domain] Hazard-collapse behavior with marker-order checkpoints needs final Plan definition."
     ],
-    "functional_requirements": 23,
-    "declared_file_operations": {
-      "total": 39,
-      "new": 21,
-      "modified": 18
-    },
-    "split_stack": [
-      "PRSG-010A final hatch",
-      "PRSG-010B contextual router",
-      "PRSG-010C O5 manifest/status",
-      "PRSG-010D docs/parity/polish"
-    ],
-    "reviewability_estimate": {
-      "status": "pass",
-      "projected": 0,
-      "note": "Estimator parsed the declared file operations; plugin-path heuristic reports 0 projected production LOC while the spec budget still requires split delivery."
-    },
-    "validation": {
-      "contracts_jq": "passed",
-      "validate_gate_g3": "passed",
-      "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
-      "layer1": "915/915 passed",
-      "layer4": "1195/1195 passed",
-      "default_verify": "2300/2300 passed",
-      "diff_check": "clean"
-    }
-  },
-  "phase5_tasks": {
-    "gate": "G5",
-    "gate_status": "passed",
-    "tasks_file": "specs/prsg-010-harden-the-hatch/tasks.md",
-    "total_tasks": 57,
-    "phases": [
-      "setup",
-      "foundational",
-      "PRSG-010A final hatch",
-      "PRSG-010B contextual router",
-      "PRSG-010C O5",
-      "PRSG-010D docs/parity/polish"
-    ],
-    "validation": {
-      "validate_gate_g5": "passed: 57 tasks found, 0 markers",
-      "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
-      "marker_scan": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
-      "contracts_jq": "passed",
-      "diff_check": "clean",
-      "layer1": "915/915 passed"
-    },
-    "summary": "Tasks are TDD-first, story/slice-aware, and preserve the corrected ordered split-stack delivery."
-  },
-  "phase6_analyze": {
-    "gate": "G6",
-    "gate_status": "passed",
-    "findings": {
-      "critical": 0,
-      "high": 1,
-      "medium": 1,
-      "low": 1,
-      "remaining": 0
-    },
-    "remediations": [
-      "Corrected split-stack order to PRSG-010A final hatch, PRSG-010B contextual router, PRSG-010C O5, PRSG-010D docs/parity/polish.",
-      "Updated projected total files to 39 before slicing and expanded declared file operations by slice.",
-      "Updated workflow metadata and Analyze results to current counts and validation status."
-    ],
-    "validation": {
-      "validate_gate_g6": "passed: 0 CRITICAL/HIGH findings, 0 markers",
-      "count_markers_findings": "0 total findings after remediation",
-      "generate_spec_index_check": "passed",
-      "contracts_jq": "passed",
-      "diff_check": "clean",
-      "layer1": "915/915 passed",
-      "consensus": "none unresolved"
-    }
-  },
-  "phase6_5_confidence_gate": {
-    "status": "completed",
-    "confidence_gate": {
-      "pass": null,
-      "mode": "advisory",
-      "recommended_action": "soft_skip",
-      "reason": "no confidence emit found",
-      "input": "docs/ai/specs/.process/PRSG-010-workflow.md"
-    },
-    "atomicity_route": {
-      "route": "one-navigable-PR",
-      "releasable": true,
-      "signals": [
-        "change-shape:modify-heavy"
-      ],
-      "hints": [
-        "flag-system signal seen (advisory only; TODO deepen in PRSG-010 US3)",
-        "release-cadence signal seen (advisory only; TODO deepen in PRSG-010 US3)",
-        "consumer-locality signal seen (advisory only; TODO deepen in PRSG-010 US3)"
-      ],
-      "warnings": []
-    },
-    "note": "Current pre-implementation atomicity-route output is recorded as classifier evidence; implementation still follows the ordered split stack required by reviewability and Analyze."
-  },
-  "phase7_implementation": {
-    "status": "in_progress",
-    "split_stack": [
-      {
-        "slice": "foundation",
-        "status": "completed",
-        "tasks": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006"
-        ],
-        "summary": "Verified split-stack order, reviewed PRSG-010 contracts, confirmed declared file operations, and preserved constitution script-safety/test obligations."
-      },
-      {
-        "slice": "PRSG-010A final hatch",
-        "status": "completed",
-        "tasks": [
-          "T007",
-          "T008",
-          "T009",
-          "T010",
-          "T011",
-          "T012",
-          "T013",
-          "T014",
-          "T015",
-          "T016",
-          "T017",
-          "T018",
-          "T019",
-          "T020",
-          "T021",
-          "T022",
-          "T023"
-        ],
-        "summary": "Added final-reviewability-backstop.sh, production gate-state and re-slicing schemas, typed-exception provenance enforcement, stop-before-PR guidance, fixtures, and run-all Layer 4 registration.",
-        "files_touched": {
-          "production": [
-            "speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh",
-            "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh",
-            "speckit-pro/skills/speckit-autopilot/contracts/final-reviewability-gate-state.schema.json",
-            "speckit-pro/skills/speckit-autopilot/contracts/reslicing-packet.schema.json",
-            "speckit-pro/skills/speckit-autopilot/SKILL.md",
-            "speckit-pro/skills/speckit-autopilot/references/phase-execution.md",
-            "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
-          ],
-          "mirrors": [
-            "speckit-pro/codex-skills/speckit-autopilot/",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/"
-          ],
-          "tests": [
-            "tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh",
-            "tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh",
-            "tests/speckit-pro/layer4-scripts/fixtures/final-reviewability-backstop/",
-            "tests/speckit-pro/run-all.sh"
-          ]
-        },
-        "validation": {
-          "final_backstop": "bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh -> 31/31 passed",
-          "reviewability_gate": "bash tests/speckit-pro/layer4-scripts/test-reviewability-gate.sh -> 92/92 passed",
-          "bash_n": "bash -n speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh -> passed",
-          "layer4": "bash tests/speckit-pro/run-all.sh --layer 4 -> 1230/1230 passed"
-        }
-      },
-      {
-        "slice": "PRSG-010B contextual router",
-        "status": "completed",
-        "tasks": [
-          "T024",
-          "T025",
-          "T026",
-          "T027",
-          "T028",
-          "T029",
-          "T030",
-          "T031",
-          "T032"
-        ],
-        "summary": "Added high-confidence contextual router fixtures, production routing-decision schema, closed weak/conflict hints, and deterministic flag-system, release-held, consumer-locality, out-of-tree, and branch-by-abstraction routing behavior.",
-        "files_touched": {
-          "production": [
-            "speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
-            "speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json"
-          ],
-          "mirrors": [
-            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/routing-decision.schema.json"
-          ],
-          "tests": [
-            "tests/speckit-pro/layer4-scripts/test-atomicity-route.sh",
-            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-guarded-cutover/",
-            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-release-held/",
-            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-weak-evidence/",
-            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-locality/",
-            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-consumer-out-of-tree/",
-            "tests/speckit-pro/layer4-scripts/fixtures/atomicity-route/context-conflict/"
-          ]
-        },
-        "validation": {
-          "red": "bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh -> 78/109 passed, 31 expected PRSG-010B failures before implementation",
-          "atomicity_route": "bash tests/speckit-pro/layer4-scripts/test-atomicity-route.sh -> 109/109 passed",
-          "plan_layers": "bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh -> 66/66 passed",
-          "multi_pr_emission": "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 81/81 passed"
-        }
-      },
-      {
-        "slice": "PRSG-010C O5 manifest/status",
-        "status": "completed",
-        "tasks": [
-          "T033",
-          "T034",
-          "T035",
-          "T036",
-          "T037",
-          "T038",
-          "T039",
-          "T040",
-          "T041",
-          "T042",
-          "T043",
-          "T044",
-          "T045"
-        ],
-        "summary": "Added O5 parent manifest production schema, topology validation and rollup script, valid/invalid/mixed-state fixtures, flat spec-index scan regression, and scaffold/status O5 fallback plus topology-first rollup guidance across Claude, Codex, and dist mirrors.",
-        "files_touched": {
-          "production": [
-            "speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
-            "speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json",
-            "speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-            "speckit-pro/skills/speckit-status/SKILL.md",
-            "speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md",
-            "speckit-pro/codex-skills/speckit-status/SKILL.md"
-          ],
-          "mirrors": [
-            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
-            "dist/claude/speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json",
-            "dist/claude/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-            "dist/claude/speckit-pro/skills/speckit-status/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
-            "dist/codex/speckit-pro/skills/speckit-autopilot/contracts/o5-parent-manifest.schema.json",
-            "dist/codex/speckit-pro/skills/speckit-scaffold-spec/SKILL.md",
-            "dist/codex/speckit-pro/skills/speckit-status/SKILL.md"
-          ],
-          "tests": [
-            "tests/speckit-pro/layer4-scripts/test-o5-topology.sh",
-            "tests/speckit-pro/layer4-scripts/fixtures/o5-topology/",
-            "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh",
-            "tests/speckit-pro/layer1-structural/fixtures/spec-index/o5-flat-scan/",
-            "tests/speckit-pro/run-all.sh"
-          ]
-        },
-        "validation": {
-          "o5_topology": "bash tests/speckit-pro/layer4-scripts/test-o5-topology.sh -> 25/25 passed",
-          "generate_spec_index": "bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh -> 87/87 passed"
-        }
-      },
-      {
-        "slice": "PRSG-010D docs/parity/polish",
-        "status": "completed",
-        "tasks": [
-          "T046",
-          "T047",
-          "T048",
-          "T049",
-          "T050",
-          "T051",
-          "T052",
-          "T053",
-          "T054",
-          "T055",
-          "T056",
-          "T057"
-        ],
-        "summary": "Added PRSG-010 Layer 8 parity fixture for backstop/O5/routing/template parity, updated roadmap and spec templates to document accepted exception provenance without live generated pragma examples, expanded structural checks for new scripts/contracts/templates, and recorded PR review packet coverage.",
-        "files_touched": {
-          "docs": [
-            "docs/ai/specs/pr-size-governance-technical-roadmap.md",
-            "specs/prsg-010-harden-the-hatch/tasks.md",
-            "docs/ai/specs/.process/PRSG-010-workflow.md"
-          ],
-          "templates": [
-            ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
-            ".specify/templates/spec-template.md"
-          ],
-          "tests": [
-            "tests/speckit-pro/layer1-structural/validate-scripts.sh",
-            "tests/speckit-pro/layer8-parity/03-prsg-010-backstop-o5-routing/"
-          ]
-        },
-        "validation": {
-          "json": "jq empty autopilot-state, PRSG-010 contracts, production contracts, dist contracts, and PRSG-010 Layer 8 parity fixture JSON -> passed",
-          "layer8": "bash tests/speckit-pro/layer8-parity/run-parity-fixtures.sh --dry-run --fixture 03-prsg-010-backstop-o5-routing -> 3/3 passed",
-          "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed after rebase onto origin/main",
-          "layer4": "bash tests/speckit-pro/run-all.sh --layer 4 -> 1283/1283 passed",
-          "default_verify": "bash tests/speckit-pro/run-all.sh -> 2451/2451 passed after rebase onto origin/main",
-          "spec_index": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check . -> current",
-          "diff_check": "git diff --check origin/main...HEAD -> passed",
-          "reviewability_gate": "bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/prsg-010c2-o5-status-guidance..HEAD -> status=warn pass=true total_files=13 blockers=0"
-        }
-      }
-    ]
-  },
-  "post_reviewability": {
-    "status": "completed",
-    "resliced_publish_stack": [
-      {
-        "branch": "prsg-010-foundation",
-        "base": "origin/main",
-        "gate": "warn",
-        "total_files": 21,
-        "blockers": 0
-      },
-      {
-        "branch": "prsg-010a-backstop-core",
-        "base": "prsg-010-foundation",
-        "gate": "warn",
-        "total_files": 21,
-        "blockers": 0
-      },
-      {
-        "branch": "prsg-010a-final-hatch",
-        "base": "prsg-010a-backstop-core",
-        "gate": "warn",
-        "total_files": 17,
-        "blockers": 0
-      },
-      {
-        "branch": "prsg-010b-contextual-router",
-        "base": "prsg-010a-final-hatch",
-        "gate": "warn",
-        "total_files": 16,
-        "blockers": 0
-      },
-      {
-        "branch": "prsg-010c1-o5-topology-core",
-        "base": "prsg-010b-contextual-router",
-        "gate": "warn",
-        "total_files": 23,
-        "blockers": 0
-      },
-      {
-        "branch": "prsg-010c2-o5-status-guidance",
-        "base": "prsg-010c1-o5-topology-core",
-        "gate": "warn",
-        "total_files": 14,
-        "blockers": 0
-      },
-      {
-        "branch": "prsg-010d-parity-polish",
-        "base": "prsg-010c2-o5-status-guidance",
-        "gate": "warn",
-        "total_files": 13,
-        "blockers": 0
-      }
-    ]
-  },
-  "phase4_checklists": {
-    "error-handling": {
-      "status": "completed",
-      "items": 26,
-      "gaps_found": 6,
-      "gaps_remaining": 0,
-      "files_modified": [
-        "specs/prsg-010-harden-the-hatch/spec.md",
-        "specs/prsg-010-harden-the-hatch/plan.md",
-        "specs/prsg-010-harden-the-hatch/data-model.md",
-        "specs/prsg-010-harden-the-hatch/contracts/final-reviewability-gate-state.schema.json",
-        "specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json",
-        "specs/prsg-010-harden-the-hatch/checklists/error-handling.md"
-      ],
-      "validation": {
-        "markers": "0 [Gap] markers by grep fallback after count-markers.sh jq --argjson failure",
-        "contracts_jq": "passed",
-        "layer1": "915/915 passed",
-        "layer4": "1195/1195 passed",
-        "default_verify": "2300/2300 passed",
-        "consensus": "none unresolved"
-      }
-    },
-    "data-integrity": {
-      "status": "completed",
-      "items": 24,
-      "gaps_found": 5,
-      "gaps_remaining": 0,
-      "files_modified": [
-        "specs/prsg-010-harden-the-hatch/spec.md",
-        "specs/prsg-010-harden-the-hatch/plan.md",
-        "specs/prsg-010-harden-the-hatch/data-model.md",
-        "specs/prsg-010-harden-the-hatch/contracts/o5-parent-manifest.schema.json",
-        "specs/prsg-010-harden-the-hatch/checklists/data-integrity.md"
-      ],
-      "validation": {
-        "markers": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
-        "contracts_jq": "passed",
-        "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
-        "diff_check": "clean",
-        "layer1": "915/915 passed",
-        "layer4": "1195/1195 passed",
-        "consensus": "none unresolved"
-      },
-      "note": "The checklist-executor generated the checklist artifact but stalled before remediation; the parent closed the agent and remediated the explicit gaps locally."
-    },
-    "developer-experience": {
-      "status": "completed",
-      "items": 27,
-      "gaps_found": 6,
-      "gaps_remaining": 0,
-      "files_modified": [
-        "specs/prsg-010-harden-the-hatch/spec.md",
-        "specs/prsg-010-harden-the-hatch/plan.md",
-        "specs/prsg-010-harden-the-hatch/data-model.md",
-        "specs/prsg-010-harden-the-hatch/contracts/reslicing-packet.schema.json",
-        "specs/prsg-010-harden-the-hatch/checklists/developer-experience.md"
-      ],
-      "validation": {
-        "markers": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
-        "contracts_jq": "passed",
-        "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
-        "diff_check": "clean",
-        "layer1": "915/915 passed",
-        "layer4": "1195/1195 passed",
-        "default_verify": "2300/2300 passed by checklist executor",
-        "consensus": "none unresolved"
-      }
-    },
-    "backward-compatibility": {
-      "status": "completed",
-      "items": 24,
-      "gaps_found": 4,
-      "gaps_remaining": 0,
-      "files_modified": [
-        "specs/prsg-010-harden-the-hatch/plan.md",
-        "specs/prsg-010-harden-the-hatch/checklists/backward-compatibility.md"
-      ],
-      "validation": {
-        "markers": "0 active [Gap], NEEDS CLARIFICATION, or CRITICAL markers; marker scan matched only gate/checklist wording",
-        "contracts_jq": "passed",
-        "generate_spec_index_check": "passed after regenerating PRSG-010 MOC backlinks",
-        "diff_check": "clean",
-        "layer1": "915/915 passed",
-        "layer4": "1195/1195 passed",
-        "default_verify": "2300/2300 passed by checklist executor",
-        "consensus": "none unresolved"
-      }
-    }
+    "summary": "Phase 1 Specify generated the PRSG-013 feature spec and requirements quality checklist."
   }
 }
