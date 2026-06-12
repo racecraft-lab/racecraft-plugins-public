@@ -1,0 +1,4 @@
+command: tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+gate_type: SCRIPT_UNIT
+exit_status: 0
+reason: PRSG-013 declared marker test mapped to SCRIPT_UNIT
