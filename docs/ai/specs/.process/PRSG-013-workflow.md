@@ -48,8 +48,8 @@ captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | 3 user stories, 16 FRs, 9 acceptance scenarios, G1 passed |
-| Clarify | `/speckit-clarify` | 🔄 In Progress | Marker Schema Focus active |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Clarify | `/speckit-clarify` | ✅ Complete | 3 sessions complete, 2 consensus items resolved, G2 passed |
+| Plan | `/speckit-plan` | 🔄 In Progress | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -233,9 +233,16 @@ Use these markers in spec.md for traceability through later phases:
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
+| 1 | Marker Schema Focus | 5 | Accepted top-level `pr_marker_plan`, stable marker IDs, one-based marker order, mandatory marker fields, Polish folding, and resume fingerprint behavior. |
+| 2 | Subdivision and Hazard Focus | 5 | Accepted safe task-cluster boundaries, no-boundary warning behavior, structured warning fields, marker-order checkpoints during hazard collapse, and the hazard-collapse predicate. |
+| 3 | Gate Boundary Focus | 5 | Accepted parseable reviewability results as marker input, post-G5 block JSON capture/continue, correctness stop boundaries, final backstop `marker_split` proceed behavior, and final-backstop evidence flow into marker packets. |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Hazard-collapse atomicity predicate | [codebase, spec] | 1 | both-agree | Hazard collapse triggers only for `route == single-atomic-PR` or `releasable == false`; `one-navigable-PR` with `releasable == true` does not trigger hazard collapse by itself. | codebase-analyst, spec-context-analyst |
+| 2 | Clarify | Final backstop marker-aware proceed outcome | [codebase, spec] | 1 | both-agree | Full-diff size `block` plus a current valid `pr_marker_plan` returns `marker_split`, exits successfully, and passes evidence to marker-based PR emission; invalid marker state remains a correctness stop. | codebase-analyst, spec-context-analyst |
 
 ---
 

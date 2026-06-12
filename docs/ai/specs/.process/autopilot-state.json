@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-013-workflow.md",
-  "updated_at": "2026-06-12T01:52:02Z",
-  "active_step": "Phase 2: Clarify - Marker Schema Focus",
+  "updated_at": "2026-06-12T02:18:09Z",
+  "active_step": "Phase 3: Plan",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -94,13 +94,13 @@
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed", "summary": "Archive extension installed; dry-run discovery completed; current target excluded; no cleanup applied."},
     {"step": "Phase 0: Prerequisites", "status": "completed", "summary": "Preflight passed; confidence gate mode advisory; reviewability setup gate passed; Layer 1 structural validation passed 978/978."},
     {"step": "Phase 1: Specify", "status": "completed", "gate": "G1", "gate_status": "passed", "summary": "Created spec.md with 3 user stories, 16 functional requirements, 9 acceptance scenarios, and 0 NEEDS CLARIFICATION markers."},
-    {"step": "Phase 2: Clarify - Marker Schema Focus", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Marker Schema Focus Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Gate Boundary Focus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Gate Boundary Focus Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Marker Schema Focus", "status": "completed", "summary": "Accepted top-level pr_marker_plan state, stable marker IDs, one-based marker order, mandatory marker fields, Polish folding, and resume fingerprint behavior."},
+    {"step": "Phase 2: Clarify - Marker Schema Focus Consensus", "status": "completed", "summary": "Clarify executor returned no unresolved consensus items."},
+    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus", "status": "completed", "summary": "Accepted safe task-cluster boundaries, no-boundary warning behavior, structured warning fields, marker-order checkpoints during hazard collapse, and the hazard-collapse predicate."},
+    {"step": "Phase 2: Clarify - Subdivision and Hazard Focus Consensus", "status": "completed", "summary": "Round 1 codebase/spec consensus agreed hazard collapse triggers only for single-atomic-PR or releasable:false, not one-navigable-PR alone."},
+    {"step": "Phase 2: Clarify - Gate Boundary Focus", "status": "completed", "summary": "Accepted parseable reviewability results as marker input, post-G5 block JSON capture/continue, correctness stop boundaries, final backstop marker_split proceed behavior, and final-backstop evidence flow into marker packets."},
+    {"step": "Phase 2: Clarify - Gate Boundary Focus Consensus", "status": "completed", "summary": "Round 1 codebase/spec consensus agreed final full-diff size block with a current valid pr_marker_plan should return marker_split and exit 0; invalid marker plans remain correctness stops."},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - state-management", "status": "pending"},
     {"step": "Phase 4: Checklist - state-management Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
@@ -149,5 +149,76 @@
       "[domain] Hazard-collapse behavior with marker-order checkpoints needs final Plan definition."
     ],
     "summary": "Phase 1 Specify generated the PRSG-013 feature spec and requirements quality checklist."
-  }
+  },
+  "clarify_results": [
+    {
+      "session": "Marker Schema Focus",
+      "questions": 5,
+      "status": "completed",
+      "outcomes": [
+        "Durable marker plan lives as top-level pr_marker_plan state, sibling to layer_plan and multi_pr_emission.",
+        "Stable marker IDs are foundation, us<N>, us<N>-part<M>, and full-spec for hazard collapse; markers[] order plus one-based review_order is authoritative.",
+        "Each marker records source boundary, task IDs, folded Polish task IDs, declared files/tests, reviewability, hazards, subdivision, implementation checkpoint, and emission mapping.",
+        "Foundation is optional, one marker is created per user story, oversized stories may subdivide, and small Polish folds into the nearest non-Polish marker.",
+        "Resume validates a source_fingerprint and replaces stale marker plans while preserving child evidence only for unchanged marker IDs."
+      ],
+      "consensus": "none unresolved"
+    },
+    {
+      "session": "Subdivision and Hazard Focus",
+      "questions": 5,
+      "status": "completed",
+      "outcomes": [
+        "Safe task clusters are contiguous tasks inside one user story with no dependency edge crossing the boundary, complete declared files/tests, no shared mutation or hazard signal, and preserved task order.",
+        "Oversized stories without safe internal boundaries keep the original us<N> marker, continue, and record structured warnings.",
+        "Hazard collapse triggers only when Atomicity Route has route == single-atomic-PR or releasable == false; one-navigable-PR with releasable true is not a hazard-collapse trigger.",
+        "Implementation still follows original marker order under hazard collapse, then emits one full-spec PR mapped back to original marker IDs.",
+        "Marker warnings use structured code/severity/message/source/details evidence and render readable strings into PR packet warnings."
+      ],
+      "consensus": "Round 1 codebase/spec consensus agreed on the hazard-collapse predicate."
+    },
+    {
+      "session": "Gate Boundary Focus",
+      "questions": 5,
+      "status": "completed",
+      "outcomes": [
+        "All parseable reviewability results feed marker planning; only unusable evidence is a correctness stop.",
+        "Post-G5 reviewability-gate tasks exit 1 with valid status=block JSON is captured as marker input and does not stop implementation.",
+        "Final full-diff size block with a current valid pr_marker_plan returns marker_split, exits successfully, and passes evidence into marker-based PR emission.",
+        "Missing, stale, malformed, or fingerprint-mismatched marker plans at final emission remain correctness stops.",
+        "Each marker emission mapping carries final-backstop status, metrics, evidence path, and structured warning objects."
+      ],
+      "consensus": "Round 1 codebase/spec consensus agreed on marker_split proceed behavior."
+    }
+  ],
+  "consensus_resolution_log": [
+    {
+      "phase": "Clarify Session 2",
+      "item": "Hazard-collapse atomicity predicate",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "Hazard collapse triggers only for route == single-atomic-PR or releasable == false; one-navigable-PR with releasable true does not trigger hazard collapse by itself.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    },
+    {
+      "phase": "Clarify Session 3",
+      "item": "Final backstop marker-aware proceed outcome",
+      "round": 1,
+      "routed_categories": [
+        "codebase",
+        "spec"
+      ],
+      "outcome": "When the final backstop sees a full-diff size block and a current valid pr_marker_plan exists, it returns marker_split, exits 0, and passes evidence to marker-based PR emission. Invalid marker state remains a correctness stop.",
+      "analysts_used": [
+        "codebase-analyst",
+        "spec-context-analyst"
+      ]
+    }
+  ]
 }
