@@ -37,7 +37,7 @@ The design concept is the source of truth for these scoping decisions:
 | Checklist | `/speckit-checklist` | Complete | API contracts, error handling, and reliability checklists complete; G4 passed |
 | Tasks | `/speckit-tasks` | Complete | Generated 56 tasks across Foundation, US1-US4, and Polish; G5 passed |
 | Analyze | `/speckit-analyze` | Complete | 5 findings remediated in `tasks.md`; marker counter clean; G6 passed |
-| Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
+| Implement | `/speckit-implement` | In Progress | Phase 7 Foundation starting after advisory confidence soft-skip |
 
 ### Phase Gates
 
@@ -384,10 +384,10 @@ Expected initial route: `one-navigable-PR`, unless Tasks introduces separable ve
 | Exit Code | 1 |
 | Reviewable LOC | 2240 |
 | Production Files | 1 |
-| Total Files | 69 |
+| Total Files | 73 |
 | Primary Surface Count | 5 |
-| Warnings | reviewable LOC 2240 exceeds warn threshold 400; total files 69 exceeds warn threshold 15; primary surfaces 5 exceeds warn threshold 1 |
-| Blockers | reviewable LOC 2240 exceeds block threshold 800; total files 69 exceeds block threshold 25 |
+| Warnings | reviewable LOC 2240 exceeds warn threshold 400; total files 73 exceeds warn threshold 15; primary surfaces 5 exceeds warn threshold 1 |
+| Blockers | reviewable LOC 2240 exceeds block threshold 800; total files 73 exceeds block threshold 25 |
 
 Planned marker order:
 
@@ -431,6 +431,18 @@ Focus on:
 | A5 | LOW | Phase 6 workflow metadata still showed Analyze in progress with an empty Analysis Results table after remediation. | Updated this workflow log to mark Analyze complete, record all findings/resolutions, and align required test evidence with the full packet target/title/body PR creation contract. |
 
 **G6:** pass - 0 CRITICAL findings; 5 findings remediated; deterministic marker counter reports 0 remaining finding markers.
+
+---
+
+## Pre-Implementation Confidence Gate
+
+| Field | Value |
+|-------|-------|
+| Mode | advisory |
+| Status | soft-skip |
+| Reason | No synthesizer confidence emit found |
+| Threshold | 0.90 |
+| Action | Continue to Phase 7 |
 
 ---
 

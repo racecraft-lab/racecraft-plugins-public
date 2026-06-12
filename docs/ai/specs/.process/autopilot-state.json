@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T17:32:39Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-06-12T17:35:54Z",
+  "active_step": "Phase 7: Foundation (T001-T009)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -89,6 +89,16 @@
     "status": "skipped",
     "reason": "atomicity route one-navigable-PR"
   },
+  "confidence_gate": {
+    "mode": "advisory",
+    "status": "soft_skip",
+    "exit_code": 1,
+    "pass": null,
+    "composite": null,
+    "threshold": 0.9,
+    "reason": "no confidence emit found",
+    "recommended_action": "soft_skip"
+  },
   "pr_marker_plan": {
     "schema_version": "1.0",
     "status": "current",
@@ -96,7 +106,7 @@
     "source": "reviewability-gate tasks",
     "feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
     "source_fingerprint": {
-      "head_sha": "73206712cc403dfa354fb86ff9a717cc77015ce4",
+      "head_sha": "95a8d1cace9dac47226acaa650a124bf97cb19f2",
       "spec_sha256": "2868f175a1317a76337610bc3d815dab6ccb3e11ae5ac7eb2441a7118d57ec63",
       "plan_sha256": "555c366e659bc1723e283d2b4d3c42a415950b0fae1b3639ae30f26bdc2f0056",
       "tasks_sha256": "fc29a183e4a6c72a963d30708c361b0ad15a728c942eafcacd6b75421cb8ad74"
@@ -405,11 +415,12 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Advisory confidence gate returned NO_DATA because no synthesizer confidence emit was present; recorded as soft-skip and continued."
     },
     {
       "step": "Phase 7: Foundation (T001-T009)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: US1 generated titles (T010-T017)",
