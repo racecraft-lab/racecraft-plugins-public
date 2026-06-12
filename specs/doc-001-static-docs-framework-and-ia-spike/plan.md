@@ -10,13 +10,13 @@ DOC-001 is a research-only spike that selects the static documentation stack and
 
 ## Technical Context
 
-**Language/Version**: Markdown/MDX research artifacts; recommended future docs shell uses Docusaurus 3.10.x with TypeScript-capable config, but DOC-001 does not add Node project files.
+**Language/Version**: Markdown/MDX research artifacts. Docusaurus official docs were refreshed at version 3.10.1 on 2026-06-12, but DOC-001 records evidence only and does not pin a package version or add Node project files; DOC-002 must refresh current docs before installation.
 
 **Primary Dependencies**: None added by DOC-001. Report-only DOC-002 recommendation: Docusaurus/MDX, React components, GitHub Actions Pages deployment, optional search provider.
 
 **Storage**: N/A. Static docs content only.
 
-**Testing**: Research validation by source evidence review and final diff scope check. Report-only DOC-002 minimum: `pnpm run build` and local preview/serve for the generated static site.
+**Testing**: Research validation by source evidence review and final diff scope check. Report-only DOC-002 command roles: scaffold/setup, dependency install, development preview, production build, local static preview, deployment, and minimum validation. DOC-002 owns actual package scripts after scaffolding; the minimum docs-site validation role is the production build.
 
 **Target Platform**: GitHub Pages from this repository.
 

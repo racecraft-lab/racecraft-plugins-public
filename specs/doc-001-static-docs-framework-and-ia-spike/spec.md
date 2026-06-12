@@ -72,6 +72,8 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 - Candidate support must distinguish built-in, official, community, third-party paid, and unsupported capabilities.
 - Maintenance burden is a scoring penalty and tie-breaker after blockers are satisfied.
 - The repo-native fallback must be evaluated seriously, but selected only if framework candidates are blocked or introduce unacceptable risk for this repository.
+- If DOC-002 finds a hard blocker for Docusaurus GitHub Pages deployment, it must record the blocker and follow the fallback order in the report: Docusaurus configuration fix if feasible, Astro/Starlight, VitePress, then repo-native Markdown fallback.
+- Configuration-only GitHub Pages failures, such as base path, trailing slash, `.nojekyll`, workflow, or package-script naming issues, are not stack-selection failures if Docusaurus still satisfies the hard blockers.
 - Each IA route record must include `route_path`, `route_label`, `diataxis_mode`, optional `secondary_modes`, `target_audience`, `route_purpose`, `source_evidence`, `success_criterion`, `shell_owner_doc`, and `full_content_owner_doc`.
 - The IA skeleton must cover these 11 PRD route labels: Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary.
 - Each route has one primary Diataxis mode from Tutorial, How-to, Reference, or Explanation; mixed routes may name secondary modes when the route purpose requires them.
@@ -80,6 +82,8 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 - DOC-001 may write only `docs/ai/research/interactive-documentation-framework-spike.md` plus normal SpecKit artifacts under `specs/doc-001-static-docs-framework-and-ia-spike/**` and `docs/ai/specs/.process/DOC-001-*`.
 - PRD, roadmap, design concept, README, plugin README, marketplace, generated payload, package, lockfile, site config, prototype component, CI, and plugin behavior files are source inputs or later-spec surfaces, not DOC-001 implementation targets.
 - Package manager, build, and test commands are report-only recommendations in DOC-001; conflicting evidence or hard blockers are recorded in the report with fallback recommendation and no prototype or scope expansion.
+- Package/build/test commands are command roles in DOC-001. DOC-002 owns actual package scripts after scaffolding and must normalize or document any script-name differences.
+- Search availability and package-manager preference are not hard blockers unless they create unacceptable dependency, cost, policy, or maintainership risk.
 
 ### Functional Requirements
 

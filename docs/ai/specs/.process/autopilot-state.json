@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T20:47:00Z",
-  "active_step": "Phase 4: Checklist - documentation-quality",
+  "updated_at": "2026-06-12T21:36:00Z",
+  "active_step": "Phase 5: Tasks",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -155,31 +155,37 @@
     },
     {
       "step": "Phase 4: Checklist - documentation-quality",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added support-class legend, bounded evidence notes, and Docusaurus version-source wording."
     },
     {
       "step": "Phase 4: Checklist - documentation-quality Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - accessibility",
-      "status": "pending"
+      "status": "completed",
+      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added W3C/WAI evidence, accessibility interaction guardrails, and DOC-010 route hardening coverage."
     },
     {
       "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed",
+      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added Docusaurus/GitHub Pages fallback rules, repo-native fallback seriousness, and command-role clarity."
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Checklist executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

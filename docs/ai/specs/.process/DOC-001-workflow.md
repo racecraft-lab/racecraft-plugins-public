@@ -33,8 +33,8 @@ The design concept is the source of truth for these setup decisions:
 | Specify | `/speckit-specify` | Complete | Created spec with 3 user stories, 11 functional requirements, 6 success criteria, and 0 `[NEEDS CLARIFICATION]` markers |
 | Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; G2 passed with 0 clarification markers and no consensus items |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and early research decision record; G3 passed; reviewability estimate passed with 0 projected production LOC |
-| Checklist | `/speckit-checklist` | In Progress | Running documentation-quality checklist first |
-| Tasks | `/speckit-tasks` | Pending | Research-only spike tasks; no site scaffold or package files |
+| Checklist | `/speckit-checklist` | Complete | Completed documentation-quality, accessibility, and error-handling; G4 passed with 0 `[Gap]` markers |
+| Tasks | `/speckit-tasks` | In Progress | Generating research-only spike tasks; no site scaffold or package files |
 | Analyze | `/speckit-analyze` | Pending | Verify no implementation creep and traceability to PRD/roadmap/design concept |
 | Implement | `/speckit-implement` | Pending | Write `docs/ai/research/interactive-documentation-framework-spike.md` |
 
@@ -277,9 +277,9 @@ Focus on DOC-001 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| documentation-quality | Pending | Pending | Pending |
-| accessibility | Pending | Pending | Pending |
-| error-handling | Pending | Pending | Pending |
+| documentation-quality | 20 | 3 found, 3 remediated, 0 remaining | `checklists/documentation-quality.md`; support-class legend, bounded evidence notes, and Docusaurus version-source wording |
+| accessibility | 20 | 3 found, 3 remediated, 0 remaining | `checklists/accessibility.md`; accessibility testing handoff, interaction guardrails, and DOC-010 route hardening coverage |
+| error-handling | 20 | 3 found, 3 remediated, 0 remaining | `checklists/error-handling.md`; Docusaurus/GitHub Pages fallback rules, repo-native fallback seriousness, and command-role clarity |
 
 ---
 

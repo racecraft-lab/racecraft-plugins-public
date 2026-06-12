@@ -27,6 +27,9 @@ roadmap.
 - [plan.md](plan.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
+- [checklists/accessibility.md](checklists/accessibility.md)
+- [checklists/documentation-quality.md](checklists/documentation-quality.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

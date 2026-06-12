@@ -36,6 +36,7 @@ Represents one comparison dimension reviewers need to validate.
 - Hard blockers cannot be unresolved.
 - Current framework/platform claims must include retrieval date.
 - Support class must distinguish official/built-in from community or third-party support.
+- Fallback rules must distinguish configuration failures from true hard blockers.
 
 ## IA Route
 
@@ -84,11 +85,15 @@ Represents the report-only package/build/test command handoff to DOC-002.
 - `build_command`: minimum future build validation command.
 - `preview_command`: future local preview command.
 - `test_command`: minimum future validation command.
+- `deployment_command_or_role`: future GitHub Pages deployment role.
+- `fallback_note`: what DOC-002 should do if the selected command path changes after scaffolding.
 - `scope_note`: reminder that DOC-001 does not execute or create tooling.
 
 **Validation rules**:
 - Commands are report-only in DOC-001.
 - Commands must map to the selected stack.
+- Command roles must distinguish setup, install, development preview, production build, local static preview, minimum validation/test, and deployment.
+- DOC-002 owns actual package scripts after scaffolding.
 - No package file or lockfile may be created in DOC-001.
 
 ## Spike Report
@@ -102,6 +107,7 @@ Represents the final research decision record.
 - `source_evidence`
 - `ia_skeleton`
 - `command_handoff`
+- `fallback_rules`
 - `doc_002_consumption`
 - `scope_boundary`
 - `verification_notes`
@@ -110,4 +116,5 @@ Represents the final research decision record.
 - Must be written to `docs/ai/research/interactive-documentation-framework-spike.md`.
 - Must include acceptance/rejection reasons for every candidate.
 - Must state how DOC-002 consumes the recommendation.
+- Must define what DOC-002 should do if the recommended stack hits a true hard blocker.
 - Must record that DOC-001 did not create implementation scaffolding.

@@ -15,6 +15,7 @@ This guide validates the DOC-001 research spike. It does not build or run a docs
 3. Confirm Docusaurus/MDX, VitePress, Astro/Starlight, and repo-native fallback are all evaluated.
 4. Confirm every non-selected candidate has a rejection or deferral reason.
 5. Confirm current framework/platform claims include retrieval date `2026-06-12`.
+6. Confirm the report defines what DOC-002 should do if Docusaurus hits a true GitHub Pages hard blocker.
 
 **Expected result**: The report recommends Docusaurus/MDX for DOC-002 and records the search tradeoff.
 
@@ -51,9 +52,10 @@ specs/doc-001-static-docs-framework-and-ia-spike/quickstart.md
 
 1. In the research report, find "DOC-002 Consumption".
 2. Confirm it tells DOC-002 to create the Docusaurus shell and not to re-run stack selection unless a new blocker appears.
-3. Confirm package manager and minimum commands are listed as report-only recommendations.
+3. Confirm package manager and command roles are listed as report-only recommendations.
+4. Confirm setup, install, preview, build, minimum validation/test, and deployment roles are separated clearly enough for DOC-002 to define actual package scripts.
 
-**Expected result**: DOC-002 has a concrete stack, route shell, and command baseline.
+**Expected result**: DOC-002 has a concrete stack, route shell, command-role baseline, and fallback rule if a true selected-stack blocker appears.
 
 ## Optional Repository Checks
 
