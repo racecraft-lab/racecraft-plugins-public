@@ -234,7 +234,7 @@
     {
       "step": "Post: Verify Implementation",
       "status": "completed",
-      "summary": "Default deterministic suite passed: bash tests/speckit-pro/run-all.sh -> 2574/2574. jq, bash -n, and git diff --check also passed."
+      "summary": "Default deterministic suite passed: bash tests/speckit-pro/run-all.sh -> 2580/2580. jq, bash -n, and git diff --check also passed."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
@@ -244,12 +244,12 @@
     {
       "step": "Post: Code Review",
       "status": "completed",
-      "summary": "Focused review found no blocking issue in marker planning, final backstop, or marker-emission surfaces. Residual risk: live marker PR branch mutation is not implemented by multi-pr-emission.sh."
+      "summary": "Focused review found no blocking issue in marker planning, final backstop, or marker-emission surfaces. Live marker PR branch mutation is implemented with fail-closed checkpoint SHA guards."
     },
     {
       "step": "Post: Integration Suite",
       "status": "completed",
-      "summary": "Full default deterministic suite passed: 2574/2574. --all was started earlier but live Layer 7 produced no output for several minutes and was not used as completion gate."
+      "summary": "Full default deterministic suite passed: 2580/2580. --all was started earlier but live Layer 7 produced no output for several minutes and was not used as completion gate."
     },
     {
       "step": "Post: Cleanup",
@@ -279,7 +279,7 @@
     {
       "step": "Post: PR Creation",
       "status": "skipped",
-      "summary": "Skipped by safety boundary: final backstop returned marker_split and multi-pr-emission.sh currently validates marker packets with mutation.branches=false and mutation.pull_requests=false. A single all-changes PR was intentionally not opened."
+      "summary": "Skipped by safety boundary: final backstop returned marker_split, live marker emission requires checkpoint SHAs, and the current marker plan lacks checkpoint_sha for foundation. A single all-changes PR was intentionally not opened."
     },
     {
       "step": "Post: Review Remediation",
@@ -289,7 +289,7 @@
     {
       "step": "Post: Retrospective",
       "status": "completed",
-      "summary": "Lessons learned recorded in workflow: marker planning should treat size-only blocks as input, payload-sensitive suites must run sequentially, and live marker PR mutation remains follow-up work."
+      "summary": "Lessons learned recorded in workflow: marker planning should treat size-only blocks as input, payload-sensitive suites must run sequentially, and live marker PR mutation must use recorded checkpoint commit SHAs."
     }
   ],
   "phase1_specify": {
@@ -964,11 +964,11 @@
           "summary": "Marker-aware PR packets, hazard collapse, guidance parity, eval registration, and deterministic validation completed; Polish tasks folded into US3 marker evidence.",
           "validation": [
             "bash -n speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh",
-            "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 116/116",
+            "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh -> 122/122",
             "bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh -> 45/45",
             "bash tests/speckit-pro/run-all.sh --layer 3 -> 0/0 registration evidence",
             "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978",
-            "bash tests/speckit-pro/run-all.sh -> 2574/2574"
+            "bash tests/speckit-pro/run-all.sh -> 2580/2580"
           ]
         },
         "emission_mapping": {
@@ -1054,15 +1054,16 @@
       "targeted_layer4": {
         "plan_layers": "85/85",
         "final_reviewability_backstop": "55/55",
-        "multi_pr_emission": "116/116",
+        "multi_pr_emission": "122/122",
         "reviewability_marker_guidance": "45/45"
       },
       "layer1": "978/978 passed",
-      "default_suite": "2574/2574 passed",
+      "default_suite": "2580/2580 passed",
       "layer3": "0/0 passed; eval files and manual helpers enumerated",
       "all_layers": "started; deterministic layers passed through Layer 5 and live Layer 7 produced no output for several minutes, so run was interrupted and not used as a completion gate",
       "final_reviewability_backstop": "status=proceed outcome=marker_split from committed full-diff block with current marker plan",
-      "marker_emission_dry_run": "4/4 marker-scoped packets validated; branches/pull_requests mutation=false"
+      "marker_emission_dry_run": "4/4 marker-scoped packets validated; branches/pull_requests mutation=false",
+      "marker_emission_live_guard": "input_error before branch/PR mutation: --live requires checkpoint_sha for slice foundation"
     },
     "summary": "Implemented non-stopping reviewability markers across marker planning, final backstop, marker-aware PR emission, guidance parity, and tests."
   },
@@ -1829,7 +1830,7 @@
     },
     "verify_implementation": {
       "status": "completed",
-      "default_suite": "2574/2574 passed",
+      "default_suite": "2580/2580 passed",
       "additional_checks": [
         "jq empty",
         "bash -n touched scripts",
@@ -1849,7 +1850,7 @@
     "code_review": {
       "status": "completed",
       "blocking_findings": 0,
-      "residual_risk": "multi-pr-emission validates marker packets and command capture but does not mutate branches or open PRs itself"
+      "residual_risk": "current PRSG-013 marker evidence predates checkpoint SHA capture, so live marker PR mutation correctly fails closed until marker checkpoints record commit SHAs"
     },
     "final_reviewability_gate": {
       "status": "proceed",
@@ -1869,8 +1870,8 @@
     },
     "pr_creation": {
       "status": "skipped",
-      "reason": "marker_split safety boundary prohibits a single all-changes PR, and live marker-scoped PR mutation is not available in multi-pr-emission.sh",
-      "safe_follow_up": "Use marker-emission command capture to implement live bounded PR emission before opening PRs for this full diff."
+      "reason": "marker_split safety boundary prohibits a single all-changes PR, and the current marker plan lacks the checkpoint SHAs required for live marker-scoped PR mutation",
+      "safe_follow_up": "Record implementation_checkpoint.head_sha or implementation_checkpoint.commit_sha for each marker checkpoint before opening marker-scoped PRs for this full diff."
     },
     "review_remediation": {
       "status": "skipped",
@@ -1881,7 +1882,7 @@
       "notes": [
         "Autopilot should keep implementation moving through size-only reviewability blocks.",
         "Final marker_split evidence must prevent accidental all-changes PR creation.",
-        "The next gap is live mutation-capable marker PR emission, not implementation stopping."
+        "Live marker PR emission must use recorded checkpoint commit SHAs and fail closed before branch or PR mutation when they are missing."
       ]
     },
     "marker_emission_dry_run": {
@@ -1898,6 +1899,14 @@
         "dry_run": true
       },
       "evidence_path": "docs/ai/specs/.process/PRSG-013-marker-emission-dry-run.json"
+    },
+    "live_marker_emission_guard": {
+      "status": "input_error",
+      "message": "--live requires checkpoint_sha for slice foundation",
+      "mutation": {
+        "branches": false,
+        "pull_requests": false
+      }
     }
   }
 }

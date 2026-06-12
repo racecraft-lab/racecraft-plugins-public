@@ -346,9 +346,11 @@ When a current `pr_marker_plan` is available, execute, checkpoint, and record
 Phase 7 evidence in marker order. Run each marker's tasks according to
 `markers[].review_order`; keep normal task dependency and `[P]` parallel rules
 inside a marker. After each marker completes, record marker ID, ordered task IDs,
-verification evidence path, fingerprint status, checkpoints, warnings, and any
-blocked/fixed tasks. Do not infer a new marker order from changed files or
-reviewability warnings.
+verification evidence path, fingerprint status, checkpoint commit SHA
+(`implementation_checkpoint.head_sha` or `implementation_checkpoint.commit_sha`),
+warnings, and any blocked/fixed tasks. The marker checkpoint SHA is the source
+commit for later live marker PR branches. Do not infer a new marker order from
+changed files or reviewability warnings.
 
 ## PR Body Generation
 

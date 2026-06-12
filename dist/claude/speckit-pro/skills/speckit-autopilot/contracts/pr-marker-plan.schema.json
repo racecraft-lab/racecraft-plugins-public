@@ -275,6 +275,12 @@
         },
         "evidence_path": {
           "type": "string"
+        },
+        "head_sha": {
+          "type": "string"
+        },
+        "commit_sha": {
+          "type": "string"
         }
       }
     },

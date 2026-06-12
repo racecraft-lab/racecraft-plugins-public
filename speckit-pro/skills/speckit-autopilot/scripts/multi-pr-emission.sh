@@ -19,7 +19,7 @@ readonly SLICE_PACKET_SCHEMA="$CONTRACT_ROOT/slice-packet.schema.json"
 readonly PLAN_LAYERS_SCHEMA="$CONTRACT_ROOT/plan-layers.schema.json"
 
 usage() {
-  printf 'Usage: multi-pr-emission.sh (--layer-plan <json> | --marker-plan <json> --marker-split-result <json>) --state <json> --feature-branch <branch> --base <branch> --base-sha <sha> [--full-verification-evidence <path>] [--changed-files <path>] [--candidate-dir <dir>] [--pr-fixture <json>] [--command-log <json>] [--scoped-verification-fixture <json>]\n' >&2
+  printf 'Usage: multi-pr-emission.sh (--layer-plan <json> | --marker-plan <json> --marker-split-result <json>) --state <json> --feature-branch <branch> --base <branch> --base-sha <sha> [--full-verification-evidence <path>] [--changed-files <path>] [--candidate-dir <dir>] [--pr-fixture <json>] [--command-log <json>] [--scoped-verification-fixture <json>] [--live]\n' >&2
 }
 
 emit_input_error() {
@@ -104,6 +104,7 @@ CANDIDATE_DIR=""
 PR_FIXTURE=""
 COMMAND_LOG=""
 SCOPED_VERIFICATION_FIXTURE=""
+LIVE=false
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -172,6 +173,10 @@ while [ "$#" -gt 0 ]; do
       SCOPED_VERIFICATION_FIXTURE="$2"
       shift 2
       ;;
+    --live)
+      LIVE=true
+      shift
+      ;;
     -h|--help)
       usage
       exit 0
@@ -201,6 +206,9 @@ fi
 [ -n "$FEATURE_BRANCH" ] || emit_input_error "missing required option --feature-branch"
 [ -n "$BASE_BRANCH" ] || emit_input_error "missing required option --base"
 [ -n "$BASE_SHA" ] || emit_input_error "missing required option --base-sha"
+[ "$LIVE" != true ] || [ -z "$CANDIDATE_DIR" ] || emit_input_error "--live cannot be combined with --candidate-dir"
+[ "$LIVE" != true ] || [ -z "$PR_FIXTURE" ] || emit_input_error "--live cannot be combined with --pr-fixture"
+[ "$LIVE" != true ] || [ "$MARKER_MODE" = true ] || emit_input_error "--live requires marker-aware emission"
 
 if [ "$MARKER_MODE" = true ]; then
   [ -r "$MARKER_PLAN" ] || emit_input_error "marker plan not readable: $MARKER_PLAN"
@@ -536,6 +544,8 @@ if [ "$MARKER_MODE" = true ]; then
                   advisory_size: {},
                   marker_split_evidence: $marker_split_evidence,
                   implementation_checkpoint_evidence: ($markers | map(.implementation_checkpoint.evidence_path) | join(",")),
+                  checkpoint_sha: ($markers[-1].implementation_checkpoint.head_sha // $markers[-1].implementation_checkpoint.commit_sha // ""),
+                  source_marker_checkpoint_shas: [$markers[] | (.implementation_checkpoint.head_sha // .implementation_checkpoint.commit_sha // "")],
                   warnings: ($split_warnings + $plan_warnings + marker_warnings($markers)),
                   final_marker_split_warnings: $split_warnings
                 }
@@ -564,6 +574,7 @@ if [ "$MARKER_MODE" = true ]; then
                       advisory_size: {},
                       marker_split_evidence: $marker_split_evidence,
                       implementation_checkpoint_evidence: $marker.implementation_checkpoint.evidence_path,
+                      checkpoint_sha: ($marker.implementation_checkpoint.head_sha // $marker.implementation_checkpoint.commit_sha // ""),
                       reviewability: $marker.reviewability,
                       warnings: (($marker.warnings // []) + $split_warnings + $plan_warnings),
                       final_marker_split_warnings: $split_warnings
@@ -817,7 +828,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
                         review_order: .review_order,
                         expected_branch: .branch,
                         expected_base_branch: .base_branch,
-                        head_sha: null,
+                        head_sha: (.checkpoint_sha // null),
                         declared_files: .declared_files,
                         declared_scoped_tests: .declared_tests,
                         scoped_verification: .scoped_verification,
@@ -939,7 +950,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
               declared_files: $slice.declared_files,
               verification_evidence: ($slice.scoped_verification.commands[0].evidence_path // $full_verification_evidence),
               status: "pending",
-              head_sha: $base_sha,
+              head_sha: ($slice.checkpoint_sha // $base_sha),
               merged_sha: null
             }
           }
@@ -965,26 +976,28 @@ if [ -n "$CANDIDATE_DIR" ]; then
 fi
 
 if [ -z "$CANDIDATE_DIR" ]; then
-  [ -n "$PR_FIXTURE" ] || emit_input_error "missing required option --pr-fixture for persistent emission"
-  if ! jq -e '
-    def int_field($name):
-      (.[$name] | type == "number")
-      and (.[$name] == (.[$name] | floor))
-      and (.[$name] >= 1);
-    type == "object"
-    and ((.existing // []) | type == "array")
-    and ((.created // []) | type == "array")
-    and ((.create_failures // []) | type == "array")
-    and all(((.existing // []) + (.created // []))[];
-      (.head | type == "string" and length > 0)
-      and (.base | type == "string" and length > 0)
-      and int_field("number")
-      and (.url | type == "string" and length > 0)
-      and (.state | type == "string" and length > 0)
-      and (.head_sha | type == "string" and length > 0)
-    )
-  ' "$PR_FIXTURE" >/dev/null 2>&1; then
-    emit_input_error "invalid pr fixture JSON"
+  if [ "$LIVE" != true ]; then
+    [ -n "$PR_FIXTURE" ] || emit_input_error "missing required option --pr-fixture for persistent emission"
+    if ! jq -e '
+      def int_field($name):
+        (.[$name] | type == "number")
+        and (.[$name] == (.[$name] | floor))
+        and (.[$name] >= 1);
+      type == "object"
+      and ((.existing // []) | type == "array")
+      and ((.created // []) | type == "array")
+      and ((.create_failures // []) | type == "array")
+      and all(((.existing // []) + (.created // []))[];
+        (.head | type == "string" and length > 0)
+        and (.base | type == "string" and length > 0)
+        and int_field("number")
+        and (.url | type == "string" and length > 0)
+        and (.state | type == "string" and length > 0)
+        and (.head_sha | type == "string" and length > 0)
+      )
+    ' "$PR_FIXTURE" >/dev/null 2>&1; then
+      emit_input_error "invalid pr fixture JSON"
+    fi
   fi
 
   state_suffix="/docs/ai/specs/.process/autopilot-state.json"
@@ -996,10 +1009,43 @@ if [ -z "$CANDIDATE_DIR" ]; then
   feature_dir_abs="$persist_root/$FEATURE_DIR_REL"
   prs_path="$feature_dir_abs/.process/prs.json"
   moc_path="$feature_dir_abs/SPEC-MOC.md"
-  workflow_path="$persist_root/docs/ai/specs/.process/PRSG-009-workflow.md"
+  workflow_id="$FEATURE_BRANCH"
+  if [[ "$FEATURE_BRANCH" =~ ^([A-Za-z]+)-([0-9]+) ]]; then
+    workflow_id="${BASH_REMATCH[1]^^}-${BASH_REMATCH[2]}"
+  elif [[ "$FEATURE_BRANCH" =~ ^([0-9]+) ]]; then
+    workflow_id="${BASH_REMATCH[1]}"
+  fi
+  workflow_path="$persist_root/docs/ai/specs/.process/${workflow_id}-workflow.md"
 
   [ -d "$feature_dir_abs" ] || emit_input_error "feature directory not found for persistent emission: $feature_dir_abs"
   [ -f "$moc_path" ] || emit_input_error "SPEC-MOC.md not found for persistent emission: $moc_path"
+
+  if [ "$LIVE" = true ]; then
+    [ -e "$persist_root/.git" ] || emit_input_error "--live requires a git repository at persistent root: $persist_root"
+    command -v git >/dev/null 2>&1 || emit_input_error "--live requires git"
+
+    live_missing_checkpoint="$(
+      printf '%s' "$plan_slices" | jq -r '
+        map(select((.checkpoint_sha // "") == ""))
+        | .[0].slice_id // empty
+      '
+    )"
+    [ -z "$live_missing_checkpoint" ] || emit_input_error "--live requires checkpoint_sha for slice $live_missing_checkpoint"
+
+    live_bad_checkpoint=""
+    while IFS= read -r checkpoint_sha; do
+      [ -n "$checkpoint_sha" ] || continue
+      if ! git -C "$persist_root" cat-file -e "$checkpoint_sha^{commit}" >/dev/null 2>&1; then
+        live_bad_checkpoint="$checkpoint_sha"
+        break
+      fi
+    done < <(printf '%s' "$plan_slices" | jq -r '.[].checkpoint_sha')
+    [ -z "$live_bad_checkpoint" ] || emit_input_error "--live checkpoint is not a commit: $live_bad_checkpoint"
+
+    live_status="$(git -C "$persist_root" status --porcelain)"
+    [ -z "$live_status" ] || emit_input_error "--live requires a clean worktree before branch/PR mutation"
+    command -v gh >/dev/null 2>&1 || emit_input_error "--live requires gh"
+  fi
 
   command_log_json="$(jq -n '{schema_version: 1, dry_run: false, operations: []}')"
 
@@ -1131,6 +1177,98 @@ if [ -z "$CANDIDATE_DIR" ]; then
             ]
         '
     )"
+  }
+
+  record_branch_command() {
+    local slice_json="$1" checkpoint_sha="$2"
+    command_log_json="$(
+      jq -n \
+        --argjson log "$command_log_json" \
+        --argjson slice "$slice_json" \
+        --arg checkpoint_sha "$checkpoint_sha" '
+          $log
+          | .operations += [
+              {
+                slice_id: $slice.slice_id,
+                review_order: $slice.review_order,
+                action: "git_branch",
+                branch: $slice.branch,
+                base_branch: $slice.base_branch,
+                checkpoint_sha: $checkpoint_sha,
+                command: ["git", "branch", "-f", $slice.branch, $checkpoint_sha]
+              }
+            ]
+        '
+    )"
+  }
+
+  record_push_command() {
+    local slice_json="$1"
+    command_log_json="$(
+      jq -n \
+        --argjson log "$command_log_json" \
+        --argjson slice "$slice_json" '
+          $log
+          | .operations += [
+              {
+                slice_id: $slice.slice_id,
+                review_order: $slice.review_order,
+                action: "git_push",
+                branch: $slice.branch,
+                command: ["git", "push", "-u", "origin", $slice.branch]
+              }
+            ]
+        '
+    )"
+  }
+
+  live_find_pr() {
+    local head_branch="$1" base_branch="$2" pr_list_json
+    if ! pr_list_json="$(
+      cd "$persist_root" &&
+      gh pr list --head "$head_branch" --base "$base_branch" --state all --json number,url,state,headRefOid 2>/dev/null
+    )"; then
+      return 0
+    fi
+    printf '%s' "$pr_list_json" | jq -c \
+      --arg head "$head_branch" \
+      --arg base "$base_branch" '
+        .[0]? // empty
+        | {
+            head: $head,
+            base: $base,
+            number: .number,
+            url: .url,
+            state: .state,
+            head_sha: (.headRefOid // ""),
+            merged_sha: null
+          }
+      '
+  }
+
+  live_create_pr() {
+    local slice_id="$1" head_branch="$2" base_branch="$3" body_file="$4" created_ref
+    created_ref="$(
+      cd "$persist_root" &&
+      gh pr create --base "$base_branch" --head "$head_branch" --title "$FEATURE_BRANCH: $slice_id" --body-file "$body_file"
+    )" || return 1
+    [ -n "$created_ref" ] || return 1
+    (
+      cd "$persist_root" &&
+      gh pr view "$created_ref" --json number,url,state,headRefOid
+    ) | jq -c \
+      --arg head "$head_branch" \
+      --arg base "$base_branch" '
+        {
+          head: $head,
+          base: $base,
+          number: .number,
+          url: .url,
+          state: .state,
+          head_sha: (.headRefOid // ""),
+          merged_sha: null
+        }
+      '
   }
 
   resolve_scoped_json() {
@@ -1307,7 +1445,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
                     review_order: .review_order,
                     expected_branch: .branch,
                     expected_base_branch: .base_branch,
-                    head_sha: null,
+                    head_sha: (.checkpoint_sha // null),
                     declared_files: .declared_files,
                     declared_scoped_tests: .declared_tests,
                     scoped_verification: .scoped_verification,
@@ -1388,7 +1526,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
               declared_files: $slice.declared_files,
               verification_evidence: ($slice.scoped_verification.commands[0].evidence_path // $full_verification_evidence),
               status: "pending",
-              head_sha: $base_sha,
+              head_sha: ($slice.checkpoint_sha // $base_sha),
               merged_sha: null
             }
           }
@@ -1423,36 +1561,79 @@ if [ -z "$CANDIDATE_DIR" ]; then
     )"
     persist_state_or_die
 
-    pr_json="$(
-      jq -c --arg head "$head_branch" --arg base "$base_branch" '
-        (.existing // [])
-        | map(select(.head == $head and .base == $base))
-        | .[0] // empty
-      ' "$PR_FIXTURE"
-    )"
+    if [ "$LIVE" = true ]; then
+      checkpoint_sha="$(printf '%s' "$slice_json" | jq -r '.checkpoint_sha // empty')"
+      base_ref="$base_branch"
+      if ! git -C "$persist_root" rev-parse --verify "$base_ref^{commit}" >/dev/null 2>&1; then
+        if git -C "$persist_root" rev-parse --verify "origin/$base_branch^{commit}" >/dev/null 2>&1; then
+          base_ref="origin/$base_branch"
+        else
+          block_with_state "$slice_id" "git_base_ref" "base branch not found for slice $slice_id: $base_branch" "failed" 2
+        fi
+      fi
+      if ! git -C "$persist_root" merge-base --is-ancestor "$base_ref" "$checkpoint_sha" >/dev/null 2>&1; then
+        block_with_state "$slice_id" "git_branch" "checkpoint $checkpoint_sha is not based on $base_branch for slice $slice_id" "failed" 2
+      fi
+      record_branch_command "$slice_json" "$checkpoint_sha"
+      if ! git -C "$persist_root" branch -f "$head_branch" "$checkpoint_sha" >/dev/null 2>&1; then
+        block_with_state "$slice_id" "git_branch" "git branch failed for slice $slice_id" "failed" 2
+      fi
+      record_push_command "$slice_json"
+      if ! git -C "$persist_root" push -u origin "$head_branch" >/dev/null 2>&1; then
+        block_with_state "$slice_id" "git_push" "git push failed for slice $slice_id" "failed" 2
+      fi
+      state_json="$(
+        printf '%s' "$state_json" | jq \
+          --arg slice "$slice_id" \
+          --arg head_sha "$checkpoint_sha" '
+            (.multi_pr_emission.slices[] | select(.slice_id == $slice)) += {
+              status: "branch_created",
+              head_sha: $head_sha
+            }
+          '
+      )"
+      persist_state_or_die
+    fi
+
+    if [ "$LIVE" = true ]; then
+      pr_json="$(live_find_pr "$head_branch" "$base_branch")"
+    else
+      pr_json="$(
+        jq -c --arg head "$head_branch" --arg base "$base_branch" '
+          (.existing // [])
+          | map(select(.head == $head and .base == $base))
+          | .[0] // empty
+        ' "$PR_FIXTURE"
+      )"
+    fi
     pr_source="existing"
 
     if [ -z "$pr_json" ]; then
       record_create_command "$slice_json" "$body_file"
-      create_failure="$(
-        jq -c --arg head "$head_branch" --arg base "$base_branch" --arg slice "$slice_id" '
-          (.create_failures // [])
-          | map(select((.slice_id == $slice) or (.head == $head and .base == $base)))
-          | .[0] // empty
-        ' "$PR_FIXTURE"
-      )"
-      if [ -n "$create_failure" ]; then
-        failure_status="$(printf '%s' "$create_failure" | jq -r '.exit_status // 4')"
-        block_with_state "$slice_id" "gh_pr_create" "gh pr create failed for slice $slice_id" "failed" "$failure_status"
+      if [ "$LIVE" = true ]; then
+        pr_json="$(live_create_pr "$slice_id" "$head_branch" "$base_branch" "$body_file")" || \
+          block_with_state "$slice_id" "gh_pr_create" "gh pr create failed for slice $slice_id" "failed" 4
+      else
+        create_failure="$(
+          jq -c --arg head "$head_branch" --arg base "$base_branch" --arg slice "$slice_id" '
+            (.create_failures // [])
+            | map(select((.slice_id == $slice) or (.head == $head and .base == $base)))
+            | .[0] // empty
+          ' "$PR_FIXTURE"
+        )"
+        if [ -n "$create_failure" ]; then
+          failure_status="$(printf '%s' "$create_failure" | jq -r '.exit_status // 4')"
+          block_with_state "$slice_id" "gh_pr_create" "gh pr create failed for slice $slice_id" "failed" "$failure_status"
+        fi
+        pr_json="$(
+          jq -c --arg head "$head_branch" --arg base "$base_branch" --arg slice "$slice_id" '
+            (.created // [])
+            | map(select((.slice_id == $slice) or (.head == $head and .base == $base)))
+            | .[0] // empty
+          ' "$PR_FIXTURE"
+        )"
+        [ -n "$pr_json" ] || block_with_state "$slice_id" "gh_pr_create" "gh pr create failed for slice $slice_id" "failed" 4
       fi
-      pr_json="$(
-        jq -c --arg head "$head_branch" --arg base "$base_branch" --arg slice "$slice_id" '
-          (.created // [])
-          | map(select((.slice_id == $slice) or (.head == $head and .base == $base)))
-          | .[0] // empty
-        ' "$PR_FIXTURE"
-      )"
-      [ -n "$pr_json" ] || block_with_state "$slice_id" "gh_pr_create" "gh pr create failed for slice $slice_id" "failed" 4
       pr_source="created"
     fi
 
@@ -1570,12 +1751,14 @@ if [ -z "$CANDIDATE_DIR" ]; then
   done < <(printf '%s' "$plan_slices" | jq -c '.[]')
 
   write_command_log || emit_input_error "command log persistence failed: $COMMAND_LOG"
+  mutation_json="$(jq -cn --argjson live "$LIVE" '{branches: $live, pull_requests: $live}')"
 
   jq -cn \
     --argjson slice_count "$(printf '%s' "$plan_slices" | jq 'length')" \
     --arg emission_mode "$EMISSION_MODE" \
     --arg route "$EMISSION_ROUTE" \
     --argjson marker_count "$MARKER_SOURCE_COUNT" \
+    --argjson mutation "$mutation_json" \
     --arg state "$STATE_FILE" \
     --arg prs "$prs_path" \
     --arg moc "$moc_path" \
@@ -1583,7 +1766,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
     '{
       script: "multi-pr-emission",
       status: "persisted",
-      mutation: {branches: false, pull_requests: false},
+      mutation: $mutation,
       emission: {
         slice_count: $slice_count,
         marker_count: $marker_count,

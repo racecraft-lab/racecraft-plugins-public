@@ -203,6 +203,10 @@ Codex parent-session responsibilities:
    SHA, full verification evidence path, and optional changed-file scope
    evidence. Marker packets must validate against current marker evidence
    before PR body generation, `gh pr create`, or equivalent PR side effects.
+   Live marker emission requires each marker checkpoint to record
+   `implementation_checkpoint.head_sha` or
+   `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
+   before branch or PR mutation and repair the marker checkpoints.
 5. Record each slice outcome in `update_plan`, `autopilot-state.json`, and the
    workflow evidence before advancing the next Post item.
 
@@ -212,6 +216,7 @@ topology and PR packet:
 ```text
 slice 1 base: <integration-base>
 slice N base: <previous-slice-branch>
+marker-aware live head: <recorded marker checkpoint commit>
 gh pr create --base <base> --head <head> --body-file <body-file>
 ```
 

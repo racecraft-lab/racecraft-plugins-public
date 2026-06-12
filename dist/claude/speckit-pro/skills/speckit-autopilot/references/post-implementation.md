@@ -396,10 +396,16 @@ opens one slice PR.
    and optional changed-file scope evidence only after the final backstop
    proceeds. The emitted packets must validate against the marker evidence
    before PR body generation, `gh pr create`, or equivalent PR side effects.
+   Live marker emission requires each marker checkpoint to record
+   `implementation_checkpoint.head_sha` or
+   `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
+   before branch or PR mutation and repair the marker checkpoints.
 8. For each planned slice, multi-pr-emission.sh creates the Style B branch
    topology and PR packet:
    - slice 1 base: <integration-base>
    - slice N base: <previous-slice-branch>
+   - marker-aware live branches are forced to the recorded checkpoint commit
+     for that marker; never infer slice contents from changed-file globs
    - PR command shape:
      gh pr create --base <base> --head <head> --body-file <body-file>
 9. Each slice must pass or record scoped verification before PR creation. A

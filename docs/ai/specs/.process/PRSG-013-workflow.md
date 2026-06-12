@@ -591,14 +591,15 @@ Before starting any task:
 | `bash -n` on touched autopilot scripts | ✅ Passed |
 | `bash tests/speckit-pro/layer4-scripts/test-plan-layers.sh` | ✅ 85/85 |
 | `bash tests/speckit-pro/layer4-scripts/test-final-reviewability-backstop.sh` | ✅ 55/55 |
-| `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` | ✅ 116/116 |
+| `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` | ✅ 122/122 |
 | `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh` | ✅ 45/45 |
 | `final-reviewability-backstop.sh` with current `pr_marker_plan` | ✅ Committed full diff is size-blocked (`117` files) but returns `marker_split`; no PR side effects |
 | `multi-pr-emission.sh` marker dry-run | ✅ 4 marker packets: `foundation`, `us1`, `us2`, `us3`; `mutation.branches=false`, `mutation.pull_requests=false` |
+| `multi-pr-emission.sh --live` with current `pr_marker_plan` | ✅ Fails closed before branch/PR mutation: `--live requires checkpoint_sha for slice foundation` |
 | UAT runbook | ✅ `specs/prsg-013-reviewability-markers/.process/uat-runbook.md` |
 | `bash tests/speckit-pro/run-all.sh --layer 3` | ✅ 0/0; eval files and manual helpers enumerated |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | ✅ 978/978 |
-| `bash tests/speckit-pro/run-all.sh` | ✅ 2574/2574 |
+| `bash tests/speckit-pro/run-all.sh` | ✅ 2580/2580 |
 | `bash tests/speckit-pro/run-all.sh --all` | ⚠️ Started; deterministic layers passed through Layer 5, then live Layer 7 emitted no output for several minutes and was interrupted. Not used as completion gate. |
 
 ---
@@ -607,10 +608,10 @@ Before starting any task:
 
 | Question | Answer |
 |----------|--------|
-| Tests executed? | Yes. `bash tests/speckit-pro/run-all.sh` passed `2574/2574`; targeted marker/backstop/emission tests passed; `jq empty`, `bash -n`, and `git diff --check` passed. No separate build/typecheck/lint commands exist for this shell/Markdown plugin repo. |
+| Tests executed? | Yes. `bash tests/speckit-pro/run-all.sh` passed `2580/2580`; targeted marker/backstop/emission tests passed; `jq empty`, `bash -n`, and `git diff --check` passed. No separate build/typecheck/lint commands exist for this shell/Markdown plugin repo. |
 | Edge cases? | Covered by Layer 4 fixtures for malformed reviewability JSON, stale fingerprints, missing/malformed marker plans, non-size blockers, safe subdivision, no-safe-boundary warnings, hazard collapse, placeholder packet paths, marker order mismatch, and scope mismatch. |
 | Requirements matched? | `tasks.md` marks `45/45` tasks complete. `verify-tasks-report.md` found `44` verified tasks and `1` weak inspection-only task, with `0` partial or not-found tasks. FR-001 through FR-018 are covered by the task matrix and validation evidence above. |
-| Follow-up? | No `TODO`, `DEFERRED`, or `OUT-OF-SCOPE` markers were found in spec, plan, tasks, or this workflow. Live marker-scoped branch/PR mutation remains follow-up work because `multi-pr-emission.sh` currently validates packets and command capture with no branch or PR mutation. |
+| Follow-up? | No `TODO`, `DEFERRED`, or `OUT-OF-SCOPE` markers were found in spec, plan, tasks, or this workflow. Live marker-scoped branch/PR mutation is now implemented with fail-closed checkpoint SHA guards; the current PRSG-013 marker plan predates checkpoint SHA capture, so no marker PRs were opened from this branch. |
 
 ---
 
@@ -625,9 +626,9 @@ Before starting any task:
 - [x] Workflow evidence records reviewability sizing as marker input, not implementation stop
 - [x] UAT runbook generated with marker/backstop/emission checks
 - [x] PR body generated at `/private/tmp/PRSG-013-speckit-pr-body.md` with `speckit-pro-review-packet-source` and `## UAT Runbook`
-- [x] PR creation evaluated and skipped by safety boundary: final backstop returned `marker_split`, while `multi-pr-emission.sh` currently reports no branch/PR mutation; no single all-changes PR was opened
+- [x] PR creation evaluated and skipped by safety boundary: final backstop returned `marker_split`, live marker emission now requires marker checkpoint SHAs, and the current marker plan lacks `checkpoint_sha` for `foundation`; no single all-changes PR was opened
 - [x] Review remediation skipped because no PR was opened
-- [x] Merge not attempted; branch awaits marker-capable PR emission follow-up
+- [x] Merge not attempted; branch awaits marker checkpoint SHA evidence before live marker-scoped PR emission
 
 ---
 
@@ -646,7 +647,7 @@ Before starting any task:
 ### Patterns to Reuse
 
 - Treat size-only reviewability `block` as explicit marker-planning input, with a normalized `is_size_only=true` capture.
-- Keep marker checkpoints in `pr_marker_plan` and workflow/state evidence, while leaving `tasks.md` as task completion only.
+- Keep marker checkpoints, including the checkpoint commit SHA, in `pr_marker_plan` and workflow/state evidence, while leaving `tasks.md` as task completion only.
 
 ---
 

@@ -645,8 +645,11 @@ checkpoints, and records evidence in marker order. Each marker's tasks run in
 the marker's `review_order`; within one marker, keep the existing task-order and
 `[P]` parallel rules. After a marker completes, record a checkpoint with the
 marker ID, ordered task IDs, test/verification evidence path, fingerprint
-status, checkpoints, warnings, and any blocked/fixed tasks. Do not infer a new
-marker order from changed files or reviewability warnings.
+status, checkpoint commit SHA (`implementation_checkpoint.head_sha` or
+`implementation_checkpoint.commit_sha`), warnings, and any blocked/fixed tasks.
+The marker checkpoint SHA is the source commit for later live marker PR
+branches. Do not infer a new marker order from changed files or reviewability
+warnings.
 
 **Why task-level:** Subagents cannot spawn other subagents
 (Claude Code platform constraint). The flat orchestrator-worker
