@@ -107,9 +107,9 @@
 
 ### Tests for User Story 4
 
-- [ ] T035 [US4] Add sanctioned prose edit fixture coverage in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single-edited.md`
-- [ ] T036 [US4] Add protected edit rejection fixture in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json`
-- [ ] T037 [US4] Assert editable boundary comments, protected fingerprint elision, unknown comment rejection, stale template comment rejection, and host template coexistence outside the protected canonical packet block in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
+- [x] T035 [US4] Add sanctioned prose edit fixture coverage in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single-edited.md`
+- [x] T036 [US4] Add protected edit rejection fixture in `tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json`
+- [x] T037 [US4] Assert editable boundary comments, protected fingerprint elision, unknown comment rejection, stale template comment rejection, and host template coexistence outside the protected canonical packet block in `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh`
 
 ### Implementation for User Story 4
 

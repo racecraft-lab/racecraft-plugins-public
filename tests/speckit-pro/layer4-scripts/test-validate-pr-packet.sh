@@ -294,6 +294,99 @@ assert_success_json "valid-split" "split" \
   "feat(speckit-pro): Validate reviewer packet slices" \
   "$valid_split_body"
 
+section "safe prose refinement"
+
+valid_edited_rel="$PACKET_FIXTURE_REL/valid-single-edited.json"
+valid_edited_body_rel="$PACKET_FIXTURE_REL/bodies/valid-single-edited.md"
+jq \
+  --arg packet_id "valid-single-edited" \
+  --arg body "$valid_edited_body_rel" \
+  --arg result "$(validation_result_rel valid-single-edited)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$valid_edited_rel"
+
+run_validator_capture "valid-single-edited" "$valid_edited_rel"
+
+set_test "valid single edited packet exits 0"
+assert_captured_exit "0"
+
+assert_success_json "valid-single-edited" "single" \
+  "feat(speckit-pro): Add reviewer-ready PR packets" \
+  "$valid_edited_body_rel"
+
+host_coexist_rel="$PACKET_FIXTURE_REL/valid-host-coexist.json"
+host_coexist_body_rel="$PACKET_FIXTURE_REL/bodies/valid-host-coexist.md"
+cp "$TEST_REPO/$valid_edited_body_rel" "$TEST_REPO/$host_coexist_body_rel"
+cat >> "$TEST_REPO/$host_coexist_body_rel" <<'EOF'
+
+# Host Required
+
+- [ ] Keep the host repository checklist outside the canonical packet block.
+EOF
+jq \
+  --arg packet_id "valid-host-coexist" \
+  --arg body "$host_coexist_body_rel" \
+  --arg result "$(validation_result_rel valid-host-coexist)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$host_coexist_rel"
+
+run_validator_capture "valid-host-coexist" "$host_coexist_rel"
+
+set_test "host template content outside canonical packet block exits 0"
+assert_captured_exit "0"
+
+invalid_protected_result="$(validation_result_rel invalid-protected-edit)"
+reset_gh_capture
+run_validator_capture "invalid-protected-edit" "$PACKET_FIXTURE_REL/invalid-protected-edit.json"
+
+set_test "invalid protected edit exits 1"
+assert_captured_exit "1"
+
+assert_failure_json "invalid-protected-edit" "validation_failure" "1" "$invalid_protected_result"
+
+set_test "invalid protected edit reports fingerprint rule"
+assert_failure_rule "body.protected_fingerprint"
+
+invalid_boundary_rel="$PACKET_FIXTURE_REL/invalid-editable-boundary.json"
+invalid_boundary_body_rel="$PACKET_FIXTURE_REL/bodies/invalid-editable-boundary.md"
+sed '/speckit-pro-editable:summary:end/d' "$TEST_REPO/$valid_edited_body_rel" > "$TEST_REPO/$invalid_boundary_body_rel"
+jq \
+  --arg packet_id "invalid-editable-boundary" \
+  --arg body "$invalid_boundary_body_rel" \
+  --arg result "$(validation_result_rel invalid-editable-boundary)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$invalid_boundary_rel"
+
+run_validator_capture "invalid-editable-boundary" "$invalid_boundary_rel"
+
+set_test "invalid editable boundary exits 1"
+assert_captured_exit "1"
+
+set_test "invalid editable boundary reports boundary rule"
+assert_failure_rule "body.editable_boundaries"
+
+unknown_comment_rel="$PACKET_FIXTURE_REL/invalid-unknown-comment.json"
+unknown_comment_body_rel="$PACKET_FIXTURE_REL/bodies/invalid-unknown-comment.md"
+cp "$TEST_REPO/$valid_edited_body_rel" "$TEST_REPO/$unknown_comment_body_rel"
+cat >> "$TEST_REPO/$unknown_comment_body_rel" <<'EOF'
+
+<!-- stale host template comment -->
+EOF
+jq \
+  --arg packet_id "invalid-unknown-comment" \
+  --arg body "$unknown_comment_body_rel" \
+  --arg result "$(validation_result_rel invalid-unknown-comment)" \
+  '.packet_id = $packet_id | .body_file = $body | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$unknown_comment_rel"
+
+run_validator_capture "invalid-unknown-comment" "$unknown_comment_rel"
+
+set_test "invalid unknown comment exits 1"
+assert_captured_exit "1"
+
+set_test "invalid unknown comment reports comment rule"
+assert_failure_rule "body.unknown_comment"
+
 section "rendered-content validation failures"
 
 invalid_title_result="$(validation_result_rel invalid-title-token)"
