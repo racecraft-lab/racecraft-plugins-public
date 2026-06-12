@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T18:51:36Z",
-  "active_step": "Phase 7: US3 validation gate (T025-T034)",
+  "updated_at": "2026-06-12T19:08:27Z",
+  "active_step": "Phase 7: US4 safe refinement (T035-T041)",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -223,7 +223,7 @@
         "source_boundary": {
           "section": "Phase 4: User Story 3 - Pre-create Validation Block"
         },
-        "checkpoint": "pending",
+        "checkpoint": "completed",
         "pr_mapping": "pending",
         "packet_validation": "pending"
       },
@@ -435,11 +435,12 @@
     },
     {
       "step": "Phase 7: US3 validation gate (T025-T034)",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "T025-T034 complete. Added input-error and split partial-failure fixtures, expanded validator and multi-PR tests, derived validation-result paths, wrote no-path input envelopes, superseded workflow events, generated canonical split bodies, and gated layer split PR creation on freshly passed packet validation."
     },
     {
       "step": "Phase 7: US4 safe refinement (T035-T041)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Polish evidence and parity (T042-T056)",
