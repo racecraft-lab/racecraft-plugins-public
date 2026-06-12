@@ -117,7 +117,7 @@ Style B incremental stack: first slice targets the integration base and later sl
 <details>
 <summary>Reviewer checklist &amp; scope details</summary>
 
-**Size:** 0 reviewable lines across 94 files (0 production). Budget: block.
+**Size:** 0 reviewable lines across 96 files (0 production). Budget: block.
 **Primary surfaces:** API, docs/process, other, scheduler/runtime, schema/migration, seed/config.
 
 **Review in this order:**
@@ -229,5 +229,5 @@ git revert <SHA>; see plan.md for data-migration considerations
 template: /Users/fredrickgabelmann/.codex/worktrees/7a80/racecraft-plugins-public/.worktrees/012-reviewer-ready-pr-packet-contract/speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md
 feature_dir: /Users/fredrickgabelmann/.codex/worktrees/7a80/racecraft-plugins-public/.worktrees/012-reviewer-ready-pr-packet-contract/specs/prsg-012-reviewer-ready-pr-packet-contract
 diff_range: 3118e81162104bfd081d01755c00c205a8eab061...HEAD
-reviewability: {"mode":"diff","status":"block","pass":false,"reviewable_loc":0,"production_files":0,"total_files":94,"primary_surface_count":6,"primary_surfaces":["API","docs/process","other","scheduler/runtime","schema/migration","seed/config"],"greenfield":false,"thresholds":{"warn":{"reviewable_loc":400,"production_files":6,"total_files":15,"primary_surfaces":1},"block":{"reviewable_loc":800,"production_files":8,"total_files":25,"primary_surfaces":1}},"exception_honored":false,"exception_class":null,"exceptions":{"accepted":[],"rejected":[]},"warnings":["total files 94 exceeds warn threshold 15","primary surfaces 6 exceeds warn threshold 1"],"blockers":["total files 94 exceeds block threshold 25"]}
+reviewability: {"mode":"diff","status":"block","pass":false,"reviewable_loc":0,"production_files":0,"total_files":96,"primary_surface_count":6,"primary_surfaces":["API","docs/process","other","scheduler/runtime","schema/migration","seed/config"],"greenfield":false,"thresholds":{"warn":{"reviewable_loc":400,"production_files":6,"total_files":15,"primary_surfaces":1},"block":{"reviewable_loc":800,"production_files":8,"total_files":25,"primary_surfaces":1}},"exception_honored":false,"exception_class":null,"exceptions":{"accepted":[],"rejected":[]},"warnings":["total files 96 exceeds warn threshold 15","primary surfaces 6 exceeds warn threshold 1"],"blockers":["total files 96 exceeds block threshold 25"]}
 -->
