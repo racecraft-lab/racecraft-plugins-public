@@ -65,18 +65,34 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 
 ## Requirements *(mandatory)*
 
+### Clarifications
+
+- Hard blockers before weighted scoring are GitHub Pages hosting from this repository, rich MDX or equivalent reusable-component interactivity, an accessible static or keyboard-usable fallback path, and the DOC-001 no-implementation boundary.
+- Search and link checking are high-weight tradeoffs; versioning is a medium-weight tradeoff; accessibility support is a hard blocker only if the stack prevents accessible fallback behavior.
+- Candidate support must distinguish built-in, official, community, third-party paid, and unsupported capabilities.
+- Maintenance burden is a scoring penalty and tie-breaker after blockers are satisfied.
+- The repo-native fallback must be evaluated seriously, but selected only if framework candidates are blocked or introduce unacceptable risk for this repository.
+- Each IA route record must include `route_path`, `route_label`, `diataxis_mode`, optional `secondary_modes`, `target_audience`, `route_purpose`, `source_evidence`, `success_criterion`, `shell_owner_doc`, and `full_content_owner_doc`.
+- The IA skeleton must cover these 11 PRD route labels: Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary.
+- Each route has one primary Diataxis mode from Tutorial, How-to, Reference, or Explanation; mixed routes may name secondary modes when the route purpose requires them.
+- Each route's source evidence must cite at least one local artifact or official URL with a short evidence note; current platform or framework claims in the spike report must include retrieval date.
+- DOC-002 is the shell owner for the IA skeleton; `full_content_owner_doc` must name the later DOC spec or specs that own detailed content.
+- DOC-001 may write only `docs/ai/research/interactive-documentation-framework-spike.md` plus normal SpecKit artifacts under `specs/doc-001-static-docs-framework-and-ia-spike/**` and `docs/ai/specs/.process/DOC-001-*`.
+- PRD, roadmap, design concept, README, plugin README, marketplace, generated payload, package, lockfile, site config, prototype component, CI, and plugin behavior files are source inputs or later-spec surfaces, not DOC-001 implementation targets.
+- Package manager, build, and test commands are report-only recommendations in DOC-001; conflicting evidence or hard blockers are recorded in the report with fallback recommendation and no prototype or scope expansion.
+
 ### Functional Requirements
 
 - **FR-001**: The spike MUST produce one source-backed comparison of Docusaurus/MDX, VitePress, Astro/Starlight, and a repo-native fallback.
-- **FR-002**: The comparison MUST evaluate each candidate for static hosting, GitHub Pages support, MDX or equivalent interactivity, search, versioning, accessibility, link checking, docs-as-code workflow, maintenance load, and package/build/test commands.
+- **FR-002**: The comparison MUST evaluate each candidate for static hosting, GitHub Pages support, MDX or equivalent reusable-component interactivity, search, versioning, accessibility, link checking, docs-as-code workflow, maintenance load, package/build/test commands, and support class for each capability.
 - **FR-003**: The spike MUST refresh live framework and platform source documentation during research and record enough source evidence for reviewers to validate the recommendation.
 - **FR-004**: The spike MUST recommend one default stack for DOC-002 unless a hard blocker is recorded.
 - **FR-005**: The spike MUST explain why each non-selected alternative was rejected or deferred.
 - **FR-006**: The spike MUST identify the package manager recommended by the selected stack and list the minimum package, build, and test commands for DOC-002.
 - **FR-007**: The spike MUST draft a Diataxis IA skeleton for the docs site.
-- **FR-008**: Each top-level IA route MUST include route, mode, audience, source evidence, and success criterion.
+- **FR-008**: Each top-level IA route MUST include route path, route label, primary Diataxis mode, optional secondary modes, target audience, route purpose, source evidence, success criterion, shell owner DOC, and full content owner DOC.
 - **FR-009**: The spike result MUST be written to `docs/ai/research/interactive-documentation-framework-spike.md`.
-- **FR-010**: Completion evidence MUST show that DOC-001 did not add or modify package files, lockfiles, site config, prototype components, CI changes, marketplace changes, plugin behavior, or README migration.
+- **FR-010**: Completion evidence MUST show that DOC-001 did not add or modify package files, lockfiles, site config, prototype components, CI files, README or plugin README migration, marketplace files, generated payload files, or plugin behavior.
 - **FR-011**: The spike MUST leave docs-site implementation, README migration, interactive widgets, and docs CI creation out of scope for DOC-002 or later work.
 
 ### Reviewability Budget *(mandatory)*
@@ -100,7 +116,7 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 
 - **Framework Candidate**: A docs-site option under evaluation, including Docusaurus/MDX, VitePress, Astro/Starlight, and the repo-native fallback.
 - **Evaluation Criterion**: A comparison dimension reviewers need to approve or reject a candidate, such as hosting, interactivity, search, versioning, accessibility, link checking, workflow fit, maintenance load, and commands.
-- **IA Route**: A proposed top-level documentation path with Diataxis mode, audience, source evidence, and success criterion.
+- **IA Route**: A proposed top-level documentation path with route label, primary Diataxis mode, optional secondary modes, target audience, route purpose, source evidence, success criterion, `shell_owner_doc`, and `full_content_owner_doc`.
 - **Spike Report**: The research artifact that records evidence, comparison, recommendation, IA skeleton, commands, non-goals, and verification scope.
 
 ## Success Criteria *(mandatory)*
@@ -109,9 +125,9 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 
 - **SC-001**: The report covers all 4 required candidate stacks across at least 10 required evaluation dimensions.
 - **SC-002**: A maintainer can identify the recommended stack and the rejection rationale for every alternative in under 5 minutes.
-- **SC-003**: The IA skeleton includes no placeholder values and provides route, mode, audience, source evidence, and success criterion for every top-level route.
+- **SC-003**: The IA skeleton includes no placeholder values and provides every required route field, including later content ownership, for every top-level route.
 - **SC-004**: A DOC-002 implementer can identify the recommended package manager plus minimum package, build, and test commands without consulting files outside the spike report.
-- **SC-005**: A reviewer can verify from the final diff that 0 package files, lockfiles, site config files, prototype components, CI files, marketplace files, plugin behavior files, or README migration files were changed by DOC-001.
+- **SC-005**: A reviewer can verify from the final diff that 0 package files, lockfiles, site config files, prototype components, CI files, README or plugin README migration files, marketplace files, generated payload files, or plugin behavior files were changed by DOC-001.
 - **SC-006**: The report records refreshed source evidence for framework and platform claims with a retrieval date matching the spike execution date.
 
 ## Assumptions
@@ -120,4 +136,6 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 - The repo-native fallback means continuing repository-native Markdown documentation without a dedicated docs-site framework or shell.
 - DOC-001 starts from a repository state with no docs-site package, config, lockfile, or hosting decision.
 - DOC-002 will create the docs-site shell after this spike is accepted.
-- Any framework-specific package manager recommendation belongs in the research report and does not authorize DOC-001 to create package files.
+- Any framework-specific package manager recommendation belongs in the research report and does not authorize DOC-001 to create package files or lockfiles.
+- DOC-001 records the selected stack's recommended package manager and commands, but does not standardize repository tooling.
+- PRD, roadmap, design concept, README, and plugin documentation corrections discovered during DOC-001 are follow-up work unless a separate explicit scope amendment is made.

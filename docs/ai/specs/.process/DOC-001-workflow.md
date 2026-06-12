@@ -31,8 +31,8 @@ The design concept is the source of truth for these setup decisions:
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created spec with 3 user stories, 11 functional requirements, 6 success criteria, and 0 `[NEEDS CLARIFICATION]` markers |
-| Clarify | `/speckit-clarify` | In Progress | Running session 1: framework decision rubric |
-| Plan | `/speckit-plan` | Pending | Plan research matrix and IA skeleton deliverable |
+| Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; G2 passed with 0 clarification markers and no consensus items |
+| Plan | `/speckit-plan` | In Progress | Planning research matrix and IA skeleton deliverable |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: documentation-quality, accessibility, error-handling |
 | Tasks | `/speckit-tasks` | Pending | Research-only spike tasks; no site scaffold or package files |
 | Analyze | `/speckit-analyze` | Pending | Verify no implementation creep and traceability to PRD/roadmap/design concept |
@@ -45,12 +45,12 @@ The design concept is the source of truth for these setup decisions:
 | Gate | Checkpoint | Approval Criteria |
 |------|------------|-------------------|
 | G1 | After Specify | Spec captures stack recommendation, IA skeleton, package/build/test command identification, and no product/plugin behavior changes |
-| G2 | After Clarify | Decision rubric, evidence sources, hosting constraints, and output boundaries are explicit |
+| G2 | After Clarify | Decision rubric, blocker/tradeoff definitions, evidence sources, hosting constraints, IA skeleton contract, and output boundaries are explicit |
 | G3 | After Plan | Research matrix and IA skeleton approach are approved; reviewability remains spike-sized |
 | G4 | After Checklist | Documentation-quality, accessibility, and error-handling gaps are addressed or marked out of scope |
 | G5 | After Tasks | Tasks map to all DOC-FR-001 acceptance criteria and avoid site implementation work |
 | G6 | After Analyze | No critical drift from PRD, roadmap, or design concept |
-| G7 | After Implementation | Research decision record exists, cites live sources, recommends one default stack, and mutates no site/package/plugin behavior |
+| G7 | After Implementation | Research decision record exists, cites live sources, recommends one default stack, and final diff is limited to the research report plus SpecKit artifacts with no site/package/config/CI/README/plugin behavior mutation |
 
 ---
 
@@ -181,9 +181,9 @@ Racecraft needs a static documentation site, but the repository currently has no
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Framework decision rubric | Pending | Pending |
-| 2 | IA skeleton contract | Pending | Pending |
-| 3 | Output boundary | Pending | Pending |
+| 1 | Framework decision rubric | 5 | Accepted blocker gates for GitHub Pages-from-this-repo, rich MDX/equivalent reusable-component interactivity, accessible fallback, and no-implementation boundary; search/link checking are high-weight tradeoffs, versioning is medium-weight, package manager follows selected framework, and repo-native fallback is selected only if framework options are blocked or too risky |
+| 2 | IA skeleton contract | 5 | Accepted IA route schema with `route_path`, `route_label`, `diataxis_mode`, optional `secondary_modes`, `target_audience`, `route_purpose`, `source_evidence`, `success_criterion`, `shell_owner_doc`, and `full_content_owner_doc`; cover all 11 PRD IA routes; use one primary Diataxis mode plus optional secondary modes; cite local/official route evidence; DOC-002 owns shell and later DOC specs own full content |
+| 3 | Output boundary | 5 | Accepted positive allow-list: `docs/ai/research/interactive-documentation-framework-spike.md` plus SpecKit artifacts under `specs/doc-001-static-docs-framework-and-ia-spike/**` and `docs/ai/specs/.process/DOC-001-*`; PRD, roadmap, design concept, README, plugin docs, package files, lockfiles, site config, prototype components, CI, marketplace/generated payloads, and plugin behavior are excluded unless separately amended |
 
 ---
 
@@ -200,7 +200,7 @@ Racecraft needs a static documentation site, but the repository currently has no
 - Current repo: Bash and Markdown heavy; no docs-site package/config/lockfile at depth 3.
 - Candidate frameworks to research: Docusaurus/MDX, VitePress, Astro/Starlight, repo-native fallback.
 - Required hosting path: GitHub Pages from this repository.
-- Expected deliverable: one research Markdown decision record.
+- Expected deliverable: one research Markdown decision record. Package manager, build, and test commands are report-only recommendations.
 
 ## Constraints
 - Research-only spike. Do not create site scaffold, package files, lockfiles, CI workflows, marketplace files, generated payloads, or plugin behavior changes.
@@ -210,7 +210,7 @@ Racecraft needs a static documentation site, but the repository currently has no
 ## Architecture Notes
 - Treat `docs/prd-interactive-documentation.md`, `docs/roadmap-interactive-documentation.md`, `docs/ai/specs/interactive-documentation-technical-roadmap.md`, and `docs/ai/specs/.process/DOC-001-design-concept.md` as source inputs.
 - The research matrix should include acceptance/rejection reasons for every candidate.
-- The IA skeleton should be route-level, not full content copy.
+- The IA skeleton should be route-level, not full content copy. Each route record must include route path, route label, primary Diataxis mode, optional secondary modes, audience, purpose, source evidence, success criterion, shell owner DOC, and full content owner DOC.
 - The plan should state how DOC-002 consumes the recommendation.
 ```
 
@@ -307,6 +307,7 @@ Focus on DOC-001 requirements:
 ## Constraints
 - Output research record: `docs/ai/research/interactive-documentation-framework-spike.md`.
 - Do not create `package.json`, lockfiles, site config, prototype components, CI workflows, marketplace files, generated payloads, or plugin behavior changes.
+- Do not edit PRD, roadmap, design concept, README, plugin README, or migration content during implementation; treat them as source inputs unless scope is explicitly amended.
 ```
 
 ### Tasks Results
@@ -381,6 +382,7 @@ Focus on:
 ## Verification
 - `git diff --name-only` shows only research/spec artifacts expected for DOC-001.
 - `rg -n "Docusaurus|VitePress|Starlight|GitHub Pages|MDX" docs/ai/research/interactive-documentation-framework-spike.md` confirms candidate evidence is present.
+- `git diff --name-only origin/main...HEAD` contains no package files, lockfiles, site config, prototype components, CI files, README/plugin README migration, marketplace files, generated payloads, or plugin behavior files introduced by DOC-001.
 - Run `bash tests/speckit-pro/run-all.sh --layer 1` if structural docs/spec artifacts changed.
 ```
 

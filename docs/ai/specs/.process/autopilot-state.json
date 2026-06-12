@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T20:20:00Z",
-  "active_step": "Phase 2: Clarify - Framework decision rubric",
+  "updated_at": "2026-06-12T20:37:00Z",
+  "active_step": "Phase 3: Plan",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -108,31 +108,37 @@
     },
     {
       "step": "Phase 2: Clarify - Framework decision rubric",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted five rubric decisions: hard blockers are GitHub Pages-from-this-repo, rich MDX/equivalent reusable-component interactivity, accessible fallback, and no-implementation boundary; search/link checking high-weight, versioning medium-weight; package manager follows selected framework; repo-native fallback selected only if framework candidates are blocked or too risky."
     },
     {
       "step": "Phase 2: Clarify - Framework decision rubric Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Clarify executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 2: Clarify - IA skeleton contract",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted IA route schema with route_path, route_label, diataxis_mode, optional secondary_modes, target_audience, route_purpose, source_evidence, success_criterion, shell_owner_doc, and full_content_owner_doc; skeleton covers all 11 PRD IA routes."
     },
     {
       "step": "Phase 2: Clarify - IA skeleton contract Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Clarify executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 2: Clarify - Research output and no-implementation boundary",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted positive allow-list of research report plus DOC-001 SpecKit artifacts only; excluded PRD, roadmap, design concept, README/plugin docs, package files, lockfiles, site config, prototypes, CI, marketplace/generated payloads, and plugin behavior unless scope is separately amended."
     },
     {
       "step": "Phase 2: Clarify - Research output and no-implementation boundary Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Clarify executor returned no unresolved consensus items."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - documentation-quality",

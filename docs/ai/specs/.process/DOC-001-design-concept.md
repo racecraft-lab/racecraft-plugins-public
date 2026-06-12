@@ -94,6 +94,8 @@ stop_reason: "natural"
 
 **User's answer:** Routes plus purpose.
 
+**Clarify session 2 update:** The IA skeleton will use route-level records with route path, route label, primary Diataxis mode, optional secondary modes, audience, purpose, source evidence, success criterion, shell owner DOC, and full content owner DOC. It must cover the 11 PRD IA route labels without drafting full page copy.
+
 ---
 
 ### Q5. Should DOC-001 require live source refresh for framework and platform docs during the spike, or use the PRD's captured source map as sufficient input?
@@ -124,14 +126,16 @@ stop_reason: "natural"
 
 **User's answer:** Research doc only.
 
+**Clarify session 3 update:** The allowed implementation output is `docs/ai/research/interactive-documentation-framework-spike.md` plus normal DOC-001 SpecKit artifacts under `specs/doc-001-static-docs-framework-and-ia-spike/**` and `docs/ai/specs/.process/DOC-001-*`. PRD, roadmap, design concept, README, plugin documentation, package files, lockfiles, site config, prototypes, CI, marketplace/generated payloads, and plugin behavior are excluded unless a later human explicitly amends scope.
+
 ## Open Questions
 
 - **What:** Final static-site framework and package manager.
-  **Why deferred:** This is the core DOC-001 spike output, not a pre-scaffold decision.
-  **Suggested next step:** Resolve in `/speckit-specify` and `/speckit-plan` with live source refresh.
+  **Why deferred:** This is the core DOC-001 spike output, not a pre-scaffold decision; Clarify session 1 confirmed the package manager follows the selected framework and does not authorize package or lockfile creation in DOC-001.
+  **Suggested next step:** Resolve in `/speckit-plan` and implementation research with live source refresh.
 - **What:** Hosting policy details for GitHub Pages.
-  **Why deferred:** The stack comparison needs current framework and GitHub Pages evidence.
-  **Suggested next step:** Include hosting constraints in the research matrix.
+  **Why deferred:** Clarify session 1 set GitHub Pages hosting from this repository as a hard blocker, but framework-specific implementation details still require live evidence.
+  **Suggested next step:** Include GitHub Pages deployment support and fallback risk in the research matrix.
 - **What:** Exact README content treatment after the site exists.
   **Why deferred:** DOC-001 defines IA, not content migration.
   **Suggested next step:** Carry as a DOC-002 or later content-shell decision.
