@@ -34,7 +34,7 @@ The design concept is the source of truth for these scoping decisions:
 | Specify | `/speckit-specify` | Complete | Generated `specs/prsg-012-reviewer-ready-pr-packet-contract/spec.md`; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | G2 passed with packet schema, title generation, and safe-refinement decisions recorded |
 | Plan | `/speckit-plan` | Complete | Generated plan/research/data model/contract/quickstart; G3 passed |
-| Checklist | `/speckit-checklist` | In Progress | Starting API contracts checklist |
+| Checklist | `/speckit-checklist` | In Progress | API contracts complete; starting error-handling checklist |
 | Tasks | `/speckit-tasks` | Pending | Organize by user story and validation boundary |
 | Analyze | `/speckit-analyze` | Pending | Check consistency against the design concept |
 | Implement | `/speckit-implement` | Pending | TDD through Layer 4 fixtures first |
@@ -302,7 +302,7 @@ Focus on PRSG-012 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| api-contracts | | | |
+| api-contracts | 16 | 6 remediated; 0 remaining | Added required PR target, constrained body paths, required changed-file scope, split-only conditionals, rendered heading order validation, and exact editable field constraints |
 | error-handling | | | |
 | reliability | | | |
 

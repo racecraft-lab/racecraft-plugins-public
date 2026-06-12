@@ -8,6 +8,7 @@
     "schema_version",
     "packet_id",
     "mode",
+    "target",
     "source_feature_dir",
     "generated_title",
     "body_file",
@@ -33,6 +34,9 @@
       "type": "string",
       "enum": ["single", "split"]
     },
+    "target": {
+      "$ref": "#/$defs/pr_target"
+    },
     "source_feature_dir": {
       "type": "string",
       "pattern": "^specs/[^/]+$"
@@ -42,7 +46,7 @@
     },
     "body_file": {
       "type": "string",
-      "minLength": 1
+      "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*\\.md$"
     },
     "required_headings": {
       "type": "array",
@@ -69,7 +73,7 @@
     "scope_evidence": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["reviewable_loc", "production_files", "total_files", "budget_result", "non_goals"],
+      "required": ["reviewable_loc", "production_files", "total_files", "budget_result", "changed_files", "non_goals"],
       "properties": {
         "reviewable_loc": {
           "type": "integer",
@@ -86,6 +90,14 @@
         "budget_result": {
           "type": "string",
           "enum": ["within_budget", "warning", "blocked", "exception"]
+        },
+        "changed_files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*$"
+          }
         },
         "non_goals": {
           "type": "array",
@@ -140,10 +152,28 @@
     },
     "editable_fields": {
       "type": "array",
+      "prefixItems": [
+        {
+          "allOf": [
+            { "$ref": "#/$defs/editable_field" },
+            { "properties": { "field_id": { "const": "summary" } } }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/editable_field" },
+            { "properties": { "field_id": { "const": "what_changed" } } }
+          ]
+        },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/editable_field" },
+            { "properties": { "field_id": { "const": "why_it_matters" } } }
+          ]
+        }
+      ],
       "minItems": 3,
-      "items": {
-        "$ref": "#/$defs/editable_field"
-      }
+      "maxItems": 3
     },
     "protected_body_fingerprint": {
       "$ref": "#/$defs/protected_body_fingerprint"
@@ -190,10 +220,30 @@
       },
       "then": {
         "required": ["split_slice"]
+      },
+      "else": {
+        "not": {
+          "required": ["split_slice"]
+        }
       }
     }
   ],
   "$defs": {
+    "pr_target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["base_branch", "head_branch"],
+      "properties": {
+        "base_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "head_branch": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
     "generated_title": {
       "type": "object",
       "additionalProperties": false,
@@ -280,7 +330,48 @@
           "type": "string",
           "pattern": "^<!-- speckit-pro-editable:(summary|what_changed|why_it_matters):end -->$"
         }
-      }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "field_id": { "const": "summary" } },
+            "required": ["field_id"]
+          },
+          "then": {
+            "properties": {
+              "heading": { "const": "Summary" },
+              "start_marker": { "const": "<!-- speckit-pro-editable:summary:start -->" },
+              "end_marker": { "const": "<!-- speckit-pro-editable:summary:end -->" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "field_id": { "const": "what_changed" } },
+            "required": ["field_id"]
+          },
+          "then": {
+            "properties": {
+              "heading": { "const": "What Changed" },
+              "start_marker": { "const": "<!-- speckit-pro-editable:what_changed:start -->" },
+              "end_marker": { "const": "<!-- speckit-pro-editable:what_changed:end -->" }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": { "field_id": { "const": "why_it_matters" } },
+            "required": ["field_id"]
+          },
+          "then": {
+            "properties": {
+              "heading": { "const": "Why It Matters" },
+              "start_marker": { "const": "<!-- speckit-pro-editable:why_it_matters:start -->" },
+              "end_marker": { "const": "<!-- speckit-pro-editable:why_it_matters:end -->" }
+            }
+          }
+        }
+      ]
     },
     "protected_body_fingerprint": {
       "type": "object",
@@ -315,6 +406,7 @@
         "schema_version",
         "packet_id",
         "mode",
+        "target",
         "status",
         "title_value",
         "body_file",
@@ -337,6 +429,9 @@
           "type": "string",
           "enum": ["single", "split"]
         },
+        "target": {
+          "$ref": "#/$defs/pr_target"
+        },
         "status": {
           "type": "string",
           "enum": ["passed", "failed"]
@@ -347,7 +442,7 @@
         },
         "body_file": {
           "type": "string",
-          "minLength": 1
+          "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))[A-Za-z0-9._-][A-Za-z0-9._/-]*\\.md$"
         },
         "rule_outcomes": {
           "type": "array",

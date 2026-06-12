@@ -29,7 +29,7 @@ Expected outcome:
 - The body contains `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
 - The body still contains the literal `## UAT Runbook` heading.
 - Validation status is `passed`.
-- PR creation uses `gh pr create --title "$title" --body-file "$body_file"`.
+- PR creation uses `gh pr create --base "$base_branch" --head "$head_branch" --title "$title" --body-file "$body_file"`.
 
 ## Scenario 2: Split-PR packets validate independently
 

@@ -9,6 +9,7 @@ Represents one rendered PR target before creation.
 - `schema_version`: Contract version string.
 - `packet_id`: Stable packet identifier for validation output.
 - `mode`: `single` or `split`.
+- `target`: PR target containing `base_branch` and `head_branch`.
 - `source_feature_dir`: Repo-relative feature directory that owns the packet.
 - `generated_title`: Structured title metadata.
 - `body_file`: Repo-relative rendered Markdown body path.
@@ -24,12 +25,16 @@ Represents one rendered PR target before creation.
 
 **Validation Rules**
 
+- `target.base_branch` and `target.head_branch` are required for every packet and are the only target values used for `gh pr create --base` and `--head`.
+- `body_file` must be a repo-relative rendered Markdown path; absolute paths, parent-directory traversal, directories, and non-Markdown paths are invalid.
 - `generated_title.value` must render as `<type>(<scope>): <plain-English description>`.
 - Title descriptions must not contain branch refs, slice IDs, PRSG/SPEC/FR/SC/L# tokens, stale placeholders, unexpanded variables, file paths, or banned labels.
-- Body must include `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, `Known Gaps`, and literal `## UAT Runbook`.
+- Body must include rendered Markdown `## Summary`, `## What Changed`, `## Why It Matters`, `## How To Review`, `## How To UAT`, `## Verification`, `## Scope`, and `## Known Gaps` headings in that order inside the canonical packet block, plus literal `## UAT Runbook` compatibility content.
 - Verification evidence, scope evidence, source markers, and provenance markers are required.
+- Scope evidence must include changed-file scope in addition to reviewability budget and non-goals.
 - Unknown HTML comments are rejected outside code fences except editable-boundary comments and the legacy `speckit-pro-review-packet-source` compatibility marker.
 - Host PR template content may appear only outside the protected canonical packet block.
+- `split_slice` is required for split packets and invalid for single packets.
 
 ## Generated Title Metadata
 
@@ -67,6 +72,7 @@ Maintainer-editable narrative region in rendered body text.
 
 - Marker pairs must be exact full lines.
 - Marker field IDs must match the packet JSON.
+- `editable_fields` must contain exactly one field each for `summary`, `what_changed`, and `why_it_matters`, in that order.
 - Only content inside marker pairs may differ without changing the protected fingerprint.
 
 ## Protected Body Fingerprint
@@ -94,6 +100,7 @@ Deterministic validation output for one packet.
 - `schema_version`: Validation record contract version.
 - `packet_id`: Packet identifier.
 - `mode`: `single` or `split`.
+- `target`: PR target evaluated by validation.
 - `status`: `passed` or `failed`.
 - `title_value`: Rendered title evaluated by validation.
 - `body_file`: Rendered body path evaluated by validation.
@@ -134,7 +141,7 @@ Concise process log entry appended when validation blocks a packet.
 draft packet
   -> rendered packet
   -> validation passed
-  -> eligible for gh pr create --title --body-file
+  -> eligible for gh pr create --base --head --title --body-file
 
 draft packet
   -> rendered packet

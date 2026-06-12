@@ -6,7 +6,7 @@
 
 ## Summary
 
-Autopilot will render packet-owned PR titles and PR bodies for both single-PR and split-PR flows, validate the rendered packet before any `gh pr create`, and pass PR creation only through `--title` and `--body-file`. The implementation centers on one shared packet schema, one shared Bash validator, direct generation of canonical reviewer sections, and fixture-backed validation of allowed prose edits versus protected governance evidence.
+Autopilot will render packet-owned PR titles and PR bodies for both single-PR and split-PR flows, validate the rendered packet before any `gh pr create`, and pass PR creation only through the packet target plus `--title` and `--body-file`. The implementation centers on one shared packet schema, one shared Bash validator, direct generation of canonical reviewer sections, and fixture-backed validation of allowed prose edits versus protected governance evidence.
 
 ## Technical Context
 
@@ -120,6 +120,8 @@ Research is captured in [research.md](research.md). Key decisions:
 
 - Use one shared rendered packet validator, not separate single/split validators.
 - Treat `generated_title` as structured packet metadata with final value, conventional type/scope, public description, source evidence, and rejected candidates.
+- Treat `target.base_branch` and `target.head_branch` as required packet metadata used for `gh pr create --base` and `--head`.
+- Treat `body_file` as a repo-relative rendered Markdown path and `scope_evidence.changed_files` as the changed-file scope reviewers inspect.
 - Generate canonical reviewer sections directly, while preserving the literal `## UAT Runbook` heading for SPEC-006a/b compatibility.
 - Allow prose refinement only inside exact full-line editable marker pairs under `Summary`, `What Changed`, and `Why It Matters`.
 - Store deterministic validation JSON under the target feature `.process/pr-packets/<packet_id>/validation.json`.
