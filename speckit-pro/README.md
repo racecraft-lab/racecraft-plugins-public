@@ -53,11 +53,11 @@ plugin's examples use the same GitHub source:
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 ```
 
-Initialize your repo with the Spec Kit integration for the agent you use. For
-example, for Claude Code in the current directory:
+Initialize your repo with the Spec Kit integration for the agent you use. From
+the project directory, the Claude Code setup is:
 
 ```bash
-specify init . --integration claude
+specify init --integration claude
 ```
 
 For Codex or other integrations, follow the official
