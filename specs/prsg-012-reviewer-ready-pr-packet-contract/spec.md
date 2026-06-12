@@ -97,13 +97,13 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 - **FR-007**: The validator MUST reject stale placeholders, unfilled template comments, unexpanded variables, and example text that remains in the rendered packet.
 - **FR-008**: The validator MUST reject rendered bodies missing any required reviewer-facing heading: Summary, What Changed, Why It Matters, How To Review, How To UAT, Verification, Scope, or Known Gaps.
 - **FR-009**: Rendered bodies MUST keep the literal `## UAT Runbook` compatibility heading while also providing the reviewer-facing How To UAT section.
-- **FR-010**: The validator MUST reject rendered packets missing required source markers for generated packet content and evidence sources.
+- **FR-010**: The validator MUST reject rendered packets missing required rendered source/provenance markers for generated packet content and evidence sources. The legacy `speckit-pro-review-packet-source` HTML comment MAY remain for backward compatibility, but MUST NOT satisfy protected source-marker validation.
 - **FR-011**: The validator MUST reject rendered packets missing verification evidence or scope evidence.
 - **FR-012**: The validator MUST reject banned labels including `ELI5` and `Plain-English Summary`.
 - **FR-013**: Validation failures MUST block before PR creation and report remediation evidence that names the failed rule, packet target, affected section, and relevant text excerpt when available.
-- **FR-014**: Validation results MUST be written as JSON under the feature `.process` tree with status, rule outcomes, packet identity, title/body paths, and failure details.
+- **FR-014**: Validation results MUST be written as one JSON record per packet under the target feature `.process/pr-packets/<packet_id>/validation.json` path, with status, packet identity, mode, title/body paths or values, rule outcomes, failure details, remediation evidence, PR-blocked status, and timestamps.
 - **FR-015**: Blocking validation failures MUST append a concise workflow event that records the blocked packet and remediation evidence location.
-- **FR-016**: The packet contract MUST allow sanctioned prose refinements while protecting generated governance sections, source markers, UAT content, traceability, scope, and verification evidence.
+- **FR-016**: The packet contract MUST allow sanctioned prose refinements only inside explicit editable blocks under `Summary`, `What Changed`, and `Why It Matters`. The validator MUST reject edits that remove or corrupt `How To Review`, `How To UAT`, `Verification`, `Scope`, `Known Gaps`, traceability, source markers, UAT content, or generated governance/evidence content.
 - **FR-017**: Host PR template support MAY coexist only when the final rendered packet still satisfies the packet contract.
 - **FR-018**: PRSG-012 MUST treat post-create auto-repair of already-open PRs as out of scope.
 
@@ -138,8 +138,8 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 
 ### Key Entities *(include if feature involves data)*
 
-- **PR Packet**: A rendered PR title and body for one PR target, including mode, slice identity when applicable, required headings, UAT content, source markers, scope evidence, verification evidence, and known-gap language.
-- **Packet Validation Result**: A JSON record describing pass or fail status, evaluated rules, packet identity, title/body locations, and remediation evidence for failures.
+- **PR Packet**: A rendered PR title and body for one PR target, including schema version, packet identity, mode, target, generated title, body file, required sections, UAT content, rendered source/provenance markers, scope evidence, verification evidence, known-gap language, editable field boundaries, and validation result path. PRSG-012 uses a shared `pr-packet.schema.json` for both single-PR and split-PR flows; split packets keep `slice-packet.schema.json` as slice evidence/source input and include slice identity or the source slice packet path.
+- **Packet Validation Result**: A JSON record describing pass or fail status, evaluated rules, packet identity, mode, title value or path, body file, failures, remediation evidence, whether PR creation was blocked, and timestamps.
 - **Workflow Event**: A concise process log entry written when validation blocks a packet before PR creation.
 - **Sanctioned Prose Field**: A maintainer-editable narrative field that may be refined without changing protected governance or evidence sections.
 
@@ -157,7 +157,8 @@ As a maintainer, I can refine sanctioned prose fields without damaging generated
 ## Assumptions
 
 - Existing SPEC-006a/b UAT runbook wiring remains the source of UAT content for generated packets.
-- A required source marker is an explicit rendered marker outside comments, code fences, generated fixtures, and other non-provenance text.
-- Sanctioned prose fields are limited to declared reviewer-facing narrative fields; generated governance and evidence fields remain validator-protected.
-- Validation JSON for this feature is written under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process`.
+- A required source marker is an explicit rendered marker outside HTML comments, code fences, generated fixtures, `.process` artifacts, generated zones, and other non-rendered or non-provenance text.
+- The legacy HTML comment marker `speckit-pro-review-packet-source` may remain for backward compatibility with existing self-checks, but it does not satisfy PRSG-012 protected source-marker validation.
+- Sanctioned prose fields are limited to explicit editable blocks under `Summary`, `What Changed`, and `Why It Matters`; generated governance and evidence fields remain validator-protected.
+- Validation JSON for this feature is written per packet under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/<packet_id>/validation.json`, with an optional aggregate index for a run.
 - PRSG-012 covers generation and validation before PR creation only; repair of already-open PRs is deferred to a later feature if needed.

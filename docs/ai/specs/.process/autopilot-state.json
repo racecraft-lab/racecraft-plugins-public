@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-012-workflow.md",
-  "updated_at": "2026-06-12T14:30:26Z",
-  "active_step": "Phase 2: Clarify - Packet Schema",
+  "updated_at": "2026-06-12T14:40:55Z",
+  "active_step": "Phase 2: Clarify - Title Generation",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -96,15 +96,17 @@
     },
     {
       "step": "Phase 2: Clarify - Packet Schema",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted shared pr-packet.schema.json, required packet fields, per-packet validation JSON path, compatibility-only legacy HTML marker semantics, and Summary/What Changed/Why It Matters editable-field boundaries."
     },
     {
       "step": "Phase 2: Clarify - Packet Schema Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Round 1 codebase/spec consensus accepted rendered source/provenance markers outside comments/code fences/generated fixtures and explicit editable prose blocks limited to Summary, What Changed, and Why It Matters."
     },
     {
       "step": "Phase 2: Clarify - Title Generation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Title Generation Consensus",

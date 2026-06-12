@@ -186,7 +186,7 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Packet schema | | |
+| 1 | Packet schema | 5 | Add a shared `pr-packet.schema.json`; keep `slice-packet.schema.json` as split-slice evidence/source input. Required packet fields: schema version, packet id, mode, target, generated title, body file, required sections, verification evidence, scope evidence, UAT source, rendered source/provenance markers, editable fields, validation result path, and split slice identity or source slice packet path. Validation JSON is one record per packet under `.process/pr-packets/<packet_id>/validation.json`. Legacy `speckit-pro-review-packet-source` HTML comments are compatibility-only and do not satisfy protected source-marker validation. Editable prose is limited to explicit blocks under `Summary`, `What Changed`, and `Why It Matters`. |
 | 2 | Titles | | |
 | 3 | Safe refinement | | |
 
@@ -209,7 +209,7 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 
 ## Architecture Notes
 - Add one shared validator script, likely `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`.
-- Extend or add contracts so a packet owns: generated title, body file path, source feature dir, required headings, verification evidence, scope evidence, UAT source, source marker, and editable prose fields.
+- Add a shared `pr-packet.schema.json` so a packet owns: generated title, body file path, source feature dir, required headings, verification evidence, scope evidence, UAT source, rendered source/provenance markers, editable prose fields, validation result path, and split slice identity when applicable. Keep `slice-packet.schema.json` as slice evidence/source input.
 - Update `generate-pr-body.sh` so the generated body owns canonical reviewer sections directly: `Summary`, `What Changed`, `Why It Matters`, `How To Review`, `How To UAT`, `Verification`, `Scope`, and `Known Gaps`.
 - Preserve a literal `## UAT Runbook` heading in the rendered body for SPEC-006a/b compatibility.
 - Update the single-PR post-implementation path to generate the packet, validate it, and create the PR with `--title` and `--body-file`.
@@ -220,8 +220,8 @@ PRSG-009 made split PRs possible, SPEC-006a/b added UAT runbook wiring, and PRSG
 ## Constraints
 - Keep scripts deterministic and fixture-friendly.
 - Do not introduce dependencies beyond Bash, `jq`, `git`, and `gh`.
-- Do not break existing L3 expectations that PR bodies contain the source marker and UAT Runbook heading.
-- Preserve generated governance sections and source markers during safe prose refinement.
+- Do not break existing L3 expectations that PR bodies contain the legacy `speckit-pro-review-packet-source` compatibility marker and UAT Runbook heading.
+- Preserve generated governance sections, rendered source/provenance markers, and compatibility markers during safe prose refinement.
 
 ## Reviewability Budget
 - Primary surface: docs/process plus Bash automation
@@ -478,3 +478,10 @@ specs/prsg-012-reviewer-ready-pr-packet-contract/
 ---
 
 Template based on SpecKit best practices. Populated for PRSG-012 from the PR-size governance roadmap and the PRSG-012 design concept doc.
+
+## Consensus Resolution Log
+
+| Phase | Item | Round | Routed Categories | Outcome | Analysts Used |
+|-------|------|-------|-------------------|---------|---------------|
+| Clarify Session 1 | HTML source marker semantics | 1 | codebase, spec | Accepted: keep `speckit-pro-review-packet-source` as a compatibility-only HTML comment marker; require rendered source/provenance markers outside comments, code fences, generated fixtures, `.process`, generated zones, and other non-provenance text for PRSG-012 protected marker validation. | codebase-analyst, spec-context-analyst |
+| Clarify Session 1 | Safe editable fields | 1 | codebase, spec | Accepted: only explicit editable blocks under `Summary`, `What Changed`, and `Why It Matters` are sanctioned prose fields; protect `How To Review`, `How To UAT`, `Verification`, `Scope`, `Known Gaps`, traceability, source markers, UAT content, and generated governance/evidence content. | codebase-analyst, spec-context-analyst |
