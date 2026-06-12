@@ -1,0 +1,58 @@
+{
+  "multi_pr_emission": {
+    "schema_version": 1,
+    "status": "blocked",
+    "emission_mode": "layer",
+    "route": "layer_plan",
+    "base_branch": "main",
+    "base_sha": "0123456789abcdef",
+    "next_slice_id": "us1",
+    "reconciled_at": "2026-06-10T00:00:00Z",
+    "slices": [
+      {
+        "slice_id": "foundation",
+        "review_order": 1,
+        "expected_branch": "prsg-009-multi-pr-emission/01-foundation",
+        "expected_base_branch": "main",
+        "declared_files": [
+          "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        ],
+        "declared_scoped_tests": [
+          "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+        ],
+        "status": "pr_opened",
+        "head_sha": "sha-foundation",
+        "pr": {
+          "number": 301,
+          "url": "https://github.example/pr/301",
+          "state": "opened",
+          "base_ref": "main",
+          "head_ref": "prsg-009-multi-pr-emission/01-foundation",
+          "head_sha": "sha-foundation",
+          "merged_sha": null
+        }
+      },
+      {
+        "slice_id": "us1",
+        "review_order": 2,
+        "expected_branch": "prsg-009-multi-pr-emission/02-us1",
+        "expected_base_branch": "prsg-009-multi-pr-emission/01-foundation",
+        "declared_files": [
+          "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        ],
+        "declared_scoped_tests": [
+          "bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+        ],
+        "status": "failed",
+        "last_error": {
+          "slice_id": "us1",
+          "failed_at": "2026-06-10T00:00:00Z",
+          "phase": "pr_packet_validation",
+          "command": "validate-pr-packet.sh failed for slice us1",
+          "exit_status": 1,
+          "evidence_path": "specs/prsg-009-multi-pr-emission/.process/pr-packets/us1/validation.json"
+        }
+      }
+    ]
+  }
+}

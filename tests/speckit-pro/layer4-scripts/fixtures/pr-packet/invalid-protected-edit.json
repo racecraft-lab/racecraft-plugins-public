@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0.0",
-  "packet_id": "valid-single",
+  "packet_id": "invalid-protected-edit",
   "mode": "single",
   "target": {
     "base_branch": "main",
@@ -28,7 +28,7 @@
       }
     ]
   },
-  "body_file": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md",
+  "body_file": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/invalid-protected-edit.md",
   "required_headings": [
     "Summary",
     "What Changed",
@@ -42,7 +42,7 @@
   "verification_evidence": [
     {
       "kind": "json_syntax",
-      "source": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json",
+      "source": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json",
       "summary": "Fixture parses with jq empty.",
       "result": "passed"
     }
@@ -53,8 +53,8 @@
     "total_files": 2,
     "budget_result": "within_budget",
     "changed_files": [
-      "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json",
-      "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md"
+      "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-protected-edit.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/invalid-protected-edit.md"
     ],
     "non_goals": [
       "Validator behavior is not implemented by this fixture task.",
@@ -64,7 +64,7 @@
   "uat": {
     "how_to_uat": "Run the Layer 4 packet validation fixture once the validator task lands. Until then, inspect the fixture shape and JSON syntax.",
     "uat_runbook_heading": "## UAT Runbook",
-    "uat_source": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/valid-single.md"
+    "uat_source": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/bodies/invalid-protected-edit.md"
   },
   "source_markers": [
     {
@@ -113,5 +113,5 @@
       "why_it_matters"
     ]
   },
-  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/valid-single/validation.json"
+  "validation_result_path": "specs/prsg-012-reviewer-ready-pr-packet-contract/.process/pr-packets/invalid-protected-edit/validation.json"
 }

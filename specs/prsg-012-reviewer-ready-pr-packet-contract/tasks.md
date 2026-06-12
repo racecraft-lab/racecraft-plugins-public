@@ -30,7 +30,7 @@
 - [x] T008 Create the executable validator skeleton with input parsing, deterministic exit-code branches, and JSON output path handling in `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh`
 - [x] T009 Verify the reviewability budget against the planned file scope and record any split decision in `specs/prsg-012-reviewer-ready-pr-packet-contract/tasks.md`
 
-**Checkpoint**: Layer 4 fixtures fail for the missing validator, generated title/body packet fields, and PR create command arguments.
+**Checkpoint**: Layer 4 fixtures cover the validator, generated title/body packet fields, and PR create command arguments. The PR branch must stay green before review.
 
 ## Phase 2: User Story 1 - Specific Conventional PR Titles (Priority: P1) MVP
 

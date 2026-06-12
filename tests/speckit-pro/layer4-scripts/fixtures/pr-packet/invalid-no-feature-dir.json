@@ -1,0 +1,10 @@
+{
+  "packet_id": "invalid-no-feature-dir",
+  "mode": "single",
+  "generated_title": {
+    "value": "feat(speckit-pro): Missing feature directory",
+    "type": "feat",
+    "scope": "speckit-pro",
+    "description": "Missing feature directory"
+  }
+}

@@ -1,0 +1,6 @@
+missing tests/speckit-pro/layer4-scripts/fixtures/pr-packet/missing-packet.json
+unreadable tests/speckit-pro/layer4-scripts/fixtures/pr-packet/unreadable-packet.json
+directory tests/speckit-pro/layer4-scripts/fixtures/pr-packet
+invalid-json tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-malformed-json.json
+schema-invalid tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-schema-with-feature-dir.json
+no-feature-dir tests/speckit-pro/layer4-scripts/fixtures/pr-packet/invalid-no-feature-dir.json
