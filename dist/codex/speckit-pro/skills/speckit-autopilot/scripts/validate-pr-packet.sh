@@ -453,8 +453,8 @@ validate_body_file() {
     "<!-- speckit-pro-editable:what_changed:end -->" \
     "<!-- speckit-pro-editable:why_it_matters:start -->" \
     "<!-- speckit-pro-editable:why_it_matters:end -->"; do
-    if ! grep -Fq "$marker" "$body_abs"; then
-      add_failure "body.required_content" "body_file" \
+      if ! grep -Fq "$marker" "$body_abs"; then
+        add_failure "body.required_content" "body_file" \
         "Rendered body is missing required content: $marker" \
         "Regenerate the body with canonical sections, editable markers, UAT compatibility, and source evidence."
     fi
