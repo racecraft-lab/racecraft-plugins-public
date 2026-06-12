@@ -508,6 +508,28 @@ For every deterministic behavior:
 - [x] Invalid packet fixture blocks before PR creation and writes JSON remediation evidence.
 - [x] PR title is conventional and public-readable.
 
+### Post-Implementation Status
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Doctor Extension Check | Skipped | Codex command not installed: `.codex/commands` is absent; command exists only under `.claude/commands/speckit.speckit-utils.doctor.md`. |
+| Verify Implementation | Skipped | Codex command not installed: `.codex/commands` is absent; command exists only under `.claude/commands/speckit.verify.md` / `.claude/commands/speckit.verify.run.md`. |
+| Verify Tasks Phantom Check | Skipped | Codex command not installed: `.codex/commands` is absent; command exists only under `.claude/commands/speckit.verify-tasks.md` / `.claude/commands/speckit.verify-tasks.run.md`. |
+| Code Review | Skipped | Review extension command is not installed for the Codex runtime. |
+| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed: 2790/2790 checks. |
+| Cleanup | Skipped | Cleanup extension command is not installed for the Codex runtime. |
+| Reviewability Diff Gate | Complete | Final reviewability backstop returned `outcome=marker_split`; full diff remains size-blocked, but the current marker plan is valid, fingerprint-matched, and emission-ready. Evidence: `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/final-reviewability/gate-state.json` and `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/marker-plan/final-marker-split-result.json`. |
+| Self-Review | Complete | Four-question audit recorded below; no follow-up gaps found. |
+| UAT Runbook Generation | Complete | Skeleton generated at `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/uat-runbook.md`; `uat-runbook-author` is not installed in this Codex runtime, so the deterministic skeleton is retained fail-open. |
+| PR Body Generation | In Progress | Non-mutating marker emission generated 5 candidate marker packets and command evidence under `specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/candidate/`; live persistent body generation is pending clean-worktree emission. |
+
+### Self-Review
+
+1. **Tests executed?** Applicable verification ran in this resumed session. `bash tests/speckit-pro/run-all.sh --layer 1` passed 978/978, `bash tests/speckit-pro/run-all.sh --layer 4` passed 1622/1622, and `bash tests/speckit-pro/run-all.sh` passed 2790/2790. The project command detector reports BUILD, TYPECHECK, LINT, UNIT_TEST, and INTEGRATION_TEST as `N/A` for this shell-only plugin repository, so no separate build/typecheck/lint commands were inferred as passing.
+2. **Edge cases?** Acceptance coverage is present for single and split packet title generation, stale/title-token rejection, canonical body order, UAT compatibility, missing evidence, banned labels, input-error packet paths, stale validation, split partial-failure resume, safe prose edits, protected evidence edits, and host-template coexistence. Evidence includes `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh:385`, `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh:390`, `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh:530`, `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:346`, `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:1141`, and `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:1445`.
+3. **Requirements matched?** FR-001 through FR-004A map to checked title and PR-create tasks T010-T017; FR-005 through FR-015F map to checked validator, workflow-event, stale-result, and split-resume tasks T018-T034; FR-016 through FR-018 map to checked safe-edit and protected-fingerprint tasks T035-T041; FR-019 maps to checked mirrored guidance/parity tasks T042-T053. Verification tasks T054-T056 are checked and passed.
+4. **Follow-up?** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]` markers were found in `spec.md`, `plan.md`, or `tasks.md`, and branch commit subjects do not contain those markers. No self-review follow-up item is required.
+
 ---
 
 ## Project Structure Reference
