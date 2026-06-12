@@ -30,8 +30,8 @@ The design concept is the source of truth for these setup decisions:
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Seed spec from PRD DOC-FR-001, roadmap DOC-001, and the design concept |
-| Clarify | `/speckit-clarify` | Pending | Resolve stack-decision rubric, evidence freshness, and GitHub Pages constraints |
+| Specify | `/speckit-specify` | Complete | Created spec with 3 user stories, 11 functional requirements, 6 success criteria, and 0 `[NEEDS CLARIFICATION]` markers |
+| Clarify | `/speckit-clarify` | In Progress | Running session 1: framework decision rubric |
 | Plan | `/speckit-plan` | Pending | Plan research matrix and IA skeleton deliverable |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: documentation-quality, accessibility, error-handling |
 | Tasks | `/speckit-tasks` | Pending | Research-only spike tasks; no site scaffold or package files |
@@ -60,12 +60,12 @@ The design concept is the source of truth for these setup decisions:
 
 | Principle | Requirement | Verification |
 |-----------|-------------|--------------|
-| Plugin Structure Compliance | Do not add plugin components or generated payload files in this spike | `git diff --name-only` review |
-| Script Safety | Do not add scripts in DOC-001 unless the plan explicitly justifies them; expected output is research markdown only | `git diff --name-only` review |
-| Test Coverage Before Merge | Research-only docs branch should at minimum pass structural checks when relevant | `bash tests/speckit-pro/run-all.sh --layer 1` if structural surfaces change |
-| KISS, Simplicity & YAGNI | Keep stack decision evidence in one research document; no prototype/package files unless the spec is formally amended | Plan review and final diff review |
+| Plugin Structure Compliance | Do not add plugin components or generated payload files in this spike | Verified baseline: current DOC-001 diff is process/spec docs only before implementation |
+| Script Safety | Do not add scripts in DOC-001 unless the plan explicitly justifies them; expected output is research markdown only | Verified baseline: no DOC-001 scripts added before implementation |
+| Test Coverage Before Merge | Research-only docs branch should at minimum pass structural checks when relevant | Verified baseline: `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978` |
+| KISS, Simplicity & YAGNI | Keep stack decision evidence in one research document; no prototype/package files unless the spec is formally amended | Verified baseline: expected deliverable remains one research markdown decision record |
 
-**Constitution Check:** Pending
+**Constitution Check:** Verified
 
 ---
 
@@ -142,14 +142,14 @@ Racecraft needs a static documentation site, but the repository currently has no
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 11 |
+| User Stories | 3 |
+| Acceptance Criteria | 6 success criteria; 6 acceptance scenarios |
 
 ### Files Generated
 
-- [ ] `specs/doc-001-static-docs-framework-and-ia-spike/spec.md`
-- [ ] `specs/doc-001-static-docs-framework-and-ia-spike/checklists/requirements.md`
+- [x] `specs/doc-001-static-docs-framework-and-ia-spike/spec.md`
+- [x] `specs/doc-001-static-docs-framework-and-ia-spike/checklists/requirements.md`
 
 ---
 

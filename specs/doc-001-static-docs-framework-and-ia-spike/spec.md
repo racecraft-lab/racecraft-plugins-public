@@ -1,0 +1,123 @@
+# Feature Specification: Static docs framework and IA spike
+
+**Feature Branch**: `doc-001-static-docs-framework-and-ia-spike`
+
+**Created**: 2026-06-12
+
+**Status**: Draft
+
+**Input**: User description: "Racecraft needs a static documentation site, but the repository currently has no docs-site package, config, lockfile, or hosting decision. DOC-001 selects the site stack and IA foundation before DOC-002 creates the shell."
+
+## User Scenarios & Testing *(mandatory)*
+
+### User Story 1 - Review the framework recommendation (Priority: P1)
+
+As a maintainer, I can review one source-backed recommendation for the docs framework and understand why the alternatives were rejected.
+
+**Why this priority**: Maintainers need to approve the dependency and hosting direction before any docs-site package or shell is created.
+
+**Independent Test**: A reviewer opens the spike report and verifies that exactly one default stack is recommended, that each rejected alternative has a rationale, and that every conclusion is backed by current source evidence.
+
+**Acceptance Scenarios**:
+
+1. **Given** the repository has no docs-site package, config, lockfile, or hosting decision, **When** a maintainer reviews the spike report, **Then** the report identifies one recommended default stack for DOC-002 unless it records a hard blocker.
+2. **Given** Docusaurus/MDX, VitePress, Astro/Starlight, and the repo-native fallback are compared, **When** a maintainer reviews the comparison, **Then** each non-selected option has a clear rejection rationale tied to the evaluation criteria.
+
+---
+
+### User Story 2 - Handoff IA and commands to DOC-002 (Priority: P2)
+
+As the DOC-002 implementer, I have a concrete IA skeleton and minimum package, build, and test commands for the selected stack.
+
+**Why this priority**: DOC-002 should be able to create the docs-site shell without reopening stack selection or top-level IA decisions.
+
+**Independent Test**: A DOC-002 implementer can use only the spike report to identify the top-level documentation routes, the Diataxis mode for each route, the intended audience, source evidence, success criteria, recommended package manager, and minimum command set.
+
+**Acceptance Scenarios**:
+
+1. **Given** DOC-002 is ready to create the docs-site shell, **When** the implementer reads the IA section, **Then** every top-level route includes its route path, Diataxis mode, audience, source evidence, and success criterion.
+2. **Given** the selected stack determines the package manager, **When** the implementer reads the command section, **Then** the report lists the minimum package, build, and test commands needed for the selected stack.
+
+---
+
+### User Story 3 - Confirm research-only scope (Priority: P3)
+
+As a reviewer, I can confirm the spike did not introduce site scaffolding, package files, or plugin behavior changes.
+
+**Why this priority**: DOC-001 must remain a bounded research spike so DOC-002 owns site creation and behavior changes.
+
+**Independent Test**: A reviewer inspects the diff and verifies the only implementation output is the research report and SpecKit planning artifacts, with no docs-site scaffold or runtime behavior changes.
+
+**Acceptance Scenarios**:
+
+1. **Given** the spike is complete, **When** a reviewer inspects changed files, **Then** there are no new or modified package files, lockfiles, site config files, prototype components, CI files, marketplace files, plugin behavior files, or README migration changes.
+2. **Given** the spike report recommends a stack, **When** a reviewer checks the repository, **Then** the recommendation is documented only as research and does not create or configure the docs site.
+
+---
+
+### Edge Cases
+
+- If live framework or platform source documentation is temporarily unavailable, the report must record the gap, avoid relying on stale unsupported claims, and use the best available official or primary source evidence.
+- If every candidate has a hard blocker for GitHub Pages hosting from this repository, the report must record the blocker and recommend the least risky fallback instead of forcing a preferred framework.
+- If a candidate supports an evaluation criterion only through third-party plugins or paid services, the report must distinguish that support from built-in or first-party support.
+- If source evidence conflicts across framework or platform docs, the report must prefer the most current official source and note the conflict.
+- If an IA route lacks enough source evidence or a measurable success criterion, the route must be revised or omitted from the top-level skeleton.
+
+## Requirements *(mandatory)*
+
+### Functional Requirements
+
+- **FR-001**: The spike MUST produce one source-backed comparison of Docusaurus/MDX, VitePress, Astro/Starlight, and a repo-native fallback.
+- **FR-002**: The comparison MUST evaluate each candidate for static hosting, GitHub Pages support, MDX or equivalent interactivity, search, versioning, accessibility, link checking, docs-as-code workflow, maintenance load, and package/build/test commands.
+- **FR-003**: The spike MUST refresh live framework and platform source documentation during research and record enough source evidence for reviewers to validate the recommendation.
+- **FR-004**: The spike MUST recommend one default stack for DOC-002 unless a hard blocker is recorded.
+- **FR-005**: The spike MUST explain why each non-selected alternative was rejected or deferred.
+- **FR-006**: The spike MUST identify the package manager recommended by the selected stack and list the minimum package, build, and test commands for DOC-002.
+- **FR-007**: The spike MUST draft a Diataxis IA skeleton for the docs site.
+- **FR-008**: Each top-level IA route MUST include route, mode, audience, source evidence, and success criterion.
+- **FR-009**: The spike result MUST be written to `docs/ai/research/interactive-documentation-framework-spike.md`.
+- **FR-010**: Completion evidence MUST show that DOC-001 did not add or modify package files, lockfiles, site config, prototype components, CI changes, marketplace changes, plugin behavior, or README migration.
+- **FR-011**: The spike MUST leave docs-site implementation, README migration, interactive widgets, and docs CI creation out of scope for DOC-002 or later work.
+
+### Reviewability Budget *(mandatory)*
+
+- **Primary surface**: docs/process
+- **Secondary surfaces, if any**: N/A
+- **Projected reviewable LOC**: 200-450 lines, excluding generated or unchanged template content
+- **Projected production files**: 1 research report; 0 production code files
+- **Projected total files**: 3-5 files, including SpecKit artifacts and the research report
+- **Budget result**: within budget
+- **Split decision**: This remains one research spike because it selects a docs framework and IA foundation without implementation changes. DOC-002 owns shell creation and any docs-site files.
+- **Exception provenance, if any**: N/A
+
+### PR Review Packet Requirements *(mandatory)*
+
+- PR description MUST include: what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes.
+- Traceability MUST map each major requirement or success criterion to changed files and verification evidence.
+- Deferred work MUST name the follow-up spec or issue.
+
+### Key Entities *(include if feature involves data)*
+
+- **Framework Candidate**: A docs-site option under evaluation, including Docusaurus/MDX, VitePress, Astro/Starlight, and the repo-native fallback.
+- **Evaluation Criterion**: A comparison dimension reviewers need to approve or reject a candidate, such as hosting, interactivity, search, versioning, accessibility, link checking, workflow fit, maintenance load, and commands.
+- **IA Route**: A proposed top-level documentation path with Diataxis mode, audience, source evidence, and success criterion.
+- **Spike Report**: The research artifact that records evidence, comparison, recommendation, IA skeleton, commands, non-goals, and verification scope.
+
+## Success Criteria *(mandatory)*
+
+### Measurable Outcomes
+
+- **SC-001**: The report covers all 4 required candidate stacks across at least 10 required evaluation dimensions.
+- **SC-002**: A maintainer can identify the recommended stack and the rejection rationale for every alternative in under 5 minutes.
+- **SC-003**: The IA skeleton includes no placeholder values and provides route, mode, audience, source evidence, and success criterion for every top-level route.
+- **SC-004**: A DOC-002 implementer can identify the recommended package manager plus minimum package, build, and test commands without consulting files outside the spike report.
+- **SC-005**: A reviewer can verify from the final diff that 0 package files, lockfiles, site config files, prototype components, CI files, marketplace files, plugin behavior files, or README migration files were changed by DOC-001.
+- **SC-006**: The report records refreshed source evidence for framework and platform claims with a retrieval date matching the spike execution date.
+
+## Assumptions
+
+- GitHub Pages is the required baseline hosting target for the selected stack.
+- The repo-native fallback means continuing repository-native Markdown documentation without a dedicated docs-site framework or shell.
+- DOC-001 starts from a repository state with no docs-site package, config, lockfile, or hosting decision.
+- DOC-002 will create the docs-site shell after this spike is accepted.
+- Any framework-specific package manager recommendation belongs in the research report and does not authorize DOC-001 to create package files.
