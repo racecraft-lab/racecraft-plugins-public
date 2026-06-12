@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/PRSG-013-workflow.md",
-  "updated_at": "2026-06-12T03:34:32Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-12T03:43:46Z",
+  "active_step": "Phase 6: Analyze",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -109,8 +109,8 @@
     {"step": "Phase 4: Checklist - api-contracts Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
     {"step": "Phase 4: Checklist - llm-integration", "status": "completed", "summary": "29 items; 5 gaps remediated; 0 [Gap] markers remaining. Added guidance evidence prompts, marker-order checkpoint evidence, no manual re-slicing stops for size alone, mirror parity coverage, and reportable marker evidence fields."},
     {"step": "Phase 4: Checklist - llm-integration Consensus", "status": "completed", "summary": "Checklist executor returned no unresolved consensus items."},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed", "gate": "G5", "gate_status": "passed", "summary": "Generated tasks.md with 45 tasks across 5 phases, 19 parallel opportunities, and coverage for US1, US2, and US3."},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
@@ -336,5 +336,36 @@
       "consensus": "none unresolved",
       "known_tool_issue": "check-prerequisites.sh --json failed in checklist executor because branch prsg-013-reviewability-markers does not match SpecKit numeric branch pattern; executor used explicit feature dir. count-markers.sh gaps still hits the known zero-spec-gap jq edge."
     }
+  },
+  "phase5_tasks": {
+    "gate": "G5",
+    "gate_status": "passed",
+    "tasks_file": "specs/prsg-013-reviewability-markers/tasks.md",
+    "total_tasks": 45,
+    "phases": 5,
+    "parallel_opportunities": 19,
+    "user_stories_covered": [
+      "US1",
+      "US2",
+      "US3"
+    ],
+    "validation": {
+      "validate_gate_g5": "passed: 45 tasks found",
+      "contracts_jq": "passed by phase executor",
+      "layer1": "978/978 passed by phase executor",
+      "diff_check": "passed by phase executor and parent"
+    },
+    "summary": "Tasks are organized by Foundation, US1, US2, US3, and Polish/Parity. Tests and fixtures precede implementation inside each story, marker state stays out of tasks.md, and PRSG-012 packet validation is explicitly excluded."
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [
+      "hint:flag-system:weak"
+    ],
+    "warnings": []
   }
 }
