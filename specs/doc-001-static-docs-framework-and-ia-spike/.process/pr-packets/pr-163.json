@@ -51,6 +51,12 @@
       "source": "tests/speckit-pro/run-all.sh",
       "summary": "Deterministic SpecKit Pro suite was rerun after the main merge and packet refresh.",
       "result": "passed"
+    },
+    {
+      "kind": "decision_update_validation",
+      "source": "docs/ai/research/interactive-documentation-framework-spike.md",
+      "summary": "2026-06-13 Astro/Starlight decision update passed Layer 1 structural validation, stale recommendation scan, and git diff whitespace checks.",
+      "result": "passed"
     }
   ],
   "scope_evidence": {
@@ -139,7 +145,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "e7c4bbb40bffe9bd523ae166330a2965082b2ac3ff11307f2839f9a815e271b7",
+    "value": "8bc761dd410833e979db012d49592f0593601b7a1935e086df1a26e0d530a5aa",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

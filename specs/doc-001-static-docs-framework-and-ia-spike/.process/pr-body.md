@@ -3,7 +3,7 @@
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-This PR selects Docusaurus with MDX as the default static docs stack and records the route-level IA handoff for the next docs-site implementation.
+This PR selects Astro with Starlight as the default static docs stack and records the route-level IA handoff for the next docs-site implementation.
 <!-- speckit-pro-editable:summary:end -->
 
 Source: DOC-001 specification and framework spike report define the selected stack and IA handoff.
@@ -11,7 +11,9 @@ Source: DOC-001 specification and framework spike report define the selected sta
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- Added a source-backed framework spike that recommends Docusaurus with MDX for the future docs site.
+- Updated the source-backed framework spike to recommend Astro with Starlight for the future docs site.
+- Added the Racecraft Systems and Focusengine Astro portfolio context to the framework decision.
+- Recorded Starlight community plugin paths for versioning and internal link validation.
 - Added the route-level IA skeleton and command handoff that the next implementation PR can use.
 - Kept this phase research-only, with no docs-site package, site config, workflow, marketplace, generated payload, or plugin behavior change.
 <!-- speckit-pro-editable:what_changed:end -->
@@ -21,7 +23,7 @@ Source: framework spike report and DOC-001 planning artifacts define the changed
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-The docs-site shell can now be scaffolded from an approved stack and information architecture without mixing framework selection into the implementation PR.
+The docs-site shell can now be scaffolded from an approved Astro-aligned stack and information architecture without mixing framework selection into the implementation PR.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review
@@ -42,6 +44,7 @@ Manual browser UAT is not required for this research-only spike. The reviewer ac
 
 - PR packet validation passed for this rendered title and body.
 - The deterministic SpecKit Pro suite was rerun after the main merge and packet refresh.
+- The 2026-06-13 decision update passed Layer 1 structural validation, stale recommendation scan, and `git diff --check`.
 
 Source: packet validation result and local verification output.
 
@@ -54,4 +57,4 @@ Source: packet validation result and local verification output.
 
 ## Known Gaps
 
-The next docs-site implementation PR must refresh current Docusaurus and GitHub Pages documentation before scaffolding. Later validation work still owns search, accessibility, deep links, and docs quality gates.
+The next docs-site implementation PR must refresh current Astro, Starlight, selected Starlight plugin, and GitHub Pages documentation before scaffolding. Later validation work still owns accessibility, deep links, docs quality gates, and the decision to add `starlight-links-validator` immediately or defer link validation to DOC-010.
