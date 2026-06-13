@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-12T23:05:00Z",
-  "active_step": "Done",
+  "updated_at": "2026-06-13T19:45:00Z",
+  "active_step": "Post-merge archive cleanup complete",
   "model_check": {
     "parent_session": "Codex main session",
     "status": "accepted",
@@ -77,22 +77,31 @@
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "dry-run",
-    "safeToApplyCleanup": false,
-    "excludedCurrentSpec": "specs/doc-001-static-docs-framework-and-ia-spike",
+    "cleanup_mode": "apply-cleanup",
+    "safeToApplyCleanup": true,
+    "excludedCurrentSpec": null,
     "eligible_previous_specs": [],
-    "cleanup_applied": [],
-    "warnings": [
-      "No active non-current spec had sufficient local merge/archive evidence for cleanup.",
-      "Empty untracked specs/doc-spec-001-static-docs-framework-and-ia-spike directory ignored."
+    "cleanup_applied": [
+      "specs/doc-001-static-docs-framework-and-ia-spike"
     ],
-    "note": "Archive extension archive v1.1.0 is installed. Sweep was recorded as dry-run/no-op for DOC-001 because no cleanup candidate passed local evidence gates."
+    "warnings": [],
+    "note": "DOC-001 was archived and removed from active specs after PR #163 merged. Recovery commands are recorded in .specify/memory/archive-reports/2026-06-13-doc-001-post-merge-hygiene.md.",
+    "initial_pre_spec_sweep": {
+      "cleanup_mode": "dry-run",
+      "safeToApplyCleanup": false,
+      "excludedCurrentSpec": "specs/doc-001-static-docs-framework-and-ia-spike",
+      "cleanup_applied": [],
+      "warnings": [
+        "No active non-current spec had sufficient local merge/archive evidence for cleanup.",
+        "Empty untracked specs/doc-spec-001-static-docs-framework-and-ia-spike directory ignored."
+      ]
+    }
   },
   "plan": [
     {
       "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
       "status": "completed",
-      "summary": "Archive extension installed; current DOC-001 target excluded; no cleanup candidate had sufficient local merge evidence, so no cleanup applied."
+      "summary": "Pre-spec archive sweep excluded current DOC-001 target; post-merge archive cleanup later archived DOC-001 and removed the active spec folder after PR #163 merged."
     },
     {
       "step": "Phase 0: Prerequisites",
@@ -336,6 +345,11 @@
       "step": "Post: Retrospective",
       "status": "skipped",
       "summary": "Retrospective extension is installed, but this Codex surface exposes only the Claude slash-command file; no executable Codex retrospective command was available."
+    },
+    {
+      "step": "Post-Merge: Archive Cleanup",
+      "status": "completed",
+      "summary": "DOC-001 archived after PR #163 merged; recovery commands recorded and specs/doc-001-static-docs-framework-and-ia-spike removed from active specs."
     }
   ],
   "pr_marker_plan": {

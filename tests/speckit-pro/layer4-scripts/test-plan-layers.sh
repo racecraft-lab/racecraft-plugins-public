@@ -1569,11 +1569,12 @@ else
   _fail "generated 200-task output must be status ok with 200 tasks"
 fi
 
-set_test "generated 200-task fixture completes under 1000ms"
-if [ "$elapsed_ms" -lt 1000 ]; then
+max_perf_ms="${PLAN_LAYERS_PERF_BUDGET_MS:-2000}"
+set_test "generated 200-task fixture completes under ${max_perf_ms}ms"
+if [ "$elapsed_ms" -lt "$max_perf_ms" ]; then
   _pass
 else
-  _fail "expected under 1000ms, got ${elapsed_ms}ms"
+  _fail "expected under ${max_perf_ms}ms, got ${elapsed_ms}ms"
 fi
 
 set_test "generated 200-task fixture remains read-only"

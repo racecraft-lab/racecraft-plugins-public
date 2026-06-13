@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: Ready for SPEC decomposition. Created 2026-06-12.
+> Status: DOC-002 ready for SPEC decomposition. Created 2026-06-12.
 
 ## Roadmap Overview
 
@@ -55,8 +55,8 @@ DOC-007 -> DOC-008
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| DOC-001 | Static docs framework and IA spike | Pending | DOC-001-workflow.md | Specify |
-| DOC-002 | Unified landing page and IA shell | Pending | DOC-002-workflow.md | Blocked by DOC-001 |
+| DOC-001 | Static docs framework and IA spike | Completed/archived | DOC-001-workflow.md | Archived after PR #163 |
+| DOC-002 | Unified landing page and IA shell | Pending | DOC-002-workflow.md | Specify |
 | DOC-003 | Claude Code marketplace installation path | Pending | DOC-003-workflow.md | Blocked by DOC-002 |
 | DOC-004 | Codex marketplace installation path | Pending | DOC-004-workflow.md | Blocked by DOC-002 |
 | DOC-005 | First successful workflow tutorial | Pending | DOC-005-workflow.md | Blocked by DOC-003, DOC-004 |
@@ -64,13 +64,15 @@ DOC-007 -> DOC-008
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Pending | DOC-007-workflow.md | Blocked by DOC-003, DOC-004 |
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Pending | DOC-008-workflow.md | Blocked by DOC-007 |
 | DOC-009 | Maintainer and contributor release workflow | Pending | DOC-009-workflow.md | Blocked by DOC-007 |
-| DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Blocked by DOC-001, DOC-002, DOC-006 |
+| DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Blocked by DOC-002, DOC-006 |
 
 ## Specification Sections
 
 ### DOC-001: Static docs framework and IA spike
 
 **Priority:** P1 | **Depends On:** None | **Enables:** DOC-002
+
+**Status:** Completed and archived after PR #163. Canonical decision record: `docs/ai/research/interactive-documentation-framework-spike.md`.
 
 **Goal:** Select the static docs-site stack and IA foundation with evidence.
 
@@ -90,13 +92,12 @@ Budget result: spike, LOC not applicable
 - Migrating README content.
 
 **Key Files:**
-- `docs/prd-interactive-documentation.md` - Source requirements.
-- `docs/roadmap-interactive-documentation.md` - Prompt-requested roadmap.
-- `docs/ai/research/interactive-documentation-framework-spike.md` - Likely spike output.
+- `docs/ai/research/interactive-documentation-framework-spike.md` - Completed framework recommendation and IA decision record.
+- `.specify/memory/archive-reports/2026-06-13-doc-001-post-merge-hygiene.md` - Archive provenance and raw artifact recovery commands.
 
 ### DOC-002: Unified landing page and IA shell
 
-**Priority:** P1 | **Depends On:** DOC-001 | **Enables:** DOC-003, DOC-004, DOC-006, DOC-010
+**Priority:** P1 | **Depends On:** DOC-001 completed | **Enables:** DOC-003, DOC-004, DOC-006, DOC-010
 
 **Goal:** Create the static docs shell, landing page, nav, and task-first IA.
 

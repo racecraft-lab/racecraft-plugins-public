@@ -449,8 +449,8 @@ Focus on:
 | Verify implementation | G7 passed with all 28 tasks complete |
 | Verify tasks phantom check | 28/28 tasks checked; no unchecked task markers remain |
 | Code review extension | Skipped; review extension is not installed |
-| Integration suite | `bash tests/speckit-pro/run-all.sh` passed `2587/2587` |
-| Cleanup extension | Skipped; cleanup extension is not installed and archive sweep was dry-run/no-op |
+| Integration suite | `bash tests/speckit-pro/run-all.sh` passed `2587/2587` before PR creation and `2915/2915` after PR #163 merge/conflict remediation |
+| Cleanup extension | Post-merge archive cleanup applied by the installed archive extension contract; report: `.specify/memory/archive-reports/2026-06-13-doc-001-post-merge-hygiene.md` |
 | Final reviewability backstop | Proceeded with `outcome=marker_split`; current final diff is a size-only 32-file block and marker plan is valid for `foundation`, `us1`, `us2`, `us3` |
 | Marker emission packet | Dry-run validation passed with 4 marker slices and no branch or PR mutations |
 | UAT runbook | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md`; author-agent rewrite unavailable, fail-open with parent self-review notes |
@@ -458,6 +458,7 @@ Focus on:
 | PR update | Existing PR updated: https://github.com/racecraft-lab/racecraft-plugins-public/pull/163 |
 | Review remediation | Initial remote check found PR mergeable with CI still pending; no review decision recorded |
 | Retrospective | Skipped in Codex surface; retrospective extension is installed but only exposes a Claude slash-command file here |
+| Post-merge archive hygiene | DOC-001 archived after PR #163 merged; `specs/doc-001-static-docs-framework-and-ia-spike` removed from active `specs/**` with recovery commands recorded |
 
 ---
 

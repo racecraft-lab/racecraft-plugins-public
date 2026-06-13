@@ -49,10 +49,12 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - PRSG-010 is archived in `.specify/memory/` as completed on 2026-06-11.
 - PRSG-005 and PRSG-013 are archived in `.specify/memory/` as completed on 2026-06-12.
 - SPEC-001, SPEC-002, SPEC-003, SPEC-004, SPEC-006a, PRSG-002, PRSG-003, PRSG-004, PRSG-006, and PRSG-012 are archived in `.specify/memory/` as completed or historically merged on 2026-06-13.
+- DOC-001 is archived in `.specify/memory/` as completed on 2026-06-13 after PR #163 merged.
 - `specs/prsg-007-atomicity-router` and `specs/prsg-011-retro-migration` were removed from active `specs/**` cleanup after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory.
 - `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup after the planner schema fixture was vendored under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/`.
 - `specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup after PR #145 merged and the PRSG-009 contract schemas were preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
 - `specs/prsg-010-harden-the-hatch` was removed from active `specs/**` cleanup after PRs #149-#155 merged and the PRSG-010 contract schemas were preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
 - `specs/prsg-005-slice-sizing-heuristics` and `specs/prsg-013-reviewability-markers` were removed from active `specs/**` cleanup after PR #120 and PR #157 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md`.
 - `specs/001-repository-foundation`, `specs/002-pr-checks-workflow`, `specs/003-release-automation`, `specs/004-integration-verification`, `specs/006a-uat-skeleton`, `specs/prsg-002-moc-templates`, `specs/prsg-003-spec-index`, `specs/prsg-004-roadmap-moc-home-note`, `specs/prsg-006-reviewability-budget`, and `specs/prsg-012-reviewer-ready-pr-packet-contract` were removed from active `specs/**` cleanup after merge provenance, recovery commands, and fixture decoupling were recorded in `.specify/memory/archive-reports/2026-06-13-merged-specs-post-merge-hygiene.md`.
+- `specs/doc-001-static-docs-framework-and-ia-spike` was removed from active `specs/**` cleanup after PR #163 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-13-doc-001-post-merge-hygiene.md`.
 - `.specify/feature.json` is transient local state. Do not commit a stale completed-spec pointer back to `main`.

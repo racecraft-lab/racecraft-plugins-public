@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** Ready for SPEC decomposition  
+**Status:** DOC-002 ready for SPEC decomposition
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -58,6 +58,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 
 ### DOC-001: Static docs framework and IA spike
 
+- **Status:** Completed and archived after PR #163. Canonical decision record: `docs/ai/research/interactive-documentation-framework-spike.md`.
 - **Maps from PRD:** DOC-FR-001
 - **User outcome:** Maintainers can select the static docs-site stack with evidence and start implementation without re-researching core tradeoffs.
 - **Scope:** Timeboxed research-only spike comparing Docusaurus/MDX, VitePress, Astro/Starlight, and a repo-native fallback. Produce a decision record, package/build/test implications, hosting options, and Diataxis IA skeleton. This is a Spike, sized by timebox rather than LOC.
@@ -82,7 +83,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 - **Non-goals:** Full platform content, interactive widgets, docs CI hardening beyond basic build.
 - **Source files likely affected:** `README.md`, `speckit-pro/README.md` for source extraction only if chosen; DOC-001 provides the stack and IA contract, while DOC-002 chooses concrete site config and docs content paths.
 - **New files likely needed:** site config, docs content directory, landing page, sidebar/nav config, glossary seed.
-- **Dependencies:** DOC-001.
+- **Dependencies:** DOC-001 completed and archived; consume the Astro/Starlight recommendation and 11-route IA skeleton from `docs/ai/research/interactive-documentation-framework-spike.md`.
 - **Acceptance criteria:** AC-2.1, AC-2.2, AC-2.3, AC-2.4, AC-2.5.
 - **Validation plan:** Site build; inspect navigation; check all top-level pages route; verify landing page platform choice and source/dist explanation.
 - **Reviewability Budget:** Primary surface: docs/process | Projected reviewable LOC: 325 | Production files: 0 | Total files: about 5 | Budget result: within budget
