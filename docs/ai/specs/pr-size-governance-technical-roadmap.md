@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 5 hatch hardening done (PRSG-010 ✅ PRs #149-#155); Phase 6 retro-migration done (PRSG-011 ✅ PR #132); Phase 7a reviewability markers done (PRSG-013 ✅ PR #157). Active: PRSG-012 reviewer-ready PR packets in progress; PRSG-014 gh-stack integration planned as optional stack-manager hardening. Created 2026-06-03; status refreshed 2026-06-12.
+> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 5 hatch hardening done (PRSG-010 ✅ PRs #149-#155); Phase 6 retro-migration done (PRSG-011 ✅ PR #132); Phase 7a reviewability markers done (PRSG-013 ✅ PR #157); Phase 7b reviewer-ready PR packets done (PRSG-012 ✅ PRs #164-#168). Active: PRSG-014 gh-stack integration planned as optional stack-manager hardening. Created 2026-06-03; status refreshed 2026-06-13.
 
 ## Vision
 
@@ -362,7 +362,7 @@ Foundation setup slice or a user story.
 
 ---
 
-### PRSG-012 — Reviewer-ready PR packet contract  · Phase 7b · P1 · 🔄 In Progress
+### PRSG-012 — Reviewer-ready PR packet contract  · Phase 7b · P1 · ✅ Complete (PRs #164-#168)
 > Added 2026-06-11 after the PRSG-010 split-PR stack exposed a reviewer-experience
 > regression: PRs were small enough to review, but titles and descriptions were still
 > hard to understand without manual cleanup.
@@ -370,6 +370,9 @@ Foundation setup slice or a user story.
 > on scoped PR packets created from persisted markers, not a flattened full-spec diff.
 > Workflow:
 > `docs/ai/specs/.process/PRSG-012-workflow.md`.
+> Completed 2026-06-13 via PRs #164-#168; active
+> `specs/prsg-012-reviewer-ready-pr-packet-contract` removed after archive
+> provenance, recovery commands, and test fixture decoupling were recorded.
 
 **Why:** PRSG-009 made split PRs possible, and SPEC-006a/b added UAT runbook wiring,
 but the post-implementation PR packet is not yet enforced as a reviewer-ready contract.

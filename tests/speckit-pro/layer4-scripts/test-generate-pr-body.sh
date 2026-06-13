@@ -10,6 +10,7 @@ REPO_ROOT="$(cd "$TEST_DIR/../../.." && pwd)"
 PLUGIN_ROOT="$REPO_ROOT/speckit-pro"
 SCRIPT="$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-pr-body.sh"
 PRSG_012_FEATURE_REL="specs/prsg-012-reviewer-ready-pr-packet-contract"
+PRSG_012_FEATURE_FIXTURE="$TEST_DIR/fixtures/prsg-012-feature/prsg-012-reviewer-ready-pr-packet-contract"
 PR_PACKET_FIXTURE_REL="tests/speckit-pro/layer4-scripts/fixtures/pr-packet"
 script_source="$(cat "$SCRIPT")"
 
@@ -388,7 +389,7 @@ body_output="$packet_repo/$body_output_rel"
 required_headings="Summary|What Changed|Why It Matters|How To Review|How To UAT|Verification|Scope|Known Gaps"
 
 mkdir -p "$packet_repo/specs" "$packet_repo/docs" "$(dirname "$packet_output")" "$(dirname "$body_output")"
-cp -R "$REPO_ROOT/$PRSG_012_FEATURE_REL" "$packet_repo/specs/"
+cp -R "$PRSG_012_FEATURE_FIXTURE" "$packet_repo/specs/"
 
 git -C "$packet_repo" init >/dev/null
 git -C "$packet_repo" checkout -b main >/dev/null 2>&1

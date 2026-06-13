@@ -326,23 +326,23 @@ scan_root "$FIX/stale" >/dev/null
 # absent(1) + dir(1) + broken-symlink(1) + wikilink(1) = 4
 assert_eq "4" "$VIOLATION_COUNT" "expected exactly the 4 negative stale fixtures to violate"
 
-section "MOC stale-index lint — dogfood scan of the real spec trees"
+section "MOC stale-index lint — fixture-backed dogfood and real-tree scan"
 
-# PRSG-002's own marker MUST be gated and its links MUST all resolve. Legacy
-# specs carry no marker -> skipped.
-PRSG_MARKER="$REPO_ROOT/specs/prsg-002-moc-templates/SPEC-MOC.md"
-set_test "PRSG-002 marker is version-gated (observable, not inferred)"
-if moc_is_gated "$PRSG_MARKER"; then _pass; else _fail "PRSG-002 SPEC-MOC.md is NOT gated"; fi
+# A committed fixture replaces the old live PRSG-002 marker dependency after
+# merged spec folders are archived out of active `specs/**`.
+DOGFOOD_MARKER="$FIX/stale/stale-valid/SPEC-MOC.md"
+set_test "Dogfood MOC marker is version-gated (observable, not inferred)"
+if moc_is_gated "$DOGFOOD_MARKER"; then _pass; else _fail "fixture SPEC-MOC.md is NOT gated"; fi
 
-set_test "PRSG-002 marker links all resolve (up: -> roadmap)"
-assert_exit_code 0 moc_links_resolve "$PRSG_MARKER"
+set_test "Dogfood MOC marker links all resolve (up: and body links)"
+assert_exit_code 0 moc_links_resolve "$DOGFOOD_MARKER"
 
 set_test "real-tree scan of docs/ai/specs/ is clean (legacy skipped)"
 VIOLATION_COUNT=0
 scan_root "$REPO_ROOT/docs/ai/specs" >/dev/null
 assert_eq "0" "$VIOLATION_COUNT" "docs/ai/specs scan should find zero violations"
 
-set_test "real-tree scan of specs/ is clean (PRSG-002 passes, legacy skipped)"
+set_test "real-tree scan of specs/ is clean (active markers pass, legacy skipped)"
 VIOLATION_COUNT=0
 scan_root "$REPO_ROOT/specs" >/dev/null
 assert_eq "0" "$VIOLATION_COUNT" "specs/ scan should find zero violations"

@@ -315,20 +315,23 @@ assert_exit_code 1 moc_specid_matches_dir "$FIX/specid/specid-absent/SPEC-MOC.md
 set_test "empty spec_id in gated marker -> VIOLATION"
 assert_exit_code 1 moc_specid_matches_dir "$FIX/specid/specid-empty/SPEC-MOC.md" "specid-empty"
 
-section "MOC orphan lint — dogfood scan of the real spec trees"
+section "MOC orphan lint — fixture-backed dogfood and real-tree scan"
 
-# PRSG-002's own marker MUST be gated (guards the inline-comment false-skip on
-# the real marker) and MUST pass both rules. Legacy specs carry no marker -> skipped.
-PRSG_MARKER="$REPO_ROOT/specs/prsg-002-moc-templates/SPEC-MOC.md"
-set_test "PRSG-002 marker is version-gated (observable, not inferred from exit 0)"
-if moc_is_gated "$PRSG_MARKER"; then _pass; else _fail "PRSG-002 SPEC-MOC.md is NOT gated (inline-comment false-skip?)"; fi
+# A committed fixture replaces the old live PRSG-002 marker dependency after
+# merged spec folders are archived out of active `specs/**`.
+DOGFOOD_MARKER="$FIX/specid/prsg-002-something/SPEC-MOC.md"
+set_test "Dogfood PRSG marker is version-gated (observable, not inferred from exit 0)"
+if moc_is_gated "$DOGFOOD_MARKER"; then _pass; else _fail "fixture SPEC-MOC.md is NOT gated"; fi
+
+set_test "Dogfood PRSG marker spec_id namespace-matches its directory"
+assert_exit_code 0 moc_specid_matches_dir "$DOGFOOD_MARKER" "prsg-002-something"
 
 set_test "real-tree scan of docs/ai/specs/ is clean (legacy skipped)"
 VIOLATION_COUNT=0
 scan_root "$REPO_ROOT/docs/ai/specs" >/dev/null
 assert_eq "0" "$VIOLATION_COUNT" "docs/ai/specs scan should find zero orphan/spec_id violations"
 
-set_test "real-tree scan of specs/ is clean (PRSG-002 passes, legacy skipped)"
+set_test "real-tree scan of specs/ is clean (active markers pass, legacy skipped)"
 VIOLATION_COUNT=0
 scan_root "$REPO_ROOT/specs" >/dev/null
 assert_eq "0" "$VIOLATION_COUNT" "specs/ scan should find zero orphan/spec_id violations"
