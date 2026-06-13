@@ -6,14 +6,14 @@ mode: "setup"
 spec_id: "DOC-001"
 source_input:
   type: "file"
-  ref: "docs/ai/specs/interactive-documentation-technical-roadmap.md#doc-001"
+  ref: "docs/ai/specs/interactive-documentation-technical-roadmap.md#doc-001-static-docs-framework-and-ia-spike"
 question_count: 6
 stop_reason: "natural"
 ---
 
 # Design Concept: Static Docs Framework and IA Spike
 
-> **Source:** docs/ai/specs/interactive-documentation-technical-roadmap.md#doc-001
+> **Source:** docs/ai/specs/interactive-documentation-technical-roadmap.md#doc-001-static-docs-framework-and-ia-spike
 > **Date:** 2026-06-12
 > **Questions asked:** 6
 > **Stop reason:** natural

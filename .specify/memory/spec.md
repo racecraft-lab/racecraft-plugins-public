@@ -505,3 +505,202 @@ PR #157 merged and PRSG-013 contracts/fixtures were preserved under the
 autopilot skill payload and test fixtures.
 Recovery commands are recorded in
 `.specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md`.
+
+---
+
+## Repository Foundation for CI/CD Pipeline
+
+[Source: specs/001-repository-foundation]
+**Branch**: `001-repository-foundation` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Established the repository release foundation for the plugin marketplace:
+release-please configuration, plugin version manifest state, and the marketplace
+version synchronization script. The shipped behavior lives in root automation
+files and `scripts/sync-marketplace-versions.sh`; the active spec folder was
+removed after PR #1 merge provenance and recovery commands were recorded.
+
+### Cleanup Note
+
+Recovery commands are recorded in
+`.specify/memory/archive-reports/2026-06-13-merged-specs-post-merge-hygiene.md`.
+
+---
+
+## PR Checks Workflow
+
+[Source: specs/002-pr-checks-workflow]
+**Branch**: `002-pr-checks-workflow` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Added the pull-request validation workflow: plugin change detection, matrix
+testing, conventional PR title validation, SHA-pinned checkout usage, skip-safe
+docs-only behavior, and reviewer-readable failure annotations. The shipped
+contract lives in `.github/workflows/pr-checks.yml`.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #2 merge provenance and recovery
+commands were recorded.
+
+---
+
+## Release Automation
+
+[Source: specs/003-release-automation]
+**Branch**: `003-release-automation` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Added release automation for `speckit-pro`: GitHub release workflow wiring,
+release-please v4 integration, marketplace version sync after release creation,
+and release safety documentation. The shipped contract lives in
+`.github/workflows/release.yml`, release-please config, and the marketplace sync
+script.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #3 merge provenance and recovery
+commands were recorded.
+
+---
+
+## Integration and Verification
+
+[Source: specs/004-integration-verification]
+**Branch**: `004-integration-verification` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Captured the repository integration and verification work: branch-protection
+expectations, squash-only merge policy, Copilot review setup, CI/CD verification
+checklist, and recovery guidance. The historical `tasks.md` ledger remained
+unchecked even though PR #5 merged; the merge commit is the source of truth for
+archive eligibility.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #5 merge provenance and recovery
+commands were recorded.
+
+---
+
+## Deterministic UAT Runbook Skeleton + PR Body Integration
+
+[Source: specs/006a-uat-skeleton]
+**Branch**: `006a-uat-skeleton` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Added deterministic UAT runbook generation and PR-body embedding: a script that
+extracts user stories, FR/SC coverage, rollback, clarification markers, and
+self-review context into a stable runbook, plus PR-body compatibility handling.
+The full-spec test dependency remains preserved in the vendored
+`tests/speckit-pro/layer4-scripts/fixtures/spec-full-snapshot.md` fixture.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #99 merge provenance and recovery
+commands were recorded.
+
+---
+
+## MOC templates + scaffold-time skeleton + version-gated lints
+
+[Source: specs/prsg-002-moc-templates]
+**Branch**: `prsg-002-moc-templates` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Added the MOC navigation contract: roadmap/spec MOC templates, scaffold-time
+`SPEC-MOC.md` creation, version-gated orphan/stale-index lints, namespace-aware
+ID normalization, and grandfathering for legacy specs without markers.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #116 merge provenance and recovery
+commands were recorded. MOC lint dogfood assertions now use committed fixtures
+rather than the live PRSG-002 spec folder.
+
+---
+
+## Generated index/PRs/backlinks + status integration + phase-gate regen
+
+[Source: specs/prsg-003-spec-index]
+**Branch**: `prsg-003-spec-index` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Added deterministic spec index regeneration: generated INDEX, PRS, and BACKLINKS
+zones, whole-zone sentinel replacement, stale generated-zone protection, status
+integration, and phase-gate regen hooks. The generator and fixtures now carry the
+behavior; the active source spec folder is no longer required.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #121 merge provenance and recovery
+commands were recorded.
+
+---
+
+## Roadmap-MOC home note from PRD + coach the two-zone structure
+
+[Source: specs/prsg-004-roadmap-moc-home-note]
+**Branch**: `prsg-004-roadmap-moc-home-note` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Added roadmap-MOC home-note support for PRD output and coach guidance: a curated
+epics zone, generated INDEX zone, relative reciprocal links, and the two-zone
+mental model for generated vs hand-authored navigation. One PR-review-packet
+task remained unchecked in `tasks.md`; it was recorded as non-blocking historical
+state because PR #129 merged.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #129 merge provenance and recovery
+commands were recorded.
+
+---
+
+## Plan-phase reviewability budget + gate threshold rework
+
+[Source: specs/prsg-006-reviewability-budget]
+**Branch**: `prsg-006-reviewability-budget` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+Added preventive reviewability sizing: plan-phase LOC estimation, production-only
+diff metrics, greenfield allowance, surface count downgraded to warning, and
+typed reviewability exceptions. The shipped behavior lives in
+`estimate-reviewable-loc.sh`, `reviewability-gate.sh`, templates, guidance, and
+Layer 4 fixtures.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #119 merge provenance and recovery
+commands were recorded.
+
+---
+
+## Reviewer-ready PR packet contract
+
+[Source: specs/prsg-012-reviewer-ready-pr-packet-contract]
+**Branch**: `prsg-012-reviewer-ready-pr-packet-contract` · **Status**: Completed · **Archived**: 2026-06-13
+
+### Summary
+
+PRSG-012 makes autopilot-generated PR packets reviewer-ready before creation. It
+adds generated conventional titles with future-spec scope support, structured
+neutral PR descriptions, pre-create PR packet validation, split-PR validation
+ordering, safe editable prose fields, and regression tests that prevent raw
+evidence dumps or patronizing labels from entering PR descriptions.
+
+### Cleanup Note
+
+The active spec folder was removed after PR stack #164-#168 merged. The PRSG-012
+feature and marker-plan test dependencies are preserved under
+`tests/speckit-pro/layer4-scripts/fixtures/`; recovery commands are recorded in
+`.specify/memory/archive-reports/2026-06-13-merged-specs-post-merge-hygiene.md`.

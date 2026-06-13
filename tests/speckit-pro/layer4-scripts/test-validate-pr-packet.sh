@@ -11,6 +11,7 @@ SCRIPT="$REPO_ROOT/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-pack
 PACKET_FIXTURE_REL="tests/speckit-pro/layer4-scripts/fixtures/pr-packet"
 FIXTURE_ROOT="$REPO_ROOT/$PACKET_FIXTURE_REL"
 FEATURE_DIR_REL="specs/prsg-012-reviewer-ready-pr-packet-contract"
+FEATURE_FIXTURE="$TEST_DIR/fixtures/prsg-012-feature/prsg-012-reviewer-ready-pr-packet-contract"
 
 SANDBOX=$(mktemp -d)
 TEST_REPO="$SANDBOX/repo"
@@ -21,7 +22,7 @@ trap 'rm -rf "$SANDBOX"' EXIT
 
 mkdir -p "$RUN_DIR" "$FAKE_BIN" "$TEST_REPO/tests/speckit-pro/layer4-scripts/fixtures" "$TEST_REPO/specs" "$TEST_REPO/docs/ai/specs/.process"
 cp -R "$FIXTURE_ROOT" "$TEST_REPO/tests/speckit-pro/layer4-scripts/fixtures/pr-packet"
-cp -R "$REPO_ROOT/$FEATURE_DIR_REL" "$TEST_REPO/specs/"
+cp -R "$FEATURE_FIXTURE" "$TEST_REPO/specs/"
 cat > "$TEST_REPO/docs/ai/specs/.process/PRSG-012-workflow.md" <<'EOF'
 # PRSG-012 Workflow Fixture
 

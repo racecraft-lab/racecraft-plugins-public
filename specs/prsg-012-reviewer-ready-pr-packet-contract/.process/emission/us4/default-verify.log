@@ -1,4 +1,0 @@
-command: tests/speckit-pro/run-all.sh
-gate_type: DEFAULT_VERIFY
-exit_status: 0
-reason: PRSG-013 declared marker test mapped to DEFAULT_VERIFY
