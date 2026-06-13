@@ -1,121 +1,57 @@
-# What changed
-This PR adds the planning and research foundation for a future Racecraft documentation website. It recommends Docusaurus with MDX as the default docs stack, records why the other options were not selected, and gives the next implementation PR a route-level site map plus command handoff.
+<!-- speckit-pro-review-packet-source: specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-packets/pr-163.json -->
 
-# Why it matters
-The repo needs a public docs site, but creating package files and hosting config before choosing the stack would make review harder. This keeps the decision research-only so the next PR can create the site shell with a clear framework, hosting path, and content structure.
+## Summary
 
-# Anything reviewers should know
-- This does not create a docs-site package, site config, workflow, README migration, or plugin behavior change.
-- The final size check is a size-only block on total file count, so marker evidence is included for review ordering.
-- The next implementation PR should refresh Docusaurus and GitHub Pages docs again before scaffolding.
+<!-- speckit-pro-editable:summary:start -->
+This PR selects Docusaurus with MDX as the default static docs stack and records the route-level IA handoff for the next docs-site implementation.
+<!-- speckit-pro-editable:summary:end -->
 
-<!-- The "Reviewer checklist & scope details" block and the "UAT Runbook" section
-     are appended automatically by generate-pr-body.sh. Do not add them by hand. -->
+Source: DOC-001 specification and framework spike report define the selected stack and IA handoff.
 
-<details>
-<summary>Reviewer checklist &amp; scope details</summary>
+## What Changed
 
-**Size:** 0 reviewable lines across 30 files (0 production). Budget: block.
-**Primary surfaces:** docs/process, scheduler/runtime, seed/config.
+<!-- speckit-pro-editable:what_changed:start -->
+- Added a source-backed framework spike that recommends Docusaurus with MDX for the future docs site.
+- Added the route-level IA skeleton and command handoff that the next implementation PR can use.
+- Kept this phase research-only, with no docs-site package, site config, workflow, marketplace, generated payload, or plugin behavior change.
+<!-- speckit-pro-editable:what_changed:end -->
 
-**Review in this order:**
-1. The spec and plan under `specs/doc-001-static-docs-framework-and-ia-spike`.
-2. The highest-risk production files.
-3. Verification evidence and any known gaps.
+Source: framework spike report and DOC-001 planning artifacts define the changed review surface.
 
-**Verification:**
-- [ ] Build / Typecheck / Lint / Tests pass (or N/A for this repo)
-- [ ] Visual review completed or N/A
+## Why It Matters
 
-**Rollback:** `git revert <SHA>` unless noted otherwise.
-</details>
+<!-- speckit-pro-editable:why_it_matters:start -->
+The docs-site shell can now be scaffolded from an approved stack and information architecture without mixing framework selection into the implementation PR.
+<!-- speckit-pro-editable:why_it_matters:end -->
+
+## How To Review
+
+1. Start with `docs/ai/research/interactive-documentation-framework-spike.md` for the framework recommendation and IA skeleton.
+2. Check `specs/doc-001-static-docs-framework-and-ia-spike/` for the requirements, plan, checklist, and task evidence.
+3. Confirm the diff stays research-only and does not add package files, lockfiles, site config, CI, marketplace files, generated payloads, or plugin behavior changes.
+
+## How To UAT
+
+No browser UAT applies because this PR does not scaffold a docs site. Review the research artifact, confirm the forbidden implementation surfaces are untouched, and rely on the deterministic repository checks.
 
 ## UAT Runbook
 
-# UAT Runbook: doc-001-static-docs-framework-and-ia-spike
+Manual browser UAT is not required for this research-only spike. The reviewer acceptance path is document review plus the automated checks listed below.
 
-| Field | Value |
-|-------|-------|
-| Spec | doc-001-static-docs-framework-and-ia-spike |
-| Branch | doc-001-static-docs-framework-and-ia-spike |
-| PR | **PR:** <set on PR open> |
-| Generated from | 2026-06-12T21:47:50Z |
+## Verification
 
+- PR packet validation passed for this rendered title and body.
+- The deterministic SpecKit Pro suite was rerun after the main merge and packet refresh.
 
+Source: packet validation result and local verification output.
 
-## Env Setup
+## Scope
 
-Run these from the repository root before walking the acceptance tests.
+- Source feature: DOC-001 static docs framework and IA spike.
+- Scope: this PR is limited to the interactive documentation PRD/roadmap scaffold, the DOC-001 research report, and SpecKit planning evidence.
+- Traceability: the PRD and roadmap point to this spike, the spike report records the framework decision, and the spec artifacts record acceptance and scope evidence.
+- Non-goals: no docs-site scaffold, package or lockfile, site config, CI workflow, README migration, marketplace update, generated payload, or plugin behavior change.
 
-| Command | Value |
-|---------|-------|
-| BUILD | <unknown — autopilot did not pass PROJECT_COMMANDS> |
-| TYPECHECK | <unknown — autopilot did not pass PROJECT_COMMANDS> |
-| LINT | <unknown — autopilot did not pass PROJECT_COMMANDS> |
-| LINT_FIX | <unknown — autopilot did not pass PROJECT_COMMANDS> |
-| UNIT_TEST | <unknown — autopilot did not pass PROJECT_COMMANDS> |
-| INTEGRATION_TEST | <unknown — autopilot did not pass PROJECT_COMMANDS> |
-| SINGLE_FILE_INTEGRATION | <unknown — autopilot did not pass PROJECT_COMMANDS> |
+## Known Gaps
 
-## Per-Story Acceptance Tests
-
-<a id="us-1"></a>
-### User Story 1 - Review the framework recommendation (Priority: P1)
-
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
-
-<a id="us-2"></a>
-### User Story 2 - Handoff IA and commands to DOC-002 (Priority: P2)
-
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
-
-<a id="us-3"></a>
-### User Story 3 - Confirm research-only scope (Priority: P3)
-
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
-
-
-
-## FR Coverage Matrix
-
-| Story | Acceptance test |
-|-------|-----------------|
-| [User Story 1 - Review the framework recommendation (Priority: P1)](#us-1) | see the Per-Story Acceptance Tests block above |
-| [User Story 2 - Handoff IA and commands to DOC-002 (Priority: P2)](#us-2) | see the Per-Story Acceptance Tests block above |
-| [User Story 3 - Confirm research-only scope (Priority: P3)](#us-3) | see the Per-Story Acceptance Tests block above |
-
-
-## Negative-Path Tests
-
-
-- If live framework or platform source documentation is temporarily unavailable, the report must record the gap, avoid relying on stale unsupported claims, and use the best available official or primary source evidence.
-- If every candidate has a hard blocker for GitHub Pages hosting from this repository, the report must record the blocker and recommend the least risky fallback instead of forcing a preferred framework.
-- If a candidate supports an evaluation criterion only through third-party plugins or paid services, the report must distinguish that support from built-in or first-party support.
-- If source evidence conflicts across framework or platform docs, the report must prefer the most current official source and note the conflict.
-- If an IA route lacks enough source evidence or a measurable success criterion, the route must be revised or omitted from the top-level skeleton.
-
-## Self-Review Findings
-
-- The report satisfies the spike: Docusaurus/MDX is the default recommendation, alternatives have concrete rationale, DOC-002 gets command handoff, and the IA skeleton covers the required routes.
-- DOC-001 stayed research-only: forbidden-surface scans found 0 package, lockfile, site config, CI, generated payload, README migration, or plugin behavior changes.
-- Verification passed for this docs/process change: Layer 1 passed `978/978`, the default deterministic suite passed `2587/2587`, G7 passed, and final reviewability proceeded with marker evidence.
-- Remaining follow-up is explicit: DOC-002 owns scaffolding/config refresh and DOC-010 owns search, accessibility, responsive, deep-link, and docs validation hardening.
-
-## Sign-off
-
-Advisory only — these checkboxes block nothing.
-
-- [ ] Reviewer walked every Per-Story Acceptance Test above.
-- [ ] Reviewer confirmed the Negative-Path Tests behave as described.
-- [ ] Reviewer is satisfied the PR delivers the behavior the spec promised.
-
-## Rollback
-
-git revert <SHA>; see plan.md for data-migration considerations
-
-<!-- speckit-pro-review-packet-source
-template: speckit-pro/skills/speckit-autopilot/templates/pr-description-template.md
-feature_dir: specs/doc-001-static-docs-framework-and-ia-spike
-diff_range: origin/main...HEAD
-reviewability: {"mode":"diff","status":"block","pass":false,"reviewable_loc":0,"production_files":0,"total_files":30,"primary_surface_count":3,"primary_surfaces":["docs/process","scheduler/runtime","seed/config"],"greenfield":false,"thresholds":{"warn":{"reviewable_loc":400,"production_files":6,"total_files":15,"primary_surfaces":1},"block":{"reviewable_loc":800,"production_files":8,"total_files":25,"primary_surfaces":1}},"exception_honored":false,"exception_class":null,"exceptions":{"accepted":[],"rejected":[]},"warnings":["total files 30 exceeds warn threshold 15","primary surfaces 3 exceeds warn threshold 1"],"blockers":["total files 30 exceeds block threshold 25"]}
--->
+The next docs-site implementation PR must refresh current Docusaurus and GitHub Pages documentation before scaffolding. Later validation work still owns search, accessibility, deep links, and docs quality gates.

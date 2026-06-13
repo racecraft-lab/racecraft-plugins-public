@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "error_class": "none",
+  "exit_code": 0,
+  "stderr_line": "",
+  "packet_id": "pr-163",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "doc-001-static-docs-framework-and-ia-spike"
+  },
+  "status": "passed",
+  "title_value": "docs(DOC-001): Select static docs framework and IA",
+  "body_file": "specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md",
+  "rule_outcomes": [
+    {
+      "rule": "packet.validation",
+      "status": "passed",
+      "evidence": "no failures"
+    }
+  ],
+  "pr_blocked": false,
+  "failures": [],
+  "remediation_evidence": [],
+  "timestamp": "1970-01-01T00:00:00Z"
+}
