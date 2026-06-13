@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-002 ready for SPEC decomposition. Created 2026-06-12.
+> Status: DOC-002 scaffolded and ready for autopilot. Created 2026-06-12; refreshed 2026-06-13.
 
 ## Roadmap Overview
 
@@ -56,7 +56,7 @@ DOC-007 -> DOC-008
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | DOC-001 | Static docs framework and IA spike | Completed/archived | DOC-001-workflow.md | Archived after PR #163 |
-| DOC-002 | Unified landing page and IA shell | Pending | DOC-002-workflow.md | Specify |
+| DOC-002 | Unified landing page and IA shell | In progress | `.process/DOC-002-workflow.md` | Run `$speckit-autopilot` |
 | DOC-003 | Claude Code marketplace installation path | Pending | DOC-003-workflow.md | Blocked by DOC-002 |
 | DOC-004 | Codex marketplace installation path | Pending | DOC-004-workflow.md | Blocked by DOC-002 |
 | DOC-005 | First successful workflow tutorial | Pending | DOC-005-workflow.md | Blocked by DOC-003, DOC-004 |
@@ -98,6 +98,8 @@ Budget result: spike, LOC not applicable
 ### DOC-002: Unified landing page and IA shell
 
 **Priority:** P1 | **Depends On:** DOC-001 completed | **Enables:** DOC-003, DOC-004, DOC-006, DOC-010
+
+**Status:** In progress. Scaffolded on branch `doc-002-unified-landing-page-and-ia-shell` with workflow `docs/ai/specs/.process/DOC-002-workflow.md`.
 
 **Goal:** Create the static docs shell, landing page, nav, and task-first IA.
 

@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-002 ready for SPEC decomposition
+**Status:** DOC-002 scaffolded and ready for autopilot
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -77,6 +77,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-002: Unified landing page and IA shell
 
 - **Maps from PRD:** DOC-FR-002
+- **Status:** In progress. Scaffolded on branch `doc-002-unified-landing-page-and-ia-shell` with workflow `docs/ai/specs/.process/DOC-002-workflow.md`.
 - **User outcome:** A visitor immediately understands the marketplace, current plugin, supported platforms, and where to go next.
 - **Scope:** Create the chosen Astro/Starlight site foundation from the DOC-001 stack and IA contract, landing page, nav/sidebar IA, and initial static pages for all 11 DOC-001 route labels: Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary. Content can be skeletal where later SPECs own full detail.
 - **Vertical-slice rationale:** Cuts through site setup, navigation, and first visible content shell as one usable docs-site increment.
