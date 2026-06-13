@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.13.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.12.0...speckit-pro-v2.13.0) (2026-06-13)
+
+
+### Features
+
+* **PRSG-012:** Add reviewer packet validation contract ([#164](https://github.com/racecraft-lab/racecraft-plugins-public/issues/164)) ([b57e299](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b57e2992b8e304b0e649398b86f7b495aada3252))
+* **PRSG-012:** Block invalid PR packets before creation ([#167](https://github.com/racecraft-lab/racecraft-plugins-public/issues/167)) ([302d73a](https://github.com/racecraft-lab/racecraft-plugins-public/commit/302d73a884d7fbe10964839f17460aec91f04dc1))
+* **PRSG-012:** Generate packet-owned conventional PR titles ([#165](https://github.com/racecraft-lab/racecraft-plugins-public/issues/165)) ([7580f08](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7580f08fc78877f21a71c72ff4a6a2781c9017ce))
+* **PRSG-012:** Protect editable PR body prose ([#168](https://github.com/racecraft-lab/racecraft-plugins-public/issues/168)) ([896ab42](https://github.com/racecraft-lab/racecraft-plugins-public/commit/896ab42f443e330d095f1c08be681cc8c9bca995))
+* **PRSG-012:** Render plain-English reviewer PR body evidence ([#166](https://github.com/racecraft-lab/racecraft-plugins-public/issues/166)) ([d6685c4](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d6685c44ae706370ec91977831d3d1149c299b65))
+
 ## [2.12.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.11.0...speckit-pro-v2.12.0) (2026-06-12)
 
 
