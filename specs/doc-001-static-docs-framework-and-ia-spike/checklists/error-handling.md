@@ -11,11 +11,11 @@
 - [ ] CHK001 - Are hard blockers explicitly defined before weighted scoring rather than inferred from candidate prose? [Clarity, Spec §Clarifications, Report §Candidate Matrix]
 - [ ] CHK002 - Does each candidate record GitHub Pages from this repository, reusable interactivity, accessible fallback, and DOC-001 no-implementation boundary outcomes? [Completeness, Spec §Clarifications, Report §Candidate Matrix]
 - [ ] CHK003 - Are search, link checking, versioning, maintenance load, and package-manager preference treated as weighted tradeoffs unless they create an explicit blocker? [Consistency, Spec §Clarifications, Report §Candidate Matrix]
-- [ ] CHK004 - Is the Docusaurus acceptance rationale specific enough for DOC-002 to know which later evidence would overturn it? [Measurability, Spec §FR-004, Report §Candidate Decisions]
+- [ ] CHK004 - Is the Astro/Starlight acceptance rationale specific enough for DOC-002 to know which later evidence would overturn it? [Measurability, Spec §FR-004, Report §Candidate Decisions]
 
 ## DOC-002 Failure and Recovery Behavior
 
-- [x] CHK005 - Does the report define what DOC-002 should do if Docusaurus GitHub Pages deployment fails after source refresh? [Resolved, Spec §Edge Cases, Spec §FR-004, Report §DOC-002 Failure Handling and Fallback Rules, Report §DOC-002 Consumption] - was a gap. Resolved by adding configuration-vs-hard-blocker failure handling and an explicit Astro/Starlight, VitePress, repo-native fallback order.
+- [x] CHK005 - Does the report define what DOC-002 should do if Astro/Starlight GitHub Pages deployment fails after source refresh? [Resolved, Spec §Edge Cases, Spec §FR-004, Report §DOC-002 Failure Handling and Fallback Rules, Report §DOC-002 Consumption] - was a gap. Resolved by adding configuration-vs-hard-blocker failure handling and an explicit Docusaurus/MDX, VitePress, repo-native fallback order.
 - [ ] CHK006 - Does the failure handling distinguish configuration or base-path issues from true hard blockers? [Clarity, Report §DOC-002 Consumption]
 - [ ] CHK007 - Is fallback routing bounded to research/report decisions rather than authorizing DOC-001 site, package, config, or CI work? [Scope, Spec §FR-010, Spec §FR-011]
 - [ ] CHK008 - Are search-provider or package-manager concerns prevented from becoming accidental hard blockers unless they create maintainership or dependency-policy risk? [Consistency, Spec §Clarifications, Report §Why This Wins]
@@ -46,3 +46,4 @@
 - Initial error-handling pass found three requirement-quality gaps: selected-stack GitHub Pages failure handling, repo-native fallback seriousness, and command-role clarity.
 - All three gaps were remediated inside the DOC-001 research report and SpecKit artifacts.
 - Post-remediation verification pass on 2026-06-12 found no new error-handling gaps after the fallback-rule, repo-native fallback, and command-role edits.
+- Decision update pass on 2026-06-13 updated selected-stack references from Docusaurus to Astro/Starlight without expanding DOC-001 implementation scope.

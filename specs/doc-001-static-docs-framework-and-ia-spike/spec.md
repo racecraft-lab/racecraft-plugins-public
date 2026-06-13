@@ -68,12 +68,13 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 ### Clarifications
 
 - Hard blockers before weighted scoring are GitHub Pages hosting from this repository, rich MDX or equivalent reusable-component interactivity, an accessible static or keyboard-usable fallback path, and the DOC-001 no-implementation boundary.
-- Search and link checking are high-weight tradeoffs; versioning is a medium-weight tradeoff; accessibility support is a hard blocker only if the stack prevents accessible fallback behavior.
-- Candidate support must distinguish built-in, official, community, third-party paid, and unsupported capabilities.
+- Search and link checking are high-weight tradeoffs; versioning is a medium/future tradeoff; accessibility support is a hard blocker only if the stack prevents accessible fallback behavior.
+- Candidate support must distinguish built-in, official, official third-party hosted, community, community plugin listed by official docs, external/manual, and unsupported capabilities.
+- Portfolio alignment is a strategic maintainability factor because the upcoming Racecraft Systems website and Focusengine product website are expected to use Astro.
 - Maintenance burden is a scoring penalty and tie-breaker after blockers are satisfied.
 - The repo-native fallback must be evaluated seriously, but selected only if framework candidates are blocked or introduce unacceptable risk for this repository.
-- If DOC-002 finds a hard blocker for Docusaurus GitHub Pages deployment, it must record the blocker and follow the fallback order in the report: Docusaurus configuration fix if feasible, Astro/Starlight, VitePress, then repo-native Markdown fallback.
-- Configuration-only GitHub Pages failures, such as base path, trailing slash, `.nojekyll`, workflow, or package-script naming issues, are not stack-selection failures if Docusaurus still satisfies the hard blockers.
+- If DOC-002 finds a hard blocker for Astro/Starlight GitHub Pages deployment, it must record the blocker and follow the fallback order in the report: Astro/Starlight configuration fix if feasible, Docusaurus/MDX, VitePress, then repo-native Markdown fallback.
+- Configuration-only GitHub Pages failures, such as base path, trailing slash, workflow, or package-script naming issues, are not stack-selection failures if Astro/Starlight still satisfies the hard blockers.
 - Each IA route record must include `route_path`, `route_label`, `diataxis_mode`, optional `secondary_modes`, `target_audience`, `route_purpose`, `source_evidence`, `success_criterion`, `shell_owner_doc`, and `full_content_owner_doc`.
 - The IA skeleton must cover these 11 PRD route labels: Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary.
 - Each route has one primary Diataxis mode from Tutorial, How-to, Reference, or Explanation; mixed routes may name secondary modes when the route purpose requires them.
@@ -89,7 +90,7 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 
 - **FR-001**: The spike MUST produce one source-backed comparison of Docusaurus/MDX, VitePress, Astro/Starlight, and a repo-native fallback.
 - **FR-002**: The comparison MUST evaluate each candidate for static hosting, GitHub Pages support, MDX or equivalent reusable-component interactivity, search, versioning, accessibility, link checking, docs-as-code workflow, maintenance load, package/build/test commands, and support class for each capability.
-- **FR-003**: The spike MUST refresh live framework and platform source documentation during research and record enough source evidence for reviewers to validate the recommendation.
+- **FR-003**: The spike MUST refresh live framework and platform source documentation during research, record follow-up evidence when the recommendation changes, and preserve enough source evidence for reviewers to validate the recommendation.
 - **FR-004**: The spike MUST recommend one default stack for DOC-002 unless a hard blocker is recorded.
 - **FR-005**: The spike MUST explain why each non-selected alternative was rejected or deferred.
 - **FR-006**: The spike MUST identify the package manager recommended by the selected stack and list the minimum package, build, and test commands for DOC-002.
@@ -132,7 +133,7 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 - **SC-003**: The IA skeleton includes no placeholder values and provides every required route field, including later content ownership, for every top-level route.
 - **SC-004**: A DOC-002 implementer can identify the recommended package manager plus minimum package, build, and test commands without consulting files outside the spike report.
 - **SC-005**: A reviewer can verify from the final diff that 0 package files, lockfiles, site config files, prototype components, CI files, README or plugin README migration files, marketplace files, generated payload files, or plugin behavior files were changed by DOC-001.
-- **SC-006**: The report records refreshed source evidence for framework and platform claims with a retrieval date matching the spike execution date.
+- **SC-006**: The report records refreshed source evidence for framework and platform claims with retrieval dates matching the initial spike and any later decision update.
 
 ## Assumptions
 

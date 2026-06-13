@@ -1,30 +1,33 @@
 # DOC-001: Interactive Documentation Framework Spike
 
 **Date**: 2026-06-12  
-**Retrieval date for live framework/platform sources**: 2026-06-12  
-**Status**: Recommended for DOC-002 handoff  
+**Initial retrieval date for live framework/platform sources**: 2026-06-12
+**Decision update date**: 2026-06-13
+**Status**: Recommended for DOC-002 handoff, updated after Astro/Starlight plugin refresh and portfolio-context review
 **Scope**: Research-only decision record. No site scaffold, package files, lockfiles, CI workflows, marketplace files, generated payloads, README migrations, prototype components, or plugin behavior changes.
 
 ## Decision
 
-Recommend **Docusaurus with MDX** as the default static documentation stack for DOC-002.
+Recommend **Astro with Starlight** as the default static documentation stack for DOC-002.
 
-DOC-002 should implement the docs shell with Docusaurus, MDX pages/components, GitHub Pages deployment from this repository, and `pnpm` as the recommended package manager unless a new hard blocker appears before implementation.
+DOC-002 should implement the docs shell with Astro, Starlight, MDX pages/components, GitHub Pages deployment from this repository, and `pnpm` as the recommended package manager unless a new hard blocker appears before implementation.
 
 ## Why This Wins
 
-Docusaurus is the best fit because it combines first-party MDX/React authoring, documented GitHub Pages deployment, first-party docs versioning, and production-build broken-link handling. Those cover the hard blockers and the highest-risk future maintenance needs better than the alternatives.
+Astro/Starlight is the best fit because it satisfies the hard blockers while aligning the documentation stack with the upcoming Racecraft Systems website and Focusengine product website, both of which are expected to use Astro. That portfolio alignment should reduce long-term design-system, component, deployment, and contributor-context drift across Racecraft web properties.
 
-The main tradeoff is search. Docusaurus has first-class Algolia DocSearch support, while local/offline search is community-supported. DOC-002 should either use the official search path or explicitly add a local-search plugin with the support-class tradeoff recorded.
+Starlight also provides strong docs-specific defaults: built-in Pagefind search, MDX/component authoring, sidebar/navigation conventions, Astro GitHub Pages deployment, and a community plugin path for docs versioning and internal link validation. Docusaurus still has the strongest first-party docs-governance story, but full docs versioning is not a DOC-002 launch requirement and should not outweigh Astro portfolio alignment unless near-term users need docs pinned to older plugin versions.
+
+The main tradeoff is support class. Starlight's versioning and link-validation paths are community-supported, not first-party. DOC-002 should record whether it includes `starlight-links-validator` immediately, defers `starlight-versions`, and treats docs versioning as a future requirement triggered by meaningful behavior divergence across released plugin versions.
 
 ## DOC-002 Failure Handling and Fallback Rules
 
-DOC-002 should refresh official Docusaurus and GitHub Pages docs before scaffolding. If Docusaurus still satisfies the hard blockers and the failure is limited to repository configuration, `baseUrl`, `trailingSlash`, `.nojekyll`, package-script naming, or GitHub Actions wiring, DOC-002 should keep Docusaurus and fix the configuration instead of reopening stack selection.
+DOC-002 should refresh official Astro, Starlight, Starlight plugin, and GitHub Pages docs before scaffolding. If Astro/Starlight still satisfies the hard blockers and the failure is limited to repository configuration, `base`, `trailingSlash`, package-script naming, or GitHub Actions wiring, DOC-002 should keep Astro/Starlight and fix the configuration instead of reopening stack selection.
 
-If Docusaurus cannot satisfy GitHub Pages hosting from this repository without violating a hard blocker, DOC-002 should stop the scaffold path, record the blocker, and use this fallback order:
+If Astro/Starlight cannot satisfy GitHub Pages hosting, MDX/component authoring, static/keyboard fallback, or maintainability requirements from this repository without violating a hard blocker, DOC-002 should stop the scaffold path, record the blocker, and use this fallback order:
 
-1. **Astro/Starlight** if GitHub Pages deployment, MDX/static fallback, and maintainability remain acceptable, with extra versioning/link-check tooling recorded as a tradeoff.
-2. **VitePress** if Vue-in-Markdown is acceptable and built-in local search becomes more important than Docusaurus versioning/link-check behavior, with custom versioning/link-check work recorded as a tradeoff.
+1. **Docusaurus/MDX** if first-party docs versioning, first-party production-build broken-link behavior, or mature docs-governance support becomes more important than Astro portfolio alignment.
+2. **VitePress** if Vue-in-Markdown is acceptable and built-in local search/minimal framework weight becomes more important than Astro alignment, with custom versioning/link-check work recorded as a tradeoff.
 3. **Repo-native Markdown fallback** only if framework candidates are blocked by GitHub Pages feasibility, dependency policy, or maintainership constraints.
 
 Search-provider availability, package-manager preference, and local-search preference are not hard blockers by themselves. They become blockers only if they create an unacceptable dependency, cost, policy, or maintainership risk for this repository.
@@ -45,9 +48,15 @@ Search-provider availability, package-manager preference, and local-search prefe
 | [VitePress Vue in Markdown](https://vitepress.dev/guide/using-vue) | 2026-06-12 | Markdown files can use Vue features and imported Vue components. |
 | [VitePress local search](https://vitepress.dev/reference/default-theme-search) | 2026-06-12 | VitePress supports built-in in-browser fuzzy full-text search with Minisearch. |
 | [Astro GitHub Pages](https://docs.astro.build/en/guides/deploy/github/) | 2026-06-12 | Astro can deploy static prerendered sites to GitHub Pages with the official Astro GitHub Action. |
+| [Astro: Why Astro?](https://docs.astro.build/en/concepts/why-astro/) | 2026-06-13 | Astro is a content-driven web framework for fast, SEO-friendly sites with UI-framework flexibility and content collections. |
+| [Starlight homepage](https://starlight.astro.build/) | 2026-06-13 | Starlight is powered by Astro and includes docs navigation, search, i18n, SEO, typography, code highlighting, dark mode, and component support. |
+| [Starlight getting started](https://starlight.astro.build/getting-started/) | 2026-06-13 | Starlight is a full-featured documentation theme built on Astro and can be scaffolded with `pnpm create astro --template starlight`. |
 | [Starlight components](https://starlight.astro.build/components/using-components/) | 2026-06-12 | Starlight supports MDX components, built-in components, and UI framework components in MDX. |
 | [Starlight site search](https://starlight.astro.build/guides/site-search/) | 2026-06-12 | Starlight includes built-in full-text search powered by Pagefind. |
 | [Starlight sidebar](https://starlight.astro.build/guides/sidebar/) | 2026-06-12 | Starlight supports autogenerated and frontmatter-customized sidebar navigation. |
+| [Starlight plugins and integrations](https://starlight.astro.build/resources/plugins/) | 2026-06-13 | Starlight documents official and community plugins; the community list includes `starlight-versions` and `starlight-links-validator`. |
+| [starlight-versions](https://starlight-versions.vercel.app/) | 2026-06-13 | Community Starlight plugin for versioning documentation pages. |
+| [starlight-links-validator](https://starlight-links-validator.vercel.app/) | 2026-06-13 | Community Starlight plugin for validating internal Markdown/MDX links during production builds. |
 | [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/) | 2026-06-12 | WCAG provides technology-neutral, testable accessibility success criteria, including keyboard, focus, labels, contrast, and responsive/reflow concerns. |
 | [W3C WAI evaluating accessibility](https://www.w3.org/WAI/test-evaluate/) | 2026-06-12 | WAI recommends evaluating accessibility early and throughout development; tools help, but knowledgeable human evaluation is still required. |
 | [WAI-ARIA APG keyboard interface](https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/) | 2026-06-12 | Interactive widgets need predictable keyboard operation and focus behavior. |
@@ -61,6 +70,10 @@ Search-provider availability, package-manager preference, and local-search prefe
 | `docs/ai/specs/.process/DOC-001-design-concept.md` | Grill Me decisions for one default stack recommendation, IA skeleton scope, live-source refresh, and research-only output boundary. |
 | `specs/doc-001-static-docs-framework-and-ia-spike/spec.md` | Formal DOC-001 requirements, acceptance scenarios, forbidden surfaces, and success criteria. |
 
+## Portfolio Context Added 2026-06-13
+
+The upcoming Racecraft Systems website and Focusengine product website are expected to use Astro. DOC-001 treats that as a strategic maintainability factor, not as a hard blocker by itself. The effect is that Astro/Starlight gains weight for shared implementation knowledge, shared component/design-system options, shared deployment patterns, and lower long-term context switching across Racecraft web properties.
+
 ## Support Class Legend and Evidence Bounds
 
 Use these support-class labels when reading the matrix:
@@ -69,13 +82,14 @@ Use these support-class labels when reading the matrix:
 - **Official**: documented by the framework/platform maintainers, but may require configuration or a first-party integration.
 - **Official third-party hosted**: officially supported by the framework, but provided by an external hosted service.
 - **Community**: supported through community-maintained packages or patterns, not first-party docs.
+- **Community listed by official docs**: community-supported, but discoverable from an official framework plugin catalog.
 - **External/manual**: possible through separate tools or hand-maintained repo practice.
 - **Unsupported/blocked**: no acceptable path for DOC-001 requirements without changing the candidate's scope.
 - **Unknown/weak**: the 2026-06-12 official-source refresh did not identify first-party support comparable to another candidate.
 
-Negative findings are intentionally bounded. "No refreshed first-party versioning path found" and "link checking likely needs extra tooling" mean the official source set refreshed on 2026-06-12 did not show a first-party docs versioning or production-build broken-link gate comparable to Docusaurus. They are not claims that the broader ecosystem cannot solve those needs. DOC-002 must refresh official docs again before installing packages or configuring the site.
+Negative findings are intentionally bounded. "No refreshed first-party versioning path found" and "link checking likely needs extra tooling" mean the official first-party source set refreshed on 2026-06-12 did not show a first-party docs versioning or production-build broken-link gate comparable to Docusaurus. The 2026-06-13 community-plugin refresh found `starlight-versions` and `starlight-links-validator`, which provide credible community paths for those needs but do not change their support class to first-party. DOC-002 must refresh official docs and selected plugin docs again before installing packages or configuring the site.
 
-Version-sensitive observations are evidence freshness markers, not package pins. The Docusaurus docs opened at version 3.10.1 on 2026-06-12, while VitePress docs showed 2.0.0-alpha.17 with a link to 1.6.4. DOC-002 should install the current recommended version after a fresh source check.
+Version-sensitive observations are evidence freshness markers, not package pins. The Docusaurus docs opened at version 3.10.1 on 2026-06-12, while VitePress docs showed 2.0.0-alpha.17 with a link to 1.6.4. npm metadata observed on 2026-06-13 listed `@astrojs/starlight` 0.40.0, `starlight-versions` 0.9.0, and `starlight-links-validator` 0.24.1. DOC-002 should install the current recommended versions after a fresh source check.
 
 Accessibility is split into two concerns. The hard blocker is whether the stack can support accessible static or keyboard-usable fallback content. Accessibility testing is a DOC-010 validation obligation after the site and interactive aids exist; DOC-001 records the handoff but does not add test tooling, CI, package files, or a site scaffold.
 
@@ -90,11 +104,11 @@ Accessibility is split into two concerns. The hard blocker is whether the stack 
 | Accessibility testing and validation handoff | Required DOC-010 hardening | External/manual: compatible with static output; DOC-010 must choose automated checks plus human review | External/manual: compatible with static output; DOC-010 must choose automated checks plus human review | External/manual: compatible with static output; DOC-010 must choose automated checks plus human review | External/manual: Markdown can be audited, but there is no site-level validation surface until later tooling exists |
 | DOC-001 no-implementation boundary | Hard blocker | Process-only: recommendation without scaffold | Process-only: recommendation without scaffold | Process-only: recommendation without scaffold | Process-only: no scaffold |
 | Search | High | Official third-party hosted: Algolia DocSearch; Community: local search | Built-in: local Minisearch index | Built-in: Pagefind; Official plugin: Algolia DocSearch | External/manual: repository or browser search only unless extra tooling is added |
-| Link checking | High | Built-in/official: production build can fail on broken links | Unknown/weak: refreshed official docs did not identify comparable first-party link-check gate; external checker likely | Unknown/weak: refreshed Astro/Starlight docs did not identify comparable first-party link-check gate; external checker likely | External/manual: separate checker needed |
-| Versioning | Medium | Built-in/official: docs versioning CLI and versioned docs | Unknown/weak: refreshed official docs did not identify a first-party docs versioning path | Unknown/weak: refreshed Astro/Starlight docs did not identify first-party docs versioning comparable to Docusaurus | External/manual: copies, branches, or convention |
+| Link checking | High | Built-in/official: production build can fail on broken links | Unknown/weak: refreshed official docs did not identify comparable first-party link-check gate; external checker likely | Community: `starlight-links-validator` validates internal Markdown/MDX links during production builds; not first-party | External/manual: separate checker needed |
+| Versioning | Medium/future | Built-in/official: docs versioning CLI and versioned docs | Unknown/weak: refreshed official docs did not identify a first-party docs versioning path | Community: `starlight-versions` versions documentation pages; not first-party and marked early/opinionated | External/manual: copies, branches, or convention |
 | Docs-as-code workflow | Medium | Built-in/official: Markdown/MDX, sidebars, GitHub Actions | Built-in/official: Markdown/Vue, GitHub Actions | Built-in/official: content collections/Starlight, GitHub Actions | Built-in repo practice for simple Markdown, weak for site UX |
-| Maintenance load | Tie-breaker | Qualitative: medium; React/MDX stack, but docs-focused and mature | Qualitative: low-medium; lightweight but Vue-specific and versioning workarounds | Qualitative: medium; Astro/Starlight plus possible custom versioning/link checks | Qualitative: low initially, high once required features are rebuilt manually |
-| Package/build/test commands | Required | Official: Docusaurus documents scaffold, install, start, build, and serve command roles; DOC-002 must define actual scripts | Official: `docs:build`/`docs:preview` scripts documented | Official: Astro action path and configurable build command | External/manual: validation can stay Markdown-only, but no framework command baseline exists |
+| Maintenance load | Tie-breaker | Qualitative: medium-high for portfolio fit; docs-focused and mature, but adds a React/Docusaurus web stack beside Astro portfolio sites | Qualitative: low-medium; lightweight but Vue-specific and no portfolio precedent | Qualitative: medium-low; Astro/Starlight plus optional community plugins, offset by shared Astro portfolio direction | Qualitative: low initially, high once required features are rebuilt manually |
+| Package/build/test commands | Required | Official: Docusaurus documents scaffold, install, start, build, and serve command roles; DOC-002 must define actual scripts | Official: `docs:build`/`docs:preview` scripts documented | Official: Starlight starter plus Astro dev/build/deploy command path; DOC-002 must define actual scripts | External/manual: validation can stay Markdown-only, but no framework command baseline exists |
 
 ## Accessibility and Interaction Guardrails
 
@@ -110,11 +124,17 @@ Minimum guardrails for later implementation:
 
 ## Candidate Decisions
 
-### Docusaurus/MDX: Accept
+### Astro/Starlight: Accept
 
-**Acceptance reason**: Docusaurus is the only candidate that refreshed sources showed covering MDX interactivity, GitHub Pages deployment, first-party versioned docs, and production-build broken-link enforcement in one docs-specific framework.
+**Acceptance reason**: Astro/Starlight satisfies the hard blockers, provides built-in Pagefind search, supports MDX/components, deploys to GitHub Pages through Astro, and aligns with the upcoming Racecraft Systems and Focusengine Astro websites. That alignment should reduce long-term toolchain and design-system fragmentation across Racecraft's public web surfaces.
 
-**Tradeoff**: Search needs a deliberate DOC-002 choice. Official Algolia DocSearch is first-class, but local search is community-supported. This is acceptable because search is high-weight but not a hard blocker, and Docusaurus wins on versioning and link checking.
+**Tradeoff**: Versioning and link validation are community-supported rather than first-party. This is acceptable because full docs versioning is not a launch requirement, Starlight has credible community plugins for both needs, and DOC-010 can harden validation policy once the site exists.
+
+### Docusaurus/MDX: Defer
+
+**Deferral reason**: Docusaurus remains the strongest docs-governance option because first-party versioning and production-build broken-link behavior are built into the framework path. It is no longer the default because those strengths are not launch hard blockers, Docusaurus local search is community-supported, and it would introduce a separate React/Docusaurus web stack beside Racecraft's planned Astro portfolio.
+
+**Best future use**: Choose Docusaurus if DOC-002 or a later docs release determines that first-party docs versioning, first-party link enforcement, or mature docs-governance conventions are more important than Astro portfolio alignment.
 
 ### VitePress: Reject for Default
 
@@ -122,15 +142,7 @@ Minimum guardrails for later implementation:
 
 **Evidence bound**: This is a bounded negative finding, not an ecosystem-wide unsupported claim. If DOC-002 finds newer official VitePress documentation for versioning or link checking, it should update the comparison before implementation.
 
-**Best future use**: Reconsider only if DOC-002 prioritizes local search and minimal framework weight above versioning and Docusaurus link-check behavior.
-
-### Astro/Starlight: Defer
-
-**Deferral reason**: Starlight is strong for built-in Pagefind search, MDX components, autogenerated sidebars, and Astro GitHub Pages deployment. It is deferred because the Astro/Starlight official source set refreshed on 2026-06-12 did not identify first-party docs versioning or a first-party production-build link-checking gate comparable to Docusaurus, so those needs likely require extra tooling.
-
-**Evidence bound**: This is a bounded negative finding. If DOC-002 finds newer official Astro/Starlight documentation for versioning or link checking, it should update the comparison before implementation.
-
-**Best future use**: Reconsider if Docusaurus search is unacceptable and the team accepts custom versioning/link-check work.
+**Best future use**: Reconsider only if DOC-002 prioritizes minimal framework weight or Vue-specific authoring above Astro portfolio alignment.
 
 ### Repo-Native Fallback: Reject for Default, Retain as Emergency Fallback
 
@@ -138,7 +150,7 @@ Minimum guardrails for later implementation:
 
 **Rejection reason**: It is not the default because it fails reusable rich interactivity, site search, first-party docs versioning, and build-time docs validation without rebuilding those capabilities manually.
 
-**Fallback condition**: Use only if Docusaurus, Astro/Starlight, and VitePress are later blocked by GitHub Pages feasibility, dependency policy, or maintainership constraints.
+**Fallback condition**: Use only if Astro/Starlight, Docusaurus, and VitePress are later blocked by GitHub Pages feasibility, dependency policy, or maintainership constraints.
 
 ## Recommended Package and Commands for DOC-002
 
@@ -147,13 +159,13 @@ These are command roles, not DOC-001-created scripts. DOC-001 does not create or
 | Command role | Report-only recommendation |
 |---|---|
 | Package manager | `pnpm` |
-| Future scaffold/setup | Use the current Docusaurus scaffold path, such as `pnpm create docusaurus`, in the DOC-002-owned docs-site path. DOC-002 chooses the final directory and commits the generated `package.json` and `pnpm-lock.yaml`. |
+| Future scaffold/setup | Use the current Astro/Starlight scaffold path, such as `pnpm create astro --template starlight`, in the DOC-002-owned docs-site path. DOC-002 chooses the final directory and commits the generated `package.json` and `pnpm-lock.yaml`. |
 | Future dependency install | `pnpm install` after DOC-002 creates the site package files. |
-| Future development preview | `pnpm run start` or the equivalent Docusaurus start script DOC-002 defines. |
-| Future production build | `pnpm run build` as the minimum site build and broken-link validation gate. |
-| Future local static preview | `pnpm run serve` or the equivalent Docusaurus serve script DOC-002 defines after a production build. |
-| Future minimum validation/test | The site production build is the minimum docs-site validation command; existing repository structural checks run only when plugin/spec surfaces are touched. |
-| Future GitHub Pages deployment | GitHub Actions Pages workflow from this repository; configure Docusaurus `url`, `baseUrl`, `trailingSlash`, and `.nojekyll` handling in DOC-002/DOC-010 as appropriate |
+| Future development preview | `pnpm dev` or the equivalent Astro dev script DOC-002 defines. |
+| Future production build | `pnpm build` as the minimum site build; add `starlight-links-validator` in DOC-002 or DOC-010 if internal-link validation is required before deployment. |
+| Future local static preview | `pnpm preview` or the equivalent Astro preview script DOC-002 defines after a production build. |
+| Future minimum validation/test | The Astro production build is the minimum docs-site validation command; internal-link validation should be enabled through `starlight-links-validator` when DOC-002 or DOC-010 formalizes the docs validation gate. Existing repository structural checks run only when plugin/spec surfaces are touched. |
+| Future GitHub Pages deployment | GitHub Actions Pages workflow from this repository using Astro's GitHub Pages guidance; configure Astro `site`, `base`, `trailingSlash`, and output path handling in DOC-002/DOC-010 as appropriate |
 
 ## IA Skeleton for DOC-002
 
@@ -186,14 +198,14 @@ DOC-010 does not add a twelfth top-level route in this IA skeleton. It hardens e
 
 DOC-002 should consume this report as the stack and IA decision record:
 
-- Create the Docusaurus/MDX docs-site shell.
+- Create the Astro/Starlight docs-site shell.
 - Add the package files, lockfile, site config, route shell, nav/sidebar, and basic build command in DOC-002.
 - Use the IA skeleton as the top-level route contract.
 - Preserve content ownership: DOC-002 owns route shell and skeletal landing/navigation; DOC-003 through DOC-010 own full route content as listed.
 - Preserve DOC-010 hardening ownership for search, accessibility, responsive UX, deep links, and docs validation across the affected routes.
-- Keep Docusaurus if a GitHub Pages failure is configuration-only and can be fixed through DOC-002/DOC-010 site config, Actions wiring, or package-script normalization.
-- Do not re-run framework selection unless new evidence creates a hard blocker for Docusaurus on GitHub Pages, MDX interactivity, accessibility fallback, dependency policy, or maintainability.
-- If a true Docusaurus hard blocker appears, follow the fallback order in this report: Astro/Starlight, VitePress, then repo-native Markdown fallback.
+- Keep Astro/Starlight if a GitHub Pages failure is configuration-only and can be fixed through DOC-002/DOC-010 site config, Actions wiring, or package-script normalization.
+- Do not re-run framework selection unless new evidence creates a hard blocker for Astro/Starlight on GitHub Pages, MDX/component interactivity, accessibility fallback, dependency policy, or maintainability.
+- If a true Astro/Starlight hard blocker appears, follow the fallback order in this report: Docusaurus/MDX, VitePress, then repo-native Markdown fallback.
 
 ## Scope Boundary Evidence
 
@@ -217,6 +229,14 @@ Verification on 2026-06-12:
 | Structural validation | `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978`. |
 | Default deterministic suite | `bash tests/speckit-pro/run-all.sh` passed `2587/2587`. |
 
+Decision update verification on 2026-06-13:
+
+| Check | Result |
+|---|---|
+| Stale recommendation scan | No obsolete default-stack or shell-handoff wording found. |
+| Whitespace check | `git diff --check` passed. |
+| Structural validation | `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978`. |
+
 ## Traceability
 
 | Requirement / criterion | Evidence |
@@ -226,7 +246,7 @@ Verification on 2026-06-12:
 | FR-007, FR-008, SC-003 | `IA Skeleton for DOC-002` records all 11 route labels and every required route field with no placeholder values. |
 | FR-009 | This file is the required spike report: `docs/ai/research/interactive-documentation-framework-spike.md`. |
 | FR-010, FR-011, SC-005 | `Scope Boundary Evidence` records the final diff checks and confirms 0 forbidden implementation surfaces changed. |
-| SC-001, SC-002, SC-006 | The matrix covers 4 candidates across more than 10 dimensions; `Decision` and `Candidate Decisions` make the default/rejected options reviewable; source evidence uses the 2026-06-12 retrieval date. |
+| SC-001, SC-002, SC-006 | The matrix covers 4 candidates across more than 10 dimensions; `Decision` and `Candidate Decisions` make the default/rejected options reviewable; source evidence uses the 2026-06-12 initial retrieval date and 2026-06-13 update date where applicable. |
 
 ## PR Review Packet Source Notes
 
@@ -237,14 +257,14 @@ Use these notes when updating the PR body:
 - **Non-goals**: No docs-site scaffold, package files, lockfiles, site config, CI workflow, README migration, interactive widgets, marketplace/generated payloads, or plugin behavior changes.
 - **Review order**: Start with `docs/ai/research/interactive-documentation-framework-spike.md`, then review `specs/doc-001-static-docs-framework-and-ia-spike/spec.md`, `plan.md`, `tasks.md`, and the checklist files.
 - **Scope budget**: Research/process-only branch; task-gate size warning is recorded in `specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json`, and the final size-only block proceeds through marker evidence.
-- **Verification evidence**: Layer 1 passed `978/978`; default deterministic suite passed `2587/2587`; diff-scope scan found 0 forbidden implementation surfaces.
-- **Known gaps**: DOC-002 owns concrete Docusaurus scaffold/config decisions and DOC-010 owns deterministic docs validation, accessibility, responsive checks, search hardening, and deep-link policy.
+- **Verification evidence**: 2026-06-12 Layer 1 passed `978/978`; default deterministic suite passed `2587/2587`; diff-scope scan found 0 forbidden implementation surfaces. 2026-06-13 decision update Layer 1 passed `978/978`; stale recommendation scan found no obsolete default-stack wording; `git diff --check` passed.
+- **Known gaps**: DOC-002 owns concrete Astro/Starlight scaffold/config decisions and DOC-010 owns deterministic docs validation, accessibility, responsive checks, search hardening, versioning policy, and deep-link policy.
 - **Rollback**: Revert the DOC-001 commits to remove the research/spec artifacts; no runtime or package state is introduced by this spike.
 
 ## Known Gaps and Follow-Ups
 
-- DOC-002 must make the concrete Docusaurus directory/config decision.
-- DOC-002 must refresh the Docusaurus/GitHub Pages path and apply the fallback rules if a true hard blocker appears.
-- DOC-002 or DOC-010 must decide official Algolia DocSearch versus community local search.
-- DOC-010 should add deterministic docs validation, link checking policy, accessibility checks, and responsive/browser verification once the site exists.
+- DOC-002 must make the concrete Astro/Starlight directory/config decision.
+- DOC-002 must refresh the Astro/Starlight/GitHub Pages path and apply the fallback rules if a true hard blocker appears.
+- DOC-002 or DOC-010 must decide whether to add `starlight-links-validator` immediately or defer link-validation enforcement to DOC-010.
+- DOC-010 should add deterministic docs validation, link checking policy, accessibility checks, responsive/browser verification, and a versioning trigger policy once the site exists.
 - DOC-003 and DOC-004 should refresh platform install docs again before writing full install content because Claude Code and Codex plugin behavior may change.

@@ -16,12 +16,12 @@
 ## Candidate Decision Rationale
 
 - [ ] CHK005 - Does each candidate have an explicit accept, reject, defer, or fallback decision and a rationale tied to the comparison criteria? [Completeness, Spec §FR-004, Spec §FR-005, Report §Candidate Decisions]
-- [ ] CHK006 - Is the Docusaurus acceptance rationale measurable enough for DOC-002 to know what evidence would overturn it? [Measurability, Spec §FR-004, Report §DOC-002 Consumption]
+- [ ] CHK006 - Is the Astro/Starlight acceptance rationale measurable enough for DOC-002 to know what evidence would overturn it? [Measurability, Spec §FR-004, Report §DOC-002 Consumption]
 - [x] CHK007 - Are negative claims about VitePress and Astro/Starlight first-party versioning or link-checking bounded by the refreshed source set and retrieval date rather than stated as unsupported absolutes? [Resolved, Spec §FR-003, Spec §Edge Cases, Report §Candidate Decisions] - was a gap. Resolved by adding Report §Support Class Legend and Evidence Bounds plus bounded-evidence notes under VitePress and Astro/Starlight candidate decisions, explicitly limiting the negative finding to the official source set refreshed on 2026-06-12.
 
 ## Source Evidence Freshness
 
-- [ ] CHK008 - Do current framework/platform claims in the spike report include official or local source evidence and retrieval date `2026-06-12`? [Traceability, Spec §FR-003, Spec §SC-006, Report §Live Source Evidence]
+- [ ] CHK008 - Do current framework/platform claims in the spike report include official or local source evidence and the applicable retrieval/update dates, including `2026-06-12` and `2026-06-13`? [Traceability, Spec §FR-003, Spec §SC-006, Report §Live Source Evidence]
 - [x] CHK009 - Does the plan avoid stale or unsourced framework-version assumptions, including the Docusaurus 3.10.x claim in Technical Context? [Resolved, Plan §Technical Context, Spec §FR-003] - was a gap. Resolved by changing Plan §Technical Context to state that official Docusaurus docs were refreshed at version 3.10.1 on 2026-06-12, that this is evidence only, and that DOC-002 must refresh current docs before installation.
 - [ ] CHK010 - Are third-party, community, paid, official, built-in, and unsupported capabilities distinguished wherever they affect acceptance or rejection? [Clarity, Spec §Clarifications, Data Model §Framework Candidate]
 
@@ -49,3 +49,4 @@
 - Gap-tagged items are requirement-quality gaps that need evidence-grounded edits to DOC-001 artifacts before the checklist can close.
 - No item in this checklist verifies a rendered docs site, package install, or runtime behavior.
 - Post-remediation verification pass on 2026-06-12 found no new documentation-quality gaps after the support-class, evidence-bound, and Docusaurus-version-source edits.
+- Decision update pass on 2026-06-13 updated the default-stack rationale to Astro/Starlight, added Astro portfolio context, and recorded Starlight community versioning/link-validation plugin evidence.

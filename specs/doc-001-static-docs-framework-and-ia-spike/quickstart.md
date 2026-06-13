@@ -14,10 +14,10 @@ This guide validates the DOC-001 research spike. It does not build or run a docs
 2. Confirm exactly one default stack is recommended.
 3. Confirm Docusaurus/MDX, VitePress, Astro/Starlight, and repo-native fallback are all evaluated.
 4. Confirm every non-selected candidate has a rejection or deferral reason.
-5. Confirm current framework/platform claims include retrieval date `2026-06-12`.
-6. Confirm the report defines what DOC-002 should do if Docusaurus hits a true GitHub Pages hard blocker.
+5. Confirm current framework/platform claims include the initial retrieval date `2026-06-12` and the Astro/Starlight decision update date `2026-06-13` where applicable.
+6. Confirm the report defines what DOC-002 should do if Astro/Starlight hits a true GitHub Pages hard blocker.
 
-**Expected result**: The report recommends Docusaurus/MDX for DOC-002 and records the search tradeoff.
+**Expected result**: The report recommends Astro/Starlight for DOC-002 and records the community-plugin tradeoff for versioning and internal link validation.
 
 ## Scenario 2: Validate the IA skeleton
 
@@ -41,9 +41,11 @@ Confirm the diff is limited to:
 ```text
 docs/ai/research/interactive-documentation-framework-spike.md
 specs/doc-001-static-docs-framework-and-ia-spike/plan.md
+specs/doc-001-static-docs-framework-and-ia-spike/spec.md
 specs/doc-001-static-docs-framework-and-ia-spike/research.md
-specs/doc-001-static-docs-framework-and-ia-spike/data-model.md
 specs/doc-001-static-docs-framework-and-ia-spike/quickstart.md
+specs/doc-001-static-docs-framework-and-ia-spike/checklists/documentation-quality.md
+specs/doc-001-static-docs-framework-and-ia-spike/checklists/error-handling.md
 ```
 
 **Expected result**: No package files, lockfiles, site config, CI workflows, README migrations, marketplace files, generated payloads, prototype components, or plugin behavior files changed.
@@ -51,7 +53,7 @@ specs/doc-001-static-docs-framework-and-ia-spike/quickstart.md
 ## Scenario 4: Validate DOC-002 handoff
 
 1. In the research report, find "DOC-002 Consumption".
-2. Confirm it tells DOC-002 to create the Docusaurus shell and not to re-run stack selection unless a new blocker appears.
+2. Confirm it tells DOC-002 to create the Astro/Starlight shell and not to re-run stack selection unless a new blocker appears.
 3. Confirm package manager and command roles are listed as report-only recommendations.
 4. Confirm setup, install, preview, build, minimum validation/test, and deployment roles are separated clearly enough for DOC-002 to define actual package scripts.
 

@@ -6,13 +6,13 @@
 
 ## Summary
 
-DOC-001 is a research-only spike that selects the static documentation stack and route-level IA foundation for DOC-002. The selected recommendation is **Docusaurus with MDX**, hosted through GitHub Pages from this repository, with package/build/test commands recorded as report-only guidance and no docs-site scaffolding created in this phase.
+DOC-001 is a research-only spike that selects the static documentation stack and route-level IA foundation for DOC-002. The selected recommendation is **Astro with Starlight**, hosted through GitHub Pages from this repository, with package/build/test commands recorded as report-only guidance and no docs-site scaffolding created in this phase.
 
 ## Technical Context
 
-**Language/Version**: Markdown/MDX research artifacts. Docusaurus official docs were refreshed at version 3.10.1 on 2026-06-12, but DOC-001 records evidence only and does not pin a package version or add Node project files; DOC-002 must refresh current docs before installation.
+**Language/Version**: Markdown/MDX research artifacts. Docusaurus official docs were refreshed at version 3.10.1 on 2026-06-12; the 2026-06-13 update observed npm metadata for `@astrojs/starlight` 0.40.0, `starlight-versions` 0.9.0, and `starlight-links-validator` 0.24.1. DOC-001 records evidence only and does not pin package versions or add Node project files; DOC-002 must refresh current docs before installation.
 
-**Primary Dependencies**: None added by DOC-001. Report-only DOC-002 recommendation: Docusaurus/MDX, React components, GitHub Actions Pages deployment, optional search provider.
+**Primary Dependencies**: None added by DOC-001. Report-only DOC-002 recommendation: Astro/Starlight, MDX/components, GitHub Actions Pages deployment, built-in Pagefind search, optional `starlight-links-validator`, and deferred/optional `starlight-versions`.
 
 **Storage**: N/A. Static docs content only.
 
@@ -57,7 +57,7 @@ DOC-001 is a research-only spike that selects the static documentation stack and
 
 **Split decision**: No split required. DOC-002 owns docs-site shell creation after this recommendation is accepted.
 
-**PR review packet source**: The PR description should summarize the research recommendation, non-goals, scope budget, route-level IA handoff, verification evidence, known search/versioning tradeoffs, and rollback as deleting the DOC-001 research/planning artifacts.
+**PR review packet source**: The PR description should summarize the research recommendation, non-goals, scope budget, route-level IA handoff, verification evidence, known community-plugin/versioning/link-validation tradeoffs, Astro portfolio alignment, and rollback as deleting the DOC-001 research/planning artifacts.
 
 ## Project Structure
 
@@ -101,7 +101,7 @@ specs/doc-001-static-docs-framework-and-ia-spike/
 
 ## Phase 0: Research Plan
 
-Research resolved the open framework, package-manager, and GitHub Pages hosting questions with live official-source refresh on 2026-06-12.
+Research resolved the open framework, package-manager, and GitHub Pages hosting questions with live official-source refresh on 2026-06-12 and an Astro/Starlight decision update on 2026-06-13.
 
 **Candidate set**:
 - Docusaurus/MDX
@@ -143,7 +143,7 @@ Research resolved the open framework, package-manager, and GitHub Pages hosting 
 | III. Semantic Versioning | Pass | No manifest or marketplace versions changed. |
 | IV. Test Coverage Before Merge | Pass | No runtime behavior changed; verification is documentation and scope review. |
 | V. Conventional Commits | Pass | No commit created. |
-| VI. KISS, Simplicity & YAGNI | Pass | Docusaurus is recommended for DOC-002, but no framework files are introduced in DOC-001. |
+| VI. KISS, Simplicity & YAGNI | Pass | Astro/Starlight is recommended for DOC-002, but no framework files are introduced in DOC-001. |
 
 **Gate status**: Pass. No unjustified constitutional violations.
 
