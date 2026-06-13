@@ -33,20 +33,10 @@ This guide validates the DOC-001 research spike. It does not build or run a docs
 Run:
 
 ```bash
-git diff --name-only
+git diff --name-only origin/main...HEAD
 ```
 
-Confirm the diff is limited to:
-
-```text
-docs/ai/research/interactive-documentation-framework-spike.md
-specs/doc-001-static-docs-framework-and-ia-spike/plan.md
-specs/doc-001-static-docs-framework-and-ia-spike/spec.md
-specs/doc-001-static-docs-framework-and-ia-spike/research.md
-specs/doc-001-static-docs-framework-and-ia-spike/quickstart.md
-specs/doc-001-static-docs-framework-and-ia-spike/checklists/documentation-quality.md
-specs/doc-001-static-docs-framework-and-ia-spike/checklists/error-handling.md
-```
+Confirm the PR diff is limited to the interactive-documentation source PRD/roadmap/traceability files, `docs/ai/research/interactive-documentation-framework-spike.md`, DOC-001 process notes under `docs/ai/specs/.process/`, and DOC-001 SpecKit artifacts under `specs/doc-001-static-docs-framework-and-ia-spike/`.
 
 **Expected result**: No package files, lockfiles, site config, CI workflows, README migrations, marketplace files, generated payloads, prototype components, or plugin behavior files changed.
 

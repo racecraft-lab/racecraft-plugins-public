@@ -98,7 +98,7 @@ As a reviewer, I can confirm the spike did not introduce site scaffolding, packa
 - **FR-008**: Each top-level IA route MUST include route path, route label, primary Diataxis mode, optional secondary modes, target audience, route purpose, source evidence, success criterion, shell owner DOC, and full content owner DOC.
 - **FR-009**: The spike result MUST be written to `docs/ai/research/interactive-documentation-framework-spike.md`.
 - **FR-010**: Completion evidence MUST show that DOC-001 did not add or modify package files, lockfiles, site config, prototype components, CI files, README or plugin README migration, marketplace files, generated payload files, or plugin behavior.
-- **FR-011**: The spike MUST leave docs-site implementation, README migration, interactive widgets, and docs CI creation out of scope for DOC-002 or later work.
+- **FR-011**: The spike MUST leave docs-site implementation, README migration, interactive widgets, and docs CI creation out of scope for DOC-001 and defer that work to DOC-002 or later work.
 
 ### Reviewability Budget *(mandatory)*
 

@@ -116,7 +116,7 @@ Budget result: within budget
 - Interactive widgets beyond basic navigation.
 
 **Key Files:**
-- Future site config and docs content paths from DOC-001.
+- DOC-001 stack and IA contract; DOC-002 chooses concrete site config and docs content paths.
 - `README.md` and `speckit-pro/README.md` as source evidence.
 
 ### DOC-003: Claude Code marketplace installation path
@@ -230,7 +230,7 @@ Budget result: within budget
 - Auto-editing user config.
 
 **Key Files:**
-- Site component paths from DOC-001.
+- DOC-002 site component paths after the Astro/Starlight shell exists.
 - `.claude-plugin/marketplace.json`
 - `.agents/plugins/marketplace.json`
 - Source/dist plugin manifests.
@@ -344,7 +344,7 @@ Budget result: within budget
 - Live install tests in CI.
 
 **Key Files:**
-- Site config and docs validation config from DOC-001.
+- DOC-002 site config and DOC-010 docs validation config after the Astro/Starlight shell exists.
 - `.github/workflows/pr-checks.yml` if docs CI is added.
 - Existing validation scripts where reusable.
 

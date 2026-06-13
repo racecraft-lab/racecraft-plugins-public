@@ -62,9 +62,9 @@ Run these from the repository root before walking the acceptance tests.
 
 ## Self-Review Findings
 
-- The report satisfies the spike: Docusaurus/MDX is the default recommendation, alternatives have concrete rationale, DOC-002 gets command handoff, and the IA skeleton covers the required routes.
+- The report satisfies the spike: Astro/Starlight is the default recommendation, Docusaurus/MDX is retained only as a deferred fallback, alternatives have concrete rationale, DOC-002 gets command handoff, and the IA skeleton covers the required routes.
 - DOC-001 stayed research-only: forbidden-surface scans found 0 package, lockfile, site config, CI, generated payload, README migration, or plugin behavior changes.
-- Verification passed for this docs/process change: Layer 1 passed `978/978`, the default deterministic suite passed `2587/2587`, G7 passed, and final reviewability proceeded with marker evidence.
+- Verification passed for this docs/process change: Layer 1 and default deterministic suites passed before merge, post-merge verification passed `2915/2915`, G7 passed, and final reviewability proceeded with marker evidence.
 - Remaining follow-up is explicit: DOC-002 owns scaffolding/config refresh and DOC-010 owns search, accessibility, responsive, deep-link, and docs validation hardening.
 
 ## Sign-off

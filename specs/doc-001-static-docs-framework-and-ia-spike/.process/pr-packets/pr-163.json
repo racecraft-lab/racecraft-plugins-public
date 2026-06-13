@@ -55,14 +55,14 @@
     {
       "kind": "decision_update_validation",
       "source": "docs/ai/research/interactive-documentation-framework-spike.md",
-      "summary": "2026-06-13 Astro/Starlight decision update passed Layer 1 structural validation, stale recommendation scan, and git diff whitespace checks.",
+      "summary": "2026-06-13 Astro/Starlight decision update passed Layer 1 structural validation, research-report default-stack scan, and git diff whitespace checks.",
       "result": "passed"
     }
   ],
   "scope_evidence": {
     "reviewable_loc": 0,
     "production_files": 0,
-    "total_files": 30,
+    "total_files": 32,
     "budget_result": "blocked",
     "changed_files": [
       ".specify/memory/archive-reports/2026-06-12-prsg-005-013-post-merge-hygiene.md",
@@ -82,6 +82,8 @@
       "specs/doc-001-static-docs-framework-and-ia-spike/.process/marker-plan/final-marker-split-result.json",
       "specs/doc-001-static-docs-framework-and-ia-spike/.process/marker-plan/pr-marker-plan.json",
       "specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md",
+      "specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-packets/pr-163.json",
+      "specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-packets/pr-163/validation.json",
       "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json",
       "specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md",
       "specs/doc-001-static-docs-framework-and-ia-spike/SPEC-MOC.md",
@@ -145,7 +147,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "8bc761dd410833e979db012d49592f0593601b7a1935e086df1a26e0d530a5aa",
+    "value": "839b72991de710496aa2606051e2d1ad0d51ad24d2329ee7e020e0877f6f24af",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

@@ -176,7 +176,7 @@
     {
       "step": "Phase 4: Checklist - error-handling",
       "status": "completed",
-      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added Docusaurus/GitHub Pages fallback rules, repo-native fallback seriousness, and command-role clarity."
+      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added Astro/Starlight GitHub Pages failure handling, Docusaurus/MDX fallback order, repo-native fallback seriousness, and command-role clarity."
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
@@ -257,7 +257,7 @@
     {
       "step": "Phase 7: Recommendation Record (T019-T022)",
       "status": "completed",
-      "summary": "T019-T022 complete. Docusaurus/MDX selected as default, alternatives rejected/deferred with evidence bounds, and FR/SC traceability recorded."
+      "summary": "T019-T022 complete. Astro/Starlight selected as default, Docusaurus/MDX retained as deferred fallback, alternatives rejected/deferred with evidence bounds, and FR/SC traceability recorded."
     },
     {
       "step": "Phase 7: Verification and Scope Boundary (T023-T028)",
@@ -265,8 +265,8 @@
       "gate": "G7",
       "gate_status": "passed",
       "verification": {
-        "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed",
-        "default_suite": "bash tests/speckit-pro/run-all.sh -> 2587/2587 passed",
+        "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed before merge; post-merge default suite covered current Layer 1 at 2915/2915 overall",
+        "default_suite": "bash tests/speckit-pro/run-all.sh -> 2587/2587 passed before merge; 2915/2915 passed after merging main and refreshing PR packet evidence",
         "forbidden_surface_scan": "0 matches in branch and post-scaffold DOC-001 diff scopes"
       },
       "summary": "T023-T028 complete. Diff-scope scan, IA coverage, verification commands, traceability, and PR review packet source notes are recorded in the research report."
@@ -304,7 +304,7 @@
     {
       "step": "Post: Reviewability Diff Gate",
       "status": "completed",
-      "summary": "final-reviewability-backstop.sh proceeded with outcome marker_split; final diff was a size-only 30-file block; marker plan valid with foundation, us1, us2, us3."
+      "summary": "final-reviewability-backstop.sh proceeded with outcome marker_split; current final diff is a size-only 32-file block; marker plan valid with foundation, us1, us2, us3."
     },
     {
       "step": "Post: Self-Review",

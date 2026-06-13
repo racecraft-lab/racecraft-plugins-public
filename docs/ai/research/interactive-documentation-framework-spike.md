@@ -222,7 +222,7 @@ Verification on 2026-06-12:
 
 | Check | Result |
 |---|---|
-| Branch diff scope | `git diff --name-only origin/main...HEAD` listed 30 files: PRD/roadmap scaffold, this research report, DOC-001 SpecKit artifacts, and final process evidence. |
+| Branch diff scope | Initial branch diff was limited to PRD/roadmap scaffold, this research report, DOC-001 SpecKit artifacts, and final process evidence; current branch diff scope is recorded in the 2026-06-13 update below. |
 | Post-scaffold DOC-001 scope | `git diff --name-only origin/doc-001-static-docs-framework-and-ia-spike...HEAD` listed 24 files: this research report plus DOC-001 process/spec/checklist/task artifacts and final process evidence. |
 | Forbidden surface scan | Both diff scopes returned 0 matches for package files, lockfiles, site configs, generated site directories, CI workflows, README migrations, marketplace/generated payload files, and plugin behavior files. |
 | IA route coverage | 11 required route labels are present in the IA skeleton with route path, Diataxis mode, audience, purpose, source evidence, success criterion, shell owner, and full content owner. |
@@ -233,9 +233,13 @@ Decision update verification on 2026-06-13:
 
 | Check | Result |
 |---|---|
-| Stale recommendation scan | No obsolete default-stack or shell-handoff wording found. |
+| Stale recommendation scan | Decision-update scan found no obsolete default-stack wording in the research report; the later consistency pass updates related workflow, PRD, roadmap, traceability, UAT, and process evidence to match Astro/Starlight. |
+| Current branch diff scope | `git diff --name-only origin/main...HEAD` lists 32 files after PR packet and validation artifacts were added. |
 | Whitespace check | `git diff --check` passed. |
 | Structural validation | `bash tests/speckit-pro/run-all.sh --layer 1` passed `978/978`. |
+| Post-merge MOC stale-index validation | `bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh` passed `11/11`. |
+| Post-merge PR packet validation | `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-packets/pr-163.json` passed. |
+| Post-merge default deterministic suite | `bash tests/speckit-pro/run-all.sh` passed `2915/2915`. |
 
 ## Traceability
 
@@ -257,7 +261,7 @@ Use these notes when updating the PR body:
 - **Non-goals**: No docs-site scaffold, package files, lockfiles, site config, CI workflow, README migration, interactive widgets, marketplace/generated payloads, or plugin behavior changes.
 - **Review order**: Start with `docs/ai/research/interactive-documentation-framework-spike.md`, then review `specs/doc-001-static-docs-framework-and-ia-spike/spec.md`, `plan.md`, `tasks.md`, and the checklist files.
 - **Scope budget**: Research/process-only branch; task-gate size warning is recorded in `specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json`, and the final size-only block proceeds through marker evidence.
-- **Verification evidence**: 2026-06-12 Layer 1 passed `978/978`; default deterministic suite passed `2587/2587`; diff-scope scan found 0 forbidden implementation surfaces. 2026-06-13 decision update Layer 1 passed `978/978`; stale recommendation scan found no obsolete default-stack wording; `git diff --check` passed.
+- **Verification evidence**: 2026-06-12 Layer 1 passed `978/978`; default deterministic suite passed `2587/2587`; diff-scope scan found 0 forbidden implementation surfaces. 2026-06-13 decision update Layer 1 passed `978/978`; `git diff --check` passed. Post-merge validation passed MOC stale-index `11/11`, PR packet validation, and the default deterministic suite `2915/2915`.
 - **Known gaps**: DOC-002 owns concrete Astro/Starlight scaffold/config decisions and DOC-010 owns deterministic docs validation, accessibility, responsive checks, search hardening, versioning policy, and deep-link policy.
 - **Rollback**: Revert the DOC-001 commits to remove the research/spec artifacts; no runtime or package state is introduced by this spike.
 

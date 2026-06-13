@@ -44,7 +44,7 @@ Manual browser UAT is not required for this research-only spike. The reviewer ac
 
 - PR packet validation passed for this rendered title and body.
 - The deterministic SpecKit Pro suite was rerun after the main merge and packet refresh.
-- The 2026-06-13 decision update passed Layer 1 structural validation, stale recommendation scan, and `git diff --check`.
+- The 2026-06-13 decision update passed Layer 1 structural validation, research-report default-stack scan, and `git diff --check`.
 
 Source: packet validation result and local verification output.
 

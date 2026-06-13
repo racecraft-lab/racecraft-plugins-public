@@ -25,7 +25,7 @@ Racecraft's public plugin marketplace and `speckit-pro` have enough working mach
 | [Claude Code settings](https://code.claude.com/docs/en/settings) | Managed settings can restrict marketplaces and plugin-only customization (`strictKnownMarketplaces`, `strictPluginOnlyCustomization`). | Team/evaluator docs need a managed-marketplace section, not just consumer install commands. | High | Official vendor docs; applies mainly to managed environments. |
 | [GitHub Spec Kit](https://github.com/github/spec-kit) | Spec-Driven Development emphasizes specifying the "what" before the "how"; the flow establishes constitution, specify, plan, tasks, and implement artifacts; `specify init` supports Codex integration options. | First-run docs must teach the lifecycle and should validate Claude vs Codex initialization commands separately. | High | Official project README; behavior may track CLI releases. |
 | [Diataxis](https://diataxis.fr/) | Documentation should be organized around four user needs: tutorials, how-to guides, reference, and explanation. | The docs IA should be task/user-need oriented rather than mirroring repo folders. | High | Authoritative framework; not a tool mandate. |
-| [Docusaurus docs](https://docusaurus.io/docs/docs-introduction) and [MDX/React support](https://docusaurus.io/docs/markdown-features/react) | Docusaurus organizes docs via pages, sidebars, versions, and plugin instances; MDX supports React components in Markdown. | Docusaurus/MDX is a strong candidate for the static site, but the user chose a framework spike before commitment. | Medium | Framework docs; authoritative for Docusaurus, not proof it is the best choice. |
+| [Docusaurus docs](https://docusaurus.io/docs/docs-introduction) and [MDX/React support](https://docusaurus.io/docs/markdown-features/react) | Docusaurus organizes docs via pages, sidebars, versions, and plugin instances; MDX supports React components in Markdown. | Docusaurus/MDX is a strong comparison candidate and fallback input, but the framework spike owns final selection; the current DOC-001 decision record recommends Astro/Starlight for DOC-002. | Medium | Framework docs; authoritative for Docusaurus, not proof it is the best choice. |
 | [W3C WAI accessibility principles](https://www.w3.org/WAI/fundamentals/accessibility-principles/) | Accessible web content should be perceivable, operable, understandable, and robust; dynamic UI needs text alternatives, keyboard support, and predictable behavior. | Interactive docs must be keyboard accessible, copyable without JavaScript, and screen-reader understandable. | High | Standards source; implementation details remain project-specific. |
 | `README.md` | The repo documents source vs `dist/claude` vs `dist/codex`, both marketplace files, Claude install commands, Codex repo/personal install notes, and cautions against installing the mixed source tree directly. | The site should promote the generated payload distinction as a first-class concept. | High | Repository evidence; may drift from official docs. |
 | `speckit-pro/README.md` | The plugin README explains the SDD flow, command matrix, install paths, prerequisites, troubleshooting, Codex agent install step, and architecture notes. | This should be decomposed into discoverable tutorials/reference pages rather than kept as one dense entry point. | High | Repository evidence; long page may hide critical tasks. |
@@ -76,7 +76,7 @@ Users can install and use `speckit-pro`, but the current documentation makes the
 - Executing `speckit-pro` or marketplace installs inside the browser.
 - Full analytics instrumentation before a hosting/tooling decision exists.
 - Changing plugin behavior, manifests, marketplace files, generated payloads, or release automation.
-- Rewriting all existing README content before the site IA and framework are selected.
+- Rewriting all existing README content before DOC-002 creates the site shell and content extraction plan.
 
 ### Explicit non-goals
 
@@ -291,7 +291,7 @@ No candidate is cut entirely. The main leanness choice is merging related refere
 | Trust | Users can identify plugin source, payload, hooks/agents, permissions, and rollback/update path in evaluator review. | Increase via checklist completion |
 | Accessibility | Keyboard navigation and automated accessibility checks for interactive components. | Pass required checks |
 
-Analytics implementation is out of scope until the docs stack and hosting path are selected.
+Analytics implementation is out of scope until the Astro/Starlight site foundation and hosting path exist.
 
 ## 11. Risks, Assumptions, and Open Questions
 
@@ -306,14 +306,14 @@ Analytics implementation is out of scope until the docs stack and hosting path a
 ### Assumptions
 
 - Static docs should be hosted from this repository, not a separate marketing repo.
-- Docusaurus/MDX is a leading candidate, but not selected until DOC-001 completes.
+- Astro/Starlight is the current DOC-001 recommendation for DOC-002; Docusaurus/MDX remains the first fallback if a true hard blocker or first-party docs-governance need outweighs Astro portfolio alignment.
 - Safe interactive docs are acceptable if every interaction degrades to static content.
 - Detailed implementation tasks belong in later Spec Kit phases, not this PRD.
 
 ### Maintainer decisions still required
 
-- Final static-site framework and package manager.
-- Hosting target and deployment policy.
+- Framework and package-manager ratification before DOC-002 scaffolding; DOC-001 currently recommends Astro/Starlight with pnpm.
+- Concrete Astro/Starlight GitHub Pages deployment policy and configuration.
 - Whether existing README content becomes source content, generated excerpts, or redirects into the site.
 - Whether docs CI should run on docs-only PRs immediately or after the site foundation exists.
 - Exact treatment of legacy `commands/` wording in AGENTS/README style guidance.

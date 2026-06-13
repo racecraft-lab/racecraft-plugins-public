@@ -279,7 +279,7 @@ Focus on DOC-001 requirements:
 |-----------|-------|------|-----------------|
 | documentation-quality | 20 | 3 found, 3 remediated, 0 remaining | `checklists/documentation-quality.md`; support-class legend, bounded evidence notes, and Docusaurus version-source wording |
 | accessibility | 20 | 3 found, 3 remediated, 0 remaining | `checklists/accessibility.md`; accessibility testing handoff, interaction guardrails, and DOC-010 route hardening coverage |
-| error-handling | 20 | 3 found, 3 remediated, 0 remaining | `checklists/error-handling.md`; Docusaurus/GitHub Pages fallback rules, repo-native fallback seriousness, and command-role clarity |
+| error-handling | 20 | 3 found, 3 remediated, 0 remaining | `checklists/error-handling.md`; Astro/Starlight GitHub Pages failure handling, Docusaurus/MDX fallback order, repo-native fallback seriousness, and command-role clarity |
 
 ---
 
@@ -413,7 +413,7 @@ Focus on:
 | Research artifact setup | T001-T004 | 4/4 | Report shell, source evidence convention, local inputs, and scope boundary recorded |
 | Candidate comparison | T005-T014 | 10/10 | Official sources refreshed; candidate matrix, support classes, scoring, and tradeoffs recorded |
 | IA skeleton | T015-T018 | 4/4 | 11 route records, command handoff, DOC-002 consumption, and fallback rules recorded |
-| Recommendation | T019-T022 | 4/4 | Docusaurus/MDX selected; alternatives rejected/deferred; FR/SC traceability added |
+| Recommendation | T019-T022 | 4/4 | Astro/Starlight selected; alternatives rejected/deferred with Docusaurus/MDX retained as fallback; FR/SC traceability added |
 | Verification | T023-T028 | 6/6 | Diff-scope scan, IA coverage, Layer 1, default suite, and PR review packet notes recorded |
 
 ---
@@ -436,10 +436,10 @@ Focus on:
 
 | Question | Finding |
 |----------|---------|
-| Does the implementation satisfy the spec? | Yes. The research report recommends Docusaurus/MDX, compares all required candidates, includes the DOC-002 command handoff, and records the route-level IA skeleton. |
+| Does the implementation satisfy the spec? | Yes. The research report recommends Astro/Starlight, compares all required candidates, includes the DOC-002 command handoff, and records the route-level IA skeleton. |
 | Did DOC-001 stay inside its research-only boundary? | Yes. Forbidden-surface scans found 0 package, lockfile, site config, CI, generated payload, README migration, or plugin behavior changes. |
-| Is verification sufficient for this docs/process spike? | Yes. Layer 1 passed `978/978`, the default deterministic suite passed `2587/2587`, G7 passed, and final reviewability proceeded with marker evidence. |
-| What remains risky or deferred? | DOC-002 must refresh Docusaurus/GitHub Pages docs before scaffolding; DOC-010 owns search, accessibility, responsive, deep-link, and docs validation hardening after the site exists. |
+| Is verification sufficient for this docs/process spike? | Yes. Layer 1 passed, the default deterministic suite passed, G7 passed, post-merge verification passed `2915/2915`, and final reviewability proceeded with marker evidence. |
+| What remains risky or deferred? | DOC-002 must refresh Astro/Starlight, selected Starlight plugin, and GitHub Pages docs before scaffolding; DOC-010 owns search, accessibility, responsive, deep-link, and docs validation hardening after the site exists. |
 
 ## Post-Implementation Evidence
 
@@ -451,7 +451,7 @@ Focus on:
 | Code review extension | Skipped; review extension is not installed |
 | Integration suite | `bash tests/speckit-pro/run-all.sh` passed `2587/2587` |
 | Cleanup extension | Skipped; cleanup extension is not installed and archive sweep was dry-run/no-op |
-| Final reviewability backstop | Proceeded with `outcome=marker_split`; final diff was a size-only 30-file block and marker plan is valid for `foundation`, `us1`, `us2`, `us3` |
+| Final reviewability backstop | Proceeded with `outcome=marker_split`; current final diff is a size-only 32-file block and marker plan is valid for `foundation`, `us1`, `us2`, `us3` |
 | Marker emission packet | Dry-run validation passed with 4 marker slices and no branch or PR mutations |
 | UAT runbook | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md`; author-agent rewrite unavailable, fail-open with parent self-review notes |
 | PR body | Generated at `specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md` with review-packet marker and UAT section |
@@ -485,3 +485,6 @@ specs/
 ---
 
 Template based on SpecKit best practices. Populated for DOC-001 from the interactive documentation PRD, roadmap, and setup Grill Me interview.
+
+### PR packet validation events
+- <!-- speckit-pro-pr-packet-validation:event-id=pr-163 --> Blocked PR packet validation for `pr-163`; result `specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-packets/pr-163/validation.json`; rules: `unknown`.

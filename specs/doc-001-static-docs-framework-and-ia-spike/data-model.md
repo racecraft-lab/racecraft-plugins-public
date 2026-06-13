@@ -6,7 +6,7 @@ Represents one documentation stack under evaluation.
 
 **Fields**:
 - `name`: Docusaurus/MDX, VitePress, Astro/Starlight, or repo-native fallback.
-- `support_class`: built-in, official, community, third-party paid, or unsupported per capability.
+- `support_class`: one of the support classes defined in the report legend, including built-in, official, official third-party hosted, community, community listed by official docs, external/manual, unsupported/blocked, unknown/weak, process-only, or qualitative.
 - `github_pages_support`: whether the stack can publish to GitHub Pages from this repository.
 - `interactivity_model`: MDX/React, Vue in Markdown, Astro/MDX components, or Markdown-only.
 - `search_model`: official hosted, built-in local, community local, external, or unsupported.
@@ -72,7 +72,7 @@ Represents a cited local or official source used by the spike.
 - `evidence_note`: short explanation of what the source supports.
 
 **Validation rules**:
-- Official framework/platform claims require `retrieval_date: 2026-06-12`.
+- Official framework/platform claims require the applicable retrieval or update date, including the 2026-06-12 initial source refresh and the 2026-06-13 Astro/Starlight decision update where relevant.
 - Local source evidence must reference existing source inputs or existing repo facts.
 
 ## Command Recommendation

@@ -46,7 +46,7 @@
 - [x] T011 [P] [US1] Compare versioning, link checking, docs-as-code workflow fit, and maintenance load across all candidates in `docs/ai/research/interactive-documentation-framework-spike.md`
 - [x] T012 [P] [US1] Record package manager, setup, install, dev preview, production build, static preview, minimum validation/test, and deployment command roles for each framework candidate in `docs/ai/research/interactive-documentation-framework-spike.md`
 - [x] T013 [US1] Score each candidate against hard blockers, high-weight tradeoffs, medium-weight tradeoffs, and maintenance tie-breakers in `docs/ai/research/interactive-documentation-framework-spike.md`
-- [x] T014 [US1] Record support class values for each candidate criterion as built-in, official, community, third-party paid, external/manual, unsupported, or unknown in `docs/ai/research/interactive-documentation-framework-spike.md`
+- [x] T014 [US1] Record support class values for each candidate criterion using the report legend, including built-in, official, official third-party hosted, community, community listed by official docs, external/manual, unsupported/blocked, unknown/weak, process-only, or qualitative in `docs/ai/research/interactive-documentation-framework-spike.md`
 
 **Checkpoint**: Candidate comparison is complete enough to support a recommendation.
 

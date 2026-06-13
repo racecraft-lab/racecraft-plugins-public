@@ -128,14 +128,12 @@ stop_reason: "natural"
 
 **Clarify session 3 update:** The allowed implementation output is `docs/ai/research/interactive-documentation-framework-spike.md` plus normal DOC-001 SpecKit artifacts under `specs/doc-001-static-docs-framework-and-ia-spike/**` and `docs/ai/specs/.process/DOC-001-*`. PRD, roadmap, design concept, README, plugin documentation, package files, lockfiles, site config, prototypes, CI, marketplace/generated payloads, and plugin behavior are excluded unless a later human explicitly amends scope.
 
-## Open Questions
+## Resolved and Deferred Questions
 
 - **What:** Final static-site framework and package manager.
-  **Why deferred:** This is the core DOC-001 spike output, not a pre-scaffold decision; Clarify session 1 confirmed the package manager follows the selected framework and does not authorize package or lockfile creation in DOC-001.
-  **Suggested next step:** Resolve in `/speckit-plan` and implementation research with live source refresh.
+  **Resolution:** DOC-001 recommends Astro/Starlight with pnpm as the report-only DOC-002 package-manager handoff. This does not authorize package or lockfile creation in DOC-001.
 - **What:** Hosting policy details for GitHub Pages.
-  **Why deferred:** Clarify session 1 set GitHub Pages hosting from this repository as a hard blocker, but framework-specific implementation details still require live evidence.
-  **Suggested next step:** Include GitHub Pages deployment support and fallback risk in the research matrix.
+  **Resolution:** DOC-001 records Astro/Starlight GitHub Pages feasibility and fallback rules. DOC-002 owns concrete Astro `site`, `base`, `trailingSlash`, workflow, and output-path configuration after refreshing current docs.
 - **What:** Exact README content treatment after the site exists.
   **Why deferred:** DOC-001 defines IA, not content migration.
   **Suggested next step:** Carry as a DOC-002 or later content-shell decision.

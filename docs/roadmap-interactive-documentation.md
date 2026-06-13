@@ -67,20 +67,20 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 - **New files likely needed:** `docs/ai/research/interactive-documentation-framework-spike.md`.
 - **Dependencies:** None.
 - **Acceptance criteria:** AC-1.1, AC-1.2, AC-1.3, AC-1.4.
-- **Validation plan:** Review cited official docs; confirm absence/presence of existing site toolchain; record decision; no build expected unless a prototype is explicitly scoped.
+- **Validation plan:** Review cited official docs; confirm absence/presence of existing site toolchain; record decision; no build or prototype is expected in DOC-001.
 - **Reviewability Budget:** Primary surface: docs/process | Projected reviewable LOC: 0 | Production files: 0 | Total files: 1-2 | Budget result: spike, LOC not applicable
 - **Risks:** Spike could balloon into implementation; framework docs may change.
-- **Open questions:** Which hosting target should the selected stack assume?
-- **Suggested implementation notes:** Keep this as a research artifact plus explicit recommendation; do not create `package.json` until DOC-002 unless the spike explicitly requires a tiny throwaway prototype.
+- **Open questions:** None for DOC-001 after the decision record; DOC-002 owns concrete Astro/Starlight GitHub Pages configuration.
+- **Suggested implementation notes:** Keep this as a research artifact plus explicit recommendation; do not create `package.json`, lockfiles, site config, CI, runtime files, or prototypes until DOC-002.
 
 ### DOC-002: Unified landing page and IA shell
 
 - **Maps from PRD:** DOC-FR-002
 - **User outcome:** A visitor immediately understands the marketplace, current plugin, supported platforms, and where to go next.
-- **Scope:** Create the chosen site foundation from DOC-001, landing page, nav/sidebar IA, glossary entry point, and initial static pages for Start, Install: Claude Code, Install: Codex, First Run, Reference, Troubleshooting, Security & Trust, Contribute & Release, and Spec Kit Lifecycle. Content can be skeletal where later SPECs own full detail.
+- **Scope:** Create the chosen Astro/Starlight site foundation from the DOC-001 stack and IA contract, landing page, nav/sidebar IA, and initial static pages for all 11 DOC-001 route labels: Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary. Content can be skeletal where later SPECs own full detail.
 - **Vertical-slice rationale:** Cuts through site setup, navigation, and first visible content shell as one usable docs-site increment.
 - **Non-goals:** Full platform content, interactive widgets, docs CI hardening beyond basic build.
-- **Source files likely affected:** `README.md`, `speckit-pro/README.md` for source extraction only if chosen; future site config and docs content paths from DOC-001.
+- **Source files likely affected:** `README.md`, `speckit-pro/README.md` for source extraction only if chosen; DOC-001 provides the stack and IA contract, while DOC-002 chooses concrete site config and docs content paths.
 - **New files likely needed:** site config, docs content directory, landing page, sidebar/nav config, glossary seed.
 - **Dependencies:** DOC-001.
 - **Acceptance criteria:** AC-2.1, AC-2.2, AC-2.3, AC-2.4, AC-2.5.
@@ -268,4 +268,3 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 - Traceability matrix: [docs/traceability-interactive-documentation.md](traceability-interactive-documentation.md)
 - SpecKit-compatible roadmap: [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 - Roadmap-MOC home note: [docs/ai/specs/interactive-documentation-roadmap-MOC.md](ai/specs/interactive-documentation-roadmap-MOC.md)
-
