@@ -17,13 +17,13 @@
 
 **Purpose**: Establish the docs app root and baseline Starlight shell without adding validation hardening or deployment workflow.
 
-- [ ] T001 Refresh current Astro/Starlight/package evidence and update `specs/doc-002-unified-landing-page-and-ia-shell/research.md` and `specs/doc-002-unified-landing-page-and-ia-shell/plan.md` only if package pins or hard-blocker evidence changed. Covers FR-015, FR-017.
-- [ ] T002 Validate the path guardrails in `specs/doc-002-unified-landing-page-and-ia-shell/contracts/route-shell-manifest.json` against planned DOC-002 changes before scaffolding `docs-site/`. Covers FR-014, FR-016, FR-017.
-- [ ] T003 Create `docs-site/package.json` with docs-site-scoped `pnpm` metadata, Astro/Starlight dependencies, and `dev`, `check`, `build`, and `preview` scripts. Covers FR-001, FR-002.
-- [ ] T004 [P] Create `docs-site/tsconfig.json` for the Astro/Starlight docs app. Covers FR-001.
-- [ ] T005 [P] Create `docs-site/src/content.config.ts` for the Starlight docs content collection. Covers FR-001.
-- [ ] T006 Create `docs-site/astro.config.mjs` with Astro/Starlight configured for `site: "https://racecraft-lab.github.io"`, `base: "/racecraft-plugins-public"`, and `trailingSlash: "always"`. Covers FR-001, FR-013.
-- [ ] T007 Create `docs-site/src/content/docs/` and `docs-site/src/content/docs/install/` as the route-shell content targets. Covers FR-006.
+- [x] T001 Refresh current Astro/Starlight/package evidence and update `specs/doc-002-unified-landing-page-and-ia-shell/research.md` and `specs/doc-002-unified-landing-page-and-ia-shell/plan.md` only if package pins or hard-blocker evidence changed. Covers FR-015, FR-017.
+- [x] T002 Validate the path guardrails in `specs/doc-002-unified-landing-page-and-ia-shell/contracts/route-shell-manifest.json` against planned DOC-002 changes before scaffolding `docs-site/`. Covers FR-014, FR-016, FR-017.
+- [x] T003 Create `docs-site/package.json` with docs-site-scoped `pnpm` metadata, Astro/Starlight dependencies, and `dev`, `check`, `build`, and `preview` scripts. Covers FR-001, FR-002.
+- [x] T004 [P] Create `docs-site/tsconfig.json` for the Astro/Starlight docs app. Covers FR-001.
+- [x] T005 [P] Create `docs-site/src/content.config.ts` for the Starlight docs content collection. Covers FR-001.
+- [x] T006 Create `docs-site/astro.config.mjs` with Astro/Starlight configured for `site: "https://racecraft-lab.github.io"`, `base: "/racecraft-plugins-public"`, and `trailingSlash: "always"`. Covers FR-001, FR-013.
+- [x] T007 Create `docs-site/src/content/docs/` and `docs-site/src/content/docs/install/` as the route-shell content targets. Covers FR-006.
 
 ## Phase 2: User Story 1 - Landing Page And Platform Choice
 
