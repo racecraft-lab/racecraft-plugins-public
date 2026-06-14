@@ -45,7 +45,7 @@ concept doc is the source of truth for any decision captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Scaffolded, not run |
+| Specify | `/speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Pending | Recommended |
 | Plan | `/speckit-plan` | Pending | Resolve `gh-stack` command/version behavior |
 | Checklist | `/speckit-checklist` | Pending | Run for each recommended domain |
@@ -86,7 +86,7 @@ at `.specify/memory/constitution.md`:
 | KISS, Simplicity & YAGNI | Add a helper only where it has multiple real callers; avoid speculative stack-manager abstractions beyond emission and restack. | Plan Complexity Tracking plus code review |
 | Conventional Commits | PR titles and generated packet titles remain public-readable conventional commits. | PRSG-012 packet validation plus PR title CI |
 
-**Constitution Check:** Pending
+**Constitution Check:** Verified during autopilot preflight
 
 ### Scaffold Preflight Evidence
 
@@ -97,6 +97,10 @@ at `.specify/memory/constitution.md`:
 | Reviewability preset | Installed | `.specify/presets/speckit-pro-reviewability` refreshed; plan template changed |
 | Preset resolution | Passed | `spec-template`, `plan-template`, and `tasks-template` resolve to `speckit-pro-reviewability v1.0.0` |
 | Slice-size advisory | OK | `estimated_loc=325`, `suggested_slices=1`, `status=ok`; no split question required |
+| Archive sweep startup | Passed | Archive extension installed; only active `specs/**` directory is the current PRSG-014 target, so no prior spec was eligible for archival or cleanup |
+| Autopilot prerequisite check | Passed | `check-prerequisites.sh docs/ai/specs/.process/PRSG-014-workflow.md` returned `all_pass=true` on branch `prsg-014-optional-gh-stack-stack-manager-integration` |
+| Codex agent availability | Passed | Required SpecKit Pro custom agents are installed in the user Codex agent registry with `gpt-5.5` / `xhigh` settings |
+| Confidence gate mode | Advisory | `resolve-confidence-mode.sh` resolved `advisory` for this invocation |
 
 ---
 
@@ -190,13 +194,27 @@ creation, sync, and restack burden.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 15 |
+| User Stories | 4 |
+| Acceptance Criteria | 11 |
 
 ### Files Generated
 
-- [ ] `specs/prsg-014-optional-gh-stack-stack-manager-integration/spec.md`
+- [x] `specs/prsg-014-optional-gh-stack-stack-manager-integration/spec.md`
+- [x] `specs/prsg-014-optional-gh-stack-stack-manager-integration/checklists/requirements.md`
+
+### Specify Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| G1 | Passed | `validate-gate.sh G1 specs/prsg-014-optional-gh-stack-stack-manager-integration` returned `pass=true`, `markers=0` |
+
+### Specify Follow-up Focus
+
+- `[codebase]` Confirm exact `gh-stack` command/version capability matrix for create/sync/restack.
+- `[spec]` Finalize stack-manager evidence field names with minimal schema churn.
+- `[domain]` Define what counts as safe pre-mutation `gh-stack` status/dry-run proof.
+- `[security]` Confirm command argument safety expectations for branch names, body paths, and command plans.
 
 ---
 

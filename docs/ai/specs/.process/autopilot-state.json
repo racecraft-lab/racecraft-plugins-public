@@ -1,21 +1,37 @@
 {
-  "workflow_file": "docs/ai/specs/.process/DOC-001-workflow.md",
-  "updated_at": "2026-06-13T19:45:00Z",
-  "active_step": "Post-merge archive cleanup complete",
-  "model_check": {
-    "parent_session": "Codex main session",
-    "status": "accepted",
-    "model": "gpt-5.5",
-    "model_reasoning_effort": "xhigh",
-    "note": "Parent Codex config and installed SpecKit Pro subagents satisfy the autopilot model and effort requirements."
+  "schemaVersion": 1,
+  "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
+  "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
+  "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
+  "updated_at": "2026-06-14T00:30:58Z",
+  "active_step": "Phase 2: Clarify - Detection Contract Focus",
+  "confidence_gate_mode": "advisory",
+  "archive_sweep": {
+    "status": "completed",
+    "archive_extension_installed": true,
+    "cleanup_mode": "feature-branch-sweep",
+    "current_target": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
+    "excluded_current_spec": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
+    "eligible_previous_specs": [],
+    "safeToApplyCleanup": false,
+    "dryRunProvenanceOnly": true,
+    "notes": [
+      "Archive Sweep inspected active specs/** before Phase 1.",
+      "The only active spec directory is the current PRSG-014 target, so no prior spec was eligible for archival or cleanup."
+    ]
   },
   "preflight": {
-    "branch": "doc-001-static-docs-framework-and-ia-spike",
-    "is_worktree": true,
-    "on_feature_branch": false,
-    "spec_directory": "specs/doc-001-static-docs-framework-and-ia-spike",
-    "workflow_branch": "doc-001-static-docs-framework-and-ia-spike",
-    "confidence_gate_mode": "advisory",
+    "prerequisites": {
+      "all_pass": true,
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration",
+      "is_worktree": true,
+      "on_feature_branch": false,
+      "specify": "specify 0.10.3.dev0",
+      "mcp_servers": {
+        "status": "fallbacks_available",
+        "missing": ["tavily-mcp", "context7", "RepoPrompt"]
+      }
+    },
     "project_commands": {
       "BUILD": "N/A",
       "TYPECHECK": "N/A",
@@ -26,599 +42,74 @@
       "SINGLE_FILE_TEST": "N/A",
       "SINGLE_FILE_INTEGRATION": "N/A",
       "FULL_VERIFY": "N/A",
-      "STRUCTURAL": "bash tests/speckit-pro/run-all.sh --layer 1",
-      "DEFAULT_VERIFY": "bash tests/speckit-pro/run-all.sh"
+      "repo_full_verify": "bash tests/speckit-pro/run-all.sh"
     },
     "preset_conventions": {
       "has_presets": true,
-      "presets": [
-        "speckit-pro-reviewability"
+      "presets": ["speckit-pro-reviewability"],
+      "templates": ["spec-template", "plan-template", "tasks-template"]
+    },
+    "codex_agents": {
+      "required_installed": true,
+      "required": [
+        "phase-executor",
+        "clarify-executor",
+        "checklist-executor",
+        "analyze-executor",
+        "implement-executor",
+        "codebase-analyst",
+        "spec-context-analyst",
+        "domain-researcher"
       ],
-      "templates": {
-        "tasks": "default",
-        "spec": "default",
-        "plan": "default"
-      }
-    },
-    "extensions": {
-      "archive": true,
-      "verify": true,
-      "verify_tasks": true,
-      "retrospective": true,
-      "speckit_utils": true,
-      "review": false,
-      "cleanup": false
-    },
-    "constitution_validation": {
-      "status": "passed",
-      "reviewability_setup_gate": "pass",
-      "structural_validation": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed",
-      "note": "Research-only DOC-001 baseline has no build stack; constitution checks passed through diff scope review, reviewability setup gate, and Layer 1 structural validation."
-    },
-    "agent_availability": {
-      "phase-executor": "user",
-      "clarify-executor": "user",
-      "checklist-executor": "user",
-      "analyze-executor": "user",
-      "implement-executor": "user",
-      "codebase-analyst": "user",
-      "spec-context-analyst": "user",
-      "domain-researcher": "user",
-      "autopilot-fast-helper": "user"
-    },
-    "mcp_servers": {
-      "status": "fallbacks_available",
-      "missing": [
-        "tavily-mcp",
-        "context7",
-        "RepoPrompt"
-      ]
-    }
-  },
-  "archive_sweep": {
-    "archive_extension_installed": true,
-    "cleanup_mode": "apply-cleanup",
-    "safeToApplyCleanup": true,
-    "excludedCurrentSpec": null,
-    "eligible_previous_specs": [],
-    "cleanup_applied": [
-      "specs/doc-001-static-docs-framework-and-ia-spike"
-    ],
-    "warnings": [],
-    "note": "DOC-001 was archived and removed from active specs after PR #163 merged. Recovery commands are recorded in .specify/memory/archive-reports/2026-06-13-doc-001-post-merge-hygiene.md.",
-    "initial_pre_spec_sweep": {
-      "cleanup_mode": "dry-run",
-      "safeToApplyCleanup": false,
-      "excludedCurrentSpec": "specs/doc-001-static-docs-framework-and-ia-spike",
-      "cleanup_applied": [],
-      "warnings": [
-        "No active non-current spec had sufficient local merge/archive evidence for cleanup.",
-        "Empty untracked specs/doc-spec-001-static-docs-framework-and-ia-spike directory ignored."
-      ]
+      "optional_installed": ["autopilot-fast-helper"],
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh"
     }
   },
   "plan": [
-    {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
-      "status": "completed",
-      "summary": "Pre-spec archive sweep excluded current DOC-001 target; post-merge archive cleanup later archived DOC-001 and removed the active spec folder after PR #163 merged."
-    },
-    {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed",
-      "summary": "Prerequisite script passed; confidence gate mode advisory; reviewability setup gate passed; Layer 1 structural validation passed 978/978."
-    },
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
     {
       "step": "Phase 1: Specify",
       "status": "completed",
       "gate": "G1",
       "gate_status": "passed",
-      "summary": "Created spec.md and requirements checklist. Spec has 3 user stories, 11 functional requirements, 6 success criteria, 6 acceptance scenarios, and 0 NEEDS CLARIFICATION markers."
+      "summary": "Created spec.md and requirements checklist. Spec has 4 user stories, 15 functional requirements, 11 acceptance scenarios, 6 success criteria, and 0 NEEDS CLARIFICATION markers."
     },
-    {
-      "step": "Phase 2: Clarify - Framework decision rubric",
-      "status": "completed",
-      "summary": "Accepted five rubric decisions: hard blockers are GitHub Pages-from-this-repo, rich MDX/equivalent reusable-component interactivity, accessible fallback, and no-implementation boundary; search/link checking high-weight, versioning medium-weight; package manager follows selected framework; repo-native fallback selected only if framework candidates are blocked or too risky."
-    },
-    {
-      "step": "Phase 2: Clarify - Framework decision rubric Consensus",
-      "status": "completed",
-      "summary": "Clarify executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 2: Clarify - IA skeleton contract",
-      "status": "completed",
-      "summary": "Accepted IA route schema with route_path, route_label, diataxis_mode, optional secondary_modes, target_audience, route_purpose, source_evidence, success_criterion, shell_owner_doc, and full_content_owner_doc; skeleton covers all 11 PRD IA routes."
-    },
-    {
-      "step": "Phase 2: Clarify - IA skeleton contract Consensus",
-      "status": "completed",
-      "summary": "Clarify executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 2: Clarify - Research output and no-implementation boundary",
-      "status": "completed",
-      "summary": "Accepted positive allow-list of research report plus DOC-001 SpecKit artifacts only; excluded PRD, roadmap, design concept, README/plugin docs, package files, lockfiles, site config, prototypes, CI, marketplace/generated payloads, and plugin behavior unless scope is separately amended."
-    },
-    {
-      "step": "Phase 2: Clarify - Research output and no-implementation boundary Consensus",
-      "status": "completed",
-      "summary": "Clarify executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed",
-      "gate": "G3",
-      "gate_status": "passed",
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 0,
-        "declared_files": {
-          "production": 0,
-          "new": 4,
-          "modified": 1,
-          "total_entries": 5
-        }
-      },
-      "summary": "Created plan.md, research.md, data-model.md, quickstart.md, and early research decision record. No contracts required for research-only spike."
-    },
-    {
-      "step": "Phase 4: Checklist - documentation-quality",
-      "status": "completed",
-      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added support-class legend, bounded evidence notes, and Docusaurus version-source wording."
-    },
-    {
-      "step": "Phase 4: Checklist - documentation-quality Consensus",
-      "status": "completed",
-      "summary": "Checklist executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 4: Checklist - accessibility",
-      "status": "completed",
-      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added W3C/WAI evidence, accessibility interaction guardrails, and DOC-010 route hardening coverage."
-    },
-    {
-      "step": "Phase 4: Checklist - accessibility Consensus",
-      "status": "completed",
-      "summary": "Checklist executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed",
-      "summary": "20 items; 3 gaps remediated; 0 [Gap] markers remaining. Added Astro/Starlight GitHub Pages failure handling, Docusaurus/MDX fallback order, repo-native fallback seriousness, and command-role clarity."
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "completed",
-      "summary": "Checklist executor returned no unresolved consensus items."
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed",
-      "gate": "G5",
-      "gate_status": "passed",
-      "task_count": 28,
-      "phase_count": 5,
-      "parallel_opportunities": 8,
-      "atomicity_route": {
-        "route": "one-navigable-PR",
-        "releasable": true,
-        "signals": [
-          "change-shape:modify-heavy"
-        ],
-        "warnings": []
-      },
-      "layer_plan": {
-        "status": "skipped",
-        "reason": "Atomicity route is one-navigable-PR; PRSG-008 layer planning applies only to split-PR routes."
-      },
-      "reviewability_task_gate": {
-        "status": "block",
-        "pass": false,
-        "reviewable_loc": 1120,
-        "production_files": 0,
-        "total_files": 35,
-        "interpretation": "Size-only task-gate block captured for final reviewability backstop; no production-file or release-safety blocker."
-      },
-      "summary": "Created tasks.md with 28 research-only tasks across 5 phases, 8 parallel-safe opportunities, 3 user stories covered, and no site scaffold/package/config/plugin behavior tasks."
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed",
-      "gate": "G6",
-      "gate_status": "passed",
-      "marker_counts": {
-        "critical": 0,
-        "high": 0,
-        "medium": 0,
-        "low": 0
-      },
-      "summary": "Analyze found 0 findings. Cross-artifact consistency, DOC-FR-001 acceptance-criterion task coverage, explicit live-source refresh tasks, route-level Diataxis IA scope, and the no-implementation boundary are verified."
-    },
-    {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "summary": "No unresolved findings; consensus not required."
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "mode": "advisory",
-      "threshold": 0.9,
-      "result": "soft_skip",
-      "reason": "confidence-gate.sh returned NO_DATA because no synthesizer confidence emit was present; no unresolved findings require consensus."
-    },
-    {
-      "step": "Phase 7: Foundation - Research Artifact Structure (T001-T004)",
-      "status": "completed",
-      "summary": "T001-T004 complete. Research report shell, official-source retrieval convention, local source inputs, and no-implementation boundary are recorded."
-    },
-    {
-      "step": "Phase 7: Candidate Comparison (T005-T014)",
-      "status": "completed",
-      "summary": "T005-T014 complete. Official Docusaurus, VitePress, Astro/Starlight, GitHub Pages, and W3C sources refreshed; candidate matrix, support classes, scoring, and tradeoffs recorded."
-    },
-    {
-      "step": "Phase 7: IA Skeleton and DOC-002 Command Handoff (T015-T018)",
-      "status": "completed",
-      "summary": "T015-T018 complete. IA skeleton covers 11 route labels with required fields; DOC-002 command handoff and fallback rules recorded."
-    },
-    {
-      "step": "Phase 7: Recommendation Record (T019-T022)",
-      "status": "completed",
-      "summary": "T019-T022 complete. Astro/Starlight selected as default, Docusaurus/MDX retained as deferred fallback, alternatives rejected/deferred with evidence bounds, and FR/SC traceability recorded."
-    },
-    {
-      "step": "Phase 7: Verification and Scope Boundary (T023-T028)",
-      "status": "completed",
-      "gate": "G7",
-      "gate_status": "passed",
-      "verification": {
-        "layer1": "bash tests/speckit-pro/run-all.sh --layer 1 -> 978/978 passed before merge; post-merge default suite covered current Layer 1 at 2915/2915 overall",
-        "default_suite": "bash tests/speckit-pro/run-all.sh -> 2587/2587 passed before merge; 2915/2915 passed after merging main and refreshing PR packet evidence",
-        "forbidden_surface_scan": "0 matches in branch and post-scaffold DOC-001 diff scopes"
-      },
-      "summary": "T023-T028 complete. Diff-scope scan, IA coverage, verification commands, traceability, and PR review packet source notes are recorded in the research report."
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "completed",
-      "summary": "specify extension list passed; verify, verify-tasks, checkpoint, retrospective, speckit-utils, git, and archive extensions are enabled."
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "completed",
-      "summary": "Research report, traceability, scope boundary, and G7 validation passed."
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed",
-      "summary": "tasks.md has 28/28 tasks checked and no remaining unchecked task markers; report evidence maps completed task groups to changed files and verification."
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "skipped",
-      "summary": "Review extension is not installed in this workspace; no dedicated review command available."
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "completed",
-      "summary": "bash tests/speckit-pro/run-all.sh passed 2587/2587."
-    },
-    {
-      "step": "Post: Cleanup",
-      "status": "skipped",
-      "summary": "Cleanup extension is not installed; archive sweep already ran dry-run/no-op and current DOC-001 target is excluded."
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "completed",
-      "summary": "final-reviewability-backstop.sh proceeded with outcome marker_split; current final diff is a size-only 32-file block; marker plan valid with foundation, us1, us2, us3."
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "completed",
-      "summary": "Self-review recorded in DOC-001 workflow and UAT runbook."
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "completed",
-      "summary": "generate-uat-skeleton.sh wrote specs/doc-001-static-docs-framework-and-ia-spike/.process/uat-runbook.md; uat-runbook-author subagent is unavailable in this Codex surface, so the author rewrite step was fail-open with parent self-review notes added."
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "completed",
-      "summary": "generate-pr-body.sh wrote specs/doc-001-static-docs-framework-and-ia-spike/.process/pr-body.md; top sections were filled and the body contains the review-packet marker and UAT section."
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "completed",
-      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/163",
-      "summary": "Existing PR #163 updated with pushed branch, title, and generated review-packet body."
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "completed",
-      "summary": "Initial remote check found PR #163 mergeable with no review decision yet; CI jobs were still pending."
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "skipped",
-      "summary": "Retrospective extension is installed, but this Codex surface exposes only the Claude slash-command file; no executable Codex retrospective command was available."
-    },
-    {
-      "step": "Post-Merge: Archive Cleanup",
-      "status": "completed",
-      "summary": "DOC-001 archived after PR #163 merged; recovery commands recorded and specs/doc-001-static-docs-framework-and-ia-spike removed from active specs."
-    }
-  ],
-  "pr_marker_plan": {
-    "schema_version": "pr-marker-plan.v1",
-    "kind": "pr_marker_plan",
-    "feature_id": "doc-001-static-docs-framework-and-ia-spike",
-    "status": "emission_ready",
-    "source_fingerprint": {
-      "feature_spec_sha": "106a2c8d3564561a85ebdb9077908b7d5af86b1fa48be36e5d1a9630f82a8881",
-      "plan_declared_scope_sha": "bc47711664f7de4ec246a62cf3e4d9446002b6d9db267e2d48b9609f8adac694",
-      "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
-      "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
-      "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
-    },
-    "markers": [
-      {
-        "id": "foundation",
-        "review_order": 1,
-        "kind": "foundation",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "Foundation",
-          "story_id": null,
-          "start_task_id": "T001",
-          "end_task_id": "T004"
-        },
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs/ai/specs/.process/DOC-001-design-concept.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs/prd-interactive-documentation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs/roadmap-interactive-documentation.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/doc-001-static-docs-framework-and-ia-spike/spec.md"
-          }
-        ],
-        "declared_tests": [],
-        "reviewability": {
-          "status": "block",
-          "mode": "marker",
-          "scope": "foundation",
-          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us1",
-        "review_order": 2,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 1 - Candidate Comparison",
-          "story_id": 1,
-          "start_task_id": "T005",
-          "end_task_id": "T014"
-        },
-        "task_ids": [
-          "T005",
-          "T006",
-          "T007",
-          "T008",
-          "T009",
-          "T010",
-          "T011",
-          "T012",
-          "T013",
-          "T014"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
-          }
-        ],
-        "declared_tests": [],
-        "reviewability": {
-          "status": "block",
-          "mode": "marker",
-          "scope": "us1",
-          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us2",
-        "review_order": 3,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 2 - IA Skeleton and DOC-002 Command Handoff",
-          "story_id": 2,
-          "start_task_id": "T015",
-          "end_task_id": "T018"
-        },
-        "task_ids": [
-          "T015",
-          "T016",
-          "T017",
-          "T018"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
-          }
-        ],
-        "declared_tests": [],
-        "reviewability": {
-          "status": "block",
-          "mode": "marker",
-          "scope": "us2",
-          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us3",
-        "review_order": 4,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 3 - Verification and Scope Boundary",
-          "story_id": 3,
-          "start_task_id": "T023",
-          "end_task_id": "T028"
-        },
-        "task_ids": [
-          "T023",
-          "T024",
-          "T025",
-          "T026",
-          "T027",
-          "T028"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs/ai/research/interactive-documentation-framework-spike.md"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/run-all.sh"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "marker",
-          "scope": "us3",
-          "evidence_path": "specs/doc-001-static-docs-framework-and-ia-spike/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "evidence_path": "docs/ai/research/interactive-documentation-framework-spike.md"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      }
-    ],
-    "warnings": [
-      {
-        "code": "reviewability_size_warning",
-        "severity": "warning",
-        "message": "Reviewability sizing result is marker-planning input.",
-        "source": "reviewability",
-        "details": {
-          "status": "block",
-          "mode": "tasks",
-          "evidence_path": ""
-        }
-      }
-    ],
-    "created_at": "2026-06-12T22:35:00Z",
-    "updated_at": "2026-06-12T22:35:00Z"
-  },
-  "current_source_fingerprint": {
-    "feature_spec_sha": "106a2c8d3564561a85ebdb9077908b7d5af86b1fa48be36e5d1a9630f82a8881",
-    "plan_declared_scope_sha": "bc47711664f7de4ec246a62cf3e4d9446002b6d9db267e2d48b9609f8adac694",
-    "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
-    "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
-    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
-  },
-  "pr_marker_plan_current_source_fingerprint": {
-    "feature_spec_sha": "106a2c8d3564561a85ebdb9077908b7d5af86b1fa48be36e5d1a9630f82a8881",
-    "plan_declared_scope_sha": "bc47711664f7de4ec246a62cf3e4d9446002b6d9db267e2d48b9609f8adac694",
-    "tasks_sha": "e395c4924a8f5a8b5ed225720d4d0be8421f84531f28b85302b5fa2fef465b0f",
-    "reviewability_sha": "11d3a54c6828f96a4249c369aefdfad9990acd995be07f403abdfdadc4f2048e",
-    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
-  },
-  "pr": {
-    "number": 163,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/163",
-    "state": "OPEN",
-    "mergeable": "MERGEABLE",
-    "title": "docs(DOC-001): choose static docs framework and IA"
-  }
+    {"step": "Phase 2: Clarify - Detection Contract Focus", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - Detection Contract Focus Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Mutation and Fallback Focus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Mutation and Fallback Focus Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Emission and Restack Focus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Emission and Restack Focus Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Parity and Test Focus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Parity and Test Focus Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - integration", "status": "pending"},
+    {"step": "Phase 4: Checklist - integration Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
+    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - reliability", "status": "pending"},
+    {"step": "Phase 4: Checklist - reliability Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - security", "status": "pending"},
+    {"step": "Phase 4: Checklist - security Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "completed", "skipped": "review extension not installed"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Cleanup", "status": "completed", "skipped": "cleanup extension not installed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
+  ]
 }
