@@ -40,8 +40,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 4 user stories, 17 FRs, 10 acceptance scenarios, and 0 clarification markers |
-| Clarify | `/speckit-clarify` | In Progress | Session 1 next: official Codex path semantics, source refresh, and local CLI help alignment |
-| Plan | `/speckit-plan` | Pending | Plan docs-site plus README/plugin README updates without changing manifests, payloads, installer behavior, or agent templates |
+| Clarify | `/speckit-clarify` | Complete | 15 questions resolved across official path semantics, custom-agent registration, and scope/validation; 6 consensus items logged; G2 passed |
+| Plan | `/speckit-plan` | In Progress | Plan docs-site plus README/plugin README updates without changing manifests, payloads, installer behavior, or agent templates |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: UX, accessibility, security, and error-handling |
 | Tasks | `/speckit-tasks` | Pending | Produce vertical docs tasks ordered by source refresh, source evidence, docs implementation, and validation |
 | Analyze | `/speckit-analyze` | Pending | Check cross-artifact consistency, platform leakage, source freshness, and validation coverage |
@@ -242,9 +242,20 @@ Codex users need a precise, source-backed install path for Racecraft Public Plug
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Official Codex path semantics | Fill after Clarify | Fill after Clarify |
-| 2 | Custom-agent registration and verification | Fill after Clarify | Fill after Clarify |
-| 3 | Scope, consistency, and validation | Fill after Clarify | Fill after Clarify |
+| 1 | Official Codex path semantics | 5 | Document HTTP/HTTPS Git URL support, `--json`, generated-payload copy/sync for personal installs, official installed plugin cache terminology, and skills-vs-custom-agents wording |
+| 2 | Custom-agent registration and verification | 5 | Use the installer-copied TOML set for verification, default `$install` to `~/.codex/agents/`, distinguish skill metadata from custom-agent TOML registration, keep verification observational, and add a bounded outside-workspace approval warning |
+| 3 | Scope, consistency, and validation | 5 | Keep shared critical invariants across all three entry points, bound trust guidance to install safety, forbid plugin behavior changes, require existing docs-site/full-suite validation commands, and record source-backed command-snippet review |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | `codex plugin marketplace add` source forms | [domain] | 1 | high-confidence | Updated FR-007 to include HTTP or HTTPS Git URLs, `--json`, `owner/repo`, `owner/repo@ref`, `--ref`, and repeatable Git-only `--sparse PATH` | domain-researcher |
+| 2 | Clarify | Personal/local generated-payload layout | [codebase, domain, spec] | 1 | 3/3 | Updated Session 1 clarifications, User Story 1 scenario 2, FR-004, and FR-005 to use generated payload plus copy/sync for personal layouts | codebase-analyst, domain-researcher, spec-context-analyst |
+| 3 | Clarify | Installed cache terminology | [codebase, domain] | 1 | both-agree | Updated Session 1 clarifications, User Story 1 cache wording, FR-005, edge cases, and assumptions to use official installed plugin cache terminology | codebase-analyst, domain-researcher |
+| 4 | Clarify | Expected custom-agent TOML verification list | [codebase, spec] | 1 | both-agree | Updated Session 2 clarifications, User Story 2 scenario 3, FR-011, SC-003, edge cases, and assumptions to verify the installer-copied 9-file TOML set unless a plan-approved source correction changes installer behavior | codebase-analyst, spec-context-analyst |
+| 5 | Clarify | `$install` permission and approval implications | [security] | 1 | 3/3 | Updated Session 2 clarifications and FR-013 with a bounded outside-workspace write warning, project-scoped destination option, network distinction, and DOC-008 deferral | codebase-analyst, spec-context-analyst, domain-researcher |
+| 6 | Clarify | Install-safety boundary vs DOC-008 | [security] | 1 | 3/3 | Updated Session 3 clarifications, FR-001, FR-013, FR-017, SC-001, SC-005, and assumptions to keep DOC-004 bounded to first-install safety and defer full trust/security/lifecycle depth to DOC-008 | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 

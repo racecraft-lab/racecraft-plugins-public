@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-14T22:33:39Z",
-  "active_step": "Phase 2: Clarify - Session 1: Official Codex path semantics",
+  "updated_at": "2026-06-14T23:12:24Z",
+  "active_step": "Phase 3: Plan",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -86,17 +86,102 @@
       "specs/doc-004-codex-marketplace-installation-path/checklists/requirements.md"
     ]
   },
+  "phase2": {
+    "sessions": {
+      "session1_official_codex_path_semantics": {
+        "status": "completed",
+        "questions": 5,
+        "gate": "G2",
+        "gate_status": "passed",
+        "clarification_markers": 0,
+        "consensus": [
+          {
+            "item": "codex plugin marketplace add source forms",
+            "categories": ["domain"],
+            "outcome": "high-confidence",
+            "analysts": ["domain-researcher"]
+          },
+          {
+            "item": "personal/local generated-payload layout",
+            "categories": ["codebase", "domain", "spec"],
+            "outcome": "3/3",
+            "analysts": ["codebase-analyst", "domain-researcher", "spec-context-analyst"]
+          },
+          {
+            "item": "installed cache terminology",
+            "categories": ["codebase", "domain"],
+            "outcome": "both-agree",
+            "analysts": ["codebase-analyst", "domain-researcher"]
+          }
+        ],
+        "artifact_updates": [
+          "specs/doc-004-codex-marketplace-installation-path/spec.md",
+          "docs/ai/specs/.process/DOC-004-workflow.md"
+        ]
+      },
+      "session2_custom_agent_registration_and_verification": {
+        "status": "completed",
+        "questions": 5,
+        "gate": "G2",
+        "gate_status": "passed",
+        "clarification_markers": 0,
+        "consensus": [
+          {
+            "item": "expected custom-agent TOML verification list",
+            "categories": ["codebase", "spec"],
+            "outcome": "both-agree",
+            "analysts": ["codebase-analyst", "spec-context-analyst"]
+          },
+          {
+            "item": "$install permission and approval implications",
+            "categories": ["security"],
+            "outcome": "3/3",
+            "analysts": ["codebase-analyst", "spec-context-analyst", "domain-researcher"]
+          }
+        ],
+        "artifact_updates": [
+          "specs/doc-004-codex-marketplace-installation-path/spec.md",
+          "docs/ai/specs/.process/DOC-004-workflow.md"
+        ]
+      },
+      "session3_scope_consistency_and_validation": {
+        "status": "completed",
+        "questions": 5,
+        "gate": "G2",
+        "gate_status": "passed",
+        "clarification_markers": 0,
+        "consensus": [
+          {
+            "item": "install-safety boundary versus DOC-008",
+            "categories": ["security"],
+            "outcome": "3/3",
+            "analysts": ["codebase-analyst", "spec-context-analyst", "domain-researcher"]
+          }
+        ],
+        "artifact_updates": [
+          "specs/doc-004-codex-marketplace-installation-path/spec.md",
+          "docs/ai/specs/.process/DOC-004-workflow.md"
+        ]
+      },
+      "gate": {
+        "gate": "G2",
+        "status": "passed",
+        "clarification_markers": 0,
+        "human_review_markers": 0
+      }
+    }
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Session 1: Official Codex path semantics", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Session 1: Official Codex path semantics Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Session 2: Custom-agent registration and verification", "status": "pending"},
-    {"step": "Phase 2: Clarify - Session 2: Custom-agent registration and verification Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation", "status": "pending"},
-    {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Session 1: Official Codex path semantics", "status": "completed"},
+    {"step": "Phase 2: Clarify - Session 1: Official Codex path semantics Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Session 2: Custom-agent registration and verification", "status": "completed"},
+    {"step": "Phase 2: Clarify - Session 2: Custom-agent registration and verification Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation", "status": "completed"},
+    {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - UX", "status": "pending"},
     {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
