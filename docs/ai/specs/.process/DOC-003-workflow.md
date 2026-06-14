@@ -42,8 +42,8 @@ revision note approved during the workflow.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md` and requirements checklist; G1 passed with 0 clarification markers. |
 | Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: no `[NEEDS CLARIFICATION]` markers remained after Specify. |
-| Plan | `/speckit-plan` | In Progress | Keep the plan docs-only and Astro/Starlight-aware. |
-| Checklist | `/speckit-checklist` | Pending | Recommended domains: ux, accessibility, security, error-handling. |
+| Plan | `/speckit-plan` | Complete | Created docs-only plan artifacts; G3 passed and reviewability estimate projected 0 production LOC. |
+| Checklist | `/speckit-checklist` | In Progress | Recommended domains: ux, accessibility, security, error-handling. |
 | Tasks | `/speckit-tasks` | Pending | Organize by user-visible docs outcome, not by file layer. |
 | Analyze | `/speckit-analyze` | Pending | Check for command/skill drift, Codex leakage, and DOC-008 overlap. |
 | Implement | `/speckit-implement` | Pending | Update docs page and install-relevant terminology surfaces. |
@@ -275,11 +275,18 @@ questions per session.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context and execution flow. |
-| `research.md` | Pending | Use if official Claude Code docs need citation notes. |
-| `data-model.md` | Not expected | Docs-only feature. |
-| `contracts/` | Not expected | Docs-only feature. |
-| `quickstart.md` | Pending | Useful if SpecKit emits a docs authoring validation quickstart. |
+| `plan.md` | Complete | Docs-only implementation plan and declared file operations. |
+| `research.md` | Complete | Records official Claude Code docs and repository source/generated-payload citation policy. |
+| `data-model.md` | Complete | Models documentation concepts and validation relationships only; no runtime data storage. |
+| `contracts/` | Omitted | No API, schema, parser, or CLI grammar contract is introduced by DOC-003. |
+| `quickstart.md` | Complete | Docs validation scenarios for install route, lifecycle, trust inventory, terminology, and runtime-surface boundaries. |
+
+Plan-phase reviewability estimate:
+
+- Status: pass
+- Projected production LOC: 0
+- Declared file entries: 8
+- Outcome: advisory pass; continue to domain checklists.
 
 ---
 
