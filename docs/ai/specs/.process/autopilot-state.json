@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
   "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
   "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T02:59:03Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-06-14T03:08:12Z",
+  "active_step": "Phase 7: Implement - Setup/Foundation (T001-T012)",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -204,7 +204,10 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed",
+      "gate": "G6.5",
+      "gate_status": "soft_skipped",
+      "summary": "Advisory confidence gate returned NO_DATA because the Analyze synthesizer did not emit a confidence block; recorded as a plugin-regression note and continued to Phase 7."
     },
     {
       "step": "Phase 7: Implement - Setup/Foundation (T001-T012)",

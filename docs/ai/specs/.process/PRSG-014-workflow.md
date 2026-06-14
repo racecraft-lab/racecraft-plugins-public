@@ -528,6 +528,12 @@ Flag drift between:
 
 **Unresolved for consensus:** None.
 
+### Confidence Gate
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| G6.5 | Soft-skipped in advisory mode | `confidence-gate.sh docs/ai/specs/.process/PRSG-014-workflow.md --threshold 0.90 --mode advisory` returned `NO_DATA`; no synthesizer confidence emit was present. Per advisory-mode protocol, this is recorded as a plugin-regression note and Phase 7 may proceed. |
+
 ---
 
 ## Phase 7: Implement
