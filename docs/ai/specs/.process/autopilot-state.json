@@ -1,120 +1,72 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-002-workflow.md",
-  "updated_at": "2026-06-14T02:40:12Z",
-  "active_step": "Phase 7: Polish and final evidence (T037-T043)",
-  "confidence_gate_mode": "advisory",
-  "current_branch": "doc-002-unified-landing-page-and-ia-shell",
+  "updated_at": "2026-06-14T19:49:28Z",
+  "active_step": "Post: Cleanup complete",
+  "status": "completed_archived",
+  "current_branch": "codex/doc-002-post-merge-hygiene",
   "feature_dir": "specs/doc-002-unified-landing-page-and-ia-shell",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "mode": "sweep",
+    "mode": "single-feature",
     "cleanup_mode": "apply",
-    "current_target": "specs/doc-002-unified-landing-page-and-ia-shell",
-    "excluded_current_spec": "specs/doc-002-unified-landing-page-and-ia-shell",
-    "eligible_previous_specs": [],
-    "safeToApplyCleanup": false,
-    "note": "No previously merged active specs found under specs/**; current DOC-002 target excluded."
+    "completed_spec": "specs/doc-002-unified-landing-page-and-ia-shell",
+    "safeToApplyCleanup": true,
+    "archive_report": ".specify/memory/archive-reports/2026-06-14-doc-002-post-merge-hygiene.md",
+    "note": "DOC-002 completed through merged PRs #173-#176; PR #177 fixed the autopilot continuation bug discovered during final emission."
   },
   "project_commands": {
-    "BUILD": "N/A",
-    "TYPECHECK": "N/A",
-    "LINT": "N/A",
-    "LINT_FIX": "N/A",
-    "UNIT_TEST": "N/A",
-    "INTEGRATION_TEST": "N/A",
-    "SINGLE_FILE_TEST": "N/A",
-    "SINGLE_FILE_INTEGRATION": "N/A",
-    "FULL_VERIFY": "N/A"
+    "DOCS_CHECK": "cd docs-site && pnpm check",
+    "DOCS_BUILD": "cd docs-site && pnpm build",
+    "DOCS_LINKS": "cd docs-site && pnpm validate:links",
+    "DOCS_VALIDATE": "cd docs-site && pnpm validate",
+    "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
   },
-  "preset_conventions": {
-    "has_presets": true,
-    "presets": [
-      "speckit-pro-reviewability"
-    ],
-    "templates": {
-      "spec": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
-      "plan": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
-      "tasks": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
-    }
-  },
-  "preflight": {
-    "check_prerequisites": "pass",
-    "reviewability_setup_gate": {
-      "status": "pass",
-      "reviewable_loc": 395,
-      "production_files": 0,
-      "total_files": 6,
-      "primary_surfaces": [
-        "docs/process"
-      ]
+  "completed_prs": [
+    {
+      "number": 173,
+      "title": "feat(speckit-pro): Add docs site foundation",
+      "merge_commit": "0bb5e6b5f7589a7872819a2fe3c0ddb583e63565"
     },
-    "spec_index": "current",
-    "layer1_structural": "979/979 passed"
-  },
-  "task_reviewability_gate": {
-    "status": "block",
-    "mode": "tasks",
-    "exit_code": 1,
-    "evidence_path": "specs/doc-002-unified-landing-page-and-ia-shell/.process/reviewability/tasks-gate.json",
-    "classification": "size-only task estimate",
-    "correctness_block": false,
-    "proceed": true
-  },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
-    ],
-    "hints": [
-      "hint:flag-system:weak"
-    ],
-    "warnings": []
-  },
-  "layer_plan": {
-    "status": "skipped",
-    "reason": "atomicity route one-navigable-PR does not require PRSG-008 layer planning"
-  },
+    {
+      "number": 174,
+      "title": "feat(speckit-pro): Add landing page platform choice",
+      "merge_commit": "ce59667582a4bd656eface86a850293b98d50ad5"
+    },
+    {
+      "number": 175,
+      "title": "feat(speckit-pro): Add IA route shell navigation",
+      "merge_commit": "e52035516f3434b82d728e32d3834f24400140cd"
+    },
+    {
+      "number": 176,
+      "title": "feat(speckit-pro): Add docs validation and review evidence",
+      "merge_commit": "73ad7c97a44b036be9247d8e5910587ce61d9ae6"
+    },
+    {
+      "number": 177,
+      "title": "fix(autopilot): require reslice continuation",
+      "merge_commit": "4fc5f81363e5b99e71d298390785d4d4c70d86ae"
+    }
+  ],
+  "next_specs": [
+    "DOC-003",
+    "DOC-004"
+  ],
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed", "gate": "G1", "gate_status": "passed", "summary": "Created spec.md with 3 user stories, 17 functional requirements, 7 acceptance scenarios, 7 success criteria, and zero clarification markers."},
-    {"step": "Phase 2: Clarify - Site scaffold and Pages-ready config", "status": "completed", "skipped": "G1 found zero clarification markers; Clarify phase routed past."},
-    {"step": "Phase 2: Clarify - Site scaffold and Pages-ready config Consensus", "status": "completed", "skipped": "No Clarify unresolved items because Clarify was skipped by G1 routing."},
-    {"step": "Phase 2: Clarify - IA shell and content ownership", "status": "completed", "skipped": "G1 found zero clarification markers; Clarify phase routed past."},
-    {"step": "Phase 2: Clarify - IA shell and content ownership Consensus", "status": "completed", "skipped": "No Clarify unresolved items because Clarify was skipped by G1 routing."},
-    {"step": "Phase 2: Clarify - Validation and slicing", "status": "completed", "skipped": "G1 found zero clarification markers; Clarify phase routed past."},
-    {"step": "Phase 2: Clarify - Validation and slicing Consensus", "status": "completed", "skipped": "No Clarify unresolved items because Clarify was skipped by G1 routing."},
-    {"step": "Phase 3: Plan", "status": "completed", "gate": "G3", "gate_status": "passed", "reviewability_estimate": {"status": "pass", "projected": 80, "declared_entries": 16, "production_files": 2}, "summary": "Created plan.md, research.md, data-model.md, quickstart.md, and contracts/route-shell-manifest.json."},
-    {"step": "Phase 4: Checklist - UX", "status": "completed", "summary": "15 items; 2 UX gaps remediated; zero remaining gap markers."},
-    {"step": "Phase 4: Checklist - UX Consensus", "status": "completed", "skipped": "UX executor returned no unresolved consensus items."},
-    {"step": "Phase 4: Checklist - Accessibility", "status": "completed", "summary": "19 items; 9 accessibility gaps remediated; zero remaining gap markers."},
-    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "completed", "skipped": "Accessibility executor returned no unresolved consensus items."},
-    {"step": "Phase 4: Checklist - Reliability", "status": "completed", "summary": "19 items; 7 reliability gaps remediated; zero remaining gap markers."},
-    {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed", "skipped": "Reliability executor returned no unresolved consensus items."},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "completed", "summary": "25 items; 7 error-handling gaps remediated; zero remaining gap markers."},
-    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed", "skipped": "Error Handling executor returned no unresolved consensus items."},
-    {"step": "Phase 5: Tasks", "status": "completed", "gate": "G5", "gate_status": "passed", "summary": "Created tasks.md with 43 tasks, 14 parallel-safe tasks, and FR-001 through FR-023 mapped. Task reviewability gate returned a size-only block recorded in .process/reviewability/tasks-gate.json; atomicity route is one-navigable-PR."},
-    {"step": "Phase 6: Analyze", "status": "completed", "gate": "G6", "gate_status": "passed", "summary": "Remediated 3 findings, added explicit AC-2.1 through AC-2.5 task coverage, reconciled checklist/workflow state, and confirmed zero finding markers."},
-    {"step": "Phase 6: Analyze - Consensus", "status": "completed", "skipped": "Analyze remediation resolved all findings; no unresolved consensus items remained."},
-    {"step": "Phase 6.5: Confidence Gate", "status": "completed", "mode": "advisory", "composite": 0.94, "gate_status": "passed"},
-    {"step": "Phase 7: Foundation shell baseline (T001-T007)", "status": "completed", "summary": "Created docs-site package/config baseline, Starlight content collection config, Pages-ready Astro config, and content directories without running dependency install."},
-    {"step": "Phase 7: Landing page and platform choice (T008-T012)", "status": "completed", "summary": "Created thin landing page with marketplace purpose, speckit-pro value, Claude Code and Codex platform choices, source-vs-payload explanation, and static next-action links."},
-    {"step": "Phase 7: Route shells and Diataxis navigation (T013-T026)", "status": "completed", "summary": "Created all route shell pages, populated Diataxis sidebar groups, verified all 11 manifest routes, and remediated landing route metadata/source-evidence coverage."},
-    {"step": "Phase 7: Build, links, Pages config, and quickstart (T027-T036)", "status": "completed", "summary": "Added docs-site validation scripts and starlight-links-validator config, generated pnpm-lock.yaml, fixed internal links for the Pages base path, and passed pnpm check/build/validate:links/validate."},
-    {"step": "Phase 7: Polish and final evidence (T037-T043)", "status": "blocked", "summary": "Route coverage, source-vs-payload boundary, forbidden-surface diff checks, validation evidence, and changed-file scope were recorded. T041 PR packet text is blocked because final reviewability backstop returned status=block: total files 36 exceeds threshold 25."},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Cleanup", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {
+      "step": "DOC-002 implementation stack",
+      "status": "completed",
+      "summary": "Merged PRs #173-#176 created the docs-site shell, landing page, IA routes, Pages-ready config, and validation evidence."
+    },
+    {
+      "step": "Autopilot continuation repair",
+      "status": "completed",
+      "summary": "Merged PR #177 fixed the reslice-continuation bug that had paused autopilot after the final reviewability backstop."
+    },
+    {
+      "step": "Post-merge archive cleanup",
+      "status": "completed",
+      "summary": "Archive provenance recorded, active DOC-002 spec folder removed, roadmap state refreshed, and next specs unblocked."
+    }
   ]
 }

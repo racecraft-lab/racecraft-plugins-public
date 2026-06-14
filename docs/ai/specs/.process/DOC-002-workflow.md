@@ -29,7 +29,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, reliability, and error-handling complete; 25 gaps remediated, 0 remaining |
 | Tasks | `/speckit-tasks` | Complete | 43 tasks across Foundation, US1-US3, and Polish; 14 parallel-safe; FR-001 through FR-023 mapped; G5 passed; task reviewability evidence recorded |
 | Analyze | `/speckit-analyze` | Complete | 3 findings remediated; explicit AC-2.1 through AC-2.5 task coverage added; checklist and workflow state reconciled; marker counter clean |
-| Implement | `/speckit-implement` | Blocked | Implementation validates, but final reviewability backstop blocks PR packet/PR creation on total changed file count: 36 files > 25 threshold |
+| Implement | `/speckit-implement` | Complete | Emitted and merged as stacked PRs #173-#176; PR #177 durably fixed the autopilot stop condition that originally left the one-PR review packet path blocked |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -99,11 +99,11 @@ DOC-002 implementation. Re-detect after the site scaffold is created.
 
 ### Success Criteria Summary
 
-- [ ] AC-2.1: Landing page states marketplace purpose, current plugin, primary value, and supported platforms in one screen.
-- [ ] AC-2.2: IA exposes Tutorials, How-to, Reference, and Explanation sections.
-- [ ] AC-2.3: Claude Code and Codex paths are selectable from the first interaction.
-- [ ] AC-2.4: Docs distinguish authoring source `speckit-pro/` from generated install payloads under `dist/claude/**` and `dist/codex/**`.
-- [ ] AC-2.5: Every top-level nav label has a stated purpose and success criterion.
+- [x] AC-2.1: Landing page states marketplace purpose, current plugin, primary value, and supported platforms in one screen.
+- [x] AC-2.2: IA exposes Tutorials, How-to, Reference, and Explanation sections.
+- [x] AC-2.3: Claude Code and Codex paths are selectable from the first interaction.
+- [x] AC-2.4: Docs distinguish authoring source `speckit-pro/` from generated install payloads under `dist/claude/**` and `dist/codex/**`.
+- [x] AC-2.5: Every top-level nav label has a stated purpose and success criterion.
 
 ### Accepted Slice Intent
 
@@ -483,22 +483,22 @@ Focus on:
 | Landing page | T008-T012 | Complete | Created thin `index.mdx` with platform links and source-vs-payload explanation |
 | Route shell | T013-T026 | Complete | Created all 11 route shells, Diataxis sidebar groups, route metadata, source evidence, and static accessibility fallback coverage |
 | Validation/config | T027-T036 | Complete | Added validator scripts/config, generated `pnpm-lock.yaml`, fixed Pages-base internal links, and passed `pnpm check`, `pnpm build`, `pnpm validate:links`, and `pnpm validate` |
-| Polish | T037-T043 | Blocked | T037-T040, T042, and T043 evidence recorded; T041 PR packet text blocked by final reviewability backstop until a valid slice plan or operator-owned typed exception exists |
+| Polish | T037-T043 | Complete with historical note | T041 stayed unchecked in the original task ledger because the one-PR packet path was blocked; the merged stack used PRs #173-#176 plus PR #177 remediation instead |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] `docs-site/` package scripts documented.
-- [ ] Production build passes.
-- [ ] Internal-link validation passes.
-- [ ] All 11 route shells exist and are reachable.
-- [ ] Landing page satisfies AC-2.1 through AC-2.4.
-- [ ] Every top-level nav label has purpose and success criterion.
-- [ ] README files remain source evidence only.
-- [ ] No plugin behavior, marketplace, generated payload, hook, agent, or release automation drift.
-- [ ] PR packet records the accepted split or one-PR fallback with evidence. Blocked by final reviewability backstop; see `specs/doc-002-unified-landing-page-and-ia-shell/.process/final-reviewability/gate-state.json`.
+- [x] All implementation tasks are complete or resolved by merged stack evidence; T041 remains a historical unchecked packet task because the original one-PR packet path was superseded.
+- [x] `docs-site/` package scripts documented.
+- [x] Production build passes.
+- [x] Internal-link validation passes.
+- [x] All 11 route shells exist and are reachable.
+- [x] Landing page satisfies AC-2.1 through AC-2.4.
+- [x] Every top-level nav label has purpose and success criterion.
+- [x] README files remain source evidence only.
+- [x] No plugin behavior, marketplace, generated payload, hook, agent, or release automation drift from DOC-002.
+- [x] PR evidence is recorded across merged PRs #173-#176; PR #177 fixed the autopilot reslice-continuation bug that prevented the intended packet path from continuing.
 
 ---
 
@@ -506,12 +506,15 @@ Focus on:
 
 ### What Worked Well
 
-- Pending.
+- The docs shell shipped as reviewable stacked PRs, with route shell, navigation, build, and link validation verified independently.
+- In-app browser UAT caught Pages-base route behavior across all 11 docs routes.
 
 ### Challenges Encountered
 
-- Pending.
+- The final reviewability backstop originally stopped autopilot at PR packet generation instead of continuing through a valid reslice path.
+- Release PR #178 exposed that release-please metadata bumps must be followed by generated payload sync before PR checks run.
 
 ### Patterns to Reuse
 
-- Pending.
+- Use route-level browser UAT for docs-site shell changes.
+- For release PRs, derive generated payload sync from Release Please PR output rather than querying labels immediately after PR creation.

@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-002 scaffolded and ready for autopilot
+**Status:** DOC-002 completed and archived; DOC-003 and DOC-004 are next
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -77,7 +77,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-002: Unified landing page and IA shell
 
 - **Maps from PRD:** DOC-FR-002
-- **Status:** In progress. Scaffolded on branch `doc-002-unified-landing-page-and-ia-shell` with workflow `docs/ai/specs/.process/DOC-002-workflow.md`.
+- **Status:** Completed and archived after PRs #173-#177. Canonical site shell lives in `docs-site/`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-14-doc-002-post-merge-hygiene.md`.
 - **User outcome:** A visitor immediately understands the marketplace, current plugin, supported platforms, and where to go next.
 - **Scope:** Create the chosen Astro/Starlight site foundation from the DOC-001 stack and IA contract, landing page, nav/sidebar IA, and initial static pages for all 11 DOC-001 route labels: Start, Install: Claude Code, Install: Codex, First Run, Choose Your Path, Reference, Troubleshooting, Security & Trust, Contribute & Release, Spec Kit Lifecycle, and Glossary. Content can be skeletal where later SPECs own full detail.
 - **Vertical-slice rationale:** Cuts through site setup, navigation, and first visible content shell as one usable docs-site increment.
@@ -89,8 +89,8 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 - **Validation plan:** Site build; inspect navigation; check all top-level pages route; verify landing page platform choice and source/dist explanation.
 - **Reviewability Budget:** Primary surface: docs/process | Projected reviewable LOC: 325 | Production files: 0 | Total files: about 5 | Budget result: within budget
 - **Risks:** New site toolchain may expand too far; content skeleton can feel empty.
-- **Open questions:** Should README become a short redirect to the site once the site exists?
-- **Suggested implementation notes:** Keep pages thin and link back to canonical README sections until later SPECs fill details.
+- **Open questions:** README redirect/migration remains deferred to a later docs-hygiene or content SPEC.
+- **Suggested implementation notes:** DOC-003 and DOC-004 should build platform-specific install content into the existing `docs-site/` shell.
 
 ### DOC-003: Claude Code marketplace installation path
 
