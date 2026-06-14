@@ -24,4 +24,4 @@ Full detail is deferred to DOC-010. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the Spec Kit lifecycle shell](/spec-kit-lifecycle/) for context on the term set.
+[Review the Spec Kit lifecycle shell](../spec-kit-lifecycle/) for context on the term set.

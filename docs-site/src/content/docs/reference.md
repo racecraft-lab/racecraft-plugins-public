@@ -32,4 +32,4 @@ Full detail is deferred to DOC-007. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Open the contributor and release shell](/contribute-and-release/) if you need maintainer workflow orientation.
+[Open the contributor and release shell](../contribute-and-release/) if you need maintainer workflow orientation.

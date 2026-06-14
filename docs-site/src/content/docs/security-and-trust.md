@@ -24,4 +24,4 @@ Full detail is deferred to DOC-008. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the source and payload reference](/reference/) to distinguish authoring source from generated install payloads.
+[Review the source and payload reference](../reference/) to distinguish authoring source from generated install payloads.

@@ -7,10 +7,10 @@ Use this route to orient a Claude Code user before the full install guide exists
 ## Route Shell
 
 - **Audience:** Claude Code user
-- **Purpose:** Orient users to adding the marketplace, installing or updating speckit-pro, and verifying namespaced plugin skills.
+- **Purpose:** Orient users to adding the marketplace, installing or updating `speckit-pro`, and verifying namespaced plugin skills.
 - **Shell owner DOC:** DOC-002
 - **Full-content owner DOC:** DOC-003
-- **Success criterion:** User reaches a working /speckit-pro:* command path.
+- **Success criterion:** User reaches a working `/speckit-pro:*` command path.
 - **Useful now:** Confirm this is the Claude Code path, then use the next step to compare source and generated payloads before following later DOC-003 procedure content.
 
 ## Source Evidence
@@ -24,4 +24,4 @@ Full detail is deferred to DOC-003. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the source and payload reference](/reference/) before comparing installed Claude Code files with the repository source.
+[Review the source and payload reference](../../reference/) before comparing installed Claude Code files with the repository source.

@@ -17,10 +17,10 @@ Use this route when you know the task but need a static handoff to the right pla
 
 This static selector fallback uses native links and works without JavaScript:
 
-- [Install for Claude Code](/install/claude-code/) for Claude Code plugin commands.
-- [Install for Codex](/install/codex/) for Codex skills, agents, and plugin surfaces.
-- [Start a first run](/first-run/) for the first safe workflow checkpoint.
-- [Check troubleshooting orientation](/troubleshooting/) when an install, path, cache, permission, version, or prerequisite issue blocks progress.
+- [Install for Claude Code](../install/claude-code/) for Claude Code plugin commands.
+- [Install for Codex](../install/codex/) for Codex skills, agents, and plugin surfaces.
+- [Start a first run](../first-run/) for the first safe workflow checkpoint.
+- [Check troubleshooting orientation](../troubleshooting/) when an install, path, cache, permission, version, or prerequisite issue blocks progress.
 
 ## Source Evidence
 
@@ -33,4 +33,4 @@ Full detail is deferred to DOC-006 and DOC-010. This DOC-002 shell intentionally
 
 ## Next Step
 
-[Open the first-run shell](/first-run/) after choosing the platform route that matches your environment.
+[Open the first-run shell](../first-run/) after choosing the platform route that matches your environment.

@@ -24,4 +24,4 @@ Full detail is deferred to DOC-005 and DOC-010. This DOC-002 shell intentionally
 
 ## Next Step
 
-[Open the first-run shell](/first-run/) for the first user-facing workflow checkpoint.
+[Open the first-run shell](../first-run/) for the first user-facing workflow checkpoint.

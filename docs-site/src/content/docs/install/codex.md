@@ -10,7 +10,7 @@ Use this route to orient a Codex user before the full install guide exists.
 - **Purpose:** Orient users to adding or selecting the marketplace, installing the plugin, restarting, and verifying custom agents.
 - **Shell owner DOC:** DOC-002
 - **Full-content owner DOC:** DOC-004
-- **Success criterion:** User reaches a working $speckit-* flow with custom agents loaded when needed.
+- **Success criterion:** User reaches a working `$speckit-*` flow with custom agents loaded when needed.
 - **Useful now:** Confirm this is the Codex path, then use the next step to understand which repository paths are source and which are generated payloads.
 
 ## Source Evidence
@@ -24,4 +24,4 @@ Full detail is deferred to DOC-004. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the source and payload reference](/reference/) before comparing installed Codex files with the repository source.
+[Review the source and payload reference](../../reference/) before comparing installed Codex files with the repository source.
