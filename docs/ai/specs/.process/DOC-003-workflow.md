@@ -43,8 +43,8 @@ revision note approved during the workflow.
 | Specify | `/speckit-specify` | Complete | Created `spec.md` and requirements checklist; G1 passed with 0 clarification markers. |
 | Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: no `[NEEDS CLARIFICATION]` markers remained after Specify. |
 | Plan | `/speckit-plan` | Complete | Created docs-only plan artifacts; G3 passed and reviewability estimate projected 0 production LOC. |
-| Checklist | `/speckit-checklist` | In Progress | Recommended domains: ux, accessibility, security, error-handling. |
-| Tasks | `/speckit-tasks` | Pending | Organize by user-visible docs outcome, not by file layer. |
+| Checklist | `/speckit-checklist` | Complete | UX, accessibility, security, and error-handling checklists passed; G4 passed with 0 gaps. |
+| Tasks | `/speckit-tasks` | In Progress | Organize by user-visible docs outcome, not by file layer. |
 | Analyze | `/speckit-analyze` | Pending | Check for command/skill drift, Codex leakage, and DOC-008 overlap. |
 | Implement | `/speckit-implement` | Pending | Update docs page and install-relevant terminology surfaces. |
 
@@ -360,11 +360,11 @@ Focus on DOC-003 Claude install requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| ux | | | |
-| accessibility | | | |
-| security | | | |
-| error-handling | | | |
-| Total | | | |
+| ux | 14 | 1 found, 1 fixed, 0 remaining | FR-008, plan Structure Decision: progressive trust disclosure. |
+| accessibility | 13 | 6 found, 6 fixed, 0 remaining | FR-015 through FR-018 and SC-007 added for accessible headings, links, code blocks, and no mixed Claude/Codex command table. |
+| security | 19 | 4 found, 4 fixed, 0 remaining | FR-019 through FR-021 added for sandboxing/hook/managed-marketplace claim boundaries and trust-surface specificity. |
+| error-handling | 24 | 7 found, 7 fixed, 0 remaining | FR-022 through FR-024 and SC-008 added for concise basic recovery and DOC-008/Codex routing. |
+| Total | 70 | 18 found, 18 fixed, 0 remaining | G4 passed with 0 `[Gap]` markers across all checklist files. |
 
 ---
 

@@ -60,7 +60,7 @@ As a Claude Code user, I can update, uninstall, remove the marketplace when appr
 
 ### User Story 4 - Inspect trust surfaces before running plugin skills (Priority: P2)
 
-As an evaluator, I can see which skills, agents, hooks, settings, and generated payload files affect trust before installing or running SpecKit Pro skills.
+As an evaluator, I can see which marketplace metadata, plugin manifest, skills, agents, hooks, MCP/settings surfaces, and generated payload files affect trust before installing or running SpecKit Pro skills.
 
 **Why this priority**: Marketplace installation carries trust implications; evaluators need a concise source-backed inventory before enabling plugin behavior.
 
@@ -68,7 +68,7 @@ As an evaluator, I can see which skills, agents, hooks, settings, and generated 
 
 **Acceptance Scenarios**:
 
-1. **Given** an evaluator wants to inspect plugin behavior before install, **When** they read the trust section, **Then** they can identify the skills, agents, hooks, and settings that matter for review.
+1. **Given** an evaluator wants to inspect plugin behavior before install, **When** they read the trust section, **Then** they can identify the marketplace metadata, plugin manifest, skills, agents, hooks, and MCP/settings surfaces that matter for review.
 2. **Given** generated Claude install payloads exist separately from authoring source, **When** the evaluator reads the trust section, **Then** the docs clearly label which paths are source and which paths are generated payloads.
 3. **Given** official Claude Code platform behavior may change, **When** platform behavior is described, **Then** the page cites or links to official Claude Code documentation rather than treating repository assumptions as platform authority.
 
@@ -90,7 +90,10 @@ As a maintainer, I can update install-relevant wording across the docs without l
 ### Edge Cases
 
 - The user already added the Racecraft marketplace before reading the new page and only needs install, reload, or verification guidance.
+- The user added the wrong marketplace source, has a stale Racecraft marketplace listing, or sees the marketplace but not the `speckit-pro` plugin.
 - The plugin appears installed but namespaced skills are not visible until the user reloads or refreshes the plugin surface.
+- A verification, update, uninstall, marketplace removal, or reinstall step fails or produces an inconclusive result.
+- A user is on the Codex install path or sees Codex-specific plugin, custom-agent, cache, sandbox, or approval failures while reading the Claude route.
 - An evaluator wants to inspect trust surfaces before installing anything locally.
 - A user wants to uninstall SpecKit Pro while keeping the Racecraft marketplace available for future plugins.
 - Official Claude Code lifecycle commands or marketplace behavior differ from older local assumptions.
@@ -107,13 +110,23 @@ As a maintainer, I can update install-relevant wording across the docs without l
 - **FR-005**: The page MUST explain expected successful verification signals in plain language so users can tell whether the install worked.
 - **FR-006**: The lifecycle guidance MUST cover update, uninstall, marketplace removal when appropriate, and reinstall without requiring users to infer command order.
 - **FR-007**: The lifecycle guidance MUST distinguish uninstalling SpecKit Pro from removing the Racecraft marketplace.
-- **FR-008**: The trust guidance MUST identify install-relevant skills, agents, hooks, settings, and generated payload files that evaluators should inspect before running plugin skills.
+- **FR-008**: The trust guidance MUST identify install-relevant marketplace metadata, plugin manifest metadata, skills, agents, hooks, MCP/settings surfaces, and generated Claude payload files that evaluators should inspect before running plugin skills. The Claude route MUST use progressive disclosure for this trust content: keep the add, install, reload, and `/plugin` visibility check in one uninterrupted first-time path; place a concise pre-skill trust note with a jump link before the `/speckit-pro:speckit-status` and `/speckit-pro:speckit-coach` checks; and place the deeper source-backed trust inventory after the primary install and verification flow.
 - **FR-009**: The docs MUST distinguish authoring source paths from generated Claude install payload paths wherever both are mentioned.
 - **FR-010**: Platform behavior claims MUST be backed by official Claude Code documentation, while plugin-specific path and surface claims MUST be backed by repository manifests or generated payloads.
 - **FR-011**: Install-relevant README and AGENTS wording MUST be updated broadly enough to remove command-vs-skill confusion, while avoiding unrelated repository-maintainer rewrites.
 - **FR-012**: The Claude route MUST include only a cross-link to the Codex install route at `/install/codex/` and MUST NOT add Codex install instructions.
 - **FR-013**: The feature MUST NOT change plugin runtime behavior, regenerate generated payloads, bump versions, or alter release automation.
 - **FR-014**: The documentation update MUST be validatable with `pnpm --dir docs-site validate`.
+- **FR-015**: The Claude route MUST use accessibility-friendly Markdown structure: descriptive hierarchical headings for deep links and screen-reader navigation, ordered or unordered lists for step sequences, fenced code blocks for commands, and literal command names in inline code when referenced in prose.
+- **FR-016**: User-facing install, verification, and lifecycle commands MUST appear as standalone copyable command examples, not as commands hidden inside dense tables.
+- **FR-017**: Link text on the Claude route MUST identify the destination or source path without relying on ambiguous surrounding prose such as "here", "this page", or "read more".
+- **FR-018**: The Claude route MUST NOT use side-by-side or overloaded comparison tables that mix Claude and Codex command forms; Codex remains a single descriptive cross-link to `/install/codex/`.
+- **FR-019**: The Claude route MUST NOT claim that Claude Code plugins, hooks, generated payloads, marketplace installation, or marketplace-managed installs provide sandboxing, isolation, harmlessness, or blocking guarantees unless the claim is directly supported by official Claude Code documentation cited on the page.
+- **FR-020**: Hook behavior guidance MUST stay limited to documented Claude Code hook surfaces and the repository hook files being cited; it MUST NOT infer undocumented execution timing, safety, isolation, or blocking behavior from repository-specific assumptions.
+- **FR-021**: Managed marketplace guidance MUST stay bounded to official Claude Code settings behavior, source inspection, add/update/remove implications, and user/project/local/managed scope distinctions; full rollback, incident response, policy design, and troubleshooting matrices are deferred to DOC-008.
+- **FR-022**: The Claude route MUST include concise basic recovery guidance for wrong marketplace source, stale marketplace listing, missing `speckit-pro` plugin, failed `/plugin` visibility, missing namespaced skills after reload, failed update, failed uninstall, failed marketplace removal, and failed reinstall. The recovery guidance MUST use official Claude Code lifecycle surfaces only, such as marketplace list/update/remove, plugin install/uninstall, `/reload-plugins`, `/plugin` installed/error views, and exact SpecKit Pro names from repository-controlled sources.
+- **FR-023**: Each DOC-003 recovery path MUST define a stopping point: after the documented basic check or one clean retry does not restore the expected Claude install surface, or when the issue appears to involve managed policy, permissions, network access, cache clearing, rollback, incident response, or undocumented platform behavior, the page MUST route to the troubleshooting route owned by DOC-008 rather than expanding DOC-003 into a troubleshooting matrix.
+- **FR-024**: Codex-specific install, verification, custom-agent, cache, sandbox, approval, or plugin-runtime failures MUST be routed to the Codex install route at `/install/codex/` or DOC-008 troubleshooting, and the Claude route MUST NOT include Codex recovery commands beyond that routing note.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -149,7 +162,7 @@ As a maintainer, I can update install-relevant wording across the docs without l
 
 - **Claude Install Route**: The canonical documentation page that guides Claude Code users through SpecKit Pro marketplace installation and lifecycle management.
 - **Lifecycle Command Set**: The set of user-facing install, reload, verify, update, uninstall, marketplace removal, and reinstall commands documented for Claude Code users.
-- **Trust Surface Inventory**: The source-backed list of skills, agents, hooks, settings, and generated payload files that evaluators inspect before running plugin skills.
+- **Trust Surface Inventory**: The source-backed list of marketplace metadata, plugin manifest metadata, skills, agents, hooks, MCP/settings surfaces, and generated payload files that evaluators inspect before running plugin skills.
 - **Source and Generated Path Map**: The documentation distinction between repository authoring source and generated Claude install payloads.
 
 ## Success Criteria *(mandatory)*
@@ -158,10 +171,12 @@ As a maintainer, I can update install-relevant wording across the docs without l
 
 - **SC-001**: A first-time Claude Code user can complete the add, install, reload, and verification path from the canonical page in under 10 minutes without maintainer assistance.
 - **SC-002**: 100% of install, verification, and lifecycle commands shown on the Claude route have clear backing from official Claude Code docs or repository-controlled plugin sources.
-- **SC-003**: An evaluator can identify the documented skills, agents, hooks, settings, and generated payload files that affect trust in under 5 minutes from the canonical page.
+- **SC-003**: An evaluator can identify the documented marketplace metadata, plugin manifest metadata, skills, agents, hooks, MCP/settings surfaces, and generated payload files that affect trust in under 5 minutes from the canonical page.
 - **SC-004**: Review of the canonical page and install-relevant README/AGENTS wording finds zero unresolved command-vs-skill terminology contradictions.
 - **SC-005**: The docs-site validation command `pnpm --dir docs-site validate` completes successfully for this change.
 - **SC-006**: The final implementation changes 0 production runtime files and does not regenerate payloads, bump versions, or alter release automation.
+- **SC-007**: A reviewer can inspect the Claude route and find descriptive headings, list-based step structure, standalone copyable command blocks, meaningful link text, and no mixed Claude/Codex command comparison table.
+- **SC-008**: A reviewer can find concise recovery guidance for wrong marketplace, missing plugin, failed verification, update, uninstall, marketplace removal, and reinstall cases, with each case either ending in a source-backed basic action or routing to DOC-008 troubleshooting.
 
 ## Assumptions
 
@@ -170,3 +185,7 @@ As a maintainer, I can update install-relevant wording across the docs without l
 - Repository manifests, authoring files, and existing generated payloads are sufficient authority for SpecKit Pro path and trust-surface claims.
 - The implementation will keep troubleshooting concise and defer a full troubleshooting matrix or rollback guide to future work if needed.
 - Users and evaluators can access the public Racecraft marketplace repository and the docs site.
+- Screen-reader or keyboard users may navigate by headings, lists, links, and code blocks rather than reading the page linearly; ambiguous link text, dense command tables, or mixed Claude/Codex command comparisons would make the install path harder to follow.
+- Official documentation links, repository source paths, and generated payload paths must remain distinguishable when read as standalone link text or inline code.
+- Security and trust wording must distinguish "inspectable source-backed surfaces" from platform guarantees; the DOC-003 page must avoid unsupported claims about sandboxing, hook isolation, or managed marketplace safety.
+- Basic recovery belongs in DOC-003 only when it keeps a Claude install, update, remove, or reinstall user from getting stuck on the primary path; detailed symptom diagnosis, cache cleanup, rollback, incident response, and cross-platform troubleshooting remain DOC-008 scope.

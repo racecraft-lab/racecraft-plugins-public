@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
-  "updated_at": "2026-06-14T22:43:00Z",
-  "active_step": "Phase 4: Checklist - UX",
+  "updated_at": "2026-06-14T23:32:12Z",
+  "active_step": "Phase 5: Tasks",
   "spec_id": "DOC-003",
   "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
   "feature_branch": "doc-003-claude-code-marketplace-installation-path",
@@ -119,6 +119,68 @@
           "total_entries": 8
         }
       }
+    },
+    "checklist": {
+      "domains": {
+        "ux": {
+          "status": "completed",
+          "items": 14,
+          "gaps_found": 1,
+          "gaps_fixed": 1,
+          "gaps_remaining": 0,
+          "files": [
+            "specs/doc-003-claude-code-marketplace-installation-path/checklists/ux.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/spec.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/plan.md"
+          ],
+          "consensus": "not_needed"
+        },
+        "accessibility": {
+          "status": "completed",
+          "items": 13,
+          "gaps_found": 6,
+          "gaps_fixed": 6,
+          "gaps_remaining": 0,
+          "files": [
+            "specs/doc-003-claude-code-marketplace-installation-path/checklists/accessibility.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/spec.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/plan.md"
+          ],
+          "consensus": "not_needed"
+        },
+        "security": {
+          "status": "completed",
+          "items": 19,
+          "gaps_found": 4,
+          "gaps_fixed": 4,
+          "gaps_remaining": 0,
+          "files": [
+            "specs/doc-003-claude-code-marketplace-installation-path/checklists/security.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/spec.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/plan.md"
+          ],
+          "consensus": "not_needed"
+        },
+        "error-handling": {
+          "status": "completed",
+          "items": 24,
+          "gaps_found": 7,
+          "gaps_fixed": 7,
+          "gaps_remaining": 0,
+          "files": [
+            "specs/doc-003-claude-code-marketplace-installation-path/checklists/error-handling.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/spec.md",
+            "specs/doc-003-claude-code-marketplace-installation-path/plan.md"
+          ],
+          "consensus": "not_needed"
+        }
+      },
+      "gate": "G4",
+      "gate_status": "passed",
+      "total_items": 70,
+      "total_gaps_found": 18,
+      "total_gaps_fixed": 18,
+      "total_gaps_remaining": 0
     }
   },
   "plan": [
@@ -164,39 +226,39 @@
     },
     {
       "step": "Phase 4: Checklist - UX",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - UX Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Accessibility",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Accessibility Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Security",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Security Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Error Handling",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Error Handling Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
