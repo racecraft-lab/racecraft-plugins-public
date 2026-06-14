@@ -9,6 +9,11 @@
 .specify/feature.json
 /.worktrees
 
+# Docs site local install/cache/build artifacts
+docs-site/node_modules/
+docs-site/.astro/
+docs-site/dist/
+
 # Layer 7 live captures are transient; commit reduced parser-fixture.jsonl only.
 tests/speckit-pro/layer7-integration/**/transcript.jsonl
 
