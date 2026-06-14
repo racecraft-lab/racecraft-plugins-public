@@ -16,13 +16,15 @@ Create a new `docs-site/` Astro/Starlight documentation app that turns the DOC-0
 
 **Storage**: Static repository files only: `docs-site/` package/config files and Starlight Markdown/MDX content under `docs-site/src/content/docs/`. No database, generated payload, runtime service, or persisted user data.
 
-**Testing**: Docs-site-scoped `pnpm` scripts after `docs-site/` exists: `pnpm check`, `pnpm build`, `pnpm validate`, `pnpm validate:links`, and `pnpm preview`. Root plugin test commands remain out of DOC-002 implementation scope unless plugin/spec scaffolding surfaces are changed.
+**Testing**: Docs-site-scoped `pnpm` scripts after `docs-site/` exists: `pnpm check` (`astro check`), `pnpm build` (`astro build`), `pnpm validate` (`pnpm check && pnpm build`), `pnpm validate:links` (`pnpm build` with `starlight-links-validator` enabled), and `pnpm preview` (`astro preview`). Root plugin test commands remain out of DOC-002 implementation scope unless plugin/spec scaffolding surfaces are changed.
 
 **Target Platform**: Static documentation site for GitHub Pages project hosting from `racecraft-lab/racecraft-plugins-public`.
 
 **Project Type**: Static documentation web app.
 
 **Performance Goals**: Static prerendered Starlight route shells with default Pagefind search behavior. DOC-002 does not add analytics, custom client-side widgets, screenshot checks, or search hardening.
+
+**Accessibility Constraints**: Keep critical choices and explanations in semantic static Markdown/MDX content. Use native links and Starlight navigation defaults for the landing choices, route links, source evidence links, and page-local links. Preserve visible focus, descriptive link text, heading order, non-color-only meaning, and readable order for any DOC-002 custom styling; leave automated accessibility tooling and responsive screenshot policy to DOC-010.
 
 **Constraints**: Use DOC-001 as the stack and IA contract; keep README files as source evidence only; do not change plugin behavior, marketplace manifests, generated payloads, hooks, agents, release automation, or GitHub Pages publish workflows.
 
@@ -124,7 +126,8 @@ docs-site/
 | Package versions | `astro@6.4.6`, `@astrojs/starlight@0.40.0`, `@astrojs/check@0.9.9`; `starlight-links-validator` selected as the validator package, with the lockfile capturing the resolved version during implementation. |
 | GitHub Pages assumptions | Configure `site: "https://racecraft-lab.github.io"`, `base: "/racecraft-plugins-public"`, and `trailingSlash: "always"` unless implementation build evidence requires a narrower Astro-compatible adjustment. Do not add `.github/workflows/**`. |
 | Search | Leave Starlight/Pagefind default enabled; DOC-010 owns hardening. |
-| Link validation | Add `starlight-links-validator` to Starlight config and expose `pnpm validate` plus `pnpm validate:links`; link validation is expected to run during `astro build`. |
+| Link validation | Add `starlight-links-validator` to Starlight config and expose `pnpm validate` plus `pnpm validate:links`; link validation is expected to run during `astro build`, so `validate:links` reuses the production build path instead of adding a separate crawler. |
+| Accessibility shell contract | Keep DOC-002 core navigation and route orientation static, semantic, keyboard reachable, and compatible with Starlight defaults; DOC-006 may enhance only when equivalent static fallback remains. |
 
 ## Phase 1 Design
 
@@ -132,22 +135,73 @@ docs-site/
 2. Implement Starlight sidebar groups: Tutorials, How-to, Reference, Explanation.
 3. Create all 11 route shell pages from the DOC-001 IA skeleton.
 4. Put source-vs-generated-payload explanation on `/` and `/reference`.
-5. Keep README-derived claims as cited source evidence only.
-6. Keep validation local to `docs-site/` package scripts and do not add a GitHub Pages publish workflow.
+5. Keep the landing page bounded to a first-screen purpose/value statement,
+   Claude Code and Codex next actions, and a short source-vs-payload summary;
+   exclude full install procedures, command matrices, and generic marketing
+   content.
+6. Give deferred route shells a compact orientation block: audience, useful-now
+   shell content, deferred owner DOC, source evidence, and one static next step
+   or related route link.
+7. Keep README-derived claims as cited source evidence only.
+8. Keep validation local to `docs-site/` package scripts and do not add a GitHub Pages publish workflow.
+9. Use Starlight's page structure and Markdown headings so each page has one
+   clear title, ordered `h2`/`h3` sections, and descriptive native links for
+   platform choices, source evidence, route links, and next steps.
+10. Avoid custom widgets or styling that suppresses native focus indicators,
+   uses color alone for callout/status meaning, changes reading order, or
+   replaces static route-shell content with JavaScript-only behavior.
 
 ## Selected Command Roles
 
-| Role | Command |
-|------|---------|
-| Install dependencies | `cd docs-site && pnpm install` |
-| Development server | `cd docs-site && pnpm dev` |
-| Type/content diagnostics | `cd docs-site && pnpm check` |
-| Production build | `cd docs-site && pnpm build` |
-| Full DOC-002 validation | `cd docs-site && pnpm validate` |
-| Internal-link validation | `cd docs-site && pnpm validate:links` |
-| Static preview | `cd docs-site && pnpm preview` |
+| Role | Command | `docs-site/package.json` script body |
+|------|---------|--------------------------------------|
+| Install dependencies | `cd docs-site && pnpm install` | N/A: package-manager install step |
+| Development server | `cd docs-site && pnpm dev` | `astro dev` |
+| Type/content diagnostics | `cd docs-site && pnpm check` | `astro check` |
+| Production build | `cd docs-site && pnpm build` | `astro build` |
+| Full DOC-002 validation | `cd docs-site && pnpm validate` | `pnpm check && pnpm build` |
+| Internal-link validation | `cd docs-site && pnpm validate:links` | `pnpm build` |
+| Static preview | `cd docs-site && pnpm preview` | `astro preview` |
 
-`pnpm validate` should run `astro check && astro build`. `pnpm validate:links` should run the production build path with `starlight-links-validator` enabled, because the validator is build-integrated.
+`pnpm validate` should compose the package scripts as `pnpm check && pnpm build` so diagnostics and the production build share the same docs-site scope. `pnpm validate:links` intentionally reuses `pnpm build` because `starlight-links-validator` is build-integrated; do not add a separate external-link crawler for DOC-002.
+
+## Reliability Failure Modes
+
+- `pnpm install` may require package-registry network access and may create or
+  refresh `docs-site/pnpm-lock.yaml`. Treat that as setup, not the repeatable
+  DOC-002 minimum completion gate after dependencies are installed.
+- `pnpm check` blocks DOC-002 completion on Astro diagnostics, type errors, or
+  content typing/schema errors reported by `astro check`.
+- `pnpm build` blocks DOC-002 completion when Astro/Starlight cannot generate the
+  static site because of config errors, content/frontmatter/schema errors, route
+  generation failures, invalid sidebar slugs, or GitHub Pages `site`, `base`, or
+  `trailingSlash` mismatches.
+- `pnpm validate:links` blocks DOC-002 completion only for internal Markdown/MDX
+  route link issues reported during the production build path, including invalid
+  internal routes, invalid hashes, missing or forbidden trailing slashes, and
+  same-site/base-path mismatches.
+- External official-doc URL reachability, external-link crawling, GitHub Pages
+  deployment, browser screenshot checks, analytics checks, and broader docs CI
+  policy are not part of DOC-002's minimum completion gate; DOC-010 owns those
+  hardening decisions.
+- A build or link-validation failure caused by ordinary Astro/Starlight config,
+  package-script naming, route, or Pages path errors must be fixed inside
+  DOC-002. Reopen the DOC-001 framework fallback only if Astro/Starlight cannot
+  satisfy GitHub Pages hosting, MDX/component authoring, accessible static
+  fallback, dependency policy, or maintainability without violating a hard
+  blocker.
+
+## Error Handling Next Actions
+
+| Failure | Next action | Fallback boundary |
+|---------|-------------|-------------------|
+| Missing `pnpm` before setup | Stop setup, enable or install `pnpm` in the local development environment, then rerun `cd docs-site && pnpm install`. Do not substitute root `npm`/`yarn` commands or create a root workspace to bypass the docs-site package-manager decision. | Setup prerequisite only; not a framework blocker. |
+| Dependency install or lockfile setup failure | Fix the docs-site package manifest, package versions, registry access, or lockfile refresh in `docs-site/`, then rerun `pnpm install`. | Setup issue unless package policy or maintainership constraints make the selected dependency set unacceptable. |
+| `pnpm check` diagnostics | Fix Astro diagnostics, TypeScript/content typing, or schema issues in docs-site source/config, then rerun `pnpm check` before `pnpm build`. | Fixable DOC-002 error. |
+| `pnpm build` failure | Inspect the Astro/Starlight build output and repair `astro.config.mjs`, package scripts, content/frontmatter/schema, route files, sidebar slugs, or Pages `site`/`base`/`trailingSlash` settings as applicable, then rerun `pnpm build` and `pnpm validate`. | Reopen fallback only if Astro/Starlight cannot satisfy GitHub Pages hosting, MDX/component authoring, accessible static fallback, dependency policy, or maintainability after local fixes are attempted or ruled out. |
+| `pnpm validate:links` failure | Fix the broken Markdown/MDX route link, anchor, trailing slash, same-site URL, or base-path assumption in docs-site content/config, then rerun `pnpm validate:links`. Do not add an external-link crawler for DOC-002. | Fixable DOC-002 error; external-link policy remains DOC-010. |
+| GitHub Pages base/path mismatch | Align `site`, `base`, `trailingSlash`, Starlight route slugs, and internal links with the project-page values `https://racecraft-lab.github.io`, `/racecraft-plugins-public`, and `always`, then rerun `pnpm build` plus `pnpm validate:links`. Do not add `.github/workflows/**`. | Fixable DOC-002 config error unless GitHub Pages hosting itself becomes impossible for the stack. |
+| True Astro/Starlight hard blocker | Stop the scaffold path, record the blocker evidence in plan/research/workflow, and apply the DOC-001 fallback order: Docusaurus/MDX, then VitePress, then repo-native Markdown. | Requires evidence that GitHub Pages hosting, MDX/component authoring, accessible static fallback, dependency policy, or maintainability cannot be satisfied by Astro/Starlight in this repository. |
 
 ## Complexity Tracking
 

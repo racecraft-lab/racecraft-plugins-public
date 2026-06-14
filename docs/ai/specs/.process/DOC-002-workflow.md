@@ -23,11 +23,11 @@ Re-read it before each phase. The design concept is the source of truth for the 
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Complete | spec.md created: 17 FRs, 3 user stories, 7 acceptance scenarios, 7 SCs; 0 clarification markers; preserves DOC-002 two-slice intent |
+| Specify | `/speckit-specify` | Complete | spec.md created and checklist-remediated: 23 FRs, 3 user stories, 7 acceptance scenarios, 12 SCs; 0 clarification markers; preserves DOC-002 two-slice intent |
 | Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: `spec.md` had zero clarification markers |
 | Plan | `/speckit-plan` | Complete | plan.md, research.md, data-model.md, route-shell contract, and quickstart created; Astro/Starlight, pnpm, Pages-ready config, and build-integrated link validation selected |
-| Checklist | `/speckit-checklist` | In Progress | Run UX, accessibility, reliability, and error-handling |
-| Tasks | `/speckit-tasks` | Pending | Preserve two-slice intent: shell/routes, then validation/config |
+| Checklist | `/speckit-checklist` | Complete | UX, accessibility, reliability, and error-handling complete; 25 gaps remediated, 0 remaining |
+| Tasks | `/speckit-tasks` | In Progress | Preserve two-slice intent: shell/routes, then validation/config |
 | Analyze | `/speckit-analyze` | Pending | Check drift against design concept and DOC-001 handoff |
 | Implement | `/speckit-implement` | Pending | Execute only after G6 passes |
 
@@ -56,7 +56,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Plugin source safety | DOC-002 must not change plugin behavior, marketplace manifests, generated payloads, hooks, agents, or release automation unless a later DOC spec explicitly owns it | `git diff --name-only` review before PR |
 | Reviewability | Setup gate passed with projected 395 reviewable LOC, 0 production files, 6 total files, and no blockers; accepted split intent is two PR slices inside one DOC-002 workflow | `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh setup docs/roadmap-interactive-documentation.md` |
 | Docs validation | DOC-002 must define and run a production build plus internal-link validation for `docs-site/` | `cd docs-site && pnpm build` plus the selected Starlight link-validation command |
-| Accessibility fallback | Route shells must not hide critical installation or trust information behind inaccessible dynamic behavior | Manual review of rendered static pages and Starlight defaults |
+| Accessibility fallback | Route shells must not hide critical platform choices, source-vs-payload explanations, route orientation, or future DOC-006 enhancement fallbacks behind inaccessible dynamic behavior | Manual review of semantic static content, native links, heading order, visible focus preservation, non-color-only meaning, and Starlight defaults |
 | Existing repo checks | If plugin/spec scaffold files are touched, keep structural checks green | `bash tests/speckit-pro/run-all.sh --layer 1` |
 
 **Constitution Check:** Verified before G1.
@@ -322,11 +322,11 @@ Focus on DOC-002 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| UX | Pending | Pending | Pending |
-| Accessibility | Pending | Pending | Pending |
-| Reliability | Pending | Pending | Pending |
-| Error Handling | Pending | Pending | Pending |
-| **Total** | Pending | Pending | Pending |
+| UX | 15 | 2 -> 0 | 15/15 traceable |
+| Accessibility | 19 | 9 -> 0 | 19/19 traceable |
+| Reliability | 19 | 7 -> 0 | 19/19 traceable |
+| Error Handling | 25 | 7 -> 0 | 25/25 traceable; `checklists/error-handling.md`; framework blocker contract, setup/build/link/Pages next actions, and fallback boundary |
+| **Total** | 78 | 25 -> 0 | All selected checklist domains complete with zero remaining gap markers |
 
 ---
 

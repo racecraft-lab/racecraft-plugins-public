@@ -147,6 +147,43 @@ internal-link validation without adding a GitHub Pages publish workflow.
   generated payloads, hooks, agents, release automation, or README source files.
 - **FR-017**: DOC-002 MUST preserve one workflow identity with two-slice intent:
   shell/routes first, then validation/config hardening.
+- **FR-018**: The landing page first screen MUST include a concise purpose and
+  value statement, supported-platform choice targets for Claude Code and Codex,
+  a short source-vs-generated-payload summary, and one static next action per
+  platform; it MUST NOT include full install procedures, long command matrices,
+  testimonials, pricing or generic marketing claims, analytics prompts, or full
+  content owned by DOC-003 through DOC-010.
+- **FR-019**: Each route shell that defers full content to a later DOC MUST
+  include user-facing orientation content beyond metadata: who the page is for,
+  what is useful now, what is intentionally deferred and which DOC owns it,
+  source evidence links, and at least one static next step or related route
+  link; it MUST NOT include full platform install, troubleshooting, security,
+  contributor, lifecycle, glossary, search, accessibility, or deployment depth
+  owned by later DOC specs.
+- **FR-020**: DOC-002 route content MUST keep critical platform choices,
+  source-vs-generated-payload explanations, route shell metadata, source
+  evidence, and next-step links available as semantic static content using
+  native document links and headings; it MUST NOT hide this content behind
+  JavaScript-only widgets, visual-only controls, or frontmatter-only metadata.
+- **FR-021**: DOC-002 MUST define the static fallback contract for later
+  DOC-006 interactive aids: any future enhanced selector, command aid, diagram,
+  or glossary aid must preserve equivalent static Markdown/MDX content,
+  keyboard-reachable controls, visible focus, descriptive labels or link text,
+  non-color-only communication, and a meaningful reading order.
+- **FR-022**: DOC-002's minimum completion gate MUST be deterministic and
+  docs-site-local after dependencies are installed: `pnpm check`, `pnpm build`,
+  `pnpm validate`, and `pnpm validate:links` from `docs-site/`. The gate MUST
+  NOT require GitHub Pages deployment, browser screenshots, external-link
+  crawls, remote official-doc URL checks, analytics checks, or network access
+  beyond initial dependency installation or lockfile refresh.
+- **FR-023**: DOC-002 MUST document the next action for each setup and
+  validation failure class: missing `pnpm`, dependency install or lockfile
+  setup failure, `pnpm check` diagnostics, `pnpm build` failure, `pnpm
+  validate:links` failure, and GitHub Pages `site`/`base`/`trailingSlash`
+  mismatch. Ordinary package-script, content, route, sidebar, and Pages config
+  failures MUST be fixed inside DOC-002 and MUST NOT reopen framework selection;
+  framework fallback may be used only when Astro/Starlight cannot satisfy a
+  hard blocker after those fixes are attempted or ruled out.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -158,6 +195,15 @@ internal-link validation without adding a GitHub Pages publish workflow.
 - Deferred route depth must name the owning follow-up DOC rather than expanding
   DOC-002 into full install, troubleshooting, security, contributor, lifecycle,
   glossary, search, accessibility, or deployment content.
+- Landing and route shells should use compact orientation copy and static
+  links/sections. They must be useful enough to choose a next path, but they
+  must stop before detailed platform commands, full matrices, or broad marketing
+  content that belongs to later DOC specs.
+- Accessibility scope is the static shell contract only: semantic headings,
+  native links, visible focus preservation, descriptive link text, static
+  fallback, non-color-only communication, and readable order. Automated
+  accessibility tooling, responsive screenshot policy, and broad hardening stay
+  with DOC-010.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -199,6 +245,16 @@ internal-link validation without adding a GitHub Pages publish workflow.
   justify a route shell's purpose and later content ownership.
 - **Validation Command Role**: A docs-site-scoped command role for installing,
   building, previewing, or validating internal links.
+- **Accessibility Shell Contract**: The static accessibility boundary that keeps
+  platform choices, route shell orientation, source evidence, and future
+  interactive-aid fallbacks perceivable, keyboard reachable, and useful without
+  JavaScript-only behavior.
+- **Reliability Completion Gate**: The repeatable local validation boundary for
+  DOC-002 after `docs-site/` dependencies and lockfile are present.
+- **Error Handling Disposition**: The documented outcome for a setup,
+  validation, link, Pages, or framework-blocker failure, including whether the
+  next action is local remediation, setup prerequisite repair, DOC-010 deferral,
+  or framework fallback.
 
 ## Success Criteria *(mandatory)*
 
@@ -221,6 +277,25 @@ internal-link validation without adding a GitHub Pages publish workflow.
 - **SC-007**: Repository changes contain no GitHub Pages publish workflow and no
   plugin behavior, marketplace manifest, generated payload, hook, agent, release
   automation, or README content changes.
+- **SC-008**: A reviewer can audit the first screen against the required landing
+  content units and exclusions in FR-018 without interpreting "thin actionable"
+  subjectively.
+- **SC-009**: A reviewer can open any deferred route shell and identify its
+  audience, useful-now shell content, deferred owner DOC, source evidence, and
+  next step without encountering full later-DOC content.
+- **SC-010**: A reviewer can inspect the landing page and any route shell and
+  identify semantic headings, descriptive native links, visible focus-compatible
+  controls or links, non-color-only status/callout meaning, and static fallback
+  content for any future DOC-006 enhancement point.
+- **SC-011**: After `docs-site/` dependencies are installed and `pnpm-lock.yaml`
+  exists, a maintainer can rerun `pnpm check`, `pnpm build`, `pnpm validate`,
+  and `pnpm validate:links` from `docs-site/` without deployment, browser
+  screenshots, external-link crawling, remote URL availability checks, or
+  additional package-network access.
+- **SC-012**: A reviewer can inspect the quickstart, plan, and route-shell
+  contract and identify the prescribed next action for missing `pnpm`, build
+  failure, internal-link validation failure, Pages base/path mismatch, and true
+  Astro/Starlight hard blocker without inferring from implementation logs.
 
 ## Assumptions
 
@@ -231,9 +306,16 @@ internal-link validation without adding a GitHub Pages publish workflow.
 - The install command role can be represented as docs-site-scoped `pnpm install`
   while build, preview, and link validation are represented by package scripts
   chosen during Plan.
+- If `pnpm` is unavailable, setup is blocked until the maintainer enables or
+  installs `pnpm`; DOC-002 should not switch to root `npm`/`yarn` commands or a
+  repository-wide workspace to work around that prerequisite.
+- `pnpm install` may require package-registry network access when dependencies or
+  the lockfile are first created or refreshed; that install step is setup, not
+  the repeatable DOC-002 minimum completion gate after dependencies are present.
 - DOC-010 owns publish workflow creation, broader docs CI hardening, search
   hardening, accessibility checks, responsive screenshots, and validation policy
-  beyond DOC-002's build plus internal-link checks.
+  beyond DOC-002's build plus internal-link checks and static accessibility
+  shell contract.
 - Later DOC specs own full platform install content, first-run walkthroughs,
   troubleshooting matrices, security/trust depth, contributor/release workflow,
   lifecycle explanations, glossary depth, and interactive aids.

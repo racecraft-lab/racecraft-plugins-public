@@ -34,5 +34,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [data-model.md](data-model.md)
 - [research.md](research.md)
 - [contracts/route-shell-manifest.json](contracts/route-shell-manifest.json)
+- [checklists/accessibility.md](checklists/accessibility.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/reliability.md](checklists/reliability.md)
+- [checklists/ux.md](checklists/ux.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

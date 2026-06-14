@@ -9,6 +9,13 @@
     "Explanation"
   ],
   "validation": {
+    "pagesConfig": {
+      "site": "https://racecraft-lab.github.io",
+      "base": "/racecraft-plugins-public",
+      "trailingSlash": "always",
+      "publishWorkflowOwner": "DOC-010",
+      "mustNotCreateWorkflow": true
+    },
     "mustExplainSourceVsPayloadOn": [
       "/",
       "/reference"
@@ -27,10 +34,150 @@
     ],
     "commands": {
       "install": "cd docs-site && pnpm install",
+      "dev": "cd docs-site && pnpm dev",
+      "check": "cd docs-site && pnpm check",
       "build": "cd docs-site && pnpm build",
       "validate": "cd docs-site && pnpm validate",
       "validateLinks": "cd docs-site && pnpm validate:links",
       "preview": "cd docs-site && pnpm preview"
+    },
+    "packageScripts": {
+      "dev": "astro dev",
+      "check": "astro check",
+      "build": "astro build",
+      "validate": "pnpm check && pnpm build",
+      "validate:links": "pnpm build",
+      "preview": "astro preview"
+    },
+    "minimumCompletionGate": {
+      "afterDependencyInstall": [
+        "cd docs-site && pnpm check",
+        "cd docs-site && pnpm build",
+        "cd docs-site && pnpm validate",
+        "cd docs-site && pnpm validate:links"
+      ],
+      "mustNotRequire": [
+        "GitHub Pages deployment",
+        "browser screenshots",
+        "external-link crawling",
+        "remote official-doc URL availability checks",
+        "analytics checks",
+        "package-registry network access after dependencies and pnpm-lock.yaml are present"
+      ]
+    },
+    "failureModes": {
+      "buildBlocksOn": [
+        "Astro/Starlight config errors",
+        "content or frontmatter schema errors",
+        "route generation failures",
+        "invalid Starlight sidebar slugs",
+        "GitHub Pages site/base/trailingSlash mismatches"
+      ],
+      "linkValidationBlocksOn": [
+        "invalid internal Markdown/MDX routes",
+        "invalid internal anchors",
+        "missing or forbidden trailing slashes",
+        "same-site or base-path mismatches"
+      ],
+      "deferredToDoc010": [
+        "external-link crawling policy",
+        "docs CI hardening",
+        "GitHub Pages publish workflow",
+        "browser screenshot checks",
+        "analytics checks",
+        "search and accessibility automation"
+      ]
+    },
+    "errorHandling": {
+      "frameworkHardBlockers": [
+        "GitHub Pages hosting cannot be satisfied",
+        "MDX/component authoring cannot be satisfied",
+        "accessible static fallback cannot be satisfied",
+        "dependency policy cannot be satisfied",
+        "maintainability cannot be satisfied"
+      ],
+      "fixableNonBlockers": [
+        "missing pnpm before setup",
+        "dependency install or lockfile setup failure",
+        "package-script naming error",
+        "Astro/Starlight config error",
+        "content or frontmatter schema error",
+        "route generation failure",
+        "invalid Starlight sidebar slug",
+        "internal Markdown/MDX route or anchor error",
+        "GitHub Pages site/base/trailingSlash mismatch"
+      ],
+      "fallbackOrder": [
+        "Docusaurus/MDX",
+        "VitePress",
+        "repo-native Markdown"
+      ],
+      "nextActions": {
+        "missingPnpm": "Stop setup, enable or install pnpm locally, then rerun cd docs-site && pnpm install; do not switch to root npm/yarn or a root workspace.",
+        "installFailure": "Fix docs-site package manifest, selected versions, registry access, or lockfile refresh, then rerun pnpm install from docs-site.",
+        "checkFailure": "Fix Astro diagnostics, TypeScript/content typing, or schema issues, then rerun pnpm check.",
+        "buildFailure": "Fix docs-site Astro/Starlight config, package scripts, content/frontmatter/schema, route files, sidebar slugs, or Pages config, then rerun pnpm build and pnpm validate.",
+        "linkValidationFailure": "Fix internal Markdown/MDX routes, anchors, trailing slashes, same-site URLs, or base-path assumptions, then rerun pnpm validate:links.",
+        "pagesMismatch": "Align site, base, trailingSlash, Starlight route slugs, and internal links with GitHub Pages project-page values, then rerun pnpm build and pnpm validate:links; do not add a publish workflow.",
+        "hardBlocker": "Record blocker evidence in plan/research/workflow and apply fallbackOrder only after local fixes are attempted or ruled out."
+      }
+    },
+    "landingPageFirstScreen": {
+      "mustInclude": [
+        "concise purpose and value statement",
+        "Claude Code path choice",
+        "Codex path choice",
+        "short source-vs-generated-payload summary",
+        "one static next action per platform"
+      ],
+      "mustAvoid": [
+        "full install procedures",
+        "long command matrices",
+        "testimonials",
+        "pricing or generic marketing claims",
+        "analytics prompts",
+        "full content owned by DOC-003 through DOC-010"
+      ]
+    },
+    "routeShellContentMinimum": {
+      "appliesTo": "routes whose fullContentOwnerDoc differs from DOC-002 or names multiple owner DOCs",
+      "mustInclude": [
+        "audience",
+        "useful-now shell content",
+        "deferred owner DOC and boundary",
+        "source evidence links",
+        "one static next step or related route link"
+      ],
+      "mustAvoid": [
+        "full platform install procedures",
+        "troubleshooting matrices",
+        "security or trust model depth",
+        "contributor or release workflow depth",
+        "lifecycle or glossary depth",
+        "search, accessibility, or deployment hardening depth"
+      ]
+    },
+    "accessibilityShellContract": {
+      "mustInclude": [
+        "critical platform choices as static native links",
+        "source-vs-generated-payload explanation as static semantic content",
+        "route metadata visible in page content, not only frontmatter",
+        "descriptive link text for platform choices, evidence, and related routes",
+        "heading hierarchy that exposes route purpose, ownership, evidence, and next steps",
+        "keyboard-reachable links and controls in meaningful source order",
+        "visible focus preservation for Starlight defaults and any DOC-002 custom styling",
+        "non-color-only meaning for callouts, labels, and status distinctions",
+        "static Markdown/MDX fallback for future DOC-006 enhancement points"
+      ],
+      "mustAvoid": [
+        "JavaScript-only platform choice or route orientation",
+        "custom widgets for DOC-002 core navigation",
+        "suppressed native focus indicators",
+        "color-only source-vs-payload or route status meaning",
+        "responsive layouts that change the reading order of critical content",
+        "automated accessibility tooling or responsive screenshot policy owned by DOC-010"
+      ],
+      "laterOwner": "DOC-010 owns automated accessibility checks and responsive/browser hardening after DOC-006 enhancements exist"
     }
   },
   "routes": [
