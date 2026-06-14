@@ -24,9 +24,9 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | spec.md created: 17 FRs, 3 user stories, 7 acceptance scenarios, 7 SCs; 0 clarification markers; preserves DOC-002 two-slice intent |
-| Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
-| Plan | `/speckit-plan` | In Progress | Astro/Starlight, MDX, pnpm, Pages-ready config, and internal-link validation |
-| Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, reliability, and error-handling |
+| Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: `spec.md` had zero clarification markers |
+| Plan | `/speckit-plan` | Complete | plan.md, research.md, data-model.md, route-shell contract, and quickstart created; Astro/Starlight, pnpm, Pages-ready config, and build-integrated link validation selected |
+| Checklist | `/speckit-checklist` | In Progress | Run UX, accessibility, reliability, and error-handling |
 | Tasks | `/speckit-tasks` | Pending | Preserve two-slice intent: shell/routes, then validation/config |
 | Analyze | `/speckit-analyze` | Pending | Check drift against design concept and DOC-001 handoff |
 | Implement | `/speckit-implement` | Pending | Execute only after G6 passes |
@@ -202,9 +202,9 @@ Racecraft Public Plugins and `speckit-pro` need a public static docs shell so fi
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Site scaffold and Pages-ready config | 0 | Skipped by G1 routing because `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
-| 2 | IA shell and content ownership | 0 | Skipped by G1 routing because `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
-| 3 | Validation and slicing | 0 | Skipped by G1 routing because `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
+| 1 | Site scaffold and Pages-ready config | 0 | Skipped by G1 routing because `spec.md` had zero clarification markers |
+| 2 | IA shell and content ownership | 0 | Skipped by G1 routing because `spec.md` had zero clarification markers |
+| 3 | Validation and slicing | 0 | Skipped by G1 routing because `spec.md` had zero clarification markers |
 
 ---
 
@@ -247,11 +247,11 @@ Racecraft Public Plugins and `speckit-pro` need a public static docs shell so fi
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow, Pages config decisions |
-| `research.md` | Pending | Current Astro/Starlight/GitHub Pages/link-validator refresh |
-| `data-model.md` | Pending | Route shell metadata model if needed |
-| `contracts/` | Pending | Route manifest or validation contract if needed |
-| `quickstart.md` | Pending | Local docs-site build and validation commands |
+| `plan.md` | Complete | Technical context, Declared File Operations, reviewability budget, split decision, PR packet source, Pages config, and command roles |
+| `research.md` | Complete | Astro/Starlight, package versions, GitHub Pages config, sidebar, Pagefind, and link-validator decisions |
+| `data-model.md` | Complete | Documentation site, route shell, navigation group, source evidence, and validation command role model |
+| `contracts/` | Complete | `contracts/route-shell-manifest.json` records route shells, validation boundaries, and docs-site commands |
+| `quickstart.md` | Complete | Local docs-site install, dev, build, link validation, full validation, preview, and review checks |
 
 ---
 

@@ -1,0 +1,239 @@
+{
+  "feature": "DOC-002",
+  "name": "Unified landing page and IA shell",
+  "docsSiteRoot": "docs-site",
+  "sidebarGroups": [
+    "Tutorials",
+    "How-to",
+    "Reference",
+    "Explanation"
+  ],
+  "validation": {
+    "mustExplainSourceVsPayloadOn": [
+      "/",
+      "/reference"
+    ],
+    "mustNotCreate": [
+      ".github/workflows/**"
+    ],
+    "mustNotModify": [
+      "README.md",
+      "speckit-pro/README.md",
+      "speckit-pro/**",
+      "dist/claude/**",
+      "dist/codex/**",
+      ".claude-plugin/**",
+      ".agents/plugins/**"
+    ],
+    "commands": {
+      "install": "cd docs-site && pnpm install",
+      "build": "cd docs-site && pnpm build",
+      "validate": "cd docs-site && pnpm validate",
+      "validateLinks": "cd docs-site && pnpm validate:links",
+      "preview": "cd docs-site && pnpm preview"
+    }
+  },
+  "routes": [
+    {
+      "path": "/",
+      "slug": "index",
+      "label": "Start",
+      "diataxisGroup": "Tutorials",
+      "secondaryModes": [
+        "Explanation"
+      ],
+      "audience": "First-time user",
+      "purpose": "Explain Racecraft Public Plugins, speckit-pro, platform choice, and first next step.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md",
+        "docs/ai/research/interactive-documentation-framework-spike.md"
+      ],
+      "successCriterion": "User chooses Claude Code or Codex path within one screen.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-002"
+    },
+    {
+      "path": "/install/claude-code",
+      "slug": "install/claude-code",
+      "label": "Install: Claude Code",
+      "diataxisGroup": "Tutorials",
+      "secondaryModes": [
+        "How-to"
+      ],
+      "audience": "Claude Code user",
+      "purpose": "Orient users to adding the marketplace, installing or updating speckit-pro, and verifying namespaced plugin skills.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "User reaches a working /speckit-pro:* command path.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-003"
+    },
+    {
+      "path": "/install/codex",
+      "slug": "install/codex",
+      "label": "Install: Codex",
+      "diataxisGroup": "Tutorials",
+      "secondaryModes": [
+        "How-to"
+      ],
+      "audience": "Codex user",
+      "purpose": "Orient users to adding or selecting the marketplace, installing the plugin, restarting, and verifying custom agents.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "User reaches a working $speckit-* flow with custom agents loaded when needed.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-004"
+    },
+    {
+      "path": "/first-run",
+      "slug": "first-run",
+      "label": "First Run",
+      "diataxisGroup": "Tutorials",
+      "secondaryModes": [
+        "Explanation"
+      ],
+      "audience": "New plugin user",
+      "purpose": "Orient users to one safe first speckit-pro workflow with checkpoints and lifecycle context.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "User produces or identifies the expected first artifact and validation checkpoint.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-005"
+    },
+    {
+      "path": "/choose-your-path",
+      "slug": "choose-your-path",
+      "label": "Choose Your Path",
+      "diataxisGroup": "How-to",
+      "secondaryModes": [
+        "Tutorials"
+      ],
+      "audience": "New and returning users",
+      "purpose": "Provide a platform and scope selector handoff without browser-side local command execution.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "User gets commands relevant only to selected platform and scope, with static fallback.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-006, DOC-010"
+    },
+    {
+      "path": "/reference",
+      "slug": "reference",
+      "label": "Reference",
+      "diataxisGroup": "Reference",
+      "secondaryModes": [
+        "How-to"
+      ],
+      "audience": "Users, agents, and maintainers",
+      "purpose": "Index commands, skills, manifests, marketplace files, hooks, agents, payloads, tests, and file layout.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md",
+        "README.md",
+        "speckit-pro/README.md"
+      ],
+      "successCriterion": "Each supported surface has a stable deep link and source citation.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-007"
+    },
+    {
+      "path": "/troubleshooting",
+      "slug": "troubleshooting",
+      "label": "Troubleshooting",
+      "diataxisGroup": "How-to",
+      "secondaryModes": [
+        "Reference"
+      ],
+      "audience": "Users and support",
+      "purpose": "Orient users to diagnosing install, path, cache, permission, version, and prerequisite failures.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "User can identify likely cause and next file or command to inspect.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-008"
+    },
+    {
+      "path": "/security-and-trust",
+      "slug": "security-and-trust",
+      "label": "Security & Trust",
+      "diataxisGroup": "Explanation",
+      "secondaryModes": [
+        "Reference"
+      ],
+      "audience": "Security or platform evaluator",
+      "purpose": "Orient evaluators to marketplace trust, generated payloads, hooks, MCP, agents, sandboxing, updates, and rollback.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "Evaluator can approve, reject, or ask a concrete follow-up.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-008"
+    },
+    {
+      "path": "/contribute-and-release",
+      "slug": "contribute-and-release",
+      "label": "Contribute & Release",
+      "diataxisGroup": "How-to",
+      "secondaryModes": [
+        "Reference"
+      ],
+      "audience": "Maintainer or contributor",
+      "purpose": "Orient maintainers to source edits, payload rebuilds, marketplace sync, tests, release-please, and PR expectations.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "Maintainer can complete a release-readiness checklist.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-009"
+    },
+    {
+      "path": "/spec-kit-lifecycle",
+      "slug": "spec-kit-lifecycle",
+      "label": "Spec Kit Lifecycle",
+      "diataxisGroup": "Explanation",
+      "secondaryModes": [
+        "Tutorials"
+      ],
+      "audience": "User or evaluator",
+      "purpose": "Explain PRD, roadmap, scaffold, autopilot phases, artifacts, and gates with static fallback.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "User can explain what each phase produces and validates.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-005, DOC-010"
+    },
+    {
+      "path": "/glossary",
+      "slug": "glossary",
+      "label": "Glossary",
+      "diataxisGroup": "Reference",
+      "secondaryModes": [
+        "Explanation"
+      ],
+      "audience": "All users",
+      "purpose": "Define marketplace, payload, source tree, skill, agent, hook, cache, constitution, and lifecycle terms.",
+      "sourceEvidence": [
+        "docs/prd-interactive-documentation.md",
+        "docs/roadmap-interactive-documentation.md"
+      ],
+      "successCriterion": "Support answers can link to exact definitions.",
+      "shellOwnerDoc": "DOC-002",
+      "fullContentOwnerDoc": "DOC-010"
+    }
+  ]
+}
