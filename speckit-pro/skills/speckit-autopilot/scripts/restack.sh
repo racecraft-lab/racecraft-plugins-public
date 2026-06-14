@@ -3,6 +3,8 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 usage() {
   printf 'Usage: restack.sh --state <json> --manifest <json> --base <branch> --remote <remote> --start-after <branch> [--apply]\n' >&2
 }
@@ -15,6 +17,8 @@ START_AFTER=""
 DRY_RUN=true
 GH_STACK_BIN="${RESTACK_GH_STACK_BIN:-gh-stack}"
 GH_STACK_JSON='{"available":false,"inspected":false,"mutating":false}'
+STACK_MANAGER_DECISION_JSON='null'
+STACK_MANAGER_EVIDENCE_PATH_JSON='null'
 
 require_jq() {
   command -v jq >/dev/null 2>&1 || {
@@ -34,6 +38,8 @@ emit_output() {
     --arg start_after "${START_AFTER:-}" \
     --argjson operations "$operations_json" \
     --argjson gh_stack "$GH_STACK_JSON" \
+    --argjson stack_manager_decision "$STACK_MANAGER_DECISION_JSON" \
+    --argjson stack_manager_evidence_path "$STACK_MANAGER_EVIDENCE_PATH_JSON" \
     --argjson recovery "$recovery_json" \
     '{
       dry_run: $dry_run,
@@ -46,7 +52,9 @@ emit_output() {
       gh_stack: $gh_stack,
       recovery_evidence: $recovery,
       operations: $operations
-    }'
+    }
+    + (if $stack_manager_decision == null then {} else {stack_manager_decision: $stack_manager_decision} end)
+    + (if $stack_manager_evidence_path == null then {} else {stack_manager_evidence_path: $stack_manager_evidence_path} end)'
 }
 
 fail_with_status() {
@@ -152,6 +160,47 @@ inspect_gh_stack() {
   fi
 }
 
+feature_dir_from_state() {
+  local source_path branch
+  source_path="$(jq -r '.multi_pr_emission.source_marker_plan.path // .multi_pr_emission.source_layer_plan.path // empty' "$STATE_FILE")"
+  case "$source_path" in
+    specs/*)
+      printf '%s\n' "${source_path%%/.process/*}"
+      return
+      ;;
+  esac
+  branch="$(jq -r '(.multi_pr_emission.slices // [])[0].expected_branch // empty' "$STATE_FILE")"
+  if [[ "$branch" =~ ^([^/]+)/ ]]; then
+    printf 'specs/%s\n' "${BASH_REMATCH[1]}"
+  else
+    printf 'specs/stack-manager-restack\n'
+  fi
+}
+
+detect_stack_manager() {
+  local feature_dir evidence_path args=()
+  feature_dir="$(feature_dir_from_state)"
+  evidence_path="$feature_dir/.process/stack-manager/restack/restack/preflight/decision.json"
+  args=(
+    --phase restack
+    --operation restack
+    --feature-dir "$feature_dir"
+    --base "$BASE_BRANCH"
+    --evidence-path "$evidence_path"
+  )
+  case "$MANIFEST_FILE" in
+    /*) ;;
+    *) args+=(--prs "$MANIFEST_FILE") ;;
+  esac
+  if [ -d "$feature_dir" ]; then
+    STACK_MANAGER_DECISION_JSON="$("$SCRIPT_DIR/detect-stack-manager.sh" "${args[@]}")"
+    STACK_MANAGER_EVIDENCE_PATH_JSON="$(jq -cn --arg path "$evidence_path" '$path')"
+  else
+    STACK_MANAGER_DECISION_JSON="$("$SCRIPT_DIR/detect-stack-manager.sh" "${args[@]}" --no-persist)"
+    STACK_MANAGER_EVIDENCE_PATH_JSON=null
+  fi
+}
+
 start_order="$(
   jq -r --arg start "$START_AFTER" '
     (.multi_pr_emission.slices // [])
@@ -195,6 +244,9 @@ operations_json="$(
     '
 )"
 
+if [ "$DRY_RUN" = false ]; then
+  detect_stack_manager
+fi
 inspect_gh_stack
 
 if [ "$DRY_RUN" = true ]; then

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${STACK_MANAGER_FAKE_LOG:-}" != "" ]; then
+  printf 'gh %s\n' "$*" >> "$STACK_MANAGER_FAKE_LOG"
+fi
+
+if [ "${1:-}" = "stack" ] && [ "${2:-}" = "--version" ]; then
+  printf 'gh stack version 0.0.1\n'
+  exit 0
+fi
+
+if [ "${1:-}" = "stack" ] && [ "${2:-}" = "view" ] && [ "${3:-}" = "--json" ]; then
+  printf '{"branches":[{"branch":"prsg-014/foundation"},{"branch":"prsg-014/us1"}]}\n'
+  exit 0
+fi
+
+printf 'unsupported fake gh invocation: %s\n' "$*" >&2
+exit 1

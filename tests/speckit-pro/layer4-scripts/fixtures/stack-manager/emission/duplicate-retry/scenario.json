@@ -1,0 +1,14 @@
+{
+  "scenario_id": "emission-duplicate-retry",
+  "phase": "emission",
+  "operation": "link",
+  "reconcile_by": [
+    "slice_id",
+    "head_branch",
+    "base_branch",
+    "pr_number",
+    "head_sha",
+    "packet_hash"
+  ],
+  "expected_status": "existing_pr_reused"
+}

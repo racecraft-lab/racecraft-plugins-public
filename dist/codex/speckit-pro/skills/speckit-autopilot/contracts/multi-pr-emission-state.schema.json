@@ -44,6 +44,8 @@
     },
     "base_branch": { "type": "string", "minLength": 1 },
     "base_sha": { "type": "string", "minLength": 1 },
+    "stack_manager_decision": { "type": "object" },
+    "stack_manager_evidence_path": { "type": "string", "minLength": 1 },
     "next_slice_id": { "type": ["string", "null"] },
     "reconciled_at": { "type": "string" },
     "slices": {

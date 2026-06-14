@@ -1,0 +1,30 @@
+{
+  "fixture_id": "04-prsg-014-stack-manager-guidance",
+  "description": "Tolerances for comparing Agent Teams vs parallel-subagents fallback outcomes on PRSG-014 stack-manager guidance.",
+  "fields": {
+    "stack_manager.supported": {
+      "tolerance": "exact",
+      "rationale": "Supported gh-stack guidance must require the same version, read-only proof, packet, and topology checks across orchestration paths."
+    },
+    "stack_manager.fallback": {
+      "tolerance": "exact",
+      "rationale": "Fallback guidance must keep explicit gh commands before any gh-stack mutation across both paths."
+    },
+    "stack_manager.blocked": {
+      "tolerance": "exact",
+      "rationale": "Partial or unknown gh-stack mutation must block without manager mixing in both paths."
+    },
+    "stack_manager.recovery": {
+      "tolerance": "exact",
+      "rationale": "Resume guidance must require the same decision, topology, PR identity, base/head ref, head SHA, and packet revalidation."
+    },
+    "stack_manager.shared_script": {
+      "tolerance": "exact",
+      "rationale": "Claude Code and Codex guidance must point to the same shared detector script."
+    },
+    "stack_manager.shared_contract": {
+      "tolerance": "exact",
+      "rationale": "Claude Code and Codex guidance must point to the same shared decision schema."
+    }
+  }
+}

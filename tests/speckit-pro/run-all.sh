@@ -244,6 +244,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-atomicity-route.sh"
     "$TESTS_DIR/layer4-scripts/test-o5-topology.sh"
     "$TESTS_DIR/layer4-scripts/test-plan-layers.sh"
+    "$TESTS_DIR/layer4-scripts/test-detect-stack-manager.sh"
     "$TESTS_DIR/layer4-scripts/test-multi-pr-emission.sh"
     "$TESTS_DIR/layer4-scripts/test-restack.sh"
   )

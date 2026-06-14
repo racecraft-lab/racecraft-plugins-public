@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 2,
+  "records": [
+    {
+      "review_order": 1,
+      "slice_id": "foundation",
+      "branch": "prsg-014/foundation",
+      "base_branch": "main",
+      "pr_number": 301,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/301",
+      "declared_files": ["speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh"],
+      "verification_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/foundation/layer4.log",
+      "status": "opened",
+      "head_sha": "abc301",
+      "merged_sha": null
+    },
+    {
+      "review_order": 2,
+      "slice_id": "us1",
+      "branch": "prsg-014/us1",
+      "base_branch": "prsg-014/foundation",
+      "pr_number": 302,
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/302",
+      "declared_files": ["speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh"],
+      "verification_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us1/layer4.log",
+      "status": "opened",
+      "head_sha": "abc302",
+      "merged_sha": null
+    }
+  ]
+}
+

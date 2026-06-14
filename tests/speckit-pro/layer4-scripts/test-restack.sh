@@ -336,6 +336,11 @@ json_check "$output" \
 assert_contains "$(cat "$apply_log" 2>/dev/null || true)" "gh pr edit 202 --base main"
 assert_contains "$(cat "$apply_log" 2>/dev/null || true)" "gh pr edit 203 --base prsg-009-multi-pr-emission/02-us1"
 
+set_test "--apply emits stack-manager decision before retarget mutation"
+json_check "$output" \
+  "data['stack_manager_decision']['schema_version'] == 'stack-manager-decision.v1' and data['stack_manager_decision']['phase'] == 'restack' and data['stack_manager_decision']['operation'] == 'restack'" \
+  "apply output should include stack-manager decision evidence"
+
 set_test "dirty worktree maps to exit code 3 with deterministic stderr"
 dirty_bin="$SANDBOX/fake-bin-dirty"
 dirty_log="$SANDBOX/fake-dirty.log"

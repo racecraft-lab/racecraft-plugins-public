@@ -1,0 +1,13 @@
+{
+  "scenario_id": "restack-fallback-before-mutation",
+  "phase": "restack",
+  "operation": "restack",
+  "selected_manager": "explicit-gh",
+  "fallback_before_mutation": true,
+  "expected_command": [
+    "gh",
+    "pr",
+    "edit",
+    "--base"
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "fixture_id": "22-prsg-014-stack-manager-replay",
+  "purpose": "Verify PRSG-014 replay routes through analyze/implement agents, avoids grill-me/live gh, and exposes stack-manager evidence terms.",
+  "must_dispatch_to": [
+    "speckit-pro:analyze-executor",
+    "speckit-pro:implement-executor"
+  ],
+  "must_not_dispatch_to": [
+    "speckit-pro:grill-me"
+  ],
+  "must_not_have_forbidden_spawns": true,
+  "min_dispatch_count": 2,
+  "max_dispatch_count": 4,
+  "must_not_invoke_skill": [
+    "grill-me"
+  ],
+  "must_include_terms": [
+    "stack_manager_decision",
+    "fallback_reason",
+    "command_plan",
+    "topology_compatibility",
+    "mutation_boundary"
+  ],
+  "must_not_include_terms": [
+    "gh pr create --live",
+    "gh stack link --live"
+  ]
+}
+
