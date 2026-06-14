@@ -24,4 +24,4 @@ Full detail is deferred to DOC-005. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Choose your platform path](/choose-your-path/) before starting the first workflow.
+[Choose your platform path](/racecraft-plugins-public/choose-your-path/) before starting the first workflow.

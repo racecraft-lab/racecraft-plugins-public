@@ -8,6 +8,8 @@
     "dev": "astro dev",
     "check": "astro check",
     "build": "astro build",
+    "validate": "pnpm check && pnpm build",
+    "validate:links": "pnpm build",
     "preview": "astro preview"
   },
   "dependencies": {
@@ -15,6 +17,7 @@
     "astro": "6.4.6"
   },
   "devDependencies": {
-    "@astrojs/check": "0.9.9"
+    "@astrojs/check": "0.9.9",
+    "starlight-links-validator": "0.24.1"
   }
 }

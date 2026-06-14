@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+import starlightLinksValidator from 'starlight-links-validator';
 
 export default defineConfig({
   site: 'https://racecraft-lab.github.io',
@@ -8,6 +9,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Racecraft Public Plugins',
+      plugins: [starlightLinksValidator()],
       sidebar: [
         {
           label: 'Tutorials',

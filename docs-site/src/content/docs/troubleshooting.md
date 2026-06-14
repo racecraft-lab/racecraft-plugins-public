@@ -24,4 +24,4 @@ Full detail is deferred to DOC-008. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the reference shell](/reference/) to confirm whether the issue concerns source files or generated payloads.
+[Review the reference shell](/racecraft-plugins-public/reference/) to confirm whether the issue concerns source files or generated payloads.

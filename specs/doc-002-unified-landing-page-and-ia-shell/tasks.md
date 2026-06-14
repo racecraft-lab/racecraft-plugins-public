@@ -64,16 +64,16 @@
 
 **Independent test**: From `docs-site/`, run `pnpm check`, `pnpm build`, `pnpm validate`, and `pnpm validate:links` after dependency setup; inspect config for Pages assumptions and no publish workflow.
 
-- [ ] T027 [US3] Validate Slice 2 entry by reviewing the Slice 1 diff for shell/routes only before adding link-validation or final Pages config hardening. Covers FR-017.
-- [ ] T028 [P] [US3] Update `docs-site/package.json` with `validate`, `validate:links`, and the selected `starlight-links-validator` dependency if not already present. Covers FR-002, FR-011, FR-022.
-- [ ] T029 [P] [US3] Update `docs-site/astro.config.mjs` to enable internal-link validation while preserving `site`, `base`, `trailingSlash`, and Starlight sidebar behavior. Covers FR-011, FR-013, FR-022.
-- [ ] T030 [US3] Run `cd docs-site && pnpm install` to create or refresh `docs-site/pnpm-lock.yaml`; if setup fails, apply the documented FR-023 setup next action before considering any framework fallback. Covers FR-002, FR-022, FR-023.
-- [ ] T031 [US3] Verify no `.github/workflows/**` file is created while hardening Pages-ready config. Covers FR-014.
-- [ ] T032 [US3] Run `cd docs-site && pnpm check` and fix only docs-site-local Astro, TypeScript, content typing, or schema diagnostics. Covers FR-012, FR-022, FR-023.
-- [ ] T033 [US3] Run `cd docs-site && pnpm build` and fix only docs-site-local config, content, route, sidebar, or Pages path/base failures. Covers FR-012, FR-013, FR-022, FR-023.
-- [ ] T034 [US3] Run `cd docs-site && pnpm validate:links` and fix only internal Markdown/MDX route, anchor, trailing-slash, same-site, or base-path failures. Covers FR-011, FR-022, FR-023.
-- [ ] T035 [US3] Run `cd docs-site && pnpm validate` after check/build/link fixes and record command evidence for the final PR review packet. Covers FR-012, FR-022.
-- [ ] T036 [US3] Update `specs/doc-002-unified-landing-page-and-ia-shell/quickstart.md` only if actual package scripts, Pages settings, or failure next actions differ from the plan. Covers FR-002, FR-013, FR-022, FR-023.
+- [x] T027 [US3] Validate Slice 2 entry by reviewing the Slice 1 diff for shell/routes only before adding link-validation or final Pages config hardening. Covers FR-017.
+- [x] T028 [P] [US3] Update `docs-site/package.json` with `validate`, `validate:links`, and the selected `starlight-links-validator` dependency if not already present. Covers FR-002, FR-011, FR-022.
+- [x] T029 [P] [US3] Update `docs-site/astro.config.mjs` to enable internal-link validation while preserving `site`, `base`, `trailingSlash`, and Starlight sidebar behavior. Covers FR-011, FR-013, FR-022.
+- [x] T030 [US3] Run `cd docs-site && pnpm install` to create or refresh `docs-site/pnpm-lock.yaml`; if setup fails, apply the documented FR-023 setup next action before considering any framework fallback. Covers FR-002, FR-022, FR-023.
+- [x] T031 [US3] Verify no `.github/workflows/**` file is created while hardening Pages-ready config. Covers FR-014.
+- [x] T032 [US3] Run `cd docs-site && pnpm check` and fix only docs-site-local Astro, TypeScript, content typing, or schema diagnostics. Covers FR-012, FR-022, FR-023.
+- [x] T033 [US3] Run `cd docs-site && pnpm build` and fix only docs-site-local config, content, route, sidebar, or Pages path/base failures. Covers FR-012, FR-013, FR-022, FR-023.
+- [x] T034 [US3] Run `cd docs-site && pnpm validate:links` and fix only internal Markdown/MDX route, anchor, trailing-slash, same-site, or base-path failures. Covers FR-011, FR-022, FR-023.
+- [x] T035 [US3] Run `cd docs-site && pnpm validate` after check/build/link fixes and record command evidence for the final PR review packet. Covers FR-012, FR-022.
+- [x] T036 [US3] Update `specs/doc-002-unified-landing-page-and-ia-shell/quickstart.md` only if actual package scripts, Pages settings, or failure next actions differ from the plan. Covers FR-002, FR-013, FR-022, FR-023.
 
 ## Phase 5: Polish - Reviewability And Final Evidence
 

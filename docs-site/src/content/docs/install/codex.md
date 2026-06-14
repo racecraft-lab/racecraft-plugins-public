@@ -24,4 +24,4 @@ Full detail is deferred to DOC-004. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the source and payload reference](/reference/) before comparing installed Codex files with the repository source.
+[Review the source and payload reference](/racecraft-plugins-public/reference/) before comparing installed Codex files with the repository source.
