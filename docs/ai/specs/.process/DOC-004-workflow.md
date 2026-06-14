@@ -39,8 +39,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Create DOC-004 spec from roadmap, PRD AC-4.1 through AC-4.6, and Design Concept decisions |
-| Clarify | `/speckit-clarify` | Pending | Focus on official Codex path semantics, custom-agent checklist boundaries, README/site consistency, and validation scope |
+| Specify | `/speckit-specify` | Complete | Created `spec.md` with 4 user stories, 17 FRs, 10 acceptance scenarios, and 0 clarification markers |
+| Clarify | `/speckit-clarify` | In Progress | Session 1 next: official Codex path semantics, source refresh, and local CLI help alignment |
 | Plan | `/speckit-plan` | Pending | Plan docs-site plus README/plugin README updates without changing manifests, payloads, installer behavior, or agent templates |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: UX, accessibility, security, and error-handling |
 | Tasks | `/speckit-tasks` | Pending | Produce vertical docs tasks ordered by source refresh, source evidence, docs implementation, and validation |
@@ -203,13 +203,14 @@ Codex users need a precise, source-backed install path for Racecraft Public Plug
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Fill after Specify |
-| User Stories | Fill after Specify |
-| Acceptance Criteria | AC-4.1 through AC-4.6 must be covered |
+| Functional Requirements | 17 |
+| User Stories | 4 |
+| Acceptance Criteria | AC-4.1 through AC-4.6 covered by FR-001 through FR-017 and SC-001 through SC-005 |
 
 ### Files Generated
 
-- [ ] `specs/doc-004-codex-marketplace-installation-path/spec.md`
+- [x] `specs/doc-004-codex-marketplace-installation-path/spec.md`
+- [x] `specs/doc-004-codex-marketplace-installation-path/checklists/requirements.md`
 
 ---
 

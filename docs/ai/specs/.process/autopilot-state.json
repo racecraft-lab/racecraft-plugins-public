@@ -1,48 +1,127 @@
 {
   "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
-  "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
-  "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T20:40:02Z",
-  "active_step": "Archived",
-  "status": "completed",
+  "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
+  "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
+  "feature_branch": "doc-004-codex-marketplace-installation-path",
+  "updated_at": "2026-06-14T22:33:39Z",
+  "active_step": "Phase 2: Clarify - Session 1: Official Codex path semantics",
+  "status": "in_progress",
+  "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-hygiene",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/prsg-014-optional-gh-stack-stack-manager-integration"
-    ],
+    "cleanup_mode": "feature-branch",
+    "current_target": "specs/doc-004-codex-marketplace-installation-path",
+    "excluded_current_spec": "specs/doc-004-codex-marketplace-installation-path",
+    "eligible_previous_specs": [],
     "safeToApplyCleanup": true,
     "dryRunProvenanceOnly": false,
-    "archive_report": ".specify/memory/archive-reports/2026-06-14-prsg-014-post-merge-hygiene.md",
-    "cleanup_applied": true
+    "cleanup_applied": false,
+    "note": "Active specs directory contains only DOC-004; no previously merged spec folders were eligible for cleanup."
   },
-  "implementation": {
-    "status": "completed",
-    "gate": "G7",
-    "gate_status": "passed",
-    "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
-    "merged_pr": 181,
-    "merge_commit": "4b8342f42db3223db6955a1390b30949b8caea8c",
-    "completed_tasks": 71,
-    "verification": {
-      "focused_layer4": [
-        "test-detect-stack-manager: 18/18 passed",
-        "test-multi-pr-emission: 159/159 passed",
-        "test-restack: 33/33 passed"
+  "phase0": {
+    "prerequisites": {
+      "all_pass": true,
+      "branch": "doc-004-codex-marketplace-installation-path",
+      "is_worktree": true,
+      "on_feature_branch": false,
+      "speckit_cli": "specify 0.10.3.dev0",
+      "settings": "defaults",
+      "mcp_servers": "Missing: tavily-mcp context7 RepoPrompt; agents will use built-in fallbacks"
+    },
+    "required_agents": {
+      "phase-executor": "installed:user",
+      "clarify-executor": "installed:user",
+      "checklist-executor": "installed:user",
+      "analyze-executor": "installed:user",
+      "implement-executor": "installed:user",
+      "codebase-analyst": "installed:user",
+      "spec-context-analyst": "installed:user",
+      "domain-researcher": "installed:user",
+      "autopilot-fast-helper": "installed:user"
+    },
+    "project_implementation_agent": "implement-executor",
+    "project_commands": {
+      "BUILD": "cd docs-site && pnpm validate",
+      "TYPECHECK": "N/A",
+      "LINT": "N/A",
+      "LINT_FIX": "N/A",
+      "UNIT_TEST": "bash tests/speckit-pro/run-all.sh",
+      "INTEGRATION_TEST": "cd docs-site && pnpm validate:links",
+      "SINGLE_FILE_TEST": "N/A",
+      "SINGLE_FILE_INTEGRATION": "N/A",
+      "FULL_VERIFY": "cd docs-site && pnpm validate && pnpm validate:links && cd .. && bash tests/speckit-pro/run-all.sh"
+    },
+    "preset_conventions": {
+      "has_presets": true,
+      "presets": [
+        "speckit-pro-reviewability v1.0.0"
       ],
-      "layer1": "979/979 passed",
-      "layer4": "1768/1768 passed",
-      "layer7": "run-all fixtures passed",
-      "layer8": "12/12 passed",
-      "default_suite": "2937/2937 passed"
+      "templates": [
+        "spec-template",
+        "plan-template",
+        "tasks-template"
+      ]
+    },
+    "extensions": {
+      "archive": "enabled",
+      "speckit-utils": "enabled",
+      "verify": "enabled",
+      "verify-tasks": "enabled",
+      "retrospective": "enabled",
+      "review": "not installed",
+      "cleanup": "not installed"
     }
   },
-  "next_specs": [
-    "DOC-003",
-    "DOC-004"
+  "phase1": {
+    "status": "completed",
+    "gate": "G1",
+    "gate_status": "passed",
+    "functional_requirements": 17,
+    "user_stories": 4,
+    "acceptance_scenarios": 10,
+    "clarification_markers": 0,
+    "artifacts": [
+      "specs/doc-004-codex-marketplace-installation-path/spec.md",
+      "specs/doc-004-codex-marketplace-installation-path/checklists/requirements.md"
+    ]
+  },
+  "plan": [
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - Session 1: Official Codex path semantics", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - Session 1: Official Codex path semantics Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Session 2: Custom-agent registration and verification", "status": "pending"},
+    {"step": "Phase 2: Clarify - Session 2: Custom-agent registration and verification Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation", "status": "pending"},
+    {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Security", "status": "pending"},
+    {"step": "Phase 4: Checklist - Security Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error-handling", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error-handling Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "completed", "skipped": "review extension not installed"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Cleanup", "status": "completed", "skipped": "cleanup extension not installed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }
