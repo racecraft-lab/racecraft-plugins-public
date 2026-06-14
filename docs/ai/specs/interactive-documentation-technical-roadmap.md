@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-002 scaffolded and ready for autopilot. Created 2026-06-12; refreshed 2026-06-13.
+> Status: DOC-002 completed and archived; DOC-003 and DOC-004 are next. Created 2026-06-12; refreshed 2026-06-14.
 
 ## Roadmap Overview
 
@@ -56,9 +56,9 @@ DOC-007 -> DOC-008
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | DOC-001 | Static docs framework and IA spike | Completed/archived | DOC-001-workflow.md | Archived after PR #163 |
-| DOC-002 | Unified landing page and IA shell | In progress | `.process/DOC-002-workflow.md` | Run `$speckit-autopilot` |
-| DOC-003 | Claude Code marketplace installation path | Pending | DOC-003-workflow.md | Blocked by DOC-002 |
-| DOC-004 | Codex marketplace installation path | Pending | DOC-004-workflow.md | Blocked by DOC-002 |
+| DOC-002 | Unified landing page and IA shell | Completed/archived | `.process/DOC-002-workflow.md` | Archived after PRs #173-#177 |
+| DOC-003 | Claude Code marketplace installation path | Pending | DOC-003-workflow.md | Ready |
+| DOC-004 | Codex marketplace installation path | Pending | DOC-004-workflow.md | Ready |
 | DOC-005 | First successful workflow tutorial | Pending | DOC-005-workflow.md | Blocked by DOC-003, DOC-004 |
 | DOC-006 | Safe interactive selector and validation aids | Pending | DOC-006-workflow.md | Blocked by DOC-002, DOC-003, DOC-004 |
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Pending | DOC-007-workflow.md | Blocked by DOC-003, DOC-004 |
@@ -99,7 +99,7 @@ Budget result: spike, LOC not applicable
 
 **Priority:** P1 | **Depends On:** DOC-001 completed | **Enables:** DOC-003, DOC-004, DOC-006, DOC-010
 
-**Status:** In progress. Scaffolded on branch `doc-002-unified-landing-page-and-ia-shell` with workflow `docs/ai/specs/.process/DOC-002-workflow.md`.
+**Status:** Completed and archived after PRs #173-#177. Canonical site shell lives in `docs-site/`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-14-doc-002-post-merge-hygiene.md`.
 
 **Goal:** Create the static docs shell, landing page, nav, and task-first IA.
 
@@ -119,7 +119,7 @@ Budget result: within budget
 - Interactive widgets beyond basic navigation.
 
 **Key Files:**
-- DOC-001 stack and IA contract; DOC-002 chooses concrete site config and docs content paths.
+- `docs-site/` shell, route content, sidebar config, Pages-ready Astro config, and link-validation scripts created by DOC-002.
 - `README.md` and `speckit-pro/README.md` as source evidence.
 
 ### DOC-003: Claude Code marketplace installation path
