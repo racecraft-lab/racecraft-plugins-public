@@ -87,7 +87,7 @@
 - [x] T042 Run or record the reviewability checkpoint if implementation scope expands beyond the accepted warning threshold; preserve shell/routes first and validation/config second instead of adding new DOC-002 scope. Covers FR-017.
 - [x] T043 Run `git diff --name-only` and attach final scope evidence to the workflow or PR packet notes before handoff. Covers FR-014, FR-016, FR-017.
 
-## Dependencies
+## Dependencies & Execution Order
 
 - Phase 1 blocks all user stories.
 - User Story 1 and User Story 2 make up Slice 1 and should be reviewed before Slice 2.
@@ -95,6 +95,14 @@
 - Polish depends on all user stories and validation commands.
 - Tasks T014 through T023 are parallel-safe after T013 because they touch separate route files.
 - Tasks T028 and T029 are parallel-safe after T027 because they touch separate config/control files.
+
+### Incremental Delivery
+
+1. Complete Foundation: establish the docs-site shell baseline.
+2. Complete User Story 1: add the landing page and platform choice.
+3. Complete User Story 2: add route shells and Diataxis navigation.
+4. Complete User Story 3: add build, link validation, Pages config, and quickstart evidence.
+5. Complete Polish: record final reviewability and handoff evidence.
 
 ## Parallel Examples
 
