@@ -49,7 +49,7 @@ concept doc is the source of truth for any decision captured during scoping.
 | Clarify | `/speckit-clarify` | Complete | Four focused sessions complete; G2 passed |
 | Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, quickstart.md, and stack-manager decision contract; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | 4 domains; 13 gaps found / 13 fixed; G4 marker count clean |
-| Tasks | `/speckit-tasks` | Pending | Generate after plan and checklist gaps are resolved |
+| Tasks | `/speckit-tasks` | Complete | Generated 71 test-first tasks; G5 passed with 0 markers |
 | Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Execute only after G6 approval |
 
@@ -437,9 +437,42 @@ Prioritize tests before implementation:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Parallel Opportunities | Pending |
-| Test Tasks | Pending |
+| Total Tasks | 71 |
+| Parallel Opportunities | 24 |
+| Test Tasks | 45 |
+
+### Tasks Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| G5 | Passed | `validate-gate.sh G5 specs/prsg-014-optional-gh-stack-stack-manager-integration` returned `pass=true`, `markers=0`, `task_count=71` |
+
+### Task Reviewability Gate
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| Task-mode reviewability | Size-only block; continue to marker planning | `specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/reviewability/tasks-gate.json` records `status=block`, `mode=tasks`, `exit_code=1`, `is_size_only=true`, `reviewable_loc=2840`, `total_files=111`, and no correctness or safety blocker. |
+
+### Atomicity Route
+
+| Field | Value |
+|-------|-------|
+| Route | `one-navigable-PR` |
+| Releasable | `true` |
+| Signals | `context:consumer-locality:out-of-tree`, `change-shape:modify-heavy` |
+| Warnings | None |
+| Evidence | `specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/atomicity/route.json` |
+
+### PR Marker Plan
+
+| Field | Value |
+|-------|-------|
+| Status | Planned |
+| Marker IDs | `foundation`, `us1`, `us2`, `us3`, `us4` |
+| Review Order | `foundation` -> `us1` -> `us2` -> `us3` -> `us4` |
+| Polish Folding | `T066`-`T071` folded into `us4` as nearest preceding non-polish scope |
+| Warning | Reviewability sizing result is marker-planning input |
+| Evidence | `specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/pr-marker-plan.json` |
 
 ---
 
