@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.13.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.13.0...speckit-pro-v2.13.1) (2026-06-14)
+
+
+### Bug Fixes
+
+* **autopilot:** require reslice continuation ([#177](https://github.com/racecraft-lab/racecraft-plugins-public/issues/177)) ([4fc5f81](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4fc5f81363e5b99e71d298390785d4d4c70d86ae))
+
 ## [2.13.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.12.0...speckit-pro-v2.13.0) (2026-06-13)
 
 
