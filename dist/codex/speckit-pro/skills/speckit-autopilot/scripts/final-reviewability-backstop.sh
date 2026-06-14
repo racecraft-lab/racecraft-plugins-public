@@ -942,6 +942,22 @@ packet_json="$(
           }]
         end
       ),
+      autopilot_continuation: {
+        required: true,
+        status: "continue_internally",
+        resume_from: $resume_from,
+        must_not_end_turn: true,
+        required_actions: (
+          if $resume_from == "prsg-007-routing" then
+            ["prsg-007-routing", "prsg-008-layer-planning", "prsg-009-multi-pr-emission"]
+          elif $resume_from == "prsg-008-layer-planning" then
+            ["prsg-008-layer-planning", "prsg-009-multi-pr-emission"]
+          else
+            ["prsg-009-multi-pr-emission"]
+          end
+        ),
+        completion_condition: "Autopilot may report completion only after valid slice PR emission or an operator-owned typed exception is committed."
+      },
       operator_steps: [
         {
           order: 1,
@@ -984,7 +1000,7 @@ packet_json="$(
         ),
         operator_message: "Final reviewability gate blocked before PR body generation, gh pr create, or multi-PR emission.",
         resume_from: $resume_from,
-        blocked_until: "A valid reviewable slice plan exists or an explicit operator-owned typed exception is committed."
+        blocked_until: "PR side effects are blocked until a valid reviewable slice plan exists or an explicit operator-owned typed exception is committed; the autopilot run must continue internally through autopilot_continuation before reporting completion."
       }
     }'
 )"

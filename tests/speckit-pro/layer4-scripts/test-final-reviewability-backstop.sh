@@ -257,6 +257,21 @@ json_check "$block_packet_json" \
 set_test "Packet resumes from PRSG-009 when routing and layer plan are valid"
 assert_json_field "$block_packet_json" "resume.resume_from" "prsg-009-multi-pr-emission"
 
+set_test "Packet requires internal autopilot continuation before final response"
+json_check "$block_packet_json" \
+  'data["autopilot_continuation"]["required"] is True and data["autopilot_continuation"]["must_not_end_turn"] is True' \
+  "reslicing packet must require internal autopilot continuation"
+
+set_test "Packet continuation mirrors resume phase and includes PRSG-009"
+json_check "$block_packet_json" \
+  'data["autopilot_continuation"]["resume_from"] == data["resume"]["resume_from"] and "prsg-009-multi-pr-emission" in data["autopilot_continuation"]["required_actions"]' \
+  "autopilot continuation must mirror resume phase and include PRSG-009"
+
+set_test "Packet continuation blocks completion until slice PR emission"
+json_check "$block_packet_json" \
+  '"may report completion only after valid slice PR emission" in data["autopilot_continuation"]["completion_condition"]' \
+  "autopilot continuation must block final response until slice PR emission"
+
 section "valid typed exception"
 
 exception_state="$SANDBOX/specs/prsg-010-harden-the-hatch/.process/final-reviewability/exception-state.json"

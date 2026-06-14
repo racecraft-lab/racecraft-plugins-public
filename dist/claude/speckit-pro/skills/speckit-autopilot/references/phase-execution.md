@@ -1031,9 +1031,13 @@ A full-diff size block with current marker evidence also proceeds to marker
 emission and is not a manual re-slicing stop. Exit 1 means `reslicing_required`
 only for unexcepted
 correctness or missing-marker cases: do not run `generate-pr-body.sh`, do not
-invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh`; read
-the packet's `operator_steps` and `resume.resume_from` to route through PRSG-007,
-regenerate PRSG-008, or hand off to PRSG-009. Exit 2 is a gate error: state is
+invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh` yet.
+This blocks only PR side effects. It is not a final response condition: read
+`autopilot_continuation`, `operator_steps`, and `resume.resume_from`; continue
+inside the same autopilot run through PRSG-007, regenerate PRSG-008, or hand off
+to PRSG-009 until a valid slice PR stack is emitted or a typed exception is
+committed. Never report completion while
+`autopilot_continuation.required=true`. Exit 2 is a gate error: state is
 written, no packet is valid, and the run stops for operator repair.
 
 For marker-aware PR preparation, record gate status/mode/exit/evidence path,

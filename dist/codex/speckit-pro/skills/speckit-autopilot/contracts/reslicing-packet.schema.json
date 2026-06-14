@@ -17,6 +17,7 @@
     "layer_plan",
     "handoff",
     "suggested_slice_boundaries",
+    "autopilot_continuation",
     "operator_steps",
     "resume"
   ],
@@ -171,6 +172,36 @@
             "items": { "type": "string", "minLength": 1 }
           }
         }
+      }
+    },
+    "autopilot_continuation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required",
+        "status",
+        "resume_from",
+        "must_not_end_turn",
+        "required_actions",
+        "completion_condition"
+      ],
+      "properties": {
+        "required": { "const": true },
+        "status": { "const": "continue_internally" },
+        "resume_from": {
+          "type": "string",
+          "enum": ["prsg-007-routing", "prsg-008-layer-planning", "prsg-009-multi-pr-emission"]
+        },
+        "must_not_end_turn": { "const": true },
+        "required_actions": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "enum": ["prsg-007-routing", "prsg-008-layer-planning", "prsg-009-multi-pr-emission"]
+          }
+        },
+        "completion_condition": { "type": "string", "minLength": 1 }
       }
     },
     "operator_steps": {
