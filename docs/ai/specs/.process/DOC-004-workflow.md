@@ -1,0 +1,599 @@
+# SpecKit Workflow: DOC-004 - Codex marketplace installation path
+
+**Template Version**: 1.0.0
+**Created**: 2026-06-14
+**Purpose**: Prepare DOC-004 for autonomous execution after DOC-002 created the Astro/Starlight docs-site shell and Codex install route placeholder.
+
+---
+
+## How to Use This Template
+
+1. Start autopilot with this file:
+
+   ```bash
+   $speckit-autopilot docs/ai/specs/.process/DOC-004-workflow.md
+   ```
+
+2. Keep `docs/ai/specs/.process/DOC-004-design-concept.md` open as the source of truth for the Grill Me decisions behind this scaffold.
+
+3. Track phase status in the table below as autopilot advances.
+
+---
+
+## Design Concept
+
+This workflow file was enriched from a Grill Me interview run during `$speckit-scaffold-spec DOC-004`.
+The full Q&A log, Goals, Non-goals, and Open Questions live at:
+
+```text
+docs/ai/specs/.process/DOC-004-design-concept.md
+```
+
+Re-read it before each phase. The design concept is the source of truth for the accepted one-page Codex install route, separate repo/personal/CLI path matrix, custom-agent checklist, bounded trust guidance, official Codex docs refresh requirement, README/plugin README consistency scope, and full-validation bar.
+
+> **Note:** Grill Me is human-in-the-loop only. It is not part of the autopilot loop. Once this workflow file is populated and autopilot begins, clarifications happen via `/speckit-clarify` and the consensus protocol.
+
+---
+
+## Workflow Overview
+
+| Phase | Command | Status | Notes |
+|-------|---------|--------|-------|
+| Specify | `/speckit-specify` | Pending | Create DOC-004 spec from roadmap, PRD AC-4.1 through AC-4.6, and Design Concept decisions |
+| Clarify | `/speckit-clarify` | Pending | Focus on official Codex path semantics, custom-agent checklist boundaries, README/site consistency, and validation scope |
+| Plan | `/speckit-plan` | Pending | Plan docs-site plus README/plugin README updates without changing manifests, payloads, installer behavior, or agent templates |
+| Checklist | `/speckit-checklist` | Pending | Recommended domains: UX, accessibility, security, and error-handling |
+| Tasks | `/speckit-tasks` | Pending | Produce vertical docs tasks ordered by source refresh, source evidence, docs implementation, and validation |
+| Analyze | `/speckit-analyze` | Pending | Check cross-artifact consistency, platform leakage, source freshness, and validation coverage |
+| Implement | `/speckit-implement` | Pending | Implement docs-only Codex install guidance and run full repo suite plus docs checks |
+
+**Status Legend:** Pending | In Progress | Complete | Blocked
+
+### Phase Gates
+
+Each phase requires human review and approval before proceeding:
+
+| Gate | Checkpoint | Approval Criteria |
+|------|------------|-------------------|
+| G1 | After Specify | User stories cover Codex install contexts, generated payload distinction, custom-agent registration, restart/verification, and bounded safety guidance |
+| G2 | After Clarify | Official Codex path semantics, README/site consistency scope, agent checklist contents, and validation commands are explicit |
+| G3 | After Plan | Docs architecture is concrete, official-source refresh is recorded, no forbidden plugin behavior changes are planned, and constitution gates pass |
+| G4 | After Checklist | Requirement-quality gaps are fixed or explicitly deferred to DOC-007/DOC-008 |
+| G5 | After Tasks | Tasks are docs-first, ordered, independently reviewable, and cover all AC-4.* acceptance criteria |
+| G6 | After Analyze | No critical consistency drift remains between roadmap, PRD, Design Concept, spec, plan, and tasks |
+| G7 | After Implementation | Docs-site validation, full repo suite, command-snippet review, and manual install-flow review are complete |
+
+---
+
+## Prerequisites
+
+### Constitution Validation
+
+Before starting any workflow phase, verify alignment with `.specify/memory/constitution.md`:
+
+| Principle | Requirement | Verification |
+|-----------|-------------|--------------|
+| Plugin Structure Compliance | DOC-004 must not change plugin structure, manifests, hooks, skills, agents, generated payloads, or marketplace behavior unless a small docs-contradiction source correction is explicitly justified. | `git diff --name-only` review before PR |
+| Script Safety | No new scripts are expected. If a validation helper is touched, preserve `#!/usr/bin/env bash`, `set -euo pipefail`, quoted variables, and clear `jq` use. | `bash -n` on touched scripts plus targeted tests |
+| Test Coverage Before Merge | User selected the full repo suite even though this is docs-first. | `bash tests/speckit-pro/run-all.sh` |
+| KISS, Simplicity & YAGNI | Prefer one focused Codex install page plus README consistency edits. Do not create a multi-page reference system or broad troubleshooting matrix in DOC-004. | Plan Complexity Tracking plus code review |
+| Conventional Commits | PR title must remain a conventional commit. | PR title check |
+
+**Constitution Check:** Verify before G1.
+
+### Scaffold Preflight Evidence
+
+| Check | Result | Notes |
+|-------|--------|-------|
+| `specify` CLI | Passed | Available at `/Users/fredrickgabelmann/.local/bin/specify` |
+| Technical roadmap | Found | `docs/ai/specs/interactive-documentation-technical-roadmap.md` |
+| DOC-004 status | Ready | Roadmap lists DOC-004 as pending/ready; DOC-002 completed and archived |
+| Open PR duplicate check | Passed | `gh pr list --state open --search "DOC-004"` returned no open PRs |
+| Branch/worktree reuse check | Passed | No local or remote DOC-004 branch/worktree existed before setup |
+| Reviewability setup gate | Passed | `reviewability-gate.sh setup docs/ai/specs/interactive-documentation-technical-roadmap.md` returned `status=pass`, projected 395 reviewable LOC, 0 production files, 6 total files |
+| Reviewability preset | Installed | `.specify/presets/speckit-pro-reviewability` refreshed; `plan-template` changed |
+| Preset resolution | Passed | `spec-template`, `plan-template`, and `tasks-template` resolve to `speckit-pro-reviewability v1.0.0` |
+| Slice-size advisory | OK | Grill Me estimate: 260 reviewable LOC, 1 suggested slice, `status=ok` |
+
+### Project Commands
+
+| Command | Purpose |
+|---------|---------|
+| `cd docs-site && pnpm validate` | Astro type/content check plus production build |
+| `cd docs-site && pnpm validate:links` | Current DOC-002 link-validation hook; presently aliases production build |
+| `bash tests/speckit-pro/run-all.sh` | Full repo/plugin validation requested during Grill Me Q7 |
+| Manual command-snippet review | Confirm Codex marketplace, plugin, skills, subagents, approvals/security, and cache wording against refreshed official OpenAI docs |
+
+---
+
+## Specification Context
+
+### Basic Information
+
+| Field | Value |
+|-------|-------|
+| **Spec ID** | DOC-004 |
+| **Name** | Codex marketplace installation path |
+| **Branch** | `doc-004-codex-marketplace-installation-path` |
+| **Feature directory** | `specs/doc-004-codex-marketplace-installation-path` |
+| **Design Concept** | `docs/ai/specs/.process/DOC-004-design-concept.md` |
+| **Roadmap** | `docs/roadmap-interactive-documentation.md` and `docs/ai/specs/interactive-documentation-technical-roadmap.md` |
+| **Dependencies** | DOC-002 completed and archived; consume existing `docs-site/` shell and `/install/codex` placeholder |
+| **Enables** | DOC-005, DOC-007, and DOC-008 |
+| **Priority** | P1 |
+| **Reviewability estimate** | Setup gate pass; Grill Me forward estimate 260 LOC, suggested 1 slice, advisory ok |
+
+### Success Criteria Summary
+
+- [ ] AC-4.1: The Codex path explains repo marketplace, personal marketplace, and `codex plugin marketplace add` options using current official terminology.
+- [ ] AC-4.2: The docs state that Codex loads installed plugins from cache and users should update the payload directory or marketplace source before expecting changes.
+- [ ] AC-4.3: The docs explain why `speckit-pro` has a Codex-only `install` skill for custom-agent TOML templates.
+- [ ] AC-4.4: The docs separate Codex skill metadata sidecars from custom-agent registration.
+- [ ] AC-4.5: The docs include sandbox, approval, and network-access implications for `speckit-pro` workflows.
+- [ ] AC-4.6: The docs validate and correct README personal-marketplace path wording against official Codex path-resolution behavior.
+
+### Accepted Scope
+
+- Expand `docs-site/src/content/docs/install/codex.md` from DOC-002 shell into the full DOC-004 Codex install page.
+- Update `README.md` and `speckit-pro/README.md` together so root, plugin, and docs-site install guidance agree.
+- Include separate repo-scoped, personal/local, and CLI install contexts.
+- Keep generated Codex payload guidance explicit: use `dist/codex/speckit-pro/`, not the mixed source authoring tree.
+- Include `@SpecKit Pro -> install`, `$install`, restart, and custom-agent TOML verification guidance.
+- Keep trust/sandbox/approval/network guidance bounded to installation safety and link or defer deeper cases to DOC-008.
+- Do not change Codex manifests, generated payloads, install scripts, custom-agent TOML files, marketplace behavior, release automation, or plugin runtime behavior.
+
+---
+
+## Phase 1: Specify
+
+**When to run:** At the start of DOC-004. Output: `specs/doc-004-codex-marketplace-installation-path/spec.md`.
+
+### Specify Prompt
+
+```bash
+/speckit-specify
+
+## Feature: Codex marketplace installation path
+
+### Problem Statement
+Codex users need a precise, source-backed install path for Racecraft Public Plugins and `speckit-pro`. The current README and DOC-002 docs-site shell explain the broad idea, but users still have to resolve repo-scoped marketplace use, personal/local plugin layout, generated Codex payloads, installed cache behavior, `$install`, custom-agent registration, restart, and sandbox/approval implications from scattered sources.
+
+### Users
+- Codex users installing `speckit-pro` from this repository or a personal/local plugin layout.
+- Existing `speckit-pro` users refreshing or repairing an install after marketplace/plugin updates.
+- Maintainers keeping root README, plugin README, and docs-site install guidance consistent.
+- Security/platform evaluators who need enough Codex-specific safety context to approve or reject installation.
+
+### User Stories
+- As a Codex user, I can choose the right repo-scoped, personal/local, or CLI marketplace path without confusing source tree, generated payload, and installed cache.
+- As a Codex user, I can install `speckit-pro`, run the Codex install skill, restart Codex, and verify the expected custom-agent TOML files are registered.
+- As a maintainer, I can keep `README.md`, `speckit-pro/README.md`, and the docs-site Codex page consistent after official-source validation.
+- As a security-minded user, I can see the bounded sandbox, approvals, network, cache, and trust implications needed before first install, with deeper cases deferred to DOC-008.
+
+### Functional Requirements Seed
+- Explain `.agents/plugins/marketplace.json`, `speckit-pro/.codex-plugin/plugin.json`, `dist/codex/speckit-pro/.codex-plugin/plugin.json`, and the installed cache as distinct surfaces.
+- Document repo-scoped marketplace use and personal/local plugin layout separately.
+- Document `codex plugin marketplace add` only after refreshing official OpenAI Codex docs for current command/path semantics.
+- State that personal/local installs should target the generated Codex payload root `dist/codex/speckit-pro/`, not the mixed authoring source tree `speckit-pro/`.
+- Explain `@SpecKit Pro -> install` and `$install` as the Codex-only custom-agent registration step.
+- Explain why skills ship with the plugin but custom agents must be copied into `.codex/agents/` or `~/.codex/agents/` by the install skill.
+- List the expected bundled TOML custom-agent files from `speckit-pro/codex-agents/`, including `uat-runbook-author.toml` if it remains present in source.
+- Tell users to restart Codex after custom-agent installation.
+- Include bounded install-safety guidance for sandbox, approvals, and network access.
+- Update `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` so the three entry points do not contradict each other.
+- Preserve cross-links to DOC-007/DOC-008-owned future reference and troubleshooting depth.
+
+### Constraints
+- Refresh official OpenAI Codex plugin, build-plugin, skills, subagents, and approvals/security docs before finalizing command/path wording.
+- Do not change Codex manifests, marketplace files, generated payloads, install script behavior, custom-agent TOML templates, or release automation unless a tiny docs-contradiction source correction is explicitly approved in the plan.
+- Keep Claude Code instructions out of DOC-004 except for cross-links to the DOC-003 path.
+- Keep all changes documentation-only unless the spec/plan records a narrow exception.
+- Run full repo validation plus docs-site validation before PR readiness.
+
+### Out of Scope
+- Claude Code install path content.
+- Full troubleshooting matrix, update/rollback model, and complete trust/security reference.
+- Live local install testing in CI.
+- Browser-side config writes or local command execution.
+- New interactive selector components.
+- Plugin runtime behavior changes.
+```
+
+### Specify Results
+
+| Metric | Value |
+|--------|-------|
+| Functional Requirements | Fill after Specify |
+| User Stories | Fill after Specify |
+| Acceptance Criteria | AC-4.1 through AC-4.6 must be covered |
+
+### Files Generated
+
+- [ ] `specs/doc-004-codex-marketplace-installation-path/spec.md`
+
+---
+
+## Phase 2: Clarify
+
+**When to run:** After Specify if any implementation boundary could be interpreted multiple ways. Maximum 5 targeted questions per session.
+
+### Clarify Prompts
+
+#### Session 1: Official Codex path semantics
+
+```bash
+/speckit-clarify Focus on official Codex path semantics: confirm current `codex plugin marketplace add` wording, repo-scoped marketplace behavior, personal/local plugin layout, generated payload path expectations, and installed cache terminology against refreshed official OpenAI docs.
+```
+
+#### Session 2: Custom-agent registration and verification
+
+```bash
+/speckit-clarify Focus on Codex custom-agent registration: confirm how the docs should explain plugin-shipped skills versus copied TOML custom agents, the `@SpecKit Pro -> install` / `$install` step, restart requirement, destination paths, expected file list, and what verification is safe to document without changing installer behavior.
+```
+
+#### Session 3: Scope, consistency, and validation
+
+```bash
+/speckit-clarify Focus on scope and validation: confirm README/plugin README/docs-site consistency rules, bounded trust guidance versus DOC-008 deferral, forbidden plugin behavior changes, docs-site validation commands, full repo suite requirement, and manual command-snippet review expectations.
+```
+
+### Clarify Results
+
+| Session | Focus Area | Questions | Key Outcomes |
+|---------|------------|-----------|--------------|
+| 1 | Official Codex path semantics | Fill after Clarify | Fill after Clarify |
+| 2 | Custom-agent registration and verification | Fill after Clarify | Fill after Clarify |
+| 3 | Scope, consistency, and validation | Fill after Clarify | Fill after Clarify |
+
+---
+
+## Phase 3: Plan
+
+**When to run:** After the spec is finalized. Output: `specs/doc-004-codex-marketplace-installation-path/plan.md`.
+
+### Plan Prompt
+
+```bash
+/speckit-plan
+
+## Tech Stack
+- Docs framework: existing Astro/Starlight app under `docs-site/`.
+- Authoring: Markdown/MDX content pages plus root Markdown README files.
+- Package manager: `pnpm` scoped to `docs-site/`.
+- Source evidence: refreshed official OpenAI Codex docs, `docs/prd-interactive-documentation.md`, `docs/roadmap-interactive-documentation.md`, `docs/ai/specs/interactive-documentation-technical-roadmap.md`, root README, plugin README, checked-in manifests, generated payload manifest, install skill, custom-agent TOML files, and Codex hook config.
+- Runtime services: none.
+- Data model: documentation-only route sections, install path matrix, command snippets, custom-agent checklist, and source-evidence notes.
+- Validation: `cd docs-site && pnpm validate`, `cd docs-site && pnpm validate:links`, `bash tests/speckit-pro/run-all.sh`, and manual command-snippet review against refreshed official docs.
+
+## Constraints
+- Consume the DOC-002 docs-site shell; do not restructure site navigation beyond what DOC-004 needs.
+- Keep one focused Codex install page in `docs-site/src/content/docs/install/codex.md`.
+- Update README and `speckit-pro/README.md` for consistency because Grill Me Q6 selected "Update all docs now".
+- Do not change manifests, payloads, installer behavior, agent TOML templates, release automation, or plugin runtime behavior.
+- Keep trust guidance bounded to install safety; defer deep troubleshooting, update, rollback, cache forensics, and full trust model to DOC-008.
+- Keep reference-library depth to DOC-007.
+
+## Architecture Notes
+- Structure the Codex page around the user's install decision: repo-scoped marketplace, personal/local plugin, or CLI marketplace path.
+- Put generated payload guidance near the top: `dist/codex/speckit-pro/` is the installable Codex payload; `speckit-pro/` is the mixed authoring source tree.
+- Include a custom-agent registration checklist after plugin install: run install skill, confirm TOML destination, restart Codex, and verify expected agent availability.
+- Include a short safety block for sandbox, approvals, and network access, written as install expectations rather than broad security guarantees.
+- Include source-evidence links/citations for official OpenAI Codex docs and local checked-in files.
+- Treat any mismatch between the install skill prose and actual `speckit-pro/codex-agents/*.toml` contents as a docs/source evidence issue to resolve in spec or plan before implementation.
+- Use concise task-first copy, not marketing copy.
+```
+
+### Plan Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `plan.md` | Pending | Must record official-source refresh, file operations, docs-only scope, and validation commands |
+| `research.md` | Pending | Use for official Codex docs refresh and path/cache terminology decisions |
+| `data-model.md` | Pending | Use if helpful for install path matrix, command snippets, and checklist objects |
+| `contracts/` | Pending | Use only if tasks need a command-snippet or install-path contract fixture |
+| `quickstart.md` | Pending | Use for manual docs verification and install-flow review |
+
+---
+
+## Phase 4: Domain Checklists
+
+**When to run:** After Plan. Use enriched prompts; do not run bare domains.
+
+### Recommended Domains
+
+| Domain | Why it applies |
+|--------|----------------|
+| UX | The install page must guide first-time Codex users through a task sequence without mixing repo, personal, CLI, payload, and cache concepts. |
+| Accessibility | Public docs content must preserve keyboard-readable structure, heading order, link clarity, and copyable command context in the Starlight site. |
+| Security | The page covers plugin trust, sandbox, approvals, network access, cache/source boundaries, and install targets. |
+| Error-handling | Install/update/remove guidance must explain safe checkpoints and failure classes without becoming the full DOC-008 troubleshooting matrix. |
+
+### Checklist Prompts
+
+#### 1. UX Checklist
+
+```bash
+/speckit-checklist ux
+
+Focus on DOC-004 Codex marketplace installation requirements:
+- Repo-scoped, personal/local, and CLI install paths are distinguishable at a glance.
+- Generated payload, authoring source tree, marketplace metadata, and installed cache are not conflated.
+- The custom-agent install/restart/verify sequence is task-first and complete.
+- README and docs-site entry points guide users to the same Codex path.
+- Pay special attention to: whether a first-time Codex user can choose the right path without reading Claude Code instructions.
+```
+
+#### 2. Accessibility Checklist
+
+```bash
+/speckit-checklist accessibility
+
+Focus on DOC-004 Codex install docs:
+- Headings, lists, tables, and command blocks have clear labels and navigable structure.
+- Links describe their destination and do not rely on surrounding prose alone.
+- Command snippets are grouped with platform and scope context.
+- Safety warnings are text-visible and not color-only.
+- Pay special attention to: install path matrix readability on mobile and screen-reader-friendly table alternatives if needed.
+```
+
+#### 3. Security Checklist
+
+```bash
+/speckit-checklist security
+
+Focus on DOC-004 Codex install trust boundaries:
+- Docs distinguish repository source, generated payload, installed cache, plugin skills, custom agents, hooks, sandbox, approvals, and network access.
+- Docs avoid promising silent autonomous access or bypassing Codex approvals.
+- Docs clearly warn against installing the mixed source tree as a personal Codex plugin.
+- Docs cite refreshed official OpenAI sources for Codex approvals/security claims.
+- Pay special attention to: bounded safety guidance versus claims that belong to DOC-008.
+```
+
+#### 4. Error-Handling Checklist
+
+```bash
+/speckit-checklist error-handling
+
+Focus on DOC-004 install/update/remove checkpoints:
+- Docs state what users should check when the plugin appears stale after update.
+- Docs explain when to rerun `$install` and restart Codex after agent updates.
+- Docs mention cache/source mismatch symptoms without duplicating DOC-008 troubleshooting depth.
+- Docs provide clear next links for deeper troubleshooting.
+- Pay special attention to: personal marketplace path examples and generated-payload path wording.
+```
+
+### Checklist Results
+
+| Checklist | Items | Gaps | Spec References |
+|-----------|-------|------|-----------------|
+| UX | Pending | Pending | Pending |
+| Accessibility | Pending | Pending | Pending |
+| Security | Pending | Pending | Pending |
+| Error-handling | Pending | Pending | Pending |
+
+---
+
+## Phase 5: Tasks
+
+**When to run:** After checklists complete and all real gaps are resolved. Output: `specs/doc-004-codex-marketplace-installation-path/tasks.md`.
+
+### Tasks Prompt
+
+```bash
+/speckit-tasks
+
+## Task Structure
+- Small docs-first chunks, each independently reviewable.
+- Clear acceptance criteria referencing AC-4.1 through AC-4.6 and FR markers.
+- Dependency ordering: source refresh -> source evidence audit -> spec/plan contract updates -> docs implementation -> consistency pass -> validation.
+- Mark parallel-safe tasks with [P] only when they do not modify the same Markdown page or source-evidence section.
+- Organize by user story, not by technical layer.
+
+## Implementation Phases
+1. Foundation and source refresh
+   - Refresh official OpenAI Codex docs.
+   - Audit local source files: root README, plugin README, `.agents/plugins/marketplace.json`, source and dist Codex manifests, install skill, `codex-agents/*.toml`, and `codex-hooks.json`.
+2. User Story 1: install path selection
+   - Build the repo/personal/CLI install path matrix.
+   - Explain source tree, generated payload, marketplace metadata, and installed cache.
+3. User Story 2: custom-agent registration
+   - Document `@SpecKit Pro -> install`, `$install`, restart, expected TOML files, and safe verification.
+4. User Story 3: docs consistency
+   - Update `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` so they agree.
+5. Polish and validation
+   - Add bounded sandbox/approval/network guidance.
+   - Run docs-site validation, full repo suite, manual command-snippet review, and final source-vs-generated-payload diff review.
+
+## Constraints
+- Do not change Codex manifests, generated payloads, installer behavior, custom-agent TOML templates, release automation, or plugin runtime behavior.
+- Do not create a broad troubleshooting matrix or reference library; link forward to DOC-007/DOC-008.
+- Keep Claude commands out of the Codex install path except for explicit cross-links to the Claude page.
+- Preserve existing docs-site Astro/Starlight conventions and route paths.
+```
+
+### Tasks Results
+
+| Metric | Value |
+|--------|-------|
+| Total Tasks | Fill after Tasks |
+| Phases | Fill after Tasks |
+| Parallel Opportunities | Fill after Tasks |
+| User Stories Covered | Fill after Tasks |
+
+---
+
+## Atomicity Route
+
+Fill after the Tasks phase / G5. Run:
+
+```bash
+bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-004-codex-marketplace-installation-path
+```
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | Pending | `true` or `false` |
+| Signals | Pending | Decisive detector findings |
+| Warnings | Pending | Release-safety warnings |
+
+---
+
+## Phase 6: Analyze
+
+**When to run:** Always run after generating tasks to catch issues.
+
+### Analyze Prompt
+
+```bash
+/speckit-analyze
+
+Focus on:
+1. Design Concept drift: verify the plan and tasks preserve one focused Codex page, all-docs consistency updates, bounded safety guidance, official-doc refresh, and full validation.
+2. Source freshness: verify official OpenAI Codex docs are refreshed before final command/path wording and that current terminology is cited.
+3. Platform leakage: ensure Claude Code commands do not appear as Codex instructions and Codex `$skill` syntax is not rewritten as Claude slash commands.
+4. Source/payload/cache consistency: ensure `speckit-pro/`, `dist/codex/speckit-pro/`, `.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`, and installed cache are distinct.
+5. Custom-agent checklist coverage: ensure the expected TOML files, install skill, destination paths, restart requirement, and verification are covered without changing installer behavior.
+6. Validation coverage: ensure docs-site validation, full repo suite, and manual command-snippet review are explicit tasks.
+```
+
+### Analyze Severity Levels
+
+| Severity | Meaning | Action Required |
+|----------|---------|-----------------|
+| CRITICAL | Blocks implementation or violates constitution | Must fix before G6 gate |
+| HIGH | Significant gap, impacts quality | Should fix |
+| MEDIUM | Improvement opportunity | Review and decide |
+| LOW | Minor inconsistency | Note for future |
+
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| Pending | Pending | Pending | Pending |
+
+---
+
+## Phase 7: Implement
+
+**When to run:** After tasks.md is generated and analyzed with no unresolved blocking findings.
+
+### Implement Prompt
+
+```bash
+/speckit-implement
+
+## Approach: Docs-First, Source-Backed
+
+For each task, follow this cycle:
+
+1. READ: Re-open the relevant official source, local source file, and Design Concept entry.
+2. EDIT: Make the smallest Markdown/content change that satisfies the task.
+3. CHECK: Verify the command/path/source claim still matches official docs and checked-in files.
+4. VALIDATE: Run the relevant docs-site or repo check before marking the task complete.
+
+### Pre-Implementation Setup
+
+1. Verify branch:
+   `git rev-parse --abbrev-ref HEAD`
+2. Verify clean starting state except scaffold artifacts:
+   `git status --short`
+3. Refresh official OpenAI Codex docs for plugins, build plugins, skills, subagents, and approvals/security.
+4. Audit local sources:
+   - `README.md`
+   - `speckit-pro/README.md`
+   - `docs-site/src/content/docs/install/codex.md`
+   - `.agents/plugins/marketplace.json`
+   - `speckit-pro/.codex-plugin/plugin.json`
+   - `dist/codex/speckit-pro/.codex-plugin/plugin.json`
+   - `speckit-pro/codex-skills/install/SKILL.md`
+   - `speckit-pro/codex-agents/*.toml`
+   - `speckit-pro/codex-hooks.json`
+
+### Implementation Notes
+
+- Keep Codex docs in Codex syntax: `$install`, `$speckit-*`, and `@SpecKit Pro -> install` where appropriate.
+- Keep generated payload guidance explicit: personal/local installs point at `dist/codex/speckit-pro/`.
+- Do not edit `dist/**`, manifests, custom-agent TOML files, or installer scripts unless the plan records an explicit exception.
+- If official docs contradict existing README guidance, update README, plugin README, and docs-site content together.
+- Keep the trust block bounded: sandbox, approvals, network, cache/source distinction, and deeper DOC-008 link.
+
+### Required Verification
+
+1. `cd docs-site && pnpm validate`
+2. `cd docs-site && pnpm validate:links`
+3. `bash tests/speckit-pro/run-all.sh`
+4. Manual review: every Codex command/path snippet is checked against refreshed official docs or local source files.
+5. Manual review: `git diff --name-only` contains docs/spec artifacts only unless a plan-approved exception exists.
+```
+
+### Implementation Progress
+
+| Phase | Tasks | Completed | Notes |
+|-------|-------|-----------|-------|
+| Foundation and source refresh | Pending | Pending | Pending |
+| Install path selection | Pending | Pending | Pending |
+| Custom-agent registration | Pending | Pending | Pending |
+| Docs consistency | Pending | Pending | Pending |
+| Polish and validation | Pending | Pending | Pending |
+
+---
+
+## Post-Implementation Checklist
+
+- [ ] All tasks marked complete in tasks.md.
+- [ ] `docs-site/src/content/docs/install/codex.md` satisfies DOC-004 page scope.
+- [ ] `README.md` and `speckit-pro/README.md` agree with docs-site Codex install guidance.
+- [ ] Official OpenAI Codex docs refresh is cited in `research.md` or the relevant implementation evidence.
+- [ ] No unintended changes to manifests, generated payloads, installer scripts, custom-agent TOML templates, or plugin runtime behavior.
+- [ ] `cd docs-site && pnpm validate` passes.
+- [ ] `cd docs-site && pnpm validate:links` passes.
+- [ ] `bash tests/speckit-pro/run-all.sh` passes.
+- [ ] Manual command-snippet review complete.
+- [ ] PR created with a conventional commit title such as `docs(DOC-004): clarify Codex install path`.
+
+---
+
+## Project Structure Reference
+
+```text
+racecraft-plugins-public/
+|-- README.md
+|-- .agents/plugins/marketplace.json
+|-- docs-site/
+|   |-- package.json
+|   `-- src/content/docs/install/codex.md
+|-- docs/
+|   |-- prd-interactive-documentation.md
+|   |-- roadmap-interactive-documentation.md
+|   `-- ai/specs/
+|       |-- interactive-documentation-technical-roadmap.md
+|       `-- .process/DOC-004-design-concept.md
+|-- speckit-pro/
+|   |-- README.md
+|   |-- .codex-plugin/plugin.json
+|   |-- codex-skills/install/SKILL.md
+|   |-- codex-agents/*.toml
+|   `-- codex-hooks.json
+|-- dist/codex/speckit-pro/
+|   `-- .codex-plugin/plugin.json
+|-- specs/doc-004-codex-marketplace-installation-path/
+|   `-- SPEC-MOC.md
+`-- tests/speckit-pro/
+```
+
+---
+
+## Lessons Learned
+
+### What Worked Well
+
+- Fill after implementation.
+
+### Challenges Encountered
+
+- Fill after implementation.
+
+### Patterns to Reuse
+
+- Fill after implementation.
