@@ -1,0 +1,546 @@
+# SpecKit Workflow: DOC-003 - Claude Code Marketplace Installation Path
+
+**Template Version**: 1.0.0
+**Created**: 2026-06-14
+**Purpose**: Prepare and execute the Claude Code install-path documentation slice.
+
+---
+
+## How to Use This Workflow
+
+Run this workflow from the `doc-003-claude-code-marketplace-installation-path`
+branch. Keep the implementation docs-only unless a later phase explicitly
+shows that a source file is misleading Claude Code users and must be corrected
+for install accuracy.
+
+The next command is:
+
+```bash
+$speckit-autopilot docs/ai/specs/.process/DOC-003-workflow.md
+```
+
+---
+
+## Design Concept
+
+This workflow was enriched from the Grill Me setup interview. The full Q&A log,
+Goals, Non-goals, and Open Questions live at:
+
+```text
+docs/ai/specs/.process/DOC-003-design-concept.md
+```
+
+Re-read it before each phase. If a downstream artifact contradicts the design
+concept, treat the downstream artifact as wrong unless it carries an explicit
+revision note approved during the workflow.
+
+---
+
+## Workflow Overview
+
+| Phase | Command | Status | Notes |
+|-------|---------|--------|-------|
+| Specify | `/speckit-specify` | Pending | Produce `specs/doc-003-claude-code-marketplace-installation-path/spec.md`. |
+| Clarify | `/speckit-clarify` | Pending | Use only for unresolved wording, verification, or trust boundaries. |
+| Plan | `/speckit-plan` | Pending | Keep the plan docs-only and Astro/Starlight-aware. |
+| Checklist | `/speckit-checklist` | Pending | Recommended domains: ux, accessibility, security, error-handling. |
+| Tasks | `/speckit-tasks` | Pending | Organize by user-visible docs outcome, not by file layer. |
+| Analyze | `/speckit-analyze` | Pending | Check for command/skill drift, Codex leakage, and DOC-008 overlap. |
+| Implement | `/speckit-implement` | Pending | Update docs page and install-relevant terminology surfaces. |
+
+**Status Legend:** Pending | In Progress | Complete | Blocked
+
+### Phase Gates
+
+Each phase requires human review and approval before proceeding.
+
+| Gate | Checkpoint | Approval Criteria |
+|------|------------|-------------------|
+| G1 | After Specify | Claude install scope, non-goals, source authority, and success checks are explicit. |
+| G2 | After Clarify | No unresolved questions remain about terminology, verification, or trust depth. |
+| G3 | After Plan | Plan is docs-only, references real file paths, and stays inside the DOC-003 slice. |
+| G4 | After Checklist | Gaps are either fixed in spec/plan or explicitly deferred to DOC-007/DOC-008. |
+| G5 | After Tasks | Tasks cover DOC-003 acceptance criteria and avoid Codex procedure work. |
+| G6 | After Analyze | No critical drift remains between design concept, spec, plan, and tasks. |
+| G7 | After Implementation | Docs validation passes and the Claude page is manually reviewed for command leakage. |
+
+---
+
+## Prerequisites
+
+### Constitution Validation
+
+| Principle | Requirement | Verification |
+|-----------|-------------|--------------|
+| Plugin Structure Compliance | Do not change plugin runtime layout or generated payloads unless a docs source correction requires it. | `bash tests/speckit-pro/run-all.sh --layer 1` if plugin metadata or manifests change. |
+| Script Safety | No shell scripts are expected in DOC-003. If a script changes, it must keep `#!/usr/bin/env bash` and `set -euo pipefail`. | `bash -n <script>` and relevant Layer 4 test. |
+| Semantic Versioning | Do not manually bump plugin versions as part of docs work. | `git diff` shows no manual version edits. |
+| Test Coverage Before Merge | Docs-only changes should validate the docs site and targeted links. | `pnpm --dir docs-site validate`; add repo tests only if runtime files change. |
+| Conventional Commits | PR title must be public-readable and conventional. | PR title shape: `docs: document Claude Code install path` or equivalent. |
+| KISS, Simplicity & YAGNI | Prefer one canonical Claude install route and concise cross-links over duplicate command matrices. | Review spec, plan, and docs diff for duplication. |
+
+**Constitution Check:** Pending until G1.
+
+### Reviewability Budget
+
+- Setup gate input: `docs/ai/specs/interactive-documentation-technical-roadmap.md`
+- Setup gate result: pass
+- Reviewable LOC: 395
+- Production files: 0
+- Total files: 6
+- Primary surface: docs/process
+- Advisory Grill Me estimate: 220 LOC, 1 slice, status `ok`
+
+---
+
+## Specification Context
+
+### Basic Information
+
+| Field | Value |
+|-------|-------|
+| Spec ID | DOC-003 |
+| Name | Claude Code marketplace installation path |
+| Branch | `doc-003-claude-code-marketplace-installation-path` |
+| Dependencies | DOC-002 completed and archived after PRs #173-#177 |
+| Enables | DOC-005, DOC-007, DOC-008 |
+| Priority | P1 |
+| Tool count | No runtime tool changes expected; this is docs/process work. |
+| Tool names | Claude Code `/plugin` UI and namespaced `/speckit-pro:<skill>` invocations are documented, not modified. |
+
+### Roadmap Scope
+
+DOC-003 ships the Claude-specific install/update/uninstall and invocation docs.
+It must document:
+
+- `/plugin marketplace add racecraft-lab/racecraft-plugins-public`
+- `/plugin install speckit-pro@racecraft-plugins-public`
+- `/plugin marketplace update racecraft-plugins-public`
+- `/plugin uninstall speckit-pro@racecraft-plugins-public`
+- `/reload-plugins` after install, enable/disable, update, or uninstall events when the user wants to stay in the same Claude Code session
+- verification through `/plugin`, `/speckit-pro:speckit-status`, and `/speckit-pro:speckit-coach`
+- update, uninstall, marketplace removal, and reinstall checks
+- `/speckit-pro:*` namespacing
+- skills, agents, hooks, MCP/settings, managed marketplaces, and generated Claude payloads
+- legacy/current wording around deprecated command-folder language, consolidated around skills
+
+### Success Criteria Summary
+
+- [ ] Claude Code users can add the marketplace, install SpecKit Pro, reload plugins, verify it, update it, uninstall it, remove the marketplace when appropriate, and reinstall it from one canonical route.
+- [ ] User-facing docs consistently prefer "skills" terminology over deprecated "commands" wording where the Claude install path would otherwise be misleading.
+- [ ] The page cites official Claude Code docs for platform behavior and repository files for this marketplace/plugin's exact source and payload paths.
+- [ ] The page includes a deep Claude-specific trust section without becoming the full DOC-008 troubleshooting/rollback matrix.
+- [ ] Codex install details are limited to a cross-link to the Codex install route.
+
+---
+
+## Phase 1: Specify
+
+**When to run:** At the start of this feature specification. Focus on what the
+Claude Code user must be able to do, why the route exists, and what is out of
+scope. Output: `specs/doc-003-claude-code-marketplace-installation-path/spec.md`.
+
+### Specify Prompt
+
+```bash
+/speckit-specify "Ship the Claude Code marketplace installation path for SpecKit Pro. The primary deliverable is docs-site/src/content/docs/install/claude-code.md as the canonical user route. The page must cover add marketplace, install, reload plugins, verify, update, uninstall, marketplace removal, and reinstall checks for /plugin-based Claude Code usage; explain /speckit-pro:<skill> namespacing; consolidate install-relevant wording around skills rather than deprecated command-folder language; cite official Claude Code docs plus repository source/generated payload files; include deep Claude-specific trust guidance for skills, agents, hooks, MCP/settings, generated payloads, and managed marketplaces; and limit Codex details to a cross-link. Do not change plugin runtime behavior, regenerate payloads, bump versions, or build the full troubleshooting matrix."
+```
+
+### Detailed Prompt
+
+```bash
+/speckit-specify
+
+## Feature: Claude Code Marketplace Installation Path
+
+### Problem Statement
+The docs-site Claude install route is currently a DOC-002 shell. Claude Code
+users need a complete, source-backed path for adding the Racecraft marketplace,
+installing SpecKit Pro, reloading plugins, verifying the namespaced skill
+surface, updating, uninstalling, removing the marketplace when appropriate, and
+understanding the trust implications before running plugin skills.
+
+### Users
+- Claude Code users installing SpecKit Pro from the public Racecraft marketplace.
+- Evaluators who need to inspect source, generated payloads, hooks, and agents before install.
+- Maintainers who need docs that distinguish authoring source from generated Claude install payloads.
+
+### User Stories
+- As a Claude Code user, I can add the Racecraft marketplace and install SpecKit Pro with exact commands.
+- As a Claude Code user, I can verify the install through `/plugin`, `/speckit-pro:speckit-status`, and `/speckit-pro:speckit-coach`.
+- As a Claude Code user, I can update, uninstall, remove the marketplace when appropriate, and reinstall the plugin without guessing at lifecycle commands.
+- As an evaluator, I can see which skills, agents, hooks, MCP/settings, and generated payload files affect trust before install.
+- As a maintainer, I can see source and generated payload paths without confusing deprecated command-folder wording for current skill-based usage.
+
+### Constraints
+- Primary surface is docs/process; production files should stay at 0.
+- The canonical page is `docs-site/src/content/docs/install/claude-code.md`.
+- Patch install-relevant README/AGENTS wording broadly enough to eliminate command-vs-skill confusion, but avoid unrelated repository-maintainer rewrites.
+- Official Claude Code docs are the authority for platform behavior; repository manifests and payloads are the authority for this plugin's exact paths.
+- Use `pnpm --dir docs-site validate` for docs-site validation.
+
+### Out of Scope
+- Codex install instructions except a cross-link to `/install/codex/`.
+- Full troubleshooting matrix, rollback procedures, and every failure mode.
+- Plugin runtime behavior changes, generated payload regeneration, version bumps, or release automation changes.
+- Side-by-side Claude/Codex command comparison.
+```
+
+### Specify Results
+
+| Metric | Value |
+|--------|-------|
+| Functional Requirements | Fill after `/speckit-specify`. Expected source: DOC-FR-003 / AC-3.1 through AC-3.5. |
+| User Stories | Expected 5. |
+| Acceptance Criteria | Expected 5. |
+
+### Files Generated
+
+- [ ] `specs/doc-003-claude-code-marketplace-installation-path/spec.md`
+
+---
+
+## Phase 2: Clarify
+
+**When to run:** Use Clarify only if Specify leaves ambiguity. Maximum 5 targeted
+questions per session.
+
+### Clarify Prompts
+
+#### Session 1: Terminology And Source Authority
+
+```bash
+/speckit-clarify "Focus on terminology and source authority for DOC-003: every install-relevant user-facing surface should prefer skills over deprecated command-folder wording; official Claude Code docs should anchor platform behavior; repository source and dist/claude payloads should anchor SpecKit Pro specifics. Resolve any ambiguity about which README/AGENTS wording must change in this slice versus later DOC-007/docs-hygiene work."
+```
+
+#### Session 2: Lifecycle And Verification
+
+```bash
+/speckit-clarify "Focus on Claude Code install lifecycle verification for DOC-003: add marketplace, install, /reload-plugins, verify with /plugin UI, verify /speckit-pro:speckit-status, sanity-check /speckit-pro:speckit-coach, update, uninstall, marketplace removal, and reinstall. Resolve any ambiguity about exact success criteria and what should be deferred to DOC-008 troubleshooting."
+```
+
+#### Session 3: Trust Depth And Platform Separation
+
+```bash
+/speckit-clarify "Focus on trust depth and platform separation for DOC-003: include deep Claude-specific trust context for skills, agents, hooks, MCP/settings, generated payloads, and managed marketplaces, while limiting Codex details to a cross-link. Resolve where the trust section belongs and what belongs later in DOC-008."
+```
+
+### Clarify Results
+
+| Session | Focus Area | Questions | Key Outcomes |
+|---------|------------|-----------|--------------|
+| 1 | Terminology and source authority | | |
+| 2 | Lifecycle and verification | | |
+| 3 | Trust depth and platform separation | | |
+
+---
+
+## Phase 3: Plan
+
+**When to run:** After spec is finalized. Output:
+`specs/doc-003-claude-code-marketplace-installation-path/plan.md`.
+
+### Plan Prompt
+
+```bash
+/speckit-plan
+
+## Tech Stack
+- Docs site: Astro 6.4.6 with Starlight 0.40.0.
+- Content format: Markdown under `docs-site/src/content/docs/`.
+- Package manager: pnpm 10.25.0 from `docs-site/package.json`.
+- Repository docs: Markdown in `README.md`, `AGENTS.md`, `speckit-pro/README.md`, and docs-site pages.
+- Plugin source: `speckit-pro/skills`, `speckit-pro/agents`, `speckit-pro/hooks/hooks.json`, `speckit-pro/.claude-plugin/plugin.json`.
+- Generated Claude payload: `dist/claude/speckit-pro/` and `.claude-plugin/marketplace.json`.
+- Testing: `pnpm --dir docs-site validate`; add `bash tests/speckit-pro/run-all.sh --layer 1` only if plugin manifests, hooks, agents, skills, or generated payloads change.
+
+## Constraints
+- Keep DOC-003 docs-only unless a source wording patch is directly required for install accuracy.
+- Do not regenerate `dist/**`, bump versions, change plugin behavior, or edit release automation.
+- Preserve Codex scope for DOC-004; the Claude page may cross-link but must not explain Codex install steps.
+- Source authority decision from the design concept: cite both official Claude Code docs and repository source/dist files.
+- User's Q2 decision: consolidate on skills terminology rather than command-folder language anywhere install-relevant.
+- User's Q7 decision: include a deep Claude-specific trust section, but do not absorb the full DOC-008 troubleshooting matrix.
+
+## Architecture Notes
+- Treat `docs-site/src/content/docs/install/claude-code.md` as the canonical user route.
+- Keep install commands in one sequential procedure section, then verification, lifecycle maintenance, and trust/reference sections.
+- Prefer local relative links for docs-site pages and stable GitHub/source paths only where external repository citations are necessary.
+- If README/AGENTS changes are needed, keep them limited to install-facing terminology and command-to-skill corrections.
+- The design concept at `docs/ai/specs/.process/DOC-003-design-concept.md` is the source of truth for scope and non-goals.
+```
+
+### Plan Results
+
+| Artifact | Status | Notes |
+|----------|--------|-------|
+| `plan.md` | Pending | Technical context and execution flow. |
+| `research.md` | Pending | Use if official Claude Code docs need citation notes. |
+| `data-model.md` | Not expected | Docs-only feature. |
+| `contracts/` | Not expected | Docs-only feature. |
+| `quickstart.md` | Pending | Useful if SpecKit emits a docs authoring validation quickstart. |
+
+---
+
+## Phase 4: Domain Checklists
+
+**When to run:** After `/speckit-plan`. Validate spec and plan together.
+
+### Recommended Domains
+
+#### 1. UX Checklist
+
+Why this domain: The primary deliverable is a user-facing install route with a
+step-by-step procedure.
+
+```bash
+/speckit-checklist ux
+
+Focus on DOC-003 Claude install requirements:
+- The add/install/verify/update/remove flow is ordered the way a first-time Claude Code user will follow it.
+- The page makes the canonical path obvious without duplicating Codex procedure detail.
+- Verification steps are concrete and low-risk: /plugin UI, /speckit-pro:speckit-status, and /speckit-pro:speckit-coach.
+- Pay special attention to: whether deep trust content interrupts the install flow or belongs after verification.
+```
+
+#### 2. Accessibility Checklist
+
+Why this domain: The docs page must stay scannable, linkable, and usable in a
+static docs site.
+
+```bash
+/speckit-checklist accessibility
+
+Focus on DOC-003 Claude install requirements:
+- Headings, lists, and code blocks are structured for screen readers and deep links.
+- Link text identifies the destination without relying on surrounding prose.
+- Command examples are copyable and not hidden in dense tables.
+- Pay special attention to: avoiding overloaded comparison tables that mix Claude and Codex command forms.
+```
+
+#### 3. Security Checklist
+
+Why this domain: DOC-003 includes a deep trust section about plugin install
+surfaces.
+
+```bash
+/speckit-checklist security
+
+Focus on DOC-003 Claude install requirements:
+- Trust guidance names the installed surfaces: skills, agents, hooks, MCP/settings, generated Claude payloads, and marketplace metadata.
+- The page distinguishes official Claude Code behavior from repository-specific claims.
+- Managed marketplace and source inspection guidance is accurate without becoming a full rollback matrix.
+- Pay special attention to: avoiding unsupported claims about sandboxing or hook behavior.
+```
+
+#### 4. Error Handling Checklist
+
+Why this domain: The page covers remove/reinstall and basic failure recovery,
+while DOC-008 owns the full troubleshooting matrix.
+
+```bash
+/speckit-checklist error-handling
+
+Focus on DOC-003 Claude install requirements:
+- Basic recovery is defined for wrong marketplace, missing plugin, failed verification, update, remove, and reinstall.
+- Each recovery path says when to move to troubleshooting instead of expanding DOC-003.
+- Codex-specific failures are routed to the Codex page or later DOC-008.
+- Pay special attention to: keeping rollback and cache-depth content out of this slice unless required for Claude install safety.
+```
+
+### Checklist Results
+
+| Checklist | Items | Gaps | Spec References |
+|-----------|-------|------|-----------------|
+| ux | | | |
+| accessibility | | | |
+| security | | | |
+| error-handling | | | |
+| Total | | | |
+
+---
+
+## Phase 5: Tasks
+
+**When to run:** After checklists complete and gaps are resolved.
+Output: `specs/doc-003-claude-code-marketplace-installation-path/tasks.md`.
+
+### Tasks Prompt
+
+```bash
+/speckit-tasks
+
+## Task Structure
+- Organize tasks by user-visible docs outcome: source audit, Claude page content, terminology consistency, validation.
+- Keep each task small and testable.
+- Mark parallel-safe tasks with [P] only when they do not touch the same Markdown files.
+- Reference `spec.md`, `plan.md`, and `docs/ai/specs/.process/DOC-003-design-concept.md`.
+- Use the design concept's non-goals to reject tasks that implement Codex install docs, full troubleshooting, payload regeneration, version changes, or runtime behavior changes.
+
+## Implementation Phases
+1. Source audit: collect official Claude Code docs links and repo source/dist evidence.
+2. Claude install page: replace the DOC-002 shell with full add/install/verify/update/remove/reinstall content and deep trust guidance.
+3. Terminology consistency: update install-relevant README/AGENTS/docs wording to prefer skills over deprecated command-folder language.
+4. Cross-links and boundaries: link Codex route without embedding Codex procedure; route full troubleshooting/rollback to later docs.
+5. Validation: run docs-site validation and targeted repo checks if non-doc surfaces changed.
+
+## Constraints
+- Primary canonical file: `docs-site/src/content/docs/install/claude-code.md`.
+- Likely supporting files: `README.md`, `AGENTS.md`, `speckit-pro/README.md`, `docs-site/src/content/docs/reference.md`, `docs-site/src/content/docs/security-and-trust.md`, or `docs-site/src/content/docs/troubleshooting.md` only if needed for navigation or boundary clarity.
+- Do not edit `dist/**`, package versions, generated payloads, plugin manifests, hooks, or agents unless a later approved plan explicitly requires it.
+- Validation command: `pnpm --dir docs-site validate`.
+```
+
+### Tasks Results
+
+| Metric | Value |
+|--------|-------|
+| Total Tasks | |
+| Phases | |
+| Parallel Opportunities | |
+| User Stories Covered | |
+
+---
+
+## Atomicity Route
+
+After the Tasks phase / G5 gate, the autopilot SKILL runs the read-only
+atomicity classifier and records its decision here. Leave the cells blank
+during scoping.
+
+| Field | Value | Meaning |
+|-------|-------|---------|
+| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| Releasable | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
+| Signals | | Decisive detector findings behind the route and releasability reading. |
+| Warnings | | Any release-safety warning attached to the change. |
+
+To produce the decision, run:
+
+```bash
+bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-003-claude-code-marketplace-installation-path
+```
+
+---
+
+## Phase 6: Analyze
+
+**When to run:** Always run after generating tasks to catch issues.
+
+### Analyze Prompt
+
+```bash
+/speckit-analyze
+
+Focus on:
+1. Constitution alignment: docs-only scope, no manual version bumps, no runtime behavior changes, no speculative rewrites.
+2. Design-concept consistency: ensure spec, plan, and tasks follow Q1-Q9 from `docs/ai/specs/.process/DOC-003-design-concept.md`.
+3. Command-vs-skill wording: flag any install-relevant surface that still tells users to rely on deprecated command-folder wording instead of plugin skills.
+4. Codex leakage: verify the Claude page cross-links to Codex but does not explain Codex install procedure.
+5. Source authority: verify official Claude Code docs are used for platform behavior, and repository source/dist files are used for SpecKit Pro specifics.
+6. DOC-008 boundary: flag rollback, cache-depth, or full troubleshooting content that should be deferred unless needed for safe install/update/remove basics.
+7. Validation coverage: ensure tasks include `pnpm --dir docs-site validate` and any targeted repo tests required by changed files.
+```
+
+### Analyze Severity Levels
+
+| Severity | Meaning | Action Required |
+|----------|---------|-----------------|
+| CRITICAL | Violates scope, contradicts design concept, or produces wrong install commands. | Must fix before G6. |
+| HIGH | Significant docs gap, misleading trust claim, or missing validation. | Should fix before implementation. |
+| MEDIUM | Useful improvement or clarity issue. | Review and decide. |
+| LOW | Minor wording or consistency issue. | Note for future if not fixed. |
+
+### Analysis Results
+
+| ID | Severity | Issue | Resolution |
+|----|----------|-------|------------|
+| | | | |
+
+---
+
+## Phase 7: Implement
+
+**When to run:** After tasks.md is generated and analyzed with no critical
+coverage gaps.
+
+### Implement Prompt
+
+```bash
+/speckit-implement
+
+## Approach: Docs-First Validation
+
+For each task, follow this cycle:
+
+1. RED: Identify the current docs gap, stale wording, or missing validation target.
+2. GREEN: Make the smallest Markdown/content edit that satisfies the accepted task.
+3. REFACTOR: Consolidate duplicated command wording and keep the canonical Claude path clear.
+4. VERIFY: Run the relevant docs validation and manually review the rendered source for Claude/Codex separation.
+
+### Pre-Implementation Setup
+
+1. Verify branch: `git rev-parse --abbrev-ref HEAD` should print `doc-003-claude-code-marketplace-installation-path`.
+2. Review design concept: `docs/ai/specs/.process/DOC-003-design-concept.md`.
+3. Review source docs: `docs-site/src/content/docs/install/claude-code.md`, `README.md`, `AGENTS.md`, and `speckit-pro/README.md`.
+4. Review repository evidence: `.claude-plugin/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json`, `dist/claude/speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/agents/`, and `speckit-pro/hooks/hooks.json`.
+
+### Implementation Notes
+
+- Keep the Claude route self-contained for first install, reload, verification, update, uninstall, marketplace removal, and reinstall.
+- Use exact Claude Code commands only where official docs and repo evidence support them.
+- Prefer "skill" / "plugin skill" language for SpecKit Pro invocation.
+- Explain agents, hooks, MCP/settings, generated payloads, and managed marketplace trust clearly, without unsupported security claims.
+- Route Codex users to the Codex install page; do not teach Codex commands here.
+- Do not edit generated payloads or plugin manifests as part of docs implementation unless the spec/plan/tasks explicitly justify the change.
+```
+
+### Implementation Progress
+
+| Phase | Tasks | Completed | Notes |
+|-------|-------|-----------|-------|
+| 1 - Source audit | | | |
+| 2 - Claude page | | | |
+| 3 - Terminology consistency | | | |
+| 4 - Cross-links and boundaries | | | |
+| 5 - Validation | | | |
+
+---
+
+## Post-Implementation Checklist
+
+- [ ] All tasks are marked complete in `tasks.md`.
+- [ ] `pnpm --dir docs-site validate` passes.
+- [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes if plugin manifests, hooks, agents, skills, payload references, or structural files changed.
+- [ ] Manual review confirms the Claude page contains no Codex procedure leakage.
+- [ ] Manual review confirms install-relevant docs use skills terminology consistently.
+- [ ] Manual review confirms DOC-008 troubleshooting/rollback depth was not absorbed into DOC-003.
+- [ ] PR created with a public-readable conventional title.
+
+---
+
+## Project Structure Reference
+
+```text
+racecraft-plugins-public/
+├── AGENTS.md
+├── README.md
+├── .claude-plugin/marketplace.json
+├── docs-site/
+│   ├── package.json
+│   └── src/content/docs/install/claude-code.md
+├── docs/ai/specs/interactive-documentation-technical-roadmap.md
+├── speckit-pro/
+│   ├── README.md
+│   ├── .claude-plugin/plugin.json
+│   ├── agents/
+│   ├── hooks/hooks.json
+│   └── skills/
+├── dist/claude/speckit-pro/
+└── specs/doc-003-claude-code-marketplace-installation-path/
+```
+
+---
+
+Template based on SpecKit best practices. Populated for DOC-003 from the
+technical roadmap and the setup Design Concept.
