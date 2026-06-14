@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
   "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
   "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T01:40:30Z",
-  "active_step": "Phase 4: Checklist - integration",
+  "updated_at": "2026-06-14T02:29:07Z",
+  "active_step": "Phase 5: Tasks",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -123,15 +123,49 @@
       "gate_status": "passed",
       "summary": "Created plan.md, research.md, data-model.md, quickstart.md, and contracts/stack-manager-decision.schema.json. Resolved gh stack v0.0.5 capability matrix from local CLI help and github/gh-stack project docs, selected read-only view --json proof, kept explicit gh fallback authoritative, and recorded PASS constitution/reviewability status."
     },
-    {"step": "Phase 4: Checklist - integration", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - integration Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
-    {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - reliability", "status": "pending"},
-    {"step": "Phase 4: Checklist - reliability Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - security", "status": "pending"},
-    {"step": "Phase 4: Checklist - security Consensus", "status": "pending"},
-    {"step": "Phase 5: Tasks", "status": "pending"},
+    {
+      "step": "Phase 4: Checklist - integration",
+      "status": "completed",
+      "summary": "Integration checklist covered 12 items and resolved 2 schema/prose gaps: gh_stack.supported/reason evidence parity and explicit-gh fallback schema strictness."
+    },
+    {
+      "step": "Phase 4: Checklist - integration Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "completed",
+      "summary": "Error-handling checklist covered 16 items and resolved 4 gaps around recoverable block requirements, side-effect classification, blocked schema constraints, and mutating failure fixtures."
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - reliability",
+      "status": "completed",
+      "summary": "Reliability checklist covered 16 items and resolved 2 gaps around deterministic repo-relative evidence paths and blocked-run resume preflight/superseding behavior."
+    },
+    {
+      "step": "Phase 4: Checklist - reliability Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - security",
+      "status": "completed",
+      "gate": "G4",
+      "gate_status": "passed",
+      "summary": "Security checklist covered 15 items and resolved 5 gaps around argv constraints, command-shape allowlisting, evidence path traversal controls, fake CLI boundaries, and injection-focused fixtures. G4 passed with 0 [Gap] markers across all checklist domains."
+    },
+    {
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {"step": "Phase 5: Tasks", "status": "in_progress"},
     {"step": "Phase 6: Analyze", "status": "pending"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},

@@ -19,6 +19,8 @@ Use a Layer 4 fake `gh` fixture where:
 Expected:
 
 - `detect-stack-manager.sh` selects `gh-stack`
+- `gh_stack.supported=true`
+- `gh_stack.reason` explains the passing support proof
 - `fallback_allowed=true` before mutation
 - command plan includes a mutating `gh stack link` or restack operation as the mutation boundary
 
@@ -36,6 +38,8 @@ Run matrix fixtures for:
 Expected:
 
 - selected manager is `explicit-gh`
+- `gh_stack.supported=false`
+- `gh_stack.reason` explains the failed support gate
 - fallback reason is specific
 - no mutating `gh stack` argv appears
 
@@ -60,16 +64,29 @@ Expected:
 - command log records fallback reason
 - output state references the stack-manager decision evidence
 
-### 5. Partial mutation block
+### 5. Failure classification and partial mutation block
 
-Use a fake `gh` fixture where the first mutating `gh stack link` or `gh stack sync` command returns ambiguous failure after possible side effects.
+Use fake `gh` fixtures for each failure class:
+
+- clean pre-mutation failure before a topology-changing `gh stack` argv is attempted
+- successful mutating command with expected topology evidence
+- failed mutating `gh stack link` with observed partial topology changes
+- failed mutating `gh stack sync` with ambiguous or unparseable post-failure evidence
+- failed mutating `gh stack rebase --upstack <branch>` with ambiguous or unparseable post-failure evidence
+- same-manager no-change reconciliation where topology, PR identity, base/head refs, head SHA, and packet identity prove the failed argv left no topology changes
 
 Expected:
 
+- clean pre-mutation failures select explicit `gh` fallback with `fallback_allowed=true` and no mutating `gh stack` argv
+- successful mutating commands record `side_effect_class=planned_mutation`
 - status is blocked
 - `fallback_allowed=false`
-- recoverable block state includes failed argv, stdout/stderr tails, pre-mutation topology, observed topology when available, prior successful PRs, and resume boundary
+- failed mutating commands with observed side effects record `side_effect_class=partial_mutation`
+- failed mutating commands with unproven side effects record `side_effect_class=partial_mutation_unknown`
+- recoverable block state includes failed action/argv/exit status, side-effect class, stdout/stderr tails, mutation boundary, pre-mutation topology, observed topology when available, prior successful PRs, resume boundary, retry policy, and evidence paths
+- decision, proof, command, recovery, and workflow evidence paths are repo-relative `.process` paths with stable operation identities, not absolute paths or timestamped temp files
 - no fallback `gh pr edit` or duplicate create command runs after the ambiguous mutation
+- same-manager reconciliation is the only automated path that may resume after a mutating `gh stack` failure, and only after proving no topology change occurred
 
 ### 6. Duplicate retry reconciliation
 
@@ -80,6 +97,7 @@ Expected:
 - existing PRs are reconciled
 - no duplicate PRs are created
 - stack linking uses reconciled PR numbers
+- mismatched PR identity, head SHA, packet hash, or base/head topology blocks before any create, sync, or manager switch
 
 ### 7. Supported restack
 
@@ -90,6 +108,7 @@ Expected:
 - restack dry run records `gh-stack` decision and command plan
 - apply mode runs `gh stack rebase --upstack <first-remaining-branch>` and the proven sync/push step
 - evidence records selected manager, command plan, topology, and recovery policy
+- any failed or ambiguous mutating rebase/sync step after the boundary emits blocked recovery evidence with `fallback_allowed=false` instead of switching to `restack.sh --apply`
 
 ### 8. Fallback restack
 
@@ -121,6 +140,42 @@ Expected:
 - Claude Code and Codex guidance both describe supported, fallback, and blocked stack-manager flows
 - both surfaces reference shared scripts/contracts
 - no Codex duplicate implementation is introduced
+
+### 11. Blocked stack-manager resume
+
+Use a fake `gh` fixture with an existing blocked recovery record, prior command evidence, a prior blocked workflow event, and current topology variants for:
+
+- same-manager no-change reconciliation
+- observed topology drift after the failed command
+- stale packet identity
+- missing recovery evidence path
+
+Expected:
+
+- resume first reloads the prior decision and recovery evidence from repo-relative `.process` paths
+- resume revalidates current topology, PR identity, base/head refs, head SHA, and packet identity before any create, sync, restack, or manager switch
+- same-manager no-change reconciliation may resume only when every preflight check matches the safe boundary
+- topology drift, stale packet identity, or missing recovery evidence remains blocked with `fallback_allowed=false`
+- the blocked workflow event is superseded by the same deterministic event id rather than duplicated
+- no explicit-`gh` fallback or duplicate PR creation occurs after a blocked `gh-stack` mutation
+
+### 12. Security injection guards
+
+Use Layer 4 fake-CLI fixtures with:
+
+- branch/base refs containing shell metacharacters, newlines, control characters, or option-looking operands such as `--help`
+- PR body paths containing absolute paths, parent traversal, or non-Markdown targets
+- stack-manager evidence paths containing parent traversal, absolute host paths, random temp segments, or rendered command strings
+- display command text containing shell metacharacters that differs from the stored argv array
+- fake CLI override attempts that point outside the test sandbox/fixture tree or provide a shell command string instead of a test-local executable/PATH shim
+
+Expected:
+
+- invalid branch/base refs, body paths, evidence paths, and fake CLI controls block before command capture or mutation
+- no `commands.candidate.json`, stack-manager decision, or command execution evidence is persisted for rejected inputs except bounded validation error evidence
+- persisted accepted command plans record canonical `["gh", "stack", ...]`, `["gh", "pr", ...]`, `["git", ...]`, or repo-local validator argv shapes
+- display command text is never parsed back into argv or executed
+- no test fixture requires real `gh`, real `gh stack`, network PR creation, or a shell string executor
 
 ## Final Verification Bundle
 

@@ -54,6 +54,7 @@
     },
     "command_plan": {
       "type": "array",
+      "minItems": 1,
       "items": {
         "$ref": "#/$defs/command_plan_item"
       }
@@ -64,35 +65,95 @@
     "recovery": {
       "type": ["object", "null"],
       "additionalProperties": false,
-      "required": ["status", "fallback_allowed", "retry_policy"],
+      "required": [
+        "status",
+        "reason",
+        "fallback_allowed",
+        "selected_manager",
+        "failed_operation",
+        "mutation_boundary",
+        "pre_mutation_topology",
+        "observed_post_failure_topology",
+        "prior_successful_prs",
+        "next_resume_boundary",
+        "retry_policy",
+        "blocked_event_id",
+        "resume_preflight",
+        "stale_result_policy",
+        "evidence_paths"
+      ],
       "properties": {
         "status": {
           "const": "blocked"
         },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
         "fallback_allowed": {
           "const": false
         },
+        "selected_manager": {
+          "const": "gh-stack"
+        },
         "failed_operation": {
-          "type": ["object", "null"]
+          "$ref": "#/$defs/command_execution_evidence"
+        },
+        "mutation_boundary": {
+          "$ref": "#/$defs/mutation_boundary"
+        },
+        "pre_mutation_topology": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/topology_record"
+          }
+        },
+        "observed_post_failure_topology": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/topology_record"
+          }
+        },
+        "prior_successful_prs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/topology_record"
+          }
         },
         "retry_policy": {
           "type": "string",
           "minLength": 1
         },
         "next_resume_boundary": {
-          "type": ["string", "null"]
+          "type": "string",
+          "minLength": 1
         },
-        "evidence_paths": {
+        "blocked_event_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resume_preflight": {
           "type": "array",
+          "minItems": 1,
           "items": {
             "type": "string",
             "minLength": 1
+          }
+        },
+        "stale_result_policy": {
+          "enum": ["supersede_blocked_event", "remain_blocked"]
+        },
+        "evidence_paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/evidence_path"
           }
         }
       }
     },
     "evidence_path": {
-      "type": ["string", "null"]
+      "$ref": "#/$defs/nullable_evidence_path"
     }
   },
   "allOf": [
@@ -113,6 +174,7 @@
           "gh_stack": {
             "properties": {
               "available": { "const": true },
+              "supported": { "const": true },
               "version_supported": { "const": true },
               "repo_enabled": { "const": true },
               "support_status": { "const": "supported" }
@@ -144,8 +206,17 @@
       "then": {
         "required": ["fallback_reason"],
         "properties": {
+          "fallback_reason": {
+            "type": "string",
+            "minLength": 1
+          },
           "fallback_allowed": {
             "const": true
+          },
+          "gh_stack": {
+            "properties": {
+              "supported": { "const": false }
+            }
           },
           "mutation_boundary": {
             "properties": {
@@ -169,6 +240,41 @@
         "properties": {
           "fallback_allowed": {
             "const": false
+          },
+          "mutation_boundary": {
+            "properties": {
+              "status": {
+                "enum": ["partial_mutation", "partial_mutation_unknown"]
+              },
+              "fallback_after_boundary_allowed": {
+                "const": false
+              }
+            }
+          },
+          "recovery": {
+            "type": "object",
+            "properties": {
+              "failed_operation": {
+                "properties": {
+                  "manager": { "const": "gh-stack" },
+                  "mutates": { "const": true },
+                  "mutation_boundary": { "const": true },
+                  "side_effect_class": {
+                    "enum": ["partial_mutation", "partial_mutation_unknown"]
+                  }
+                }
+              },
+              "mutation_boundary": {
+                "properties": {
+                  "status": {
+                    "enum": ["partial_mutation", "partial_mutation_unknown"]
+                  },
+                  "fallback_after_boundary_allowed": {
+                    "const": false
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -196,6 +302,8 @@
       "additionalProperties": false,
       "required": [
         "available",
+        "supported",
+        "reason",
         "version",
         "version_supported",
         "repo_enabled",
@@ -205,6 +313,13 @@
       "properties": {
         "available": {
           "type": "boolean"
+        },
+        "supported": {
+          "type": "boolean"
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
         },
         "extension_owner": {
           "type": ["string", "null"]
@@ -269,7 +384,7 @@
           "type": "string"
         },
         "evidence_path": {
-          "type": ["string", "null"]
+          "$ref": "#/$defs/nullable_evidence_path"
         }
       }
     },
@@ -290,15 +405,13 @@
         "expected_order": {
           "type": "array",
           "items": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/$defs/safe_string"
           }
         },
         "observed_order": {
           "type": "array",
           "items": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/$defs/safe_string"
           }
         }
       }
@@ -318,8 +431,7 @@
       ],
       "properties": {
         "id": {
-          "type": "string",
-          "minLength": 1
+          "$ref": "#/$defs/safe_string"
         },
         "action": {
           "enum": [
@@ -346,7 +458,10 @@
           "type": "boolean"
         },
         "slice_id": {
-          "type": ["string", "null"]
+          "anyOf": [
+            { "$ref": "#/$defs/safe_string" },
+            { "type": "null" }
+          ]
         },
         "review_order": {
           "type": ["integer", "null"],
@@ -355,13 +470,80 @@
         "preconditions": {
           "type": "array",
           "items": {
-            "type": "string",
-            "minLength": 1
+            "$ref": "#/$defs/safe_string"
           }
         },
         "reason": {
-          "type": "string",
-          "minLength": 1
+          "$ref": "#/$defs/safe_string"
+        }
+      }
+    },
+    "command_execution_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command_id",
+        "action",
+        "manager",
+        "argv",
+        "mutates",
+        "mutation_boundary",
+        "started_at",
+        "finished_at",
+        "exit_status",
+        "stdout_tail",
+        "stderr_tail",
+        "side_effect_class",
+        "evidence_path"
+      ],
+      "properties": {
+        "command_id": {
+          "$ref": "#/$defs/safe_string"
+        },
+        "action": {
+          "enum": [
+            "detect",
+            "create_pr",
+            "edit_pr",
+            "link_stack",
+            "sync_stack",
+            "rebase_upstack",
+            "retarget_base",
+            "block"
+          ]
+        },
+        "manager": {
+          "enum": ["gh-stack", "explicit-gh"]
+        },
+        "argv": {
+          "$ref": "#/$defs/argv"
+        },
+        "mutates": {
+          "type": "boolean"
+        },
+        "mutation_boundary": {
+          "type": "boolean"
+        },
+        "started_at": {
+          "type": "string"
+        },
+        "finished_at": {
+          "type": ["string", "null"]
+        },
+        "exit_status": {
+          "type": ["integer", "null"]
+        },
+        "stdout_tail": {
+          "type": "string"
+        },
+        "stderr_tail": {
+          "type": "string"
+        },
+        "side_effect_class": {
+          "enum": ["none", "planned_mutation", "partial_mutation", "partial_mutation_unknown"]
+        },
+        "evidence_path": {
+          "$ref": "#/$defs/evidence_path"
         }
       }
     },
@@ -397,12 +579,10 @@
           "minLength": 1
         },
         "branch": {
-          "type": "string",
-          "minLength": 1
+          "$ref": "#/$defs/branch_ref"
         },
         "base_branch": {
-          "type": "string",
-          "minLength": 1
+          "$ref": "#/$defs/branch_ref"
         },
         "pr_number": {
           "type": ["integer", "null"],
@@ -415,17 +595,45 @@
           "type": ["string", "null"]
         },
         "status": {
-          "type": "string",
-          "minLength": 1
+          "$ref": "#/$defs/safe_string"
         }
       }
+    },
+    "safe_string": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^[^\\x00-\\x1F\\x7F]+$"
+    },
+    "branch_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "pattern": "^(?!-)(?!.*(^|/)\\.\\.(?:/|$))(?!.*//)[A-Za-z0-9._/-]+$"
     },
     "argv": {
       "type": "array",
       "minItems": 1,
+      "maxItems": 64,
       "items": {
-        "type": "string"
+        "$ref": "#/$defs/safe_string"
       }
+    },
+    "evidence_path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^(?!.*(^|/)\\.\\.(?:/|$))(specs/[^/]+/\\.process/|docs/ai/specs/\\.process/)[A-Za-z0-9._/-]+$"
+    },
+    "nullable_evidence_path": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/evidence_path"
+        },
+        {
+          "type": "null"
+        }
+      ]
     }
   }
 }

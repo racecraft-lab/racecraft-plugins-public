@@ -48,7 +48,7 @@ concept doc is the source of truth for any decision captured during scoping.
 | Specify | `/speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Four focused sessions complete; G2 passed |
 | Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, quickstart.md, and stack-manager decision contract; G3 passed |
-| Checklist | `/speckit-checklist` | Pending | Run for each recommended domain |
+| Checklist | `/speckit-checklist` | Complete | 4 domains; 13 gaps found / 13 fixed; G4 marker count clean |
 | Tasks | `/speckit-tasks` | Pending | Generate after plan and checklist gaps are resolved |
 | Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Execute only after G6 approval |
@@ -194,7 +194,7 @@ creation, sync, and restack burden.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 23 after clarify |
+| Functional Requirements | 28 after security checklist remediation |
 | User Stories | 4 |
 | Acceptance Criteria | 11 |
 
@@ -391,10 +391,16 @@ Focus on PRSG-014 requirements:
 
 | Domain | Items | Gaps | Status |
 |--------|-------|------|--------|
-| integration | Pending | Pending | Pending |
-| error-handling | Pending | Pending | Pending |
-| reliability | Pending | Pending | Pending |
-| security | Pending | Pending | Pending |
+| integration | 12 | 2 found / 2 fixed | Complete |
+| error-handling | 16 | 4 found / 4 fixed | Complete |
+| reliability | 16 | 2 found / 2 fixed | Complete |
+| security | 15 | 5 found / 5 fixed | Complete |
+
+### Checklist Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| G4 | Passed | `validate-gate.sh G4 specs/prsg-014-optional-gh-stack-stack-manager-integration` returned `pass=true`, `markers=0`; four checklist domains covered 59 items and resolved 13 gaps with no unresolved consensus items. |
 
 ---
 

@@ -16,7 +16,7 @@ The supported path creates or reconciles PRs through the existing PRSG-012 packe
 
 **Primary Dependencies**: `bash`, `jq`, `git`, `gh`; optional `gh stack` GitHub CLI extension via `github/gh-stack`
 
-**Storage**: JSON evidence under feature `.process/` directories, `.process/prs.json`, `autopilot-state.json`, command logs, PR packet artifacts, and local `gh-stack` metadata outside the repo when the extension is used
+**Storage**: JSON evidence under feature `.process/` directories, including `specs/<feature>/.process/stack-manager/` decision/proof/command/recovery records, `.process/prs.json`, `autopilot-state.json`, command logs, PR packet artifacts, and local `gh-stack` metadata outside the repo when the extension is used
 
 **Testing**: Shell Layer 4 fixtures with fake `gh` dispatching canonical `gh stack`; Layer 7 replay for orchestration shape; Layer 8 parity fixtures for Claude Code and Codex operator guidance
 
@@ -26,7 +26,7 @@ The supported path creates or reconciles PRs through the existing PRSG-012 packe
 
 **Performance Goals**: Detection completes with bounded local/read-only probes before mutation; no network or mutating command is used during support detection except documented read-only `gh stack view --json` proof when repository support exists
 
-**Constraints**: `gh-stack` is optional; fallback is allowed before mutation only; no manager mixing after attempted topology-changing `gh stack`; command plans execute argv arrays only; stdout/stderr evidence is bounded to 120 lines and 16 KiB per stream; `jq` handles JSON state; PRSG-012 packets and PRSG-013 marker order/base topology remain authoritative
+**Constraints**: `gh-stack` is optional; fallback is allowed before mutation only; no manager mixing after attempted topology-changing `gh stack`; command plans execute argv arrays only; argv elements are non-empty, control-character-free, and bounded to 1024 characters; stack-manager evidence paths are deterministic repo-relative `.process` paths; stdout/stderr evidence is bounded to 120 lines and 16 KiB per stream; `jq` handles JSON state; PRSG-012 packets and PRSG-013 marker order/base topology remain authoritative
 
 **Scale/Scope**: One shared stack-manager decision used by emission and restack, covering create/link/sync/restack safety and evidence only
 
@@ -127,16 +127,16 @@ Resolved decisions:
 
 Design outputs:
 
-- `data-model.md` defines Stack Manager Decision, Command Plan, Topology Evidence, Command Execution Evidence, and Recoverable Block State.
+- `data-model.md` defines Stack Manager Decision, Command Plan, Stack-Manager Evidence Path, Topology Evidence, Command Execution Evidence, and Recoverable Block State.
 - `contracts/stack-manager-decision.schema.json` defines the shared decision record that emission and restack reference.
 - `quickstart.md` defines deterministic validation scenarios for supported, fallback, blocked, duplicate-retry, supported-restack, fallback-restack, Layer 7 replay, and Layer 8 guidance parity.
 
 Implementation design:
 
 1. Add `detect-stack-manager.sh` as the single pre-mutation detector.
-   - Inputs: mode (`emission` or `restack`), operation (`link`, `sync`, `restack`), PRS/marker topology paths, optional command plan output, remote, base, start branch, and fake-command override for Layer 4.
+   - Inputs: mode (`emission` or `restack`), operation (`link`, `sync`, `restack`), PRS/marker topology paths, optional command plan output, remote, base, start branch, and Layer 4 fake-command controls. Fake-command controls are test-only PATH shims or sandbox/fixture executable paths; persisted command plans still record canonical `gh stack`, explicit `gh pr`, `git`, or repo-local validator argv.
    - Output: JSON matching `stack-manager-decision.schema.json`.
-   - It records selected manager, fallback reason, availability, version, repository compatibility, topology compatibility, read-only proof, command plan, mutation boundary, and fallback policy.
+   - It records selected manager, fallback reason, `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`, version/support status, repository compatibility, topology compatibility, read-only proof, command plan, mutation boundary, fallback policy, and deterministic repo-relative evidence path.
 
 2. Extend `multi-pr-emission.sh`.
    - Dry run emits candidate command plans and stack-manager decision evidence.
@@ -144,12 +144,38 @@ Implementation design:
    - Explicit `gh pr create/edit --base --head --body-file` remains authoritative for PR title/body and base/head metadata.
    - If selected, `gh stack link --base <base> <pr-number>...` runs after explicit PR reconciliation. The first `gh stack link` argv is the no-fallback mutation boundary.
    - Retry reconciles expected slice ID, head branch, base branch, PR number/URL, head SHA, and packet hash before creating or linking.
+   - Blocked resume reloads prior stack-manager recovery evidence, supersedes the prior workflow event by deterministic event id, and either resumes through same-manager no-change reconciliation or remains blocked without explicit-`gh` fallback.
 
 3. Extend `restack.sh`.
    - Dry run plans existing explicit `gh pr edit --base` operations and stack-manager decision evidence.
    - Apply mode invokes `gh stack rebase --upstack <first-remaining-branch>` plus the proven sync/push step only when `detect-stack-manager.sh` selects `gh-stack`.
    - If detection does not pass before mutation, keep the existing fallback retarget path.
    - After any partial or unknown `gh stack` mutation, output blocked recoverable state with `fallback_allowed=false`.
+   - Resume after a blocked restack must revalidate current stack topology, PR identity, base/head refs, head SHA, and packet identity before any same-manager reconciliation or resumed restack command.
+
+Error classification rules:
+
+- Read-only detection, planning, packet-validation, and topology-proof failures happen before the no-fallback boundary and may select explicit `gh` fallback.
+- A mutating `gh stack` command that succeeds and matches expected topology records `side_effect_class=planned_mutation`.
+- A mutating `gh stack` command that fails with observed branch, PR, base, or metadata side effects records `side_effect_class=partial_mutation` and blocks.
+- A mutating `gh stack` command that times out, crashes, returns ambiguous output, or cannot prove no side effects records `side_effect_class=partial_mutation_unknown` and blocks.
+- Same-manager no-change reconciliation is the only automated path out of a blocked state, and it must prove current topology, PR identity, base/head refs, head SHA, and packet identity match the safe resume boundary.
+
+Security validation rules:
+
+- Command execution accepts only allowlisted argv shapes: `gh stack view --json`, `gh stack link --base <base> <pr-number|branch>...`, `gh stack sync --remote <remote>`, `gh stack rebase --upstack <branch>`, explicit `gh pr create/edit` packet-owned forms, scoped `git` forms required by emission/restack, and repo-local validator scripts.
+- Joined command strings, display strings, and shell-rendered command text are evidence only. They must never be parsed back into argv or executed through `eval`, `bash -c`, `sh -c`, or a shell command string.
+- Branch/base refs must pass `git check-ref-format --branch` and stack-manager branch operands must not be option-looking values unless a proven command shape provides an operand delimiter or PR-number operands are used.
+- PR body paths must satisfy the PRSG-012 repo-relative body-file contract before capture; evidence paths must satisfy the PRSG-014 repo-relative `.process` path contract before persistence.
+- Layer 4 security fixtures must cover malicious branch/base refs, absolute or parent-traversal PR body paths, evidence path traversal, fake CLI override abuse, and display command strings with shell metacharacters.
+
+Reliability evidence and resume rules:
+
+- Stack-manager machine evidence is persisted under `specs/<feature>/.process/stack-manager/`; reader-facing blocked workflow events are written under `docs/ai/specs/.process/<workflow-id>-workflow.md`.
+- Evidence paths are repo-relative and derived from stable operation identity: phase, operation, slice id or review order when present, and first mutating command id when present. They must not include timestamps, random temporary names, or absolute host paths.
+- The decision record, read-only proof, command execution evidence, and recovery evidence each carry explicit evidence paths so `.process/prs.json`, `autopilot-state.json`, restack output, and workflow evidence can reopen the same records on resume.
+- A blocked workflow event id is derived from the stack-manager decision evidence path, selected manager, mutation boundary command id, and next resume boundary. Retried blocked runs supersede the prior event for that id instead of appending ambiguous duplicates.
+- Resume after a blocked stack-manager operation first reloads the persisted decision and recovery evidence, revalidates current topology/PRS/packet identity, and only then either resumes the same manager after no-change reconciliation or remains blocked with updated recovery evidence.
 
 4. Extend schemas compatibly.
    - Add shared `stack-manager-decision.schema.json`.
