@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
   "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
   "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T03:08:12Z",
-  "active_step": "Phase 7: Implement - Setup/Foundation (T001-T012)",
+  "updated_at": "2026-06-14T03:41:57Z",
+  "active_step": "Post: Doctor Extension Check",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -211,27 +211,33 @@
     },
     {
       "step": "Phase 7: Implement - Setup/Foundation (T001-T012)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
     },
     {
       "step": "Phase 7: Implement - US1 Detection (T013-T026)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
     },
     {
       "step": "Phase 7: Implement - US2 Emission (T027-T041)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
     },
     {
       "step": "Phase 7: Implement - US3 Restack (T042-T056)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
     },
     {
       "step": "Phase 7: Implement - US4 Guidance/Replay/Parity (T057-T065)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
     },
     {
       "step": "Phase 7: Implement - Polish/Verification (T066-T071)",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -354,13 +360,13 @@
     "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/atomicity/route.json"
   },
   "pr_marker_plan": {
-    "status": "planned",
+    "status": "emission_ready",
     "schema_version": "pr-marker-plan.v1",
     "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/pr-marker-plan.json",
     "source_fingerprint": {
       "feature_spec_sha": "5c9359619422b69e5cbd70f3c3685b9fbc601692fff4f8f1847005c0029f9dbc",
       "plan_declared_scope_sha": "574e4f821423a2a3104d61ef95cfc71cb639ed38541209ad827b79763aa2bf72",
-      "tasks_sha": "7f2dc7178e23c451822fa1dc2a6890161d9f2976e179a941c4310f5432287c1a",
+      "tasks_sha": "adf68363687ec2a82747fc6c8ab3a22e18ffda38d776e33aec5e3b368afa5e53",
       "reviewability_sha": "6ad5b3da8f1ad4d31a9784e42ecd8f3c38a8a4806297fc07c896e39f45938765",
       "hazard_route_sha": "feaf8803f3d53fbc661e5b4bf2d7f16c5a106ef585827531a363edc5c0aab52a"
     },
@@ -392,7 +398,10 @@
         ],
         "folded_polish_task_ids": [],
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
         },
         "emission_mapping": {
           "status": "pending"
@@ -420,7 +429,10 @@
         ],
         "folded_polish_task_ids": [],
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
         },
         "emission_mapping": {
           "status": "pending"
@@ -449,7 +461,10 @@
         ],
         "folded_polish_task_ids": [],
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
         },
         "emission_mapping": {
           "status": "pending"
@@ -478,7 +493,10 @@
         ],
         "folded_polish_task_ids": [],
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
         },
         "emission_mapping": {
           "status": "pending"
@@ -508,7 +526,10 @@
           "T071"
         ],
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
         },
         "emission_mapping": {
           "status": "pending"
@@ -536,6 +557,32 @@
     },
     "pr_mappings": {
       "status": "pending"
+    }
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "5c9359619422b69e5cbd70f3c3685b9fbc601692fff4f8f1847005c0029f9dbc",
+    "plan_declared_scope_sha": "574e4f821423a2a3104d61ef95cfc71cb639ed38541209ad827b79763aa2bf72",
+    "tasks_sha": "adf68363687ec2a82747fc6c8ab3a22e18ffda38d776e33aec5e3b368afa5e53",
+    "reviewability_sha": "6ad5b3da8f1ad4d31a9784e42ecd8f3c38a8a4806297fc07c896e39f45938765",
+    "hazard_route_sha": "feaf8803f3d53fbc661e5b4bf2d7f16c5a106ef585827531a363edc5c0aab52a"
+  },
+  "implementation": {
+    "status": "completed",
+    "gate": "G7",
+    "gate_status": "passed",
+    "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+    "completed_tasks": 71,
+    "verification": {
+      "focused_layer4": [
+        "test-detect-stack-manager: 18/18 passed",
+        "test-multi-pr-emission: 159/159 passed",
+        "test-restack: 33/33 passed"
+      ],
+      "layer1": "979/979 passed",
+      "layer4": "1768/1768 passed",
+      "layer7": "run-all fixtures passed",
+      "layer8": "12/12 passed",
+      "default_suite": "2937/2937 passed"
     }
   }
 }

@@ -51,7 +51,7 @@ concept doc is the source of truth for any decision captured during scoping.
 | Checklist | `/speckit-checklist` | Complete | 4 domains; 13 gaps found / 13 fixed; G4 marker count clean |
 | Tasks | `/speckit-tasks` | Complete | Generated 71 test-first tasks; G5 passed with 0 markers |
 | Analyze | `/speckit-analyze` | Complete | 4 findings (0C/1H/3M/0L) remediated; marker counter clean; G6 passed |
-| Implement | `/speckit-implement` | Pending | Execute only after G6 approval |
+| Implement | `/speckit-implement` | Complete | Implemented optional stack-manager detection, emission/restack evidence threading, guidance parity, and verification; G7 passed |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -119,12 +119,12 @@ at `.specify/memory/constitution.md`:
 
 ### Success Criteria Summary
 
-- [ ] Autopilot detects whether `gh-stack` is available through `gh stack`, supported, compatible with the repo, compatible with the branch topology, and safe by read-only proof before mutation.
-- [ ] Emission/restack evidence persists `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`, selected stack manager, command plan, version/support outcome, fallback reason, and PR/branch topology.
-- [ ] When support detection passes, stack-aware create/sync/restack behavior preserves PRSG-013 marker order, branch names, explicit base topology, and PRSG-012 title/body validation.
-- [ ] Unsupported, missing, or ambiguous `gh-stack` environments fall back to explicit `gh pr create/edit --base --head --body-file` before mutation.
-- [ ] After any partial `gh-stack` mutation, failures block with recoverable state instead of mixing stack managers.
-- [ ] Layer 4 fake-CLI fixtures, Layer 7 live-safe replay, and Layer 8 operator guidance parity expectations cover supported, fallback, and blocked paths.
+- [x] Autopilot detects whether `gh-stack` is available through `gh stack`, supported, compatible with the repo, compatible with the branch topology, and safe by read-only proof before mutation.
+- [x] Emission/restack evidence persists `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`, selected stack manager, command plan, version/support outcome, fallback reason, and PR/branch topology.
+- [x] When support detection passes, stack-aware create/sync/restack behavior preserves PRSG-013 marker order, branch names, explicit base topology, and PRSG-012 title/body validation.
+- [x] Unsupported, missing, or ambiguous `gh-stack` environments fall back to explicit `gh pr create/edit --base --head --body-file` before mutation.
+- [x] After any partial `gh-stack` mutation, failures block with recoverable state instead of mixing stack managers.
+- [x] Layer 4 fake-CLI fixtures, Layer 7 live-safe replay, and Layer 8 operator guidance parity expectations cover supported, fallback, and blocked paths.
 
 ---
 
@@ -567,9 +567,27 @@ smallest broader suite that covers changed surfaces. Finish with
 
 | Metric | Value |
 |--------|-------|
-| Tasks Completed | Pending |
-| Tests Added/Updated | Pending |
-| Verification | Pending |
+| Tasks Completed | 71 / 71 |
+| Tests Added/Updated | Layer 4 detector/emission/restack tests and fixtures; Layer 7 replay fixture; Layer 8 guidance parity fixture |
+| Implementation Commit | `03da8f3c8587d911e6adbbb8361966c80b8cc717` |
+| Verification | `test-detect-stack-manager: 18/18`, `test-multi-pr-emission: 159/159`, `test-restack: 33/33`, Layer 1 `979/979`, Layer 4 `1768/1768`, Layer 7 all fixtures passed, Layer 8 `12/12`, default suite `2937/2937` |
+
+### Implementation Evidence
+
+| Area | Evidence |
+|------|----------|
+| Shared detector | `speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh` |
+| Shared schema | `speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json` |
+| Emission integration | `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh` persists `stack_manager_decision`, `stack_manager_evidence_path`, command-plan, topology, and PRS evidence references |
+| Restack integration | `speckit-pro/skills/speckit-autopilot/scripts/restack.sh` emits stack-manager decision/evidence in apply output and keeps dry-run pure |
+| Guidance parity | `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`, and `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md` |
+| Marker checkpoints | `specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/pr-marker-plan.json` now records complete checkpoints for `foundation`, `us1`, `us2`, `us3`, and `us4` at implementation commit `03da8f3` |
+
+### Implement Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| G7 | Passed | `bash tests/speckit-pro/run-all.sh` passed `2937/2937` after the final detector classification fix; focused Layer 4, Layer 7, and Layer 8 validation also passed. |
 
 ---
 
