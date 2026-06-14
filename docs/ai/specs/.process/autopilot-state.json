@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-14T23:12:24Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-06-14T23:38:49Z",
+  "active_step": "Phase 4: Checklist - UX",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -171,6 +171,38 @@
       }
     }
   },
+  "phase3": {
+    "status": "completed",
+    "gate": "G3",
+    "gate_status": "passed",
+    "reviewability_estimate": {
+      "status": "pass",
+      "projected": 0,
+      "declared_files": {
+        "production": 0,
+        "new": 0,
+        "modified": 3,
+        "total_entries": 3
+      }
+    },
+    "artifacts": [
+      "specs/doc-004-codex-marketplace-installation-path/plan.md",
+      "specs/doc-004-codex-marketplace-installation-path/research.md",
+      "specs/doc-004-codex-marketplace-installation-path/data-model.md",
+      "specs/doc-004-codex-marketplace-installation-path/contracts/codex-install-content-contract.md",
+      "specs/doc-004-codex-marketplace-installation-path/quickstart.md"
+    ],
+    "declared_file_operations": [
+      "MODIFIED README.md",
+      "MODIFIED speckit-pro/README.md",
+      "MODIFIED docs-site/src/content/docs/install/codex.md"
+    ],
+    "validation_reported_by_executor": [
+      "cd docs-site && pnpm validate",
+      "cd docs-site && pnpm validate:links",
+      "bash tests/speckit-pro/run-all.sh: 2947/2947 passed"
+    ]
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -181,8 +213,8 @@
     {"step": "Phase 2: Clarify - Session 2: Custom-agent registration and verification Consensus", "status": "completed"},
     {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation", "status": "completed"},
     {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - UX", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "completed"},
+    {"step": "Phase 4: Checklist - UX", "status": "in_progress"},
     {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
     {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},

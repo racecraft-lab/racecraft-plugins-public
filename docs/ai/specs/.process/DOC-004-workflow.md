@@ -41,7 +41,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 4 user stories, 17 FRs, 10 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | 15 questions resolved across official path semantics, custom-agent registration, and scope/validation; 6 consensus items logged; G2 passed |
-| Plan | `/speckit-plan` | In Progress | Plan docs-site plus README/plugin README updates without changing manifests, payloads, installer behavior, or agent templates |
+| Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, content contract, and quickstart without changing manifests, payloads, installer behavior, or agent templates |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: UX, accessibility, security, and error-handling |
 | Tasks | `/speckit-tasks` | Pending | Produce vertical docs tasks ordered by source refresh, source evidence, docs implementation, and validation |
 | Analyze | `/speckit-analyze` | Pending | Check cross-artifact consistency, platform leakage, source freshness, and validation coverage |
@@ -85,7 +85,7 @@ Before starting any workflow phase, verify alignment with `.specify/memory/const
 
 | Check | Result | Notes |
 |-------|--------|-------|
-| `specify` CLI | Passed | Available at `/Users/fredrickgabelmann/.local/bin/specify` |
+| `specify` CLI | Passed | Available on `PATH` as `specify` |
 | Technical roadmap | Found | `docs/ai/specs/interactive-documentation-technical-roadmap.md` |
 | DOC-004 status | Ready | Roadmap lists DOC-004 as pending/ready; DOC-002 completed and archived |
 | Open PR duplicate check | Passed | `gh pr list --state open --search "DOC-004"` returned no open PRs |
@@ -299,11 +299,11 @@ Codex users need a precise, source-backed install path for Racecraft Public Plug
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Must record official-source refresh, file operations, docs-only scope, and validation commands |
-| `research.md` | Pending | Use for official Codex docs refresh and path/cache terminology decisions |
-| `data-model.md` | Pending | Use if helpful for install path matrix, command snippets, and checklist objects |
-| `contracts/` | Pending | Use only if tasks need a command-snippet or install-path contract fixture |
-| `quickstart.md` | Pending | Use for manual docs verification and install-flow review |
+| `plan.md` | Complete | Records official-source refresh, file operations, docs-only scope, reviewability budget, and validation commands |
+| `research.md` | Complete | Captures official Codex docs refresh, CLI help evidence, path/cache terminology, and installer-copied TOML decision |
+| `data-model.md` | Complete | Models documentation entry points, install paths, Codex surfaces, checklist objects, safety notice, and snippets |
+| `contracts/` | Complete | Adds `contracts/codex-install-content-contract.md` for route sections, README invariants, snippet review, and verification list |
+| `quickstart.md` | Complete | Defines manual docs verification, command-snippet review, and automated validation guide |
 
 ---
 
