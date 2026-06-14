@@ -34,10 +34,27 @@ else
   _fail "expected release workflow to dispatch PR Checks for release-please PR branches"
 fi
 
+set_test "release workflow uses release-please PR output for payload sync"
+if grep -Fq 'RELEASE_PRS: ${{ steps.release.outputs.prs }}' "$WORKFLOW_FILE" \
+  && grep -Fq 'release_prs="${RELEASE_PRS:-[]}"' "$WORKFLOW_FILE" \
+  && grep -Fq 'headBranchName // .headRefName // empty' "$WORKFLOW_FILE" \
+  && grep -Fq 'prs_created=true but returned no PR metadata' "$WORKFLOW_FILE"; then
+  _pass
+else
+  _fail "expected release workflow to use release-please prs output instead of querying just-created PR labels"
+fi
+
+set_test "release workflow does not depend on pending release labels for payload sync"
+if grep -Fq -- '--label "autorelease: pending"' "$WORKFLOW_FILE"; then
+  _fail "release PR payload sync must not depend on a just-created label query"
+else
+  _pass
+fi
+
 set_test "release workflow syncs release PR payloads before release merge"
 if [[ "$CONTENT" == *"Sync release PR payloads"* \
   && "$CONTENT" == *"steps.release.outputs.prs_created == 'true'"* \
-  && "$CONTENT" == *'--label "autorelease: pending"'* \
+  && "$CONTENT" == *'RELEASE_PRS: ${{ steps.release.outputs.prs }}'* \
   && "$CONTENT" == *"bash scripts/build-plugin-payloads.sh"* \
   && "$CONTENT" == *'git push origin "HEAD:${branch}"'* ]]; then
   _pass
