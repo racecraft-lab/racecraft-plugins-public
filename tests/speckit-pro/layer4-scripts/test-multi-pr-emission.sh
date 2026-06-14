@@ -1188,6 +1188,21 @@ json_check "$persist_prs_json" \
   "data['schemaVersion'] == 2 and [r['slice_id'] for r in data['records']] == ['foundation', 'us1', 'us2'] and [r['pr_number'] for r in data['records']] == [301, 302, 303]" \
   "PRS manifest should record opened PRs in slice order"
 
+set_test "successful emission persists stack-manager decision evidence"
+json_check "$persist_state_json" \
+  "data['multi_pr_emission']['stack_manager_decision']['schema_version'] == 'stack-manager-decision.v1' and data['multi_pr_emission']['stack_manager_evidence_path'].endswith('/.process/stack-manager/emission/link/preflight/decision.json')" \
+  "state should reference stack-manager decision evidence"
+
+set_test "successful emission command log carries stack-manager decision"
+json_check "$persist_commands_json" \
+  "data['stack_manager_decision']['schema_version'] == 'stack-manager-decision.v1' and data['stack_manager_evidence_path'].endswith('/.process/stack-manager/emission/link/preflight/decision.json')" \
+  "command log should carry stack-manager decision evidence"
+
+set_test "successful emission PRS rows reference stack-manager evidence"
+json_check "$persist_prs_json" \
+  "all(r['stack_manager_evidence_path'].endswith('/.process/stack-manager/emission/link/preflight/decision.json') for r in data['records'])" \
+  "PRS rows should reference stack-manager evidence"
+
 set_test "successful emission regenerates SPEC-MOC PRS table"
 assert_contains "$persist_moc_body" "| 1 | foundation | PR#301 | opened | prsg-009-multi-pr-emission/01-foundation | main | sha-foundation |"
 

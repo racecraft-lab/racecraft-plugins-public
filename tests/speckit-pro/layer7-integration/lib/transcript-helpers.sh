@@ -235,3 +235,17 @@ assert_skill_invoked() {
   n=$(count_skill_invocations "$transcript" "$skill_pattern" "$scope")
   [ "$n" -gt 0 ]
 }
+
+# assert_transcript_contains_term <transcript.jsonl> <literal>
+#   exit 0 if the transcript contains the exact literal term.
+assert_transcript_contains_term() {
+  local transcript="$1" term="$2"
+  grep -F -q -- "$term" "$transcript"
+}
+
+# assert_transcript_not_contains_term <transcript.jsonl> <literal>
+#   exit 0 if the transcript does not contain the exact literal term.
+assert_transcript_not_contains_term() {
+  local transcript="$1" term="$2"
+  ! grep -F -q -- "$term" "$transcript"
+}

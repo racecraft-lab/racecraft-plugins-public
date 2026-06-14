@@ -1,0 +1,17 @@
+{
+  "scenario_id": "emission-supported",
+  "phase": "emission",
+  "operation": "link",
+  "selected_manager": "gh-stack",
+  "preconditions": [
+    "supported_version",
+    "read_only_proof_matched",
+    "packets_validated",
+    "topology_validated"
+  ],
+  "expected_command": [
+    "gh",
+    "stack",
+    "link"
+  ]
+}

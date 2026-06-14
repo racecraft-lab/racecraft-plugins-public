@@ -1,0 +1,3 @@
+export SPECKIT_AGENT_TEAMS=false
+export SPECKIT_PRSG_014_STACK_MANAGER=fallback
+

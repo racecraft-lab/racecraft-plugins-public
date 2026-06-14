@@ -428,6 +428,22 @@ opens one slice PR.
    `implementation_checkpoint.head_sha` or
    `implementation_checkpoint.commit_sha`; without those commit SHAs, stop
    before branch or PR mutation and repair the marker checkpoints.
+7b. Before any stack-manager mutation, multi-pr-emission.sh MUST call the
+   shared `skills/speckit-autopilot/scripts/detect-stack-manager.sh` helper
+   and persist the resulting `stack-manager-decision.v1` evidence. A supported
+   `gh-stack` path is allowed only when `gh stack --version`, read-only
+   `gh stack view --json` proof, packet validation, and expected topology all
+   pass. Missing, unsupported, ambiguous, unsafe, or topology-incompatible
+   environments must stay on the explicit `gh pr create/edit --base --head
+   --title --body-file` fallback before mutation. After any partial `gh-stack`
+   mutation, fallback is no longer allowed; block with recoverable evidence
+   rather than mixing stack managers.
+7c. Persist stack-manager evidence in the emission state, command log, and PRS
+   records: `selected_manager`, `fallback_reason`, `mutation_boundary`,
+   `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`,
+   `topology_compatibility`, `command_plan`, and `stack_manager_evidence_path`.
+   The shared schema is
+   `skills/speckit-autopilot/contracts/stack-manager-decision.schema.json`.
 8. For each planned slice, multi-pr-emission.sh creates the Style B branch
    topology and PR packet:
    - slice 1 base: <integration-base>
@@ -466,14 +482,19 @@ packets, PR bodies, `.process/prs.json`, workflow evidence, and
 `autopilot-state.json`. It MUST NOT modify `.github/workflows/pr-checks.yml`;
 the existing PR Checks workflow remains unchanged.
 
-**Restack after lower squash merges:** Use `gh-stack` only when it is installed
-and safe non-mutating inspection confirms an existing active stack. Otherwise
-use `skills/speckit-autopilot/scripts/restack.sh`, which is dry-run by default
-and requires `--apply` for mutation. Restack preserves each remaining slice's
-declared file scope, retargets the first remaining open slice to the integration
-base, retargets each later slice to the immediately preceding remaining slice
-branch, records recovery evidence on failure, and requires a fresh
-DEFAULT_VERIFY before final merge evidence is considered current.
+**Restack after lower squash merges:** Use `gh-stack` only when the shared
+`detect-stack-manager.sh` helper selects it from deterministic version,
+read-only proof, and topology checks. Otherwise use the existing explicit
+`restack.sh --apply` fallback, which retargets bases with `gh pr edit --base`.
+Restack remains dry-run by default and requires `--apply` for mutation. It
+preserves each remaining slice's declared file scope, retargets the first
+remaining open slice to the integration base, retargets each later slice to the
+immediately preceding remaining slice branch, records recovery evidence on
+failure, persists `stack_manager_decision` / `stack_manager_evidence_path`, and
+requires a fresh DEFAULT_VERIFY before final merge evidence is considered
+current. If a prior `gh-stack` mutation has crossed the mutation boundary,
+resume with same-manager recovery evidence or block; never switch to explicit
+fallback after the boundary.
 
 ## 3.3 Copilot Review Remediation Loop
 

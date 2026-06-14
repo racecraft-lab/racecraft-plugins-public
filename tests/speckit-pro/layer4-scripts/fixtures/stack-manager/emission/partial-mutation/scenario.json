@@ -1,0 +1,8 @@
+{
+  "scenario_id": "emission-partial-mutation",
+  "phase": "emission",
+  "operation": "link",
+  "mutation_boundary": "crossed",
+  "fallback_allowed": false,
+  "expected_status": "blocked_recoverable"
+}

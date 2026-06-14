@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "dry_run": true,
+  "declared_scope_guard": {
+    "status": "not_checked",
+    "changed_files_path": null,
+    "changed_files_count": 0,
+    "allowed_files_count": 15
+  },
+  "operations": [
+    {
+      "slice_id": "foundation",
+      "review_order": 1,
+      "action": "git_branch",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+      "base_branch": "main",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+        "main"
+      ]
+    },
+    {
+      "slice_id": "foundation",
+      "review_order": 1,
+      "action": "git_push",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+      "command": [
+        "git",
+        "push",
+        "-u",
+        "origin",
+        "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation"
+      ]
+    },
+    {
+      "slice_id": "foundation",
+      "review_order": 1,
+      "action": "gh_pr_create",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+      "base_branch": "main",
+      "title": "feat(PRSG-014): Add stack manager decision contract",
+      "body_file": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/foundation.md",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "main",
+        "--head",
+        "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+        "--body-file",
+        "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/foundation.md",
+        "--title",
+        "feat(PRSG-014): Add stack manager decision contract"
+      ]
+    },
+    {
+      "slice_id": "us1",
+      "review_order": 2,
+      "action": "git_branch",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+        "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation"
+      ]
+    },
+    {
+      "slice_id": "us1",
+      "review_order": 2,
+      "action": "git_push",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+      "command": [
+        "git",
+        "push",
+        "-u",
+        "origin",
+        "prsg-014-optional-gh-stack-stack-manager-integration/02-us1"
+      ]
+    },
+    {
+      "slice_id": "us1",
+      "review_order": 2,
+      "action": "gh_pr_create",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+      "title": "feat(PRSG-014): Detect stack manager support before mutation",
+      "body_file": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us1.md",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+        "--head",
+        "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+        "--body-file",
+        "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us1.md",
+        "--title",
+        "feat(PRSG-014): Detect stack manager support before mutation"
+      ]
+    },
+    {
+      "slice_id": "us2",
+      "review_order": 3,
+      "action": "git_branch",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+        "prsg-014-optional-gh-stack-stack-manager-integration/02-us1"
+      ]
+    },
+    {
+      "slice_id": "us2",
+      "review_order": 3,
+      "action": "git_push",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+      "command": [
+        "git",
+        "push",
+        "-u",
+        "origin",
+        "prsg-014-optional-gh-stack-stack-manager-integration/03-us2"
+      ]
+    },
+    {
+      "slice_id": "us2",
+      "review_order": 3,
+      "action": "gh_pr_create",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+      "title": "feat(PRSG-014): Thread stack manager decisions through emission",
+      "body_file": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us2.md",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+        "--head",
+        "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+        "--body-file",
+        "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us2.md",
+        "--title",
+        "feat(PRSG-014): Thread stack manager decisions through emission"
+      ]
+    },
+    {
+      "slice_id": "us3",
+      "review_order": 4,
+      "action": "git_branch",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+        "prsg-014-optional-gh-stack-stack-manager-integration/03-us2"
+      ]
+    },
+    {
+      "slice_id": "us3",
+      "review_order": 4,
+      "action": "git_push",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+      "command": [
+        "git",
+        "push",
+        "-u",
+        "origin",
+        "prsg-014-optional-gh-stack-stack-manager-integration/04-us3"
+      ]
+    },
+    {
+      "slice_id": "us3",
+      "review_order": 4,
+      "action": "gh_pr_create",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+      "title": "feat(PRSG-014): Record stack-aware restack decisions",
+      "body_file": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us3.md",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+        "--head",
+        "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+        "--body-file",
+        "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us3.md",
+        "--title",
+        "feat(PRSG-014): Record stack-aware restack decisions"
+      ]
+    },
+    {
+      "slice_id": "us4",
+      "review_order": 5,
+      "action": "git_branch",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/05-us4",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+      "command": [
+        "git",
+        "checkout",
+        "-B",
+        "prsg-014-optional-gh-stack-stack-manager-integration/05-us4",
+        "prsg-014-optional-gh-stack-stack-manager-integration/04-us3"
+      ]
+    },
+    {
+      "slice_id": "us4",
+      "review_order": 5,
+      "action": "git_push",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/05-us4",
+      "command": [
+        "git",
+        "push",
+        "-u",
+        "origin",
+        "prsg-014-optional-gh-stack-stack-manager-integration/05-us4"
+      ]
+    },
+    {
+      "slice_id": "us4",
+      "review_order": 5,
+      "action": "gh_pr_create",
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration/05-us4",
+      "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+      "title": "feat(PRSG-014): Align stack manager guidance and parity fixtures",
+      "body_file": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us4.md",
+      "command": [
+        "gh",
+        "pr",
+        "create",
+        "--base",
+        "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+        "--head",
+        "prsg-014-optional-gh-stack-stack-manager-integration/05-us4",
+        "--body-file",
+        "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us4.md",
+        "--title",
+        "feat(PRSG-014): Align stack manager guidance and parity fixtures"
+      ]
+    }
+  ]
+}

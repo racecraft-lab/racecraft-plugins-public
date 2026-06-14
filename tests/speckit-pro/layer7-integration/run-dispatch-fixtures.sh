@@ -189,6 +189,28 @@ assert_fixture() {
     fi
   done < <(jq -r '.must_not_invoke_skill[]? // empty' "$expected")
 
+  # must_include_terms / must_not_include_terms: literal transcript text
+  # assertions for evidence and forbidden command-shape boundaries.
+  while read -r term; do
+    [ -z "$term" ] && continue
+    set_test "$fixture_id: transcript includes term: $term"
+    if assert_transcript_contains_term "$transcript" "$term"; then
+      _pass
+    else
+      _fail "expected transcript to include literal term '$term'"
+    fi
+  done < <(jq -r '.must_include_terms[]? // empty' "$expected")
+
+  while read -r term; do
+    [ -z "$term" ] && continue
+    set_test "$fixture_id: transcript excludes term: $term"
+    if assert_transcript_not_contains_term "$transcript" "$term"; then
+      _pass
+    else
+      _fail "transcript included forbidden literal term '$term'"
+    fi
+  done < <(jq -r '.must_not_include_terms[]? // empty' "$expected")
+
   # min/max dispatch count
   local total
   total=$(extract_orchestrator_dispatches "$transcript" | jq 'length')

@@ -1257,6 +1257,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
   feature_dir_abs="$persist_root/$FEATURE_DIR_REL"
   prs_path="$feature_dir_abs/.process/prs.json"
   moc_path="$feature_dir_abs/SPEC-MOC.md"
+  stack_manager_topology_rel="$FEATURE_DIR_REL/.process/stack-manager/emission/link/preflight/topology.json"
+  stack_manager_topology_path="$persist_root/$stack_manager_topology_rel"
+  stack_manager_evidence_rel="$FEATURE_DIR_REL/.process/stack-manager/emission/link/preflight/decision.json"
   workflow_id="$FEATURE_BRANCH"
   if [[ "$FEATURE_BRANCH" =~ ^([A-Za-z]+)-([0-9]+) ]]; then
     workflow_id="${BASH_REMATCH[1]^^}-${BASH_REMATCH[2]}"
@@ -1295,7 +1298,55 @@ if [ -z "$CANDIDATE_DIR" ]; then
     command -v gh >/dev/null 2>&1 || emit_input_error "--live requires gh"
   fi
 
-  command_log_json="$(jq -n '{schema_version: 1, dry_run: false, operations: []}')"
+  stack_manager_topology_json="$(
+    printf '%s' "$plan_slices" | jq '
+      {
+        schemaVersion: 2,
+        records: [
+          .[]
+          | {
+              review_order: .review_order,
+              slice_id: .slice_id,
+              layer: .slice_id,
+              branch: .branch,
+              base_branch: .base_branch,
+              pr_number: null,
+              pr_url: null,
+              declared_files: (.declared_files // []),
+              verification_evidence: ((.scoped_verification.commands[0].evidence_path // "") // ""),
+              status: "pending",
+              head_sha: ((.checkpoint_sha // "pending") | tostring),
+              merged_sha: null
+            }
+        ]
+      }
+    '
+  )"
+  write_json_atomic "$stack_manager_topology_path" "$stack_manager_topology_json"
+  stack_manager_decision_json="$(
+    cd "$persist_root" &&
+    "$SCRIPT_DIR/detect-stack-manager.sh" \
+      --phase emission \
+      --operation link \
+      --feature-dir "$FEATURE_DIR_REL" \
+      --prs "$stack_manager_topology_rel" \
+      --base "$BASE_BRANCH" \
+      --evidence-path "$stack_manager_evidence_rel"
+  )" || emit_input_error "stack-manager detection failed"
+
+  command_log_json="$(
+    jq -n \
+      --argjson decision "$stack_manager_decision_json" \
+      --arg evidence "$stack_manager_evidence_rel" '
+        {
+          schema_version: 1,
+          dry_run: false,
+          stack_manager_decision: $decision,
+          stack_manager_evidence_path: $evidence,
+          operations: []
+        }
+      '
+  )"
 
   write_command_log() {
     if [ -n "$COMMAND_LOG" ]; then
@@ -1367,7 +1418,9 @@ if [ -z "$CANDIDATE_DIR" ]; then
   }
 
   build_prs_json() {
-    printf '%s' "$state_json" | jq --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" '
+    printf '%s' "$state_json" | jq \
+      --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
+      --arg stack_manager_evidence_path "$stack_manager_evidence_rel" '
       {
         schemaVersion: 2,
         records: [
@@ -1383,6 +1436,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
               pr_url: .pr.url,
               declared_files: .declared_files,
               verification_evidence: (.scoped_verification.commands[0].evidence_path // $full_verification_evidence),
+              stack_manager_evidence_path: $stack_manager_evidence_path,
               status: (if .status == "merged" then "merged" else "opened" end),
               head_sha: (.pr.head_sha // .head_sha),
               merged_sha: (.pr.merged_sha // null)
@@ -1466,6 +1520,28 @@ if [ -z "$CANDIDATE_DIR" ]; then
                 action: "git_push",
                 branch: $slice.branch,
                 command: ["git", "push", "-u", "origin", $slice.branch]
+              }
+            ]
+        '
+    )"
+  }
+
+  record_stack_link_command() {
+    local prs_json_input="$1"
+    command_log_json="$(
+      jq -n \
+        --argjson log "$command_log_json" \
+        --argjson prs "$prs_json_input" \
+        --arg base "$BASE_BRANCH" \
+        --arg evidence "$stack_manager_evidence_rel" '
+          ($prs.records | sort_by(.review_order) | map(.pr_number | tostring)) as $prs_numbers
+          | $log
+          | .operations += [
+              {
+                action: "gh_stack_link",
+                manager: "gh-stack",
+                stack_manager_evidence_path: $evidence,
+                command: (["gh", "stack", "link", "--base", $base] + $prs_numbers)
               }
             ]
         '
@@ -1700,6 +1776,8 @@ if [ -z "$CANDIDATE_DIR" ]; then
       --arg route "$EMISSION_ROUTE" \
       --arg base_branch "$BASE_BRANCH" \
       --arg base_sha "$BASE_SHA" \
+      --argjson stack_manager_decision "$stack_manager_decision_json" \
+      --arg stack_manager_evidence_path "$stack_manager_evidence_rel" \
       --argjson slices "$plan_slices" '
         {
           multi_pr_emission: {
@@ -1709,6 +1787,8 @@ if [ -z "$CANDIDATE_DIR" ]; then
             route: $route,
             base_branch: $base_branch,
             base_sha: $base_sha,
+            stack_manager_decision: $stack_manager_decision,
+            stack_manager_evidence_path: $stack_manager_evidence_path,
             next_slice_id: ($slices[0].slice_id // null),
             reconciled_at: "2026-06-10T00:00:00Z",
             slices: (
@@ -2219,6 +2299,23 @@ if [ -z "$CANDIDATE_DIR" ]; then
     )"
     persist_state_or_die
   done < <(printf '%s' "$plan_slices" | jq -c '.[]')
+
+  if [ "$(printf '%s' "$stack_manager_decision_json" | jq -r '.selected_manager')" = "gh-stack" ]; then
+    prs_json="$(build_prs_json)"
+    record_stack_link_command "$prs_json"
+    if [ "$LIVE" = true ]; then
+      mapfile -t stack_link_pr_numbers < <(printf '%s' "$prs_json" | jq -r '.records | sort_by(.review_order) | .[].pr_number')
+      if [ "${#stack_link_pr_numbers[@]}" -gt 0 ]; then
+        if ! (
+          cd "$persist_root" &&
+          gh stack link --base "$BASE_BRANCH" "${stack_link_pr_numbers[@]}"
+        ) >/dev/null 2>&1; then
+          first_slice="$(printf '%s' "$prs_json" | jq -r '.records | sort_by(.review_order) | .[0].slice_id // "stack"')"
+          block_with_state "$first_slice" "gh_stack_link" "gh stack link failed after packet-owned PR reconciliation" "failed" 4
+        fi
+      fi
+    fi
+  fi
 
   write_command_log || emit_input_error "command log persistence failed: $COMMAND_LOG"
   mutation_json="$(jq -cn --argjson live "$LIVE" '{branches: $live, pull_requests: $live}')"

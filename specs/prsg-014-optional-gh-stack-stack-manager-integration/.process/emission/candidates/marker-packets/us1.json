@@ -1,0 +1,160 @@
+{
+  "slice_id": "us1",
+  "review_order": 2,
+  "total_slices": 5,
+  "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+  "head_branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+  "target": {
+    "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+    "head_branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1"
+  },
+  "generated_title": {
+    "value": "feat(PRSG-014): Detect stack manager support before mutation",
+    "type": "feat",
+    "scope": "PRSG-014",
+    "description": "Detect stack manager support before mutation",
+    "source_evidence": {
+      "kind": "marker_source_boundary",
+      "source": "us1",
+      "summary": "Source label and declared file scope normalized into a strict plain-English reviewer title."
+    },
+    "rejected_candidates": [
+      {
+        "value": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+        "reason": "Branch names remain metadata and are not public title descriptions."
+      },
+      {
+        "value": "us1",
+        "reason": "Slice ids remain metadata and are not public title descriptions."
+      }
+    ]
+  },
+  "body_file": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/candidates/pr-bodies/us1.md",
+  "declared_files": [
+    "speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh"
+  ],
+  "declared_tests": [
+    "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/cases/detection-matrix.json",
+    "tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh"
+  ],
+  "scoped_verification": {
+    "commands": [
+      {
+        "command": "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/cases/detection-matrix.json",
+        "gate_type": "SCRIPT_UNIT",
+        "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+        "required": true,
+        "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us1/layer4.log",
+        "exit_status": 0,
+        "started_at": "2026-06-10T00:00:00Z",
+        "finished_at": "2026-06-10T00:00:01Z"
+      },
+      {
+        "command": "tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh",
+        "gate_type": "SCRIPT_UNIT",
+        "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+        "required": true,
+        "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us1/layer4.log",
+        "exit_status": 0,
+        "started_at": "2026-06-10T00:00:00Z",
+        "finished_at": "2026-06-10T00:00:01Z"
+      }
+    ]
+  },
+  "full_verification_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/full-verification.md",
+  "traceability": [
+    {
+      "requirement": "FR-001",
+      "files": [
+        "speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh"
+      ],
+      "evidence": [
+        "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/full-verification.md"
+      ]
+    }
+  ],
+  "known_gaps": [],
+  "warnings": [
+    {
+      "code": "reviewability_size_warning",
+      "severity": "warning",
+      "message": "Reviewability sizing result is marker-planning input.",
+      "source": "reviewability",
+      "details": {
+        "status": "block",
+        "mode": "tasks",
+        "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/reviewability/tasks-gate.json"
+      }
+    },
+    {
+      "code": "FINAL_DIFF_SIZE_BLOCKED",
+      "severity": "warning",
+      "message": "Final diff is size-blocked, but the current marker plan is valid for scoped PR emission.",
+      "source": "final-reviewability-backstop",
+      "details": {
+        "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration"
+      }
+    },
+    {
+      "code": "reviewability_size_warning",
+      "severity": "warning",
+      "message": "Reviewability sizing result is marker-planning input.",
+      "source": "reviewability",
+      "details": {
+        "status": "block",
+        "mode": "tasks",
+        "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/reviewability/tasks-gate.json"
+      }
+    }
+  ],
+  "restack_note": "Style B incremental stack: first slice targets the integration base and later slices target the previous slice branch.",
+  "prs_row": {
+    "review_order": 2,
+    "slice_id": "us1",
+    "layer": "us1",
+    "branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+    "base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+    "pr_number": null,
+    "pr_url": null,
+    "declared_files": [
+      "speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh"
+    ],
+    "verification_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us1/layer4.log",
+    "status": "pending",
+    "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+    "merged_sha": null
+  },
+  "marker_id": "us1",
+  "source_marker_ids": [
+    "us1"
+  ],
+  "source_marker_checkpoints": [
+    "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md"
+  ],
+  "route": "marker_split",
+  "marker_split_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/final-marker-split-result.json",
+  "implementation_checkpoint_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+  "final_marker_split_warnings": [
+    {
+      "code": "reviewability_size_warning",
+      "severity": "warning",
+      "message": "Reviewability sizing result is marker-planning input.",
+      "source": "reviewability",
+      "details": {
+        "status": "block",
+        "mode": "tasks",
+        "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/reviewability/tasks-gate.json"
+      }
+    },
+    {
+      "code": "FINAL_DIFF_SIZE_BLOCKED",
+      "severity": "warning",
+      "message": "Final diff is size-blocked, but the current marker plan is valid for scoped PR emission.",
+      "source": "final-reviewability-backstop",
+      "details": {
+        "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration"
+      }
+    }
+  ],
+  "rollback_or_flags": "Use the recorded marker/base order for rollback or feature-flag review."
+}

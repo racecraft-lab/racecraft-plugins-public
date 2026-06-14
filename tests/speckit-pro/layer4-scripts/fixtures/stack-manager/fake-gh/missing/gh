@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${STACK_MANAGER_FAKE_LOG:-}" != "" ]; then
+  printf 'gh %s\n' "$*" >> "$STACK_MANAGER_FAKE_LOG"
+fi
+
+printf 'unknown command: stack\n' >&2
+exit 1
+

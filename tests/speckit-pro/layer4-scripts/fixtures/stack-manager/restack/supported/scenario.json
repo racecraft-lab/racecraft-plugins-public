@@ -1,0 +1,12 @@
+{
+  "scenario_id": "restack-supported",
+  "phase": "restack",
+  "operation": "restack",
+  "selected_manager": "gh-stack",
+  "expected_command": [
+    "gh",
+    "stack",
+    "rebase",
+    "--upstack"
+  ]
+}

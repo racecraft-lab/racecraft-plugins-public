@@ -1,0 +1,12 @@
+{
+  "scenario_id": "emission-fallback-before-mutation",
+  "phase": "emission",
+  "operation": "link",
+  "selected_manager": "explicit-gh",
+  "fallback_before_mutation": true,
+  "expected_command": [
+    "gh",
+    "pr",
+    "create"
+  ]
+}

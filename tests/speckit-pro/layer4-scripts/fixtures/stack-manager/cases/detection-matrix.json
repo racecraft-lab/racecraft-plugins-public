@@ -1,0 +1,9 @@
+{
+  "cases": [
+    { "id": "supported", "fake": "supported", "selected_manager": "gh-stack", "support_status": "supported" },
+    { "id": "missing", "fake": "missing", "selected_manager": "explicit-gh", "support_status": "ambiguous" },
+    { "id": "unsupported", "fake": "unsupported", "selected_manager": "explicit-gh", "support_status": "unsupported_version" },
+    { "id": "topology-incompatible", "fake": "supported", "selected_manager": "explicit-gh", "support_status": "topology_incompatible", "mode": "mismatch" }
+  ]
+}
+

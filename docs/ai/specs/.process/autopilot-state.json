@@ -1,72 +1,593 @@
 {
-  "workflow_file": "docs/ai/specs/.process/DOC-002-workflow.md",
-  "updated_at": "2026-06-14T19:49:28Z",
-  "active_step": "Post: Cleanup complete",
-  "status": "completed_archived",
-  "current_branch": "codex/doc-002-post-merge-hygiene",
-  "feature_dir": "specs/doc-002-unified-landing-page-and-ia-shell",
+  "schemaVersion": 1,
+  "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
+  "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
+  "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
+  "updated_at": "2026-06-14T03:41:57Z",
+  "active_step": "Post: Doctor Extension Check",
+  "confidence_gate_mode": "advisory",
   "archive_sweep": {
+    "status": "completed",
     "archive_extension_installed": true,
-    "mode": "single-feature",
-    "cleanup_mode": "apply",
-    "completed_spec": "specs/doc-002-unified-landing-page-and-ia-shell",
-    "safeToApplyCleanup": true,
-    "archive_report": ".specify/memory/archive-reports/2026-06-14-doc-002-post-merge-hygiene.md",
-    "note": "DOC-002 completed through merged PRs #173-#176; PR #177 fixed the autopilot continuation bug discovered during final emission."
+    "cleanup_mode": "feature-branch-sweep",
+    "current_target": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
+    "excluded_current_spec": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
+    "eligible_previous_specs": [],
+    "safeToApplyCleanup": false,
+    "dryRunProvenanceOnly": true,
+    "notes": [
+      "Archive Sweep inspected active specs/** before Phase 1.",
+      "The only active spec directory is the current PRSG-014 target, so no prior spec was eligible for archival or cleanup."
+    ]
   },
-  "project_commands": {
-    "DOCS_CHECK": "cd docs-site && pnpm check",
-    "DOCS_BUILD": "cd docs-site && pnpm build",
-    "DOCS_LINKS": "cd docs-site && pnpm validate:links",
-    "DOCS_VALIDATE": "cd docs-site && pnpm validate",
-    "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
-  },
-  "completed_prs": [
-    {
-      "number": 173,
-      "title": "feat(speckit-pro): Add docs site foundation",
-      "merge_commit": "0bb5e6b5f7589a7872819a2fe3c0ddb583e63565"
+  "preflight": {
+    "prerequisites": {
+      "all_pass": true,
+      "branch": "prsg-014-optional-gh-stack-stack-manager-integration",
+      "is_worktree": true,
+      "on_feature_branch": false,
+      "specify": "specify 0.10.3.dev0",
+      "mcp_servers": {
+        "status": "fallbacks_available",
+        "missing": [
+          "tavily-mcp",
+          "context7",
+          "RepoPrompt"
+        ]
+      }
     },
-    {
-      "number": 174,
-      "title": "feat(speckit-pro): Add landing page platform choice",
-      "merge_commit": "ce59667582a4bd656eface86a850293b98d50ad5"
+    "project_commands": {
+      "BUILD": "N/A",
+      "TYPECHECK": "N/A",
+      "LINT": "N/A",
+      "LINT_FIX": "N/A",
+      "UNIT_TEST": "N/A",
+      "INTEGRATION_TEST": "N/A",
+      "SINGLE_FILE_TEST": "N/A",
+      "SINGLE_FILE_INTEGRATION": "N/A",
+      "FULL_VERIFY": "N/A",
+      "repo_full_verify": "bash tests/speckit-pro/run-all.sh"
     },
-    {
-      "number": 175,
-      "title": "feat(speckit-pro): Add IA route shell navigation",
-      "merge_commit": "e52035516f3434b82d728e32d3834f24400140cd"
+    "preset_conventions": {
+      "has_presets": true,
+      "presets": [
+        "speckit-pro-reviewability"
+      ],
+      "templates": [
+        "spec-template",
+        "plan-template",
+        "tasks-template"
+      ]
     },
-    {
-      "number": 176,
-      "title": "feat(speckit-pro): Add docs validation and review evidence",
-      "merge_commit": "73ad7c97a44b036be9247d8e5910587ce61d9ae6"
-    },
-    {
-      "number": 177,
-      "title": "fix(autopilot): require reslice continuation",
-      "merge_commit": "4fc5f81363e5b99e71d298390785d4d4c70d86ae"
+    "codex_agents": {
+      "required_installed": true,
+      "required": [
+        "phase-executor",
+        "clarify-executor",
+        "checklist-executor",
+        "analyze-executor",
+        "implement-executor",
+        "codebase-analyst",
+        "spec-context-analyst",
+        "domain-researcher"
+      ],
+      "optional_installed": [
+        "autopilot-fast-helper"
+      ],
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh"
     }
-  ],
-  "next_specs": [
-    "DOC-003",
-    "DOC-004"
-  ],
+  },
   "plan": [
     {
-      "step": "DOC-002 implementation stack",
-      "status": "completed",
-      "summary": "Merged PRs #173-#176 created the docs-site shell, landing page, IA routes, Pages-ready config, and validation evidence."
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
     },
     {
-      "step": "Autopilot continuation repair",
-      "status": "completed",
-      "summary": "Merged PR #177 fixed the reslice-continuation bug that had paused autopilot after the final reviewability backstop."
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
     },
     {
-      "step": "Post-merge archive cleanup",
+      "step": "Phase 1: Specify",
       "status": "completed",
-      "summary": "Archive provenance recorded, active DOC-002 spec folder removed, roadmap state refreshed, and next specs unblocked."
+      "gate": "G1",
+      "gate_status": "passed",
+      "summary": "Created spec.md and requirements checklist. Spec has 4 user stories, 15 functional requirements, 11 acceptance scenarios, 6 success criteria, and 0 NEEDS CLARIFICATION markers."
+    },
+    {
+      "step": "Phase 2: Clarify - Detection Contract Focus",
+      "status": "completed",
+      "summary": "Accepted five detection-contract decisions: canonical `gh stack` invocation; shared `stack_manager_decision` object; read-only `gh stack view --json` plus synthetic command plan for pre-mutation proof; topology compatibility from SpecKit PRS/marker state; and array-of-argv command plan records."
+    },
+    {
+      "step": "Phase 2: Clarify - Detection Contract Focus Consensus",
+      "status": "completed",
+      "summary": "Round 1 routed to codebase/domain analysts; codebase low confidence triggered Round 2 spec-context review. Final 3-perspective consensus accepted read-only `gh stack view --json` plus synthetic command plan as the safe pre-mutation proof rule, with detailed command/version matrix deferred to Plan."
+    },
+    {
+      "step": "Phase 2: Clarify - Mutation and Fallback Focus",
+      "status": "completed",
+      "summary": "Accepted five mutation/fallback decisions: first attempted topology-changing command is the no-fallback mutation boundary; fallback is only before mutating `gh stack` attempts; recoverable block state carries selected manager, failed argv/action, per-operation statuses, topology, PR identity, evidence paths, retry policy, and fallback_allowed=false; retries reconcile by deterministic slice/head/base/PR/head SHA/packet identity; unknown side effects become partial_mutation_unknown."
+    },
+    {
+      "step": "Phase 2: Clarify - Mutation and Fallback Focus Consensus",
+      "status": "completed",
+      "summary": "Clarify executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 2: Clarify - Emission and Restack Focus",
+      "status": "completed",
+      "summary": "Accepted five emission/restack decisions: packet-owned `gh pr create/edit` remains authoritative before `gh stack` topology linking; stack-wide marker/packet preflight happens before the first mutating `gh stack` command; evidence adds top-level `stack_manager_decision` plus per-operation manager/argv/status; supported restack uses `gh stack rebase --upstack` only behind version/capability proof; command execution is argv-only with validated refs/paths and bounded output tails."
+    },
+    {
+      "step": "Phase 2: Clarify - Emission and Restack Focus Consensus",
+      "status": "completed",
+      "summary": "Consensus resolved three items: emission codebase/domain both agreed packet-owned PR metadata precedes stack linking; restack codebase/domain both agreed `gh stack rebase --upstack` is only supported behind version proof with explicit fallback otherwise; security all-three agreed argv-only execution with no command-string execution."
+    },
+    {
+      "step": "Phase 2: Clarify - Parity and Test Focus",
+      "status": "completed",
+      "summary": "Accepted five proof/parity decisions: Layer 4 fake-CLI fixtures are authoritative behavior proof; stack-manager decisions use a shared versioned schema with explicit schema fields; Layer 7 is orchestration/live-safe proof only; Layer 8 is operator guidance parity without duplicate Codex implementation; the exact gh stack command/version matrix remains Plan-owned."
+    },
+    {
+      "step": "Phase 2: Clarify - Parity and Test Focus Consensus",
+      "status": "completed",
+      "summary": "Codebase and spec-context analysts agreed that PRSG-014 should prove Claude/Codex parity as operator guidance parity backed by shared scripts/contracts, L1 Codex structural parity, and L4/L7 executable proof; transcript-level Claude/Codex parity remains out of scope until a stable Codex replay/transcript harness and schema exist."
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed",
+      "gate": "G3",
+      "gate_status": "passed",
+      "summary": "Created plan.md, research.md, data-model.md, quickstart.md, and contracts/stack-manager-decision.schema.json. Resolved gh stack v0.0.5 capability matrix from local CLI help and github/gh-stack project docs, selected read-only view --json proof, kept explicit gh fallback authoritative, and recorded PASS constitution/reviewability status."
+    },
+    {
+      "step": "Phase 4: Checklist - integration",
+      "status": "completed",
+      "summary": "Integration checklist covered 12 items and resolved 2 schema/prose gaps: gh_stack.supported/reason evidence parity and explicit-gh fallback schema strictness."
+    },
+    {
+      "step": "Phase 4: Checklist - integration Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "completed",
+      "summary": "Error-handling checklist covered 16 items and resolved 4 gaps around recoverable block requirements, side-effect classification, blocked schema constraints, and mutating failure fixtures."
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - reliability",
+      "status": "completed",
+      "summary": "Reliability checklist covered 16 items and resolved 2 gaps around deterministic repo-relative evidence paths and blocked-run resume preflight/superseding behavior."
+    },
+    {
+      "step": "Phase 4: Checklist - reliability Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {
+      "step": "Phase 4: Checklist - security",
+      "status": "completed",
+      "gate": "G4",
+      "gate_status": "passed",
+      "summary": "Security checklist covered 15 items and resolved 5 gaps around argv constraints, command-shape allowlisting, evidence path traversal controls, fake CLI boundaries, and injection-focused fixtures. G4 passed with 0 [Gap] markers across all checklist domains."
+    },
+    {
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "completed",
+      "summary": "No unresolved consensus items."
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "summary": "Generated 71 test-first tasks across setup, foundation, US1 detection, US2 emission, US3 restack, US4 guidance/parity, and polish; task-mode reviewability block was size-only and converted into a 5-marker PR plan."
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "summary": "Completed Phase 6 Analyze with 4 findings (0C/1H/3M/0L) remediated: packet-validation hard-block wording, Layer 7/8 fixture path drift, stale checklist item state, and reviewability marker-plan visibility. Marker counter clean; G6 passed."
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "completed",
+      "summary": "No unresolved Analyze findings; consensus skipped."
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "completed",
+      "gate": "G6.5",
+      "gate_status": "soft_skipped",
+      "summary": "Advisory confidence gate returned NO_DATA because the Analyze synthesizer did not emit a confidence block; recorded as a plugin-regression note and continued to Phase 7."
+    },
+    {
+      "step": "Phase 7: Implement - Setup/Foundation (T001-T012)",
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
+    },
+    {
+      "step": "Phase 7: Implement - US1 Detection (T013-T026)",
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
+    },
+    {
+      "step": "Phase 7: Implement - US2 Emission (T027-T041)",
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
+    },
+    {
+      "step": "Phase 7: Implement - US3 Restack (T042-T056)",
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
+    },
+    {
+      "step": "Phase 7: Implement - US4 Guidance/Replay/Parity (T057-T065)",
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
+    },
+    {
+      "step": "Phase 7: Implement - Polish/Verification (T066-T071)",
+      "status": "completed",
+      "summary": "Completed PRSG-014 implementation tasks and verification; implementation commit 03da8f3."
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "completed",
+      "skipped": "review extension not installed"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "completed",
+      "skipped": "cleanup extension not installed"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
     }
-  ]
+  ],
+  "analyze": {
+    "status": "completed",
+    "gate": "G6",
+    "gate_status": "passed",
+    "findings": {
+      "total": 4,
+      "critical": 0,
+      "high": 1,
+      "medium": 3,
+      "low": 0
+    },
+    "remediations": [
+      "Clarified PRSG-012 packet-validation failures as hard blocks before any stack-manager or explicit-gh mutation.",
+      "Aligned Layer 7/8 fixture paths in plan.md with generated tasks and existing harness layout.",
+      "Marked verified checklist items complete with task/source citations.",
+      "Added task reviewability size-only block and PRSG-013 marker-plan summary to tasks.md."
+    ],
+    "unresolved_for_consensus": []
+  },
+  "reviewability_tasks_gate": {
+    "status": "block",
+    "mode": "tasks",
+    "pass": false,
+    "exit_code": 1,
+    "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/reviewability/tasks-gate.json",
+    "is_size_only": true,
+    "size_only_reason": "Task-mode reviewability gate blocked only on size metrics: reviewable LOC and total file count. No correctness or safety blocker was reported.",
+    "metrics": {
+      "reviewable_loc": 2840,
+      "production_files": 1,
+      "total_files": 111,
+      "primary_surface_count": 7,
+      "primary_surfaces": [
+        "API",
+        "docs/process",
+        "harness/adapter",
+        "other",
+        "scheduler/runtime",
+        "schema/migration",
+        "seed/config"
+      ]
+    },
+    "warnings": [
+      "reviewable LOC 2840 exceeds warn threshold 400",
+      "total files 111 exceeds warn threshold 15",
+      "primary surfaces 7 exceeds warn threshold 1"
+    ],
+    "blockers": [
+      "reviewable LOC 2840 exceeds block threshold 800",
+      "total files 111 exceeds block threshold 25"
+    ]
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "context:consumer-locality:out-of-tree",
+      "change-shape:modify-heavy"
+    ],
+    "hints": [
+      "hint:flag-system:weak"
+    ],
+    "warnings": [],
+    "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/atomicity/route.json"
+  },
+  "pr_marker_plan": {
+    "status": "emission_ready",
+    "schema_version": "pr-marker-plan.v1",
+    "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/pr-marker-plan.json",
+    "source_fingerprint": {
+      "feature_spec_sha": "5c9359619422b69e5cbd70f3c3685b9fbc601692fff4f8f1847005c0029f9dbc",
+      "plan_declared_scope_sha": "574e4f821423a2a3104d61ef95cfc71cb639ed38541209ad827b79763aa2bf72",
+      "tasks_sha": "adf68363687ec2a82747fc6c8ab3a22e18ffda38d776e33aec5e3b368afa5e53",
+      "reviewability_sha": "6ad5b3da8f1ad4d31a9784e42ecd8f3c38a8a4806297fc07c896e39f45938765",
+      "hazard_route_sha": "feaf8803f3d53fbc661e5b4bf2d7f16c5a106ef585827531a363edc5c0aab52a"
+    },
+    "ordered_marker_ids": [
+      "foundation",
+      "us1",
+      "us2",
+      "us3",
+      "us4"
+    ],
+    "review_order": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012"
+        ],
+        "folded_polish_task_ids": [],
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "title_description": "Add stack manager decision contract"
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "task_ids": [
+          "T013",
+          "T014",
+          "T015",
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026"
+        ],
+        "folded_polish_task_ids": [],
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "title_description": "Detect stack manager support before mutation"
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "task_ids": [
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T035",
+          "T036",
+          "T037",
+          "T038",
+          "T039",
+          "T040",
+          "T041"
+        ],
+        "folded_polish_task_ids": [],
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "title_description": "Thread stack manager decisions through emission"
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "task_ids": [
+          "T042",
+          "T043",
+          "T044",
+          "T045",
+          "T046",
+          "T047",
+          "T048",
+          "T049",
+          "T050",
+          "T051",
+          "T052",
+          "T053",
+          "T054",
+          "T055",
+          "T056"
+        ],
+        "folded_polish_task_ids": [],
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "title_description": "Record stack-aware restack decisions"
+      },
+      {
+        "id": "us4",
+        "review_order": 5,
+        "kind": "user_story",
+        "task_ids": [
+          "T057",
+          "T058",
+          "T059",
+          "T060",
+          "T061",
+          "T062",
+          "T063",
+          "T064",
+          "T065"
+        ],
+        "folded_polish_task_ids": [
+          "T066",
+          "T067",
+          "T068",
+          "T069",
+          "T070",
+          "T071"
+        ],
+        "implementation_checkpoint": {
+          "status": "complete",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md",
+          "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+          "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "title_description": "Align stack manager guidance and parity fixtures"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/reviewability/tasks-gate.json"
+        }
+      }
+    ],
+    "final_marker_split": {
+      "status": "pending"
+    },
+    "packet_validation": {
+      "status": "pending"
+    },
+    "pr_mappings": {
+      "status": "pending"
+    }
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "5c9359619422b69e5cbd70f3c3685b9fbc601692fff4f8f1847005c0029f9dbc",
+    "plan_declared_scope_sha": "574e4f821423a2a3104d61ef95cfc71cb639ed38541209ad827b79763aa2bf72",
+    "tasks_sha": "adf68363687ec2a82747fc6c8ab3a22e18ffda38d776e33aec5e3b368afa5e53",
+    "reviewability_sha": "6ad5b3da8f1ad4d31a9784e42ecd8f3c38a8a4806297fc07c896e39f45938765",
+    "hazard_route_sha": "feaf8803f3d53fbc661e5b4bf2d7f16c5a106ef585827531a363edc5c0aab52a"
+  },
+  "implementation": {
+    "status": "completed",
+    "gate": "G7",
+    "gate_status": "passed",
+    "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+    "completed_tasks": 71,
+    "verification": {
+      "focused_layer4": [
+        "test-detect-stack-manager: 18/18 passed",
+        "test-multi-pr-emission: 159/159 passed",
+        "test-restack: 33/33 passed"
+      ],
+      "layer1": "979/979 passed",
+      "layer4": "1768/1768 passed",
+      "layer7": "run-all fixtures passed",
+      "layer8": "12/12 passed",
+      "default_suite": "2937/2937 passed"
+    }
+  }
 }

@@ -1,0 +1,14 @@
+{
+  "accepted": [
+    "supported-gh-stack",
+    "explicit-gh-missing",
+    "explicit-gh-unsupported",
+    "explicit-gh-topology-incompatible"
+  ],
+  "rejected": [
+    "unsafe-feature-dir",
+    "unsafe-base-ref",
+    "unsafe-prs-path"
+  ]
+}
+

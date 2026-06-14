@@ -14,6 +14,8 @@
     "remote": { "type": "string", "minLength": 1 },
     "start_after": { "type": ["string", "null"] },
     "scope_preserved": { "type": "boolean" },
+    "stack_manager_decision": { "type": "object" },
+    "stack_manager_evidence_path": { "type": "string", "minLength": 1 },
     "gh_stack": {
       "type": "object",
       "required": ["available", "inspected", "mutating"],

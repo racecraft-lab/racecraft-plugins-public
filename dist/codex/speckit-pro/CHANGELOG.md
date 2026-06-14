@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.13.1...speckit-pro-v2.14.0) (2026-06-14)
+
+
+### Features
+
+* **speckit-pro:** Add optional gh-stack stack manager integration ([#181](https://github.com/racecraft-lab/racecraft-plugins-public/issues/181)) ([4b8342f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/4b8342f42db3223db6955a1390b30949b8caea8c))
+
 ## [2.13.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.13.0...speckit-pro-v2.13.1) (2026-06-14)
 
 

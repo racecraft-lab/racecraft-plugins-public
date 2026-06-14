@@ -1,0 +1,8 @@
+{
+  "scenario_id": "restack-partial-mutation",
+  "phase": "restack",
+  "operation": "restack",
+  "mutation_boundary": "crossed",
+  "fallback_allowed": false,
+  "expected_status": "blocked_recoverable"
+}

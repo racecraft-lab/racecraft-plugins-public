@@ -867,8 +867,13 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    with packet fields through
    `gh pr create --base --head --title --body-file`; never derive the title
    from the branch, write the body from scratch, pass inline `--body`, reuse
-   stale validation JSON, or repair invalid packets after creation. Push,
-   create PR, update workflow file.
+   stale validation JSON, or repair invalid packets after creation. For
+   split-PR or marker emission, use the shared `detect-stack-manager.sh`
+   decision before any stack-manager mutation: supported `gh-stack` may proceed
+   only after version, read-only proof, packet, and topology checks pass;
+   missing/unsupported/ambiguous/unsafe environments keep the explicit `gh`
+   fallback before mutation; partial `gh-stack` mutation blocks rather than
+   mixing managers. Push, create PR, update workflow file.
    Required evidence prompts: gate status/mode/exit/evidence path,
    fingerprint status, ordered marker IDs, checkpoints, warnings, final
    marker_split, packet validation, and PR mappings.
@@ -1010,6 +1015,10 @@ never from `.specify/scripts/bash/`.
   creation, exit 1 writes packet remediation evidence, and exit 2 reports an
   input error. Codex uses the shared primary script and schema; do not create
   Codex-only copies.
+- `detect-stack-manager.sh --phase <emission|restack> --operation <detect|link|sync|restack> --feature-dir <specs/name> ...` —
+  Emit and optionally persist the shared `stack-manager-decision.v1` evidence
+  used by multi-PR emission and restack. It is the only Codex/Claude stack
+  manager decision surface; do not create Codex-only detector or schema copies.
 - `generate-uat-skeleton.sh <spec-path> <output-path> [--workflow-file <path>]` —
   Render a deterministic UAT runbook skeleton from `spec.md` (Env Setup formatted
   from the `UAT_PROJECT_COMMANDS` env var). Exit 0/2/1; silent stdout. Run after

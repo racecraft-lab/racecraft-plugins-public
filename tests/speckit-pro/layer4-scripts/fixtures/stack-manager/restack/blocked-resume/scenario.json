@@ -1,0 +1,13 @@
+{
+  "scenario_id": "restack-blocked-resume",
+  "phase": "restack",
+  "operation": "restack",
+  "resume_preflight": [
+    "decision_evidence",
+    "topology",
+    "packet_identity",
+    "head_sha",
+    "base_head_refs"
+  ],
+  "expected_status": "requires_same_manager_recovery"
+}
