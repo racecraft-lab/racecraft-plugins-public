@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-002 completed and archived; DOC-003 and DOC-004 are next
+**Status:** DOC-004 scaffolded and in progress; DOC-003 remains ready
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
