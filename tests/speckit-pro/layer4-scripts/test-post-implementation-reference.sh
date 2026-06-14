@@ -35,6 +35,10 @@ set_test "Claude reference blocks failed slices before PR creation"
 assert_contains "$claude_body" 'stop before `gh pr create`'
 assert_contains "$claude_body" "next_slice_id"
 
+set_test "Claude reference requires reslicing continuation before final response"
+assert_contains "$claude_body" "autopilot_continuation"
+assert_contains "$claude_body" "Never end the run or report completion while"
+
 set_test "Claude reference documents explicit stack PR creation and restack"
 assert_contains "$claude_body" "gh pr create --base <base> --head <head> --body-file <body-file>"
 assert_contains "$claude_body" "restack.sh"
@@ -49,6 +53,8 @@ assert_contains "$codex_body" "MUST NOT infer, reroute, or re-slice"
 assert_contains "$codex_body" "schemaVersion: 2"
 assert_contains "$codex_body" "multi_pr_emission"
 assert_contains "$codex_body" 'stop before `gh pr create`'
+assert_contains "$codex_body" "autopilot_continuation"
+assert_contains "$codex_body" "Never report completion while"
 assert_contains "$codex_body" "gh pr create --base <base> --head <head> --body-file <body-file>"
 assert_contains "$codex_body" "restack.sh"
 assert_contains "$codex_body" 'MUST NOT modify `.github/workflows/pr-checks.yml`'
@@ -62,6 +68,7 @@ set_test "Codex dist reference carries multi-PR contract"
 assert_contains "$codex_dist_body" "multi-pr-emission.sh"
 assert_contains "$codex_dist_body" "MUST NOT infer, reroute, or re-slice"
 assert_contains "$codex_dist_body" "schemaVersion: 2"
+assert_contains "$codex_dist_body" "autopilot_continuation"
 assert_contains "$codex_dist_body" 'MUST NOT modify `.github/workflows/pr-checks.yml`'
 
 test_summary

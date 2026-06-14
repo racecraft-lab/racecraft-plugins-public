@@ -343,9 +343,14 @@ opens one slice PR.
    fall back to a single all-changes PR just because the final full-diff gate is
    `pass` or `warn`. A valid current size-only final block also continues into
    marker emission; it is not a manual re-slicing stop. On an unexcepted
-   correctness block, stop with
-   `final_reviewability_gate.status=block` plus a `reslicing_required` packet;
-   on gate error, stop with state only and no packet. Correctness stops include
+   correctness block, block only PR body generation and PR side effects with
+   `final_reviewability_gate.status=block` plus a `reslicing_required` packet.
+   This is an internal continuation boundary, not a final operator handoff: read
+   `autopilot_continuation`, `operator_steps`, and `resume.resume_from`, then
+   continue through PRSG-007/008/009 until a valid slice PR stack is emitted or a
+   typed exception is committed. Never end the run or report completion while
+   `autopilot_continuation.required=true`; on gate error, stop with state only
+   and no packet. Correctness stops include
    malformed/stale marker state, failed verification, invalid packet, unsafe
    output, unusable gate evidence, invalid JSON, missing status/mode, and stale
    fingerprints.

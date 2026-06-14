@@ -31,18 +31,23 @@ jobs:
         if: steps.release.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_PRS: ${{ steps.release.outputs.prs }}
         run: |
           set -euo pipefail
 
-          release_prs=$(gh pr list \
-            --state open \
-            --base main \
-            --label "autorelease: pending" \
-            --json number,headRefName,title)
+          release_prs="${RELEASE_PRS:-[]}"
+          if [ -z "$release_prs" ] || [ "$release_prs" = "null" ]; then
+            release_prs="[]"
+          fi
+
+          if ! printf '%s' "$release_prs" | jq -e 'type == "array"' >/dev/null; then
+            echo "::error::Release Please prs output is not a JSON array."
+            exit 1
+          fi
 
           if [ "$(printf '%s' "$release_prs" | jq 'length')" -eq 0 ]; then
-            echo "No open release-please PRs found."
-            exit 0
+            echo "::error::Release Please reported prs_created=true but returned no PR metadata."
+            exit 1
           fi
 
           git config user.name "github-actions[bot]"
@@ -50,8 +55,13 @@ jobs:
 
           printf '%s\n' "$release_prs" | jq -c '.[]' | while IFS= read -r pr; do
             pr_number=$(printf '%s' "$pr" | jq -r '.number')
-            branch=$(printf '%s' "$pr" | jq -r '.headRefName')
+            branch=$(printf '%s' "$pr" | jq -r '.headBranchName // .headRefName // empty')
             title=$(printf '%s' "$pr" | jq -r '.title')
+
+            if [ -z "$pr_number" ] || [ "$pr_number" = "null" ] || [ -z "$branch" ]; then
+              echo "::error::Release Please PR metadata is missing number or head branch: ${pr}"
+              exit 1
+            fi
 
             echo "Syncing generated payloads for PR #${pr_number} (${branch})."
             git fetch origin "$branch"

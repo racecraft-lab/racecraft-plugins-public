@@ -131,10 +131,13 @@ all-changes PR just because the final full-diff gate is `pass` or `warn`. A
 valid current size-only block also continues into marker emission; it is not a
 manual re-slicing stop. If it returns 1 for an unexcepted
 correctness block or missing/stale marker plan, do not generate a PR body, do
-not invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh`;
-read the `reslicing_required` packet and resume from the named PRSG-007/008/009
-operator step. If it returns 2, stop as a gate error; no re-slicing packet is
-valid for that run.
+not invoke any `gh pr create` variant, and do not run `multi-pr-emission.sh`
+yet. This blocks only PR side effects. It is not a final response condition:
+read `autopilot_continuation`, the `reslicing_required` packet, and the named
+PRSG-007/008/009 operator step, then continue internally until a valid slice PR
+stack is emitted or a typed exception is committed. Never report completion while
+`autopilot_continuation.required=true`. If it returns 2, stop as a gate error;
+no re-slicing packet is valid for that run.
 
 For marker-aware PR preparation, record gate status/mode/exit/evidence path,
 fingerprint status, ordered marker IDs, checkpoints, warnings, final

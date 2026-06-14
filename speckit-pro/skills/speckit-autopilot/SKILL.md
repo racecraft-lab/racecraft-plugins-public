@@ -547,8 +547,13 @@ detailed procedures in `references/post-implementation.md`:
    marker-based PR emission; it is not a manual re-slicing stop. An unexcepted
    correctness block writes
    `final_reviewability_gate` state plus a `reslicing_required` packet and
-   stops before PR preparation; a gate error writes state and stops without a
-   packet. After a proceed result, build the PR packet/body by running
+   stops only the unsafe PR side effects. It is not a final answer or operator
+   handoff: read `autopilot_continuation`, `operator_steps`, and
+   `resume.resume_from`, then continue internally through PRSG-007/008/009
+   until a valid slice PR stack is emitted or a typed exception is committed.
+   Never report completion while `autopilot_continuation.required=true`; a gate
+   error writes state and stops without a packet. After a proceed result, build
+   the PR packet/body by running
    `generate-pr-body.sh --packet-output .git/speckit-pr-packet.json` →
    `.git/speckit-pr-body.md`, refine only sanctioned editable prose fields,
    then run the shared `validate-pr-packet.sh` against the just-rendered
