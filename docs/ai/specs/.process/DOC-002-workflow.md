@@ -29,7 +29,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, reliability, and error-handling complete; 25 gaps remediated, 0 remaining |
 | Tasks | `/speckit-tasks` | Complete | 43 tasks across Foundation, US1-US3, and Polish; 14 parallel-safe; FR-001 through FR-023 mapped; G5 passed; task reviewability evidence recorded |
 | Analyze | `/speckit-analyze` | Complete | 3 findings remediated; explicit AC-2.1 through AC-2.5 task coverage added; checklist and workflow state reconciled; marker counter clean |
-| Implement | `/speckit-implement` | In Progress | Landing page complete; starting route-shell and Diataxis navigation tasks T013-T026 |
+| Implement | `/speckit-implement` | In Progress | Route shells complete; starting build, link, Pages config, and quickstart tasks T027-T036 |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -481,8 +481,8 @@ Focus on:
 |-------|-------|-----------|-------|
 | Foundation | T001-T007 | Complete | Created `docs-site/` package/config baseline and content directories; dependency install and validation scripts remain owned by Slice 2 |
 | Landing page | T008-T012 | Complete | Created thin `index.mdx` with platform links and source-vs-payload explanation |
-| Route shell | T013-T026 | In Progress | Next group creates route shells and final Diataxis sidebar groups |
-| Validation/config | Pending | Pending | Pending |
+| Route shell | T013-T026 | Complete | Created all 11 route shells, Diataxis sidebar groups, route metadata, source evidence, and static accessibility fallback coverage |
+| Validation/config | T027-T036 | In Progress | Next group adds link validation, dependency lockfile, command verification, and any quickstart corrections |
 | Polish | Pending | Pending | Pending |
 
 ---

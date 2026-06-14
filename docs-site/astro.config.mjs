@@ -8,7 +8,24 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Racecraft Public Plugins',
-      sidebar: [],
+      sidebar: [
+        {
+          label: 'Tutorials',
+          items: ['index', 'install/claude-code', 'install/codex', 'first-run'],
+        },
+        {
+          label: 'How-to',
+          items: ['choose-your-path', 'troubleshooting', 'contribute-and-release'],
+        },
+        {
+          label: 'Reference',
+          items: ['reference', 'glossary'],
+        },
+        {
+          label: 'Explanation',
+          items: ['security-and-trust', 'spec-kit-lifecycle'],
+        },
+      ],
     }),
   ],
 });
