@@ -23,9 +23,9 @@ Re-read it before each phase. The design concept is the source of truth for the 
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Seed from DOC-002 roadmap entry, DOC-001 decision record, and this design concept |
-| Clarify | `/speckit-clarify` | Pending | Focus on site config, route ownership, validation, and split boundaries |
-| Plan | `/speckit-plan` | Pending | Astro/Starlight, MDX, pnpm, Pages-ready config, and internal-link validation |
+| Specify | `/speckit-specify` | Complete | spec.md created: 17 FRs, 3 user stories, 7 acceptance scenarios, 7 SCs; 0 clarification markers; preserves DOC-002 two-slice intent |
+| Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
+| Plan | `/speckit-plan` | In Progress | Astro/Starlight, MDX, pnpm, Pages-ready config, and internal-link validation |
 | Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, reliability, and error-handling |
 | Tasks | `/speckit-tasks` | Pending | Preserve two-slice intent: shell/routes, then validation/config |
 | Analyze | `/speckit-analyze` | Pending | Check drift against design concept and DOC-001 handoff |
@@ -59,7 +59,24 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Accessibility fallback | Route shells must not hide critical installation or trust information behind inaccessible dynamic behavior | Manual review of rendered static pages and Starlight defaults |
 | Existing repo checks | If plugin/spec scaffold files are touched, keep structural checks green | `bash tests/speckit-pro/run-all.sh --layer 1` |
 
-**Constitution Check:** Pending before G1.
+**Constitution Check:** Verified before G1.
+
+### Autopilot Preflight
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| Archive Sweep | Complete | Archive extension installed; no previously merged active specs under `specs/**`; current target `specs/doc-002-unified-landing-page-and-ia-shell` excluded |
+| Prerequisites | Pass | `check-prerequisites.sh docs/ai/specs/.process/DOC-002-workflow.md` |
+| Confidence Gate Mode | Advisory | `resolve-confidence-mode.sh -- docs/ai/specs/.process/DOC-002-workflow.md` |
+| Reviewability Setup | Pass | 395 reviewable LOC, 0 production files, 6 total files, primary surface `docs/process` |
+| Spec Index | Current | `generate-spec-index.sh --check` |
+| Structural Baseline | Pass | `bash tests/speckit-pro/run-all.sh --layer 1` -> 979/979 passed |
+
+### Project Commands
+
+Initial command detection returned `N/A` for build, typecheck, lint, unit,
+integration, and full verification because `docs-site/` does not exist before
+DOC-002 implementation. Re-detect after the site scaffold is created.
 
 ---
 
@@ -147,13 +164,13 @@ Racecraft Public Plugins and `speckit-pro` need a public static docs shell so fi
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | AC-2.1 through AC-2.5 |
+| Functional Requirements | 17 |
+| User Stories | 3 |
+| Acceptance Criteria | AC-2.1 through AC-2.5 covered by 7 acceptance scenarios and 7 measurable outcomes |
 
 ### Files Generated
 
-- [ ] `specs/doc-002-unified-landing-page-and-ia-shell/spec.md`
+- [x] `specs/doc-002-unified-landing-page-and-ia-shell/spec.md`
 
 ---
 
@@ -185,9 +202,9 @@ Racecraft Public Plugins and `speckit-pro` need a public static docs shell so fi
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Site scaffold and Pages-ready config | Pending | Pending |
-| 2 | IA shell and content ownership | Pending | Pending |
-| 3 | Validation and slicing | Pending | Pending |
+| 1 | Site scaffold and Pages-ready config | 0 | Skipped by G1 routing because `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
+| 2 | IA shell and content ownership | 0 | Skipped by G1 routing because `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
+| 3 | Validation and slicing | 0 | Skipped by G1 routing because `spec.md` has 0 `[NEEDS CLARIFICATION]` markers |
 
 ---
 
