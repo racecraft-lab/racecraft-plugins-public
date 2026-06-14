@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
   "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
   "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T00:30:58Z",
-  "active_step": "Phase 2: Clarify - Detection Contract Focus",
+  "updated_at": "2026-06-14T01:25:32Z",
+  "active_step": "Phase 3: Plan",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -76,15 +76,47 @@
       "gate_status": "passed",
       "summary": "Created spec.md and requirements checklist. Spec has 4 user stories, 15 functional requirements, 11 acceptance scenarios, 6 success criteria, and 0 NEEDS CLARIFICATION markers."
     },
-    {"step": "Phase 2: Clarify - Detection Contract Focus", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Detection Contract Focus Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Mutation and Fallback Focus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Mutation and Fallback Focus Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Emission and Restack Focus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Emission and Restack Focus Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Parity and Test Focus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Parity and Test Focus Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {
+      "step": "Phase 2: Clarify - Detection Contract Focus",
+      "status": "completed",
+      "summary": "Accepted five detection-contract decisions: canonical `gh stack` invocation; shared `stack_manager_decision` object; read-only `gh stack view --json` plus synthetic command plan for pre-mutation proof; topology compatibility from SpecKit PRS/marker state; and array-of-argv command plan records."
+    },
+    {
+      "step": "Phase 2: Clarify - Detection Contract Focus Consensus",
+      "status": "completed",
+      "summary": "Round 1 routed to codebase/domain analysts; codebase low confidence triggered Round 2 spec-context review. Final 3-perspective consensus accepted read-only `gh stack view --json` plus synthetic command plan as the safe pre-mutation proof rule, with detailed command/version matrix deferred to Plan."
+    },
+    {
+      "step": "Phase 2: Clarify - Mutation and Fallback Focus",
+      "status": "completed",
+      "summary": "Accepted five mutation/fallback decisions: first attempted topology-changing command is the no-fallback mutation boundary; fallback is only before mutating `gh stack` attempts; recoverable block state carries selected manager, failed argv/action, per-operation statuses, topology, PR identity, evidence paths, retry policy, and fallback_allowed=false; retries reconcile by deterministic slice/head/base/PR/head SHA/packet identity; unknown side effects become partial_mutation_unknown."
+    },
+    {
+      "step": "Phase 2: Clarify - Mutation and Fallback Focus Consensus",
+      "status": "completed",
+      "summary": "Clarify executor returned no unresolved consensus items."
+    },
+    {
+      "step": "Phase 2: Clarify - Emission and Restack Focus",
+      "status": "completed",
+      "summary": "Accepted five emission/restack decisions: packet-owned `gh pr create/edit` remains authoritative before `gh stack` topology linking; stack-wide marker/packet preflight happens before the first mutating `gh stack` command; evidence adds top-level `stack_manager_decision` plus per-operation manager/argv/status; supported restack uses `gh stack rebase --upstack` only behind version/capability proof; command execution is argv-only with validated refs/paths and bounded output tails."
+    },
+    {
+      "step": "Phase 2: Clarify - Emission and Restack Focus Consensus",
+      "status": "completed",
+      "summary": "Consensus resolved three items: emission codebase/domain both agreed packet-owned PR metadata precedes stack linking; restack codebase/domain both agreed `gh stack rebase --upstack` is only supported behind version proof with explicit fallback otherwise; security all-three agreed argv-only execution with no command-string execution."
+    },
+    {
+      "step": "Phase 2: Clarify - Parity and Test Focus",
+      "status": "completed",
+      "summary": "Accepted five proof/parity decisions: Layer 4 fake-CLI fixtures are authoritative behavior proof; stack-manager decisions use a shared versioned schema with explicit schema fields; Layer 7 is orchestration/live-safe proof only; Layer 8 is operator guidance parity without duplicate Codex implementation; the exact gh stack command/version matrix remains Plan-owned."
+    },
+    {
+      "step": "Phase 2: Clarify - Parity and Test Focus Consensus",
+      "status": "completed",
+      "summary": "Codebase and spec-context analysts agreed that PRSG-014 should prove Claude/Codex parity as operator guidance parity backed by shared scripts/contracts, L1 Codex structural parity, and L4/L7 executable proof; transcript-level Claude/Codex parity remains out of scope until a stable Codex replay/transcript harness and schema exist."
+    },
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - integration", "status": "pending"},
     {"step": "Phase 4: Checklist - integration Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling", "status": "pending"},

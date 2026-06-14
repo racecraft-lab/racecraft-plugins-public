@@ -46,7 +46,7 @@ concept doc is the source of truth for any decision captured during scoping.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
-| Clarify | `/speckit-clarify` | Pending | Recommended |
+| Clarify | `/speckit-clarify` | Complete | Four focused sessions complete; G2 passed |
 | Plan | `/speckit-plan` | Pending | Resolve `gh-stack` command/version behavior |
 | Checklist | `/speckit-checklist` | Pending | Run for each recommended domain |
 | Tasks | `/speckit-tasks` | Pending | Generate after plan and checklist gaps are resolved |
@@ -119,12 +119,12 @@ at `.specify/memory/constitution.md`:
 
 ### Success Criteria Summary
 
-- [ ] Autopilot detects whether `gh-stack` is available, supported, compatible with the repo, compatible with the branch topology, and safe to dry-run.
+- [ ] Autopilot detects whether `gh-stack` is available through `gh stack`, supported, compatible with the repo, compatible with the branch topology, and safe by read-only proof before mutation.
 - [ ] Emission/restack evidence persists `gh_stack.available`, `gh_stack.supported`, `gh_stack.reason`, selected stack manager, command plan, version/support outcome, fallback reason, and PR/branch topology.
 - [ ] When support detection passes, stack-aware create/sync/restack behavior preserves PRSG-013 marker order, branch names, explicit base topology, and PRSG-012 title/body validation.
 - [ ] Unsupported, missing, or ambiguous `gh-stack` environments fall back to explicit `gh pr create/edit --base --head --body-file` before mutation.
 - [ ] After any partial `gh-stack` mutation, failures block with recoverable state instead of mixing stack managers.
-- [ ] Layer 4 fixtures with fake `gh-stack` and fake `gh`, Layer 7 live-safe replay, and Layer 8 parity expectations cover supported and fallback paths.
+- [ ] Layer 4 fake-CLI fixtures, Layer 7 live-safe replay, and Layer 8 operator guidance parity expectations cover supported, fallback, and blocked paths.
 
 ---
 
@@ -194,7 +194,7 @@ creation, sync, and restack burden.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 15 |
+| Functional Requirements | 23 after clarify |
 | User Stories | 4 |
 | Acceptance Criteria | 11 |
 
@@ -213,7 +213,7 @@ creation, sync, and restack burden.
 
 - `[codebase]` Confirm exact `gh-stack` command/version capability matrix for create/sync/restack.
 - `[spec]` Finalize stack-manager evidence field names with minimal schema churn.
-- `[domain]` Define what counts as safe pre-mutation `gh-stack` status/dry-run proof.
+- `[domain]` Define what counts as safe pre-mutation `gh-stack` read-only proof.
 - `[security]` Confirm command argument safety expectations for branch names, body paths, and command plans.
 
 ---
@@ -227,7 +227,7 @@ creation, sync, and restack burden.
 #### Session 1: Detection Contract Focus
 
 ```bash
-/speckit-clarify Focus on gh-stack detection: command availability, version capture, usable status output, repo compatibility, branch topology compatibility, safe dry-run semantics, and exact JSON fields for `available`, `supported`, `reason`, selected manager, and command plan.
+/speckit-clarify Focus on gh-stack detection: command availability, version capture, usable status output, repo compatibility, branch topology compatibility, safe read-only proof semantics, and exact JSON fields for `available`, `supported`, `reason`, selected manager, and command plan.
 ```
 
 #### Session 2: Mutation and Fallback Focus
@@ -252,10 +252,26 @@ creation, sync, and restack burden.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Detection Contract | Pending | |
-| 2 | Mutation and Fallback | Pending | |
-| 3 | Emission and Restack | Pending | |
-| 4 | Parity and Test | Pending | |
+| 1 | Detection Contract | 5 | Accepted `gh stack` as canonical runtime invocation, a shared `stack_manager_decision` object, read-only `gh stack view --json` plus synthetic command plan as pre-mutation proof, topology compatibility from SpecKit PRS/marker state, and array-of-argv command plan records. |
+| 2 | Mutation and Fallback | 5 | Accepted first attempted topology-changing command as the no-fallback mutation boundary; fallback only before mutating `gh stack` attempts; recoverable blocked state fields; retry reconciliation by slice/head/base/PR/head SHA/packet identity; ambiguous side effects classified as `partial_mutation_unknown` with `fallback_allowed=false`. |
+| 3 | Emission and Restack | 5 | Accepted packet-owned PR metadata as authoritative before `gh stack` topology linking; stack-wide packet/marker preflight before first mutating `gh stack` command; shared top-level `stack_manager_decision` evidence plus per-operation manager/argv/status; supported restack via `gh stack rebase --upstack <first-remaining-branch>` only behind version/capability proof; argv-only command execution with validated refs/paths and bounded output tails. |
+| 4 | Parity and Test | 5 | Accepted Layer 4 fake-CLI fixtures as authoritative stack-manager behavior proof, a shared versioned `stack-manager-decision` schema with explicit schema fields, Layer 7 as orchestration/live-safe proof only, Layer 8 as operator guidance parity for Claude Code and Codex without duplicate scripts, and Plan-owned `gh stack` command/version matrix resolution. |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Safe read-only proof for `gh stack` | [domain, codebase] | 1->2 | escape-hatch then 3/3 | Safe pre-mutation proof is read-only availability/version/support evidence plus parseable `gh stack view --json` topology checked against SpecKit PRS/marker state; mutating commands are never detection dry-runs, so detection records a synthetic command plan and falls back before mutation when proof is missing or ambiguous. | codebase-analyst, domain-researcher, spec-context-analyst |
+| 2 | Clarify | Packet-owned PR metadata before stack linking | [domain, codebase] | 1 | both-agree | Supported emission renders and validates all PR packets, creates or updates PRs with packet-owned explicit `gh pr create/edit`, then uses `gh stack link` or a proven equivalent only for topology linking/sync. | codebase-analyst, domain-researcher |
+| 3 | Clarify | Safe supported restack subcommand | [domain, codebase] | 1 | both-agree | Supported restack may use `gh stack rebase --upstack <first-remaining-branch>` plus required proven sync/push only when the installed version matrix proves exact noninteractive scope support; otherwise `restack.sh --apply` / `gh pr edit --base` remains the fallback before mutation. | codebase-analyst, domain-researcher |
+| 4 | Clarify | Argv-only command execution | [security] | 1 | 3/3 | Stack-manager command plans are executable only as argv arrays; command strings are display-only, refs/body paths are validated before inclusion, and stdout/stderr evidence is bounded. | codebase-analyst, spec-context-analyst, domain-researcher |
+| 5 | Clarify | L8 Claude/Codex parity without duplicate scripts | [codebase, spec-context] | 1 | both-agree | L8 proves operator guidance parity for supported, fallback, and blocked stack-manager flows; Claude Code and Codex guidance point to shared scripts/contracts, PRSG-014 adds no Codex-only stack-manager implementation, and transcript-level Claude/Codex parity is out of scope until a stable Codex replay/transcript harness and schema exist. | codebase-analyst, spec-context-analyst |
+
+### Clarify Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| G2 | Passed | `validate-gate.sh G2 specs/prsg-014-optional-gh-stack-stack-manager-integration` returned `pass=true`, `markers=0` |
 
 ---
 
@@ -273,7 +289,7 @@ creation, sync, and restack burden.
 - JSON/state: `jq`, emission/restack schemas, `.process/prs.json`, `autopilot-state.json`, workflow evidence
 - GitHub operations: `gh` CLI remains canonical fallback
 - Optional stack manager: `gh-stack` extension when installed, supported, compatible, and safe before mutation
-- Tests: shell Layer 4 fixtures with fake `gh-stack` and fake `gh`; Layer 7 replay; Layer 8 parity fixtures
+- Tests: shell Layer 4 fixtures with fake `gh` dispatching canonical `gh stack`; Layer 7 replay; Layer 8 operator guidance parity fixtures
 
 ## Constraints
 - `gh-stack` is selected only after deterministic support checks pass.
@@ -293,7 +309,9 @@ creation, sync, and restack burden.
 - Extend evidence schemas compatibly rather than replacing existing PRSG-009,
   PRSG-012, or PRSG-013 records.
 - Plan fake command fixtures before implementation so supported, unsupported,
-  ambiguous, missing, dry-run-failed, and partial-mutation cases are testable.
+  ambiguous, missing, read-only-proof-failed, topology-incompatible, fallback,
+  partial-mutation, duplicate-retry, supported-restack, and fallback-restack
+  cases are testable.
 - Resolve exact `gh-stack` subcommands and version support in research before
   tasks are generated.
 ```
@@ -327,7 +345,7 @@ creation, sync, and restack burden.
 /speckit-checklist integration
 
 Focus on PRSG-014 requirements:
-- `gh-stack` command availability, version, status, repo compatibility, topology compatibility, and dry-run semantics
+- `gh-stack` command availability, version, read-only status proof, repo compatibility, topology compatibility, and support semantics
 - Fallback to explicit `gh pr create/edit --base --head --body-file`
 - Consistency between detection output, emission behavior, restack behavior, and schema evidence
 - Pay special attention to unsupported or ambiguous extension behavior.
@@ -396,8 +414,9 @@ Task boundaries must preserve the design concept decisions:
 - Shared scripts plus mirrored Claude/Codex guidance
 
 Prioritize tests before implementation:
-- Fake `gh-stack`/`gh` Layer 4 fixtures for supported, unsupported, missing,
-  ambiguous, dry-run-failed, fallback, and partial-mutation cases
+- Fake `gh`/`gh stack` Layer 4 fixtures for supported, unsupported, missing,
+  ambiguous, read-only-proof-failed, topology-incompatible, fallback,
+  partial-mutation, duplicate-retry, supported-restack, and fallback-restack cases
 - Schema/evidence assertions for selected manager, reasons, command plan, and topology
 - L8 parity fixture updates for Claude/Codex guidance
 ```
