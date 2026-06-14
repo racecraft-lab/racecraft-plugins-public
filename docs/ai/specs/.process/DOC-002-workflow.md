@@ -27,8 +27,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: `spec.md` had zero clarification markers |
 | Plan | `/speckit-plan` | Complete | plan.md, research.md, data-model.md, route-shell contract, and quickstart created; Astro/Starlight, pnpm, Pages-ready config, and build-integrated link validation selected |
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, reliability, and error-handling complete; 25 gaps remediated, 0 remaining |
-| Tasks | `/speckit-tasks` | In Progress | Preserve two-slice intent: shell/routes, then validation/config |
-| Analyze | `/speckit-analyze` | Pending | Check drift against design concept and DOC-001 handoff |
+| Tasks | `/speckit-tasks` | Complete | 43 tasks across Foundation, US1-US3, and Polish; 14 parallel-safe; FR-001 through FR-023 mapped; G5 passed; task reviewability evidence recorded |
+| Analyze | `/speckit-analyze` | In Progress | Check drift against design concept and DOC-001 handoff |
 | Implement | `/speckit-implement` | Pending | Execute only after G6 passes |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -364,10 +364,26 @@ Focus on DOC-002 requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Pending |
-| **Parallel Opportunities** | Pending |
-| **User Stories Covered** | Pending |
+| **Total Tasks** | 43 |
+| **Phases** | 5: Foundation, User Story 1, User Story 2, User Story 3, Polish |
+| **Parallel Opportunities** | 14 |
+| **User Stories Covered** | 3 |
+| **FR Coverage** | FR-001 through FR-023 mapped in `tasks.md` Coverage Matrix |
+| **Reviewability Notes** | Slice 1 is T001-T026 for shell/routes; Slice 2 is T027-T043 for validation/config hardening and final review evidence; PR packet tasks cover review order, traceability, verification evidence, non-goals, and scope budget |
+| **Unresolved Items** | None |
+
+### Task Reviewability Gate
+
+| Field | Value |
+|-------|-------|
+| **Status** | `block` |
+| **Mode** | `tasks` |
+| **Exit Code** | 1 |
+| **Evidence** | `specs/doc-002-unified-landing-page-and-ia-shell/.process/reviewability/tasks-gate.json` |
+| **Reviewable LOC** | 1720 |
+| **Production Files** | 2 |
+| **Total Files** | 75 |
+| **Decision** | Size-only task estimate recorded; no correctness block. Continue to Analyze and preserve final reviewability backstop before PR creation. |
 
 ---
 
@@ -381,10 +397,17 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-0
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| **Releasable** | Pending | `true`, or `false` for destructive/concurrency-sensitive changes |
-| **Signals** | Pending | Decisive detector findings |
-| **Warnings** | Pending | Release-safety warnings |
+| **Route** | `one-navigable-PR` | One navigable PR; preserve shell/routes before validation/config in review order |
+| **Releasable** | `true` | No destructive or concurrency-sensitive release warning |
+| **Signals** | `change-shape:modify-heavy` | Decisive detector findings |
+| **Warnings** | None | Release-safety warnings |
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| **Status** | Skipped |
+| **Reason** | Atomicity route is `one-navigable-PR`, so PRSG-008 layer planning is not required |
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-002-workflow.md",
-  "updated_at": "2026-06-14T01:28:02Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-14T01:39:39Z",
+  "active_step": "Phase 6: Analyze",
   "confidence_gate_mode": "advisory",
   "current_branch": "doc-002-unified-landing-page-and-ia-shell",
   "feature_dir": "specs/doc-002-unified-landing-page-and-ia-shell",
@@ -51,6 +51,30 @@
     "spec_index": "current",
     "layer1_structural": "979/979 passed"
   },
+  "task_reviewability_gate": {
+    "status": "block",
+    "mode": "tasks",
+    "exit_code": 1,
+    "evidence_path": "specs/doc-002-unified-landing-page-and-ia-shell/.process/reviewability/tasks-gate.json",
+    "classification": "size-only task estimate",
+    "correctness_block": false,
+    "proceed": true
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [
+      "hint:flag-system:weak"
+    ],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route one-navigable-PR does not require PRSG-008 layer planning"
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -70,11 +94,15 @@
     {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed", "skipped": "Reliability executor returned no unresolved consensus items."},
     {"step": "Phase 4: Checklist - Error Handling", "status": "completed", "summary": "25 items; 7 error-handling gaps remediated; zero remaining gap markers."},
     {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed", "skipped": "Error Handling executor returned no unresolved consensus items."},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed", "gate": "G5", "gate_status": "passed", "summary": "Created tasks.md with 43 tasks, 14 parallel-safe tasks, and FR-001 through FR-023 mapped. Task reviewability gate returned a size-only block recorded in .process/reviewability/tasks-gate.json; atomicity route is one-navigable-PR."},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Phase 7: Foundation shell baseline (T001-T007)", "status": "pending"},
+    {"step": "Phase 7: Landing page and platform choice (T008-T012)", "status": "pending"},
+    {"step": "Phase 7: Route shells and Diataxis navigation (T013-T026)", "status": "pending"},
+    {"step": "Phase 7: Build, links, Pages config, and quickstart (T027-T036)", "status": "pending"},
+    {"step": "Phase 7: Polish and final evidence (T037-T043)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},

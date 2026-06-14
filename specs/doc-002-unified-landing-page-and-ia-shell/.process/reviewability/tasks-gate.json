@@ -1,0 +1,53 @@
+{
+  "mode": "tasks",
+  "status": "block",
+  "pass": false,
+  "reviewable_loc": 1720,
+  "production_files": 2,
+  "total_files": 75,
+  "primary_surface_count": 6,
+  "primary_surfaces": [
+    "API",
+    "docs/process",
+    "other",
+    "scheduler/runtime",
+    "schema/migration",
+    "seed/config"
+  ],
+  "greenfield": false,
+  "thresholds": {
+    "warn": {
+      "reviewable_loc": 400,
+      "production_files": 6,
+      "total_files": 15,
+      "primary_surfaces": 1
+    },
+    "block": {
+      "reviewable_loc": 800,
+      "production_files": 8,
+      "total_files": 25,
+      "primary_surfaces": 1
+    }
+  },
+  "exception_honored": false,
+  "exception_class": null,
+  "exceptions": {
+    "accepted": [],
+    "rejected": []
+  },
+  "warnings": [
+    "reviewable LOC 1720 exceeds warn threshold 400",
+    "total files 75 exceeds warn threshold 15",
+    "primary surfaces 6 exceeds warn threshold 1"
+  ],
+  "blockers": [
+    "reviewable LOC 1720 exceeds block threshold 800",
+    "total files 75 exceeds block threshold 25"
+  ],
+  "autopilot_decision": {
+    "classification": "size-only task estimate",
+    "correctness_block": false,
+    "proceed": true,
+    "reason": "G5 passed, the task gate reported only sizing and file-count blockers, and atomicity routing selected one-navigable-PR for implementation. Final diff reviewability backstop remains mandatory before PR creation."
+  }
+}
