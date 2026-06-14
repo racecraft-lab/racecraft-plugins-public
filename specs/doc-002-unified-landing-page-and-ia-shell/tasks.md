@@ -31,11 +31,11 @@
 
 **Independent test**: Open the landing page and confirm the first screen includes the marketplace purpose, current plugin, supported Claude Code and Codex paths, source-vs-payload distinction, and static next actions without later-DOC content depth.
 
-- [ ] T008 [US1] Validate the landing-page acceptance contract in `specs/doc-002-unified-landing-page-and-ia-shell/spec.md` and `specs/doc-002-unified-landing-page-and-ia-shell/contracts/route-shell-manifest.json` before editing `docs-site/src/content/docs/index.mdx`. Covers FR-003, FR-004, FR-005, FR-009, FR-018.
-- [ ] T009 [US1] Create `docs-site/src/content/docs/index.mdx` with Starlight frontmatter, page title, marketplace purpose, `speckit-pro`, concise value statement, and Claude Code/Codex platform choices. Covers FR-003, FR-004, FR-009, FR-018.
-- [ ] T010 [US1] Add a concise source-vs-generated-payload summary to `docs-site/src/content/docs/index.mdx` naming `speckit-pro/`, `dist/claude/**`, and `dist/codex/**` without changing those source or payload paths. Covers FR-005, FR-018, FR-020.
-- [ ] T011 [US1] Add descriptive native links from `docs-site/src/content/docs/index.mdx` to `/install/claude-code/`, `/install/codex/`, and `/reference/` as static next actions. Covers FR-009, FR-020, FR-021.
-- [ ] T012 [US1] Verify `docs-site/src/content/docs/index.mdx` excludes full install procedures, long command matrices, testimonials, pricing or generic marketing claims, analytics prompts, and DOC-003 through DOC-010 content depth. Covers FR-003, FR-018.
+- [x] T008 [US1] Validate the landing-page acceptance contract in `specs/doc-002-unified-landing-page-and-ia-shell/spec.md` and `specs/doc-002-unified-landing-page-and-ia-shell/contracts/route-shell-manifest.json` before editing `docs-site/src/content/docs/index.mdx`. Covers FR-003, FR-004, FR-005, FR-009, FR-018.
+- [x] T009 [US1] Create `docs-site/src/content/docs/index.mdx` with Starlight frontmatter, page title, marketplace purpose, `speckit-pro`, concise value statement, and Claude Code/Codex platform choices. Covers FR-003, FR-004, FR-009, FR-018.
+- [x] T010 [US1] Add a concise source-vs-generated-payload summary to `docs-site/src/content/docs/index.mdx` naming `speckit-pro/`, `dist/claude/**`, and `dist/codex/**` without changing those source or payload paths. Covers FR-005, FR-018, FR-020.
+- [x] T011 [US1] Add descriptive native links from `docs-site/src/content/docs/index.mdx` to `/install/claude-code/`, `/install/codex/`, and `/reference/` as static next actions. Covers FR-009, FR-020, FR-021.
+- [x] T012 [US1] Verify `docs-site/src/content/docs/index.mdx` excludes full install procedures, long command matrices, testimonials, pricing or generic marketing claims, analytics prompts, and DOC-003 through DOC-010 content depth. Covers FR-003, FR-018.
 
 ## Phase 3: User Story 2 - Eleven Route Shells And Diataxis Navigation
 
