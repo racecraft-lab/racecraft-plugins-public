@@ -405,7 +405,8 @@
         },
         "emission_mapping": {
           "status": "pending"
-        }
+        },
+        "title_description": "Add stack manager decision contract"
       },
       {
         "id": "us1",
@@ -436,7 +437,8 @@
         },
         "emission_mapping": {
           "status": "pending"
-        }
+        },
+        "title_description": "Detect stack manager support before mutation"
       },
       {
         "id": "us2",
@@ -468,7 +470,8 @@
         },
         "emission_mapping": {
           "status": "pending"
-        }
+        },
+        "title_description": "Thread stack manager decisions through emission"
       },
       {
         "id": "us3",
@@ -500,7 +503,8 @@
         },
         "emission_mapping": {
           "status": "pending"
-        }
+        },
+        "title_description": "Record stack-aware restack decisions"
       },
       {
         "id": "us4",
@@ -533,7 +537,8 @@
         },
         "emission_mapping": {
           "status": "pending"
-        }
+        },
+        "title_description": "Align stack manager guidance and parity fixtures"
       }
     ],
     "warnings": [

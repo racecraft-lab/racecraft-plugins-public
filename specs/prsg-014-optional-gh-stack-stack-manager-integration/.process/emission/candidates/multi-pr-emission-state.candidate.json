@@ -1,0 +1,280 @@
+{
+  "multi_pr_emission": {
+    "schema_version": 2,
+    "status": "pending",
+    "emission_mode": "marker",
+    "route": "marker_split",
+    "base_branch": "main",
+    "base_sha": "be389fb7ca0dd15766c729c118fa12a6455d1831",
+    "next_slice_id": "foundation",
+    "reconciled_at": "",
+    "slices": [
+      {
+        "slice_id": "foundation",
+        "review_order": 1,
+        "expected_branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+        "expected_base_branch": "main",
+        "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+        "declared_files": [
+          "speckit-pro/skills/speckit-autopilot/contracts/multi-pr-emission-state.schema.json",
+          "speckit-pro/skills/speckit-autopilot/contracts/prs-v2.schema.json",
+          "speckit-pro/skills/speckit-autopilot/contracts/restack-output.schema.json",
+          "speckit-pro/skills/speckit-autopilot/contracts/stack-manager-decision.schema.json",
+          "speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh",
+          "specs/prsg-014-optional-gh-stack-stack-manager-integration/plan.md"
+        ],
+        "declared_scoped_tests": [
+          "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/README.md",
+          "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/expected/decision-supported.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/schema/stack-manager-decision-cases.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/topology/prsg-014-prs.json",
+          "tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh"
+        ],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/README.md",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/expected/decision-supported.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/schema/stack-manager-decision-cases.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/topology/prsg-014-prs.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/foundation/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "foundation",
+        "source_marker_ids": [
+          "foundation"
+        ],
+        "source_marker_checkpoints": [
+          "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us1",
+        "review_order": 2,
+        "expected_branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+        "expected_base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/01-foundation",
+        "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+        "declared_files": [
+          "speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh"
+        ],
+        "declared_scoped_tests": [
+          "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/cases/detection-matrix.json",
+          "tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh"
+        ],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/fixtures/stack-manager/cases/detection-matrix.json",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us1/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            },
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us1/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us1",
+        "source_marker_ids": [
+          "us1"
+        ],
+        "source_marker_checkpoints": [
+          "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us2",
+        "review_order": 3,
+        "expected_branch": "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+        "expected_base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/02-us1",
+        "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+        "declared_files": [
+          "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
+        ],
+        "declared_scoped_tests": [
+          "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh"
+        ],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us2/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us2",
+        "source_marker_ids": [
+          "us2"
+        ],
+        "source_marker_checkpoints": [
+          "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us3",
+        "review_order": 4,
+        "expected_branch": "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+        "expected_base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/03-us2",
+        "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+        "declared_files": [
+          "speckit-pro/skills/speckit-autopilot/scripts/restack.sh"
+        ],
+        "declared_scoped_tests": [
+          "tests/speckit-pro/layer4-scripts/test-restack.sh"
+        ],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/layer4-scripts/test-restack.sh",
+              "gate_type": "SCRIPT_UNIT",
+              "reason": "PRSG-013 declared marker test mapped to SCRIPT_UNIT",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us3/layer4.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us3",
+        "source_marker_ids": [
+          "us3"
+        ],
+        "source_marker_checkpoints": [
+          "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us4",
+        "review_order": 5,
+        "expected_branch": "prsg-014-optional-gh-stack-stack-manager-integration/05-us4",
+        "expected_base_branch": "prsg-014-optional-gh-stack-stack-manager-integration/04-us3",
+        "head_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
+        "declared_files": [
+          "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+          "speckit-pro/skills/speckit-autopilot/references/post-implementation.md",
+          "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md"
+        ],
+        "declared_scoped_tests": [
+          "tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/README.md",
+          "tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/expected.json",
+          "tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/parser-fixture.jsonl",
+          "tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/prompt.txt",
+          "tests/speckit-pro/layer7-integration/run-all-fixtures.sh",
+          "tests/speckit-pro/layer7-integration/run-dispatch-fixtures.sh",
+          "tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/README.md",
+          "tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/env-fallback.sh",
+          "tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/env-teams.sh",
+          "tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/expected-equivalence.json",
+          "tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/tolerance.json",
+          "tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/workflow.md",
+          "tests/speckit-pro/layer8-parity/run-parity-fixtures.sh",
+          "tests/speckit-pro/run-all.sh"
+        ],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "tests/speckit-pro/run-all.sh",
+              "gate_type": "DEFAULT_VERIFY",
+              "reason": "PRSG-013 declared marker test mapped to DEFAULT_VERIFY",
+              "required": true,
+              "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/emission/us4/default-verify.log",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us4",
+        "source_marker_ids": [
+          "us4"
+        ],
+        "source_marker_checkpoints": [
+          "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/pr-packet.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/final-marker-split-result.json"
+      }
+    ],
+    "source_marker_plan": {
+      "path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/pr-marker-plan.json"
+    },
+    "marker_split_result": {
+      "path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/final-marker-split-result.json"
+    }
+  }
+}
