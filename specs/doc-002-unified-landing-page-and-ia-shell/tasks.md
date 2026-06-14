@@ -79,13 +79,13 @@
 
 **Purpose**: Prove route coverage, non-goal boundaries, deterministic validation, and PR review packet readiness.
 
-- [ ] T037 Verify route coverage against `specs/doc-002-unified-landing-page-and-ia-shell/contracts/route-shell-manifest.json`: all 11 paths have content files and all four sidebar groups appear in `docs-site/astro.config.mjs`. Covers FR-006, FR-008.
-- [ ] T038 Verify `docs-site/src/content/docs/index.mdx` and `docs-site/src/content/docs/reference.md` both distinguish `speckit-pro/` authoring source from `dist/claude/**` and `dist/codex/**` generated payloads, and verify README files remain unchanged source evidence only. Covers FR-005, FR-010, FR-016.
-- [ ] T039 Verify repository diff excludes plugin behavior, marketplace manifests, generated payloads, hooks, agents, release automation, README files, and `.github/workflows/**`. Covers FR-014, FR-016.
-- [ ] T040 Build final PR traceability evidence mapping landing, route shells, navigation, source-vs-payload, build/link validation, Pages-ready config, and non-goals to changed files and command outputs. Covers FR-017 and PR review packet requirements.
+- [x] T037 Verify route coverage against `specs/doc-002-unified-landing-page-and-ia-shell/contracts/route-shell-manifest.json`: all 11 paths have content files and all four sidebar groups appear in `docs-site/astro.config.mjs`. Covers FR-006, FR-008.
+- [x] T038 Verify `docs-site/src/content/docs/index.mdx` and `docs-site/src/content/docs/reference.md` both distinguish `speckit-pro/` authoring source from `dist/claude/**` and `dist/codex/**` generated payloads, and verify README files remain unchanged source evidence only. Covers FR-005, FR-010, FR-016.
+- [x] T039 Verify repository diff excludes plugin behavior, marketplace manifests, generated payloads, hooks, agents, release automation, README files, and `.github/workflows/**`. Covers FR-014, FR-016.
+- [x] T040 Build final PR traceability evidence mapping landing, route shells, navigation, source-vs-payload, build/link validation, Pages-ready config, and non-goals to changed files and command outputs. Covers FR-017 and PR review packet requirements.
 - [ ] T041 Prepare PR review packet text with what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes. Covers FR-017 and PR review packet requirements.
-- [ ] T042 Run or record the reviewability checkpoint if implementation scope expands beyond the accepted warning threshold; preserve shell/routes first and validation/config second instead of adding new DOC-002 scope. Covers FR-017.
-- [ ] T043 Run `git diff --name-only` and attach final scope evidence to the workflow or PR packet notes before handoff. Covers FR-014, FR-016, FR-017.
+- [x] T042 Run or record the reviewability checkpoint if implementation scope expands beyond the accepted warning threshold; preserve shell/routes first and validation/config second instead of adding new DOC-002 scope. Covers FR-017.
+- [x] T043 Run `git diff --name-only` and attach final scope evidence to the workflow or PR packet notes before handoff. Covers FR-014, FR-016, FR-017.
 
 ## Dependencies
 

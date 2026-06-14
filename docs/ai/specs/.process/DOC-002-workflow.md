@@ -29,7 +29,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, reliability, and error-handling complete; 25 gaps remediated, 0 remaining |
 | Tasks | `/speckit-tasks` | Complete | 43 tasks across Foundation, US1-US3, and Polish; 14 parallel-safe; FR-001 through FR-023 mapped; G5 passed; task reviewability evidence recorded |
 | Analyze | `/speckit-analyze` | Complete | 3 findings remediated; explicit AC-2.1 through AC-2.5 task coverage added; checklist and workflow state reconciled; marker counter clean |
-| Implement | `/speckit-implement` | In Progress | Build, link, Pages config, and quickstart validation complete; starting final polish tasks T037-T043 |
+| Implement | `/speckit-implement` | Blocked | Implementation validates, but final reviewability backstop blocks PR packet/PR creation on total changed file count: 36 files > 25 threshold |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -483,7 +483,7 @@ Focus on:
 | Landing page | T008-T012 | Complete | Created thin `index.mdx` with platform links and source-vs-payload explanation |
 | Route shell | T013-T026 | Complete | Created all 11 route shells, Diataxis sidebar groups, route metadata, source evidence, and static accessibility fallback coverage |
 | Validation/config | T027-T036 | Complete | Added validator scripts/config, generated `pnpm-lock.yaml`, fixed Pages-base internal links, and passed `pnpm check`, `pnpm build`, `pnpm validate:links`, and `pnpm validate` |
-| Polish | T037-T043 | In Progress | Next group records final route/scope evidence and PR review packet text |
+| Polish | T037-T043 | Blocked | T037-T040, T042, and T043 evidence recorded; T041 PR packet text blocked by final reviewability backstop until a valid slice plan or operator-owned typed exception exists |
 
 ---
 
@@ -498,7 +498,7 @@ Focus on:
 - [ ] Every top-level nav label has purpose and success criterion.
 - [ ] README files remain source evidence only.
 - [ ] No plugin behavior, marketplace, generated payload, hook, agent, or release automation drift.
-- [ ] PR packet records the accepted split or one-PR fallback with evidence.
+- [ ] PR packet records the accepted split or one-PR fallback with evidence. Blocked by final reviewability backstop; see `specs/doc-002-unified-landing-page-and-ia-shell/.process/final-reviewability/gate-state.json`.
 
 ---
 

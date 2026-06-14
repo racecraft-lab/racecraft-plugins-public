@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-002-workflow.md",
-  "updated_at": "2026-06-14T02:33:53Z",
+  "updated_at": "2026-06-14T02:40:12Z",
   "active_step": "Phase 7: Polish and final evidence (T037-T043)",
   "confidence_gate_mode": "advisory",
   "current_branch": "doc-002-unified-landing-page-and-ia-shell",
@@ -102,7 +102,7 @@
     {"step": "Phase 7: Landing page and platform choice (T008-T012)", "status": "completed", "summary": "Created thin landing page with marketplace purpose, speckit-pro value, Claude Code and Codex platform choices, source-vs-payload explanation, and static next-action links."},
     {"step": "Phase 7: Route shells and Diataxis navigation (T013-T026)", "status": "completed", "summary": "Created all route shell pages, populated Diataxis sidebar groups, verified all 11 manifest routes, and remediated landing route metadata/source-evidence coverage."},
     {"step": "Phase 7: Build, links, Pages config, and quickstart (T027-T036)", "status": "completed", "summary": "Added docs-site validation scripts and starlight-links-validator config, generated pnpm-lock.yaml, fixed internal links for the Pages base path, and passed pnpm check/build/validate:links/validate."},
-    {"step": "Phase 7: Polish and final evidence (T037-T043)", "status": "in_progress"},
+    {"step": "Phase 7: Polish and final evidence (T037-T043)", "status": "blocked", "summary": "Route coverage, source-vs-payload boundary, forbidden-surface diff checks, validation evidence, and changed-file scope were recorded. T041 PR packet text is blocked because final reviewability backstop returned status=block: total files 36 exceeds threshold 25."},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
