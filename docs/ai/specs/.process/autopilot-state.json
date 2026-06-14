@@ -1,48 +1,248 @@
 {
-  "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
-  "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
-  "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T20:40:02Z",
-  "active_step": "Archived",
-  "status": "completed",
-  "archive_sweep": {
-    "status": "completed",
-    "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-hygiene",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/prsg-014-optional-gh-stack-stack-manager-integration"
-    ],
-    "safeToApplyCleanup": true,
-    "dryRunProvenanceOnly": false,
-    "archive_report": ".specify/memory/archive-reports/2026-06-14-prsg-014-post-merge-hygiene.md",
-    "cleanup_applied": true
+  "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
+  "updated_at": "2026-06-14T22:32:09Z",
+  "active_step": "Phase 3: Plan",
+  "spec_id": "DOC-003",
+  "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
+  "feature_branch": "doc-003-claude-code-marketplace-installation-path",
+  "confidence_gate_mode": "advisory",
+  "project_commands": {
+    "BUILD": "N/A",
+    "TYPECHECK": "N/A",
+    "LINT": "N/A",
+    "LINT_FIX": "N/A",
+    "UNIT_TEST": "N/A",
+    "INTEGRATION_TEST": "N/A",
+    "SINGLE_FILE_TEST": "N/A",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "FULL_VERIFY": "N/A"
   },
-  "implementation": {
-    "status": "completed",
-    "gate": "G7",
-    "gate_status": "passed",
-    "commit_sha": "03da8f3c8587d911e6adbbb8361966c80b8cc717",
-    "merged_pr": 181,
-    "merge_commit": "4b8342f42db3223db6955a1390b30949b8caea8c",
-    "completed_tasks": 71,
-    "verification": {
-      "focused_layer4": [
-        "test-detect-stack-manager: 18/18 passed",
-        "test-multi-pr-emission: 159/159 passed",
-        "test-restack: 33/33 passed"
-      ],
-      "layer1": "979/979 passed",
-      "layer4": "1768/1768 passed",
-      "layer7": "run-all fixtures passed",
-      "layer8": "12/12 passed",
-      "default_suite": "2937/2937 passed"
+  "preset_conventions": {
+    "has_presets": true,
+    "presets": [
+      "speckit-pro-reviewability"
+    ],
+    "templates": {
+      "spec": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
+      "plan": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+      "tasks": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
     }
   },
-  "next_specs": [
-    "DOC-003",
-    "DOC-004"
+  "archive_sweep": {
+    "archive_extension_installed": true,
+    "cleanup_mode": "apply-eligible-feature-branch",
+    "current_target": "specs/doc-003-claude-code-marketplace-installation-path",
+    "excluded_current_spec": "specs/doc-003-claude-code-marketplace-installation-path",
+    "eligible_previous_specs": [],
+    "safe_to_apply_cleanup": false,
+    "note": "Local pre-flight found no active specs other than the current target. The installed specify CLI exposes extension management but not a non-interactive speckit.archive.run command surface."
+  },
+  "preflight": {
+    "check_prerequisites": {
+      "all_pass": true,
+      "branch": "doc-003-claude-code-marketplace-installation-path",
+      "is_worktree": true,
+      "on_feature_branch": false,
+      "mcp_servers": "Missing: tavily-mcp context7 RepoPrompt; agents will use built-in fallbacks."
+    },
+    "reviewability_setup_gate": {
+      "mode": "setup",
+      "status": "pass",
+      "reviewable_loc": 395,
+      "production_files": 0,
+      "total_files": 6,
+      "primary_surfaces": [
+        "docs/process"
+      ]
+    },
+    "codex_agents": {
+      "required_present": [
+        "phase-executor",
+        "clarify-executor",
+        "checklist-executor",
+        "analyze-executor",
+        "implement-executor",
+        "codebase-analyst",
+        "spec-context-analyst",
+        "domain-researcher"
+      ],
+      "optional_present": [
+        "autopilot-fast-helper"
+      ]
+    }
+  },
+  "post_extension_availability": {
+    "doctor": true,
+    "verify": true,
+    "verify_tasks": true,
+    "review": false,
+    "cleanup": false,
+    "retrospective": true
+  },
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "passed",
+      "functional_requirements": 14,
+      "user_stories": 5,
+      "acceptance_scenarios": 14,
+      "clarification_markers": 0,
+      "files": [
+        "specs/doc-003-claude-code-marketplace-installation-path/spec.md",
+        "specs/doc-003-claude-code-marketplace-installation-path/checklists/requirements.md"
+      ]
+    },
+    "clarify": {
+      "status": "completed",
+      "skipped_by_gate": "G1",
+      "reason": "No [NEEDS CLARIFICATION] markers remained after Specify."
+    }
+  },
+  "plan": [
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Terminology And Source Authority",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Terminology And Source Authority Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Lifecycle And Verification",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Lifecycle And Verification Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Trust Depth And Platform Separation",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Trust Depth And Platform Separation Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 4: Checklist - UX",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - UX Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Accessibility",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Accessibility Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Security",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Security Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
   ]
 }

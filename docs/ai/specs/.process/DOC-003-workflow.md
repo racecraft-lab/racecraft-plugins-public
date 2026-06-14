@@ -40,9 +40,9 @@ revision note approved during the workflow.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Produce `specs/doc-003-claude-code-marketplace-installation-path/spec.md`. |
-| Clarify | `/speckit-clarify` | Pending | Use only for unresolved wording, verification, or trust boundaries. |
-| Plan | `/speckit-plan` | Pending | Keep the plan docs-only and Astro/Starlight-aware. |
+| Specify | `/speckit-specify` | Complete | Created `spec.md` and requirements checklist; G1 passed with 0 clarification markers. |
+| Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: no `[NEEDS CLARIFICATION]` markers remained after Specify. |
+| Plan | `/speckit-plan` | In Progress | Keep the plan docs-only and Astro/Starlight-aware. |
 | Checklist | `/speckit-checklist` | Pending | Recommended domains: ux, accessibility, security, error-handling. |
 | Tasks | `/speckit-tasks` | Pending | Organize by user-visible docs outcome, not by file layer. |
 | Analyze | `/speckit-analyze` | Pending | Check for command/skill drift, Codex leakage, and DOC-008 overlap. |
@@ -79,7 +79,7 @@ Each phase requires human review and approval before proceeding.
 | Conventional Commits | PR title must be public-readable and conventional. | PR title shape: `docs: document Claude Code install path` or equivalent. |
 | KISS, Simplicity & YAGNI | Prefer one canonical Claude install route and concise cross-links over duplicate command matrices. | Review spec, plan, and docs diff for duplication. |
 
-**Constitution Check:** Pending until G1.
+**Constitution Check:** Verified after G1; DOC-003 remains docs/process-only with no runtime/plugin layout change.
 
 ### Reviewability Budget
 
@@ -190,13 +190,14 @@ understanding the trust implications before running plugin skills.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Fill after `/speckit-specify`. Expected source: DOC-FR-003 / AC-3.1 through AC-3.5. |
-| User Stories | Expected 5. |
-| Acceptance Criteria | Expected 5. |
+| Functional Requirements | 14 |
+| User Stories | 5 |
+| Acceptance Criteria | 14 acceptance scenarios across 5 user stories |
 
 ### Files Generated
 
-- [ ] `specs/doc-003-claude-code-marketplace-installation-path/spec.md`
+- [x] `specs/doc-003-claude-code-marketplace-installation-path/spec.md`
+- [x] `specs/doc-003-claude-code-marketplace-installation-path/checklists/requirements.md`
 
 ---
 
@@ -229,9 +230,9 @@ questions per session.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Terminology and source authority | | |
-| 2 | Lifecycle and verification | | |
-| 3 | Trust depth and platform separation | | |
+| 1 | Terminology and source authority | 0 | Skipped by G1: no clarification markers remained in `spec.md`. |
+| 2 | Lifecycle and verification | 0 | Skipped by G1: lifecycle and verification requirements are explicit in FR-002 through FR-007. |
+| 3 | Trust depth and platform separation | 0 | Skipped by G1: trust/source/Codex-boundary requirements are explicit in FR-008 through FR-013. |
 
 ---
 
