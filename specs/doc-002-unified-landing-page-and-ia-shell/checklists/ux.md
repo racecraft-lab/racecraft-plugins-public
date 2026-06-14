@@ -8,30 +8,30 @@
 
 ## Landing Page Requirements
 
-- [ ] CHK001 Are the landing-page purpose, current plugin, primary value, supported platforms, source-vs-payload distinction, and next actions all specified for the first screen? [Completeness, Spec FR-004, Spec SC-001]
-- [ ] CHK002 Are Claude Code and Codex path choices defined as first-interaction options without requiring interactive widgets or browser-side local command execution? [Completeness, Spec FR-009, Spec SC-003]
+- [x] CHK001 Are the landing-page purpose, current plugin, primary value, supported platforms, source-vs-payload distinction, and next actions all specified for the first screen? [Resolved, Spec FR-004, Spec SC-001, Contract landingPageFirstScreen]
+- [x] CHK002 Are Claude Code and Codex path choices defined as first-interaction options without requiring interactive widgets or browser-side local command execution? [Resolved, Spec FR-009, Spec SC-003, Contract landingPageFirstScreen]
 - [x] CHK003 Is the phrase "thin actionable landing page" defined with enough concrete content and exclusion criteria to distinguish it from an empty placeholder or oversized marketing page? [Resolved, Spec FR-018, Spec SC-008, Research page-depth decision]
 
 ## Navigation And Information Architecture
 
-- [ ] CHK004 Are the four Diataxis sidebar groups named and required for the top-level navigation? [Completeness, Spec FR-008, Spec SC-002]
-- [ ] CHK005 Are all 11 top-level route shells required and aligned with the route manifest labels and paths? [Consistency, Spec FR-006, Contract route-shell-manifest.json]
-- [ ] CHK006 Are route-shell group assignments traceable to the Diataxis route contract instead of left to implementation guesswork? [Consistency, Data Model Navigation Group, Contract sidebarGroups]
+- [x] CHK004 Are the four Diataxis sidebar groups named and required for the top-level navigation? [Resolved, Spec FR-008, Spec SC-002, Plan Phase 1 Design, Contract sidebarGroups]
+- [x] CHK005 Are all 11 top-level route shells required and aligned with the route manifest labels and paths? [Resolved, Spec FR-006, Contract route-shell-manifest.json]
+- [x] CHK006 Are route-shell group assignments traceable to the Diataxis route contract instead of left to implementation guesswork? [Resolved, Data Model Navigation Group, Contract sidebarGroups]
 
 ## Route Shell Orientation
 
-- [ ] CHK007 Are required route-shell fields specified for purpose, shell owner DOC, full content owner DOC when distinct, success criterion, and source evidence? [Completeness, Spec FR-007, Data Model Top-Level Route Shell]
+- [x] CHK007 Are required route-shell fields specified for purpose, shell owner DOC, full content owner DOC when distinct, success criterion, and source evidence? [Resolved, Spec FR-007, Data Model Top-Level Route Shell, Contract routes]
 - [x] CHK008 Does the spec define minimum user-facing orientation content for deferred route shells, beyond metadata fields, so route pages are not empty placeholders while still avoiding full DOC-003 through DOC-010 content? [Resolved, Spec FR-019, Spec SC-009, Contract routeShellContentMinimum]
-- [ ] CHK009 Are deferred content boundaries required to name the follow-up DOC owner instead of expanding DOC-002 into full install, troubleshooting, security, contributor, lifecycle, glossary, search, accessibility, or deployment content? [Consistency, Spec Reviewability Notes]
+- [x] CHK009 Are deferred content boundaries required to name the follow-up DOC owner instead of expanding DOC-002 into full install, troubleshooting, security, contributor, lifecycle, glossary, search, accessibility, or deployment content? [Resolved, Spec Reviewability Notes, Spec FR-019, Contract routeShellContentMinimum]
 
 ## Acceptance Criteria Quality
 
-- [ ] CHK010 Can a reviewer objectively check that the landing page stays within DOC-002 shell scope while still providing immediate platform next actions? [Measurability, Spec SC-001, Spec SC-003]
-- [ ] CHK011 Can a reviewer objectively check that every top-level route has enough route purpose and success-criterion content to orient users? [Measurability, Spec SC-005]
-- [ ] CHK012 Are build and internal-link validation requirements scoped to docs-site command roles rather than root plugin validation? [Consistency, Spec FR-011, Spec FR-012, Plan Selected Command Roles]
+- [x] CHK010 Can a reviewer objectively check that the landing page stays within DOC-002 shell scope while still providing immediate platform next actions? [Resolved, Spec FR-018, Spec SC-008, Tasks Acceptance Coverage Matrix]
+- [x] CHK011 Can a reviewer objectively check that every top-level route has enough route purpose and success-criterion content to orient users? [Resolved, Spec FR-007, Spec SC-005, Tasks Acceptance Coverage Matrix]
+- [x] CHK012 Are build and internal-link validation requirements scoped to docs-site command roles rather than root plugin validation? [Resolved, Spec FR-011, Spec FR-012, Plan Selected Command Roles, Tasks T032-T035]
 
 ## Verification Run 2
 
-- [ ] CHK013 Are landing first-screen content units and exclusions now specified directly enough for PR review? [Completeness, Spec FR-018, Spec SC-008]
-- [ ] CHK014 Are deferred route shell orientation requirements now specified beyond metadata fields while preserving later-DOC ownership? [Completeness, Spec FR-019, Spec SC-009]
-- [ ] CHK015 Are the landing and route-shell UX boundaries represented consistently in plan, research, data model, quickstart, and the route shell contract? [Consistency, Plan Phase 1 Design, Research page-depth decision, Data Model Top-Level Route Shell, Contract validation]
+- [x] CHK013 Are landing first-screen content units and exclusions now specified directly enough for PR review? [Resolved, Spec FR-018, Spec SC-008, Contract landingPageFirstScreen]
+- [x] CHK014 Are deferred route shell orientation requirements now specified beyond metadata fields while preserving later-DOC ownership? [Resolved, Spec FR-019, Spec SC-009, Contract routeShellContentMinimum]
+- [x] CHK015 Are the landing and route-shell UX boundaries represented consistently in plan, research, data model, quickstart, and the route shell contract? [Resolved, Plan Phase 1 Design, Research page-depth decision, Data Model Top-Level Route Shell, Contract validation, Quickstart Review Checks]

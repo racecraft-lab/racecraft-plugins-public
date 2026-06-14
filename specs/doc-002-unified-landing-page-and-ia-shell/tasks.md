@@ -144,6 +144,16 @@ Task: T029 update docs-site/astro.config.mjs link-validation config
 | FR-022 | T028, T029, T030, T032, T033, T034, T035, T036 |
 | FR-023 | T030, T032, T033, T034, T036 |
 
+## Acceptance Coverage Matrix
+
+| Acceptance criterion | Task coverage | Verification note |
+|----------------------|---------------|-------------------|
+| AC-2.1 Landing page states marketplace purpose, current plugin, primary value, and supported platforms in one screen | T008, T009, T010, T011, T012 | Landing first-screen content is implemented and bounded before later-DOC content depth. |
+| AC-2.2 IA exposes Tutorials, How-to, Reference, and Explanation sections | T013, T024, T037 | Route manifest and Starlight sidebar groups are checked for all four Diataxis groups. |
+| AC-2.3 Claude Code and Codex paths are selectable from the first interaction | T008, T009, T011 | Landing page includes static native links to both platform route shells. |
+| AC-2.4 Docs distinguish `speckit-pro/` source from generated install payloads under `dist/claude/**` and `dist/codex/**` | T010, T018, T038 | Landing and Reference shell both carry the source-vs-payload explanation while README and payload files remain unchanged. |
+| AC-2.5 Every top-level nav label has a stated purpose and success criterion | T013, T014, T015, T016, T017, T018, T019, T020, T021, T022, T023, T024, T025, T037 | Each route shell is created from the route contract and then verified for visible purpose, owner DOC, success criterion, source evidence, and next step. |
+
 ## Task Summary
 
 - Total tasks: 43

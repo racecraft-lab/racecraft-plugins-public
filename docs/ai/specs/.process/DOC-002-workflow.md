@@ -28,8 +28,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Plan | `/speckit-plan` | Complete | plan.md, research.md, data-model.md, route-shell contract, and quickstart created; Astro/Starlight, pnpm, Pages-ready config, and build-integrated link validation selected |
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, reliability, and error-handling complete; 25 gaps remediated, 0 remaining |
 | Tasks | `/speckit-tasks` | Complete | 43 tasks across Foundation, US1-US3, and Polish; 14 parallel-safe; FR-001 through FR-023 mapped; G5 passed; task reviewability evidence recorded |
-| Analyze | `/speckit-analyze` | In Progress | Check drift against design concept and DOC-001 handoff |
-| Implement | `/speckit-implement` | Pending | Execute only after G6 passes |
+| Analyze | `/speckit-analyze` | Complete | 3 findings remediated; explicit AC-2.1 through AC-2.5 task coverage added; checklist and workflow state reconciled; marker counter clean |
+| Implement | `/speckit-implement` | In Progress | G6 and advisory confidence gate passed; starting foundation shell baseline tasks T001-T007 |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -164,9 +164,9 @@ Racecraft Public Plugins and `speckit-pro` need a public static docs shell so fi
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 17 |
+| Functional Requirements | 23 |
 | User Stories | 3 |
-| Acceptance Criteria | AC-2.1 through AC-2.5 covered by 7 acceptance scenarios and 7 measurable outcomes |
+| Acceptance Criteria | AC-2.1 through AC-2.5 covered by 7 acceptance scenarios and 12 measurable outcomes |
 
 ### Files Generated
 
@@ -433,7 +433,19 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| F1 | MEDIUM | `tasks.md` mapped FR-001 through FR-023 but did not explicitly map AC-2.1 through AC-2.5, even though Analyze focuses on acceptance coverage. | Added an Acceptance Coverage Matrix to `tasks.md` mapping AC-2.1 through AC-2.5 to task IDs and verification notes. |
+| F2 | MEDIUM | UX, accessibility, and reliability checklists still contained unchecked items while the workflow Checklist Results table reported zero remaining gaps. | Marked satisfied checklist items resolved after confirming coverage in spec, plan, research, data model, route contract, quickstart, and tasks. |
+| F3 | LOW | Specify Results table still said 17 functional requirements and 7 measurable outcomes after the current spec expanded to FR-001 through FR-023 and SC-001 through SC-012. | Updated the workflow Specify Results counts to 23 functional requirements and 12 measurable outcomes. |
+
+### Pre-Implement Confidence
+
+📊 Confidence: 0.94
+
+- Task understanding: 0.96
+- Approach clarity: 0.94
+- Requirements alignment: 0.95
+- Risk assessment: 0.91
+- Completeness: 0.94
 
 ---
 
