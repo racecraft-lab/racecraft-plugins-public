@@ -435,6 +435,8 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 - Repository files only: feature artifacts, contract schemas, workflow state JSON, and generated re-slicing packets (prsg-010-harden-the-hatch)
 - Bash 4+ shell scripts, Markdown skill guidance, JSON Schema 2020-12 + `bash`, `jq`, `git`, `gh` at PR-emission boundaries, existing SpecKit Pro shell harness (prsg-013-reviewability-markers)
 - Repository files only: `autopilot-state.json`, workflow evidence blocks, JSON contract schemas, and generated PR packet artifacts (prsg-013-reviewability-markers)
+- Bash scripts with Markdown skill/operator guidance + `bash`, `jq`, `git`, `gh`; optional `gh stack` GitHub CLI extension via `github/gh-stack` (prsg-014-optional-gh-stack-stack-manager-integration)
+- JSON evidence under feature `.process/` directories, `.process/prs.json`, `autopilot-state.json`, command logs, PR packet artifacts, and local `gh-stack` metadata outside the repo when the extension is used (prsg-014-optional-gh-stack-stack-manager-integration)
 
 ## Recent Changes
 - prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.

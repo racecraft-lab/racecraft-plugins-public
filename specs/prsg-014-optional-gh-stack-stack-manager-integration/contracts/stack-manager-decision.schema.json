@@ -1,0 +1,431 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.local/speckit-pro/stack-manager-decision.schema.json",
+  "title": "Stack Manager Decision",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "phase",
+    "operation",
+    "selected_manager",
+    "reason",
+    "fallback_allowed",
+    "mutation_boundary",
+    "gh_stack",
+    "read_only_proof",
+    "topology_compatibility",
+    "command_plan"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "stack-manager-decision.v1"
+    },
+    "phase": {
+      "enum": ["emission", "restack"]
+    },
+    "operation": {
+      "enum": ["detect", "link", "sync", "restack"]
+    },
+    "selected_manager": {
+      "enum": ["gh-stack", "explicit-gh", "blocked"]
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1
+    },
+    "fallback_reason": {
+      "type": ["string", "null"]
+    },
+    "fallback_allowed": {
+      "type": "boolean"
+    },
+    "mutation_boundary": {
+      "$ref": "#/$defs/mutation_boundary"
+    },
+    "gh_stack": {
+      "$ref": "#/$defs/gh_stack"
+    },
+    "read_only_proof": {
+      "$ref": "#/$defs/read_only_proof"
+    },
+    "topology_compatibility": {
+      "$ref": "#/$defs/topology_compatibility"
+    },
+    "command_plan": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/command_plan_item"
+      }
+    },
+    "topology": {
+      "$ref": "#/$defs/topology"
+    },
+    "recovery": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["status", "fallback_allowed", "retry_policy"],
+      "properties": {
+        "status": {
+          "const": "blocked"
+        },
+        "fallback_allowed": {
+          "const": false
+        },
+        "failed_operation": {
+          "type": ["object", "null"]
+        },
+        "retry_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_resume_boundary": {
+          "type": ["string", "null"]
+        },
+        "evidence_paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "evidence_path": {
+      "type": ["string", "null"]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "selected_manager": {
+            "const": "gh-stack"
+          }
+        },
+        "required": ["selected_manager"]
+      },
+      "then": {
+        "properties": {
+          "fallback_allowed": {
+            "const": true
+          },
+          "gh_stack": {
+            "properties": {
+              "available": { "const": true },
+              "version_supported": { "const": true },
+              "repo_enabled": { "const": true },
+              "support_status": { "const": "supported" }
+            }
+          },
+          "read_only_proof": {
+            "properties": {
+              "parsed": { "const": true },
+              "matched_expected_topology": { "const": true }
+            }
+          },
+          "topology_compatibility": {
+            "properties": {
+              "compatible": { "const": true }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "selected_manager": {
+            "const": "explicit-gh"
+          }
+        },
+        "required": ["selected_manager"]
+      },
+      "then": {
+        "required": ["fallback_reason"],
+        "properties": {
+          "fallback_allowed": {
+            "const": true
+          },
+          "mutation_boundary": {
+            "properties": {
+              "fallback_after_boundary_allowed": { "const": false }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "selected_manager": {
+            "const": "blocked"
+          }
+        },
+        "required": ["selected_manager"]
+      },
+      "then": {
+        "required": ["recovery"],
+        "properties": {
+          "fallback_allowed": {
+            "const": false
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "mutation_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "first_mutating_command_id", "fallback_after_boundary_allowed"],
+      "properties": {
+        "status": {
+          "enum": ["none", "planned", "attempted", "partial_mutation", "partial_mutation_unknown"]
+        },
+        "first_mutating_command_id": {
+          "type": ["string", "null"]
+        },
+        "fallback_after_boundary_allowed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "gh_stack": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "available",
+        "version",
+        "version_supported",
+        "repo_enabled",
+        "support_status",
+        "invocation"
+      ],
+      "properties": {
+        "available": {
+          "type": "boolean"
+        },
+        "extension_owner": {
+          "type": ["string", "null"]
+        },
+        "extension_name": {
+          "type": ["string", "null"]
+        },
+        "version": {
+          "type": ["string", "null"]
+        },
+        "version_supported": {
+          "type": "boolean"
+        },
+        "repo_enabled": {
+          "type": "boolean"
+        },
+        "support_status": {
+          "enum": [
+            "supported",
+            "missing",
+            "unsupported_version",
+            "private_preview_unavailable",
+            "ambiguous",
+            "read_only_proof_failed",
+            "topology_incompatible"
+          ]
+        },
+        "invocation": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/argv"
+          }
+        }
+      }
+    },
+    "read_only_proof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "argv",
+        "exit_status",
+        "parsed",
+        "matched_expected_topology"
+      ],
+      "properties": {
+        "argv": {
+          "$ref": "#/$defs/argv"
+        },
+        "exit_status": {
+          "type": ["integer", "null"]
+        },
+        "parsed": {
+          "type": "boolean"
+        },
+        "matched_expected_topology": {
+          "type": "boolean"
+        },
+        "stdout_tail": {
+          "type": "string"
+        },
+        "stderr_tail": {
+          "type": "string"
+        },
+        "evidence_path": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "topology_compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["compatible", "source", "mismatch_reason"],
+      "properties": {
+        "compatible": {
+          "type": "boolean"
+        },
+        "source": {
+          "enum": ["prs-v2", "pr-marker-plan", "combined", "none"]
+        },
+        "mismatch_reason": {
+          "type": ["string", "null"]
+        },
+        "expected_order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "observed_order": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "command_plan_item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "action",
+        "manager",
+        "argv",
+        "mutates",
+        "mutation_boundary",
+        "preconditions",
+        "reason"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "action": {
+          "enum": [
+            "detect",
+            "create_pr",
+            "edit_pr",
+            "link_stack",
+            "sync_stack",
+            "rebase_upstack",
+            "retarget_base",
+            "block"
+          ]
+        },
+        "manager": {
+          "enum": ["gh-stack", "explicit-gh"]
+        },
+        "argv": {
+          "$ref": "#/$defs/argv"
+        },
+        "mutates": {
+          "type": "boolean"
+        },
+        "mutation_boundary": {
+          "type": "boolean"
+        },
+        "slice_id": {
+          "type": ["string", "null"]
+        },
+        "review_order": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "topology": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "pre_mutation": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/topology_record"
+          }
+        },
+        "post_mutation": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/topology_record"
+          }
+        }
+      }
+    },
+    "topology_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["review_order", "slice_id", "branch", "base_branch", "status"],
+      "properties": {
+        "review_order": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "slice_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "base_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pr_number": {
+          "type": ["integer", "null"],
+          "minimum": 1
+        },
+        "pr_url": {
+          "type": ["string", "null"]
+        },
+        "head_sha": {
+          "type": ["string", "null"]
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

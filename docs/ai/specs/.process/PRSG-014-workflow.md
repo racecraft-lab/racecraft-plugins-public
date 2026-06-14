@@ -47,7 +47,7 @@ concept doc is the source of truth for any decision captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Four focused sessions complete; G2 passed |
-| Plan | `/speckit-plan` | Pending | Resolve `gh-stack` command/version behavior |
+| Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, quickstart.md, and stack-manager decision contract; G3 passed |
 | Checklist | `/speckit-checklist` | Pending | Run for each recommended domain |
 | Tasks | `/speckit-tasks` | Pending | Generate after plan and checklist gaps are resolved |
 | Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
@@ -320,11 +320,17 @@ creation, sync, and restack burden.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow |
-| `research.md` | Pending | `gh-stack` command/version behavior and fallback rationale |
-| `data-model.md` | Pending | Evidence/state schema extensions |
-| `contracts/` | Pending | JSON schemas for stack-manager evidence if needed |
-| `quickstart.md` | Pending | Operator verification for supported and fallback paths |
+| `plan.md` | Complete | Technical context, command capability matrix, constitution gates, reviewability estimate, and implementation flow |
+| `research.md` | Complete | `gh stack` v0.0.5 command/version behavior, private-preview fail-closed rationale, selected commands, and fallback rationale |
+| `data-model.md` | Complete | Stack-manager decision, command plan, topology evidence, execution evidence, and recoverable block state |
+| `contracts/` | Complete | Planning contract for `stack-manager-decision.v1` |
+| `quickstart.md` | Complete | Operator and fixture validation for supported, fallback, blocked, retry, restack, replay, and parity paths |
+
+### Plan Gate
+
+| Gate | Result | Evidence |
+|------|--------|----------|
+| G3 | Passed | `validate-gate.sh G3 specs/prsg-014-optional-gh-stack-stack-manager-integration` returned `pass=true`, `markers=0`; reviewability estimator returned `status=pass` for 14 declared file entries. |
 
 ---
 

@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
   "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
   "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T01:25:32Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-06-14T01:40:30Z",
+  "active_step": "Phase 4: Checklist - integration",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -116,8 +116,14 @@
       "status": "completed",
       "summary": "Codebase and spec-context analysts agreed that PRSG-014 should prove Claude/Codex parity as operator guidance parity backed by shared scripts/contracts, L1 Codex structural parity, and L4/L7 executable proof; transcript-level Claude/Codex parity remains out of scope until a stable Codex replay/transcript harness and schema exist."
     },
-    {"step": "Phase 3: Plan", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - integration", "status": "pending"},
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed",
+      "gate": "G3",
+      "gate_status": "passed",
+      "summary": "Created plan.md, research.md, data-model.md, quickstart.md, and contracts/stack-manager-decision.schema.json. Resolved gh stack v0.0.5 capability matrix from local CLI help and github/gh-stack project docs, selected read-only view --json proof, kept explicit gh fallback authoritative, and recorded PASS constitution/reviewability status."
+    },
+    {"step": "Phase 4: Checklist - integration", "status": "in_progress"},
     {"step": "Phase 4: Checklist - integration Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling", "status": "pending"},
     {"step": "Phase 4: Checklist - error-handling Consensus", "status": "pending"},
