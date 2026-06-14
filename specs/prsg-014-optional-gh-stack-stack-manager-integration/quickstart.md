@@ -53,6 +53,7 @@ Expected:
 - explicit `gh pr create/edit --base --head --title --body-file` reconciles PRs first
 - `gh stack link --base <base> <pr-number>...` runs only after PR numbers are known
 - evidence preserves marker order, branch names, base topology, PR packet paths, and stack-manager decision
+- invalid or stale PRSG-012 packets block before any explicit `gh` create/edit, `gh stack` link/sync, or manager switch; they are not treated as a stack-manager fallback cause
 
 ### 4. Fallback emission
 
@@ -60,7 +61,7 @@ Use the same PRS/marker fixture with `gh-stack` unsupported.
 
 Expected:
 
-- explicit `gh pr create/edit --base --head --body-file` path is used
+- after packet validation passes, the explicit `gh pr create/edit --base --head --body-file` path is used
 - command log records fallback reason
 - output state references the stack-manager decision evidence
 

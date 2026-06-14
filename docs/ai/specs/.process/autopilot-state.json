@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/PRSG-014-workflow.md",
   "feature_dir": "specs/prsg-014-optional-gh-stack-stack-manager-integration",
   "feature_branch": "prsg-014-optional-gh-stack-stack-manager-integration",
-  "updated_at": "2026-06-14T02:45:44Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-14T02:59:03Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -192,11 +192,15 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "summary": "Completed Phase 6 Analyze with 4 findings (0C/1H/3M/0L) remediated: packet-validation hard-block wording, Layer 7/8 fixture path drift, stale checklist item state, and reviewability marker-plan visibility. Marker counter clean; G6 passed."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved Analyze findings; consensus skipped."
     },
     {
       "step": "Phase 6.5: Confidence Gate",
@@ -281,6 +285,25 @@
       "status": "pending"
     }
   ],
+  "analyze": {
+    "status": "completed",
+    "gate": "G6",
+    "gate_status": "passed",
+    "findings": {
+      "total": 4,
+      "critical": 0,
+      "high": 1,
+      "medium": 3,
+      "low": 0
+    },
+    "remediations": [
+      "Clarified PRSG-012 packet-validation failures as hard blocks before any stack-manager or explicit-gh mutation.",
+      "Aligned Layer 7/8 fixture paths in plan.md with generated tasks and existing harness layout.",
+      "Marked verified checklist items complete with task/source citations.",
+      "Added task reviewability size-only block and PRSG-013 marker-plan summary to tasks.md."
+    ],
+    "unresolved_for_consensus": []
+  },
   "reviewability_tasks_gate": {
     "status": "block",
     "mode": "tasks",
@@ -333,8 +356,8 @@
     "evidence_path": "specs/prsg-014-optional-gh-stack-stack-manager-integration/.process/marker-plan/pr-marker-plan.json",
     "source_fingerprint": {
       "feature_spec_sha": "5c9359619422b69e5cbd70f3c3685b9fbc601692fff4f8f1847005c0029f9dbc",
-      "plan_declared_scope_sha": "516c8823d1d5a3c749fa9c9801b20c947bff281ba99bc69e5ec890fb81a08e04",
-      "tasks_sha": "3fd53e6319b56a274bc93777c13b82d51685061f471465ea82fc005005fa5c25",
+      "plan_declared_scope_sha": "574e4f821423a2a3104d61ef95cfc71cb639ed38541209ad827b79763aa2bf72",
+      "tasks_sha": "7f2dc7178e23c451822fa1dc2a6890161d9f2976e179a941c4310f5432287c1a",
       "reviewability_sha": "6ad5b3da8f1ad4d31a9784e42ecd8f3c38a8a4806297fc07c896e39f45938765",
       "hazard_route_sha": "feaf8803f3d53fbc661e5b4bf2d7f16c5a106ef585827531a363edc5c0aab52a"
     },

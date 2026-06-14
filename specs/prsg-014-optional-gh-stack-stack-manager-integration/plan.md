@@ -46,8 +46,16 @@ The supported path creates or reconciles PRs through the existing PRSG-012 packe
 - MODIFIED tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
 - MODIFIED tests/speckit-pro/layer4-scripts/test-restack.sh
 - NEW tests/speckit-pro/layer4-scripts/test-detect-stack-manager.sh
-- NEW tests/speckit-pro/layer7-integration/fixtures/prsg-014-stack-manager-replay/transcript.jsonl
-- NEW tests/speckit-pro/layer8-parity/fixtures/prsg-014-stack-manager-guidance.json
+- NEW tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/README.md
+- NEW tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/prompt.txt
+- NEW tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/parser-fixture.jsonl
+- NEW tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/expected.json
+- NEW tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/README.md
+- NEW tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/workflow.md
+- NEW tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/env-teams.sh
+- NEW tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/env-fallback.sh
+- NEW tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/expected-equivalence.json
+- NEW tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/tolerance.json
 
 ## Constitution Check
 
@@ -102,8 +110,8 @@ tests/speckit-pro/
 │   ├── test-multi-pr-emission.sh
 │   ├── test-restack.sh
 │   └── fixtures/
-├── layer7-integration/fixtures/prsg-014-stack-manager-replay/
-└── layer8-parity/fixtures/
+├── layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/
+└── layer8-parity/04-prsg-014-stack-manager-guidance/
 ```
 
 **Structure Decision**: Keep implementation single-copy in `skills/speckit-autopilot/scripts/` and shared contracts in `skills/speckit-autopilot/contracts/`. Codex changes are guidance/parity only, with no duplicated scripts, schemas, or validators.
@@ -155,7 +163,8 @@ Implementation design:
 
 Error classification rules:
 
-- Read-only detection, planning, packet-validation, and topology-proof failures happen before the no-fallback boundary and may select explicit `gh` fallback.
+- Read-only detection, stack-manager command planning, and topology-proof failures happen before the no-fallback boundary and may select explicit `gh` fallback when every PRSG-012 packet remains valid.
+- PRSG-012 packet-validation failures are pre-mutation hard blocks, not stack-manager fallback causes; no `gh stack`, explicit `gh pr create/edit`, or manager switch may run until the packet is regenerated and validates.
 - A mutating `gh stack` command that succeeds and matches expected topology records `side_effect_class=planned_mutation`.
 - A mutating `gh stack` command that fails with observed branch, PR, base, or metadata side effects records `side_effect_class=partial_mutation` and blocks.
 - A mutating `gh stack` command that times out, crashes, returns ambiguous output, or cannot prove no side effects records `side_effect_class=partial_mutation_unknown` and blocks.

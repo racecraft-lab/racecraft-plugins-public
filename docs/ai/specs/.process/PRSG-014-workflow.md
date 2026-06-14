@@ -50,7 +50,7 @@ concept doc is the source of truth for any decision captured during scoping.
 | Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, quickstart.md, and stack-manager decision contract; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | 4 domains; 13 gaps found / 13 fixed; G4 marker count clean |
 | Tasks | `/speckit-tasks` | Complete | Generated 71 test-first tasks; G5 passed with 0 markers |
-| Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
+| Analyze | `/speckit-analyze` | Complete | 4 findings (0C/1H/3M/0L) remediated; marker counter clean; G6 passed |
 | Implement | `/speckit-implement` | Pending | Execute only after G6 approval |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -504,9 +504,29 @@ Flag drift between:
 
 | Severity | Count | Status |
 |----------|-------|--------|
-| Critical | Pending | Pending |
-| Warning | Pending | Pending |
-| Info | Pending | Pending |
+| Critical | 0 | Complete |
+| High | 1 | Remediated |
+| Medium | 3 | Remediated |
+| Low | 0 | Complete |
+
+**Finding remediation:**
+
+- F1 [HIGH]: Packet-validation fallback wording in `plan.md` could be read as allowing explicit-`gh` fallback after invalid PRSG-012 packet validation, contradicting packet-owned title/body validation before PR creation.
+  - Fix: Changed the error classification rules so stack-manager planning/read-only/topology failures may fall back only when packets are valid, while PRSG-012 packet-validation failures hard-block before `gh stack`, explicit `gh pr create/edit`, or manager switching; added matching quickstart and task coverage.
+  - Source: `docs/ai/specs/pr-size-governance-technical-roadmap.md` PRSG-012 packet contract; `research.md` Decisions 3-4; local `gh stack link --help` confirms branch args can push/create PRs.
+- F2 [MEDIUM]: `plan.md` declared stale Layer 7/8 fixture paths that did not match generated tasks or existing test harness layout.
+  - Fix: Updated declared file operations and project structure to use `tests/speckit-pro/layer7-integration/dispatch-fixtures/22-prsg-014-stack-manager-replay/` and `tests/speckit-pro/layer8-parity/04-prsg-014-stack-manager-guidance/`.
+  - Source: existing `tests/speckit-pro/layer7-integration/dispatch-fixtures/*` and `tests/speckit-pro/layer8-parity/*` layout.
+- F3 [MEDIUM]: Checklist artifacts still had unchecked items after the workflow/state recorded 13 gaps fixed and G4 clean.
+  - Fix: Marked verified checklist items complete with task/source citations in integration, error-handling, and security checklists.
+  - Source: `tasks.md` T013-T065 coverage and G4 marker counter evidence.
+- F4 [MEDIUM]: `tasks.md` carried only the initial 325 LOC reviewability estimate and did not expose the actual post-G5 size-only block or PRSG-013 marker plan.
+  - Fix: Added the post-G5 task reviewability result, marker order (`foundation -> us1 -> us2 -> us3 -> us4`), and T066-T071 polish folding to the task reviewability note.
+  - Source: `.process/reviewability/tasks-gate.json`, `.process/marker-plan/pr-marker-plan.json`, and PRSG-013 non-stopping marker-plan guidance.
+
+**Verification:** marker counter reports 0 findings after remediation; G6 validation passed.
+
+**Unresolved for consensus:** None.
 
 ---
 

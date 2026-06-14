@@ -8,14 +8,14 @@
 
 ## Command Construction
 
-- [ ] CHK001 Are stack-manager commands required to execute only from argv arrays, with display command text forbidden as executable input? [Security, Spec §FR-019, Data Model §Command Plan]
+- [x] CHK001 Are stack-manager commands required to execute only from argv arrays, with display command text forbidden as executable input? [Verified, Security, Spec §FR-019, Data Model §Command Plan, Tasks T020/T025/T034]
 - [x] CHK002 Does the stack-manager decision schema constrain argv elements enough to reject empty strings and control-character/newline payloads before command capture? [Resolved, Security, Contract §argv, Spec §FR-027]
 - [x] CHK003 Are executable positions and command shapes allowlisted so runtime `gh stack`, explicit `gh`, `git`, and validator calls cannot be replaced by untrusted command strings? [Resolved, Security, Spec §FR-026, Plan §Security validation rules, Data Model §Command Plan]
 
 ## Input Validation
 
-- [ ] CHK004 Are branch names and base refs validated against PRSG topology contracts before inclusion in `gh stack`, `gh pr`, or `git` argv? [Security, Spec §FR-020, Data Model §Topology Evidence]
-- [ ] CHK005 Are PR body paths required to stay repo-relative, PRSG-012 validated, and passed via `--body-file` rather than inline shell content? [Security, Spec §FR-006, Spec §FR-020]
+- [x] CHK004 Are branch names and base refs validated against PRSG topology contracts before inclusion in `gh stack`, `gh pr`, or `git` argv? [Verified, Security, Spec §FR-020, Data Model §Topology Evidence, Tasks T020/T025/T034]
+- [x] CHK005 Are PR body paths required to stay repo-relative, PRSG-012 validated, and passed via `--body-file` rather than inline shell content? [Verified, Security, Spec §FR-006, Spec §FR-020, Tasks T021/T031/T036]
 - [x] CHK006 Are repo-relative evidence paths and command-related persisted paths constrained against absolute paths, parent traversal, and shell-derived display strings? [Resolved, Security, Spec §FR-024, Data Model §Stack-Manager Evidence Path, Contract §evidence_path]
 
 ## Fixture Safety
@@ -25,10 +25,10 @@
 
 ## No Unsafe Execution
 
-- [ ] CHK009 Are `eval`, `bash -c`, `sh -c`, joined command strings, and re-parsed display commands forbidden for `gh stack`, `gh pr`, `git`, and fake CLI fixture invocations? [Security, Spec §FR-019]
-- [ ] CHK010 Are stdout/stderr tails bounded so failed commands cannot persist unbounded terminal output or accidental secrets? [Security, Spec §FR-021, Research §Decision 7]
-- [ ] CHK011 Are `gh stack submit` and branch-argv stack linking excluded unless packet-owned PR metadata and duplicate-safe preconditions are proven first? [Security, Research §Decision 3, Research §Decision 4]
-- [ ] CHK012 Are partial or unknown `gh stack` mutation failures forbidden from switching to explicit `gh` in a way that could duplicate PRs or retarget attacker-controlled refs? [Security, Spec §FR-011, Spec §FR-013]
+- [x] CHK009 Are `eval`, `bash -c`, `sh -c`, joined command strings, and re-parsed display commands forbidden for `gh stack`, `gh pr`, `git`, and fake CLI fixture invocations? [Verified, Security, Spec §FR-019, Tasks T020/T025/T034]
+- [x] CHK010 Are stdout/stderr tails bounded so failed commands cannot persist unbounded terminal output or accidental secrets? [Verified, Security, Spec §FR-021, Research §Decision 7, Tasks T018/T049]
+- [x] CHK011 Are `gh stack submit` and branch-argv stack linking excluded unless packet-owned PR metadata and duplicate-safe preconditions are proven first? [Verified, Security, Research §Decision 3, Research §Decision 4, Tasks T031/T036/T037]
+- [x] CHK012 Are partial or unknown `gh stack` mutation failures forbidden from switching to explicit `gh` in a way that could duplicate PRs or retarget attacker-controlled refs? [Verified, Security, Spec §FR-011, Spec §FR-013, Tasks T032/T038/T047/T053]
 
 ## Notes
 
@@ -38,6 +38,7 @@
 - Resolved CHK006 by tightening repo-relative evidence path validation against parent traversal, absolute paths, and shell-derived display strings.
 - Resolved CHK007 by documenting fake CLI fixtures as test-only PATH shims or sandbox/fixture executables while persisted evidence keeps canonical argv.
 - Resolved CHK008 by adding Quickstart scenario 12 for malicious refs, body/evidence path traversal, fake CLI override abuse, and display-command metacharacters.
+- Analyze verified the remaining security checklist items against generated tasks and local `gh stack` command behavior; no unresolved security checklist gap remains.
 
 ## Verification Rerun
 

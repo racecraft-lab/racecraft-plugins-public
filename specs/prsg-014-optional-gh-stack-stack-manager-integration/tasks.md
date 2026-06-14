@@ -6,7 +6,7 @@
 
 **Tests**: Required and test-first. PRSG-014 explicitly requires Layer 4 fake `gh`/`gh stack` fixtures, schema/evidence assertions, Layer 7 replay coverage, and Layer 8 Claude/Codex guidance parity before implementation is complete.
 
-**Reviewability**: Plan declares 325 projected reviewable LOC, 5 production files, and 14 total files. If implementation expands beyond 400 reviewable LOC, 6 production files, 15 total files, or one primary surface, run the reviewability checkpoint before continuing. If it expands beyond 800 reviewable LOC, 8 production files, 25 total files, or more than one primary surface without a ratified exception, stop and split the spec.
+**Reviewability**: Plan declares 325 projected reviewable LOC, 5 production files, and 14 total files. The post-G5 task reviewability gate recorded a size-only block (`reviewable_loc=2840`, `total_files=111`) with no correctness or safety blocker, so implementation proceeds through the PRSG-013 marker plan `foundation -> us1 -> us2 -> us3 -> us4`; T066-T071 are folded into `us4` as polish. If implementation expands beyond 400 reviewable LOC, 6 production files, 15 total files, or one primary surface, run the reviewability checkpoint before continuing. If it expands beyond 800 reviewable LOC, 8 production files, 25 total files, or more than one primary surface without a ratified exception, stop and split the spec.
 
 ## Phase 1: Setup (Shared Test Scaffolding)
 
@@ -85,7 +85,7 @@
 - [ ] T028 [P] [US2] Add fallback-before-mutation emission fixture data in `tests/speckit-pro/layer4-scripts/fixtures/stack-manager/emission/fallback/`
 - [ ] T029 [P] [US2] Add partial-mutation and unknown-side-effect emission fixture data in `tests/speckit-pro/layer4-scripts/fixtures/stack-manager/emission/partial-mutation/`
 - [ ] T030 [P] [US2] Add duplicate-retry reconciliation emission fixture data in `tests/speckit-pro/layer4-scripts/fixtures/stack-manager/emission/duplicate-retry/`
-- [ ] T031 [US2] Add supported `gh stack link` and fallback explicit-`gh` create/sync assertions in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
+- [ ] T031 [US2] Add supported `gh stack link`, fallback explicit-`gh` create/sync, and invalid/stale packet hard-block assertions in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 - [ ] T032 [US2] Add fallback-before-mutation, partial-mutation, and `partial_mutation_unknown` blocked recovery assertions in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 - [ ] T033 [US2] Add duplicate retry reconciliation assertions for slice ID, head branch, base branch, PR number or URL, head SHA, and packet hash in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
 - [ ] T034 [US2] Add emission FR-024, FR-026, FR-027, and FR-028 evidence path, argv, ref, body path, fake CLI, and injection assertions in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`
@@ -93,7 +93,7 @@
 ### Implementation for User Story 2
 
 - [ ] T035 [US2] Update emission to call shared detection before mutation and load the stack-manager decision in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
-- [ ] T036 [US2] Preserve PRSG-012 packet-owned explicit `gh pr create/edit --base --head --title --body-file` behavior before `gh stack` linking in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
+- [ ] T036 [US2] Preserve PRSG-012 packet-owned explicit `gh pr create/edit --base --head --title --body-file` behavior before `gh stack` linking, and block invalid or stale packets before either manager can create, edit, link, or sync in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
 - [ ] T037 [US2] Implement supported `gh stack link` and proven sync command execution after PR reconciliation in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
 - [ ] T038 [US2] Implement explicit-`gh` fallback before mutation and blocked recovery after partial or unknown `gh-stack` mutation in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
 - [ ] T039 [US2] Implement duplicate retry reconciliation before create or sync operations in `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh`
