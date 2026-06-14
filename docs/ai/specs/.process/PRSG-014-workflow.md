@@ -600,3 +600,18 @@ smallest broader suite that covers changed surfaces. Finish with
   `gh-stack` is unavailable, unsupported, ambiguous, or unsafe before mutation.
 - Any partial-mutation block must include enough state for an operator to resume
   or repair without duplicating PRs.
+
+---
+
+## Archive Outcome
+
+| Field | Value |
+|-------|-------|
+| Status | Complete and archived |
+| Merged PR | #181 |
+| Merge commit | `4b8342f42db3223db6955a1390b30949b8caea8c` |
+| Archive report | `.specify/memory/archive-reports/2026-06-14-prsg-014-post-merge-hygiene.md` |
+| Active spec cleanup | `specs/prsg-014-optional-gh-stack-stack-manager-integration` removed after provenance and recovery commands were recorded |
+
+PRSG-014 is complete. Shipped behavior lives in the shared autopilot scripts,
+contracts, generated payloads, and committed test fixtures.

@@ -13,13 +13,18 @@ FIXTURE_ROOT="$TEST_DIR/fixtures/stack-manager"
 SANDBOX=$(mktemp -d)
 trap 'rm -rf "$SANDBOX"' EXIT
 
+TEST_REPO_ROOT="$SANDBOX/repo"
+mkdir -p "$TEST_REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/stack-manager/topology"
+cp "$FIXTURE_ROOT/topology/prsg-014-prs.json" \
+  "$TEST_REPO_ROOT/tests/speckit-pro/layer4-scripts/fixtures/stack-manager/topology/prsg-014-prs.json"
+
 run_detect() {
   local out_var="$1" err_var="$2"
   shift 2
   local stdout_file="$SANDBOX/stdout.$RANDOM"
   local stderr_file="$SANDBOX/stderr.$RANDOM"
   local rc=0
-  "$@" >"$stdout_file" 2>"$stderr_file" || rc=$?
+  (cd "$TEST_REPO_ROOT" && "$@") >"$stdout_file" 2>"$stderr_file" || rc=$?
   printf -v "$out_var" '%s' "$(cat "$stdout_file")"
   printf -v "$err_var" '%s' "$(cat "$stderr_file")"
   return "$rc"

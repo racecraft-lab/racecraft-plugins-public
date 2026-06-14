@@ -549,3 +549,45 @@ groups, Pages-ready base path, and link-validation scripts.
 `specs/**` cleanup after PRs #173-#177 merged. The original T041 PR-packet task
 remains a historical unchecked task because PR #177 fixed the autopilot
 continuation bug that caused the packet path to pause.
+
+---
+
+## PRSG-014 Optional gh-stack stack manager integration
+
+[Source: .specify/memory/archive-reports/2026-06-14-prsg-014-post-merge-hygiene.md]
+**Branch**: `codex/post-merge-archive-hygiene` · **Status**: Completed · **Archived**: 2026-06-14
+
+### Scope
+
+PRSG-014 added optional stack-manager support for autopilot create/sync/restack
+flows while preserving explicit `gh pr create/edit --base --head` as the
+deterministic fallback path.
+
+### Architecture / Approach
+
+- Add one shared `detect-stack-manager.sh` script used by both emission and
+  restack flows.
+- Persist stack-manager decisions through `stack-manager-decision.schema.json`
+  and evidence paths under feature/workflow `.process` directories.
+- Select `gh-stack` only after command availability, version/support, read-only
+  proof, and topology compatibility checks pass.
+- Fall back to explicit `gh` before mutation for missing, unsupported,
+  ambiguous, unsafe, or topology-incompatible environments.
+- Block with recoverable state after partial or unknown `gh-stack` mutation
+  instead of switching managers and risking duplicate or divergent PR topology.
+- Keep Codex and Claude guidance in parity while sharing scripts and contracts.
+
+### Test Strategy
+
+- Focused Layer 4 tests: `test-detect-stack-manager` 18/18,
+  `test-multi-pr-emission` 159/159, `test-restack` 33/33.
+- Broader recorded verification: Layer 1 979/979, Layer 4 1768/1768, Layer 7
+  fixtures, Layer 8 parity 12/12, and default suite 2937/2937 before PR #181.
+- Post-cleanup validation regenerates Spec-MOC indexes and reruns the default
+  deterministic suite.
+
+### Cleanup Notes
+
+`specs/prsg-014-optional-gh-stack-stack-manager-integration` was removed from
+active `specs/**` cleanup after PR #181 merged. Recovery commands and provenance
+are recorded in the PRSG-014 archive report.

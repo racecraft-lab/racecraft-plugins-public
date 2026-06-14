@@ -528,6 +528,33 @@ Recovery commands are recorded in
 
 ---
 
+## Optional gh-stack stack manager integration
+
+[Source: specs/prsg-014-optional-gh-stack-stack-manager-integration]
+**Branch**: `prsg-014-optional-gh-stack-stack-manager-integration` · **Status**: Completed · **Archived**: 2026-06-14
+
+### Summary
+
+PRSG-014 completed optional stack-manager hardening for autopilot split-PR
+emission and restack flows. It added shared deterministic `gh stack` support
+detection, a versioned `stack-manager-decision` contract, evidence threading
+through `multi-pr-emission.sh` and `restack.sh`, pre-mutation explicit-`gh`
+fallback, blocked recovery after partial or unknown `gh-stack` mutation, and
+Claude/Codex operator-guidance parity.
+
+The canonical path remains explicit GitHub `--base`/`--head` PR topology.
+`gh-stack` is opportunistic and only selected after command availability,
+version/support, read-only proof, and topology compatibility checks pass.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #181 merged. Shipped behavior lives
+in the shared autopilot scripts/contracts and committed Layer 4, Layer 7, and
+Layer 8 fixtures; recovery commands are recorded in
+`.specify/memory/archive-reports/2026-06-14-prsg-014-post-merge-hygiene.md`.
+
+---
+
 ## DOC-002 Unified Landing Page and IA Shell
 
 [Source: .specify/memory/archive-reports/2026-06-14-doc-002-post-merge-hygiene.md]

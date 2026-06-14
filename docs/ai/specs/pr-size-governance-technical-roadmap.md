@@ -3,7 +3,7 @@
 > Companion to the research synthesis at
 > [`../research/spec-pr-size-governance-research.md`](../research/spec-pr-size-governance-research.md).
 > **Source PRD:** [`../../prd-pr-size-governance.md`](../../prd-pr-size-governance.md).
-> Status: **in progress** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 5 hatch hardening done (PRSG-010 ✅ PRs #149-#155); Phase 6 retro-migration done (PRSG-011 ✅ PR #132); Phase 7a reviewability markers done (PRSG-013 ✅ PR #157); Phase 7b reviewer-ready PR packets done (PRSG-012 ✅ PRs #164-#168). Active: PRSG-014 gh-stack integration scaffolded for optional stack-manager hardening. Created 2026-06-03; status refreshed 2026-06-13.
+> Status: **complete** — Phase 1 relocation done (PRSG-001 ✅ PR #111); Phase 2 navigation spine done (PRSG-002 ✅ PR #116; PRSG-003 ✅ PR #121; PRSG-004 ✅ PR #129); Phase 3 upstream sizing done (PRSG-005 ✅ PR #120; PRSG-006 ✅ PR #119); Phase 4 router done (PRSG-007 ✅ PR #133); Phase 4 layer-planner done (PRSG-008 ✅ PR #138); Phase 4 split-PR emission done (PRSG-009 ✅ PR #145); Phase 5 hatch hardening done (PRSG-010 ✅ PRs #149-#155); Phase 6 retro-migration done (PRSG-011 ✅ PR #132); Phase 7a reviewability markers done (PRSG-013 ✅ PR #157); Phase 7b reviewer-ready PR packets done (PRSG-012 ✅ PRs #164-#168); Phase 7c optional gh-stack integration done (PRSG-014 ✅ PR #181). Created 2026-06-03; status refreshed 2026-06-14.
 
 ## Vision
 
@@ -412,11 +412,13 @@ title/body packet deterministic, neutral, and validated before any PR is opened.
 
 ---
 
-### PRSG-014 — Optional gh-stack stack manager integration  · Phase 7c · P2 · In progress
+### PRSG-014 — Optional gh-stack stack manager integration  · Phase 7c · P2 · ✅ Complete (PR #181)
 > Added 2026-06-12 after PRSG-013 proved explicit branch/base PR emission works,
 > but left stack-manager tooling as a shallow optional inspection path.
-> Scaffolded 2026-06-13 at `docs/ai/specs/.process/PRSG-014-workflow.md` with
-> `docs/ai/specs/.process/PRSG-014-design-concept.md` as setup context.
+> Completed 2026-06-14 via PR #181; workflow:
+> `docs/ai/specs/.process/PRSG-014-workflow.md`.
+> Active `specs/prsg-014-optional-gh-stack-stack-manager-integration` was removed
+> after archive provenance and recovery commands were recorded.
 
 **Why:** PRSG-009 and PRSG-013 correctly stack emitted PRs by passing explicit
 `--base`/`--head` branches to `gh pr create`, and `restack.sh` can retarget later
