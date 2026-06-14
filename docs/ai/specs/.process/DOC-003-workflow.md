@@ -44,8 +44,8 @@ revision note approved during the workflow.
 | Clarify | `/speckit-clarify` | Complete | Skipped by G1 routing: no `[NEEDS CLARIFICATION]` markers remained after Specify. |
 | Plan | `/speckit-plan` | Complete | Created docs-only plan artifacts; G3 passed and reviewability estimate projected 0 production LOC. |
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, security, and error-handling checklists passed; G4 passed with 0 gaps. |
-| Tasks | `/speckit-tasks` | In Progress | Organize by user-visible docs outcome, not by file layer. |
-| Analyze | `/speckit-analyze` | Pending | Check for command/skill drift, Codex leakage, and DOC-008 overlap. |
+| Tasks | `/speckit-tasks` | Complete | Created 39 tasks across 9 phases; G5 passed and marker planning produced 5 review markers. |
+| Analyze | `/speckit-analyze` | In Progress | Check for command/skill drift, Codex leakage, and DOC-008 overlap. |
 | Implement | `/speckit-implement` | Pending | Update docs page and install-relevant terminology surfaces. |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -403,10 +403,14 @@ Output: `specs/doc-003-claude-code-marketplace-installation-path/tasks.md`.
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | |
-| Phases | |
-| Parallel Opportunities | |
-| User Stories Covered | |
+| Total Tasks | 39 |
+| Phases | 9 |
+| Parallel Opportunities | 8 |
+| User Stories Covered | 5 |
+| Functional Requirement Coverage | FR-001 through FR-024 mapped. |
+| Success Criteria Coverage | SC-001 through SC-008 mapped. |
+| G5 Gate | Passed: 39 tasks found, 0 markers. |
+| Task Reviewability Gate | Size-only block: `reviewable_loc=1560`, `total_files=47`, `production_files=1`; evidence in `specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/tasks-gate.json`. |
 
 ---
 
@@ -418,16 +422,27 @@ during scoping.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| Releasable | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| Signals | | Decisive detector findings behind the route and releasability reading. |
-| Warnings | | Any release-safety warning attached to the change. |
+| Route | `one-navigable-PR` | One navigable docs PR with review markers, not a runtime split. |
+| Releasable | `true` | No destructive migration or concurrency-sensitive change. |
+| Signals | `change-shape:modify-heavy` | The change is docs-heavy and should be reviewed by story markers. |
+| Warnings | None | No release-safety warning attached to the change. |
 
 To produce the decision, run:
 
 ```bash
 bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-003-claude-code-marketplace-installation-path
 ```
+
+### Marker Plan
+
+| Field | Value |
+|-------|-------|
+| Status | Planned |
+| Marker Count | 5 |
+| Marker IDs | `us1`, `us2`, `us3`, `us4`, `us5` |
+| Warning Count | 1 reviewability size warning |
+| Output | `specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/pr-marker-plan.json` |
+| Layer Plan | Skipped because atomicity route is `one-navigable-PR`, not `split-PR`. |
 
 ---
 
@@ -507,11 +522,15 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Source audit | | | |
-| 2 - Claude page | | | |
-| 3 - Terminology consistency | | | |
-| 4 - Cross-links and boundaries | | | |
-| 5 - Validation | | | |
+| 1 - Source audit | T001-T006 | 0/6 | Read-only official-docs and repository evidence audit. |
+| 2 - Scope and reviewability gate | T007-T008 | 0/2 | Confirm docs-only boundaries before page edits. |
+| 3 - US1 install route | T009-T013 | 0/5 | Add first-time Racecraft marketplace install and verification path. |
+| 4 - US2 skill verification | T014-T016 | 0/3 | Add namespaced SpecKit Pro skill checks. |
+| 5 - US3 lifecycle and recovery | T017-T021 | 0/5 | Add update, uninstall, remove, reinstall, and basic recovery. |
+| 6 - US4 trust surfaces | T022-T026 | 0/5 | Add source-backed trust inventory and security boundaries. |
+| 7 - US5 terminology consistency | T027-T030 | 0/4 | Align install-relevant README and AGENTS terminology. |
+| 8 - Cross-links and boundaries | T031-T033 | 0/3 | Keep Codex and DOC-008 content routed out of DOC-003. |
+| 9 - Validation and PR evidence | T034-T039 | 0/6 | Run validation, scope checks, and PR packet prep. |
 
 ---
 

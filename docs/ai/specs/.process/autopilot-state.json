@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
-  "updated_at": "2026-06-14T23:32:12Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-14T23:44:52Z",
+  "active_step": "Phase 6: Analyze",
   "spec_id": "DOC-003",
   "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
   "feature_branch": "doc-003-claude-code-marketplace-installation-path",
@@ -181,6 +181,70 @@
       "total_gaps_found": 18,
       "total_gaps_fixed": 18,
       "total_gaps_remaining": 0
+    },
+    "tasks": {
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "task_count": 39,
+      "phase_count": 9,
+      "parallel_markers": 8,
+      "user_stories_covered": 5,
+      "functional_requirements_covered": "FR-001 through FR-024",
+      "success_criteria_covered": "SC-001 through SC-008",
+      "files": [
+        "specs/doc-003-claude-code-marketplace-installation-path/tasks.md",
+        "specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/tasks-gate.json",
+        "specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/hazard-route.json",
+        "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/pr-marker-plan.json"
+      ],
+      "reviewability_task_gate": {
+        "status": "block",
+        "is_size_only": true,
+        "reviewable_loc": 1560,
+        "production_files": 1,
+        "total_files": 47,
+        "primary_surfaces": [
+          "docs/process",
+          "other",
+          "seed/config"
+        ],
+        "blockers": [
+          "reviewable LOC 1560 exceeds block threshold 800",
+          "total files 47 exceeds block threshold 25"
+        ],
+        "evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/tasks-gate.json"
+      },
+      "atomicity_route": {
+        "route": "one-navigable-PR",
+        "releasable": true,
+        "signals": [
+          "change-shape:modify-heavy"
+        ],
+        "hints": [
+          "hint:flag-system:weak"
+        ],
+        "warnings": [],
+        "evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/hazard-route.json"
+      },
+      "marker_plan": {
+        "status": "planned",
+        "marker_count": 5,
+        "marker_ids": [
+          "us1",
+          "us2",
+          "us3",
+          "us4",
+          "us5"
+        ],
+        "warning_count": 1,
+        "hazard_collapsed": false,
+        "output": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/pr-marker-plan.json"
+      },
+      "layer_plan": {
+        "status": "skipped",
+        "reason": "Atomicity route is one-navigable-PR, not split-PR."
+      }
     }
   },
   "plan": [
@@ -258,7 +322,7 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
@@ -273,7 +337,39 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Source Audit (T001-T006)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Scope And Reviewability Gate (T007-T008)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Install Route (T009-T013)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Namespaced Skill Verification (T014-T016)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Lifecycle And Recovery (T017-T021)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Trust Surface Inventory (T022-T026)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Terminology Consistency (T027-T030)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Cross-Links And Boundary Clarity (T031-T033)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Validation And PR Evidence (T034-T039)",
       "status": "pending"
     },
     {
