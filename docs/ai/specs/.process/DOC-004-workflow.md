@@ -713,3 +713,18 @@ racecraft-plugins-public/
 
 - Record validation-induced generated payload README sync explicitly in the workflow when a docs-only task changes README content that is copied into generated plugin payloads.
 - Keep the detailed install guide as the source of truth and keep README surfaces concise but invariant-compatible.
+
+---
+
+## Post-Merge Archive
+
+| Item | Result |
+|------|--------|
+| PR | #186 `docs(DOC-004): add Codex marketplace installation path` |
+| Merge commit | `bc48441c494d34a7df9876c3bdebabc4db8408a5` |
+| Merged at | 2026-06-15T20:40:39Z |
+| Archive report | `.specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md` |
+| Cleanup | Active spec folder removed from `specs/doc-004-codex-marketplace-installation-path` after recovery commands were recorded |
+
+DOC-004 is complete and archived. The canonical Codex install route remains
+`docs-site/src/content/docs/install/codex.md`.

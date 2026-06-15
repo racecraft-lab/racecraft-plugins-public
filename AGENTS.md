@@ -56,6 +56,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - DOC-001 is archived in `.specify/memory/` as completed on 2026-06-13 after PR #163 merged.
 - DOC-002 is archived in `.specify/memory/` as completed on 2026-06-14 after PRs #173-#177 merged.
 - PRSG-014 is archived in `.specify/memory/` as completed on 2026-06-14 after PR #181 merged.
+- DOC-003 and DOC-004 are archived in `.specify/memory/` as completed on 2026-06-15 after PR #187 and PR #186 merged.
 - `specs/prsg-007-atomicity-router` and `specs/prsg-011-retro-migration` were removed from active `specs/**` cleanup after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory.
 - `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup after the planner schema fixture was vendored under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/`.
 - `specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup after PR #145 merged and the PRSG-009 contract schemas were preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
@@ -65,4 +66,5 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - `specs/doc-001-static-docs-framework-and-ia-spike` was removed from active `specs/**` cleanup after PR #163 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-13-doc-001-post-merge-hygiene.md`.
 - `specs/doc-002-unified-landing-page-and-ia-shell` was removed from active `specs/**` cleanup after PRs #173-#177 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-14-doc-002-post-merge-hygiene.md`.
 - `specs/prsg-014-optional-gh-stack-stack-manager-integration` was removed from active `specs/**` cleanup after PR #181 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-14-prsg-014-post-merge-hygiene.md`.
+- `specs/doc-003-claude-code-marketplace-installation-path` and `specs/doc-004-codex-marketplace-installation-path` were removed from active `specs/**` cleanup after PR #187 and PR #186 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md`.
 - `.specify/feature.json` is transient local state. Do not commit a stale completed-spec pointer back to `main`.

@@ -591,3 +591,42 @@ deterministic fallback path.
 `specs/prsg-014-optional-gh-stack-stack-manager-integration` was removed from
 active `specs/**` cleanup after PR #181 merged. Recovery commands and provenance
 are recorded in the PRSG-014 archive report.
+
+---
+
+## DOC-003 and DOC-004 platform install paths
+
+[Source: .specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md]
+**Branch**: `codex/doc-003-004-post-merge-hygiene` · **Status**: Completed · **Archived**: 2026-06-15
+
+### Scope
+
+DOC-003 and DOC-004 completed the platform-specific install tier for the
+interactive documentation roadmap. DOC-003 owns the Claude Code install route;
+DOC-004 owns the Codex install route, README alignment, generated payload
+documentation sync, and Codex custom-agent registration guidance.
+
+### Architecture / Approach
+
+- Keep `docs-site/src/content/docs/install/claude-code.md` and
+  `docs-site/src/content/docs/install/codex.md` structurally aligned while
+  preserving platform-specific commands and trust boundaries.
+- Retain historical workflow/process evidence under `docs/ai/specs/.process/`.
+- Record recovery commands before removing active spec folders.
+- Regenerate the roadmap-MOC generated INDEX after cleanup so active links do
+  not point at archived spec folders.
+
+### Test Strategy
+
+- Confirm PR #187 and PR #186 are merged to `main`.
+- Validate JSON state files after rewriting archive state.
+- Regenerate and check SpecKit generated indexes.
+- Verify active `specs/**` contains only `specs/.gitkeep` after cleanup.
+- Run docs-site validation and the deterministic SpecKit test suite.
+
+### Cleanup Notes
+
+`specs/doc-003-claude-code-marketplace-installation-path` and
+`specs/doc-004-codex-marketplace-installation-path` were removed from active
+`specs/**` cleanup after PR #187 and PR #186 merged. Recovery commands and
+provenance are recorded in the DOC-003/DOC-004 archive report.

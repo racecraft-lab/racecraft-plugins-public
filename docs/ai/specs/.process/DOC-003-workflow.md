@@ -601,3 +601,18 @@ technical roadmap and the setup Design Concept.
 
 ### PR packet validation events
 - <!-- speckit-pro-pr-packet-validation:event-id=pr-packet --> Blocked PR packet validation for `pr-packet`; result `specs/doc-003-claude-code-marketplace-installation-path/.process/pr-packets/pr-packet/validation.json`; rules: `unknown`.
+
+---
+
+## Post-Merge Archive
+
+| Item | Result |
+|------|--------|
+| PR | #187 `docs(DOC-003): add Claude Code install route` |
+| Merge commit | `afc197a278001c7b8c2ffeb973c359971676d597` |
+| Merged at | 2026-06-15T20:26:31Z |
+| Archive report | `.specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md` |
+| Cleanup | Active spec folder removed from `specs/doc-003-claude-code-marketplace-installation-path` after recovery commands were recorded |
+
+DOC-003 is complete and archived. The canonical Claude install route remains
+`docs-site/src/content/docs/install/claude-code.md`.

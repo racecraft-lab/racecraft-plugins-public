@@ -528,6 +528,45 @@ Recovery commands are recorded in
 
 ---
 
+## DOC-003 Claude Code marketplace installation path
+
+[Source: .specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md]
+**Branch**: `doc-003-claude-code-marketplace-installation-path` · **Status**: Completed · **Archived**: 2026-06-15
+
+### Summary
+
+DOC-003 converted the Claude Code install route from a DOC-002 shell into a
+source-backed user path for adding the Racecraft marketplace, installing
+SpecKit Pro, reloading plugins, verifying namespaced skills, updating,
+uninstalling, reinstalling, and reviewing Claude-specific trust surfaces.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #187 merged. Recovery commands and
+provenance are recorded in the DOC-003/DOC-004 archive report.
+
+---
+
+## DOC-004 Codex marketplace installation path
+
+[Source: .specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md]
+**Branch**: `doc-004-codex-marketplace-installation-path` · **Status**: Completed · **Archived**: 2026-06-15
+
+### Summary
+
+DOC-004 converted the Codex install route from a DOC-002 shell into a
+source-backed user path for repo-scoped, personal/local, and CLI marketplace
+installation, generated Codex payload use, installed plugin cache behavior,
+`$install` custom-agent registration, restart and verification checks, and
+bounded install-safety guidance.
+
+### Cleanup Note
+
+The active spec folder was removed after PR #186 merged. Recovery commands and
+provenance are recorded in the DOC-003/DOC-004 archive report.
+
+---
+
 ## Optional gh-stack stack manager integration
 
 [Source: specs/prsg-014-optional-gh-stack-stack-manager-integration]

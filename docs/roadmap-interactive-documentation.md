@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-003 and DOC-004 are in progress
+**Status:** DOC-003 and DOC-004 completed and archived; DOC-005, DOC-006, and DOC-007 are ready
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -95,6 +95,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-003: Claude Code marketplace installation path
 
 - **Maps from PRD:** DOC-FR-003
+- **Status:** Completed and archived after PR #187. Canonical Claude install guidance lives in `docs-site/src/content/docs/install/claude-code.md`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md`.
 - **User outcome:** Claude Code users can add the marketplace, install/update/remove `speckit-pro`, verify the install, and understand namespaced plugin surfaces.
 - **Scope:** Claude-specific tutorial/how-to/reference content: `/plugin marketplace add`, `/plugin install`, update/remove path, `/speckit-pro:*` invocation, `skills/`, `agents/`, `hooks/`, MCP/settings references, trust and managed-marketplace notes. Include current repo path evidence and legacy/current command-folder clarification.
 - **Vertical-slice rationale:** Delivers one complete end-to-end install capability for one platform.
@@ -112,6 +113,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-004: Codex marketplace installation path
 
 - **Maps from PRD:** DOC-FR-004
+- **Status:** Completed and archived after PR #186. Canonical Codex install guidance lives in `docs-site/src/content/docs/install/codex.md`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md`.
 - **User outcome:** Codex users can install the plugin through repo/personal/CLI marketplace paths, run the install skill, restart, and verify custom agents.
 - **Scope:** Codex-specific tutorial/how-to/reference content: `.agents/plugins/marketplace.json`, `.codex-plugin/plugin.json`, `codex plugin marketplace add`, repo-scoped vs personal install, installed cache behavior, generated Codex payload, `$install`, `@SpecKit Pro -> install`, custom-agent TOML registration, restart, sandbox/approvals/network constraints.
 - **Vertical-slice rationale:** Delivers one complete end-to-end install capability for one platform.
