@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.0...speckit-pro-v2.14.1) (2026-06-15)
+
+
+### Bug Fixes
+
+* **speckit-pro:** enforce spec-scoped PR emission ([#188](https://github.com/racecraft-lab/racecraft-plugins-public/issues/188)) ([2375654](https://github.com/racecraft-lab/racecraft-plugins-public/commit/23756542be49e9bf88eaf9913a8c881302c0a1f7))
+
 ## [2.14.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.13.1...speckit-pro-v2.14.0) (2026-06-14)
 
 

@@ -1,6 +1,6 @@
 {
   "name": "speckit-pro",
-  "version": "2.14.0",
+  "version": "2.14.1",
   "description": "Skill-backed Spec-Driven Development workflows for Codex, including archive-aware autopilot startup, coaching, spec scaffolding, Codex subagent installation, status dashboards, and PR review resolution.",
   "author": {
     "name": "Racecraft Lab",
