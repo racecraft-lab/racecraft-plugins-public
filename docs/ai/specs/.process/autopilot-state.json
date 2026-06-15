@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T02:38:42Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-06-15T02:48:11Z",
+  "active_step": "Post: Review Remediation",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -440,7 +440,7 @@
           "bash tests/speckit-pro/run-all.sh: 2947/2947 passed",
           "git diff --check: passed"
         ],
-        "notes": "Aligned root README, plugin README, and docs-site Codex guidance for repo marketplace, generated payload, installed cache, $install, restart, nine-file verification, stale-update checkpoint, bounded safety, and DOC-003/DOC-007/DOC-008 boundaries. Generated dist README changes from validation were restored."
+        "notes": "Aligned root README, plugin README, and docs-site Codex guidance for repo marketplace, generated payload, installed cache, $install, restart, nine-file verification, stale-update checkpoint, bounded safety, and DOC-003/DOC-007/DOC-008 boundaries. Generated dist README files were later synced because CI enforces current generated payload documentation."
       },
       "us4_install_safety": {
         "status": "completed",
@@ -481,7 +481,7 @@
           "bash tests/speckit-pro/run-all.sh: 2947/2947 passed",
           "git diff --check: passed"
         ],
-        "notes": "Recorded Phase 7 source-backed snippet review, accessibility review, docs-site validation, full suite evidence, generated-dist cleanup, docs-only scope review, and PR evidence."
+        "notes": "Recorded Phase 7 source-backed snippet review, accessibility review, docs-site validation, full suite evidence, generated-dist README sync evidence, docs/runtime scope review, and PR evidence."
       }
     },
     "gate": "G7",
@@ -494,7 +494,7 @@
       "docs_validate_links": "passed",
       "full_suite": "passed: 2947/2947",
       "diff_check": "passed",
-      "dist_scope": "no dist changes in final intended diff"
+      "dist_scope": "generated README sync only; no manifest, installer, hook, TOML, marketplace, release automation, or runtime behavior changes"
     }
   },
   "post_implementation": {
@@ -574,13 +574,27 @@
       "artifact_policy": "transient packet/body used for PR creation; not committed to branch"
     },
     "pr_creation": {
-      "status": "pending"
+      "status": "completed",
+      "result": "pass",
+      "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/186",
+      "is_draft": false
     },
     "review_remediation": {
-      "status": "pending"
+      "status": "in_progress",
+      "initial_pr_check_failures": [
+        "test (speckit-pro): validate-plugin-payload reported stale committed payload files",
+        "validate-plugins: sentinel failed because plugin tests failed"
+      ],
+      "remediation": "Sync generated dist README files after source README install guidance changes; rerun local validation before push."
     },
     "retrospective": {
-      "status": "pending"
+      "status": "completed",
+      "result": "pass",
+      "report": "specs/doc-004-codex-marketplace-installation-path/retrospective.md",
+      "completion_rate": 100,
+      "spec_adherence": 100,
+      "critical_findings": 0,
+      "proposed_spec_changes": 0
     }
   },
   "plan": [
@@ -620,8 +634,8 @@
     {"step": "Post: Cleanup", "status": "completed", "skipped": "cleanup extension not installed"},
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {"step": "Post: PR Creation", "status": "completed"},
+    {"step": "Post: Review Remediation", "status": "in_progress"},
+    {"step": "Post: Retrospective", "status": "completed"}
   ]
 }

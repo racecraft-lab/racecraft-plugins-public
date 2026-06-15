@@ -569,7 +569,7 @@ For each task, follow this cycle:
 | Custom-agent registration | T008-T009 | Complete | Added Codex-only install checklist, exact nine installer-copied TOML files, skill metadata sidecar distinction, observational verification, no manual cache or TOML edits, and restart/rerun triggers. |
 | Docs consistency | T010-T013 | Complete | README, plugin README, and docs-site Codex guide now share repo marketplace, generated payload, installed cache, install skill, restart, nine-file verification, stale-update, safety, and DOC-003/DOC-007/DOC-008 boundary guidance. |
 | Install safety | T014-T016 | Complete | Added text-visible sandbox, approval, network, cache/source, destination, outside-workspace, hook-payload, external-auth, and DOC-008 deferral guidance; focused forbidden-claim check passes. |
-| Polish and validation | T017-T020 | Complete | Source-backed command/path snippet review, accessibility review, docs-site validation, full repo suite, generated-dist cleanup, and PR evidence recorded. |
+| Polish and validation | T017-T020 | Complete | Source-backed command/path snippet review, accessibility review, docs-site validation, full repo suite, generated-dist README sync, and PR evidence recorded. |
 
 ### Phase 7 Evidence
 
@@ -612,14 +612,14 @@ Result: Pass. `docs-site/src/content/docs/install/codex.md` uses semantic sectio
 | Check | Result |
 |-------|--------|
 | `bash tests/speckit-pro/run-all.sh` | Pass: `2947/2947` passed (`L1 551/551`, Codex L1 `430/430`, `L4 1776/1776`, `L5 190/190`). |
-| Generated-dist cleanup | The full suite regenerated `dist/claude/speckit-pro/README.md` and `dist/codex/speckit-pro/README.md`; both generated validation changes were restored to preserve DOC-004 no-dist-write scope. |
+| Generated-dist README sync | CI requires generated payload README files to be current with the source README. `dist/claude/speckit-pro/README.md` and `dist/codex/speckit-pro/README.md` were synced after the first PR check failed `validate-plugin-payload`; no manifests, installer behavior, custom-agent TOML templates, hooks, marketplace behavior, release automation, or runtime code changed. |
 | Scope review | Final intended diff is limited to `docs/ai/specs/.process/DOC-004-workflow.md` and `specs/doc-004-codex-marketplace-installation-path/tasks.md` for Phase 7 evidence and task completion. |
 
 PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outputs:
 
 - Summary: DOC-004 provides a source-backed Codex install path across the docs-site Codex page, root README, and SpecKit Pro README.
 - Why: Codex users need separate repo-scoped, personal/local, and CLI marketplace paths without conflating source, generated payload, installed cache, skills, and custom-agent TOML registration.
-- Non-goals: no manifest, generated payload, installer behavior, custom-agent TOML template, hook, release automation, marketplace behavior, or runtime changes.
+- Non-goals: no manifest, generated payload behavior, installer behavior, custom-agent TOML template, hook, release automation, marketplace behavior, or runtime changes. Generated dist README files are synced only because CI enforces current generated payload documentation.
 - Review order: review `docs-site/src/content/docs/install/codex.md` first, then README alignment, then SpecKit artifacts and validation evidence.
 - Traceability: AC-4.1 through AC-4.6 and FR-001 through FR-019 are mapped in `tasks.md`; Phase 7 validates FR-017, FR-018, SC-005, and SC-006.
 - Validation: `pnpm validate`, `pnpm validate:links`, and `bash tests/speckit-pro/run-all.sh` all passed.
@@ -634,7 +634,7 @@ PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outpu
 - [x] `docs-site/src/content/docs/install/codex.md` satisfies DOC-004 page scope.
 - [x] `README.md` and `speckit-pro/README.md` agree with docs-site Codex install guidance.
 - [x] Official OpenAI Codex docs refresh is cited in `research.md` or the relevant implementation evidence.
-- [x] No unintended changes to manifests, generated payloads, installer scripts, custom-agent TOML templates, or plugin runtime behavior.
+- [x] No unintended changes to manifests, installer scripts, custom-agent TOML templates, hooks, marketplace behavior, release automation, or plugin runtime behavior; generated dist README files are synced because CI enforces current generated payload documentation.
 - [x] `$speckit-doctor` equivalent extension check passes: 5 pass, 0 warn, 0 fail.
 - [x] `$speckit-verify` equivalent implementation check passes: 0 critical, 0 high, 0 medium, 0 low findings; 20/20 tasks complete; 19/19 requirements covered.
 - [x] `$speckit-verify-tasks` equivalent phantom-task check passes with 20 verified, 0 partial, 0 weak, 0 not found, 0 skipped; report written to `specs/doc-004-codex-marketplace-installation-path/verify-tasks-report.md`.
@@ -648,7 +648,7 @@ PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outpu
 - [x] PR packet/body generated and validated.
 - [ ] PR created.
 - [ ] Review remediation checked.
-- [ ] Retrospective complete.
+- [x] Retrospective complete.
 
 ### Post-Implementation Evidence
 
@@ -662,6 +662,8 @@ PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outpu
 | Cleanup extension | Skipped | Cleanup extension is not installed. |
 | Final reviewability backstop | Warn/pass | `final-reviewability-backstop.sh` completed with `status=warn`, `blocked_operations=[]`, `reviewable_loc=0`, `production_files=0`, `total_files=25`, and `primary_surface_count=4`; warning evidence is recorded in `specs/doc-004-codex-marketplace-installation-path/.process/final-reviewability/gate-state.json`. |
 | PR packet/body generation | Pass | `generate-pr-body.sh` produced a single-PR packet and DOC-004 reviewer body; `validate-pr-packet.sh` passed with `title_value=feat(speckit-pro): Add codex marketplace installation path`, `base_branch=main`, `head_branch=doc-004-codex-marketplace-installation-path`, and `pr_blocked=false`. The packet/body were kept transient for PR creation rather than committed to the branch. |
+| PR creation | Pass | Created ready PR #186: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/186`. Initial PR checks found stale generated payload README files, so the branch now includes the CI-required generated dist README sync. |
+| Retrospective | Pass | `specs/doc-004-codex-marketplace-installation-path/retrospective.md` records 100% task completion, 100% spec adherence, 0 critical findings, and no proposed spec changes. |
 
 ---
 
@@ -700,13 +702,13 @@ racecraft-plugins-public/
 ### What Worked Well
 
 - Keeping the source-backed snippet checklist grouped by command/path family made the final review practical without duplicating the full docs page.
-- Running the full suite after docs-site validation exposed generated dist README churn; restoring those generated files preserved the DOC-004 no-dist-write boundary.
+- Running the full suite and PR checks exposed generated dist README drift; syncing generated README files is required when source README install guidance changes.
 
 ### Challenges Encountered
 
-- The full suite regenerated generated payload README files from the source README, but DOC-004 intentionally excludes dist payload writes. The generated changes were reviewed, then restored.
+- Initial local validation restored generated payload README files, but CI correctly required them to remain current with the source README. The generated changes were reviewed and committed as documentation-only payload sync.
 
 ### Patterns to Reuse
 
-- Record validation-induced generated payload churn explicitly in the workflow when a docs-only task runs the full plugin suite.
+- Record validation-induced generated payload README sync explicitly in the workflow when a docs-only task changes README content that is copied into generated plugin payloads.
 - Keep the detailed install guide as the source of truth and keep README surfaces concise but invariant-compatible.
