@@ -1,0 +1,199 @@
+{
+  "multi_pr_emission": {
+    "schema_version": 2,
+    "status": "pending",
+    "emission_mode": "marker",
+    "route": "marker_split",
+    "base_branch": "main",
+    "base_sha": "b310eece8a11cc0dd4f897756758f2e2b013141f",
+    "next_slice_id": "us1",
+    "reconciled_at": "",
+    "slices": [
+      {
+        "slice_id": "us1",
+        "review_order": 1,
+        "expected_branch": "doc-003-claude-code-marketplace-installation-path/01-us1",
+        "expected_base_branch": "main",
+        "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+        "declared_files": [
+          "docs-site/src/content/docs/install/claude-code.md"
+        ],
+        "declared_scoped_tests": [],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "<none>",
+              "gate_type": "no_scoped_tests",
+              "reason": "No declared scoped tests or applicable project command; full regression evidence remains required.",
+              "required": true,
+              "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/us1/no_scoped_tests.txt",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us1",
+        "source_marker_ids": [
+          "us1"
+        ],
+        "source_marker_checkpoints": [
+          "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us2",
+        "review_order": 2,
+        "expected_branch": "doc-003-claude-code-marketplace-installation-path/02-us2",
+        "expected_base_branch": "doc-003-claude-code-marketplace-installation-path/01-us1",
+        "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+        "declared_files": [
+          "docs-site/src/content/docs/install/claude-code.md"
+        ],
+        "declared_scoped_tests": [],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "<none>",
+              "gate_type": "no_scoped_tests",
+              "reason": "No declared scoped tests or applicable project command; full regression evidence remains required.",
+              "required": true,
+              "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/us2/no_scoped_tests.txt",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us2",
+        "source_marker_ids": [
+          "us2"
+        ],
+        "source_marker_checkpoints": [
+          "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us3",
+        "review_order": 3,
+        "expected_branch": "doc-003-claude-code-marketplace-installation-path/03-us3",
+        "expected_base_branch": "doc-003-claude-code-marketplace-installation-path/02-us2",
+        "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+        "declared_files": [
+          "docs-site/src/content/docs/install/claude-code.md"
+        ],
+        "declared_scoped_tests": [],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "<none>",
+              "gate_type": "no_scoped_tests",
+              "reason": "No declared scoped tests or applicable project command; full regression evidence remains required.",
+              "required": true,
+              "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/us3/no_scoped_tests.txt",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us3",
+        "source_marker_ids": [
+          "us3"
+        ],
+        "source_marker_checkpoints": [
+          "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us4",
+        "review_order": 4,
+        "expected_branch": "doc-003-claude-code-marketplace-installation-path/04-us4",
+        "expected_base_branch": "doc-003-claude-code-marketplace-installation-path/03-us3",
+        "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+        "declared_files": [
+          ".claude-plugin/marketplace.json",
+          "docs-site/src/content/docs/install/claude-code.md",
+          "speckit-pro/.claude-plugin/plugin.json",
+          "speckit-pro/hooks/hooks.json"
+        ],
+        "declared_scoped_tests": [],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "<none>",
+              "gate_type": "no_scoped_tests",
+              "reason": "No declared scoped tests or applicable project command; full regression evidence remains required.",
+              "required": true,
+              "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/us4/no_scoped_tests.txt",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us4",
+        "source_marker_ids": [
+          "us4"
+        ],
+        "source_marker_checkpoints": [
+          "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/final-marker-split-result.json"
+      },
+      {
+        "slice_id": "us5",
+        "review_order": 5,
+        "expected_branch": "doc-003-claude-code-marketplace-installation-path/05-us5",
+        "expected_base_branch": "doc-003-claude-code-marketplace-installation-path/04-us4",
+        "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+        "declared_files": [
+          "docs-site/src/content/docs/install/claude-code.md",
+          "speckit-pro/README.md"
+        ],
+        "declared_scoped_tests": [],
+        "scoped_verification": {
+          "commands": [
+            {
+              "command": "<none>",
+              "gate_type": "no_scoped_tests",
+              "reason": "No declared scoped tests or applicable project command; full regression evidence remains required.",
+              "required": true,
+              "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/us5/no_scoped_tests.txt",
+              "exit_status": 0,
+              "started_at": "2026-06-10T00:00:00Z",
+              "finished_at": "2026-06-10T00:00:01Z"
+            }
+          ]
+        },
+        "status": "pending",
+        "marker_id": "us5",
+        "source_marker_ids": [
+          "us5"
+        ],
+        "source_marker_checkpoints": [
+          "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        ],
+        "route": "marker_split",
+        "marker_split_evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/final-marker-split-result.json"
+      }
+    ],
+    "source_marker_plan": {
+      "path": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/pr-marker-plan.json"
+    },
+    "marker_split_result": {
+      "path": "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/final-marker-split-result.json"
+    }
+  }
+}

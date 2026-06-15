@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
-  "updated_at": "2026-06-15T00:03:05Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-06-15T00:20:38Z",
+  "active_step": "Blocked: PR Creation",
   "spec_id": "DOC-003",
   "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
   "feature_branch": "doc-003-claude-code-marketplace-installation-path",
@@ -228,7 +228,7 @@
         "evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/hazard-route.json"
       },
       "marker_plan": {
-        "status": "planned",
+        "status": "emission_ready",
         "marker_count": 5,
         "marker_ids": [
           "us1",
@@ -310,6 +310,67 @@
         "layer1_required": false,
         "codex_procedure_leakage": false,
         "doc008_absorbed": false
+      }
+    },
+    "post_implementation": {
+      "doctor_extension_check": {
+        "status": "completed",
+        "result": "pass_with_known_doc_branch_caveat",
+        "templates": "6 non-empty templates present",
+        "agent_config": "Claude integration present with 9 speckit command docs",
+        "scripts": "6 executable bash scripts present",
+        "constitution": "857 words",
+        "feature_artifacts": "DOC-003 spec, plan, and tasks present"
+      },
+      "verify_implementation": {
+        "status": "completed",
+        "first_pass": "content passed; T039 process evidence missing",
+        "rerun": "passed after PR packet/body generation"
+      },
+      "verify_tasks": {
+        "status": "completed",
+        "first_pass": "T001-T038 verified; T039 missing PR packet before packet generation",
+        "rerun": "passed after PR packet/body generation"
+      },
+      "final_reviewability_backstop": {
+        "status": "completed",
+        "outcome": "marker_split",
+        "gate_result": "warn",
+        "reason": "total files 24 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1",
+        "marker_plan_valid": true,
+        "fingerprint_matched": true,
+        "evidence": "specs/doc-003-claude-code-marketplace-installation-path/.process/final-reviewability/gate-state.json"
+      },
+      "pr_packet": {
+        "status": "completed",
+        "validation": "passed",
+        "title": "docs(DOC-003): add Claude Code install route",
+        "packet": "specs/doc-003-claude-code-marketplace-installation-path/.process/pr-packet/pr-packet.json",
+        "body": "specs/doc-003-claude-code-marketplace-installation-path/.process/pr-packet/pr-body.md"
+      },
+      "marker_emission": {
+        "status": "validated_candidate_only",
+        "mode": "marker",
+        "route": "marker_split",
+        "slice_count": 5,
+        "mutation": {
+          "branches": false,
+          "pull_requests": false
+        },
+        "candidate_files": {
+          "state": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/candidate/multi-pr-emission-state.candidate.json",
+          "prs_manifest": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/candidate/prs.candidate.json",
+          "command_capture": "specs/doc-003-claude-code-marketplace-installation-path/.process/emission/candidate/commands.candidate.json"
+        }
+      },
+      "pr_creation": {
+        "status": "blocked",
+        "reason": "All five marker slices resolve to implementation checkpoint 6bc62f61000df62c2d4c9f3318333c0ba2547701; live marker PR emission would create a stack of same-commit branches.",
+        "options": [
+          "stop without PR",
+          "open one conventional PR manually from the current branch",
+          "rework history into true marker-scoped commits/branches before live marker emission"
+        ]
       }
     }
   },
@@ -440,23 +501,23 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Cleanup",
@@ -464,11 +525,11 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
@@ -476,11 +537,11 @@
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "blocked"
     },
     {
       "step": "Post: Review Remediation",
@@ -490,5 +551,333 @@
       "step": "Post: Retrospective",
       "status": "pending"
     }
-  ]
+  ],
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "doc-003-claude-code-marketplace-installation-path",
+    "status": "emission_ready",
+    "source_fingerprint": {
+      "feature_spec_sha": "d72c41cb47a493026ad7d107c0a6ac0a1b7593edd45f354023d7b3787ffdcbd6",
+      "plan_declared_scope_sha": "eac9dbc0f2fa71016f7d4f631f5a872737cdecc0c7fb35561e83853b3bbce119",
+      "tasks_sha": "c305336710f2eadd8475b1d8e575c1a7744e93d0dc4fd07459d57475b91ce432",
+      "reviewability_sha": "ec9e540eeb0c335ccea068b9a5b283f83ebdcbd195eb27466ec0c6003885f776",
+      "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+    },
+    "markers": [
+      {
+        "id": "us1",
+        "review_order": 1,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Install SpecKit Pro From The Racecraft Marketplace",
+          "story_id": 1,
+          "start_task_id": "T009",
+          "end_task_id": "T013"
+        },
+        "task_ids": [
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/install/claude-code.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us1",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "commit_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        },
+        "emission_mapping": {
+          "status": "marker_split",
+          "source_marker_ids": [
+            "us1"
+          ],
+          "packet_path": null
+        },
+        "warnings": [],
+        "title_description": "Document Claude marketplace install path"
+      },
+      {
+        "id": "us2",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - Verify The Namespaced Skill Surface",
+          "story_id": 2,
+          "start_task_id": "T014",
+          "end_task_id": "T016"
+        },
+        "task_ids": [
+          "T014",
+          "T015",
+          "T016"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/install/claude-code.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us2",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "commit_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        },
+        "emission_mapping": {
+          "status": "marker_split",
+          "source_marker_ids": [
+            "us2"
+          ],
+          "packet_path": null
+        },
+        "warnings": [],
+        "title_description": "Document namespaced skill verification"
+      },
+      {
+        "id": "us3",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Manage Plugin Lifecycle Without Guessing Commands",
+          "story_id": 3,
+          "start_task_id": "T017",
+          "end_task_id": "T021"
+        },
+        "task_ids": [
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/install/claude-code.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us3",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "commit_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        },
+        "emission_mapping": {
+          "status": "marker_split",
+          "source_marker_ids": [
+            "us3"
+          ],
+          "packet_path": null
+        },
+        "warnings": [],
+        "title_description": "Document plugin lifecycle recovery"
+      },
+      {
+        "id": "us4",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 4 - Inspect Trust Surfaces Before Running Plugin Skills",
+          "story_id": 4,
+          "start_task_id": "T022",
+          "end_task_id": "T026"
+        },
+        "task_ids": [
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": ".claude-plugin/marketplace.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/install/claude-code.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/.claude-plugin/plugin.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/hooks/hooks.json"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us4",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "commit_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        },
+        "emission_mapping": {
+          "status": "marker_split",
+          "source_marker_ids": [
+            "us4"
+          ],
+          "packet_path": null
+        },
+        "warnings": [],
+        "title_description": "Document Claude trust surfaces"
+      },
+      {
+        "id": "us5",
+        "review_order": 5,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 5 - Maintain Source And Generated Payload Clarity",
+          "story_id": 5,
+          "start_task_id": "T027",
+          "end_task_id": "T030"
+        },
+        "task_ids": [
+          "T027",
+          "T028",
+          "T029",
+          "T030"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/install/claude-code.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/README.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us5",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "complete",
+          "commit_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "head_sha": "6bc62f61000df62c2d4c9f3318333c0ba2547701",
+          "evidence_path": "specs/doc-003-claude-code-marketplace-installation-path/tasks.md"
+        },
+        "emission_mapping": {
+          "status": "marker_split",
+          "source_marker_ids": [
+            "us5"
+          ],
+          "packet_path": null
+        },
+        "warnings": [],
+        "title_description": "Align install skill terminology"
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": ""
+        }
+      }
+    ]
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "d72c41cb47a493026ad7d107c0a6ac0a1b7593edd45f354023d7b3787ffdcbd6",
+    "plan_declared_scope_sha": "eac9dbc0f2fa71016f7d4f631f5a872737cdecc0c7fb35561e83853b3bbce119",
+    "tasks_sha": "c305336710f2eadd8475b1d8e575c1a7744e93d0dc4fd07459d57475b91ce432",
+    "reviewability_sha": "ec9e540eeb0c335ccea068b9a5b283f83ebdcbd195eb27466ec0c6003885f776",
+    "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+  }
 }
