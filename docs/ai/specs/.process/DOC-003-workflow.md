@@ -433,15 +433,15 @@ To produce the decision, run:
 bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-003-claude-code-marketplace-installation-path
 ```
 
-### Marker Plan
+### Review Plan
 
 | Field | Value |
 |-------|-------|
-| Status | Planned |
-| Marker Count | 5 |
-| Marker IDs | `us1`, `us2`, `us3`, `us4`, `us5` |
-| Warning Count | 1 reviewability size warning |
-| Output | `specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/pr-marker-plan.json` |
+| Status | Single install-instruction PR |
+| Review Shape | One Claude Code install route aligned to DOC-004's Codex install route structure. |
+| Review Focus | Compare Claude Code-specific content against the shared install-page section skeleton. |
+| Warning Count | 1 historical reviewability size warning, resolved by keeping the PR single and navigable. |
+| Output | PR #187: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/187` |
 | Layer Plan | Skipped because atomicity route is `one-navigable-PR`, not `split-PR`. |
 
 ---
@@ -553,10 +553,10 @@ For each task, follow this cycle:
 | Command Coverage | Required install, reload, `/plugin`, `/speckit-pro:speckit-status`, and `/speckit-pro:speckit-coach` checks present. |
 | Lifecycle Coverage | Update, uninstall, marketplace removal, reinstall, and bounded recovery guidance present. |
 | Runtime Scope | No changes under `dist/`, plugin source/runtime paths, release automation, or GitHub workflows. |
-| Final Reviewability | Proceeded with marker-split outcome; full diff warn-only on total files/surfaces, marker fingerprint matched. |
+| Final Reviewability | Proceeded as a single install-instruction PR after DOC-003 was aligned to DOC-004's page structure; stale marker-split candidate artifacts were removed. |
 | PR Packet | Generated `specs/doc-003-claude-code-marketplace-installation-path/.process/pr-packet/pr-packet.json` and `pr-body.md`; `validate-pr-packet.sh` passed. |
-| Marker Emission | Candidate dry run validated 5 marker slices with no branch/PR mutations. |
-| PR Creation | Created ready PR #187 using the automatic single-PR fallback after marker emission validated only as a same-commit candidate: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/187`. |
+| Marker Emission | Not applicable after structure alignment; stale candidate marker-split artifacts were removed from PR #187. |
+| PR Creation | Ready PR #187 remains the single Claude Code install-instruction PR: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/187`. |
 
 ---
 

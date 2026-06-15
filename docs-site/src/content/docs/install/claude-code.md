@@ -2,346 +2,271 @@
 title: "Install: Claude Code"
 ---
 
-Use this route to add the Racecraft marketplace to Claude Code, install
-SpecKit Pro, reload plugin surfaces, verify the namespaced skills, and manage
-the plugin lifecycle.
+Use this route when you are installing SpecKit Pro in Claude Code and need to
+choose the right marketplace, plugin payload, reload path, and verification
+path.
 
-This page is for Claude Code. Codex users should use the
-[Install: Codex route](/racecraft-plugins-public/install/codex/).
+## Install Decision
 
-## Source Authority
+Start by choosing the install context before running commands:
 
-- Claude Code marketplace, install, reload, lifecycle, and trust behavior:
-  [Claude Code plugin marketplace docs](https://code.claude.com/docs/en/discover-plugins)
-- Claude Code plugin layout and skill behavior:
-  [Claude Code plugin authoring docs](https://code.claude.com/docs/en/plugins)
-- Claude Code settings, managed marketplaces, scopes, hooks, and MCP policy:
-  [Claude Code settings docs](https://code.claude.com/docs/en/settings)
-- Racecraft marketplace catalog:
-  `.claude-plugin/marketplace.json`
-- SpecKit Pro Claude plugin manifest:
-  `speckit-pro/.claude-plugin/plugin.json`
-- Generated Claude install payload:
-  `dist/claude/speckit-pro/`
+- **Marketplace install:** use this when you want Claude Code to install
+  SpecKit Pro from the Racecraft marketplace.
+- **Repository source inspection:** use this when you need to inspect the
+  authoring source and generated Claude payload before installing.
+- **Managed or policy-controlled install:** use this when your Claude Code
+  environment is governed by organization policy, managed settings, or approved
+  marketplace sources.
 
-## First-Time Install
+Codex installation is the separate DOC-004-owned path. Use the
+[Codex install guide](/racecraft-plugins-public/install/codex/) for Codex
+commands.
 
-### Add The Racecraft Marketplace
+## Source, Payload, And Cache
 
-Run this from Claude Code:
+Keep these surfaces separate:
+
+- `speckit-pro/` is the mixed authoring source tree. Do not treat it as the
+  generated Claude install payload.
+- `dist/claude/speckit-pro/` is the generated Claude Code plugin payload.
+- `.claude-plugin/marketplace.json` is this repository's Claude Code
+  marketplace catalog.
+- `speckit-pro/.claude-plugin/plugin.json` is source manifest evidence.
+- `dist/claude/speckit-pro/.claude-plugin/plugin.json` is generated payload
+  manifest evidence.
+- Claude Code's installed plugin state is runtime state, not as the editable
+  source of truth.
+
+When source changes, update the marketplace source or generated payload, then
+refresh the marketplace or reinstall the plugin. Do not edit installed runtime
+state to try to patch a stale install.
+
+The detailed source and file-layout reference belongs in
+[DOC-007 reference](/racecraft-plugins-public/reference/).
+
+## Install Path Matrix
+
+Use this accessible matrix to pick the next task. The headers identify the
+install context, marketplace source, payload source of truth, and when to use
+each flow.
+
+| Context | Marketplace source | Payload to install | Use when |
+|---|---|---|---|
+| Racecraft marketplace entry | `.claude-plugin/marketplace.json` | `./dist/claude/speckit-pro` from this repository | You want Claude Code to install SpecKit Pro from the Racecraft marketplace. |
+| Repository source inspection | `racecraft-lab/racecraft-plugins-public` | The generated Claude payload under `dist/claude/speckit-pro/` | You need to compare source files, generated payload files, and installed plugin behavior. |
+| Managed marketplace source | Organization-managed Claude Code settings | The marketplace and plugin payload approved by policy | Your Claude Code environment restricts marketplace sources, hooks, MCP, or plugin settings. |
+
+## Compact Install Path List
+
+- **Marketplace install:** add the Racecraft marketplace, install
+  `speckit-pro@racecraft-plugins-public`, then reload plugins.
+- **Repository source inspection:** inspect `speckit-pro/`,
+  `.claude-plugin/marketplace.json`, and `dist/claude/speckit-pro/` before
+  comparing installed behavior.
+- **Managed install:** confirm the approved marketplace source and policy
+  settings before attempting install, reload, hook, or MCP troubleshooting.
+
+## Install From A Marketplace Entry
+
+Claude Code plugin marketplace command group, Racecraft marketplace source:
 
 ```text
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
-```
-
-Expected signal: Claude Code adds the marketplace named
-`racecraft-plugins-public` so its plugins can appear in `/plugin`.
-
-### Install SpecKit Pro
-
-Install the plugin from the Racecraft marketplace:
-
-```text
 /plugin install speckit-pro@racecraft-plugins-public
-```
-
-Expected signal: Claude Code installs `speckit-pro` from the Racecraft
-marketplace. The repository marketplace entry points Claude Code at
-`dist/claude/speckit-pro/`, the generated Claude payload.
-
-### Reload Plugins
-
-Reload after installing so Claude Code picks up the plugin skills, agents,
-hooks, and plugin configuration without a full restart:
-
-```text
 /reload-plugins
+/plugin
 ```
 
-Expected signal: Claude Code reports refreshed plugin components. The official
-Claude Code docs describe reload output as including counts for plugins, skills,
-agents, hooks, plugin MCP servers, and plugin LSP servers when present.
+Expected signal: Claude Code adds the Racecraft marketplace, installs
+`speckit-pro`, reloads plugin components, and shows the plugin in the installed
+plugin view.
 
-### Confirm Plugin Visibility
+Repo-scoped Claude Code marketplace context:
 
-Open the plugin manager:
+- Open this repository in Claude Code.
+- Use the checked-in `.claude-plugin/marketplace.json` marketplace.
+- Confirm the `speckit-pro` entry uses `source.path`:
 
 ```text
-/plugin
+./dist/claude/speckit-pro
 ```
 
 Expected signal: `speckit-pro` appears in the installed plugin view, and the
-plugin details show the components Claude Code will load from the plugin.
+plugin details show the skills, agents, hooks, plugin MCP servers, or plugin
+LSP servers Claude Code loaded from the payload when present.
 
-Before running SpecKit Pro skills, review the
-[trust surface inventory](#trust-surface-inventory) if you need to inspect what
-the plugin adds.
+Managed or policy-controlled Claude Code marketplace context:
 
-### Verify Namespaced Skills
+- Confirm the Racecraft marketplace source is approved by managed settings.
+- Confirm plugin install, reload, hooks, MCP, and LSP behavior are allowed by
+  local or organization policy.
+- Refresh the approved marketplace source before expecting source changes to
+  appear in the installed plugin.
 
-Check project status through the installed Claude Code skill namespace:
-
-```text
-/speckit-pro:speckit-status
-```
-
-Expected signal: SpecKit Pro responds with project status, archive-sweep state,
-or the next recommended SpecKit action.
-
-Run a lightweight coaching check:
-
-```text
-/speckit-pro:speckit-coach walk me through SDD
-```
-
-Expected signal: SpecKit Pro explains the Spec-Driven Development workflow or
-asks for the next context needed to coach the current repository.
-
-Claude Code plugin skills are namespaced by plugin name, so the Claude Code
-form is `/speckit-pro:<skill-name>`. Install-facing docs should prefer skill
-language over older command-folder wording.
-
-## Lifecycle Management
-
-### Refresh Marketplace Listings
-
-Use this when the Racecraft marketplace may be stale or when Claude Code cannot
-find the expected `speckit-pro` listing:
+Lifecycle command group, Claude Code marketplace context:
 
 ```text
 /plugin marketplace update racecraft-plugins-public
-```
-
-Then reload plugins:
-
-```text
 /reload-plugins
-```
-
-Verify again:
-
-```text
 /plugin
-```
-
-Expected signal: the Racecraft marketplace listing refreshes, and the installed
-view or discover view reflects the current `speckit-pro` entry.
-
-### Uninstall SpecKit Pro
-
-Use this when you want to remove SpecKit Pro but keep the Racecraft marketplace
-available for future Racecraft plugins:
-
-```text
 /plugin uninstall speckit-pro@racecraft-plugins-public
-```
-
-Then reload plugins:
-
-```text
 /reload-plugins
-```
-
-Expected signal: `speckit-pro` no longer appears as an installed plugin, while
-`racecraft-plugins-public` remains an added marketplace.
-
-### Remove The Racecraft Marketplace
-
-Use this only when you want to remove the marketplace itself. Claude Code's
-marketplace docs state that removing a marketplace also uninstalls plugins
-installed from it.
-
-```text
 /plugin marketplace remove racecraft-plugins-public
-```
-
-Then confirm the marketplace list:
-
-```text
 /plugin marketplace list
 ```
 
-Expected signal: `racecraft-plugins-public` no longer appears in the marketplace
-list, and any plugin installed from that marketplace is removed.
+Use marketplace update when Claude Code cannot find the expected
+`speckit-pro` entry. Use uninstall when you want to remove the plugin while
+keeping the Racecraft marketplace available. Use marketplace remove only when
+you want Claude Code to remove the marketplace itself and plugins installed from
+it.
 
-### Clean Reinstall
+## Register Custom Agents
 
-Use this sequence after uninstalling or removing the marketplace:
+Claude Code does not use the Codex custom-agent copy step. Plugin skills,
+agents, hooks, plugin MCP servers, and plugin LSP servers are loaded from the
+installed Claude Code plugin payload after plugin install and reload.
 
-```text
-/plugin marketplace add racecraft-lab/racecraft-plugins-public
-```
+Keep these three Claude Code surfaces separate:
 
-```text
-/plugin marketplace update racecraft-plugins-public
-```
+- Plugin skills use the namespaced slash-command form
+  `/speckit-pro:<skill-name>`.
+- Plugin agents are part of the Claude Code plugin payload and are surfaced by
+  Claude Code after install and reload when available.
+- Hook, MCP, LSP, and settings behavior remains governed by Claude Code plugin
+  and settings policy.
 
-```text
-/plugin install speckit-pro@racecraft-plugins-public
-```
-
-```text
-/reload-plugins
-```
-
-```text
-/speckit-pro:speckit-status
-```
-
-Expected signal: Claude Code can see the Racecraft marketplace, install
-`speckit-pro`, reload plugin components, and run the namespaced status skill.
-
-## Basic Recovery
-
-### Wrong Marketplace Source
-
-List configured marketplaces:
-
-```text
-/plugin marketplace list
-```
-
-If the Racecraft marketplace source is wrong, remove that marketplace entry and
-add the GitHub source again:
-
-```text
-/plugin marketplace remove racecraft-plugins-public
-```
-
-```text
-/plugin marketplace add racecraft-lab/racecraft-plugins-public
-```
-
-Stop after one clean retry. If managed policy, permissions, network access, or
-undocumented platform behavior appears to be involved, route the issue to the
-DOC-008 troubleshooting work instead of expanding this install route.
-
-### Stale Listing Or Missing Plugin
-
-Refresh the Racecraft marketplace:
-
-```text
-/plugin marketplace update racecraft-plugins-public
-```
-
-Then retry the install:
-
-```text
-/plugin install speckit-pro@racecraft-plugins-public
-```
-
-Stop if `speckit-pro` is still missing after the refresh and retry. That belongs
-in the DOC-008 troubleshooting path.
-
-### Failed Plugin Visibility
-
-Reload and reopen the plugin manager:
+After installing the plugin, run the Claude Code reload step:
 
 ```text
 /reload-plugins
 ```
+
+or:
 
 ```text
 /plugin
 ```
 
-Use the plugin manager installed and error views to check whether `speckit-pro`
-loaded or reported an error. Stop if visibility remains inconclusive after one
-reload.
+The reload and plugin manager views confirm Claude Code loaded plugin-provided
+skills, agents, hooks, plugin MCP servers, and plugin LSP servers from the
+installed payload. Claude Code does not copy SpecKit Pro TOML custom-agent files
+into `~/.codex/agents/` or `.codex/agents/`.
 
-### Missing Namespaced Skills
+Use this checklist:
 
-Reload plugins, then verify both the plugin manager and the status skill:
+1. Install `speckit-pro@racecraft-plugins-public` from the Racecraft
+   marketplace.
+2. Run `/reload-plugins` after install, uninstall, update, or marketplace
+   source changes.
+3. Open `/plugin` and inspect the installed plugin detail view.
+4. Verify the namespaced skill surface with `/speckit-pro:speckit-status`.
+5. Confirm managed settings or local policy before troubleshooting hooks, MCP,
+   LSP, or plugin permission behavior.
 
-```text
-/reload-plugins
-```
+Expected namespaced plugin skill surfaces:
 
-```text
-/plugin
-```
+- `/speckit-pro:grill-me`
+- `/speckit-pro:speckit-autopilot`
+- `/speckit-pro:speckit-coach`
+- `/speckit-pro:speckit-install`
+- `/speckit-pro:speckit-prd`
+- `/speckit-pro:speckit-resolve-pr`
+- `/speckit-pro:speckit-scaffold-spec`
+- `/speckit-pro:speckit-status`
+- `/speckit-pro:speckit-upgrade`
 
-```text
-/speckit-pro:speckit-status
-```
+## Verify The Install
 
-Stop if the plugin is installed but the namespaced skills still do not appear.
-Deep cache, dependency, rollback, or platform-state debugging belongs to
-DOC-008.
+After plugin install and reload, use observational verification only. Do not
+edit installed runtime state as part of DOC-003 verification.
 
-### Failed Update, Uninstall, Remove, Or Reinstall
+1. Review the `/plugin` installed plugin detail view for loaded components.
+2. Confirm `speckit-pro` is installed from `racecraft-plugins-public`.
+3. Confirm the installed plugin points back to the generated Claude payload
+   referenced by the marketplace.
+4. Confirm `/speckit-pro:speckit-status` responds from the namespaced skill
+   surface.
+5. Confirm `/speckit-pro:speckit-coach walk me through SDD` responds with
+   Spec-Driven Development coaching or asks for needed context.
+6. Reload plugins after plugin enablement changes, marketplace updates, or
+   settings edits that affect plugin state.
 
-For failed marketplace refreshes, uninstall attempts, marketplace removals, or
-clean reinstalls, run the relevant lifecycle command once more only after
-checking `/plugin` for the current installed or error state.
+Rerun `/plugin marketplace update racecraft-plugins-public`, reinstall or
+refresh `speckit-pro`, and reload plugins after a plugin update when marketplace
+metadata, generated payload files, hook configuration, agents, skills, MCP, or
+LSP behavior has changed.
 
-Do not keep layering retries into this route. Stop when the issue appears tied
-to managed policy, permissions, network access, cache clearing, rollback,
-incident response, or undocumented platform behavior.
+The full command-snippet review belongs to the later DOC-003 validation tasks
+and the [DOC-007 reference](/racecraft-plugins-public/reference/).
 
-## Trust Surface Inventory
+## Stale Update Checkpoint
 
-### Marketplace Metadata
+If SpecKit Pro still looks stale after an update, keep the first check shallow:
 
-Inspect `.claude-plugin/marketplace.json` for the marketplace name,
-`racecraft-plugins-public`, and its `speckit-pro` plugin entry. The marketplace
-entry names the generated Claude payload source as `./dist/claude/speckit-pro`.
+- Symptoms can include old skill text, missing namespaced skills, old plugin
+  metadata, unchanged hook behavior, a stale marketplace listing, or
+  source/payload mismatch.
+- Inspect the marketplace source, generated Claude payload directory, installed
+  plugin detail view, reload status, and managed settings.
+- If the marketplace listing or generated payload is stale, update the
+  marketplace source or generated payload, then refresh, reinstall, or reload
+  the plugin.
+- Rerun `/reload-plugins` after install, update, uninstall, remove, managed
+  settings, hook, MCP, or LSP changes.
 
-### Plugin Manifest
+Do not edit installed runtime state. Use
+[DOC-008 troubleshooting](/racecraft-plugins-public/troubleshooting/) for
+deeper stale-cache diagnosis, update or remove procedures, rollback, and
+permission repair. Use [DOC-007 reference](/racecraft-plugins-public/reference/)
+for command, manifest, payload, skill, agent, hook, and file-layout detail.
 
-Inspect `speckit-pro/.claude-plugin/plugin.json` for the SpecKit Pro plugin
-name, version, description, author, license, homepage, and repository metadata.
-The source manifest is the authoring-side Claude plugin manifest.
+## Install Safety
 
-### Skills
+Safety warning: Claude Code plugin permissions, managed settings, hooks, MCP,
+and LSP policy still apply during plugin installation and reload.
 
-Inspect `speckit-pro/skills/` for the source skill folders that define the
-Claude Code plugin skill surface. After installation and reload, Claude Code
-uses the namespaced form `/speckit-pro:<skill-name>` for those plugin skills.
+- Git-backed marketplace setup or plugin installation may require network
+  access or network approval; network use remains governed by your Claude Code
+  settings and any approval prompts.
+- Installed plugin runtime state is not the source of truth. Update the
+  marketplace source or generated payload instead of editing runtime state.
+- Claude Code plugin skills use the namespaced `/speckit-pro:<skill-name>`
+  form; install docs should not direct users to older unnamespaced command
+  paths.
+- Managed marketplace configuration can restrict which plugin sources are
+  available. Confirm approved marketplace sources before treating missing plugin
+  listings as cache or payload defects.
+- SpecKit Pro's generated Claude payload may include hooks as bundled plugin
+  payload configuration. This is not a separate permission grant. Hook behavior
+  remains governed by Claude Code settings, managed policy, and configured
+  controls.
+- External app or MCP authentication, if a future plugin payload uses it, is
+  not automatic. It remains subject to the connected service and Claude Code
+  approval flow.
 
-### Agents
+DOC-008 owns hook trust analysis, managed policy, external authentication,
+permission troubleshooting, update, remove, rollback, and stale-cache forensics.
+The full security, trust, hook policy, and install lifecycle belong in
+[DOC-008 security and trust](/racecraft-plugins-public/security-and-trust/) and
+[DOC-008 troubleshooting](/racecraft-plugins-public/troubleshooting/).
 
-Inspect `speckit-pro/agents/` for source agent definitions that the plugin can
-make available to Claude Code. The plugin manager details view is the user-facing
-place to confirm what the installed plugin contributes.
+## Source Evidence And Boundaries
 
-### Hooks
+This page is grounded in:
 
-Inspect `speckit-pro/hooks/hooks.json` for repository-defined hook
-configuration. Keep hook claims limited to the official Claude Code hook and
-settings documentation plus the checked-in hook file. This page does not claim
-that hooks provide sandboxing, isolation, harmlessness, or blocking guarantees.
+- [Claude Code plugin marketplace docs](https://code.claude.com/docs/en/discover-plugins)
+- [Claude Code plugin authoring docs](https://code.claude.com/docs/en/plugins)
+- [Claude Code settings docs](https://code.claude.com/docs/en/settings)
+- Claude Code plugin manager observation through `/plugin`
+- Local repository evidence in `.claude-plugin/marketplace.json`
+- Local repository evidence in `speckit-pro/.claude-plugin/plugin.json`
+- Local repository evidence in
+  `dist/claude/speckit-pro/.claude-plugin/plugin.json`
+- Local repository evidence in `speckit-pro/skills/`,
+  `speckit-pro/agents/`, and `speckit-pro/hooks/hooks.json`
 
-### Settings And MCP
-
-Inspect official Claude Code settings documentation for user, project, local,
-and managed scopes. Managed marketplace behavior, hook restrictions, MCP
-controls, and organization policy are Claude Code platform settings, not
-Racecraft-specific guarantees.
-
-### Source And Generated Payload Paths
-
-- Authoring source: `speckit-pro/`
-- Claude plugin source manifest: `speckit-pro/.claude-plugin/plugin.json`
-- Claude skills source: `speckit-pro/skills/`
-- Claude agents source: `speckit-pro/agents/`
-- Claude hooks source: `speckit-pro/hooks/hooks.json`
-- Generated Claude install payload: `dist/claude/speckit-pro/`
-
-Do not treat `dist/claude/speckit-pro/` as the authoring source. It is the
-generated install payload referenced by the marketplace.
-
-## Boundaries
-
-- This route does not regenerate payloads, change plugin manifests, bump
-  versions, or alter runtime behavior.
-- This route does not provide a full troubleshooting matrix, rollback playbook,
-  incident response guide, or managed policy design.
-- This route does not include install, verification, custom-agent, cache,
-  sandbox, approval, or runtime recovery commands for other runtimes.
-
-## Next Step
-
-After the two verification skills respond, continue with the
-[source and payload reference](/racecraft-plugins-public/reference/) if you need
-to inspect more repository surfaces before running heavier SpecKit Pro workflows.
+DOC-003 stays bounded to Claude Code first-install guidance. DOC-007 owns
+deeper reference content, and DOC-008 owns troubleshooting, update, remove,
+rollback, managed-policy, stale-cache forensics, and full trust or security
+lifecycle depth.

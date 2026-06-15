@@ -39,7 +39,6 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
 - [checklists/ux.md](checklists/ux.md)
-- [.process/marker-plan/pr-marker-plan.json](.process/marker-plan/pr-marker-plan.json)
 - [.process/reviewability/hazard-route.json](.process/reviewability/hazard-route.json)
 - [.process/reviewability/tasks-gate.json](.process/reviewability/tasks-gate.json)
 - [quickstart.md](quickstart.md)

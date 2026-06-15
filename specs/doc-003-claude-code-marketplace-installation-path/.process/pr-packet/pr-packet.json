@@ -50,7 +50,7 @@
   "scope_evidence": {
     "reviewable_loc": 0,
     "production_files": 0,
-    "total_files": 24,
+    "total_files": 23,
     "budget_result": "within_budget",
     "changed_files": [
       "AGENTS.md",
@@ -62,7 +62,6 @@
       "docs/ai/specs/interactive-documentation-roadmap-MOC.md",
       "docs/ai/specs/interactive-documentation-technical-roadmap.md",
       "speckit-pro/README.md",
-      "specs/doc-003-claude-code-marketplace-installation-path/.process/marker-plan/pr-marker-plan.json",
       "specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/hazard-route.json",
       "specs/doc-003-claude-code-marketplace-installation-path/.process/reviewability/tasks-gate.json",
       "specs/doc-003-claude-code-marketplace-installation-path/SPEC-MOC.md",
