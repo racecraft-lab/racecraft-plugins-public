@@ -231,7 +231,7 @@ require_jq_true() {
 
 contains_banned_text() {
   local value="$1"
-  [[ "$value" =~ (ELI5|Plain-English[[:space:]]Summary|TODO|refs/heads/|refs/remotes/|refs/tags/|PRSG-[0-9]+|SPEC-[0-9A-Za-z_-]+|FR-[0-9A-Za-z_-]+|SC-[0-9A-Za-z_-]+|L[0-9]+|\{\{|\}\}|\$\{|<!--[[:space:]]*[^>]*-->|Example:) ]]
+  [[ "$value" =~ (ELI5|Plain-English[[:space:]]Summary|TODO|refs/heads/|refs/remotes/|refs/tags/|PRSG-[0-9]+|SPEC-[0-9A-Za-z_-]+|DOC-[0-9A-Za-z_-]+|FR-[0-9A-Za-z_-]+|SC-[0-9A-Za-z_-]+|L[0-9]+|\{\{|\}\}|\$\{|<!--[[:space:]]*[^>]*-->|Example:) ]]
 }
 
 contains_generic_title_text() {
@@ -527,16 +527,42 @@ validate_public_text() {
   fi
 }
 
+expected_scope_from_feature_dir() {
+  local feature_dir="$1" base spec_suffix
+  base="${feature_dir%/}"
+  base="${base##*/}"
+  if [[ "$base" =~ ^[Pp][Rr][Ss][Gg]-([0-9]+)(-|$) ]]; then
+    printf 'PRSG-%s\n' "${BASH_REMATCH[1]}"
+  elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'SPEC-%s\n' "$spec_suffix"
+  elif [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'DOC-%s\n' "$spec_suffix"
+  fi
+}
+
+expected_title_type_for_scope() {
+  local scope="$1"
+  case "$scope" in
+    DOC-*) printf 'docs\n' ;;
+    *) printf '\n' ;;
+  esac
+}
+
 validate_packet() {
   local packet="$1"
-  local packet_id mode title_value body_file validation_result_path
+  local packet_id mode title_value body_file validation_result_path source_feature_dir expected_scope expected_type title_scope title_type
   packet_id="$(jq_get "$packet" '.packet_id')"
   if [ -z "$packet_id" ]; then
     packet_id="$(packet_id_from_path "$packet")"
   fi
   mode="$(jq_get "$packet" '.mode')"
   title_value="$(jq_get "$packet" '.generated_title.value')"
+  title_scope="$(jq_get "$packet" '.generated_title.scope')"
+  title_type="$(jq_get "$packet" '.generated_title.type')"
   body_file="$(jq_get "$packet" '.body_file')"
+  source_feature_dir="$(jq_get "$packet" '.source_feature_dir')"
   validation_result_path="$(derive_validation_result_path "$packet" "$packet_id")"
 
   if [ "$validation_result_path" = "no-path" ]; then
@@ -586,6 +612,21 @@ validate_packet() {
   ' "title.metadata_consistency" "generated_title" \
     "generated_title.value must use the explicit generated_title.type and generated_title.scope metadata." \
     "Regenerate the title from metadata instead of accepting candidate-only type or scope overrides."
+
+  expected_scope="$(expected_scope_from_feature_dir "$source_feature_dir")"
+  if [ -n "$expected_scope" ] && [ "$title_scope" != "$expected_scope" ]; then
+    add_failure "title.scope_source" "generated_title.scope" \
+      "Spec-backed PR packets must derive generated_title.scope from source_feature_dir." \
+      "Regenerate the title with scope $expected_scope instead of ${title_scope:-empty}."
+  fi
+
+  expected_type="$(expected_title_type_for_scope "$expected_scope")"
+  if [ -n "$expected_type" ] && [ "$title_type" != "$expected_type" ]; then
+    add_failure "title.type_source" "generated_title.type" \
+      "Documentation spec packets must use the docs conventional title type." \
+      "Regenerate the title with type $expected_type for $expected_scope."
+  fi
+
   require_jq_true "$packet" '(.verification_evidence // []) | length > 0' \
     "evidence.verification" "verification_evidence" \
     "Packet must include verification evidence." \

@@ -119,6 +119,8 @@ Before creating or updating PRs after G7, the parent session runs:
 skills/speckit-autopilot/scripts/final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> --diff-range origin/main...HEAD --state-output specs/<feature>/.process/final-reviewability/gate-state.json --packet-output specs/<feature>/.process/final-reviewability/reslicing-packet.json ...
 skills/speckit-autopilot/scripts/generate-pr-body.sh --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD
 skills/speckit-autopilot/scripts/validate-pr-packet.sh .git/speckit-pr-packet.json
+git diff --name-only origin/main...HEAD > .git/speckit-pr-changed-files.txt
+skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh --title "$(jq -r '.generated_title.value' .git/speckit-pr-packet.json)" --changed-files .git/speckit-pr-changed-files.txt
 ```
 
 `final-reviewability-backstop.sh` is the mandatory stop-before-PR boundary.
@@ -183,6 +185,15 @@ authorization to create a PR; stale passed or failed records are evidence only
 until the current packet is validated again. Validation failure exits 1,
 writes packet-specific remediation JSON, appends workflow evidence, and blocks
 before PR creation. Input error exits 2 and must also stop before PR creation.
+
+Validate the PR workflow contract before any single-PR create attempt. The
+shared `validate-pr-workflow-contract.sh` checks the actual PR title against the
+changed spec scope and rejects aggregate single-PR creation when changed files
+contain multi-PR candidate commands or multi-marker final split evidence. A
+`DOC-*` spec title must be `docs(DOC-XXX): ...`; `feat(speckit-pro): ...` is
+only valid for non-spec plugin changes. Any split-contract failure means the
+single-PR path is forbidden: run `multi-pr-emission.sh` with the current layer or
+marker plan, or stop blocked with the validator output.
 
 Create the single PR from packet fields, never from branch-derived title text
 or hand-written body content:

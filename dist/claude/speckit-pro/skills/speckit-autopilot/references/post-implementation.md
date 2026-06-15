@@ -408,7 +408,22 @@ opens one slice PR.
    1, writes packet-specific remediation JSON to the packet's
    `validation_result_path`, appends workflow evidence, and blocks before PR
    creation. An input error exits 2 and must also stop before PR creation.
-6e. Create the single PR from packet fields, never from branch-derived title
+6e. Validate the PR workflow contract before any single-PR create attempt:
+   ```bash
+   git diff --name-only origin/main...HEAD > .git/speckit-pr-changed-files.txt
+   skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh \
+     --title "$(jq -r '.generated_title.value' .git/speckit-pr-packet.json)" \
+     --changed-files .git/speckit-pr-changed-files.txt
+   ```
+   Continue only when this just-run validator exits 0. It checks the actual PR
+   title against changed spec scope and rejects aggregate single-PR creation
+   when changed files contain multi-PR candidate commands or multi-marker final
+   split evidence. A `DOC-*` spec title must be `docs(DOC-XXX): ...`;
+   `feat(speckit-pro): ...` is only valid for non-spec plugin changes. Any
+   split-contract failure means the single-PR path is forbidden: run
+   `multi-pr-emission.sh` with the current layer or marker plan, or stop
+   blocked with the validator output.
+6f. Create the single PR from packet fields, never from branch-derived title
    text or hand-written body content:
    ```bash
    gh pr create \

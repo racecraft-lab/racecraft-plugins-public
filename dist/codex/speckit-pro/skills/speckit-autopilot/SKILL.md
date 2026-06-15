@@ -867,7 +867,13 @@ procedures in [post-implementation-codex.md](./references/post-implementation-co
    with packet fields through
    `gh pr create --base --head --title --body-file`; never derive the title
    from the branch, write the body from scratch, pass inline `--body`, reuse
-   stale validation JSON, or repair invalid packets after creation. For
+   stale validation JSON, or repair invalid packets after creation. Before any
+   single-PR create attempt, run the shared
+   `validate-pr-workflow-contract.sh` with the packet title and changed-file
+   list; a nonzero result blocks the aggregate PR path. If the changed files
+   include multi-PR candidate commands or final marker-split evidence for more
+   than one PR, the single-PR path is forbidden: run `multi-pr-emission.sh`
+   or stop blocked with the validator evidence. For
    split-PR or marker emission, use the shared `detect-stack-manager.sh`
    decision before any stack-manager mutation: supported `gh-stack` may proceed
    only after version, read-only proof, packet, and topology checks pass;
@@ -1015,6 +1021,9 @@ never from `.specify/scripts/bash/`.
   creation, exit 1 writes packet remediation evidence, and exit 2 reports an
   input error. Codex uses the shared primary script and schema; do not create
   Codex-only copies.
+- `validate-pr-workflow-contract.sh --title <title> --changed-files <path>` —
+  Validate the actual PR title against changed spec scope and block aggregate
+  single-PR creation when split candidate or final marker-split evidence exists.
 - `detect-stack-manager.sh --phase <emission|restack> --operation <detect|link|sync|restack> --feature-dir <specs/name> ...` —
   Emit and optionally persist the shared `stack-manager-decision.v1` evidence
   used by multi-PR emission and restack. It is the only Codex/Claude stack

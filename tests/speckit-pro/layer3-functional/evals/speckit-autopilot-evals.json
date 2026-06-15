@@ -75,7 +75,7 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, cleanup, reviewability diff gate, self-review, UAT runbook generation, PR packet/body generation, pre-create PR packet validation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
+      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, cleanup, reviewability diff gate, self-review, UAT runbook generation, PR packet/body generation, pre-create PR packet validation, pre-create PR workflow contract validation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
       "expectations": [
         "Lists verify implementation as a post-implementation step",
         "Lists code review as a post-implementation step",
@@ -84,6 +84,7 @@
         "Lists UAT Runbook Generation — generate-uat-skeleton.sh writes and commits uat-runbook.md — as an always-required built-in step before PR body generation",
         "Lists PR packet/body generation via generate-pr-body.sh --packet-output, including packet-owned generated title and body file fields",
         "Lists pre-create packet validation via validate-pr-packet.sh after body generation and before any gh pr create",
+        "Lists pre-create PR workflow contract validation via validate-pr-workflow-contract.sh with packet title and changed-file evidence",
         "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
         "Lists review remediation loop using /loop command",
         "States invalid packets block before PR creation; no post-create auto-repair fallback is used",
@@ -268,12 +269,13 @@
     {
       "id": 22,
       "prompt": "The autopilot has finished Post: Self-Review and is about to open the PR. Walk through exactly how it produces the PR body and guarantees the UAT runbook reaches the human reviewer. Name the scripts it runs, the order, what it commits, how it invokes gh pr create, and what it does if the generated body is missing the review-packet marker.",
-      "expected_output": "States that the autopilot runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md and commits it, then runs generate-pr-body.sh --packet-output to produce .git/speckit-pr-packet.json plus .git/speckit-pr-body.md. It validates the just-rendered packet with validate-pr-packet.sh before PR creation and opens the PR only with gh pr create --base --head --title --body-file values read from the packet — never a hand-written body, inline --body, or branch-derived title. The generated PR description is strict, unpatronizing, ELI5-style plain English: it names the actual change first and does not dump raw command, path, or packet evidence into the PR body. The generated body always contains a ## UAT Runbook section because the generator emits the heading even when the runbook file is absent. If the marker, UAT heading, protected sections, generic story/foundation labels, packet-mechanics prose, or packet evidence are missing or stale, validation blocks before PR creation and writes remediation evidence; there is no post-create repair fallback. UAT generation is fail-open (a nonzero exit never blocks the PR) yet mandatory — it must run.",
+      "expected_output": "States that the autopilot runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md and commits it, then runs generate-pr-body.sh --packet-output to produce .git/speckit-pr-packet.json plus .git/speckit-pr-body.md. It validates the just-rendered packet with validate-pr-packet.sh and validates the PR workflow contract with validate-pr-workflow-contract.sh before PR creation, then opens the PR only with gh pr create --base --head --title --body-file values read from the packet — never a hand-written body, inline --body, or branch-derived title. The generated PR description is strict, unpatronizing, ELI5-style plain English: it names the actual change first and does not dump raw command, path, or packet evidence into the PR body. The generated body always contains a ## UAT Runbook section because the generator emits the heading even when the runbook file is absent. If the marker, UAT heading, protected sections, generic story/foundation labels, packet-mechanics prose, packet evidence, or PR workflow contract is missing, invalid, stale, or aggregate-split unsafe, validation blocks before PR creation and writes remediation evidence; there is no post-create repair fallback. UAT generation is fail-open (a nonzero exit never blocks the PR) yet mandatory — it must run.",
       "expectations": [
         "Runs generate-uat-skeleton.sh to write <feature-dir>/uat-runbook.md before PR body generation",
         "Commits the uat-runbook.md artifact (e.g. docs(SPEC-XXX): add UAT runbook)",
         "Runs generate-pr-body.sh --packet-output to produce .git/speckit-pr-packet.json and .git/speckit-pr-body.md",
         "Runs validate-pr-packet.sh against the current packet and requires a fresh passing result before PR creation",
+        "Runs validate-pr-workflow-contract.sh against the packet title and changed-file list before PR creation",
         "Opens the PR with gh pr create --base --head --title --body-file using packet fields — explicitly NOT a hand-written body, inline --body, or branch-derived title",
         "Requires strict, unpatronizing, ELI5-style plain-English PR descriptions that name the actual change without dumping command, path, or packet evidence",
         "States the generated PR body always contains a ## UAT Runbook section because generate-pr-body.sh emits the heading even when the runbook file is absent",
@@ -341,6 +343,23 @@
         "Requires emitted PR mappings when PRs are opened",
         "Preserves correctness stops for malformed/stale marker state, failed verification, invalid packet, unsafe output, unusable gate evidence, invalid JSON, missing status/mode, stale fingerprints, and non-size safety findings",
         "Explains that marker emission follows the persisted marker plan instead of inferring new boundaries from changed files or warnings"
+      ]
+    },
+    {
+      "id": 26,
+      "prompt": "A post-implementation autopilot run is preparing documentation specs. DOC-004 has a single generated PR packet for specs/doc-004-codex-marketplace-installation-path. DOC-003 has final marker_split evidence plus .process/emission/candidate/commands.candidate.json with five gh_pr_create operations. What must the Claude autopilot do before opening PRs, and which title/splitting mistakes are forbidden?",
+      "expected_output": "Explains that DOC-backed single PR packets must generate and use docs(DOC-004): titles from packet metadata, then validate both validate-pr-packet.sh and validate-pr-workflow-contract.sh before any gh pr create. For DOC-003, the presence of final marker_split evidence and multi-PR candidate commands forbids one aggregate PR; Claude must run multi-pr-emission.sh with the current marker/layer evidence or stop blocked with validator evidence. It must not use feat(speckit-pro): for a DOC implementation PR and must not create or repair a single all-changes PR after split evidence exists.",
+      "expectations": [
+        "States that DOC-004 packet title scope must be DOC-004 and title type must be docs, e.g. docs(DOC-004): ...",
+        "States that feat(speckit-pro): is forbidden for spec-backed DOC implementation PRs",
+        "Runs generate-pr-body.sh --packet-output and validate-pr-packet.sh before a single PR",
+        "Runs validate-pr-workflow-contract.sh with the generated packet title and changed-file list before any single gh pr create",
+        "States that final marker_split evidence plus multiple gh_pr_create candidate operations forbids a single aggregate PR",
+        "Requires multi-pr-emission.sh for the DOC-003 split route or a blocked stop with validator evidence",
+        "States the agent must not manually issue one gh pr create for all changed files when split candidate artifacts exist",
+        "Requires each split PR creation to use packet-owned --base, --head, --title, and --body-file arguments",
+        "States invalid packet, invalid workflow contract, stale validation, or aggregate split-contract failures block before PR creation",
+        "Applies the same no-post-create-repair rule: do not create first and fix title/body/splitting afterward"
       ]
     }
   ]

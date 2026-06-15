@@ -138,6 +138,8 @@ custom_feature_plan="$SANDBOX/custom-feature-plan.json"
 custom_full_evidence="$SANDBOX/specs/prsg-999-custom-feature/.process/emission/full-regression.txt"
 spec_future_plan="$SANDBOX/spec-future-plan.json"
 spec_future_evidence="$SANDBOX/specs/spec-014c-future-title-contract/.process/emission/full-regression.txt"
+doc_future_plan="$SANDBOX/doc-future-plan.json"
+doc_future_evidence="$SANDBOX/specs/doc-003-claude-code-marketplace-installation-path/.process/emission/full-regression.txt"
 wrong_feature_evidence="$SANDBOX/specs/prsg-009-multi-pr-emission/.process/emission/wrong-feature.txt"
 declared_changed_files="$SANDBOX/declared-changed-files.txt"
 scope_violation_files="$SANDBOX/scope-violation-files.txt"
@@ -154,11 +156,14 @@ printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-013 marker fixture' > "$marker_ful
 mkdir -p "$(dirname "$prsg012_full_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for PRSG-012 marker title fixture' > "$prsg012_full_evidence"
 mkdir -p "$(dirname "$custom_full_evidence")" "$(dirname "$spec_future_evidence")" "$(dirname "$wrong_feature_evidence")"
+mkdir -p "$(dirname "$doc_future_evidence")"
 printf '%s\n' 'DEFAULT_VERIFY passed for custom feature fixture' > "$custom_full_evidence"
 printf '%s\n' 'DEFAULT_VERIFY passed for future SPEC fixture' > "$spec_future_evidence"
+printf '%s\n' 'DEFAULT_VERIFY passed for future DOC fixture' > "$doc_future_evidence"
 printf '%s\n' 'wrong feature evidence path' > "$wrong_feature_evidence"
 jq '.feature_dir = "specs/prsg-999-custom-feature"' "$valid_plan" > "$custom_feature_plan"
 jq '.feature_dir = "specs/spec-014c-future-title-contract"' "$valid_plan" > "$spec_future_plan"
+jq '.feature_dir = "specs/doc-003-claude-code-marketplace-installation-path"' "$valid_plan" > "$doc_future_plan"
 cat > "$declared_changed_files" <<'EOF'
 tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
 speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
@@ -296,6 +301,31 @@ set_test "future SPEC dry run does not use current or fallback scope"
 json_check "$spec_future_commands_json" \
   "not any(('PRSG-012' in op.get('title', '') or 'feat(speckit-pro):' in op.get('title', '')) for op in data['operations'] if op['action'] == 'gh_pr_create')" \
   "future SPEC dry run should not use PRSG-012 or plugin fallback title scope"
+
+set_test "future DOC dry run derives docs type and DOC scope"
+doc_future_candidate_dir="$SANDBOX/doc-future-candidates"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --layer-plan "$doc_future_plan" \
+  --state "$empty_state" \
+  --feature-branch doc-003-claude-code-marketplace-installation-path \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$doc_future_evidence" \
+  --candidate-dir "$doc_future_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+doc_future_commands_json="$(cat "$doc_future_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+
+set_test "future DOC dry run uses docs DOC scope for every PR title"
+json_check "$doc_future_commands_json" \
+  "len([op for op in data['operations'] if op['action'] == 'gh_pr_create']) == 3 and all(op['title'].startswith('docs(DOC-003): ') for op in data['operations'] if op['action'] == 'gh_pr_create')" \
+  "future DOC dry run should use docs(DOC-003) title scope"
+
+set_test "future DOC dry run does not use plugin or feature scope"
+json_check "$doc_future_commands_json" \
+  "not any(('feat(speckit-pro):' in op.get('title', '') or 'feat(DOC-003):' in op.get('title', '')) for op in data['operations'] if op['action'] == 'gh_pr_create')" \
+  "future DOC dry run should not use plugin fallback or feat(DOC-003) title scope"
 
 set_test "wrong feature evidence path exits 2"
 result=0

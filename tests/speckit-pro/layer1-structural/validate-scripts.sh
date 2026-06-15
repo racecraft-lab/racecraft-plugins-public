@@ -19,6 +19,7 @@ SCRIPT_FILES=(
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-spec-index.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/generate-pr-body.sh"
+  "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/plan-layers.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
   "$PLUGIN_ROOT/skills/speckit-autopilot/scripts/restack.sh"

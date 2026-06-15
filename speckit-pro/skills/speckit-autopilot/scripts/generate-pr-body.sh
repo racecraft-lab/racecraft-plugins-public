@@ -238,8 +238,22 @@ conventional_scope_from_feature_dir() {
   elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
     spec_suffix="${BASH_REMATCH[1]^^}"
     printf 'SPEC-%s\n' "$spec_suffix"
+  elif [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'DOC-%s\n' "$spec_suffix"
   else
     printf 'speckit-pro\n'
+  fi
+}
+
+conventional_type_from_feature_dir() {
+  local feature_dir_rel="$1" base
+  base="${feature_dir_rel%/}"
+  base="${base##*/}"
+  if [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    printf 'docs\n'
+  else
+    printf 'feat\n'
   fi
 }
 
@@ -426,10 +440,11 @@ EOF
 write_single_packet_metadata() {
   local packet_file="$1" packet_id="$2" body_file_rel="$3" feature_dir_rel="$4"
   local base_branch="$5" head_branch="$6" display_title="$7" title_description="$8" changed_files_json="$9"
-  local generated_title validation_result_path body_sha total_changed title_scope
+  local generated_title validation_result_path body_sha total_changed title_scope title_type
 
   title_scope="$(conventional_scope_from_feature_dir "$feature_dir_rel")"
-  generated_title="feat($title_scope): $title_description"
+  title_type="$(conventional_type_from_feature_dir "$feature_dir_rel")"
+  generated_title="$title_type($title_scope): $title_description"
   validation_result_path="$feature_dir_rel/.process/pr-packets/$packet_id/validation.json"
   body_sha=$(single_packet_body_sha)
   total_changed=$(printf '%s' "$changed_files_json" | jq 'length')
@@ -442,6 +457,7 @@ write_single_packet_metadata() {
     --arg head_branch "$head_branch" \
     --arg source_feature_dir "$feature_dir_rel" \
     --arg title_value "$generated_title" \
+    --arg title_type "$title_type" \
     --arg title_scope "$title_scope" \
     --arg title_description "$title_description" \
     --arg title_source "$feature_dir_rel/spec.md" \
@@ -463,7 +479,7 @@ write_single_packet_metadata() {
         source_feature_dir: $source_feature_dir,
         generated_title: {
           value: $title_value,
-          type: "feat",
+          type: $title_type,
           scope: $title_scope,
           description: $title_description,
           source_evidence: {
