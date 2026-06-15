@@ -120,8 +120,22 @@ conventional_scope_from_feature_dir() {
   elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
     spec_suffix="${BASH_REMATCH[1]^^}"
     printf 'SPEC-%s\n' "$spec_suffix"
+  elif [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="${BASH_REMATCH[1]^^}"
+    printf 'DOC-%s\n' "$spec_suffix"
   else
     printf 'speckit-pro\n'
+  fi
+}
+
+conventional_type_from_feature_dir() {
+  local feature_dir_rel="$1" base
+  base="${feature_dir_rel%/}"
+  base="${base##*/}"
+  if [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
+    printf 'docs\n'
+  else
+    printf 'feat\n'
   fi
 }
 
@@ -361,6 +375,7 @@ else
 fi
 EXPECTED_EMISSION_DIR="$FEATURE_DIR_REL/.process/emission/"
 TITLE_SCOPE="$(conventional_scope_from_feature_dir "$FEATURE_DIR_REL")"
+TITLE_TYPE="$(conventional_type_from_feature_dir "$FEATURE_DIR_REL")"
 
 if [ -z "$FULL_VERIFICATION_EVIDENCE" ]; then
   emit_input_error "missing required option --full-verification-evidence"
@@ -559,6 +574,7 @@ if [ "$MARKER_MODE" = true ]; then
       --arg base_branch "$BASE_BRANCH" \
       --arg feature_dir "$FEATURE_DIR_REL" \
       --arg title_scope "$TITLE_SCOPE" \
+      --arg title_type "$TITLE_TYPE" \
       --arg marker_split_evidence "$MARKER_SPLIT_RESULT" \
       --arg route "$EMISSION_ROUTE" \
       --slurpfile plan "$MARKER_PLAN" \
@@ -693,7 +709,7 @@ if [ "$MARKER_MODE" = true ]; then
                       source_id: $marker.id,
                       source_title: $source_title,
                       title_description: $title_description,
-                      generated_title: ("feat(" + $title_scope + "): " + $title_description),
+                      generated_title: ($title_type + "(" + $title_scope + "): " + $title_description),
                       slice_id: $marker.id,
                       marker_id: $marker.id,
                       source_marker_ids: [$marker.id],
@@ -740,6 +756,7 @@ else
     --arg base_branch "$BASE_BRANCH" \
     --arg feature_dir "$FEATURE_DIR_REL" \
     --arg title_scope "$TITLE_SCOPE" \
+    --arg title_type "$TITLE_TYPE" \
     --slurpfile plan "$LAYER_PLAN" '
       def slug:
         ascii_downcase
@@ -850,7 +867,7 @@ else
                   source_id: $inc.id,
                   source_title: $source_title,
                   title_description: $title_description,
-                  generated_title: ("feat(" + $title_scope + "): " + $title_description),
+                  generated_title: ($title_type + "(" + $title_scope + "): " + $title_description),
                   slice_id: $slice_id,
                   review_order: $review_order,
                   branch: "\($feature_branch)/\($label)-\($slice_id)",
@@ -1050,6 +1067,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
       --arg candidate_dir "$CANDIDATE_DIR" \
       --arg emission_mode "$EMISSION_MODE" \
       --arg title_scope "$TITLE_SCOPE" \
+      --arg title_type "$TITLE_TYPE" \
       --arg validator "$SCRIPT_DIR/validate-pr-packet.sh" '
         def body_file($slice_id): "\($candidate_dir)/pr-bodies/\($slice_id).md";
         def packet_file($slice_id):
@@ -1057,7 +1075,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
           else "\($candidate_dir)/slice-packets/\($slice_id).json"
           end;
         def generated_title($slice):
-          $slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
+          $slice.generated_title // ($title_type + "(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id));
         def validate_op($slice):
           if $emission_mode == "marker" then []
           else [
@@ -1134,6 +1152,7 @@ if [ -n "$CANDIDATE_DIR" ]; then
         --arg body_file "$body_file" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
         --arg title_scope "$TITLE_SCOPE" \
+        --arg title_type "$TITLE_TYPE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$(printf '%s' "$plan_slices" | jq 'length')" '
           {
@@ -1147,8 +1166,8 @@ if [ -n "$CANDIDATE_DIR" ]; then
               head_branch: $slice.branch
             },
             generated_title: {
-              value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
-              type: "feat",
+              value: ($slice.generated_title // ($title_type + "(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              type: $title_type,
               scope: $title_scope,
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
                 source_evidence: {
@@ -1853,6 +1872,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
         --arg body_file "$body_file_rel" \
         --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
         --arg title_scope "$TITLE_SCOPE" \
+        --arg title_type "$TITLE_TYPE" \
         --arg base_sha "$BASE_SHA" \
         --argjson total_slices "$total_slices" '
           {
@@ -1866,8 +1886,8 @@ if [ -z "$CANDIDATE_DIR" ]; then
               head_branch: $slice.branch
             },
             generated_title: {
-              value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
-              type: "feat",
+              value: ($slice.generated_title // ($title_type + "(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+              type: $title_type,
               scope: $title_scope,
               description: ($slice.title_description // $slice.source_title // $slice.slice_id),
                 source_evidence: {
@@ -1949,6 +1969,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
           --arg body_sha "$body_sha" \
           --arg full_verification_evidence "$FULL_VERIFICATION_EVIDENCE" \
           --arg title_scope "$TITLE_SCOPE" \
+          --arg title_type "$TITLE_TYPE" \
           '
             {
               schema_version: "1.0.0",
@@ -1960,8 +1981,8 @@ if [ -z "$CANDIDATE_DIR" ]; then
               },
               source_feature_dir: $source_feature_dir,
               generated_title: {
-                value: ($slice.generated_title // ("feat(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
-                type: "feat",
+                value: ($slice.generated_title // ($title_type + "(" + $title_scope + "): " + ($slice.title_description // $slice.source_title // $slice.slice_id))),
+                type: $title_type,
                 scope: $title_scope,
                 description: ($slice.title_description // $slice.source_title // $slice.slice_id),
                 source_evidence: {

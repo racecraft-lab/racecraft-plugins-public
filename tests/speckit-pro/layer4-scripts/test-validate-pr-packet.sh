@@ -179,9 +179,13 @@ assert_no_pr_create_attempts() {
 }
 
 assert_success_json() {
-  local packet_id="$1" mode="$2" title="$3" body_file="$4"
+  local packet_id="$1" mode="$2" title="$3" body_file="$4" result_path="${5:-}"
   local result_file
-  result_file="$(validation_result_file "$packet_id")"
+  if [ -n "$result_path" ]; then
+    result_file="$TEST_REPO/$result_path"
+  else
+    result_file="$(validation_result_file "$packet_id")"
+  fi
 
   set_test "$packet_id stdout is deterministic success JSON"
   assert_json_file_field "$LAST_STDOUT" "schema_version" "1.0.0"
@@ -295,7 +299,7 @@ set_test "valid single packet emits no stderr"
 assert_captured_stderr_empty
 
 assert_success_json "valid-single" "single" \
-  "feat(speckit-pro): Add reviewer-ready PR packets" \
+  "feat(PRSG-012): Add reviewer-ready PR packets" \
   "$valid_single_body"
 
 valid_prsg_scope_rel="$PACKET_FIXTURE_REL/valid-prsg-scope.json"
@@ -320,13 +324,16 @@ assert_success_json "valid-prsg-scope" "single" \
   "$valid_single_body"
 
 valid_spec_scope_rel="$PACKET_FIXTURE_REL/valid-spec-scope.json"
+valid_spec_scope_result="specs/spec-014c-future-title-contract/.process/pr-packets/valid-spec-scope/validation.json"
 jq \
   --arg packet_id "valid-spec-scope" \
   --arg title "feat(SPEC-014C): Add future title contract" \
   --arg scope "SPEC-014C" \
   --arg description "Add future title contract" \
-  --arg result "$(validation_result_rel valid-spec-scope)" \
+  --arg source_feature_dir "specs/spec-014c-future-title-contract" \
+  --arg result "$valid_spec_scope_result" \
   '.packet_id = $packet_id
+    | .source_feature_dir = $source_feature_dir
     | .generated_title.value = $title
     | .generated_title.scope = $scope
     | .generated_title.description = $description
@@ -340,7 +347,37 @@ assert_captured_exit "0"
 
 assert_success_json "valid-spec-scope" "single" \
   "feat(SPEC-014C): Add future title contract" \
-  "$valid_single_body"
+  "$valid_single_body" \
+  "$valid_spec_scope_result"
+
+valid_doc_scope_rel="$PACKET_FIXTURE_REL/valid-doc-scope.json"
+valid_doc_scope_result="specs/doc-004-codex-marketplace-installation-path/.process/pr-packets/valid-doc-scope/validation.json"
+jq \
+  --arg packet_id "valid-doc-scope" \
+  --arg title "docs(DOC-004): Add codex marketplace installation path" \
+  --arg type "docs" \
+  --arg scope "DOC-004" \
+  --arg description "Add codex marketplace installation path" \
+  --arg source_feature_dir "specs/doc-004-codex-marketplace-installation-path" \
+  --arg result "$valid_doc_scope_result" \
+  '.packet_id = $packet_id
+    | .source_feature_dir = $source_feature_dir
+    | .generated_title.value = $title
+    | .generated_title.type = $type
+    | .generated_title.scope = $scope
+    | .generated_title.description = $description
+    | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$valid_doc_scope_rel"
+
+run_validator_capture "valid-doc-scope" "$valid_doc_scope_rel"
+
+set_test "valid DOC-scoped packet exits 0"
+assert_captured_exit "0"
+
+assert_success_json "valid-doc-scope" "single" \
+  "docs(DOC-004): Add codex marketplace installation path" \
+  "$valid_single_body" \
+  "$valid_doc_scope_result"
 
 valid_split="$PACKET_FIXTURE_REL/valid-split.json"
 valid_split_body="$PACKET_FIXTURE_REL/bodies/valid-split.md"
@@ -353,7 +390,7 @@ set_test "valid split packet emits no stderr"
 assert_captured_stderr_empty
 
 assert_success_json "valid-split" "split" \
-  "feat(speckit-pro): Validate reviewer packet slices" \
+  "feat(PRSG-012): Validate reviewer packet slices" \
   "$valid_split_body"
 
 section "safe prose refinement"
@@ -373,7 +410,7 @@ set_test "valid single edited packet exits 0"
 assert_captured_exit "0"
 
 assert_success_json "valid-single-edited" "single" \
-  "feat(speckit-pro): Add reviewer-ready PR packets" \
+  "feat(PRSG-012): Add reviewer-ready PR packets" \
   "$valid_edited_body_rel"
 
 host_coexist_rel="$PACKET_FIXTURE_REL/valid-host-coexist.json"
@@ -505,6 +542,39 @@ assert_captured_stderr_contains "$invalid_title_result" "validation failure resu
 assert_failure_json "invalid-title-token" "validation_failure" "1" "$invalid_title_result"
 
 set_test "invalid title token makes no PR creation attempts"
+assert_no_pr_create_attempts
+
+invalid_doc_type_rel="$PACKET_FIXTURE_REL/invalid-doc-title-type.json"
+invalid_doc_type_result="specs/doc-004-codex-marketplace-installation-path/.process/pr-packets/invalid-doc-title-type/validation.json"
+jq \
+  --arg packet_id "invalid-doc-title-type" \
+  --arg title "feat(DOC-004): Add codex marketplace installation path" \
+  --arg type "feat" \
+  --arg scope "DOC-004" \
+  --arg description "Add codex marketplace installation path" \
+  --arg source_feature_dir "specs/doc-004-codex-marketplace-installation-path" \
+  --arg result "$invalid_doc_type_result" \
+  '.packet_id = $packet_id
+    | .source_feature_dir = $source_feature_dir
+    | .generated_title.value = $title
+    | .generated_title.type = $type
+    | .generated_title.scope = $scope
+    | .generated_title.description = $description
+    | .validation_result_path = $result' \
+  "$TEST_REPO/$PACKET_FIXTURE_REL/valid-single.json" > "$TEST_REPO/$invalid_doc_type_rel"
+
+reset_gh_capture
+run_validator_capture "invalid-doc-title-type" "$invalid_doc_type_rel"
+
+set_test "invalid DOC title type exits 1"
+assert_captured_exit "1"
+
+assert_failure_json "invalid-doc-title-type" "validation_failure" "1" "$invalid_doc_type_result"
+
+set_test "invalid DOC title type reports source-derived type rule"
+assert_failure_rule "title.type_source"
+
+set_test "invalid DOC title type makes no PR creation attempts"
 assert_no_pr_create_attempts
 
 generic_title_rel="$PACKET_FIXTURE_REL/invalid-generic-title.json"
