@@ -28,31 +28,34 @@ Claude Code users now have one reviewable route from marketplace setup to verifi
 
 ## How To Review
 
-1. Inspect the generated packet JSON for mode, target, title, body path, and validation path.
-2. Inspect this body for required reviewer headings, editable markers, and source evidence.
+1. Review `docs-site/src/content/docs/install/claude-code.md` first for the full Claude Code marketplace install path.
+2. Review `README.md`, `AGENTS.md`, and `speckit-pro/README.md` for install-relevant terminology alignment.
+3. Review DOC-003 process evidence under `specs/doc-003-claude-code-marketplace-installation-path/` for traceability and validation.
 
 ## How To UAT
 
-Run the focused Layer 4 PR body generation test and confirm the packet metadata assertions pass.
+Read the Claude Code install route as a first-time Racecraft marketplace user and confirm the documented flow is coherent from marketplace setup through verified namespaced SpecKit Pro skills.
 
 ## UAT Runbook
 
-Manual UAT is not required for this packet metadata task. The compatibility heading remains present for downstream PR body checks.
+Manual UAT is documentation review only. Confirm the page clearly covers marketplace add, SpecKit Pro install, `/reload-plugins`, `/plugin` verification, namespaced skill checks, update, uninstall, marketplace removal, clean reinstall, bounded recovery, and trust boundaries without adding Codex procedure.
 
 ## Verification
 
-- Focused packet generation checks passed.
-- Packet metadata and rendered body assertions passed.
+- `validate-gate.sh G7` passed with all 39 tasks complete.
+- `pnpm --dir docs-site validate` passed.
+- DOC-003 quickstart checks passed for planning artifacts, route content, lifecycle coverage, Codex boundary, trust inventory, terminology, and runtime-surface scope.
+- Scope review confirmed no `dist/`, runtime, generated payload, release automation, or GitHub workflow changes.
 
-Source: generated PR packet.
+Source: quickstart and workflow validation evidence.
 
 ## Scope
 
-- Source feature: recorded in packet metadata.
-- Scope: this PR is limited to generated PR packet title and body behavior.
-- Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
-- Non-goals: split title generation and multi-PR emission behavior.
+- Source feature: DOC-003 Claude Code marketplace installation path.
+- Scope: Claude Code install docs route, install-relevant README and AGENTS wording, and SDD/process artifacts.
+- Traceability: DOC-003 spec, tasks, quickstart, workflow evidence, and generated packet metadata record the review scope and validation.
+- Non-goals: no Codex install procedure, plugin runtime behavior, generated payload, manifest, hook, agent, version, release automation, or GitHub workflow change.
 
 ## Known Gaps
 
-No known gaps for single-PR packet title metadata. Split packet title generation remains deferred.
+No known DOC-003 implementation gaps. Full troubleshooting, rollback, incident response, policy design, network debugging, permission repair, and deeper cache forensics remain deferred to DOC-008.
