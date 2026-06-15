@@ -43,7 +43,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Clarify | `/speckit-clarify` | Complete | 15 questions resolved across official path semantics, custom-agent registration, and scope/validation; 6 consensus items logged; G2 passed |
 | Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, content contract, and quickstart without changing manifests, payloads, installer behavior, or agent templates |
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, security, and error-handling checklists completed with 0 remaining gaps |
-| Tasks | `/speckit-tasks` | In Progress | Produce vertical docs tasks ordered by source refresh, source evidence, docs implementation, and validation |
+| Tasks | `/speckit-tasks` | Complete | Generated 20 docs-first tasks across setup, foundation, 4 user stories, and validation; G5 passed; reviewability tasks gate passes with warnings |
 | Analyze | `/speckit-analyze` | Pending | Check cross-artifact consistency, platform leakage, source freshness, and validation coverage |
 | Implement | `/speckit-implement` | Pending | Implement docs-only Codex install guidance and run full repo suite plus docs checks |
 
@@ -427,10 +427,16 @@ Focus on DOC-004 install/update/remove checkpoints:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Fill after Tasks |
-| Phases | Fill after Tasks |
-| Parallel Opportunities | Fill after Tasks |
-| User Stories Covered | Fill after Tasks |
+| Total Tasks | 20 |
+| Phases | 7 |
+| Parallel Opportunities | 2 `[P]` tasks (`T010`, `T011`) plus review work that may be parallelized after implementation with one final evidence update |
+| User Stories Covered | 4 (`US1` install path selection, `US2` custom-agent registration, `US3` consistency, `US4` install safety) |
+| Marker Coverage | AC-4.1 through AC-4.6, FR-001 through FR-019, SC-006, and SC-007 are mapped in `tasks.md` |
+| G5 Gate | Pass: `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/doc-004-codex-marketplace-installation-path` returned `task_count=20` |
+| Task Format Check | Pass: local parser found 20 sequential tasks, 2 `[P]`, and all required FR/AC/SC markers |
+| Reviewability Tasks Gate | Warn/pass: `reviewability-gate.sh tasks` projected 800 reviewable LOC, 1 production file token, 25 total file tokens, and no blockers |
+| Spec Index | Pass after regeneration: `generate-spec-index.sh --check .` reports in-scope maps current |
+| Prerequisites | Pass with explicit numeric feature override: `SPECIFY_FEATURE=004-doc-004-codex-marketplace-installation-path .specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks`; bare command rejects the non-numeric DOC branch name |
 
 ---
 
@@ -444,10 +450,11 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-0
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Pending | `true` or `false` |
-| Signals | Pending | Decisive detector findings |
-| Warnings | Pending | Release-safety warnings |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | `true` | `true` or `false` |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings |
+| Hints | None | Advisory detector hints |
+| Warnings | None | Release-safety warnings |
 
 ---
 

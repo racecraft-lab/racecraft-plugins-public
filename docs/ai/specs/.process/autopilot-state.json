@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T00:35:16Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-15T00:52:41Z",
+  "active_step": "Phase 6: Analyze",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -252,6 +252,40 @@
       "gaps": 0
     }
   },
+  "phase5": {
+    "status": "completed",
+    "gate": "G5",
+    "gate_status": "passed",
+    "task_count": 20,
+    "phases": 7,
+    "parallel_tasks": 2,
+    "user_stories": 4,
+    "coverage": [
+      "AC-4.1 through AC-4.6",
+      "FR-001 through FR-019",
+      "SC-006",
+      "SC-007"
+    ],
+    "artifacts": [
+      "specs/doc-004-codex-marketplace-installation-path/tasks.md"
+    ],
+    "atomicity_route": {
+      "route": "one-navigable-PR",
+      "releasable": true,
+      "signals": [
+        "change-shape:modify-heavy"
+      ],
+      "hints": [],
+      "warnings": []
+    },
+    "validation": {
+      "task_format": "passed: 20 sequential tasks, 2 [P], required FR/AC/SC markers present",
+      "g5": "passed: validate-gate.sh G5 task_count=20",
+      "reviewability_tasks_gate": "warn/pass: projected 800 reviewable LOC, 1 production file token, 25 total file tokens, and no blockers",
+      "spec_index": "passed after regeneration",
+      "prerequisites": "passed with SPECIFY_FEATURE=004-doc-004-codex-marketplace-installation-path; bare check rejects non-numeric DOC branch name"
+    }
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -271,11 +305,16 @@
     {"step": "Phase 4: Checklist - Security Consensus", "status": "completed"},
     {"step": "Phase 4: Checklist - Error-handling", "status": "completed"},
     {"step": "Phase 4: Checklist - Error-handling Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "pending"},
+    {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "pending"},
+    {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "pending"},
+    {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "pending"},
+    {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "pending"},
+    {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
