@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
-  "updated_at": "2026-06-15T00:20:38Z",
-  "active_step": "Blocked: PR Creation",
+  "updated_at": "2026-06-15T17:02:36Z",
+  "active_step": "Post: PR Created",
   "spec_id": "DOC-003",
   "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
   "feature_branch": "doc-003-claude-code-marketplace-installation-path",
@@ -364,13 +364,12 @@
         }
       },
       "pr_creation": {
-        "status": "blocked",
-        "reason": "All five marker slices resolve to implementation checkpoint 6bc62f61000df62c2d4c9f3318333c0ba2547701; live marker PR emission would create a stack of same-commit branches.",
-        "options": [
-          "stop without PR",
-          "open one conventional PR manually from the current branch",
-          "rework history into true marker-scoped commits/branches before live marker emission"
-        ]
+        "status": "completed",
+        "strategy": "automatic single-PR fallback after marker emission validated only as a same-commit candidate",
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/187",
+        "title": "docs(DOC-003): add Claude Code install route",
+        "head_branch": "doc-003-claude-code-marketplace-installation-path",
+        "base_branch": "main"
       }
     }
   },
@@ -541,7 +540,7 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "blocked"
+      "status": "completed"
     },
     {
       "step": "Post: Review Remediation",

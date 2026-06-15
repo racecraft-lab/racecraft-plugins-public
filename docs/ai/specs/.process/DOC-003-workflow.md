@@ -556,7 +556,7 @@ For each task, follow this cycle:
 | Final Reviewability | Proceeded with marker-split outcome; full diff warn-only on total files/surfaces, marker fingerprint matched. |
 | PR Packet | Generated `specs/doc-003-claude-code-marketplace-installation-path/.process/pr-packet/pr-packet.json` and `pr-body.md`; `validate-pr-packet.sh` passed. |
 | Marker Emission | Candidate dry run validated 5 marker slices with no branch/PR mutations. |
-| PR Creation | Stopped before live PR creation because all five marker slices use checkpoint `6bc62f61000df62c2d4c9f3318333c0ba2547701`; live marker PR emission would create a stack of same-commit branches. |
+| PR Creation | Created ready PR #187 using the automatic single-PR fallback after marker emission validated only as a same-commit candidate: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/187`. |
 
 ---
 
@@ -569,7 +569,7 @@ For each task, follow this cycle:
 - [x] Manual review confirms install-relevant docs use skills terminology consistently.
 - [x] Manual review confirms DOC-008 troubleshooting/rollback depth was not absorbed into DOC-003.
 - [x] PR body/packet generated with a public-readable conventional title.
-- [ ] PR created with a public-readable conventional title. Blocked pending operator decision on same-commit marker emission.
+- [x] PR created with a public-readable conventional title: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/187`.
 
 ---
 
