@@ -3,9 +3,9 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T02:48:11Z",
-  "active_step": "Post: Review Remediation",
-  "status": "in_progress",
+  "updated_at": "2026-06-15T02:53:55Z",
+  "active_step": "Post: Complete",
+  "status": "completed",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -77,7 +77,7 @@
     "status": "completed",
     "gate": "G1",
     "gate_status": "passed",
-    "functional_requirements": 17,
+    "functional_requirements": 19,
     "user_stories": 4,
     "acceptance_scenarios": 10,
     "clarification_markers": 0,
@@ -498,7 +498,7 @@
     }
   },
   "post_implementation": {
-    "status": "in_progress",
+    "status": "completed",
     "doctor_extension_check": {
       "status": "completed",
       "result": "pass",
@@ -580,12 +580,18 @@
       "is_draft": false
     },
     "review_remediation": {
-      "status": "in_progress",
+      "status": "completed",
       "initial_pr_check_failures": [
         "test (speckit-pro): validate-plugin-payload reported stale committed payload files",
         "validate-plugins: sentinel failed because plugin tests failed"
       ],
-      "remediation": "Sync generated dist README files after source README install guidance changes; rerun local validation before push."
+      "remediation": "Synced generated dist README files after source README install guidance changes, addressed three Copilot comments, regenerated the spec index, and reran local full-suite validation.",
+      "review_comments_addressed": [
+        "Set DOC-004 SPEC-MOC status to in-progress",
+        "Updated interactive documentation technical roadmap refreshed date to 2026-06-15",
+        "Corrected phase1.functional_requirements from 17 to 19"
+      ],
+      "validation_after_remediation": "bash tests/speckit-pro/run-all.sh: 2947/2947 passed"
     },
     "retrospective": {
       "status": "completed",
@@ -635,7 +641,7 @@
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
     {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "in_progress"},
+    {"step": "Post: Review Remediation", "status": "completed"},
     {"step": "Post: Retrospective", "status": "completed"}
   ]
 }

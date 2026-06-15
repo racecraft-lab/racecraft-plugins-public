@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-004 scaffolded and in progress; DOC-003 remains ready. Created 2026-06-12; refreshed 2026-06-14.
+> Status: DOC-004 scaffolded and in progress; DOC-003 remains ready. Created 2026-06-12; refreshed 2026-06-15.
 
 ## Roadmap Overview
 

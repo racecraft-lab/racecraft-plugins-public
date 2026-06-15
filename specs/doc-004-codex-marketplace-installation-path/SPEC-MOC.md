@@ -10,7 +10,7 @@
 #     the ../../docs/ai/specs/ prefix is hardcoded and only the filename is tokenized.
 up: "[Interactive documentation roadmap](../../docs/ai/specs/interactive-documentation-technical-roadmap.md)"
 related: []                  # list of relative []() links; carried, unenforced in v1
-status: ""                   # carried, unenforced in v1
+status: "in-progress"        # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
 spec_id: "DOC-004"           # e.g., PRSG-002 — namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
@@ -41,5 +41,8 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
 - [checklists/ux.md](checklists/ux.md)
+- [.process/final-reviewability/gate-state.json](.process/final-reviewability/gate-state.json)
 - [quickstart.md](quickstart.md)
+- [retrospective.md](retrospective.md)
+- [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->

@@ -646,8 +646,8 @@ PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outpu
 - [x] Manual command-snippet review complete.
 - [x] Final reviewability backstop complete.
 - [x] PR packet/body generated and validated.
-- [ ] PR created.
-- [ ] Review remediation checked.
+- [x] PR created.
+- [x] Review remediation checked.
 - [x] Retrospective complete.
 
 ### Post-Implementation Evidence
@@ -663,6 +663,7 @@ PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outpu
 | Final reviewability backstop | Warn/pass | `final-reviewability-backstop.sh` completed with `status=warn`, `blocked_operations=[]`, `reviewable_loc=0`, `production_files=0`, `total_files=25`, and `primary_surface_count=4`; warning evidence is recorded in `specs/doc-004-codex-marketplace-installation-path/.process/final-reviewability/gate-state.json`. |
 | PR packet/body generation | Pass | `generate-pr-body.sh` produced a single-PR packet and DOC-004 reviewer body; `validate-pr-packet.sh` passed with `title_value=feat(speckit-pro): Add codex marketplace installation path`, `base_branch=main`, `head_branch=doc-004-codex-marketplace-installation-path`, and `pr_blocked=false`. The packet/body were kept transient for PR creation rather than committed to the branch. |
 | PR creation | Pass | Created ready PR #186: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/186`. Initial PR checks found stale generated payload README files, so the branch now includes the CI-required generated dist README sync. |
+| Review remediation | Pass | Addressed Copilot comments by setting DOC-004 `SPEC-MOC.md` status to `in-progress`, refreshing the technical roadmap date to 2026-06-15, correcting `phase1.functional_requirements` to 19, regenerating the spec index, and rerunning `bash tests/speckit-pro/run-all.sh` with `2947/2947` passing. |
 | Retrospective | Pass | `specs/doc-004-codex-marketplace-installation-path/retrospective.md` records 100% task completion, 100% spec adherence, 0 critical findings, and no proposed spec changes. |
 
 ---
