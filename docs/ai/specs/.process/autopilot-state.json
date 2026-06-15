@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T02:19:47Z",
-  "active_step": "Post: Verify Tasks Phantom Check",
+  "updated_at": "2026-06-15T02:31:03Z",
+  "active_step": "Post: Final Reviewability Backstop",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -330,7 +330,7 @@
     "recommended_action": "proceed"
   },
   "phase7": {
-    "status": "in_progress",
+    "status": "completed",
     "completed_tasks": [
       "T001",
       "T002",
@@ -497,6 +497,72 @@
       "dist_scope": "no dist changes in final intended diff"
     }
   },
+  "post_implementation": {
+    "status": "in_progress",
+    "doctor_extension_check": {
+      "status": "completed",
+      "result": "pass",
+      "summary": "5 pass, 0 warn, 0 fail; templates, agent config, scripts, constitution, and DOC-004 artifacts present."
+    },
+    "verify_implementation": {
+      "status": "completed",
+      "result": "pass",
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0
+      },
+      "tasks_completed": "20/20",
+      "requirements_covered": "19/19"
+    },
+    "verify_tasks_phantom_check": {
+      "status": "completed",
+      "result": "pass",
+      "report": "specs/doc-004-codex-marketplace-installation-path/verify-tasks-report.md",
+      "verdicts": {
+        "verified": 20,
+        "partial": 0,
+        "weak": 0,
+        "not_found": 0,
+        "skipped": 0
+      },
+      "flagged_items": 0
+    },
+    "code_review": {
+      "status": "skipped",
+      "reason": "review extension not installed"
+    },
+    "integration_suite": {
+      "status": "completed",
+      "result": "pass",
+      "commands": [
+        "cd docs-site && pnpm validate",
+        "cd docs-site && pnpm validate:links",
+        "bash tests/speckit-pro/run-all.sh"
+      ],
+      "full_suite": "2947/2947"
+    },
+    "cleanup": {
+      "status": "skipped",
+      "reason": "cleanup extension not installed"
+    },
+    "final_reviewability_backstop": {
+      "status": "pending"
+    },
+    "pr_packet_body_generation": {
+      "status": "pending"
+    },
+    "pr_creation": {
+      "status": "pending"
+    },
+    "review_remediation": {
+      "status": "pending"
+    },
+    "retrospective": {
+      "status": "pending"
+    }
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -526,15 +592,13 @@
     {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "completed"},
     {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "completed"},
     {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "in_progress"},
+    {"step": "Post: Doctor Extension Check", "status": "completed"},
+    {"step": "Post: Verify Implementation", "status": "completed"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
     {"step": "Post: Code Review", "status": "completed", "skipped": "review extension not installed"},
-    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "completed"},
     {"step": "Post: Cleanup", "status": "completed", "skipped": "cleanup extension not installed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: Final Reviewability Backstop", "status": "pending"},
     {"step": "Post: PR Body Generation", "status": "pending"},
     {"step": "Post: PR Creation", "status": "pending"},
     {"step": "Post: Review Remediation", "status": "pending"},

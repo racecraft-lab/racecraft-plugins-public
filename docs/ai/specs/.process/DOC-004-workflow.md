@@ -635,11 +635,31 @@ PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outpu
 - [x] `README.md` and `speckit-pro/README.md` agree with docs-site Codex install guidance.
 - [x] Official OpenAI Codex docs refresh is cited in `research.md` or the relevant implementation evidence.
 - [x] No unintended changes to manifests, generated payloads, installer scripts, custom-agent TOML templates, or plugin runtime behavior.
+- [x] `$speckit-doctor` equivalent extension check passes: 5 pass, 0 warn, 0 fail.
+- [x] `$speckit-verify` equivalent implementation check passes: 0 critical, 0 high, 0 medium, 0 low findings; 20/20 tasks complete; 19/19 requirements covered.
+- [x] `$speckit-verify-tasks` equivalent phantom-task check passes with 20 verified, 0 partial, 0 weak, 0 not found, 0 skipped; report written to `specs/doc-004-codex-marketplace-installation-path/verify-tasks-report.md`.
+- [x] `$speckit-review` skipped because the review extension is not installed in `.specify/extensions/.registry`.
 - [x] `cd docs-site && pnpm validate` passes.
 - [x] `cd docs-site && pnpm validate:links` passes.
 - [x] `bash tests/speckit-pro/run-all.sh` passes.
+- [x] `$speckit-cleanup` skipped because the cleanup extension is not installed in `.specify/extensions/.registry`.
 - [x] Manual command-snippet review complete.
-- [x] PR evidence prepared for a conventional commit title such as `docs(DOC-004): clarify Codex install path`; no commit or PR was created in this task.
+- [ ] Final reviewability backstop complete.
+- [ ] PR packet/body generated and validated.
+- [ ] PR created.
+- [ ] Review remediation checked.
+- [ ] Retrospective complete.
+
+### Post-Implementation Evidence
+
+| Item | Result | Evidence |
+|------|--------|----------|
+| Doctor extension check | Pass | Templates, agent config, scripts, constitution, and DOC-004 artifacts all present; worktree remained clean. |
+| Verify implementation | Pass | 0 critical/high/medium/low findings; 20/20 tasks complete; 19/19 requirements covered; docs-only constitution scope clean. |
+| Verify tasks phantom check | Pass | 20 verified, 0 partial, 0 weak, 0 not found, 0 skipped; no flagged items. |
+| Integration suite | Pass | `cd docs-site && pnpm validate`, `cd docs-site && pnpm validate:links`, and `bash tests/speckit-pro/run-all.sh` all passed; full suite reported `2947/2947`. |
+| Review extension | Skipped | Review extension is not installed. |
+| Cleanup extension | Skipped | Cleanup extension is not installed. |
 
 ---
 
