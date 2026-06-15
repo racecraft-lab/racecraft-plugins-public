@@ -221,19 +221,31 @@ Safety warning: Codex sandbox mode and approval policy still apply during plugin
 installation and custom-agent registration.
 
 - Git-backed marketplace setup or plugin installation may require network
-  access or network approval.
-- `~/.codex/agents/` is outside most project workspaces, so writing there may
-  require approval. Approve only the expected local write of the named SpecKit
-  Pro TOML custom-agent files, or reject the prompt and rerun with
-  `.codex/agents/` or narrower permissions.
-- SpecKit Pro's generated Codex payload may include lifecycle hook
-  configuration such as `codex-hooks.json`. Hook behavior remains governed by
-  Codex sandbox, approval, hook trust, and configured policy controls.
-- External app and MCP authentication, if a future plugin payload uses them,
-  remains subject to the connected service and Codex approval flow.
+  access or network approval; network use remains governed by your Codex
+  settings and any approval prompts.
+- The installed plugin cache is runtime state, not the source of truth. Its
+  path is `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`;
+  update the marketplace source or generated payload instead of editing the
+  installed cache.
+- The default user-scoped destination is `~/.codex/agents/`, an
+  outside-workspace write for most projects that may require approval before
+  Codex writes there.
+  Approve only the expected local write of the named SpecKit Pro TOML
+  custom-agent files to the selected destination.
+- For a narrower project-scoped `.codex/agents/` destination override, reject
+  the prompt and rerun in the repository that should carry the custom-agent
+  registration.
+- SpecKit Pro's generated Codex payload may include `codex-hooks.json` as
+  bundled plugin payload configuration for lifecycle hooks. This is not a
+  separate permission grant. Hook behavior remains governed by Codex sandbox
+  mode, approval prompts, and configured policy controls.
+- External app or MCP authentication, if a future plugin payload uses it, is
+  not automatic. It remains subject to the connected service and Codex approval
+  flow.
 
-The full security, trust, hook policy, managed policy, update, rollback, and
-stale-cache lifecycle belongs in
+DOC-008 owns hook trust analysis, managed policy, external authentication,
+permission troubleshooting, update, remove, rollback, and stale-cache forensics.
+The full security, trust, hook policy, and install lifecycle belong in
 [DOC-008 security and trust](/racecraft-plugins-public/security-and-trust/) and
 [DOC-008 troubleshooting](/racecraft-plugins-public/troubleshooting/).
 

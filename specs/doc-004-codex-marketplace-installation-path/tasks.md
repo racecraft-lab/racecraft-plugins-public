@@ -94,9 +94,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T014 [US4] Add a text-visible install-safety warning to `docs-site/src/content/docs/install/codex.md` covering sandbox mode, approval prompts, network access, installed cache and source distinction, destination permissions, user-scoped destination, project-scoped override, and outside-workspace writes (FR-013, FR-018, SC-004, SC-006, AC-4.5)
-- [ ] T015 [US4] Identify Codex hooks as bundled plugin payload configuration and defer hook trust analysis, managed policy, external authentication, permission troubleshooting, update, remove, rollback, and stale-cache forensics to DOC-008 in `docs-site/src/content/docs/install/codex.md` (FR-013, FR-014, AC-4.5)
-- [ ] T016 [US4] Verify safety copy in `docs-site/src/content/docs/install/codex.md` does not promise silent hook execution, sandbox bypass, approval bypass, unrestricted network access, or automatic external authentication (FR-013, FR-016, AC-4.5)
+- [x] T014 [US4] Add a text-visible install-safety warning to `docs-site/src/content/docs/install/codex.md` covering sandbox mode, approval prompts, network access, installed cache and source distinction, destination permissions, user-scoped destination, project-scoped override, and outside-workspace writes (FR-013, FR-018, SC-004, SC-006, AC-4.5)
+- [x] T015 [US4] Identify Codex hooks as bundled plugin payload configuration and defer hook trust analysis, managed policy, external authentication, permission troubleshooting, update, remove, rollback, and stale-cache forensics to DOC-008 in `docs-site/src/content/docs/install/codex.md` (FR-013, FR-014, AC-4.5)
+- [x] T016 [US4] Verify safety copy in `docs-site/src/content/docs/install/codex.md` does not promise silent hook execution, sandbox bypass, approval bypass, unrestricted network access, or automatic external authentication (FR-013, FR-016, AC-4.5)
 
 **Checkpoint**: User Story 4 is independently reviewable against AC-4.5, SC-004, and SC-006.
 

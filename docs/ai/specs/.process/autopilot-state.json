@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T01:57:13Z",
-  "active_step": "Phase 7: Implement - US4 install safety (T014-T016)",
+  "updated_at": "2026-06-15T02:06:50Z",
+  "active_step": "Phase 7: Implement - Polish and validation (T017-T020)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -344,9 +344,12 @@
       "T010",
       "T011",
       "T012",
-      "T013"
+      "T013",
+      "T014",
+      "T015",
+      "T016"
     ],
-    "current_group": "US4 install safety (T014-T016)",
+    "current_group": "Polish and validation (T017-T020)",
     "groups": {
       "setup_and_foundation": {
         "status": "completed",
@@ -434,6 +437,25 @@
           "git diff --check: passed"
         ],
         "notes": "Aligned root README, plugin README, and docs-site Codex guidance for repo marketplace, generated payload, installed cache, $install, restart, nine-file verification, stale-update checkpoint, bounded safety, and DOC-003/DOC-007/DOC-008 boundaries. Generated dist README changes from validation were restored."
+      },
+      "us4_install_safety": {
+        "status": "completed",
+        "tasks": [
+          "T014",
+          "T015",
+          "T016"
+        ],
+        "artifacts_updated": [
+          "docs-site/src/content/docs/install/codex.md",
+          "docs/ai/specs/.process/DOC-004-workflow.md",
+          "specs/doc-004-codex-marketplace-installation-path/tasks.md"
+        ],
+        "validation_reported_by_executor": [
+          "focused safety content check: 24 assertions passed",
+          "cd docs-site && pnpm validate: passed",
+          "git diff --check: passed"
+        ],
+        "notes": "Added text-visible sandbox, approval, network, cache/source, destination, outside-workspace, hook-payload, external-auth, and DOC-008 deferral guidance; verified no silent hook, sandbox bypass, approval bypass, unrestricted network, or automatic external auth claims."
       }
     }
   },
@@ -464,8 +486,8 @@
     {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "completed"},
     {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "completed"},
     {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "completed"},
-    {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "in_progress"},
-    {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "pending"},
+    {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "completed"},
+    {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "in_progress"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},

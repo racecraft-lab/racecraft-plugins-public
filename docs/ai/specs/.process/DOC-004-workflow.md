@@ -568,7 +568,8 @@ For each task, follow this cycle:
 | Install path selection | T004-T007 | Complete | DOC-002 shell replaced with task-first DOC-004 outline; accessible matrix, compact list, CLI source forms, generated-payload warning, installed cache behavior, and bounded stale-update checkpoint are implemented. |
 | Custom-agent registration | T008-T009 | Complete | Added Codex-only install checklist, exact nine installer-copied TOML files, skill metadata sidecar distinction, observational verification, no manual cache or TOML edits, and restart/rerun triggers. |
 | Docs consistency | T010-T013 | Complete | README, plugin README, and docs-site Codex guide now share repo marketplace, generated payload, installed cache, install skill, restart, nine-file verification, stale-update, safety, and DOC-003/DOC-007/DOC-008 boundary guidance. |
-| Polish and validation | Pending | Pending | Pending |
+| Install safety | T014-T016 | Complete | Added text-visible sandbox, approval, network, cache/source, destination, outside-workspace, hook-payload, external-auth, and DOC-008 deferral guidance; focused forbidden-claim check passes. |
+| Polish and validation | T017-T020 | Pending | Pending |
 
 ---
 
