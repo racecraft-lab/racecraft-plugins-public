@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
-  "updated_at": "2026-06-14T23:56:49Z",
-  "active_step": "Phase 7: Source Audit (T001-T006)",
+  "updated_at": "2026-06-15T00:03:05Z",
+  "active_step": "Post: Doctor Extension Check",
   "spec_id": "DOC-003",
   "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
   "feature_branch": "doc-003-claude-code-marketplace-installation-path",
@@ -284,6 +284,33 @@
         "risk_assessment": 0.91,
         "completeness": 0.95
       }
+    },
+    "implementation": {
+      "status": "completed",
+      "gate": "G7",
+      "gate_status": "passed",
+      "tasks_total": 39,
+      "tasks_completed": 39,
+      "files_changed": [
+        "docs-site/src/content/docs/install/claude-code.md",
+        "README.md",
+        "AGENTS.md",
+        "speckit-pro/README.md",
+        "specs/doc-003-claude-code-marketplace-installation-path/tasks.md",
+        "docs/ai/specs/.process/DOC-003-workflow.md",
+        "docs/ai/specs/.process/autopilot-state.json"
+      ],
+      "validation": {
+        "docs_site_validate": "passed",
+        "command": "pnpm --dir docs-site validate",
+        "notes": "docs-site dependencies were installed from the lockfile before validation because node_modules was missing."
+      },
+      "scope_checks": {
+        "runtime_generated_release_changes": false,
+        "layer1_required": false,
+        "codex_procedure_leakage": false,
+        "doc008_absorbed": false
+      }
     }
   },
   "plan": [
@@ -377,39 +404,39 @@
     },
     {
       "step": "Phase 7: Source Audit (T001-T006)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Scope And Reviewability Gate (T007-T008)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Install Route (T009-T013)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Namespaced Skill Verification (T014-T016)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Lifecycle And Recovery (T017-T021)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Trust Surface Inventory (T022-T026)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Terminology Consistency (T027-T030)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Cross-Links And Boundary Clarity (T031-T033)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Validation And PR Evidence (T034-T039)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",

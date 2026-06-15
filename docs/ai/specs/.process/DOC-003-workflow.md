@@ -46,7 +46,7 @@ revision note approved during the workflow.
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, security, and error-handling checklists passed; G4 passed with 0 gaps. |
 | Tasks | `/speckit-tasks` | Complete | Created 39 tasks across 9 phases; G5 passed and marker planning produced 5 review markers. |
 | Analyze | `/speckit-analyze` | Complete | 0 findings; G6 passed with no critical/high drift. |
-| Implement | `/speckit-implement` | Pending | Update docs page and install-relevant terminology surfaces. |
+| Implement | `/speckit-implement` | Complete | Updated Claude install route and install-relevant terminology; G7 passed. |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -534,26 +534,36 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Source audit | T001-T006 | 0/6 | Read-only official-docs and repository evidence audit. |
-| 2 - Scope and reviewability gate | T007-T008 | 0/2 | Confirm docs-only boundaries before page edits. |
-| 3 - US1 install route | T009-T013 | 0/5 | Add first-time Racecraft marketplace install and verification path. |
-| 4 - US2 skill verification | T014-T016 | 0/3 | Add namespaced SpecKit Pro skill checks. |
-| 5 - US3 lifecycle and recovery | T017-T021 | 0/5 | Add update, uninstall, remove, reinstall, and basic recovery. |
-| 6 - US4 trust surfaces | T022-T026 | 0/5 | Add source-backed trust inventory and security boundaries. |
-| 7 - US5 terminology consistency | T027-T030 | 0/4 | Align install-relevant README and AGENTS terminology. |
-| 8 - Cross-links and boundaries | T031-T033 | 0/3 | Keep Codex and DOC-008 content routed out of DOC-003. |
-| 9 - Validation and PR evidence | T034-T039 | 0/6 | Run validation, scope checks, and PR packet prep. |
+| 1 - Source audit | T001-T006 | 6/6 | Official Claude docs and repository source/generated evidence audited. |
+| 2 - Scope and reviewability gate | T007-T008 | 2/2 | Docs-only boundaries confirmed before page edits. |
+| 3 - US1 install route | T009-T013 | 5/5 | First-time Racecraft marketplace install and verification path added. |
+| 4 - US2 skill verification | T014-T016 | 3/3 | Namespaced SpecKit Pro skill checks added. |
+| 5 - US3 lifecycle and recovery | T017-T021 | 5/5 | Update, uninstall, remove, reinstall, and basic recovery added. |
+| 6 - US4 trust surfaces | T022-T026 | 5/5 | Source-backed trust inventory and security boundaries added. |
+| 7 - US5 terminology consistency | T027-T030 | 4/4 | Install-relevant README and AGENTS terminology aligned. |
+| 8 - Cross-links and boundaries | T031-T033 | 3/3 | Codex and DOC-008 content routed out of DOC-003. |
+| 9 - Validation and PR evidence | T034-T039 | 6/6 | Quickstart checks, docs validation, scope checks, and PR evidence prepared. |
+
+### Implementation Results
+
+| Evidence | Result |
+|----------|--------|
+| G7 Gate | Passed: all 39 tasks complete. |
+| Docs Validation | `pnpm --dir docs-site validate` passed after installing docs-site dependencies from the lockfile. |
+| Command Coverage | Required install, reload, `/plugin`, `/speckit-pro:speckit-status`, and `/speckit-pro:speckit-coach` checks present. |
+| Lifecycle Coverage | Update, uninstall, marketplace removal, reinstall, and bounded recovery guidance present. |
+| Runtime Scope | No changes under `dist/`, plugin source/runtime paths, release automation, or GitHub workflows. |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks are marked complete in `tasks.md`.
-- [ ] `pnpm --dir docs-site validate` passes.
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes if plugin manifests, hooks, agents, skills, payload references, or structural files changed.
-- [ ] Manual review confirms the Claude page contains no Codex procedure leakage.
-- [ ] Manual review confirms install-relevant docs use skills terminology consistently.
-- [ ] Manual review confirms DOC-008 troubleshooting/rollback depth was not absorbed into DOC-003.
+- [x] All tasks are marked complete in `tasks.md`.
+- [x] `pnpm --dir docs-site validate` passes.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 1` is not required because plugin manifests, hooks, agents, skills, payload references, and structural files were not changed.
+- [x] Manual review confirms the Claude page contains no Codex procedure leakage.
+- [x] Manual review confirms install-relevant docs use skills terminology consistently.
+- [x] Manual review confirms DOC-008 troubleshooting/rollback depth was not absorbed into DOC-003.
 - [ ] PR created with a public-readable conventional title.
 
 ---

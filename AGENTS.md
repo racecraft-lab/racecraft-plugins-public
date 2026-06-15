@@ -2,11 +2,15 @@
 
 ## Project Structure & Module Organization
 
-This repository is a Claude Code plugin marketplace. The registry lives in `.claude-plugin/marketplace.json`. Each plugin gets its own top-level directory; today that is `speckit-pro/`.
+This repository is a Claude Code and Codex plugin marketplace. The Claude Code
+registry lives in `.claude-plugin/marketplace.json`. Each plugin gets its own
+top-level directory; today that is `speckit-pro/`.
 
 Inside `speckit-pro/`:
 
-- `commands/` contains slash-command docs with required YAML frontmatter.
+- `commands/` contains Claude Code slash-command docs with required YAML
+  frontmatter. Install-facing usage should still prefer current plugin skill
+  wording, for example `/speckit-pro:<skill>`.
 - `skills/` contains skill folders such as `speckit-autopilot/` and `speckit-coach/`, each with a `SKILL.md` entry point plus optional `references/` and `scripts/`.
 - `agents/` contains sub-agent definitions.
 - `hooks/` contains plugin hook configuration.

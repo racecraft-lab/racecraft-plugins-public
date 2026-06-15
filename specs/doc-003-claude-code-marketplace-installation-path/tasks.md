@@ -20,19 +20,19 @@
 
 **Purpose**: Collect official Claude Code docs links and repository source/generated evidence before editing the canonical route.
 
-- [ ] T001 [P] Audit official Claude Code plugin, marketplace, settings, and hook documentation URLs listed in `specs/doc-003-claude-code-marketplace-installation-path/research.md` for platform-backed add, install, reload, update, uninstall, remove, managed marketplace, settings, and hook claims
-- [ ] T002 [P] Audit Racecraft marketplace and plugin manifest evidence in `.claude-plugin/marketplace.json` and `speckit-pro/.claude-plugin/plugin.json` for the exact marketplace name, plugin name, and SpecKit Pro metadata
-- [ ] T003 [P] Audit source trust surfaces in `speckit-pro/skills/`, `speckit-pro/agents/`, and `speckit-pro/hooks/hooks.json` for the installed skill, agent, and hook inventory
-- [ ] T004 [P] Audit generated Claude payload evidence in `dist/claude/speckit-pro/` and keep this directory read-only for DOC-003
-- [ ] T005 [P] Audit install-relevant command-vs-skill terminology in `README.md`, `AGENTS.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T006 Review DOC-003 non-goals in `docs/ai/specs/.process/DOC-003-design-concept.md` against declared file operations in `specs/doc-003-claude-code-marketplace-installation-path/plan.md`
+- [x] T001 [P] Audit official Claude Code plugin, marketplace, settings, and hook documentation URLs listed in `specs/doc-003-claude-code-marketplace-installation-path/research.md` for platform-backed add, install, reload, update, uninstall, remove, managed marketplace, settings, and hook claims
+- [x] T002 [P] Audit Racecraft marketplace and plugin manifest evidence in `.claude-plugin/marketplace.json` and `speckit-pro/.claude-plugin/plugin.json` for the exact marketplace name, plugin name, and SpecKit Pro metadata
+- [x] T003 [P] Audit source trust surfaces in `speckit-pro/skills/`, `speckit-pro/agents/`, and `speckit-pro/hooks/hooks.json` for the installed skill, agent, and hook inventory
+- [x] T004 [P] Audit generated Claude payload evidence in `dist/claude/speckit-pro/` and keep this directory read-only for DOC-003
+- [x] T005 [P] Audit install-relevant command-vs-skill terminology in `README.md`, `AGENTS.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/claude-code.md`
+- [x] T006 Review DOC-003 non-goals in `docs/ai/specs/.process/DOC-003-design-concept.md` against declared file operations in `specs/doc-003-claude-code-marketplace-installation-path/plan.md`
 
 ## Phase 2: Scope And Reviewability Gate
 
 **Purpose**: Confirm the task set stays docs-only before user story work begins.
 
-- [ ] T007 Verify the reviewability budget and declared file operations in `specs/doc-003-claude-code-marketplace-installation-path/plan.md` before modifying docs
-- [ ] T008 Inspect the current DOC-002 shell and target route structure in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T007 Verify the reviewability budget and declared file operations in `specs/doc-003-claude-code-marketplace-installation-path/plan.md` before modifying docs
+- [x] T008 Inspect the current DOC-002 shell and target route structure in `docs-site/src/content/docs/install/claude-code.md`
 
 **Checkpoint**: Source evidence and scope boundaries are ready for page work.
 
@@ -42,11 +42,11 @@
 
 **Independent Test**: A reviewer can open `docs-site/src/content/docs/install/claude-code.md` and find an ordered add, install, reload, and `/plugin` visibility path with source-backed commands and expected signals.
 
-- [ ] T009 [US1] Replace the DOC-002 shell opening in `docs-site/src/content/docs/install/claude-code.md` with the canonical Claude-only install route, source authority summary, and Codex cross-link boundary
-- [ ] T010 [US1] Add ordered Racecraft marketplace add and SpecKit Pro install commands as standalone copyable code blocks in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T011 [US1] Add `/reload-plugins` and `/plugin` visibility verification steps with plain-language success signals in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T012 [US1] Structure the first-time install flow in `docs-site/src/content/docs/install/claude-code.md` with descriptive headings, ordered lists, meaningful link text, inline literal command names, and no dense command tables
-- [ ] T013 [US1] Add a concise pre-skill trust note with a jump link in `docs-site/src/content/docs/install/claude-code.md` after `/plugin` visibility and before running namespaced SpecKit Pro skills
+- [x] T009 [US1] Replace the DOC-002 shell opening in `docs-site/src/content/docs/install/claude-code.md` with the canonical Claude-only install route, source authority summary, and Codex cross-link boundary
+- [x] T010 [US1] Add ordered Racecraft marketplace add and SpecKit Pro install commands as standalone copyable code blocks in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T011 [US1] Add `/reload-plugins` and `/plugin` visibility verification steps with plain-language success signals in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T012 [US1] Structure the first-time install flow in `docs-site/src/content/docs/install/claude-code.md` with descriptive headings, ordered lists, meaningful link text, inline literal command names, and no dense command tables
+- [x] T013 [US1] Add a concise pre-skill trust note with a jump link in `docs-site/src/content/docs/install/claude-code.md` after `/plugin` visibility and before running namespaced SpecKit Pro skills
 
 **Checkpoint**: First-time install flow is complete and independently reviewable.
 
@@ -56,9 +56,9 @@
 
 **Independent Test**: A reviewer can compare the verification section with repository-controlled plugin surfaces and confirm it names `/plugin`, `/speckit-pro:speckit-status`, and `/speckit-pro:speckit-coach` with expected success signals.
 
-- [ ] T014 [US2] Add `/speckit-pro:speckit-status` as a standalone verification command with expected success signals in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T015 [US2] Add `/speckit-pro:speckit-coach` as a standalone verification command with expected success signals in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T016 [US2] Clarify current namespaced skill usage and remove install-facing deprecated command-folder language from `docs-site/src/content/docs/install/claude-code.md`
+- [x] T014 [US2] Add `/speckit-pro:speckit-status` as a standalone verification command with expected success signals in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T015 [US2] Add `/speckit-pro:speckit-coach` as a standalone verification command with expected success signals in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T016 [US2] Clarify current namespaced skill usage and remove install-facing deprecated command-folder language from `docs-site/src/content/docs/install/claude-code.md`
 
 **Checkpoint**: Installed plugin and namespaced skill verification are complete.
 
@@ -68,11 +68,11 @@
 
 **Independent Test**: A reviewer can validate that lifecycle guidance covers update, uninstall, marketplace removal, and reinstall with exact commands, decision points, and post-action checks.
 
-- [ ] T017 [US3] Add marketplace or plugin update guidance with exact commands, reload guidance, and post-update verification in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T018 [US3] Add SpecKit Pro uninstall guidance with exact commands and a clear distinction from marketplace removal in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T019 [US3] Add Racecraft marketplace removal and clean reinstall sequences with exact commands and decision points in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T020 [US3] Add concise basic recovery guidance for wrong marketplace source, stale marketplace listing, missing `speckit-pro`, failed `/plugin` visibility, missing namespaced skills after reload, failed update, failed uninstall, failed marketplace removal, and failed reinstall in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T021 [US3] Add recovery stopping rules that route to DOC-008 troubleshooting after one clean retry or when managed policy, permissions, network access, cache clearing, rollback, incident response, undocumented platform behavior, or Codex-specific failures appear in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T017 [US3] Add marketplace or plugin update guidance with exact commands, reload guidance, and post-update verification in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T018 [US3] Add SpecKit Pro uninstall guidance with exact commands and a clear distinction from marketplace removal in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T019 [US3] Add Racecraft marketplace removal and clean reinstall sequences with exact commands and decision points in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T020 [US3] Add concise basic recovery guidance for wrong marketplace source, stale marketplace listing, missing `speckit-pro`, failed `/plugin` visibility, missing namespaced skills after reload, failed update, failed uninstall, failed marketplace removal, and failed reinstall in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T021 [US3] Add recovery stopping rules that route to DOC-008 troubleshooting after one clean retry or when managed policy, permissions, network access, cache clearing, rollback, incident response, undocumented platform behavior, or Codex-specific failures appear in `docs-site/src/content/docs/install/claude-code.md`
 
 **Checkpoint**: Lifecycle and basic recovery coverage are complete without becoming a troubleshooting matrix.
 
@@ -82,11 +82,11 @@
 
 **Independent Test**: A reviewer can find marketplace metadata, plugin manifest metadata, skills, agents, hooks, MCP/settings implications, generated Claude payloads, source/generated path distinctions, and security claim boundaries from the canonical page in under 5 minutes.
 
-- [ ] T022 [US4] Add marketplace metadata and plugin manifest trust inventory entries for `.claude-plugin/marketplace.json` and `speckit-pro/.claude-plugin/plugin.json` in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T023 [US4] Add skills, agents, hooks, MCP/settings, and managed marketplace trust inventory entries for `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/hooks.json`, and official Claude Code settings documentation in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T024 [US4] Add source-vs-generated path mapping for source files and `dist/claude/speckit-pro/` generated payloads in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T025 [US4] Add security claim boundaries that avoid unsupported sandboxing, isolation, harmlessness, blocking, hook safety, and managed marketplace safety guarantees in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T026 [US4] Bound managed marketplace guidance to official settings behavior, source inspection, add/update/remove implications, and user/project/local/managed scope distinctions in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T022 [US4] Add marketplace metadata and plugin manifest trust inventory entries for `.claude-plugin/marketplace.json` and `speckit-pro/.claude-plugin/plugin.json` in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T023 [US4] Add skills, agents, hooks, MCP/settings, and managed marketplace trust inventory entries for `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/hooks.json`, and official Claude Code settings documentation in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T024 [US4] Add source-vs-generated path mapping for source files and `dist/claude/speckit-pro/` generated payloads in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T025 [US4] Add security claim boundaries that avoid unsupported sandboxing, isolation, harmlessness, blocking, hook safety, and managed marketplace safety guarantees in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T026 [US4] Bound managed marketplace guidance to official settings behavior, source inspection, add/update/remove implications, and user/project/local/managed scope distinctions in `docs-site/src/content/docs/install/claude-code.md`
 
 **Checkpoint**: Trust guidance is source-backed, progressively disclosed, and bounded.
 
@@ -96,10 +96,10 @@
 
 **Independent Test**: A reviewer can inspect the canonical page and install-relevant README/AGENTS wording and find no contradictions about current skill-based usage.
 
-- [ ] T027 [P] [US5] Update install-relevant skills terminology in `README.md` without rewriting unrelated maintainer guidance
-- [ ] T028 [P] [US5] Update install-relevant skills terminology in `AGENTS.md` without rewriting unrelated maintainer guidance
-- [ ] T029 [P] [US5] Update install-relevant skills terminology in `speckit-pro/README.md` without rewriting unrelated maintainer guidance
-- [ ] T030 [US5] Recheck source/generated path wording across `README.md`, `AGENTS.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/claude-code.md` so source paths and generated payload paths are not conflated
+- [x] T027 [P] [US5] Update install-relevant skills terminology in `README.md` without rewriting unrelated maintainer guidance
+- [x] T028 [P] [US5] Update install-relevant skills terminology in `AGENTS.md` without rewriting unrelated maintainer guidance
+- [x] T029 [P] [US5] Update install-relevant skills terminology in `speckit-pro/README.md` without rewriting unrelated maintainer guidance
+- [x] T030 [US5] Recheck source/generated path wording across `README.md`, `AGENTS.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/claude-code.md` so source paths and generated payload paths are not conflated
 
 **Checkpoint**: Install-relevant terminology is consistent across supporting docs.
 
@@ -107,20 +107,20 @@
 
 **Purpose**: Keep DOC-003 connected to adjacent routes without implementing out-of-scope content.
 
-- [ ] T031 Confirm the Codex route is linked only as `/install/codex/` and no Codex install, verification, custom-agent, cache, sandbox, approval, or runtime recovery commands are embedded in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T032 Confirm full troubleshooting, rollback, cache cleanup, incident response, policy design, network debugging, and permission repair are routed to DOC-008 rather than implemented in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T033 Inspect `docs-site/src/content/docs/reference.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/troubleshooting.md` only for navigation or boundary contradictions, and modify them only if required to keep DOC-003 links accurate
+- [x] T031 Confirm the Codex route is linked only as `/install/codex/` and no Codex install, verification, custom-agent, cache, sandbox, approval, or runtime recovery commands are embedded in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T032 Confirm full troubleshooting, rollback, cache cleanup, incident response, policy design, network debugging, and permission repair are routed to DOC-008 rather than implemented in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T033 Inspect `docs-site/src/content/docs/reference.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/troubleshooting.md` only for navigation or boundary contradictions, and modify them only if required to keep DOC-003 links accurate
 
 ## Phase 9: Validation
 
 **Purpose**: Prove the docs-only implementation satisfies functional requirements, success criteria, and scope boundaries.
 
-- [ ] T034 Run planning artifact validation from `specs/doc-003-claude-code-marketplace-installation-path/quickstart.md`
-- [ ] T035 Run command coverage validation for install, reload, `/plugin`, `/speckit-pro:speckit-status`, and `/speckit-pro:speckit-coach` in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T036 Run lifecycle, Codex boundary, trust inventory, terminology, and runtime-surface checks from `specs/doc-003-claude-code-marketplace-installation-path/quickstart.md`
-- [ ] T037 Run `pnpm --dir docs-site validate` for `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T038 Inspect `git diff --name-only` to confirm no changes under `dist/`, `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/`, `speckit-pro/.claude-plugin/`, release automation files, or other runtime/generated payload paths
-- [ ] T039 Prepare PR review packet details from `docs-site/src/content/docs/install/claude-code.md`, `README.md`, `AGENTS.md`, `speckit-pro/README.md`, and validation evidence, covering what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes
+- [x] T034 Run planning artifact validation from `specs/doc-003-claude-code-marketplace-installation-path/quickstart.md`
+- [x] T035 Run command coverage validation for install, reload, `/plugin`, `/speckit-pro:speckit-status`, and `/speckit-pro:speckit-coach` in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T036 Run lifecycle, Codex boundary, trust inventory, terminology, and runtime-surface checks from `specs/doc-003-claude-code-marketplace-installation-path/quickstart.md`
+- [x] T037 Run `pnpm --dir docs-site validate` for `docs-site/src/content/docs/install/claude-code.md`
+- [x] T038 Inspect `git diff --name-only` to confirm no changes under `dist/`, `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/`, `speckit-pro/.claude-plugin/`, release automation files, or other runtime/generated payload paths
+- [x] T039 Prepare PR review packet details from `docs-site/src/content/docs/install/claude-code.md`, `README.md`, `AGENTS.md`, `speckit-pro/README.md`, and validation evidence, covering what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes
 
 ## Dependencies & Execution Order
 
