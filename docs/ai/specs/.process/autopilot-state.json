@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T00:52:41Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-15T01:04:00Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -263,8 +263,7 @@
     "coverage": [
       "AC-4.1 through AC-4.6",
       "FR-001 through FR-019",
-      "SC-006",
-      "SC-007"
+      "SC-001 through SC-007"
     ],
     "artifacts": [
       "specs/doc-004-codex-marketplace-installation-path/tasks.md"
@@ -286,6 +285,34 @@
       "prerequisites": "passed with SPECIFY_FEATURE=004-doc-004-codex-marketplace-installation-path; bare check rejects non-numeric DOC branch name"
     }
   },
+  "phase6": {
+    "status": "completed",
+    "gate": "G6",
+    "gate_status": "passed",
+    "findings": {
+      "total": 3,
+      "critical": 0,
+      "high": 0,
+      "medium": 2,
+      "low": 1,
+      "remaining": 0
+    },
+    "remediation": [
+      "A1 MEDIUM: Expanded tasks.md success-criteria coverage from SC-006/SC-007 to SC-001 through SC-007.",
+      "A2 MEDIUM: Added missing official Codex marketplace source-form and copied-payload coverage to the content contract and tasks.",
+      "A3 LOW: Reconciled the workflow seed so the custom-agent checklist expects the nine installer-copied TOML files, excluding source-only TOML files unless installer behavior changes."
+    ],
+    "consensus": "skipped: no unresolved items",
+    "validations": [
+      "count-markers.sh findings: 0 findings",
+      "validate-gate.sh G6: passed"
+    ],
+    "artifacts_updated": [
+      "docs/ai/specs/.process/DOC-004-workflow.md",
+      "specs/doc-004-codex-marketplace-installation-path/tasks.md",
+      "specs/doc-004-codex-marketplace-installation-path/contracts/codex-install-content-contract.md"
+    ]
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -306,9 +333,9 @@
     {"step": "Phase 4: Checklist - Error-handling", "status": "completed"},
     {"step": "Phase 4: Checklist - Error-handling Consensus", "status": "completed"},
     {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "in_progress"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "completed"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "completed", "skipped": "no unresolved items"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
     {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "pending"},
     {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "pending"},
     {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "pending"},

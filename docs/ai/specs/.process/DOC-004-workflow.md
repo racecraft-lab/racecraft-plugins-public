@@ -44,7 +44,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, content contract, and quickstart without changing manifests, payloads, installer behavior, or agent templates |
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, security, and error-handling checklists completed with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Generated 20 docs-first tasks across setup, foundation, 4 user stories, and validation; G5 passed; reviewability tasks gate passes with warnings |
-| Analyze | `/speckit-analyze` | Pending | Check cross-artifact consistency, platform leakage, source freshness, and validation coverage |
+| Analyze | `/speckit-analyze` | Complete | 3 findings (0C/0H/2M/1L), all remediated; G6 passed |
 | Implement | `/speckit-implement` | Pending | Implement docs-only Codex install guidance and run full repo suite plus docs checks |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -177,7 +177,7 @@ Codex users need a precise, source-backed install path for Racecraft Public Plug
 - State that personal/local installs should target the generated Codex payload root `dist/codex/speckit-pro/`, not the mixed authoring source tree `speckit-pro/`.
 - Explain `@SpecKit Pro -> install` and `$install` as the Codex-only custom-agent registration step.
 - Explain why skills ship with the plugin but custom agents must be copied into `.codex/agents/` or `~/.codex/agents/` by the install skill.
-- List the expected bundled TOML custom-agent files from `speckit-pro/codex-agents/`, including `uat-runbook-author.toml` if it remains present in source.
+- List the expected installer-copied TOML custom-agent files from the current install skill and installer script. Do not list source-only TOML files such as `uat-runbook-author.toml` as expected installed output unless a later plan-approved source correction changes installer behavior.
 - Tell users to restart Codex after custom-agent installation.
 - Include bounded install-safety guidance for sandbox, approvals, and network access.
 - Update `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` so the three entry points do not contradict each other.
@@ -431,7 +431,7 @@ Focus on DOC-004 install/update/remove checkpoints:
 | Phases | 7 |
 | Parallel Opportunities | 2 `[P]` tasks (`T010`, `T011`) plus review work that may be parallelized after implementation with one final evidence update |
 | User Stories Covered | 4 (`US1` install path selection, `US2` custom-agent registration, `US3` consistency, `US4` install safety) |
-| Marker Coverage | AC-4.1 through AC-4.6, FR-001 through FR-019, SC-006, and SC-007 are mapped in `tasks.md` |
+| Marker Coverage | AC-4.1 through AC-4.6, FR-001 through FR-019, and SC-001 through SC-007 are mapped in `tasks.md` |
 | G5 Gate | Pass: `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/doc-004-codex-marketplace-installation-path` returned `task_count=20` |
 | Task Format Check | Pass: local parser found 20 sequential tasks, 2 `[P]`, and all required FR/AC/SC markers |
 | Reviewability Tasks Gate | Warn/pass: `reviewability-gate.sh tasks` projected 800 reviewable LOC, 1 production file token, 25 total file tokens, and no blockers |
@@ -489,7 +489,11 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | MEDIUM | `tasks.md` referenced most success criteria in task prose but the formal Requirement Coverage table only mapped SC-006 and SC-007, and SC-002 appeared only in a checkpoint. | Added SC-002 to T005/T006 and expanded the Requirement Coverage table to map SC-001 through SC-007 explicitly. |
+| A2 | MEDIUM | The command-snippet contract did not explicitly cover every FR-007 marketplace source form, especially `owner/repo@ref` and SSH Git URLs. | Added missing CLI source-form rows to the content contract and tightened T006/T017 so implementation review covers `owner/repo@ref`, SSH Git URLs, repeatable Git-only `--sparse`, and `--json`. |
+| A3 | LOW | The historical Specify prompt seed still asked for source TOML files including `uat-runbook-author.toml`, which drifted from the clarified nine installer-copied expected installed files. | Updated the workflow seed to say DOC-004 must list installer-copied TOML files and must not list source-only TOML files as expected installed output without a plan-approved source correction. |
+
+**G6 Validation**: `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh findings specs/doc-004-codex-marketplace-installation-path` and `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G6 specs/doc-004-codex-marketplace-installation-path` both pass after remediation.
 
 ---
 

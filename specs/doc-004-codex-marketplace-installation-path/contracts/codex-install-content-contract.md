@@ -85,12 +85,15 @@ Codex command/path snippet. Minimum expected checklist:
 | `/plugins` | OpenAI Codex plugin docs | Plugin browser path. |
 | `codex plugin marketplace add ./local-marketplace-root` | OpenAI Build plugins docs and local CLI help | Local marketplace source. |
 | `codex plugin marketplace add owner/repo` | OpenAI Build plugins docs and local CLI help | GitHub shorthand. |
+| `codex plugin marketplace add owner/repo@ref` | OpenAI Build plugins docs and local CLI help | GitHub shorthand with inline ref. |
 | `codex plugin marketplace add owner/repo --ref main` | OpenAI Build plugins docs and local CLI help | Pinned Git ref. |
-| `codex plugin marketplace add https://github.com/example/plugins.git --sparse .agents/plugins` | OpenAI Build plugins docs and local CLI help | HTTP or HTTPS Git URL plus sparse path. |
+| `codex plugin marketplace add https://github.com/example/plugins.git --sparse .agents/plugins` | OpenAI Build plugins docs and local CLI help | HTTP or HTTPS Git URL plus Git-only sparse path; repeat `--sparse PATH` when more than one sparse path is needed. |
+| `codex plugin marketplace add git@github.com:example/plugins.git` | OpenAI Build plugins docs and local CLI help | SSH Git URL source. |
 | `codex plugin marketplace add <source> --json` | Local CLI help | Automation output. |
 | `.agents/plugins/marketplace.json` | OpenAI Build plugins docs and repo marketplace file | Repo-scoped marketplace. |
 | `~/.agents/plugins/marketplace.json` | OpenAI Build plugins docs | Personal marketplace. |
 | `dist/codex/speckit-pro/` | Repo marketplace and generated payload manifest | Racecraft installable Codex payload. |
+| `~/.codex/plugins/speckit-pro/` | OpenAI Build plugins docs and DOC-004 spec | Example copied personal payload location, not installed cache. |
 | `speckit-pro/` | Source tree evidence | Must be labeled authoring source, not install target. |
 | `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/` | OpenAI Build plugins docs | Installed plugin cache. |
 | `@SpecKit Pro -> install` | Local install skill and plugin manifest default prompt | UI invocation. |

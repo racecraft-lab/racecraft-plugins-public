@@ -46,8 +46,8 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add an accessible install path matrix plus compact list alternative to `docs-site/src/content/docs/install/codex.md` for repo-scoped, personal or local, and CLI marketplace flows (FR-003, FR-018, SC-006, AC-4.1)
-- [ ] T006 [US1] Document repo-scoped marketplace installation, personal or local generated-payload layout, and source-backed CLI marketplace examples in `docs-site/src/content/docs/install/codex.md`; explicitly warn against installing Codex from the mixed authoring source tree (FR-002, FR-003, FR-004, FR-006, FR-007, FR-008, AC-4.1, AC-4.6)
+- [ ] T005 [US1] Add an accessible install path matrix plus compact list alternative to `docs-site/src/content/docs/install/codex.md` for repo-scoped, personal or local, and CLI marketplace flows (FR-003, FR-018, SC-002, SC-006, AC-4.1)
+- [ ] T006 [US1] Document repo-scoped marketplace installation, personal or local generated-payload layout, and source-backed CLI marketplace examples in `docs-site/src/content/docs/install/codex.md`, including `owner/repo`, `owner/repo@ref`, HTTP or HTTPS Git URLs, SSH Git URLs, `--ref`, repeatable Git-only `--sparse`, and `--json`; explicitly warn against installing Codex from the mixed authoring source tree (FR-002, FR-003, FR-004, FR-006, FR-007, FR-008, SC-002, AC-4.1, AC-4.6)
 - [ ] T007 [US1] Explain installed plugin cache behavior and add the bounded stale-after-update checkpoint to `docs-site/src/content/docs/install/codex.md`, including DOC-007 and DOC-008 next links (FR-005, FR-019, SC-007, AC-4.2)
 
 **Checkpoint**: User Story 1 is independently reviewable against AC-4.1, AC-4.2, AC-4.6, SC-002, and SC-007.
@@ -106,7 +106,7 @@
 
 **Purpose**: Validate traceability, accessibility, source backing, and docs-only scope after user stories are implemented.
 
-- [ ] T017 Review every changed Codex command and path snippet in `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` against official OpenAI docs, local CLI help, or checked-in source, then record source-backed snippet review in `docs/ai/specs/.process/DOC-004-workflow.md` implementation evidence (FR-017)
+- [ ] T017 Review every changed Codex command and path snippet in `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` against official OpenAI docs, local CLI help, or checked-in source, including the contract's CLI source-form checklist for `owner/repo@ref`, SSH Git URLs, repeatable Git-only `--sparse`, and `--json`; then record source-backed snippet review in `docs/ai/specs/.process/DOC-004-workflow.md` implementation evidence (FR-017)
 - [ ] T018 Review accessibility requirements in `docs-site/src/content/docs/install/codex.md`: semantic headings, descriptive links, labeled command groups, text-visible warnings, and mobile-readable or screen-reader-friendly matrix alternative (FR-018, SC-006)
 - [ ] T019 Run `cd docs-site && pnpm validate`, then `cd docs-site && pnpm validate:links`, and record both results in `docs/ai/specs/.process/DOC-004-workflow.md` (FR-017, SC-005)
 - [ ] T020 Run `bash tests/speckit-pro/run-all.sh`, review `git diff --name-only` for docs-only scope, and prepare PR evidence from `spec.md`, `plan.md`, `tasks.md`, and validation outputs (FR-014, FR-016, FR-017, SC-005)
@@ -187,5 +187,12 @@
 | FR-015 | T012 |
 | FR-016 | T003, T016, T020 |
 | FR-017 | T001, T017, T019, T020 |
-| FR-018 / SC-006 | T004, T005, T014, T018 |
-| FR-019 / SC-007 | T007, T009, T010, T011 |
+| FR-018 | T004, T005, T014, T018 |
+| FR-019 | T007, T009, T010, T011 |
+| SC-001 | T010, T011, T013 |
+| SC-002 | T005, T006 |
+| SC-003 | T008 |
+| SC-004 | T014, T015, T016 |
+| SC-005 | T019, T020 |
+| SC-006 | T004, T005, T014, T018 |
+| SC-007 | T007, T009, T010, T011 |
