@@ -118,8 +118,19 @@ when you need more than one sparse checkout path.
 ## Register Custom Agents
 
 Plugin installation loads SpecKit Pro's bundled skills, but it does not
-automatically register the bundled Codex custom agents. After installing the
-plugin, run the Codex-only install skill:
+automatically register the bundled Codex custom agents.
+
+Keep these three Codex surfaces separate:
+
+- Bundled skills load from the installed plugin payload.
+- OpenAI agent metadata sidecars such as `agents/openai.yaml` describe skill
+  UI, invocation, and policy metadata. They are not custom-agent registration.
+- TOML custom-agent registration happens only when the install skill copies the
+  bundled TOML files into `~/.codex/agents/` or `.codex/agents/`. Those TOML
+  custom-agent files are copied into the selected destination; they are not
+  loaded directly from the plugin bundle.
+
+After installing the plugin, run the Codex-only custom-agent registration step:
 
 ```text
 @SpecKit Pro -> install
@@ -136,20 +147,55 @@ files into the selected Codex agent directory. The default destination is
 `~/.codex/agents/`; `.codex/agents/` is the project-scoped destination when you
 explicitly choose a repo-local registration.
 
+Use this checklist:
+
+1. Invoke `@SpecKit Pro -> install` from the SpecKit Pro plugin card, or invoke
+   the same skill directly with `$install`.
+2. Keep the default user destination, `~/.codex/agents/`, unless you want
+   repo-local custom agents.
+3. For an explicit project destination override, choose `.codex/agents/` in the
+   repository you want to carry the custom-agent registration.
+4. Approve only the expected local write of the named SpecKit Pro TOML files to
+   the selected destination.
+5. Restart Codex after the installer reports success.
+
+Expected installed TOML files:
+
+- `autopilot-fast-helper.toml`
+- `phase-executor.toml`
+- `clarify-executor.toml`
+- `checklist-executor.toml`
+- `analyze-executor.toml`
+- `implement-executor.toml`
+- `codebase-analyst.toml`
+- `spec-context-analyst.toml`
+- `domain-researcher.toml`
+
 ## Verify The Install
 
-After the custom-agent registration step:
+After the custom-agent registration step, use observational verification only.
+Do not edit the installed plugin cache, and do not manually edit the copied TOML
+files as part of DOC-004 verification.
 
 1. Review the install skill report for the source directory, destination
    directory, effective model, copied filenames, and restart instruction.
-2. Confirm unrelated user custom agents were preserved.
-3. Restart Codex.
-4. Start a new Codex thread and verify a simple `$speckit-*` workflow can load
+2. Confirm the selected destination contains the nine expected TOML filenames
+   above.
+3. Confirm the copied TOML model lines match the model reported by the installer
+   when you used a supported fallback model.
+4. Confirm unrelated user custom agents were preserved.
+5. Restart Codex after plugin enablement changes, custom-agent install or
+   refresh, or `~/.codex/config.toml` or `.codex/config.toml` edits that affect
+   plugin or skill state.
+6. Start a new Codex thread and verify a simple `$speckit-*` workflow can load
    the plugin skill surface.
 
-The full expected TOML inventory and command-snippet review belong to the later
-DOC-004 user-story tasks and the
-[DOC-007 reference](/racecraft-plugins-public/reference/).
+Rerun `@SpecKit Pro -> install` or `$install` after a plugin update when the
+installer report, expected TOML list, model lines, or bundled custom-agent
+behavior has changed, then restart Codex before expecting updated custom agents.
+
+The full command-snippet review belongs to the later DOC-004 validation tasks
+and the [DOC-007 reference](/racecraft-plugins-public/reference/).
 
 ## Stale Update Checkpoint
 

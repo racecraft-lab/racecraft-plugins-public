@@ -62,8 +62,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T008 [US2] Add the Codex-only custom-agent registration checklist with `@SpecKit Pro -> install`, `$install`, default user destination, explicit project destination override, and the exact nine installer-copied TOML files to `docs-site/src/content/docs/install/codex.md` (FR-009, FR-011, FR-013, SC-003, AC-4.3)
-- [ ] T009 [US2] Explain bundled skills, OpenAI agent metadata sidecars, TOML custom-agent registration, observational verification, no manual cache or TOML edits, restart triggers, and rerun triggers in `docs-site/src/content/docs/install/codex.md` (FR-010, FR-012, FR-019, SC-007, AC-4.4)
+- [x] T008 [US2] Add the Codex-only custom-agent registration checklist with `@SpecKit Pro -> install`, `$install`, default user destination, explicit project destination override, and the exact nine installer-copied TOML files to `docs-site/src/content/docs/install/codex.md` (FR-009, FR-011, FR-013, SC-003, AC-4.3)
+- [x] T009 [US2] Explain bundled skills, OpenAI agent metadata sidecars, TOML custom-agent registration, observational verification, no manual cache or TOML edits, restart triggers, and rerun triggers in `docs-site/src/content/docs/install/codex.md` (FR-010, FR-012, FR-019, SC-007, AC-4.4)
 
 **Checkpoint**: User Story 2 is independently reviewable against AC-4.3, AC-4.4, SC-003, and SC-007.
 
