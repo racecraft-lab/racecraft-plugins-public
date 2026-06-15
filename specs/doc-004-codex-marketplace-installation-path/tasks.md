@@ -20,9 +20,9 @@
 
 **Purpose**: Refresh source truth before any docs copy is written.
 
-- [ ] T001 Refresh official OpenAI Codex plugin, build-plugin, skills, subagents, permissions, approvals, security, and local CLI help evidence, then update `specs/doc-004-codex-marketplace-installation-path/research.md` (FR-006, FR-007, FR-017, AC-4.1)
-- [ ] T002 Audit repo marketplace, generated payload, install skill, bundled custom-agent TOML, and hook payload evidence, then update `specs/doc-004-codex-marketplace-installation-path/research.md` (FR-002, FR-004, FR-005, FR-009, FR-010, FR-011, FR-013, AC-4.2, AC-4.3, AC-4.4, AC-4.5)
-- [ ] T003 Reconcile refreshed source evidence against `specs/doc-004-codex-marketplace-installation-path/spec.md`, `specs/doc-004-codex-marketplace-installation-path/plan.md`, `specs/doc-004-codex-marketplace-installation-path/data-model.md`, and the content contract; stop for explicit approval before any non-docs source correction (FR-016)
+- [x] T001 Refresh official OpenAI Codex plugin, build-plugin, skills, subagents, permissions, approvals, security, and local CLI help evidence, then update `specs/doc-004-codex-marketplace-installation-path/research.md` (FR-006, FR-007, FR-017, AC-4.1)
+- [x] T002 Audit repo marketplace, generated payload, install skill, bundled custom-agent TOML, and hook payload evidence, then update `specs/doc-004-codex-marketplace-installation-path/research.md` (FR-002, FR-004, FR-005, FR-009, FR-010, FR-011, FR-013, AC-4.2, AC-4.3, AC-4.4, AC-4.5)
+- [x] T003 Reconcile refreshed source evidence against `specs/doc-004-codex-marketplace-installation-path/spec.md`, `specs/doc-004-codex-marketplace-installation-path/plan.md`, `specs/doc-004-codex-marketplace-installation-path/data-model.md`, and the content contract; stop for explicit approval before any non-docs source correction (FR-016)
 
 ---
 
@@ -32,7 +32,7 @@
 
 **Critical**: No user-story documentation edits should begin until this phase is complete.
 
-- [ ] T004 Replace the DOC-002 shell in `docs-site/src/content/docs/install/codex.md` with a task-first DOC-004 outline covering install decision, source and generated payload and cache distinction, install paths, custom-agent registration, verification, stale-update checkpoint, safety, source evidence, and DOC-007 plus DOC-008 boundaries (FR-001, FR-014, FR-018)
+- [x] T004 Replace the DOC-002 shell in `docs-site/src/content/docs/install/codex.md` with a task-first DOC-004 outline covering install decision, source and generated payload and cache distinction, install paths, custom-agent registration, verification, stale-update checkpoint, safety, source evidence, and DOC-007 plus DOC-008 boundaries (FR-001, FR-014, FR-018)
 
 **Checkpoint**: Foundation ready; each user story can now be implemented and reviewed independently.
 

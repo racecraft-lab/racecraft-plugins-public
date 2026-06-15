@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T01:07:43Z",
-  "active_step": "Phase 7: Implement - Setup and foundation (T001-T004)",
+  "updated_at": "2026-06-15T01:21:54Z",
+  "active_step": "Phase 7: Implement - US1 install path selection (T005-T007)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -329,6 +329,41 @@
     "pass": true,
     "recommended_action": "proceed"
   },
+  "phase7": {
+    "status": "in_progress",
+    "completed_tasks": [
+      "T001",
+      "T002",
+      "T003",
+      "T004"
+    ],
+    "current_group": "US1 install path selection (T005-T007)",
+    "groups": {
+      "setup_and_foundation": {
+        "status": "completed",
+        "tasks": [
+          "T001",
+          "T002",
+          "T003",
+          "T004"
+        ],
+        "artifacts_updated": [
+          "docs-site/src/content/docs/install/codex.md",
+          "docs/ai/specs/.process/DOC-004-workflow.md",
+          "specs/doc-004-codex-marketplace-installation-path/research.md",
+          "specs/doc-004-codex-marketplace-installation-path/tasks.md"
+        ],
+        "validation_reported_by_executor": [
+          "temporary content-contract check: red then green",
+          "cd docs-site && pnpm validate: passed",
+          "cd docs-site && pnpm validate:links: passed",
+          "bash tests/speckit-pro/run-all.sh: 2947/2947 passed",
+          "git diff --check: passed"
+        ],
+        "notes": "Refreshed official and local source evidence, confirmed no non-docs source correction was required, and replaced the DOC-002 Codex shell with the task-first DOC-004 outline."
+      }
+    }
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -352,8 +387,8 @@
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed", "skipped": "no unresolved items"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "in_progress"},
-    {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "pending"},
+    {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "completed"},
+    {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "in_progress"},
     {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "pending"},
     {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "pending"},
     {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "pending"},

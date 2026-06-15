@@ -185,3 +185,72 @@ finishes by telling users to restart Codex.
 - OpenAI Codex approvals/security: https://developers.openai.com/codex/agent-approvals-security
 - Local CLI: `codex plugin marketplace add --help`
 - Local files: `.agents/plugins/marketplace.json`, `speckit-pro/.codex-plugin/plugin.json`, `dist/codex/speckit-pro/.codex-plugin/plugin.json`, `speckit-pro/codex-skills/install/SKILL.md`, `speckit-pro/codex-skills/install/scripts/install-codex-agents.sh`, `speckit-pro/codex-agents/*.toml`, `speckit-pro/codex-hooks.json`
+
+## Implementation Refresh: T001-T003 Source Evidence
+
+Codex manual fetched during implementation with the OpenAI docs helper reported
+the local manual was current. The implementation pass re-read the current manual
+sections for Build plugins, Plugins, Agent Skills, Subagents, Permissions,
+Agent approvals and security, Sandbox, and Hooks.
+
+Official evidence remained consistent with the plan:
+
+- Build plugins confirms repo marketplaces at
+  `$REPO_ROOT/.agents/plugins/marketplace.json`, personal marketplaces at
+  `~/.agents/plugins/marketplace.json`, `source.path` resolution relative to
+  the marketplace root, local and Git-backed marketplace sources, plugin
+  directory browsing, and restart-after-change guidance.
+- Plugins confirms the CLI plugin browser path is `codex` then `/plugins`,
+  plugin installation happens through marketplace entries, bundled skills are
+  available after plugin install, and existing approval settings plus external
+  app or MCP authentication policies still apply.
+- Agent Skills confirms `$skill` explicit invocation, automatic skill-change
+  detection with restart as the fallback when updates do not appear, and
+  `agents/openai.yaml` as optional skill metadata rather than TOML custom-agent
+  registration.
+- Subagents confirms custom agents are standalone TOML files under
+  `~/.codex/agents/` or `.codex/agents/`, inherit parent sandbox and approval
+  controls, and may declare fields such as `name`, `description`,
+  `developer_instructions`, `model`, `model_reasoning_effort`, and
+  `sandbox_mode`.
+- Permissions, approvals, sandbox, and hooks confirm DOC-004 should keep safety
+  language bounded to first-install expectations: workspace-limited writes,
+  outside-workspace approvals, network approvals, plugin-bundled lifecycle hook
+  configuration, and the fact that hooks do not bypass Codex trust, sandbox, or
+  approval controls.
+
+Local CLI evidence from `codex plugin marketplace add --help` confirmed local
+path, `owner/repo[@ref]`, HTTPS Git URL, SSH Git URL, `--ref`, repeatable
+Git-only `--sparse`, and `--json`. The command emitted a non-blocking sandbox
+warning about PATH aliases, but returned the required help text.
+
+Local repository evidence remained consistent with the plan:
+
+- `.agents/plugins/marketplace.json` exposes `racecraft-plugins-public` with
+  `speckit-pro` version `2.14.0` and `source.path` set to
+  `./dist/codex/speckit-pro`.
+- source/dist manifest versions: 2.14.0 in both
+  `speckit-pro/.codex-plugin/plugin.json` and
+  `dist/codex/speckit-pro/.codex-plugin/plugin.json`; the source manifest uses
+  `skills: ./codex-skills/`, while the generated payload manifest uses
+  `skills: ./skills/`.
+- The generated payload and source manifest both reference `codex-hooks.json`;
+  source and generated hook payloads match and define a `UserPromptSubmit`
+  command hook that checks SpecKit CLI availability for SpecKit prompts.
+- The installer-copied TOML files remain nine:
+  `autopilot-fast-helper.toml`, `phase-executor.toml`,
+  `clarify-executor.toml`, `checklist-executor.toml`,
+  `analyze-executor.toml`, `implement-executor.toml`,
+  `codebase-analyst.toml`, `spec-context-analyst.toml`, and
+  `domain-researcher.toml`.
+- `uat-runbook-author.toml` is still present in source and generated
+  `codex-agents/` directories, but the install skill and installer script do
+  not copy it. DOC-004 user-facing verification should continue to list only
+  the installer-copied set unless a later plan records an approved installer
+  correction.
+
+Reconciliation result: refreshed official and local evidence does not require a
+non-docs source correction for T001-T004. `spec.md`, `plan.md`,
+`data-model.md`, and the content contract remain aligned with the refreshed
+evidence. README alignment, detailed install matrices, exact command-snippet
+review evidence, and full validation remain owned by later DOC-004 tasks.

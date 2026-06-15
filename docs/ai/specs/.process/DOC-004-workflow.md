@@ -564,8 +564,8 @@ For each task, follow this cycle:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation and source refresh | Pending | Pending | Pending |
-| Install path selection | Pending | Pending | Pending |
+| Foundation and source refresh | T001-T003 | Complete | OpenAI Codex manual, local CLI help, repo marketplace, source/dist manifests, install skill/script, TOML source set, and hook payloads refreshed; no non-docs source correction required. |
+| Install path selection | T004 | Complete | DOC-002 shell replaced with task-first DOC-004 outline; detailed install matrices and command-snippet evidence remain in later tasks. |
 | Custom-agent registration | Pending | Pending | Pending |
 | Docs consistency | Pending | Pending | Pending |
 | Polish and validation | Pending | Pending | Pending |
