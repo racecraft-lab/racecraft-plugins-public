@@ -1,7 +1,15 @@
 {
   "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md + docs/ai/specs/.process/DOC-004-workflow.md",
-  "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path + specs/doc-004-codex-marketplace-installation-path",
+  "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
+  "workflow_files": [
+    "docs/ai/specs/.process/DOC-003-workflow.md",
+    "docs/ai/specs/.process/DOC-004-workflow.md"
+  ],
+  "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
+  "feature_dirs": [
+    "specs/doc-003-claude-code-marketplace-installation-path",
+    "specs/doc-004-codex-marketplace-installation-path"
+  ],
   "feature_branch": "codex/doc-003-004-post-merge-hygiene",
   "updated_at": "2026-06-15T20:40:39Z",
   "active_step": "Archived",

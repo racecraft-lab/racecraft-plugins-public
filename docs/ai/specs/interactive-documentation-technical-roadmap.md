@@ -59,9 +59,9 @@ DOC-007 -> DOC-008
 | DOC-002 | Unified landing page and IA shell | Completed/archived | `.process/DOC-002-workflow.md` | Archived after PRs #173-#177 |
 | DOC-003 | Claude Code marketplace installation path | Completed/archived | `.process/DOC-003-workflow.md` | Archived after PR #187 |
 | DOC-004 | Codex marketplace installation path | Completed/archived | `.process/DOC-004-workflow.md` | Archived after PR #186 |
-| DOC-005 | First successful workflow tutorial | Pending | DOC-005-workflow.md | Ready |
-| DOC-006 | Safe interactive selector and validation aids | Pending | DOC-006-workflow.md | Ready |
-| DOC-007 | Command, workflow, manifest, and file-layout reference | Pending | DOC-007-workflow.md | Ready |
+| DOC-005 | First successful workflow tutorial | Ready | DOC-005-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
+| DOC-006 | Safe interactive selector and validation aids | Ready | DOC-006-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
+| DOC-007 | Command, workflow, manifest, and file-layout reference | Ready | DOC-007-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Pending | DOC-008-workflow.md | Blocked by DOC-007 |
 | DOC-009 | Maintainer and contributor release workflow | Pending | DOC-009-workflow.md | Blocked by DOC-007 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Blocked by DOC-002, DOC-006 |
