@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T02:06:50Z",
-  "active_step": "Phase 7: Implement - Polish and validation (T017-T020)",
+  "updated_at": "2026-06-15T02:19:47Z",
+  "active_step": "Post: Verify Tasks Phantom Check",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -347,9 +347,13 @@
       "T013",
       "T014",
       "T015",
-      "T016"
+      "T016",
+      "T017",
+      "T018",
+      "T019",
+      "T020"
     ],
-    "current_group": "Polish and validation (T017-T020)",
+    "current_group": null,
     "groups": {
       "setup_and_foundation": {
         "status": "completed",
@@ -456,7 +460,41 @@
           "git diff --check: passed"
         ],
         "notes": "Added text-visible sandbox, approval, network, cache/source, destination, outside-workspace, hook-payload, external-auth, and DOC-008 deferral guidance; verified no silent hook, sandbox bypass, approval bypass, unrestricted network, or automatic external auth claims."
+      },
+      "polish_and_validation": {
+        "status": "completed",
+        "tasks": [
+          "T017",
+          "T018",
+          "T019",
+          "T020"
+        ],
+        "artifacts_updated": [
+          "docs/ai/specs/.process/DOC-004-workflow.md",
+          "specs/doc-004-codex-marketplace-installation-path/tasks.md"
+        ],
+        "validation_reported_by_executor": [
+          "source-backed command/path snippet review: passed",
+          "accessibility review: passed",
+          "cd docs-site && pnpm validate: passed",
+          "cd docs-site && pnpm validate:links: passed",
+          "bash tests/speckit-pro/run-all.sh: 2947/2947 passed",
+          "git diff --check: passed"
+        ],
+        "notes": "Recorded Phase 7 source-backed snippet review, accessibility review, docs-site validation, full suite evidence, generated-dist cleanup, docs-only scope review, and PR evidence."
       }
+    },
+    "gate": "G7",
+    "gate_status": "passed",
+    "task_count": 20,
+    "tasks_completed": 20,
+    "validation": {
+      "g7": "passed: validate-gate.sh G7 total=20 done=20",
+      "docs_validate": "passed",
+      "docs_validate_links": "passed",
+      "full_suite": "passed: 2947/2947",
+      "diff_check": "passed",
+      "dist_scope": "no dist changes in final intended diff"
     }
   },
   "plan": [
@@ -487,10 +525,10 @@
     {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "completed"},
     {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "completed"},
     {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "completed"},
-    {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "in_progress"},
+    {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "completed"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "in_progress"},
     {"step": "Post: Code Review", "status": "completed", "skipped": "review extension not installed"},
     {"step": "Post: Integration Suite", "status": "pending"},
     {"step": "Post: Cleanup", "status": "completed", "skipped": "cleanup extension not installed"},

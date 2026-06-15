@@ -106,10 +106,10 @@
 
 **Purpose**: Validate traceability, accessibility, source backing, and docs-only scope after user stories are implemented.
 
-- [ ] T017 Review every changed Codex command and path snippet in `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` against official OpenAI docs, local CLI help, or checked-in source, including the contract's CLI source-form checklist for `owner/repo@ref`, SSH Git URLs, repeatable Git-only `--sparse`, and `--json`; then record source-backed snippet review in `docs/ai/specs/.process/DOC-004-workflow.md` implementation evidence (FR-017)
-- [ ] T018 Review accessibility requirements in `docs-site/src/content/docs/install/codex.md`: semantic headings, descriptive links, labeled command groups, text-visible warnings, and mobile-readable or screen-reader-friendly matrix alternative (FR-018, SC-006)
-- [ ] T019 Run `cd docs-site && pnpm validate`, then `cd docs-site && pnpm validate:links`, and record both results in `docs/ai/specs/.process/DOC-004-workflow.md` (FR-017, SC-005)
-- [ ] T020 Run `bash tests/speckit-pro/run-all.sh`, review `git diff --name-only` for docs-only scope, and prepare PR evidence from `spec.md`, `plan.md`, `tasks.md`, and validation outputs (FR-014, FR-016, FR-017, SC-005)
+- [x] T017 Review every changed Codex command and path snippet in `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` against official OpenAI docs, local CLI help, or checked-in source, including the contract's CLI source-form checklist for `owner/repo@ref`, SSH Git URLs, repeatable Git-only `--sparse`, and `--json`; then record source-backed snippet review in `docs/ai/specs/.process/DOC-004-workflow.md` implementation evidence (FR-017)
+- [x] T018 Review accessibility requirements in `docs-site/src/content/docs/install/codex.md`: semantic headings, descriptive links, labeled command groups, text-visible warnings, and mobile-readable or screen-reader-friendly matrix alternative (FR-018, SC-006)
+- [x] T019 Run `cd docs-site && pnpm validate`, then `cd docs-site && pnpm validate:links`, and record both results in `docs/ai/specs/.process/DOC-004-workflow.md` (FR-017, SC-005)
+- [x] T020 Run `bash tests/speckit-pro/run-all.sh`, review `git diff --name-only` for docs-only scope, and prepare PR evidence from `spec.md`, `plan.md`, `tasks.md`, and validation outputs (FR-014, FR-016, FR-017, SC-005)
 
 ---
 
