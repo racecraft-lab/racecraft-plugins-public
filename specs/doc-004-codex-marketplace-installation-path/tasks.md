@@ -77,10 +77,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T010 [P] [US3] Align the root `README.md` Codex install section with the docs-site guide on repo marketplace, generated payload, installed cache, `$install`, restart, nine-file verification, stale-update checkpoint, and bounded install safety (FR-001, FR-004, FR-005, FR-009, FR-012, FR-013, FR-019, AC-4.6)
-- [ ] T011 [P] [US3] Align `speckit-pro/README.md` Codex install, troubleshooting, and packaging sections with the docs-site guide on repo marketplace, generated payload, installed cache, `$install`, restart, nine-file verification, stale-update checkpoint, and bounded install safety (FR-001, FR-004, FR-005, FR-009, FR-012, FR-013, FR-019, AC-4.6)
-- [ ] T012 [US3] Preserve explicit DOC-003, DOC-007, and DOC-008 boundaries while removing or revising any Claude Code command leakage across `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` (FR-014, FR-015)
-- [ ] T013 [US3] Perform a three-entry-point consistency pass across `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md`, fixing contradictory path, command, cache, custom-agent, restart, verification, stale-update, or safety statements (FR-001, SC-001, AC-4.6)
+- [x] T010 [P] [US3] Align the root `README.md` Codex install section with the docs-site guide on repo marketplace, generated payload, installed cache, `$install`, restart, nine-file verification, stale-update checkpoint, and bounded install safety (FR-001, FR-004, FR-005, FR-009, FR-012, FR-013, FR-019, AC-4.6)
+- [x] T011 [P] [US3] Align `speckit-pro/README.md` Codex install, troubleshooting, and packaging sections with the docs-site guide on repo marketplace, generated payload, installed cache, `$install`, restart, nine-file verification, stale-update checkpoint, and bounded install safety (FR-001, FR-004, FR-005, FR-009, FR-012, FR-013, FR-019, AC-4.6)
+- [x] T012 [US3] Preserve explicit DOC-003, DOC-007, and DOC-008 boundaries while removing or revising any Claude Code command leakage across `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md` (FR-014, FR-015)
+- [x] T013 [US3] Perform a three-entry-point consistency pass across `README.md`, `speckit-pro/README.md`, and `docs-site/src/content/docs/install/codex.md`, fixing contradictory path, command, cache, custom-agent, restart, verification, stale-update, or safety statements (FR-001, SC-001, AC-4.6)
 
 **Checkpoint**: User Story 3 is independently reviewable against AC-4.6 and SC-001.
 

@@ -17,7 +17,7 @@ Start by choosing the install context before running commands:
 - **CLI marketplace add:** use this when you want Codex to track a local or
   Git-backed marketplace source from the command line.
 
-Claude Code installation is a separate path. Use the
+Claude Code installation is the separate DOC-003-owned path. Use the
 [Claude Code install guide](/racecraft-plugins-public/install/claude-code/)
 for Claude Code commands.
 

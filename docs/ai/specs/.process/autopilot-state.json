@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T01:43:35Z",
-  "active_step": "Phase 7: Implement - US3 consistency (T010-T013)",
+  "updated_at": "2026-06-15T01:57:13Z",
+  "active_step": "Phase 7: Implement - US4 install safety (T014-T016)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -340,9 +340,13 @@
       "T006",
       "T007",
       "T008",
-      "T009"
+      "T009",
+      "T010",
+      "T011",
+      "T012",
+      "T013"
     ],
-    "current_group": "US3 consistency (T010-T013)",
+    "current_group": "US4 install safety (T014-T016)",
     "groups": {
       "setup_and_foundation": {
         "status": "completed",
@@ -406,6 +410,30 @@
           "git diff --check: passed"
         ],
         "notes": "Added Codex-only custom-agent install checklist, exact nine installer-copied TOML files, skill metadata sidecar distinction, observational verification, no manual cache/TOML edits, and restart/rerun triggers."
+      },
+      "us3_consistency": {
+        "status": "completed",
+        "tasks": [
+          "T010",
+          "T011",
+          "T012",
+          "T013"
+        ],
+        "artifacts_updated": [
+          "README.md",
+          "speckit-pro/README.md",
+          "docs-site/src/content/docs/install/codex.md",
+          "docs/ai/specs/.process/DOC-004-workflow.md",
+          "specs/doc-004-codex-marketplace-installation-path/tasks.md"
+        ],
+        "validation_reported_by_executor": [
+          "focused consistency/content check: passed",
+          "cd docs-site && pnpm validate: passed",
+          "cd docs-site && pnpm validate:links: passed",
+          "bash tests/speckit-pro/run-all.sh: 2947/2947 passed",
+          "git diff --check: passed"
+        ],
+        "notes": "Aligned root README, plugin README, and docs-site Codex guidance for repo marketplace, generated payload, installed cache, $install, restart, nine-file verification, stale-update checkpoint, bounded safety, and DOC-003/DOC-007/DOC-008 boundaries. Generated dist README changes from validation were restored."
       }
     }
   },
@@ -435,8 +463,8 @@
     {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "completed"},
     {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "completed"},
     {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "completed"},
-    {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "in_progress"},
-    {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "pending"},
+    {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "completed"},
+    {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "in_progress"},
     {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "pending"},
     {"step": "Post: Doctor Extension Check", "status": "pending"},
     {"step": "Post: Verify Implementation", "status": "pending"},

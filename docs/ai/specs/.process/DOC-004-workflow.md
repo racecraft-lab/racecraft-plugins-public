@@ -567,7 +567,7 @@ For each task, follow this cycle:
 | Foundation and source refresh | T001-T003 | Complete | OpenAI Codex manual, local CLI help, repo marketplace, source/dist manifests, install skill/script, TOML source set, and hook payloads refreshed; no non-docs source correction required. |
 | Install path selection | T004-T007 | Complete | DOC-002 shell replaced with task-first DOC-004 outline; accessible matrix, compact list, CLI source forms, generated-payload warning, installed cache behavior, and bounded stale-update checkpoint are implemented. |
 | Custom-agent registration | T008-T009 | Complete | Added Codex-only install checklist, exact nine installer-copied TOML files, skill metadata sidecar distinction, observational verification, no manual cache or TOML edits, and restart/rerun triggers. |
-| Docs consistency | Pending | Pending | Pending |
+| Docs consistency | T010-T013 | Complete | README, plugin README, and docs-site Codex guide now share repo marketplace, generated payload, installed cache, install skill, restart, nine-file verification, stale-update, safety, and DOC-003/DOC-007/DOC-008 boundary guidance. |
 | Polish and validation | Pending | Pending | Pending |
 
 ---
