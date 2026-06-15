@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-004 scaffolded and in progress; DOC-003 remains ready. Created 2026-06-12; refreshed 2026-06-15.
+> Status: DOC-003 and DOC-004 are in progress. Created 2026-06-12; refreshed 2026-06-15.
 
 ## Roadmap Overview
 
@@ -57,8 +57,8 @@ DOC-007 -> DOC-008
 |---|---|---|---|---|
 | DOC-001 | Static docs framework and IA spike | Completed/archived | DOC-001-workflow.md | Archived after PR #163 |
 | DOC-002 | Unified landing page and IA shell | Completed/archived | `.process/DOC-002-workflow.md` | Archived after PRs #173-#177 |
-| DOC-003 | Claude Code marketplace installation path | Pending | DOC-003-workflow.md | Ready |
-| DOC-004 | Codex marketplace installation path | In progress | `.process/DOC-004-workflow.md` | Setup complete; run autopilot |
+| DOC-003 | Claude Code marketplace installation path | In Progress | `.process/DOC-003-workflow.md` | Scaffolded on branch `doc-003-claude-code-marketplace-installation-path` |
+| DOC-004 | Codex marketplace installation path | In Progress | `.process/DOC-004-workflow.md` | PR #186 ready |
 | DOC-005 | First successful workflow tutorial | Pending | DOC-005-workflow.md | Blocked by DOC-003, DOC-004 |
 | DOC-006 | Safe interactive selector and validation aids | Pending | DOC-006-workflow.md | Blocked by DOC-002, DOC-003, DOC-004 |
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Pending | DOC-007-workflow.md | Blocked by DOC-003, DOC-004 |

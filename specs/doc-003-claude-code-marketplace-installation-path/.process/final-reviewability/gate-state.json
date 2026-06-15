@@ -1,0 +1,137 @@
+{
+  "schemaVersion": 1,
+  "kind": "final_reviewability_gate",
+  "status": "proceed",
+  "outcome": "single_install_pr",
+  "mode": "final",
+  "gate_result": "warn",
+  "gate_reason": "DOC-003 was aligned to the DOC-004 install-instruction structure and stale marker-split candidate artifacts were removed from PR #187.",
+  "metrics": {
+    "reviewable_loc": 0,
+    "production_files": 0,
+    "total_files": 24,
+    "primary_surface_count": 3,
+    "primary_surfaces": [
+      "docs/process",
+      "scheduler/runtime",
+      "seed/config"
+    ],
+    "greenfield": false,
+    "thresholds": {
+      "warn": {
+        "reviewable_loc": 400,
+        "production_files": 6,
+        "total_files": 15,
+        "primary_surfaces": 1
+      },
+      "block": {
+        "reviewable_loc": 800,
+        "production_files": 8,
+        "total_files": 25,
+        "primary_surfaces": 1
+      }
+    },
+    "warnings": [
+      "total files 24 exceeds warn threshold 15",
+      "primary surfaces 3 exceeds warn threshold 1"
+    ],
+    "blockers": []
+  },
+  "exception": {
+    "honored": false,
+    "class": null,
+    "evidence": []
+  },
+  "blocked_operations": [],
+  "timestamp": "2026-06-15T00:19:18Z",
+  "pr_created": false,
+  "pr": null,
+  "reslicing_packet_path": null,
+  "marker_split_evidence_path": null,
+  "full_diff": {
+    "reviewability_status": "warn",
+    "gate_exit_code": 0,
+    "reason": "total files 24 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1",
+    "metrics": {
+      "reviewable_loc": 0,
+      "production_files": 0,
+      "total_files": 24,
+      "primary_surface_count": 3,
+      "primary_surfaces": [
+        "docs/process",
+        "scheduler/runtime",
+        "seed/config"
+      ],
+      "greenfield": false,
+      "thresholds": {
+        "warn": {
+          "reviewable_loc": 400,
+          "production_files": 6,
+          "total_files": 15,
+          "primary_surfaces": 1
+        },
+        "block": {
+          "reviewable_loc": 800,
+          "production_files": 8,
+          "total_files": 25,
+          "primary_surfaces": 1
+        }
+      },
+      "warnings": [
+        "total files 24 exceeds warn threshold 15",
+        "primary surfaces 3 exceeds warn threshold 1"
+      ],
+      "blockers": []
+    },
+    "evidence_path": "/var/folders/jp/nt5kjq_11m3fvxg9ftwjjqsw0000gn/T//final-reviewability-gate.KZzYw5"
+  },
+  "marker_plan": {
+    "valid": false,
+    "fingerprint_matched": false,
+    "marker_count": 0,
+    "marker_order": [],
+    "status": "removed_after_structure_alignment",
+    "evidence_path": null
+  },
+  "emission": {
+    "route": "single_install_pr",
+    "markers": []
+  },
+  "warnings": [
+    {
+      "code": "reviewability_size_warning",
+      "severity": "warning",
+      "message": "Reviewability sizing result is marker-planning input.",
+      "source": "reviewability",
+      "details": {
+        "status": "block",
+        "mode": "tasks",
+        "evidence_path": ""
+      }
+    },
+    {
+      "code": "SINGLE_INSTALL_PR_ALIGNMENT",
+      "severity": "info",
+      "message": "DOC-003 remains a single Claude Code install PR aligned to the DOC-004 structure.",
+      "source": "pr-187-repair",
+      "details": {
+        "pull_request": 187,
+        "aligned_with": "DOC-004"
+      }
+    }
+  ],
+  "no_pr_assertions": {
+    "pr_created": false,
+    "pr": null,
+    "pr_body_generated": false,
+    "single_pr_create_invoked": false,
+    "gh_pr_create_invoked": false,
+    "multi_pr_emission_invoked": false
+  },
+  "single_pr": {
+    "valid": true,
+    "review_shape": "one-navigable-PR",
+    "target_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/187",
+    "alignment_target": "DOC-004 Codex install route structure"
+  }
+}

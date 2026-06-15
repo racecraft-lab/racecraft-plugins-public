@@ -46,10 +46,12 @@ Add the marketplace, then install the plugin:
 ```text
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
 /plugin install speckit-pro@racecraft-plugins-public
+/reload-plugins
 ```
 
-You can also browse installed and available plugins from Claude Code's
-`/plugin` UI.
+Verify the installed plugin from Claude Code's `/plugin` UI, then use
+namespaced plugin skills such as `/speckit-pro:speckit-status` and
+`/speckit-pro:speckit-coach`.
 
 ### Codex
 

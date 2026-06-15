@@ -71,9 +71,10 @@ and [quick start](https://github.github.io/spec-kit/quickstart.html).
 ```text
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
 /plugin install speckit-pro@racecraft-plugins-public
+/reload-plugins
 ```
 
-Claude Code plugin skills are namespaced, so SpecKit Pro commands use the
+Claude Code plugin skills are namespaced, so SpecKit Pro skills use the
 `/speckit-pro:<skill>` form.
 
 ### Codex
@@ -150,8 +151,8 @@ depth.
 
 ## First Successful Workflow
 
-Start with the lightest useful path. Use the Claude Code commands on the left or
-the Codex commands on the right.
+Start with the lightest useful path. Use the Claude Code namespaced skill
+invocations on the left or the Codex skill invocations on the right.
 
 | Step | Claude Code | Codex |
 |---|---|---|
@@ -186,9 +187,9 @@ The core idea is simple:
 3. Run phase gates so ambiguity does not silently drift forward.
 4. Implement only after the spec, plan, tasks, and analysis have enough detail.
 
-## Command Map
+## Skill Map
 
-| Command | Use it when... |
+| Skill | Use it when... |
 |---|---|
 | `speckit-prd` | You have a broad product or technical idea and need a PRD plus SPEC catalog. |
 | `speckit-coach` | You need SDD guidance, roadmap help, checklist domain advice, or gate troubleshooting. |
@@ -200,7 +201,7 @@ The core idea is simple:
 | `install` | Codex needs the bundled custom-agent TOML templates copied into its agent registry. |
 
 <details>
-<summary><strong>Claude Code and Codex command forms</strong></summary>
+<summary><strong>Claude Code and Codex skill forms</strong></summary>
 
 | Capability | Claude Code | Codex |
 |---|---|---|

@@ -1,0 +1,50 @@
+{
+  "feature_id": "doc-003-claude-code-marketplace-installation-path",
+  "mode": "tasks",
+  "status": "block",
+  "pass": false,
+  "is_size_only": true,
+  "normalization": {
+    "source": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks",
+    "reason": "The local reviewability gate blocked only on reviewable LOC and total file count; marker planning requires an explicit is_size_only flag for size-only task gate blocks."
+  },
+  "reviewable_loc": 1560,
+  "production_files": 1,
+  "total_files": 47,
+  "primary_surface_count": 3,
+  "primary_surfaces": [
+    "docs/process",
+    "other",
+    "seed/config"
+  ],
+  "greenfield": false,
+  "thresholds": {
+    "warn": {
+      "reviewable_loc": 400,
+      "production_files": 6,
+      "total_files": 15,
+      "primary_surfaces": 1
+    },
+    "block": {
+      "reviewable_loc": 800,
+      "production_files": 8,
+      "total_files": 25,
+      "primary_surfaces": 1
+    }
+  },
+  "exception_honored": false,
+  "exception_class": null,
+  "exceptions": {
+    "accepted": [],
+    "rejected": []
+  },
+  "warnings": [
+    "reviewable LOC 1560 exceeds warn threshold 400",
+    "total files 47 exceeds warn threshold 15",
+    "primary surfaces 3 exceeds warn threshold 1"
+  ],
+  "blockers": [
+    "reviewable LOC 1560 exceeds block threshold 800",
+    "total files 47 exceeds block threshold 25"
+  ]
+}
