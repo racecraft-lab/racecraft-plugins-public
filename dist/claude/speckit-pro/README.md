@@ -71,22 +71,31 @@ and [quick start](https://github.github.io/spec-kit/quickstart.html).
 ```text
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
 /plugin install speckit-pro@racecraft-plugins-public
+/reload-plugins
 ```
 
-Claude Code plugin skills are namespaced, so SpecKit Pro commands use the
+Claude Code plugin skills are namespaced, so SpecKit Pro skills use the
 `/speckit-pro:<skill>` form.
 
 ### Codex
 
-Open the marketplace repo in Codex, then open the plugin directory:
+Claude Code install commands are the separate DOC-003-owned path. For Codex,
+open this marketplace repo in Codex, then open the plugin directory:
 
 ```text
 codex
 /plugins
 ```
 
-Install SpecKit Pro from the repo marketplace. Then run the plugin install skill
-to register the bundled Codex custom agents:
+Install SpecKit Pro from the repo marketplace. Codex reads the repo-scoped
+marketplace from `.agents/plugins/marketplace.json`, and that marketplace points
+the plugin at the generated payload in `dist/codex/speckit-pro/`. Do not install
+Codex from the mixed authoring source tree at `speckit-pro/`.
+For personal or local Codex setups, copy or sync `dist/codex/speckit-pro/` and
+point `~/.agents/plugins/marketplace.json` at that copied payload.
+
+Then run the Codex-only install skill to register the bundled Codex custom
+agents:
 
 ```text
 @SpecKit Pro -> install
@@ -98,15 +107,52 @@ or:
 $install
 ```
 
-Restart Codex after that step. Codex skills and custom agents are separate
-runtime surfaces: the plugin ships skills directly, while the install skill
-copies `codex-agents/*.toml` templates into `.codex/agents/` or
-`~/.codex/agents/`.
+The default destination is `~/.codex/agents/`; `.codex/agents/` is the explicit
+project-scoped destination override. Verify the nine installer-copied TOML
+files:
+
+- `autopilot-fast-helper.toml`
+- `phase-executor.toml`
+- `clarify-executor.toml`
+- `checklist-executor.toml`
+- `analyze-executor.toml`
+- `implement-executor.toml`
+- `codebase-analyst.toml`
+- `spec-context-analyst.toml`
+- `domain-researcher.toml`
+
+Then restart Codex. Codex skills and custom agents are separate runtime
+surfaces: the plugin ships skills directly, while the install skill copies the
+named TOML templates into `.codex/agents/` or `~/.codex/agents/`.
+
+Codex loads installed plugins from
+`~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`. Treat that
+installed plugin cache as runtime state, not source of truth. If SpecKit Pro
+looks stale after an update, inspect the marketplace source or copied personal
+payload, the generated payload, the installed plugin cache, the selected
+custom-agent destination, and whether Codex was restarted. Rerun
+`@SpecKit Pro -> install` or `$install` after plugin updates that change bundled
+custom-agent TOML files, then restart Codex.
+
+Install safety is bounded here: Codex sandbox, approval, and network policy
+still apply. Git-backed marketplace setup can require network access or network
+approval, and the default `~/.codex/agents/` write is outside most project
+workspaces. Approve only the expected local write of the named SpecKit Pro TOML
+files, or rerun with `.codex/agents/` or narrower permissions. The generated
+Codex payload can include lifecycle hook configuration such as
+`codex-hooks.json`; hook behavior remains governed by Codex sandbox, approval,
+hook trust, and configured policy controls.
+
+For the detailed Codex install page, use
+[`docs-site/src/content/docs/install/codex.md`](../docs-site/src/content/docs/install/codex.md).
+DOC-007 owns deeper reference detail, and DOC-008 owns troubleshooting, update,
+rollback, permission repair, stale-cache forensics, and full security or trust
+depth.
 
 ## First Successful Workflow
 
-Start with the lightest useful path. Use the Claude Code commands on the left or
-the Codex commands on the right.
+Start with the lightest useful path. Use the Claude Code namespaced skill
+invocations on the left or the Codex skill invocations on the right.
 
 | Step | Claude Code | Codex |
 |---|---|---|
@@ -141,9 +187,9 @@ The core idea is simple:
 3. Run phase gates so ambiguity does not silently drift forward.
 4. Implement only after the spec, plan, tasks, and analysis have enough detail.
 
-## Command Map
+## Skill Map
 
-| Command | Use it when... |
+| Skill | Use it when... |
 |---|---|
 | `speckit-prd` | You have a broad product or technical idea and need a PRD plus SPEC catalog. |
 | `speckit-coach` | You need SDD guidance, roadmap help, checklist domain advice, or gate troubleshooting. |
@@ -155,7 +201,7 @@ The core idea is simple:
 | `install` | Codex needs the bundled custom-agent TOML templates copied into its agent registry. |
 
 <details>
-<summary><strong>Claude Code and Codex command forms</strong></summary>
+<summary><strong>Claude Code and Codex skill forms</strong></summary>
 
 | Capability | Claude Code | Codex |
 |---|---|---|
@@ -274,7 +320,16 @@ $install
 
 Then restart Codex. The plugin ships Codex skills directly, but custom agents
 must be copied into `.codex/agents/` or `~/.codex/agents/` before Codex can
-spawn them by name.
+spawn them by name. The expected installed output is the nine TOML files listed
+in the Codex install section above.
+
+If a plugin update changed bundled custom-agent TOML files, rerun
+`@SpecKit Pro -> install` or `$install`, verify the selected destination, and
+restart Codex again. If behavior still looks stale, check the marketplace source
+or copied personal payload, the generated payload, the installed plugin cache,
+the selected custom-agent destination, and restart state. Do not edit the
+installed plugin cache; DOC-008 owns deeper stale-cache troubleshooting,
+permission repair, update, and rollback procedures.
 
 </details>
 
@@ -354,6 +409,17 @@ sidecars describe appearance and dependencies for the skill.
 Custom Codex subagents are different. They are TOML templates under
 `codex-agents/` and must be copied into Codex's runtime agent directories by the
 `install` skill.
+
+The repo-scoped Codex marketplace is `.agents/plugins/marketplace.json`, which
+points at `dist/codex/speckit-pro/`. Personal or local Codex setups should copy
+or sync that generated payload, not install from `speckit-pro/`. Codex then
+loads the installed runtime copy from
+`~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`.
+
+The generated Codex payload can also include lifecycle hook configuration such
+as `codex-hooks.json`. DOC-004 keeps that as install-safety awareness only;
+DOC-007 owns deeper reference detail, and DOC-008 owns hook trust,
+troubleshooting, update, rollback, permission, stale-cache, and security depth.
 
 </details>
 

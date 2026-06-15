@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-002 completed and archived; DOC-003 and DOC-004 are next. Created 2026-06-12; refreshed 2026-06-14.
+> Status: DOC-003 and DOC-004 completed and archived; DOC-005, DOC-006, and DOC-007 are ready. Created 2026-06-12; refreshed 2026-06-15.
 
 ## Roadmap Overview
 
@@ -57,11 +57,11 @@ DOC-007 -> DOC-008
 |---|---|---|---|---|
 | DOC-001 | Static docs framework and IA spike | Completed/archived | DOC-001-workflow.md | Archived after PR #163 |
 | DOC-002 | Unified landing page and IA shell | Completed/archived | `.process/DOC-002-workflow.md` | Archived after PRs #173-#177 |
-| DOC-003 | Claude Code marketplace installation path | Pending | DOC-003-workflow.md | Ready |
-| DOC-004 | Codex marketplace installation path | Pending | DOC-004-workflow.md | Ready |
-| DOC-005 | First successful workflow tutorial | Pending | DOC-005-workflow.md | Blocked by DOC-003, DOC-004 |
-| DOC-006 | Safe interactive selector and validation aids | Pending | DOC-006-workflow.md | Blocked by DOC-002, DOC-003, DOC-004 |
-| DOC-007 | Command, workflow, manifest, and file-layout reference | Pending | DOC-007-workflow.md | Blocked by DOC-003, DOC-004 |
+| DOC-003 | Claude Code marketplace installation path | Completed/archived | `.process/DOC-003-workflow.md` | Archived after PR #187 |
+| DOC-004 | Codex marketplace installation path | Completed/archived | `.process/DOC-004-workflow.md` | Archived after PR #186 |
+| DOC-005 | First successful workflow tutorial | Ready | DOC-005-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
+| DOC-006 | Safe interactive selector and validation aids | Ready | DOC-006-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
+| DOC-007 | Command, workflow, manifest, and file-layout reference | Ready | DOC-007-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Pending | DOC-008-workflow.md | Blocked by DOC-007 |
 | DOC-009 | Maintainer and contributor release workflow | Pending | DOC-009-workflow.md | Blocked by DOC-007 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Blocked by DOC-002, DOC-006 |
@@ -126,6 +126,8 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-002 | **Enables:** DOC-005, DOC-007, DOC-008
 
+**Status:** Completed and archived after PR #187. Canonical Claude install guidance lives in `docs-site/src/content/docs/install/claude-code.md`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md`.
+
 **Goal:** Ship Claude-specific install/update/remove and invocation docs.
 
 **Reviewability Budget:** Primary surface: docs/process |
@@ -153,6 +155,8 @@ Budget result: within budget
 ### DOC-004: Codex marketplace installation path
 
 **Priority:** P1 | **Depends On:** DOC-002 | **Enables:** DOC-005, DOC-007, DOC-008
+
+**Status:** Completed and archived after PR #186. Canonical Codex install guidance lives in `docs-site/src/content/docs/install/codex.md`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md`.
 
 **Goal:** Ship Codex-specific install/update/remove and custom-agent registration docs.
 

@@ -46,14 +46,19 @@ Add the marketplace, then install the plugin:
 ```text
 /plugin marketplace add racecraft-lab/racecraft-plugins-public
 /plugin install speckit-pro@racecraft-plugins-public
+/reload-plugins
 ```
 
-You can also browse installed and available plugins from Claude Code's
-`/plugin` UI.
+Verify the installed plugin from Claude Code's `/plugin` UI, then use
+namespaced plugin skills such as `/speckit-pro:speckit-status` and
+`/speckit-pro:speckit-coach`.
 
 ### Codex
 
-Open this repository in Codex, then open the plugin directory:
+Claude Code commands are the separate DOC-003-owned path; use the
+[Claude Code install guide](./docs-site/src/content/docs/install/claude-code.md)
+for that runtime. For Codex, open this repository in Codex, then open the plugin
+directory:
 
 ```text
 codex
@@ -61,9 +66,13 @@ codex
 ```
 
 Codex reads the repo-scoped marketplace from
-[`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json). After
-installing SpecKit Pro, run the plugin's Codex install skill so its bundled
-custom-agent templates are copied into Codex's agent registry:
+[`.agents/plugins/marketplace.json`](./.agents/plugins/marketplace.json). That
+marketplace points SpecKit Pro at the generated Codex payload,
+[`dist/codex/speckit-pro/`](./dist/codex/speckit-pro/). Do not install Codex
+from the mixed authoring tree at [`speckit-pro/`](./speckit-pro/).
+
+After installing SpecKit Pro, run the plugin's Codex install skill so its
+bundled custom-agent TOML files are copied into Codex's agent registry:
 
 ```text
 @SpecKit Pro -> install
@@ -75,15 +84,57 @@ or:
 $install
 ```
 
-Restart Codex after that install step so the custom agents are registered.
+The default destination is `~/.codex/agents/`; choose `.codex/agents/` only when
+you intentionally want project-scoped custom agents. Verify these nine
+installer-copied TOML files only:
 
-For personal Codex installs, follow the official local-plugin layout and point
-your personal marketplace at the generated Codex payload, not the mixed authoring
-tree:
+- `autopilot-fast-helper.toml`
+- `phase-executor.toml`
+- `clarify-executor.toml`
+- `checklist-executor.toml`
+- `analyze-executor.toml`
+- `implement-executor.toml`
+- `codebase-analyst.toml`
+- `spec-context-analyst.toml`
+- `domain-researcher.toml`
+
+Then restart Codex. Also restart Codex after plugin enablement changes,
+custom-agent refreshes, or relevant Codex config edits.
+
+Codex loads installed plugins from the installed plugin cache at
+`~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`. Treat that as
+runtime state, not the source of truth. If SpecKit Pro looks stale after an
+update, check the marketplace source or copied personal payload, the generated
+payload, the installed plugin cache, the selected custom-agent destination, and
+whether Codex was restarted. Rerun `@SpecKit Pro -> install` or `$install` after
+a plugin update that changes bundled custom-agent TOML files, then restart
+Codex again. Do not edit the installed plugin cache.
+
+Install safety stays bounded here: Codex sandbox, approval, and network policy
+still apply. Git-backed marketplace setup can require network access or network
+approval. Writing to `~/.codex/agents/` is outside most project workspaces, so
+approve only the expected local write of the named SpecKit Pro TOML files, or
+rerun with `.codex/agents/` or narrower permissions. The generated Codex payload
+can include lifecycle hook configuration such as `codex-hooks.json`; hook
+behavior remains governed by Codex sandbox, approval, hook trust, and configured
+policy controls.
+
+For personal Codex installs, follow the official local-plugin layout: copy or
+sync the generated Codex payload, then point
+`~/.agents/plugins/marketplace.json` at that copied payload, not the mixed
+authoring tree:
 
 ```text
 dist/codex/speckit-pro/
 ```
+
+For deeper Codex file-layout details, use the
+[DOC-007 reference shell](./docs-site/src/content/docs/reference.md). For
+trust, hook policy, update, rollback, permission repair, and stale-cache
+forensics, use the
+[DOC-008 security and trust](./docs-site/src/content/docs/security-and-trust.md)
+and [DOC-008 troubleshooting](./docs-site/src/content/docs/troubleshooting.md)
+shells.
 
 ## How This Repo Is Organized
 
