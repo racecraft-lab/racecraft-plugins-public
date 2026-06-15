@@ -113,18 +113,21 @@ installation does not automatically register those TOML custom agents.
 
 **Decision**: Include a short safety block covering sandbox mode, approval
 policy, network access, outside-workspace writes, installed cache/source
-distinction, and external app/MCP authentication implications only as first
-install expectations.
+distinction, bundled lifecycle hook configuration, and external app/MCP
+authentication implications only as first install expectations.
 
 **Rationale**: OpenAI approvals/security docs describe sandbox mode and approval
 policy as separate controls and note local defaults around workspace-limited
-writes and network approvals. DOC-004 must help users approve only the expected
-local write of named TOML files or reject and rerun with a project-scoped
-destination. DOC-008 owns the full trust/security lifecycle.
+writes and network approvals. OpenAI plugin docs describe bundled hooks as part
+of the plugin package, and local manifests point to `codex-hooks.json`. DOC-004
+must help users approve only the expected local write of named TOML files or
+reject and rerun with a project-scoped destination, while naming bundled hook
+configuration without expanding into hook policy or lifecycle security. DOC-008
+owns the full trust/security lifecycle.
 
 **Alternatives considered**:
 
-- Full trust model in DOC-004: rejected as DOC-008 scope.
+- Full trust model or hook policy guide in DOC-004: rejected as DOC-008 scope.
 - Defer trust guidance entirely: rejected because first-time install includes
   plugin installation, network decisions, and possible writes to
   `~/.codex/agents/`.
@@ -145,6 +148,32 @@ current DOC-002 link-validation hook even though it presently aliases a build.
   docs validation hardening.
 - Skip the full repo suite for docs-only work: rejected because Grill Me Q7
   selected the stricter full repo suite.
+
+## Decision 8: Keep stale-update recovery as a bounded checkpoint
+
+**Decision**: Add a short stale-after-update checkpoint to DOC-004 instead of a
+full troubleshooting matrix. The checkpoint tells users to inspect the
+marketplace source or copied personal payload, generated payload, installed
+plugin cache, selected custom-agent destination, and restart state. It also
+tells users to rerun `@SpecKit Pro -> install` or `$install` after plugin
+updates that change bundled custom-agent TOML files, then restart Codex.
+
+**Rationale**: OpenAI's local plugin guidance says to update the plugin
+directory targeted by the marketplace entry and restart Codex after plugin
+changes. OpenAI's skills guidance says Codex detects skill changes
+automatically, but users should restart Codex if an update does not appear. The
+SpecKit Pro install skill/script already treats `install` as an install,
+refresh, repair, and verify path for Codex custom-agent TOML files and always
+finishes by telling users to restart Codex.
+
+**Alternatives considered**:
+
+- Full symptom decision tree in DOC-004: rejected because DOC-008 owns
+  troubleshooting, stale-cache forensics, update/remove, rollback, and the full
+  trust model.
+- No stale guidance in DOC-004: rejected because the Codex install path must
+  give users a shallow checkpoint when update or custom-agent state appears
+  stale before handing off to DOC-007 or DOC-008.
 
 ## Source Index
 

@@ -39,11 +39,11 @@ Re-read it before each phase. The design concept is the source of truth for the 
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Complete | Created `spec.md` with 4 user stories, 17 FRs, 10 acceptance scenarios, and 0 clarification markers |
+| Specify | `/speckit-specify` | Complete | Created `spec.md` with 4 user stories, 19 FRs, 10 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | 15 questions resolved across official path semantics, custom-agent registration, and scope/validation; 6 consensus items logged; G2 passed |
 | Plan | `/speckit-plan` | Complete | Created plan.md, research.md, data-model.md, content contract, and quickstart without changing manifests, payloads, installer behavior, or agent templates |
-| Checklist | `/speckit-checklist` | Pending | Recommended domains: UX, accessibility, security, and error-handling |
-| Tasks | `/speckit-tasks` | Pending | Produce vertical docs tasks ordered by source refresh, source evidence, docs implementation, and validation |
+| Checklist | `/speckit-checklist` | Complete | UX, accessibility, security, and error-handling checklists completed with 0 remaining gaps |
+| Tasks | `/speckit-tasks` | In Progress | Produce vertical docs tasks ordered by source refresh, source evidence, docs implementation, and validation |
 | Analyze | `/speckit-analyze` | Pending | Check cross-artifact consistency, platform leakage, source freshness, and validation coverage |
 | Implement | `/speckit-implement` | Pending | Implement docs-only Codex install guidance and run full repo suite plus docs checks |
 
@@ -203,9 +203,9 @@ Codex users need a precise, source-backed install path for Racecraft Public Plug
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 17 |
+| Functional Requirements | 19 |
 | User Stories | 4 |
-| Acceptance Criteria | AC-4.1 through AC-4.6 covered by FR-001 through FR-017 and SC-001 through SC-005 |
+| Acceptance Criteria | AC-4.1 through AC-4.6 covered by FR-001 through FR-019 and SC-001 through SC-007 |
 
 ### Files Generated
 
@@ -378,10 +378,10 @@ Focus on DOC-004 install/update/remove checkpoints:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| UX | Pending | Pending | Pending |
-| Accessibility | Pending | Pending | Pending |
-| Security | Pending | Pending | Pending |
-| Error-handling | Pending | Pending | Pending |
+| UX | 22 | 0 | spec.md, plan.md, data-model.md, contract, quickstart |
+| Accessibility | 19 | 6 remediated; 0 remain | Added semantic structure, matrix fallback, table labeling, descriptive-link, command-context, and text-visible safety-warning requirements |
+| Security | 22 | 1 remediated; 0 remain | Added bounded lifecycle hook payload awareness to spec, plan, research, data model, contract, and quickstart; DOC-008 retains hook trust/policy depth |
+| Error-handling | 18 | 4 remediated; 0 remain | Added bounded stale-after-update checkpoint requirements, cache/source mismatch symptoms, `$install` rerun plus restart trigger for custom-agent updates, and DOC-007/DOC-008 next-link requirements |
 
 ---
 

@@ -14,12 +14,29 @@ task-first order:
    - Repo-scoped marketplace.
    - Personal/local marketplace.
    - CLI marketplace add.
+   - Clear table headers/caption when rendered as a table, plus a compact
+     list/card alternative if the matrix is too dense for mobile or
+     screen-reader navigation.
 4. Plugin installation through Codex plugin browser (`codex` then `/plugins`).
 5. Custom-agent registration checklist.
 6. Expected installer-copied TOML file list.
 7. Restart and verification guidance.
-8. Bounded install-safety block.
-9. Source evidence and deferred DOC-007/DOC-008 boundaries.
+8. Bounded stale-after-update checkpoint:
+   - What to inspect when the plugin appears stale after update: marketplace
+     source, copied personal payload, generated payload, installed plugin cache,
+     selected custom-agent destination, and restart state.
+   - When to rerun `@SpecKit Pro -> install` or `$install` after bundled
+     custom-agent TOML updates, then restart Codex.
+   - Observable symptoms such as old skill text, old plugin metadata, unchanged
+     custom-agent behavior, stale copied personal payload, or source/payload
+     mismatch.
+   - Links to DOC-008 for deeper troubleshooting, update/remove, rollback, and
+     stale-cache forensics and DOC-007 for reference details.
+9. Bounded install-safety block covering sandbox, approvals, network, cache
+   source of truth, selected custom-agent destination permissions, bundled
+   lifecycle hook configuration, and external app or MCP authentication
+   implications only as first-install expectations.
+10. Source evidence and deferred DOC-007/DOC-008 boundaries.
 
 ## Required README Alignment
 
@@ -31,11 +48,31 @@ to the same critical invariants:
 - Do not install Codex from `speckit-pro/`.
 - Installed plugin cache is runtime state, not source of truth.
 - Run `@SpecKit Pro -> install` or `$install` after plugin install.
-- Restart Codex after plugin enablement, custom-agent install, or relevant
-  config edits.
+- Rerun `@SpecKit Pro -> install` or `$install` after plugin updates that change
+  bundled custom-agent TOML files, then restart Codex.
+- Restart Codex after plugin enablement, custom-agent install or refresh, or
+  relevant config edits.
 - Verification uses the nine installer-copied TOML custom-agent files.
-- DOC-004 covers first-install safety; DOC-008 owns deeper trust, update,
-  rollback, and troubleshooting.
+- Stale-after-update guidance stays shallow: check marketplace source or copied
+  personal payload, generated payload, installed cache, selected custom-agent
+  destination, and restart state, then link to DOC-008 or DOC-007 for depth.
+- DOC-004 covers first-install safety, including bounded lifecycle hook payload
+  awareness; DOC-008 owns deeper trust, update, rollback, hook policy, and
+  troubleshooting.
+
+## Accessibility Structure Requirements
+
+The detailed docs-site Codex page must:
+
+- Use semantic heading order for install decisions, custom-agent registration,
+  verification, safety, and source evidence.
+- Prefer ordered or unordered lists for procedures, TOML inventories, and
+  command groups instead of dense prose.
+- Use descriptive link text that names the destination or purpose.
+- Label command snippets by Codex platform, install scope, and source-of-truth
+  context.
+- Render safety warnings as visible text; styling, icons, or colors may support
+  the warning but must not be the only signal.
 
 ## Command And Path Snippet Review Table
 
@@ -61,6 +98,11 @@ Codex command/path snippet. Minimum expected checklist:
 | `.codex/agents/` | OpenAI Subagents docs and local install skill | Project-scoped destination override. |
 | `~/.codex/agents/` | OpenAI Subagents docs and local install skill | Default destination. |
 
+Every command block that contains these snippets must include nearby text naming
+the platform (`Codex`), install scope (`repo-scoped`, `personal/local`, or
+`CLI marketplace add`), and whether the snippet is source, generated payload,
+installed cache, or custom-agent destination context.
+
 ## Custom-Agent Verification List
 
 The docs must list exactly these files as expected installed output:
@@ -83,8 +125,10 @@ copy explicitly says it is not part of DOC-004's expected installed output.
 - Do not add Claude Code install steps except as a cross-link to the Claude path.
 - Do not document unsupported marketplace source forms.
 - Do not tell users to edit the installed plugin cache.
-- Do not promise sandbox, approval, network, app, MCP, or external-service
-  access beyond what Codex policy and user approval allow.
+- Do not promise sandbox, approval, network, lifecycle hook, app, MCP, or
+  external-service access beyond what Codex policy and user approval allow.
+- Do not turn the stale-after-update checkpoint into a symptom decision tree,
+  recovery matrix, cache forensics guide, or rollback procedure.
 - Do not expand into DOC-007 reference-library depth or DOC-008 troubleshooting,
   update/remove/rollback, managed policy, stale-cache forensics, or full trust
   model.
@@ -96,6 +140,16 @@ copy explicitly says it is not part of DOC-004's expected installed output.
 - The generated payload warning appears before any personal/local install
   instructions.
 - The install skill and restart sequence appears after plugin install.
+- The stale-after-update checkpoint names observable symptoms, surfaces to
+  inspect, rerun/restart triggers, and DOC-007/DOC-008 next links without
+  duplicating deeper troubleshooting.
 - Security-minded readers see bounded safety guidance before approving writes
   or network-backed setup.
+- Bundled lifecycle hooks are identified as plugin payload configuration, while
+  hook trust analysis, policy tuning, and lifecycle security are deferred to
+  DOC-008.
+- Safety warnings are readable as text and do not rely on callout color or icon
+  alone.
+- Dense install path comparisons have a mobile-readable or screen-reader-friendly
+  alternative.
 - All three entry points agree on the same install invariants.

@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-14T23:38:49Z",
-  "active_step": "Phase 4: Checklist - UX",
+  "updated_at": "2026-06-15T00:35:16Z",
+  "active_step": "Phase 5: Tasks",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -203,6 +203,55 @@
       "bash tests/speckit-pro/run-all.sh: 2947/2947 passed"
     ]
   },
+  "phase4": {
+    "checklists": {
+      "ux": {
+        "status": "completed",
+        "items": 22,
+        "gaps_fixed": 1,
+        "gaps_remaining": 0,
+        "consensus": "skipped: no unresolved items",
+        "checklist_file": "specs/doc-004-codex-marketplace-installation-path/checklists/ux.md"
+      },
+      "accessibility": {
+        "status": "completed",
+        "items": 19,
+        "gaps_fixed": 6,
+        "gaps_remaining": 0,
+        "consensus": "skipped: no unresolved items",
+        "checklist_file": "specs/doc-004-codex-marketplace-installation-path/checklists/accessibility.md",
+        "requirements_added": [
+          "FR-018",
+          "SC-006"
+        ]
+      },
+      "security": {
+        "status": "completed",
+        "items": 22,
+        "gaps_fixed": 1,
+        "gaps_remaining": 0,
+        "consensus": "skipped: no unresolved items",
+        "checklist_file": "specs/doc-004-codex-marketplace-installation-path/checklists/security.md",
+        "remediation": "Added bounded lifecycle hook payload awareness while preserving DOC-008 ownership of hook trust analysis and policy depth."
+      },
+      "error_handling": {
+        "status": "completed",
+        "items": 18,
+        "gaps_fixed": 4,
+        "gaps_remaining": 0,
+        "consensus": "skipped: no unresolved items",
+        "checklist_file": "specs/doc-004-codex-marketplace-installation-path/checklists/error-handling.md",
+        "requirements_added": [
+          "FR-019",
+          "SC-007"
+        ],
+        "remediation": "Added bounded stale-after-update checkpoints, cache/source mismatch symptoms, custom-agent $install rerun plus restart guidance, and DOC-007/DOC-008 next-link handoffs."
+      }
+    },
+    "marker_count": {
+      "gaps": 0
+    }
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -214,15 +263,15 @@
     {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation", "status": "completed"},
     {"step": "Phase 2: Clarify - Session 3: Scope, consistency, and validation Consensus", "status": "completed"},
     {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - UX", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
-    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Security", "status": "pending"},
-    {"step": "Phase 4: Checklist - Security Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Error-handling", "status": "pending"},
-    {"step": "Phase 4: Checklist - Error-handling Consensus", "status": "pending"},
-    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX", "status": "completed"},
+    {"step": "Phase 4: Checklist - UX Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Accessibility", "status": "completed"},
+    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Security", "status": "completed"},
+    {"step": "Phase 4: Checklist - Security Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error-handling", "status": "completed"},
+    {"step": "Phase 4: Checklist - Error-handling Consensus", "status": "completed"},
+    {"step": "Phase 5: Tasks", "status": "in_progress"},
     {"step": "Phase 6: Analyze", "status": "pending"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},

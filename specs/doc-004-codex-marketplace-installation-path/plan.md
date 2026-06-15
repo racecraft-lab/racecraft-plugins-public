@@ -10,7 +10,10 @@ Deliver DOC-004 as a documentation-only Codex install path. Expand the existing
 Astro/Starlight Codex install page, then align the root README and SpecKit Pro
 README so all three entry points agree on repo-scoped marketplace use, personal
 or local payload layout, installed plugin cache behavior, `$install`, restart,
-custom-agent verification, and bounded first-install safety.
+custom-agent verification, and bounded first-install safety including lifecycle
+hook payload awareness. Include a shallow stale-after-update checkpoint that
+names the surfaces to inspect, when to rerun `$install`, when to restart, and
+where to go for deeper DOC-007/DOC-008 reference and troubleshooting.
 
 No runtime, manifest, generated payload, install script, TOML template, hook,
 release automation, or marketplace behavior changes are planned.
@@ -32,6 +35,8 @@ release automation, or marketplace behavior changes are planned.
 **Performance Goals**: N/A for runtime performance; docs must remain scannable and task-first
 
 **Constraints**: Consume the DOC-002 docs-site shell; keep one focused Codex install page; keep DOC-004 bounded to first-install safety; defer reference depth to DOC-007 and troubleshooting/security lifecycle depth to DOC-008
+
+**Accessibility Constraints**: The Codex install page must use semantic headings, lists, table headers/captions where tables remain appropriate, descriptive links, labeled command groups, and text-visible warnings. The install path matrix must stay readable on mobile and for screen-reader users by providing a compact list/card alternative when the table becomes dense.
 
 **Scale/Scope**: Three user-facing documentation entry points plus plan artifacts
 
@@ -147,6 +152,10 @@ Research resolved the platform wording and implementation boundaries:
 - Source/package drift is resolved as a documentation decision: user-facing
   verification lists the installer-copied nine TOML files and does not list
   `uat-runbook-author.toml` as expected installed output.
+- OpenAI's local plugin guidance and SpecKit Pro's install skill both support a
+  bounded stale-update checkpoint: after plugin changes, update the marketplace
+  target or copied payload and restart Codex; when bundled custom-agent TOML
+  templates change, rerun `$install`, verify the copied files, then restart.
 
 ## Phase 1: Design & Contracts
 
@@ -162,15 +171,29 @@ Design decisions:
   model.
 - Include an install path matrix with repo-scoped marketplace, personal/local
   marketplace, and CLI marketplace source forms.
+- Keep the install path matrix accessible: use clear headers and caption/summary
+  context if rendered as a table, and provide a mobile-readable or
+  screen-reader-friendly list/card alternative when the matrix would otherwise
+  require difficult horizontal scanning.
 - Place generated payload guidance near the top: `dist/codex/speckit-pro/` is
   the installable Codex payload; `speckit-pro/` is the mixed authoring source
   tree.
 - Include a custom-agent checklist after plugin installation: run
   `@SpecKit Pro -> install` or `$install`, confirm destination, verify the nine
   TOML filenames, restart Codex, then run a simple `$speckit-*` flow.
+- Include a bounded stale/update checkpoint after verification: if a plugin
+  appears stale, inspect the marketplace source or copied personal payload,
+  generated payload, installed plugin cache, selected custom-agent destination,
+  and restart state; mention symptoms such as old skill copy, old plugin
+  metadata, unchanged custom-agent behavior, or copied payload drift; link to
+  DOC-008 for deeper troubleshooting/update/remove/rollback and DOC-007 for
+  reference depth.
 - Keep the safety block limited to sandbox, approvals, network access,
-  outside-workspace writes, installed cache/source distinction, and external
-  app/MCP authentication as first-install expectations.
+  outside-workspace writes, installed cache/source distinction, bundled
+  lifecycle hook configuration, and external app/MCP authentication as
+  first-install expectations, with warning text
+  visible in the copy rather than conveyed only by color, icon, or callout
+  styling.
 
 ## Source-Evidence Notes
 
@@ -199,6 +222,10 @@ Implementation PR readiness requires:
 3. `bash tests/speckit-pro/run-all.sh`
 4. Manual source-backed command-snippet review covering every changed Codex
    command/path snippet.
+5. Manual accessibility review covering semantic headings/lists/tables,
+   descriptive link text, command snippet labels by platform and install scope,
+   text-visible warnings, and install path matrix readability on mobile and
+   screen readers.
 
 The current DOC-002 `validate:links` script aliases `pnpm build`; DOC-004 will
 use it as-is and will not change docs-site validation scripts.

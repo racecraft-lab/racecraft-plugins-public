@@ -22,9 +22,12 @@ objects the Codex install page and README alignment must present consistently.
 
 - All three entry points must agree on marketplace surfaces, generated payload
   target, installed plugin cache behavior, `$install`, restart, verification,
-  and bounded install-safety guidance.
+  bounded stale-update checkpoints, and bounded install-safety guidance.
 - README surfaces may be concise, but they must not contradict the docs-site
   page.
+- The detailed docs-site entry point must preserve accessible document
+  structure: semantic headings, list-based procedures, descriptive links, and
+  text-visible warnings.
 
 ## Entity: Install Path
 
@@ -45,14 +48,18 @@ objects the Codex install page and README alignment must present consistently.
 - Docs must not direct users to install Codex from `speckit-pro/`.
 - CLI examples may include local path, `owner/repo[@ref]`, HTTP or HTTPS Git
   URL, SSH Git URL, `--ref`, repeatable `--sparse PATH`, and `--json` only.
+- Install path comparisons must remain understandable without relying on a wide
+  table alone: use clear table headers/caption when tabular, and add a compact
+  list/card alternative if the matrix is dense on mobile or for screen-reader
+  navigation.
 
 ## Entity: Codex Surface
 
 **Fields**
 
 - `surface_name`: marketplace file, source manifest, generated payload manifest,
-  installed plugin cache, bundled skill, skill metadata sidecar, or custom-agent
-  TOML file
+  installed plugin cache, bundled skill, skill metadata sidecar, lifecycle hook
+  configuration, or custom-agent TOML file
 - `path_pattern`: local path or official path pattern
 - `role`: authoring, distribution, runtime cache, or registration target
 - `editable_source_of_truth`: yes or no
@@ -65,6 +72,9 @@ objects the Codex install page and README alignment must present consistently.
   installed plugin cache, not the source of truth.
 - `speckit-pro/codex-agents/*.toml` is source/package evidence; installed
   verification follows the installer-copied set.
+- `codex-hooks.json` is plugin payload configuration referenced by the Codex
+  plugin manifest when present; DOC-004 may identify it as bundled payload
+  evidence, while DOC-008 owns hook trust analysis and policy tuning.
 
 ## Entity: Custom-Agent Checklist
 
@@ -96,6 +106,33 @@ objects the Codex install page and README alignment must present consistently.
   model lines, restart instruction, and preservation of unrelated user agents.
 - Do not introduce a new doctor/list command.
 - Do not tell users to edit installed cache or generated TOML files manually.
+- After a plugin update that changes bundled custom-agent TOML files, DOC-004
+  may tell users to rerun `$install`, verify the expected copied files, and
+  restart Codex before expecting updated custom agents.
+
+## Entity: Stale Update Checkpoint
+
+**Fields**
+
+- `symptoms`: observable stale behavior without full diagnosis
+- `surfaces_to_check`: marketplace source, copied personal payload, generated
+  payload, installed plugin cache, custom-agent destination, restart state
+- `bounded_action`: refresh the source/payload, rerun `$install` when agent
+  templates changed, restart Codex
+- `next_links`: DOC-008 troubleshooting/trust/update depth and DOC-007 reference
+  details
+
+**Validation rules**
+
+- Mention symptoms such as old skill text, old plugin metadata, unchanged
+  custom-agent behavior, stale copied personal payloads, or source/payload
+  mismatch.
+- Keep this as a short checkpoint, not a troubleshooting decision tree.
+- Do not tell users to edit the installed plugin cache.
+- Link to DOC-008 for stale-cache forensics, permission troubleshooting,
+  update/remove, rollback, and full trust/security depth.
+- Link to DOC-007 for command, manifest, file-layout, skill, agent, and payload
+  reference depth.
 
 ## Entity: Safety Notice
 
@@ -106,6 +143,8 @@ objects the Codex install page and README alignment must present consistently.
 - `network_expectation`: when Git-backed setup may need network access
 - `destination_expectation`: whether the write target is inside or outside the
   workspace
+- `hook_expectation`: that lifecycle hook configuration may be bundled with the
+  plugin payload and remains subject to Codex controls
 - `deferred_topics`: DOC-008 topics not covered here
 
 **Validation rules**
@@ -118,6 +157,11 @@ objects the Codex install page and README alignment must present consistently.
   network access or approval.
 - Do not imply plugin install or `$install` bypasses sandbox or approval
   controls.
+- Do not imply bundled lifecycle hooks bypass sandbox, approval, or configured
+  policy controls; full hook trust analysis and policy guidance belong to
+  DOC-008.
+- Safety warnings must be visible in text and not conveyed only by color,
+  iconography, or callout styling.
 - Defer full trust model, managed policy, stale-cache diagnosis, permission
   troubleshooting, update/remove/rollback, and hook/MCP/agent security depth to
   DOC-008.
@@ -137,6 +181,8 @@ objects the Codex install page and README alignment must present consistently.
   checklist before PR readiness.
 - Snippets must be labeled by install context so Claude Code commands do not
   leak into the Codex path.
+- Command snippets must be grouped or labeled by platform, install scope, and
+  source-of-truth context.
 
 ## State Transitions
 
@@ -156,5 +202,6 @@ Cache refresh guidance is state-aware:
 Edit source or generated payload
   -> Update marketplace source or copied payload
   -> Reinstall/refresh plugin
+  -> Rerun $install if bundled custom-agent TOML files changed
   -> Restart Codex when plugin or agent state changes
 ```

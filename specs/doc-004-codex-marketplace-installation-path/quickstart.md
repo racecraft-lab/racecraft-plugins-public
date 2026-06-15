@@ -17,26 +17,55 @@ does not execute a real marketplace install or write to a user's Codex config.
 
 1. Open `docs-site/src/content/docs/install/codex.md`.
 2. Confirm it starts with the Codex user's install decision, not marketing copy.
-3. Confirm the page distinguishes:
+3. Confirm headings are semantic and task-oriented enough for screen-reader
+   navigation: install decision, source/payload/cache distinction, install
+   paths, custom-agent registration, verification, safety, and source evidence.
+4. Confirm link text describes the destination or purpose without relying on
+   surrounding prose alone.
+5. Confirm command snippets are grouped or labeled by Codex platform, install
+   scope, and source-of-truth context.
+6. Confirm safety warnings are visible in text and not conveyed only through
+   callout color, icons, or styling.
+7. Confirm any install path matrix has clear headers/caption context and, if
+   dense, a compact list/card alternative for mobile and screen-reader users.
+8. Confirm the page distinguishes:
    - `.agents/plugins/marketplace.json`
    - `speckit-pro/.codex-plugin/plugin.json`
    - `dist/codex/speckit-pro/.codex-plugin/plugin.json`
    - `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/`
-4. Confirm personal/local guidance points at `dist/codex/speckit-pro/` or a
+9. Confirm personal/local guidance points at `dist/codex/speckit-pro/` or a
    copy/sync of that payload, not `speckit-pro/`.
-5. Confirm repo, personal/local, and CLI install contexts are visibly separate.
-6. Confirm the custom-agent checklist includes:
+10. Confirm repo, personal/local, and CLI install contexts are visibly separate.
+11. Confirm the custom-agent checklist includes:
    - `@SpecKit Pro -> install`
    - `$install`
    - default `~/.codex/agents/`
    - optional project-scoped `.codex/agents/`
+   - rerun `$install` after plugin updates that change bundled custom-agent
+     TOML files
    - restart requirement
    - the nine installer-copied TOML filenames
-7. Confirm `uat-runbook-author.toml` is not listed as an expected installed file.
-8. Confirm the install-safety block is limited to first-install sandbox,
-   approval, network, outside-workspace write, installed cache/source, and
-   external app/MCP authentication expectations.
-9. Confirm deeper reference/troubleshooting/security lifecycle topics are
+12. Confirm `uat-runbook-author.toml` is not listed as an expected installed file.
+13. Confirm the bounded stale-after-update checkpoint names:
+   - symptoms such as old skill text, old plugin metadata, unchanged
+     custom-agent behavior, stale copied personal payload, or source/payload
+     mismatch
+   - surfaces to inspect: marketplace source or copied payload, generated
+     payload, installed plugin cache, selected custom-agent destination, and
+     restart state
+   - next links to DOC-008 for deeper troubleshooting/update/remove/rollback
+     and DOC-007 for reference details
+14. Confirm the stale-after-update checkpoint does not become a troubleshooting
+   matrix, cache forensics guide, rollback procedure, or instruction to edit the
+   installed plugin cache.
+15. Confirm the install-safety block is limited to first-install sandbox,
+   approval, network, outside-workspace write, installed cache/source, bundled
+   lifecycle hook configuration, and external app/MCP authentication
+   expectations.
+16. Confirm bundled lifecycle hooks are identified as plugin payload
+   configuration when present, with hook trust analysis, policy tuning, and
+   lifecycle security deferred to DOC-008.
+17. Confirm deeper reference/troubleshooting/security lifecycle topics are
    deferred to DOC-007 or DOC-008.
 
 ## README Consistency Review
@@ -48,6 +77,7 @@ does not execute a real marketplace install or write to a user's Codex config.
    - generated Codex payload target
    - installed plugin cache behavior
    - install skill invocation
+   - stale-after-update checkpoint
    - restart requirement
    - custom-agent verification list
    - bounded safety wording
@@ -76,8 +106,17 @@ For every changed Codex command or path snippet, record source evidence from:
   - `speckit-pro/codex-agents/*.toml`
   - `speckit-pro/codex-hooks.json`
 
+For hook-related snippets or safety claims, confirm the docs cite the Codex
+plugin manifest `hooks` field or `speckit-pro/codex-hooks.json` as local source
+evidence and do not imply hook execution bypasses Codex sandbox, approval, or
+configured policy controls.
+
 At minimum, cover the snippets listed in
 `contracts/codex-install-content-contract.md`.
+
+For accessibility, also record whether each changed command block is labeled by
+Codex platform, install scope, and source-of-truth context, and whether nearby
+links use descriptive link text.
 
 ## Automated Validation
 
@@ -112,7 +151,7 @@ The implementation PR should include:
   changed.
 - Review order: docs-site Codex page first, then README alignment.
 - Scope budget from `plan.md`.
-- Traceability from FR-001 through FR-017 or SC-001 through SC-005 to changed
+- Traceability from FR-001 through FR-019 or SC-001 through SC-007 to changed
   files and validation evidence.
 - The manual command-snippet source review.
 - Automated validation command output summaries.
