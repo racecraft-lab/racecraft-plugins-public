@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T02:32:50Z",
-  "active_step": "Post: PR Packet/Body Generation",
+  "updated_at": "2026-06-15T02:37:28Z",
+  "active_step": "Post: PR Creation",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -564,7 +564,14 @@
       ]
     },
     "pr_packet_body_generation": {
-      "status": "pending"
+      "status": "completed",
+      "result": "pass",
+      "packet_mode": "single",
+      "title_value": "feat(speckit-pro): Add codex marketplace installation path",
+      "base_branch": "main",
+      "head_branch": "doc-004-codex-marketplace-installation-path",
+      "pr_blocked": false,
+      "artifact_policy": "transient packet/body used for PR creation; not committed to branch"
     },
     "pr_creation": {
       "status": "pending"
@@ -612,7 +619,7 @@
     {"step": "Post: Integration Suite", "status": "completed"},
     {"step": "Post: Cleanup", "status": "completed", "skipped": "cleanup extension not installed"},
     {"step": "Post: Final Reviewability Backstop", "status": "completed"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "completed"},
     {"step": "Post: PR Creation", "status": "pending"},
     {"step": "Post: Review Remediation", "status": "pending"},
     {"step": "Post: Retrospective", "status": "pending"}
