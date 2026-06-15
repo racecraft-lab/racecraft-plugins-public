@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T01:21:54Z",
-  "active_step": "Phase 7: Implement - US1 install path selection (T005-T007)",
+  "updated_at": "2026-06-15T01:36:00Z",
+  "active_step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -335,9 +335,12 @@
       "T001",
       "T002",
       "T003",
-      "T004"
+      "T004",
+      "T005",
+      "T006",
+      "T007"
     ],
-    "current_group": "US1 install path selection (T005-T007)",
+    "current_group": "US2 custom-agent registration (T008-T009)",
     "groups": {
       "setup_and_foundation": {
         "status": "completed",
@@ -361,6 +364,27 @@
           "git diff --check: passed"
         ],
         "notes": "Refreshed official and local source evidence, confirmed no non-docs source correction was required, and replaced the DOC-002 Codex shell with the task-first DOC-004 outline."
+      },
+      "us1_install_path_selection": {
+        "status": "completed",
+        "tasks": [
+          "T005",
+          "T006",
+          "T007"
+        ],
+        "artifacts_updated": [
+          "docs-site/src/content/docs/install/codex.md",
+          "docs/ai/specs/.process/DOC-004-workflow.md",
+          "specs/doc-004-codex-marketplace-installation-path/tasks.md"
+        ],
+        "validation_reported_by_executor": [
+          "focused content-contract check: 26 assertions passed",
+          "cd docs-site && pnpm validate: passed",
+          "cd docs-site && pnpm validate:links: passed",
+          "bash tests/speckit-pro/run-all.sh: 2947/2947 passed",
+          "git diff --check: passed"
+        ],
+        "notes": "Added accessible install path matrix and list fallback, repo/personal/CLI source forms, generated-payload warning, installed-cache behavior, and stale-update checkpoint."
       }
     }
   },
@@ -388,8 +412,8 @@
     {"step": "Phase 6: Analyze - Consensus", "status": "completed", "skipped": "no unresolved items"},
     {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
     {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "completed"},
-    {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "in_progress"},
-    {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "pending"},
+    {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "completed"},
+    {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "in_progress"},
     {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "pending"},
     {"step": "Phase 7: Implement - US4 install safety (T014-T016)", "status": "pending"},
     {"step": "Phase 7: Implement - Polish and validation (T017-T020)", "status": "pending"},

@@ -26,7 +26,7 @@ for Claude Code commands.
 Keep these surfaces separate:
 
 - `speckit-pro/` is the mixed authoring source tree. Do not install Codex from
-  this path.
+  this path. Do not point a personal or local Codex marketplace at `speckit-pro/`.
 - `dist/codex/speckit-pro/` is the generated Codex plugin payload.
 - `.agents/plugins/marketplace.json` is this repository's Codex marketplace
   catalog.
@@ -35,30 +35,40 @@ Keep these surfaces separate:
   manifest evidence.
 - `~/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME/$VERSION/` is Codex's
   installed plugin cache. Treat it as runtime state, not as the editable source
-  of truth.
+  of truth. For local plugins, `$VERSION` is `local`.
+
+When source changes, update the marketplace source or copied personal payload, then reinstall or refresh the plugin. Do not edit the installed plugin cache to
+try to patch a stale install.
 
 The detailed source and file-layout reference belongs in
 [DOC-007 reference](/racecraft-plugins-public/reference/).
 
-## Install Paths
+## Install Path Matrix
 
-Use this outline to pick the next task:
+Use this accessible matrix to pick the next task. The headers identify the
+install context, marketplace source, payload source of truth, and when to use
+each flow.
 
 | Context | Marketplace source | Payload to install | Use when |
 |---|---|---|---|
-| Repo-scoped | `.agents/plugins/marketplace.json` | `./dist/codex/speckit-pro` | You are working inside this repository in Codex. |
-| Personal or local | `~/.agents/plugins/marketplace.json` | A copied or synced `dist/codex/speckit-pro/` payload | You want the plugin available outside this repo. |
-| CLI marketplace add | `codex plugin marketplace add <source>` | The plugin path named by that marketplace | You want Codex to manage a local or Git-backed marketplace source. |
+| Repo-scoped marketplace entry | `.agents/plugins/marketplace.json` | `./dist/codex/speckit-pro` from this repository | You opened this repo in Codex and want to install from the checked-in marketplace. |
+| Personal or local generated-payload layout | `~/.agents/plugins/marketplace.json` | A copied or synced `dist/codex/speckit-pro/` payload, for example `~/.codex/plugins/speckit-pro/` | You want SpecKit Pro available outside this repository. |
+| CLI marketplace source examples | `codex plugin marketplace add <source>` | The plugin path named by the local or Git-backed marketplace source | You want Codex to track a marketplace source through the CLI. |
 
-Compact checklist:
+## Compact Install Path List
 
-1. Confirm whether the marketplace source is repo-scoped, personal/local, or
-   CLI-managed.
-2. Confirm the plugin entry points at the generated Codex payload, not
-   `speckit-pro/`.
-3. Install SpecKit Pro from Codex's plugin browser.
-4. Run the Codex custom-agent registration step.
-5. Restart Codex and verify the expected skill and custom-agent behavior.
+- **Repo-scoped:** use `.agents/plugins/marketplace.json`. Its `speckit-pro`
+  entry points at `./dist/codex/speckit-pro`, so the source of truth is the
+  generated Codex payload in this repository.
+- **Personal or local:** copy or sync `dist/codex/speckit-pro/` into a personal
+  plugin location such as `~/.codex/plugins/speckit-pro/`, then point
+  `~/.agents/plugins/marketplace.json` at that copied payload. Do not point a
+  personal or local Codex marketplace at `speckit-pro/`.
+- **CLI marketplace add:** use `codex plugin marketplace add <source>` for a
+  local marketplace root, GitHub shorthand, or a Git URL source. Install the
+  plugin entry from Codex after the marketplace source is added.
+
+## Install From A Marketplace Entry
 
 Codex plugin browser command group, repo-scoped or configured marketplace:
 
@@ -66,6 +76,44 @@ Codex plugin browser command group, repo-scoped or configured marketplace:
 codex
 /plugins
 ```
+
+Choose the Racecraft Public Plugins marketplace entry, then install
+SpecKit Pro.
+
+Repo-scoped Codex marketplace context:
+
+- Open this repository in Codex.
+- Use the checked-in `.agents/plugins/marketplace.json` marketplace.
+- Confirm the `speckit-pro` entry uses `source.path`:
+
+```text
+./dist/codex/speckit-pro
+```
+
+Personal or local Codex marketplace context:
+
+- Copy or sync the generated payload at `dist/codex/speckit-pro/` into a
+  personal plugin location such as `~/.codex/plugins/speckit-pro/`.
+- Point `~/.agents/plugins/marketplace.json` at the copied payload.
+- Refresh the copied payload before expecting repo source changes to appear in
+  your personal install.
+
+CLI marketplace add command group, Codex CLI source context:
+
+```text
+codex plugin marketplace add ./local-marketplace-root
+codex plugin marketplace add owner/repo
+codex plugin marketplace add owner/repo@ref
+codex plugin marketplace add owner/repo --ref main
+codex plugin marketplace add https://github.com/example/plugins.git --sparse .agents/plugins
+codex plugin marketplace add git@github.com:example/plugins.git
+codex plugin marketplace add <source> --json
+```
+
+Supported source forms are local marketplace root directories, GitHub shorthand
+such as `owner/repo` and `owner/repo@ref`, HTTP or HTTPS Git URLs, SSH Git URLs,
+`--ref`, and `--json`. Repeat `--sparse PATH` only for Git marketplace sources
+when you need more than one sparse checkout path.
 
 ## Register Custom Agents
 
@@ -107,12 +155,11 @@ DOC-004 user-story tasks and the
 
 If SpecKit Pro still looks stale after an update, keep the first check shallow:
 
-- Symptoms can include old skill text, old plugin metadata, unchanged
-  custom-agent behavior, a stale copied personal payload, or mismatch between
-  source and generated payload.
+- Symptoms can include old skill text, old plugin metadata, unchanged custom-agent behavior, a stale copied personal payload, or source/payload mismatch.
 - Inspect the marketplace source or copied personal payload, the generated
   payload directory, the installed plugin cache, the selected custom-agent
   destination, and whether Codex was restarted.
+- If the marketplace source or copied payload is stale, update the marketplace source or copied personal payload, then reinstall or refresh the plugin.
 - Rerun `@SpecKit Pro -> install` or `$install` after an update that changes
   bundled custom-agent TOML files, then restart Codex.
 

@@ -46,9 +46,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T005 [US1] Add an accessible install path matrix plus compact list alternative to `docs-site/src/content/docs/install/codex.md` for repo-scoped, personal or local, and CLI marketplace flows (FR-003, FR-018, SC-002, SC-006, AC-4.1)
-- [ ] T006 [US1] Document repo-scoped marketplace installation, personal or local generated-payload layout, and source-backed CLI marketplace examples in `docs-site/src/content/docs/install/codex.md`, including `owner/repo`, `owner/repo@ref`, HTTP or HTTPS Git URLs, SSH Git URLs, `--ref`, repeatable Git-only `--sparse`, and `--json`; explicitly warn against installing Codex from the mixed authoring source tree (FR-002, FR-003, FR-004, FR-006, FR-007, FR-008, SC-002, AC-4.1, AC-4.6)
-- [ ] T007 [US1] Explain installed plugin cache behavior and add the bounded stale-after-update checkpoint to `docs-site/src/content/docs/install/codex.md`, including DOC-007 and DOC-008 next links (FR-005, FR-019, SC-007, AC-4.2)
+- [x] T005 [US1] Add an accessible install path matrix plus compact list alternative to `docs-site/src/content/docs/install/codex.md` for repo-scoped, personal or local, and CLI marketplace flows (FR-003, FR-018, SC-002, SC-006, AC-4.1)
+- [x] T006 [US1] Document repo-scoped marketplace installation, personal or local generated-payload layout, and source-backed CLI marketplace examples in `docs-site/src/content/docs/install/codex.md`, including `owner/repo`, `owner/repo@ref`, HTTP or HTTPS Git URLs, SSH Git URLs, `--ref`, repeatable Git-only `--sparse`, and `--json`; explicitly warn against installing Codex from the mixed authoring source tree (FR-002, FR-003, FR-004, FR-006, FR-007, FR-008, SC-002, AC-4.1, AC-4.6)
+- [x] T007 [US1] Explain installed plugin cache behavior and add the bounded stale-after-update checkpoint to `docs-site/src/content/docs/install/codex.md`, including DOC-007 and DOC-008 next links (FR-005, FR-019, SC-007, AC-4.2)
 
 **Checkpoint**: User Story 1 is independently reviewable against AC-4.1, AC-4.2, AC-4.6, SC-002, and SC-007.
 
