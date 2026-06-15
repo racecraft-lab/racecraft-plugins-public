@@ -77,7 +77,27 @@
     "status": "completed",
     "gate": "G1",
     "gate_status": "passed",
-    "functional_requirements": 19,
+    "functional_requirements": [
+      "FR-001",
+      "FR-002",
+      "FR-003",
+      "FR-004",
+      "FR-005",
+      "FR-006",
+      "FR-007",
+      "FR-008",
+      "FR-009",
+      "FR-010",
+      "FR-011",
+      "FR-012",
+      "FR-013",
+      "FR-014",
+      "FR-015",
+      "FR-016",
+      "FR-017",
+      "FR-018",
+      "FR-019"
+    ],
     "user_stories": 4,
     "acceptance_scenarios": 10,
     "clarification_markers": 0,
@@ -589,7 +609,7 @@
       "review_comments_addressed": [
         "Set DOC-004 SPEC-MOC status to in-progress",
         "Updated interactive documentation technical roadmap refreshed date to 2026-06-15",
-        "Corrected phase1.functional_requirements from 17 to 19"
+        "Corrected phase1.functional_requirements from a stale count to FR-001 through FR-019"
       ],
       "validation_after_remediation": "bash tests/speckit-pro/run-all.sh: 2947/2947 passed"
     },
