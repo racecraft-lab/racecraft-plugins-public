@@ -45,7 +45,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, security, and error-handling checklists completed with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Generated 20 docs-first tasks across setup, foundation, 4 user stories, and validation; G5 passed; reviewability tasks gate passes with warnings |
 | Analyze | `/speckit-analyze` | Complete | 3 findings (0C/0H/2M/1L), all remediated; G6 passed |
-| Implement | `/speckit-implement` | Pending | Implement docs-only Codex install guidance and run full repo suite plus docs checks |
+| Implement | `/speckit-implement` | In Progress | Implement docs-only Codex install guidance and run full repo suite plus docs checks |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -494,6 +494,16 @@ Focus on:
 | A3 | LOW | The historical Specify prompt seed still asked for source TOML files including `uat-runbook-author.toml`, which drifted from the clarified nine installer-copied expected installed files. | Updated the workflow seed to say DOC-004 must list installer-copied TOML files and must not list source-only TOML files as expected installed output without a plan-approved source correction. |
 
 **G6 Validation**: `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh findings specs/doc-004-codex-marketplace-installation-path` and `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G6 specs/doc-004-codex-marketplace-installation-path` both pass after remediation.
+
+📊 Confidence: 0.96
+
+- Task understanding: 0.95
+- Approach clarity: 0.92
+- Requirements alignment: 0.94
+- Risk assessment: 1.00
+- Completeness: 1.00
+
+**G6.5 Confidence Gate**: Pass: `bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh docs/ai/specs/.process/DOC-004-workflow.md --threshold 0.90 --mode advisory` returned composite `0.96`, threshold `0.90`, recommendation `proceed`.
 
 ---
 

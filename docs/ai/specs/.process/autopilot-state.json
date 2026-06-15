@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T01:04:00Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-06-15T01:07:43Z",
+  "active_step": "Phase 7: Implement - Setup and foundation (T001-T004)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -313,6 +313,22 @@
       "specs/doc-004-codex-marketplace-installation-path/contracts/codex-install-content-contract.md"
     ]
   },
+  "phase6_5": {
+    "status": "completed",
+    "gate": "G6.5",
+    "confidence_gate_mode": "advisory",
+    "threshold": 0.90,
+    "composite": 0.96,
+    "criteria": {
+      "task_understanding": 0.95,
+      "approach_clarity": 0.92,
+      "requirements_alignment": 0.94,
+      "risk_assessment": 1.00,
+      "completeness": 1.00
+    },
+    "pass": true,
+    "recommended_action": "proceed"
+  },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
@@ -335,8 +351,8 @@
     {"step": "Phase 5: Tasks", "status": "completed"},
     {"step": "Phase 6: Analyze", "status": "completed"},
     {"step": "Phase 6: Analyze - Consensus", "status": "completed", "skipped": "no unresolved items"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "in_progress"},
-    {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
+    {"step": "Phase 7: Implement - Setup and foundation (T001-T004)", "status": "in_progress"},
     {"step": "Phase 7: Implement - US1 install path selection (T005-T007)", "status": "pending"},
     {"step": "Phase 7: Implement - US2 custom-agent registration (T008-T009)", "status": "pending"},
     {"step": "Phase 7: Implement - US3 consistency (T010-T013)", "status": "pending"},
