@@ -3,7 +3,7 @@
   "workflow_file": "docs/ai/specs/.process/DOC-004-workflow.md",
   "feature_dir": "specs/doc-004-codex-marketplace-installation-path",
   "feature_branch": "doc-004-codex-marketplace-installation-path",
-  "updated_at": "2026-06-15T02:37:28Z",
+  "updated_at": "2026-06-15T02:38:42Z",
   "active_step": "Post: PR Creation",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
@@ -555,11 +555,11 @@
       "metrics": {
         "reviewable_loc": 0,
         "production_files": 0,
-        "total_files": 24,
+        "total_files": 25,
         "primary_surface_count": 4
       },
       "warnings": [
-        "total files 24 exceeds warn threshold 15",
+        "total files 25 exceeds warn threshold 15",
         "primary surfaces 4 exceeds warn threshold 1"
       ]
     },

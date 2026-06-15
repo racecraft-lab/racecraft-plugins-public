@@ -660,7 +660,7 @@ PR evidence prepared from `spec.md`, `plan.md`, `tasks.md`, and validation outpu
 | Integration suite | Pass | `cd docs-site && pnpm validate`, `cd docs-site && pnpm validate:links`, and `bash tests/speckit-pro/run-all.sh` all passed; full suite reported `2947/2947`. |
 | Review extension | Skipped | Review extension is not installed. |
 | Cleanup extension | Skipped | Cleanup extension is not installed. |
-| Final reviewability backstop | Warn/pass | `final-reviewability-backstop.sh` completed with `status=warn`, `blocked_operations=[]`, `reviewable_loc=0`, `production_files=0`, `total_files=24`, and `primary_surface_count=4`; warning evidence is recorded in `specs/doc-004-codex-marketplace-installation-path/.process/final-reviewability/gate-state.json`. |
+| Final reviewability backstop | Warn/pass | `final-reviewability-backstop.sh` completed with `status=warn`, `blocked_operations=[]`, `reviewable_loc=0`, `production_files=0`, `total_files=25`, and `primary_surface_count=4`; warning evidence is recorded in `specs/doc-004-codex-marketplace-installation-path/.process/final-reviewability/gate-state.json`. |
 | PR packet/body generation | Pass | `generate-pr-body.sh` produced a single-PR packet and DOC-004 reviewer body; `validate-pr-packet.sh` passed with `title_value=feat(speckit-pro): Add codex marketplace installation path`, `base_branch=main`, `head_branch=doc-004-codex-marketplace-installation-path`, and `pr_blocked=false`. The packet/body were kept transient for PR creation rather than committed to the branch. |
 
 ---
