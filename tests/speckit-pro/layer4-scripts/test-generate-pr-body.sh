@@ -533,6 +533,35 @@ assert_not_contains "$(cat "$future_packet_output")" "PRSG-012"
 set_test "Future generated packet does not fall back to plugin scope"
 assert_not_contains "$(cat "$future_packet_output")" "feat(speckit-pro):"
 
+doc_feature_rel="specs/doc-004-codex-marketplace-installation-path"
+doc_feature="$packet_repo/$doc_feature_rel"
+doc_packet_output_rel="$PR_PACKET_FIXTURE_REL/doc-single.json"
+doc_body_output_rel="$PR_PACKET_FIXTURE_REL/bodies/doc-single.md"
+doc_packet_output="$packet_repo/$doc_packet_output_rel"
+doc_body_output="$packet_repo/$doc_body_output_rel"
+mkdir -p "$doc_feature" "$(dirname "$doc_packet_output")" "$(dirname "$doc_body_output")"
+cat > "$doc_feature/spec.md" <<'EOF'
+# Feature Specification: Codex marketplace installation path
+EOF
+cat > "$doc_feature/plan.md" <<'EOF'
+# Plan
+Primary surface: docs/site
+EOF
+
+set_test "Generator writes DOC-scoped packet metadata"
+result=0
+(cd "$packet_repo" && "$SCRIPT" --packet-output "$doc_packet_output" "$packet_repo" "$doc_feature" "$doc_body_output" main...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "DOC generated packet uses docs title type"
+assert_json_file_value "$doc_packet_output" "generated_title.type" "docs"
+
+set_test "DOC generated packet uses derived DOC scope"
+assert_json_file_value "$doc_packet_output" "generated_title.scope" "DOC-004"
+
+set_test "DOC generated packet title uses docs DOC scope"
+assert_json_file_value "$doc_packet_output" "generated_title.value" "docs(DOC-004): Add codex marketplace installation path"
+
 missing_title_feature_rel="specs/spec-014d-missing-title"
 missing_title_feature="$packet_repo/$missing_title_feature_rel"
 missing_title_packet_output_rel="$PR_PACKET_FIXTURE_REL/missing-title-single.json"

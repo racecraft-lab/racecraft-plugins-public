@@ -561,8 +561,14 @@ detailed procedures in `references/post-implementation.md`:
    with packet fields through
    `gh pr create --base --head --title --body-file`; never derive the title
    from the branch, write the body from scratch, pass inline `--body`, reuse
-   stale validation JSON, or repair invalid packets after creation. Push,
-   create PR, update workflow file.
+   stale validation JSON, or repair invalid packets after creation. Before any
+   single-PR create attempt, run the shared
+   `validate-pr-workflow-contract.sh` with the packet title and changed-file
+   list; a nonzero result blocks the aggregate PR path. If the changed files
+   include multi-PR candidate commands or final marker-split evidence for more
+   than one PR, the single-PR path is forbidden: run `multi-pr-emission.sh`
+   or stop blocked with the validator evidence. Push, create PR, update
+   workflow file.
    Required evidence prompts: gate status/mode/exit/evidence path,
    fingerprint status, ordered marker IDs, checkpoints, warnings, final
    marker_split or marker-plan-ready handoff, packet validation, and PR
@@ -674,6 +680,9 @@ Always invoke via the full resolved path — never from `.specify/scripts/bash/`
   and rendered body evidence before any `gh pr create`; exit 0 permits PR
   creation, exit 1 writes packet remediation evidence, and exit 2 reports an
   input error
+- `validate-pr-workflow-contract.sh --title <title> --changed-files <path>` —
+  Validate the actual PR title against changed spec scope and block aggregate
+  single-PR creation when split candidate or final marker-split evidence exists.
 - `generate-uat-skeleton.sh <spec-path> <output-path> [--workflow-file <path>]` —
   Render a deterministic UAT runbook skeleton from `spec.md` (Env Setup formatted
   from the `UAT_PROJECT_COMMANDS` env var). Exit 0/2/1; silent stdout. Run after

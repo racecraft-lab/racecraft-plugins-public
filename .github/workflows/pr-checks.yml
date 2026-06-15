@@ -144,38 +144,22 @@ jobs:
     permissions: {}
 
     steps:
-      - name: Check Conventional Commits format
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR title and split workflow contract
         env:
           TITLE: ${{ github.event_name == 'pull_request' && github.event.pull_request.title || inputs.pr_title }}
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
         run: |
           set -euo pipefail
 
-          PATTERN='^(feat|fix|chore|docs|refactor|test)(\(.+\))?!?: .+$'
-
-          if [[ "$TITLE" =~ $PATTERN ]]; then
-            echo "PR title is valid: \"${TITLE}\""
-          else
-            echo "::error::PR title does not match Conventional Commits format."
-            echo ""
-            echo "Your title: \"${TITLE}\""
-            echo ""
-            echo "Expected format: <type>(<optional scope>): <description>"
-            echo "Pattern: ${PATTERN}"
-            echo ""
-            echo "Valid type prefixes:"
-            echo "  feat     — a new feature"
-            echo "  fix      — a bug fix"
-            echo "  chore    — maintenance or tooling changes"
-            echo "  docs     — documentation only"
-            echo "  refactor — code restructuring without behavior change"
-            echo "  test     — adding or updating tests"
-            echo ""
-            echo "Examples:"
-            echo "  feat(speckit-pro): add new coaching command"
-            echo "  fix: resolve session timeout"
-            echo "  docs: update README"
-            exit 1
-          fi
+          git diff --name-only "origin/${BASE_REF}...HEAD" > .git/pr-changed-files.txt
+          speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh \
+            --title "$TITLE" \
+            --changed-files .git/pr-changed-files.txt
 
   # ───────────────────────────────────────────────────────────────────
   # Job 4: Sentinel aggregator — provides stable check name for branch

@@ -23,6 +23,27 @@ assert_contains "$CONTENT" "validate-plugins:"
 set_test "validate-plugins has name: validate-plugins"
 assert_contains "$CONTENT" "name: validate-plugins"
 
+section "pr-checks.yml — PR Workflow Contract"
+
+set_test "title validation checks out repository history"
+if [[ "$CONTENT" == *"uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"* \
+  && "$CONTENT" == *"fetch-depth: 0"* ]]; then
+  _pass
+else
+  _fail "expected validate-pr-title to checkout repository history before inspecting changed files"
+fi
+
+set_test "title validation uses shared workflow contract validator"
+assert_contains "$CONTENT" "validate-pr-workflow-contract.sh"
+
+set_test "title validation supplies changed-file evidence"
+if [[ "$CONTENT" == *"git diff --name-only"* \
+  && "$CONTENT" == *"--changed-files .git/pr-changed-files.txt"* ]]; then
+  _pass
+else
+  _fail "expected title validation to pass changed-file evidence to the contract validator"
+fi
+
 section "pr-checks.yml — Release PR Dispatch"
 
 set_test "workflow_dispatch trigger is defined"

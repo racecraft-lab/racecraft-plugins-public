@@ -8,9 +8,9 @@
   },
   "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
   "generated_title": {
-    "value": "feat(speckit-pro): Validate reviewer packet slices",
+    "value": "feat(PRSG-012): Validate reviewer packet slices",
     "type": "feat",
-    "scope": "speckit-pro",
+    "scope": "PRSG-012",
     "description": "Validate reviewer packet slices",
     "source_evidence": {
       "kind": "split_source_boundary",

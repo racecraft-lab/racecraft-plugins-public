@@ -8,9 +8,9 @@
   },
   "source_feature_dir": "specs/prsg-012-reviewer-ready-pr-packet-contract",
   "generated_title": {
-    "value": "feat(speckit-pro): Add reviewer-ready PR packets",
+    "value": "feat(PRSG-012): Add reviewer-ready PR packets",
     "type": "feat",
-    "scope": "speckit-pro",
+    "scope": "PRSG-012",
     "description": "Add reviewer-ready PR packets",
     "source_evidence": {
       "kind": "feature_spec",

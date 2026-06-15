@@ -223,6 +223,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-estimate-spec-size.sh"
     "$TESTS_DIR/layer4-scripts/test-generate-pr-body.sh"
     "$TESTS_DIR/layer4-scripts/test-validate-pr-packet.sh"
+    "$TESTS_DIR/layer4-scripts/test-validate-pr-workflow-contract.sh"
     "$TESTS_DIR/layer4-scripts/test-post-implementation-reference.sh"
     "$TESTS_DIR/layer4-scripts/test-reviewability-marker-guidance.sh"
     "$TESTS_DIR/layer4-scripts/test-generate-uat-skeleton.sh"
