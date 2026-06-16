@@ -75,7 +75,7 @@ If **PRESENT**: continue.
 ### 2. Capture current versions and integrations
 
 ```text
-Bash("command -v specify >/dev/null 2>&1 && specify --version || echo MISSING")
+Bash("PATH=\"${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}\"; command -v specify >/dev/null 2>&1 && specify --version || echo MISSING")
 Bash("specify self check 2>&1 || true")
 Bash("specify integration list 2>&1")
 ```

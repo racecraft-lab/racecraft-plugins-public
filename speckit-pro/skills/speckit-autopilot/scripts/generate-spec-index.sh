@@ -493,6 +493,21 @@ _zone_state() {
   fi
 }
 
+render_prs_into_or_die2() {
+  local __var="$1" spec_dir="$2" __out __rc=0
+  # render_prs uses return 1 for deliberate malformed-manifest failures after
+  # printing the one precise stderr line. Under Bash 3.2 + errtrace, that expected
+  # return can otherwise fire the global internal-error trap inside the command
+  # substitution and again at the parent assignment site.
+  trap - ERR
+  __out="$(render_prs "$spec_dir")" || __rc=$?
+  trap _on_err ERR
+  if [ "$__rc" -ne 0 ]; then
+    die2
+  fi
+  eval "$__var=\$__out"
+}
+
 # rebuild_map <moc> <spec_dir> <branch> — emit the freshly regenerated full file
 # body for one MOC on stdout. Marker validation + the malformed-PRS check run here
 # (directly in this function, so an err()/exit propagates out as this function's —
@@ -526,7 +541,7 @@ rebuild_map() {
   # is defined under set -u.
   local idx_body="" prs_body="" bl_body=""
   if [ "$st_index" = present ];     then idx_body="$(render_index "$spec_dir" "$is_home")"; fi
-  if [ "$st_prs" = present ];       then prs_body="$(render_prs "$spec_dir")" || die2; fi
+  if [ "$st_prs" = present ];       then render_prs_into_or_die2 prs_body "$spec_dir"; fi
   if [ "$st_backlinks" = present ]; then bl_body="$(render_backlinks "$spec_dir")"; fi
 
   # FR-017a fail-safe: a home-note target with ALL three pairs absent is a MALFORMED
@@ -544,7 +559,7 @@ rebuild_map() {
     # For an all-absent in-scope map, the PRS body was not rendered above (st_prs is
     # absent), so render it now — the injected zones must be filled too. `|| die2`:
     # render_prs already emitted the precise stderr line; propagate to exit 2 silently.
-    prs_body="$(render_prs "$spec_dir")" || die2
+    render_prs_into_or_die2 prs_body "$spec_dir"
     bl_body="$(render_backlinks "$spec_dir")"
     # Append the three-zone block at the canonical anchor (end of body) with exactly
     # one blank line before INDEX_START and a single trailing newline.

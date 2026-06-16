@@ -75,7 +75,8 @@ sync_marketplace() {
 
   local updated_json
   updated_json=$(cat "$marketplace")
-  local changes=()
+  local changes_text=""
+  local change_count=0
 
   for ((i=0; i<plugin_count; i++)); do
     local source_field
@@ -137,22 +138,18 @@ sync_marketplace() {
     updated_json=$(printf '%s' "$updated_json" | jq --arg ver "$version" --argjson idx "$i" '.plugins[$idx].version = $ver')
 
     if [ "$current_version" != "$version" ]; then
-      changes+=("synced ${plugin_dir}: ${current_version:-<none>} -> ${version}")
+      changes_text="${changes_text}synced ${plugin_dir}: ${current_version:-<none>} -> ${version}
+"
+      change_count=$((change_count + 1))
     fi
   done
 
-  local existing_content
-  existing_content=$(jq '.' "$marketplace")
-
-  if [ "$updated_json" = "$existing_content" ]; then
+  if [ "$change_count" -eq 0 ]; then
     return 0
   fi
 
   printf '%s\n' "$updated_json" > "$marketplace"
-
-  for change in "${changes[@]}"; do
-    echo "$change"
-  done
+  printf '%s' "$changes_text"
 }
 
 for entry in "${MARKETPLACES[@]}"; do

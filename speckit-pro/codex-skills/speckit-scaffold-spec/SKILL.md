@@ -132,6 +132,7 @@ Before parsing or mutating the repository, verify the official SpecKit CLI is
 available:
 
 ```text
+PATH="${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}"
 command -v specify
 ```
 

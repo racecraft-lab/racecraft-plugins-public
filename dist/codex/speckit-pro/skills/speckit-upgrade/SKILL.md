@@ -107,6 +107,7 @@ If PRESENT: continue.
 ### 2. Capture current CLI version and installed integrations
 
 ```bash
+PATH="${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}"
 command -v specify >/dev/null 2>&1 && specify --version || echo MISSING
 specify self check 2>&1 || true
 specify integration list 2>&1

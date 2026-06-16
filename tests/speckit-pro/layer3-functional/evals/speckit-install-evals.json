@@ -1,0 +1,30 @@
+{
+  "skill_name": "speckit-install",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Install SpecKit in this empty repository for both Claude and Codex integrations.",
+      "expected_output": "Bootstraps the SpecKit CLI if missing, detects no existing .specify/ directory, asks or honors the dual-integration choice, runs specify init for the first integration and specify integration install for the second, and reports the install summary with a restart reminder.",
+      "expectations": [
+        "Checks for the specify CLI with a path-normalized `command -v specify` probe before mutating anything, including `$HOME/.local/bin` for uv tool installs",
+        "If the CLI is missing, recommends `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`",
+        "Detects .specify/ presence and confirms it is ABSENT before proceeding",
+        "Runs `specify init --here --integration claude` or an equivalent bootstrap call",
+        "Runs `specify integration install codex` for the second integration when both integrations are requested",
+        "Reports the installed integrations and their artifact paths",
+        "Tells the user to restart the coding-agent process so new skills load"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Install SpecKit in this repo, but I already have .specify/ from a previous install.",
+      "expected_output": "Detects the existing install, refuses to overwrite, and hands off to /speckit-pro:speckit-upgrade or offers to add a new integration alongside the existing one.",
+      "expectations": [
+        "Runs `specify integration list` to show what is already installed",
+        "States that the right tool for an existing install is /speckit-pro:speckit-upgrade, not /speckit-pro:speckit-install",
+        "Does NOT run `specify init --here --force`",
+        "Either hands off to /speckit-pro:speckit-upgrade or offers to add a new integration alongside via `specify integration install <key>`"
+      ]
+    }
+  ]
+}

@@ -6,7 +6,7 @@
       "prompt": "Install SpecKit in this empty repository for both Claude and Codex integrations.",
       "expected_output": "Bootstraps the SpecKit CLI if missing, detects no existing .specify/ directory, asks (or honors) the dual-integration choice, runs specify init for the first integration and specify integration install for the second, and reports the install summary with a restart reminder.",
       "expectations": [
-        "Checks for the specify CLI via `command -v specify` before mutating anything",
+        "Checks for the specify CLI with a path-normalized `command -v specify` probe before mutating anything, including `$HOME/.local/bin` for uv tool installs",
         "If the CLI is missing, recommends `uv tool install specify-cli --from git+https://github.com/github/spec-kit.git`",
         "Detects .specify/ presence and confirms it is ABSENT before proceeding",
         "Runs `specify init --here --integration claude` (or similar) as the bootstrap call",

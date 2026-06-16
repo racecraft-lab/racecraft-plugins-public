@@ -84,6 +84,23 @@ done
 output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
 assert_contains "$output" "All SpecKit commands installed"
 
+set_test "SpecKit CLI in HOME/.local/bin → detected when PATH omits it"
+dir=$(make_project "home-local-specify")
+fake_home="$dir/home"
+mkdir -p "$fake_home/.local/bin"
+cat > "$fake_home/.local/bin/specify" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = "--version" ]; then
+  printf 'specify 9.9.9-test\n'
+  exit 0
+fi
+exit 0
+SH
+chmod +x "$fake_home/.local/bin/specify"
+limited_path="/usr/bin:/bin:/usr/sbin:/sbin"
+output=$(cd "$dir" && HOME="$fake_home" PATH="$limited_path" bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
+assert_contains "$output" "specify 9.9.9-test"
+
 # ─────────────────────────────────────────
 section "Branch detection"
 # ─────────────────────────────────────────

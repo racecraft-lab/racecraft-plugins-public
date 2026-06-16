@@ -40,6 +40,23 @@ assert_contains "$output" '"presets":[]'
 set_test "Empty dir — has templates field"
 assert_contains "$output" '"templates":'
 
+set_test "Specify CLI in HOME/.local/bin → used when PATH omits it"
+dir="$FIXTURE_DIR/home-local-specify"
+fake_home="$dir/home"
+mkdir -p "$dir/.specify" "$fake_home/.local/bin"
+cat > "$fake_home/.local/bin/specify" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = "preset" ] && [ "${2:-}" = "resolve" ]; then
+  printf 'resolved-%s\n' "${3:-unknown}"
+  exit 0
+fi
+exit 0
+SH
+chmod +x "$fake_home/.local/bin/specify"
+limited_path="/usr/bin:/bin:/usr/sbin:/sbin"
+output=$(cd "$dir" && HOME="$fake_home" PATH="$limited_path" bash "$SCRIPT")
+assert_contains "$output" "resolved-tasks-template"
+
 # ─────────────────────────────────────────
 section "Preset detection"
 # ─────────────────────────────────────────

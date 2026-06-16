@@ -119,19 +119,33 @@ raw_entries=$(printf '%s\n' "$declared_section" | grep -E "$ENTRY_RE" 2>/dev/nul
   | sed -E 's/'"$ENTRY_RE"'/\1'"$TAB"'\2/' || true)
 
 declare -a paths_in_order=()
-declare -A status_by_path=()
+declare -a statuses_in_order=()
+
+find_path_index() {
+  local needle="$1"
+  local index
+  for index in "${!paths_in_order[@]}"; do
+    if [ "${paths_in_order[$index]}" = "$needle" ]; then
+      printf '%s' "$index"
+      return 0
+    fi
+  done
+  return 1
+}
 
 if [ -n "$raw_entries" ]; then
   while IFS=$'\t' read -r status path; do
     [ -n "${path:-}" ] || continue
-    if [ -z "${status_by_path[$path]+set}" ]; then
+    if index="$(find_path_index "$path")"; then
+      if [ "$status" = "MODIFIED" ]; then
+        # De-dup conflict: a path declared both NEW and MODIFIED resolves to
+        # MODIFIED (fail-safe toward "an existing file is touched" — so the slice
+        # is correctly NOT greenfield; contract §De-duplication, FR-006).
+        statuses_in_order[$index]="MODIFIED"
+      fi
+    else
       paths_in_order+=("$path")
-      status_by_path["$path"]="$status"
-    elif [ "$status" = "MODIFIED" ]; then
-      # De-dup conflict: a path declared both NEW and MODIFIED resolves to
-      # MODIFIED (fail-safe toward "an existing file is touched" — so the slice
-      # is correctly NOT greenfield; contract §De-duplication, FR-006).
-      status_by_path["$path"]="MODIFIED"
+      statuses_in_order+=("$status")
     fi
   done <<< "$raw_entries"
 fi
@@ -173,8 +187,9 @@ modified_count=0
 production_count=0
 greenfield=true
 
-for path in "${paths_in_order[@]}"; do
-  status="${status_by_path[$path]}"
+for index in "${!paths_in_order[@]}"; do
+  path="${paths_in_order[$index]}"
+  status="${statuses_in_order[$index]}"
 
   if [ "$status" = "NEW" ]; then
     new_count=$((new_count + 1))

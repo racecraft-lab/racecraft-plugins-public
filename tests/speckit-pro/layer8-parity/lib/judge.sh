@@ -43,6 +43,18 @@ L8_JUDGE_TIMEOUT_S="${L8_JUDGE_TIMEOUT_S:-60}"
 # reason is required so a flaky verdict always leaves an audit trail.
 _L8_JUDGE_SCHEMA='{"type":"object","required":["verdict","reason"],"properties":{"verdict":{"type":"string","enum":["EQUIVALENT","NOT_EQUIVALENT"]},"reason":{"type":"string"}}}'
 
+_l8_timeout_bin() {
+  if command -v timeout >/dev/null 2>&1; then
+    command -v timeout
+    return 0
+  fi
+  if command -v gtimeout >/dev/null 2>&1; then
+    command -v gtimeout
+    return 0
+  fi
+  return 1
+}
+
 semantic_equivalent_judge() {
   local value_a="$1" value_b="$2" rationale="$3"
 
@@ -81,16 +93,27 @@ PROMPT
   # Run claude -p with structured-output schema and a wall-time bound.
   # We capture stdout + the exit code; stderr is dropped (the schema
   # validator already constrains the output shape).
-  local raw rc=0
-  raw=$(
-    printf '%s' "$prompt" | \
-      timeout "$L8_JUDGE_TIMEOUT_S" \
+  local raw rc=0 timeout_bin
+  if timeout_bin="$(_l8_timeout_bin)"; then
+    raw=$(
+      printf '%s' "$prompt" | \
+        "$timeout_bin" "$L8_JUDGE_TIMEOUT_S" \
+          "$CLAUDE_BIN" -p \
+            --model "$L8_JUDGE_MODEL" \
+            --json-schema "$_L8_JUDGE_SCHEMA" \
+            --output-format text \
+            2>/dev/null
+    ) || rc=$?
+  else
+    raw=$(
+      printf '%s' "$prompt" | \
         "$CLAUDE_BIN" -p \
           --model "$L8_JUDGE_MODEL" \
           --json-schema "$_L8_JUDGE_SCHEMA" \
           --output-format text \
           2>/dev/null
-  ) || rc=$?
+    ) || rc=$?
+  fi
 
   if [ "$rc" -ne 0 ]; then
     return 1

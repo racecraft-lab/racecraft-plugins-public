@@ -534,10 +534,10 @@ expected_scope_from_feature_dir() {
   if [[ "$base" =~ ^[Pp][Rr][Ss][Gg]-([0-9]+)(-|$) ]]; then
     printf 'PRSG-%s\n' "${BASH_REMATCH[1]}"
   elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
-    spec_suffix="${BASH_REMATCH[1]^^}"
+    spec_suffix="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
     printf 'SPEC-%s\n' "$spec_suffix"
   elif [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
-    spec_suffix="${BASH_REMATCH[1]^^}"
+    spec_suffix="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
     printf 'DOC-%s\n' "$spec_suffix"
   fi
 }

@@ -110,7 +110,7 @@ output and has a clean worktree. Never invoke
 Check for the official SpecKit CLI before parsing or mutating the repository:
 
 ```text
-Bash("command -v specify")
+Bash("PATH=\"${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}\"; command -v specify")
 ```
 
 If missing and `uv` exists, install it:

@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/specify-cli.sh"
+
 WORKFLOW_FILE="${1:-}"
 
 # Helper: emit a single JSON check object, safely escaping all string values
@@ -24,8 +27,8 @@ results=()
 all_pass=true
 
 # 0.1 SpecKit CLI
-if command -v specify >/dev/null 2>&1; then
-  version=$(specify --version 2>/dev/null || echo "unknown")
+if speckit_have_specify; then
+  version=$(speckit_specify --version 2>/dev/null || echo "unknown")
   results+=("$(json_result "speckit_cli" "true" "SpecKit CLI installed" "$version")")
 else
   results+=("$(json_result "speckit_cli" "false" "SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git" "")")

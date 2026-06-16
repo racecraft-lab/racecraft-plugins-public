@@ -7,6 +7,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/specify-cli.sh"
+
 # Detect presets — build a jq-safe JSON array
 presets_json="[]"
 if ls .specify/presets/*/preset.yml >/dev/null 2>&1; then
@@ -55,10 +58,10 @@ fi
 tasks_template="default"
 spec_template="default"
 plan_template="default"
-if command -v specify >/dev/null 2>&1; then
-  tasks_template=$(specify preset resolve tasks-template 2>/dev/null || echo "default")
-  spec_template=$(specify preset resolve spec-template 2>/dev/null || echo "default")
-  plan_template=$(specify preset resolve plan-template 2>/dev/null || echo "default")
+if speckit_have_specify; then
+  tasks_template=$(speckit_specify preset resolve tasks-template 2>/dev/null || echo "default")
+  spec_template=$(speckit_specify preset resolve spec-template 2>/dev/null || echo "default")
+  plan_template=$(speckit_specify preset resolve plan-template 2>/dev/null || echo "default")
 fi
 
 has_presets="false"

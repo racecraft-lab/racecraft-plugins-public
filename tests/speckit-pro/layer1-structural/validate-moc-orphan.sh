@@ -72,7 +72,10 @@ VIOLATION_COUNT=0
 # or empty. Does NOT resolve the target.
 moc_up_well_formed() {
   local file="$1" up target before
-  up="$(moc_frontmatter_field "$file" up)" || return 1   # absent -> violation
+  # Missing up: is an expected content violation, not an internal error. On
+  # Bash 3.2 with errtrace, a failing command substitution assignment can still
+  # fire ERR, so normalize the expected miss to an empty value explicitly.
+  up="$(moc_frontmatter_field "$file" up 2>/dev/null || true)"
   [ -n "$up" ] || return 1                                # empty  -> violation
   # Reject the wikilink form outright (ill-formed for orphan).
   case "$up" in
@@ -118,7 +121,9 @@ moc_up_well_formed() {
 # under the ID-normalization grammar. Absent/empty spec_id -> exit 1.
 moc_specid_matches_dir() {
   local file="$1" dir_name="$2" spec_id
-  spec_id="$(moc_frontmatter_field "$file" spec_id)" || return 1  # absent
+  # Missing spec_id is an expected content violation; avoid tripping the global
+  # internal-error trap for this predicate miss.
+  spec_id="$(moc_frontmatter_field "$file" spec_id 2>/dev/null || true)"
   [ -n "$spec_id" ] || return 1                                    # empty
   moc_id_match "$spec_id" "$dir_name"
 }

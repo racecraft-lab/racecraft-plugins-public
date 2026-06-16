@@ -37,7 +37,7 @@ repo — detects existing installs and hands off to
 ### 1. Ensure the SpecKit CLI is on PATH
 
 ```text
-Bash("command -v specify >/dev/null 2>&1 && specify --version || echo MISSING")
+Bash("PATH=\"${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}\"; command -v specify >/dev/null 2>&1 && specify --version || echo MISSING")
 ```
 
 - If the output begins with `specify`, the CLI is installed. Capture the

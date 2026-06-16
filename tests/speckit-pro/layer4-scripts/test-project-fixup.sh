@@ -59,6 +59,24 @@ assert_json_field "$output" "status" "warn"
 set_test "Audit detects spec template"
 assert_contains "$output" '"spec-template"'
 
+set_test "Audit resolves templates with specify in HOME/.local/bin when PATH omits it"
+fake_home="$FIXTURE_DIR/home-local-specify"
+mkdir -p "$fake_home/.local/bin"
+cat > "$fake_home/.local/bin/specify" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = "preset" ] && [ "${2:-}" = "resolve" ]; then
+  printf 'resolved-%s\n' "${3:-unknown}"
+  exit 0
+fi
+exit 0
+SH
+chmod +x "$fake_home/.local/bin/specify"
+limited_path="/usr/bin:/bin:/usr/sbin:/sbin"
+result=0
+output=$(HOME="$fake_home" PATH="$limited_path" "$SCRIPT" audit "$repo" demo-reviewability) || result=$?
+assert_eq "0" "$result" "exit code"
+assert_contains "$output" "resolved-spec-template"
+
 section "apply mode"
 
 set_test "Apply creates preset and registry"

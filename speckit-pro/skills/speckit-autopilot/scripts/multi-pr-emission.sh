@@ -118,10 +118,10 @@ conventional_scope_from_feature_dir() {
   if [[ "$base" =~ ^[Pp][Rr][Ss][Gg]-([0-9]+)(-|$) ]]; then
     printf 'PRSG-%s\n' "${BASH_REMATCH[1]}"
   elif [[ "$base" =~ ^[Ss][Pp][Ee][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
-    spec_suffix="${BASH_REMATCH[1]^^}"
+    spec_suffix="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
     printf 'SPEC-%s\n' "$spec_suffix"
   elif [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
-    spec_suffix="${BASH_REMATCH[1]^^}"
+    spec_suffix="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
     printf 'DOC-%s\n' "$spec_suffix"
   else
     printf 'speckit-pro\n'
@@ -1281,7 +1281,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
   stack_manager_evidence_rel="$FEATURE_DIR_REL/.process/stack-manager/emission/link/preflight/decision.json"
   workflow_id="$FEATURE_BRANCH"
   if [[ "$FEATURE_BRANCH" =~ ^([A-Za-z]+)-([0-9]+) ]]; then
-    workflow_id="${BASH_REMATCH[1]^^}-${BASH_REMATCH[2]}"
+    workflow_id="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')-${BASH_REMATCH[2]}"
   elif [[ "$FEATURE_BRANCH" =~ ^([0-9]+) ]]; then
     workflow_id="${BASH_REMATCH[1]}"
   fi
@@ -2325,7 +2325,11 @@ if [ -z "$CANDIDATE_DIR" ]; then
     prs_json="$(build_prs_json)"
     record_stack_link_command "$prs_json"
     if [ "$LIVE" = true ]; then
-      mapfile -t stack_link_pr_numbers < <(printf '%s' "$prs_json" | jq -r '.records | sort_by(.review_order) | .[].pr_number')
+      stack_link_pr_numbers=()
+      while IFS= read -r stack_link_pr_number; do
+        [ -n "$stack_link_pr_number" ] || continue
+        stack_link_pr_numbers+=("$stack_link_pr_number")
+      done < <(printf '%s' "$prs_json" | jq -r '.records | sort_by(.review_order) | .[].pr_number')
       if [ "${#stack_link_pr_numbers[@]}" -gt 0 ]; then
         if ! (
           cd "$persist_root" &&

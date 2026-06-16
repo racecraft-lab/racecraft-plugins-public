@@ -65,6 +65,7 @@ If the operator does not specify, ask before proceeding.
 ### 1. Resolve the SpecKit CLI
 
 ```bash
+PATH="${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}"
 command -v specify >/dev/null 2>&1 && specify --version || echo MISSING
 ```
 

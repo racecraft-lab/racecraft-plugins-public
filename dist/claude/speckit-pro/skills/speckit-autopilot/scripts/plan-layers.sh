@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 # plan-layers.sh - Read-only layer and marker planner for SpecKit tasks.md files.
 
+if [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+  for bash_bin in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+    if [ -x "$bash_bin" ]; then
+      exec "$bash_bin" "$0" "$@"
+    fi
+  done
+  printf 'plan-layers.sh: Bash 4+ required; install Homebrew Bash at /opt/homebrew/bin/bash or /usr/local/bin/bash\n' >&2
+  exit 2
+fi
+
 set -euo pipefail
 shopt -s extglob
 

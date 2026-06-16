@@ -12,6 +12,9 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../../speckit-autopilot/scripts/lib/specify-cli.sh"
+
 MODE="${1:-audit}"
 PROJECT_ROOT="${2:-$PWD}"
 PRESET_ID="${3:-speckit-pro-reviewability}"
@@ -67,8 +70,8 @@ find_pr_template() {
 
 resolve_template() {
   local name="$1"
-  if command -v specify >/dev/null 2>&1; then
-    (cd "$PROJECT_ROOT" && specify preset resolve "$name" 2>/dev/null) | tr '\n' ' ' | sed 's/[[:space:]][[:space:]]*/ /g' || true
+  if speckit_have_specify; then
+    (cd "$PROJECT_ROOT" && speckit_specify preset resolve "$name" 2>/dev/null) | tr '\n' ' ' | sed 's/[[:space:]][[:space:]]*/ /g' || true
   fi
 }
 

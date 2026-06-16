@@ -148,4 +148,30 @@ else
   _fail "command must grep prompt for speckit-/grill-me/SpecKit invocation patterns (was: '$cmd_val')"
 fi
 
+set_test "Command body prepends common user CLI paths before probing specify"
+if [[ "$cmd_val" == *'$HOME/.local/bin'* ]] && [[ "$cmd_val" == *"/opt/homebrew/bin"* ]] && [[ "$cmd_val" == *"/usr/local/bin"* ]]; then
+  _pass
+else
+  _fail "command must prepend common user CLI paths before command -v specify (was: '$cmd_val')"
+fi
+
+set_test "Command does not warn when specify exists only in HOME/.local/bin"
+hook_tmp=$(mktemp -d)
+mkdir -p "$hook_tmp/.local/bin"
+cat > "$hook_tmp/.local/bin/specify" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+chmod +x "$hook_tmp/.local/bin/specify"
+hook_output=$(
+  printf '{"prompt":"$speckit-install"}' \
+    | HOME="$hook_tmp" PATH="/usr/bin:/bin:/usr/sbin:/sbin" sh -c "$cmd_val" 2>/dev/null || true
+)
+rm -rf "$hook_tmp"
+if [ -z "$hook_output" ]; then
+  _pass
+else
+  _fail "hook warned even though specify existed in HOME/.local/bin: $hook_output"
+fi
+
 test_summary

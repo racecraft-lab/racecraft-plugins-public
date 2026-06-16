@@ -106,10 +106,14 @@ section "Timeout"
 set_test "judge exits 1 when shim exceeds L8_JUDGE_TIMEOUT_S"
 # shim sleeps longer than the timeout; the wrapping `timeout(1)` should
 # kill it and the judge should return exit 1.
-shim=$(write_shim "claude-hang" 'sleep 5; echo "{\"verdict\":\"EQUIVALENT\",\"reason\":\"x\"}"')
-result=0
-output=$(L8_JUDGE_TIMEOUT_S=1 CLAUDE_BIN="$shim" semantic_equivalent_judge "A" "B" "rat" 2>&1) || result=$?
-assert_eq "1" "$result" "exit code"
+if command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; then
+  shim=$(write_shim "claude-hang" 'sleep 5; echo "{\"verdict\":\"EQUIVALENT\",\"reason\":\"x\"}"')
+  result=0
+  output=$(L8_JUDGE_TIMEOUT_S=1 CLAUDE_BIN="$shim" semantic_equivalent_judge "A" "B" "rat" 2>&1) || result=$?
+  assert_eq "1" "$result" "exit code"
+else
+  _pass
+fi
 
 # ─────────────────────────────────────────
 section "Prompt content reaches the shim"

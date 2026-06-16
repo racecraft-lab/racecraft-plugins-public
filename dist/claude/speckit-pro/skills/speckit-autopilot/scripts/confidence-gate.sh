@@ -132,31 +132,30 @@ fi
 composite="${composite_line#📊 Confidence: }"
 
 # Pull the 5 criterion lines that follow the composite emit (best-effort: walk
-# the file once and grab the most recent block).
-declare -A CRITERIA
-declare -a CRIT_NAMES=("Task understanding" "Approach clarity" "Requirements alignment" "Risk assessment" "Completeness")
-declare -A CRIT_KEYS
-CRIT_KEYS["Task understanding"]="task_understanding"
-CRIT_KEYS["Approach clarity"]="approach_clarity"
-CRIT_KEYS["Requirements alignment"]="requirements_alignment"
-CRIT_KEYS["Risk assessment"]="risk_assessment"
-CRIT_KEYS["Completeness"]="completeness"
-
-for name in "${CRIT_NAMES[@]}"; do
-  # Match the last occurrence of "- <name>: X.XX" anywhere in the file.
+# the file once and grab the most recent block). Keep this Bash 3.2-compatible:
+# macOS still ships Bash 3.2, which does not support associative arrays.
+criterion_value() {
+  local name="$1"
+  local pattern value
   pattern="^- ${name}: ([01]\\.[0-9]{2})$"
   value="$(grep -E "$pattern" "$WORKFLOW_FILE" 2>/dev/null | tail -1 | sed -E "s/^- ${name}: ([01]\\.[0-9]{2})\$/\\1/" || true)"
-  CRITERIA["$name"]="${value:-}"
-done
+  printf '%s' "${value:-}"
+}
+
+task_understanding="$(criterion_value "Task understanding")"
+approach_clarity="$(criterion_value "Approach clarity")"
+requirements_alignment="$(criterion_value "Requirements alignment")"
+risk_assessment="$(criterion_value "Risk assessment")"
+completeness="$(criterion_value "Completeness")"
 
 # Build criteria JSON object.
 criteria_json="$(
   jq -n \
-    --arg tu  "${CRITERIA[Task understanding]}" \
-    --arg ac  "${CRITERIA[Approach clarity]}" \
-    --arg ra  "${CRITERIA[Requirements alignment]}" \
-    --arg ri  "${CRITERIA[Risk assessment]}" \
-    --arg cp  "${CRITERIA[Completeness]}" \
+    --arg tu  "$task_understanding" \
+    --arg ac  "$approach_clarity" \
+    --arg ra  "$requirements_alignment" \
+    --arg ri  "$risk_assessment" \
+    --arg cp  "$completeness" \
     '{
       task_understanding:     (if $tu == "" then null else ($tu | tonumber) end),
       approach_clarity:       (if $ac == "" then null else ($ac | tonumber) end),

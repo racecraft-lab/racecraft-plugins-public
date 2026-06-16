@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "prompt=$(jq -r '.prompt // empty' 2>/dev/null) && echo \"$prompt\" | grep -qE '[$]speckit-|[$]grill-me|[$]install([^a-z]|$)|/speckit[.]' && ! command -v specify >/dev/null 2>&1 && echo 'speckit-pro: WARNING — SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git'; true",
+            "command": "prompt=$(jq -r '.prompt // empty' 2>/dev/null) && echo \"$prompt\" | grep -qE '[$]speckit-|[$]grill-me|[$]install([^a-z]|$)|/speckit[.]' && PATH=\"${HOME:+$HOME/.local/bin:}/opt/homebrew/bin:/usr/local/bin:${PATH:-}\" && ! command -v specify >/dev/null 2>&1 && echo 'speckit-pro: WARNING — SpecKit CLI not found. Install: uv tool install specify-cli --from git+https://github.com/github/spec-kit.git'; true",
             "statusMessage": "Checking SpecKit CLI availability (only when invoking speckit-pro / SpecKit commands)"
           }
         ]
