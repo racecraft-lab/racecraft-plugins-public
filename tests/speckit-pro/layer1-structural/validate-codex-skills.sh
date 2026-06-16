@@ -303,25 +303,42 @@ $(cat "$ref_file")"
   set_test "${skill}: agents/openai.yaml allow_implicit_invocation policy"
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
-    case "$skill" in
-      speckit-scaffold-spec|speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me|speckit-prd)
-        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
-          _pass
-        else
-          _fail "mutation-heavy skill must have allow_implicit_invocation: false"
-        fi
-        ;;
-      speckit-coach|speckit-status)
-        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: true'; then
-          _pass
-        else
-          _fail "read-only skill must have allow_implicit_invocation: true"
-        fi
-        ;;
-      *)
-        _fail "no implicit-invocation policy expectation defined for '$skill'; update validate-codex-skills.sh"
-        ;;
-    esac
+    policy_value=$(printf '%s\n' "$yaml_content" \
+      | sed -nE 's/^[[:space:]]*allow_implicit_invocation:[[:space:]]*(true|false)[[:space:]]*$/\1/p')
+    policy_count=$(printf '%s\n' "$policy_value" | grep -cE '^(true|false)$' || true)
+
+    if [ "$policy_count" -ne 1 ]; then
+      _fail "agents/openai.yaml must declare exactly one anchored allow_implicit_invocation policy"
+    else
+      case "$skill" in
+        speckit-scaffold-spec)
+          # Scaffold must be discoverable in fresh Codex threads; the skill body
+          # still owns the setup gates before mutating repo state.
+          if [ "$policy_value" = "true" ]; then
+            _pass
+          else
+            _fail "scaffold skill must have allow_implicit_invocation: true for Codex discovery"
+          fi
+          ;;
+        speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me|speckit-prd)
+          if [ "$policy_value" = "false" ]; then
+            _pass
+          else
+            _fail "mutation-heavy skill must have allow_implicit_invocation: false"
+          fi
+          ;;
+        speckit-coach|speckit-status)
+          if [ "$policy_value" = "true" ]; then
+            _pass
+          else
+            _fail "read-only skill must have allow_implicit_invocation: true"
+          fi
+          ;;
+        *)
+          _fail "no implicit-invocation policy expectation defined for '$skill'; update validate-codex-skills.sh"
+          ;;
+      esac
+    fi
   else
     _fail "agents/openai.yaml not found; skipping policy check"
   fi
