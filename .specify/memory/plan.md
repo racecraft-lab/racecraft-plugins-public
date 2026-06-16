@@ -630,3 +630,47 @@ documentation sync, and Codex custom-agent registration guidance.
 `specs/doc-004-codex-marketplace-installation-path` were removed from active
 `specs/**` cleanup after PR #187 and PR #186 merged. Recovery commands and
 provenance are recorded in the DOC-003/DOC-004 archive report.
+
+---
+
+## DOC-005 first successful workflow tutorial and lifecycle explainer
+
+[Source: .specify/memory/archive-reports/2026-06-16-doc-005-post-merge-hygiene.md]
+**Branch**: `codex/doc-005-post-merge-hygiene` · **Status**: Completed · **Archived**: 2026-06-16
+
+### Scope
+
+DOC-005 completed the first-run tier for the interactive documentation roadmap.
+It owns the canonical first successful workflow tutorial, lifecycle explainer,
+static lifecycle flow component, platform-separated command examples, validated
+Codex Spec Kit init snippet, prerequisite checks, first-success checkpoints,
+and bounded fallback handoffs.
+
+### Architecture / Approach
+
+- Keep first-run tutorial content in `docs-site/src/content/docs/first-run.md`.
+- Keep phase, artifact, and gate explanation in
+  `docs-site/src/content/docs/spec-kit-lifecycle.mdx`.
+- Render the lifecycle visualizer through
+  `docs-site/src/components/LifecycleFlow.astro` as static semantic HTML.
+- Treat install pages, `speckit-pro/README.md`, and skill entrypoints as source
+  evidence without editing plugin runtime or generated payload surfaces.
+- Preserve detailed recovery commands for the residual DOC-005 PR-packet
+  evidence before removing it from active `specs/**`.
+- Regenerate and check the roadmap-MOC generated INDEX after cleanup.
+
+### Test Strategy
+
+- Confirm PRs #198, #199, #200, and #201 are merged to `main`.
+- Validate JSON state files after replacing stale archive state.
+- Regenerate and check SpecKit generated indexes.
+- Verify active `specs/**` contains only `specs/.gitkeep` after cleanup.
+- Run docs-site validation, docs-site link validation, and the deterministic
+  SpecKit test suite.
+
+### Cleanup Notes
+
+Residual DOC-005 process evidence under
+`specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer` was
+removed from active `specs/**` cleanup after PRs #198-#201 merged. Recovery
+commands and provenance are recorded in the DOC-005 archive report.

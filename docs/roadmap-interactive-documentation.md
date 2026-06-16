@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-003 and DOC-004 completed and archived; DOC-005, DOC-006, and DOC-007 are ready
+**Status:** DOC-005 completed and archived; DOC-006 and DOC-007 are ready
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -131,6 +131,9 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-005: First successful `speckit-pro` workflow tutorial and lifecycle explainer
 
 - **Maps from PRD:** DOC-FR-005
+- **Status:** Completed and archived after PRs #198-#201. Canonical routes live
+  in `docs-site/src/content/docs/first-run.md` and
+  `docs-site/src/content/docs/spec-kit-lifecycle.mdx`.
 - **User outcome:** A user can complete one guided `speckit-pro` run and understand the artifacts produced.
 - **Scope:** First-run tutorial with platform tabs or separate branches, Spec Kit prerequisite checks, lifecycle diagram, PRD/roadmap/scaffold/autopilot explanation, and first-success checkpoints for `$speckit-prd`, `$grill-me`, `$speckit-scaffold-spec`, and `$speckit-autopilot`.
 - **Vertical-slice rationale:** Delivers a usable onboarding tutorial from prerequisite check through first workflow.

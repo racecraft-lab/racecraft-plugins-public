@@ -1,17 +1,13 @@
 {
   "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/DOC-003-workflow.md",
-  "workflow_files": [
-    "docs/ai/specs/.process/DOC-003-workflow.md",
-    "docs/ai/specs/.process/DOC-004-workflow.md"
-  ],
-  "feature_dir": "specs/doc-003-claude-code-marketplace-installation-path",
+  "workflow_file": null,
+  "workflow_files": [],
+  "feature_dir": "specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer",
   "feature_dirs": [
-    "specs/doc-003-claude-code-marketplace-installation-path",
-    "specs/doc-004-codex-marketplace-installation-path"
+    "specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer"
   ],
-  "feature_branch": "codex/doc-003-004-post-merge-hygiene",
-  "updated_at": "2026-06-15T20:40:39Z",
+  "feature_branch": "codex/doc-005-post-merge-hygiene",
+  "updated_at": "2026-06-16T20:47:28Z",
   "active_step": "Archived",
   "status": "completed",
   "archive_sweep": {
@@ -21,12 +17,11 @@
     "current_target": null,
     "excluded_current_spec": null,
     "eligible_previous_specs": [
-      "specs/doc-003-claude-code-marketplace-installation-path",
-      "specs/doc-004-codex-marketplace-installation-path"
+      "specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer"
     ],
     "safeToApplyCleanup": true,
     "dryRunProvenanceOnly": false,
-    "archive_report": ".specify/memory/archive-reports/2026-06-15-doc-003-004-post-merge-hygiene.md",
+    "archive_report": ".specify/memory/archive-reports/2026-06-16-doc-005-post-merge-hygiene.md",
     "cleanup_applied": true
   },
   "implementation": {
@@ -35,31 +30,34 @@
     "gate_status": "passed",
     "completed_specs": [
       {
-        "spec_id": "DOC-003",
-        "merged_pr": 187,
-        "merge_commit": "afc197a278001c7b8c2ffeb973c359971676d597",
-        "completed_tasks": 39,
-        "canonical_route": "docs-site/src/content/docs/install/claude-code.md",
+        "spec_id": "DOC-005",
+        "merged_prs": [
+          198,
+          199,
+          200,
+          201
+        ],
+        "merge_commits": [
+          "238bd36921787588f52d5f0f24bd3a0d7b485d66",
+          "d6143d8fdf142f277b525a8fb759ee8b10faa44e",
+          "f03e352d5cc143d104c9b8f977266496fa869fd4",
+          "0f0eff05f80130d4c61cc91c2633f2b73ad88151"
+        ],
+        "canonical_routes": [
+          "docs-site/src/content/docs/first-run.md",
+          "docs-site/src/content/docs/spec-kit-lifecycle.mdx"
+        ],
+        "canonical_component": "docs-site/src/components/LifecycleFlow.astro",
         "verification": {
           "docs_validate": "passed before PR merge",
-          "default_suite": "3001/3001 passed before PR merge"
-        }
-      },
-      {
-        "spec_id": "DOC-004",
-        "merged_pr": 186,
-        "merge_commit": "bc48441c494d34a7df9876c3bdebabc4db8408a5",
-        "completed_tasks": 20,
-        "canonical_route": "docs-site/src/content/docs/install/codex.md",
-        "verification": {
-          "docs_validate": "passed before PR merge",
-          "default_suite": "3001/3001 passed before PR merge"
+          "docs_validate_links": "passed before PR merge",
+          "pr_packet_reviews": "8/8 passed before post-merge hygiene",
+          "default_suite": "passed before PR merge"
         }
       }
     ]
   },
   "next_specs": [
-    "DOC-005",
     "DOC-006",
     "DOC-007"
   ]
