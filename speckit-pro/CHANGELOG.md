@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.2...speckit-pro-v2.14.3) (2026-06-16)
+
+
+### Bug Fixes
+
+* **speckit-pro:** expose scaffold skill in Codex ([#195](https://github.com/racecraft-lab/racecraft-plugins-public/issues/195)) ([5e0cfb1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/5e0cfb1f17090fce828ecdc642653afa08b3a7d7))
+
 ## [2.14.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.1...speckit-pro-v2.14.2) (2026-06-16)
 
 

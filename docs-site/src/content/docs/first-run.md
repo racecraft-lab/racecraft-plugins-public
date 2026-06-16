@@ -40,7 +40,7 @@ For a new Codex Spec Kit project, current local CLI evidence supports this
 skills-mode initialization form:
 
 ```bash
-specify init --here --integration codex --integration-options="--skills"
+specify init --here --integration codex --integration-options="--skills" --script sh
 ```
 
 Use the [Codex install guide](/racecraft-plugins-public/install/codex/) for the
