@@ -1,0 +1,144 @@
+<section class="lifecycle-flow" aria-labelledby="lifecycle-flow-title">
+  <div class="lifecycle-flow__header">
+    <h2 id="lifecycle-flow-title">Lifecycle Artifact Flow</h2>
+    <p>
+      Each step leaves evidence for the next step. Gates check that the evidence
+      is ready before the workflow moves forward.
+    </p>
+  </div>
+
+  <ol class="lifecycle-flow__list">
+    <li>
+      <h3>Idea</h3>
+      <p>Problem, request, support note, or transcript.</p>
+      <span>Input</span>
+    </li>
+    <li>
+      <h3>PRD</h3>
+      <p>Requirements, success criteria, and SPEC catalog.</p>
+      <span>Product artifact</span>
+    </li>
+    <li>
+      <h3>Roadmap</h3>
+      <p>SPEC-ID, dependencies, status, and execution order.</p>
+      <span>Planning artifact</span>
+    </li>
+    <li>
+      <h3>Scaffold</h3>
+      <p>Workflow file, design concept, spec folder, and MOC.</p>
+      <span>Setup gate</span>
+    </li>
+    <li>
+      <h3>Specify</h3>
+      <p>User stories and functional requirements in <code>spec.md</code>.</p>
+      <span>G1</span>
+    </li>
+    <li>
+      <h3>Clarify</h3>
+      <p>Open questions resolved before planning starts.</p>
+      <span>G2</span>
+    </li>
+    <li>
+      <h3>Plan</h3>
+      <p>Implementation approach, contracts, research, and quickstart.</p>
+      <span>G3</span>
+    </li>
+    <li>
+      <h3>Checklist</h3>
+      <p>UX, accessibility, integration, and error-handling gaps.</p>
+      <span>G4</span>
+    </li>
+    <li>
+      <h3>Tasks</h3>
+      <p>Reviewable work items grouped by user story.</p>
+      <span>G5</span>
+    </li>
+    <li>
+      <h3>Analyze</h3>
+      <p>Cross-artifact drift review before implementation.</p>
+      <span>G6</span>
+    </li>
+    <li>
+      <h3>Implement</h3>
+      <p>Docs changes, validation evidence, and PR packet.</p>
+      <span>G7</span>
+    </li>
+  </ol>
+</section>
+
+<style>
+  .lifecycle-flow {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 8px;
+    margin: 2rem 0;
+    padding: 1rem;
+    background: var(--sl-color-bg);
+  }
+
+  .lifecycle-flow__header {
+    max-width: 64rem;
+    margin-bottom: 1rem;
+  }
+
+  .lifecycle-flow__header h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.35rem;
+    letter-spacing: 0;
+  }
+
+  .lifecycle-flow__header p {
+    margin: 0;
+  }
+
+  .lifecycle-flow__list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .lifecycle-flow__list li {
+    min-height: 10rem;
+    border: 1px solid var(--sl-color-gray-5);
+    border-left: 0.35rem solid var(--sl-color-accent);
+    border-radius: 8px;
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    background: color-mix(in srgb, var(--sl-color-bg) 88%, var(--sl-color-gray-7));
+  }
+
+  .lifecycle-flow__list li:nth-child(3n) {
+    border-left-color: #0f766e;
+  }
+
+  .lifecycle-flow__list li:nth-child(3n + 1) {
+    border-left-color: #b45309;
+  }
+
+  .lifecycle-flow__list h3 {
+    margin: 0;
+    font-size: 1rem;
+    letter-spacing: 0;
+  }
+
+  .lifecycle-flow__list p {
+    margin: 0;
+    flex: 1;
+    font-size: 0.95rem;
+  }
+
+  .lifecycle-flow__list span {
+    align-self: flex-start;
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--sl-color-white);
+    background: var(--sl-color-gray-2);
+  }
+</style>

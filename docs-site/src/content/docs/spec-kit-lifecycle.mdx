@@ -1,0 +1,77 @@
+---
+title: "Spec Kit Lifecycle"
+---
+
+import LifecycleFlow from '../../components/LifecycleFlow.astro';
+
+Use this page to understand what each SpecKit Pro phase produces, what gate
+checks it, and where to go next. The lifecycle starts before autopilot: idea,
+PRD, roadmap entry, and scaffolded workflow/spec are part of the artifact trail.
+
+<LifecycleFlow />
+
+## Lifecycle Overview
+
+| Stage | Purpose | Output to inspect | Gate or signal | Next action |
+|---|---|---|---|---|
+| Idea | Capture the problem or opportunity in plain language. | Notes, transcript, or scoping answers. | The idea is specific enough to write a PRD. | Run `grill-me` or move to PRD creation. |
+| PRD | Convert the idea into product requirements and acceptance criteria. | PRD and SPEC catalog. | A SPEC-ID is visible. | Add or confirm the roadmap entry. |
+| Roadmap | Put the SPEC-ID in technical order with dependencies and status. | `docs/ai/specs/*.md` roadmap row. | The roadmap marks the SPEC ready or explains the blocker. | Scaffold the SPEC. |
+| Scaffold | Prepare one worktree, workflow file, spec folder, and MOC. | Design concept, workflow, `SPEC-MOC.md`, and initial `spec.md`. | Setup gates pass and the target feature directory exists. | Start autopilot. |
+| Specify | Turn the request into user stories and functional requirements. | `spec.md`. | G1: spec exists and clarification markers are addressed. | Clarify remaining decisions. |
+| Clarify | Resolve ambiguity before planning. | Updated `spec.md` and clarification notes. | G2: no unresolved clarification markers remain. | Plan implementation. |
+| Plan | Choose the docs architecture, files, validation, and constraints. | `plan.md`, `research.md`, `data-model.md`, `contracts/`, `quickstart.md`. | G3: plan exists with no unresolved markers. | Generate checklists. |
+| Checklist | Audit UX, accessibility, integration, and error-handling gaps. | `checklists/*.md`. | G4: checklist gaps are fixed or explicitly deferred. | Generate tasks. |
+| Tasks | Break work into reviewable tasks by user story. | `tasks.md` and reviewability evidence. | G5: tasks exist and route/marker planning is recorded. | Analyze drift before implementation. |
+| Analyze | Check cross-artifact consistency. | Analysis results in the workflow file. | G6: no Critical or High findings remain. | Pass the confidence gate. |
+| Implement | Apply the tasks and record validation evidence. | Changed docs files, static component, task checkoffs, PR packet. | G7: all tasks complete and validation evidence is present. | Prepare review. |
+
+## Platform Actions Stay Separate
+
+SpecKit lifecycle concepts are platform-neutral. Invocation syntax is not.
+
+| Activity | Claude Code | Codex |
+|---|---|---|
+| Scope an idea | `/speckit-pro:grill-me docs/raw-idea.md` | `$grill-me docs/raw-idea.md` |
+| Create PRD and roadmap | `/speckit-pro:speckit-prd "saved searches"` | `$speckit-prd "saved searches"` |
+| Check status | `/speckit-pro:speckit-status` | `$speckit-status` |
+| Scaffold a SPEC | `/speckit-pro:speckit-scaffold-spec DOC-005` | `$speckit-scaffold-spec DOC-005` |
+| Run autopilot | `/speckit-pro:speckit-autopilot docs/ai/specs/.process/DOC-005-workflow.md` | `$speckit-autopilot docs/ai/specs/.process/DOC-005-workflow.md` |
+
+Use the [Claude Code install guide](/racecraft-plugins-public/install/claude-code/)
+for Claude Code plugin setup and the
+[Codex install guide](/racecraft-plugins-public/install/codex/) for Codex
+skills, custom agents, and plugin surfaces.
+
+## What Each Gate Means
+
+| Gate | Checks | If it does not pass |
+|---|---|---|
+| G1 | `spec.md` exists and the basic request is captured. | Inspect the specify output and update the spec evidence. |
+| G2 | Clarification markers are resolved. | Return to the unanswered decision before planning. |
+| G3 | The plan has concrete files, validation, and constraints. | Inspect `plan.md` and the research or contract artifact it references. |
+| G4 | Checklist gaps are resolved or intentionally deferred. | Review the checklist item and update the owning artifact. |
+| G5 | `tasks.md` exists and implementation can be reviewed by task group. | Inspect task grouping, dependencies, and reviewability evidence. |
+| G6 | Analyze has no open Critical or High drift findings. | Resolve the finding recorded in the workflow file. |
+| G7 | All implementation tasks and validation evidence are complete. | Inspect `tasks.md`, docs validation output, and PR packet evidence. |
+
+For command catalogs and file-layout depth, use
+[SpecKit Pro reference](/racecraft-plugins-public/reference/). For deeper
+diagnosis, use
+[troubleshooting orientation](/racecraft-plugins-public/troubleshooting/).
+For platform trust questions, use
+[security and trust orientation](/racecraft-plugins-public/security-and-trust/).
+For future path selection, use
+[choose your path](/racecraft-plugins-public/choose-your-path/).
+
+## Source Evidence And Boundaries
+
+This page is grounded in:
+
+- [docs/prd-interactive-documentation.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs/prd-interactive-documentation.md)
+- [docs/roadmap-interactive-documentation.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs/roadmap-interactive-documentation.md)
+- [speckit-pro/README.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/README.md)
+
+This route owns the phase, artifact, and gate explanation for the first
+successful workflow. It links to selector, reference, troubleshooting, and trust
+routes instead of duplicating their deeper material.
