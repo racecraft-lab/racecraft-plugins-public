@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.2](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.1...speckit-pro-v2.14.2) (2026-06-16)
+
+
+### Bug Fixes
+
+* **speckit-pro:** harden specify cli detection ([f26bc14](https://github.com/racecraft-lab/racecraft-plugins-public/commit/f26bc14aa52a3dd9f19938cdb667d476d21f4fcf))
+
 ## [2.14.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.0...speckit-pro-v2.14.1) (2026-06-15)
 
 
