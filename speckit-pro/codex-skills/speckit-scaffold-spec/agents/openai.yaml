@@ -4,4 +4,4 @@ interface:
   default_prompt: "Scaffold a SPEC-ID from the technical roadmap for SpecKit autopilot"
 
 policy:
-  allow_implicit_invocation: false
+  allow_implicit_invocation: true

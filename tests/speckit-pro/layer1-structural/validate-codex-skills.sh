@@ -304,7 +304,16 @@ $(cat "$ref_file")"
   if [ -f "$SKILL_DIR/agents/openai.yaml" ]; then
     yaml_content=$(cat "$SKILL_DIR/agents/openai.yaml")
     case "$skill" in
-      speckit-scaffold-spec|speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me|speckit-prd)
+      speckit-scaffold-spec)
+        # Scaffold must be discoverable in fresh Codex threads; the skill body
+        # still owns the setup gates before mutating repo state.
+        if echo "$yaml_content" | grep -q 'allow_implicit_invocation: true'; then
+          _pass
+        else
+          _fail "scaffold skill must have allow_implicit_invocation: true for Codex discovery"
+        fi
+        ;;
+      speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me|speckit-prd)
         if echo "$yaml_content" | grep -q 'allow_implicit_invocation: false'; then
           _pass
         else
