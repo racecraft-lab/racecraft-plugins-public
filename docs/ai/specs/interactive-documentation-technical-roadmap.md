@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-005 completed and archived; DOC-006 and DOC-007 are ready. Created 2026-06-12; refreshed 2026-06-16.
+> Status: DOC-005 completed and archived; DOC-006 is in progress; DOC-007 is ready. Created 2026-06-12; refreshed 2026-06-16.
 
 ## Roadmap Overview
 
@@ -60,7 +60,7 @@ DOC-007 -> DOC-008
 | DOC-003 | Claude Code marketplace installation path | Completed/archived | `.process/DOC-003-workflow.md` | Archived after PR #187 |
 | DOC-004 | Codex marketplace installation path | Completed/archived | `.process/DOC-004-workflow.md` | Archived after PR #186 |
 | DOC-005 | First successful workflow tutorial | Completed/archived | DOC-005-workflow.md | Archived after PRs #198-#201 |
-| DOC-006 | Safe interactive selector and validation aids | Ready | DOC-006-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
+| DOC-006 | Safe interactive selector and validation aids | In progress | `.process/DOC-006-workflow.md` | Scaffolded on `doc-006-safe-interactive-selector-and-validation-aids`; run autopilot |
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Ready | DOC-007-workflow.md | Unblocked after DOC-003 and DOC-004 archive |
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Pending | DOC-008-workflow.md | Blocked by DOC-007 |
 | DOC-009 | Maintainer and contributor release workflow | Pending | DOC-009-workflow.md | Blocked by DOC-007 |
@@ -221,6 +221,8 @@ Budget result: within budget
 ### DOC-006: Safe interactive selector and validation aids
 
 **Priority:** P1 | **Depends On:** DOC-002, DOC-003, DOC-004 | **Enables:** DOC-010
+
+**Status:** In progress as of 2026-06-16. Scaffolded on branch `doc-006-safe-interactive-selector-and-validation-aids` with workflow `docs/ai/specs/.process/DOC-006-workflow.md` and Design Concept `docs/ai/specs/.process/DOC-006-design-concept.md`.
 
 **Goal:** Add safe interactive docs aids without executing local plugin workflows.
 
