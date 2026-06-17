@@ -20,11 +20,11 @@
 
 **Purpose**: Create the report shell, inventory plan, and guardrails before any evidence classification begins.
 
-- [ ] T001 Create the report skeleton with required sections in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T002 Record TACD-001 scope, non-goals, and design-concept source reference in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T003 Add the confidence rubric and evidence-state definitions from `specs/tacd-001-platform-mechanics-spike/spec.md` to `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T004 Add the local source inventory command plan from `specs/tacd-001-platform-mechanics-spike/plan.md` to `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T005 Add a no-behavior-change guardrail checklist covering `CLAUDE.md`, `.claude/`, active guidance, prerequisite behavior, docs messaging, generated payload semantics, and final enforcement tests in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T001 Create the report skeleton with required sections in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T002 Record TACD-001 scope, non-goals, and design-concept source reference in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T003 Add the confidence rubric and evidence-state definitions from `specs/tacd-001-platform-mechanics-spike/spec.md` to `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T004 Add the local source inventory command plan from `specs/tacd-001-platform-mechanics-spike/plan.md` to `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T005 Add a no-behavior-change guardrail checklist covering `CLAUDE.md`, `.claude/`, active guidance, prerequisite behavior, docs messaging, generated payload semantics, and final enforcement tests in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
 **Checkpoint**: The report can accept evidence without expanding beyond the TACD-001 spike boundary.
 
@@ -38,19 +38,19 @@
 
 ### Phase 2a: Claude Code Evidence
 
-- [ ] T006 [P] [US1] Inventory Claude agent named-tool references and active guidance in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T007 [P] [US1] Inventory Claude skill, reference, prerequisite-script, and plugin-limitation named-tool references in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T008 [US1] Classify Claude generated payload duplicates from `dist/claude/speckit-pro/` in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T009 [US1] Fill Claude Code runtime-by-capability matrix cells with evidence state, confidence, confidence rationale, and absent-capability disposition in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T010 [US1] Add sanitized Claude Code probe appendix entries for mechanics that local source inspection cannot prove in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T006 [P] [US1] Inventory Claude agent named-tool references and active guidance in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T007 [P] [US1] Inventory Claude skill, reference, prerequisite-script, and plugin-limitation named-tool references in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T008 [US1] Classify Claude generated payload duplicates from `dist/claude/speckit-pro/` in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T009 [US1] Fill Claude Code runtime-by-capability matrix cells with evidence state, confidence, confidence rationale, and absent-capability disposition in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T010 [US1] Add sanitized Claude Code probe appendix entries for mechanics that local source inspection cannot prove in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
 ### Phase 3: Codex Evidence
 
-- [ ] T011 [P] [US1] Inventory Codex agent and skill named-tool references in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T012 [P] [US1] Inventory Codex dependency metadata, generated payload duplicates, and eval expectations in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T013 [US1] Classify Codex runtime/dependency metadata separately from named-tool prose preference in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T014 [US1] Fill Codex runtime-by-capability matrix cells with evidence state, confidence, confidence rationale, and absent-capability disposition in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T015 [US1] Add sanitized Codex probe appendix entries for mechanics that local source inspection cannot prove in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T011 [P] [US1] Inventory Codex agent and skill named-tool references in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T012 [P] [US1] Inventory Codex dependency metadata, generated payload duplicates, and eval expectations in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T013 [US1] Classify Codex runtime/dependency metadata separately from named-tool prose preference in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T014 [US1] Fill Codex runtime-by-capability matrix cells with evidence state, confidence, confidence rationale, and absent-capability disposition in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T015 [US1] Add sanitized Codex probe appendix entries for mechanics that local source inspection cannot prove in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
 **Checkpoint**: Runtime audit and mechanics evidence are independently reviewable. Claude Code and Codex evidence retain separate Phase 2a and Phase 3 subsections while sharing the single parser-valid US1 marker.
 
@@ -64,10 +64,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T016 [US3] Create the allowlist category table with allowed status, description, example surfaces, TACD owner, and false-positive guard in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T017 [US3] Map audited named-tool findings into active guidance, metadata, prerequisite messaging, eval expectation, generated duplicate, historical/provenance, fixture-only, ambiguous, or out-of-scope categories in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T018 [US3] Document TACD-004 deterministic-check recommendations without adding enforcement tests in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T019 [US3] Document TACD-004 functional eval-plan scenarios with observable behavior, required evidence, and failure signals for Claude Code and Codex in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T016 [US3] Create the allowlist category table with allowed status, description, example surfaces, TACD owner, and false-positive guard in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T017 [US3] Map audited named-tool findings into active guidance, metadata, prerequisite messaging, eval expectation, generated duplicate, historical/provenance, fixture-only, ambiguous, or out-of-scope categories in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T018 [US3] Document TACD-004 deterministic-check recommendations without adding enforcement tests in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T019 [US3] Document TACD-004 functional eval-plan scenarios with observable behavior, required evidence, and failure signals for Claude Code and Codex in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
 **Checkpoint**: TACD-004 has a report-backed category and eval-plan handoff, but no enforcement files are changed.
 
@@ -81,11 +81,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T020 [US2] Summarize static pointer coverage requirements for Claude Code and Codex in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T021 [US2] Summarize pointer target resolution and approved runtime-specific equivalent rules in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T022 [US2] Verify report evidence from T006-T019 before selecting shared reference with pointers or runtime-specific equivalents in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T023 [US2] Write the directive-home recommendation with pass/fail rationale and fallback plan in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T024 [US2] Record TACD-002, TACD-003, and TACD-004 downstream handoffs with scope, inputs, non-goals, and validation needed in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T020 [US2] Summarize static pointer coverage requirements for Claude Code and Codex in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T021 [US2] Summarize pointer target resolution and approved runtime-specific equivalent rules in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T022 [US2] Verify report evidence from T006-T019 before selecting shared reference with pointers or runtime-specific equivalents in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T023 [US2] Write the directive-home recommendation with pass/fail rationale and fallback plan in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T024 [US2] Record TACD-002, TACD-003, and TACD-004 downstream handoffs with scope, inputs, non-goals, and validation needed in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
 **Checkpoint**: The directive-home recommendation is evidence-backed and ready for TACD-002 planning.
 
@@ -95,12 +95,12 @@
 
 **Purpose**: Prove the report is complete, sanitized, cited, and scoped to TACD-001 only.
 
-- [ ] T025 Run required section check from `specs/tacd-001-platform-mechanics-spike/quickstart.md` and record the result in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T026 Run probe sanitization review from `specs/tacd-001-platform-mechanics-spike/quickstart.md` and record the result in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T027 Review every source citation for path, line context, classification, and rationale completeness in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T028 Run marker and G3 checks for `specs/tacd-001-platform-mechanics-spike` and record the result in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T029 Run `git diff --name-only` scope review and confirm no active runtime guidance, prerequisite behavior, docs messaging, generated payload semantics, final enforcement tests, `CLAUDE.md`, or `.claude` command surfaces changed in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
-- [ ] T030 Generate the PR review packet notes covering review order, scope budget, traceability, verification evidence, known gaps, and rollback/flag notes in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T025 Run required section check from `specs/tacd-001-platform-mechanics-spike/quickstart.md` and record the result in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T026 Run probe sanitization review from `specs/tacd-001-platform-mechanics-spike/quickstart.md` and record the result in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T027 Review every source citation for path, line context, classification, and rationale completeness in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T028 Run marker and G3 checks for `specs/tacd-001-platform-mechanics-spike` and record the result in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T029 Run `git diff --name-only` scope review and confirm no active runtime guidance, prerequisite behavior, docs messaging, generated payload semantics, final enforcement tests, `CLAUDE.md`, or `.claude` command surfaces changed in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
+- [x] T030 Generate the PR review packet notes covering review order, scope budget, traceability, verification evidence, known gaps, and rollback/flag notes in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
 **Checkpoint**: TACD-001 is ready for implementation review as a report-only spike.
 
