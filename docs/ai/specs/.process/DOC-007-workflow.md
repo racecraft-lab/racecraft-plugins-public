@@ -44,8 +44,8 @@ generate/check validation, parallel Claude Code/Codex presentation, and the
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Define generated reference subpages, strict citations, and no behavior changes |
-| Clarify | `/speckit-clarify` | Pending | Resolve route names/sidebar, generated file format, and DOC-010 CI handoff |
+| Specify | `/speckit-specify` | Complete | spec.md created: 3 user stories, 18 FRs, 9 acceptance scenarios, 0 `[NEEDS CLARIFICATION]`; 3 consensus items carried forward |
+| Clarify | `/speckit-clarify` | In Progress | Session 1 is resolving route names/sidebar and reference landing-page behavior |
 | Plan | `/speckit-plan` | Pending | Choose deterministic generator architecture and docs-site integration |
 | Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, integration/source-data, and error-handling checklists |
 | Tasks | `/speckit-tasks` | Pending | Generate story-ordered tasks for generator, pages, validation, and docs checks |
@@ -223,13 +223,17 @@ source facts.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 18 |
+| User Stories | 3 |
+| Acceptance Criteria | 9 acceptance scenarios |
+| `[NEEDS CLARIFICATION]` markers | 0 |
+| Unresolved for consensus | 3: [IA], [Format], [CI-Handoff] |
 
 ### Files Generated
 
-- [ ] `specs/doc-007-command-workflow-manifest-and-file-layout-reference/spec.md`
+- [x] `specs/doc-007-command-workflow-manifest-and-file-layout-reference/spec.md`
+- [x] `specs/doc-007-command-workflow-manifest-and-file-layout-reference/checklists/requirements.md`
+- [x] `.specify/feature.json`
 
 ---
 

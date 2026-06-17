@@ -1,65 +1,97 @@
 {
   "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/DOC-006-workflow.md",
+  "workflow_file": "docs/ai/specs/.process/DOC-007-workflow.md",
   "workflow_files": [
-    "docs/ai/specs/.process/DOC-006-workflow.md"
+    "docs/ai/specs/.process/DOC-007-workflow.md"
   ],
-  "feature_dir": "specs/doc-006-safe-interactive-selector-and-validation-aids",
+  "feature_dir": "specs/doc-007-command-workflow-manifest-and-file-layout-reference",
   "feature_dirs": [
-    "specs/doc-006-safe-interactive-selector-and-validation-aids"
+    "specs/doc-007-command-workflow-manifest-and-file-layout-reference"
   ],
-  "feature_branch": "codex/doc-006-post-merge-hygiene",
-  "updated_at": "2026-06-17T16:04:35Z",
-  "active_step": "Archived",
-  "status": "completed",
+  "feature_branch": "doc-007-command-workflow-manifest-and-file-layout-reference",
+  "updated_at": "2026-06-17T17:17:28Z",
+  "active_step": "Phase 2: Clarify - IA And Route Shape",
+  "status": "running",
+  "confidence_gate_mode": "advisory",
+  "project_commands": {
+    "BUILD": "N/A",
+    "TYPECHECK": "N/A",
+    "LINT": "N/A",
+    "LINT_FIX": "N/A",
+    "UNIT_TEST": "N/A",
+    "INTEGRATION_TEST": "N/A",
+    "SINGLE_FILE_TEST": "N/A",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "FULL_VERIFY": "N/A",
+    "DOCS_GENERATE_CHECK": "to be chosen during Plan",
+    "DOCS_VALIDATE": "pnpm --dir docs-site validate",
+    "DOCS_VALIDATE_LINKS": "pnpm --dir docs-site validate:links",
+    "PLUGIN_LAYER1": "bash tests/speckit-pro/run-all.sh --layer 1",
+    "PLUGIN_DEFAULT": "bash tests/speckit-pro/run-all.sh"
+  },
+  "preset_conventions": {
+    "has_presets": true,
+    "presets": [
+      "speckit-pro-reviewability v1.0.0"
+    ],
+    "note": "spec-template, plan-template, and tasks-template resolve through the speckit-pro-reviewability preset"
+  },
+  "mcp_servers": {
+    "status": "fallbacks_available",
+    "missing": [
+      "tavily-mcp",
+      "context7",
+      "RepoPrompt"
+    ]
+  },
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-hygiene",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/doc-006-safe-interactive-selector-and-validation-aids"
-    ],
-    "safeToApplyCleanup": true,
-    "dryRunProvenanceOnly": false,
-    "archive_report": ".specify/memory/archive-reports/2026-06-17-doc-006-post-merge-hygiene.md",
-    "cleanup_applied": true
+    "cleanup_mode": "feature-branch-sweep",
+    "current_target": "specs/doc-007-command-workflow-manifest-and-file-layout-reference",
+    "excluded_current_spec": "specs/doc-007-command-workflow-manifest-and-file-layout-reference",
+    "eligible_previous_specs": [],
+    "safeToApplyCleanup": false,
+    "dryRunProvenanceOnly": true,
+    "cleanup_applied": false,
+    "notes": "Local active specs scan found only the DOC-007 current target; no prior active specs were eligible for archive or cleanup."
   },
-  "implementation": {
-    "status": "completed",
-    "gate": "G7",
-    "gate_status": "passed",
-    "completed_specs": [
-      {
-        "spec_id": "DOC-006",
-        "merged_prs": [
-          203
-        ],
-        "merge_commits": [
-          "973e9cf76143efe168f4c2b9ab5682581317e28c"
-        ],
-        "canonical_routes": [
-          "docs-site/src/content/docs/choose-your-path.mdx"
-        ],
-        "canonical_component": "docs-site/src/components/SafeInstallAids.astro",
-        "canonical_data": "docs-site/src/data/safe-install-aids.ts",
-        "canonical_validation": "docs-site/scripts/validate-doc006-safe-aids.mjs",
-        "verification": {
-          "focused_validation": "passed before PR merge",
-          "docs_validate": "passed before PR merge",
-          "docs_validate_links": "passed before PR merge",
-          "privacy_scan": "passed before PR merge",
-          "default_suite": "passed before PR merge",
-          "manual_browser_uat": "PR #203 review feedback resolved before merge"
-        }
-      }
-    ]
-  },
-  "next_specs": [
-    "DOC-007",
-    "DOC-008",
-    "DOC-009",
-    "DOC-010"
+  "plan": [
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - IA And Route Shape", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - IA And Route Shape Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Generation Format And Reviewability", "status": "pending"},
+    {"step": "Phase 2: Clarify - Generation Format And Reviewability Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Validation And Handoff Boundaries", "status": "pending"},
+    {"step": "Phase 2: Clarify - Validation And Handoff Boundaries Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Integration", "status": "pending"},
+    {"step": "Phase 4: Checklist - Integration Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Cleanup", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }
