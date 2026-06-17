@@ -65,15 +65,18 @@
     }
   },
   "emission": {
-    "route": "marker_split",
+    "route": "hazard_collapsed",
     "markers": [
       {
-        "id": "foundation",
+        "id": "full-spec",
         "review_order": 1,
         "source_marker_ids": [
-          "foundation"
+          "foundation",
+          "us1",
+          "us2",
+          "us3"
         ],
-        "packet_path": null,
+        "packet_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/pr-packet.json",
         "declared_files": [
           {
             "operation": "MODIFIED",
@@ -121,87 +124,30 @@
           },
           {
             "operation": "MODIFIED",
-            "path": "specs/doc-006-safe-interactive-selector-and-validation-aids/tasks.md"
-          }
-        ],
-        "declared_tests": [],
-        "warnings": []
-      },
-      {
-        "id": "us1",
-        "review_order": 2,
-        "source_marker_ids": [
-          "us1"
-        ],
-        "packet_path": null,
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/components/SafeInstallAids.astro"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/choose-your-path.mdx"
-          }
-        ],
-        "declared_tests": [],
-        "warnings": []
-      },
-      {
-        "id": "us2",
-        "review_order": 3,
-        "source_marker_ids": [
-          "us2"
-        ],
-        "packet_path": null,
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/components/SafeInstallAids.astro"
-          }
-        ],
-        "declared_tests": [],
-        "warnings": []
-      },
-      {
-        "id": "us3",
-        "review_order": 4,
-        "source_marker_ids": [
-          "us3"
-        ],
-        "packet_path": null,
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/components/SafeInstallAids.astro"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/choose-your-path.mdx"
-          },
-          {
-            "operation": "MODIFIED",
             "path": "specs/doc-006-safe-interactive-selector-and-validation-aids/quickstart.md"
           },
           {
             "operation": "MODIFIED",
             "path": "specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-006-safe-interactive-selector-and-validation-aids/tasks.md"
           }
         ],
         "declared_tests": [],
-        "warnings": []
+        "warnings": [
+          {
+            "code": "HAZARD_COLLAPSE",
+            "severity": "warning",
+            "message": "Marker checkpoints collapsed to one completed implementation state; live split emission would create unsafe duplicate or empty slice branches, so this run uses one aggregate PR with marker evidence retained for review.",
+            "source": "marker-checkpoints",
+            "details": {
+              "route": "one-navigable-PR",
+              "releasable": false
+            }
+          }
+        ]
       }
     ]
   },
@@ -224,6 +170,16 @@
       "source": "final-reviewability-backstop",
       "details": {
         "feature_dir": "specs/doc-006-safe-interactive-selector-and-validation-aids"
+      }
+    },
+    {
+      "code": "HAZARD_COLLAPSE",
+      "severity": "warning",
+      "message": "Marker checkpoints collapsed to one completed implementation state; live split emission would create unsafe duplicate or empty slice branches, so this run uses one aggregate PR with marker evidence retained for review.",
+      "source": "marker-checkpoints",
+      "details": {
+        "route": "one-navigable-PR",
+        "releasable": false
       }
     }
   ]

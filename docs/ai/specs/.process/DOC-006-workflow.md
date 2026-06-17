@@ -594,7 +594,7 @@ For tasks touching derived command/checker metadata:
 | User Story 1 - Selector and commands | T012-T017 | 6/6 | Rendered native radio selector, complete static fallback table, selected-path panels, visible command blocks, optional copy buttons, unsupported/unavailable/ambiguous state text, and route placement. |
 | User Story 2 - Checker and payload diagram | T018-T022 | 5/5 | Rendered repository-only checker with 7 pass/info rows, compared values, consistency rules, manifest input availability, mismatch/unavailable fixture coverage, and no user JSON or local config inspection. |
 | User Story 3 - First-run checklist and handoffs | T023-T027 | 5/5 | Rendered text-backed payload diagram, first-run checkpoints, safe handoff copy, native controls, visible focus styling, and static content that remains available without selector scripting. |
-| Validation and review packet | T028-T032 | 5/5 | Focused validator, docs validation, link validation, full verify, built-HTML manifest review, command-safety/static-fallback review, full SpecKit suite, UAT runbook, PR packet, and packet validation passed. |
+| Validation and review packet | T028-T032 | 5/5 | Focused validator, docs validation, link validation, full verify, built-HTML manifest review, command-safety/static-fallback review, full SpecKit suite, UAT runbook, PR packet, packet validation, and hazard-collapsed PR route evidence passed. |
 
 ---
 
@@ -636,3 +636,4 @@ Template based on SpecKit best practices and populated for DOC-006 from the tech
 
 ### PR packet validation events
 - `pr-packet` validation passed; result `specs/doc-006-safe-interactive-selector-and-validation-aids/.process/pr-packets/pr-packet/validation.json`; PR creation unblocked.
+- Final reviewability emitted marker evidence, then collapsed to one aggregate PR because marker checkpoints resolved to the same completed implementation state; live marker-split emission would create unsafe duplicate or empty slice branches.

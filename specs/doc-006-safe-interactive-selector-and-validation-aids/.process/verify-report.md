@@ -38,4 +38,4 @@ No constitution conflicts found. The implementation stays docs-site scoped, read
 
 ## Next Actions
 
-Implementation verified. Reviewability backstop, UAT runbook, PR packet generation, and packet validation are complete; proceed to PR review.
+Implementation verified. Reviewability backstop, UAT runbook, PR packet generation, packet validation, and hazard-collapsed PR route evidence are complete; proceed to PR review.

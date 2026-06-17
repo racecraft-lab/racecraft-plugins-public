@@ -103,7 +103,9 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "commit": "ff159284"
+        "commit": "ff159284",
+        "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/marker-plan/final-marker-split-result.json",
+        "commit_sha": "ff159284"
       },
       "emission_mapping": {
         "status": "marker_split",
@@ -165,7 +167,9 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "commit": "ff159284"
+        "commit": "ff159284",
+        "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/marker-plan/final-marker-split-result.json",
+        "commit_sha": "ff159284"
       },
       "emission_mapping": {
         "status": "marker_split",
@@ -222,7 +226,9 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "commit": "ff159284"
+        "commit": "ff159284",
+        "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/marker-plan/final-marker-split-result.json",
+        "commit_sha": "ff159284"
       },
       "emission_mapping": {
         "status": "marker_split",
@@ -297,7 +303,9 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "commit": "ff159284"
+        "commit": "ff159284",
+        "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/marker-plan/final-marker-split-result.json",
+        "commit_sha": "ff159284"
       },
       "emission_mapping": {
         "status": "marker_split",

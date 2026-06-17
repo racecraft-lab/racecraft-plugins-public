@@ -314,6 +314,16 @@
             "mode": "tasks",
             "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
           }
+        },
+        {
+          "code": "HAZARD_COLLAPSE",
+          "severity": "warning",
+          "message": "Marker checkpoints collapsed to one completed implementation state; live split emission would create unsafe duplicate or empty slice branches, so this run uses one aggregate PR with marker evidence retained for review.",
+          "source": "marker-checkpoints",
+          "details": {
+            "route": "one-navigable-PR",
+            "releasable": false
+          }
         }
       ]
     },
@@ -329,8 +339,9 @@
       "pr_packet_validation": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/pr-packets/pr-packet/validation.json",
       "final_reviewability": {
         "status": "proceed",
-        "outcome": "marker_split",
-        "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/marker-plan/final-marker-split-result.json"
+        "outcome": "hazard_collapsed",
+        "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/marker-plan/final-marker-split-result.json",
+        "reason": "Marker checkpoints collapsed to one implementation state; live split emission would create unsafe duplicate or empty slice branches."
       },
       "verification": [
         "node docs-site/scripts/validate-doc006-safe-aids.mjs: pass",
@@ -847,6 +858,16 @@
           "status": "block",
           "mode": "tasks",
           "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
+        }
+      },
+      {
+        "code": "HAZARD_COLLAPSE",
+        "severity": "warning",
+        "message": "Marker checkpoints collapsed to one completed implementation state; live split emission would create unsafe duplicate or empty slice branches, so this run uses one aggregate PR with marker evidence retained for review.",
+        "source": "marker-checkpoints",
+        "details": {
+          "route": "one-navigable-PR",
+          "releasable": false
         }
       }
     ]

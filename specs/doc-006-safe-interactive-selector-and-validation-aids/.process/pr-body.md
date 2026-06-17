@@ -56,7 +56,7 @@ Source: generated PR packet.
 - Source feature: `specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md`.
 - Main docs surface: `docs-site/src/content/docs/choose-your-path.mdx`.
 - Implementation scope: docs-site component, docs-site metadata helper, focused validator, and DOC-006 process evidence.
-- Reviewability: final size-only gate exceeded the single-PR LOC threshold, and the marker-split backstop approved proceeding with the recorded marker plan and matching source fingerprint.
+- Reviewability: final size-only gate exceeded the single-PR LOC threshold, and the marker evidence is retained for review. Because all marker checkpoints collapsed to one completed implementation state, live split emission would create unsafe duplicate or empty slice branches; this PR records the supported hazard-collapsed aggregate route.
 - Traceability: source feature, implementation tasks, verification report, UAT runbook, marker plan, and changed-file scope are recorded in the packet metadata.
 - Non-goals: live doctor command, browser-side shell execution, user-local JSON checker, config mutation, full troubleshooting matrix, search/deep-link hardening, and docs CI hardening.
 
