@@ -9,9 +9,9 @@
     "specs/doc-007-command-workflow-manifest-and-file-layout-reference"
   ],
   "feature_branch": "doc-007-command-workflow-manifest-and-file-layout-reference",
-  "updated_at": "2026-06-17T19:46:19Z",
-  "active_step": "Post: Review Remediation",
-  "status": "awaiting_review",
+  "updated_at": "2026-06-17T20:24:44Z",
+  "active_step": "Archived",
+  "status": "completed_archived",
   "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
@@ -27,6 +27,7 @@
     "DOCS_REFERENCE_CHECK": "pnpm --dir docs-site reference:check",
     "DOCS_VALIDATE": "pnpm --dir docs-site validate",
     "DOCS_VALIDATE_LINKS": "pnpm --dir docs-site validate:links",
+    "PLUGIN_PAYLOADS": "bash scripts/build-plugin-payloads.sh",
     "PLUGIN_LAYER1": "bash tests/speckit-pro/run-all.sh --layer 1",
     "PLUGIN_DEFAULT": "bash tests/speckit-pro/run-all.sh"
   },
@@ -48,14 +49,21 @@
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "feature-branch-sweep",
+    "cleanup_mode": "post-merge-hygiene",
     "current_target": "specs/doc-007-command-workflow-manifest-and-file-layout-reference",
-    "excluded_current_spec": "specs/doc-007-command-workflow-manifest-and-file-layout-reference",
-    "eligible_previous_specs": [],
-    "safeToApplyCleanup": false,
-    "dryRunProvenanceOnly": true,
-    "cleanup_applied": false,
-    "notes": "Local active specs scan found only the DOC-007 current target; no prior active specs were eligible for archive or cleanup."
+    "excluded_current_spec": null,
+    "eligible_previous_specs": [
+      "specs/doc-007-command-workflow-manifest-and-file-layout-reference"
+    ],
+    "safeToApplyCleanup": true,
+    "dryRunProvenanceOnly": false,
+    "cleanup_applied": true,
+    "cleanup_branch": "codex/doc-007-post-merge-hygiene",
+    "cleanup_command": "git rm -r specs/doc-007-command-workflow-manifest-and-file-layout-reference",
+    "merged_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/208",
+    "merge_commit": "2f5ee096e903723e1ab0133c699bda5a22ae2172",
+    "archive_report": ".specify/memory/archive-reports/2026-06-17-doc-007-post-merge-hygiene.md",
+    "notes": "DOC-007 merged through PR #208 and was removed from active specs after archive provenance and recovery commands were recorded. Historical process files were retained."
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
@@ -92,7 +100,8 @@
     {"step": "Post: UAT Runbook Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
     {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
+    {"step": "Post: Review Remediation", "status": "completed"},
+    {"step": "Post: Retrospective", "status": "completed"},
+    {"step": "Archive: Post-merge cleanup", "status": "completed"}
   ]
 }

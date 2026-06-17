@@ -834,3 +834,53 @@ git checkout 973e9cf76143efe168f4c2b9ab5682581317e28c -- specs/doc-006-safe-inte
 
 The detailed archive and verification record is stored in
 `.specify/memory/archive-reports/2026-06-17-doc-006-post-merge-hygiene.md`.
+
+## DOC-007 Command, Workflow, Manifest, and File-Layout Reference
+
+[Source: .specify/memory/archive-reports/2026-06-17-doc-007-post-merge-hygiene.md]
+
+- **Cleanup applied**: 2026-06-17
+- **Cleanup branch**: `codex/doc-007-post-merge-hygiene`
+- **Cleanup command**: `git rm -r specs/doc-007-command-workflow-manifest-and-file-layout-reference`
+- **safeToApplyCleanup**: `true`
+- **Removed from active specs**: `specs/doc-007-command-workflow-manifest-and-file-layout-reference`
+
+### Provenance
+
+| PR | Title | Merge commit | Tree reference |
+|----|-------|--------------|----------------|
+| #208 | `docs(DOC-007): add generated reference pages` | `2f5ee096e903723e1ab0133c699bda5a22ae2172` | `67d3b8890b09605150b9cf300543d7a7ba517045` |
+
+### Summary
+
+DOC-007 completed the generated reference library for skills, agents,
+manifests, hooks, scripts, tests, and source-vs-dist layout. The canonical
+shipped docs and validation files are:
+
+- `docs-site/scripts/generate-reference-pages.mjs`
+- `docs-site/src/content/docs/reference.md`
+- `docs-site/src/content/docs/reference/skills.md`
+- `docs-site/src/content/docs/reference/agents.md`
+- `docs-site/src/content/docs/reference/manifests.md`
+- `docs-site/src/content/docs/reference/hooks.md`
+- `docs-site/src/content/docs/reference/scripts.md`
+- `docs-site/src/content/docs/reference/tests.md`
+- `docs-site/src/content/docs/reference/source-vs-dist.md`
+
+This cleanup also added `speckit-archive-cleanup` as a plugin skill so future
+post-merge archive hygiene can be invoked directly.
+
+### Recovery Commands
+
+```text
+git show 2f5ee096e903723e1ab0133c699bda5a22ae2172:specs/doc-007-command-workflow-manifest-and-file-layout-reference/spec.md
+git show 2f5ee096e903723e1ab0133c699bda5a22ae2172:specs/doc-007-command-workflow-manifest-and-file-layout-reference/plan.md
+git show 2f5ee096e903723e1ab0133c699bda5a22ae2172:specs/doc-007-command-workflow-manifest-and-file-layout-reference/tasks.md
+git show 2f5ee096e903723e1ab0133c699bda5a22ae2172:specs/doc-007-command-workflow-manifest-and-file-layout-reference/SPEC-MOC.md
+git show 2f5ee096e903723e1ab0133c699bda5a22ae2172:specs/doc-007-command-workflow-manifest-and-file-layout-reference/contracts/reference-generator.md
+git show 2f5ee096e903723e1ab0133c699bda5a22ae2172:specs/doc-007-command-workflow-manifest-and-file-layout-reference/contracts/reference-inventory.schema.json
+git checkout 2f5ee096e903723e1ab0133c699bda5a22ae2172 -- specs/doc-007-command-workflow-manifest-and-file-layout-reference
+```
+
+The detailed archive and verification record is stored in
+`.specify/memory/archive-reports/2026-06-17-doc-007-post-merge-hygiene.md`.

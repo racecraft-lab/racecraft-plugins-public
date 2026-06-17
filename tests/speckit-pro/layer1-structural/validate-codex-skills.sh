@@ -8,8 +8,8 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
 CODEX_SKILLS_DIR="$PLUGIN_ROOT/codex-skills"
 # Canonical skill list — keep in sync with the case block in the
 # "corresponding source artifact exists" test below.
-SKILLS=(speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install speckit-install speckit-upgrade grill-me speckit-prd)
-COLLISION_GUARD_SKILLS=(speckit-autopilot speckit-coach grill-me speckit-prd)
+SKILLS=(speckit-archive-cleanup speckit-autopilot speckit-coach speckit-scaffold-spec speckit-status speckit-resolve-pr install speckit-install speckit-upgrade grill-me speckit-prd)
+COLLISION_GUARD_SKILLS=(speckit-archive-cleanup speckit-autopilot speckit-coach grill-me speckit-prd)
 
 # Claude Code-only frontmatter keys that must NOT appear in Codex skills
 CC_ONLY_KEYS=(user-invocable disable-model-invocation license argument-hint)
@@ -320,7 +320,7 @@ $(cat "$ref_file")"
             _fail "scaffold skill must have allow_implicit_invocation: true for Codex discovery"
           fi
           ;;
-        speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me|speckit-prd)
+        speckit-archive-cleanup|speckit-autopilot|speckit-resolve-pr|install|speckit-install|speckit-upgrade|grill-me|speckit-prd)
           if [ "$policy_value" = "false" ]; then
             _pass
           else
@@ -354,7 +354,7 @@ $(cat "$ref_file")"
         _fail "corresponding Claude skill not found at skills/$skill/SKILL.md"
       fi
       ;;
-    speckit-scaffold-spec|speckit-status|speckit-resolve-pr|speckit-install|speckit-upgrade|speckit-prd)
+    speckit-archive-cleanup|speckit-scaffold-spec|speckit-status|speckit-resolve-pr|speckit-install|speckit-upgrade|speckit-prd)
       if [ -f "$PLUGIN_ROOT/skills/$skill/SKILL.md" ]; then
         _pass
       else

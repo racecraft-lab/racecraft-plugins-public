@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-007 scaffolded and in progress; DOC-008 and DOC-009 remain blocked by DOC-007
+**Status:** DOC-007 completed and archived after PR #208; DOC-008 and DOC-009 are ready for scaffold
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -22,7 +22,7 @@ The work is decomposed into 10 vertical SPECs across 6 dependency tiers.
 | 2 | DOC-002 | Build docs IA/landing shell | Sequential after DOC-001 |
 | 3 | DOC-003, DOC-004 | Platform-specific install paths | Parallel |
 | 4 | DOC-005, DOC-006 | First-run tutorial and safe interactive aids | Parallel after platform paths |
-| 5 | DOC-007, DOC-008, DOC-009 | Reference, troubleshooting/trust, maintainer workflow | Parallel with shared source evidence |
+| 5 | DOC-007, DOC-008, DOC-009 | Reference, troubleshooting/trust, maintainer workflow | DOC-007 complete; DOC-008 and DOC-009 can proceed in parallel |
 | 6 | DOC-010 | Search/accessibility/deep links/docs CI | Sequential hardening after site and interactive aids |
 
 **Execution order:** DOC-001 -> DOC-002 -> DOC-003/DOC-004 -> DOC-005/DOC-006 -> DOC-007/DOC-008/DOC-009 -> DOC-010
@@ -173,7 +173,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-007: Command, workflow, manifest, and file-layout reference
 
 - **Maps from PRD:** DOC-FR-007
-- **Status:** In progress as of 2026-06-17. Scaffolded on branch `doc-007-command-workflow-manifest-and-file-layout-reference` with workflow `docs/ai/specs/.process/DOC-007-workflow.md` and Design Concept `docs/ai/specs/.process/DOC-007-design-concept.md`.
+- **Status:** Completed and archived after PR #208. Canonical generated reference pages live in `docs-site/src/content/docs/reference/`, with generation logic in `docs-site/scripts/generate-reference-pages.mjs`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-17-doc-007-post-merge-hygiene.md`.
 - **User outcome:** Users, maintainers, and agents can look up exact plugin surfaces and file responsibilities by stable deep link.
 - **Scope:** Reference pages for Claude commands/skills, Codex skills, agents/subagents, hooks, MCP/config surfaces, manifests, marketplace files, generated payloads, scripts, tests, CI, release files, and repo structure. Include source facts and inferred notes separately.
 - **Vertical-slice rationale:** Delivers one coherent reference library that other pages can deep-link.
@@ -190,6 +190,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 
 ### DOC-008: Troubleshooting, security, trust, update, and rollback model
 
+- **Status:** Ready for scaffold after DOC-007 completed in PR #208.
 - **Maps from PRD:** DOC-FR-008
 - **User outcome:** Users and evaluators can diagnose failures and decide whether to trust/install/update the plugin.
 - **Scope:** Troubleshooting matrix and trust model for Claude and Codex: marketplace source trust, generated payloads, installed cache, hooks/MCP/agents/custom agents, permissions/approvals/sandbox, update/remove/rollback, stale versions, missing Spec Kit CLI, missing custom agents, path errors, and managed restrictions.
@@ -207,6 +208,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 
 ### DOC-009: Maintainer and contributor release workflow
 
+- **Status:** Ready for scaffold after DOC-007 completed in PR #208.
 - **Maps from PRD:** DOC-FR-009
 - **User outcome:** Contributors can make docs/plugin changes and know the exact build/test/sync/release checks required.
 - **Scope:** Contributor workflow for changing plugin source, rebuilding payloads, syncing marketplace versions, validating source/dist/marketplace parity, running shell tests, docs-only PR behavior, release-please expectations, Conventional Commit titles, and public-readable PR bodies.
@@ -246,9 +248,9 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 3. DOC-003 and DOC-004: build platform-specific install paths in parallel.
 4. DOC-005: connects install to first successful `speckit-pro` run.
 5. DOC-006: adds safe interactive aids once platform content exists.
-6. DOC-007: builds the reference library needed by troubleshooting and maintainer docs.
-7. DOC-008: adds diagnostics and trust model.
-8. DOC-009: adds maintainer/contributor release workflow.
+6. DOC-007: completed and archived the generated reference library needed by troubleshooting and maintainer docs.
+7. DOC-008: adds diagnostics and trust model; ready after DOC-007.
+8. DOC-009: adds maintainer/contributor release workflow; ready after DOC-007.
 9. DOC-010: hardens search, accessibility, responsive behavior, deep links, and docs CI.
 
 ## 6. Validation Strategy

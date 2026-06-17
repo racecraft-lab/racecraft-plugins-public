@@ -10,12 +10,13 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - **Public path:** `/racecraft-plugins-public/reference/skills/`
 - **Generated output:** `docs-site/src/content/docs/reference/skills.md`
-- **Records:** 10
+- **Records:** 11
 
 ## Navigation Summary
 
 - Grill Me
 - Install
+- Speckit Archive Cleanup
 - Speckit Autopilot
 - Speckit Coach
 - Speckit Install
@@ -100,6 +101,41 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 - This skill is present only in the Codex source tree; do not assume a parallel runtime surface exists unless a matching source file is added.
   - Based on: `speckit-pro/codex-skills/install/SKILL.md`
+
+### Speckit Archive Cleanup
+
+- **Purpose:** Archive a merged SpecKit spec, remove completed active specs, refresh roadmap and project-memory state, and prepare the cleanup PR after merge.
+- **Classification:** `source`
+- **Platform concept:** SpecKit Pro speckit-archive-cleanup skill
+- **Claude Code:** /speckit-pro:speckit-archive-cleanup
+- **Codex:** $speckit-archive-cleanup
+- **Runtime difference:** Both runtimes ship source skill instructions; invocation syntax and runtime guardrails differ.
+
+#### Command Or Skill Reference
+
+- **Claude Code invocation:** `/speckit-pro:speckit-archive-cleanup`
+- **Codex invocation:** `$speckit-archive-cleanup`
+- **Purpose:** Archive a merged SpecKit spec, remove completed active specs, refresh roadmap and project-memory state, and prepare the cleanup PR after merge.
+- **Expected output artifact:** Archive report, project-memory updates, cleaned active spec folder, refreshed generated indexes, and a cleanup PR.
+
+**Prerequisites**
+
+- The implementation PR has merged.
+- The active spec directory and workflow file can be mapped to that merged PR.
+
+#### Source Facts
+
+- speckit-archive-cleanup has a Claude Code skill source and a Codex skill source in the checked-in plugin tree. Source refs: `speckit-pro/skills/speckit-archive-cleanup/SKILL.md`, `speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md`.
+
+#### Sources
+
+- [speckit-pro/skills/speckit-archive-cleanup/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/skills/speckit-archive-cleanup/SKILL.md)
+- [speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md)
+
+#### Inferred Notes
+
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+  - Based on: `speckit-pro/skills/speckit-archive-cleanup/SKILL.md`, `speckit-pro/codex-skills/speckit-archive-cleanup/SKILL.md`
 
 ### Speckit Autopilot
 

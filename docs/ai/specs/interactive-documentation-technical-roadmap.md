@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-007 scaffolded and in progress; DOC-008 and DOC-009 remain blocked by DOC-007. Created 2026-06-12; refreshed 2026-06-17.
+> Status: DOC-007 completed and archived after PR #208; DOC-008 and DOC-009 are ready for scaffold. Created 2026-06-12; refreshed 2026-06-17.
 
 ## Roadmap Overview
 
@@ -61,9 +61,9 @@ DOC-007 -> DOC-008
 | DOC-004 | Codex marketplace installation path | Completed/archived | `.process/DOC-004-workflow.md` | Archived after PR #186 |
 | DOC-005 | First successful workflow tutorial | Completed/archived | DOC-005-workflow.md | Archived after PRs #198-#201 |
 | DOC-006 | Safe interactive selector and validation aids | Completed/archived | `.process/DOC-006-workflow.md` | Archived after PR #203 |
-| DOC-007 | Command, workflow, manifest, and file-layout reference | In progress | `.process/DOC-007-workflow.md` | Scaffolded on `doc-007-command-workflow-manifest-and-file-layout-reference`; run autopilot |
-| DOC-008 | Troubleshooting, security, trust, update, rollback | Pending | DOC-008-workflow.md | Blocked by DOC-007 |
-| DOC-009 | Maintainer and contributor release workflow | Pending | DOC-009-workflow.md | Blocked by DOC-007 |
+| DOC-007 | Command, workflow, manifest, and file-layout reference | Completed/archived | `.process/DOC-007-workflow.md` | Archived after PR #208 |
+| DOC-008 | Troubleshooting, security, trust, update, rollback | Ready | DOC-008-workflow.md | Ready for scaffold after DOC-007 |
+| DOC-009 | Maintainer and contributor release workflow | Ready | DOC-009-workflow.md | Ready for scaffold after DOC-007 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Unblocked by completed DOC-002 and DOC-006; sequence after DOC-007/DOC-008/DOC-009 content |
 
 ## Specification Sections
@@ -253,7 +253,7 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** DOC-003, DOC-004 | **Enables:** DOC-008, DOC-009
 
-**Status:** In progress as of 2026-06-17. Scaffolded on branch `doc-007-command-workflow-manifest-and-file-layout-reference` with workflow `docs/ai/specs/.process/DOC-007-workflow.md` and Design Concept `docs/ai/specs/.process/DOC-007-design-concept.md`.
+**Status:** Completed and archived after PR #208. Canonical generated reference pages live in `docs-site/src/content/docs/reference/`, with generation logic in `docs-site/scripts/generate-reference-pages.mjs`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-17-doc-007-post-merge-hygiene.md`.
 
 **Goal:** Provide stable reference pages for all plugin and repo surfaces.
 
@@ -285,6 +285,8 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-003, DOC-004, DOC-007 | **Enables:** DOC-010
 
+**Status:** Ready for scaffold after DOC-007 completed in PR #208.
+
 **Goal:** Help users diagnose failures and evaluate plugin trust boundaries.
 
 **Reviewability Budget:** Primary surface: docs/process |
@@ -312,6 +314,8 @@ Budget result: within budget
 ### DOC-009: Maintainer and contributor release workflow
 
 **Priority:** P1 | **Depends On:** DOC-007 | **Enables:** DOC-010
+
+**Status:** Ready for scaffold after DOC-007 completed in PR #208.
 
 **Goal:** Give contributors a release-ready checklist for docs/plugin changes.
 

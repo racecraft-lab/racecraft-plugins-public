@@ -203,6 +203,7 @@ async function parseCodexAgent(repoPath) {
 function commandExpectedArtifact(name) {
   const map = {
     'grill-me': 'Scoping answers or a decision log that can feed PRD or SPEC work.', install: 'Copied Codex TOML custom-agent files plus restart guidance.',
+    'speckit-archive-cleanup': 'Archive report, project-memory updates, cleaned active spec folder, refreshed generated indexes, and a cleanup PR.',
     'speckit-install': 'SpecKit setup guidance and install verification notes.', 'speckit-prd': 'A PRD and roadmap entry for later SPEC scaffolding.',
     'speckit-scaffold-spec': 'A feature worktree, workflow file, design concept, and spec folder.', 'speckit-autopilot': 'SpecKit phase artifacts, validation evidence, commits, and PR packet material.',
     'speckit-status': 'A read-only roadmap and workflow status dashboard.', 'speckit-coach': 'SDD coaching guidance or next-step explanation.',
@@ -213,6 +214,7 @@ function commandExpectedArtifact(name) {
 function skillPrerequisites(name) {
   if (name === 'install') return ['SpecKit Pro is installed as a Codex plugin.', 'The user approves the selected local custom-agent destination.'];
   if (name === 'speckit-autopilot') return ['A populated workflow file exists.', 'SpecKit Pro custom agents are registered for Codex or available in Claude Code.'];
+  if (name === 'speckit-archive-cleanup') return ['The implementation PR has merged.', 'The active spec directory and workflow file can be mapped to that merged PR.'];
   if (name === 'speckit-scaffold-spec') return ['A SPEC-ID exists in the technical roadmap.', 'The repository has SpecKit project structure available.'];
   if (name === 'speckit-status') return ['A repository or worktree contains roadmap or workflow files to inspect.'];
   return ['SpecKit Pro is installed for the selected runtime.', 'The linked SKILL.md file defines the active scope and guardrails.'];
