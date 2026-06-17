@@ -67,12 +67,19 @@ hardcoded vendor-specific list.
   environment-specific
 - `conclusion`: reviewer-facing mechanics conclusion
 - `confidence`: `high`, `medium`, or `low`
+- `confidence_rationale`: one-sentence explanation for the confidence level
+- `absent_capability_disposition`: documented fallback path, explicit
+  unsupported state, explicit unresolved state, or downstream owner/reviewer
+  decision needed when the capability is absent, unsupported, unavailable, or
+  unverified
 
 **Validation rules**:
 
 - Each runtime/capability pair must appear in the runtime-by-capability matrix.
 - Source-backed evidence must cite local repository paths and line contexts.
 - Probe-backed evidence must not expose raw inventories or local identifiers.
+- Unavailable or unsupported capabilities must be recorded as report evidence,
+  not silently converted into implementation assumptions or behavior changes.
 
 ## Entity: Runtime-by-Capability Matrix Cell
 
@@ -85,6 +92,12 @@ Represents one cell in the platform mechanics matrix.
 - `status`
 - `evidence_refs`
 - `reviewer_note`
+- `confidence`: `high`, `medium`, or `low`
+- `confidence_rationale`: one-sentence explanation following the confidence
+  rubric
+- `absent_capability_disposition`: documented fallback path, explicit
+  unsupported state, explicit unresolved state, or downstream owner/reviewer
+  decision needed
 
 **Validation rules**:
 
@@ -92,6 +105,9 @@ Represents one cell in the platform mechanics matrix.
   `unresolved`, or `environment-specific`.
 - A cell marked `unresolved` must explain what evidence is missing and which
   downstream spec or reviewer decision owns it.
+- A cell marked `unsupported`, `unresolved`, or `environment-specific` must not
+  imply implementation support unless cited source or sanitized probe evidence
+  supports that conclusion.
 
 ## Entity: Sanitized Probe Summary
 
@@ -164,6 +180,7 @@ checks.
 - generated source-derived duplicate
 - historical/provenance
 - fixture/test-only
+- ambiguous/requires-review
 - explicitly out of scope
 
 **Validation rules**:
@@ -172,6 +189,9 @@ checks.
   active guidance.
 - Active prose that recommends named optional tools must be separated from
   concrete runtime/dependency metadata.
+- Ambiguous active-vs-historical references must use
+  `ambiguous/requires-review` with `allowed_status: review`, low confidence,
+  candidate categories, missing evidence, and an owner decision needed.
 
 ## Entity: Downstream Handoff
 

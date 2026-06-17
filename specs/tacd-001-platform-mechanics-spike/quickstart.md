@@ -100,3 +100,19 @@ Expected result:
 - No unresolved Plan or report markers remain before G3/G7 validation.
 - Any intentionally unresolved platform mechanic in the report is labeled
   `unresolved` in the runtime-by-capability matrix, not as a placeholder marker.
+
+## Scenario 7: Validate No-Assumption Mechanics Reporting
+
+```bash
+rg -n "unsupported|unresolved|environment-specific|ambiguous/requires-review|absent-capability disposition|confidence rationale" docs/ai/research/tool-agnostic-capability-discovery-spike.md
+```
+
+Expected result:
+
+- Runtime-by-capability matrix cells include evidence state, confidence,
+  confidence rationale, and absent-capability disposition.
+- Unsupported, unresolved, unavailable, unverified, or ambiguous mechanics are
+  recorded as explicit report states with missing evidence or owner decisions,
+  not as implied implementation support.
+- Ambiguous active-vs-historical named-tool references use
+  `ambiguous/requires-review` until source evidence resolves the category.

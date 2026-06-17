@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T19:57:00Z",
-  "active_step": "Phase 4: Checklist - Integration",
+  "updated_at": "2026-06-17T20:28:00Z",
+  "active_step": "Phase 5: Tasks",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -109,31 +109,45 @@
     },
     {
       "step": "Phase 4: Checklist - Integration",
-      "status": "in_progress"
+      "status": "completed",
+      "items": 14,
+      "gaps": 0,
+      "summary": "Integration checklist created with 14 checked items and 0 gaps."
     },
     {
       "step": "Phase 4: Checklist - Integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - LLM Integration",
-      "status": "pending"
+      "status": "completed",
+      "items": 18,
+      "gaps": 2,
+      "remaining_gaps": 0,
+      "summary": "LLM Integration checklist created with 18 checked items; remediated confidence rubric and behavior-observable eval-plan gaps in spec.md and plan.md."
     },
     {
       "step": "Phase 4: Checklist - LLM Integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - Error Handling",
-      "status": "pending"
+      "status": "completed",
+      "items": 20,
+      "gaps": 4,
+      "remaining_gaps": 0,
+      "summary": "Error Handling checklist created with 20 checked items; remediated absent-capability disposition, confidence-rationale fields, ambiguous/requires-review handling, and no-assumption validation."
     },
     {
       "step": "Phase 4: Checklist - Error Handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

@@ -34,6 +34,9 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [plan.md](plan.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/integration.md](checklists/integration.md)
+- [checklists/llm-integration.md](checklists/llm-integration.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

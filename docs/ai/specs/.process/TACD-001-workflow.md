@@ -42,8 +42,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 14 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Three clarify sessions resolved audit categories, probe evidence shape, sanitized appendix boundaries, and directive-home proof bar |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, and quickstart; contracts intentionally omitted |
-| Checklist | `/speckit-checklist` | In Progress | Starting Integration checklist |
-| Tasks | `/speckit-tasks` | Pending | Generate research-first tasks for audit, probes, report, and verification handoff |
+| Checklist | `/speckit-checklist` | Complete | Integration, LLM Integration, and Error Handling checklists complete with 0 remaining gaps |
+| Tasks | `/speckit-tasks` | In Progress | Starting task generation |
 | Analyze | `/speckit-analyze` | Pending | Check roadmap, PRD, design concept, spec, plan, tasks, and report contract consistency |
 | Implement | `/speckit-implement` | Pending | Produce the spike report and any appendix probe evidence only |
 
@@ -375,9 +375,9 @@ Focus on TACD-001 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| Integration | Pending | Pending | Pending |
-| LLM Integration | Pending | Pending | Pending |
-| Error Handling | Pending | Pending | Pending |
+| Integration | 14 | 0 | Source inventory, runtime mechanics, cross-runtime consistency, downstream handoffs, and no-behavior-change scope are covered |
+| LLM Integration | 18 | 2 remediated, 0 remaining | Added confidence rubric and behavior-observable eval-plan requirements to spec and plan |
+| Error Handling | 20 | 4 remediated, 0 remaining | Added absent-capability disposition, confidence-rationale fields, ambiguous/requires-review handling, and no-assumption validation |
 
 ---
 

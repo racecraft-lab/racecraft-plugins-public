@@ -206,8 +206,55 @@ The report will include a runtime-by-capability matrix:
 | Codex | Source/probe-backed from TOML agents and current Codex tool-discovery surfaces. | Source/probe-backed from Codex plugin/skill metadata and available tool discovery. | Source-backed from `speckit-pro/codex-skills/**`, installed plugin cache metadata, and active skill surfaces. | Source-backed from shell, local files, and repo helper scripts. |
 
 Each matrix cell must be labeled `source-backed`, `probe-backed`, `unsupported`,
-`unresolved`, or `environment-specific`. Probe appendix entries publish only
-sanitized command summaries and conclusions.
+`unresolved`, or `environment-specific`, and must include:
+
+- confidence: `high`, `medium`, or `low`
+- one-sentence confidence rationale
+- absent-capability disposition: documented fallback path, explicit unsupported
+  state, explicit unresolved state, or downstream owner/reviewer decision needed
+
+The absent-capability disposition is report evidence only. TACD-001 records what
+the report can prove or cannot prove; it does not change active fallback
+behavior, prerequisite messaging, public docs messaging, generated payloads, or
+final enforcement tests. Probe appendix entries publish only sanitized command
+summaries and conclusions.
+
+### Confidence Rubric for Mechanics Evidence
+
+The report must assign both an `evidence_state` and a `confidence` value to
+every runtime-by-capability matrix cell. Confidence means how strongly the
+available evidence supports the mechanics conclusion:
+
+- `high`: direct active source evidence or a sanitized probe proves the mechanic
+  for the runtime/capability pair with no known conflicting evidence.
+- `medium`: evidence supports the mechanic but is indirect, partial,
+  template-only, condition-dependent, or does not prove end-to-end runtime
+  behavior.
+- `low`: evidence is ambiguous, conflicting, incomplete, too local to
+  generalize, or missing.
+
+Evidence-state rules:
+
+- `source-backed` and `probe-backed` may be high, medium, or low depending on
+  directness, reproducibility, and conflicts.
+- `environment-specific` may be high only when the report proves the mechanic
+  depends on installation or configuration conditions without exposing raw
+  inventories.
+- `unsupported` may be high only when source or probe evidence directly proves
+  lack of support.
+- `unresolved` must always be low confidence and must name the missing evidence
+  plus the downstream owner or reviewer decision needed.
+
+### Ambiguous Category Handling
+
+If a named-tool reference cannot be confidently classified as active runtime
+guidance, runtime/dependency metadata, prerequisite/user-facing messaging,
+deterministic/eval expectation, generated duplicate, historical/provenance,
+fixture/test-only, or out of scope, the report must use
+`ambiguous/requires-review` with `allowed_status: review`, low confidence, the
+candidate categories, missing evidence, and the TACD owner or reviewer decision
+needed. The report must not silently convert ambiguity into active guidance,
+historical provenance, or an implementation assumption.
 
 ## Directive-Home Recommendation Rule
 
@@ -227,6 +274,39 @@ If either runtime lacks a reliable pointer path or planned eval coverage, the
 report must recommend runtime-specific directive copies with a shared
 source-of-truth note.
 
+### Behavior-Observable Eval Plan Requirement
+
+Pointer coverage and pointer-target resolution are static prerequisites only;
+they are not sufficient proof that agents apply the directive. The report's
+TACD-004 eval-plan recommendations must define behavior-observable assertions
+for both Claude Code and Codex.
+
+Each planned scenario must include:
+
+- runtime path: Claude Code or Codex
+- setup assumption: capability present, capability absent, or
+  environment-specific
+- prompt/task shape
+- expected observable response behavior
+- required evidence fields in the response, including capability path, citations
+  or local files, and confidence
+- failure signals
+
+Required observable behaviors:
+
+- The agent chooses by capability need, not by hardcoded named optional-tool
+  preference.
+- When the scenario declares an installed capability is available, the agent
+  uses or acknowledges that capability path without treating a specific
+  vendor/tool as globally preferred.
+- When the capability is absent, the agent falls back to local or platform
+  capabilities and reports any confidence reduction.
+- The agent applies the directive during a research or codebase-context task,
+  not merely by confirming that a pointer exists.
+
+TACD-001 only documents these planned eval scenarios. It does not add final
+TACD-004 eval files, run live AI evals, or change active runtime guidance.
+
 ## TACD-004 Allowlist Categories
 
 The report will hand TACD-004 a category set that distinguishes:
@@ -239,6 +319,7 @@ The report will hand TACD-004 a category set that distinguishes:
 - generated source-derived duplicate
 - historical/provenance
 - fixture/test-only
+- ambiguous/requires-review
 - explicitly out of scope
 
 Generic MCP/app/installed-tool vocabulary is not a named-tool finding unless it
