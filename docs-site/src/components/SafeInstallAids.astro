@@ -1,0 +1,577 @@
+---
+import { safeInstallAids } from '../data/safe-install-aids.ts';
+
+const {
+  selectorPaths,
+  checkerComparisons,
+  diagramNodes,
+  firstRunCheckpoints,
+  handoffs,
+  selectorStateMessages,
+  manifestInputs,
+} = safeInstallAids;
+
+const stateLabel = (state: string) => {
+  if (state === 'pass') return 'Pass';
+  if (state === 'mismatch') return 'Mismatch';
+  return 'Unavailable';
+};
+---
+
+<section class="safe-aids" data-safe-install-aids aria-labelledby="safe-aids-title">
+  <div class="safe-aids__intro">
+    <h2 id="safe-aids-title">Safe Install Selector</h2>
+    <p>
+      Choose a platform path to narrow the guidance. Commands are copyable guidance only:
+      this page does not execute local commands, write configuration, install plugins, invoke
+      local workflows, read user configuration, or inspect local user files.
+    </p>
+  </div>
+
+  <form class="safe-aids__selector" aria-describedby="safe-aids-selector-status">
+    <fieldset>
+      <legend>Platform and install scope</legend>
+      <div class="safe-aids__choices">
+        {selectorPaths.map((selectorPath) => (
+          <label class="safe-aids__choice" data-selector-choice={selectorPath.id}>
+            <input
+              type="radio"
+              name="safe-install-path"
+              value={selectorPath.id}
+              data-path-label={selectorPath.label}
+            />
+            <span>{selectorPath.label}</span>
+            <small>{selectorPath.platform === 'claude-code' ? 'Claude Code' : 'Codex'} - {selectorPath.scope}</small>
+          </label>
+        ))}
+      </div>
+    </fieldset>
+    <p id="safe-aids-selector-status" class="safe-aids__status" aria-live="polite">
+      No path selected. The full static table below remains available.
+    </p>
+  </form>
+
+  <section class="safe-aids__section" aria-labelledby="selector-fallback-title">
+    <h3 id="selector-fallback-title">Static Selector Fallback</h3>
+    <p>
+      This table is complete static content. It stays visible when scripting is unavailable
+      or when an enhanced selector state is unsupported, unavailable, or ambiguous.
+    </p>
+    <div class="safe-aids__table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Platform</th>
+            <th scope="col">Scope</th>
+            <th scope="col">Prerequisites</th>
+            <th scope="col">Command sequence</th>
+            <th scope="col">Success signal</th>
+            <th scope="col">Next link</th>
+          </tr>
+        </thead>
+        <tbody>
+          {selectorPaths.map((selectorPath) => (
+            <tr>
+              <th scope="row">{selectorPath.platform === 'claude-code' ? 'Claude Code' : 'Codex'}</th>
+              <td>{selectorPath.scope}</td>
+              <td>
+                <ul>
+                  {selectorPath.prerequisites.map((item) => <li>{item}</li>)}
+                </ul>
+              </td>
+              <td>
+                <ol>
+                  {selectorPath.commands.map((command) => (
+                    <li><code>{command.command}</code></li>
+                  ))}
+                </ol>
+              </td>
+              <td>
+                <ul>
+                  {selectorPath.successSignals.map((signal) => <li>{signal}</li>)}
+                </ul>
+              </td>
+              <td>
+                <ul>
+                  {selectorPath.nextLinks.map((link) => (
+                    <li><a href={link.href}>{link.label}</a></li>
+                  ))}
+                </ul>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="safe-aids__section" aria-labelledby="selected-path-title">
+    <h3 id="selected-path-title">Selected Path Output</h3>
+    <p>
+      Enhanced filtering can hide unrelated path panels after a choice, but the command
+      blocks themselves stay visible and selectable.
+    </p>
+    <div class="safe-aids__path-grid">
+      {selectorPaths.map((selectorPath) => (
+        <article class="safe-aids__panel" data-path-panel={selectorPath.id} aria-labelledby={`${selectorPath.id}-title`}>
+          <div class="safe-aids__panel-header">
+            <h4 id={`${selectorPath.id}-title`}>{selectorPath.label}</h4>
+            <span>{selectorPath.platform === 'claude-code' ? 'Claude Code' : 'Codex'} - {selectorPath.scope}</span>
+          </div>
+
+          <h5>Prerequisites</h5>
+          <ul>
+            {selectorPath.prerequisites.map((item) => <li>{item}</li>)}
+          </ul>
+
+          <h5>Copyable command blocks</h5>
+          <div class="safe-aids__commands">
+            {selectorPath.commands.map((command) => (
+              <div class="safe-aids__command">
+                <div class="safe-aids__command-header">
+                  <strong>{command.label}</strong>
+                  <button type="button" data-copy-command={`${selectorPath.id}-${command.id}`} aria-describedby={`${selectorPath.id}-${command.id}-status`}>
+                    Copy
+                  </button>
+                </div>
+                <pre id={`${selectorPath.id}-${command.id}`}><code>{command.command}</code></pre>
+                <p>{command.expectedSignal}</p>
+                <p id={`${selectorPath.id}-${command.id}-status`} class="safe-aids__copy-status" aria-live="polite"></p>
+              </div>
+            ))}
+          </div>
+
+          <h5>Expected success signals</h5>
+          <ul>
+            {selectorPath.successSignals.map((signal) => <li>{signal}</li>)}
+          </ul>
+
+          <h5>Next documentation links</h5>
+          <ul>
+            {selectorPath.nextLinks.map((link) => (
+              <li><a href={link.href}>{link.label}</a></li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </div>
+  </section>
+
+  <section class="safe-aids__section" aria-labelledby="selector-state-title">
+    <h3 id="selector-state-title">Selector State Guardrails</h3>
+    <ul class="safe-aids__message-list">
+      {selectorStateMessages.map((message) => (
+        <li>
+          <strong>{message.label}:</strong> {message.message}
+        </li>
+      ))}
+    </ul>
+  </section>
+
+  <section class="safe-aids__section" aria-labelledby="checker-title">
+    <h3 id="checker-title">Repository Manifest Checker</h3>
+    <p>
+      This checker is repository scoped. It reads only checked-in source and generated
+      payload metadata during docs generation, does not accept user JSON, and does not inspect local user files.
+    </p>
+    <div class="safe-aids__table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">State</th>
+            <th scope="col">Comparison</th>
+            <th scope="col">Rule</th>
+            <th scope="col">Left value</th>
+            <th scope="col">Right value</th>
+            <th scope="col">Handoff</th>
+          </tr>
+        </thead>
+        <tbody>
+          {checkerComparisons.map((row) => (
+            <tr data-checker-state={row.state} data-checker-severity={row.severity}>
+              <th scope="row">{stateLabel(row.state)}{row.severity === 'info' ? ' (info)' : ''}</th>
+              <td>
+                <strong>{row.label}</strong>
+                <br />
+                <small>{row.leftSource} compared with {row.rightSource}</small>
+              </td>
+              <td>{row.rule}</td>
+              <td><code>{row.leftValue}</code></td>
+              <td><code>{row.rightValue}</code></td>
+              <td>{row.handoff ? <a href={row.handoff.href}>{row.handoff.label}</a> : 'No handoff'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <details>
+      <summary>Manifest inputs</summary>
+      <ul>
+        {manifestInputs.map((source) => (
+          <li>
+            <code>{source.path}</code> - {source.available ? 'available' : `unavailable: ${source.error}`}
+          </li>
+        ))}
+      </ul>
+    </details>
+  </section>
+
+  <section class="safe-aids__section" aria-labelledby="payload-diagram-title">
+    <h3 id="payload-diagram-title">Generated Payload Diagram</h3>
+    <p>
+      The diagram is text backed. The same facts are present as headings, descriptions,
+      and table rows so no meaning depends on hover, drag, zoom, or pointer input.
+    </p>
+    <ol class="safe-aids__diagram">
+      {diagramNodes.map((node) => (
+        <li>
+          <h4>{node.label}</h4>
+          <p>{node.description}</p>
+          <small>{node.kind}</small>
+        </li>
+      ))}
+    </ol>
+    <div class="safe-aids__table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Node</th>
+            <th scope="col">Inputs</th>
+            <th scope="col">Outputs</th>
+          </tr>
+        </thead>
+        <tbody>
+          {diagramNodes.map((node) => (
+            <tr>
+              <th scope="row">{node.label}</th>
+              <td>{node.inputs.length > 0 ? node.inputs.join(', ') : 'None'}</td>
+              <td>{node.outputs.length > 0 ? node.outputs.join(', ') : 'None'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="safe-aids__section" aria-labelledby="first-run-title">
+    <h3 id="first-run-title">First-Run Checklist</h3>
+    <p>
+      Review these checkpoints before running local workflows yourself. Keyboard users
+      can reach selector controls, copy buttons, checker rows, diagram content, and
+      checklist links in reading order.
+    </p>
+    <ol class="safe-aids__checklist">
+      {firstRunCheckpoints.map((checkpoint) => (
+        <li>
+          <h4>{checkpoint.label}</h4>
+          <p>{checkpoint.description}</p>
+          <span>{checkpoint.category}</span>
+          {checkpoint.handoff && <a href={checkpoint.handoff.href}>{checkpoint.handoff.label}</a>}
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="safe-aids__section" aria-labelledby="handoff-title">
+    <h3 id="handoff-title">Lightweight Handoffs</h3>
+    <p>
+      Mismatch, unavailable, or caution states route to orientation pages. DOC-008 owns
+      full troubleshooting, update, rollback, cache diagnosis, and trust-model depth.
+    </p>
+    <ul class="safe-aids__handoffs">
+      {handoffs.map((handoff) => (
+        <li>
+          <a href={handoff.href}>{handoff.label}</a>
+          <span>{handoff.audience}</span>
+          <p>{handoff.scope}</p>
+        </li>
+      ))}
+    </ul>
+  </section>
+</section>
+
+<script is:inline>
+  const root = document.querySelector('[data-safe-install-aids]');
+
+  if (root) {
+    root.classList.add('safe-aids--enhanced');
+
+    const radios = Array.from(root.querySelectorAll('input[name="safe-install-path"]'));
+    const panels = Array.from(root.querySelectorAll('[data-path-panel]'));
+    const status = root.querySelector('#safe-aids-selector-status');
+
+    const updatePanels = () => {
+      const selected = radios.find((radio) => radio.checked);
+      const selectedId = selected?.value;
+
+      panels.forEach((panel) => {
+        panel.hidden = Boolean(selectedId) && panel.dataset.pathPanel !== selectedId;
+      });
+
+      if (status) {
+        status.textContent = selected
+          ? `Selected path: ${selected.dataset.pathLabel}. Static fallback remains available.`
+          : 'No path selected. The full static table below remains available.';
+      }
+    };
+
+    radios.forEach((radio) => {
+      radio.addEventListener('change', updatePanels);
+    });
+    updatePanels();
+
+    root.querySelectorAll('[data-copy-command]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const targetId = button.getAttribute('data-copy-command');
+        const target = targetId ? document.getElementById(targetId) : null;
+        const statusId = button.getAttribute('aria-describedby');
+        const copyStatus = statusId ? document.getElementById(statusId) : null;
+        const text = target?.innerText ?? '';
+
+        if (!navigator.clipboard || !text.trim()) {
+          if (copyStatus) copyStatus.textContent = 'Copy unavailable. Select the visible command text manually.';
+          return;
+        }
+
+        try {
+          await navigator.clipboard.writeText(text);
+          if (copyStatus) copyStatus.textContent = 'Copied command text.';
+        } catch {
+          if (copyStatus) copyStatus.textContent = 'Copy failed. Select the visible command text manually.';
+        }
+      });
+    });
+  }
+</script>
+
+<style>
+  .safe-aids {
+    display: grid;
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .safe-aids__intro {
+    max-width: 68rem;
+  }
+
+  .safe-aids h2,
+  .safe-aids h3,
+  .safe-aids h4,
+  .safe-aids h5,
+  .safe-aids p {
+    letter-spacing: 0;
+  }
+
+  .safe-aids h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.45rem;
+  }
+
+  .safe-aids h3 {
+    margin: 0 0 0.625rem;
+    font-size: 1.18rem;
+  }
+
+  .safe-aids h4 {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .safe-aids h5 {
+    margin: 1rem 0 0.35rem;
+    font-size: 0.95rem;
+  }
+
+  .safe-aids p {
+    margin: 0 0 0.75rem;
+  }
+
+  .safe-aids__section,
+  .safe-aids__selector {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .safe-aids__selector fieldset {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 8px;
+    margin: 0;
+    padding: 1rem;
+  }
+
+  .safe-aids__selector legend {
+    padding: 0 0.35rem;
+    font-weight: 700;
+  }
+
+  .safe-aids__choices,
+  .safe-aids__path-grid,
+  .safe-aids__commands,
+  .safe-aids__handoffs,
+  .safe-aids__checklist,
+  .safe-aids__diagram {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .safe-aids__choices {
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  }
+
+  .safe-aids__choice,
+  .safe-aids__panel,
+  .safe-aids__command,
+  .safe-aids__handoffs li,
+  .safe-aids__checklist li,
+  .safe-aids__diagram li {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 8px;
+    background: var(--sl-color-bg-nav);
+  }
+
+  .safe-aids__choice {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.35rem 0.6rem;
+    align-items: start;
+    padding: 0.85rem;
+  }
+
+  .safe-aids__choice input {
+    margin-top: 0.2rem;
+  }
+
+  .safe-aids__choice span {
+    font-weight: 700;
+  }
+
+  .safe-aids__choice small {
+    grid-column: 2;
+    color: var(--sl-color-gray-2);
+  }
+
+  .safe-aids__status,
+  .safe-aids__copy-status {
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .safe-aids__table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .safe-aids table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .safe-aids th,
+  .safe-aids td {
+    border: 1px solid var(--sl-color-gray-5);
+    padding: 0.55rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .safe-aids th {
+    background: var(--sl-color-gray-6);
+  }
+
+  .safe-aids ul,
+  .safe-aids ol {
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-left: 1.2rem;
+  }
+
+  .safe-aids__panel,
+  .safe-aids__command,
+  .safe-aids__handoffs li,
+  .safe-aids__checklist li,
+  .safe-aids__diagram li {
+    padding: 0.9rem;
+  }
+
+  .safe-aids__panel-header,
+  .safe-aids__command-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .safe-aids__panel-header span,
+  .safe-aids__handoffs span,
+  .safe-aids__checklist span,
+  .safe-aids__diagram small {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 999px;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+    background: var(--sl-color-bg);
+  }
+
+  .safe-aids__command pre {
+    margin: 0.6rem 0;
+    white-space: pre-wrap;
+  }
+
+  .safe-aids__command button {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 8px;
+    padding: 0.35rem 0.65rem;
+    color: var(--sl-color-text);
+    background: var(--sl-color-bg);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .safe-aids__message-list {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .safe-aids__diagram {
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .safe-aids__checklist,
+  .safe-aids__handoffs {
+    list-style: none;
+    padding-left: 0;
+  }
+
+  .safe-aids__checklist li,
+  .safe-aids__handoffs li {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .safe-aids :focus-visible {
+    outline: 3px solid var(--sl-color-accent);
+    outline-offset: 3px;
+  }
+
+  @media (forced-colors: active) {
+    .safe-aids__choice,
+    .safe-aids__panel,
+    .safe-aids__command,
+    .safe-aids__handoffs li,
+    .safe-aids__checklist li,
+    .safe-aids__diagram li,
+    .safe-aids__selector fieldset,
+    .safe-aids th,
+    .safe-aids td {
+      border-color: CanvasText;
+    }
+  }
+</style>

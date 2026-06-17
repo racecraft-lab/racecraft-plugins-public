@@ -9,8 +9,8 @@
     "specs/doc-006-safe-interactive-selector-and-validation-aids"
   ],
   "feature_branch": "doc-006-safe-interactive-selector-and-validation-aids",
-  "updated_at": "2026-06-17T04:07:40.887Z",
-  "active_step": "Phase 7: Setup (T001-T004)",
+  "updated_at": "2026-06-17T04:28:58.001Z",
+  "active_step": "Post: Doctor Extension Check",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -265,6 +265,33 @@
       "threshold": 0.9,
       "result": "soft_skip",
       "reason": "confidence-gate.sh returned NO_DATA because no synthesizer confidence emit exists; no unresolved Analyze consensus items remain."
+    },
+    "implementation": {
+      "status": "completed",
+      "gate": "G7",
+      "gate_status": "passed",
+      "tasks_completed": "32/32",
+      "files": [
+        "docs-site/src/content/docs/choose-your-path.mdx",
+        "docs-site/src/components/SafeInstallAids.astro",
+        "docs-site/src/data/safe-install-aids.ts",
+        "docs-site/scripts/validate-doc006-safe-aids.mjs",
+        "specs/doc-006-safe-interactive-selector-and-validation-aids/tasks.md"
+      ],
+      "verification": [
+        "node docs-site/scripts/validate-doc006-safe-aids.mjs: pass",
+        "pnpm --dir docs-site validate: pass",
+        "pnpm --dir docs-site validate:links: pass",
+        "pnpm --dir docs-site validate && pnpm --dir docs-site validate:links: pass",
+        "built HTML review: 7 pass/info checker rows, 0 unavailable rows, 5 radios, 3 tables",
+        "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh: 9/9 passed",
+        "bash tests/speckit-pro/run-all.sh: 3009/3009 passed"
+      ],
+      "manual_review": {
+        "keyboard_source_review": "native radio controls, native copy buttons, aria-live status, focus-visible styles, semantic tables/lists",
+        "static_fallback": "complete selector table, checker table, diagram nodes, first-run checklist present in built HTML",
+        "command_safety": "no browser-side local execution, config write, plugin run, local file inspection, user JSON input, or local diagnostic UI in DOC-006 sources"
+      }
     }
   },
   "plan": [
@@ -358,31 +385,31 @@
     },
     {
       "step": "Phase 7: Setup (T001-T004)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Foundation (T005-T011)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: User Story 1 (T012-T017)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: User Story 2 (T018-T022)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: User Story 3 (T023-T027)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Polish (T028-T032)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",

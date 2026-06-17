@@ -45,7 +45,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `/speckit-checklist` | Complete | Completed UX, accessibility, integration/source-data, and error-handling checklists; G4 passed with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Created 32 docs-first tasks across setup, foundation, 3 user stories, and polish; G5 passed; size-only reviewability block produced a 4-marker review plan |
 | Analyze | `/speckit-analyze` | Complete | 1 MEDIUM task explicit-review finding remediated; marker counter clean; G6 recommended pass |
-| Implement | `/speckit-implement` | In Progress | Implement selector/checker aids, static fallbacks, payload diagram, checklist, and fixture evidence |
+| Implement | `/speckit-implement` | Complete | Implemented route-preserving MDX, safe install aids component, source-derived metadata helper, focused validator, static fallback tables, repository checker, payload diagram, and first-run checklist |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -96,7 +96,7 @@ Before starting any workflow phase, verify alignment with `.specify/memory/const
 
 | Check | Result | Notes |
 |-------|--------|-------|
-| `specify` CLI | Passed | Available on `PATH` as `/Users/fredrickgabelmann/.local/bin/specify` |
+| `specify` CLI | Passed | Available on `PATH`; local binary path intentionally omitted from committed process evidence |
 | Technical roadmap | Found | `docs/ai/specs/interactive-documentation-technical-roadmap.md` |
 | DOC-006 status | Ready | Roadmap lists DOC-006 as ready after DOC-002, DOC-003, and DOC-004 |
 | Branch/worktree reuse check | Passed | No local or remote DOC-006 branch existed before setup |
@@ -590,24 +590,24 @@ For tasks touching derived command/checker metadata:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | | | |
-| User Story 1 - Selector and commands | | | |
-| User Story 2 - Checker and payload diagram | | | |
-| User Story 3 - First-run checklist and handoffs | | | |
-| Validation and review packet | | | |
+| Foundation | T001-T011 | 11/11 | Converted route to MDX, added JavaScript-compatible docs data helper, added focused validator, confirmed RED state before component integration, and loaded all six manifest inputs from repo root during docs build. |
+| User Story 1 - Selector and commands | T012-T017 | 6/6 | Rendered native radio selector, complete static fallback table, selected-path panels, visible command blocks, optional copy buttons, unsupported/unavailable/ambiguous state text, and route placement. |
+| User Story 2 - Checker and payload diagram | T018-T022 | 5/5 | Rendered repository-only checker with 7 pass/info rows, compared values, consistency rules, manifest input availability, mismatch/unavailable fixture coverage, and no user JSON or local config inspection. |
+| User Story 3 - First-run checklist and handoffs | T023-T027 | 5/5 | Rendered text-backed payload diagram, first-run checkpoints, safe handoff copy, native controls, visible focus styling, and static content that remains available without selector scripting. |
+| Validation and review packet | T028-T032 | 5/5 | Focused validator, docs validation, link validation, full verify, built-HTML manifest review, command-safety/static-fallback review, and full SpecKit suite passed; PR packet generation remains a post step. |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] `cd docs-site && pnpm validate` passes.
-- [ ] `cd docs-site && pnpm validate:links` passes.
-- [ ] Focused metadata/rendering fixture or test passes.
-- [ ] Manual keyboard review completed for selector/checker controls.
-- [ ] Static fallback review completed without relying on JavaScript.
-- [ ] Command-safety review confirms no browser-side local execution, config writes, plugin runs, or local file inspection.
-- [ ] Full `bash tests/speckit-pro/run-all.sh` run completed if plugin/source/script/manifest/generated payload surfaces changed.
+- [x] All tasks marked complete in `tasks.md`.
+- [x] `pnpm --dir docs-site validate` passes.
+- [x] `pnpm --dir docs-site validate:links` passes.
+- [x] Focused metadata/rendering fixture or test passes.
+- [x] Manual keyboard/source review completed for selector/checker controls.
+- [x] Static fallback review completed without relying on JavaScript.
+- [x] Command-safety review confirms no browser-side local execution, config writes, plugin runs, or local file inspection.
+- [x] Full `bash tests/speckit-pro/run-all.sh` run completed because spec/process surfaces changed.
 - [ ] PR review packet includes review order, scope budget, traceability, verification evidence, known gaps, and rollback/fallback notes.
 
 ---

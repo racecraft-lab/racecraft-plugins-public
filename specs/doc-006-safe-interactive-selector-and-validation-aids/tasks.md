@@ -22,10 +22,10 @@
 
 **Purpose**: Preserve the existing route, create the planned data/test surfaces, and keep the reviewability budget visible before story work begins.
 
-- [ ] T001 [P] Convert the existing route source from `docs-site/src/content/docs/choose-your-path.md` to `docs-site/src/content/docs/choose-your-path.mdx` while preserving the public `choose-your-path` route and frontmatter.
-- [ ] T002 [P] Create the DOC-006 source-derived metadata helper shell in `docs-site/src/data/safe-install-aids.ts` with typed exports for selector paths, checker comparisons, diagram nodes, first-run checkpoints, handoffs, and the six required manifest input paths.
-- [ ] T003 [P] Create the focused DOC-006 validation harness in `docs-site/scripts/validate-doc006-safe-aids.mjs` with fixture entry points for selector, checker, diagram, checklist, handoff, and command-surface assertions.
-- [ ] T004 Verify the plan's reviewability budget against the active file scope and record any split-triggering drift before production edits in `specs/doc-006-safe-interactive-selector-and-validation-aids/tasks.md`.
+- [x] T001 [P] Convert the existing route source from `docs-site/src/content/docs/choose-your-path.md` to `docs-site/src/content/docs/choose-your-path.mdx` while preserving the public `choose-your-path` route and frontmatter.
+- [x] T002 [P] Create the DOC-006 source-derived metadata helper shell in `docs-site/src/data/safe-install-aids.ts` with typed exports for selector paths, checker comparisons, diagram nodes, first-run checkpoints, handoffs, and the six required manifest input paths.
+- [x] T003 [P] Create the focused DOC-006 validation harness in `docs-site/scripts/validate-doc006-safe-aids.mjs` with fixture entry points for selector, checker, diagram, checklist, handoff, and command-surface assertions.
+- [x] T004 Verify the plan's reviewability budget against the active file scope and record any split-triggering drift before production edits in `specs/doc-006-safe-interactive-selector-and-validation-aids/tasks.md`.
 
 ---
 
@@ -35,13 +35,13 @@
 
 **Critical**: No user story rendering work should begin until these tasks are complete.
 
-- [ ] T005 Add RED validation assertions for required selector fields, supported platform/scope records, Claude/Codex command-surface separation, and unsupported or ambiguous selector states in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
-- [ ] T006 Add RED validation assertions for the six repository manifest inputs, pass/mismatch/unavailable checker states, compared values, consistency rules, and informational packaging-difference rows in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
-- [ ] T007 Add RED validation assertions for no pasted JSON input, no local user diagnostic UI, no browser-side command execution claims, lightweight handoff links, payload diagram node coverage, and first-run checkpoint coverage in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
-- [ ] T008 Implement manifest loading or JSON imports for `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `dist/claude/speckit-pro/.claude-plugin/plugin.json`, and `dist/codex/speckit-pro/.codex-plugin/plugin.json` in `docs-site/src/data/safe-install-aids.ts`.
-- [ ] T009 Implement curated selector path records that combine manifest-backed values with command labels, prerequisites, success signals, next docs links, and unsupported/unavailable/ambiguous state metadata in `docs-site/src/data/safe-install-aids.ts`.
-- [ ] T010 Implement repository-only checker comparison records for stable source/dist name, version, marketplace source/path, and counterpart presence rules in `docs-site/src/data/safe-install-aids.ts`.
-- [ ] T011 Run `node docs-site/scripts/validate-doc006-safe-aids.mjs` and confirm failures are limited to missing rendering integration before editing `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T005 Add RED validation assertions for required selector fields, supported platform/scope records, Claude/Codex command-surface separation, and unsupported or ambiguous selector states in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+- [x] T006 Add RED validation assertions for the six repository manifest inputs, pass/mismatch/unavailable checker states, compared values, consistency rules, and informational packaging-difference rows in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+- [x] T007 Add RED validation assertions for no pasted JSON input, no local user diagnostic UI, no browser-side command execution claims, lightweight handoff links, payload diagram node coverage, and first-run checkpoint coverage in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+- [x] T008 Implement manifest loading or JSON imports for `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `dist/claude/speckit-pro/.claude-plugin/plugin.json`, and `dist/codex/speckit-pro/.codex-plugin/plugin.json` in `docs-site/src/data/safe-install-aids.ts`.
+- [x] T009 Implement curated selector path records that combine manifest-backed values with command labels, prerequisites, success signals, next docs links, and unsupported/unavailable/ambiguous state metadata in `docs-site/src/data/safe-install-aids.ts`.
+- [x] T010 Implement repository-only checker comparison records for stable source/dist name, version, marketplace source/path, and counterpart presence rules in `docs-site/src/data/safe-install-aids.ts`.
+- [x] T011 Run `node docs-site/scripts/validate-doc006-safe-aids.mjs` and confirm failures are limited to missing rendering integration before editing `docs-site/src/components/SafeInstallAids.astro`.
 
 **Checkpoint**: Source-derived data and focused RED checks are ready for user-story implementation.
 
@@ -55,15 +55,15 @@
 
 ### Tests for User Story 1
 
-- [ ] T012 [US1] Turn the selector RED checks GREEN for required path fields, command-surface leakage, unsupported/ambiguous states, and selected/current state exposure in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+- [x] T012 [US1] Turn the selector RED checks GREEN for required path fields, command-surface leakage, unsupported/ambiguous states, and selected/current state exposure in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Render platform and install-scope selector controls with native form controls or programmatic selected/current state for any custom controls in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T014 [US1] Render the complete static fallback table for every supported selector path, including platform, scope, prerequisites, command sequence, success signals, and next links in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T015 [US1] Render the selected path output with visible copyable command blocks, platform labels, scope labels, prerequisite notes, success signals, and next documentation links in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T016 [US1] Render explicit unsupported, unavailable, and ambiguous selector-state messages that keep supported static guidance reachable and avoid local diagnostic or repair claims in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T017 [US1] Import and place the safe install aids component in the preserved route content in `docs-site/src/content/docs/choose-your-path.mdx`.
+- [x] T013 [US1] Render platform and install-scope selector controls with native form controls or programmatic selected/current state for any custom controls in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T014 [US1] Render the complete static fallback table for every supported selector path, including platform, scope, prerequisites, command sequence, success signals, and next links in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T015 [US1] Render the selected path output with visible copyable command blocks, platform labels, scope labels, prerequisite notes, success signals, and next documentation links in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T016 [US1] Render explicit unsupported, unavailable, and ambiguous selector-state messages that keep supported static guidance reachable and avoid local diagnostic or repair claims in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T017 [US1] Import and place the safe install aids component in the preserved route content in `docs-site/src/content/docs/choose-your-path.mdx`.
 
 **Checkpoint**: User Story 1 is independently reviewable by selector state and copyable command output.
 
@@ -77,14 +77,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T018 [US2] Turn the checker RED checks GREEN for pass, mismatch, unavailable, compared values, six manifest sources, no pasted JSON, no local config inspection, and no local diagnostic UI in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+- [x] T018 [US2] Turn the checker RED checks GREEN for pass, mismatch, unavailable, compared values, six manifest sources, no pasted JSON, no local config inspection, and no local diagnostic UI in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Render repository manifest/version checker pass rows with compared values and expected consistency rules in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T020 [US2] Render mismatch checker rows with both values, the expected consistency rule, and lightweight install or maintainer handoff links in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T021 [US2] Render unavailable checker rows for missing source or generated payload metadata without stale output, pasted JSON input, local user file inspection, or repair claims in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T022 [US2] Render informational rows for intentional Claude/Codex packaging differences without marking them as failed consistency checks in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T019 [US2] Render repository manifest/version checker pass rows with compared values and expected consistency rules in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T020 [US2] Render mismatch checker rows with both values, the expected consistency rule, and lightweight install or maintainer handoff links in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T021 [US2] Render unavailable checker rows for missing source or generated payload metadata without stale output, pasted JSON input, local user file inspection, or repair claims in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T022 [US2] Render informational rows for intentional Claude/Codex packaging differences without marking them as failed consistency checks in `docs-site/src/components/SafeInstallAids.astro`.
 
 **Checkpoint**: User Story 2 is independently reviewable by checker state and manifest comparison rows.
 
@@ -98,14 +98,14 @@
 
 ### Tests for User Story 3
 
-- [ ] T023 [US3] Turn the diagram, checklist, handoff, keyboard, and no-local-execution RED checks GREEN in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+- [x] T023 [US3] Turn the diagram, checklist, handoff, keyboard, and no-local-execution RED checks GREEN in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
 
 ### Implementation for User Story 3
 
-- [ ] T024 [US3] Render an accessible generated-payload diagram fallback with semantic nodes for source tree, Claude distribution, Codex distribution, marketplace entries, and Codex cache in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T025 [US3] Render the first-run checklist with platform route, Spec Kit CLI exists/version, constitution, roadmap or SPEC-ID, GitHub CLI, `jq`, branch/worktree clean-state, scaffold output, and docs validation checkpoints in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T026 [US3] Render safe handoff copy explaining that commands are visible copyable guidance only and browser behavior never runs shell commands, reads local files, writes config, installs plugins, or invokes local workflows in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T027 [US3] Verify keyboard focus order, visible focus, and selected/current state behavior across selector, checker, diagram, and checklist controls in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T024 [US3] Render an accessible generated-payload diagram fallback with semantic nodes for source tree, Claude distribution, Codex distribution, marketplace entries, and Codex cache in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T025 [US3] Render the first-run checklist with platform route, Spec Kit CLI exists/version, constitution, roadmap or SPEC-ID, GitHub CLI, `jq`, branch/worktree clean-state, scaffold output, and docs validation checkpoints in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T026 [US3] Render safe handoff copy explaining that commands are visible copyable guidance only and browser behavior never runs shell commands, reads local files, writes config, installs plugins, or invokes local workflows in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T027 [US3] Verify keyboard focus order, visible focus, and selected/current state behavior across selector, checker, diagram, and checklist controls in `docs-site/src/components/SafeInstallAids.astro`.
 
 **Checkpoint**: User Story 3 is independently reviewable by static diagram fallback, checklist coverage, and no-local-execution safety copy.
 
@@ -115,11 +115,11 @@
 
 **Purpose**: Validate the complete docs slice and prepare review evidence.
 
-- [ ] T028 Run `node docs-site/scripts/validate-doc006-safe-aids.mjs` and resolve any focused validation failures in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
-- [ ] T029 Run `pnpm --dir docs-site validate` and resolve docs build/content failures in `docs-site/src/content/docs/choose-your-path.mdx`.
-- [ ] T030 Run `pnpm --dir docs-site validate:links` and resolve broken handoff links in `docs-site/src/components/SafeInstallAids.astro`.
-- [ ] T031 Run `pnpm --dir docs-site validate && pnpm --dir docs-site validate:links` and capture final verification evidence against `specs/doc-006-safe-interactive-selector-and-validation-aids/quickstart.md`.
-- [ ] T032 Perform manual command-safety and static-fallback review for the selector, checker, payload diagram, first-run checklist, and copyable command blocks, then verify the PR review packet requirements, non-goals, rollback/feature-flag note, and FR traceability against `specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md`.
+- [x] T028 Run `node docs-site/scripts/validate-doc006-safe-aids.mjs` and resolve any focused validation failures in `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+- [x] T029 Run `pnpm --dir docs-site validate` and resolve docs build/content failures in `docs-site/src/content/docs/choose-your-path.mdx`.
+- [x] T030 Run `pnpm --dir docs-site validate:links` and resolve broken handoff links in `docs-site/src/components/SafeInstallAids.astro`.
+- [x] T031 Run `pnpm --dir docs-site validate && pnpm --dir docs-site validate:links` and capture final verification evidence against `specs/doc-006-safe-interactive-selector-and-validation-aids/quickstart.md`.
+- [x] T032 Perform manual command-safety and static-fallback review for the selector, checker, payload diagram, first-run checklist, and copyable command blocks, then verify the PR review packet requirements, non-goals, rollback/feature-flag note, and FR traceability against `specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md`.
 
 ---
 
