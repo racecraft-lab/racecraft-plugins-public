@@ -183,6 +183,10 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
     assert(componentSource.includes(key), `selector keyboard handler must support ${key}.`);
   }
   assert(componentSource.includes('.focus()'), 'selector keyboard handler must move focus with selection.');
+  assert(componentSource.includes('grid-auto-rows: 1fr'), 'selector choice cards must keep equal row heights across breakpoints.');
+  assert(componentSource.includes('align-items: stretch'), 'selector choice grid must stretch cards within equal-height tracks.');
+  assert(componentSource.includes('box-sizing: border-box'), 'selector choice cards must include padding inside equal-height tracks.');
+  assert(componentSource.includes('margin: 0'), 'selector choice cards must not inherit markdown flow margins.');
 
   const combined = `${routeSource}\n${componentSource}\n${dataSource}`;
   const forbiddenPatterns = [

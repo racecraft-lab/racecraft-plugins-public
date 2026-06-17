@@ -448,7 +448,9 @@ const stateLabel = (state: string) => {
   }
 
   .safe-aids__choices {
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    grid-auto-rows: 1fr;
+    align-items: stretch;
   }
 
   .safe-aids__choice,
@@ -467,6 +469,9 @@ const stateLabel = (state: string) => {
     grid-template-columns: auto 1fr;
     gap: 0.35rem 0.6rem;
     align-items: start;
+    box-sizing: border-box;
+    height: 100%;
+    margin: 0;
     padding: 0.85rem;
   }
 
