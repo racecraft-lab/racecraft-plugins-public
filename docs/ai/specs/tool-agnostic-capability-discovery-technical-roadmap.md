@@ -7,7 +7,7 @@ This document defines the **SPEC catalog** for Tool-Agnostic Capability Discover
 **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
 **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 **Spec ID prefix:** `TACD-###`
-**Branch:** `TBD` (current drafting worktree is detached)
+**Branch:** `tacd-001-platform-mechanics-spike` for active TACD-001 setup
 **Tracker:** N/A
 
 ---
@@ -75,7 +75,7 @@ FEATURE COMPLETE
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| TACD-001 | Platform Mechanics Spike | Pending | [TACD-001-workflow.md](TACD-001-workflow.md) | Specify |
+| TACD-001 | Platform Mechanics Spike | In Progress | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Scaffolded on `tacd-001-platform-mechanics-spike`; run autopilot |
 | TACD-002 | Capability Discovery Directive and Agent Updates | Pending | [TACD-002-workflow.md](TACD-002-workflow.md) | Blocked by TACD-001 |
 | TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Blocked by TACD-002 |
 | TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Blocked by TACD-003 |
