@@ -119,7 +119,7 @@
 - [ ] T029 Run `pnpm --dir docs-site validate` and resolve docs build/content failures in `docs-site/src/content/docs/choose-your-path.mdx`.
 - [ ] T030 Run `pnpm --dir docs-site validate:links` and resolve broken handoff links in `docs-site/src/components/SafeInstallAids.astro`.
 - [ ] T031 Run `pnpm --dir docs-site validate && pnpm --dir docs-site validate:links` and capture final verification evidence against `specs/doc-006-safe-interactive-selector-and-validation-aids/quickstart.md`.
-- [ ] T032 Verify the PR review packet requirements, non-goals, rollback/feature-flag note, and FR traceability against `specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md`.
+- [ ] T032 Perform manual command-safety and static-fallback review for the selector, checker, payload diagram, first-run checklist, and copyable command blocks, then verify the PR review packet requirements, non-goals, rollback/feature-flag note, and FR traceability against `specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md`.
 
 ---
 
@@ -210,7 +210,7 @@ pnpm --dir docs-site validate && pnpm --dir docs-site validate:links
 - **FR-011**: T007, T018, T021, T026
 - **FR-012**: T007, T023, T024
 - **FR-013**: T007, T023, T025
-- **FR-014**: T013, T014, T024, T025, T027
-- **FR-015**: T007, T021, T026
+- **FR-014**: T013, T014, T024, T025, T027, T032
+- **FR-015**: T007, T021, T026, T032
 - **FR-016**: T007, T016, T020, T021, T026
-- **FR-017**: T003, T005, T006, T007, T012, T018, T023, T028
+- **FR-017**: T003, T005, T006, T007, T012, T018, T023, T028, T032

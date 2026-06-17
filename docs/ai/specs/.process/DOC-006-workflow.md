@@ -44,8 +44,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and schema contract; G3 passed; reviewability estimator passed at 80 projected production LOC |
 | Checklist | `/speckit-checklist` | Complete | Completed UX, accessibility, integration/source-data, and error-handling checklists; G4 passed with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Created 32 docs-first tasks across setup, foundation, 3 user stories, and polish; G5 passed; size-only reviewability block produced a 4-marker review plan |
-| Analyze | `/speckit-analyze` | In Progress | Check drift across PRD, roadmap, Design Concept, spec, plan, tasks, and validation scope |
-| Implement | `/speckit-implement` | Pending | Implement selector/checker aids, static fallbacks, payload diagram, checklist, and fixture evidence |
+| Analyze | `/speckit-analyze` | Complete | 1 MEDIUM task explicit-review finding remediated; marker counter clean; G6 recommended pass |
+| Implement | `/speckit-implement` | In Progress | Implement selector/checker aids, static fallbacks, payload diagram, checklist, and fixture evidence |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -544,7 +544,17 @@ Focus on DOC-006 consistency:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| A1 | MEDIUM | `tasks.md` included docs validation, link validation, focused fixture evidence, keyboard checks, and safe rendering work, but did not make the manual command-safety/static-fallback review explicit in a task. | Amended T032 to require manual command-safety and static-fallback review for selector, checker, payload diagram, first-run checklist, and copyable command blocks; added T032 to FR-014, FR-015, and FR-017 coverage. |
+
+### Confidence Gate
+
+| Field | Value |
+|-------|-------|
+| Gate | G6.5 |
+| Mode | Advisory |
+| Threshold | 0.90 |
+| Result | Soft skip |
+| Reason | `confidence-gate.sh` returned `NO_DATA` because no synthesizer confidence emit exists in this environment. No unresolved Analyze consensus items remain, so autopilot proceeds under the advisory fail-open path. |
 
 ---
 

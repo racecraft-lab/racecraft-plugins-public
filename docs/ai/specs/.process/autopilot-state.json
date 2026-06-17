@@ -9,8 +9,8 @@
     "specs/doc-006-safe-interactive-selector-and-validation-aids"
   ],
   "feature_branch": "doc-006-safe-interactive-selector-and-validation-aids",
-  "updated_at": "2026-06-17T03:59:51.601Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-17T04:07:40.887Z",
+  "active_step": "Phase 7: Setup (T001-T004)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -226,6 +226,45 @@
         "total_files": 48,
         "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
       }
+    },
+    "analyze": {
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 1,
+        "low": 0,
+        "total": 1,
+        "remaining": 0
+      },
+      "fixes": [
+        {
+          "id": "A1",
+          "severity": "MEDIUM",
+          "summary": "Made manual command-safety and static-fallback review explicit in T032 and FR coverage."
+        }
+      ],
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "no unresolved items"
+      },
+      "verification": [
+        "count-markers.sh findings: 0 remaining",
+        "count-markers.sh all: 0 markers",
+        "validate-gate.sh G6: pass",
+        "git diff --check: pass"
+      ]
+    },
+    "confidence_gate": {
+      "status": "completed",
+      "gate": "G6.5",
+      "mode": "advisory",
+      "threshold": 0.9,
+      "result": "soft_skip",
+      "reason": "confidence-gate.sh returned NO_DATA because no synthesizer confidence emit exists; no unresolved Analyze consensus items remain."
     }
   },
   "plan": [
@@ -307,19 +346,19 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Setup (T001-T004)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Foundation (T005-T011)",
