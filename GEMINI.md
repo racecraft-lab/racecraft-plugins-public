@@ -1,8 +1,10 @@
 # Racecraft Plugins Public Development Guidelines
 
-Auto-generated from feature plans on archival. Last updated: 2026-06-05
+Auto-generated from feature plans on archival. Last updated: 2026-06-17
 
 ## Active Technologies
+- Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
+- Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
 
 - Bash (macOS/Linux) + `jq` for JSON; Python 3 only where existing scripts already
   use it. No compiled runtime — this is a Claude Code plugin marketplace.
@@ -37,6 +39,7 @@ specs/<NNN>/                        # per-feature spec dirs; per-feature exhaust
   Codex counterpart (parity is enforced by `validate-codex-skills.sh` + Layer-8).
 
 ## Recent Changes
+- doc-007-command-workflow-manifest-and-file-layout-reference: Planned a docs-site reference generator that emits committed Markdown pages using Node built-ins and existing Astro/Starlight validation; no new runtime dependency planned.
 
 - **007 Artifact relocation — tiering, .process/, collapse** [Source: specs/007-artifact-relocation]:
   CONTRACT-vs-EXHAUST taxonomy; redirected speckit-pro-authored exhaust

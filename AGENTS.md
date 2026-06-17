@@ -72,3 +72,10 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - Residual DOC-005 PR-packet evidence under `specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer` was removed from active `specs/**` cleanup after PRs #198-#201 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-16-doc-005-post-merge-hygiene.md`.
 - `specs/doc-006-safe-interactive-selector-and-validation-aids` was removed from active `specs/**` cleanup after PR #203 merged and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-17-doc-006-post-merge-hygiene.md`.
 - `.specify/feature.json` is transient local state. Do not commit a stale completed-spec pointer back to `main`.
+
+## Active Technologies
+- Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
+- Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
+
+## Recent Changes
+- doc-007-command-workflow-manifest-and-file-layout-reference: Planned a docs-site reference generator that emits committed Markdown pages using Node built-ins and existing Astro/Starlight validation; no new runtime dependency planned.

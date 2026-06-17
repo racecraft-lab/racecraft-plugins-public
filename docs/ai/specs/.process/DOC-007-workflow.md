@@ -46,8 +46,8 @@ generate/check validation, parallel Claude Code/Codex presentation, and the
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | spec.md created: 3 user stories, 22 FRs after clarification, 9 acceptance scenarios, 0 `[NEEDS CLARIFICATION]` |
 | Clarify | `/speckit-clarify` | Complete | Sessions 1-3 answered IA, generated Markdown format, source evidence, local validation, and DOC-010 handoff boundaries |
-| Plan | `/speckit-plan` | Pending | Choose deterministic generator architecture and docs-site integration |
-| Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, integration/source-data, and error-handling checklists |
+| Plan | `/speckit-plan` | Complete | G3 passed; plan selects a docs-site Node generator, committed Markdown output, local package scripts, and no CI workflow edits |
+| Checklist | `/speckit-checklist` | In Progress | Starting UX checklist, then accessibility, integration/source-data, and error-handling checklists |
 | Tasks | `/speckit-tasks` | Pending | Generate story-ordered tasks for generator, pages, validation, and docs checks |
 | Analyze | `/speckit-analyze` | Pending | Check consistency across roadmap, design concept, spec, plan, and tasks |
 | Implement | `/speckit-implement` | Pending | Implement only after G6 passes |
@@ -335,11 +335,11 @@ source facts.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow, selected generator architecture |
-| `research.md` | Pending | Decision rationales for generation format, source citation model, and check mode |
-| `data-model.md` | Pending | Surface inventory, source fact, inferred note, platform mapping, generated page |
-| `contracts/` | Pending | Schema for generated reference inventory if useful |
-| `quickstart.md` | Pending | Developer commands for generate, check, docs validation, and link validation |
+| `plan.md` | Complete | Technical context, declared file operations, reviewability budget, constitution checks, and docs-site generator architecture |
+| `research.md` | Complete | Decision rationales for committed Markdown generation, explicit source allowlist, source/inference separation, read-only check mode, local validation, and reference IA |
+| `data-model.md` | Complete | Reference page, record, source fact, source citation, inferred note, platform mapping, file classification, source allowlist, and freshness-check entities |
+| `contracts/` | Complete | `reference-generator.md` CLI contract and `reference-inventory.schema.json` inventory schema |
+| `quickstart.md` | Complete | Developer commands for generate, check, docs validation, link validation, scope review, and optional Layer 1 safety check |
 
 ---
 
