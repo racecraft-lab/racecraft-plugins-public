@@ -1,107 +1,188 @@
 {
   "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/DOC-007-workflow.md",
+  "workflow_file": "docs/ai/specs/.process/TACD-001-workflow.md",
   "workflow_files": [
-    "docs/ai/specs/.process/DOC-007-workflow.md"
+    "docs/ai/specs/.process/TACD-001-workflow.md"
   ],
-  "feature_dir": "specs/doc-007-command-workflow-manifest-and-file-layout-reference",
+  "feature_dir": "specs/tacd-001-platform-mechanics-spike",
   "feature_dirs": [
-    "specs/doc-007-command-workflow-manifest-and-file-layout-reference"
+    "specs/tacd-001-platform-mechanics-spike"
   ],
-  "feature_branch": "doc-007-command-workflow-manifest-and-file-layout-reference",
-  "updated_at": "2026-06-17T20:24:44Z",
-  "active_step": "Archived",
-  "status": "completed_archived",
+  "feature_branch": "tacd-001-platform-mechanics-spike",
+  "updated_at": "2026-06-17T19:14:00Z",
+  "active_step": "Phase 2: Clarify - Audit Categories And Allowlist Boundaries",
+  "status": "in_progress",
   "confidence_gate_mode": "advisory",
-  "project_commands": {
-    "BUILD": "N/A",
-    "TYPECHECK": "N/A",
-    "LINT": "N/A",
-    "LINT_FIX": "N/A",
-    "UNIT_TEST": "N/A",
-    "INTEGRATION_TEST": "N/A",
-    "SINGLE_FILE_TEST": "N/A",
-    "SINGLE_FILE_INTEGRATION": "N/A",
-    "FULL_VERIFY": "N/A",
-    "DOCS_REFERENCE_GENERATE": "pnpm --dir docs-site reference:generate",
-    "DOCS_REFERENCE_CHECK": "pnpm --dir docs-site reference:check",
-    "DOCS_VALIDATE": "pnpm --dir docs-site validate",
-    "DOCS_VALIDATE_LINKS": "pnpm --dir docs-site validate:links",
-    "PLUGIN_PAYLOADS": "bash scripts/build-plugin-payloads.sh",
-    "PLUGIN_LAYER1": "bash tests/speckit-pro/run-all.sh --layer 1",
-    "PLUGIN_DEFAULT": "bash tests/speckit-pro/run-all.sh"
-  },
-  "preset_conventions": {
-    "has_presets": true,
-    "presets": [
-      "speckit-pro-reviewability v1.0.0"
-    ],
-    "note": "spec-template, plan-template, and tasks-template resolve through the speckit-pro-reviewability preset"
-  },
-  "mcp_servers": {
-    "status": "fallbacks_available",
-    "missing": [
-      "tavily-mcp",
-      "context7",
-      "RepoPrompt"
-    ]
-  },
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-hygiene",
-    "current_target": "specs/doc-007-command-workflow-manifest-and-file-layout-reference",
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/doc-007-command-workflow-manifest-and-file-layout-reference"
-    ],
-    "safeToApplyCleanup": true,
-    "dryRunProvenanceOnly": false,
-    "cleanup_applied": true,
-    "cleanup_branch": "codex/doc-007-post-merge-hygiene",
-    "cleanup_command": "git rm -r specs/doc-007-command-workflow-manifest-and-file-layout-reference",
-    "merged_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/208",
-    "merge_commit": "2f5ee096e903723e1ab0133c699bda5a22ae2172",
-    "archive_report": ".specify/memory/archive-reports/2026-06-17-doc-007-post-merge-hygiene.md",
-    "notes": "DOC-007 merged through PR #208 and was removed from active specs after archive provenance and recovery commands were recorded. Historical process files were retained."
+    "cleanup_mode": "feature-branch-sweep",
+    "current_target": "specs/tacd-001-platform-mechanics-spike",
+    "excluded_current_spec": "specs/tacd-001-platform-mechanics-spike",
+    "eligible_previous_specs": [],
+    "safeToApplyCleanup": false,
+    "dryRunProvenanceOnly": true,
+    "notes": "Repository active specs only include the current TACD-001 target in this worktree; cleanup was not applied."
+  },
+  "prerequisites": {
+    "status": "completed",
+    "speckit_cli": "specify 0.10.3.dev0",
+    "branch": "tacd-001-platform-mechanics-spike",
+    "is_worktree": true,
+    "required_codex_agents": "installed in /Users/fredrickgabelmann/.codex/agents",
+    "mcp_servers": "Some MCP servers not configured; agents will use built-in fallbacks.",
+    "project_commands": {
+      "BUILD": "N/A",
+      "TYPECHECK": "N/A",
+      "LINT": "N/A",
+      "LINT_FIX": "N/A",
+      "UNIT_TEST": "N/A",
+      "INTEGRATION_TEST": "N/A",
+      "SINGLE_FILE_TEST": "N/A",
+      "SINGLE_FILE_INTEGRATION": "N/A",
+      "FULL_VERIFY": "N/A"
+    },
+    "preset": "speckit-pro-reviewability"
   },
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - IA And Route Shape", "status": "completed"},
-    {"step": "Phase 2: Clarify - IA And Route Shape Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Generation Format And Reviewability", "status": "completed"},
-    {"step": "Phase 2: Clarify - Generation Format And Reviewability Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Validation And Handoff Boundaries", "status": "completed"},
-    {"step": "Phase 2: Clarify - Validation And Handoff Boundaries Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - UX", "status": "completed"},
-    {"step": "Phase 4: Checklist - UX Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Accessibility", "status": "completed"},
-    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Integration", "status": "completed"},
-    {"step": "Phase 4: Checklist - Integration Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "completed"},
-    {"step": "Phase 6: Analyze", "status": "completed"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "completed"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "completed"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "completed"},
-    {"step": "Post: Doctor Extension Check", "status": "completed"},
-    {"step": "Post: Verify Implementation", "status": "completed"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "completed"},
-    {"step": "Post: Code Review", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "completed"},
-    {"step": "Post: Cleanup", "status": "completed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "completed"},
-    {"step": "Post: Self-Review", "status": "completed"},
-    {"step": "Post: UAT Runbook Generation", "status": "completed"},
-    {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "completed"},
-    {"step": "Post: Review Remediation", "status": "completed"},
-    {"step": "Post: Retrospective", "status": "completed"},
-    {"step": "Archive: Post-merge cleanup", "status": "completed"}
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "passed",
+      "summary": "Created spec.md with 14 functional requirements, 3 user stories, 9 acceptance scenarios, and 0 clarification markers."
+    },
+    {
+      "step": "Phase 2: Clarify - Audit Categories And Allowlist Boundaries",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 2: Clarify - Audit Categories And Allowlist Boundaries Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Platform Mechanics And Probe Evidence",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Platform Mechanics And Probe Evidence Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Directive-Home Proof Bar",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Directive-Home Proof Bar Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Integration",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Integration Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - LLM Integration Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
   ]
 }

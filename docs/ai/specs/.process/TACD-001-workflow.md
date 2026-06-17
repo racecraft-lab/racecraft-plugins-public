@@ -39,7 +39,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Create the spike specification for TACD-001 |
+| Specify | `/speckit-specify` | Complete | Created `spec.md` with 14 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Pending | Resolve audit category, probe, and proof-bar ambiguity |
 | Plan | `/speckit-plan` | Pending | Plan the spike report, audit method, probe appendix, and recommendation format |
 | Checklist | `/speckit-checklist` | Pending | Validate integration, llm-integration, and error-handling requirements |
@@ -227,14 +227,14 @@ SpecKit Pro currently has active guidance, prerequisites, and eval expectations 
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 14 |
+| User Stories | 3 |
+| Acceptance Criteria | 9 |
 
 ### Files Generated
 
-- [ ] `specs/tacd-001-platform-mechanics-spike/spec.md`
-- [ ] `specs/tacd-001-platform-mechanics-spike/checklists/requirements.md`
+- [x] `specs/tacd-001-platform-mechanics-spike/spec.md`
+- [x] `specs/tacd-001-platform-mechanics-spike/checklists/requirements.md`
 
 ---
 
