@@ -41,8 +41,12 @@ When source changes, update the marketplace source or generated payload, then
 refresh the marketplace or reinstall the plugin. Do not edit installed runtime
 state to try to patch a stale install.
 
-The detailed source and file-layout reference belongs in
-[DOC-007 reference](/racecraft-plugins-public/reference/).
+For generated reference detail, use the focused DOC-007 pages:
+[manifests](/racecraft-plugins-public/reference/manifests/),
+[skills](/racecraft-plugins-public/reference/skills/),
+[agents](/racecraft-plugins-public/reference/agents/),
+[hooks](/racecraft-plugins-public/reference/hooks/), and
+[source vs dist](/racecraft-plugins-public/reference/source-vs-dist/).
 
 ## Install Path Matrix
 
@@ -197,8 +201,10 @@ refresh `speckit-pro`, and reload plugins after a plugin update when marketplace
 metadata, generated payload files, hook configuration, agents, skills, MCP, or
 LSP behavior has changed.
 
-The full command-snippet review belongs to the later DOC-003 validation tasks
-and the [DOC-007 reference](/racecraft-plugins-public/reference/).
+The full command-snippet review belongs to the later DOC-003 validation tasks.
+Use the generated [skills](/racecraft-plugins-public/reference/skills/) and
+[manifests](/racecraft-plugins-public/reference/manifests/) reference pages
+when you need source-cited command or manifest detail.
 
 ## Stale Update Checkpoint
 
@@ -218,8 +224,13 @@ If SpecKit Pro still looks stale after an update, keep the first check shallow:
 Do not edit installed runtime state. Use
 [DOC-008 troubleshooting](/racecraft-plugins-public/troubleshooting/) for
 deeper stale-cache diagnosis, update or remove procedures, rollback, and
-permission repair. Use [DOC-007 reference](/racecraft-plugins-public/reference/)
-for command, manifest, payload, skill, agent, hook, and file-layout detail.
+permission repair. Use the generated
+[skills](/racecraft-plugins-public/reference/skills/),
+[agents](/racecraft-plugins-public/reference/agents/),
+[hooks](/racecraft-plugins-public/reference/hooks/),
+[manifests](/racecraft-plugins-public/reference/manifests/), and
+[source vs dist](/racecraft-plugins-public/reference/source-vs-dist/) pages for
+command, manifest, payload, skill, agent, hook, and file-layout detail.
 
 ## Install Safety
 

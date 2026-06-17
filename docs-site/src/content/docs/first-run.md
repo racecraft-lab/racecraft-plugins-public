@@ -156,9 +156,10 @@ These are short first-run checks, not full troubleshooting procedures.
 | Partial autopilot output | `autopilot-state.json`, phase artifacts, checklists, tasks, and PR packet evidence | Continue from the phase named in the state file after recording what already exists. |
 | Failed validation checkpoint | The validation command output and changed docs files | Record the failing check in the PR packet and use the troubleshooting route for deeper diagnosis. |
 
-For deeper command reference, use
-[SpecKit Pro reference](/racecraft-plugins-public/reference/). For deeper
-diagnosis, use
+For deeper command reference, use the generated
+[skills](/racecraft-plugins-public/reference/skills/) page. For validation
+surface detail, use [scripts](/racecraft-plugins-public/reference/scripts/) and
+[tests](/racecraft-plugins-public/reference/tests/). For deeper diagnosis, use
 [troubleshooting orientation](/racecraft-plugins-public/troubleshooting/).
 For platform trust questions, use
 [security and trust orientation](/racecraft-plugins-public/security-and-trust/).

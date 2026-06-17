@@ -24,4 +24,9 @@ Full detail is deferred to DOC-008. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the source and payload reference](/racecraft-plugins-public/reference/) to distinguish authoring source from generated install payloads.
+[Review source vs dist](/racecraft-plugins-public/reference/source-vs-dist/) to
+distinguish authoring source from generated install payloads. Use the generated
+[hooks](/racecraft-plugins-public/reference/hooks/),
+[agents](/racecraft-plugins-public/reference/agents/), and
+[manifests](/racecraft-plugins-public/reference/manifests/) pages for
+source-cited trust review of runtime extension surfaces.

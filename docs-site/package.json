@@ -8,7 +8,9 @@
     "dev": "astro dev",
     "check": "astro check",
     "build": "astro build",
-    "validate": "pnpm check && pnpm build",
+    "reference:generate": "node scripts/generate-reference-pages.mjs",
+    "reference:check": "node scripts/generate-reference-pages.mjs --check",
+    "validate": "pnpm reference:check && pnpm check && pnpm build",
     "validate:links": "pnpm build",
     "preview": "astro preview"
   },

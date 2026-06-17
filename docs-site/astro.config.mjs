@@ -21,7 +21,17 @@ export default defineConfig({
         },
         {
           label: 'Reference',
-          items: ['reference', 'glossary'],
+          items: [
+            'reference',
+            'reference/skills',
+            'reference/agents',
+            'reference/manifests',
+            'reference/hooks',
+            'reference/scripts',
+            'reference/tests',
+            'reference/source-vs-dist',
+            'glossary',
+          ],
         },
         {
           label: 'Explanation',

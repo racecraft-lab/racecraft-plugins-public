@@ -24,9 +24,9 @@ description: "Task list for DOC-007 command, workflow, manifest, and file-layout
 
 **Purpose**: Create the docs-site entry points and navigation slots that all generated reference pages rely on.
 
-- [ ] T001 Create the generator entry point at `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T002 [P] Add `reference:generate`, `reference:check`, and `validate` script wiring in `docs-site/package.json`
-- [ ] T003 [P] Add the ordered Reference sidebar entries for `reference`, `reference/skills`, `reference/agents`, `reference/manifests`, `reference/hooks`, `reference/scripts`, `reference/tests`, `reference/source-vs-dist`, and `glossary` in `docs-site/astro.config.mjs`
+- [x] T001 Create the generator entry point at `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T002 [P] Add `reference:generate`, `reference:check`, and `validate` script wiring in `docs-site/package.json`
+- [x] T003 [P] Add the ordered Reference sidebar entries for `reference`, `reference/skills`, `reference/agents`, `reference/manifests`, `reference/hooks`, `reference/scripts`, `reference/tests`, `reference/source-vs-dist`, and `glossary` in `docs-site/astro.config.mjs`
 
 ---
 
@@ -36,11 +36,11 @@ description: "Task list for DOC-007 command, workflow, manifest, and file-layout
 
 **Critical**: No user story work should begin until this phase is complete.
 
-- [ ] T004 Define normalized repo-relative source allowlist and excluded-path checks in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T005 Define generator error categories, stdout/stderr routing, and exit-code helpers for source, parse, output-write, and internal failures in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T006 Define `ReferencePage`, `ReferenceRecord`, command/skill reference, manifest field-set, source citation, inferred-note, platform-mapping, and file-classification validation helpers in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T007 Define deterministic Markdown rendering helpers, generated notice text and validation, GitHub citation URL construction, and stable sorting in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T008 Verify the planned file scope remains within the accepted DOC-007 reviewability budget using `specs/doc-007-command-workflow-manifest-and-file-layout-reference/plan.md` and `specs/doc-007-command-workflow-manifest-and-file-layout-reference/tasks.md`
+- [x] T004 Define normalized repo-relative source allowlist and excluded-path checks in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T005 Define generator error categories, stdout/stderr routing, and exit-code helpers for source, parse, output-write, and internal failures in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T006 Define `ReferencePage`, `ReferenceRecord`, command/skill reference, manifest field-set, source citation, inferred-note, platform-mapping, and file-classification validation helpers in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T007 Define deterministic Markdown rendering helpers, generated notice text and validation, GitHub citation URL construction, and stable sorting in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T008 Verify the planned file scope remains within the accepted DOC-007 reviewability budget using `specs/doc-007-command-workflow-manifest-and-file-layout-reference/plan.md` and `specs/doc-007-command-workflow-manifest-and-file-layout-reference/tasks.md`
 
 **Checkpoint**: Foundation ready; user-story implementation can now proceed in priority order or in parallel by story with separate owners.
 
@@ -54,16 +54,16 @@ description: "Task list for DOC-007 command, workflow, manifest, and file-layout
 
 ### Tests and Checks for User Story 1
 
-- [ ] T009 [US1] Add source-existence, citation, generated-notice, command/skill reference field, manifest field-set, and source-fact-vs-inferred-note validation checks for skills, agents, hooks, and manifests in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T009 [US1] Add source-existence, citation, generated-notice, command/skill reference field, manifest field-set, and source-fact-vs-inferred-note validation checks for skills, agents, hooks, and manifests in `docs-site/scripts/generate-reference-pages.mjs`
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement skills inventory collection and rendering for Claude Code and Codex surfaces, including invocation form, purpose, prerequisites, and expected output artifact fields, in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T011 [US1] Implement agents inventory collection and rendering for Claude Code and Codex surfaces in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T012 [US1] Implement hooks inventory collection and rendering for Claude Code and Codex configuration surfaces in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T013 [US1] Implement manifest inventory collection and rendering for marketplace, plugin, integration, and generated distribution manifest categories, including runtime-specific required and optional plugin manifest fields, in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T014 [US1] Generate and review the committed P1 Markdown outputs in `docs-site/src/content/docs/reference/skills.md`, `docs-site/src/content/docs/reference/agents.md`, `docs-site/src/content/docs/reference/hooks.md`, and `docs-site/src/content/docs/reference/manifests.md` for generated notices, source-backed command/skill fields, manifest field groupings, and citation visibility
-- [ ] T015 [US1] Expand the canonical landing page to orient readers to generated subpages in `docs-site/src/content/docs/reference.md`
+- [x] T010 [US1] Implement skills inventory collection and rendering for Claude Code and Codex surfaces, including invocation form, purpose, prerequisites, and expected output artifact fields, in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T011 [US1] Implement agents inventory collection and rendering for Claude Code and Codex surfaces in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T012 [US1] Implement hooks inventory collection and rendering for Claude Code and Codex configuration surfaces in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T013 [US1] Implement manifest inventory collection and rendering for marketplace, plugin, integration, and generated distribution manifest categories, including runtime-specific required and optional plugin manifest fields, in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T014 [US1] Generate and review the committed P1 Markdown outputs in `docs-site/src/content/docs/reference/skills.md`, `docs-site/src/content/docs/reference/agents.md`, `docs-site/src/content/docs/reference/hooks.md`, and `docs-site/src/content/docs/reference/manifests.md` for generated notices, source-backed command/skill fields, manifest field groupings, and citation visibility
+- [x] T015 [US1] Expand the canonical landing page to orient readers to generated subpages in `docs-site/src/content/docs/reference.md`
 
 **Checkpoint**: User Story 1 should be independently reviewable from the generated Markdown pages and `/reference/` landing page.
 
@@ -77,14 +77,14 @@ description: "Task list for DOC-007 command, workflow, manifest, and file-layout
 
 ### Tests and Checks for User Story 2
 
-- [ ] T016 [US2] Add file-classification validation checks for source, generated-payload, test-only, release-infrastructure, documentation-infrastructure, and other roles in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T016 [US2] Add file-classification validation checks for source, generated-payload, test-only, release-infrastructure, documentation-infrastructure, and other roles in `docs-site/scripts/generate-reference-pages.mjs`
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Implement scripts inventory collection and role classification for `speckit-pro/scripts/`, `speckit-pro/skills/speckit-autopilot/scripts/`, root `scripts/`, and validation helpers in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T018 [US2] Implement tests inventory collection and validation-only classification for `tests/speckit-pro/` in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T019 [US2] Implement source-vs-dist responsibility mapping across source, generated payload, test, release, and docs-site paths in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T020 [US2] Generate and review the committed P2 Markdown outputs in `docs-site/src/content/docs/reference/scripts.md`, `docs-site/src/content/docs/reference/tests.md`, and `docs-site/src/content/docs/reference/source-vs-dist.md`
+- [x] T017 [US2] Implement scripts inventory collection and role classification for `speckit-pro/scripts/`, `speckit-pro/skills/speckit-autopilot/scripts/`, root `scripts/`, and validation helpers in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T018 [US2] Implement tests inventory collection and validation-only classification for `tests/speckit-pro/` in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T019 [US2] Implement source-vs-dist responsibility mapping across source, generated payload, test, release, and docs-site paths in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T020 [US2] Generate and review the committed P2 Markdown outputs in `docs-site/src/content/docs/reference/scripts.md`, `docs-site/src/content/docs/reference/tests.md`, and `docs-site/src/content/docs/reference/source-vs-dist.md`
 
 **Checkpoint**: User Story 2 should be independently reviewable from generated Markdown without changing plugin source, generated payload, release automation, or marketplace files.
 
@@ -98,18 +98,18 @@ description: "Task list for DOC-007 command, workflow, manifest, and file-layout
 
 ### Tests and Checks for User Story 3
 
-- [ ] T021 [US3] Add check-mode contract checks for current output, stale output, read-only behavior, exit `1` stdout, and exit `2` stderr categories in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T021 [US3] Add check-mode contract checks for current output, stale output, read-only behavior, exit `1` stdout, and exit `2` stderr categories in `docs-site/scripts/generate-reference-pages.mjs`
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Implement generate mode to collect, parse, validate, and render all reference data in memory before writing `docs-site/src/content/docs/reference/*.md`
-- [ ] T023 [US3] Implement read-only `--check` mode byte comparison against `docs-site/src/content/docs/reference/*.md` in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T024 [US3] Implement stale-output diagnostics that list stale paths and `pnpm --dir docs-site reference:generate` on stdout in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T025 [US3] Implement source, parse, output-write, and internal error diagnostics with repo-relative path or phase context on stderr in `docs-site/scripts/generate-reference-pages.mjs`
-- [ ] T026 [US3] Validate `pnpm --dir docs-site reference:generate` creates exactly seven generated outputs under `docs-site/src/content/docs/reference/`
-- [ ] T027 [US3] Validate `pnpm --dir docs-site reference:check` succeeds on current output and fails read-only on an intentionally stale `docs-site/src/content/docs/reference/skills.md`
-- [ ] T028 [US3] Validate `pnpm --dir docs-site validate` runs `reference:check` before Astro check/build using `docs-site/package.json`
-- [ ] T029 [US3] Validate `pnpm --dir docs-site validate:links` covers public `/racecraft-plugins-public/reference/<slug>/` links from `docs-site/src/content/docs/reference/*.md`
+- [x] T022 [US3] Implement generate mode to collect, parse, validate, and render all reference data in memory before writing `docs-site/src/content/docs/reference/*.md`
+- [x] T023 [US3] Implement read-only `--check` mode byte comparison against `docs-site/src/content/docs/reference/*.md` in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T024 [US3] Implement stale-output diagnostics that list stale paths and `pnpm --dir docs-site reference:generate` on stdout in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T025 [US3] Implement source, parse, output-write, and internal error diagnostics with repo-relative path or phase context on stderr in `docs-site/scripts/generate-reference-pages.mjs`
+- [x] T026 [US3] Validate `pnpm --dir docs-site reference:generate` creates exactly seven generated outputs under `docs-site/src/content/docs/reference/`
+- [x] T027 [US3] Validate `pnpm --dir docs-site reference:check` succeeds on current output and fails read-only on an intentionally stale `docs-site/src/content/docs/reference/skills.md`
+- [x] T028 [US3] Validate `pnpm --dir docs-site validate` runs `reference:check` before Astro check/build using `docs-site/package.json`
+- [x] T029 [US3] Validate `pnpm --dir docs-site validate:links` covers public `/racecraft-plugins-public/reference/<slug>/` links from `docs-site/src/content/docs/reference/*.md`
 
 **Checkpoint**: User Story 3 should prove generated reference freshness locally and preserve check-mode immutability.
 
@@ -119,15 +119,15 @@ description: "Task list for DOC-007 command, workflow, manifest, and file-layout
 
 **Purpose**: Add bounded contextual deep links, final citation/readability checks, and review packet evidence without expanding into DOC-008, DOC-009, or DOC-010 scope.
 
-- [ ] T030 [P] Add context-specific reference deep links in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T031 [P] Add context-specific reference deep links in `docs-site/src/content/docs/install/codex.md`
-- [ ] T032 [P] Add context-specific skills, scripts, and tests reference links in `docs-site/src/content/docs/first-run.md`
-- [ ] T033 [P] Add context-specific source-vs-dist, manifests, and hooks reference links in `docs-site/src/content/docs/troubleshooting.md`
-- [ ] T034 [P] Add context-specific hooks, agents, manifests, and source-vs-dist reference links in `docs-site/src/content/docs/security-and-trust.md`
-- [ ] T035 [P] Add context-specific source-vs-dist, scripts, tests, and manifests reference links in `docs-site/src/content/docs/contribute-and-release.md`
-- [ ] T036 Verify generated page heading hierarchy, visible generated notice on all seven pages, visible citation link text with distinguishing context, source-fact separation, inferred-note `Based on:` fields, command/skill invocation/prerequisite/output fields, manifest required/optional field groupings, and static Markdown readability across `docs-site/src/content/docs/reference/*.md`
-- [ ] T037 Run final scope review with `git diff --name-only` and confirm no `.github/workflows/*`, plugin behavior, manifest semantics, generated payload content, marketplace behavior, install flow, hook semantics, or release automation files changed
-- [ ] T038 Assemble PR review packet evidence from `specs/doc-007-command-workflow-manifest-and-file-layout-reference/spec.md`, `plan.md`, `tasks.md`, `quickstart.md`, `docs-site` validation output, and final `git diff --name-only`
+- [x] T030 [P] Add context-specific reference deep links in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T031 [P] Add context-specific reference deep links in `docs-site/src/content/docs/install/codex.md`
+- [x] T032 [P] Add context-specific skills, scripts, and tests reference links in `docs-site/src/content/docs/first-run.md`
+- [x] T033 [P] Add context-specific source-vs-dist, manifests, and hooks reference links in `docs-site/src/content/docs/troubleshooting.md`
+- [x] T034 [P] Add context-specific hooks, agents, manifests, and source-vs-dist reference links in `docs-site/src/content/docs/security-and-trust.md`
+- [x] T035 [P] Add context-specific source-vs-dist, scripts, tests, and manifests reference links in `docs-site/src/content/docs/contribute-and-release.md`
+- [x] T036 Verify generated page heading hierarchy, visible generated notice on all seven pages, visible citation link text with distinguishing context, source-fact separation, inferred-note `Based on:` fields, command/skill invocation/prerequisite/output fields, manifest required/optional field groupings, and static Markdown readability across `docs-site/src/content/docs/reference/*.md`
+- [x] T037 Run final scope review with `git diff --name-only` and confirm no `.github/workflows/*`, plugin behavior, manifest semantics, generated payload content, marketplace behavior, install flow, hook semantics, or release automation files changed
+- [x] T038 Assemble PR review packet evidence from `specs/doc-007-command-workflow-manifest-and-file-layout-reference/spec.md`, `plan.md`, `tasks.md`, `quickstart.md`, `docs-site` validation output, and final `git diff --name-only`
 
 ---
 

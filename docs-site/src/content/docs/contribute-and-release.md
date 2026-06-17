@@ -24,4 +24,9 @@ Full detail is deferred to DOC-009. This DOC-002 shell intentionally stops befor
 
 ## Next Step
 
-[Review the reference shell](/racecraft-plugins-public/reference/) before deciding whether a change belongs in source or generated payload output.
+[Review source vs dist](/racecraft-plugins-public/reference/source-vs-dist/)
+before deciding whether a change belongs in source or generated payload output.
+Use [scripts](/racecraft-plugins-public/reference/scripts/),
+[tests](/racecraft-plugins-public/reference/tests/), and
+[manifests](/racecraft-plugins-public/reference/manifests/) for source-cited
+release and validation surfaces.

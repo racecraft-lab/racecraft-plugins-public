@@ -50,7 +50,7 @@ generate/check validation, parallel Claude Code/Codex presentation, and the
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, integration/source-data, and error-handling complete; 9 error-handling gaps remediated, 0 remaining |
 | Tasks | `/speckit-tasks` | Complete | tasks.md created with 38 story-ordered tasks, 8 parallel opportunities, generator/check-mode validation, and explicit dependency boundaries |
 | Analyze | `/speckit-analyze` | Complete | 3 findings remediated (0 critical, 2 high, 1 medium); marker counter clean |
-| Implement | `/speckit-implement` | In Progress | G6 passed; implementing DOC-007 tasks in story order |
+| Implement | `/speckit-implement` | Complete | 38/38 tasks complete; generated reference pages current; docs validation and default plugin suite pass |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -540,26 +540,49 @@ Follow tasks.md in order. Use TDD or check-first implementation where practical:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Setup and inventory contract | Pending | 0/0 | Pending tasks generation |
-| User Story 1 - user-facing generated references | Pending | 0/0 | Pending tasks generation |
-| User Story 2 - maintainer file-layout references | Pending | 0/0 | Pending tasks generation |
-| User Story 3 - validation and stale-output checks | Pending | 0/0 | Pending tasks generation |
-| Polish and handoffs | Pending | 0/0 | Pending tasks generation |
+| Setup and inventory contract | Complete | 3/3 | Generator entry point, package scripts, and Reference sidebar entries added |
+| Foundation | Complete | 5/5 | Source allowlist, diagnostics, data model validation, Markdown rendering, and scope budget implemented |
+| User Story 1 - user-facing generated references | Complete | 7/7 | Skills, agents, hooks, manifests, landing page, generated notice, command/skill fields, and manifest field sets implemented |
+| User Story 2 - maintainer file-layout references | Complete | 5/5 | Scripts, tests, and source-vs-dist generated pages classify repository roles |
+| User Story 3 - validation and stale-output checks | Complete | 9/9 | Generate/check mode, stale-output diagnostics, read-only check behavior, docs validation, and link validation verified |
+| Polish and handoffs | Complete | 9/9 | Existing install, first-run, troubleshooting, security, and contributor pages now deep-link to generated subpages |
+
+### Implementation Verification
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| `pnpm --dir docs-site reference:check` | Pass | Generated pages are current |
+| Stale-output probe | Pass | Intentional `skills.md` edit returned exit 1, listed stale page, printed `pnpm --dir docs-site reference:generate`, and did not rewrite the page |
+| `pnpm --dir docs-site validate` | Pass | Astro check/build completed; internal links valid |
+| `pnpm --dir docs-site validate:links` | Pass | Astro build completed; internal links valid |
+| `bash tests/speckit-pro/run-all.sh --layer 1` | Pass | 993/993 |
+| `bash tests/speckit-pro/run-all.sh` | Pass | 3009/3009 across default layers 1, 4, and 5 |
+| Scope review | Pass | No `.github/workflows/*`, `speckit-pro/`, root marketplace, generated plugin payload, hook, install-flow, or release automation files changed |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] Generated reference content is current.
-- [ ] Generator check mode passes and writes nothing.
-- [ ] `pnpm --dir docs-site validate` passes.
-- [ ] `pnpm --dir docs-site validate:links` passes.
-- [ ] Source citation review confirms every generated row links to a real source path.
-- [ ] Public-readable prose review confirms inferred notes are labeled separately from source facts.
-- [ ] `git diff --name-only` confirms no plugin behavior, manifest semantics, install flow, generated payload content, marketplace behavior, or release automation changed.
-- [ ] Additional plugin suite or Layer 1 checks run if implementation touches plugin/spec/payload surfaces beyond docs reference generation.
-- [ ] PR packet includes review order, scope budget, traceability, verification evidence, known gaps, rollback/fallback notes, and DOC-008/DOC-009/DOC-010 handoffs.
+- [x] All tasks marked complete in `tasks.md`.
+- [x] Generated reference content is current.
+- [x] Generator check mode passes and writes nothing.
+- [x] `pnpm --dir docs-site validate` passes.
+- [x] `pnpm --dir docs-site validate:links` passes.
+- [x] Source citation review confirms every generated row links to a real source path.
+- [x] Public-readable prose review confirms inferred notes are labeled separately from source facts.
+- [x] `git diff --name-only` confirms no plugin behavior, manifest semantics, install flow, generated payload content, marketplace behavior, or release automation changed.
+- [x] Additional plugin suite or Layer 1 checks run if implementation touches plugin/spec/payload surfaces beyond docs reference generation.
+- [x] PR packet includes review order, scope budget, traceability, verification evidence, known gaps, rollback/fallback notes, and DOC-008/DOC-009/DOC-010 handoffs.
+
+---
+
+## Self-Review
+
+- PASS: The generated reference pages are deterministic committed Markdown and `pnpm --dir docs-site reference:check` reports them current.
+- PASS: Check mode is read-only; an intentional stale edit returned exit 1 with the stale page and generate command, and the page was restored only by explicit regeneration.
+- PASS: Scope stayed in docs-site reference generation, link-only docs updates, workflow state, and DOC-007 spec artifacts; no `.github/workflows/*`, plugin source behavior, marketplace files, generated plugin payloads, hook semantics, install flow, or release automation changed.
+- PASS: `pnpm --dir docs-site validate`, `pnpm --dir docs-site validate:links`, `bash tests/speckit-pro/run-all.sh --layer 1`, and `bash tests/speckit-pro/run-all.sh` passed after docs-site dependencies were installed.
+- WATCH: Reviewability gate is warn-only for primary-surface classification; there are no blockers.
 
 ---
 
