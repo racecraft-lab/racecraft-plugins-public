@@ -594,7 +594,7 @@ For tasks touching derived command/checker metadata:
 | User Story 1 - Selector and commands | T012-T017 | 6/6 | Rendered native radio selector, complete static fallback table, selected-path panels, visible command blocks, optional copy buttons, unsupported/unavailable/ambiguous state text, and route placement. |
 | User Story 2 - Checker and payload diagram | T018-T022 | 5/5 | Rendered repository-only checker with 7 pass/info rows, compared values, consistency rules, manifest input availability, mismatch/unavailable fixture coverage, and no user JSON or local config inspection. |
 | User Story 3 - First-run checklist and handoffs | T023-T027 | 5/5 | Rendered text-backed payload diagram, first-run checkpoints, safe handoff copy, native controls, visible focus styling, and static content that remains available without selector scripting. |
-| Validation and review packet | T028-T032 | 5/5 | Focused validator, docs validation, link validation, full verify, built-HTML manifest review, command-safety/static-fallback review, and full SpecKit suite passed; PR packet generation remains a post step. |
+| Validation and review packet | T028-T032 | 5/5 | Focused validator, docs validation, link validation, full verify, built-HTML manifest review, command-safety/static-fallback review, full SpecKit suite, UAT runbook, PR packet, and packet validation passed. |
 
 ---
 
@@ -608,7 +608,7 @@ For tasks touching derived command/checker metadata:
 - [x] Static fallback review completed without relying on JavaScript.
 - [x] Command-safety review confirms no browser-side local execution, config writes, plugin runs, or local file inspection.
 - [x] Full `bash tests/speckit-pro/run-all.sh` run completed because spec/process surfaces changed.
-- [ ] PR review packet includes review order, scope budget, traceability, verification evidence, known gaps, and rollback/fallback notes.
+- [x] PR review packet includes review order, scope budget, traceability, verification evidence, known gaps, and rollback/fallback notes.
 
 ---
 
@@ -633,3 +633,6 @@ racecraft-plugins-public/
 ---
 
 Template based on SpecKit best practices and populated for DOC-006 from the technical roadmap plus the Design Concept.
+
+### PR packet validation events
+- `pr-packet` validation passed; result `specs/doc-006-safe-interactive-selector-and-validation-aids/.process/pr-packets/pr-packet/validation.json`; PR creation unblocked.
