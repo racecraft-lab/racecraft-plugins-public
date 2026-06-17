@@ -542,7 +542,7 @@ Follow tasks.md in order. Treat TACD-001 as a research spike:
 - [x] Active-vs-historical categories are specific enough for TACD-004.
 - [x] TACD-002/TACD-003/TACD-004 handoffs are explicit.
 - [x] No active runtime guidance, prerequisite behavior, docs messaging, generated payload semantics, or final enforcement tests changed outside the spike scope.
-- [x] Targeted verification ran and results are recorded in the PR body.
+- [x] Targeted verification ran and results are recorded in PR packet and workflow evidence.
 
 ### Post Verification Results
 

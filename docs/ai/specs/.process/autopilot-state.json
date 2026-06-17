@@ -512,7 +512,7 @@
         "folded_polish_target_reason": "",
         "declared_files": [
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
           },
           {
@@ -576,7 +576,7 @@
         "folded_polish_target_reason": "",
         "declared_files": [
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
           }
         ],
@@ -626,7 +626,7 @@
         "folded_polish_target_reason": "",
         "declared_files": [
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
           }
         ],
@@ -684,7 +684,7 @@
         "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
         "declared_files": [
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
           },
           {
