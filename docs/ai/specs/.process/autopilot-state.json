@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T20:35:04Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-17T20:48:24Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -185,15 +185,26 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "findings": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 1,
+        "remaining": 0
+      },
+      "summary": "Analyze found one LOW task-phase clarity issue; repaired with parser-valid US1 marker and separate Claude/Codex subsections; G6 passed with 0 CRITICAL/HIGH findings."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: foundation (T001-T005)",
@@ -436,7 +447,7 @@
     "source_fingerprint": {
       "feature_spec_sha": "60095a4164a9dbeb31976dbae7b74b8779a564b56cda3719da1b4b4d054c5bf0",
       "plan_declared_scope_sha": "0edd38b6b7ddea5f87d8bc5a71e1a4ad92d0353725daf730426c5f7ce8537dc9",
-      "tasks_sha": "39e81869a480795f2848c9594c0b88bd76d78988c662d3b89ef4b16590640767",
+      "tasks_sha": "e2e9d53c76c6e1766517dd1463ba689b8f6de861957f040c08b59f005bdd852f",
       "reviewability_sha": "8b26507768f4e74b3b3918e313e72afbb13b402704f6f1d7230d8c704e1915a0",
       "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
     },
@@ -674,7 +685,7 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "60095a4164a9dbeb31976dbae7b74b8779a564b56cda3719da1b4b4d054c5bf0",
     "plan_declared_scope_sha": "0edd38b6b7ddea5f87d8bc5a71e1a4ad92d0353725daf730426c5f7ce8537dc9",
-    "tasks_sha": "39e81869a480795f2848c9594c0b88bd76d78988c662d3b89ef4b16590640767",
+    "tasks_sha": "e2e9d53c76c6e1766517dd1463ba689b8f6de861957f040c08b59f005bdd852f",
     "reviewability_sha": "8b26507768f4e74b3b3918e313e72afbb13b402704f6f1d7230d8c704e1915a0",
     "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
   }

@@ -36,7 +36,7 @@
 
 **Independent Test**: Review the Claude Code and Codex sections of `docs/ai/research/tool-agnostic-capability-discovery-spike.md` and confirm every audited finding includes source path, line context, classification, and rationale.
 
-### Claude Code Evidence
+### Phase 2a: Claude Code Evidence
 
 - [ ] T006 [P] [US1] Inventory Claude agent named-tool references and active guidance in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 - [ ] T007 [P] [US1] Inventory Claude skill, reference, prerequisite-script, and plugin-limitation named-tool references in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
@@ -44,7 +44,7 @@
 - [ ] T009 [US1] Fill Claude Code runtime-by-capability matrix cells with evidence state, confidence, confidence rationale, and absent-capability disposition in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 - [ ] T010 [US1] Add sanitized Claude Code probe appendix entries for mechanics that local source inspection cannot prove in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
-### Codex Evidence
+### Phase 3: Codex Evidence
 
 - [ ] T011 [P] [US1] Inventory Codex agent and skill named-tool references in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 - [ ] T012 [P] [US1] Inventory Codex dependency metadata, generated payload duplicates, and eval expectations in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
@@ -52,7 +52,7 @@
 - [ ] T014 [US1] Fill Codex runtime-by-capability matrix cells with evidence state, confidence, confidence rationale, and absent-capability disposition in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 - [ ] T015 [US1] Add sanitized Codex probe appendix entries for mechanics that local source inspection cannot prove in `docs/ai/research/tool-agnostic-capability-discovery-spike.md`
 
-**Checkpoint**: Runtime audit and mechanics evidence are independently reviewable.
+**Checkpoint**: Runtime audit and mechanics evidence are independently reviewable. Claude Code and Codex evidence retain separate Phase 2a and Phase 3 subsections while sharing the single parser-valid US1 marker.
 
 ---
 
@@ -111,14 +111,14 @@
 ### Phase Dependencies
 
 - **Phase 1**: No dependencies; creates the report skeleton and guardrails.
-- **Phase 2**: Depends on Phase 1; Claude Code and Codex audit/mechanics evidence. Runtime subsections can be worked in parallel if report sections are coordinated.
+- **Phase 2**: Depends on Phase 1; Claude Code and Codex audit/mechanics evidence. Runtime subsections preserve the requested Phase 2a Claude Code and Phase 3 Codex work while sharing the single US1 marker.
 - **Phase 4**: Depends on Phase 2; categories require audited findings from both runtimes.
 - **Phase 5**: Depends on Phases 2 and 4; directive-home recommendation must not be final until mechanics evidence and allowlist recommendations are available.
 - **Phase 6**: Depends on Phases 1-5; verifies report completeness, citation quality, sanitization, and no-behavior-change scope.
 
 ### User Story Dependencies
 
-- **User Story 1 (P1)**: Starts after Phase 1; split into Claude and Codex audit phases for independent review.
+- **User Story 1 (P1)**: Starts after Phase 1; split into Claude Code and Codex audit subsections for independent review within the single US1 marker.
 - **User Story 2 (P2)**: Starts after audit evidence and category recommendations exist; no dependency on implementation changes.
 - **User Story 3 (P3)**: Starts after audit evidence exists; provides TACD-004 category and eval-plan inputs.
 
@@ -152,7 +152,7 @@ Task: "Inventory Codex agent and skill named-tool references in docs/ai/research
 ### MVP First (User Story 1 Only)
 
 1. Complete Phase 1 setup and report skeleton.
-2. Complete Phase 2 and Phase 3 audit/mechanics evidence.
+2. Complete Phase 2a Claude Code and Phase 3 Codex audit/mechanics evidence within the US1 marker.
 3. Stop and validate that every audited finding has source path, line context, classification, and rationale.
 
 ### Incremental Delivery
