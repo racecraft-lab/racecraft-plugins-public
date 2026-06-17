@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-006 completed and archived; DOC-007 is ready
+**Status:** DOC-007 scaffolded and in progress; DOC-008 and DOC-009 remain blocked by DOC-007
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -173,6 +173,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-007: Command, workflow, manifest, and file-layout reference
 
 - **Maps from PRD:** DOC-FR-007
+- **Status:** In progress as of 2026-06-17. Scaffolded on branch `doc-007-command-workflow-manifest-and-file-layout-reference` with workflow `docs/ai/specs/.process/DOC-007-workflow.md` and Design Concept `docs/ai/specs/.process/DOC-007-design-concept.md`.
 - **User outcome:** Users, maintainers, and agents can look up exact plugin surfaces and file responsibilities by stable deep link.
 - **Scope:** Reference pages for Claude commands/skills, Codex skills, agents/subagents, hooks, MCP/config surfaces, manifests, marketplace files, generated payloads, scripts, tests, CI, release files, and repo structure. Include source facts and inferred notes separately.
 - **Vertical-slice rationale:** Delivers one coherent reference library that other pages can deep-link.
