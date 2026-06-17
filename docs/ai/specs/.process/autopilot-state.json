@@ -29,7 +29,7 @@
     "speckit_cli": "specify 0.10.3.dev0",
     "branch": "tacd-001-platform-mechanics-spike",
     "is_worktree": true,
-    "required_codex_agents": "installed in /Users/fredrickgabelmann/.codex/agents",
+    "required_codex_agents": "installed in user-scoped Codex agents directory",
     "mcp_servers": "Some MCP servers not configured; agents will use built-in fallbacks.",
     "project_commands": {
       "BUILD": "N/A",
