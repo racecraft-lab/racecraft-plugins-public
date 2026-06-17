@@ -45,7 +45,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `/speckit-checklist` | Complete | Integration, LLM Integration, and Error Handling checklists complete with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Created 30 tasks across 6 phases; G5 passed; marker plan created from size-only reviewability block |
 | Analyze | `/speckit-analyze` | Complete | 1 LOW task-phase drift finding remediated; marker counter clean; G6 passed |
-| Implement | `/speckit-implement` | Pending | Produce the spike report and any appendix probe evidence only |
+| Implement | `/speckit-implement` | In Progress | Produce the spike report and any appendix probe evidence only |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -481,6 +481,15 @@ Focus on TACD-001 consistency:
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
 | A1 | LOW | `tasks.md` needed clearer separation between Claude Code and Codex audit work while staying compatible with marker planning. | Kept one parser-valid US1 marker and added separate Phase 2a Claude Code and Phase 3 Codex subsections; updated dependencies, parallel wording, and MVP strategy text. Re-run marker counter: 0 findings (`0C/0H/0M/0L`). |
+
+### Confidence Gate
+
+| Field | Value |
+|-------|-------|
+| **Mode** | `advisory` |
+| **Threshold** | `0.90` |
+| **Result** | `NO_DATA` soft skip |
+| **Evidence** | `specs/tacd-001-platform-mechanics-spike/.process/confidence-gate.json` |
 
 ---
 

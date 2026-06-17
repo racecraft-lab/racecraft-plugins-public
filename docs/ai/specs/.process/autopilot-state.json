@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T20:48:24Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-06-17T20:49:42Z",
+  "active_step": "Phase 7: foundation (T001-T005)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -204,11 +204,15 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed",
+      "no_data": true,
+      "gate_status": "soft_skip",
+      "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/confidence-gate.json",
+      "summary": "Advisory confidence gate had no confidence emit; soft-skipped per protocol."
     },
     {
       "step": "Phase 7: foundation (T001-T005)",
-      "status": "pending",
+      "status": "in_progress",
       "marker_id": "foundation",
       "task_ids": [
         "T001",
@@ -688,5 +692,17 @@
     "tasks_sha": "e2e9d53c76c6e1766517dd1463ba689b8f6de861957f040c08b59f005bdd852f",
     "reviewability_sha": "8b26507768f4e74b3b3918e313e72afbb13b402704f6f1d7230d8c704e1915a0",
     "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  },
+  "confidence_gate": {
+    "pass": null,
+    "composite": null,
+    "criteria": {},
+    "threshold": 0.9,
+    "mode": "advisory",
+    "recommended_action": "soft_skip",
+    "reason": "no confidence emit found",
+    "input": "docs/ai/specs/.process/TACD-001-workflow.md",
+    "exit_code": 1,
+    "no_data": true
   }
 }
