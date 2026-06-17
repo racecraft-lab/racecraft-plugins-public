@@ -42,8 +42,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 17 functional requirements, 3 user stories, 10 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; clarified metadata source boundary, interaction/fallback/accessibility, repository-only checker, handoffs, first-run checklist scope, and validation coverage |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and schema contract; G3 passed; reviewability estimator passed at 80 projected production LOC |
-| Checklist | `/speckit-checklist` | In Progress | UX checklist active; run UX, accessibility, integration/source-data, and error-handling checklists |
-| Tasks | `/speckit-tasks` | Pending | Generate docs-first tasks by user story with source-derived metadata validation |
+| Checklist | `/speckit-checklist` | Complete | Completed UX, accessibility, integration/source-data, and error-handling checklists; G4 passed with 0 remaining gaps |
+| Tasks | `/speckit-tasks` | In Progress | Generate docs-first tasks by user story with source-derived metadata validation |
 | Analyze | `/speckit-analyze` | Pending | Check drift across PRD, roadmap, Design Concept, spec, plan, tasks, and validation scope |
 | Implement | `/speckit-implement` | Pending | Implement selector/checker aids, static fallbacks, payload diagram, checklist, and fixture evidence |
 
@@ -435,11 +435,11 @@ Focus on DOC-006 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| UX | | | |
-| Accessibility | | | |
-| Integration | | | |
-| Error Handling | | | |
-| **Total** | | | |
+| UX | 26 | 0 | `spec.md`, `plan.md`, `data-model.md`, `quickstart.md` |
+| Accessibility | 23 | 1 found, 1 fixed, 0 remaining | Added explicit accessible name, role, and selected/current/expanded state requirements when custom controls are used. |
+| Integration | 26 | 0 | `spec.md`, `plan.md`, `data-model.md`, `contracts/doc006-safe-aids.schema.json`, `quickstart.md` |
+| Error Handling | 17 | 1 found, 1 fixed, 0 remaining | Added unsupported/ambiguous selector-state requirements and validation coverage without local diagnostics or repair claims. |
+| **Total** | 92 | 2 found, 2 fixed, 0 remaining | G4 passed; no `[Gap]` markers remain across spec, plan, or checklists. |
 
 ---
 

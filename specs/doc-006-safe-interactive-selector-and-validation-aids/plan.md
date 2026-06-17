@@ -119,11 +119,12 @@ See [research.md](research.md). No open research items remain for planning. Deci
 - Allowed: route-preserving MDX conversion, one small Astro component, one small data helper, focused fixture/test, static fallback tables/lists, native controls, copyable visible commands.
 - Required manifest inputs: `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `dist/claude/speckit-pro/.claude-plugin/plugin.json`, `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
 - Disallowed: install Markdown parsing as data source, persistent generated metadata output, pasted JSON checker, browser-side shell command execution, local user file inspection, local plugin workflow invocation, auto-config editing, full troubleshooting matrix, update/rollback/cache diagnosis expansion.
+- Unsupported, unavailable, or ambiguous selector states are handled as static rendering states only: derive supported platform/scope pairs from checked-in selector path metadata, identify unsupported or ambiguous combinations in text, keep complete supported static guidance reachable, and route to safe install or DOC-008-owned troubleshooting handoffs without local diagnostics or repair claims.
 - Direct source-data bug rule: If implementation discovers an actual mismatch in one of the six checked-in manifest files, stop and record it as a source-data bug before modifying source manifests.
 
 ## Validation Plan
 
-- Focused metadata/rendering fixture or test verifies selector required fields, platform command-surface boundaries, checker pass/mismatch/unavailable states, no pasted-JSON or local-diagnostic UI, handoff links, first-run checkpoint coverage, and manifest-backed field drift.
+- Focused metadata/rendering fixture or test verifies selector required fields, unsupported or ambiguous selector-state handling, platform command-surface boundaries, checker pass/mismatch/unavailable states, no pasted-JSON or local-diagnostic UI, handoff links, first-run checkpoint coverage, and manifest-backed field drift.
 - Build validation: `pnpm --dir docs-site validate`.
 - Link validation: `pnpm --dir docs-site validate:links`.
 - Full verify: `pnpm --dir docs-site validate && pnpm --dir docs-site validate:links`.

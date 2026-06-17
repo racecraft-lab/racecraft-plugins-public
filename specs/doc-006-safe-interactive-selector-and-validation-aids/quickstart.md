@@ -11,6 +11,7 @@ node docs-site/scripts/validate-doc006-safe-aids.mjs
 The focused check must cover:
 
 - Required selector fields for every path.
+- Unsupported or ambiguous selector-state handling with supported static guidance still reachable.
 - Claude Code and Codex command-surface separation.
 - Manifest checker `pass`, `mismatch`, and `unavailable` states.
 - No pasted-JSON or local user diagnostic UI.
