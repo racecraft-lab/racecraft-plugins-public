@@ -39,6 +39,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/integration.md](checklists/integration.md)
 - [checklists/llm-integration.md](checklists/llm-integration.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [.process/confidence-gate.json](.process/confidence-gate.json)
 - [.process/marker-plan/atomicity-route.json](.process/marker-plan/atomicity-route.json)
 - [.process/marker-plan/pr-marker-plan.json](.process/marker-plan/pr-marker-plan.json)
 - [.process/marker-plan/reviewability-task-gate.json](.process/marker-plan/reviewability-task-gate.json)
