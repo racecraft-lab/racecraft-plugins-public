@@ -82,7 +82,7 @@ const stateLabel = (state: string) => {
               <td>
                 <ol>
                   {selectorPath.commands.map((command) => (
-                    <li><code>{command.command}</code></li>
+                    <li><pre><code>{command.command}</code></pre></li>
                   ))}
                 </ol>
               </td>
@@ -553,9 +553,14 @@ const stateLabel = (state: string) => {
     background: var(--sl-color-bg);
   }
 
+  .safe-aids td pre,
   .safe-aids__command pre {
     margin: 0.6rem 0;
     white-space: pre-wrap;
+  }
+
+  .safe-aids td pre {
+    margin: 0;
   }
 
   .safe-aids__command button {

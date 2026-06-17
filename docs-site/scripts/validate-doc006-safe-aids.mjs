@@ -43,6 +43,12 @@ function readJson(relativePath) {
   }
 }
 
+function marketplacePlugin(manifest, relativePath) {
+  const plugin = manifest?.plugins?.find((entry) => entry?.name === 'speckit-pro');
+  assert(plugin, `${relativePath} must include a speckit-pro marketplace entry.`);
+  return plugin;
+}
+
 async function loadDataModule() {
   if (!fs.existsSync(dataPath)) {
     failures.push('Missing data helper: docs-site/src/data/safe-install-aids.ts');
@@ -75,8 +81,8 @@ function validateRoute(routeSource) {
 
 function validateManifests() {
   const manifests = Object.fromEntries(requiredManifestPaths.map((manifestPath) => [manifestPath, readJson(manifestPath)]));
-  const claudeMarketplace = manifests['.claude-plugin/marketplace.json']?.plugins?.[0];
-  const codexMarketplace = manifests['.agents/plugins/marketplace.json']?.plugins?.[0];
+  const claudeMarketplace = marketplacePlugin(manifests['.claude-plugin/marketplace.json'], '.claude-plugin/marketplace.json');
+  const codexMarketplace = marketplacePlugin(manifests['.agents/plugins/marketplace.json'], '.agents/plugins/marketplace.json');
   const claudeSource = manifests['speckit-pro/.claude-plugin/plugin.json'];
   const codexSource = manifests['speckit-pro/.codex-plugin/plugin.json'];
   const claudeDist = manifests['dist/claude/speckit-pro/.claude-plugin/plugin.json'];
@@ -175,6 +181,7 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
   assert(componentSource.includes('data-path-panel'), 'component must render selected-path panels for progressive filtering.');
   assert(componentSource.includes('<table'), 'component must render semantic fallback/checker tables.');
   assert(componentSource.includes('<pre') && componentSource.includes('<code'), 'component must keep commands visible in code blocks.');
+  assert(componentSource.includes('<li><pre><code>{command.command}</code></pre></li>'), 'static fallback command sequences must preserve line breaks.');
   assert(componentSource.includes('type=\"button\"') && componentSource.includes('navigator.clipboard'), 'copy affordance must use native buttons and clipboard copy only.');
   assert(componentSource.includes('aria-live'), 'selector or copy status must expose status text.');
   assert(componentSource.includes('Keyboard'), 'component must include keyboard/static-fallback review language.');
@@ -209,6 +216,8 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
   assert(combined.includes('copyable guidance only'), 'sources must label commands as copyable guidance only.');
   assert(combined.includes('does not inspect local user files'), 'sources must state the checker does not inspect local user files.');
   assert(combined.includes('does not accept user JSON'), 'sources must state the checker does not accept user JSON.');
+  assert(dataSource.includes('marketplacePlugin') && dataSource.includes(".find((plugin) => plugin?.name === pluginId)"), 'data helper must select marketplace entries by plugin name.');
+  assert(dataSource.includes('sanitizeManifestError'), 'data helper must sanitize manifest read errors before rendering them.');
 }
 
 validateRoute(readText(routeMdx));

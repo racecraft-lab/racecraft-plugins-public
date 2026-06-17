@@ -1,8 +1,11 @@
+// This module must stay plain JavaScript-compatible because the focused validator
+// copies it to a temporary .mjs file before importing it in Node.
 // @ts-nocheck
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+const pluginId = 'speckit-pro';
 const sourceRelativeRoot = path.resolve(fileURLToPath(new URL('../../../', import.meta.url)));
 const repoRootCandidates = [
   process.cwd(),
@@ -57,6 +60,14 @@ export const manifestSources = [
   },
 ];
 
+function sanitizeManifestError(relativePath, error) {
+  if (error instanceof SyntaxError) return `INVALID_JSON: ${relativePath}`;
+  if (error && typeof error === 'object' && 'code' in error && typeof error.code === 'string') {
+    return `${error.code}: ${relativePath}`;
+  }
+  return `ERROR: ${relativePath}`;
+}
+
 function readManifest(relativePath) {
   try {
     const source = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
@@ -69,7 +80,7 @@ function readManifest(relativePath) {
     return {
       available: false,
       value: null,
-      error: error instanceof Error ? error.message : String(error),
+      error: sanitizeManifestError(relativePath, error),
     };
   }
 }
@@ -93,6 +104,7 @@ const textValue = (value) => {
   return String(value);
 };
 
+const marketplacePlugin = (manifest) => manifest.plugins?.find((plugin) => plugin?.name === pluginId);
 const docsLink = (label, href) => ({ label, href: `${siteBase}${href}` });
 
 export function compareManifestValues(leftValue, rightValue) {
@@ -132,8 +144,8 @@ function comparison({
 
 const pluginName = textValue(manifestValue('claude-source-plugin', (manifest) => manifest.name));
 const pluginVersion = textValue(manifestValue('claude-source-plugin', (manifest) => manifest.version));
-const claudeMarketplaceSource = textValue(manifestValue('claude-marketplace', (manifest) => manifest.plugins?.[0]?.source));
-const codexMarketplaceSource = textValue(manifestValue('codex-marketplace', (manifest) => manifest.plugins?.[0]?.source?.path));
+const claudeMarketplaceSource = textValue(manifestValue('claude-marketplace', (manifest) => marketplacePlugin(manifest)?.source));
+const codexMarketplaceSource = textValue(manifestValue('codex-marketplace', (manifest) => marketplacePlugin(manifest)?.source?.path));
 
 export const handoffs = [
   {
@@ -434,9 +446,9 @@ export const checkerComparisons = [
     id: 'claude-version',
     label: 'Claude plugin version',
     rule: 'Claude marketplace, source manifest, and generated payload versions must stay equal.',
-    leftSource: '.claude-plugin/marketplace.json#/plugins/0/version',
+    leftSource: `.claude-plugin/marketplace.json#/plugins[name=${pluginId}]/version`,
     rightSource: 'dist/claude/speckit-pro/.claude-plugin/plugin.json#/version',
-    leftValue: manifestValue('claude-marketplace', (manifest) => manifest.plugins?.[0]?.version),
+    leftValue: manifestValue('claude-marketplace', (manifest) => marketplacePlugin(manifest)?.version),
     rightValue: manifestValue('claude-dist-plugin', (manifest) => manifest.version),
     handoff: docsLink('Use Claude stale update checkpoint', '/install/claude-code/'),
   }),
@@ -444,9 +456,9 @@ export const checkerComparisons = [
     id: 'codex-name',
     label: 'Codex plugin name',
     rule: 'Codex marketplace, source manifest, and generated payload plugin names must match.',
-    leftSource: '.agents/plugins/marketplace.json#/plugins/0/name',
+    leftSource: `.agents/plugins/marketplace.json#/plugins[name=${pluginId}]/name`,
     rightSource: 'dist/codex/speckit-pro/.codex-plugin/plugin.json#/name',
-    leftValue: manifestValue('codex-marketplace', (manifest) => manifest.plugins?.[0]?.name),
+    leftValue: manifestValue('codex-marketplace', (manifest) => marketplacePlugin(manifest)?.name),
     rightValue: manifestValue('codex-dist-plugin', (manifest) => manifest.name),
     handoff: docsLink('Review source and payload reference', '/reference/'),
   }),
@@ -454,9 +466,9 @@ export const checkerComparisons = [
     id: 'codex-version',
     label: 'Codex plugin version',
     rule: 'Codex marketplace, source manifest, and generated payload versions must stay equal.',
-    leftSource: '.agents/plugins/marketplace.json#/plugins/0/version',
+    leftSource: `.agents/plugins/marketplace.json#/plugins[name=${pluginId}]/version`,
     rightSource: 'dist/codex/speckit-pro/.codex-plugin/plugin.json#/version',
-    leftValue: manifestValue('codex-marketplace', (manifest) => manifest.plugins?.[0]?.version),
+    leftValue: manifestValue('codex-marketplace', (manifest) => marketplacePlugin(manifest)?.version),
     rightValue: manifestValue('codex-dist-plugin', (manifest) => manifest.version),
     handoff: docsLink('Use Codex stale update checkpoint', '/install/codex/'),
   }),
@@ -464,9 +476,9 @@ export const checkerComparisons = [
     id: 'claude-marketplace-source',
     label: 'Claude marketplace payload path',
     rule: 'Claude marketplace source must point at the generated Claude payload.',
-    leftSource: '.claude-plugin/marketplace.json#/plugins/0/source',
+    leftSource: `.claude-plugin/marketplace.json#/plugins[name=${pluginId}]/source`,
     rightSource: 'expected generated Claude payload path',
-    leftValue: manifestValue('claude-marketplace', (manifest) => manifest.plugins?.[0]?.source),
+    leftValue: manifestValue('claude-marketplace', (manifest) => marketplacePlugin(manifest)?.source),
     rightValue: './dist/claude/speckit-pro',
     handoff: docsLink('Use maintainer release handoff', '/contribute-and-release/'),
   }),
@@ -474,9 +486,9 @@ export const checkerComparisons = [
     id: 'codex-marketplace-source',
     label: 'Codex marketplace payload path',
     rule: 'Codex marketplace source.path must point at the generated Codex payload.',
-    leftSource: '.agents/plugins/marketplace.json#/plugins/0/source/path',
+    leftSource: `.agents/plugins/marketplace.json#/plugins[name=${pluginId}]/source/path`,
     rightSource: 'expected generated Codex payload path',
-    leftValue: manifestValue('codex-marketplace', (manifest) => manifest.plugins?.[0]?.source?.path),
+    leftValue: manifestValue('codex-marketplace', (manifest) => marketplacePlugin(manifest)?.source?.path),
     rightValue: './dist/codex/speckit-pro',
     handoff: docsLink('Use maintainer release handoff', '/contribute-and-release/'),
   }),
