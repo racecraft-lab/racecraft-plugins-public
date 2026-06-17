@@ -41,8 +41,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 17 functional requirements, 3 user stories, 10 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; clarified metadata source boundary, interaction/fallback/accessibility, repository-only checker, handoffs, first-run checklist scope, and validation coverage |
-| Plan | `/speckit-plan` | In Progress | Plan Astro/Starlight docs-site changes, source JSON reads, no-browser-execution guarantees, and focused tests |
-| Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, integration/source-data, and error-handling checklists |
+| Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and schema contract; G3 passed; reviewability estimator passed at 80 projected production LOC |
+| Checklist | `/speckit-checklist` | In Progress | UX checklist active; run UX, accessibility, integration/source-data, and error-handling checklists |
 | Tasks | `/speckit-tasks` | Pending | Generate docs-first tasks by user story with source-derived metadata validation |
 | Analyze | `/speckit-analyze` | Pending | Check drift across PRD, roadmap, Design Concept, spec, plan, tasks, and validation scope |
 | Implement | `/speckit-implement` | Pending | Implement selector/checker aids, static fallbacks, payload diagram, checklist, and fixture evidence |
@@ -350,11 +350,21 @@ Users can now read separate Claude Code, Codex, first-run, and lifecycle docs, b
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow |
-| `research.md` | Pending | Decision rationales if needed |
-| `data-model.md` | Pending | Command/checker data structures if useful |
-| `contracts/` | Pending | Static data contract or fixture schema if useful |
-| `quickstart.md` | Pending | Developer validation steps |
+| `plan.md` | Complete | Technical context, execution flow, declared file operations, constitution gates, and validation plan |
+| `research.md` | Complete | Decision rationales for source-derived metadata, static-first interaction, checker scope, handoffs, and validation |
+| `data-model.md` | Complete | Selector/checker/diagram/checklist data structures |
+| `contracts/` | Complete | `contracts/doc006-safe-aids.schema.json` |
+| `quickstart.md` | Complete | Developer validation steps |
+
+### Plan Reviewability Advisory
+
+| Field | Result |
+|-------|--------|
+| G3 gate | Passed |
+| Plan estimator status | `pass` |
+| Projected production LOC | 80 |
+| Declared files | 2 production files, 4 new files, 1 modified file, 5 total entries |
+| Notes | Manual plan estimate remains 450-700 reviewable LOC, below block threshold and scoped to one docs route slice. |
 
 ---
 
