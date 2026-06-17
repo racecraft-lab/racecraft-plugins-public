@@ -1,0 +1,9 @@
+{
+  "marker_id": "foundation",
+  "status": "complete",
+  "task_ids": ["T001", "T002", "T003", "T004", "T005"],
+  "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+  "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+  "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/foundation.json",
+  "summary": "Created the TACD-001 report skeleton, scope guardrails, confidence rubric, inventory plan, and no-behavior-change guardrail."
+}

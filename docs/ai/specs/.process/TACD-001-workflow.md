@@ -45,7 +45,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `/speckit-checklist` | Complete | Integration, LLM Integration, and Error Handling checklists complete with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Created 30 tasks across 6 phases; G5 passed; marker plan created from size-only reviewability block |
 | Analyze | `/speckit-analyze` | Complete | 1 LOW task-phase drift finding remediated; marker counter clean; G6 passed |
-| Implement | `/speckit-implement` | In Progress | Produce the spike report and any appendix probe evidence only |
+| Implement | `/speckit-implement` | Complete | Added report and completed all 30 tasks; marker checkpoints recorded at `a8db2762` |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -445,13 +445,13 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/tacd-
 | Field | Value |
 |-------|-------|
 | **Schema** | `pr-marker-plan.v1` |
-| **Status** | `planned` |
+| **Status** | `emission_ready` |
 | **Evidence** | `specs/tacd-001-platform-mechanics-spike/.process/marker-plan/pr-marker-plan.json` |
 | **Reviewability Input** | `specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json` (`status=block`, `is_size_only=true`, exit code 1) |
 | **Atomicity Input** | `specs/tacd-001-platform-mechanics-spike/.process/marker-plan/atomicity-route.json` |
 | **Ordered Markers** | 1. `foundation` (`T001`-`T005`); 2. `us1` (`T006`-`T015`); 3. `us3` (`T016`-`T019`); 4. `us2` (`T020`-`T024`, folded polish `T025`-`T030`) |
 | **Warnings** | `reviewability_size_warning`: task gate block is marker-planning input |
-| **Checkpoints** | Pending |
+| **Checkpoints** | `foundation`, `us1`, `us3`, and `us2` complete at `a8db2762` |
 | **Final Marker Split** | Pending |
 | **Packet Validation** | Pending |
 | **PR Mappings** | Pending |
@@ -528,10 +528,10 @@ Follow tasks.md in order. Treat TACD-001 as a research spike:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| `foundation` | `T001`-`T005` | Pending | Report skeleton, scope, confidence rubric, inventory command plan, and no-behavior-change guardrail |
-| `us1` | `T006`-`T015` | Pending | Claude Code and Codex runtime-surface audit and mechanics evidence |
-| `us3` | `T016`-`T019` | Pending | Active-vs-historical allowlist and TACD-004 recommendations |
-| `us2` | `T020`-`T030` | Pending | Directive-home recommendation, downstream handoff, verification, citation review, and no-behavior-change scope review |
+| `foundation` | `T001`-`T005` | Complete | Report skeleton, scope, confidence rubric, inventory command plan, and no-behavior-change guardrail |
+| `us1` | `T006`-`T015` | Complete | Claude Code and Codex runtime-surface audit and mechanics evidence |
+| `us3` | `T016`-`T019` | Complete | Active-vs-historical allowlist and TACD-004 recommendations |
+| `us2` | `T020`-`T030` | Complete | Directive-home recommendation, downstream handoff, verification, citation review, and no-behavior-change scope review |
 
 ---
 

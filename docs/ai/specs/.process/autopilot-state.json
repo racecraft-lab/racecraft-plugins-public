@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T20:49:42Z",
-  "active_step": "Phase 7: foundation (T001-T005)",
+  "updated_at": "2026-06-17T20:56:07Z",
+  "active_step": "Post: Doctor Extension Check",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -212,7 +212,7 @@
     },
     {
       "step": "Phase 7: foundation (T001-T005)",
-      "status": "in_progress",
+      "status": "completed",
       "marker_id": "foundation",
       "task_ids": [
         "T001",
@@ -234,11 +234,17 @@
         "SINGLE_FILE_INTEGRATION": "N/A",
         "FULL_VERIFY": "N/A"
       },
-      "completed_tasks_context": "Phases 1-5 complete; G5 passed; marker plan current."
+      "completed_tasks_context": "Phases 1-5 complete; G5 passed; marker plan current.",
+      "implementation_checkpoint": {
+        "status": "complete",
+        "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/foundation.json"
+      }
     },
     {
       "step": "Phase 7: us1 Runtime-Surface Audit and Mechanics Evidence (T006-T015)",
-      "status": "pending",
+      "status": "completed",
       "marker_id": "us1",
       "task_ids": [
         "T006",
@@ -267,11 +273,17 @@
         "SINGLE_FILE_INTEGRATION": "N/A",
         "FULL_VERIFY": "N/A"
       },
-      "completed_tasks_context": "Foundation marker must complete first."
+      "completed_tasks_context": "Foundation marker must complete first.",
+      "implementation_checkpoint": {
+        "status": "complete",
+        "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us1.json"
+      }
     },
     {
       "step": "Phase 7: us3 Active-vs-Historical Allowlist Recommendation (T016-T019)",
-      "status": "pending",
+      "status": "completed",
       "marker_id": "us3",
       "task_ids": [
         "T016",
@@ -294,11 +306,17 @@
         "SINGLE_FILE_INTEGRATION": "N/A",
         "FULL_VERIFY": "N/A"
       },
-      "completed_tasks_context": "Runtime audit evidence must exist first."
+      "completed_tasks_context": "Runtime audit evidence must exist first.",
+      "implementation_checkpoint": {
+        "status": "complete",
+        "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us3.json"
+      }
     },
     {
       "step": "Phase 7: us2 Directive-Home Recommendation and Verification (T020-T030)",
-      "status": "pending",
+      "status": "completed",
       "marker_id": "us2",
       "task_ids": [
         "T020",
@@ -330,11 +348,17 @@
         "SINGLE_FILE_INTEGRATION": "N/A",
         "FULL_VERIFY": "N/A"
       },
-      "completed_tasks_context": "All prior markers complete before final recommendation and verification."
+      "completed_tasks_context": "All prior markers complete before final recommendation and verification.",
+      "implementation_checkpoint": {
+        "status": "complete",
+        "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+        "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us2.json"
+      }
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",
@@ -447,11 +471,11 @@
     "schema_version": "pr-marker-plan.v1",
     "kind": "pr_marker_plan",
     "feature_id": "tacd-001-platform-mechanics-spike",
-    "status": "planned",
+    "status": "emission_ready",
     "source_fingerprint": {
       "feature_spec_sha": "60095a4164a9dbeb31976dbae7b74b8779a564b56cda3719da1b4b4d054c5bf0",
       "plan_declared_scope_sha": "0edd38b6b7ddea5f87d8bc5a71e1a4ad92d0353725daf730426c5f7ce8537dc9",
-      "tasks_sha": "e2e9d53c76c6e1766517dd1463ba689b8f6de861957f040c08b59f005bdd852f",
+      "tasks_sha": "1edd01391a96cc470460c35ba59d8a1477a4f5fe07ad338c1d3666ee8a529969",
       "reviewability_sha": "8b26507768f4e74b3b3918e313e72afbb13b402704f6f1d7230d8c704e1915a0",
       "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
     },
@@ -505,7 +529,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/foundation.json"
         },
         "emission_mapping": {
           "status": "pending"
@@ -558,7 +585,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us1.json"
         },
         "emission_mapping": {
           "status": "pending"
@@ -605,7 +635,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us3.json"
         },
         "emission_mapping": {
           "status": "pending"
@@ -664,7 +697,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us2.json"
         },
         "emission_mapping": {
           "status": "pending"
@@ -689,7 +725,7 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "60095a4164a9dbeb31976dbae7b74b8779a564b56cda3719da1b4b4d054c5bf0",
     "plan_declared_scope_sha": "0edd38b6b7ddea5f87d8bc5a71e1a4ad92d0353725daf730426c5f7ce8537dc9",
-    "tasks_sha": "e2e9d53c76c6e1766517dd1463ba689b8f6de861957f040c08b59f005bdd852f",
+    "tasks_sha": "1edd01391a96cc470460c35ba59d8a1477a4f5fe07ad338c1d3666ee8a529969",
     "reviewability_sha": "8b26507768f4e74b3b3918e313e72afbb13b402704f6f1d7230d8c704e1915a0",
     "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
   },
