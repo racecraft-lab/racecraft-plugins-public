@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T20:56:07Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-06-17T21:09:13Z",
+  "active_step": "Post: Cleanup",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -358,27 +358,37 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed",
+      "result": "pass",
+      "summary": "Equivalent doctor checks passed; no files changed."
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "result": "warn",
+      "summary": "TACD artifact checks passed; upstream numeric branch-name prerequisite warned on tacd-001-platform-mechanics-spike."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass_with_warning",
+      "summary": "30 completed tasks parsed; no phantom tasks; same upstream branch-name warning."
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "skipped",
+      "reason": "review extension command not installed"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "result": "pass",
+      "command": "bash tests/speckit-pro/run-all.sh",
+      "summary": "speckit-pro test suite: 3009/3009 passed."
     },
     {
       "step": "Post: Cleanup",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Reviewability Diff Gate",
@@ -740,5 +750,32 @@
     "input": "docs/ai/specs/.process/TACD-001-workflow.md",
     "exit_code": 1,
     "no_data": true
+  },
+  "post_verification": {
+    "doctor": {
+      "status": "pass",
+      "evidence": "Equivalent checks from speckit-utils doctor command; no files changed."
+    },
+    "verify_implementation": {
+      "status": "warn",
+      "evidence": "TACD artifact checks passed; upstream numeric branch-name prerequisite warned on tacd-001-platform-mechanics-spike."
+    },
+    "verify_tasks": {
+      "status": "pass_with_warning",
+      "evidence": "30 completed tasks parsed; no phantom tasks; upstream branch-name prerequisite warned."
+    },
+    "code_review": {
+      "status": "skipped",
+      "reason": "review extension command not installed"
+    },
+    "integration_suite": {
+      "status": "pass",
+      "command": "bash tests/speckit-pro/run-all.sh",
+      "result": "3009/3009 passed"
+    },
+    "privacy_scan_fix": {
+      "status": "pass",
+      "evidence": "Removed local absolute home path from state; privacy scan and full suite pass."
+    }
   }
 }

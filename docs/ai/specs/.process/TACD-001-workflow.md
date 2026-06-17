@@ -537,12 +537,23 @@ Follow tasks.md in order. Treat TACD-001 as a research spike:
 
 ## Post-Implementation Checklist
 
-- [ ] `docs/ai/research/tool-agnostic-capability-discovery-spike.md` exists and cites source paths.
-- [ ] Probe appendix commands/results are reproducible or explicitly marked as environment-specific.
-- [ ] Active-vs-historical categories are specific enough for TACD-004.
-- [ ] TACD-002/TACD-003/TACD-004 handoffs are explicit.
-- [ ] No active runtime guidance, prerequisite behavior, docs messaging, generated payload semantics, or final enforcement tests changed outside the spike scope.
-- [ ] Targeted verification ran and results are recorded in the PR body.
+- [x] `docs/ai/research/tool-agnostic-capability-discovery-spike.md` exists and cites source paths.
+- [x] Probe appendix commands/results are reproducible or explicitly marked as environment-specific.
+- [x] Active-vs-historical categories are specific enough for TACD-004.
+- [x] TACD-002/TACD-003/TACD-004 handoffs are explicit.
+- [x] No active runtime guidance, prerequisite behavior, docs messaging, generated payload semantics, or final enforcement tests changed outside the spike scope.
+- [x] Targeted verification ran and results are recorded in the PR body.
+
+### Post Verification Results
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Doctor Extension Check | Pass | Equivalent checks from `.specify/extensions/speckit-utils/commands/doctor.md`; no files changed |
+| Verify Implementation | Warn | Equivalent `$speckit-verify` checks passed for TACD artifacts; upstream numeric branch-name prerequisite warned on `tacd-001-platform-mechanics-spike` |
+| Verify Tasks Phantom Check | Pass with warning | 30 completed tasks parsed; no phantom tasks; same upstream branch-name warning |
+| Code Review | Skipped | Review extension command not installed in `.specify/extensions/.registry` |
+| Integration Suite | Pass | `bash tests/speckit-pro/run-all.sh` -> `3009/3009 passed` |
+| Privacy Scan Fix | Pass | Removed local absolute home path from `autopilot-state.json`; `test-privacy-scan` and full suite pass |
 
 ---
 
