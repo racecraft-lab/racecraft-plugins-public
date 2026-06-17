@@ -64,7 +64,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/grill-me/SKILL.md`, `speckit-pro/codex-skills/grill-me/SKILL.md`
 
 ### Install
@@ -98,7 +98,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- This skill is present only in the Codex source tree; do not assume a parallel runtime surface exists unless a matching source file is added.
   - Based on: `speckit-pro/codex-skills/install/SKILL.md`
 
 ### Speckit Autopilot
@@ -133,7 +133,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-autopilot/SKILL.md`, `speckit-pro/codex-skills/speckit-autopilot/SKILL.md`
 
 ### Speckit Coach
@@ -168,7 +168,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-coach/SKILL.md`, `speckit-pro/codex-skills/speckit-coach/SKILL.md`
 
 ### Speckit Install
@@ -203,7 +203,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-install/SKILL.md`, `speckit-pro/codex-skills/speckit-install/SKILL.md`
 
 ### Speckit Prd
@@ -238,7 +238,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-prd/SKILL.md`, `speckit-pro/codex-skills/speckit-prd/SKILL.md`
 
 ### Speckit Resolve Pr
@@ -273,7 +273,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-resolve-pr/SKILL.md`, `speckit-pro/codex-skills/speckit-resolve-pr/SKILL.md`
 
 ### Speckit Scaffold Spec
@@ -308,7 +308,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-scaffold-spec/SKILL.md`, `speckit-pro/codex-skills/speckit-scaffold-spec/SKILL.md`
 
 ### Speckit Status
@@ -342,7 +342,7 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-status/SKILL.md`, `speckit-pro/codex-skills/speckit-status/SKILL.md`
 
 ### Speckit Upgrade
@@ -377,5 +377,5 @@ Claude Code and Codex skill surfaces, invocations, prerequisites, expected artif
 
 #### Inferred Notes
 
-- When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
+- Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.
   - Based on: `speckit-pro/skills/speckit-upgrade/SKILL.md`, `speckit-pro/codex-skills/speckit-upgrade/SKILL.md`

@@ -37,7 +37,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** dist/claude/speckit-pro/README.md, dist/claude/speckit-pro/.claude-plugin/plugin.json
 - **Codex:** Not applicable.
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Generated payloads are runtime-specific install inventory; authoring changes belong in source paths and their owning build or release process.
 
 #### Source Facts
 
@@ -60,7 +60,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** Not applicable.
 - **Codex:** dist/codex/speckit-pro/README.md, dist/codex/speckit-pro/.codex-plugin/plugin.json
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Generated payloads are runtime-specific install inventory; authoring changes belong in source paths and their owning build or release process.
 
 #### Source Facts
 
@@ -83,7 +83,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** docs-site/package.json, docs-site/astro.config.mjs, docs-site/src/content/docs/reference.md
 - **Codex:** docs-site/package.json, docs-site/astro.config.mjs, docs-site/src/content/docs/reference.md
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Docs-site files are shared documentation infrastructure and are not runtime-specific install payloads.
 
 #### Source Facts
 
@@ -107,7 +107,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** .claude-plugin/marketplace.json, .agents/plugins/marketplace.json
 - **Codex:** .agents/plugins/marketplace.json
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Authoring-source and registry files are shared source responsibilities unless the referenced path names a runtime-specific surface.
 
 #### Source Facts
 
@@ -130,7 +130,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** speckit-pro/README.md, speckit-pro/.claude-plugin/plugin.json
 - **Codex:** speckit-pro/README.md, speckit-pro/.codex-plugin/plugin.json
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Authoring-source and registry files are shared source responsibilities unless the referenced path names a runtime-specific surface.
 
 #### Source Facts
 
@@ -154,7 +154,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** scripts/build-plugin-payloads.sh, scripts/sync-marketplace-versions.sh
 - **Codex:** scripts/build-plugin-payloads.sh, scripts/sync-marketplace-versions.sh
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Release and payload scripts are shared maintenance infrastructure unless an individual script declares a runtime-specific target.
 
 #### Source Facts
 
@@ -177,7 +177,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** .specify/integrations/claude.manifest.json, .specify/integrations/speckit.manifest.json
 - **Codex:** .specify/integrations/speckit.manifest.json
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Integration manifests record installed SpecKit and Claude integration evidence; they are reference inventory, not generated plugin payloads.
 
 #### Source Facts
 
@@ -200,7 +200,7 @@ Editability and responsibility map for source, generated payloads, tests, releas
 - **Platform concept:** Source-vs-dist responsibility
 - **Claude Code:** tests/speckit-pro/run-all.sh, tests/speckit-pro/layer1-structural/validate-plugin.sh
 - **Codex:** tests/speckit-pro/run-all.sh, tests/speckit-pro/layer1-structural/validate-plugin.sh
-- **Runtime difference:** Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.
+- **Runtime difference:** Validation files are shared repository checks; runtime-specific assertions live inside the referenced test files.
 
 #### Source Facts
 

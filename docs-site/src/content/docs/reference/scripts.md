@@ -32,7 +32,7 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Platform concept:** Repository script group
 - **Claude Code:** speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh, speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh, speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh, speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh, speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh, speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh, speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh, speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh, speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh, speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh, speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh, speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh, speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh, speckit-pro/skills/speckit-autopilot/scripts/restack.sh, speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh
 - **Codex:** speckit-pro/skills/speckit-autopilot/scripts/aggregate-crl.sh, speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh, speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh, speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh, speckit-pro/skills/speckit-autopilot/scripts/detect-stack-manager.sh, speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh, speckit-pro/skills/speckit-autopilot/scripts/final-reviewability-backstop.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh, speckit-pro/skills/speckit-autopilot/scripts/generate-uat-skeleton.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-frontmatter.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/moc-id-normalize.sh, speckit-pro/skills/speckit-autopilot/scripts/lib/specify-cli.sh, speckit-pro/skills/speckit-autopilot/scripts/migrate-structure.sh, speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh, speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh, speckit-pro/skills/speckit-autopilot/scripts/parse-consensus-categories.sh, speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh, speckit-pro/skills/speckit-autopilot/scripts/relocate-process-artifacts.sh, speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh, speckit-pro/skills/speckit-autopilot/scripts/restack.sh, speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh, speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh
-- **Runtime difference:** Script files are documented by repository role only; DOC-007 does not change execution behavior.
+- **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
@@ -107,8 +107,8 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Classification:** `source`
 - **Platform concept:** Repository script group
 - **Claude Code:** speckit-pro/scripts/curated-set.json, speckit-pro/scripts/install-curated-set.sh
-- **Codex:** No Codex-specific script paths in this group.
-- **Runtime difference:** Script files are documented by repository role only; DOC-007 does not change execution behavior.
+- **Codex:** speckit-pro/scripts/curated-set.json, speckit-pro/scripts/install-curated-set.sh
+- **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
@@ -131,8 +131,8 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Classification:** `release-infrastructure`
 - **Platform concept:** Repository script group
 - **Claude Code:** scripts/build-plugin-payloads.sh, scripts/sync-marketplace-versions.sh
-- **Codex:** No Codex-specific script paths in this group.
-- **Runtime difference:** Script files are documented by repository role only; DOC-007 does not change execution behavior.
+- **Codex:** scripts/build-plugin-payloads.sh, scripts/sync-marketplace-versions.sh
+- **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 

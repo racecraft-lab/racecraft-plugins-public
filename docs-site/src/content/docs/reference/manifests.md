@@ -32,7 +32,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### .agents/plugins/marketplace.json
 
-- **Purpose:** Reference inventory for the codex marketplace registry.
+- **Purpose:** Reference inventory for the Codex marketplace registry.
 - **Classification:** `source`
 - **Platform concept:** marketplace registry
 - **Claude Code:** Not a Claude Code manifest record.
@@ -56,7 +56,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### .claude-plugin/marketplace.json
 
-- **Purpose:** Reference inventory for the claude-code marketplace registry.
+- **Purpose:** Reference inventory for the Claude Code marketplace registry.
 - **Classification:** `source`
 - **Platform concept:** marketplace registry
 - **Claude Code:** .claude-plugin/marketplace.json
@@ -80,7 +80,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### .specify/integrations/claude.manifest.json
 
-- **Purpose:** Reference inventory for the claude-code SpecKit integration manifest.
+- **Purpose:** Reference inventory for the Claude Code SpecKit integration manifest.
 - **Classification:** `source`
 - **Platform concept:** SpecKit integration manifest
 - **Claude Code:** .specify/integrations/claude.manifest.json
@@ -104,11 +104,11 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### .specify/integrations/speckit.manifest.json
 
-- **Purpose:** Reference inventory for the claude-code SpecKit integration manifest.
+- **Purpose:** Reference inventory for the shared Claude Code and Codex SpecKit integration manifest.
 - **Classification:** `source`
 - **Platform concept:** SpecKit integration manifest
 - **Claude Code:** .specify/integrations/speckit.manifest.json
-- **Codex:** Not a Codex manifest record.
+- **Codex:** .specify/integrations/speckit.manifest.json
 - **Runtime difference:** Marketplace, plugin, integration, and generated distribution manifests are documented as separate categories.
 
 #### Source Facts
@@ -128,7 +128,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### dist/claude/speckit-pro/.claude-plugin/plugin.json
 
-- **Purpose:** Reference inventory for the claude-code generated distribution plugin manifest.
+- **Purpose:** Reference inventory for the Claude Code generated distribution plugin manifest.
 - **Classification:** `generated-payload`
 - **Platform concept:** generated distribution plugin manifest
 - **Claude Code:** dist/claude/speckit-pro/.claude-plugin/plugin.json
@@ -158,7 +158,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### dist/codex/speckit-pro/.codex-plugin/plugin.json
 
-- **Purpose:** Reference inventory for the codex generated distribution plugin manifest.
+- **Purpose:** Reference inventory for the Codex generated distribution plugin manifest.
 - **Classification:** `generated-payload`
 - **Platform concept:** generated distribution plugin manifest
 - **Claude Code:** Not a Claude Code manifest record.
@@ -188,7 +188,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### speckit-pro/.claude-plugin/plugin.json
 
-- **Purpose:** Reference inventory for the claude-code source plugin manifest.
+- **Purpose:** Reference inventory for the Claude Code source plugin manifest.
 - **Classification:** `source`
 - **Platform concept:** source plugin manifest
 - **Claude Code:** speckit-pro/.claude-plugin/plugin.json
@@ -218,7 +218,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 ### speckit-pro/.codex-plugin/plugin.json
 
-- **Purpose:** Reference inventory for the codex source plugin manifest.
+- **Purpose:** Reference inventory for the Codex source plugin manifest.
 - **Classification:** `source`
 - **Platform concept:** source plugin manifest
 - **Claude Code:** Not a Claude Code manifest record.

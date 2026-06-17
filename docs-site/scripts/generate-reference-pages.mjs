@@ -236,6 +236,9 @@ async function buildSkillsPage() {
     const sourceRefs = [claude?.path, codex?.path].filter(Boolean);
     const sources = [];
     for (const source of sourceRefs) sources.push(await citation(source));
+    const skillInferredNote = claude && codex
+      ? 'Both runtime variants exist, so use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.'
+      : `This skill is present only in the ${claude ? 'Claude Code' : 'Codex'} source tree; do not assume a parallel runtime surface exists unless a matching source file is added.`;
     records.push({
       id: name,
       heading: titleFromSlug(name),
@@ -259,7 +262,7 @@ async function buildSkillsPage() {
       ],
       sources,
       inferredNotes: [
-        inferredNote('When both runtime variants exist, use the runtime-specific SKILL.md as the active instruction surface rather than treating the two files as interchangeable.', sourceRefs),
+        inferredNote(skillInferredNote, sourceRefs),
       ],
       classification: 'source',
     });
@@ -363,10 +366,17 @@ async function buildHooksPage() {
     await citation('speckit-pro/codex-hooks.json'),
   ]);
 }
-function manifestRuntime(repoPath) {
+function manifestRuntime(repoPath, json = {}) {
+  if (repoPath === '.specify/integrations/speckit.manifest.json' || json.integration === 'speckit') return 'shared';
+  if (json.integration === 'claude') return 'claude-code';
   if (repoPath.includes('codex') || repoPath.startsWith('.agents/')) return 'codex';
   if (repoPath.includes('claude') || repoPath.startsWith('.claude-plugin/')) return 'claude-code';
   return 'claude-code';
+}
+function runtimeLabel(runtime) {
+  if (runtime === 'claude-code') return 'Claude Code';
+  if (runtime === 'codex') return 'Codex';
+  return 'shared Claude Code and Codex';
 }
 function manifestKind(repoPath) {
   if (repoPath.includes('marketplace.json')) return 'marketplace registry';
@@ -376,7 +386,7 @@ function manifestKind(repoPath) {
   return 'manifest';
 }
 function manifestFieldSet(repoPath, json) {
-  const runtime = manifestRuntime(repoPath);
+  const runtime = manifestRuntime(repoPath, json);
   const topLevel = Object.keys(json).sort((a, b) => a.localeCompare(b));
   const requiredFields = runtime === 'codex'
     ? ['name', 'version', 'description']
@@ -397,7 +407,7 @@ async function buildManifestsPage() {
     const json = await readJson(repoPath);
     const topLevel = Object.keys(json).sort((a, b) => a.localeCompare(b));
     const kind = manifestKind(repoPath);
-    const runtime = manifestRuntime(repoPath);
+    const runtime = manifestRuntime(repoPath, json);
     const source = await citation(repoPath);
     const facts = [
       sourceFact(`${repoPath} is categorized as ${kind}.`, [repoPath]),
@@ -409,11 +419,11 @@ async function buildManifestsPage() {
     records.push({
       id: repoPath.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase(),
       heading: repoPath,
-      purpose: `Reference inventory for the ${runtime} ${kind}.`,
+      purpose: `Reference inventory for the ${runtimeLabel(runtime)} ${kind}.`,
       platformMapping: {
         concept: kind,
-        claudeCode: runtime === 'claude-code' ? repoPath : 'Not a Claude Code manifest record.',
-        codex: runtime === 'codex' ? repoPath : 'Not a Codex manifest record.',
+        claudeCode: runtime !== 'codex' ? repoPath : 'Not a Claude Code manifest record.',
+        codex: runtime !== 'claude-code' ? repoPath : 'Not a Codex manifest record.',
         runtimeDifference: 'Marketplace, plugin, integration, and generated distribution manifests are documented as separate categories.',
       },
       sourceFacts: facts,
@@ -469,9 +479,9 @@ async function buildScriptsPage() {
       purpose: group.purpose,
       platformMapping: {
         concept: 'Repository script group',
-        claudeCode: group.files.filter((repoPath) => !repoPath.includes('codex')).join(', ') || 'No Claude-specific script paths in this group.',
-        codex: group.files.filter((repoPath) => repoPath.includes('codex') || repoPath.includes('autopilot')).join(', ') || 'No Codex-specific script paths in this group.',
-        runtimeDifference: 'Script files are documented by repository role only; DOC-007 does not change execution behavior.',
+        claudeCode: group.files.join(', '),
+        codex: group.files.join(', '),
+        runtimeDifference: 'Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.',
       },
       sourceFacts: group.files.map((repoPath) => sourceFact(`${repoPath} is a checked-in ${group.classification} file.`, [repoPath])),
       sources,
@@ -544,7 +554,7 @@ async function buildSourceVsDistPage() {
         concept: 'Source-vs-dist responsibility',
         claudeCode: item.paths.filter((repoPath) => repoPath.includes('claude') || !repoPath.includes('codex')).join(', '),
         codex: item.paths.filter((repoPath) => repoPath.includes('codex') || !repoPath.includes('claude')).join(', '),
-        runtimeDifference: 'Generated payloads are install inventory; authoring changes belong in source paths and their owning build/release process.',
+        runtimeDifference: sourceVsDistRuntimeDifference(item),
       },
       sourceFacts: [
         sourceFact(`${item.heading} is classified as ${item.classification}.`, item.paths),
@@ -560,6 +570,24 @@ async function buildSourceVsDistPage() {
     await citation('docs-site/src/content/docs/reference.md'),
     await citation('speckit-pro/README.md'),
   ]);
+}
+function sourceVsDistRuntimeDifference(item) {
+  if (item.classification === 'generated-payload') {
+    return 'Generated payloads are runtime-specific install inventory; authoring changes belong in source paths and their owning build or release process.';
+  }
+  if (item.id === 'docs-site') {
+    return 'Docs-site files are shared documentation infrastructure and are not runtime-specific install payloads.';
+  }
+  if (item.id === 'test-suite') {
+    return 'Validation files are shared repository checks; runtime-specific assertions live inside the referenced test files.';
+  }
+  if (item.id === 'release-scripts') {
+    return 'Release and payload scripts are shared maintenance infrastructure unless an individual script declares a runtime-specific target.';
+  }
+  if (item.id === 'speckit-integration-manifests') {
+    return 'Integration manifests record installed SpecKit and Claude integration evidence; they are reference inventory, not generated plugin payloads.';
+  }
+  return 'Authoring-source and registry files are shared source responsibilities unless the referenced path names a runtime-specific surface.';
 }
 function page(slug, title, description, records, sources) {
   return {
@@ -619,7 +647,7 @@ function validateCitation(source) {
   assertAllowedSource(source.path);
 }
 function escapeMarkdown(text) {
-  return String(text || '').replace(/\|/g, '\\|');
+  return String(text || '').replace(/[\\|[\]]/g, (character) => `\\${character}`);
 }
 function renderSources(sources) {
   return sources
