@@ -40,7 +40,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 14 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
-| Clarify | `/speckit-clarify` | Pending | Resolve audit category, probe, and proof-bar ambiguity |
+| Clarify | `/speckit-clarify` | Complete | Three clarify sessions resolved audit categories, probe evidence shape, sanitized appendix boundaries, and directive-home proof bar |
 | Plan | `/speckit-plan` | Pending | Plan the spike report, audit method, probe appendix, and recommendation format |
 | Checklist | `/speckit-checklist` | Pending | Validate integration, llm-integration, and error-handling requirements |
 | Tasks | `/speckit-tasks` | Pending | Generate research-first tasks for audit, probes, report, and verification handoff |
@@ -266,9 +266,16 @@ SpecKit Pro currently has active guidance, prerequisites, and eval expectations 
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Audit categories and allowlist boundaries | Pending | Pending |
-| 2 | Platform mechanics and probe evidence | Pending | Pending |
-| 3 | Directive-home proof bar | Pending | Pending |
+| 1 | Audit categories and allowlist boundaries | 5 | Classified exact runtime schema/tool IDs as runtime/dependency metadata with conditional rewrite only after equivalent discovery is proven; generic MCP/app wording is not a finding unless tied to concrete tools; prerequisite messaging belongs to TACD-003; generated payloads are source-derived duplicates |
+| 2 | Platform mechanics and probe evidence | 4 | Report must use a runtime-by-capability matrix with source-backed, probe-backed, unsupported, unresolved, or environment-specific cells; Claude evidence separates declared plugin/agent surfaces from connected parent-session capabilities; Codex evidence separates bundled templates/metadata from installed runtime state; appendix probes publish sanitized summaries only |
+| 3 | Directive-home proof bar | 4 | Shared reference plus per-agent pointers is valid only when both static pointer coverage and planned functional eval coverage are defined for Claude and Codex; active Claude agents, Codex agents, relevant skill entrypoints/references, and TACD-004 test/eval expectations need pointers or approved equivalents; TACD-004 should check pointer coverage, target resolution, approved equivalents, and active named-tool prose outside approved categories |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | How should exact concrete tool IDs in runtime schemas be classified? | [codebase, spec, domain] | 1 | 3/3 | Active runtime/dependency metadata; TACD-002 may remove or genericize only after TACD-001 proves an equivalent discovery path preserves access and invocation behavior | codebase-analyst, spec-context-analyst, domain-researcher |
+| 2 | Clarify | Should appendix probes include raw runtime inventories or only sanitized summaries? | [security] | 1 | 3/3 | Sanitized summaries only; raw runtime inventories, transcripts, session/request IDs, local paths, full plugin/tool/MCP inventories, connector lists, and access tokens stay transient and uncommitted | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 

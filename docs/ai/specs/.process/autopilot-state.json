@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T19:14:00Z",
-  "active_step": "Phase 2: Clarify - Audit Categories And Allowlist Boundaries",
+  "updated_at": "2026-06-17T19:44:00Z",
+  "active_step": "Phase 3: Plan",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -62,31 +62,41 @@
     },
     {
       "step": "Phase 2: Clarify - Audit Categories And Allowlist Boundaries",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Answered 5 audit-category questions and narrowed active guidance, runtime/dependency metadata, prerequisite messaging, deterministic/eval expectations, generated duplicates, historical/provenance, and fixture/test-only categories."
     },
     {
       "step": "Phase 2: Clarify - Audit Categories And Allowlist Boundaries Consensus",
-      "status": "pending"
+      "status": "completed",
+      "round": 1,
+      "outcome": "3/3",
+      "summary": "Consensus classified exact concrete runtime schema/tool IDs as active runtime/dependency metadata with conditional rewrite only after equivalent capability discovery is proven."
     },
     {
       "step": "Phase 2: Clarify - Platform Mechanics And Probe Evidence",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Clarified runtime-by-capability evidence matrix, static-plus-probe evidence shape for Claude and Codex mechanics, and sanitized probe summary requirements."
     },
     {
       "step": "Phase 2: Clarify - Platform Mechanics And Probe Evidence Consensus",
-      "status": "pending"
+      "status": "completed",
+      "round": 1,
+      "outcome": "3/3",
+      "summary": "Security-tag consensus requires sanitized summaries only; raw runtime inventories, transcripts, identifiers, local paths, connector lists, and access tokens remain transient and uncommitted."
     },
     {
       "step": "Phase 2: Clarify - Directive-Home Proof Bar",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Clarified shared-reference proof bar, directive pointer coverage, static pointer checks, and TACD-004 functional eval-plan scenarios."
     },
     {
       "step": "Phase 2: Clarify - Directive-Home Proof Bar Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items; clarify-executor reported high-confidence repo/spec agreement."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - Integration",
