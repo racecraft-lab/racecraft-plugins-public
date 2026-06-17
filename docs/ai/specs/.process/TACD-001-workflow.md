@@ -41,8 +41,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 14 FRs, 3 user stories, 9 acceptance scenarios, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Three clarify sessions resolved audit categories, probe evidence shape, sanitized appendix boundaries, and directive-home proof bar |
-| Plan | `/speckit-plan` | Pending | Plan the spike report, audit method, probe appendix, and recommendation format |
-| Checklist | `/speckit-checklist` | Pending | Validate integration, llm-integration, and error-handling requirements |
+| Plan | `/speckit-plan` | Complete | Created plan, research, data model, and quickstart; contracts intentionally omitted |
+| Checklist | `/speckit-checklist` | In Progress | Starting Integration checklist |
 | Tasks | `/speckit-tasks` | Pending | Generate research-first tasks for audit, probes, report, and verification handoff |
 | Analyze | `/speckit-analyze` | Pending | Check roadmap, PRD, design concept, spec, plan, tasks, and report contract consistency |
 | Implement | `/speckit-implement` | Pending | Produce the spike report and any appendix probe evidence only |
@@ -315,11 +315,11 @@ SpecKit Pro currently has active guidance, prerequisites, and eval expectations 
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Pending |
-| `research.md` | Pending | Spike report design can point to `docs/ai/research/tool-agnostic-capability-discovery-spike.md` |
-| `data-model.md` | Pending | Likely optional; use only if the audit inventory needs structured entities |
-| `contracts/` | Pending | Likely optional; use only if report schema/check contract is needed |
-| `quickstart.md` | Pending | Pending |
+| `plan.md` | Complete | Defines one canonical report, source inventory, mechanics matrix, directive-home rule, and verification approach |
+| `research.md` | Complete | Records Plan decisions for report architecture, local-first inventory, sanitized probes, matrix evidence, and allowlist categories |
+| `data-model.md` | Complete | Defines report entities for findings, runtime surfaces, mechanics evidence, probe summaries, recommendations, handoffs, and verification |
+| `contracts/` | Omitted | Not needed because TACD-001 has no API, CLI, schema, parser grammar, or runtime contract |
+| `quickstart.md` | Complete | Defines reviewer validation for Plan artifacts, inventory reproduction, report structure, probe sanitization, scope review, and markers |
 
 ---
 
