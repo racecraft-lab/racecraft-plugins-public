@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.14.4](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.3...speckit-pro-v2.14.4) (2026-06-17)
+
+
+### Bug Fixes
+
+* **speckit-pro:** detect Codex phase skills in the .agents/skills directory ([#206](https://github.com/racecraft-lab/racecraft-plugins-public/issues/206)) ([e65d8a8](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e65d8a8987b4851bbf8000a32f95e9b65fb4dbf0))
+
 ## [2.14.3](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.2...speckit-pro-v2.14.3) (2026-06-16)
 
 
