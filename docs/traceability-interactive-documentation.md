@@ -3,7 +3,7 @@
 **Date:** 2026-06-12  
 **Source PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Roadmap:** [docs/roadmap-interactive-documentation.md](roadmap-interactive-documentation.md)  
-**Status:** DOC-005 completed and archived; DOC-006 and DOC-007 are next
+**Status:** DOC-006 completed and archived; DOC-007 is next
 
 Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back to exactly one PRD feature. Acceptance criteria are not shared across features.
 
@@ -14,7 +14,7 @@ Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back
 | DOC-FR-003 | Claude Code marketplace installation path | DOC-003 | AC-3.1, AC-3.2, AC-3.3, AC-3.4, AC-3.5 | Claude Code user | Claude plugin/marketplace/settings docs; `.claude-plugin/marketplace.json`; `speckit-pro/.claude-plugin/plugin.json` | Link check; command review; source file existence check | Completed | DOC-003 shipped the Claude install route, skill-first terminology, lifecycle checks, and trust boundaries through PR #187; archived after merge. |
 | DOC-FR-004 | Codex marketplace installation path | DOC-004 | AC-4.1, AC-4.2, AC-4.3, AC-4.4, AC-4.5, AC-4.6 | Codex user | OpenAI Codex plugin/skills/subagents/security docs; `.agents/plugins/marketplace.json`; `speckit-pro/.codex-plugin/plugin.json`; generated Codex payload manifest path | Link check; command review; source file existence check | Completed | DOC-004 shipped the Codex install route, README alignment, generated payload guidance, custom-agent registration checks, and install-safety boundaries through PR #186; archived after merge. |
 | DOC-FR-005 | First successful `speckit-pro` workflow tutorial and lifecycle explainer | DOC-005 | AC-5.1, AC-5.2, AC-5.3, AC-5.4, AC-5.5, AC-5.6 | New plugin user | GitHub Spec Kit README; `speckit-pro/README.md`; skill files | Tutorial walkthrough review; platform command labels; static fallback diagram | Completed | DOC-005 shipped the first-run tutorial, lifecycle explainer, static lifecycle component, prerequisite checks, and bounded fallback handoffs through PRs #198-#201; archived after merge. |
-| DOC-FR-006 | Safe interactive platform/path selector and validation aids | DOC-006 | AC-6.1, AC-6.2, AC-6.3, AC-6.4, AC-6.5, AC-6.6 | New and returning users | Official platform docs; manifests; build script; W3C WAI | Site build; keyboard smoke test; metadata fixture review | Pending | No browser-executed local shell commands. |
+| DOC-FR-006 | Safe interactive platform/path selector and validation aids | DOC-006 | AC-6.1, AC-6.2, AC-6.3, AC-6.4, AC-6.5, AC-6.6 | New and returning users | Official platform docs; manifests; build script; W3C WAI | Site build; keyboard smoke test; metadata fixture review | Completed | DOC-006 shipped the safe choose-your-path selector, repository metadata checker, generated payload diagram, first-run checklist, and focused validation through PR #203; archived after merge. |
 | DOC-FR-007 | Command, workflow, manifest, and file-layout reference | DOC-007 | AC-7.1, AC-7.2, AC-7.3, AC-7.4, AC-7.5, AC-7.6 | Users, agents, maintainers | README, skill files, agents, hooks, manifests, tests | Local link check; referenced-file existence check | Pending | Shared reference for later troubleshooting docs. |
 | DOC-FR-008 | Troubleshooting, security, trust, update, and rollback model | DOC-008 | AC-8.1, AC-8.2, AC-8.3, AC-8.4, AC-8.5, AC-8.6 | Security/platform evaluator | OpenAI security docs; Claude settings/marketplace docs; repo hooks/manifests | Source-fact review; symptom matrix coverage | Pending | Keep guarantees narrow and source-backed. |
 | DOC-FR-009 | Maintainer and contributor release workflow | DOC-009 | AC-9.1, AC-9.2, AC-9.3, AC-9.4, AC-9.5, AC-9.6 | Maintainer/contributor | AGENTS.md, CLAUDE.md, CI workflows, scripts, tests | Command existence check; optional layer-1 test after docs edits | Pending | Should not duplicate all CLAUDE.md internals. |
@@ -24,7 +24,7 @@ Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back
 
 - **PRD feature count:** 10
 - **Roadmap SPEC count:** 10
-- **Mapping status:** 1:1; DOC-001 through DOC-005 are complete and archived; DOC-006 and DOC-007 are next.
+- **Mapping status:** 1:1; DOC-001 through DOC-006 are complete and archived; DOC-007 is next.
 - **Acceptance criteria ownership:** Each AC-N.* belongs only to DOC-FR-00N.
 - **Shared dependencies:** Allowed where platform pages feed first-run/reference/troubleshooting pages.
 - **Untraced items:** None.

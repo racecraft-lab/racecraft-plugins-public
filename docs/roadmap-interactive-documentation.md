@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-005 completed and archived; DOC-006 and DOC-007 are ready
+**Status:** DOC-006 completed and archived; DOC-007 is ready
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -150,6 +150,11 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 
 ### DOC-006: Safe interactive platform/path selector and validation aids
 
+- **Status:** Completed and archived after PR #203. Canonical safe install aids
+  live in `docs-site/src/content/docs/choose-your-path.mdx`,
+  `docs-site/src/components/SafeInstallAids.astro`,
+  `docs-site/src/data/safe-install-aids.ts`, and
+  `docs-site/scripts/validate-doc006-safe-aids.mjs`.
 - **Maps from PRD:** DOC-FR-006
 - **User outcome:** Users get the right platform commands and safe consistency checks without browser-side local execution.
 - **Scope:** Implement safe interactive components or static equivalents: platform/path selector, install-scope selector, copyable command blocks, manifest/version checker from checked-in JSON, generated payload diagram, first-run checklist, and troubleshooting decision-tree scaffold.

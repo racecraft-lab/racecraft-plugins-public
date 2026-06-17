@@ -674,3 +674,47 @@ Residual DOC-005 process evidence under
 `specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer` was
 removed from active `specs/**` cleanup after PRs #198-#201 merged. Recovery
 commands and provenance are recorded in the DOC-005 archive report.
+
+---
+
+## DOC-006 safe interactive selector and validation aids
+
+[Source: .specify/memory/archive-reports/2026-06-17-doc-006-post-merge-hygiene.md]
+**Branch**: `codex/doc-006-post-merge-hygiene` · **Status**: Completed · **Archived**: 2026-06-17
+
+### Scope
+
+DOC-006 completed the safe interactive aid tier for the interactive
+documentation roadmap. It owns the canonical choose-your-path selector/checker
+experience, source-derived safe install metadata helper, accessible generated
+payload diagram, first-run checklist, and focused validation harness.
+
+### Architecture / Approach
+
+- Preserve the public choose-your-path route while converting the content source
+  to MDX for component placement.
+- Render complete static fallback content through
+  `docs-site/src/components/SafeInstallAids.astro`.
+- Read checked-in repository and generated payload manifests during docs build
+  through `docs-site/src/data/safe-install-aids.ts`.
+- Keep command sequences, prerequisites, success signals, and handoffs in a
+  small docs metadata helper while using manifest-derived values for
+  repository consistency facts.
+- Validate command boundaries, checker states, safety constraints, handoffs, and
+  first-run checkpoint coverage through
+  `docs-site/scripts/validate-doc006-safe-aids.mjs`.
+
+### Test Strategy
+
+- Confirm PR #203 merged to `main`.
+- Validate JSON state files after replacing active autopilot state.
+- Regenerate and check SpecKit generated indexes.
+- Verify active `specs/**` contains only `specs/.gitkeep` after cleanup.
+- Run DOC-006 focused validation, docs-site validation, docs-site link
+  validation, and the deterministic SpecKit test suite.
+
+### Cleanup Notes
+
+`specs/doc-006-safe-interactive-selector-and-validation-aids` was removed from
+active `specs/**` cleanup after PR #203 merged. Recovery commands and
+provenance are recorded in the DOC-006 archive report.
