@@ -36,6 +36,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [research.md](research.md)
 - [contracts/reference-generator.md](contracts/reference-generator.md)
 - [contracts/reference-inventory.schema.json](contracts/reference-inventory.schema.json)
+- [checklists/accessibility.md](checklists/accessibility.md)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/integration.md](checklists/integration.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/ux.md](checklists/ux.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

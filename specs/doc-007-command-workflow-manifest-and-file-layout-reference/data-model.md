@@ -75,11 +75,15 @@
 
 ## Entity: FreshnessCheck
 
-- **Fields**: `mode`, `expectedFiles`, `staleFiles`, `exitCode`, `message`
+- **Fields**: `mode`, `expectedFiles`, `staleFiles`, `exitCode`, `message`, `errorCategory`, `affectedPath`, `phase`, `recoveryAction`
 - **Validation rules**:
   - `mode=generate` writes generated Markdown files.
   - `mode=check` does not write files.
   - Exit code `0` means current, `1` means stale generated output, and `2` means source/parsing/internal error.
+  - `errorCategory` is one of `source`, `parse`, `output-write`, or `internal` when `exitCode=2`.
+  - `affectedPath` is a repo-relative source or output path when one path caused the failure.
+  - `phase` is present when no single source or output path explains the failure.
+  - `recoveryAction` is bounded to local generate/check recovery and must not expand into DOC-008 troubleshooting or DOC-010 CI hardening.
 - **State transitions**:
   - `missing-or-stale -> current` after `reference:generate`.
   - `current -> stale` when source facts or generated output diverge.

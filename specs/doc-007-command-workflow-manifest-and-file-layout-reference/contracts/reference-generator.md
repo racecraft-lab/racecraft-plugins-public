@@ -13,7 +13,7 @@ pnpm --dir docs-site reference:generate
 - Uses only checked-in allowlisted local source files as evidence.
 - Prints a concise success summary listing generated pages.
 - Exits `0` when generation completes.
-- Exits `2` for source, parsing, or internal errors.
+- Exits `2` for source, parsing, output-write, or internal errors and prints the error category plus source/output path or generator phase on stderr.
 
 ### Check
 
@@ -23,10 +23,23 @@ pnpm --dir docs-site reference:check
 
 - Runs `node scripts/generate-reference-pages.mjs --check`.
 - Renders expected Markdown in memory and compares it with committed generated output.
-- Does not create, rewrite, delete, or format generated files.
+- Does not create, rewrite, delete, format, or update generated files, docs-site package/config files, sidebar configuration, or existing docs links.
 - Exits `0` when generated output is current.
 - Exits `1` when output is stale, prints stale repo-relative page paths on stdout, and prints `pnpm --dir docs-site reference:generate` as the fix command.
-- Exits `2` when source/parsing/internal errors prevent a trustworthy comparison and names the source path on stderr where possible.
+- Exits `2` when source/parsing/internal errors prevent a trustworthy comparison and prints the error category plus repo-relative source path or generator phase on stderr.
+
+## Diagnostics
+
+Exit `1` is reserved for stale generated output and writes only stale generated page paths plus the generate command to stdout.
+
+Exit `2` writes diagnostics to stderr with one of these categories:
+
+- `source`: missing/unreadable required source, allowlist violation, or normalized path violation.
+- `parse`: malformed JSON, malformed or missing Markdown/frontmatter metadata, or missing required metadata fields.
+- `output-write`: generated output write failure in generate mode.
+- `internal`: render, comparison, or other generator failure without a more specific source or parse classification.
+
+Each exit-`2` diagnostic includes a concise cause and a repo-relative source/output path when one exists. If no single path applies, the diagnostic names the failing generator phase.
 
 ## Output Pages
 

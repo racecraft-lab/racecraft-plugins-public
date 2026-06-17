@@ -59,7 +59,8 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 ### Edge Cases
 
 - Optional repository surfaces may be absent; generated pages should label the surface as absent or omit it without inventing source facts.
-- Source files may have malformed metadata or missing expected fields; generation/check behavior should fail clearly rather than publish unsupported rows.
+- Required source files may be missing or unreadable; generation/check behavior must fail as a source error rather than treating the surface as optional.
+- Source files may have malformed JSON, malformed or missing Markdown/frontmatter metadata, or missing expected fields; generation/check behavior should fail clearly as a parsing error rather than publish unsupported rows.
 - Generated output may be stale; check mode must report the stale files without writing changes.
 - A row may need explanatory context that is not directly present in a source file; that context must appear as an inferred note, separate from source facts.
 - Existing links to the reference section may still target `/reference/`; the existing landing page must remain canonical and useful while subpages are added below it.
@@ -72,6 +73,7 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - The current `docs-site/src/content/docs/reference.md` page remains the canonical `/reference/` landing page; DOC-007 expands it into an index/orientation page instead of replacing it, redirecting it, or moving it to `reference/index.*`.
 - The Starlight sidebar keeps the existing `Reference` group. The landing page stays first, generated `reference/*` subpages appear after it in a stable order, and `glossary` remains last.
 - Public deep links use the deployed base and trailing slash shape `/racecraft-plugins-public/reference/<slug>/`; source files live under `docs-site/src/content/docs/reference/<slug>.*`.
+- Existing docs pages that currently point readers to the generic reference landing page are updated with task-relevant deep links: install pages to manifests, skills, agents, hooks, and source-vs-dist where applicable; first-run to skills, scripts, and tests; troubleshooting to source-vs-dist, manifests, and hooks; security/trust to hooks, agents, manifests, and source-vs-dist; and contributor/release to source-vs-dist, scripts, tests, and manifests.
 - Roadmap-only surfaces are folded into the seven first-class pages as sections or rows: marketplace and generated manifests under `manifests`, MCP/config where applicable under `hooks` or `manifests`, CI/release validation under `scripts`, and generated payload responsibility under `source-vs-dist`.
 
 ### Session 2026-06-17 - Generation Format And Reviewability
@@ -82,12 +84,25 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - Inferred notes appear only in a dedicated `Inferred notes` field with `Based on:` source paths; inferred notes must never be mixed into source facts.
 - Each generated page includes a short visible generated notice naming the generator and check command and stating that source facts and inferred notes come from checked-in files. Hidden comments may support check mode, but hidden comments are not source evidence.
 
+### Session 2026-06-17 - Accessibility And Static Readability
+
+- Generated reference pages use meaningful heading hierarchy for page titles, section groups, and per-record headings so dense inventories can be scanned by headings and links.
+- Compact summaries, lists, or tables must have meaningful labels, headings, or table headers; they may summarize records but must not be the only review surface for source facts, sources, or inferred notes.
+- Source citation links use repo-relative path text as the visible link text. Multiple or repeated citations must include distinguishing context such as a fragment, label, or record-specific suffix.
+- Required generated reference content must be present in committed Markdown and rendered static HTML without relying on JavaScript-only expansion, filtering, disclosure, or client-rendered data.
+- DOC-007 owns generated content structure and link-text accessibility requirements. DOC-010 still owns broader accessibility automation, responsive/browser checks, search, and CI hardening.
+
 ### Session 2026-06-17 - Validation And Handoff Boundaries
 
 - DOC-007 adds docs-site package scripts `reference:generate` and `reference:check`. The public commands are `pnpm --dir docs-site reference:generate` and `pnpm --dir docs-site reference:check`, both wrapping `node scripts/generate-reference-pages.mjs` with `--check` for check mode.
 - Local docs validation includes reference freshness: `pnpm --dir docs-site validate` runs `reference:check` before the existing Astro check/build sequence. This is local validation, not GitHub Actions wiring.
 - Check mode is read-only. It exits `0` when generated output is current, exits `1` for stale generated output while listing stale pages and the `reference:generate` fix command on stdout, and exits `2` for source/parsing/internal errors while naming the source path on stderr.
-- Source reads are allowlisted to checked-in repository paths: repo manifests, `speckit-pro/`, `dist/claude/`, `dist/codex/`, root scripts, `tests/speckit-pro/`, and docs-site config/content needed for navigation. `.git`, `.worktrees`, `node_modules`, user home/cache installs, network sources, user-pasted JSON, and generated `docs-site/src/content/docs/reference/*.md` output are not source evidence.
+- Error diagnostics distinguish stale output from source, parsing, output-write, and internal errors. Exit-`2` diagnostics must print to stderr with an error category, a repo-relative source or output path when one exists, or the failing phase when no single path applies.
+- Generation must validate and render source-backed reference data in memory before writing generated reference pages. Source, parsing, or internal errors must not publish unsupported reference rows; output-write failures in generate mode exit `2` and name the generated output path.
+- Recovery guidance remains local and bounded: stale output points to `pnpm --dir docs-site reference:generate`, source/parsing failures point to the named checked-in file or metadata, and internal/pathless failures point to the failing generator phase without expanding into DOC-008 troubleshooting or DOC-010 CI hardening.
+- Source reads are allowlisted to checked-in repository paths: repo manifests, `speckit-pro/`, `dist/claude/`, `dist/codex/`, root scripts, `tests/speckit-pro/`, and docs-site config/content needed for navigation. Allowlist and exclusion checks use normalized repo-relative paths, not absolute checkout path segments, so a repository checked out under a parent `.worktrees/` directory is still valid.
+- `.git`, repo-relative `.worktrees`, `node_modules`, user home/cache installs, network sources, user-pasted JSON, and generated `docs-site/src/content/docs/reference/*.md` output are not source evidence. The generated `docs-site/src/content/docs/reference/*.md` files are writable outputs only.
+- Checked-in `dist/claude/` and `dist/codex/` files may be cited only as generated-payload inventory evidence. Authoring-source facts about plugin behavior, manifest semantics, skills, agents, hooks, scripts, or tests must cite `speckit-pro/`, repo manifests, root scripts, tests, or docs-site config/content as applicable.
 - DOC-010 owns GitHub Actions/docs CI wiring, markdown/link hardening, accessibility automation, search, and broader docs validation decisions. DOC-007 must not edit `.github/workflows/*`.
 
 ## Requirements *(mandatory)*
@@ -106,16 +121,24 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - **FR-010**: Script, hook, and test references MUST describe repository role and source path without changing the referenced behavior or semantics.
 - **FR-011**: The feature MUST provide deterministic generate behavior for the generated reference pages.
 - **FR-012**: The feature MUST provide check behavior that detects stale generated reference pages.
-- **FR-013**: Check behavior MUST be read-only, MUST NOT rewrite generated files, and MUST exit `0` for current output, `1` for stale output, and `2` for source/parsing/internal errors.
-- **FR-014**: Generation and check behavior MUST read only allowlisted local checked-in repository paths: repo manifests, `speckit-pro/`, `dist/claude/`, `dist/codex/`, root scripts, `tests/speckit-pro/`, and docs-site config/content needed for navigation; no network access, browser-side local execution, user-pasted JSON, user-local plugin-install inspection, `.git`, `.worktrees`, `node_modules`, or generated reference output as source evidence is allowed.
+- **FR-013**: Check behavior MUST be read-only, MUST NOT create, rewrite, delete, format, or update generated files, docs-site package/config files, or existing docs links, and MUST exit `0` for current output, `1` for stale output, and `2` for source/parsing/internal errors.
+- **FR-014**: Generation and check behavior MUST read only allowlisted local checked-in repository paths, evaluated as normalized repo-relative paths: repo manifests, `speckit-pro/`, `dist/claude/`, `dist/codex/`, root scripts, `tests/speckit-pro/`, and docs-site config/content needed for navigation; no network access, browser-side local execution, user-pasted JSON, user-local plugin-install inspection, repo-relative `.git`, repo-relative `.worktrees`, `node_modules`, or generated reference output as source evidence is allowed.
 - **FR-015**: The feature MUST NOT change plugin behavior, manifest semantics, generated payload content, marketplace behavior, install flow, hook semantics, or release automation.
-- **FR-016**: Generated prose MUST remain public-readable for users, maintainers, and agents, using stable section-per-record Markdown blocks instead of raw metadata dumps or wide evidence-only tables.
+- **FR-016**: Generated prose MUST remain public-readable and accessibility-scannable for users, maintainers, and agents, using stable section-per-record Markdown blocks with meaningful headings, ordered labels, visible source fields, and visible inferred-note fields instead of raw metadata dumps or wide evidence-only tables.
 - **FR-017**: Generated pages MUST provide stable public links in the `/racecraft-plugins-public/reference/<slug>/` shape that later docs, troubleshooting guides, agents, and release work can cite.
 - **FR-018**: The specification and later planning artifacts MUST keep DOC-008 troubleshooting/security/trust depth, DOC-009 contributor workflow depth, and DOC-010 CI hardening out of this implementation slice.
 - **FR-019**: The docs sidebar MUST keep the existing Reference group, list the reference landing page first, include generated reference subpages in stable order, and keep the glossary after generated reference entries.
 - **FR-020**: Every generated reference page MUST include a visible generated notice naming the generator/check command and declaring that source facts and inferred notes come from checked-in files.
 - **FR-021**: The docs-site package MUST expose `reference:generate` and `reference:check`, and `validate` MUST run `reference:check` before the existing docs-site check/build sequence.
 - **FR-022**: DOC-007 MUST NOT edit `.github/workflows/*`; later GitHub Actions/docs CI wiring belongs to DOC-010.
+- **FR-023**: Existing install, first-run, troubleshooting, security, and contributor documentation MUST include context-specific deep links to the generated reference subpages introduced by DOC-007; links MUST point to the most relevant generated subpage for the reader's current task, and linking only to `/reference/` is insufficient when a generated subpage is more precise.
+- **FR-024**: Generated reference pages MUST use a meaningful heading hierarchy for page titles, section groups, and per-record headings so readers can scan dense inventories by headings and links.
+- **FR-025**: Generated lists, compact navigation summaries, and compact tables MUST have meaningful labels, headings, or table headers; they MAY summarize records but MUST NOT be the only location where source facts, sources, or inferred notes appear.
+- **FR-026**: Source citation links MUST use visible, non-ambiguous link text that includes the repo-relative source path. When one record has multiple citations or repeated paths, the visible link text MUST include distinguishing context such as a fragment, label, or record-specific suffix.
+- **FR-027**: Required generated reference content MUST be readable and navigable in committed Markdown and rendered static HTML without depending on JavaScript-only expansion, filtering, disclosure controls, or client-rendered data.
+- **FR-028**: Generator error handling MUST classify stale generated output separately from source errors, parsing errors, output-write errors, and internal errors; missing/unreadable required sources, allowlist violations, malformed JSON, malformed or missing frontmatter, missing required metadata fields, generated-output write failures, and pathless internal failures MUST have deterministic dispositions.
+- **FR-029**: Generate mode MUST collect, parse, validate, and render source-backed reference data before writing generated reference pages; source, parsing, or internal failures MUST exit `2` without publishing unsupported source facts or inferred notes, and generated-output write failures MUST exit `2` with the generated output path.
+- **FR-030**: Exit diagnostics MUST be actionable: exit `1` stale-output diagnostics go to stdout with stale generated page paths and `pnpm --dir docs-site reference:generate`; exit `2` diagnostics go to stderr with an error category, a concise cause, and either the repo-relative source/output path or the failing generator phase when no single path applies.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -125,10 +148,10 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: docs/process
-- **Secondary surfaces, if any**: docs-site generated reference pages and local docs validation
-- **Projected reviewable LOC**: Approximately 395 LOC, excluding any clearly declared generated reference output
+- **Secondary surfaces, if any**: docs-site generated reference pages, link-only existing docs updates, and local docs validation
+- **Projected reviewable LOC**: Approximately 430 LOC, excluding any clearly declared generated reference output
 - **Projected production files**: 0 plugin/runtime production files
-- **Projected total files**: 6-10 files, depending on generated subpage grouping chosen during Clarify/Plan
+- **Projected total files**: Approximately 17 planned files, including seven generated reference subpages and six link-only updates to existing docs pages
 - **Budget result**: within budget
 - **Split decision**: Remains one spec because it is one documentation reference slice with no plugin behavior, manifest semantics, install-flow, generated payload, marketplace, hook, or release automation changes.
 
@@ -149,7 +172,7 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - **Runtime Surface Mapping**: The relationship between Claude Code and Codex surfaces when both runtimes expose comparable plugin concepts.
 - **File Classification**: The repository role assigned to a path, such as source, generated payload, test-only, release infrastructure, or documentation infrastructure.
 - **Reference Freshness Check**: A local validation result proving generated reference pages match current checked-in source files.
-- **Source Allowlist**: The bounded set of checked-in repository paths the generator may read as evidence for source facts.
+- **Source Allowlist**: The bounded set of normalized repo-relative checked-in repository paths the generator may read as evidence for source facts; generated reference outputs are writable targets only, and checked-in `dist/` payload files are generated-payload inventory evidence rather than authoring source-of-truth evidence.
 
 ## Success Criteria *(mandatory)*
 
@@ -159,9 +182,12 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - **SC-002**: 100% of generated rows that state source facts include a citation link to an existing checked-in repository path.
 - **SC-003**: A sampled review of generated rows confirms source facts and inferred notes are visibly separated.
 - **SC-004**: Local check mode succeeds when generated reference pages are current and fails when at least one generated page is intentionally made stale.
-- **SC-005**: Check mode leaves the working tree unchanged when it detects stale generated output.
+- **SC-005**: Check mode leaves the working tree unchanged when it detects stale generated output or source/parsing/internal errors.
 - **SC-006**: Review of the final diff confirms no plugin behavior, manifest semantics, generated payload content, marketplace behavior, install flow, hook semantics, or release automation changed.
 - **SC-007**: Maintainers can identify the source-vs-dist responsibility for every first-class surface group named in DOC-007: skills, agents, manifests, hooks, scripts, tests, and source-vs-dist layout.
+- **SC-008**: Existing install, first-run, troubleshooting, security, and contributor pages contain task-relevant links to generated reference subpages instead of relying only on the generic `/racecraft-plugins-public/reference/` landing page.
+- **SC-009**: Review of all seven committed generated Markdown pages confirms dense-inventory accessibility: each page has meaningful page, section, and per-record headings; compact lists or tables have labels or headers; citation links expose repo-relative path text with distinguishing context for multiple citations; and required source facts, sources, and inferred notes are available without JavaScript-only interaction.
+- **SC-010**: A reviewer can classify each documented generator failure as stale output, source error, parsing error, output-write error, or internal error and identify the bounded recovery action from the diagnostic.
 
 ## Assumptions
 
@@ -171,6 +197,7 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - Checked-in source files are the only permitted evidence source for generated reference content.
 - DOC-010 may later wire `pnpm --dir docs-site validate` and `pnpm --dir docs-site validate:links` into GitHub Actions, but DOC-007 only provides deterministic local behavior and an explicit handoff.
 - DOC-008 and DOC-009 can depend on DOC-007 reference links later, but their troubleshooting, security/trust, contributor, update, rollback, and release-workflow depth stays out of this slice.
+- Existing docs-page updates for DOC-007 are limited to contextual reference links and brief lead-in text; deeper troubleshooting, security/trust, contributor, update, rollback, and release-workflow procedures remain deferred to DOC-008 and DOC-009.
 
 ## Unresolved for Consensus
 

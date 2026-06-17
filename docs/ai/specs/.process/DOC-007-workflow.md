@@ -44,11 +44,11 @@ generate/check validation, parallel Claude Code/Codex presentation, and the
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Complete | spec.md created: 3 user stories, 22 FRs after clarification, 9 acceptance scenarios, 0 `[NEEDS CLARIFICATION]` |
+| Specify | `/speckit-specify` | Complete | spec.md created: 3 user stories, 30 FRs after clarification/checklist refinement, 10 success criteria, 0 `[NEEDS CLARIFICATION]` |
 | Clarify | `/speckit-clarify` | Complete | Sessions 1-3 answered IA, generated Markdown format, source evidence, local validation, and DOC-010 handoff boundaries |
 | Plan | `/speckit-plan` | Complete | G3 passed; plan selects a docs-site Node generator, committed Markdown output, local package scripts, and no CI workflow edits |
-| Checklist | `/speckit-checklist` | In Progress | Starting UX checklist, then accessibility, integration/source-data, and error-handling checklists |
-| Tasks | `/speckit-tasks` | Pending | Generate story-ordered tasks for generator, pages, validation, and docs checks |
+| Checklist | `/speckit-checklist` | Complete | UX, accessibility, integration/source-data, and error-handling complete; 9 error-handling gaps remediated, 0 remaining |
+| Tasks | `/speckit-tasks` | In Progress | Generating story-ordered tasks for generator, pages, validation, and docs checks |
 | Analyze | `/speckit-analyze` | Pending | Check consistency across roadmap, design concept, spec, plan, and tasks |
 | Implement | `/speckit-implement` | Pending | Implement only after G6 passes |
 
@@ -409,10 +409,10 @@ Focus on DOC-007 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| UX | Pending | Pending | Pending |
-| Accessibility | Pending | Pending | Pending |
-| Integration | Pending | Pending | Pending |
-| Error handling | Pending | Pending | Pending |
+| UX | 17 | 0 | `spec.md` FR-023/SC-008; `plan.md` link-only existing-docs scope; `checklists/ux.md` |
+| Accessibility | 22 | 0 | `spec.md` FR-016/FR-024-FR-027/SC-009; `plan.md` generated Markdown accessibility constraints; `checklists/accessibility.md` |
+| Integration | 26 | 0 | `spec.md` FR-014; `plan.md` source allowlist, source-input matrix, source-vs-dist mapping, script handoff, deep-link targets; `checklists/integration.md` |
+| Error handling | 30 | 9 -> 0 | `spec.md` FR-013/FR-028-FR-030/SC-005/SC-010; `plan.md` generator error-handling contract; `contracts/reference-generator.md` diagnostics; `data-model.md` FreshnessCheck; `checklists/error-handling.md` |
 
 ---
 
