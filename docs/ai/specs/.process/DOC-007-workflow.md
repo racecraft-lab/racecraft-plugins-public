@@ -48,8 +48,8 @@ generate/check validation, parallel Claude Code/Codex presentation, and the
 | Clarify | `/speckit-clarify` | Complete | Sessions 1-3 answered IA, generated Markdown format, source evidence, local validation, and DOC-010 handoff boundaries |
 | Plan | `/speckit-plan` | Complete | G3 passed; plan selects a docs-site Node generator, committed Markdown output, local package scripts, and no CI workflow edits |
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, integration/source-data, and error-handling complete; 9 error-handling gaps remediated, 0 remaining |
-| Tasks | `/speckit-tasks` | In Progress | Generating story-ordered tasks for generator, pages, validation, and docs checks |
-| Analyze | `/speckit-analyze` | Pending | Check consistency across roadmap, design concept, spec, plan, and tasks |
+| Tasks | `/speckit-tasks` | Complete | tasks.md created with 38 story-ordered tasks, 8 parallel opportunities, generator/check-mode validation, and explicit dependency boundaries |
+| Analyze | `/speckit-analyze` | In Progress | Checking consistency across roadmap, design concept, spec, plan, and tasks |
 | Implement | `/speckit-implement` | Pending | Implement only after G6 passes |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -449,10 +449,10 @@ Focus on DOC-007 requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Pending |
-| **Parallel Opportunities** | Pending |
-| **User Stories Covered** | Pending |
+| **Total Tasks** | 38 |
+| **Phases** | 6 |
+| **Parallel Opportunities** | 8 |
+| **User Stories Covered** | 3 |
 
 ---
 

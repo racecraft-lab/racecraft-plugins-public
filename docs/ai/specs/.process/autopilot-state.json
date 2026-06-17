@@ -9,9 +9,9 @@
     "specs/doc-007-command-workflow-manifest-and-file-layout-reference"
   ],
   "feature_branch": "doc-007-command-workflow-manifest-and-file-layout-reference",
-  "updated_at": "2026-06-17T18:45:17Z",
-  "active_step": "Phase 5: Tasks",
-  "status": "running",
+  "updated_at": "2026-06-17T18:54:59Z",
+  "active_step": "Phase 6: Analyze",
+  "status": "awaiting_review",
   "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
@@ -76,8 +76,8 @@
     {"step": "Phase 4: Checklist - Integration Consensus", "status": "completed"},
     {"step": "Phase 4: Checklist - Error Handling", "status": "completed"},
     {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "completed"},
+    {"step": "Phase 6: Analyze", "status": "in_progress"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
     {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
