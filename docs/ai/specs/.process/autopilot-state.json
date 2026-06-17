@@ -1,64 +1,115 @@
 {
   "schemaVersion": 1,
-  "workflow_file": null,
-  "workflow_files": [],
-  "feature_dir": "specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer",
-  "feature_dirs": [
-    "specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer"
+  "workflow_file": "docs/ai/specs/.process/DOC-006-workflow.md",
+  "workflow_files": [
+    "docs/ai/specs/.process/DOC-006-workflow.md"
   ],
-  "feature_branch": "codex/doc-005-post-merge-hygiene",
-  "updated_at": "2026-06-16T20:47:28Z",
-  "active_step": "Archived",
-  "status": "completed",
-  "archive_sweep": {
-    "status": "completed",
-    "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-hygiene",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/doc-005-first-successful-workflow-tutorial-and-lifecycle-explainer"
-    ],
-    "safeToApplyCleanup": true,
-    "dryRunProvenanceOnly": false,
-    "archive_report": ".specify/memory/archive-reports/2026-06-16-doc-005-post-merge-hygiene.md",
-    "cleanup_applied": true
+  "feature_dir": "specs/doc-006-safe-interactive-selector-and-validation-aids",
+  "feature_dirs": [
+    "specs/doc-006-safe-interactive-selector-and-validation-aids"
+  ],
+  "feature_branch": "doc-006-safe-interactive-selector-and-validation-aids",
+  "updated_at": "2026-06-17T02:46:27Z",
+  "active_step": "Phase 2: Clarify - Metadata derivation and command boundaries",
+  "status": "in_progress",
+  "confidence_gate_mode": "advisory",
+  "project_commands": {
+    "BUILD": "pnpm --dir docs-site validate",
+    "TYPECHECK": "N/A",
+    "LINT": "N/A",
+    "LINT_FIX": "N/A",
+    "UNIT_TEST": "focused metadata/rendering fixture or test",
+    "INTEGRATION_TEST": "pnpm --dir docs-site validate:links",
+    "SINGLE_FILE_TEST": "focused metadata/rendering fixture or test",
+    "SINGLE_FILE_INTEGRATION": "N/A",
+    "FULL_VERIFY": "pnpm --dir docs-site validate && pnpm --dir docs-site validate:links"
   },
-  "implementation": {
-    "status": "completed",
-    "gate": "G7",
-    "gate_status": "passed",
-    "completed_specs": [
+  "preset_conventions": {
+    "has_presets": true,
+    "presets": [
       {
-        "spec_id": "DOC-005",
-        "merged_prs": [
-          198,
-          199,
-          200,
-          201
-        ],
-        "merge_commits": [
-          "238bd36921787588f52d5f0f24bd3a0d7b485d66",
-          "d6143d8fdf142f277b525a8fb759ee8b10faa44e",
-          "f03e352d5cc143d104c9b8f977266496fa869fd4",
-          "0f0eff05f80130d4c61cc91c2633f2b73ad88151"
-        ],
-        "canonical_routes": [
-          "docs-site/src/content/docs/first-run.md",
-          "docs-site/src/content/docs/spec-kit-lifecycle.mdx"
-        ],
-        "canonical_component": "docs-site/src/components/LifecycleFlow.astro",
-        "verification": {
-          "docs_validate": "passed before PR merge",
-          "docs_validate_links": "passed before PR merge",
-          "pr_packet_reviews": "8/8 passed before post-merge hygiene",
-          "default_suite": "passed before PR merge"
-        }
+        "name": "speckit-pro-reviewability",
+        "version": "schema_version: \"1.0\""
       }
     ]
   },
-  "next_specs": [
-    "DOC-006",
-    "DOC-007"
+  "agent_availability": {
+    "required_agents_installed": true,
+    "install_scope": "user",
+    "model": "gpt-5.5",
+    "model_reasoning_effort": "xhigh"
+  },
+  "archive_sweep": {
+    "status": "completed",
+    "archive_extension_installed": true,
+    "cleanup_mode": "sweep",
+    "current_target": "specs/doc-006-safe-interactive-selector-and-validation-aids",
+    "excluded_current_spec": "specs/doc-006-safe-interactive-selector-and-validation-aids",
+    "eligible_previous_specs": [],
+    "cleanup_applied": false,
+    "safeToApplyCleanup": false,
+    "notes": "Archive extension v1.1.0 available; active spec directories scanned: 1; no eligible previously merged specs; no cleanup target."
+  },
+  "prerequisites": {
+    "status": "completed",
+    "speckit_cli": "specify 0.10.3.dev0",
+    "branch": "doc-006-safe-interactive-selector-and-validation-aids",
+    "is_worktree": true,
+    "mcp_servers": "Missing tavily-mcp, context7, RepoPrompt; agents will use fallbacks",
+    "confidence_gate_mode": "advisory",
+    "tier2_relocation": "suppressed: active spec already has SPEC-MOC.md structureVersion 1 and no relocatable PROCESS artifacts"
+  },
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "gate": "G1",
+      "gate_status": "passed",
+      "functional_requirements": 17,
+      "user_stories": 3,
+      "acceptance_scenarios": 10,
+      "needs_clarification_markers": 0,
+      "files": [
+        "specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md",
+        "specs/doc-006-safe-interactive-selector-and-validation-aids/checklists/requirements.md"
+      ]
+    }
+  },
+  "plan": [
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility", "status": "pending"},
+    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries", "status": "pending"},
+    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Integration", "status": "pending"},
+    {"step": "Phase 4: Checklist - Integration Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error Handling", "status": "pending"},
+    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Cleanup", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }

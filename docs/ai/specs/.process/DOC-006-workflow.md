@@ -39,8 +39,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Seed requirements from DOC-006 roadmap plus Design Concept decisions |
-| Clarify | `/speckit-clarify` | Pending | Focus on metadata derivation, interaction fallback, checker boundaries, and validation fixture shape |
+| Specify | `/speckit-specify` | Complete | Created `spec.md` with 17 functional requirements, 3 user stories, 10 acceptance scenarios, and 0 clarification markers |
+| Clarify | `/speckit-clarify` | In Progress | Session 1 active; focus on metadata derivation, interaction fallback, checker boundaries, and validation fixture shape |
 | Plan | `/speckit-plan` | Pending | Plan Astro/Starlight docs-site changes, source JSON reads, no-browser-execution guarantees, and focused tests |
 | Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, integration/source-data, and error-handling checklists |
 | Tasks | `/speckit-tasks` | Pending | Generate docs-first tasks by user story with source-derived metadata validation |
@@ -79,7 +79,18 @@ Before starting any workflow phase, verify alignment with `.specify/memory/const
 | KISS, Simplicity & YAGNI | Keep the aids static-first and build-time read-only. Do not add a reusable metadata generator, pasted JSON checker, or rich app widget in this slice. | Plan Complexity Tracking plus code review |
 | Conventional Commits | PR title must remain a conventional commit. | PR title check |
 
-**Constitution Check:** To be verified by autopilot preflight.
+**Constitution Check:** Verified by autopilot preflight on 2026-06-17. `check-prerequisites.sh` passed with SpecKit CLI `specify 0.10.3.dev0`, branch `doc-006-safe-interactive-selector-and-validation-aids`, and worktree isolation enabled. MCP research servers are not configured, so agents will use built-in fallbacks.
+
+### Archive Sweep Startup
+
+| Field | Result |
+|-------|--------|
+| Archive extension | Available, `archive` v1.1.0 |
+| Current target excluded | `specs/doc-006-safe-interactive-selector-and-validation-aids` |
+| Eligible previously merged specs | None |
+| Cleanup applied | No |
+| `safeToApplyCleanup` | `false` |
+| Tier-2 relocation | Suppressed: active spec already has `SPEC-MOC.md` `structureVersion: 1` and no relocatable PROCESS artifacts |
 
 ### Scaffold Preflight Evidence
 
@@ -245,14 +256,14 @@ Users can now read separate Claude Code, Codex, first-run, and lifecycle docs, b
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending until Specify completes |
-| User Stories | Pending until Specify completes |
-| Acceptance Criteria | Pending until Specify completes |
+| Functional Requirements | 17 |
+| User Stories | 3 |
+| Acceptance Criteria | 10 acceptance scenarios plus 7 measurable success criteria |
 
 ### Files Generated
 
-- [ ] `specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md`
-- [ ] `specs/doc-006-safe-interactive-selector-and-validation-aids/checklists/requirements.md`
+- [x] `specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md`
+- [x] `specs/doc-006-safe-interactive-selector-and-validation-aids/checklists/requirements.md`
 
 ---
 
