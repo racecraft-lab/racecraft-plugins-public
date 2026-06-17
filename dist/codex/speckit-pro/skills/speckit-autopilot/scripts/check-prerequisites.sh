@@ -54,14 +54,17 @@ fi
 # 0.4 SpecKit Commands Installed
 missing_cmds=()
 # SpecKit v0.8.13+ installs the core SDD phases as SKILLS. Autopilot runs under
-# both Claude Code (.claude/skills/<cmd>/SKILL.md) and Codex
-# (.codex/skills/<cmd>/SKILL.md), and this same script serves both — so a command
-# counts as installed if it exists as a skill on EITHER platform. Only the
-# project-local install dirs are checked: the plugin's own bundled codex-skills/
-# must NOT count, or the gate would false-pass for every project.
+# both Claude Code (.claude/skills/<cmd>/SKILL.md) and Codex, and this same script
+# serves both — so a command counts as installed if it exists as a skill in ANY of
+# the project-local skill layouts. Codex has used two layouts: the legacy
+# .codex/skills/<cmd>/SKILL.md and the native .agents/skills/<cmd>/SKILL.md that
+# current spec-kit installs (github/spec-kit#1906). Only the project-local install
+# dirs are checked: the plugin's own bundled codex-skills/ must NOT count, or the
+# gate would false-pass for every project.
 for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
   if [ ! -f ".claude/skills/${cmd}/SKILL.md" ] \
-    && [ ! -f ".codex/skills/${cmd}/SKILL.md" ]; then
+    && [ ! -f ".codex/skills/${cmd}/SKILL.md" ] \
+    && [ ! -f ".agents/skills/${cmd}/SKILL.md" ]; then
     missing_cmds+=("$cmd")
   fi
 done

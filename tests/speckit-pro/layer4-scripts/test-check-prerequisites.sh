@@ -84,6 +84,19 @@ done
 output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
 assert_contains "$output" "All SpecKit commands installed"
 
+set_test "Agents-dir skills install → commands detected"
+# Current spec-kit (github/spec-kit#1906) installs Codex phase skills natively at
+# .agents/skills/<cmd>/SKILL.md. The gate must accept this layout so projects don't
+# need .codex/skills compatibility shims to pass preflight.
+dir=$(make_project "agents-skills")
+rm -rf "$dir/.claude/skills"
+for cmd in speckit-specify speckit-plan speckit-tasks speckit-implement; do
+  mkdir -p "$dir/.agents/skills/${cmd}"
+  printf -- '---\ndescription: test\n---\n# Test\n' > "$dir/.agents/skills/${cmd}/SKILL.md"
+done
+output=$(cd "$dir" && bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
+assert_contains "$output" "All SpecKit commands installed"
+
 set_test "SpecKit CLI in HOME/.local/bin → detected when PATH omits it"
 dir=$(make_project "home-local-specify")
 fake_home="$dir/home"
