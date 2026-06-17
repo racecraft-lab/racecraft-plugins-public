@@ -44,8 +44,8 @@ generate/check validation, parallel Claude Code/Codex presentation, and the
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Complete | spec.md created: 3 user stories, 18 FRs, 9 acceptance scenarios, 0 `[NEEDS CLARIFICATION]`; 3 consensus items carried forward |
-| Clarify | `/speckit-clarify` | In Progress | Session 1 is resolving route names/sidebar and reference landing-page behavior |
+| Specify | `/speckit-specify` | Complete | spec.md created: 3 user stories, 22 FRs after clarification, 9 acceptance scenarios, 0 `[NEEDS CLARIFICATION]` |
+| Clarify | `/speckit-clarify` | Complete | Sessions 1-3 answered IA, generated Markdown format, source evidence, local validation, and DOC-010 handoff boundaries |
 | Plan | `/speckit-plan` | Pending | Choose deterministic generator architecture and docs-site integration |
 | Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, integration/source-data, and error-handling checklists |
 | Tasks | `/speckit-tasks` | Pending | Generate story-ordered tasks for generator, pages, validation, and docs checks |
@@ -113,8 +113,9 @@ Before starting any workflow phase, verify alignment with `.specify/memory/const
 
 | Command | Purpose |
 |---------|---------|
-| generator `--check` command chosen during Plan | Confirm generated reference pages are current |
-| `pnpm --dir docs-site validate` | Astro content/type check plus production build |
+| `pnpm --dir docs-site reference:generate` | Generate committed reference Markdown pages |
+| `pnpm --dir docs-site reference:check` | Confirm generated reference pages are current without writing files |
+| `pnpm --dir docs-site validate` | Reference freshness check plus Astro content/type check and production build |
 | `pnpm --dir docs-site validate:links` | Docs-site link-validation hook |
 | `bash tests/speckit-pro/run-all.sh --layer 1` | Structural safety if source/plugin references or generated payload paths are touched |
 | `bash tests/speckit-pro/run-all.sh` | Full plugin validation if implementation touches plugin/spec surfaces, scripts outside docs-site, manifests, or generated payloads |
@@ -223,11 +224,11 @@ source facts.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 18 |
+| Functional Requirements | 22 after IA, format, validation, and handoff clarifications |
 | User Stories | 3 |
 | Acceptance Criteria | 9 acceptance scenarios |
 | `[NEEDS CLARIFICATION]` markers | 0 |
-| Unresolved for consensus | 3: [IA], [Format], [CI-Handoff] |
+| Unresolved for consensus | None |
 
 ### Files Generated
 
@@ -265,9 +266,9 @@ source facts.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | IA and route shape | Pending | Pending |
-| 2 | Generation format and reviewability | Pending | Pending |
-| 3 | Validation and handoffs | Pending | Pending |
+| 1 | IA and route shape | 5 answered | Use seven generated subpages under `/reference/`: `skills`, `agents`, `manifests`, `hooks`, `scripts`, `tests`, and `source-vs-dist`; preserve `docs-site/src/content/docs/reference.md` as the canonical landing page; keep Reference sidebar with landing page first, generated subpages next, and glossary last; use public links shaped `/racecraft-plugins-public/reference/<slug>/`; fold roadmap-only surfaces into the seven pages as sections or rows. |
+| 2 | Generation format and reviewability | 5 answered | Generate committed Markdown pages at `docs-site/src/content/docs/reference/<slug>.md`; use stable section-per-record blocks with ordered fields for purpose, platform mapping, source facts, sources, and inferred notes; render source citations as visible repo-relative path links to GitHub `blob/main/<path>` URLs; render inferred notes only in a dedicated `Inferred notes` field with `Based on:` source paths; include a visible generated notice naming the generator/check command. |
+| 3 | Validation and handoffs | 5 answered | Add `reference:generate` and `reference:check` docs-site package scripts around `node scripts/generate-reference-pages.mjs`; make `validate` run `reference:check` before the existing check/build sequence; check mode exits `0` for current, `1` for stale output, and `2` for source/parsing/internal errors; read only allowlisted checked-in source paths and never generated output as source evidence; hand GitHub Actions/docs CI wiring to DOC-010 without editing `.github/workflows/*`. |
 
 ---
 
@@ -293,6 +294,10 @@ source facts.
 - Generator must be deterministic and local-file-only.
 - Generated pages must carry strict source citations and label inferred notes.
 - Check mode must fail when generated reference pages are stale.
+- Check mode must be read-only and distinguish `0=current`, `1=stale output`,
+  and `2=source/parsing/internal error`.
+- Do not edit `.github/workflows/*`; DOC-010 owns GitHub Actions/docs CI
+  wiring for the docs validation bundle.
 - Do not introduce a reusable docs platform beyond DOC-007 needs.
 - Do not change plugin behavior, manifests, install flow, generated payload
   content, marketplace behavior, release automation, or hook semantics.
@@ -302,13 +307,25 @@ source facts.
   and `docs-site/scripts/validate-doc006-safe-aids.mjs` for bounded source-file
   reads and deterministic validation.
 - Prefer a small docs-site script such as
-  `docs-site/scripts/generate-reference-pages.mjs` with `--check` support, unless
-  Clarify chooses a different file format.
+  `docs-site/scripts/generate-reference-pages.mjs` with `--check` support that
+  writes committed Markdown pages rather than MDX or component-rendered data.
 - Candidate generated pages should live under a stable reference route grouping,
-  for example `docs-site/src/content/docs/reference/`, while preserving the
-  existing `/reference/` landing page.
+  `docs-site/src/content/docs/reference/`, while preserving the existing
+  `/reference/` landing page. Generate exactly seven first-class subpages:
+  `skills`, `agents`, `manifests`, `hooks`, `scripts`, `tests`, and
+  `source-vs-dist`.
+- Keep the Starlight `Reference` sidebar group: `reference` first, generated
+  reference subpages in stable order, and `glossary` last.
 - Treat source facts and inferred notes as separate data fields in the generator
   output so generated content cannot blur evidence with interpretation.
+- Render each generated record as stable Markdown sections with visible
+  `Sources` and `Inferred notes` fields so diffs remain reviewable.
+- Add docs-site package scripts `reference:generate` and `reference:check`
+  wrapping `node scripts/generate-reference-pages.mjs`, and update
+  `validate` to run `reference:check` before the existing check/build sequence.
+- Restrict generator source reads to checked-in allowlisted paths: repo
+  manifests, `speckit-pro/`, `dist/claude/`, `dist/codex/`, root scripts,
+  `tests/speckit-pro/`, and docs-site config/content needed for navigation.
 - Record any complexity tradeoff in the plan's Complexity Tracking table,
   especially because Grill Me selected generated full page content over the
   simpler hand-authored roadmap suggestion.
