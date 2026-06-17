@@ -316,8 +316,39 @@ const stateLabel = (state: string) => {
       }
     };
 
-    radios.forEach((radio) => {
+    const selectRadio = (radio) => {
+      if (!radio) return;
+      radio.checked = true;
+      radio.focus();
+      updatePanels();
+    };
+
+    radios.forEach((radio, index) => {
       radio.addEventListener('change', updatePanels);
+      radio.addEventListener('keydown', (event) => {
+        const lastIndex = radios.length - 1;
+        let nextIndex = null;
+
+        if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+          nextIndex = index === lastIndex ? 0 : index + 1;
+        }
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+          nextIndex = index === 0 ? lastIndex : index - 1;
+        }
+        if (event.key === 'Home') {
+          nextIndex = 0;
+        }
+        if (event.key === 'End') {
+          nextIndex = lastIndex;
+        }
+        if (event.key === ' ' || event.key === 'Spacebar' || event.key === 'Enter') {
+          nextIndex = index;
+        }
+        if (nextIndex === null) return;
+
+        event.preventDefault();
+        selectRadio(radios[nextIndex]);
+      });
     });
     updatePanels();
 

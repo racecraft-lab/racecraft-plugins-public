@@ -178,6 +178,11 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
   assert(componentSource.includes('type=\"button\"') && componentSource.includes('navigator.clipboard'), 'copy affordance must use native buttons and clipboard copy only.');
   assert(componentSource.includes('aria-live'), 'selector or copy status must expose status text.');
   assert(componentSource.includes('Keyboard'), 'component must include keyboard/static-fallback review language.');
+  assert(componentSource.includes("addEventListener('keydown'"), 'selector controls must handle keyboard navigation explicitly.');
+  for (const key of ['ArrowDown', 'ArrowRight', 'Home', 'End']) {
+    assert(componentSource.includes(key), `selector keyboard handler must support ${key}.`);
+  }
+  assert(componentSource.includes('.focus()'), 'selector keyboard handler must move focus with selection.');
 
   const combined = `${routeSource}\n${componentSource}\n${dataSource}`;
   const forbiddenPatterns = [
