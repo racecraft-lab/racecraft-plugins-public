@@ -43,8 +43,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; clarified metadata source boundary, interaction/fallback/accessibility, repository-only checker, handoffs, first-run checklist scope, and validation coverage |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and schema contract; G3 passed; reviewability estimator passed at 80 projected production LOC |
 | Checklist | `/speckit-checklist` | Complete | Completed UX, accessibility, integration/source-data, and error-handling checklists; G4 passed with 0 remaining gaps |
-| Tasks | `/speckit-tasks` | In Progress | Generate docs-first tasks by user story with source-derived metadata validation |
-| Analyze | `/speckit-analyze` | Pending | Check drift across PRD, roadmap, Design Concept, spec, plan, tasks, and validation scope |
+| Tasks | `/speckit-tasks` | Complete | Created 32 docs-first tasks across setup, foundation, 3 user stories, and polish; G5 passed; size-only reviewability block produced a 4-marker review plan |
+| Analyze | `/speckit-analyze` | In Progress | Check drift across PRD, roadmap, Design Concept, spec, plan, tasks, and validation scope |
 | Implement | `/speckit-implement` | Pending | Implement selector/checker aids, static fallbacks, payload diagram, checklist, and fixture evidence |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -480,10 +480,12 @@ Focus on DOC-006 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | |
-| Phases | |
-| Parallel Opportunities | |
-| User Stories Covered | |
+| Total Tasks | 32 |
+| Phases | 6 |
+| Parallel Opportunities | 3 explicit `[P]` setup tasks plus story-level review boundaries after foundation |
+| User Stories Covered | 3 |
+| Gate G5 | Passed: 32 tasks found and 0 unresolved markers |
+| Reviewability task gate | Size-only block: 1280 reviewable LOC and 48 total files exceeded block thresholds; persisted as marker-planning input |
 
 ---
 
@@ -497,10 +499,25 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-0
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| Releasable | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| Signals | | Decisive detector findings. |
-| Warnings | | Release-safety warnings. |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| Releasable | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings. |
+| Warnings | None | Release-safety warnings. |
+
+### Marker Plan
+
+The tasks reviewability result was a valid size-only block, so autopilot generated a durable PR marker plan at:
+
+```text
+specs/doc-006-safe-interactive-selector-and-validation-aids/.process/marker-plan/pr-marker-plan.json
+```
+
+| Marker | Review Order | Task Boundary | Notes |
+|--------|--------------|---------------|-------|
+| `foundation` | 1 | T001-T011 | Setup, focused RED checks, source-derived metadata helper, and pre-render validation |
+| `us1` | 2 | T012-T017 | Selector controls, static fallback table, selected path output, unsupported states, and route placement |
+| `us2` | 3 | T018-T022 | Repository manifest/version checker states and informational packaging rows |
+| `us3` | 4 | T023-T027 plus folded polish T028-T032 | Payload diagram, first-run checklist, safe handoff copy, validation, and review packet checks |
 
 ---
 
@@ -549,7 +566,7 @@ For tasks touching derived command/checker metadata:
 4. VERIFY: Run docs validation, link validation, the focused fixture/test, and manual keyboard/static-fallback review.
 
 ## Implementation Notes
-- Keep the primary page `docs-site/src/content/docs/choose-your-path.md`.
+- Preserve the public `choose-your-path` route while converting the content source to `docs-site/src/content/docs/choose-your-path.mdx` for component placement.
 - Use existing docs-site component patterns; prefer one small Astro component/data helper over a rich app surface.
 - Read checked-in JSON/manifests at build time only.
 - Do not write generated metadata files.

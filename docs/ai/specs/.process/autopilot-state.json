@@ -9,8 +9,8 @@
     "specs/doc-006-safe-interactive-selector-and-validation-aids"
   ],
   "feature_branch": "doc-006-safe-interactive-selector-and-validation-aids",
-  "updated_at": "2026-06-17T03:49:28Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-17T03:59:51.601Z",
+  "active_step": "Phase 6: Analyze",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -206,44 +206,514 @@
       "gaps_found": 2,
       "gaps_fixed": 2,
       "gaps_remaining": 0
+    },
+    "tasks": {
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "total_tasks": 32,
+      "phases": 6,
+      "parallel_opportunities": 3,
+      "user_stories_covered": 3,
+      "markers": 0,
+      "files": [
+        "specs/doc-006-safe-interactive-selector-and-validation-aids/tasks.md"
+      ],
+      "reviewability": {
+        "status": "block",
+        "is_size_only": true,
+        "reviewable_loc": 1280,
+        "total_files": 48,
+        "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
+      }
     }
   },
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries", "status": "completed"},
-    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility", "status": "completed"},
-    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries", "status": "completed"},
-    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - UX", "status": "completed"},
-    {"step": "Phase 4: Checklist - UX Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Accessibility", "status": "completed"},
-    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Integration", "status": "completed"},
-    {"step": "Phase 4: Checklist - Integration Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling", "status": "completed"},
-    {"step": "Phase 4: Checklist - Error Handling Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review", "status": "pending"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Cleanup", "status": "pending"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
-  ]
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Metadata derivation and command boundaries",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Metadata derivation and command boundaries Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Interaction, fallback, and accessibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Interaction, fallback, and accessibility Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - UX",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - UX Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Accessibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Accessibility Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Integration",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Integration Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - Error Handling Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Setup (T001-T004)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Foundation (T005-T011)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: User Story 1 (T012-T017)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: User Story 2 (T018-T022)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: User Story 3 (T023-T027)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Polish (T028-T032)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Cleanup",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
+  ],
+  "atomicity_route": {
+    "status": "completed",
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [
+      "hint:flag-system:weak"
+    ],
+    "warnings": [],
+    "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/atomicity-route.json"
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route was one-navigable-PR; marker plan was generated for review boundaries instead of split-PR layer emission"
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "doc-006-safe-interactive-selector-and-validation-aids",
+    "status": "planned",
+    "source_fingerprint": {
+      "feature_spec_sha": "4358585ffd5ea393f471b35181a3ee9b6925e017d1f3586e01d43138af3fb439",
+      "plan_declared_scope_sha": "54b4f1c98e8feb835be4efe0473588d91224bc6b4e9997d0f771ca9ac03a73d4",
+      "tasks_sha": "36d14f404537998997f97326866364e20ee96279ac66533d02565d6d8af67525",
+      "reviewability_sha": "a9f38ca15edfcff31d113915900962177b6280e6f97682be8425d7a48aa2209e",
+      "hazard_route_sha": "d5501ebfc29e3f67f6df2e4f36615efe1784a6d353ebd151a90d111a55a2ce91"
+    },
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "Foundation",
+          "story_id": null,
+          "start_task_id": "T001",
+          "end_task_id": "T011"
+        },
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": ".agents/plugins/marketplace.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": ".claude-plugin/marketplace.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/claude/speckit-pro/.claude-plugin/plugin.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "dist/codex/speckit-pro/.codex-plugin/plugin.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/components/SafeInstallAids.astro"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/choose-your-path.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/choose-your-path.mdx"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/data/safe-install-aids.ts"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/.claude-plugin/plugin.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/.codex-plugin/plugin.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-006-safe-interactive-selector-and-validation-aids/tasks.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "foundation",
+          "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Choose the correct install path",
+          "story_id": 1,
+          "start_task_id": "T012",
+          "end_task_id": "T017"
+        },
+        "task_ids": [
+          "T012",
+          "T013",
+          "T014",
+          "T015",
+          "T016",
+          "T017"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/components/SafeInstallAids.astro"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/choose-your-path.mdx"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us1",
+          "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - Inspect repository metadata consistency",
+          "story_id": 2,
+          "start_task_id": "T018",
+          "end_task_id": "T022"
+        },
+        "task_ids": [
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/components/SafeInstallAids.astro"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us2",
+          "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Review safe first-run checkpoints",
+          "story_id": 3,
+          "start_task_id": "T023",
+          "end_task_id": "T027"
+        },
+        "task_ids": [
+          "T023",
+          "T024",
+          "T025",
+          "T026",
+          "T027"
+        ],
+        "folded_polish_task_ids": [
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032"
+        ],
+        "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/components/SafeInstallAids.astro"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/choose-your-path.mdx"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-006-safe-interactive-selector-and-validation-aids/quickstart.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us3",
+          "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": "specs/doc-006-safe-interactive-selector-and-validation-aids/.process/reviewability/tasks-gate-result.json"
+        }
+      }
+    ]
+  }
 }
