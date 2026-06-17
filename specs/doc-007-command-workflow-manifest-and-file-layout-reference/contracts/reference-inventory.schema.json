@@ -17,7 +17,7 @@
     "page": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["slug", "title", "publicPath", "outputPath", "records"],
+      "required": ["slug", "title", "publicPath", "outputPath", "records", "generatedNotice", "sources"],
       "properties": {
         "slug": {
           "enum": ["skills", "agents", "manifests", "hooks", "scripts", "tests", "source-vs-dist"]
@@ -31,6 +31,12 @@
         "outputPath": {
           "type": "string",
           "pattern": "^docs-site/src/content/docs/reference/(skills|agents|manifests|hooks|scripts|tests|source-vs-dist)\\.md$"
+        },
+        "generatedNotice": { "type": "string", "minLength": 1 },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/sourceCitation" }
         },
         "records": {
           "type": "array",
@@ -64,6 +70,13 @@
         "inferredNotes": {
           "type": "array",
           "items": { "$ref": "#/$defs/inferredNote" }
+        },
+        "commandSkillReference": {
+          "$ref": "#/$defs/commandSkillReference"
+        },
+        "manifestFieldSets": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/manifestFieldSet" }
         }
       }
     },
@@ -75,6 +88,51 @@
         "claudeCode": { "type": "string" },
         "codex": { "type": "string" },
         "runtimeDifference": { "type": "string" }
+      }
+    },
+    "commandSkillReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claudeInvocation", "codexInvocation", "purpose", "prerequisites", "expectedOutputArtifact", "sourceRefs"],
+      "properties": {
+        "claudeInvocation": { "type": "string", "minLength": 1 },
+        "codexInvocation": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string", "minLength": 1 },
+        "prerequisites": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "expectedOutputArtifact": { "type": "string", "minLength": 1 },
+        "sourceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "manifestFieldSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runtime", "manifestKind", "requiredFields", "optionalFields", "sourceRefs"],
+      "properties": {
+        "runtime": {
+          "enum": ["claude-code", "codex"]
+        },
+        "manifestKind": { "type": "string", "minLength": 1 },
+        "requiredFields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "optionalFields": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "sourceRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "sourceFact": {

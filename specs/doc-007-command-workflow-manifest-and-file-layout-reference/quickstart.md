@@ -17,6 +17,7 @@ Expected result:
 - Seven Markdown files exist under `docs-site/src/content/docs/reference/`.
 - Output is deterministic for unchanged checked-in source files.
 - Each generated page includes the generated notice, visible `Sources`, and visible `Inferred notes`.
+- Skill or command records show runtime invocation forms, purpose, prerequisites, and expected output artifacts; manifest records separate required and optional fields for Claude Code and Codex.
 
 ## Check Reference Freshness
 

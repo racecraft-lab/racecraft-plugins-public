@@ -24,6 +24,7 @@ pnpm --dir docs-site reference:check
 - Runs `node scripts/generate-reference-pages.mjs --check`.
 - Renders expected Markdown in memory and compares it with committed generated output.
 - Does not create, rewrite, delete, format, or update generated files, docs-site package/config files, sidebar configuration, or existing docs links.
+- Treats missing or changed visible generated notices, command/skill reference fields, manifest field groupings, source fields, or inferred-note fields as stale generated output.
 - Exits `0` when generated output is current.
 - Exits `1` when output is stale, prints stale repo-relative page paths on stdout, and prints `pnpm --dir docs-site reference:generate` as the fix command.
 - Exits `2` when source/parsing/internal errors prevent a trustworthy comparison and prints the error category plus repo-relative source path or generator phase on stderr.
@@ -63,6 +64,8 @@ Each generated page includes:
 - Visible `Sources` fields for source facts.
 - Visible `Inferred notes` fields for inferred notes, with `Based on:` source paths.
 - Public source citation links using `https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/<path>`.
+- For command or skill records: visible Claude Code invocation, Codex invocation, purpose, prerequisites, and expected output artifact fields when applicable and source-backed.
+- For manifest records: visible runtime-specific required and optional field groupings for Claude Code and Codex plugin manifests.
 
 ## Boundaries
 

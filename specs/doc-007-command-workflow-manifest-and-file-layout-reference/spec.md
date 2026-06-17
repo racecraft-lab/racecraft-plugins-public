@@ -21,7 +21,7 @@ As a SpecKit Pro user, I can open generated reference pages and understand which
 **Acceptance Scenarios**:
 
 1. **Given** the generated reference pages are current, **When** a user opens the reference section, **Then** they can navigate to separate subpages for skills, agents, manifests, hooks, scripts, tests, and source-vs-dist layout under `/reference/`.
-2. **Given** a surface exists for both Claude Code and Codex, **When** a user reads the generated row for that surface, **Then** the page presents the mapped surfaces in parallel and separates runtime-specific differences.
+2. **Given** a command or skill surface exists for Claude Code, Codex, or both runtimes, **When** a user reads the generated row for that surface, **Then** the page presents available invocation forms, purpose, prerequisites, expected output artifact, mapped runtime surfaces, and runtime-specific differences.
 3. **Given** a generated reference row states a source fact, **When** a user follows its citation link, **Then** the link points to a real checked-in source path.
 
 ---
@@ -36,7 +36,7 @@ As a maintainer, I can inspect generated file-layout and manifest reference page
 
 **Acceptance Scenarios**:
 
-1. **Given** a maintainer is reviewing plugin manifest or marketplace files, **When** they open the manifest reference page, **Then** they can distinguish source manifests, distribution manifests, marketplace registry files, and generated payload files.
+1. **Given** a maintainer is reviewing plugin manifest or marketplace files, **When** they open the manifest reference page, **Then** they can distinguish source manifests, distribution manifests, marketplace registry files, generated payload files, and Claude Code versus Codex required and optional manifest fields.
 2. **Given** a maintainer is reviewing scripts or tests, **When** they open the generated scripts or tests reference page, **Then** each listed row identifies the checked-in path, the repository role, and whether the row describes a source fact or an inferred note.
 3. **Given** a maintainer is preparing a change, **When** they inspect the source-vs-dist layout reference, **Then** they can identify which files should be edited directly and which files are generated or validation-only.
 
@@ -114,10 +114,10 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - **FR-003**: Every generated reference row that states a source fact MUST include a visible `Sources` field with repo-relative path text linked to the corresponding public GitHub `blob/main/<path>` URL.
 - **FR-004**: Source facts MUST come only from checked-in repository files.
 - **FR-005**: Inferred notes MUST appear only in a dedicated `Inferred notes` field with `Based on:` source paths and MUST NOT be presented as direct source evidence.
-- **FR-006**: Claude Code and Codex surfaces MUST be presented in parallel wherever they map to the same user or maintainer concept.
+- **FR-006**: Claude Code and Codex command and skill surfaces MUST be presented in parallel wherever they map to the same user or maintainer concept, and those records MUST show Claude Code invocation, Codex invocation, purpose, prerequisites, and expected output artifact when those fields are applicable and source-backed.
 - **FR-007**: Runtime-specific differences between Claude Code and Codex MUST remain visible instead of being collapsed into a single generic description.
 - **FR-008**: File-layout references MUST classify relevant files as source, generated payload, test-only, release infrastructure, documentation infrastructure, or other clearly named repository roles.
-- **FR-009**: Manifest references MUST distinguish plugin manifests, marketplace registry files, integration manifests, and generated distribution manifests when those categories are present.
+- **FR-009**: Manifest references MUST distinguish plugin manifests, marketplace registry files, integration manifests, and generated distribution manifests when those categories are present, and Claude Code versus Codex plugin manifest records MUST list required and optional fields separately by runtime.
 - **FR-010**: Script, hook, and test references MUST describe repository role and source path without changing the referenced behavior or semantics.
 - **FR-011**: The feature MUST provide deterministic generate behavior for the generated reference pages.
 - **FR-012**: The feature MUST provide check behavior that detects stale generated reference pages.
@@ -166,6 +166,8 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - **Reference Page**: A generated docs page for one repository surface group, such as skills, agents, manifests, hooks, scripts, tests, or source-vs-dist layout.
 - **Reference Landing Page**: The preserved `/reference/` route that orients readers to generated subpages without replacing existing inbound links.
 - **Reference Row**: A generated Markdown record block on a reference page that describes one surface, file, or mapping and carries ordered fields for purpose, platform mapping, source facts, visible sources, and inferred notes.
+- **Command Skill Reference**: A generated record detail for command or skill surfaces that names runtime invocation forms, prerequisites, expected output artifact, and supporting source paths.
+- **Manifest Field Set**: A generated record detail that separates required and optional manifest fields by runtime and manifest category without changing manifest semantics.
 - **Source Fact**: A statement derived directly from a checked-in repository file and linked to that file.
 - **Inferred Note**: A labeled explanatory statement derived from relationships among source facts rather than copied directly from one source file.
 - **Generated Notice**: A visible statement on each generated reference page naming the generator/check command and the checked-in source boundary.
@@ -184,9 +186,9 @@ As a reviewer or agent, I can run a local check mode that proves generated refer
 - **SC-004**: Local check mode succeeds when generated reference pages are current and fails when at least one generated page is intentionally made stale.
 - **SC-005**: Check mode leaves the working tree unchanged when it detects stale generated output or source/parsing/internal errors.
 - **SC-006**: Review of the final diff confirms no plugin behavior, manifest semantics, generated payload content, marketplace behavior, install flow, hook semantics, or release automation changed.
-- **SC-007**: Maintainers can identify the source-vs-dist responsibility for every first-class surface group named in DOC-007: skills, agents, manifests, hooks, scripts, tests, and source-vs-dist layout.
+- **SC-007**: Maintainers can identify the source-vs-dist responsibility for every first-class surface group named in DOC-007: skills, agents, manifests, hooks, scripts, tests, and source-vs-dist layout, and can identify Claude Code versus Codex required and optional manifest fields.
 - **SC-008**: Existing install, first-run, troubleshooting, security, and contributor pages contain task-relevant links to generated reference subpages instead of relying only on the generic `/racecraft-plugins-public/reference/` landing page.
-- **SC-009**: Review of all seven committed generated Markdown pages confirms dense-inventory accessibility: each page has meaningful page, section, and per-record headings; compact lists or tables have labels or headers; citation links expose repo-relative path text with distinguishing context for multiple citations; and required source facts, sources, and inferred notes are available without JavaScript-only interaction.
+- **SC-009**: Review of all seven committed generated Markdown pages confirms dense-inventory accessibility: each page has a visible generated notice; meaningful page, section, and per-record headings; compact lists or tables have labels or headers; command/skill records expose invocation, prerequisite, and expected-output fields; manifest records separate required and optional fields by runtime; citation links expose repo-relative path text with distinguishing context for multiple citations; and required source facts, sources, and inferred notes are available without JavaScript-only interaction.
 - **SC-010**: A reviewer can classify each documented generator failure as stale output, source error, parsing error, output-write error, or internal error and identify the bounded recovery action from the diagnostic.
 
 ## Assumptions

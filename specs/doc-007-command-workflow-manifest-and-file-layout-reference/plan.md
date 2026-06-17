@@ -172,13 +172,19 @@ Check mode renders expected Markdown in memory and compares it to committed outp
 
 | Generated page | Source inputs that may support rows | Required source-data boundary |
 |----------------|--------------------------------------|-------------------------------|
-| `reference/skills` | `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `dist/claude/speckit-pro/skills/`, `dist/codex/speckit-pro/skills/` | Present Claude Code and Codex skills in parallel where concepts map; cite `dist/` only as payload inventory evidence. |
+| `reference/skills` | `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `dist/claude/speckit-pro/skills/`, `dist/codex/speckit-pro/skills/`, `README.md`, `speckit-pro/README.md`, and existing install/first-run docs where they state invocation/prerequisite/output behavior | Present Claude Code and Codex command or skill forms in parallel where concepts map; include source-backed invocation, purpose, prerequisites, and expected output artifact; cite `dist/` only as payload inventory evidence. |
 | `reference/agents` | `speckit-pro/agents/`, `speckit-pro/codex-agents/`, `dist/claude/speckit-pro/agents/`, `dist/codex/speckit-pro/codex-agents/` | Preserve runtime-specific agent file formats and do not collapse Markdown and TOML differences. |
-| `reference/manifests` | Marketplace/plugin/integration manifests from the allowlist plus generated dist plugin manifests | Distinguish marketplace registries, source plugin manifests, integration manifests, and generated distribution manifests. |
+| `reference/manifests` | Marketplace/plugin/integration manifests from the allowlist plus generated dist plugin manifests | Distinguish marketplace registries, source plugin manifests, integration manifests, and generated distribution manifests; list required and optional plugin manifest fields separately for Claude Code and Codex without changing manifest semantics. |
 | `reference/hooks` | `speckit-pro/hooks/hooks.json`, `speckit-pro/codex-hooks.json`, `dist/claude/speckit-pro/hooks/hooks.json`, `dist/codex/speckit-pro/codex-hooks.json` | Describe hook/config inventory without changing hook semantics. |
 | `reference/scripts` | `speckit-pro/scripts/`, `speckit-pro/skills/speckit-autopilot/scripts/`, root `scripts/`, and relevant test validators | Classify build/release scripts separately from autopilot helper scripts and validation scripts. |
 | `reference/tests` | `tests/speckit-pro/` | Classify tests as validation evidence and avoid treating fixtures or replay data as plugin behavior source. |
 | `reference/source-vs-dist` | All allowed source groups above | Show editability and responsibility for source, generated payload, test-only, release infrastructure, and documentation infrastructure paths. |
+
+**Generated Record Content Requirements**:
+
+- Command and skill records include the visible fields `Claude Code invocation`, `Codex invocation`, `Purpose`, `Prerequisites`, and `Expected output artifact` when the values are applicable and supported by checked-in source evidence. Runtime-specific absence is labeled explicitly instead of inferred from silence.
+- Manifest records include runtime-specific `Required fields` and `Optional fields` groupings for Claude Code and Codex plugin manifests. If a field classification is derived from repository conventions rather than a manifest file literal, it appears as an inferred note with `Based on:` source paths.
+- Every generated page includes the visible generated notice before record content, and check mode treats a missing or changed notice as stale generated output rather than silently accepting the page.
 
 **Source-vs-Dist Responsibility Mapping**:
 
@@ -186,7 +192,7 @@ Check mode renders expected Markdown in memory and compares it to committed outp
 |---------------|---------------------------|----------------------------|---------------------|
 | Skills | `speckit-pro/skills/*/SKILL.md`, `speckit-pro/codex-skills/*/SKILL.md` | `dist/claude/speckit-pro/skills/*/SKILL.md`, `dist/codex/speckit-pro/skills/*/SKILL.md` | Source files are editable; dist files are generated payload inventory. |
 | Agents | `speckit-pro/agents/*.md`, `speckit-pro/codex-agents/*.toml` | `dist/claude/speckit-pro/agents/*.md`, `dist/codex/speckit-pro/codex-agents/*.toml` | Markdown and TOML runtime formats are parallel but distinct. |
-| Manifests | `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `.specify/integrations/*.manifest.json` | `dist/claude/speckit-pro/.claude-plugin/plugin.json`, `dist/codex/speckit-pro/.codex-plugin/plugin.json` | Marketplace, plugin, integration, and dist manifests must remain separate categories. |
+| Manifests | `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `.specify/integrations/*.manifest.json` | `dist/claude/speckit-pro/.claude-plugin/plugin.json`, `dist/codex/speckit-pro/.codex-plugin/plugin.json` | Marketplace, plugin, integration, and dist manifests must remain separate categories; required and optional field lists are reference metadata only and do not alter manifest semantics. |
 | Hooks | `speckit-pro/hooks/hooks.json`, `speckit-pro/codex-hooks.json` | `dist/claude/speckit-pro/hooks/hooks.json`, `dist/codex/speckit-pro/codex-hooks.json` | Hooks are documented as configuration surfaces only; semantics are unchanged. |
 | Scripts | `speckit-pro/scripts/`, `speckit-pro/skills/speckit-autopilot/scripts/`, root `scripts/` | `dist/*/speckit-pro/scripts/` and `dist/*/speckit-pro/skills/speckit-autopilot/scripts/` where present | Script records identify role and path; release/build behavior remains out of scope. |
 | Tests | `tests/speckit-pro/` | None | Test files are validation-only evidence and are not generated payload. |

@@ -7,12 +7,14 @@
   - `slug` is one of `skills`, `agents`, `manifests`, `hooks`, `scripts`, `tests`, `source-vs-dist`.
   - `publicPath` uses `/racecraft-plugins-public/reference/<slug>/`.
   - `outputPath` is under `docs-site/src/content/docs/reference/`.
+  - `generatedNotice` is non-empty and rendered visibly on every generated page.
+  - `sources` contains page-level source citations for the inventory inputs used by the page.
   - Records are sorted deterministically.
 - **Relationships**: Owns many `ReferenceRecord` objects and has page-level `SourceCitation` values.
 
 ## Entity: ReferenceRecord
 
-- **Fields**: `id`, `heading`, `purpose`, `platformMapping`, `sourceFacts`, `sources`, `inferredNotes`, `classification`
+- **Fields**: `id`, `heading`, `purpose`, `platformMapping`, `commandSkillReference`, `manifestFieldSets`, `sourceFacts`, `sources`, `inferredNotes`, `classification`
 - **Validation rules**:
   - `id` is stable and unique within the page.
   - A record that states source facts has at least one visible `SourceCitation`.
@@ -55,6 +57,24 @@
   - Runtime-specific differences are not collapsed into a generic description.
   - Missing optional surfaces are labeled absent or omitted without invented facts.
 - **Relationships**: Used by skill, agent, hook, manifest, and source-vs-dist records.
+
+## Entity: CommandSkillReference
+
+- **Fields**: `claudeInvocation`, `codexInvocation`, `purpose`, `prerequisites`, `expectedOutputArtifact`, `sourceRefs`
+- **Validation rules**:
+  - Present on command or skill records that describe invocable surfaces.
+  - Claude Code and Codex invocation fields are both rendered; unavailable or not-applicable runtime values are labeled explicitly.
+  - Prerequisites and expected output artifacts are supported by checked-in source paths or labeled as inferred notes with `Based on:` paths.
+- **Relationships**: Belongs to a `ReferenceRecord` and references one or more `SourceCitation` values.
+
+## Entity: ManifestFieldSet
+
+- **Fields**: `runtime`, `manifestKind`, `requiredFields`, `optionalFields`, `sourceRefs`
+- **Validation rules**:
+  - `runtime` is either `claude-code` or `codex`.
+  - Required and optional fields are listed separately for each runtime-specific plugin manifest record.
+  - Field classifications are reference metadata only; they do not change manifest semantics or generated payload content.
+- **Relationships**: Belongs to a manifest `ReferenceRecord` and references one or more `SourceCitation` values.
 
 ## Entity: FileClassification
 

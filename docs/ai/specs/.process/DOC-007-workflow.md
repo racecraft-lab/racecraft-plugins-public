@@ -49,8 +49,8 @@ generate/check validation, parallel Claude Code/Codex presentation, and the
 | Plan | `/speckit-plan` | Complete | G3 passed; plan selects a docs-site Node generator, committed Markdown output, local package scripts, and no CI workflow edits |
 | Checklist | `/speckit-checklist` | Complete | UX, accessibility, integration/source-data, and error-handling complete; 9 error-handling gaps remediated, 0 remaining |
 | Tasks | `/speckit-tasks` | Complete | tasks.md created with 38 story-ordered tasks, 8 parallel opportunities, generator/check-mode validation, and explicit dependency boundaries |
-| Analyze | `/speckit-analyze` | In Progress | Checking consistency across roadmap, design concept, spec, plan, and tasks |
-| Implement | `/speckit-implement` | Pending | Implement only after G6 passes |
+| Analyze | `/speckit-analyze` | Complete | 3 findings remediated (0 critical, 2 high, 1 medium); marker counter clean |
+| Implement | `/speckit-implement` | In Progress | G6 passed; implementing DOC-007 tasks in story order |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -498,7 +498,9 @@ Focus on DOC-007 consistency:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | HIGH | PRD AC-7.1 command/skill matrix fields were not explicit in spec, plan, tasks, or contracts. | Added source-backed invocation, purpose, prerequisite, and expected-output artifact coverage to `spec.md`, `plan.md`, `data-model.md`, `contracts/`, `tasks.md`, and `quickstart.md`. |
+| A2 | HIGH | PRD AC-7.2 manifest required/optional field treatment was not explicit for Claude Code versus Codex. | Added runtime-specific required/optional manifest field coverage to `spec.md`, `plan.md`, `data-model.md`, `contracts/`, `tasks.md`, and `quickstart.md`. |
+| A3 | MEDIUM | FR-020 generated notice coverage was not validated across all generated pages and was missing from the inventory schema. | Added page-level `generatedNotice` and `sources` schema requirements, notice validation tasks, and check-mode stale-output handling for missing or changed notices. |
 
 ---
 
