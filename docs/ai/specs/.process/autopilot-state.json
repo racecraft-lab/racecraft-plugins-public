@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T20:28:00Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-17T20:35:04Z",
+  "active_step": "Phase 6: Analyze",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -147,11 +147,45 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "task_count": 30,
+      "phases": 6,
+      "parallel_opportunities": 4,
+      "story_tasks": {
+        "US1": 10,
+        "US2": 5,
+        "US3": 4,
+        "shared_setup": 5,
+        "verification": 6
+      },
+      "reviewability_task_gate": {
+        "status": "block",
+        "is_size_only": true,
+        "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json"
+      },
+      "atomicity_route": {
+        "route": "one-navigable-PR",
+        "releasable": true,
+        "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/atomicity-route.json"
+      },
+      "pr_marker_plan": {
+        "status": "planned",
+        "marker_count": 4,
+        "marker_ids": [
+          "foundation",
+          "us1",
+          "us3",
+          "us2"
+        ],
+        "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/pr-marker-plan.json"
+      },
+      "summary": "Created tasks.md with 30 tasks across 6 phases; G5 passed; task reviewability gate is a valid size-only block recorded as marker-planning input; atomicity route is one-navigable-PR."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -162,8 +196,126 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "pending"
+      "step": "Phase 7: foundation (T001-T005)",
+      "status": "pending",
+      "marker_id": "foundation",
+      "task_ids": [
+        "T001",
+        "T002",
+        "T003",
+        "T004",
+        "T005"
+      ],
+      "dependencies": [],
+      "tdd_protocol": "Report-only research spike; verify no behavior changes before checkpoint.",
+      "project_commands": {
+        "BUILD": "N/A",
+        "TYPECHECK": "N/A",
+        "LINT": "N/A",
+        "LINT_FIX": "N/A",
+        "UNIT_TEST": "N/A",
+        "INTEGRATION_TEST": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "FULL_VERIFY": "N/A"
+      },
+      "completed_tasks_context": "Phases 1-5 complete; G5 passed; marker plan current."
+    },
+    {
+      "step": "Phase 7: us1 Runtime-Surface Audit and Mechanics Evidence (T006-T015)",
+      "status": "pending",
+      "marker_id": "us1",
+      "task_ids": [
+        "T006",
+        "T007",
+        "T008",
+        "T009",
+        "T010",
+        "T011",
+        "T012",
+        "T013",
+        "T014",
+        "T015"
+      ],
+      "dependencies": [
+        "foundation"
+      ],
+      "tdd_protocol": "Report-only research spike; source/probe evidence must be cited and sanitized.",
+      "project_commands": {
+        "BUILD": "N/A",
+        "TYPECHECK": "N/A",
+        "LINT": "N/A",
+        "LINT_FIX": "N/A",
+        "UNIT_TEST": "N/A",
+        "INTEGRATION_TEST": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "FULL_VERIFY": "N/A"
+      },
+      "completed_tasks_context": "Foundation marker must complete first."
+    },
+    {
+      "step": "Phase 7: us3 Active-vs-Historical Allowlist Recommendation (T016-T019)",
+      "status": "pending",
+      "marker_id": "us3",
+      "task_ids": [
+        "T016",
+        "T017",
+        "T018",
+        "T019"
+      ],
+      "dependencies": [
+        "us1"
+      ],
+      "tdd_protocol": "Report-only research spike; categories must trace to audited findings.",
+      "project_commands": {
+        "BUILD": "N/A",
+        "TYPECHECK": "N/A",
+        "LINT": "N/A",
+        "LINT_FIX": "N/A",
+        "UNIT_TEST": "N/A",
+        "INTEGRATION_TEST": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "FULL_VERIFY": "N/A"
+      },
+      "completed_tasks_context": "Runtime audit evidence must exist first."
+    },
+    {
+      "step": "Phase 7: us2 Directive-Home Recommendation and Verification (T020-T030)",
+      "status": "pending",
+      "marker_id": "us2",
+      "task_ids": [
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024"
+      ],
+      "folded_polish_task_ids": [
+        "T025",
+        "T026",
+        "T027",
+        "T028",
+        "T029",
+        "T030"
+      ],
+      "dependencies": [
+        "us3"
+      ],
+      "tdd_protocol": "Report-only research spike; complete citation, sanitization, marker, and no-behavior-change verification before checkpoint.",
+      "project_commands": {
+        "BUILD": "N/A",
+        "TYPECHECK": "N/A",
+        "LINT": "N/A",
+        "LINT_FIX": "N/A",
+        "UNIT_TEST": "N/A",
+        "INTEGRATION_TEST": "N/A",
+        "SINGLE_FILE_TEST": "N/A",
+        "SINGLE_FILE_INTEGRATION": "N/A",
+        "FULL_VERIFY": "N/A"
+      },
+      "completed_tasks_context": "All prior markers complete before final recommendation and verification."
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -217,5 +369,313 @@
       "step": "Post: Retrospective",
       "status": "pending"
     }
-  ]
+  ],
+  "reviewability_task_gate": {
+    "mode": "tasks",
+    "status": "block",
+    "pass": false,
+    "feature_id": "tacd-001-platform-mechanics-spike",
+    "is_size_only": true,
+    "exit_code": 1,
+    "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json",
+    "reviewable_loc": 1200,
+    "production_files": 0,
+    "total_files": 71,
+    "primary_surface_count": 4,
+    "primary_surfaces": [
+      "docs/process",
+      "other",
+      "scheduler/runtime",
+      "seed/config"
+    ],
+    "greenfield": false,
+    "thresholds": {
+      "warn": {
+        "reviewable_loc": 400,
+        "production_files": 6,
+        "total_files": 15,
+        "primary_surfaces": 1
+      },
+      "block": {
+        "reviewable_loc": 800,
+        "production_files": 8,
+        "total_files": 25,
+        "primary_surfaces": 1
+      }
+    },
+    "exception_honored": false,
+    "exception_class": null,
+    "exceptions": {
+      "accepted": [],
+      "rejected": []
+    },
+    "warnings": [
+      "reviewable LOC 1200 exceeds warn threshold 400",
+      "total files 71 exceeds warn threshold 15",
+      "primary surfaces 4 exceeds warn threshold 1"
+    ],
+    "blockers": [
+      "reviewable LOC 1200 exceeds block threshold 800",
+      "total files 71 exceeds block threshold 25"
+    ]
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "tacd-001-platform-mechanics-spike",
+    "status": "planned",
+    "source_fingerprint": {
+      "feature_spec_sha": "60095a4164a9dbeb31976dbae7b74b8779a564b56cda3719da1b4b4d054c5bf0",
+      "plan_declared_scope_sha": "0edd38b6b7ddea5f87d8bc5a71e1a4ad92d0353725daf730426c5f7ce8537dc9",
+      "tasks_sha": "39e81869a480795f2848c9594c0b88bd76d78988c662d3b89ef4b16590640767",
+      "reviewability_sha": "8b26507768f4e74b3b3918e313e72afbb13b402704f6f1d7230d8c704e1915a0",
+      "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+    },
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "Foundation",
+          "story_id": null,
+          "start_task_id": "T001",
+          "end_task_id": "T005"
+        },
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/tacd-001-platform-mechanics-spike/plan.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/tacd-001-platform-mechanics-spike/spec.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "foundation",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Runtime-Surface Audit and Mechanics Evidence",
+          "story_id": 1,
+          "start_task_id": "T006",
+          "end_task_id": "T015"
+        },
+        "task_ids": [
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us1",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Active-vs-Historical Allowlist Recommendation",
+          "story_id": 3,
+          "start_task_id": "T016",
+          "end_task_id": "T019"
+        },
+        "task_ids": [
+          "T016",
+          "T017",
+          "T018",
+          "T019"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us3",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us2",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - Directive-Home Recommendation and TACD-002/TACD-003/TACD-004 Handoff",
+          "story_id": 2,
+          "start_task_id": "T020",
+          "end_task_id": "T024"
+        },
+        "task_ids": [
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024"
+        ],
+        "folded_polish_task_ids": [
+          "T025",
+          "T026",
+          "T027",
+          "T028",
+          "T029",
+          "T030"
+        ],
+        "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/research/tool-agnostic-capability-discovery-spike.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/tacd-001-platform-mechanics-spike/quickstart.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us2",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json"
+        }
+      }
+    ]
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "60095a4164a9dbeb31976dbae7b74b8779a564b56cda3719da1b4b4d054c5bf0",
+    "plan_declared_scope_sha": "0edd38b6b7ddea5f87d8bc5a71e1a4ad92d0353725daf730426c5f7ce8537dc9",
+    "tasks_sha": "39e81869a480795f2848c9594c0b88bd76d78988c662d3b89ef4b16590640767",
+    "reviewability_sha": "8b26507768f4e74b3b3918e313e72afbb13b402704f6f1d7230d8c704e1915a0",
+    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  }
 }

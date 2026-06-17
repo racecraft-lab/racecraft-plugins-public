@@ -43,8 +43,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Clarify | `/speckit-clarify` | Complete | Three clarify sessions resolved audit categories, probe evidence shape, sanitized appendix boundaries, and directive-home proof bar |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, and quickstart; contracts intentionally omitted |
 | Checklist | `/speckit-checklist` | Complete | Integration, LLM Integration, and Error Handling checklists complete with 0 remaining gaps |
-| Tasks | `/speckit-tasks` | In Progress | Starting task generation |
-| Analyze | `/speckit-analyze` | Pending | Check roadmap, PRD, design concept, spec, plan, tasks, and report contract consistency |
+| Tasks | `/speckit-tasks` | Complete | Created 30 tasks across 6 phases; G5 passed; marker plan created from size-only reviewability block |
+| Analyze | `/speckit-analyze` | In Progress | Check roadmap, PRD, design concept, spec, plan, tasks, and report contract consistency |
 | Implement | `/speckit-implement` | Pending | Produce the spike report and any appendix probe evidence only |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -416,10 +416,10 @@ Focus on TACD-001 requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Pending |
-| **Parallel Opportunities** | Pending |
-| **User Stories Covered** | Pending |
+| **Total Tasks** | 30 |
+| **Phases** | 6 |
+| **Parallel Opportunities** | 4 |
+| **User Stories Covered** | US1: 10 tasks; US2: 5 tasks; US3: 4 tasks; shared setup: 5; verification: 6 |
 
 ---
 
@@ -429,16 +429,32 @@ After Tasks/G5, autopilot records the atomicity route here:
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | Pending | `true`, or `false` for release-sensitive changes. |
-| **Signals** | Pending | Decisive detector findings behind the route. |
-| **Warnings** | Pending | Release-safety warnings, if any. |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| **Releasable** | `true` | `true`, or `false` for release-sensitive changes. |
+| **Signals** | `change-shape:modify-heavy` | Decisive detector findings behind the route. |
+| **Warnings** | None | Release-safety warnings, if any. |
 
 To produce the decision, run the classifier against the feature directory:
 
 ```bash
 bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/tacd-001-platform-mechanics-spike
 ```
+
+### PR Marker Plan
+
+| Field | Value |
+|-------|-------|
+| **Schema** | `pr-marker-plan.v1` |
+| **Status** | `planned` |
+| **Evidence** | `specs/tacd-001-platform-mechanics-spike/.process/marker-plan/pr-marker-plan.json` |
+| **Reviewability Input** | `specs/tacd-001-platform-mechanics-spike/.process/marker-plan/reviewability-task-gate.json` (`status=block`, `is_size_only=true`, exit code 1) |
+| **Atomicity Input** | `specs/tacd-001-platform-mechanics-spike/.process/marker-plan/atomicity-route.json` |
+| **Ordered Markers** | 1. `foundation` (`T001`-`T005`); 2. `us1` (`T006`-`T015`); 3. `us3` (`T016`-`T019`); 4. `us2` (`T020`-`T024`, folded polish `T025`-`T030`) |
+| **Warnings** | `reviewability_size_warning`: task gate block is marker-planning input |
+| **Checkpoints** | Pending |
+| **Final Marker Split** | Pending |
+| **Packet Validation** | Pending |
+| **PR Mappings** | Pending |
 
 ---
 
@@ -503,10 +519,10 @@ Follow tasks.md in order. Treat TACD-001 as a research spike:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Audit inventory | Pending | Pending | Pending |
-| 2 - Platform mechanics | Pending | Pending | Pending |
-| 3 - Allowlist and directive recommendation | Pending | Pending | Pending |
-| 4 - Handoff and verification | Pending | Pending | Pending |
+| `foundation` | `T001`-`T005` | Pending | Report skeleton, scope, confidence rubric, inventory command plan, and no-behavior-change guardrail |
+| `us1` | `T006`-`T015` | Pending | Claude Code and Codex runtime-surface audit and mechanics evidence |
+| `us3` | `T016`-`T019` | Pending | Active-vs-historical allowlist and TACD-004 recommendations |
+| `us2` | `T020`-`T030` | Pending | Directive-home recommendation, downstream handoff, verification, citation review, and no-behavior-change scope review |
 
 ---
 
