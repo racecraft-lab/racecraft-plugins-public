@@ -553,6 +553,7 @@ Follow tasks.md in order. Treat TACD-001 as a research spike:
 | Verify Tasks Phantom Check | Pass with warning | 30 completed tasks parsed; no phantom tasks; same upstream branch-name warning |
 | Code Review | Skipped | Review extension command not installed in `.specify/extensions/.registry` |
 | Integration Suite | Pass | `bash tests/speckit-pro/run-all.sh` -> `3009/3009 passed` |
+| Cleanup | Skipped | Cleanup extension command not installed in `.specify/extensions/.registry` |
 | Privacy Scan Fix | Pass | Removed local absolute home path from `autopilot-state.json`; `test-privacy-scan` and full suite pass |
 
 ---

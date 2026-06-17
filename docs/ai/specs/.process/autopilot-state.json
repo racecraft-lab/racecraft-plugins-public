@@ -9,8 +9,8 @@
     "specs/tacd-001-platform-mechanics-spike"
   ],
   "feature_branch": "tacd-001-platform-mechanics-spike",
-  "updated_at": "2026-06-17T21:09:13Z",
-  "active_step": "Post: Cleanup",
+  "updated_at": "2026-06-17T21:10:32Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -388,11 +388,12 @@
     },
     {
       "step": "Post: Cleanup",
-      "status": "in_progress"
+      "status": "skipped",
+      "reason": "cleanup extension command not installed"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Self-Review",
