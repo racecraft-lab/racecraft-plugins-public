@@ -9,8 +9,8 @@
     "specs/doc-007-command-workflow-manifest-and-file-layout-reference"
   ],
   "feature_branch": "doc-007-command-workflow-manifest-and-file-layout-reference",
-  "updated_at": "2026-06-17T19:33:51Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-06-17T19:46:19Z",
+  "active_step": "Post: Review Remediation",
   "status": "awaiting_review",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -91,7 +91,7 @@
     {"step": "Post: Self-Review", "status": "completed"},
     {"step": "Post: UAT Runbook Generation", "status": "completed"},
     {"step": "Post: PR Body Generation", "status": "completed"},
-    {"step": "Post: PR Creation", "status": "in_progress"},
+    {"step": "Post: PR Creation", "status": "completed"},
     {"step": "Post: Review Remediation", "status": "pending"},
     {"step": "Post: Retrospective", "status": "pending"}
   ]

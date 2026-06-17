@@ -586,6 +586,15 @@ Follow tasks.md in order. Use TDD or check-first implementation where practical:
 
 ---
 
+## PR Creation
+
+- Draft PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/208
+- Base: `main`
+- Head: `doc-007-command-workflow-manifest-and-file-layout-reference`
+- Reviewability: warn-only for size and surface count; no blockers.
+
+---
+
 ## Project Structure Reference
 
 ```text
