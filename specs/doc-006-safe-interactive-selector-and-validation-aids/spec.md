@@ -73,20 +73,35 @@ As a cautious first-run user, I can review a generated payload diagram and first
 - **FR-001**: The primary DOC-006 user-facing surface MUST be the existing choose-your-path docs route, not a separate docs route.
 - **FR-002**: The page MUST provide a platform and path selector for Claude Code and Codex guidance.
 - **FR-003**: The selector MUST include install-scope choices where a selected platform path supports more than one scope.
-- **FR-004**: Each selected path MUST display copyable command blocks with visible platform labels, install-scope labels, prerequisite notes, expected success signals, and next documentation links.
-- **FR-005**: The selected path guidance MUST keep Claude Code command guidance separate from Codex command guidance.
-- **FR-006**: Codex guidance MUST describe Codex skill invocation as Codex skill usage, not as Claude slash-command usage.
-- **FR-007**: Command and checker facts MUST be derived from checked-in repository JSON or manifest sources during docs content generation.
-- **FR-008**: The feature MUST NOT require or commit a persistent generated metadata file for selector or checker facts.
-- **FR-009**: The page MUST include a repository-only manifest and version checker that compares source repository marketplace or plugin values against generated payload marketplace or manifest values.
-- **FR-010**: The checker MUST explain the expected consistency rule for each compared value and show the values being compared.
+- **FR-004**: Each selected path MUST display copyable command blocks with visible platform labels, install-scope labels, prerequisite notes, platform-specific expected success signals, and next documentation links.
+- **FR-005**: The selected path guidance MUST keep Claude Code and Codex command records separate, so selected Claude guidance cannot render Codex skill invocations and selected Codex guidance cannot render Claude Code marketplace command guidance.
+- **FR-006**: Codex guidance MUST describe Codex skill invocation as Codex `$skill` usage, not as Claude slash-command usage.
+- **FR-007**: Manifest-backed selector and checker values MUST be read from checked-in repository JSON or manifest sources during docs content generation. Command templates, prerequisites, success signals, and handoff labels that are not present in those JSON or manifest files MAY be maintained as a small checked-in docs metadata source, but MUST use JSON-derived values for manifest-backed fields and MUST be covered by focused metadata/rendering validation.
+- **FR-008**: The feature MUST NOT parse install Markdown as a machine data source and MUST NOT require or commit a persistent generated metadata file for selector or checker facts.
+- **FR-009**: The page MUST include a repository-only manifest and version checker that compares source repository marketplace or plugin values against generated payload marketplace or manifest values from `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, `speckit-pro/.claude-plugin/plugin.json`, `speckit-pro/.codex-plugin/plugin.json`, `dist/claude/speckit-pro/.claude-plugin/plugin.json`, and `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
+- **FR-010**: The checker MUST explain the expected consistency rule for each compared value and show the values being compared. Equality checks MUST be limited to stable repository consistency fields such as plugin name, version, marketplace source/path, and source/dist counterpart presence; intentional platform packaging differences MUST be displayed as informational context rather than false mismatches.
 - **FR-011**: The checker MUST NOT accept pasted user JSON, inspect local user configuration, or diagnose user machine state.
 - **FR-012**: The page MUST include an accessible generated-payload diagram that distinguishes source tree, Claude distribution, Codex distribution, marketplace entries, and Codex cache as separate nodes.
-- **FR-013**: The page MUST include a first-run checklist with checkpoints for Spec Kit CLI, constitution, GitHub CLI, `jq`, branch or worktree state, platform install route, scaffold output, and docs validation.
-- **FR-014**: All selector, checker, diagram, and checklist aids MUST be keyboard usable and backed by semantic static fallback tables or equivalent static content.
+- **FR-013**: The page MUST include a compact first-run checklist with checkpoints for platform install route, Spec Kit CLI exists/version, constitution, roadmap or SPEC-ID selection, GitHub CLI, `jq`, branch or worktree and clean-state review, scaffold output artifacts, and docs validation evidence.
+- **FR-014**: All selector, checker, diagram, and checklist aids MUST be keyboard usable through native controls where possible and backed by semantic static fallback tables or equivalent static content.
 - **FR-015**: Browser behavior MUST NOT run shell commands, read local user files, write configuration, install plugins, or invoke local plugin workflows.
 - **FR-016**: Mismatch, unavailable, or caution states MUST provide lightweight troubleshooting handoffs to existing content or DOC-008-owned troubleshooting content without expanding into a full troubleshooting matrix.
-- **FR-017**: The feature MUST include focused validation for source-derived metadata and rendering behavior in addition to standard docs validation and link validation.
+- **FR-017**: The feature MUST include focused validation for source-derived metadata and rendering behavior in addition to standard docs validation and link validation, including at least one passing metadata state, one mismatch metadata state, one unavailable metadata state, command-surface leakage checks, no pasted-JSON/local-diagnostic UI, handoff links, first-run checkpoint coverage, and required-field coverage for every selector path.
+
+### Clarifications
+
+- **Command metadata source boundary**: For DOC-006, "source-derived" means manifest-backed values already present in checked-in marketplace or plugin JSON are read during docs content generation and interpolated into selector/checker output. Command sequences, prerequisites, success signals, and handoff labels that are not represented in those JSON manifests may live in a small checked-in docs metadata helper as curated documentation source, provided the helper uses or cross-checks JSON-derived variables for manifest-backed values, references the authoritative install handoff pages, and is covered by the focused metadata/rendering fixture. DOC-006 MUST NOT parse install Markdown as a data source and MUST NOT commit generated selector/checker metadata output.
+- **Metadata checker inputs**: The repository-only checker compares the six checked-in marketplace and plugin manifest files named in FR-009. It must never read installed cache files, user home-directory files, pasted JSON, or browser-local configuration.
+- **Checker comparison rules**: The checker equality-compares stable repository consistency fields such as plugin name, version, marketplace source/path, and source/dist counterpart presence. Fields that intentionally differ between source and distribution packaging, such as Codex `skills` path rewrites or platform-specific descriptions, should be shown as informational context with an explicit explanation instead of failing the checker.
+- **Mismatch and unavailable handoffs**: Mismatch, unavailable, and caution states should show the relevant repository consistency rule, the compared or unavailable values, and lightweight links for installers to platform install stale-update checkpoints or troubleshooting shell content, plus maintainer links to reference or contribute/release content. They must not become a symptom matrix, cache diagnosis, update procedure, rollback guide, or security/trust model.
+- **First-run checklist scope**: DOC-006 includes compact safe checkpoints for platform install route, Spec Kit CLI exists/version, constitution, roadmap or SPEC-ID, `gh`, `jq`, branch/worktree and clean-state review, scaffold output artifacts, and docs validation evidence. It should not mirror the full first-run tutorial or absorb DOC-008 troubleshooting/deeper failure diagnosis or DOC-010 broad accessibility, responsive, deep-link, and docs-CI hardening.
+- **Platform command boundaries**: Claude Code path records may show Claude Code marketplace and plugin commands such as `/plugin`, `/reload-plugins`, and `/speckit-pro:<skill>`. Codex path records may show Codex app or CLI guidance such as `codex`, `/plugins`, `@SpecKit Pro` install actions, `$install`, and `$speckit-*`. A selected path must not mix the other platform's selected command sequence into its copyable guidance.
+- **Expected success signals**: Claude Code command blocks should identify observable success signals such as marketplace added, plugin installed or reloaded, plugin visible in `/plugin`, and `/speckit-pro:speckit-status` responding where relevant. Codex command blocks should identify observable success signals such as marketplace/plugin visible, install skill report with copied TOML filenames or restart instruction, expected TOML destination contents, and a new thread loading `$speckit-*` skills.
+- **Static-first component shape**: DOC-006 may preserve the `choose-your-path` route by converting the content file to MDX and importing one small Astro component, provided the component renders complete static HTML and uses only minimal progressive enhancement for filtering or selection.
+- **Keyboard behavior**: Selector and checker controls should use native form or button behavior where possible. Tab and Shift+Tab must reach controls in reading order, Space or Enter must activate controls, focus must remain visible, and selected state must be visually distinct from focus.
+- **Semantic fallback content**: The selector fallback must visibly include every supported path with platform, scope, prerequisites, command label or sequence, success signal, and next link. Checker and diagram fallback tables or lists must include the same facts as any enhanced view; a `noscript`-only fallback is insufficient.
+- **Copy affordance boundary**: Copy buttons are optional progressive enhancement. If included, commands must remain visible/selectable in normal code blocks, copy controls must be native buttons, clipboard failure must have visible status, and raw commands must never be hidden behind JavaScript.
+- **Accessible payload diagram**: The generated-payload diagram should be a text-backed flow where source tree, Claude distribution, Codex distribution, marketplace entries, and Codex cache are real headings, list items, or table rows. Visual connectors may be decorative, but no information may depend on hover, drag, zoom, click, or pointer-only interaction.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -111,9 +126,9 @@ As a cautious first-run user, I can review a generated payload diagram and first
 
 ### Key Entities *(include if feature involves data)*
 
-- **Selector Path**: A supported platform and install-scope choice with labels, prerequisites, commands, success signals, and next docs links.
-- **Command Guidance**: A copyable command sequence with platform boundary metadata and expected user-visible outcome.
-- **Manifest Consistency Check**: A repository-scoped comparison between checked-in source values and generated payload values, including match or mismatch state.
+- **Selector Path**: A supported platform and install-scope choice with labels, prerequisites, commands, success signals, next docs links, and a platform discriminator that prevents Claude/Codex command leakage.
+- **Command Guidance**: A copyable command sequence with platform boundary metadata, curated command text, JSON-derived manifest-backed values where applicable, and expected user-visible outcome.
+- **Manifest Consistency Check**: A repository-scoped comparison between checked-in source values and generated payload values from the six declared marketplace and plugin manifest files, including match or mismatch state.
 - **Generated Payload Diagram Node**: A labeled static diagram node representing source tree, Claude distribution, Codex distribution, marketplace entries, or Codex cache.
 - **First-Run Checkpoint**: A safe readiness item users can review before running local commands.
 - **Troubleshooting Handoff**: A lightweight link or message that points users from mismatch or caution states to existing or DOC-008-owned troubleshooting material.
@@ -123,11 +138,11 @@ As a cautious first-run user, I can review a generated payload diagram and first
 ### Measurable Outcomes
 
 - **SC-001**: A first-time installer can identify the correct platform and install-scope path and locate the relevant command sequence within 60 seconds.
-- **SC-002**: 100% of supported selector paths display platform label, install-scope label where applicable, prerequisites, copyable commands, expected success signal, and next docs link.
+- **SC-002**: 100% of supported selector paths display platform label, install-scope label where applicable, prerequisites, copyable commands, platform-specific expected success signal, and next docs link.
 - **SC-003**: 100% of repository metadata comparisons show both compared values, a pass or mismatch state, and the expected consistency rule.
 - **SC-004**: The page remains usable with browser scripting disabled, including selector fallback content, checker comparison content, payload diagram content, and first-run checklist content.
 - **SC-005**: Keyboard-only users can reach and operate all interactive aids without losing context or encountering hidden required information.
-- **SC-006**: Focused validation detects at least one passing metadata/rendering fixture and at least one mismatch metadata/rendering fixture.
+- **SC-006**: Focused validation detects at least one passing metadata/rendering fixture, at least one mismatch metadata/rendering fixture, no selected-path leakage between Claude Code and Codex command surfaces, and required fields for every selector path.
 - **SC-007**: Standard docs validation and link validation pass for the choose-your-path page and its handoff links.
 
 ## Assumptions
@@ -136,5 +151,6 @@ As a cautious first-run user, I can review a generated payload diagram and first
 - Existing Claude Code, Codex, first-run, lifecycle, and generated payload docs remain the authoritative detailed handoff pages.
 - Checked-in source marketplace and plugin manifest files are available during docs content generation.
 - Generated payload marketplace and manifest files exist in the repository when the checker compares distribution metadata.
+- JSON and manifest files provide names, versions, paths, and consistency values, but they do not provide every command sequence, prerequisite, or success signal needed by the docs selector.
 - Selector and checker aids can use progressive enhancement, but the complete facts must also be present as semantic static content.
 - DOC-008 will own full troubleshooting, security and trust model, update, rollback, and cache-diagnosis content.

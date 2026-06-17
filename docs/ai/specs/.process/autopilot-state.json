@@ -9,8 +9,8 @@
     "specs/doc-006-safe-interactive-selector-and-validation-aids"
   ],
   "feature_branch": "doc-006-safe-interactive-selector-and-validation-aids",
-  "updated_at": "2026-06-17T02:46:27Z",
-  "active_step": "Phase 2: Clarify - Metadata derivation and command boundaries",
+  "updated_at": "2026-06-17T03:11:58Z",
+  "active_step": "Phase 3: Plan",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -72,19 +72,61 @@
         "specs/doc-006-safe-interactive-selector-and-validation-aids/spec.md",
         "specs/doc-006-safe-interactive-selector-and-validation-aids/checklists/requirements.md"
       ]
+    },
+    "clarify_session_1": {
+      "status": "completed",
+      "focus": "Metadata derivation and command boundaries",
+      "questions": 5,
+      "needs_clarification_markers": 0,
+      "consensus": {
+        "status": "completed",
+        "items": 1,
+        "round": 1,
+        "outcome": "both-agree",
+        "resolution": "Manifest-backed selector/checker values are read from checked-in JSON/manifests at build time; command templates, prerequisites, success signals, and handoff labels may live in a small checked-in docs metadata helper, with no install Markdown parsing and no persistent generated metadata output."
+      }
+    },
+    "clarify_session_2": {
+      "status": "completed",
+      "focus": "Interaction, fallback, and accessibility",
+      "questions": 5,
+      "needs_clarification_markers": 0,
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "no unresolved items"
+      }
+    },
+    "clarify_session_3": {
+      "status": "completed",
+      "focus": "Checker, checklist, and handoff boundaries",
+      "questions": 5,
+      "needs_clarification_markers": 0,
+      "consensus": {
+        "status": "completed",
+        "items": 0,
+        "outcome": "no unresolved items"
+      }
+    },
+    "clarify": {
+      "status": "completed",
+      "gate": "G2",
+      "needs_clarification_markers": 0,
+      "sessions": 3,
+      "consensus_items": 1
     }
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility", "status": "pending"},
-    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries", "status": "pending"},
-    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries", "status": "completed"},
+    {"step": "Phase 2: Clarify - Metadata derivation and command boundaries Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility", "status": "completed"},
+    {"step": "Phase 2: Clarify - Interaction, fallback, and accessibility Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries", "status": "completed"},
+    {"step": "Phase 2: Clarify - Checker, checklist, and handoff boundaries Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - UX", "status": "pending"},
     {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},

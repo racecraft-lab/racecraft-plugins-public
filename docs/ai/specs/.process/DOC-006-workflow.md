@@ -40,8 +40,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md` with 17 functional requirements, 3 user stories, 10 acceptance scenarios, and 0 clarification markers |
-| Clarify | `/speckit-clarify` | In Progress | Session 1 active; focus on metadata derivation, interaction fallback, checker boundaries, and validation fixture shape |
-| Plan | `/speckit-plan` | Pending | Plan Astro/Starlight docs-site changes, source JSON reads, no-browser-execution guarantees, and focused tests |
+| Clarify | `/speckit-clarify` | Complete | Completed 3 sessions; clarified metadata source boundary, interaction/fallback/accessibility, repository-only checker, handoffs, first-run checklist scope, and validation coverage |
+| Plan | `/speckit-plan` | In Progress | Plan Astro/Starlight docs-site changes, source JSON reads, no-browser-execution guarantees, and focused tests |
 | Checklist | `/speckit-checklist` | Pending | Run UX, accessibility, integration/source-data, and error-handling checklists |
 | Tasks | `/speckit-tasks` | Pending | Generate docs-first tasks by user story with source-derived metadata validation |
 | Analyze | `/speckit-analyze` | Pending | Check drift across PRD, roadmap, Design Concept, spec, plan, tasks, and validation scope |
@@ -295,9 +295,15 @@ Users can now read separate Claude Code, Codex, first-run, and lifecycle docs, b
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Metadata derivation and command boundaries | | |
-| 2 | Interaction, fallback, and accessibility | | |
-| 3 | Checker, checklist, and handoff boundaries | | |
+| 1 | Metadata derivation and command boundaries | 5 | Resolved checker input files, command metadata source boundary, platform command separation, expected success signals, and focused validation. Consensus confirmed that manifest-backed facts are read from JSON while command templates/success text may live in a small checked-in docs metadata helper. |
+| 2 | Interaction, fallback, and accessibility | 5 | Resolved route-preserving MDX/component shape, native keyboard behavior, visible fallback table/list requirements, progressive copy-button boundary, and text-backed payload diagram requirements. No consensus was needed. |
+| 3 | Checker, checklist, and handoff boundaries | 5 | Resolved repository-only checker scope, stable equality-check fields versus informational packaging differences, lightweight mismatch/unavailable handoffs, first-run checklist ownership, and focused validation coverage. No consensus was needed. |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | What counts as command metadata derived from source when command sequences are not fully present in JSON manifests? | [codebase, spec] | 1 | both-agree | Clarified that manifest-backed values are read from checked-in JSON/manifests at build time, while command templates, prerequisites, success signals, and handoff labels may live in a small checked-in docs metadata helper covered by focused validation; no Markdown parsing or generated metadata output. | codebase-analyst, spec-context-analyst |
 
 ---
 
