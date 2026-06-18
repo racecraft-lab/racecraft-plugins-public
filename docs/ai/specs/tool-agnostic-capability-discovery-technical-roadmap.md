@@ -7,7 +7,7 @@ This document defines the **SPEC catalog** for Tool-Agnostic Capability Discover
 **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
 **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 **Spec ID prefix:** `TACD-###`
-**Branch:** one branch per TACD spec; TACD-001 completed the platform-mechanics spike stack
+**Branch:** one branch per TACD spec; TACD-001 completed and archived the platform-mechanics spike stack
 **Tracker:** N/A
 
 ---
@@ -75,8 +75,8 @@ FEATURE COMPLETE
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Spike report complete; use its directive-home and allowlist recommendations to scaffold TACD-002 |
-| TACD-002 | Capability Discovery Directive and Agent Updates | Pending | [TACD-002-workflow.md](TACD-002-workflow.md) | Ready after TACD-001 stack lands |
+| TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
+| TACD-002 | Capability Discovery Directive and Agent Updates | Pending | [TACD-002-workflow.md](TACD-002-workflow.md) | Ready to scaffold from the archived TACD-001 spike report |
 | TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Blocked by TACD-002 |
 | TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Blocked by TACD-003 |
 
@@ -89,6 +89,8 @@ FEATURE COMPLETE
 ### TACD-001: Platform Mechanics Spike
 
 **Priority:** P1 | **Depends On:** None | **Enables:** TACD-002, TACD-003, TACD-004
+
+**Status:** Complete and archived after PRs #211-#214 merged the spike stack and PR #216 adopted the spike decisions into the PRD and roadmap.
 
 **Goal:** Verify how Claude and Codex agents can discover and use installed tools, MCP/app connectors, skills/plugins, and repo-local helpers without hardcoding a vendor-specific MCP list.
 
@@ -114,6 +116,7 @@ Budget result: within budget (research spike; LOC sizing not applicable)
 - **Spike-first decision (2026-06-17):** The PRD starts with this spike because Claude and Codex expose agent/tool configuration differently, and directive validation must be proven before behavior edits.
 - **Directive-home decision (TACD-001):** Use a shared capability-discovery reference with runtime-specific pointers and approved equivalents. TACD-004 must prove static pointer coverage, target resolution, and behavior-observable eval scenarios.
 - **Allowlist decision (TACD-001):** Enforce active guidance by category: active runtime guidance is blocked after TACD-002, prerequisite/user-facing messaging is blocked after TACD-003, deterministic/eval expectations are blocked after TACD-004, and historical/provenance or generated source-derived duplicates may remain when clearly classified.
+- **Archive decision (2026-06-18):** The active spec folder was removed after post-merge provenance was recorded. The canonical decision record is `docs/ai/research/tool-agnostic-capability-discovery-spike.md`, and raw spec artifacts remain recoverable through `.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md`.
 
 **Key Files:**
 - `docs/ai/research/tool-agnostic-capability-discovery-spike.md` - spike report and decision record.
@@ -286,5 +289,7 @@ When breaking this feature into specs:
 - **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
 - **Design concept:** [tool-agnostic-capability-discovery-design-concept.md](tool-agnostic-capability-discovery-design-concept.md)
 - **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
+- **TACD-001 spike report:** [../research/tool-agnostic-capability-discovery-spike.md](../research/tool-agnostic-capability-discovery-spike.md)
+- **TACD-001 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md)
 - **Constitution:** [.specify/memory/constitution.md](../../../.specify/memory/constitution.md)
 - **Project Standards:** [AGENTS.md](../../../AGENTS.md), [CLAUDE.md](../../../CLAUDE.md)
