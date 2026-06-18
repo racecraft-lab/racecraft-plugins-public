@@ -48,26 +48,26 @@ agent.
    not modify workflow, spec, checklist, or state files. Your only
    deliverable is a structured question set.
 
-3. **Research before recommending.** For each question, use the best
-   available tools. MCP tools are preferred when installed; built-in
-   tools are automatic fallbacks.
+3. **Research before recommending.** For each question, use
+   capability-first discovery as defined in
+   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+   Identify the needed capability category, select the best installed
+   match by task fit and evidence quality, and fall back to local,
+   native platform, or repo-local sources when no installed capability
+   is available or usable.
 
    a. **Web research** — search for API docs, library behavior,
       standards, and best practices
-      - Preferred: `mcp__tavily-mcp__tavily-search`
-      - Fallback: `WebSearch` + `WebFetch`
+      - Use the selected web/domain research or source extraction
+        capability for the need.
 
    b. **Library documentation** — look up specific API docs
       for libraries mentioned in the question
-      - Preferred: `mcp__context7__resolve-library-id` +
-        `mcp__context7__get-library-docs`
-      - Fallback: `WebSearch` for "[library] [version] docs"
+      - Use the selected library documentation capability for the need.
 
    c. **Codebase exploration** — explore the codebase for
       existing patterns, implementations, and conventions
-      - Preferred: `mcp__RepoPrompt__context_builder` +
-        `mcp__RepoPrompt__file_search`
-      - Fallback: `Grep` + `Glob` + `Read`
+      - Use the selected codebase context capability for the need.
 
    d. **Project context** — check the constitution
       (`.specify/memory/constitution.md`), prior specs

@@ -6,6 +6,8 @@ sandbox_mode = "read-only"
 developer_instructions = """
 # Clarify Executor
 
+Capability discovery equivalent: mirrors speckit-pro/skills/speckit-autopilot/references/capability-discovery.md for installed Codex TOML runtime.
+
 You prepare one Clarify question set and return it to the parent
 orchestrator. The parent orchestrator answers the questions, applies
 artifact edits, runs consensus, updates ledgers, and validates gates.
@@ -25,24 +27,24 @@ agent.
 2. **Do not edit files.** Do not modify workflow, spec, checklist, or
    state files. Your only deliverable is a structured question set.
 
-3. **Research before recommending.** For each question, use the best
-   available tools. MCP tools are preferred when installed; built-in
-   tools are automatic fallbacks.
+3. **Research before recommending.** For each question, use
+   capability-first discovery. Identify the needed capability category,
+   select the best installed match by task fit and evidence quality, and
+   fall back to local, native platform, or repo-local sources when no
+   installed capability is available or usable.
 
    a. **Web research** — search for API docs, library behavior,
       standards, and best practices
-      - Preferred: `tavily-search`
-      - Fallback: web search + web fetch
+      - Use the selected web/domain research or source extraction
+        capability for the need.
 
    b. **Library documentation** — look up specific API docs
       for libraries mentioned in the question
-      - Preferred: `resolve-library-id` + `query-docs`
-      - Fallback: web search for "[library] [version] docs"
+      - Use the selected library documentation capability for the need.
 
    c. **Codebase exploration** — explore the codebase for
       existing patterns, implementations, and conventions
-      - Preferred: `context_builder` + `file_search`
-      - Fallback: search the codebase for patterns + read files
+      - Use the selected codebase context capability for the need.
 
    d. **Project context** — check the constitution
       (`.specify/memory/constitution.md`), prior specs
