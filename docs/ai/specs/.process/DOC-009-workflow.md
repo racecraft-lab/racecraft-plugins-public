@@ -527,6 +527,8 @@ Consensus escalation was not required for Analyze.
 - Risk assessment: 1.00
 - Completeness: 0.95
 
+Confidence gate result: passed in advisory mode with threshold 0.90; recommended action `proceed`.
+
 ---
 
 ## Phase 7: Implement
