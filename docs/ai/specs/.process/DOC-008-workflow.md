@@ -44,7 +44,7 @@ policy, one-slice decision, and validation scope.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `$speckit-specify` | Pending | Create DOC-008 spec from roadmap plus design concept |
+| Specify | `$speckit-specify` | Complete | Created `spec.md`; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Pending | Resolve route slug, source-link policy, row taxonomy, and update/rollback boundaries |
 | Plan | `$speckit-plan` | Pending | Plan docs-site Markdown/MDX changes only; no plugin behavior changes |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: UX, security, error handling, accessibility |
@@ -247,13 +247,13 @@ It must stay docs-only and source-backed.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 17 |
+| User Stories | 3 |
+| Acceptance Criteria | 9 |
 
 ### Files Generated
 
-- [ ] `specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md`
+- [x] `specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md`
 
 ---
 
