@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-007 completed and archived after PR #208; DOC-008 and DOC-009 are ready for scaffold. Created 2026-06-12; refreshed 2026-06-17.
+> Status: DOC-008 scaffolded and in progress; DOC-009 remains ready for scaffold. Created 2026-06-12; refreshed 2026-06-18.
 
 ## Roadmap Overview
 
@@ -62,7 +62,7 @@ DOC-007 -> DOC-008
 | DOC-005 | First successful workflow tutorial | Completed/archived | DOC-005-workflow.md | Archived after PRs #198-#201 |
 | DOC-006 | Safe interactive selector and validation aids | Completed/archived | `.process/DOC-006-workflow.md` | Archived after PR #203 |
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Completed/archived | `.process/DOC-007-workflow.md` | Archived after PR #208 |
-| DOC-008 | Troubleshooting, security, trust, update, rollback | Ready | DOC-008-workflow.md | Ready for scaffold after DOC-007 |
+| DOC-008 | Troubleshooting, security, trust, update, rollback | In Progress | `.process/DOC-008-workflow.md` | Scaffolded; run autopilot |
 | DOC-009 | Maintainer and contributor release workflow | Ready | DOC-009-workflow.md | Ready for scaffold after DOC-007 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Unblocked by completed DOC-002 and DOC-006; sequence after DOC-007/DOC-008/DOC-009 content |
 
@@ -285,7 +285,7 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-003, DOC-004, DOC-007 | **Enables:** DOC-010
 
-**Status:** Ready for scaffold after DOC-007 completed in PR #208.
+**Status:** Scaffolded and in progress on branch `doc-008-troubleshooting-security-trust-update-rollback`.
 
 **Goal:** Help users diagnose failures and evaluate plugin trust boundaries.
 
