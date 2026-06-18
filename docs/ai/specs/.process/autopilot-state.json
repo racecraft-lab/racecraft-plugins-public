@@ -10,8 +10,8 @@
   ],
   "feature_branch": "doc-009-maintainer-contributor-release-workflow",
   "updated_at": "2026-06-18T02:42:08Z",
-  "active_step": "Post: PR Creation",
-  "status": "in_progress",
+  "active_step": "Post: Retrospective",
+  "status": "completed",
   "confidence_gate_mode": "advisory",
   "execution_notes": {
     "agent_runner_fallback": "Phase 3 Plan was executed locally after RepoPrompt agent transport returned Transport closed for list, bind, and agent-management calls. Required phase prompt, setup script, gate validation, and artifact updates were still followed."
@@ -289,15 +289,23 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed",
+      "pr": {
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/219",
+        "draft": true,
+        "title": "docs(DOC-009): document maintainer contributor release workflow"
+      }
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No review feedback existed at PR creation time."
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed",
+      "report": "specs/doc-009-maintainer-contributor-release-workflow/retrospective.md",
+      "summary": "Retrospective report records 100% completion, 100% spec adherence, and zero critical findings."
     }
   ]
 }
