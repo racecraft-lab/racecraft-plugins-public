@@ -40,8 +40,8 @@ scope decisions captured during setup.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Produce `specs/doc-009-maintainer-contributor-release-workflow/spec.md` |
-| Clarify | `/speckit-clarify` | Pending | Resolve docs-page structure and validation boundaries |
+| Specify | `/speckit-specify` | Complete | Created `specs/doc-009-maintainer-contributor-release-workflow/spec.md`; G1 passed with zero clarification markers |
+| Clarify | `/speckit-clarify` | In Progress | Resolving docs-page structure and validation boundaries |
 | Plan | `/speckit-plan` | Pending | Produce implementation plan and reviewability budget |
 | Checklist | `/speckit-checklist` | Pending | Run documentation, release-process, and validation checks |
 | Tasks | `/speckit-tasks` | Pending | Produce ordered, reviewable implementation tasks |
@@ -77,7 +77,7 @@ and repository guidance in `AGENTS.md` and `CLAUDE.md`.
 | Verifiable success criteria | Tie every docs claim to a command or checked-in source file | Source links plus validation commands |
 | Public-readable PRs | Use Conventional Commit titles and plain-English PR bodies | PR title/body review |
 
-**Constitution Check:** mark pass/fail before proceeding to G1.
+**Constitution Check:** Verified during autopilot preflight and Specify; DOC-009 remains docs-only and source-backed.
 
 ---
 
@@ -186,13 +186,14 @@ CI behavior, release-please, and PR conventions.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Track AC-9.1 through AC-9.6 |
-| User Stories | At least contributor path, maintainer readiness, reviewer verification, docs-CI handoff |
-| Acceptance Criteria | Six PRD criteria |
+| Functional Requirements | 15 requirements covering AC-9.1 through AC-9.6 |
+| User Stories | 4 stories: contributor path, maintainer readiness, reviewer verification, docs-CI handoff |
+| Acceptance Criteria | Six PRD criteria plus 8 acceptance scenarios |
+| G1 Gate | Passed: `spec.md` exists with 0 `[NEEDS CLARIFICATION]` markers |
 
 ### Files Generated
 
-- `specs/doc-009-maintainer-contributor-release-workflow/spec.md`
+- `specs/doc-009-maintainer-contributor-release-workflow/spec.md` - created
 
 ### SpecKit Traceability Markers
 
@@ -579,4 +580,3 @@ racecraft-plugins-public/
 ---
 
 Template based on SpecKit best practices and populated for DOC-009.
-
