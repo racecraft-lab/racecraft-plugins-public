@@ -20,10 +20,10 @@
 
 **Purpose**: Confirm the current route shell, source evidence, and reviewability boundaries before editing the public page.
 
-- [ ] T001 [P] Review the existing DOC-002 shell and target route in `docs-site/src/content/docs/contribute-and-release.md`.
-- [ ] T002 [P] Review generated reference contract and target links in `docs-site/scripts/generate-reference-pages.mjs` and `docs-site/src/content/docs/reference/{source-vs-dist,scripts,tests,manifests}.md`.
-- [ ] T003 [P] Review release and validation source files: `.github/workflows/pr-checks.yml`, `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json`, `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`, `tests/speckit-pro/run-all.sh`, and `docs-site/package.json`.
-- [ ] T004 Verify reviewability boundaries from `specs/doc-009-maintainer-contributor-release-workflow/plan.md` before editing: no CI workflow, release automation, script, manifest, generated payload, marketplace registry, or version-field changes.
+- [x] T001 [P] Review the existing DOC-002 shell and target route in `docs-site/src/content/docs/contribute-and-release.md`.
+- [x] T002 [P] Review generated reference contract and target links in `docs-site/scripts/generate-reference-pages.mjs` and `docs-site/src/content/docs/reference/{source-vs-dist,scripts,tests,manifests}.md`.
+- [x] T003 [P] Review release and validation source files: `.github/workflows/pr-checks.yml`, `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json`, `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`, `tests/speckit-pro/run-all.sh`, and `docs-site/package.json`.
+- [x] T004 Verify reviewability boundaries from `specs/doc-009-maintainer-contributor-release-workflow/plan.md` before editing: no CI workflow, release automation, script, manifest, generated payload, marketplace registry, or version-field changes.
 
 **Checkpoint**: Source facts are verified and the public docs edit can begin.
 
@@ -35,10 +35,10 @@
 
 **Independent Test**: Review the page with one example from each change type and confirm the reader can identify source surface, generated/synchronized surface, required checks, and PR evidence.
 
-- [ ] T005 [US1] Replace the DOC-002 shell intro in `docs-site/src/content/docs/contribute-and-release.md` with DOC-009 purpose, audience, and route ownership context.
-- [ ] T006 [US1] Add a source-of-truth map to `docs-site/src/content/docs/contribute-and-release.md` covering authoring source, generated payloads, marketplace registries, release scripts, tests, docs-site files, and generated reference pages.
-- [ ] T007 [US1] Add the change-type decision matrix to `docs-site/src/content/docs/contribute-and-release.md` for docs-only, plugin source, generated payload/dist, marketplace registry, and release automation changes.
-- [ ] T008 [US1] Add source-vs-generated guidance to `docs-site/src/content/docs/contribute-and-release.md`, including when generated payloads and generated reference pages should not be hand-edited.
+- [x] T005 [US1] Replace the DOC-002 shell intro in `docs-site/src/content/docs/contribute-and-release.md` with DOC-009 purpose, audience, and route ownership context.
+- [x] T006 [US1] Add a source-of-truth map to `docs-site/src/content/docs/contribute-and-release.md` covering authoring source, generated payloads, marketplace registries, release scripts, tests, docs-site files, and generated reference pages.
+- [x] T007 [US1] Add the change-type decision matrix to `docs-site/src/content/docs/contribute-and-release.md` for docs-only, plugin source, generated payload/dist, marketplace registry, and release automation changes.
+- [x] T008 [US1] Add source-vs-generated guidance to `docs-site/src/content/docs/contribute-and-release.md`, including when generated payloads and generated reference pages should not be hand-edited.
 
 **Checkpoint**: US1 can be reviewed independently against AC-9.1.
 
@@ -50,11 +50,11 @@
 
 **Independent Test**: Apply the checklist to a hypothetical plugin source PR and a docs-site PR and confirm all required parity and validation evidence is present.
 
-- [ ] T009 [US2] Add one consolidated release-readiness command block to `docs-site/src/content/docs/contribute-and-release.md` with `bash scripts/build-plugin-payloads.sh`, `bash scripts/sync-marketplace-versions.sh`, `bash tests/speckit-pro/run-all.sh`, `pnpm --dir docs-site reference:check`, and `pnpm --dir docs-site validate`.
-- [ ] T010 [US2] Add payload rebuild and marketplace sync guidance to `docs-site/src/content/docs/contribute-and-release.md` sourced from `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`, and generated reference links.
-- [ ] T011 [US2] Add version-field ownership guidance to `docs-site/src/content/docs/contribute-and-release.md` covering release-please-owned source manifests, generated payload manifests, and synchronized marketplace versions.
-- [ ] T012 [US2] Add observable release automation flow to `docs-site/src/content/docs/contribute-and-release.md` covering release-please PRs, release PR payload sync, manual PR Checks dispatch, GitHub Release publication, and post-release sync PR behavior.
-- [ ] T013 [US2] Add the final release-readiness checklist to `docs-site/src/content/docs/contribute-and-release.md` covering source/dist parity, Claude/Codex marketplace parity, manifest version consistency, generated payload validation, full shell suite, and docs-site validation when relevant.
+- [x] T009 [US2] Add one consolidated release-readiness command block to `docs-site/src/content/docs/contribute-and-release.md` with `bash scripts/build-plugin-payloads.sh`, `bash scripts/sync-marketplace-versions.sh`, `bash tests/speckit-pro/run-all.sh`, `pnpm --dir docs-site reference:check`, and `pnpm --dir docs-site validate`.
+- [x] T010 [US2] Add payload rebuild and marketplace sync guidance to `docs-site/src/content/docs/contribute-and-release.md` sourced from `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`, and generated reference links.
+- [x] T011 [US2] Add version-field ownership guidance to `docs-site/src/content/docs/contribute-and-release.md` covering release-please-owned source manifests, generated payload manifests, and synchronized marketplace versions.
+- [x] T012 [US2] Add observable release automation flow to `docs-site/src/content/docs/contribute-and-release.md` covering release-please PRs, release PR payload sync, manual PR Checks dispatch, GitHub Release publication, and post-release sync PR behavior.
+- [x] T013 [US2] Add the final release-readiness checklist to `docs-site/src/content/docs/contribute-and-release.md` covering source/dist parity, Claude/Codex marketplace parity, manifest version consistency, generated payload validation, full shell suite, and docs-site validation when relevant.
 
 **Checkpoint**: US2 can be reviewed independently against AC-9.2, AC-9.3, and AC-9.4.
 
@@ -66,8 +66,8 @@
 
 **Independent Test**: Compare sample PR titles and bodies against the page guidance and confirm invalid titles, internal-only descriptions, and missing evidence are caught.
 
-- [ ] T014 [US3] Add contributor PR preparation guidance to `docs-site/src/content/docs/contribute-and-release.md` covering smallest source surface, Conventional Commit title, public-readable body, and validation evidence.
-- [ ] T015 [US3] Add reviewer evidence guidance to `docs-site/src/content/docs/contribute-and-release.md` covering what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, and rollback/flag notes.
+- [x] T014 [US3] Add contributor PR preparation guidance to `docs-site/src/content/docs/contribute-and-release.md` covering smallest source surface, Conventional Commit title, public-readable body, and validation evidence.
+- [x] T015 [US3] Add reviewer evidence guidance to `docs-site/src/content/docs/contribute-and-release.md` covering what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, and rollback/flag notes.
 
 **Checkpoint**: US3 can be reviewed independently against AC-9.5.
 
@@ -79,8 +79,8 @@
 
 **Independent Test**: Read the docs-only section and confirm it explains current PR Checks behavior, docs-site validation expectations, and the DOC-010 boundary without promising future CI.
 
-- [ ] T016 [US4] Add current PR Checks behavior to `docs-site/src/content/docs/contribute-and-release.md`, including changed-plugin detection, skipped plugin matrix behavior, `validate-plugins`, and `validate-pr-title`.
-- [ ] T017 [US4] Add docs-site validation and DOC-010 handoff language to `docs-site/src/content/docs/contribute-and-release.md` covering local validation, current CI boundaries, and future site build, search, accessibility, deep-link, responsive, manifest/payload consistency, and safe command-snippet validation.
+- [x] T016 [US4] Add current PR Checks behavior to `docs-site/src/content/docs/contribute-and-release.md`, including changed-plugin detection, skipped plugin matrix behavior, `validate-plugins`, and `validate-pr-title`.
+- [x] T017 [US4] Add docs-site validation and DOC-010 handoff language to `docs-site/src/content/docs/contribute-and-release.md` covering local validation, current CI boundaries, and future site build, search, accessibility, deep-link, responsive, manifest/payload consistency, and safe command-snippet validation.
 
 **Checkpoint**: US4 can be reviewed independently against AC-9.6.
 
@@ -90,12 +90,12 @@
 
 **Purpose**: Validate the page, confirm traceability, and prepare review evidence.
 
-- [ ] T018 [P] Run `pnpm --dir docs-site reference:check` and record the result in `docs/ai/specs/.process/DOC-009-workflow.md`.
-- [ ] T019 Run `pnpm --dir docs-site validate` and record the result in `docs/ai/specs/.process/DOC-009-workflow.md`.
-- [ ] T020 Run `bash tests/speckit-pro/run-all.sh` and record the result in `docs/ai/specs/.process/DOC-009-workflow.md`.
-- [ ] T021 Review `docs-site/src/content/docs/contribute-and-release.md` against AC-9.1 through AC-9.6 and record traceability notes in `docs/ai/specs/.process/DOC-009-workflow.md`.
-- [ ] T022 Update task completion checkboxes in `specs/doc-009-maintainer-contributor-release-workflow/tasks.md` after implementation and validation.
-- [ ] T023 Generate or update PR review packet evidence from `docs/ai/specs/.process/DOC-009-workflow.md`, `specs/doc-009-maintainer-contributor-release-workflow/spec.md`, and `specs/doc-009-maintainer-contributor-release-workflow/plan.md`.
+- [x] T018 [P] Run `pnpm --dir docs-site reference:check` and record the result in `docs/ai/specs/.process/DOC-009-workflow.md`.
+- [x] T019 Run `pnpm --dir docs-site validate` and record the result in `docs/ai/specs/.process/DOC-009-workflow.md`.
+- [x] T020 Run `bash tests/speckit-pro/run-all.sh` and record the result in `docs/ai/specs/.process/DOC-009-workflow.md`.
+- [x] T021 Review `docs-site/src/content/docs/contribute-and-release.md` against AC-9.1 through AC-9.6 and record traceability notes in `docs/ai/specs/.process/DOC-009-workflow.md`.
+- [x] T022 Update task completion checkboxes in `specs/doc-009-maintainer-contributor-release-workflow/tasks.md` after implementation and validation.
+- [x] T023 Generate or update PR review packet evidence from `docs/ai/specs/.process/DOC-009-workflow.md`, `specs/doc-009-maintainer-contributor-release-workflow/spec.md`, and `specs/doc-009-maintainer-contributor-release-workflow/plan.md`.
 
 ---
 

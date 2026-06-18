@@ -45,8 +45,8 @@ scope decisions captured during setup.
 | Plan | `/speckit-plan` | Complete | Created `plan.md`, `research.md`, and `quickstart.md`; G3 passed with projected production LOC 0 |
 | Checklist | `/speckit-checklist` | Complete | Four domain checklists completed; G4 passed with zero gap markers |
 | Tasks | `/speckit-tasks` | Complete | Generated 23 story-sliced tasks; G5 passed |
-| Analyze | `/speckit-analyze` | In Progress | Check consistency across spec, plan, tasks, and design concept |
-| Implement | `/speckit-implement` | Pending | Implement docs changes with focused verification |
+| Analyze | `/speckit-analyze` | Complete | G6 passed with zero findings |
+| Implement | `/speckit-implement` | Complete | Implemented docs-only route update; G7 validation passed |
 
 ### Phase Gates
 
@@ -569,11 +569,40 @@ Verification:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Source-fact audit | Pending | No | |
-| Page structure | Pending | No | |
-| Contributor flow | Pending | No | |
-| Maintainer flow | Pending | No | |
-| Validation and polish | Pending | No | |
+| Source-fact audit | T001-T004 | Yes | Rechecked existing route shell, generated reference contract, release/validation source files, and docs-only reviewability boundary. |
+| Page structure | T005-T008 | Yes | Replaced the DOC-002 shell with DOC-009 purpose, source-of-truth map, change-type matrix, and source-vs-generated guidance. |
+| Contributor flow | T014-T015 | Yes | Added smallest-source-surface guidance, Conventional Commit title expectations, public-readable PR body guidance, and reviewer evidence expectations. |
+| Maintainer flow | T009-T013 | Yes | Added release-readiness command block, payload rebuild and marketplace sync guidance, version-field ownership, release automation flow, and final checklist. |
+| Validation and polish | T016-T023 | Yes | Added current PR Checks behavior and DOC-010 handoff, then completed validation, traceability review, tasks, and PR packet evidence. |
+
+### Implementation Evidence
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| Reviewability boundary | Pass | Only `docs-site/src/content/docs/contribute-and-release.md` changes implementation content; no CI, release automation, script, manifest, payload, marketplace, or version-field edits. |
+| `git diff --check` | Pass | No whitespace errors. |
+| `pnpm --dir docs-site reference:check` | Pass | `Reference pages are current.` |
+| `pnpm --dir docs-site validate` | Pass | Ran `reference:check`, `astro check`, `astro build`, and internal link validation with 0 errors. |
+| `bash tests/speckit-pro/run-all.sh` | Pass | `speckit-pro test suite: 3041/3041 passed` across Layers 1, 4, and 5. |
+
+### Acceptance Criteria Traceability
+
+| Criterion | Implemented Evidence |
+|-----------|----------------------|
+| AC-9.1 | Change Type Matrix lists docs-only, docs-site, plugin source, generated payload/dist, marketplace registry, and release automation lanes with required evidence. |
+| AC-9.2 | Maintainer Release Readiness explains `build-plugin-payloads.sh`, `sync-marketplace-versions.sh`, `run-all.sh`, `reference:check`, and `docs-site validate`. |
+| AC-9.3 | Version Fields defines release-please-owned source manifests, generated dist manifests, marketplace sync ownership, and rare manual override cases. |
+| AC-9.4 | Final Checklist covers source/dist parity, Claude/Codex marketplace parity, manifest version consistency, generated payload validation, full suite, and docs-site validation. |
+| AC-9.5 | Contributor Path documents Conventional Commit titles, public-readable PR bodies, validation evidence, non-goals, known gaps, and rollback notes. |
+| AC-9.6 | Current PR Checks Behavior explains docs-only plugin-matrix skip behavior, sentinel/title checks, local docs-site validation, and DOC-010 CI hardening handoff. |
+
+### PR Packet Evidence
+
+- **Summary:** Deepened `/contribute-and-release` from a DOC-002 placeholder shell into the DOC-009 maintainer/contributor release workflow.
+- **Affected paths:** `docs-site/src/content/docs/contribute-and-release.md`, `specs/doc-009-maintainer-contributor-release-workflow/tasks.md`, and this workflow evidence file.
+- **Validation:** `git diff --check`; `pnpm --dir docs-site reference:check`; `pnpm --dir docs-site validate`; `bash tests/speckit-pro/run-all.sh`.
+- **Scope notes:** Docs-only implementation. No CI, release automation, scripts, manifests, generated payloads, marketplace registries, or version fields changed.
+- **Recommended PR title:** `docs(DOC-009): document maintainer contributor release workflow`
 
 ---
 
@@ -588,6 +617,22 @@ Verification:
 - `bash tests/speckit-pro/run-all.sh` passes.
 - The PR title uses Conventional Commit format and plain English.
 - The PR body lists affected paths and validation commands.
+
+### Post-Implementation Evidence
+
+| Item | Result | Evidence |
+|------|--------|----------|
+| Doctor Extension Check | Complete | Fallback parent-session health check passed: templates present, Claude commands registered, scripts executable, constitution present, and feature artifacts present. |
+| Verify Implementation | Complete | Verified 23/23 tasks complete, 15/15 functional requirements covered, and no constitution or scope-boundary findings. |
+| Verify Tasks Phantom Check | Complete | `specs/doc-009-maintainer-contributor-release-workflow/verify-tasks-report.md` records 23 VERIFIED tasks and no flagged items. |
+| Code Review | Skipped | Review extension is not installed in `.specify/extensions/.registry` and no review command surface exists under `.claude/commands`. |
+| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed with `3041/3041`. |
+| Cleanup | Skipped | Cleanup extension is not installed in `.specify/extensions/.registry`; no cleanup command surface exists. |
+| Retrospective | Complete | `specs/doc-009-maintainer-contributor-release-workflow/retrospective.md` records 100% completion, 100% spec adherence, and zero critical findings. |
+
+Note: post-extension subagent dispatch was attempted after G7, but the agent
+threads were shut down before returning usable summaries. The post checks above
+were completed in the parent session as a fallback and are recorded explicitly.
 
 ---
 

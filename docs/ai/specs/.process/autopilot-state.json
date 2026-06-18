@@ -9,8 +9,8 @@
     "specs/doc-009-maintainer-contributor-release-workflow"
   ],
   "feature_branch": "doc-009-maintainer-contributor-release-workflow",
-  "updated_at": "2026-06-18T02:31:40Z",
-  "active_step": "Phase 7: Implement",
+  "updated_at": "2026-06-18T02:42:08Z",
+  "active_step": "Post: Final Reviewability Backstop",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "execution_notes": {
@@ -227,32 +227,42 @@
       "summary": "Confidence gate passed with composite 0.96 against threshold 0.90."
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "in_progress"
+      "step": "Phase 7: Implement",
+      "status": "completed",
+      "gate": "G7",
+      "gate_status": "passed",
+      "summary": "Implemented DOC-009 as a docs-only route update, completed all 23 tasks, recorded validation evidence, and passed G7 with all 23 tasks complete."
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Fallback parent-session health check passed: templates present, Claude commands registered, scripts executable, constitution present, and feature artifacts present."
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Fallback parent-session verification found 23/23 tasks complete, 15/15 functional requirements covered, and no constitution or scope-boundary findings."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "report": "specs/doc-009-maintainer-contributor-release-workflow/verify-tasks-report.md",
+      "summary": "Report records 23 VERIFIED tasks and no flagged items."
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "skipped",
+      "reason": "review extension not installed and no review command surface found"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "summary": "bash tests/speckit-pro/run-all.sh passed with 3041/3041."
     },
     {
       "step": "Post: Cleanup",
-      "status": "pending"
+      "status": "skipped",
+      "reason": "cleanup extension not installed and no cleanup command surface found"
     },
     {
       "step": "Post: Reviewability Diff Gate",
