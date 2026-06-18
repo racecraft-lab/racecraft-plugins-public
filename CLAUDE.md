@@ -440,6 +440,8 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 - Markdown/MDX content plus Astro/Starlight docs site metadata + Astro 6.4.6, Starlight 0.40.0, pnpm 10.25.0 (doc-004-codex-marketplace-installation-path)
 - Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
 - Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
+- Docs-site JavaScript ESM on Node, with Markdown/MDX content under `docs-site/src/content/docs/` + Astro 6.4.6, Starlight 0.40.0, existing `starlight-links-validator` (doc-008-troubleshooting-security-trust-update-rollback)
+- Checked-in Markdown/MDX files only; no database, browser storage, or runtime state (doc-008-troubleshooting-security-trust-update-rollback)
 
 ## Recent Changes
 - prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.
