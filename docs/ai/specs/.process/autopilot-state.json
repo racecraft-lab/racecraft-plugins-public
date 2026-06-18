@@ -9,8 +9,8 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T02:04:20Z",
-  "active_step": "Phase 2: Clarify - IA and Route Boundaries",
+  "updated_at": "2026-06-18T03:36:25Z",
+  "active_step": "Phase 3: Plan",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -76,39 +76,55 @@
     },
     {
       "step": "Phase 2: Clarify - IA and Route Boundaries",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Answered 4 IA/route questions. Route/sidebar already resolved; consensus clarified that DOC-008 should link from hand-authored reference pages unless it explicitly changes the reference generator."
     },
     {
       "step": "Phase 2: Clarify - IA and Route Boundaries Consensus",
-      "status": "pending"
+      "status": "completed",
+      "round": 1,
+      "outcome": "both-agree",
+      "summary": "Codebase and spec-context analysts agreed with high confidence that generated DOC-007 reference subpages should not receive hand-edited DOC-008 backlinks."
     },
     {
       "step": "Phase 2: Clarify - Troubleshooting Matrix",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Answered 5 troubleshooting matrix questions. Security-tagged consensus and user confirmation made row categories explicit and restricted inspect command/file cells to read-only inspection guidance."
     },
     {
       "step": "Phase 2: Clarify - Troubleshooting Matrix Consensus",
-      "status": "pending"
+      "status": "completed",
+      "round": 1,
+      "outcome": "all-agree-human-confirmed",
+      "summary": "Codebase, spec-context, and domain-research analysts agreed with high confidence on explicit troubleshooting categories and read-only inspection boundaries; user accepted security-tagged edits."
     },
     {
       "step": "Phase 2: Clarify - Security, Trust, and Sources",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Answered 5 security/trust/source-policy questions. Security-tagged consensus and user confirmation expanded the vendor citation inventory, tightened claim-specific evidence policy, and clarified cache/recovery boundaries."
     },
     {
       "step": "Phase 2: Clarify - Security, Trust, and Sources Consensus",
-      "status": "pending"
+      "status": "completed",
+      "round": 1,
+      "outcome": "all-agree-human-confirmed",
+      "summary": "Codebase, spec-context, and domain-research analysts agreed with high confidence on the expanded citation set and cache wording; user accepted security-tagged edits."
     },
     {
       "step": "Phase 2: Clarify - Update and Rollback Recovery",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Answered 5 update/rollback recovery questions. Recovery cases now require checkpoint/action/side-effect/reload-source structure, and Codex installed state must use CLI JSON/runtime-observation wording rather than stable hardcoded cache-path claims."
     },
     {
       "step": "Phase 2: Clarify - Update and Rollback Recovery Consensus",
-      "status": "pending"
+      "status": "completed",
+      "round": 1,
+      "outcome": "all-agree",
+      "summary": "Codebase, spec-context, and domain-research analysts agreed that hardcoded Codex cache paths are repository/plugin-owned local runtime evidence unless current OpenAI docs document the exact path."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - UX",

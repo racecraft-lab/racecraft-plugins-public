@@ -45,8 +45,8 @@ policy, one-slice decision, and validation scope.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created `spec.md`; G1 passed with 0 clarification markers |
-| Clarify | `$speckit-clarify` | Pending | Resolve route slug, source-link policy, row taxonomy, and update/rollback boundaries |
-| Plan | `$speckit-plan` | Pending | Plan docs-site Markdown/MDX changes only; no plugin behavior changes |
+| Clarify | `$speckit-clarify` | Complete | G2 passed; route slug, source-link policy, row taxonomy, and update/rollback boundaries are explicit |
+| Plan | `$speckit-plan` | In Progress | Plan docs-site Markdown/MDX changes only; no plugin behavior changes |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: UX, security, error handling, accessibility |
 | Tasks | `$speckit-tasks` | Pending | Generate story-ordered docs tasks with source citation checks |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, tasks, and source policy |
@@ -247,7 +247,7 @@ It must stay docs-only and source-backed.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | 17 |
+| Functional Requirements | 19 after Clarify; 17 after Specify |
 | User Stories | 3 |
 | Acceptance Criteria | 9 |
 
@@ -315,10 +315,21 @@ Focus on DOC-008 update and rollback procedures:
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | IA and route boundaries | Pending | Pending |
-| 2 | Troubleshooting matrix | Pending | Pending |
-| 3 | Security, trust, and sources | Pending | Pending |
-| 4 | Update and rollback recovery | Pending | Pending |
+| 1 | IA and route boundaries | 4 | Route/sidebar already resolved; clarified that reference backlinks belong in hand-authored pages unless DOC-008 explicitly changes the reference generator |
+| 2 | Troubleshooting matrix | 5 | Accepted explicit required row categories and a strict read-only inspection boundary after security-tagged consensus and human confirmation |
+| 3 | Security, trust, and sources | 5 | Accepted expanded vendor citation inventory, claim-specific source policy, no-overclaim wording, and cache/recovery boundary after security-tagged consensus and human confirmation |
+| 4 | Update and rollback recovery | 5 | Clarified recovery-case structure, manual operator action boundaries, payload script handoff, Codex custom-agent reinstall separation, and Codex CLI JSON/runtime-observation wording for installed state |
+
+### Clarify Consensus Notes
+
+- Session 1: Codebase and spec-context analysts agreed that DOC-008 should not hand-edit generated DOC-007 reference subpages for backlinks. Backlinks from reference content must live in hand-authored `reference.md` or be implemented through an explicit reference-generator change.
+- Session 2: Codebase, spec-context, and domain-research analysts agreed that troubleshooting coverage must include explicit rows for install failure, marketplace source, generated payload, installed cache/runtime state, permissions/approvals, Spec Kit CLI, GitHub CLI, jq, and Codex custom agents. Security-tagged consensus was human-confirmed before edits.
+- Session 2: The `inspect command/file` field is read-only only: state-reporting commands, platform detail views, manual file paths, or source/reference links. Mutating actions such as login, install, remove, reload, restart, approve, edit, set, unset, delete, rebuild, config writes, cache edits, or token/secret-printing commands must stay out of the inspect column and appear only as manual operator recovery steps where appropriate.
+- Session 3: Codebase, spec-context, and domain-research analysts agreed that platform claims must cite the narrowest current vendor page for the specific behavior, with expanded Claude Code coverage for plugins reference, plugin marketplaces, managed MCP, and environment/Claude-directory behavior, plus expanded OpenAI Codex coverage for hooks, MCP, config, environment variables, and CLI reference. Security-tagged consensus was human-confirmed before edits.
+- Session 3: Cache and recovery wording must classify evidence precisely: vendor-documented cache paths or commands are official vendor behavior; Racecraft source, generated payload, manifest, and DOC-007 reference facts are repository facts; `do not edit installed caches directly` is recommended practice derived from those facts. DOC-008 must not make direct cache deletion, cache edits, or manual cache directory removal the default stale-install or stale-cache recovery path.
+- Session 4: Recovery cases must distinguish read-only checkpoints from manual operator actions with expected side effects, reload/restart needs, and source citations. End-user recovery should inspect marketplace/source state, generated or copied payload state, platform-managed refresh/reinstall/remove state, reload/restart state, Codex custom-agent registration, and only then last-resort cache guidance.
+- Session 4: Codebase, spec-context, and domain-research analysts agreed that DOC-008 should describe Codex installed plugin state through documented CLI JSON fields and local runtime observations, not as a stable hardcoded cache-path contract. Official Codex claims may cite `CODEX_HOME`, documented `codex plugin ... --json` fields such as `installedPath`, and documented install/list/remove/marketplace commands. Concrete paths from current Racecraft docs, installer output, or the SpecKit Pro install skill are repository/plugin-owned local runtime evidence or machine-observed examples unless current OpenAI Codex docs explicitly document the exact path.
+- Session 4: Payload rebuild and version-sync scripts are maintainer/source-infrastructure evidence or handoff references, not DOC-008 end-user recovery commands. Codex custom-agent reinstall remains separate from plugin refresh and must route through `@SpecKit Pro -> install` or `$install` when bundled TOML files change.
 
 ---
 
@@ -556,6 +567,7 @@ For each task:
 - Update `docs-site/astro.config.mjs` only as needed to expose the new route.
 - Prefer static Markdown tables with clear headers over custom components unless a stronger need appears in the plan.
 - Do not edit generated reference pages directly unless `pnpm --dir docs-site reference:generate` is intentionally rerun after source changes.
+- If DOC-008 needs a backlink from reference content, place it in a hand-authored page such as `reference.md`; generated-subpage backlinks require an explicit generator change plus regenerate/check verification.
 - If source facts appear stale, prefer linking to source files and recording the limitation rather than making unsupported claims.
 ```
 
