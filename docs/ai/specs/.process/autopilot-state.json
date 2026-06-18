@@ -9,8 +9,8 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T04:17:15Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-18T04:23:44Z",
+  "active_step": "Phase 6: Analyze",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -175,11 +175,14 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G5",
+      "gate_status": "passed",
+      "summary": "Created tasks.md with 40 story-ordered docs tasks across 6 phases, 8 parallel-safe markers, and explicit validation/source-citation review tasks."
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
