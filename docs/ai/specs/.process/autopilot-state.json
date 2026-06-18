@@ -9,9 +9,9 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T04:49:43Z",
-  "active_step": "Post: PR Creation",
-  "status": "in_progress",
+  "updated_at": "2026-06-18T04:50:48Z",
+  "active_step": "Complete",
+  "status": "completed",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
     "status": "completed",
@@ -284,15 +284,18 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Created PR #220: https://github.com/racecraft-lab/racecraft-plugins-public/pull/220."
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "PR was newly created with no review feedback or requested changes to remediate."
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "Retrospective extension is registered only for Claude in this worktree; no runnable Codex retrospective command or skill was available."
     }
   ],
   "plan_audit": {

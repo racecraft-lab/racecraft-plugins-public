@@ -607,9 +607,9 @@ For each task:
 | UAT Runbook Generation | Complete | Generated a DOC-008 UAT skeleton during post checks; the file is regenerated transiently for PR body generation rather than committed, keeping the final diff within reviewability limits. |
 | Final Reviewability Backstop | Complete | Proceeded with status `warn`: total files 25 exceeded the warn threshold 15 and primary surfaces 4 exceeded the warn threshold 1; no blockers remained after keeping UAT evidence transient. |
 | PR Packet/Body Generation | Complete | Generated transient packet/body, edited sanctioned DOC-008 prose fields, passed `validate-pr-packet.sh`, and passed `validate-pr-workflow-contract.sh`. |
-| PR Creation | Pending | Runs after PR packet validation and workflow-contract validation pass. |
-| Review Remediation | Pending | Runs after PR creation if GitHub feedback exists. |
-| Retrospective | Pending | Skipped/complete decision is deferred until PR side effects are complete. |
+| PR Creation | Complete | Created PR #220: <https://github.com/racecraft-lab/racecraft-plugins-public/pull/220>. |
+| Review Remediation | Complete | PR was newly created with no review feedback or requested changes to remediate. |
+| Retrospective | Skipped | Retrospective extension is registered only for Claude in this worktree; no runnable Codex retrospective command or skill was available. |
 
 ---
 
