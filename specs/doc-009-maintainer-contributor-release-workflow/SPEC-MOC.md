@@ -10,7 +10,7 @@
 #     the ../../docs/ai/specs/ prefix is hardcoded and only the filename is tokenized.
 up: "[Interactive documentation roadmap](../../docs/ai/specs/interactive-documentation-technical-roadmap.md)"
 related: []                  # list of relative []() links; carried, unenforced in v1
-status: ""                   # carried, unenforced in v1
+status: "In Progress"        # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
 spec_id: "DOC-009"           # e.g., PRSG-002 -- namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal

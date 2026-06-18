@@ -14,8 +14,8 @@ DOC-002 created this route shell. DOC-009 owns the full workflow content here.
 | Area | Edit or review first | Generated or synchronized output | Deeper reference |
 |------|----------------------|----------------------------------|------------------|
 | Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | [Source vs dist](/racecraft-plugins-public/reference/source-vs-dist/) |
-| Claude marketplace | `.claude-plugin/marketplace.json` | Version values synced from `speckit-pro/.claude-plugin/plugin.json` | [Manifests](/racecraft-plugins-public/reference/manifests/) |
-| Codex marketplace | `.agents/plugins/marketplace.json` | Version values synced from `speckit-pro/.codex-plugin/plugin.json` | [Manifests](/racecraft-plugins-public/reference/manifests/) |
+| Claude marketplace | `.claude-plugin/marketplace.json` | Version values synced from the Claude payload manifest under the marketplace entry's `source` path | [Manifests](/racecraft-plugins-public/reference/manifests/) |
+| Codex marketplace | `.agents/plugins/marketplace.json` | Version values synced from the Codex payload manifest under the marketplace entry's `source.path` | [Manifests](/racecraft-plugins-public/reference/manifests/) |
 | Payload scripts | `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh` | Generated payloads and marketplace version sync PRs | [Scripts](/racecraft-plugins-public/reference/scripts/) |
 | Tests | `tests/speckit-pro/run-all.sh` | Deterministic release-readiness evidence | [Tests](/racecraft-plugins-public/reference/tests/) |
 | Docs site | `docs-site/src/content/docs/` and `docs-site/package.json` | Static Astro/Starlight site output | [Reference overview](/racecraft-plugins-public/reference/) |
@@ -107,7 +107,8 @@ Primary sources: [release-please-config.json](https://github.com/racecraft-lab/r
 
 The maintainer-facing release flow is:
 
-1. A squash merge to `main` triggers the Release workflow.
+1. A push to `main`, typically from a squash merge, triggers the Release
+   workflow.
 2. Release-please opens or updates a release PR when releasable Conventional
    Commits exist.
 3. When release PRs are created, the Release workflow checks out the release PR
