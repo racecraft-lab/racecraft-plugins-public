@@ -10,7 +10,7 @@
   ],
   "feature_branch": "doc-009-maintainer-contributor-release-workflow",
   "updated_at": "2026-06-18T02:42:08Z",
-  "active_step": "Post: Final Reviewability Backstop",
+  "active_step": "Post: PR Creation",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "execution_notes": {
@@ -266,19 +266,26 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "gate_status": "warn",
+      "summary": "Final reviewability backstop returned warn with no blockers: total files 20 exceeded warn threshold 15 and primary surfaces 3 exceeded warn threshold 1; production LOC remained 0.",
+      "evidence": "specs/doc-009-maintainer-contributor-release-workflow/.process/final-reviewability/gate-state.json"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Parent-session self-review found the generated PR packet protected body was generic; actual PR body was prepared separately with DOC-009-specific content."
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Manual UAT not required for docs-only DOC-009; docs-site validation and full shell suite provide verification evidence."
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated and validated Speckit PR packet/body, then prepared DOC-009-specific PR body at /private/tmp/doc-009-pr-body.md because generated protected sections were generic packet text.",
+      "packet": "specs/doc-009-maintainer-contributor-release-workflow/.process/pr-packet/speckit-pr-packet.json"
     },
     {
       "step": "Post: PR Creation",

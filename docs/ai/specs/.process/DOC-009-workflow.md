@@ -628,6 +628,9 @@ Verification:
 | Code Review | Skipped | Review extension is not installed in `.specify/extensions/.registry` and no review command surface exists under `.claude/commands`. |
 | Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed with `3041/3041`. |
 | Cleanup | Skipped | Cleanup extension is not installed in `.specify/extensions/.registry`; no cleanup command surface exists. |
+| Final Reviewability Backstop | Complete | Returned `warn` with no blockers: total files 20 exceeded warn threshold 15 and primary surfaces 3 exceeded warn threshold 1; production LOC remained 0. |
+| PR Packet/Body Generation | Complete | Generated packet/body, edited only allowed prose fields, and `validate-pr-packet.sh` passed. The generated protected body sections were generic packet text, so the actual PR body was prepared separately with DOC-009-specific review content. |
+| PR Workflow Contract | Complete | `validate-pr-workflow-contract.sh` passed for `docs(DOC-009): document maintainer contributor release workflow`. |
 | Retrospective | Complete | `specs/doc-009-maintainer-contributor-release-workflow/retrospective.md` records 100% completion, 100% spec adherence, and zero critical findings. |
 
 Note: post-extension subagent dispatch was attempted after G7, but the agent
