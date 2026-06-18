@@ -1,9 +1,1 @@
-{
-  "route": "one-navigable-PR",
-  "releasable": true,
-  "signals": [
-    "change-shape:modify-heavy"
-  ],
-  "hints": [],
-  "warnings": []
-}
+{"route":"one-navigable-PR","releasable":true,"signals":["change-shape:modify-heavy"],"hints":[],"warnings":[]}

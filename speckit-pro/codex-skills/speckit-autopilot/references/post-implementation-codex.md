@@ -234,6 +234,13 @@ Codex parent-session responsibilities:
    SHA, full verification evidence path, and optional changed-file scope
    evidence. Marker packets must validate against current marker evidence
    before PR body generation, `gh pr create`, or equivalent PR side effects.
+   For marker emission, `--feature-branch` is the emitted branch prefix. If
+   that prefix would collide with an existing parent branch ref, pass a
+   non-conflicting prefix through `--feature-branch` and the authoritative
+   source spec directory through `--source-feature-dir specs/<feature>`.
+   Full verification evidence, scoped evidence, PRS, and MOC files stay under
+   the source feature directory while emitted head/base refs use the safe branch
+   prefix.
    Live marker emission requires each marker checkpoint to record
    `implementation_checkpoint.head_sha` or
    `implementation_checkpoint.commit_sha`; without those commit SHAs, stop

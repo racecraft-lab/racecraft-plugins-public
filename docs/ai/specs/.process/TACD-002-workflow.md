@@ -26,13 +26,13 @@ Open Questions, and the accepted reviewability warning.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Complete | `spec.md`: 4 stories, 15 FRs, 8 ACs, 6 SCs; no active clarification markers; Clarify carries directive path, target surfaces, metadata evidence, payload refresh, and fallback confidence wording |
+| Specify | `/speckit-specify` | Complete | `spec.md`: 5 stories, 18 FRs, 12 ACs, 9 SCs; no active clarification markers; Clarify carries directive path, target surfaces, metadata evidence, payload refresh, fallback confidence wording, and marker-emission blocker hardening |
 | Clarify | `/speckit-clarify` | Complete | G2 passed; directive path, target surfaces, metadata policy, generated payload refresh path, and fallback evidence wording documented |
 | Plan | `/speckit-plan` | Complete | G3 passed; Plan artifacts created; reviewability estimator projected 0 production LOC |
 | Checklist | `/speckit-checklist` | Complete | G4 passed; 3 domains complete; 6 gaps fixed; 0 remaining `[Gap]` markers |
-| Tasks | `/speckit-tasks` | Complete | G5 passed; 37 tasks generated with FR/SC coverage; reviewability task gate recorded a valid size-only block; atomicity route is one navigable PR |
+| Tasks | `/speckit-tasks` | Complete | G5 passed; 53 tasks generated with FR/SC coverage; reviewability task gate recorded a valid size-only block; atomicity route is one navigable PR |
 | Analyze | `/speckit-analyze` | Complete | G6 passed after one workflow-only input coverage fix; no consensus required |
-| Implement | `/speckit-implement` | Complete | G7 passed; source guidance updated; generated payloads refreshed; default suite passed `3041/3041` |
+| Implement | `/speckit-implement` | Complete | G7 passed; source guidance updated; generated payloads refreshed; default suite passed `3063/3063` after blocker hardening |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -315,8 +315,8 @@ Focus on TACD-002 requirements:
 
 | Domain | Status | Gaps | Outcome | Consensus |
 |--------|--------|------|---------|-----------|
-| llm-integration | Complete | 3 found/fixed; 0 remaining | Added taxonomy-not-chain wording, multi-capability selection criteria, and exact Codex TOML compact-equivalent source-note marker; checklist artifact: `checklists/llm-integration.md`; full verify passed `3041/3041` | Skipped: no unresolved items |
-| error-handling | Complete | 2 found/fixed; 0 remaining | Clarified missing, unavailable, and present-but-unusable optional installed capability fallback; constrained fallback confidence to `medium` or `low`; checklist artifact: `checklists/error-handling.md`; full verify passed `3041/3041` | Skipped: no unresolved items |
+| llm-integration | Complete | 3 found/fixed; 0 remaining | Added taxonomy-not-chain wording, multi-capability selection criteria, and exact Codex TOML compact-equivalent source-note marker; checklist artifact: `checklists/llm-integration.md`; final full verify passed `3063/3063` | Skipped: no unresolved items |
+| error-handling | Complete | 2 found/fixed; 0 remaining | Clarified missing, unavailable, and present-but-unusable optional installed capability fallback; constrained fallback confidence to `medium` or `low`; checklist artifact: `checklists/error-handling.md`; final full verify passed `3063/3063` | Skipped: no unresolved items |
 | integration | Complete | 1 found/fixed; 0 remaining | Declared generated shared-reference payload copies for `capability-discovery.md`, `consensus-protocol.md`, and `gate-validation.md` under both Claude and Codex payload roots; checklist artifact: `checklists/integration.md`; marker count `0` | Skipped: no unresolved items |
 
 ### Addressing Gaps
@@ -357,9 +357,9 @@ TACD-003 or TACD-004.
 | Item | Result |
 |------|--------|
 | Artifact | `specs/tacd-002-capability-discovery-directive-and-agent-updates/tasks.md` |
-| G5 | Passed: 37 tasks found; FR-001 through FR-015 and SC-001 through SC-006 mapped |
-| Parallel tasks | 16 tasks marked `[P]` |
-| Implementation groups | Directive foundation; Claude guidance; Codex guidance and metadata; Generated payload refresh; Verification and PR packet |
+| G5 | Passed: 53 tasks found; FR-001 through FR-018 and SC-001 through SC-009 mapped |
+| Parallel tasks | 17 tasks marked `[P]` |
+| Implementation groups | Directive foundation; Claude guidance; Codex guidance and metadata; Generated payload refresh; Verification and PR packet; Marker emission blocker hardening |
 | Reviewability task gate | Size-only block recorded: 1480 reviewable LOC and 83 total files exceeded block thresholds; proceeding to marker planning/final backstop per autopilot protocol |
 | Atomicity classifier | Route `one-navigable-PR`; releasable `true`; signal `change-shape:modify-heavy`; no warnings |
 
@@ -395,8 +395,8 @@ tracked for marker planning and the final reviewability backstop.
 | Status | `emission_ready` |
 | Evidence | `specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/marker-plan/pr-marker-plan.json` |
 | Source fingerprint | Recorded in `autopilot-state.json` as `current_source_fingerprint` |
-| Markers | `foundation`, `us1`, `us2`, `us3`, `us4` |
-| Checkpoints | All markers point to implementation checkpoint commit `3e0392c6` |
+| Markers | `foundation`, `us1`, `us2`, `us3`, `us4`, `us5` |
+| Checkpoints | `foundation` -> `3762a4c6`; `us1` -> `6ab12d1e`; `us2` -> `2e2abfdd`; `us3` -> `f9149b9f`; `us4` -> `d8e1815c`; `us5` -> `48ddc8d0` |
 | Warning | Reviewability sizing result is marker-planning input |
 
 ---
@@ -476,7 +476,7 @@ Focus on:
 
 | Item | Result |
 |------|--------|
-| Tasks | T001-T037 complete in `tasks.md` |
+| Tasks | T001-T053 complete in `tasks.md` |
 | Shared directive | Added `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` |
 | Claude guidance | Updated six scoped Markdown agents to reference the shared directive and select capabilities by task need |
 | Codex guidance | Updated six scoped TOML agents with the approved compact-equivalent marker and capability-first semantics |
@@ -484,7 +484,7 @@ Focus on:
 | Generated payloads | Ran `bash scripts/build-plugin-payloads.sh` twice; second run produced no additional intended changes |
 | Payload coverage | Generated directive copies exist under both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` |
 | Active wording scan | No scoped source or generated behavior surface matched preferred named optional-tool wording |
-| Verification | `git diff --check` passed; `bash tests/speckit-pro/run-all.sh --layer 1` passed `1024/1024`; `bash tests/speckit-pro/run-all.sh` passed `3041/3041` |
+| Verification | `git diff --check` passed; `bash tests/speckit-pro/run-all.sh --layer 1` passed `1024/1024`; focused marker checks passed `177/177` and `52/52`; `bash tests/speckit-pro/run-all.sh` passed `3063/3063` |
 
 ### Preserved-ID Review Table
 
@@ -494,6 +494,37 @@ Focus on:
 | `speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml` | `dependencies.tools[].value` entries `tavily` and `context7` | Runtime dependency metadata | No active behavior prose in the metadata file |
 | `dist/claude/speckit-pro/agents/*.md` | Generated frontmatter `tools:` allowlist entries | Generated metadata | Generated from source; body text uses capability-first discovery |
 | `dist/codex/speckit-pro/codex-agents/*.toml` | Generated compact-equivalent marker and runtime payload paths | Generated rewrite/runtime metadata | Generated from source; developer instructions use capability-first discovery |
+
+---
+
+## Post-Implementation Blocker Hardening Evidence
+
+Autopilot stopped in marker PR emission because marker mode used
+`--feature-branch` for both emitted branch names and the source feature
+directory. On the real feature branch
+`tacd-002-capability-discovery-directive-and-agent-updates`, child refs like
+`tacd-002-capability-discovery-directive-and-agent-updates/01-foundation`
+collide with Git's existing parent branch ref. Using a different prefix avoided
+the Git ref conflict but made emission look under the wrong `specs/<feature>/`
+directory.
+
+The durable fix separates those concepts with
+`--source-feature-dir specs/tacd-002-capability-discovery-directive-and-agent-updates`
+while keeping `--feature-branch` as the emitted stack branch prefix. Follow-up
+dry validation also found and fixed two additional marker-emission stops before
+final handoff: user-story source boundaries now normalize into reviewer-safe PR
+titles, and changed-file scope validation now accepts declared tests,
+source-derived generated payloads, and standard SpecKit process evidence while
+still blocking unrelated undeclared files.
+
+| Proof | Result |
+|-------|--------|
+| Focused marker emission tests | `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `177/177` passed |
+| Marker guidance regression tests | `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`: `52/52` passed |
+| Layer 3 eval fixture loading | Claude autopilot evals loaded `26`; Codex autopilot evals loaded `33` |
+| Full deterministic suite | `bash tests/speckit-pro/run-all.sh`: `3063/3063` passed |
+| Final reviewability backstop | Full diff remains size-blocked at `73` files with `5` primary surfaces and `0` reviewable LOC; valid marker plan, fingerprint matched, outcome `marker_split` |
+| Marker emission dry validation | `multi-pr-emission.sh` validated `6` marker slices with `tacd-002-capability-discovery-directive-and-agent-updates-stack/*`, source artifacts anchored to `specs/tacd-002-capability-discovery-directive-and-agent-updates`, and no branch or PR mutation |
 
 ---
 
@@ -515,12 +546,12 @@ Focus on:
 | Doctor Extension Check | Skipped | `$speckit-speckit-utils-doctor` / `$speckit-doctor` unavailable in the live Codex skill/command surface |
 | Verify Implementation | Skipped | `$speckit-verify` unavailable in the live Codex skill/command surface |
 | Verify Tasks Phantom Check | Skipped | `$speckit-verify-tasks` unavailable in the live Codex skill/command surface; `tasks.md` has no open task checkboxes |
-| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh`: `3041/3041` passed |
+| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh`: `3063/3063` passed |
 | Cleanup | Skipped | Cleanup extension not installed |
 | Self-Review | Complete | No correctness issues found in scoped source/generated diffs |
 | UAT Runbook Generation | Complete | `specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/uat-runbook.md` generated |
-| Final Reviewability Backstop | Complete | Full diff remains size-blocked (`52` files) but marker plan is valid and fingerprint-matched; outcome `marker_split` |
-| Marker Emission Dry Validation | Complete | `multi-pr-emission.sh` validated 5 marker slices without branch or PR mutation |
+| Final Reviewability Backstop | Complete | Full diff remains size-blocked (`73` files) but marker plan is valid and fingerprint-matched; outcome `marker_split` |
+| Marker Emission Dry Validation | Complete | `multi-pr-emission.sh` validated 6 marker slices with safe stack branch prefix, explicit source feature directory, clean public titles, and no branch or PR mutation |
 
 ---
 
@@ -531,12 +562,17 @@ Focus on:
 - No correctness issues found in the scoped source or generated payload diffs.
 - Preserved named IDs are confined to allowlist/dependency metadata or generated runtime metadata.
 - The reviewability task gate size block remains recorded; final reviewability backstop still decides PR side effects.
+- Marker emission now separates emitted branch prefix from source feature directory, normalizes public titles, and accepts expected declared/generated/process evidence while keeping the undeclared-file block.
 
 ### Verification Reviewed
 
 - `git diff --check`: passed.
 - `bash tests/speckit-pro/run-all.sh --layer 1`: `1024/1024` passed.
-- `bash tests/speckit-pro/run-all.sh`: `3041/3041` passed.
+- `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `177/177` passed.
+- `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`: `52/52` passed.
+- Layer 3 eval fixture helpers loaded Claude/Codex autopilot evals: `26` / `33`.
+- `bash tests/speckit-pro/run-all.sh`: `3063/3063` passed.
+- Marker emission dry validation: 6 marker slices validated without branch or PR mutation.
 
 ---
 

@@ -145,6 +145,7 @@ declared_changed_files="$SANDBOX/declared-changed-files.txt"
 scope_violation_files="$SANDBOX/scope-violation-files.txt"
 marker_declared_changed_files="$SANDBOX/marker-declared-changed-files.txt"
 marker_scope_violation_files="$SANDBOX/marker-scope-violation-files.txt"
+marker_operational_changed_files="$SANDBOX/marker-operational-changed-files.txt"
 prsg012_marker_plan="$MARKER_FIXTURE_ROOT/prsg-012-pr-marker-plan.json"
 prsg012_split_result="$MARKER_FIXTURE_ROOT/prsg-012-final-marker-split-result.json"
 prsg012_full_evidence="$SANDBOX/specs/prsg-012-reviewer-ready-pr-packet-contract/.process/emission/full-regression.log"
@@ -182,6 +183,17 @@ EOF
 cat > "$marker_scope_violation_files" <<'EOF'
 speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
 docs/unplanned-marker-change.md
+EOF
+cat > "$marker_operational_changed_files" <<'EOF'
+speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+dist/claude/speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+dist/codex/speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+specs/prsg-013-reviewability-markers/data-model.md
+specs/prsg-013-reviewability-markers/.process/marker-plan/pr-marker-plan.json
+docs/ai/specs/.process/autopilot-state.json
+docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md
+CLAUDE.md
 EOF
 
 set_test "invalid layer-plan status blocks before mutation"
@@ -537,6 +549,14 @@ order_mismatch_split_result="$MARKER_FIXTURE_ROOT/order-mismatch-split-result.js
 missing_source_boundary_marker_plan="$SANDBOX/missing-source-boundary-marker-plan.json"
 jq '(.markers[] | select(.id == "us1") | .source_boundary) = {}' \
   "$valid_marker_plan" > "$missing_source_boundary_marker_plan"
+story_title_marker_plan="$SANDBOX/story-title-marker-plan.json"
+jq '
+  (.markers[] | select(.id == "us1") | .source_boundary.section) = "User Story 1 - Agents Choose By Capability Need (Priority: P1) - MVP"
+  | (.markers[] | select(.id == "us1") | .title_description) = null
+  | (.markers[] | select(.id == "us1") | .declared_files) = [
+      {"operation":"MODIFIED","path":"speckit-pro/agents/codebase-analyst.md"}
+    ]
+' "$valid_marker_plan" > "$story_title_marker_plan"
 
 marker_candidate_dir="$SANDBOX/marker-candidates"
 
@@ -599,6 +619,103 @@ set_test "marker-aware stdout identifies marker mode and marker count"
 json_check "$output" \
   "data['script'] == 'multi-pr-emission' and data['status'] == 'validated' and data['emission']['mode'] == 'marker' and data['emission']['route'] == 'marker_split' and data['emission']['marker_count'] == 3" \
   "stdout should describe marker-aware dry-run result"
+
+marker_alias_candidate_dir="$SANDBOX/marker-alias-candidates"
+
+set_test "marker dry run decouples source feature dir from emitted branch prefix"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$valid_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-013-reviewability-markers-stack \
+  --source-feature-dir specs/prsg-013-reviewability-markers \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$marker_full_evidence" \
+  --changed-files "$marker_declared_changed_files" \
+  --candidate-dir "$marker_alias_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+marker_alias_state_json="$(cat "$marker_alias_candidate_dir/multi-pr-emission-state.candidate.json" 2>/dev/null || true)"
+marker_alias_commands_json="$(cat "$marker_alias_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+marker_alias_foundation_packet_json="$(cat "$marker_alias_candidate_dir/marker-packets/foundation.json" 2>/dev/null || true)"
+
+set_test "marker alias state uses safe branch prefix and original evidence paths"
+json_check "$marker_alias_state_json" \
+  "[s['expected_branch'] for s in data['multi_pr_emission']['slices']] == ['prsg-013-reviewability-markers-stack/01-foundation', 'prsg-013-reviewability-markers-stack/02-us1', 'prsg-013-reviewability-markers-stack/03-us2-part1'] and [s['expected_base_branch'] for s in data['multi_pr_emission']['slices']] == ['main', 'prsg-013-reviewability-markers-stack/01-foundation', 'prsg-013-reviewability-markers-stack/02-us1'] and data['multi_pr_emission']['slices'][0]['scoped_verification']['commands'][0]['evidence_path'].startswith('specs/prsg-013-reviewability-markers/.process/emission/')" \
+  "marker alias state should decouple emitted branch refs from source feature evidence paths"
+
+set_test "marker alias command capture uses safe branch prefix"
+json_check "$marker_alias_commands_json" \
+  "[op['command'][0:8] for op in data['operations'] if op['action'] == 'gh_pr_create'] == [['gh', 'pr', 'create', '--base', 'main', '--head', 'prsg-013-reviewability-markers-stack/01-foundation', '--body-file'], ['gh', 'pr', 'create', '--base', 'prsg-013-reviewability-markers-stack/01-foundation', '--head', 'prsg-013-reviewability-markers-stack/02-us1', '--body-file'], ['gh', 'pr', 'create', '--base', 'prsg-013-reviewability-markers-stack/02-us1', '--head', 'prsg-013-reviewability-markers-stack/03-us2-part1', '--body-file']]" \
+  "marker alias command capture should use the non-conflicting emitted branch prefix"
+
+set_test "marker alias packets keep source feature verification evidence"
+json_check "$marker_alias_foundation_packet_json" \
+  "data['full_verification_evidence'] == '$marker_full_evidence' and data['head_branch'] == 'prsg-013-reviewability-markers-stack/01-foundation' and data['scoped_verification']['commands'][0]['evidence_path'].startswith('specs/prsg-013-reviewability-markers/.process/emission/')" \
+  "marker alias packet should keep original source-feature verification paths"
+
+marker_operational_candidate_dir="$SANDBOX/marker-operational-candidates"
+
+set_test "marker scope guard allows declared tests generated payloads and process evidence"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$valid_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-013-reviewability-markers-stack \
+  --source-feature-dir specs/prsg-013-reviewability-markers \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$marker_full_evidence" \
+  --changed-files "$marker_operational_changed_files" \
+  --candidate-dir "$marker_operational_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+marker_operational_commands_json="$(cat "$marker_operational_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+
+set_test "marker scope guard records operational changed file count"
+json_check "$marker_operational_commands_json" \
+  "data['declared_scope_guard']['status'] == 'passed' and data['declared_scope_guard']['changed_files_count'] == 9" \
+  "marker scope guard should allow declared tests, generated payloads, and process evidence"
+
+set_test "marker alias rejects source dirs outside specs"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$valid_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-013-reviewability-markers-stack \
+  --source-feature-dir docs/prsg-013-reviewability-markers \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$marker_full_evidence" \
+  --candidate-dir "$SANDBOX/bad-source-feature-candidates" || result=$?
+assert_eq "2" "$result" "exit code"
+assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: --source-feature-dir must be repo-relative under specs/"
+
+story_title_candidate_dir="$SANDBOX/story-title-marker-candidates"
+
+set_test "marker dry run normalizes non-verb story source boundaries into public titles"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$story_title_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-013-reviewability-markers \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$marker_full_evidence" \
+  --candidate-dir "$story_title_candidate_dir" || result=$?
+assert_eq "0" "$result" "exit code"
+
+story_title_commands_json="$(cat "$story_title_candidate_dir/commands.candidate.json" 2>/dev/null || true)"
+
+set_test "marker story title fallback strips raw story metadata"
+json_check "$story_title_commands_json" \
+  "any(op.get('title') == 'feat(PRSG-013): Update Agents Choose By Capability Need' for op in data['operations'] if op['action'] == 'gh_pr_create') and not any(('User Story' in op.get('title', '') or 'Priority:' in op.get('title', '') or 'MVP' in op.get('title', '') or 'Describe reviewer-visible change' in op.get('title', '')) for op in data['operations'] if op['action'] == 'gh_pr_create')" \
+  "marker story titles should be normalized from source boundaries without raw metadata"
 
 section "PRSG-012 marker title regression"
 
@@ -1087,6 +1204,81 @@ json_check "$live_success_commands_json" \
   "len([op for op in data['operations'] if op['action'] == 'git_branch']) == 3 and len([op for op in data['operations'] if op['action'] == 'git_push']) == 3 and len([op for op in data['operations'] if op['action'] == 'gh_pr_create']) == 3" \
   "live command log should record branch, push, and PR create operations"
 
+set_test "live marker emission survives existing parent feature branch with alias prefix"
+live_alias_repo="$SANDBOX/live-marker-alias-repo"
+live_alias_remote="$SANDBOX/live-marker-alias-remote.git"
+make_live_marker_success_repo "$live_alias_repo" "$live_alias_remote"
+live_alias_state="$live_alias_repo/docs/ai/specs/.process/autopilot-state.json"
+live_alias_evidence="$live_alias_repo/specs/prsg-013-reviewability-markers/.process/emission/full-regression.txt"
+live_alias_prs="$live_alias_repo/specs/prsg-013-reviewability-markers/.process/prs.json"
+live_alias_commands="$SANDBOX/live-marker-alias-commands.json"
+live_alias_marker_plan="$SANDBOX/live-marker-alias-plan-with-shas.json"
+live_alias_fake_bin="$SANDBOX/live-marker-alias-fake-bin"
+live_alias_gh_log="$SANDBOX/live-marker-alias-gh-create.jsonl"
+write_fake_live_gh "$live_alias_fake_bin"
+git -C "$live_alias_repo" branch prsg-013-reviewability-markers main
+live_alias_base_sha="$(git -C "$live_alias_repo" rev-parse main)"
+live_alias_foundation_sha="$(git -C "$live_alias_repo" rev-parse marker-foundation)"
+live_alias_us1_sha="$(git -C "$live_alias_repo" rev-parse marker-us1)"
+live_alias_us2_sha="$(git -C "$live_alias_repo" rev-parse marker-us2-part1)"
+jq \
+  --arg foundation_sha "$live_alias_foundation_sha" \
+  --arg us1_sha "$live_alias_us1_sha" \
+  --arg us2_sha "$live_alias_us2_sha" '
+    .markers |= map(
+      if .id == "foundation" then .implementation_checkpoint.head_sha = $foundation_sha
+      elif .id == "us1" then .implementation_checkpoint.head_sha = $us1_sha
+      elif .id == "us2-part1" then .implementation_checkpoint.head_sha = $us2_sha
+      else . end
+    )
+  ' "$valid_marker_plan" > "$live_alias_marker_plan"
+
+result=0
+run_emission output stderr_output env \
+  PATH="$live_alias_fake_bin:$PATH" \
+  FAKE_GH_LOG="$live_alias_gh_log" \
+  FAKE_GH_REPO="$live_alias_repo" \
+  "$SCRIPT" \
+  --marker-plan "$live_alias_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$live_alias_state" \
+  --feature-branch prsg-013-reviewability-markers-stack \
+  --source-feature-dir specs/prsg-013-reviewability-markers \
+  --base main \
+  --base-sha "$live_alias_base_sha" \
+  --full-verification-evidence "$live_alias_evidence" \
+  --command-log "$live_alias_commands" \
+  --live || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "live marker alias pushes safe child branches despite existing parent branch"
+remote_alias_foundation_sha="$(git -C "$live_alias_remote" rev-parse refs/heads/prsg-013-reviewability-markers-stack/01-foundation)"
+remote_alias_us1_sha="$(git -C "$live_alias_remote" rev-parse refs/heads/prsg-013-reviewability-markers-stack/02-us1)"
+remote_alias_us2_sha="$(git -C "$live_alias_remote" rev-parse refs/heads/prsg-013-reviewability-markers-stack/03-us2-part1)"
+if [ "$remote_alias_foundation_sha" = "$live_alias_foundation_sha" ] && [ "$remote_alias_us1_sha" = "$live_alias_us1_sha" ] && [ "$remote_alias_us2_sha" = "$live_alias_us2_sha" ]; then
+  _pass
+else
+  _fail "alias marker branches should point at their checkpoint SHAs"
+fi
+
+live_alias_gh_json="$(jq -s '.' "$live_alias_gh_log" 2>/dev/null || printf '[]')"
+set_test "live marker alias creates PRs with safe branch bases"
+json_check "$live_alias_gh_json" \
+  "[r['head'] for r in data] == ['prsg-013-reviewability-markers-stack/01-foundation', 'prsg-013-reviewability-markers-stack/02-us1', 'prsg-013-reviewability-markers-stack/03-us2-part1'] and [r['base'] for r in data] == ['main', 'prsg-013-reviewability-markers-stack/01-foundation', 'prsg-013-reviewability-markers-stack/02-us1']" \
+  "live alias gh create calls should use the non-conflicting branch prefix"
+
+live_alias_prs_json="$(cat "$live_alias_prs" 2>/dev/null || true)"
+set_test "live marker alias writes PRS manifest under source feature dir"
+json_check "$live_alias_prs_json" \
+  "data['schemaVersion'] == 2 and [r['branch'] for r in data['records']] == ['prsg-013-reviewability-markers-stack/01-foundation', 'prsg-013-reviewability-markers-stack/02-us1', 'prsg-013-reviewability-markers-stack/03-us2-part1'] and [r['verification_evidence'].startswith('specs/prsg-013-reviewability-markers/.process/emission/') for r in data['records']] == [True, True, True]" \
+  "live alias PRS manifest should stay in source feature dir while recording alias branches"
+
+live_alias_commands_json="$(cat "$live_alias_commands" 2>/dev/null || true)"
+set_test "live marker alias command log records source-dir evidence and alias branches"
+json_check "$live_alias_commands_json" \
+  "any(op.get('branch') == 'prsg-013-reviewability-markers-stack/01-foundation' for op in data['operations'] if op['action'] == 'git_branch') and any(op.get('evidence_path', '').startswith('specs/prsg-013-reviewability-markers/.process/emission/') for op in data['operations'] if op['action'] == 'scoped_verification')" \
+  "live alias command log should prove branch/evidence separation"
+
 section "US2 persistence and resume reconciliation"
 
 make_persist_repo() {
@@ -1096,7 +1288,19 @@ make_persist_repo() {
     "$root/specs/prsg-009-multi-pr-emission/.process/emission" \
     "$root/specs/prsg-009-multi-pr-emission/.process" \
     "$root/speckit-pro/skills/speckit-autopilot/scripts"
-  printf '{}\n' > "$root/docs/ai/specs/.process/autopilot-state.json"
+  cat > "$root/docs/ai/specs/.process/autopilot-state.json" <<'EOF'
+{
+  "workflow_file": "docs/ai/specs/.process/PRSG-009-workflow.md",
+  "plan": [
+    {"step": "Post: PR Creation", "status": "in_progress"}
+  ],
+  "post_results": {
+    "integration_suite": {
+      "status": "completed"
+    }
+  }
+}
+EOF
   cat > "$root/specs/prsg-009-multi-pr-emission/SPEC-MOC.md" <<'EOF'
 ---
 structureVersion: 1
@@ -1212,6 +1416,11 @@ set_test "successful emission advances next_slice_id only after all surfaces per
 json_check "$persist_state_json" \
   "data['multi_pr_emission']['status'] == 'complete' and data['multi_pr_emission']['next_slice_id'] is None and [s['status'] for s in data['multi_pr_emission']['slices']] == ['pr_opened', 'pr_opened', 'pr_opened']" \
   "state should complete only after PRS/MOC/workflow persistence"
+
+set_test "successful emission preserves existing autopilot state fields"
+json_check "$persist_state_json" \
+  "data['workflow_file'] == 'docs/ai/specs/.process/PRSG-009-workflow.md' and data['plan'][0]['step'] == 'Post: PR Creation' and data['post_results']['integration_suite']['status'] == 'completed'" \
+  "state update should preserve orchestration fields outside multi_pr_emission"
 
 set_test "successful emission PRS rows preserve review order and PR numbers"
 json_check "$persist_prs_json" \

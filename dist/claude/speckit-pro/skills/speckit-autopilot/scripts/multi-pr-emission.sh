@@ -19,7 +19,7 @@ readonly SLICE_PACKET_SCHEMA="$CONTRACT_ROOT/slice-packet.schema.json"
 readonly PLAN_LAYERS_SCHEMA="$CONTRACT_ROOT/plan-layers.schema.json"
 
 usage() {
-  printf 'Usage: multi-pr-emission.sh (--layer-plan <json> | --marker-plan <json> --marker-split-result <json>) --state <json> --feature-branch <branch> --base <branch> --base-sha <sha> [--full-verification-evidence <path>] [--changed-files <path>] [--candidate-dir <dir>] [--pr-fixture <json>] [--command-log <json>] [--scoped-verification-fixture <json>] [--live]\n' >&2
+  printf 'Usage: multi-pr-emission.sh (--layer-plan <json> | --marker-plan <json> --marker-split-result <json>) --state <json> --feature-branch <branch> --base <branch> --base-sha <sha> [--source-feature-dir <specs/feature>] [--full-verification-evidence <path>] [--changed-files <path>] [--candidate-dir <dir>] [--pr-fixture <json>] [--command-log <json>] [--scoped-verification-fixture <json>] [--live]\n' >&2
 }
 
 emit_input_error() {
@@ -191,6 +191,7 @@ MARKER_PLAN=""
 MARKER_SPLIT_RESULT=""
 STATE_FILE=""
 FEATURE_BRANCH=""
+SOURCE_FEATURE_DIR=""
 BASE_BRANCH=""
 BASE_SHA=""
 FULL_VERIFICATION_EVIDENCE=""
@@ -226,6 +227,11 @@ while [ "$#" -gt 0 ]; do
     --feature-branch)
       [ "$#" -ge 2 ] || emit_input_error "missing value for --feature-branch"
       FEATURE_BRANCH="$2"
+      shift 2
+      ;;
+    --source-feature-dir)
+      [ "$#" -ge 2 ] || emit_input_error "missing value for --source-feature-dir"
+      SOURCE_FEATURE_DIR="${2%/}"
       shift 2
       ;;
     --base)
@@ -304,6 +310,16 @@ fi
 [ "$LIVE" != true ] || [ -z "$CANDIDATE_DIR" ] || emit_input_error "--live cannot be combined with --candidate-dir"
 [ "$LIVE" != true ] || [ -z "$PR_FIXTURE" ] || emit_input_error "--live cannot be combined with --pr-fixture"
 [ "$LIVE" != true ] || [ "$MARKER_MODE" = true ] || emit_input_error "--live requires marker-aware emission"
+if [ -n "$SOURCE_FEATURE_DIR" ]; then
+  [ "$MARKER_MODE" = true ] || emit_input_error "--source-feature-dir requires marker-aware emission"
+  case "$SOURCE_FEATURE_DIR" in
+    specs/*) ;;
+    *) emit_input_error "--source-feature-dir must be repo-relative under specs/" ;;
+  esac
+  case "$SOURCE_FEATURE_DIR" in
+    *".."*|*//*|*/.|*/./*) emit_input_error "invalid --source-feature-dir $SOURCE_FEATURE_DIR" ;;
+  esac
+fi
 
 if [ "$MARKER_MODE" = true ]; then
   [ -r "$MARKER_PLAN" ] || emit_input_error "marker plan not readable: $MARKER_PLAN"
@@ -366,7 +382,11 @@ if [ -n "$duplicate_slice" ]; then
 fi
 
 if [ "$MARKER_MODE" = true ]; then
-  FEATURE_DIR_REL="specs/$FEATURE_BRANCH"
+  if [ -n "$SOURCE_FEATURE_DIR" ]; then
+    FEATURE_DIR_REL="$SOURCE_FEATURE_DIR"
+  else
+    FEATURE_DIR_REL="specs/$FEATURE_BRANCH"
+  fi
 else
   FEATURE_DIR_REL="$(jq -r '.feature_dir // empty' "$LAYER_PLAN")"
   if [ -z "$FEATURE_DIR_REL" ]; then
@@ -634,11 +654,14 @@ if [ "$MARKER_MODE" = true ]; then
         def marker_warnings($markers): [($markers[] | (.warnings // []))[]];
         def title_clean:
           gsub("\\s*\\(Priority:[^)]+\\)"; "")
+          | gsub("\\s*-\\s*MVP$"; "")
           | gsub("\\s+MVP$"; "")
           | gsub("^User Story [0-9]+\\s*-\\s*"; "")
           | gsub("^User Story [0-9]+$"; "")
           | gsub("^\\s+"; "")
           | gsub("\\s+$"; "");
+        def generic_source_title:
+          test("^(Foundation|User Story|US[0-9]+|us[0-9]+|full-spec|slice)$"; "i");
         def has_action_verb:
           test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
         def public_title_description($id; $source_title; $files; $explicit_title):
@@ -659,6 +682,8 @@ if [ "$MARKER_MODE" = true ]; then
               "Render reviewer PR body evidence"
             elif ($clean | has_action_verb) then
               $clean
+            elif ($clean != "" and (($clean | generic_source_title) | not)) then
+              "Update " + $clean
             elif ($id == "foundation") then
               "Add split PR emission foundation"
             else
@@ -817,11 +842,14 @@ else
 
       def title_clean:
         gsub("\\s*\\(Priority:[^)]+\\)"; "")
+        | gsub("\\s*-\\s*MVP$"; "")
         | gsub("\\s+MVP$"; "")
         | gsub("^User Story [0-9]+\\s*-\\s*"; "")
         | gsub("^User Story [0-9]+$"; "")
         | gsub("^\\s+"; "")
         | gsub("\\s+$"; "");
+      def generic_source_title:
+        test("^(Foundation|User Story|US[0-9]+|us[0-9]+|full-spec|slice)$"; "i");
       def has_action_verb:
         test("^(Add|Block|Create|Document|Emit|Enforce|Fix|Generate|Improve|Persist|Protect|Record|Render|Update|Validate)\\b"; "i");
       def public_title_description($id; $source_title; $files; $explicit_title):
@@ -842,6 +870,8 @@ else
             "Render reviewer PR body evidence"
           elif ($clean | has_action_verb) then
             $clean
+          elif ($clean != "" and (($clean | generic_source_title) | not)) then
+            "Update " + $clean
           elif ($id == "foundation") then
             "Add split PR emission foundation"
           else
@@ -950,11 +980,38 @@ allowed_scope="$(
   jq -n \
     --argjson slices "$plan_slices" \
     --arg feature_dir "$FEATURE_DIR_REL" '
+      def generated_counterparts($path):
+        if ($path | startswith("speckit-pro/agents/")) then
+          ["dist/claude/speckit-pro/agents/" + ($path | sub("^speckit-pro/agents/"; ""))]
+        elif ($path | startswith("speckit-pro/codex-agents/")) then
+          ["dist/codex/speckit-pro/codex-agents/" + ($path | sub("^speckit-pro/codex-agents/"; ""))]
+        elif ($path | startswith("speckit-pro/skills/speckit-autopilot/references/")) then
+          ($path | sub("^speckit-pro/skills/speckit-autopilot/references/"; "")) as $tail
+          | [
+              "dist/claude/speckit-pro/skills/speckit-autopilot/references/" + $tail,
+              "dist/codex/speckit-pro/skills/speckit-autopilot/references/" + $tail
+            ]
+        elif ($path | startswith("speckit-pro/codex-skills/speckit-autopilot/references/")) then
+          ($path | sub("^speckit-pro/codex-skills/speckit-autopilot/references/"; "")) as $tail
+          | ["dist/codex/speckit-pro/skills/speckit-autopilot/references/" + $tail]
+        elif ($path | startswith("speckit-pro/skills/speckit-autopilot/scripts/")) then
+          ($path | sub("^speckit-pro/skills/speckit-autopilot/scripts/"; "")) as $tail
+          | [
+              "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/" + $tail,
+              "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/" + $tail
+            ]
+        else
+          []
+        end;
+      ([($slices[].declared_files[]), ($slices[].declared_tests[])] | map(select(type == "string" and length > 0))) as $declared
+      |
       (
-        [$slices[].declared_files[]]
+        $declared
+        + ([$declared[] | generated_counterparts(.)[]])
         + [
             "docs/ai/specs/.process/PRSG-009-workflow.md",
             "docs/ai/specs/.process/autopilot-state.json",
+            "CLAUDE.md",
             "\($feature_dir)/.process/prs.json",
             "\($feature_dir)/SPEC-MOC.md"
           ]
@@ -969,8 +1026,17 @@ if [ -n "$CHANGED_FILES" ]; then
   scope_violation="$(
     jq -r -n \
       --argjson changed "$changed_files" \
-      --argjson allowed "$allowed_scope" '
-        [$changed[] | . as $file | select(($allowed | index($file)) | not)][0] // empty
+      --argjson allowed "$allowed_scope" \
+      --arg feature_dir "$FEATURE_DIR_REL" '
+        def operational_scope($file):
+          ($file | startswith($feature_dir + "/"))
+          or ($file | startswith("docs/ai/specs/.process/"))
+          or ($file | test("^docs/ai/specs/.*(MOC|roadmap).*\\.md$"));
+        [
+          $changed[]
+          | . as $file
+          | select((($allowed | index($file)) != null or operational_scope($file)) | not)
+        ][0] // empty
       '
   )"
   if [ -n "$scope_violation" ]; then
@@ -1787,7 +1853,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
   }
 
   state_json="$(
-    jq -n \
+    jq \
       --arg source_path "$LAYER_PLAN" \
       --arg marker_plan_path "$MARKER_PLAN" \
       --arg marker_split_result "$MARKER_SPLIT_RESULT" \
@@ -1798,8 +1864,8 @@ if [ -z "$CANDIDATE_DIR" ]; then
       --argjson stack_manager_decision "$stack_manager_decision_json" \
       --arg stack_manager_evidence_path "$stack_manager_evidence_rel" \
       --argjson slices "$plan_slices" '
-        {
-          multi_pr_emission: {
+        (if type == "object" then . else {} end)
+        | .multi_pr_emission = {
             schema_version: (if $emission_mode == "marker" then 2 else 1 end),
             status: "emitting",
             emission_mode: $emission_mode,
@@ -1833,7 +1899,6 @@ if [ -z "$CANDIDATE_DIR" ]; then
                     } else {} end)
                 )
             )
-          }
         }
         | if $source_path != "" then
             .multi_pr_emission.source_layer_plan = {path: $source_path}
@@ -1841,7 +1906,7 @@ if [ -z "$CANDIDATE_DIR" ]; then
             .multi_pr_emission.source_marker_plan = {path: $marker_plan_path}
             | .multi_pr_emission.marker_split_result = {path: $marker_split_result}
           end
-      '
+      ' "$STATE_FILE"
   )"
 
   total_slices="$(printf '%s' "$plan_slices" | jq 'length')"

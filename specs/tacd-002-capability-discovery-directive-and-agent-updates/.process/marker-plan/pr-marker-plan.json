@@ -4,11 +4,11 @@
   "feature_id": "tacd-002-capability-discovery-directive-and-agent-updates",
   "status": "emission_ready",
   "source_fingerprint": {
-    "feature_spec_sha": "ce2cf5e5c665b538dd315239f9b0bedea541162476260b2ff013f53e05d71f77",
-    "plan_declared_scope_sha": "927e865548d61303f08327424edc535397cb836f937c314769440bbd02b8e7d8",
-    "tasks_sha": "6ca9726672d0e235bec1d3bc7b4335f34a043eb1549f711afebd692381e66764",
-    "reviewability_sha": "7bb38e26bf4c7b95b787b8db931e973a828fb1ae494ce14c65788ac7d436d6bb",
-    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+    "feature_spec_sha": "ed69e2b1bfbde6dd439a0f0b67a47742e00af0cd707f6e197a7a74afad8ad757",
+    "plan_declared_scope_sha": "53c558ceb6a6d3a40bd8e7443cb06de8d35c00deadd944cb3e1edc5e4a3a2040",
+    "tasks_sha": "7d6b58ea6da026c2e547e76907ceb907d761fb1fccbd3bcad4a7f7ca661d2a9a",
+    "reviewability_sha": "488e7a1c6b75900e438e39b39b2ca029f0ba146b922d222c494f545cbaa71ffc",
+    "hazard_route_sha": "57eb0ef319cb1075f5cd033a12944e52fa59edaace2562f3692f4919b8ca9f23"
   },
   "markers": [
     {
@@ -35,31 +35,7 @@
       "declared_files": [
         {
           "operation": "MODIFIED",
-          "path": "CLAUDE.md"
-        },
-        {
-          "operation": "MODIFIED",
           "path": "docs/ai/specs/.process/TACD-002-design-concept.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs/ai/specs/.process/TACD-002-workflow.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs/ai/specs/.process/autopilot-state.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs/ai/specs/interactive-documentation-roadmap-MOC.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs/ai/specs/tool-agnostic-capability-discovery-technical-roadmap.md"
         },
         {
           "operation": "MODIFIED",
@@ -75,55 +51,7 @@
         },
         {
           "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/changed-files.txt"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/emission/full-verification-evidence.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/final-reviewability/gate-state.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/marker-plan/final-marker-split-result.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/marker-plan/hazard-route.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/marker-plan/pr-marker-plan.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/reviewability/task-gate.exit"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/reviewability/task-gate.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/reviewability/task-gate.marker-input.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/uat-runbook.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/SPEC-MOC.md"
-        },
-        {
-          "operation": "MODIFIED",
           "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/contracts/capability-discovery-guidance.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/data-model.md"
         },
         {
           "operation": "MODIFIED",
@@ -135,15 +63,7 @@
         },
         {
           "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/research.md"
-        },
-        {
-          "operation": "MODIFIED",
           "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/spec.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/tasks.md"
         }
       ],
       "declared_tests": [],
@@ -162,16 +82,15 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "head_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
-        "commit_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
+        "head_sha": "3762a4c6af1a12375a3f598dd56e9b94158db752",
+        "commit_sha": "3762a4c6af1a12375a3f598dd56e9b94158db752",
         "verification_evidence": "docs/ai/specs/.process/TACD-002-workflow.md",
         "evidence_path": "docs/ai/specs/.process/TACD-002-workflow.md"
       },
       "emission_mapping": {
         "status": "pending"
       },
-      "warnings": [],
-      "title_description": "Add capability discovery directive"
+      "warnings": []
     },
     {
       "id": "us1",
@@ -275,16 +194,15 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "head_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
-        "commit_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
+        "head_sha": "6ab12d1e6472a0f546a90079561c68438b5a6a85",
+        "commit_sha": "6ab12d1e6472a0f546a90079561c68438b5a6a85",
         "verification_evidence": "docs/ai/specs/.process/TACD-002-workflow.md",
         "evidence_path": "docs/ai/specs/.process/TACD-002-workflow.md"
       },
       "emission_mapping": {
         "status": "pending"
       },
-      "warnings": [],
-      "title_description": "Update agent capability selection"
+      "warnings": []
     },
     {
       "id": "us2",
@@ -379,16 +297,15 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "head_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
-        "commit_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
+        "head_sha": "2e2abfdd08d8987deb3aa94bf908c568fc9864d9",
+        "commit_sha": "2e2abfdd08d8987deb3aa94bf908c568fc9864d9",
         "verification_evidence": "docs/ai/specs/.process/TACD-002-workflow.md",
         "evidence_path": "docs/ai/specs/.process/TACD-002-workflow.md"
       },
       "emission_mapping": {
         "status": "pending"
       },
-      "warnings": [],
-      "title_description": "Document fallback evidence behavior"
+      "warnings": []
     },
     {
       "id": "us3",
@@ -492,16 +409,15 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "head_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
-        "commit_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
+        "head_sha": "f9149b9f9141a1f6fab0df2be6af38657f7cb81e",
+        "commit_sha": "f9149b9f9141a1f6fab0df2be6af38657f7cb81e",
         "verification_evidence": "docs/ai/specs/.process/TACD-002-workflow.md",
         "evidence_path": "docs/ai/specs/.process/TACD-002-workflow.md"
       },
       "emission_mapping": {
         "status": "pending"
       },
-      "warnings": [],
-      "title_description": "Align Claude and Codex guidance"
+      "warnings": []
     },
     {
       "id": "us4",
@@ -521,6 +437,77 @@
         "T032",
         "T033"
       ],
+      "folded_polish_task_ids": [],
+      "folded_polish_target_reason": "",
+      "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "scripts/build-plugin-payloads.sh"
+        }
+      ],
+      "declared_tests": [],
+      "reviewability": {
+        "status": "block",
+        "mode": "tasks",
+        "scope": "us4",
+        "evidence_path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/reviewability/task-gate.json"
+      },
+      "hazards": [
+        "change-shape:modify-heavy"
+      ],
+      "subdivision": {
+        "status": "none",
+        "details": {}
+      },
+      "implementation_checkpoint": {
+        "status": "complete",
+        "head_sha": "d8e1815cc303c67f11589dd2e196e71a974ebfc7",
+        "commit_sha": "d8e1815cc303c67f11589dd2e196e71a974ebfc7",
+        "verification_evidence": "docs/ai/specs/.process/TACD-002-workflow.md",
+        "evidence_path": "docs/ai/specs/.process/TACD-002-workflow.md"
+      },
+      "emission_mapping": {
+        "status": "pending"
+      },
+      "warnings": []
+    },
+    {
+      "id": "us5",
+      "review_order": 6,
+      "kind": "user_story",
+      "parent_marker_id": null,
+      "source_boundary": {
+        "section": "User Story 5 - Marker Emission Survives Branch Namespace Conflicts",
+        "story_id": 5,
+        "start_task_id": "T038",
+        "end_task_id": "T053"
+      },
+      "task_ids": [
+        "T038",
+        "T039",
+        "T040",
+        "T041",
+        "T042",
+        "T043",
+        "T044",
+        "T045",
+        "T046",
+        "T047",
+        "T048",
+        "T049",
+        "T050",
+        "T051",
+        "T052",
+        "T053"
+      ],
       "folded_polish_task_ids": [
         "T034",
         "T035",
@@ -531,79 +518,19 @@
       "declared_files": [
         {
           "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/agents/analyze-executor.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/agents/checklist-executor.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/agents/clarify-executor.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/agents/codebase-analyst.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/agents/domain-researcher.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/agents/implement-executor.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/claude/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/codex-agents/analyze-executor.toml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/codex-agents/checklist-executor.toml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/codex-agents/clarify-executor.toml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/codex-agents/codebase-analyst.toml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/codex-agents/domain-researcher.toml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/codex-agents/implement-executor.toml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "dist/codex/speckit-pro/skills/speckit-autopilot/references/gate-validation.md"
-        },
-        {
-          "operation": "MODIFIED",
           "path": "scripts/build-plugin-payloads.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/references/post-implementation.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh"
         },
         {
           "operation": "MODIFIED",
@@ -627,12 +554,16 @@
         }
       ],
       "declared_tests": [
+        "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
+        "tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh",
+        "tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh",
         "tests/speckit-pro/run-all.sh"
       ],
       "reviewability": {
         "status": "block",
         "mode": "tasks",
-        "scope": "us4",
+        "scope": "us5",
         "evidence_path": "specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/reviewability/task-gate.json"
       },
       "hazards": [
@@ -644,16 +575,15 @@
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "head_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
-        "commit_sha": "3e0392c6f8f9e1b84603a0c01207040ce4b3c967",
+        "head_sha": "48ddc8d0aee79780a91b234c0e4b55fb07409e6c",
+        "commit_sha": "48ddc8d0aee79780a91b234c0e4b55fb07409e6c",
         "verification_evidence": "docs/ai/specs/.process/TACD-002-workflow.md",
         "evidence_path": "docs/ai/specs/.process/TACD-002-workflow.md"
       },
       "emission_mapping": {
         "status": "pending"
       },
-      "warnings": [],
-      "title_description": "Refresh generated capability payloads"
+      "warnings": []
     }
   ],
   "warnings": [

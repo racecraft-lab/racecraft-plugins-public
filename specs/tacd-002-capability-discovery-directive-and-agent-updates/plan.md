@@ -20,7 +20,7 @@ The implementation will create or update the shared directive at `speckit-pro/sk
 
 **Storage**: Repository files only. Source guidance under `speckit-pro/`, generated payload copies under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, and Plan-phase artifacts under `specs/tacd-002-capability-discovery-directive-and-agent-updates/`.
 
-**Testing**: Source/diff review, payload rebuild evidence, second-rebuild idempotence check, and default deterministic suite `bash tests/speckit-pro/run-all.sh`.
+**Testing**: Source/diff review, payload rebuild evidence, second-rebuild idempotence check, focused marker-emission regression tests, Layer 3 eval fixture/guidance checks, and default deterministic suite `bash tests/speckit-pro/run-all.sh`.
 
 **Target Platform**: Claude Code and Codex plugin marketplace runtime guidance, including installed agent surfaces generated from this repository.
 
@@ -69,6 +69,17 @@ The implementation will create or update the shared directive at `speckit-pro/sk
 - MODIFIED dist/codex/speckit-pro/codex-agents/checklist-executor.toml
 - MODIFIED dist/codex/speckit-pro/codex-agents/analyze-executor.toml
 - MODIFIED dist/codex/speckit-pro/codex-agents/implement-executor.toml
+- MODIFIED speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+- MODIFIED speckit-pro/skills/speckit-autopilot/references/post-implementation.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md
+- MODIFIED tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
+- MODIFIED tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh
+- MODIFIED tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json
+- MODIFIED tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json
+- MODIFIED dist/claude/speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+- MODIFIED dist/claude/speckit-pro/skills/speckit-autopilot/references/post-implementation.md
+- MODIFIED dist/codex/speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+- MODIFIED dist/codex/speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md
 
 Generated `dist/**` entries are declared only as source-derived payload outputs; implementation must regenerate them through `bash scripts/build-plugin-payloads.sh`. The generated shared-reference entries are included because the builder copies `speckit-pro/skills/` into both Claude and Codex payload roots before Codex-specific overlays.
 
@@ -81,7 +92,7 @@ Generated `dist/**` entries are declared only as source-derived payload outputs;
 | I. Plugin Structure Compliance | PASS | TACD-002 changes existing plugin guidance and generated payloads without changing plugin layout, manifests, commands, hooks, or skill directory conventions. |
 | II. Script Safety | PASS | No new Bash script is planned. Existing builder and verification scripts are used as-is. |
 | III. Semantic Versioning | PASS | No manual version edit is planned. Release automation remains responsible for version changes. |
-| IV. Test Coverage Before Merge | PASS | Planned verification uses `bash scripts/build-plugin-payloads.sh`, generated diff review, second rebuild idempotence, and `bash tests/speckit-pro/run-all.sh`. TACD-004 owns new deterministic/eval enforcement. |
+| IV. Test Coverage Before Merge | PASS | Planned verification uses `bash scripts/build-plugin-payloads.sh`, generated diff review, second rebuild idempotence, focused marker-emission regressions, Layer 3 eval expectation checks, and `bash tests/speckit-pro/run-all.sh`. TACD-004 still owns broad deterministic/eval enforcement. |
 | V. Conventional Commits | PASS | Commit/PR title will use the repository's Conventional Commit pattern. |
 | VI. KISS, Simplicity & YAGNI | PASS | The simplest durable design is the design concept's shared reference with narrow runtime pointers/equivalents. No new abstraction, installer, or enforcement layer is added in TACD-002. |
 | Reviewability Budget | PASS with accepted warning | The design concept explicitly accepts the setup warning because TACD-002 is a bounded docs/process behavior-guidance slice with 0 projected production files and no TACD-003 or TACD-004 implementation. |
@@ -141,6 +152,39 @@ See [research.md](research.md). All planning decisions are resolved from the TAC
 
 See [data-model.md](data-model.md), [contracts/capability-discovery-guidance.md](contracts/capability-discovery-guidance.md), and [quickstart.md](quickstart.md).
 
+## Post-Implementation Blocker Addendum
+
+During marker-split PR emission, `multi-pr-emission.sh` used
+`--feature-branch` for two different concepts: the source spec directory
+(`specs/<feature>`) and the emitted slice branch prefix. This blocked TACD-002
+because the parent feature branch already existed, so child refs under the same
+prefix could not be created; using a different prefix then pointed evidence and
+persistence checks at a nonexistent source directory.
+
+The fix is intentionally narrow: add `--source-feature-dir specs/<feature>` for
+marker-aware emission. Existing callers remain compatible. When the option is
+provided, `--feature-branch` stays the emitted branch prefix while full/scoped
+verification evidence, PRS, MOC, and packet paths resolve through the source
+feature directory. Regression coverage includes dry-run JSON/command capture,
+live fake-GitHub branch and PR creation with an existing parent feature branch
+ref, Layer 3 eval expectation updates, and guidance assertions that prevent
+future drift.
+
+Dry marker validation also exposed a title-normalization stop: descriptive
+source boundaries such as `User Story 1 - Agents Choose By Capability Need
+(Priority: P1) - MVP` were rejected because they did not already start with an
+imperative verb. The same blocker hardening now requires marker emission to
+strip raw story metadata and derive reviewer-safe public titles, with focused
+regression coverage proving the emitted command title avoids `User Story`,
+`Priority`, `MVP`, and placeholder text.
+
+The final dry validation also exposed an over-strict changed-file guard. Marker
+emission planned exact declared files but TACD-002's real branch diff includes
+declared tests, source-derived generated payload counterparts, root/context
+evidence, roadmap MOCs, and feature `.process/**` files. The guard now admits
+those expected evidence classes while retaining the undeclared-file block for
+unrelated paths.
+
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
@@ -153,4 +197,4 @@ See [data-model.md](data-model.md), [contracts/capability-discovery-guidance.md]
 |------|--------|-------|
 | Constitutional gates | PASS | Phase 1 artifacts preserve 0 projected production files, no new scripts, no metadata version edits, and no new deterministic/eval enforcement. |
 | Reviewability gate | PASS with accepted warning | The accepted warning remains bounded to active guidance and generated payload refresh evidence. TACD-003 and TACD-004 are explicitly deferred. |
-| Scope gate | PASS | Plan artifacts do not implement prerequisite messaging, public setup wording, or final enforcement/evals. |
+| Scope gate | PASS | Plan artifacts do not implement prerequisite messaging, public setup wording, or TACD-004 enforcement. Targeted eval fixture expectations are updated only to prove the marker-emission blocker cannot recur. |

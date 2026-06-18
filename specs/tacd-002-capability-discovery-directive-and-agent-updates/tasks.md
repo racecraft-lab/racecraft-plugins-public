@@ -114,6 +114,27 @@
 - [x] T036 Run the default deterministic suite with `bash tests/speckit-pro/run-all.sh`.
 - [x] T037 Prepare the PR review packet content from `specs/tacd-002-capability-discovery-directive-and-agent-updates/spec.md`, `specs/tacd-002-capability-discovery-directive-and-agent-updates/plan.md`, final diffs under `speckit-pro/`, `dist/claude/speckit-pro/`, and `dist/codex/speckit-pro/`, with what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, rollback/flag notes, preserved-ID review table, payload refresh evidence, and explicit TACD-003/TACD-004 deferrals.
 
+## Phase 8: User Story 5 - Marker Emission Survives Branch Namespace Conflicts (Priority: P1)
+
+**Purpose**: Durably fix the marker-emission bug that stopped TACD-002 post-implementation PR emission, then prove it with focused regressions, eval/guidance checks, generated payload refresh, and full-suite verification.
+
+- [x] T038 [US5] Update `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh` so marker-aware emission accepts `--source-feature-dir specs/<feature>` and keeps `--feature-branch` as the emitted branch prefix.
+- [x] T039 [US5] Add marker dry-run regression coverage in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` proving emitted branch refs can use a safe prefix while full/scoped verification evidence remains under the source feature directory.
+- [x] T040 [US5] Add live fake-GitHub marker regression coverage in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` with an existing parent feature branch ref, checkpoint-backed slice branches, PR creation, source-dir PRS persistence, and alias branch command logging.
+- [x] T041 [US5] Update `speckit-pro/skills/speckit-autopilot/references/post-implementation.md`, `speckit-pro/codex-skills/speckit-autopilot/references/post-implementation-codex.md`, `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json`, `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json`, and `tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh` so future guidance/eval expectations require source-dir and branch-prefix separation.
+- [x] T042 [US5] Run focused regression checks: `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` and `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`.
+- [x] T043 [US4] Run `bash scripts/build-plugin-payloads.sh` after blocker-fix source edits and verify generated `dist/**` payloads reflect source-derived script/reference updates.
+- [x] T044 [US5] Run Layer 3 eval fixture resolution helpers for Claude and Codex autopilot evals and verify the updated expectations are loaded from the intended eval files.
+- [x] T045 [US5] Re-run `bash tests/speckit-pro/run-all.sh`, refresh reviewability/marker evidence, and rerun marker emission dry validation with `--source-feature-dir specs/tacd-002-capability-discovery-directive-and-agent-updates`.
+- [x] T046 [US5] Update `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh` so marker source-boundary titles that are descriptive user-story headings normalize into reviewer-safe public PR titles.
+- [x] T047 [US5] Add focused regression coverage in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` proving source boundaries like `User Story 1 - Agents Choose By Capability Need (Priority: P1) - MVP` emit clean public titles without raw story metadata or placeholder text.
+- [x] T048 [US5] Run `bash scripts/build-plugin-payloads.sh` after title-normalization source edits and verify generated `dist/**` payloads reflect the script update.
+- [x] T049 [US5] Re-run focused marker-emission tests, the full deterministic suite, final reviewability evidence, and marker emission dry validation after the title-normalization blocker fix.
+- [x] T050 [US5] Update `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh` so marker changed-file scope validation accepts declared tests, source-derived generated payload counterparts, and standard SpecKit process evidence while preserving undeclared-file blocking.
+- [x] T051 [US5] Add focused regression coverage in `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh` proving marker changed-file validation accepts declared tests, generated payloads, `CLAUDE.md`, roadmap MOCs, `docs/ai/specs/.process/**`, and feature `.process/**` evidence.
+- [x] T052 [US5] Run `bash scripts/build-plugin-payloads.sh` after scope-guard source edits and verify generated `dist/**` payloads reflect the script update.
+- [x] T053 [US5] Re-run focused marker-emission tests, the full deterministic suite, final reviewability evidence, and marker emission dry validation after the scope-guard blocker fix.
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -125,6 +146,7 @@
 - **User Story 3 (Phase 5)**: Depends on US1 and US2 source guidance being stable.
 - **User Story 4 (Phase 6)**: Depends on all source guidance changes from US1 through US3.
 - **Polish and Verification (Phase 7)**: Depends on all desired user stories and generated payload refresh.
+- **Marker Emission Blocker Hardening (Phase 8)**: Depends on the post-implementation marker emission blocker being reproduced and must complete before final PR emission.
 
 ### User Story Dependencies
 
@@ -132,6 +154,7 @@
 - **US2 (P1)**: Same priority as US1 but serial after US1 to avoid overlapping edits in the same agent guidance files.
 - **US3 (P2)**: After US1 and US2 so pointer/equivalent coverage reflects final behavior wording.
 - **US4 (P2)**: After US1 through US3 because generated payloads must be refreshed from final source.
+- **US5 (P1)**: After the blocker is observed in post-implementation; blocks final marker PR emission.
 
 ### Parallel Opportunities
 
@@ -140,6 +163,9 @@
 - T024 and T025 can run in parallel because they verify different runtime families.
 - Within T027/T028 review, metadata rows can be collected independently by file family, but the final preserved-ID table must be consolidated once.
 - Generated payload tasks T029 through T033 are serial because the builder output and idempotence checks depend on the previous step.
+- T039 and T040 are independent regression additions after T038, but T042/T045 must run after both.
+- T047 is independent after T046, but T048/T049 must run after both T046 and T047.
+- T051 is independent after T050, but T052/T053 must run after both T050 and T051.
 
 ## Parallel Example: User Story 1
 
@@ -195,12 +221,18 @@ Task: "T014 [US1] Update speckit-pro/codex-agents/domain-researcher.toml"
 | FR-013 | T001, T002, T035, T037 |
 | FR-014 | T001, T002, T005, T035, T037 |
 | FR-015 | T027, T031, T034, T037 |
+| FR-016 | T038-T045 |
+| FR-017 | T046-T049 |
+| FR-018 | T050-T053 |
 | SC-001 | T019, T035 |
 | SC-002 | T024-T026, T033 |
 | SC-003 | T020-T023 |
 | SC-004 | T029-T033 |
 | SC-005 | T027, T028 |
 | SC-006 | T001, T002, T035, T037 |
+| SC-007 | T039, T040, T042, T044, T045 |
+| SC-008 | T047, T049 |
+| SC-009 | T051, T053 |
 
 ## Notes
 
@@ -208,4 +240,4 @@ Task: "T014 [US1] Update speckit-pro/codex-agents/domain-researcher.toml"
 - Generated `dist/**` payloads are source-derived outputs and must be refreshed through `bash scripts/build-plugin-payloads.sh`.
 - Do not hand-edit `dist/**` as durable source.
 - Do not implement TACD-003 prerequisite/user-facing messaging in this task list.
-- Do not implement TACD-004 deterministic checks, static pointer enforcement, Layer 3 eval changes, or final tool-scoping enforcement in this task list.
+- Do not implement TACD-004 deterministic checks, static pointer enforcement, or final tool-scoping enforcement in this task list. Targeted Layer 3 eval fixture updates are included only as regression evidence for the marker-emission blocker fix.

@@ -84,6 +84,33 @@
   directive or use capability categories; do not rewrite TACD-003 prerequisite
   docs or TACD-004 enforcement.
 
+### Session 2026-06-18 - Marker Emission Blocker Hardening
+
+- Q: What stopped post-implementation marker PR emission? A:
+  `multi-pr-emission.sh` used `--feature-branch` both as the source spec
+  directory identity and as the emitted slice branch prefix. When the parent
+  feature branch already existed, Git could not create child branch refs under
+  that same prefix; using a different prefix then made the script look for a
+  nonexistent `specs/<different-prefix>/` directory.
+- Q: What durable fix belongs in TACD-002? A: Marker emission must support a
+  separate source feature directory via `--source-feature-dir specs/<feature>`
+  while preserving `--feature-branch` as the emitted branch prefix. Tests and
+  eval guidance must prove evidence/PRS/MOC paths stay under the source feature
+  directory while emitted branch refs use a non-conflicting prefix.
+- Q: What second blocker did dry marker validation expose? A: Marker emission
+  rejected normal user-story source boundary titles such as
+  `User Story 1 - Agents Choose By Capability Need (Priority: P1) - MVP`
+  because they did not already start with an imperative verb. The durable fix is
+  to normalize story source boundaries into reviewer-safe titles, for example
+  `Update Agents Choose By Capability Need`, without leaking raw story,
+  priority, MVP, or placeholder text into PR titles.
+- Q: What third blocker did dry marker validation expose? A: The marker
+  changed-file scope guard only accepted exact declared files. It rejected
+  declared tests, source-derived `dist/**` payload counterparts, and standard
+  SpecKit process evidence such as `CLAUDE.md`, workflow state, roadmap MOCs,
+  and feature `.process/**` files. The durable fix is to treat those as allowed
+  marker emission evidence while still blocking arbitrary undeclared files.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Agents Choose By Capability Need (Priority: P1)
@@ -146,6 +173,23 @@ As a maintainer, I want generated Claude and Codex payloads refreshed from sourc
 
 ---
 
+### User Story 5 - Marker Emission Survives Branch Namespace Conflicts (Priority: P1)
+
+As an operator finishing a marker-split autopilot run from an existing feature branch, I want the emitter to create ordered slice branches without confusing branch prefixes with source spec directories.
+
+**Why this priority**: TACD-002 cannot complete post-implementation PR emission if the marker emitter blocks on a normal Git ref namespace shape.
+
+**Independent Test**: Run marker emission dry-run and live fake-GitHub coverage with `--feature-branch <safe-prefix>` and `--source-feature-dir specs/<feature>`, including a repository where the parent feature branch already exists.
+
+**Acceptance Scenarios**:
+
+1. **Given** a marker plan whose source artifacts live under `specs/<feature>`, **When** marker emission uses a non-conflicting emitted branch prefix, **Then** generated head/base refs use that prefix while full/scoped verification evidence and PRS/MOC files remain under `specs/<feature>`.
+2. **Given** a Git repository already has a parent feature branch ref, **When** live marker emission uses a safe emitted branch prefix plus `--source-feature-dir specs/<feature>`, **Then** child slice branches and PRs are created from marker checkpoint SHAs without mutating the wrong source directory.
+3. **Given** a marker source boundary is a normal user-story heading with priority or MVP suffix text, **When** marker emission derives PR packet titles, **Then** the public title is normalized into reviewer-safe action wording and does not include raw `User Story`, `Priority`, `MVP`, or placeholder text.
+4. **Given** the changed-file list includes declared tests, generated payload counterparts, and standard SpecKit process evidence, **When** marker emission validates scope, **Then** those files are accepted while unrelated undeclared files still block emission.
+
+---
+
 ### Edge Cases
 
 - Runtime or dependency metadata requires exact tool or capability IDs; TACD-002 preserves those IDs unless a generic equivalent is proven.
@@ -154,6 +198,17 @@ As a maintainer, I want generated Claude and Codex payloads refreshed from sourc
 - A target runtime cannot follow a shared Markdown pointer from its installed context; installed Codex TOML agents may include a compact approved equivalent with a source-note marker that preserves the same semantic directive.
 - Generated `dist/**` payloads are stale after source edits; implementation must refresh them through the repository's generation path.
 - A narrow behavior pointer touches setup or limitation wording; the change must stay behavior-only and avoid TACD-003 prerequisite messaging.
+- Marker PR emission needs branch names under a prefix that would collide with
+  an existing parent branch ref; marker emission must separate emitted branch
+  prefix from source feature directory with `--source-feature-dir`.
+- Marker PR emission derives public titles from source boundaries that are
+  descriptive user-story headings rather than imperative change summaries; title
+  normalization must produce reviewer-safe action wording instead of stopping or
+  emitting generic placeholder titles.
+- Marker PR emission receives a changed-file list that includes declared tests,
+  source-derived generated payloads, root context, roadmap MOCs, and `.process`
+  evidence; the scope guard must allow those expected evidence files without
+  allowing unrelated undeclared changes.
 
 ## Requirements *(mandatory)*
 
@@ -174,6 +229,9 @@ As a maintainer, I want generated Claude and Codex payloads refreshed from sourc
 - **FR-013**: TACD-002 MUST NOT replace prerequisite checks, public setup messaging, or plugin limitation documentation except for narrow agent behavior pointers needed by this feature.
 - **FR-014**: TACD-002 MUST NOT add final deterministic or eval enforcement owned by TACD-004.
 - **FR-015**: The PR review packet MUST trace major directive and agent-guidance changes to changed files, generated payload refresh evidence, and verification results.
+- **FR-016**: Marker-aware multi-PR emission MUST support a non-conflicting emitted branch prefix separate from the source feature directory through `--source-feature-dir specs/<feature>`, and MUST keep verification evidence, PRS, and MOC paths anchored to the source feature directory.
+- **FR-017**: Marker-aware multi-PR emission MUST normalize descriptive marker source-boundary titles into reviewer-safe public PR titles, stripping raw story metadata such as `User Story`, `Priority`, and `MVP`, and MUST block placeholder titles such as `Describe reviewer-visible change`.
+- **FR-018**: Marker-aware multi-PR emission MUST include declared tests, source-derived generated payload counterparts, and standard SpecKit process evidence in changed-file scope validation while preserving the stop for unrelated undeclared files.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -218,6 +276,9 @@ As a maintainer, I want generated Claude and Codex payloads refreshed from sourc
 - **SC-004**: Generated Claude and Codex payload copies can be shown to be refreshed from source guidance through the repository's generation path.
 - **SC-005**: Preserved exact runtime/dependency IDs are documented as schema-required metadata, historical references, provenance, or otherwise non-preferential behavior.
 - **SC-006**: The final TACD-002 diff does not implement TACD-003 prerequisite/user-facing messaging or TACD-004 deterministic/eval enforcement.
+- **SC-007**: Focused marker-emission tests prove both dry-run and live fake-GitHub marker emission succeed when the emitted branch prefix differs from the source feature directory and an existing parent feature branch ref is present.
+- **SC-008**: Focused marker-emission tests prove normal user-story source boundaries derive reviewer-safe public PR titles without raw story metadata or placeholder title text.
+- **SC-009**: Focused marker-emission tests prove the changed-file scope guard accepts declared tests, generated payload counterparts, and standard process evidence while retaining the undeclared-file block.
 
 ## Assumptions
 
