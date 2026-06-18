@@ -1,9 +1,0 @@
-{
-  "marker_id": "us2",
-  "status": "complete",
-  "task_ids": ["T020", "T021", "T022", "T023", "T024", "T025", "T026", "T027", "T028", "T029", "T030"],
-  "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
-  "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
-  "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us2.json",
-  "summary": "Added directive-home recommendation, TACD-002/TACD-003/TACD-004 handoffs, verification evidence, reviewer order, known gaps, and rollback notes."
-}
