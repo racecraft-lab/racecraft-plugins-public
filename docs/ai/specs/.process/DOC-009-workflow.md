@@ -44,8 +44,8 @@ scope decisions captured during setup.
 | Clarify | `/speckit-clarify` | Complete | Resolved page structure, source-fact boundaries, validation lanes, and DOC-010 handoff |
 | Plan | `/speckit-plan` | Complete | Created `plan.md`, `research.md`, and `quickstart.md`; G3 passed with projected production LOC 0 |
 | Checklist | `/speckit-checklist` | Complete | Four domain checklists completed; G4 passed with zero gap markers |
-| Tasks | `/speckit-tasks` | In Progress | Produce ordered, reviewable implementation tasks |
-| Analyze | `/speckit-analyze` | Pending | Check consistency across spec, plan, tasks, and design concept |
+| Tasks | `/speckit-tasks` | Complete | Generated 23 story-sliced tasks; G5 passed |
+| Analyze | `/speckit-analyze` | In Progress | Check consistency across spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Implement docs changes with focused verification |
 
 ### Phase Gates
@@ -439,10 +439,10 @@ Consensus escalation was not required for any checklist domain.
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Fill after run |
-| Phases | Fill after run |
-| Parallel Opportunities | Fill after run |
-| User Stories Covered | Fill after run |
+| Total Tasks | 23 |
+| Phases | 6: setup/source audit, US1, US2, US3, US4, polish/validation |
+| Parallel Opportunities | T001-T003 read-only source audit, T018 reference check after page edits; US3 and US4 drafts can proceed in parallel after shared terminology |
+| User Stories Covered | US1, US2, US3, US4 |
 
 ---
 
@@ -453,10 +453,10 @@ record its decision here.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Pending | `true` or `false` |
-| Signals | Pending | Decisive detector findings |
-| Warnings | Pending | Release-safety warnings |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | `true` | `true` or `false` |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings |
+| Warnings | None | Release-safety warnings |
 
 Run:
 
