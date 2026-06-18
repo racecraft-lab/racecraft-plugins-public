@@ -476,14 +476,14 @@ Focus on:
 
 | Item | Result |
 |------|--------|
-| Tasks | T001-T037 complete in `tasks.md` |
-| Shared directive | Added `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` |
-| Claude guidance | Updated six scoped Markdown agents to reference the shared directive and select capabilities by task need |
-| Codex guidance | Updated six scoped TOML agents with the approved compact-equivalent marker and capability-first semantics |
-| Shared references | Updated `consensus-protocol.md` and `gate-validation.md` with narrow capability-first pointers |
-| Generated payloads | Ran `bash scripts/build-plugin-payloads.sh` twice; second run produced no additional intended changes |
-| Payload coverage | Generated directive copies exist under both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` |
-| Active wording scan | No scoped source or generated behavior surface matched preferred named optional-tool wording |
+| Tasks | US2 slice T020-T023 complete in `tasks.md`; foundation and US1 are already merged on `main` |
+| Shared directive | Updated fallback and degradation behavior in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` |
+| Claude guidance | Preserved merged capability-first agent guidance and added fallback evidence behavior where needed |
+| Codex guidance | Preserved merged compact-equivalent agent guidance and added fallback evidence behavior where needed |
+| Shared references | Preserved capability-first pointers in `consensus-protocol.md` and `gate-validation.md` |
+| Generated payloads | Refreshed generated Claude and Codex payload copies from source |
+| Payload coverage | Generated directive and agent copies exist under both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` |
+| Changed-file evidence | `changed-files.txt` is refreshed from the PR #223 diff against `origin/main` |
 | Verification | `git diff --check` passed; `bash tests/speckit-pro/run-all.sh --layer 1` passed `1024/1024`; `bash tests/speckit-pro/run-all.sh` passed `3041/3041` |
 
 ### Preserved-ID Review Table
@@ -499,9 +499,9 @@ Focus on:
 
 ## Post-Implementation Checklist
 
-- [x] All tasks marked complete in `tasks.md`
-- [x] Shared directive or approved runtime equivalents are present
-- [x] Active Claude/Codex agent guidance no longer contains preferred named optional-tool wording
+- [x] US2 fallback evidence tasks are complete in `tasks.md`
+- [x] Shared directive or approved runtime equivalents include fallback behavior
+- [x] Active Claude/Codex US2 guidance describes degradation without requiring optional capabilities
 - [x] Metadata IDs are reviewed and classified
 - [x] Generated payloads are refreshed from source
 - [x] Focused validation passes
@@ -528,7 +528,7 @@ Focus on:
 
 ### Findings
 
-- No correctness issues found in the scoped source or generated payload diffs.
+- No correctness issues found in the scoped US2 source or generated payload diffs.
 - Preserved named IDs are confined to allowlist/dependency metadata or generated runtime metadata.
 - The reviewability task gate size block remains recorded; final reviewability backstop still decides PR side effects.
 

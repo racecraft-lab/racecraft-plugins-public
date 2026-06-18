@@ -40,6 +40,25 @@ Generated install payloads live under `dist/claude/**` and `dist/codex/**`. Thos
 
 DOC-007 owns the generated subpages listed above. They are committed Markdown output generated from checked-in repository files. Do not treat generated pages as source evidence for themselves; rerun `pnpm --dir docs-site reference:generate` after source changes, then use `pnpm --dir docs-site reference:check`.
 
+## DOC-008 Support Handoffs
+
+Use these hand-authored handoffs when a reference page identifies the source or
+payload surface, but you need diagnosis or recovery guidance:
+
+- [Troubleshooting](/racecraft-plugins-public/troubleshooting/) maps install,
+  marketplace, generated payload, cache/runtime, permissions, CLI prerequisite,
+  path, version, and Codex custom-agent symptoms to read-only inspection and a
+  safe next action.
+- [Security & Trust](/racecraft-plugins-public/security-and-trust/) separates
+  official platform behavior, Racecraft repository facts, and recommended
+  practice for manifests, skills, agents, hooks, MCP/app integrations,
+  sandboxing, approvals, managed policy, cache/runtime state, and rollback
+  boundaries.
+- [Update & Rollback](/racecraft-plugins-public/update-and-rollback/) defines
+  update, refresh, reinstall, remove, rollback, stale payload, stale cache, and
+  version-sync recovery cases without hand-editing generated payloads or
+  installed caches.
+
 ## Next Step
 
 [Open the contributor and release shell](/racecraft-plugins-public/contribute-and-release/) if you need maintainer workflow orientation.
