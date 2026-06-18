@@ -605,7 +605,7 @@ For each task:
 | Cleanup | Skipped | No runnable Codex cleanup extension command was installed. |
 | Self-Review | Complete | Parent review found no unresolved markers, unsafe cache-default guidance, or generated reference subpage edits. |
 | UAT Runbook Generation | Complete | Generated a DOC-008 UAT skeleton during post checks; the file is regenerated transiently for PR body generation rather than committed, keeping the final diff within reviewability limits. |
-| Final Reviewability Backstop | Pending | Runs after the implementation checkpoint is committed so `origin/main...HEAD` includes the docs implementation. |
+| Final Reviewability Backstop | Complete | Proceeded with status `warn`: total files 25 exceeded the warn threshold 15 and primary surfaces 4 exceeded the warn threshold 1; no blockers remained after keeping UAT evidence transient. |
 | PR Packet/Body Generation | Pending | Runs after final reviewability backstop proceeds. |
 | PR Creation | Pending | Runs after PR packet validation and workflow-contract validation pass. |
 | Review Remediation | Pending | Runs after PR creation if GitHub feedback exists. |

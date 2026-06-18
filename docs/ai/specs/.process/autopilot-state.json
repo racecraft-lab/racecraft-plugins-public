@@ -9,8 +9,8 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T04:45:03Z",
-  "active_step": "Post: Reviewability Diff Gate",
+  "updated_at": "2026-06-18T04:48:07Z",
+  "active_step": "Post: PR Body Generation",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -264,7 +264,8 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Final reviewability backstop proceeded with status warn: total files 25 exceeds warn threshold 15 and primary surfaces 4 exceeds warn threshold 1; no blockers remained after keeping UAT evidence transient."
     },
     {
       "step": "Post: Self-Review",
