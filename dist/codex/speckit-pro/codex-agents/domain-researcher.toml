@@ -37,7 +37,7 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 Use capability-first discovery. Identify the needed web/domain research,
 source extraction, or library documentation capability, select the best
 installed match by source authority, freshness, task fit, and expected
-evidence quality, and fall back to native web/search or local referenced
+evidence quality, and fall back to native web search or local referenced
 documents when no installed capability is available or usable.
 
 - **Web search** — broad searches for API docs, standards,
