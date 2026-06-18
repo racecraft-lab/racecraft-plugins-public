@@ -50,7 +50,7 @@ policy, one-slice decision, and validation scope.
 | Checklist | `$speckit-checklist` | Complete | Completed UX, security, error handling, and accessibility; 6 gaps found and fixed; G4 marker count clean |
 | Tasks | `$speckit-tasks` | Complete | Generated 40 story-ordered docs tasks with source citation checks; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Remediated AC traceability drift; G6 marker count clean |
-| Implement | `$speckit-implement` | Pending | Expand DOC-008 pages, update sidebar/links, validate docs-site |
+| Implement | `$speckit-implement` | Complete | Expanded DOC-008 pages, updated sidebar/links, ran docs validation bundle; G7 passed |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -575,23 +575,41 @@ For each task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | Pending | Pending | Pending |
-| User Story 1 | Pending | Pending | Troubleshooting matrix |
-| User Story 2 | Pending | Pending | Security/trust model |
-| User Story 3 | Pending | Pending | Update/rollback guidance |
-| Polish | Pending | Pending | Links, accessibility, validation |
+| Foundation | T001-T008 | Complete | Reviewed route/sidebar, source inventory, generated DOC-007 references, validation commands, and scope guard |
+| User Story 1 | T009-T014 | Complete | Replaced troubleshooting shell with source-cited symptom matrix and read-only inspection boundary |
+| User Story 2 | T015-T020 | Complete | Expanded security/trust model with vendor behavior, repository facts, and recommended-practice boundaries |
+| User Story 3 | T021-T027 | Complete | Added update/rollback route with recovery cases, stale-cache guardrails, and platform notes |
+| Polish | T028-T040 | Complete | Added sidebar/install/reference handoffs, completed citation/accessibility review, and ran validation bundle |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks are marked complete in `tasks.md`.
-- [ ] `pnpm --dir docs-site reference:check` passes.
-- [ ] `pnpm --dir docs-site validate` passes.
-- [ ] `pnpm --dir docs-site validate:links` passes.
-- [ ] Source-reference review confirms platform claims cite official docs and repo-specific claims cite checked-in files or generated reference pages.
-- [ ] `git diff --name-only` confirms no plugin behavior, generated payload semantics, manifests, hooks, release automation, or CI behavior changed.
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 1` is run if plugin/spec surfaces, manifests, hooks, scripts, or generated payload paths are touched.
+- [x] All tasks are marked complete in `tasks.md` (40/40; G7 passed).
+- [x] `pnpm --dir docs-site reference:check` passes.
+- [x] `pnpm --dir docs-site validate` passes.
+- [x] `pnpm --dir docs-site validate:links` passes.
+- [x] Source-reference review confirms platform claims cite official docs and repo-specific claims cite checked-in files or generated reference pages.
+- [x] `git diff --name-only` confirms no plugin behavior, generated payload semantics, manifests, hooks, release automation, or CI behavior changed.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 1` was not required because implementation touched docs-site content/navigation and DOC-008 process artifacts only; no plugin behavior, manifests, hooks, scripts, tests, generated payload paths, release automation, or CI behavior changed.
+
+### Post-Implementation Evidence
+
+| Item | Status | Evidence |
+|------|--------|----------|
+| Doctor Extension Check | Skipped | No runnable Codex doctor command was registered; `speckit-utils` commands exist only under `.claude/commands` in this worktree. |
+| Verify Implementation | Skipped | `$speckit-verify` is registered only for Claude in `.specify/extensions/.registry`; no runnable Codex command/skill was available. |
+| Verify Tasks Phantom Check | Skipped | `$speckit-verify-tasks` is registered only for Claude in `.specify/extensions/.registry`; no runnable Codex command/skill was available. |
+| Code Review | Complete | Subagent review found the new route was untracked and the Spec Kit CLI row citation was weak; route file will be staged, and the citation was updated to scripts evidence. |
+| Integration Suite | Complete | `pnpm --dir docs-site reference:check`, `pnpm --dir docs-site validate`, `pnpm --dir docs-site validate:links`, `git diff --check`, and G7 all passed. |
+| Cleanup | Skipped | No runnable Codex cleanup extension command was installed. |
+| Self-Review | Complete | Parent review found no unresolved markers, unsafe cache-default guidance, or generated reference subpage edits. |
+| UAT Runbook Generation | Complete | Generated `specs/doc-008-troubleshooting-security-trust-update-rollback/.process/uat-runbook.md`. |
+| Final Reviewability Backstop | Pending | Runs after the implementation checkpoint is committed so `origin/main...HEAD` includes the docs implementation. |
+| PR Packet/Body Generation | Pending | Runs after final reviewability backstop proceeds. |
+| PR Creation | Pending | Runs after PR packet validation and workflow-contract validation pass. |
+| Review Remediation | Pending | Runs after PR creation if GitHub feedback exists. |
+| Retrospective | Pending | Skipped/complete decision is deferred until PR side effects are complete. |
 
 ---
 

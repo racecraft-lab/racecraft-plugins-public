@@ -9,8 +9,8 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T04:31:11Z",
-  "active_step": "Phase 7: Implement - Setup and Foundation",
+  "updated_at": "2026-06-18T04:45:03Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -207,47 +207,60 @@
     },
     {
       "step": "Phase 7: Implement - Setup and Foundation",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Reviewed DOC-008 file operations, route shells, sidebar placement, source inventory, generated DOC-007 references, validation commands, and scope guard."
     },
     {
       "step": "Phase 7: Implement - User Story 1 Troubleshooting",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Expanded troubleshooting.md into a source-cited symptom matrix with platform labels, read-only inspection guidance, safe recovery handoffs, and support anchors."
     },
     {
       "step": "Phase 7: Implement - User Story 2 Security and Trust",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Expanded security-and-trust.md with official vendor behavior, Racecraft repository facts, recommended-practice boundaries, evaluator checklist, and no-audit/no-certification positioning."
     },
     {
       "step": "Phase 7: Implement - User Story 3 Update and Rollback",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Added update-and-rollback.md with recovery cases for update, refresh, reinstall, remove, rollback, stale payload, stale cache, and version sync."
     },
     {
       "step": "Phase 7: Implement - Polish and Validation",
-      "status": "pending"
+      "status": "completed",
+      "gate": "G7",
+      "gate_status": "passed",
+      "summary": "Added sidebar/install/reference handoffs, marked all 40 tasks complete, updated one weak source citation, and reran docs validation. G7 passed with 40/40 tasks complete."
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "No runnable Codex doctor command was registered. speckit-utils is enabled in .specify/extensions/.registry but registered only for Claude command files."
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "$speckit-verify is registered only for Claude in this worktree; no runnable Codex command or skill was available."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "$speckit-verify-tasks is registered only for Claude in this worktree; no runnable Codex command or skill was available. G7 separately confirmed 40/40 tasks complete."
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Subagent review found the new route file was untracked and one Spec Kit CLI row citation was weak. The route file will be staged and the citation was updated to scripts evidence."
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Passed pnpm --dir docs-site reference:check, pnpm --dir docs-site validate, pnpm --dir docs-site validate:links, git diff --check, and G7."
     },
     {
       "step": "Post: Cleanup",
-      "status": "pending"
+      "status": "skipped",
+      "summary": "No runnable Codex cleanup extension command was installed."
     },
     {
       "step": "Post: Reviewability Diff Gate",
@@ -255,11 +268,13 @@
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Parent self-review found no unresolved markers, unsafe cache-default guidance, or generated reference subpage edits."
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated specs/doc-008-troubleshooting-security-trust-update-rollback/.process/uat-runbook.md."
     },
     {
       "step": "Post: PR Body Generation",
@@ -292,6 +307,6 @@
       "Post:"
     ],
     "coverage": "complete",
-    "in_progress_count": 1
+    "in_progress_count": 0
   }
 }

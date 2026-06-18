@@ -31,11 +31,11 @@
 
 **Purpose**: Resolve the docs route/sidebar plan, source inventory, page model, and validation setup before page implementation starts.
 
-- [ ] T001 Review declared DOC-008 file operations and docs-only scope in `specs/doc-008-troubleshooting-security-trust-update-rollback/plan.md` before editing docs-site files
-- [ ] T002 [P] Review existing route shells and sidebar placement in `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/astro.config.mjs`
-- [ ] T003 [P] Build the official-vendor and repository citation checklist from `specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md`, `specs/doc-008-troubleshooting-security-trust-update-rollback/research.md`, and `docs/ai/specs/.process/DOC-008-design-concept.md`
-- [ ] T004 [P] Review generated DOC-007 reference coverage for manifests, skills, agents, hooks, scripts, tests, and source-vs-dist in `docs-site/src/content/docs/reference/`
-- [ ] T005 [P] Confirm validation commands and manual content checks from `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md`
+- [x] T001 Review declared DOC-008 file operations and docs-only scope in `specs/doc-008-troubleshooting-security-trust-update-rollback/plan.md` before editing docs-site files
+- [x] T002 [P] Review existing route shells and sidebar placement in `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/astro.config.mjs`
+- [x] T003 [P] Build the official-vendor and repository citation checklist from `specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md`, `specs/doc-008-troubleshooting-security-trust-update-rollback/research.md`, and `docs/ai/specs/.process/DOC-008-design-concept.md`
+- [x] T004 [P] Review generated DOC-007 reference coverage for manifests, skills, agents, hooks, scripts, tests, and source-vs-dist in `docs-site/src/content/docs/reference/`
+- [x] T005 [P] Confirm validation commands and manual content checks from `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md`
 
 ---
 
@@ -45,9 +45,9 @@
 
 **CRITICAL**: Complete this phase before editing the three DOC-008 user-facing pages.
 
-- [ ] T006 Define the shared static-Markdown row/case pattern for troubleshooting rows, trust claims, recovery cases, read-only inspections, and manual recovery actions from `specs/doc-008-troubleshooting-security-trust-update-rollback/data-model.md`
-- [ ] T007 Verify the checklist guardrails for UX, security, error handling, and accessibility in `specs/doc-008-troubleshooting-security-trust-update-rollback/checklists/`
-- [ ] T008 Confirm that DOC-009 contributor workflow and DOC-010 docs CI hardening remain out of scope by reviewing `docs/ai/specs/.process/DOC-008-workflow.md`
+- [x] T006 Define the shared static-Markdown row/case pattern for troubleshooting rows, trust claims, recovery cases, read-only inspections, and manual recovery actions from `specs/doc-008-troubleshooting-security-trust-update-rollback/data-model.md`
+- [x] T007 Verify the checklist guardrails for UX, security, error handling, and accessibility in `specs/doc-008-troubleshooting-security-trust-update-rollback/checklists/`
+- [x] T008 Confirm that DOC-009 contributor workflow and DOC-010 docs CI hardening remain out of scope by reviewing `docs/ai/specs/.process/DOC-008-workflow.md`
 
 **Checkpoint**: Foundation ready - user story implementation can start by page owner without changing plugin/runtime surfaces.
 
@@ -61,12 +61,12 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Replace the DOC-002 troubleshooting shell with a browser-safe introduction, stable support anchors, and the required matrix field headers in `docs-site/src/content/docs/troubleshooting.md`
-- [ ] T010 [US1] Add troubleshooting rows for install failure, marketplace source, generated payload, installed cache/runtime state, and permissions/approvals in `docs-site/src/content/docs/troubleshooting.md`
-- [ ] T011 [US1] Add troubleshooting rows for missing or outdated Spec Kit CLI, GitHub CLI, jq, path confusion, version drift, and source-vs-generated-payload mismatch in `docs-site/src/content/docs/troubleshooting.md`
-- [ ] T012 [US1] Add the Codex custom-agent troubleshooting row and platform-specific diagnostic text where Claude Code and Codex behavior differs in `docs-site/src/content/docs/troubleshooting.md`
-- [ ] T013 [US1] Verify every inspect command/file cell is read-only and contains no login, install, remove, reload, restart, approve, edit, set, unset, delete, rebuild, config-write, cache-edit, or token/secret-printing command in `docs-site/src/content/docs/troubleshooting.md`
-- [ ] T014 [US1] Add source citations and descriptive follow-up links to install, reference, security/trust, and update/rollback destinations in `docs-site/src/content/docs/troubleshooting.md`
+- [x] T009 [US1] Replace the DOC-002 troubleshooting shell with a browser-safe introduction, stable support anchors, and the required matrix field headers in `docs-site/src/content/docs/troubleshooting.md`
+- [x] T010 [US1] Add troubleshooting rows for install failure, marketplace source, generated payload, installed cache/runtime state, and permissions/approvals in `docs-site/src/content/docs/troubleshooting.md`
+- [x] T011 [US1] Add troubleshooting rows for missing or outdated Spec Kit CLI, GitHub CLI, jq, path confusion, version drift, and source-vs-generated-payload mismatch in `docs-site/src/content/docs/troubleshooting.md`
+- [x] T012 [US1] Add the Codex custom-agent troubleshooting row and platform-specific diagnostic text where Claude Code and Codex behavior differs in `docs-site/src/content/docs/troubleshooting.md`
+- [x] T013 [US1] Verify every inspect command/file cell is read-only and contains no login, install, remove, reload, restart, approve, edit, set, unset, delete, rebuild, config-write, cache-edit, or token/secret-printing command in `docs-site/src/content/docs/troubleshooting.md`
+- [x] T014 [US1] Add source citations and descriptive follow-up links to install, reference, security/trust, and update/rollback destinations in `docs-site/src/content/docs/troubleshooting.md`
 
 **Checkpoint**: User Story 1 is independently reviewable by checking `docs-site/src/content/docs/troubleshooting.md` against FR-003 through FR-006 and SC-002.
 
@@ -80,12 +80,12 @@
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Expand the security/trust shell with explicit non-audit, non-certification, non-threat-model, and non-control-attestation positioning in `docs-site/src/content/docs/security-and-trust.md`
-- [ ] T016 [US2] Add official Claude Code behavior coverage and narrow citations for plugins, marketplaces, settings, environment variables, permissions, sandboxing/security, hooks, subagents, and managed MCP in `docs-site/src/content/docs/security-and-trust.md`
-- [ ] T017 [US2] Add official OpenAI Codex behavior coverage and narrow citations for plugins, build plugins, skills, subagents/custom agents, hooks, MCP/app integrations, config, environment variables, CLI, sandboxing, permissions, approvals/security, managed configuration, and AGENTS.md in `docs-site/src/content/docs/security-and-trust.md`
-- [ ] T018 [US2] Add Racecraft repository fact coverage for source tree, generated payloads, marketplace manifests, skills, agents/custom agents, hooks, scripts, tests, and source-vs-dist evidence in `docs-site/src/content/docs/security-and-trust.md`
-- [ ] T019 [US2] Add recommended-practice boundaries for installed runtime/cache state, managed policy, update flow, rollback boundaries, and not editing generated payloads or caches directly in `docs-site/src/content/docs/security-and-trust.md`
-- [ ] T020 [US2] Perform a source-reference review so every official platform claim and every Racecraft repository fact has an appropriate citation in `docs-site/src/content/docs/security-and-trust.md`
+- [x] T015 [US2] Expand the security/trust shell with explicit non-audit, non-certification, non-threat-model, and non-control-attestation positioning in `docs-site/src/content/docs/security-and-trust.md`
+- [x] T016 [US2] Add official Claude Code behavior coverage and narrow citations for plugins, marketplaces, settings, environment variables, permissions, sandboxing/security, hooks, subagents, and managed MCP in `docs-site/src/content/docs/security-and-trust.md`
+- [x] T017 [US2] Add official OpenAI Codex behavior coverage and narrow citations for plugins, build plugins, skills, subagents/custom agents, hooks, MCP/app integrations, config, environment variables, CLI, sandboxing, permissions, approvals/security, managed configuration, and AGENTS.md in `docs-site/src/content/docs/security-and-trust.md`
+- [x] T018 [US2] Add Racecraft repository fact coverage for source tree, generated payloads, marketplace manifests, skills, agents/custom agents, hooks, scripts, tests, and source-vs-dist evidence in `docs-site/src/content/docs/security-and-trust.md`
+- [x] T019 [US2] Add recommended-practice boundaries for installed runtime/cache state, managed policy, update flow, rollback boundaries, and not editing generated payloads or caches directly in `docs-site/src/content/docs/security-and-trust.md`
+- [x] T020 [US2] Perform a source-reference review so every official platform claim and every Racecraft repository fact has an appropriate citation in `docs-site/src/content/docs/security-and-trust.md`
 
 **Checkpoint**: User Story 2 is independently reviewable by checking `docs-site/src/content/docs/security-and-trust.md` against FR-007 through FR-010 and SC-003 through SC-005.
 
@@ -99,13 +99,13 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Create `docs-site/src/content/docs/update-and-rollback.md` with frontmatter, title `Update & Rollback`, page introduction, browser-safety boundary, and definitions for update, refresh, reinstall, remove, rollback, stale payload, stale cache, and version sync
-- [ ] T022 [US3] Add recovery cases for update, refresh, reinstall, and remove with checkpoint, manual action, expected side effect, reload/restart need, and source citation in `docs-site/src/content/docs/update-and-rollback.md`
-- [ ] T023 [US3] Add recovery cases for rollback, stale payload, stale cache, and version sync with checkpoint, manual action, expected side effect, reload/restart need, and source citation in `docs-site/src/content/docs/update-and-rollback.md`
-- [ ] T024 [US3] Add Codex-specific recovery guidance that separates plugin installation, bundled skill loading, marketplace add/remove/list/upgrade, custom-agent registration through `@SpecKit Pro -> install` or `$install`, and Codex restart in `docs-site/src/content/docs/update-and-rollback.md`
-- [ ] T025 [US3] Add Claude Code-specific recovery guidance that separates marketplace update/remove, plugin install/uninstall, `/reload-plugins`, plugin detail inspection, managed policy, installed runtime state, and cache behavior in `docs-site/src/content/docs/update-and-rollback.md`
-- [ ] T026 [US3] Verify stale-cache guidance is last-resort only and direct cache edits, direct cache deletion, or cache directory removal are not default fixes in `docs-site/src/content/docs/update-and-rollback.md`
-- [ ] T027 [US3] Add source citations and descriptive follow-up links from all recovery cases to install, reference, troubleshooting, and security/trust destinations in `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T021 [US3] Create `docs-site/src/content/docs/update-and-rollback.md` with frontmatter, title `Update & Rollback`, page introduction, browser-safety boundary, and definitions for update, refresh, reinstall, remove, rollback, stale payload, stale cache, and version sync
+- [x] T022 [US3] Add recovery cases for update, refresh, reinstall, and remove with checkpoint, manual action, expected side effect, reload/restart need, and source citation in `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T023 [US3] Add recovery cases for rollback, stale payload, stale cache, and version sync with checkpoint, manual action, expected side effect, reload/restart need, and source citation in `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T024 [US3] Add Codex-specific recovery guidance that separates plugin installation, bundled skill loading, marketplace add/remove/list/upgrade, custom-agent registration through `@SpecKit Pro -> install` or `$install`, and Codex restart in `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T025 [US3] Add Claude Code-specific recovery guidance that separates marketplace update/remove, plugin install/uninstall, `/reload-plugins`, plugin detail inspection, managed policy, installed runtime state, and cache behavior in `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T026 [US3] Verify stale-cache guidance is last-resort only and direct cache edits, direct cache deletion, or cache directory removal are not default fixes in `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T027 [US3] Add source citations and descriptive follow-up links from all recovery cases to install, reference, troubleshooting, and security/trust destinations in `docs-site/src/content/docs/update-and-rollback.md`
 
 **Checkpoint**: User Story 3 is independently reviewable by checking `docs-site/src/content/docs/update-and-rollback.md` against FR-011 through FR-016 and SC-006.
 
@@ -115,19 +115,19 @@
 
 **Purpose**: Wire route visibility, cross-links, accessibility, citations, scope checks, and docs-site validation.
 
-- [ ] T028 [P] Add the top-level `update-and-rollback` route to the existing How-to/support sidebar near troubleshooting in `docs-site/astro.config.mjs`
-- [ ] T029 [P] Add descriptive troubleshooting and update/rollback follow-up links to the Claude Code install guide in `docs-site/src/content/docs/install/claude-code.md`
-- [ ] T030 [P] Add descriptive troubleshooting and update/rollback follow-up links to the Codex install guide in `docs-site/src/content/docs/install/codex.md`
-- [ ] T031 [P] Add the hand-authored reference-shell handoff to troubleshooting, security/trust, and update/rollback without editing generated reference subpages in `docs-site/src/content/docs/reference.md`
-- [ ] T032 Verify cross-links use descriptive destination-identifying text and resolve among `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, `docs-site/src/content/docs/update-and-rollback.md`, `docs-site/src/content/docs/install/claude-code.md`, `docs-site/src/content/docs/install/codex.md`, and `docs-site/src/content/docs/reference.md`
-- [ ] T033 Verify static Markdown accessibility: semantic table headers or section labels, readable row/case labels, stable headings or anchors, and no interactive-only controls in `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/update-and-rollback.md`
-- [ ] T034 Perform a final source-citation review across `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/update-and-rollback.md`
-- [ ] T035 Run `pnpm --dir docs-site reference:check` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
-- [ ] T036 Run `pnpm --dir docs-site validate` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
-- [ ] T037 Run `pnpm --dir docs-site validate:links` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
-- [ ] T038 Run `pnpm --dir docs-site validate && pnpm --dir docs-site validate:links` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
-- [ ] T039 Review `git diff --name-only` for docs/process-only scope after edits to `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/update-and-rollback.md`; run `bash tests/speckit-pro/run-all.sh --layer 1` only if implementation unexpectedly touches plugin/spec surfaces, manifests, scripts, hooks, tests, generated payload paths, release automation, or CI behavior
-- [ ] T040 Prepare PR review packet evidence from `specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md`, `specs/doc-008-troubleshooting-security-trust-update-rollback/plan.md`, and the DOC-008 docs-site diff
+- [x] T028 [P] Add the top-level `update-and-rollback` route to the existing How-to/support sidebar near troubleshooting in `docs-site/astro.config.mjs`
+- [x] T029 [P] Add descriptive troubleshooting and update/rollback follow-up links to the Claude Code install guide in `docs-site/src/content/docs/install/claude-code.md`
+- [x] T030 [P] Add descriptive troubleshooting and update/rollback follow-up links to the Codex install guide in `docs-site/src/content/docs/install/codex.md`
+- [x] T031 [P] Add the hand-authored reference-shell handoff to troubleshooting, security/trust, and update/rollback without editing generated reference subpages in `docs-site/src/content/docs/reference.md`
+- [x] T032 Verify cross-links use descriptive destination-identifying text and resolve among `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, `docs-site/src/content/docs/update-and-rollback.md`, `docs-site/src/content/docs/install/claude-code.md`, `docs-site/src/content/docs/install/codex.md`, and `docs-site/src/content/docs/reference.md`
+- [x] T033 Verify static Markdown accessibility: semantic table headers or section labels, readable row/case labels, stable headings or anchors, and no interactive-only controls in `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T034 Perform a final source-citation review across `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/update-and-rollback.md`
+- [x] T035 Run `pnpm --dir docs-site reference:check` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
+- [x] T036 Run `pnpm --dir docs-site validate` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
+- [x] T037 Run `pnpm --dir docs-site validate:links` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
+- [x] T038 Run `pnpm --dir docs-site validate && pnpm --dir docs-site validate:links` from the repository root and record the result for `specs/doc-008-troubleshooting-security-trust-update-rollback/quickstart.md` validation
+- [x] T039 Review `git diff --name-only` for docs/process-only scope after edits to `docs-site/src/content/docs/troubleshooting.md`, `docs-site/src/content/docs/security-and-trust.md`, and `docs-site/src/content/docs/update-and-rollback.md`; run `bash tests/speckit-pro/run-all.sh --layer 1` only if implementation unexpectedly touches plugin/spec surfaces, manifests, scripts, hooks, tests, generated payload paths, release automation, or CI behavior
+- [x] T040 Prepare PR review packet evidence from `specs/doc-008-troubleshooting-security-trust-update-rollback/spec.md`, `specs/doc-008-troubleshooting-security-trust-update-rollback/plan.md`, and the DOC-008 docs-site diff
 
 ---
 
