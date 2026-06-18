@@ -42,8 +42,8 @@ scope decisions captured during setup.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `specs/doc-009-maintainer-contributor-release-workflow/spec.md`; G1 passed with zero clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Resolved page structure, source-fact boundaries, validation lanes, and DOC-010 handoff |
-| Plan | `/speckit-plan` | In Progress | Produce implementation plan and reviewability budget |
-| Checklist | `/speckit-checklist` | Pending | Run documentation, release-process, and validation checks |
+| Plan | `/speckit-plan` | Complete | Created `plan.md`, `research.md`, and `quickstart.md`; G3 passed with projected production LOC 0 |
+| Checklist | `/speckit-checklist` | In Progress | Run documentation, release-process, and validation checks |
 | Tasks | `/speckit-tasks` | Pending | Produce ordered, reviewable implementation tasks |
 | Analyze | `/speckit-analyze` | Pending | Check consistency across spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Implement docs changes with focused verification |
@@ -306,11 +306,11 @@ handoff without promising current CI behavior that does not exist.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Must include docs-site and release-process constraints |
-| `research.md` | Pending if needed | Use only if source facts require decisions |
-| `data-model.md` | Pending if needed | Usually unnecessary for docs-only work |
-| `contracts/` | Pending if needed | Usually unnecessary for docs-only work |
-| `quickstart.md` | Pending | Should capture validation and review steps |
+| `plan.md` | Complete | Docs-only implementation plan with reviewability budget, declared file operations, and source-backed constraints |
+| `research.md` | Complete | Captures source-fact decisions for CI, release automation, version ownership, generated references, and validation |
+| `data-model.md` | Not needed | No data entities, storage, API behavior, or runtime contracts in DOC-009 |
+| `contracts/` | Not needed | Documentation-only route update; no API or schema contract changes |
+| `quickstart.md` | Complete | Captures implementation steps, validation commands, AC review checks, and rollback |
 
 ---
 
