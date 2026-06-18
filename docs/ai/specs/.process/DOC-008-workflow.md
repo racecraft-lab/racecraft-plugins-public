@@ -47,7 +47,7 @@ policy, one-slice decision, and validation scope.
 | Specify | `$speckit-specify` | Complete | Created `spec.md`; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | G2 passed; route slug, source-link policy, row taxonomy, and update/rollback boundaries are explicit |
 | Plan | `$speckit-plan` | Complete | G3 passed; plan keeps DOC-008 docs-only with no plugin behavior changes |
-| Checklist | `$speckit-checklist` | In Progress | Recommended domains: UX, security, error handling, accessibility |
+| Checklist | `$speckit-checklist` | Complete | Completed UX, security, error handling, and accessibility; 6 gaps found and fixed; G4 marker count clean |
 | Tasks | `$speckit-tasks` | Pending | Generate story-ordered docs tasks with source citation checks |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, tasks, and source policy |
 | Implement | `$speckit-implement` | Pending | Expand DOC-008 pages, update sidebar/links, validate docs-site |
@@ -444,11 +444,11 @@ Focus on DOC-008 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| UX | Pending | Pending | Pending |
-| Security | Pending | Pending | Pending |
-| Error Handling | Pending | Pending | Pending |
-| Accessibility | Pending | Pending | Pending |
-| **Total** | Pending | Pending | Pending |
+| UX | 14 | 1 found; 0 remain | FR-003, FR-004, FR-006, FR-017, SC-001, SC-002 |
+| Security | 18 | 1 found; 0 remain | FR-006, FR-007, FR-008, FR-009, FR-010, FR-013, FR-014, FR-015, FR-016, SC-003, SC-004, SC-005 |
+| Error Handling | 18 | 0 found; 0 remain | FR-003, FR-004, FR-006, FR-011, FR-012, FR-013, FR-015, FR-016, SC-002, SC-006 |
+| Accessibility | 18 | 4 found; 0 remain | FR-003, FR-011, FR-017, SC-009, plan page architecture and documentation boundaries |
+| **Total** | 68 | 6 found; 0 remain | G4 passed; no `[Gap]` markers remain across spec, plan, or checklists |
 
 ---
 

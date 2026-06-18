@@ -9,8 +9,8 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T03:45:45Z",
-  "active_step": "Phase 4: Checklist - UX",
+  "updated_at": "2026-06-18T04:17:15Z",
+  "active_step": "Phase 5: Tasks",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -131,39 +131,51 @@
     },
     {
       "step": "Phase 4: Checklist - UX",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Generated UX checklist with 14 items. Remediated 1 gap by adding hand-authored reference.md handoff scope; 0 gaps remain."
     },
     {
       "step": "Phase 4: Checklist - UX Consensus",
-      "status": "pending"
+      "status": "completed",
+      "outcome": "not-needed",
+      "summary": "UX checklist executor reported no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - Security",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated security checklist with 18 items. Remediated 1 gap by making browser permission/workflow boundaries explicit; 0 gaps remain."
     },
     {
       "step": "Phase 4: Checklist - Security Consensus",
-      "status": "pending"
+      "status": "completed",
+      "outcome": "not-needed",
+      "summary": "Security checklist executor reported no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - Error Handling",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated error-handling checklist with 18 items. No substantive spec or plan gaps found; 0 gaps remain."
     },
     {
       "step": "Phase 4: Checklist - Error Handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "outcome": "not-needed",
+      "summary": "Error Handling checklist executor reported no unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - Accessibility",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Generated accessibility checklist with 18 items. Remediated 4 gaps for semantic matrix headers, readable row/case labels, stable headings/descriptive link text, and static Markdown success criteria; 0 gaps remain."
     },
     {
       "step": "Phase 4: Checklist - Accessibility Consensus",
-      "status": "pending"
+      "status": "completed",
+      "outcome": "not-needed",
+      "summary": "Accessibility checklist executor reported no unresolved consensus items."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
