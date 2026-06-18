@@ -17,7 +17,7 @@ export default defineConfig({
         },
         {
           label: 'How-to',
-          items: ['choose-your-path', 'troubleshooting', 'contribute-and-release'],
+          items: ['choose-your-path', 'troubleshooting', 'update-and-rollback', 'contribute-and-release'],
         },
         {
           label: 'Reference',

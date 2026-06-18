@@ -222,9 +222,12 @@ If SpecKit Pro still looks stale after an update, keep the first check shallow:
   settings, hook, MCP, or LSP changes.
 
 Do not edit installed runtime state. Use
-[DOC-008 troubleshooting](/racecraft-plugins-public/troubleshooting/) for
-deeper stale-cache diagnosis, update or remove procedures, rollback, and
-permission repair. Use the generated
+[Troubleshooting](/racecraft-plugins-public/troubleshooting/) to match stale
+metadata, missing skills, path, cache, version, permission, or prerequisite
+symptoms to a likely cause. Use
+[Update & Rollback](/racecraft-plugins-public/update-and-rollback/) for
+marketplace refresh, reinstall, remove, rollback, stale-payload, stale-cache,
+and version-sync procedures. Use the generated
 [skills](/racecraft-plugins-public/reference/skills/),
 [agents](/racecraft-plugins-public/reference/agents/),
 [hooks](/racecraft-plugins-public/reference/hooks/),
@@ -260,7 +263,9 @@ DOC-008 owns hook trust analysis, managed policy, external authentication,
 permission troubleshooting, update, remove, rollback, and stale-cache forensics.
 The full security, trust, hook policy, and install lifecycle belong in
 [DOC-008 security and trust](/racecraft-plugins-public/security-and-trust/) and
-[DOC-008 troubleshooting](/racecraft-plugins-public/troubleshooting/).
+[Troubleshooting](/racecraft-plugins-public/troubleshooting/). Returning users
+who need procedural recovery should use
+[Update & Rollback](/racecraft-plugins-public/update-and-rollback/).
 
 ## Source Evidence And Boundaries
 
