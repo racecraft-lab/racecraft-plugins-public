@@ -3,7 +3,7 @@
 **Status**: Draft
 **Source**: Interactive `speckit-prd` + `grill-me` session on 2026-06-17
 **Created**: 2026-06-17
-**Last updated**: 2026-06-17
+**Last updated**: 2026-06-18
 **Target window**: Next SpecKit Pro roadmap slot after DOC-006 archive
 **Spec ID prefix**: `TACD-###` (Tool-Agnostic Capability Discovery)
 
@@ -42,7 +42,7 @@ The user-facing behavior should shift from "these named optional MCPs improve th
 
 - **AC-1.1**: A spike report audits the current Claude and Codex runtime surfaces that reference optional research/context tools, including agent definitions, skill references, prerequisite checks, plugin limitation docs, and tests/evals.
 - **AC-1.2**: The spike verifies how each runtime can direct agents to discover and use installed tools, MCP/app connectors, skills/plugins, and repo-local helpers without hardcoding a vendor-specific MCP list.
-- **AC-1.3**: The spike recommends the directive home. The preferred outcome is a shared reference plus pointers, but only if deterministic checks and evals can validate it reliably.
+- **AC-1.3**: The spike recommends the directive home: a shared capability-discovery reference with runtime-specific pointers and approved equivalents, backed by deterministic pointer checks and behavior-observable evals.
 - **AC-1.4**: The spike identifies exact file categories where historical named-tool references may remain, and where active guidance must become vendor-neutral.
 
 ### 3.2 Capability Discovery Directive and Agent Updates *(-> TACD-002)*
@@ -82,10 +82,11 @@ The user-facing behavior should shift from "these named optional MCPs improve th
 - Do not remove historical archive/changelog provenance solely to satisfy wording preferences.
 - Keep deterministic tests shell-based and aligned with existing Layer 1, Layer 4, and Layer 5 patterns.
 
-## 6. Open Questions
+## 6. Decisions And Open Questions
 
-- **OQ-1 (TACD-001):** Can a shared directive reference plus per-agent pointers be validated strongly enough across Claude and Codex? Recommendation: use it only if static checks and evals can prove coverage.
-- **OQ-2 (TACD-004):** What exact allowlist should separate active guidance from historical references? Recommendation: define it from the TACD-001 audit, not from a broad repo-wide string ban.
+- **Resolved (TACD-001):** Use a shared capability-discovery reference with runtime-specific pointers and approved equivalents across Claude and Codex. TACD-004 must prove static pointer coverage, target resolution, and behavior-observable eval scenarios before the contract is considered enforced.
+- **Resolved (TACD-001):** Separate named optional-tool references by category, not by a broad string ban. Active runtime guidance is blocked after TACD-002, prerequisite/user-facing messaging is blocked after TACD-003, deterministic/eval expectations are blocked after TACD-004, and historical/provenance or generated source-derived duplicates may remain when clearly classified.
+- **Open (TACD-002/TACD-004):** Exact runtime/dependency metadata IDs may remain where platform schema or dependency declaration requires them, unless TACD-002 proves an equivalent generic declaration path and TACD-004 can enforce it.
 
 ## 7. SPEC Catalog Crosswalk
 

@@ -7,7 +7,7 @@ This document defines the **SPEC catalog** for Tool-Agnostic Capability Discover
 **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
 **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 **Spec ID prefix:** `TACD-###`
-**Branch:** `tacd-001-platform-mechanics-spike` for active TACD-001 setup
+**Branch:** one branch per TACD spec; TACD-001 completed the platform-mechanics spike stack
 **Tracker:** N/A
 
 ---
@@ -75,8 +75,8 @@ FEATURE COMPLETE
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
-| TACD-001 | Platform Mechanics Spike | In Progress | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Scaffolded on `tacd-001-platform-mechanics-spike`; run autopilot |
-| TACD-002 | Capability Discovery Directive and Agent Updates | Pending | [TACD-002-workflow.md](TACD-002-workflow.md) | Blocked by TACD-001 |
+| TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Spike report complete; use its directive-home and allowlist recommendations to scaffold TACD-002 |
+| TACD-002 | Capability Discovery Directive and Agent Updates | Pending | [TACD-002-workflow.md](TACD-002-workflow.md) | Ready after TACD-001 stack lands |
 | TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Blocked by TACD-002 |
 | TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Blocked by TACD-003 |
 
@@ -101,7 +101,7 @@ Budget result: within budget (research spike; LOC sizing not applicable)
 **Scope:**
 - Audit active references to optional research/context tools across Claude agents, Codex agents, autopilot skills, prerequisite scripts, plugin limitation docs, and tests/evals.
 - Verify runtime mechanics for dynamic installed-capability discovery in Claude and Codex, including whether shared-reference pointers are reliable in each agent context.
-- Decide the directive home: shared reference plus pointers if static checks and evals can validate it reliably; otherwise document the best runtime-specific structure.
+- Record the selected directive home: a shared capability-discovery reference with runtime-specific pointers and approved equivalents.
 - Produce an allowlist recommendation that separates active guidance from historical references in changelogs, archives, and fixtures.
 - This is a Spike: it answers platform/testability questions and should not directly rewrite shipped agent behavior.
 
@@ -112,6 +112,8 @@ Budget result: within budget (research spike; LOC sizing not applicable)
 
 **Key Decisions:**
 - **Spike-first decision (2026-06-17):** The PRD starts with this spike because Claude and Codex expose agent/tool configuration differently, and directive validation must be proven before behavior edits.
+- **Directive-home decision (TACD-001):** Use a shared capability-discovery reference with runtime-specific pointers and approved equivalents. TACD-004 must prove static pointer coverage, target resolution, and behavior-observable eval scenarios.
+- **Allowlist decision (TACD-001):** Enforce active guidance by category: active runtime guidance is blocked after TACD-002, prerequisite/user-facing messaging is blocked after TACD-003, deterministic/eval expectations are blocked after TACD-004, and historical/provenance or generated source-derived duplicates may remain when clearly classified.
 
 **Key Files:**
 - `docs/ai/research/tool-agnostic-capability-discovery-spike.md` - spike report and decision record.
@@ -135,11 +137,12 @@ Total files: 8 |
 Budget result: within budget
 
 **Scope:**
-- Implement the directive home chosen by TACD-001, preferably a shared reference with per-agent pointers.
+- Implement the TACD-001 directive home: a shared capability-discovery reference with runtime-specific pointers and approved equivalents.
 - Update relevant Claude Markdown agents and Codex TOML agents so they choose tools by capability: codebase context, spec context, library documentation, web/domain research, source extraction, installed skills/plugins, and repo-local helpers.
 - Remove active preferred-tool wording for named optional MCPs from runtime guidance while preserving historical references where TACD-001 permits them.
 - Require agents to report capability path, citations or local files, and confidence level when research/context discovery informs an answer.
 - Preserve backward compatibility by allowing discovery to use formerly named tools if the user's runtime exposes them as the best available capability.
+- Preserve exact runtime/dependency metadata IDs only where the platform schema or dependency declaration requires them, unless TACD-002 proves an equivalent generic declaration path that TACD-004 can enforce.
 
 **Out of Scope:**
 - Rewriting the consensus protocol.
@@ -149,6 +152,7 @@ Budget result: within budget
 **Key Decisions:**
 - **Capability-first decision (2026-06-17):** Agents select by needed capability, not by vendor-specific MCP names.
 - **Evidence decision (2026-06-17):** Agent outputs should report capability path plus confidence rather than full inventories.
+- **Directive-home decision (TACD-001):** TACD-002 adopts the shared reference plus runtime-specific pointer structure, with approved equivalents only where runtime loading requires them.
 
 **Key Files:**
 - `speckit-pro/agents/codebase-analyst.md` - Claude codebase context behavior.
@@ -175,10 +179,11 @@ Total files: 5 |
 Budget result: within budget
 
 **Scope:**
-- Replace the autopilot prerequisite check's hardcoded optional MCP report with a generic, non-blocking capability advisory.
+- Replace the autopilot prerequisite check's hardcoded optional MCP report with a generic, non-blocking capability advisory that aligns with the TACD-002 directive.
 - Update active autopilot references so missing optional capabilities degrade confidence instead of failing setup.
 - Update plugin limitation and coach/autopilot docs to describe capability-first discovery and fallback behavior in vendor-neutral language.
 - Name capability types, not concrete tool IDs, except where a platform schema or exact file reference requires a concrete identifier.
+- Avoid enumerating formerly named optional tools as a preferred set in active docs, setup output, or coaching guidance.
 
 **Out of Scope:**
 - Removing historical archive/changelog references.
@@ -211,9 +216,11 @@ Total files: 7 |
 Budget result: within budget
 
 **Scope:**
-- Add or update deterministic tests that fail when active runtime guidance reintroduces a hardcoded named optional-tool contract outside the TACD-001 historical allowlist.
-- Update Layer 5 tool-scoping or structural tests to verify relevant agents point to the approved directive home or carry its approved equivalent.
+- Add or update deterministic tests that fail when active runtime guidance reintroduces a hardcoded named optional-tool contract outside the TACD-001 category allowlist.
+- Update Layer 5 tool-scoping or structural tests to verify relevant agents point to the shared capability-discovery reference or carry an approved runtime-specific equivalent.
+- Add target-resolution checks so directive pointers resolve from installed Claude and Codex runtime contexts.
 - Update Claude and Codex functional eval expectations so optional-tool setup questions are answered in vendor-neutral capability-discovery terms.
+- Include behavior-observable eval scenarios for installed-capability discovery, fallback behavior, evidence path, citations or local file references, and lower-confidence reporting when fallback quality is lower.
 - Verify the default deterministic suite with `bash tests/speckit-pro/run-all.sh`.
 
 **Out of Scope:**
@@ -258,7 +265,7 @@ When breaking this feature into specs:
 
 | Change | Where | Detail |
 |--------|-------|--------|
-| Capability directive | Spike-approved location | Shared reference plus pointers if TACD-001 proves it testable, otherwise runtime-specific equivalent. |
+| Capability directive | TACD-001 selected structure | Shared capability-discovery reference with runtime-specific pointers and approved equivalents; TACD-004 must prove pointer coverage, target resolution, and behavior-observable evals. |
 | Agent guidance | `speckit-pro/agents/`, `speckit-pro/codex-agents/` | Replace named optional-tool preferences with capability-first discovery. |
 | Prerequisite advisory | `check-prerequisites.sh` and references | Replace hardcoded optional MCP check with generic advisory. |
 | Verification | `tests/speckit-pro/` | Static checks and eval updates for vendor-neutral behavior. |
