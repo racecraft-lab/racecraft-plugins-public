@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+<!-- SPECKIT START -->
+Current SpecKit plan: `specs/tacd-002-capability-discovery-directive-and-agent-updates/plan.md`
+<!-- SPECKIT END -->
+
 ## Working in This Repo
 
 Four rules, in priority order. These exist because plugin/marketplace edits have high blast radius (every install consumer gets the change on `/plugin marketplace update`) and most defects here come from doing too much, not too little.
@@ -440,6 +444,8 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 - Markdown/MDX content plus Astro/Starlight docs site metadata + Astro 6.4.6, Starlight 0.40.0, pnpm 10.25.0 (doc-004-codex-marketplace-installation-path)
 - Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
 - Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
+- Markdown runtime guidance, TOML Codex agent templates, YAML metadata, generated payload files, and Bash validation scripts in the existing repository; existing SpecKit Pro plugin structure, payload builder `bash scripts/build-plugin-payloads.sh`, and deterministic verification `bash tests/speckit-pro/run-all.sh`; no new runtime dependency planned. (tacd-002-capability-discovery-directive-and-agent-updates)
+- Repository files only. Source guidance under `speckit-pro/`, generated payload copies under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, and Plan-phase artifacts under `specs/tacd-002-capability-discovery-directive-and-agent-updates/`. (tacd-002-capability-discovery-directive-and-agent-updates)
 
 ## Recent Changes
 - prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.

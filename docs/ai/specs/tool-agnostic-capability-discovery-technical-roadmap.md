@@ -76,7 +76,7 @@ FEATURE COMPLETE
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
 | TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
-| TACD-002 | Capability Discovery Directive and Agent Updates | Pending | [TACD-002-workflow.md](TACD-002-workflow.md) | Ready to scaffold from the archived TACD-001 spike report |
+| TACD-002 | Capability Discovery Directive and Agent Updates | In Progress | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Scaffolded on `tacd-002-capability-discovery-directive-and-agent-updates`; next run `$speckit-autopilot` with the generated workflow |
 | TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Blocked by TACD-002 |
 | TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Blocked by TACD-003 |
 
@@ -130,6 +130,8 @@ Budget result: within budget (research spike; LOC sizing not applicable)
 ### TACD-002: Capability Discovery Directive and Agent Updates
 
 **Priority:** P1 | **Depends On:** TACD-001 | **Enables:** TACD-003, TACD-004
+
+**Status:** In Progress - scaffolded on branch `tacd-002-capability-discovery-directive-and-agent-updates`; workflow is `docs/ai/specs/.process/TACD-002-workflow.md`.
 
 **Goal:** Update active Claude and Codex agent behavior to follow the spike-approved capability-discovery directive.
 
