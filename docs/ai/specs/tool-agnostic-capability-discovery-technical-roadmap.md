@@ -7,7 +7,7 @@ This document defines the **SPEC catalog** for Tool-Agnostic Capability Discover
 **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
 **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 **Spec ID prefix:** `TACD-###`
-**Branch:** one branch per TACD spec; TACD-001 completed and archived the platform-mechanics spike stack
+**Branch:** one branch per TACD spec; TACD-001 and TACD-002 completed and archived their shipped stacks
 **Tracker:** N/A
 
 ---
@@ -76,8 +76,8 @@ FEATURE COMPLETE
 | Spec | Name | Status | Workflow File | Next Phase |
 |------|------|--------|---------------|------------|
 | TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
-| TACD-002 | Capability Discovery Directive and Agent Updates | In Progress | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Scaffolded on `tacd-002-capability-discovery-directive-and-agent-updates`; next run `$speckit-autopilot` with the generated workflow |
-| TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Blocked by TACD-002 |
+| TACD-002 | Capability Discovery Directive and Agent Updates | Complete | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
+| TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Ready to scaffold from the implemented TACD-002 directive |
 | TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Blocked by TACD-003 |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -131,7 +131,7 @@ Budget result: within budget (research spike; LOC sizing not applicable)
 
 **Priority:** P1 | **Depends On:** TACD-001 | **Enables:** TACD-003, TACD-004
 
-**Status:** In Progress - scaffolded on branch `tacd-002-capability-discovery-directive-and-agent-updates`; workflow is `docs/ai/specs/.process/TACD-002-workflow.md`.
+**Status:** Complete and archived after PRs #221-#226 merged the capability-discovery directive, agent guidance updates, generated payload refresh, and marker-emission hardening.
 
 **Goal:** Update active Claude and Codex agent behavior to follow the spike-approved capability-discovery directive.
 
@@ -158,6 +158,7 @@ Budget result: within budget
 - **Capability-first decision (2026-06-17):** Agents select by needed capability, not by vendor-specific MCP names.
 - **Evidence decision (2026-06-17):** Agent outputs should report capability path plus confidence rather than full inventories.
 - **Directive-home decision (TACD-001):** TACD-002 adopts the shared reference plus runtime-specific pointer structure, with approved equivalents only where runtime loading requires them.
+- **Archive decision (2026-06-18):** The active spec folder was removed after post-merge provenance was recorded. The shared directive, runtime guidance, generated payloads, marker-emission hardening, and regression tests remain in source and generated payload paths; raw spec artifacts remain recoverable through `.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md`.
 
 **Key Files:**
 - `speckit-pro/agents/codebase-analyst.md` - Claude codebase context behavior.
@@ -168,6 +169,8 @@ Budget result: within budget
 - `speckit-pro/agents/implement-executor.md` - Claude implementation research behavior.
 - `speckit-pro/codex-agents/*.toml` - Codex agent behavior.
 - `speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml` - Codex skill dependency metadata.
+- `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` - shared capability-discovery directive.
+- `speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh` - marker-emission source-dir and branch-prefix separation.
 
 ---
 
@@ -293,5 +296,6 @@ When breaking this feature into specs:
 - **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 - **TACD-001 spike report:** [../research/tool-agnostic-capability-discovery-spike.md](../research/tool-agnostic-capability-discovery-spike.md)
 - **TACD-001 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md)
+- **TACD-002 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md)
 - **Constitution:** [.specify/memory/constitution.md](../../../.specify/memory/constitution.md)
 - **Project Standards:** [AGENTS.md](../../../AGENTS.md), [CLAUDE.md](../../../CLAUDE.md)

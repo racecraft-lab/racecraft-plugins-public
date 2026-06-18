@@ -802,3 +802,48 @@ cleanup after the canonical report landed at
 `docs/ai/research/tool-agnostic-capability-discovery-spike.md` and PR #216
 updated the PRD/roadmap to adopt the spike decisions. Recovery commands and
 provenance are recorded in the TACD-001 archive report.
+
+## TACD-002 Capability Discovery Directive and Agent Updates
+
+[Source: .specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md]
+**Branch**: `codex/tacd-002-post-merge-hygiene` · **Status**: Completed · **Archived**: 2026-06-18
+
+### Scope
+
+TACD-002 completed the active agent-behavior tier for the tool-agnostic
+capability discovery roadmap. It owns the shared capability-discovery directive,
+Claude and Codex runtime guidance updates, source-derived generated payloads,
+and marker-emission hardening required to finish the sliced PR stack.
+
+### Architecture / Approach
+
+- Keep one shared source directive at
+  `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+- Point Claude agent bodies to the directive and use approved compact
+  equivalents in installed Codex TOML agents where direct pointers are not
+  stable.
+- Preserve exact named IDs only in schema metadata, historical/provenance text,
+  or generated runtime evidence.
+- Regenerate Claude and Codex payload roots from source through
+  `bash scripts/build-plugin-payloads.sh`; do not treat `dist/**` as durable
+  source.
+- Separate marker-emission source feature directory from emitted branch prefix
+  so existing parent branch refs no longer block ordered slice PR creation.
+- Leave TACD-003 prerequisite/user-facing messaging and TACD-004 deterministic
+  enforcement as separate roadmap specs.
+
+### Test Strategy
+
+- Confirm PRs #221-#226 merged to `main`.
+- Validate JSON state after replacing active TACD-002 autopilot state.
+- Regenerate and check SpecKit generated indexes after active spec removal.
+- Verify active `specs/**` contains only expected active specs after cleanup.
+- Run `git diff --check` and the deterministic SpecKit test suite.
+
+### Cleanup Notes
+
+`specs/tacd-002-capability-discovery-directive-and-agent-updates` was removed
+from active `specs/**` cleanup after the shared directive, runtime guidance,
+generated payloads, marker-emission hardening, and tests landed through PRs
+#221-#226. Recovery commands and provenance are recorded in the TACD-002
+archive report.
