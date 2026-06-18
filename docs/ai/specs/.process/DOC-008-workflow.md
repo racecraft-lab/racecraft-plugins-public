@@ -46,8 +46,8 @@ policy, one-slice decision, and validation scope.
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created `spec.md`; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | G2 passed; route slug, source-link policy, row taxonomy, and update/rollback boundaries are explicit |
-| Plan | `$speckit-plan` | In Progress | Plan docs-site Markdown/MDX changes only; no plugin behavior changes |
-| Checklist | `$speckit-checklist` | Pending | Recommended domains: UX, security, error handling, accessibility |
+| Plan | `$speckit-plan` | Complete | G3 passed; plan keeps DOC-008 docs-only with no plugin behavior changes |
+| Checklist | `$speckit-checklist` | In Progress | Recommended domains: UX, security, error handling, accessibility |
 | Tasks | `$speckit-tasks` | Pending | Generate story-ordered docs tasks with source citation checks |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, tasks, and source policy |
 | Implement | `$speckit-implement` | Pending | Expand DOC-008 pages, update sidebar/links, validate docs-site |
@@ -369,11 +369,11 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow |
-| `research.md` | Pending | Source/citation decision rationales if official docs verification needs recording |
-| `data-model.md` | Pending | Troubleshooting row model and trust-claim source model if useful |
-| `contracts/` | Pending | Not expected unless the plan chooses a data/schema artifact |
-| `quickstart.md` | Pending | Manual validation walkthrough |
+| `plan.md` | Complete | Technical context, declared file operations, constitution check, validation plan |
+| `research.md` | Complete | Three-page IA, source policy, matrix model, recovery model, vendor-doc verification |
+| `data-model.md` | Complete | Troubleshooting row, trust claim, recovery case, read-only inspection, manual recovery action, rollback anchor, evidence source |
+| `contracts/` | Not generated | Omitted because DOC-008 exposes no new API, CLI command, schema, or generated data artifact |
+| `quickstart.md` | Complete | Manual validation walkthrough and required docs-site commands |
 
 ---
 
