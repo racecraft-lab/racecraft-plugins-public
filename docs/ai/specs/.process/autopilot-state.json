@@ -274,7 +274,7 @@
     {
       "step": "Post: UAT Runbook Generation",
       "status": "completed",
-      "summary": "Generated specs/doc-008-troubleshooting-security-trust-update-rollback/.process/uat-runbook.md."
+      "summary": "Generated a DOC-008 UAT skeleton during post checks. The file is regenerated transiently for PR body generation rather than committed, keeping the final diff within reviewability limits."
     },
     {
       "step": "Post: PR Body Generation",
