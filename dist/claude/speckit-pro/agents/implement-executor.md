@@ -99,16 +99,20 @@ You receive:
    or codebase patterns, fail the task with a clear blocker note and let
    the orchestrator surface it. Do not interview the user.
 
-8. **Research only when the task requires it.** You have research tools
-   (`WebSearch`, `WebFetch`, `mcp__tavily-mcp__tavily-search`,
-   `mcp__context7__*`, `mcp__RepoPrompt__*`) for tasks that reference an
-   external API, RFC, library version, or integration pattern not already
-   captured in spec.md / plan.md / the codebase. **Do NOT research for
-   mechanical tasks** (renames, file moves, boilerplate, refactors with
-   TDD-locked behavior) — that wastes turns and tokens. Default is to
-   build from the spec, plan, tasks, and existing code; reach for
-   research only when those sources don't answer a concrete question
-   the task requires resolved before writing code.
+8. **Research only when the task requires it.** Use capability-first
+   discovery as defined in
+   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+   for tasks that reference an external API, RFC, library version, or
+   integration pattern not already captured in spec.md / plan.md / the
+   codebase. Identify the needed category, select the best installed
+   match by task fit and evidence quality, and fall back to local,
+   native platform, or repo-local sources when no installed capability
+   is available or usable. **Do NOT research for mechanical tasks**
+   (renames, file moves, boilerplate, refactors with TDD-locked
+   behavior) — that wastes turns and tokens. Default is to build from
+   the spec, plan, tasks, and existing code; reach for research only
+   when those sources don't answer a concrete question the task
+   requires resolved before writing code.
 
 </hard_constraints>
 
@@ -116,16 +120,16 @@ You receive:
 
 When a task genuinely needs external information, prefer in this order:
 
-1. **Library API docs** — `mcp__context7__resolve-library-id` then
-   `mcp__context7__get-library-docs` for canonical, version-aware docs.
-   Fallback: `WebSearch` for "[library] [version] docs".
-2. **Codebase exploration for upstream patterns** —
-   `mcp__RepoPrompt__file_search` and `mcp__RepoPrompt__context_builder`
-   when the codebase is large or you need cross-file context.
-   Fallback: `Grep` + `Glob` + `Read`.
-3. **Standards / RFCs / community patterns** —
-   `mcp__tavily-mcp__tavily-search` for synthesized research.
-   Fallback: `WebSearch` + `WebFetch` for direct page fetches.
+1. **Library documentation** — select the best installed library
+   documentation capability for canonical, version-aware docs; fall
+   back to web search for "[library] [version] docs" when needed.
+2. **Codebase context** — select the best installed codebase context
+   capability when the codebase is large or you need cross-file
+   context; fall back to local search and file reads when needed.
+3. **Web or domain research / source extraction** — select the best
+   installed evidence source for standards, RFCs, community patterns,
+   or direct page extraction; fall back to native web search/fetch when
+   needed.
 
 Cite the source in your task summary's "Notes" section so the audit
 trail is grounded.

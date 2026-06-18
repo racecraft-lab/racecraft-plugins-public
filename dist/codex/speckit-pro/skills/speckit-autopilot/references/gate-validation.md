@@ -94,16 +94,21 @@ SKILL.md Rule 6).
 For EACH [Gap] marker found after a domain subagent:
 
 Step 1: Research the gap using multiple tools:
-  a. Codebase exploration — use RepoPrompt context_builder
-     (preferred) or Grep/Glob/Read (fallback) to ask
+  a. Codebase context — use capability-first discovery per
+     `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+     ([capability-discovery.md](./capability-discovery.md)) to select
+     the best installed codebase context capability and ask
      "How should we close this gap?" with the gap text,
      spec.md excerpt, and plan.md excerpt as context.
      Explore the codebase for established patterns and
      propose an evidence-grounded fix.
-  b. Web search — use Tavily (preferred) or WebSearch/
-     WebFetch (fallback) to search for API docs, standards,
-     or best practices relevant to the gap (e.g., API
-     behavior, framework patterns, error handling standards)
+  b. Web or domain research / library documentation — use
+     capability-first discovery per
+     `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+     ([capability-discovery.md](./capability-discovery.md)) to select
+     the best installed evidence source for API docs, standards,
+     or best practices relevant to the gap (e.g., API behavior,
+     framework patterns, error handling standards)
   c. Read constitution + prior specs — check if project
      principles or precedent decisions address the gap
 
@@ -212,14 +217,19 @@ Step 2: Parse ALL findings by severity
 Step 3: For EACH finding (CRITICAL, HIGH, MEDIUM, LOW):
 
   a. Research the finding using multiple tools:
-     - Codebase exploration — use RepoPrompt context_builder
-       (preferred) or Grep/Glob/Read (fallback) to ask
+     - Codebase context — use capability-first discovery per
+       `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+       ([capability-discovery.md](./capability-discovery.md)) to select
+       the best installed codebase context capability and ask
        "How should we fix this finding?" with the finding
        text, spec.md/plan.md/tasks.md excerpts as context.
        Explore the codebase for established patterns and
        propose an evidence-grounded fix.
-     - Web search — use Tavily (preferred) or WebSearch/
-       WebFetch (fallback) to search for API docs, standards,
+     - Web or domain research / library documentation — use
+       capability-first discovery per
+       `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+       ([capability-discovery.md](./capability-discovery.md)) to select
+       the best installed evidence source for API docs, standards,
        or best practices relevant to the finding
      - Read constitution + prior specs — check if project
        principles or precedent decisions inform the fix
