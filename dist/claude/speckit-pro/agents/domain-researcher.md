@@ -50,21 +50,29 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 ### Search Strategy
 
-Use the best available tools. MCP tools are preferred when
-installed; built-in tools are automatic fallbacks.
+Use capability-first discovery as defined in
+`speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+Identify the needed web/domain research, source extraction, or library
+documentation capability, select the best installed match by source
+authority, freshness, task fit, and expected evidence quality, and fall
+back to native web search or local referenced documents when no installed
+capability is available or usable.
 
 - **Web search** — broad searches for API docs, standards,
   community patterns
-  - Preferred: `mcp__tavily-mcp__tavily-search`
-  - Fallback: `WebSearch`
+  - Select an installed web or domain research capability when it is
+    the best fit.
+  - Fall back to native web search when needed.
 - **Content extraction** — extract specific content from
   documentation pages
-  - Preferred: `mcp__tavily-mcp__tavily-extract`
-  - Fallback: `WebFetch` with the URL
+  - Select an installed source extraction capability when it is the
+    best fit.
+  - Fall back to native web fetch with the URL when needed.
 - **Library documentation** — library-specific API docs
-  - Preferred: `mcp__context7__resolve-library-id` +
-    `mcp__context7__get-library-docs`
-  - Fallback: `WebSearch` for "[library] [version] docs"
+  - Select an installed library documentation capability when it is
+    the best fit.
+  - Fall back to web search for "[library] [version] docs" when
+    needed.
 - Use `Read` to review any local documentation referenced
   in the question
 

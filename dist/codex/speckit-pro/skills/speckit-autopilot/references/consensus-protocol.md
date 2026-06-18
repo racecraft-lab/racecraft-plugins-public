@@ -35,9 +35,13 @@ forward designs.
 **Layer 1 — Executor agent (first pass):** Each phase has a
 specialized executor agent (clarify-executor,
 checklist-executor, analyze-executor) that runs the
-`/speckit-*` command AND does direct research using web search,
-library docs, and codebase exploration (MCP tools when available,
-built-in fallbacks otherwise). The executor
+`/speckit-*` command AND does direct research using capability-first
+discovery for codebase context, spec context, library documentation,
+web or domain research, source extraction, installed skills/plugins,
+and repo-local helpers. Follow
+`speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+([capability-discovery.md](./capability-discovery.md)) for selection,
+fallback, evidence, inventory, and metadata rules. The executor
 resolves most items directly (~80%) and applies fixes to
 artifacts. Items it can't resolve with high confidence are
 flagged in its "Unresolved for consensus" summary section,
@@ -279,9 +283,9 @@ the batch.
 
 | Agent | Perspective | Primary Tools | Strength |
 |-------|------------|---------------|----------|
-| `speckit-pro:codebase-analyst` | What does the existing code show? | RepoPrompt (preferred) or Grep/Glob/Read (fallback) | Finding established patterns, types, naming conventions, error handling |
+| `speckit-pro:codebase-analyst` | What does the existing code show? | codebase context capability selected through [capability-discovery.md](./capability-discovery.md) | Finding established patterns, types, naming conventions, error handling |
 | `speckit-pro:spec-context-analyst` | What do project decisions say? | Read (constitution, technical roadmap, prior specs, CLAUDE.md) | Grounding answers in established principles and prior decisions |
-| `speckit-pro:domain-researcher` | What do best practices recommend? | Tavily/Context7 (preferred) or WebSearch/WebFetch (fallback) | External evidence — API docs, standards, community patterns |
+| `speckit-pro:domain-researcher` | What do best practices recommend? | web or domain research, library documentation, or source extraction capability selected through [capability-discovery.md](./capability-discovery.md) | External evidence — API docs, standards, community patterns |
 
 ## Consensus Rules
 
@@ -343,7 +347,7 @@ main session handles Layer 2 (consensus) for unresolved items.
 clarify-executor prepares read-only Clarify Question Set
     │
     ├── Layer 1: Executor researches questions and recommendations
-    │   using available research tools (MCP preferred, built-in fallbacks)
+    │   using capability-first discovery per capability-discovery.md
     │
     ├── Executor returns summary with:
     │   ├── Questions for parent (with recommendations and citations)

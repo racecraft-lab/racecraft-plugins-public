@@ -55,7 +55,7 @@ Use capability-first discovery as defined in
 Identify the needed web/domain research, source extraction, or library
 documentation capability, select the best installed match by source
 authority, freshness, task fit, and expected evidence quality, and fall
-back to native web/search or local referenced documents when no installed
+back to native web search or local referenced documents when no installed
 capability is available or usable.
 
 - **Web search** — broad searches for API docs, standards,
