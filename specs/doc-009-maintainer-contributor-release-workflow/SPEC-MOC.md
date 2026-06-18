@@ -39,4 +39,6 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/release-process-accuracy.md](checklists/release-process-accuracy.md)
 - [checklists/reviewer-usability.md](checklists/reviewer-usability.md)
 - [quickstart.md](quickstart.md)
+- [retrospective.md](retrospective.md)
+- [verify-tasks-report.md](verify-tasks-report.md)
 <!-- GENERATED:BACKLINKS:END -->
