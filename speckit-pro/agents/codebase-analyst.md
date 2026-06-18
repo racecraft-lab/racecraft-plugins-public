@@ -51,22 +51,29 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 ### Search Strategy
 
-Use the best available tools. RepoPrompt MCP tools are preferred
-when installed; built-in tools are automatic fallbacks.
+Use capability-first discovery as defined in
+`speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+Identify the needed codebase context capability, select the best
+installed match by task fit and evidence quality, and fall back to
+repo-local searches or file reads when no installed capability is
+available or usable.
 
 - **Broad pattern matching** across the codebase
-  - Preferred: `mcp__RepoPrompt__file_search`
-  - Fallback: `Grep` with regex patterns
+  - Select an installed codebase search capability when it is the
+    best fit.
+  - Fall back to regex searches across the repository.
 - **API surface exploration** — understand function/type
   signatures without reading full files
-  - Preferred: `mcp__RepoPrompt__get_code_structure`
-  - Fallback: `Grep` for function/class/type definitions
+  - Select an installed code-structure capability when it is the
+    best fit.
+  - Fall back to searching for function/class/type definitions.
 - **Deep code exploration** — understand relationships and
   context across related files
-  - Preferred: `mcp__RepoPrompt__context_builder`
-  - Fallback: `Glob` to find files + `Read` for content
-- `Grep` for specific pattern searches (always available)
-- `Glob` to find files matching structural patterns (always available)
+  - Select an installed context-building capability when it is the
+    best fit.
+  - Fall back to finding relevant files and reading their content.
+- Use local pattern searches and file discovery when they are the
+  selected capability or the required fallback.
 
 ## Output Format
 

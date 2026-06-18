@@ -51,21 +51,23 @@ checklist and fix the gaps — all in one agent.
    checklist files. Use these counts to verify you've
    addressed every gap.
 
-3. **Research and fix EVERY gap.** For each `[Gap]` found,
-   use the best available tools. MCP tools are preferred when
-   installed; built-in tools are automatic fallbacks.
+3. **Research and fix EVERY gap.** For each `[Gap]` found, use
+   capability-first discovery as defined in
+   `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+   Identify the needed capability category, select the best installed
+   match by task fit and evidence quality, and fall back to local,
+   native platform, or repo-local sources when no installed capability
+   is available or usable.
 
    a. **Codebase exploration** — ask "How should we close this
       gap?" with the gap text and spec/plan excerpts. Explore
       the codebase for established patterns that inform the fix.
-      - Preferred: `mcp__RepoPrompt__context_builder` with
-        `response_type: "question"`
-      - Fallback: `Grep` + `Glob` + `Read`
+      - Use the selected codebase context capability for the need.
 
    b. **Web research** — search for API docs, standards, or
       best practices relevant to the gap
-      - Preferred: `mcp__tavily-mcp__tavily-search`
-      - Fallback: `WebSearch` + `WebFetch`
+      - Use the selected web/domain research, source extraction, or
+        library documentation capability for the need.
 
    c. **Project context** — read constitution (`.specify/memory/constitution.md`)
       and prior specs (`specs/*/spec.md`) — check if project
