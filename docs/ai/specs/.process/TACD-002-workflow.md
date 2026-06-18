@@ -476,34 +476,31 @@ Focus on:
 
 | Item | Result |
 |------|--------|
-| Tasks | T001-T037 complete in `tasks.md` |
+| Tasks | Foundation slice emitted from the T001-T006 checkpoint; full-feature tasks remain documented in `tasks.md` for the stacked TACD-002 plan |
 | Shared directive | Added `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` |
-| Claude guidance | Updated six scoped Markdown agents to reference the shared directive and select capabilities by task need |
-| Codex guidance | Updated six scoped TOML agents with the approved compact-equivalent marker and capability-first semantics |
 | Shared references | Updated `consensus-protocol.md` and `gate-validation.md` with narrow capability-first pointers |
-| Generated payloads | Ran `bash scripts/build-plugin-payloads.sh` twice; second run produced no additional intended changes |
-| Payload coverage | Generated directive copies exist under both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` |
-| Active wording scan | No scoped source or generated behavior surface matched preferred named optional-tool wording |
+| Later stack slices | Scoped Claude/Codex agent updates, Codex compact-equivalent markers, and generated `dist/**` payload refresh are intentionally outside PR #221 |
+| Changed-file evidence | `changed-files.txt` is refreshed from the PR #221 diff against `origin/main`; no generated `dist/**` paths are included in this foundation slice |
 | Verification | `git diff --check` passed; `bash tests/speckit-pro/run-all.sh --layer 1` passed `1024/1024`; `bash tests/speckit-pro/run-all.sh` passed `3041/3041` |
 
-### Preserved-ID Review Table
+### Foundation-Slice Evidence Table
 
-| File/Pattern | Field | Classification | Behavior-scan result |
-|--------------|-------|----------------|----------------------|
-| `speckit-pro/agents/*.md` | YAML frontmatter `tools:` allowlist entries such as `mcp__RepoPrompt__*`, `mcp__tavily-mcp__*`, and `mcp__context7__*` | Schema metadata | Agent body text uses capability-first discovery; preserved IDs are not active preferences |
-| `speckit-pro/codex-skills/speckit-autopilot/agents/openai.yaml` | `dependencies.tools[].value` entries `tavily` and `context7` | Runtime dependency metadata | No active behavior prose in the metadata file |
-| `dist/claude/speckit-pro/agents/*.md` | Generated frontmatter `tools:` allowlist entries | Generated metadata | Generated from source; body text uses capability-first discovery |
-| `dist/codex/speckit-pro/codex-agents/*.toml` | Generated compact-equivalent marker and runtime payload paths | Generated rewrite/runtime metadata | Generated from source; developer instructions use capability-first discovery |
+| File/Pattern | Role | Evidence |
+|--------------|------|----------|
+| `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` | Shared directive source | Added in PR #221 |
+| `speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md` | Shared reference pointer | Updated in PR #221 |
+| `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | Shared reference pointer | Updated in PR #221 |
+| `dist/**` | Generated payload output | Out of scope for PR #221; handled by a later TACD-002 stack slice |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [x] All tasks marked complete in `tasks.md`
-- [x] Shared directive or approved runtime equivalents are present
-- [x] Active Claude/Codex agent guidance no longer contains preferred named optional-tool wording
-- [x] Metadata IDs are reviewed and classified
-- [x] Generated payloads are refreshed from source
+- [x] Foundation planning and directive artifacts are present
+- [x] Shared directive source file is present
+- [x] Shared references point at the directive
+- [ ] Active Claude/Codex agent surfaces updated in later TACD-002 stack slices
+- [ ] Generated payloads refreshed from source in later TACD-002 stack slices
 - [x] Focused validation passes
 - [x] `bash tests/speckit-pro/run-all.sh` passes
 - [ ] PR packet includes scope budget, traceability, verification, known gaps, and rollback/flag notes
@@ -528,8 +525,8 @@ Focus on:
 
 ### Findings
 
-- No correctness issues found in the scoped source or generated payload diffs.
-- Preserved named IDs are confined to allowlist/dependency metadata or generated runtime metadata.
+- No correctness issues found in the scoped foundation source/reference diffs.
+- Generated payload and agent-surface updates are intentionally deferred to later TACD-002 stack slices.
 - The reviewability task gate size block remains recorded; final reviewability backstop still decides PR side effects.
 
 ### Verification Reviewed
