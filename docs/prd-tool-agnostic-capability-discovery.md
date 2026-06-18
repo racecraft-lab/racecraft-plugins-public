@@ -82,7 +82,7 @@ The user-facing behavior should shift from "these named optional MCPs improve th
 - Do not remove historical archive/changelog provenance solely to satisfy wording preferences.
 - Keep deterministic tests shell-based and aligned with existing Layer 1, Layer 4, and Layer 5 patterns.
 
-## 6. Decisions And Open Questions
+## 6. Decisions and Open Questions
 
 - **Resolved (TACD-001):** Use a shared capability-discovery reference with runtime-specific pointers and approved equivalents across Claude and Codex. TACD-004 must prove static pointer coverage, target resolution, and behavior-observable eval scenarios before the contract is considered enforced.
 - **Resolved (TACD-001):** Separate named optional-tool references by category, not by a broad string ban. Active runtime guidance is blocked after TACD-002, prerequisite/user-facing messaging is blocked after TACD-003, deterministic/eval expectations are blocked after TACD-004, and historical/provenance or generated source-derived duplicates may remain when clearly classified.
