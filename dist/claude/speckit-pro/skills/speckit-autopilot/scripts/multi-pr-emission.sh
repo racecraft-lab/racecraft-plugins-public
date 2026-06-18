@@ -1029,7 +1029,7 @@ if [ -n "$CHANGED_FILES" ]; then
       --argjson allowed "$allowed_scope" \
       --arg feature_dir "$FEATURE_DIR_REL" '
         def operational_scope($file):
-          ($file | startswith($feature_dir + "/"))
+          ($file | startswith($feature_dir + "/.process/"))
           or ($file | startswith("docs/ai/specs/.process/"))
           or ($file | test("^docs/ai/specs/.*(MOC|roadmap).*\\.md$"));
         [

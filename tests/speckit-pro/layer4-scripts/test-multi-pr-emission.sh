@@ -145,6 +145,7 @@ declared_changed_files="$SANDBOX/declared-changed-files.txt"
 scope_violation_files="$SANDBOX/scope-violation-files.txt"
 marker_declared_changed_files="$SANDBOX/marker-declared-changed-files.txt"
 marker_scope_violation_files="$SANDBOX/marker-scope-violation-files.txt"
+marker_feature_scope_violation_files="$SANDBOX/marker-feature-scope-violation-files.txt"
 marker_operational_changed_files="$SANDBOX/marker-operational-changed-files.txt"
 prsg012_marker_plan="$MARKER_FIXTURE_ROOT/prsg-012-pr-marker-plan.json"
 prsg012_split_result="$MARKER_FIXTURE_ROOT/prsg-012-final-marker-split-result.json"
@@ -184,12 +185,15 @@ cat > "$marker_scope_violation_files" <<'EOF'
 speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
 docs/unplanned-marker-change.md
 EOF
+cat > "$marker_feature_scope_violation_files" <<'EOF'
+speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
+specs/prsg-013-reviewability-markers/data-model.md
+EOF
 cat > "$marker_operational_changed_files" <<'EOF'
 speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
 tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh
 dist/claude/speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
 dist/codex/speckit-pro/skills/speckit-autopilot/scripts/multi-pr-emission.sh
-specs/prsg-013-reviewability-markers/data-model.md
 specs/prsg-013-reviewability-markers/.process/marker-plan/pr-marker-plan.json
 docs/ai/specs/.process/autopilot-state.json
 docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md
@@ -677,7 +681,7 @@ marker_operational_commands_json="$(cat "$marker_operational_candidate_dir/comma
 
 set_test "marker scope guard records operational changed file count"
 json_check "$marker_operational_commands_json" \
-  "data['declared_scope_guard']['status'] == 'passed' and data['declared_scope_guard']['changed_files_count'] == 9" \
+  "data['declared_scope_guard']['status'] == 'passed' and data['declared_scope_guard']['changed_files_count'] == 8" \
   "marker scope guard should allow declared tests, generated payloads, and process evidence"
 
 set_test "marker alias rejects source dirs outside specs"
@@ -930,6 +934,24 @@ run_emission output stderr_output "$SCRIPT" \
 assert_eq "2" "$result" "exit code"
 assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: changed file outside declared marker scope: docs/unplanned-marker-change.md"
 assert_file_not_exists "$marker_scope_candidate_dir/commands.candidate.json"
+
+set_test "marker changed-file scope rejects undeclared feature files outside process evidence"
+marker_feature_scope_candidate_dir="$SANDBOX/marker-feature-scope-candidates"
+result=0
+run_emission output stderr_output "$SCRIPT" \
+  --marker-plan "$valid_marker_plan" \
+  --marker-split-result "$marker_split_result" \
+  --state "$empty_state" \
+  --feature-branch prsg-013-reviewability-markers \
+  --source-feature-dir specs/prsg-013-reviewability-markers \
+  --base main \
+  --base-sha 0123456789abcdef \
+  --full-verification-evidence "$marker_full_evidence" \
+  --changed-files "$marker_feature_scope_violation_files" \
+  --candidate-dir "$marker_feature_scope_candidate_dir" || result=$?
+assert_eq "2" "$result" "exit code"
+assert_contains "$stderr_output" "multi-pr-emission.sh: input_error: changed file outside declared marker scope: specs/prsg-013-reviewability-markers/data-model.md"
+assert_file_not_exists "$marker_feature_scope_candidate_dir/commands.candidate.json"
 
 set_test "live marker emission rejects candidate dry-run mode"
 result=0

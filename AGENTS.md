@@ -80,6 +80,9 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 ## Active Technologies
 - Docs-site JavaScript ESM on Node; Astro 6.4.6 and Starlight 0.40.0 for docs rendering; Node built-ins (`node:fs`, `node:path`, `node:url`) plus existing docs-site pnpm scripts and `starlight-links-validator`; no new runtime dependency planned. (doc-007-command-workflow-manifest-and-file-layout-reference)
 - Checked-in Markdown files under `docs-site/src/content/docs/reference/`; no database or browser storage. (doc-007-command-workflow-manifest-and-file-layout-reference)
+- Markdown content rendered by Astro 6.4.6 and Starlight 0.40.0; docs-site JavaScript ESM on Node for generated references; `docs-site/package.json` declares Astro, Starlight, `@astrojs/check`, and `starlight-links-validator`; no new dependency planned. (doc-009-maintainer-contributor-release-workflow)
+- Checked-in repository files only; no database, browser storage, or runtime service state. (doc-009-maintainer-contributor-release-workflow)
 
 ## Recent Changes
 - doc-007-command-workflow-manifest-and-file-layout-reference: Planned a docs-site reference generator that emits committed Markdown pages using Node built-ins and existing Astro/Starlight validation; no new runtime dependency planned.
+- doc-009-maintainer-contributor-release-workflow: Planned a docs-only release workflow page for maintainers and contributors using existing docs-site validation, release helper scripts, PR Checks, and release-please source evidence.

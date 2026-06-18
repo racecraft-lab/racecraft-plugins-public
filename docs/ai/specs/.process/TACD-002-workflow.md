@@ -32,7 +32,7 @@ Open Questions, and the accepted reviewability warning.
 | Checklist | `/speckit-checklist` | Complete | G4 passed; 3 domains complete; 6 gaps fixed; 0 remaining `[Gap]` markers |
 | Tasks | `/speckit-tasks` | Complete | G5 passed; 53 tasks generated with FR/SC coverage; reviewability task gate recorded a valid size-only block; atomicity route is one navigable PR |
 | Analyze | `/speckit-analyze` | Complete | G6 passed after one workflow-only input coverage fix; no consensus required |
-| Implement | `/speckit-implement` | Complete | G7 passed; source guidance updated; generated payloads refreshed; default suite passed `3063/3063` after blocker hardening |
+| Implement | `/speckit-implement` | Complete | G7 passed; source guidance updated; generated payloads refreshed; default suite passed `3067/3067` after blocker hardening |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -315,8 +315,8 @@ Focus on TACD-002 requirements:
 
 | Domain | Status | Gaps | Outcome | Consensus |
 |--------|--------|------|---------|-----------|
-| llm-integration | Complete | 3 found/fixed; 0 remaining | Added taxonomy-not-chain wording, multi-capability selection criteria, and exact Codex TOML compact-equivalent source-note marker; checklist artifact: `checklists/llm-integration.md`; final full verify passed `3063/3063` | Skipped: no unresolved items |
-| error-handling | Complete | 2 found/fixed; 0 remaining | Clarified missing, unavailable, and present-but-unusable optional installed capability fallback; constrained fallback confidence to `medium` or `low`; checklist artifact: `checklists/error-handling.md`; final full verify passed `3063/3063` | Skipped: no unresolved items |
+| llm-integration | Complete | 3 found/fixed; 0 remaining | Added taxonomy-not-chain wording, multi-capability selection criteria, and exact Codex TOML compact-equivalent source-note marker; checklist artifact: `checklists/llm-integration.md`; final full verify passed `3067/3067` | Skipped: no unresolved items |
+| error-handling | Complete | 2 found/fixed; 0 remaining | Clarified fallback behavior for missing, unavailable, and present-but-unusable optional installed capabilities; constrained fallback confidence to `medium` or `low`; checklist artifact: `checklists/error-handling.md`; final full verify passed `3067/3067` | Skipped: no unresolved items |
 | integration | Complete | 1 found/fixed; 0 remaining | Declared generated shared-reference payload copies for `capability-discovery.md`, `consensus-protocol.md`, and `gate-validation.md` under both Claude and Codex payload roots; checklist artifact: `checklists/integration.md`; marker count `0` | Skipped: no unresolved items |
 
 ### Addressing Gaps
@@ -484,7 +484,7 @@ Focus on:
 | Generated payloads | Ran `bash scripts/build-plugin-payloads.sh` twice; second run produced no additional intended changes |
 | Payload coverage | Generated directive copies exist under both `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` |
 | Active wording scan | No scoped source or generated behavior surface matched preferred named optional-tool wording |
-| Verification | `git diff --check` passed; `bash tests/speckit-pro/run-all.sh --layer 1` passed `1024/1024`; focused marker checks passed `177/177` and `52/52`; `bash tests/speckit-pro/run-all.sh` passed `3063/3063` |
+| Verification | `git diff --check` passed; `bash tests/speckit-pro/run-all.sh --layer 1` passed `1024/1024`; focused marker checks passed `181/181` and `52/52`; `bash tests/speckit-pro/run-all.sh` passed `3067/3067` |
 
 ### Preserved-ID Review Table
 
@@ -519,10 +519,10 @@ still blocking unrelated undeclared files.
 
 | Proof | Result |
 |-------|--------|
-| Focused marker emission tests | `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `177/177` passed |
+| Focused marker emission tests | `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `181/181` passed |
 | Marker guidance regression tests | `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`: `52/52` passed |
 | Layer 3 eval fixture loading | Claude autopilot evals loaded `26`; Codex autopilot evals loaded `33` |
-| Full deterministic suite | `bash tests/speckit-pro/run-all.sh`: `3063/3063` passed |
+| Full deterministic suite | `bash tests/speckit-pro/run-all.sh`: `3067/3067` passed |
 | Final reviewability backstop | Full diff remains size-blocked at `73` files with `5` primary surfaces and `0` reviewable LOC; valid marker plan, fingerprint matched, outcome `marker_split` |
 | Marker emission dry validation | `multi-pr-emission.sh` validated `6` marker slices with `tacd-002-capability-discovery-directive-and-agent-updates-stack/*`, source artifacts anchored to `specs/tacd-002-capability-discovery-directive-and-agent-updates`, and no branch or PR mutation |
 
@@ -546,7 +546,7 @@ still blocking unrelated undeclared files.
 | Doctor Extension Check | Skipped | `$speckit-speckit-utils-doctor` / `$speckit-doctor` unavailable in the live Codex skill/command surface |
 | Verify Implementation | Skipped | `$speckit-verify` unavailable in the live Codex skill/command surface |
 | Verify Tasks Phantom Check | Skipped | `$speckit-verify-tasks` unavailable in the live Codex skill/command surface; `tasks.md` has no open task checkboxes |
-| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh`: `3063/3063` passed |
+| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh`: `3067/3067` passed |
 | Cleanup | Skipped | Cleanup extension not installed |
 | Self-Review | Complete | No correctness issues found in scoped source/generated diffs |
 | UAT Runbook Generation | Complete | `specs/tacd-002-capability-discovery-directive-and-agent-updates/.process/uat-runbook.md` generated |
@@ -568,10 +568,10 @@ still blocking unrelated undeclared files.
 
 - `git diff --check`: passed.
 - `bash tests/speckit-pro/run-all.sh --layer 1`: `1024/1024` passed.
-- `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `177/177` passed.
+- `bash tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh`: `181/181` passed.
 - `bash tests/speckit-pro/layer4-scripts/test-reviewability-marker-guidance.sh`: `52/52` passed.
 - Layer 3 eval fixture helpers loaded Claude/Codex autopilot evals: `26` / `33`.
-- `bash tests/speckit-pro/run-all.sh`: `3063/3063` passed.
+- `bash tests/speckit-pro/run-all.sh`: `3067/3067` passed.
 - Marker emission dry validation: 6 marker slices validated without branch or PR mutation.
 
 ---
