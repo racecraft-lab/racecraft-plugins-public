@@ -1,79 +1,60 @@
 {
   "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/TACD-002-workflow.md",
+  "workflow_file": "docs/ai/specs/.process/DOC-009-workflow.md",
   "workflow_files": [
-    "docs/ai/specs/.process/TACD-002-workflow.md"
+    "docs/ai/specs/.process/DOC-008-workflow.md",
+    "docs/ai/specs/.process/DOC-009-workflow.md"
   ],
-  "feature_dir": "specs/tacd-002-capability-discovery-directive-and-agent-updates",
+  "feature_dir": "specs/doc-009-maintainer-contributor-release-workflow",
   "feature_dirs": [
-    "specs/tacd-002-capability-discovery-directive-and-agent-updates"
+    "specs/doc-008-troubleshooting-security-trust-update-rollback",
+    "specs/doc-009-maintainer-contributor-release-workflow"
   ],
-  "feature_branch": "tacd-002-capability-discovery-directive-and-agent-updates",
-  "updated_at": "2026-06-18T20:04:52Z",
+  "feature_branch": "doc-009-maintainer-contributor-release-workflow",
+  "feature_branches": [
+    "doc-008-troubleshooting-security-trust-update-rollback",
+    "doc-009-maintainer-contributor-release-workflow"
+  ],
+  "updated_at": "2026-06-18T16:37:02Z",
   "active_step": "Archive Cleanup",
   "status": "completed",
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "single-feature-apply",
-    "current_target": "specs/tacd-002-capability-discovery-directive-and-agent-updates",
+    "cleanup_mode": "multi-feature-apply",
+    "current_target": null,
     "excluded_current_spec": null,
     "eligible_previous_specs": [
-      "specs/tacd-002-capability-discovery-directive-and-agent-updates"
+      "specs/doc-008-troubleshooting-security-trust-update-rollback",
+      "specs/doc-009-maintainer-contributor-release-workflow"
     ],
     "safeToApplyCleanup": true,
     "dryRunProvenanceOnly": false,
-    "archive_report": ".specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md",
-    "cleanup_branch": "codex/tacd-002-post-merge-hygiene",
+    "archive_report": ".specify/memory/archive-reports/2026-06-18-doc-008-009-post-merge-hygiene.md",
+    "cleanup_branch": "codex/doc-specs-post-merge-hygiene",
     "notes": [
-      "PRs #221-#226 are merged into main.",
-      "The completed TACD-002 active spec folder is removed from specs/** cleanup.",
+      "PR #220 and PR #219 are merged into main.",
+      "The completed DOC-008 and DOC-009 active spec folders are removed from specs/** cleanup.",
       "Process files under docs/ai/specs/.process/ are retained for workflow provenance."
     ]
   },
   "provenance": {
     "merged_prs": [
       {
-        "number": 221,
-        "title": "feat(TACD-002): Add capability discovery foundation",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/221",
-        "merged_at": "2026-06-18T17:19:33Z",
-        "merge_commit": "b63dfc95525eb64f9f221d7f2513c9ab9c36b314"
+        "number": 220,
+        "title": "docs(DOC-008): Add troubleshooting, Security, Trust, Update, and Rollback",
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/220",
+        "merged_at": "2026-06-18T15:16:34Z",
+        "merge_commit": "a27fc5dcb2b295fd7ea2d3250d2df58692a7408b",
+        "head_ref": "doc-008-troubleshooting-security-trust-update-rollback"
       },
       {
-        "number": 222,
-        "title": "feat(TACD-002): Update agent capability selection",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/222",
-        "merged_at": "2026-06-18T17:42:02Z",
-        "merge_commit": "da9a7c5cd6ba567f1530e396cfc69527948bf7a7"
-      },
-      {
-        "number": 223,
-        "title": "feat(TACD-002): Document fallback evidence behavior",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/223",
-        "merged_at": "2026-06-18T17:54:57Z",
-        "merge_commit": "2060789358cdf4cd946d423238ee2be1f7f90675"
-      },
-      {
-        "number": 224,
-        "title": "feat(TACD-002): Align Claude and Codex guidance",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/224",
-        "merged_at": "2026-06-18T19:01:30Z",
-        "merge_commit": "4203e1011a1d67220e0e82115108759446fa04cf"
-      },
-      {
-        "number": 225,
-        "title": "feat(TACD-002): Refresh generated capability payloads",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/225",
-        "merged_at": "2026-06-18T19:22:08Z",
-        "merge_commit": "12ff3667a36906552bb47ee11b7b53239d42f391"
-      },
-      {
-        "number": 226,
-        "title": "feat(TACD-002): Emit ordered slice PRs",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/226",
-        "merged_at": "2026-06-18T20:04:52Z",
-        "merge_commit": "130abd2b6329e774207c84ab798cfb5b6dab7131"
+        "number": 219,
+        "title": "docs(DOC-009): document maintainer contributor release workflow",
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/219",
+        "merged_at": "2026-06-18T16:37:02Z",
+        "merge_commit": "2686caa2a12dbaf460c33f37f054f40765fb2b35",
+        "head_ref": "doc-009-maintainer-contributor-release-workflow"
       }
     ]
   },
@@ -89,28 +70,42 @@
     "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
   },
   "post_results": {
-    "integration_suite_before_merge": {
+    "doc_008_before_merge": {
       "status": "completed",
-      "command": "bash tests/speckit-pro/run-all.sh",
-      "result": "3067/3067 passed"
+      "commands": [
+        "pnpm --dir docs-site reference:check",
+        "pnpm --dir docs-site validate",
+        "pnpm --dir docs-site validate:links"
+      ],
+      "result": "recorded in docs/ai/specs/.process/DOC-008-workflow.md"
+    },
+    "doc_009_before_merge": {
+      "status": "completed",
+      "commands": [
+        "pnpm --dir docs-site reference:check",
+        "pnpm --dir docs-site validate",
+        "bash tests/speckit-pro/run-all.sh"
+      ],
+      "result": "recorded in docs/ai/specs/.process/DOC-009-workflow.md"
     },
     "archive_cleanup": {
       "status": "completed",
-      "report": ".specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md",
-      "cleanup_command": "git rm -r specs/tacd-002-capability-discovery-directive-and-agent-updates",
+      "report": ".specify/memory/archive-reports/2026-06-18-doc-008-009-post-merge-hygiene.md",
+      "cleanup_command": "git rm -r specs/doc-008-troubleshooting-security-trust-update-rollback specs/doc-009-maintainer-contributor-release-workflow",
       "verification": [
         "python3 -m json.tool docs/ai/specs/.process/autopilot-state.json: passed",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .: regenerated",
+        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .: regenerated interactive-documentation-roadmap-MOC.md and tool-agnostic-capability-discovery-roadmap-MOC.md",
+        "bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh: 90/90 passed",
         "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .: passed",
-        "find specs -mindepth 1 -maxdepth 4 -print: DOC-008, DOC-009, and specs/.gitkeep remain",
+        "find specs -mindepth 1 -maxdepth 4 -print: only specs/.gitkeep remains",
         "git diff --check: passed",
-        "bash tests/speckit-pro/run-all.sh: 3067/3067 passed"
+        "bash tests/speckit-pro/run-all.sh: 3070/3070 passed"
       ]
     }
   },
   "plan": [
     {
-      "step": "Confirm merged PR stack #221-#226",
+      "step": "Confirm merged PRs #220 and #219",
       "status": "completed"
     },
     {
@@ -118,7 +113,7 @@
       "status": "completed"
     },
     {
-      "step": "Remove completed active spec folder",
+      "step": "Remove completed active spec folders",
       "status": "completed"
     },
     {

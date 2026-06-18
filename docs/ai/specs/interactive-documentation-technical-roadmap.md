@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-008 and DOC-009 are scaffolded and in progress. Created 2026-06-12; refreshed 2026-06-18.
+> Status: DOC-008 and DOC-009 are complete and archived; DOC-010 is ready to scaffold. Created 2026-06-12; refreshed 2026-06-18.
 
 ## Roadmap Overview
 
@@ -62,9 +62,9 @@ DOC-007 -> DOC-008
 | DOC-005 | First successful workflow tutorial | Completed/archived | DOC-005-workflow.md | Archived after PRs #198-#201 |
 | DOC-006 | Safe interactive selector and validation aids | Completed/archived | `.process/DOC-006-workflow.md` | Archived after PR #203 |
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Completed/archived | `.process/DOC-007-workflow.md` | Archived after PR #208 |
-| DOC-008 | Troubleshooting, security, trust, update, rollback | In Progress | `.process/DOC-008-workflow.md` | Scaffolded; run autopilot |
-| DOC-009 | Maintainer and contributor release workflow | In Progress | `.process/DOC-009-workflow.md` | Scaffolded on `doc-009-maintainer-contributor-release-workflow`; draft PR #219 open |
-| DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Unblocked by completed DOC-002 and DOC-006; sequence after DOC-007/DOC-008/DOC-009 content |
+| DOC-008 | Troubleshooting, security, trust, update, rollback | Completed/archived | `.process/DOC-008-workflow.md` | Archived after PR #220 |
+| DOC-009 | Maintainer and contributor release workflow | Completed/archived | `.process/DOC-009-workflow.md` | Archived after PR #219 |
+| DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Ready to scaffold after DOC-008/DOC-009 archive cleanup |
 
 ## Specification Sections
 
@@ -285,7 +285,12 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-003, DOC-004, DOC-007 | **Enables:** DOC-010
 
-**Status:** Scaffolded and in progress on branch `doc-008-troubleshooting-security-trust-update-rollback`.
+**Status:** Completed and archived after PR #220. Canonical docs live in
+`docs-site/src/content/docs/troubleshooting.md`,
+`docs-site/src/content/docs/security-and-trust.md`,
+`docs-site/src/content/docs/update-and-rollback.md`, and linked install/reference
+routes; archive provenance is recorded in
+`.specify/memory/archive-reports/2026-06-18-doc-008-009-post-merge-hygiene.md`.
 
 **Goal:** Help users diagnose failures and evaluate plugin trust boundaries.
 
@@ -315,7 +320,10 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-007 | **Enables:** DOC-010
 
-**Status:** In progress. Scaffolded on `doc-009-maintainer-contributor-release-workflow`; ready for autopilot with `docs/ai/specs/.process/DOC-009-workflow.md`.
+**Status:** Completed and archived after PR #219. Canonical docs live in
+`docs-site/src/content/docs/contribute-and-release.md`; archive provenance is
+recorded in
+`.specify/memory/archive-reports/2026-06-18-doc-008-009-post-merge-hygiene.md`.
 
 **Goal:** Give contributors a release-ready checklist for docs/plugin changes.
 
@@ -345,6 +353,9 @@ Budget result: within budget
 ### DOC-010: Search, accessibility, deep links, docs validation
 
 **Priority:** P2 | **Depends On:** DOC-001, DOC-002, DOC-006 | **Enables:** Feature complete
+
+**Status:** Pending and ready to scaffold after DOC-008 and DOC-009 completed
+the trust, recovery, and release workflow content tier.
 
 **Goal:** Harden the docs site so it is findable, accessible, linkable, responsive, and validated in CI.
 

@@ -647,7 +647,10 @@ main() {
   # (marker balance, malformed PRS, non-regular-file target) happens HERE, before
   # any write, so a poison map aborts the whole batch with no partial write (D6).
   local in_moc=() in_new=() in_branch=()
-  for d in "${spec_dirs[@]}"; do
+  local spec_count=${#spec_dirs[@]}
+  local spec_i
+  for (( spec_i = 0; spec_i < spec_count; spec_i++ )); do
+    d="${spec_dirs[$spec_i]}"
     local branch moc
     branch="$(basename "$d")"
     moc="$d/SPEC-MOC.md"
