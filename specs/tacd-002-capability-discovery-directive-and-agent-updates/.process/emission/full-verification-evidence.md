@@ -479,8 +479,9 @@ Focus on:
 | Tasks | Foundation slice emitted from the T001-T006 checkpoint; full-feature tasks remain documented in `tasks.md` for the stacked TACD-002 plan |
 | Shared directive | Added `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` |
 | Shared references | Updated `consensus-protocol.md` and `gate-validation.md` with narrow capability-first pointers |
-| Later stack slices | Scoped Claude/Codex agent updates, Codex compact-equivalent markers, and generated `dist/**` payload refresh are intentionally outside PR #221 |
-| Changed-file evidence | `changed-files.txt` is refreshed from the PR #221 diff against `origin/main`; no generated `dist/**` paths are included in this foundation slice |
+| Generated payloads | Refreshed generated payload copies for the shared directive/reference files under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` |
+| Later stack slices | Scoped Claude/Codex agent updates and Codex compact-equivalent markers are intentionally outside PR #221 |
+| Changed-file evidence | `changed-files.txt` is refreshed from the PR #221 diff against `origin/main` |
 | Verification | `git diff --check` passed; `bash tests/speckit-pro/run-all.sh --layer 1` passed `1024/1024`; `bash tests/speckit-pro/run-all.sh` passed `3041/3041` |
 
 ### Foundation-Slice Evidence Table
@@ -490,7 +491,8 @@ Focus on:
 | `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` | Shared directive source | Added in PR #221 |
 | `speckit-pro/skills/speckit-autopilot/references/consensus-protocol.md` | Shared reference pointer | Updated in PR #221 |
 | `speckit-pro/skills/speckit-autopilot/references/gate-validation.md` | Shared reference pointer | Updated in PR #221 |
-| `dist/**` | Generated payload output | Out of scope for PR #221; handled by a later TACD-002 stack slice |
+| `dist/claude/speckit-pro/skills/speckit-autopilot/references/` | Generated Claude payload output | Refreshed from source for the shared directive/reference files |
+| `dist/codex/speckit-pro/skills/speckit-autopilot/references/` | Generated Codex payload output | Refreshed from source for the shared directive/reference files |
 
 ---
 
@@ -499,8 +501,8 @@ Focus on:
 - [x] Foundation planning and directive artifacts are present
 - [x] Shared directive source file is present
 - [x] Shared references point at the directive
+- [x] Generated shared-reference payload copies are refreshed from source
 - [ ] Active Claude/Codex agent surfaces updated in later TACD-002 stack slices
-- [ ] Generated payloads refreshed from source in later TACD-002 stack slices
 - [x] Focused validation passes
 - [x] `bash tests/speckit-pro/run-all.sh` passes
 - [ ] PR packet includes scope budget, traceability, verification, known gaps, and rollback/flag notes
@@ -524,7 +526,7 @@ Focus on:
 ### Findings
 
 - No correctness issues found in the scoped foundation source/reference diffs.
-- Generated payload and agent-surface updates are intentionally deferred to later TACD-002 stack slices.
+- Generated shared-reference payload copies are refreshed from source; agent-surface updates remain deferred to later TACD-002 stack slices.
 - The reviewability task gate size block remains recorded; final reviewability backstop still decides PR side effects.
 
 ### Verification Reviewed
