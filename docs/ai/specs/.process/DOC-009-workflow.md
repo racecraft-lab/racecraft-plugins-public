@@ -43,8 +43,8 @@ scope decisions captured during setup.
 | Specify | `/speckit-specify` | Complete | Created `specs/doc-009-maintainer-contributor-release-workflow/spec.md`; G1 passed with zero clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Resolved page structure, source-fact boundaries, validation lanes, and DOC-010 handoff |
 | Plan | `/speckit-plan` | Complete | Created `plan.md`, `research.md`, and `quickstart.md`; G3 passed with projected production LOC 0 |
-| Checklist | `/speckit-checklist` | In Progress | Run documentation, release-process, and validation checks |
-| Tasks | `/speckit-tasks` | Pending | Produce ordered, reviewable implementation tasks |
+| Checklist | `/speckit-checklist` | Complete | Four domain checklists completed; G4 passed with zero gap markers |
+| Tasks | `/speckit-tasks` | In Progress | Produce ordered, reviewable implementation tasks |
 | Analyze | `/speckit-analyze` | Pending | Check consistency across spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Implement docs changes with focused verification |
 
@@ -387,10 +387,12 @@ Focus on DOC-009:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| documentation-ia | Fill after run | Fill after run | AC-9.1, AC-9.6 |
-| release-process-accuracy | Fill after run | Fill after run | AC-9.2, AC-9.3, AC-9.4 |
-| ci-validation | Fill after run | Fill after run | AC-9.1, AC-9.6 |
-| reviewer-usability | Fill after run | Fill after run | AC-9.5 |
+| documentation-ia | 11 | 0 | AC-9.1, AC-9.6 |
+| release-process-accuracy | 10 | 0 | AC-9.2, AC-9.3, AC-9.4 |
+| ci-validation | 9 | 0 | AC-9.1, AC-9.6 |
+| reviewer-usability | 9 | 0 | AC-9.5 |
+
+Consensus escalation was not required for any checklist domain.
 
 ---
 

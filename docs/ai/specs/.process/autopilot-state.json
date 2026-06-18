@@ -9,8 +9,8 @@
     "specs/doc-009-maintainer-contributor-release-workflow"
   ],
   "feature_branch": "doc-009-maintainer-contributor-release-workflow",
-  "updated_at": "2026-06-18T02:24:36Z",
-  "active_step": "Phase 4: Checklist - documentation-ia",
+  "updated_at": "2026-06-18T02:27:11Z",
+  "active_step": "Phase 5: Tasks",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "execution_notes": {
@@ -126,39 +126,55 @@
     },
     {
       "step": "Phase 4: Checklist - documentation-ia",
-      "status": "in_progress"
+      "status": "completed",
+      "items": 11,
+      "gaps": 0,
+      "summary": "Checklist created with route ownership, page shape, generated-reference, and DOC-010 handoff checks."
     },
     {
       "step": "Phase 4: Checklist - documentation-ia Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - release-process-accuracy",
-      "status": "pending"
+      "status": "completed",
+      "items": 10,
+      "gaps": 0,
+      "summary": "Checklist created with source-citation, payload, marketplace, version, and release automation checks."
     },
     {
       "step": "Phase 4: Checklist - release-process-accuracy Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - ci-validation",
-      "status": "pending"
+      "status": "completed",
+      "items": 9,
+      "gaps": 0,
+      "summary": "Checklist created with PR Checks, docs-site validation, release-readiness, and DOC-010 CI-boundary checks."
     },
     {
       "step": "Phase 4: Checklist - ci-validation Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 4: Checklist - reviewer-usability",
-      "status": "pending"
+      "status": "completed",
+      "items": 9,
+      "gaps": 0,
+      "summary": "Checklist created with contributor, maintainer, and reviewer PR metadata checks."
     },
     {
       "step": "Phase 4: Checklist - reviewer-usability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
