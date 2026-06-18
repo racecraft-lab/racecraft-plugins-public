@@ -72,7 +72,7 @@ As a docs maintainer, I can see current docs-only CI behavior and the future DOC
 
 - A PR changes both docs-site content and plugin source, requiring both docs-site validation and plugin release-readiness validation.
 - A PR changes generated payloads or marketplace registries without a matching source or version-sync explanation.
-- A release-please PR does not receive ordinary pull request workflow events and must be understood through the observable release workflow dispatch behavior.
+- A release-please PR is validated through observable release workflow behavior: payload sync on the release PR branch plus manual `PR Checks` dispatch. Any explanation of GitHub-token event behavior must be caveated to `GITHUB_TOKEN` recursion rules and sourced.
 - Generated reference pages drift from their generator output and must be handled through the generator contract, not hand edits.
 - A docs-only PR passes current repository CI but still lacks the validation evidence expected for a release-ready review.
 
@@ -83,7 +83,7 @@ As a docs maintainer, I can see current docs-only CI behavior and the future DOC
 - **FR-001**: The documentation MUST deepen `docs-site/src/content/docs/contribute-and-release.md` as the single `/contribute-and-release` page for the maintainer and contributor release workflow.
 - **FR-002**: The page MUST map authoring source, generated payloads, Claude marketplace registry, Codex marketplace registry, manifest version fields, docs-site files, generated reference pages, CI behavior, release-please, and PR conventions.
 - **FR-003**: The page MUST include a change-type decision matrix covering docs-only, plugin source, generated payload/dist, marketplace registry, and release automation changes.
-- **FR-004**: For each change type, the page MUST name the source surface, generated or synchronized surfaces, required checks, and review evidence contributors should include.
+- **FR-004**: For each change type, the page MUST name the source surface, generated or synchronized surfaces, required checks, and review evidence contributors should include without repeating a full command block in every change-type section.
 - **FR-005**: The contributor path MUST explain how to pick the smallest source surface, avoid editing generated payloads unless the change is a generated sync, use Conventional Commit PR titles, write public-readable PR bodies, and include validation evidence.
 - **FR-006**: The maintainer release-readiness path MUST include source/dist parity, Claude/Codex marketplace parity, manifest version consistency, generated payload validation, full deterministic tests, and docs-site validation when relevant.
 - **FR-007**: The page MUST present `bash tests/speckit-pro/run-all.sh` as the release-readiness test expectation.
@@ -107,7 +107,7 @@ As a docs maintainer, I can see current docs-only CI behavior and the future DOC
 
 ### Source Evidence Requirements
 
-- The implementation MUST source workflow claims from `AGENTS.md`, `CLAUDE.md`, `.github/workflows/pr-checks.yml`, `.github/workflows/release.yml`, `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`, `tests/speckit-pro/run-all.sh`, and `docs-site/package.json`.
+- The implementation MUST source every command, CI, release, version, generated-surface, and marketplace behavior claim from primary files such as `AGENTS.md`, `CLAUDE.md`, `.github/workflows/pr-checks.yml`, `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json`, `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`, `tests/speckit-pro/run-all.sh`, and `docs-site/package.json`.
 - The implementation MUST use `docs/ai/specs/.process/DOC-009-design-concept.md` for scope decisions.
 - The implementation MUST preserve the existing DOC-002 route shell ownership history while replacing the shell content with DOC-009's full workflow content.
 
@@ -150,6 +150,31 @@ As a docs maintainer, I can see current docs-only CI behavior and the future DOC
 - **SC-004**: The page makes no unsourced claims about CI, release automation, generated payloads, or marketplace behavior.
 - **SC-005**: The page clearly distinguishes current docs-only CI behavior from DOC-010 future docs-site CI hardening, with no promise that DOC-009 implements DOC-010 behavior.
 - **SC-006**: Each DOC-009 acceptance criterion AC-9.1 through AC-9.6 maps to a visible page section or checklist item.
+
+## Clarifications
+
+### Session 1 - Page Structure
+
+- Command examples will use one consolidated release-readiness block, while the change-type matrix labels which commands and evidence apply to each path.
+- Generated reference pages will be linked from a source-of-truth map and the final checklist, with sparse inline links on first mention rather than repeated links in every release section.
+- `pnpm --dir docs-site validate` is required for changes under `docs-site/`; non-site Markdown docs changes still need appropriate PR evidence and the release-readiness expectation stated by the page.
+- The published page order will be: purpose, source-of-truth map, change-type matrix, contributor path, maintainer readiness, version and release automation guidance, final checklist, and DOC-010 handoff.
+
+### Session 2 - Source-Fact Boundaries
+
+- Every command, CI, release, version, generated-surface, and marketplace behavior claim must cite primary source files; generated reference pages can be reader-facing links but do not replace primary source citations.
+- Docs-only PR Checks behavior must be stated from `.github/workflows/pr-checks.yml`: plugin tests skip only when no plugin-affecting paths changed, while `validate-pr-title` and the `validate-plugins` sentinel still matter.
+- Release-please PR guidance must describe observable repo behavior first: the Release workflow syncs generated payloads for the release PR branch, then manually dispatches `PR Checks`. Any GitHub-token rationale must be scoped to `GITHUB_TOKEN` recursion behavior instead of phrased as an absolute platform rule.
+- Release-please owns source plugin manifest version bumps for both Claude Code and Codex manifests. Generated payload manifests under `dist/` are rebuilt from source. Marketplace registry versions are synchronized from the platform manifest paths by `scripts/sync-marketplace-versions.sh` and are not normal manual edit targets.
+- Docs-site validation claims must cite `docs-site/package.json`; `validate` runs the checked-in docs-site validation script chain and must not be described as DOC-010 hardening.
+
+### Session 3 - Validation and DOC-010 Handoff
+
+- `pnpm --dir docs-site validate` is required for any change under `docs-site/**`; non-site Markdown docs do not require it unless they affect docs-site generation or output.
+- `pnpm --dir docs-site reference:check` is included in `docs-site` validation and may also be listed as a focused preflight when checking generated reference drift or generator output directly.
+- `bash tests/speckit-pro/run-all.sh` is the release-readiness expectation for maintainer review, especially plugin or release-affecting changes; it must not be described as a promise that current CI runs the full suite for every PR.
+- Mixed docs-site plus plugin or release-surface PRs need both validation lanes, plus payload rebuild or marketplace sync evidence when those generated/synchronized surfaces are relevant.
+- DOC-009 documents current local docs-site validation and current PR Checks behavior. DOC-010 owns adding or hardening docs-site CI for site build, Markdown/link validation, search, accessibility, deep links, responsive checks, manifest/payload consistency, and safe command-snippet validation.
 
 ## Assumptions
 

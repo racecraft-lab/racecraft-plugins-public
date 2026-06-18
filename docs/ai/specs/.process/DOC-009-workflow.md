@@ -41,8 +41,8 @@ scope decisions captured during setup.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `specs/doc-009-maintainer-contributor-release-workflow/spec.md`; G1 passed with zero clarification markers |
-| Clarify | `/speckit-clarify` | In Progress | Resolving docs-page structure and validation boundaries |
-| Plan | `/speckit-plan` | Pending | Produce implementation plan and reviewability budget |
+| Clarify | `/speckit-clarify` | Complete | Resolved page structure, source-fact boundaries, validation lanes, and DOC-010 handoff |
+| Plan | `/speckit-plan` | In Progress | Produce implementation plan and reviewability budget |
 | Checklist | `/speckit-checklist` | Pending | Run documentation, release-process, and validation checks |
 | Tasks | `/speckit-tasks` | Pending | Produce ordered, reviewable implementation tasks |
 | Analyze | `/speckit-analyze` | Pending | Check consistency across spec, plan, tasks, and design concept |
@@ -245,11 +245,18 @@ handoff without promising current CI behavior that does not exist.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Page structure | Record count after session | Record command-block and section decisions |
-| 2 | Source facts | Record count after session | Record citation rules and generated-reference boundaries |
-| 3 | Validation and DOC-010 | Record count after session | Record validation matrix and handoff wording |
+| 1 | Page structure | 4 questions | Consolidated release-readiness command block, sparse generated-reference links, docs-site-only validation trigger, and classification-first page order |
+| 2 | Source facts | 5 questions | Primary-source citation rules, docs-only PR Checks wording, caveated release-dispatch wording, dual-manifest version hierarchy, and docs-site validation source boundaries |
+| 3 | Validation and DOC-010 | 5 questions | Docs-site validation trigger, reference-check preflight, release-readiness suite expectation, mixed-change validation lanes, and DOC-010 CI hardening handoff |
 
 ---
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Release-please PR workflow-event wording | [codebase, domain, security] | 1 | 3/3 | Use observable release workflow dispatch wording and caveat any `GITHUB_TOKEN` explanation | codebase-analyst, domain-researcher, spec-context-analyst |
+| 2 | Clarify | Version-field source hierarchy | [codebase, spec] | 1 | both-agree | Release-please owns both source platform manifest versions; dist is generated; marketplace versions sync from platform manifests | codebase-analyst, spec-context-analyst |
 
 ## Phase 3: Plan
 

@@ -9,8 +9,8 @@
     "specs/doc-009-maintainer-contributor-release-workflow"
   ],
   "feature_branch": "doc-009-maintainer-contributor-release-workflow",
-  "updated_at": "2026-06-18T02:02:49Z",
-  "active_step": "Phase 2: Clarify - Page Structure",
+  "updated_at": "2026-06-18T02:18:52Z",
+  "active_step": "Phase 3: Plan",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "model_prerequisites": {
@@ -82,31 +82,39 @@
     },
     {
       "step": "Phase 2: Clarify - Page Structure",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted consolidated release-readiness command block, sparse generated-reference links, docs-site-only validation trigger for docs-site files, and classification-first page order."
     },
     {
       "step": "Phase 2: Clarify - Page Structure Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 2: Clarify - Source-Fact Boundaries",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted primary-source citation rules, docs-only PR Checks wording, caveated release-dispatch wording, dual-manifest version hierarchy, and docs-site validation source boundaries."
     },
     {
       "step": "Phase 2: Clarify - Source-Fact Boundaries Consensus",
-      "status": "pending"
+      "status": "completed",
+      "round": 1,
+      "outcome": "3/3 and both-agree",
+      "summary": "Consensus resolved release-please PR workflow-event wording and version-field source hierarchy."
     },
     {
       "step": "Phase 2: Clarify - Validation and DOC-010 Handoff",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted docs-site validation trigger, reference-check preflight, release-readiness suite expectation, mixed-change validation lanes, and DOC-010 CI hardening handoff."
     },
     {
       "step": "Phase 2: Clarify - Validation and DOC-010 Handoff Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "No unresolved consensus items."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - documentation-ia",
