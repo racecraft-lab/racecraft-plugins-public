@@ -9,8 +9,8 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T04:23:44Z",
-  "active_step": "Phase 6: Analyze",
+  "updated_at": "2026-06-18T04:29:48Z",
+  "active_step": "Phase 6.5: Confidence Gate",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -182,15 +182,20 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed",
+      "gate": "G6",
+      "gate_status": "passed",
+      "summary": "Analyze found 1 medium AC traceability gap in tasks.md and remediated it by mapping PRD AC-8.1 through AC-8.6 to user stories and task IDs; 0 findings remain."
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "outcome": "not-needed",
+      "summary": "Analyze executor reported no unresolved consensus items."
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",

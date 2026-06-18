@@ -10,6 +10,17 @@
 
 **Organization**: Tasks are grouped by user story so each page-level increment can be implemented and reviewed independently after the shared foundation.
 
+## Acceptance Criteria Traceability
+
+| PRD AC | User Story | Requirement / outcome coverage | Task IDs |
+|--------|------------|--------------------------------|----------|
+| AC-8.1 | US1 | Troubleshooting entries include symptom, likely cause, diagnostic command or file to inspect, recommended fix, platform label, follow-up link, and source citation. | T009-T014, T032-T034 |
+| AC-8.2 | US2 | Security docs explain what SpecKit Pro can package or invoke on Claude Code and Codex, including skills, agents/subagents/custom agents, hooks, MCP/app integrations, settings/assets where applicable, and platform boundaries. | T015-T020, T034 |
+| AC-8.3 | US2 | The trust model distinguishes repository source, generated payloads, installed cache/runtime state, user/project agents or custom agents, and managed-policy controls. | T015, T018-T020, T034 |
+| AC-8.4 | US3 | Update/rollback docs cover marketplace refresh, payload rebuild, version sync, rollback, stale payload, stale cache, reinstall, remove, and stale install recovery cases. | T021-T027, T032, T034 |
+| AC-8.5 | US1, US2, US3 | Browser docs state they do not grant permissions, run local plugin workflows, execute local diagnostics, inspect local filesystems, or modify configuration. | T009, T013, T015, T021, T033 |
+| AC-8.6 | US2 | Security/evaluator pages cite official vendor docs for platform behavior and label repository-derived behavior separately from recommended practice. | T016-T020, T034 |
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel because it touches different files or is read-only with no dependency on incomplete tasks

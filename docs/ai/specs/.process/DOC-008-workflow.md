@@ -49,7 +49,7 @@ policy, one-slice decision, and validation scope.
 | Plan | `$speckit-plan` | Complete | G3 passed; plan keeps DOC-008 docs-only with no plugin behavior changes |
 | Checklist | `$speckit-checklist` | Complete | Completed UX, security, error handling, and accessibility; 6 gaps found and fixed; G4 marker count clean |
 | Tasks | `$speckit-tasks` | Complete | Generated 40 story-ordered docs tasks with source citation checks; G5 passed |
-| Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, tasks, and source policy |
+| Analyze | `$speckit-analyze` | Complete | Remediated AC traceability drift; G6 marker count clean |
 | Implement | `$speckit-implement` | Pending | Expand DOC-008 pages, update sidebar/links, validate docs-site |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -534,7 +534,7 @@ Focus on DOC-008:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | Medium | `tasks.md` did not explicitly map PRD AC-8.1 through AC-8.6 to DOC-008 user stories and task IDs | Added `Acceptance Criteria Traceability` mapping AC-8.1 through AC-8.6 to user stories and concrete tasks; marker counts returned to zero |
 
 ---
 
