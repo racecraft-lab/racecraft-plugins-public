@@ -500,10 +500,10 @@ decision here. This scaffold does not precompute or force a route.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | Pending | `true`, or `false` for a release-sensitive change. |
-| **Signals** | Pending | Decisive detector findings. |
-| **Warnings** | Pending | Release-safety warnings. |
+| **Route** | `one-navigable-PR` | One navigable documentation PR is appropriate for the three coordinated DOC-008 pages and links. |
+| **Releasable** | `true` | Docs-only change with no release-sensitive runtime behavior. |
+| **Signals** | `change-shape:modify-heavy` | The classifier saw a modify-heavy docs/process change shape. |
+| **Warnings** | None | No release-safety warnings emitted. |
 
 Command:
 

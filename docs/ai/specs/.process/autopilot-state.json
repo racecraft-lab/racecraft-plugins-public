@@ -9,8 +9,8 @@
     "specs/doc-008-troubleshooting-security-trust-update-rollback"
   ],
   "feature_branch": "doc-008-troubleshooting-security-trust-update-rollback",
-  "updated_at": "2026-06-18T04:29:48Z",
-  "active_step": "Phase 6.5: Confidence Gate",
+  "updated_at": "2026-06-18T04:31:11Z",
+  "active_step": "Phase 7: Implement - Setup and Foundation",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "archive_sweep": {
@@ -195,10 +195,34 @@
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "in_progress"
+      "status": "completed",
+      "mode": "advisory",
+      "outcome": "soft_skip",
+      "summary": "No synthesizer confidence emit was present in the workflow file; advisory confidence gate soft-skipped. Atomicity classifier returned one-navigable-PR, releasable true, no warnings."
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "completed",
+      "summary": "Task decomposition completed in tasks.md with setup, foundation, US1, US2, US3, and polish phases."
+    },
+    {
+      "step": "Phase 7: Implement - Setup and Foundation",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 1 Troubleshooting",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 2 Security and Trust",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - User Story 3 Update and Rollback",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Polish and Validation",
       "status": "pending"
     },
     {
