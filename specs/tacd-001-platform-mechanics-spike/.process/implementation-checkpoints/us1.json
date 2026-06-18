@@ -1,9 +1,0 @@
-{
-  "marker_id": "us1",
-  "status": "complete",
-  "task_ids": ["T006", "T007", "T008", "T009", "T010", "T011", "T012", "T013", "T014", "T015"],
-  "head_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
-  "commit_sha": "a8db27622733e4377fd5cb3088e085ba8b62a9a1",
-  "evidence_path": "specs/tacd-001-platform-mechanics-spike/.process/implementation-checkpoints/us1.json",
-  "summary": "Added Claude Code and Codex runtime-surface audit evidence, generated-payload classification, runtime mechanics matrix, and sanitized probe appendix entries."
-}

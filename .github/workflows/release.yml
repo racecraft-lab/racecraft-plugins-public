@@ -22,7 +22,7 @@ jobs:
       - id: release
         uses: googleapis/release-please-action@v5
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         if: steps.release.outputs.prs_created == 'true'
         with:
           fetch-depth: 0
@@ -84,7 +84,7 @@ jobs:
               -f base_ref="main"
           done
 
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
 
       - name: Build clean plugin payloads

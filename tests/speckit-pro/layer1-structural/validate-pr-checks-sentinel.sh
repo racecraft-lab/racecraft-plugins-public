@@ -26,7 +26,7 @@ assert_contains "$CONTENT" "name: validate-plugins"
 section "pr-checks.yml — PR Workflow Contract"
 
 set_test "title validation checks out repository history"
-if [[ "$CONTENT" == *"uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd"* \
+if [[ "$CONTENT" == *"uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10"* \
   && "$CONTENT" == *"fetch-depth: 0"* ]]; then
   _pass
 else

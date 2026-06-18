@@ -1,6 +1,6 @@
 # UX Checklist: Troubleshooting, Security, Trust, Update, And Rollback
 
-**Purpose**: Validate DOC-008 requirements quality for scanable support flows, route distinction, row-level next actions, and correct handoffs among install, reference, troubleshooting, security/trust, and update/rollback content.
+**Purpose**: Validate DOC-008 requirements quality for scannable support flows, route distinction, row-level next actions, and correct handoffs among install, reference, troubleshooting, security/trust, and update/rollback content.
 **Created**: 2026-06-18
 **Feature**: [spec.md](../spec.md)
 

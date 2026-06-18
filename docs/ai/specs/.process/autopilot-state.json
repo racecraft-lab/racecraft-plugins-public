@@ -20,12 +20,10 @@
     "current_target": "specs/doc-008-troubleshooting-security-trust-update-rollback",
     "excluded_current_spec": "specs/doc-008-troubleshooting-security-trust-update-rollback",
     "eligible_previous_specs": [],
-    "active_non_current_specs": [
-      "specs/tacd-001-platform-mechanics-spike"
-    ],
+    "active_non_current_specs": [],
     "safeToApplyCleanup": false,
     "dryRunProvenanceOnly": true,
-    "notes": "Archive command is extension/skill-document based rather than a specify CLI subcommand in this Codex surface. Static sweep found only the current DOC-008 target and active TACD-001; no cleanup was applied."
+    "notes": "Archive command is extension/skill-document based rather than a specify CLI subcommand in this Codex surface. Static sweep found only the current DOC-008 target; TACD-001 was archived on main, so no DOC-008 cleanup was applied."
   },
   "prerequisites": {
     "status": "completed",
