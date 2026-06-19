@@ -44,7 +44,7 @@ concept is the source of truth for setup-time scoping decisions.
 | Plan | `/speckit-plan` | ✅ Complete | plan.md/research.md/quickstart.md; G3 PASS; reviewability est. ~40 LOC |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains; 8 `[Gap]` resolved; G4 PASS (0 markers) |
 | Tasks | `/speckit-tasks` | ✅ Complete | 37 tasks, 7 groups; G5 PASS; route = one-navigable-PR |
-| Analyze | `/speckit-analyze` | Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | 1 HIGH resolved (T004 3→6 agents); G6 PASS; confidence 0.96 |
 | Implement | `/speckit-implement` | Pending | TDD where checks/build behavior change |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -576,7 +576,24 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | _Pending run_ |
+| C1 | HIGH | tasks.md T004 listed only 3 pointer-coverage agents; ground-truth grep shows 6 reference `capability-discovery.md` | Corrected T004 → 6 directive-referencing agents (inventory-derived) + enumerated exclusion sets; bound T017's in-scope set to it |
+| — | (other) | 0 CRITICAL / 0 MEDIUM / 0 LOW; 0 unresolved for consensus | G6 PASS; constitution 6/6; traceability + non-vacuity verified against the live repo |
+
+### Pre-Implement Confidence (G6.5)
+
+Emitted by the consensus-synthesizer at end of Phase 6 (advisory gate; threshold 0.90):
+
+```text
+📊 Confidence: 0.96
+
+- Task understanding: 0.97
+- Approach clarity: 0.97
+- Requirements alignment: 1.00
+- Risk assessment: 1.00
+- Completeness: 0.87
+```
+
+Aggregate **0.96 ≥ 0.90** → G6.5 PASS (advisory). Completeness (0.87) note: the five behavior-observable eval scenario fixtures (T033) are described but designed during Implement — flagged for extra care in Phase 7.
 
 ---
 
