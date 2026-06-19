@@ -84,20 +84,20 @@
 
 ### Validation for User Story 3
 
-- [ ] T020 [US3] Add failing command-chain checks in `docs-site/scripts/validate-docs-quality.mjs` so `docs-site/package.json` must include `reference:check`, `check`, `build`, `validate:safe-aids`, `validate:quality`, and `validate:smoke` under the DOC-010 validation path (FR-007, FR-008)
-- [ ] T021 [US3] Add failing CI docs-surface detection expectations for rendered docs-site, generated-reference source, docs-validation contract, and plugin-only changes in `.github/workflows/pr-checks.yml` comments or job logic review points (FR-009, FR-011)
+- [X] T020 [US3] Add failing command-chain checks in `docs-site/scripts/validate-docs-quality.mjs` so `docs-site/package.json` must include `reference:check`, `check`, `build`, `validate:safe-aids`, `validate:quality`, and `validate:smoke` under the DOC-010 validation path (FR-007, FR-008)
+- [X] T021 [US3] Add failing CI docs-surface detection expectations for rendered docs-site, generated-reference source, docs-validation contract, and plugin-only changes in `.github/workflows/pr-checks.yml` comments or job logic review points (FR-009, FR-011)
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Update `docs-site/package.json` so `pnpm --dir docs-site validate` runs generated reference checks, Astro checks, build/link validation, safe-aids validation, docs-quality validation, and `validate:smoke` (FR-007, FR-008)
-- [ ] T023 [US3] Update `.github/workflows/pr-checks.yml` with a stable `validate-docs` job using job-level changed-file detection and successful skip behavior for unrelated changes (FR-009)
-- [ ] T024 [US3] Keep existing `detect`, `test`, `validate-pr-title`, and `validate-plugins` plugin matrix semantics intact while adding docs validation logic in `.github/workflows/pr-checks.yml` (FR-009)
+- [X] T022 [US3] Update `docs-site/package.json` so `pnpm --dir docs-site validate` runs generated reference checks, Astro checks, build/link validation, safe-aids validation, docs-quality validation, and `validate:smoke` (FR-007, FR-008)
+- [X] T023 [US3] Update `.github/workflows/pr-checks.yml` with a stable `validate-docs` job using job-level changed-file detection and successful skip behavior for unrelated changes (FR-009)
+- [X] T024 [US3] Keep existing `detect`, `test`, `validate-pr-title`, and `validate-plugins` plugin matrix semantics intact while adding docs validation logic in `.github/workflows/pr-checks.yml` (FR-009)
 
 ### Verification for User Story 3
 
-- [ ] T025 [US3] Run `pnpm --dir docs-site reference:check` and confirm generated reference drift is caught before review (FR-003, FR-007)
-- [ ] T026 [US3] Run `pnpm --dir docs-site validate` and confirm the full DOC-010 local validation path includes `validate:smoke` (FR-007, FR-008)
-- [ ] T027 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` after `.github/workflows/pr-checks.yml` or structural spec-marker surfaces change (FR-009, FR-013)
+- [X] T025 [US3] Run `pnpm --dir docs-site reference:check` and confirm generated reference drift is caught before review (FR-003, FR-007)
+- [X] T026 [US3] Run `pnpm --dir docs-site validate` and confirm the full DOC-010 local validation path includes `validate:smoke` (FR-007, FR-008)
+- [X] T027 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` after `.github/workflows/pr-checks.yml` or structural spec-marker surfaces change (FR-009, FR-013)
 
 **Checkpoint**: User Story 3 has one local docs validation path and a conditional CI docs gate without plugin matrix fan-out for docs-only changes.
 

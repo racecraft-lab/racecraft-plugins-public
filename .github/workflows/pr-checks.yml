@@ -162,7 +162,126 @@ jobs:
             --changed-files .git/pr-changed-files.txt
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 4: Sentinel aggregator — provides stable check name for branch
+  # Job 4: Validate docs-site and generated reference surfaces
+  # ───────────────────────────────────────────────────────────────────
+  validate-docs:
+    name: validate-docs
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          fetch-depth: 0
+
+      - name: Detect docs validation surfaces
+        id: docs
+        env:
+          BASE_REF: ${{ github.event_name == 'pull_request' && github.base_ref || inputs.base_ref }}
+        run: |
+          set -euo pipefail
+
+          # All files changed relative to the base branch.
+          changed_files=$(git diff --name-only "origin/${BASE_REF}...HEAD")
+
+          # DOC-010 changed-file surfaces:
+          # - Rendered docs-site: docs-site/src/content/docs/**,
+          #   docs-site/src/components/**, docs-site/astro.config.mjs -> full validate.
+          # - Generated-reference source: plugin manifests, skills, agents,
+          #   hooks, scripts, README, tests, dist manifests, and source allowlists
+          #   -> reference drift plus docs-quality validation.
+          # - Docs-validation contract: docs-site scripts, package scripts,
+          #   Playwright config/spec, and this PR Checks docs-gate logic -> full validate.
+          # - Plugin-only changes outside those inputs keep the existing plugin
+          #   matrix semantics and skip docs validation successfully.
+          rendered_docs=false
+          generated_reference=false
+          docs_contract=false
+
+          while IFS= read -r file; do
+            [ -n "$file" ] || continue
+
+            case "$file" in
+              docs-site/src/content/docs/*|docs-site/src/components/*|docs-site/astro.config.mjs)
+                rendered_docs=true
+                ;;
+            esac
+
+            case "$file" in
+              */.claude-plugin/plugin.json|*/.codex-plugin/plugin.json|.claude-plugin/marketplace.json|.agents/plugins/marketplace.json)
+                generated_reference=true
+                ;;
+              speckit-pro/skills/*|speckit-pro/codex-skills/*|speckit-pro/agents/*|speckit-pro/codex-agents/*|speckit-pro/hooks/*|speckit-pro/codex-hooks.json|speckit-pro/scripts/*)
+                generated_reference=true
+                ;;
+              scripts/*|README.md|*/README.md|tests/speckit-pro/*|dist/claude/*|dist/codex/*)
+                generated_reference=true
+                ;;
+              .specify/integrations/*|docs/prd-interactive-documentation.md|docs/roadmap-interactive-documentation.md)
+                generated_reference=true
+                ;;
+            esac
+
+            case "$file" in
+              docs-site/scripts/*|docs-site/src/data/safe-install-aids.ts|docs-site/package.json|docs-site/playwright.config.mjs|docs-site/tests/docs-smoke.spec.mjs|.github/workflows/pr-checks.yml)
+                docs_contract=true
+                ;;
+            esac
+          done <<< "$changed_files"
+
+          should_validate_docs=false
+          validation_mode=skip
+          if [[ "$rendered_docs" == "true" || "$docs_contract" == "true" ]]; then
+            should_validate_docs=true
+            validation_mode=full
+          elif [[ "$generated_reference" == "true" ]]; then
+            should_validate_docs=true
+            validation_mode=reference
+          fi
+
+          echo "Rendered docs-site changed: ${rendered_docs}"
+          echo "Generated-reference source changed: ${generated_reference}"
+          echo "Docs-validation contract changed: ${docs_contract}"
+          echo "Docs validation mode: ${validation_mode}"
+          if [[ "$should_validate_docs" == "false" ]]; then
+            echo "No DOC-010 docs validation surfaces changed; validate-docs skipped successfully."
+          fi
+
+          {
+            echo "should_validate_docs=${should_validate_docs}"
+            echo "validation_mode=${validation_mode}"
+            echo "rendered_docs=${rendered_docs}"
+            echo "generated_reference=${generated_reference}"
+            echo "docs_contract=${docs_contract}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Enable pnpm
+        if: steps.docs.outputs.should_validate_docs == 'true'
+        run: corepack enable
+
+      - name: Install docs-site dependencies
+        if: steps.docs.outputs.should_validate_docs == 'true'
+        run: pnpm --dir docs-site install --frozen-lockfile
+
+      - name: Run full docs validation
+        if: steps.docs.outputs.validation_mode == 'full'
+        env:
+          DOCS_SITE_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/docs-site-smoke-evidence
+        run: pnpm --dir docs-site validate
+
+      - name: Run generated-reference docs validation
+        if: steps.docs.outputs.validation_mode == 'reference'
+        run: |
+          set -euo pipefail
+
+          pnpm --dir docs-site reference:check
+          pnpm --dir docs-site validate:quality
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 5: Sentinel aggregator — provides stable check name for branch
   #         protection. Passes if test matrix passed or was skipped.
   # ───────────────────────────────────────────────────────────────────
   validate-plugins:

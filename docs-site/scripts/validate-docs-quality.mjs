@@ -66,6 +66,15 @@ const DOC010_FOUNDATION_FILES = Object.freeze([
   'docs-site/tests/docs-smoke.spec.mjs',
 ]);
 
+const REQUIRED_DOC010_VALIDATE_CHAIN = Object.freeze([
+  'pnpm reference:check',
+  'pnpm check',
+  'pnpm build',
+  'pnpm validate:safe-aids',
+  'pnpm validate:quality',
+  'pnpm validate:smoke',
+]);
+
 const SUPPORT_ANCHOR_INVENTORY = Object.freeze([
   {
     publicPath: '/racecraft-plugins-public/choose-your-path/',
@@ -319,6 +328,10 @@ function assertRepoRelative(relativePath, diagnostics) {
   }
 }
 
+function normalizeCommand(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
 function validateRouteSources(diagnostics) {
   for (const route of DOC010_ROUTES) {
     assertRepoRelative(route.sourcePath, diagnostics);
@@ -343,6 +356,46 @@ function validateFoundationFiles(diagnostics) {
       if (pattern.test(source)) {
         diagnostics.push(`${relativePath}: DOC-010 validation must not include ${label}.`);
       }
+    }
+  }
+}
+
+function validateDocsCommandChain(diagnostics) {
+  const packagePath = 'docs-site/package.json';
+  assertRepoRelative(packagePath, diagnostics);
+
+  const source = readRepoText(packagePath, diagnostics);
+  if (!source) return;
+
+  let packageJson;
+  try {
+    packageJson = JSON.parse(source);
+  } catch (error) {
+    diagnostics.push(`${packagePath}: unable to parse JSON for DOC-010 validation chain (${error.message}).`);
+    return;
+  }
+
+  const scripts = packageJson.scripts || {};
+  const expectedChain = REQUIRED_DOC010_VALIDATE_CHAIN.join(' && ');
+  const actualChain = normalizeCommand(scripts.validate);
+  const actualCommands = actualChain
+    .split(/\s+&&\s+/)
+    .map((command) => normalizeCommand(command))
+    .filter(Boolean);
+
+  if (
+    actualCommands.length !== REQUIRED_DOC010_VALIDATE_CHAIN.length ||
+    REQUIRED_DOC010_VALIDATE_CHAIN.some((expectedCommand, index) => actualCommands[index] !== expectedCommand)
+  ) {
+    diagnostics.push(
+      `${packagePath}: scripts.validate must run the DOC-010 validation chain in order: ${expectedChain}.`,
+    );
+  }
+
+  for (const requiredCommand of REQUIRED_DOC010_VALIDATE_CHAIN) {
+    const scriptName = requiredCommand.replace(/^pnpm\s+/, '');
+    if (!scripts[scriptName]) {
+      diagnostics.push(`${packagePath}: missing focused DOC-010 script "${scriptName}" used by scripts.validate.`);
     }
   }
 }
@@ -413,6 +466,7 @@ export function validateDocsQuality() {
 
   validateRouteSources(diagnostics);
   validateFoundationFiles(diagnostics);
+  validateDocsCommandChain(diagnostics);
   validateSupportAnchorInventory(diagnostics);
   validateSupportCrossLinks(diagnostics);
   validateSourceUpdateGuidance(diagnostics);
