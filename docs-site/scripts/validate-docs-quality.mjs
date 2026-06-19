@@ -302,6 +302,16 @@ function collectAnchors(source) {
   return anchors;
 }
 
+function normalizeMarkdownHeadingText(value) {
+  return value
+    .replace(/\s+\{#[A-Za-z0-9_-]+\}\s*$/, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[`*_~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 function readRepoText(relativePath, diagnostics) {
   const absolutePath = repoResolve(relativePath);
 
@@ -384,15 +394,19 @@ function validateSourceUpdateGuidance(diagnostics) {
     const source = readRepoText(guidance.sourcePath, diagnostics);
     if (!source) continue;
 
-    const headingPattern = new RegExp(`^##\\s+${escapeRegExp(guidance.heading)}\\s*$`, 'm');
-    if (!headingPattern.test(source)) {
+    const expectedHeading = normalizeMarkdownHeadingText(guidance.heading);
+    const hasHeading = Array.from(source.matchAll(/^##\s+(.+)$/gm)).some(
+      (match) => normalizeMarkdownHeadingText(match[1]) === expectedHeading,
+    );
+    if (!hasHeading) {
       diagnostics.push(
         `${guidance.sourcePath}: missing "${guidance.heading}" for DOC-010 external platform source-update guidance.`,
       );
     }
 
+    const normalizedSource = source.toLowerCase();
     for (const snippet of guidance.requiredSnippets) {
-      if (!source.includes(snippet)) {
+      if (!normalizedSource.includes(snippet.toLowerCase())) {
         diagnostics.push(
           `${guidance.sourcePath}: source-update guidance must mention "${snippet}" for external platform claims.`,
         );
