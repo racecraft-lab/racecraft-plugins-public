@@ -41,8 +41,8 @@ concept is the source of truth for setup-time scoping decisions.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | `spec.md` created; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Three sessions answered; G2 passed with 0 clarification markers |
-| Plan | `/speckit-plan` | In Progress | Plan script/docs updates with focused deterministic coverage |
-| Checklist | `/speckit-checklist` | Pending | Run enriched checklists after spec and plan exist |
+| Plan | `/speckit-plan` | Complete | `plan.md`, `research.md`, and `quickstart.md` created; G3 passed |
+| Checklist | `/speckit-checklist` | In Progress | Run enriched checklists after spec and plan exist |
 | Tasks | `/speckit-tasks` | Pending | Generate small TDD-oriented tasks |
 | Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Implement one vertical slice |
@@ -360,11 +360,18 @@ Consensus: Sessions 1, 2, and 3 had no unresolved items; consensus steps skipped
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow |
-| `research.md` | Pending | Only if advisory wording needs additional research |
+| `plan.md` | Complete | Declares 5 modified files and focused verification |
+| `research.md` | Complete | Records advisory shape, category list, docs boundary, generated payload rule, and verification boundary |
 | `data-model.md` | Not expected | No database or persistent data model planned |
 | `contracts/` | Not expected | No API contract planned |
-| `quickstart.md` | Pending | Useful if prerequisite output behavior changes |
+| `quickstart.md` | Complete | Lists implementation checks, verification commands, and PR packet checklist |
+
+Plan gate: G3 passed with `plan.md` present and 0 unresolved markers.
+
+Reviewability estimator: `estimate-reviewable-loc.sh plan.md` returned
+`status=pass`, `projected=0`, `declared_files.modified=5`,
+`declared_files.total_entries=5`. The plan also records the roadmap budget:
+142 projected reviewable LOC, 1 production file, 5 total implementation files.
 
 ---
 
