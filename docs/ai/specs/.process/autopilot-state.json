@@ -1,5 +1,8 @@
 {
   "schemaVersion": 1,
+  "status": "completed_archived",
+  "active_step": "Archive Cleanup",
+  "updated_at": "2026-06-19T14:41:09Z",
   "workflow_file": "docs/ai/specs/.process/TACD-003-workflow.md",
   "workflow_files": [
     "docs/ai/specs/.process/TACD-003-workflow.md"
@@ -8,13 +11,8 @@
   "feature_dirs": [
     "specs/tacd-003-prerequisite-and-documentation-messaging"
   ],
-  "feature_branch": "tacd-003-prerequisite-and-documentation-messaging",
-  "feature_branches": [
-    "tacd-003-prerequisite-and-documentation-messaging"
-  ],
-  "updated_at": "2026-06-19T03:16:00Z",
-  "active_step": "Post: Doctor Extension Check",
-  "status": "in_progress",
+  "feature_branch": "codex/tacd-003-archive-cleanup",
+  "completed_feature_branch": "tacd-003-prerequisite-and-documentation-messaging-slice/01-foundation",
   "confidence_gate_mode": "advisory",
   "skill_scripts": "speckit-pro/skills/speckit-autopilot/scripts",
   "project_commands": {
@@ -28,610 +26,98 @@
     "SINGLE_FILE_INTEGRATION": "N/A",
     "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
   },
-  "preset_conventions": {
-    "has_presets": true,
-    "active_preset": "speckit-pro-reviewability",
-    "templates": [
-      ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
-      ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
-      ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
+  "archive_cleanup": {
+    "status": "applied",
+    "spec_id": "TACD-003",
+    "pr_number": 230,
+    "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/230",
+    "pr_title": "feat(speckit-pro): TACD-003 prerequisite advisory, active guidance, focused verification, and review packet evidence",
+    "merged_at": "2026-06-19T14:41:09Z",
+    "merge_commit": "bcc8eedd2dd732b6f02e18ff68fd4de0e58396e9",
+    "tree_sha": "6aea1266ff75fef87b94fb5aac3bf6a5aa5d58e6",
+    "source_spec_dir": "specs/tacd-003-prerequisite-and-documentation-messaging",
+    "workflow_file": "docs/ai/specs/.process/TACD-003-workflow.md",
+    "design_concept": "docs/ai/specs/.process/TACD-003-design-concept.md",
+    "archive_report": ".specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md",
+    "cleanup_branch": "codex/tacd-003-archive-cleanup",
+    "cleanup_command": "git rm -r specs/tacd-003-prerequisite-and-documentation-messaging",
+    "active_spec_removed": true,
+    "safeToApplyCleanup": true,
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/TACD-003-workflow.md",
+      "docs/ai/specs/.process/TACD-003-design-concept.md"
     ],
-    "summary": "Spec, plan, and tasks templates require explicit reviewability budget, declared file operations, PR review packet traceability, and TDD-oriented task structure."
-  },
-  "extensions": {
-    "archive": "enabled",
-    "verify": "enabled",
-    "verify-tasks": "enabled",
-    "retrospective": "enabled",
-    "speckit-utils": "enabled",
-    "git": "enabled"
-  },
-  "codex_agents": {
-    "phase-executor": "available",
-    "clarify-executor": "available",
-    "checklist-executor": "available",
-    "analyze-executor": "available",
-    "implement-executor": "available",
-    "codebase-analyst": "available",
-    "spec-context-analyst": "available",
-    "domain-researcher": "available",
-    "autopilot-fast-helper": "available"
+    "canonical_artifacts": [
+      "speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh",
+      "speckit-pro/skills/speckit-autopilot/references/prerequisites.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md",
+      "speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md",
+      "speckit-pro/skills/speckit-coach/references/autopilot-guide.md",
+      "tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh",
+      "dist/claude/speckit-pro/",
+      "dist/codex/speckit-pro/"
+    ],
+    "next_spec": "TACD-004 Verification Coverage",
+    "next_spec_status": "ready_to_scaffold"
   },
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "feature-branch-sweep",
-    "current_target": "specs/tacd-003-prerequisite-and-documentation-messaging",
-    "excluded_current_spec": "specs/tacd-003-prerequisite-and-documentation-messaging",
-    "eligible_previous_specs": [],
-    "safeToApplyCleanup": false,
-    "dryRunProvenanceOnly": true,
+    "cleanup_mode": "post_merge_apply_cleanup",
+    "current_target": null,
+    "excluded_current_spec": null,
+    "eligible_previous_specs": [
+      "specs/tacd-003-prerequisite-and-documentation-messaging"
+    ],
+    "safeToApplyCleanup": true,
+    "dryRunProvenanceOnly": false,
+    "cleanupApplied": true,
     "notes": [
-      "No eligible previous active specs found.",
-      "Direct archive command surface was unavailable in PATH, so the executor used the documented manual fallback decision.",
-      "Cleanup is disabled on the feature branch and while the worktree contains active TACD-003 state changes."
+      "PR #230 is merged.",
+      "Historical process evidence under docs/ai/specs/.process/ was preserved.",
+      "The active TACD-003 spec directory was removed after archive provenance and recovery commands were recorded."
     ]
-  },
-  "tier2_relocation": {
-    "status": "suppressed",
-    "reason": "Active target already has SPEC-MOC.md structureVersion: 1 and no relocatable root PROCESS artifacts."
   },
   "plan": [
     {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "step": "Confirm merge provenance and branch safety",
       "status": "completed",
       "evidence": {
-        "eligible_previous_specs": [],
-        "excluded_current_spec": "specs/tacd-003-prerequisite-and-documentation-messaging",
-        "safeToApplyCleanup": false
+        "pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/230",
+        "merge_commit": "bcc8eedd2dd732b6f02e18ff68fd4de0e58396e9",
+        "cleanup_branch": "codex/tacd-003-archive-cleanup"
       }
     },
     {
-      "step": "Phase 0: Prerequisites",
+      "step": "Archive project memory and roadmap state",
       "status": "completed",
       "evidence": {
-        "check_prerequisites": "passed",
-        "branch": "tacd-003-prerequisite-and-documentation-messaging",
-        "worktree": true,
-        "confidence_gate_mode": "advisory"
+        "archive_report": ".specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md"
       }
     },
     {
-      "step": "Phase 1: Specify",
+      "step": "Remove completed active spec residue",
       "status": "completed",
       "evidence": {
-        "spec": "specs/tacd-003-prerequisite-and-documentation-messaging/spec.md",
-        "requirements_checklist": "specs/tacd-003-prerequisite-and-documentation-messaging/checklists/requirements.md",
-        "user_stories": 3,
-        "functional_requirements": 10,
-        "acceptance_scenarios": 6,
-        "needs_clarification_markers": 0,
-        "gate": "G1 passed"
+        "removed": "specs/tacd-003-prerequisite-and-documentation-messaging"
       }
     },
     {
-      "step": "Phase 2: Clarify - Advisory Wording",
+      "step": "Regenerate indexes and verify cleanup",
       "status": "completed",
       "evidence": {
-        "questions_answered": 4,
-        "accepted_answers": [
-          "Report codebase context, library documentation, web/domain research, and source extraction.",
-          "Use one non-blocking capability_coverage advisory with pass=true and no per-tool inventory.",
-          "Surface fallback confidence in setup wording and task evidence; escalate only when no acceptable evidence path exists or a true gate fails.",
-          "Allow concrete IDs only for platform metadata, exact file references, generated source-derived duplicates, or historical provenance."
-        ],
-        "consensus": "skipped: no unresolved items"
+        "json": "python3 -m json.tool docs/ai/specs/.process/autopilot-state.json",
+        "index_regenerated": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .",
+        "index_check": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
+        "active_specs_audit": "find specs -mindepth 1 -maxdepth 4 -print returned only specs/.gitkeep",
+        "diff_check": "git diff --check",
+        "full_verify": "bash tests/speckit-pro/run-all.sh",
+        "full_verify_result": "speckit-pro test suite: 3163/3163 passed"
       }
     },
     {
-      "step": "Phase 2: Clarify - Advisory Wording Consensus",
-      "status": "completed",
-      "evidence": {
-        "reason": "clarify-executor returned no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 2: Clarify - Active Docs Boundary",
-      "status": "completed",
-      "evidence": {
-        "questions_answered": 5,
-        "accepted_answers": [
-          "Active docs scope is the four roadmap docs plus adjacent autopilot entrypoint summaries when they repeat active preflight or limitation wording.",
-          "Generated payload copies are regenerated from source when needed, not hand-edited.",
-          "Archives, changelogs, and fixture prose are out of scope unless reused as current setup guidance or expected current behavior.",
-          "Setup/user guidance uses the four Session 1 categories and points to the broader capability directive for agent behavior.",
-          "Platform behavior claims require official vendor evidence; repository facts cite Racecraft source or generated artifacts."
-        ],
-        "consensus": "skipped: no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 2: Clarify - Active Docs Boundary Consensus",
-      "status": "completed",
-      "evidence": {
-        "reason": "clarify-executor returned no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 2: Clarify - Focused Verification Boundary",
-      "status": "completed",
-      "evidence": {
-        "questions_answered": 5,
-        "accepted_answers": [
-          "Extend test-check-prerequisites.sh for capability_coverage JSON behavior.",
-          "Add narrow assertions only for changed active docs.",
-          "Keep test-generate-spec-index.sh as Phase 1 blocker coverage only.",
-          "Defer Layer 3 eval expectation updates, Layer 5 pointer coverage, and broad named-tool enforcement to TACD-004.",
-          "Completion verification is bash -n for the prerequisite script, focused Layer 4 tests, and the default deterministic suite before PR."
-        ],
-        "consensus": "skipped: no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 2: Clarify - Focused Verification Boundary Consensus",
-      "status": "completed",
-      "evidence": {
-        "reason": "clarify-executor returned no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed",
-      "evidence": {
-        "plan": "specs/tacd-003-prerequisite-and-documentation-messaging/plan.md",
-        "research": "specs/tacd-003-prerequisite-and-documentation-messaging/research.md",
-        "quickstart": "specs/tacd-003-prerequisite-and-documentation-messaging/quickstart.md",
-        "declared_file_operations": 8,
-        "gate": "G3 passed",
-        "reviewability_estimate": {
-          "status": "pass",
-          "projected": 0,
-          "declared_files_modified": 8,
-          "declared_files_total_entries": 8,
-          "note": "Estimator counts new production LOC; plan records the current TACD-003 budget of 190 projected reviewable LOC across 8 implementation files."
-        }
-      }
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed",
-      "evidence": {
-        "checklist": "specs/tacd-003-prerequisite-and-documentation-messaging/checklists/error-handling.md",
-        "items": 14,
-        "gaps_before": 2,
-        "gaps_after": 0,
-        "edits": [
-          "Added FR-012 and SC-006 for escalation boundary.",
-          "Expanded plan scope to include adjacent active guidance surfaces."
-        ],
-        "consensus": "skipped: no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "completed",
-      "evidence": {
-        "reason": "checklist-executor returned no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 4: Checklist - integration",
-      "status": "completed",
-      "evidence": {
-        "checklist": "specs/tacd-003-prerequisite-and-documentation-messaging/checklists/integration.md",
-        "items": 13,
-        "gaps_before": 2,
-        "gaps_after": 0,
-        "edits": [
-          "Clarified Claude and Codex prerequisite guidance as peer active surfaces.",
-          "Mapped repo-vs-platform guidance separation to review evidence and traceability."
-        ],
-        "consensus": "skipped: no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 4: Checklist - integration Consensus",
-      "status": "completed",
-      "evidence": {
-        "reason": "checklist-executor returned no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 4: Checklist - reliability",
-      "status": "completed",
-      "evidence": {
-        "checklist": "specs/tacd-003-prerequisite-and-documentation-messaging/checklists/reliability.md",
-        "items": 15,
-        "gaps_before": 2,
-        "gaps_after": 0,
-        "edits": [
-          "Added FR-013 and SC-007 for deterministic JSON output and stable advisory fields.",
-          "Added FR-014 and SC-008 for actionable true-blocker preservation."
-        ],
-        "consensus": "skipped: no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "completed",
-      "evidence": {
-        "reason": "checklist-executor returned no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed",
-      "evidence": {
-        "tasks": "specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md",
-        "task_count": 32,
-        "task_phases": 6,
-        "planner_increments": 5,
-        "parallel_opportunities": 4,
-        "user_stories_covered": 3,
-        "gate": "G5 passed",
-        "reviewability_gate": "size-only block captured and continued to marker planning",
-        "atomicity_route": "one-navigable-PR"
-      }
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed",
-      "evidence": {
-        "findings_total": 3,
-        "critical": 0,
-        "high": 1,
-        "medium": 2,
-        "low": 0,
-        "remediated": 3,
-        "gate": "G6 passed"
-      }
-    },
-    {
-      "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "evidence": {
-        "reason": "analyze-executor returned no unresolved items"
-      }
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "evidence": {
-        "status": "soft_skip",
-        "mode": "advisory",
-        "reason": "no confidence emit found",
-        "recommended_action": "soft_skip"
-      }
-    },
-    {
-      "step": "Phase 7: Implement full-spec marker (T001-T032)",
-      "status": "completed",
-      "evidence": {
-        "marker_id": "full-spec",
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006",
-          "T007",
-          "T008",
-          "T009",
-          "T010",
-          "T011",
-          "T012",
-          "T013",
-          "T014",
-          "T015",
-          "T016",
-          "T017",
-          "T018",
-          "T019",
-          "T020",
-          "T021",
-          "T022",
-          "T023",
-          "T024",
-          "T025",
-          "T026",
-          "T027",
-          "T028",
-          "T029",
-          "T030",
-          "T031",
-          "T032"
-        ],
-        "marker_plan_status": "collapsed",
-        "fingerprint_status": "current",
-        "gate": "G7 passed",
-        "verification": [
-          "bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh: passed",
-          "bash tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh: 51/51 passed",
-          "bash tests/speckit-pro/run-all.sh --layer 4: 1949/1949 passed",
-          "bash tests/speckit-pro/run-all.sh --layer 1: 1024/1024 passed",
-          "bash tests/speckit-pro/run-all.sh: 3163/3163 passed"
-        ],
-        "generated_payloads": "dist/claude and dist/codex regenerated by Layer 1 payload validation from declared source changes"
-      }
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Cleanup",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "pending"
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Retrospective",
+      "step": "Commit, push, and open cleanup PR",
       "status": "pending"
     }
-  ],
-  "current_source_fingerprint": {
-    "feature_spec_sha": "7beb070f01c12258a972aac1a2594428933f939b",
-    "plan_declared_scope_sha": "ab8c50d499ee81a41053592b84d2cd108c2452a3",
-    "tasks_sha": "b824e7a41859ec774d62760838c7dafa03b94797",
-    "reviewability_sha": "3bab46beae478c56acfa47fe9369c1fb3b539f93",
-    "hazard_route_sha": "42d63e463419487d6d9b2a07d95838b36bf76493"
-  },
-  "pr_marker_plan_current_source_fingerprint": {
-    "feature_spec_sha": "7beb070f01c12258a972aac1a2594428933f939b",
-    "plan_declared_scope_sha": "ab8c50d499ee81a41053592b84d2cd108c2452a3",
-    "tasks_sha": "b824e7a41859ec774d62760838c7dafa03b94797",
-    "reviewability_sha": "3bab46beae478c56acfa47fe9369c1fb3b539f93",
-    "hazard_route_sha": "42d63e463419487d6d9b2a07d95838b36bf76493"
-  },
-  "reviewability_task_gate": {
-    "status": "block",
-    "mode": "tasks",
-    "exit_code": 1,
-    "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
-    "proceed_decision": "size_only_block_continue_to_marker_planning",
-    "reason": "valid current size-only block; no correctness or safety issue present",
-    "reviewable_loc": 1280,
-    "total_files": 46
-  },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
-    ],
-    "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/atomicity-route.json"
-  },
-  "pr_marker_plan": {
-    "schema_version": "pr-marker-plan.v1",
-    "kind": "pr_marker_plan",
-    "feature_id": "TACD-003",
-    "status": "collapsed",
-    "source_fingerprint": {
-      "feature_spec_sha": "7beb070f01c12258a972aac1a2594428933f939b",
-      "plan_declared_scope_sha": "ab8c50d499ee81a41053592b84d2cd108c2452a3",
-      "tasks_sha": "b824e7a41859ec774d62760838c7dafa03b94797",
-      "reviewability_sha": "3bab46beae478c56acfa47fe9369c1fb3b539f93",
-      "hazard_route_sha": "42d63e463419487d6d9b2a07d95838b36bf76493"
-    },
-    "markers": [
-      {
-        "id": "full-spec",
-        "review_order": 1,
-        "kind": "full_spec",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "TACD-003 full implementation and PR packet readiness",
-          "story_id": null,
-          "start_task_id": "T001",
-          "end_task_id": "T032"
-        },
-        "title_description": "TACD-003 prerequisite advisory, active guidance, focused verification, and review packet evidence",
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006",
-          "T007",
-          "T008",
-          "T009",
-          "T010",
-          "T011",
-          "T012",
-          "T013",
-          "T014",
-          "T015",
-          "T016",
-          "T017",
-          "T018",
-          "T019",
-          "T020",
-          "T021",
-          "T022",
-          "T023",
-          "T024",
-          "T025",
-          "T026",
-          "T027",
-          "T028",
-          "T029",
-          "T030",
-          "T031",
-          "T032"
-        ],
-        "folded_polish_task_ids": [
-          "T027",
-          "T028",
-          "T029",
-          "T030",
-          "T031",
-          "T032"
-        ],
-        "folded_polish_target_reason": "Polish tasks prepare review evidence for the same TACD-003 slice and are folded into the collapsed full-spec marker.",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-coach/references/autopilot-guide.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
-          },
-          {
-            "operation": "NEW",
-            "path": "specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh",
-          "bash tests/speckit-pro/run-all.sh --layer 4",
-          "bash tests/speckit-pro/run-all.sh --layer 1",
-          "bash tests/speckit-pro/run-all.sh"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "specs/tacd-003-prerequisite-and-documentation-messaging",
-          "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
-          "exit_code": 1,
-          "reason": "valid current size-only task gate block",
-          "reviewable_loc": 1280,
-          "total_files": 46
-        },
-        "hazards": [
-          "tasks-mode size heuristic block",
-          "atomicity route one-navigable-PR with releasable=true"
-        ],
-        "subdivision": {
-          "status": "hazard_collapsed",
-          "details": {
-            "route": "one-navigable-PR",
-            "releasable": true,
-            "reason": "The implementation is one vertical messaging slice; marker state is retained for reviewability evidence rather than task-driven split emission."
-          }
-        },
-        "implementation_checkpoint": {
-          "status": "pending",
-          "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/marker-plan/full-spec-checkpoint.json"
-        },
-        "emission_mapping": {
-          "status": "hazard_collapsed",
-          "source_marker_ids": [
-            "full-spec"
-          ],
-          "packet_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/pr-packet.json"
-        },
-        "warnings": [
-          {
-            "code": "tasks_reviewability_size_block",
-            "severity": "warning",
-            "message": "Task-mode reviewability gate returned a size-only block; autopilot proceeds with collapsed full-spec marker planning.",
-            "source": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
-            "details": {
-              "reviewable_loc": 1280,
-              "total_files": 46,
-              "blockers": [
-                "reviewable LOC 1280 exceeds block threshold 800",
-                "total files 46 exceeds block threshold 25"
-              ],
-              "proceed_decision": "size_only_block_continue_to_marker_planning"
-            }
-          }
-        ]
-      }
-    ],
-    "warnings": [
-      {
-        "code": "tasks_reviewability_size_block",
-        "severity": "warning",
-        "message": "Task-mode reviewability gate returned a size-only block; autopilot proceeds with collapsed full-spec marker planning.",
-        "source": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
-        "details": {
-          "reviewable_loc": 1280,
-          "total_files": 46,
-          "blockers": [
-            "reviewable LOC 1280 exceeds block threshold 800",
-            "total files 46 exceeds block threshold 25"
-          ],
-          "proceed_decision": "size_only_block_continue_to_marker_planning"
-        }
-      }
-    ],
-    "created_at": "2026-06-19T02:20:00Z",
-    "updated_at": "2026-06-19T03:16:00Z"
-  },
-  "confidence_gate": {
-    "status": "soft_skip",
-    "mode": "advisory",
-    "pass": null,
-    "composite": null,
-    "reason": "no confidence emit found",
-    "recommended_action": "soft_skip",
-    "threshold": 0.9,
-    "exit_code": 1
-  }
+  ]
 }
