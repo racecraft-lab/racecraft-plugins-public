@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-008 and DOC-009 completed and archived after PR #220 and PR #219; DOC-010 is ready for scaffold
+**Status:** DOC-001 through DOC-010 completed and archived; interactive documentation roadmap complete
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -23,7 +23,7 @@ The work is decomposed into 10 vertical SPECs across 6 dependency tiers.
 | 3 | DOC-003, DOC-004 | Platform-specific install paths | Parallel |
 | 4 | DOC-005, DOC-006 | First-run tutorial and safe interactive aids | Parallel after platform paths |
 | 5 | DOC-007, DOC-008, DOC-009 | Reference, troubleshooting/trust, maintainer workflow | Complete and archived |
-| 6 | DOC-010 | Search/accessibility/deep links/docs CI | Sequential hardening after site and interactive aids |
+| 6 | DOC-010 | Search/accessibility/deep links/docs CI | Completed and archived |
 
 **Execution order:** DOC-001 -> DOC-002 -> DOC-003/DOC-004 -> DOC-005/DOC-006 -> DOC-007/DOC-008/DOC-009 -> DOC-010
 
@@ -227,7 +227,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 ### DOC-010: Search, accessibility, deep links, responsive UX, and docs validation
 
 - **Maps from PRD:** DOC-FR-010
-- **Status:** Pending and ready to scaffold after DOC-008 and DOC-009 completed the trust, recovery, and release workflow content tier.
+- **Status:** Completed and archived after PRs #232-#236. Canonical docs validation, support anchor, accessibility/fallback, PR Checks docs-gate, and compact smoke evidence lives in `docs-site/` and `.github/workflows/pr-checks.yml`; archive provenance is recorded in `.specify/memory/archive-reports/2026-06-19-doc-010-post-merge-hygiene.md`.
 - **User outcome:** The docs site is findable, accessible, linkable, responsive, and protected by CI.
 - **Scope:** Search integration or documented local-search plan, glossary/deep-link conventions, responsive checks, accessibility requirements and tests for interactive components, markdown/link validation, site build in CI, manifest/payload consistency validation integration, safe command-snippet validation, and visual/screenshot regression plan if supported.
 - **Vertical-slice rationale:** Hardens the full docs product after core content and interactions exist.
@@ -252,7 +252,7 @@ DOC-007 Reference -> DOC-008 Troubleshooting/trust
 6. DOC-007: completed and archived the generated reference library needed by troubleshooting and maintainer docs.
 7. DOC-008: completed and archived the diagnostics, trust, update, and rollback model after PR #220.
 8. DOC-009: completed and archived the maintainer/contributor release workflow after PR #219.
-9. DOC-010: ready to scaffold for search, accessibility, responsive behavior, deep links, and docs CI.
+9. DOC-010: completed and archived after PRs #232-#236, finishing search, accessibility, responsive behavior, deep links, and docs CI.
 
 ## 6. Validation Strategy
 

@@ -1,1081 +1,145 @@
 {
   "schemaVersion": 1,
+  "status": "completed_archived",
+  "active_step": "Archive Cleanup",
+  "updated_at": "2026-06-19T20:46:22Z",
   "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
+  "workflow_files": [
+    "docs/ai/specs/.process/DOC-010-workflow.md"
+  ],
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
-  "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
-  "updated_at": "2026-06-19T14:43:57Z",
-  "active_step": "Post: Reviewability Diff Gate",
-  "status": "in_progress",
+  "feature_dirs": [
+    "specs/doc-010-search-accessibility-deep-links-docs-validation"
+  ],
+  "feature_branch": "codex/archive-doc-tacd-completed-work",
+  "completed_feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
   "confidence_gate_mode": "advisory",
+  "skill_scripts": "speckit-pro/skills/speckit-autopilot/scripts",
   "project_commands": {
-    "BUILD": "N/A",
-    "TYPECHECK": "N/A",
+    "BUILD": "pnpm --dir docs-site build",
+    "TYPECHECK": "pnpm --dir docs-site check",
     "LINT": "N/A",
     "LINT_FIX": "N/A",
-    "UNIT_TEST": "N/A",
-    "INTEGRATION_TEST": "N/A",
-    "SINGLE_FILE_TEST": "N/A",
-    "SINGLE_FILE_INTEGRATION": "N/A",
-    "FULL_VERIFY": "N/A"
+    "UNIT_TEST": "pnpm --dir docs-site validate",
+    "INTEGRATION_TEST": "bash tests/speckit-pro/run-all.sh --layer 1",
+    "SINGLE_FILE_TEST": "pnpm --dir docs-site validate:quality",
+    "SINGLE_FILE_INTEGRATION": "pnpm --dir docs-site validate:smoke",
+    "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
   },
-  "preset_conventions": {
-    "has_presets": true,
-    "presets": [
-      {
-        "name": "speckit-pro-reviewability",
-        "version": "schema_version: \"1.0\"",
-        "templates": "template,--,template,--,"
-      }
+  "archive_cleanup": {
+    "status": "applied",
+    "spec_id": "DOC-010",
+    "pr_numbers": [
+      232,
+      233,
+      234,
+      235,
+      236
     ],
-    "templates": {
-      "spec": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
-      "plan": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
-      "tasks": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
-    }
+    "final_pr_number": 236,
+    "final_pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/236",
+    "final_pr_title": "docs(DOC-010): Update Review Minimal Browser Evidence",
+    "merged_at": "2026-06-19T20:46:22Z",
+    "merge_commit": "3fb8b55fc13b3896f7a9507eb07fa40b077f8781",
+    "tree_sha": "bd1b9df9e41e99bbb201a9712868b9d8ec714029",
+    "source_spec_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
+    "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
+    "design_concept": "docs/ai/specs/.process/DOC-010-design-concept.md",
+    "archive_report": ".specify/memory/archive-reports/2026-06-19-doc-010-post-merge-hygiene.md",
+    "cleanup_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/237",
+    "cleanup_branch": "codex/archive-doc-tacd-completed-work",
+    "cleanup_command": "git rm -r specs/doc-010-search-accessibility-deep-links-docs-validation",
+    "active_spec_removed": true,
+    "safeToApplyCleanup": true,
+    "process_evidence_preserved": [
+      "docs/ai/specs/.process/DOC-010-workflow.md",
+      "docs/ai/specs/.process/DOC-010-design-concept.md"
+    ],
+    "canonical_artifacts": [
+      "docs-site/package.json",
+      "docs-site/pnpm-lock.yaml",
+      "docs-site/playwright.config.mjs",
+      "docs-site/tests/docs-smoke.spec.mjs",
+      "docs-site/scripts/validate-docs-quality.mjs",
+      "docs-site/scripts/validate-doc006-safe-aids.mjs",
+      "docs-site/src/content/docs/glossary.md",
+      "docs-site/src/content/docs/choose-your-path.mdx",
+      "docs-site/src/components/LifecycleFlow.astro",
+      ".github/workflows/pr-checks.yml"
+    ],
+    "roadmap_status": "interactive_documentation_complete",
+    "tacd_cleanup_status": "already_archived_through_tacd_003",
+    "next_doc_spec": null
   },
   "archive_sweep": {
     "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "feature-branch-apply-eligible",
-    "current_target": "specs/doc-010-search-accessibility-deep-links-docs-validation",
-    "excluded_current_spec": "specs/doc-010-search-accessibility-deep-links-docs-validation",
-    "eligible_previous_specs": [],
-    "safeToApplyCleanup": false,
+    "cleanup_mode": "post_merge_apply_cleanup",
+    "current_target": null,
+    "excluded_current_spec": null,
+    "eligible_previous_specs": [
+      "specs/doc-010-search-accessibility-deep-links-docs-validation"
+    ],
+    "already_archived_specs": [
+      "TACD-001",
+      "TACD-002",
+      "TACD-003"
+    ],
+    "safeToApplyCleanup": true,
+    "dryRunProvenanceOnly": false,
+    "cleanupApplied": true,
     "notes": [
-      "Archive extension is installed and enabled.",
-      "Active specs/** contains only the current DOC-010 target, so there are no previous merged active specs to clean up before this run.",
-      "No archive cleanup mutation was required."
+      "PRs #232 through #236 are merged.",
+      "Historical process evidence under docs/ai/specs/.process/ was preserved.",
+      "The active DOC-010 spec directory was removed after archive provenance and recovery commands were recorded.",
+      "TACD completed work was already archived; no active TACD spec directory remained."
     ]
-  },
-  "prerequisites": {
-    "status": "completed",
-    "branch": "doc-010-search-accessibility-deep-links-docs-validation",
-    "is_worktree": true,
-    "on_feature_branch": false,
-    "specify": "specify 0.10.3.dev0",
-    "mcp_servers": "Missing: tavily-mcp context7 RepoPrompt; agents will use built-in fallbacks",
-    "confidence_gate_mode": "advisory",
-    "reviewability_setup_gate": {
-      "status": "pass",
-      "reviewable_loc": 395,
-      "production_files": 0,
-      "total_files": 6
-    },
-    "agents": {
-      "required": "installed",
-      "optional_autopilot_fast_helper": "installed",
-      "model": "gpt-5.5",
-      "reasoning_effort": "xhigh"
-    }
-  },
-  "phase_results": {
-    "specify": {
-      "status": "completed",
-      "gate": "G1",
-      "gate_status": "pass",
-      "functional_requirements": 13,
-      "user_stories": 4,
-      "acceptance_scenarios": 11,
-      "clarification_markers": 0,
-      "files": [
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/requirements.md"
-      ],
-      "notes": [
-        "The before_specify git feature hook was intentionally skipped because the DOC-010 branch and spec directory already existed.",
-        "Clarify will still run because the workflow contains explicit route list, CI condition, and Playwright evidence prompts."
-      ]
-    },
-    "clarify": {
-      "route_list": {
-        "status": "completed",
-        "questions": 5,
-        "consensus": "not required; executor reported no unresolved items",
-        "decisions": [
-          "Keep the six logical routes: /, /choose-your-path/, /spec-kit-lifecycle/, /glossary/, /reference/skills/, and /contribute-and-release/.",
-          "Use logical Starlight routes in tests; Playwright baseURL owns the deployed /racecraft-plugins-public prefix.",
-          "Use deterministic validation for full internal link and anchor coverage; sample representative deep links in Playwright.",
-          "Focus browser accessibility smoke on SafeInstallAids at /choose-your-path/ and LifecycleFlow at /spec-kit-lifecycle/.",
-          "Run one global Starlight search smoke from / using high-value terms and a known result link."
-        ]
-      },
-      "ci_condition": {
-        "status": "completed",
-        "questions": 5,
-        "consensus": "completed; Round 2 resolved a Round 1 disagreement",
-        "consensus_log": [
-          {
-            "type": "Clarify",
-            "item": "Non-docs-site CI trigger allowlist",
-            "categories": "[codebase, spec]",
-            "round": "1->2",
-            "outcome": "2/3",
-            "analysts": [
-              "codebase-analyst",
-              "spec-context-analyst",
-              "domain-researcher"
-            ]
-          }
-        ],
-        "decisions": [
-          "Keep PR Checks triggered for all PRs; do not use workflow-level path filters for the docs gate.",
-          "Use job-level changed-file detection and expose one stable docs validation gate.",
-          "Distinguish rendered docs-site changes from generated-reference source changes and docs-validation contract changes.",
-          "Run full docs-site validation for rendered docs changes and reference drift validation for generated-reference source changes.",
-          "Workflow edits run affected docs checks while preserving existing plugin matrix semantics.",
-          "Generated-reference source detection must track the real transitive inputs to reference and safe-aids validation instead of a broad all-docs glob."
-        ]
-      },
-      "playwright_script_shape": {
-        "status": "completed",
-        "questions": 4,
-        "consensus": "not required; executor reported no unresolved items",
-        "decisions": [
-          "Use docs-site script `validate:smoke` for Playwright smoke.",
-          "Include `validate:smoke` in `pnpm --dir docs-site validate`.",
-          "Use stable PR Checks job/gate name `validate-docs`.",
-          "Upload one compact short-retention artifact named `docs-site-smoke-evidence`; do not commit screenshots.",
-          "Record manual/browser accessibility evidence in existing PR packet sections such as How To UAT, Verification, traceability, and Known Gaps."
-        ]
-      }
-    },
-    "plan": {
-      "status": "completed",
-      "gate": "G3",
-      "gate_status": "pass",
-      "files": [
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md",
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/research.md",
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/data-model.md",
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md",
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/browser-smoke-contract.md",
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/docs-validation-contract.md",
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/pr-checks-docs-gate-contract.md"
-      ],
-      "reviewability_estimate": {
-        "status": "pass",
-        "projected": 160,
-        "production_files": 4,
-        "new": 3,
-        "modified": 7,
-        "total_entries": 10
-      }
-    },
-    "checklists": {
-      "accessibility": {
-        "status": "completed",
-        "items": 21,
-        "gaps_before": 3,
-        "gaps_after": 0,
-        "consensus": "not required; executor reported no unresolved items",
-        "files": [
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/accessibility.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md"
-        ]
-      },
-      "ux": {
-        "status": "completed",
-        "items": 18,
-        "gaps_before": 2,
-        "gaps_after": 0,
-        "consensus": "not required; executor reported no unresolved items",
-        "files": [
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/ux.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md"
-        ]
-      },
-      "reliability": {
-        "status": "completed",
-        "items": 23,
-        "gaps_before": 2,
-        "gaps_after": 0,
-        "consensus": "not required; executor reported no unresolved items",
-        "files": [
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/reliability.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/browser-smoke-contract.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/pr-checks-docs-gate-contract.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md"
-        ]
-      },
-      "security": {
-        "status": "completed",
-        "items": 22,
-        "gaps_before": 11,
-        "gaps_after": 0,
-        "consensus": "completed; security keyword item routed to all three analysts",
-        "files": [
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/security.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md",
-          "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/pr-checks-docs-gate-contract.md"
-        ],
-        "consensus_log": [
-          {
-            "type": "Gap",
-            "item": "Permission, credential, secret, token, marketplace, plugin-runtime, and plugin-matrix boundaries for validate-docs",
-            "categories": "[security]",
-            "round": "2",
-            "outcome": "3/3",
-            "analysts": [
-              "codebase-analyst",
-              "spec-context-analyst",
-              "domain-researcher"
-            ]
-          }
-        ]
-      }
-    },
-    "tasks": {
-      "status": "completed",
-      "gate": "G5",
-      "gate_status": "pass",
-      "total_tasks": 40,
-      "phases": {
-        "setup": 6,
-        "user_story_1": 7,
-        "user_story_2": 6,
-        "user_story_3": 8,
-        "user_story_4": 6,
-        "polish_and_cross_cutting_verification": 7
-      },
-      "parallel_opportunities": 6,
-      "user_stories_covered": [
-        "US1",
-        "US2",
-        "US3",
-        "US4"
-      ],
-      "functional_requirements_covered": [
-        "FR-001",
-        "FR-002",
-        "FR-003",
-        "FR-004",
-        "FR-005",
-        "FR-006",
-        "FR-007",
-        "FR-008",
-        "FR-009",
-        "FR-010",
-        "FR-011",
-        "FR-012",
-        "FR-013"
-      ],
-      "files": [
-        "specs/doc-010-search-accessibility-deep-links-docs-validation/tasks.md"
-      ]
-    },
-    "analyze": {
-      "status": "completed",
-      "gate": "G6",
-      "gate_status": "pass",
-      "findings": {
-        "total": 0,
-        "critical": 0,
-        "high": 0,
-        "medium": 0,
-        "low": 0
-      },
-      "consensus": "not required; analyze reported no unresolved findings",
-      "notes": [
-        "Native prerequisite check rejected the DOC-prefixed branch naming unless SPECIFY_FEATURE=010-search-accessibility-deep-links-docs-validation is supplied.",
-        "Coverage checked against design concept, spec.md, plan.md, contracts, tasks.md, marker-plan state, and DOC-FR-010 AC-10.1 through AC-10.7."
-      ]
-    },
-    "implement": {
-      "status": "completed",
-      "gate": "G7",
-      "gate_status": "pass",
-      "total_tasks": 40,
-      "completed_tasks": 40,
-      "markers": {
-        "foundation": {
-          "status": "completed",
-          "task_ids": [
-            "T001",
-            "T002",
-            "T003",
-            "T004",
-            "T005",
-            "T006"
-          ],
-          "commit_sha": "2f21220e",
-          "verification": [
-            "node -c docs-site/scripts/validate-docs-quality.mjs",
-            "node -c docs-site/playwright.config.mjs",
-            "node -c docs-site/tests/docs-smoke.spec.mjs",
-            "pnpm --dir docs-site validate:quality",
-            "pnpm --dir docs-site validate:safe-aids",
-            "pnpm --dir docs-site exec playwright test --list",
-            "git diff --check"
-          ],
-          "notes": [
-            "Full validate:smoke browser execution awaits installed Playwright browser binaries; test discovery listed 12 tests."
-          ]
-        },
-        "us1": {
-          "status": "completed",
-          "task_ids": [
-            "T007",
-            "T008",
-            "T009",
-            "T010",
-            "T011",
-            "T012",
-            "T013"
-          ],
-          "commit_sha": "147559bb",
-          "verification": [
-            "pnpm --dir docs-site validate:quality",
-            "pnpm --dir docs-site reference:check",
-            "git diff --check"
-          ],
-          "notes": [
-            "Generated reference pages refreshed for deterministic reference:check output after source inventory changed."
-          ]
-        },
-        "us2": {
-          "status": "completed",
-          "task_ids": [
-            "T014",
-            "T015",
-            "T016",
-            "T017",
-            "T018",
-            "T019"
-          ],
-          "commit_sha": "a828f29a",
-          "verification": [
-            "pnpm --dir docs-site validate:safe-aids",
-            "pnpm --dir docs-site validate:quality",
-            "pnpm --dir docs-site check",
-            "git diff --check"
-          ],
-          "notes": [
-            "Accessibility/static-fallback evidence recorded in quickstart.md; browser smoke evidence remains owned by US4."
-          ]
-        },
-        "us3": {
-          "status": "completed",
-          "task_ids": [
-            "T020",
-            "T021",
-            "T022",
-            "T023",
-            "T024",
-            "T025",
-            "T026",
-            "T027"
-          ],
-          "commit_sha": "0fc3f0c6",
-          "verification": [
-            "pnpm --dir docs-site validate:quality",
-            "pnpm --dir docs-site reference:check",
-            "bash tests/speckit-pro/run-all.sh --layer 1",
-            "git diff --check",
-            "pnpm --dir docs-site validate"
-          ],
-          "notes": [
-            "Full docs validation passed after installing Playwright Chromium and allowing localhost browser smoke."
-          ]
-        },
-        "us4": {
-          "status": "completed",
-          "task_ids": [
-            "T028",
-            "T029",
-            "T030",
-            "T031",
-            "T032",
-            "T033",
-            "T034",
-            "T035",
-            "T036",
-            "T037",
-            "T038",
-            "T039",
-            "T040"
-          ],
-          "commit_sha": "63ac46f0",
-          "verification": [
-            "pnpm --dir docs-site reference:check",
-            "pnpm --dir docs-site validate:quality",
-            "pnpm --dir docs-site validate:safe-aids",
-            "git diff --check",
-            "pnpm --dir docs-site validate:smoke",
-            "pnpm --dir docs-site validate",
-            "bash tests/speckit-pro/run-all.sh --layer 1",
-            "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/doc-010-search-accessibility-deep-links-docs-validation"
-          ],
-          "notes": [
-            "Browser smoke passed 20 checks across desktop and mobile; CI uploads docs-site-smoke-evidence with 7-day retention."
-          ]
-        }
-      }
-    }
   },
   "plan": [
     {
-      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 0: Prerequisites",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 1: Specify",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Route List",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Route List Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - CI Condition",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - CI Condition Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Playwright Script Shape",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 2: Clarify - Playwright Script Shape Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 3: Plan",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Accessibility",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Accessibility Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - UX",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - UX Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Reliability",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Reliability Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Security",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 4: Checklist - Security Consensus",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 5: Tasks",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 6: Analyze",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 6: Analyze - Consensus",
+      "step": "Confirm merge provenance and branch safety",
       "status": "completed",
-      "skipped_reason": "no unresolved analyze findings"
-    },
-    {
-      "step": "Phase 6.5: Confidence Gate",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - foundation (T001-T006)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - us1 support anchors and source guidance (T007-T013)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - us2 accessible aids and fallbacks (T014-T019)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - us3 validation path and CI gate (T020-T027)",
-      "status": "completed"
-    },
-    {
-      "step": "Phase 7: Implement - us4 smoke evidence plus polish (T028-T040)",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Doctor Extension Check",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Verify Implementation",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Code Review",
-      "status": "skipped"
-    },
-    {
-      "step": "Post: Integration Suite",
-      "status": "completed"
-    },
-    {
-      "step": "Post: Cleanup",
-      "status": "skipped"
-    },
-    {
-      "step": "Post: Reviewability Diff Gate",
-      "status": "in_progress"
-    },
-    {
-      "step": "Post: Self-Review",
-      "status": "pending"
-    },
-    {
-      "step": "Post: UAT Runbook Generation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: PR Body Generation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: PR Creation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Review Remediation",
-      "status": "pending"
-    },
-    {
-      "step": "Post: Retrospective",
-      "status": "pending"
-    }
-  ],
-  "task_reviewability_gate": {
-    "status": "block",
-    "mode": "tasks",
-    "exit_code": 1,
-    "evidence_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json",
-    "size_only": true,
-    "proceed_decision": "proceed_to_marker_planning",
-    "reason": "Task-mode reviewability gate produced only reviewable LOC and total-file budget blockers; no correctness or safety blocker was reported.",
-    "reviewable_loc": 1600,
-    "production_files": 6,
-    "total_files": 58,
-    "blockers": [
-      "reviewable LOC 1600 exceeds block threshold 800",
-      "total files 58 exceeds block threshold 25"
-    ],
-    "warnings": [
-      "reviewable LOC 1600 exceeds warn threshold 400",
-      "total files 58 exceeds warn threshold 15",
-      "primary surfaces 6 exceeds warn threshold 1"
-    ]
-  },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
-    ],
-    "hints": [],
-    "warnings": []
-  },
-  "layer_plan": {
-    "status": "skipped",
-    "route": "one-navigable-PR",
-    "reason": "Atomicity route is one-navigable-PR, so PRSG-008 split-PR layer planning is not required."
-  },
-  "pr_marker_plan": {
-    "schema_version": "pr-marker-plan.v1",
-    "kind": "pr_marker_plan",
-    "feature_id": "doc-010-search-accessibility-deep-links-docs-validation",
-    "status": "emission_ready",
-    "source_fingerprint": {
-      "feature_spec_sha": "6ac0a5a8c6d745b0402c7bfd106cd073967f113ba65a0a29521abb1500599e06",
-      "plan_declared_scope_sha": "4b629f67917e00c4135561a9310598beb853352464b839914b809f5e7a65d5a4",
-      "tasks_sha": "b7d6780d04697cc03a5e974673bdf97bd884d52e48412fc1d1421ce74669d552",
-      "reviewability_sha": "195268e9fcec1e6a2828d31e9153a81f2a6ccc7f0a455c4cc8f0faf28ee35a79",
-      "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
-    },
-    "markers": [
-      {
-        "id": "foundation",
-        "review_order": 1,
-        "kind": "foundation",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "Foundation",
-          "story_id": null,
-          "start_task_id": "T001",
-          "end_task_id": "T006"
-        },
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/package.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/playwright.config.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/pnpm-lock.yaml"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/validate-docs-quality.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md"
-          }
-        ],
-        "declared_tests": [
-          "docs-site/tests/docs-smoke.spec.mjs"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "foundation",
-          "evidence_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "commit_sha": "2f21220e",
-          "head_sha": "2f21220e",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
-          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us1",
-        "review_order": 2,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 1 - Find And Share Support Guidance (Priority: P1) MVP",
-          "story_id": 1,
-          "start_task_id": "T007",
-          "end_task_id": "T013"
-        },
-        "task_ids": [
-          "T007",
-          "T008",
-          "T009",
-          "T010",
-          "T011",
-          "T012",
-          "T013"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/generate-reference-pages.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/validate-docs-quality.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/choose-your-path.mdx"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/glossary.md"
-          }
-        ],
-        "declared_tests": [],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us1",
-          "evidence_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "commit_sha": "147559bb",
-          "head_sha": "147559bb",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
-          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us2",
-        "review_order": 3,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 2 - Use Interactive Aids Accessibly",
-          "story_id": 2,
-          "start_task_id": "T014",
-          "end_task_id": "T019"
-        },
-        "task_ids": [
-          "T014",
-          "T015",
-          "T016",
-          "T017",
-          "T018",
-          "T019"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/validate-doc006-safe-aids.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/components/LifecycleFlow.astro"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/src/content/docs/choose-your-path.mdx"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md"
-          }
-        ],
-        "declared_tests": [],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us2",
-          "evidence_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "commit_sha": "a828f29a",
-          "head_sha": "a828f29a",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
-          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us3",
-        "review_order": 4,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 3 - Run One Matching Docs Validation Path",
-          "story_id": 3,
-          "start_task_id": "T020",
-          "end_task_id": "T027"
-        },
-        "task_ids": [
-          "T020",
-          "T021",
-          "T022",
-          "T023",
-          "T024",
-          "T025",
-          "T026",
-          "T027"
-        ],
-        "folded_polish_task_ids": [],
-        "folded_polish_target_reason": "",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": ".github/workflows/pr-checks.yml"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/package.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/validate-docs-quality.mjs"
-          }
-        ],
-        "declared_tests": [
-          "tests/speckit-pro/run-all.sh"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us3",
-          "evidence_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "commit_sha": "0fc3f0c6",
-          "head_sha": "0fc3f0c6",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
-          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
-      },
-      {
-        "id": "us4",
-        "review_order": 5,
-        "kind": "user_story",
-        "parent_marker_id": null,
-        "source_boundary": {
-          "section": "User Story 4 - Review Minimal Browser Evidence",
-          "story_id": 4,
-          "start_task_id": "T028",
-          "end_task_id": "T033"
-        },
-        "task_ids": [
-          "T028",
-          "T029",
-          "T030",
-          "T031",
-          "T032",
-          "T033"
-        ],
-        "folded_polish_task_ids": [
-          "T034",
-          "T035",
-          "T036",
-          "T037",
-          "T038",
-          "T039",
-          "T040"
-        ],
-        "folded_polish_target_reason": "nearest_preceding_non_polish_scope",
-        "declared_files": [
-          {
-            "operation": "MODIFIED",
-            "path": ".github/workflows/pr-checks.yml"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/package.json"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/playwright.config.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "docs-site/scripts/generate-reference-pages.mjs"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md"
-          },
-          {
-            "operation": "MODIFIED",
-            "path": "specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md"
-          }
-        ],
-        "declared_tests": [
-          "docs-site/tests/docs-smoke.spec.mjs",
-          "tests/speckit-pro/run-all.sh"
-        ],
-        "reviewability": {
-          "status": "block",
-          "mode": "tasks",
-          "scope": "us4",
-          "evidence_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json"
-        },
-        "hazards": [
-          "change-shape:modify-heavy"
-        ],
-        "subdivision": {
-          "status": "none",
-          "details": {}
-        },
-        "implementation_checkpoint": {
-          "status": "complete",
-          "commit_sha": "63ac46f0",
-          "head_sha": "63ac46f0",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
-          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
-        },
-        "emission_mapping": {
-          "status": "pending"
-        },
-        "warnings": []
+      "evidence": {
+        "final_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/236",
+        "merge_commit": "3fb8b55fc13b3896f7a9507eb07fa40b077f8781",
+        "cleanup_branch": "codex/archive-doc-tacd-completed-work"
       }
-    ],
-    "warnings": [
-      {
-        "code": "reviewability_size_warning",
-        "severity": "warning",
-        "message": "Reviewability sizing result is marker-planning input.",
-        "source": "reviewability",
-        "details": {
-          "status": "block",
-          "mode": "tasks",
-          "evidence_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json"
-        }
-      }
-    ]
-  },
-  "current_source_fingerprint": {
-    "feature_spec_sha": "6ac0a5a8c6d745b0402c7bfd106cd073967f113ba65a0a29521abb1500599e06",
-    "plan_declared_scope_sha": "4b629f67917e00c4135561a9310598beb853352464b839914b809f5e7a65d5a4",
-    "tasks_sha": "b7d6780d04697cc03a5e974673bdf97bd884d52e48412fc1d1421ce74669d552",
-    "reviewability_sha": "195268e9fcec1e6a2828d31e9153a81f2a6ccc7f0a455c4cc8f0faf28ee35a79",
-    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
-  },
-  "pr_marker_plan_current_source_fingerprint": {
-    "feature_spec_sha": "6ac0a5a8c6d745b0402c7bfd106cd073967f113ba65a0a29521abb1500599e06",
-    "plan_declared_scope_sha": "4b629f67917e00c4135561a9310598beb853352464b839914b809f5e7a65d5a4",
-    "tasks_sha": "b7d6780d04697cc03a5e974673bdf97bd884d52e48412fc1d1421ce74669d552",
-    "reviewability_sha": "195268e9fcec1e6a2828d31e9153a81f2a6ccc7f0a455c4cc8f0faf28ee35a79",
-    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
-  },
-  "confidence_gate": {
-    "status": "pass",
-    "gate": "G6.5",
-    "mode": "advisory",
-    "threshold": 0.9,
-    "composite": 0.96,
-    "criteria": {
-      "task_understanding": 0.96,
-      "approach_clarity": 0.94,
-      "requirements_alignment": 0.96,
-      "risk_assessment": 1,
-      "completeness": 0.96
     },
-    "recommended_action": "proceed",
-    "reason": "composite at or above threshold"
-  },
-  "post_implementation": {
-    "updated_at": "2026-06-19T14:43:57Z",
-    "results": {
-      "doctor_extension_check": {
-        "status": "completed",
-        "summary": "Doctor extension check completed in prior resumed post track; project root, SpecKit templates, Claude command registration, scripts, constitution, DOC-010 artifacts, and clean git state verified.",
-        "evidence": [
-          "doctor extension agent result recorded in resumed post track"
-        ]
-      },
-      "verify_implementation": {
-        "status": "completed",
-        "summary": "Manual execution of $speckit-verify contract passed within read-only non-browser scope: 13/13 functional requirements, 4/4 user stories, 11/11 scenarios, 40/40 tasks, 0 critical/high findings.",
-        "evidence": [
-          "pnpm --dir docs-site reference:check",
-          "pnpm --dir docs-site validate:quality",
-          "pnpm --dir docs-site validate:safe-aids",
-          "git diff --check",
-          "bash tests/speckit-pro/run-all.sh --layer 1"
-        ]
-      },
-      "verify_tasks_phantom_check": {
-        "status": "completed",
-        "summary": "Manual execution of $speckit-verify-tasks contract wrote verify-tasks-report.md with 40/40 completed tasks verified and no flagged items.",
-        "report_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/verify-tasks-report.md",
-        "counts": {
-          "verified": 40,
-          "partial": 0,
-          "weak": 0,
-          "not_found": 0,
-          "skipped": 0
-        }
-      },
-      "code_review": {
-        "status": "skipped",
-        "reason": "review extension not installed; no .registry review entry and no .claude/.codex speckit-review command found."
-      },
-      "integration_suite": {
-        "status": "completed",
-        "summary": "Full docs-site validation and deterministic SpecKit Pro suite passed after rewording quickstart keyboard evidence to avoid a privacy-scan false positive.",
-        "evidence": [
-          "pnpm --dir docs-site validate: passed, including 20 Playwright smoke tests",
-          "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh: 9/9 passed",
-          "bash tests/speckit-pro/run-all.sh: 3128/3128 passed",
-          "git diff --check: passed"
-        ],
-        "remediation": "Changed quickstart wording from slash-separated key to arrow, Home, and End to avoid matching local-home-path privacy regex."
-      },
-      "cleanup": {
-        "status": "skipped",
-        "reason": "cleanup extension not installed; no cleanup entry in .specify/extensions/.registry and no $speckit-cleanup command found. Archive cleanup is a separate post-merge extension and not the Post: Cleanup command."
+    {
+      "step": "Archive project memory and roadmap state",
+      "status": "completed",
+      "evidence": {
+        "archive_report": ".specify/memory/archive-reports/2026-06-19-doc-010-post-merge-hygiene.md"
+      }
+    },
+    {
+      "step": "Remove completed active spec residue",
+      "status": "completed",
+      "evidence": {
+        "removed": "specs/doc-010-search-accessibility-deep-links-docs-validation",
+        "tacd_residue": "none"
+      }
+    },
+    {
+      "step": "Regenerate indexes and verify cleanup",
+      "status": "completed",
+      "evidence": {
+        "json": "python3 -m json.tool docs/ai/specs/.process/autopilot-state.json",
+        "index_regenerated": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .",
+        "index_check": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
+        "active_specs_audit": "find specs -mindepth 1 -maxdepth 4 -print returned only specs/.gitkeep",
+        "diff_check": "git diff --check",
+        "full_verify": "bash tests/speckit-pro/run-all.sh",
+        "full_verify_result": "speckit-pro test suite: 3163/3163 passed"
+      }
+    },
+    {
+      "step": "Commit, push, and open cleanup PR",
+      "status": "completed",
+      "evidence": {
+        "cleanup_branch": "codex/archive-doc-tacd-completed-work",
+        "cleanup_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/237"
       }
     }
-  }
+  ]
 }

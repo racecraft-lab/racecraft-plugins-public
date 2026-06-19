@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Current SpecKit plan: `specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md`
+Current SpecKit plan: none active; latest DOC archive report: `.specify/memory/archive-reports/2026-06-19-doc-010-post-merge-hygiene.md`
 <!-- SPECKIT END -->
 
 ## Working in This Repo

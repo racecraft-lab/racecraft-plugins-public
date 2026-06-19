@@ -3,7 +3,7 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-008 and DOC-009 are complete and archived; DOC-010 is ready to scaffold. Created 2026-06-12; refreshed 2026-06-18.
+> Status: DOC-001 through DOC-010 are complete and archived. Created 2026-06-12; refreshed 2026-06-19.
 
 ## Roadmap Overview
 
@@ -64,7 +64,7 @@ DOC-007 -> DOC-008
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Completed/archived | `.process/DOC-007-workflow.md` | Archived after PR #208 |
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Completed/archived | `.process/DOC-008-workflow.md` | Archived after PR #220 |
 | DOC-009 | Maintainer and contributor release workflow | Completed/archived | `.process/DOC-009-workflow.md` | Archived after PR #219 |
-| DOC-010 | Search, accessibility, deep links, docs validation | In progress | `.process/DOC-010-workflow.md` | Scaffolded; ready for autopilot |
+| DOC-010 | Search, accessibility, deep links, docs validation | Completed/archived | `.process/DOC-010-workflow.md` | Archived after PRs #232-#236 |
 
 ## Specification Sections
 
@@ -354,10 +354,11 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** DOC-001, DOC-002, DOC-006 | **Enables:** Feature complete
 
-**Status:** In progress. Scaffolded on branch
-`doc-010-search-accessibility-deep-links-docs-validation` after DOC-008 and DOC-009
-completed the trust, recovery, and release workflow content tier. Ready for
-autopilot via `docs/ai/specs/.process/DOC-010-workflow.md`.
+**Status:** Completed and archived after PRs #232-#236. Canonical docs-site
+validation, support anchor, accessibility/fallback, PR Checks docs-gate, and
+compact smoke evidence lives in `docs-site/` and `.github/workflows/pr-checks.yml`;
+archive provenance is recorded in
+`.specify/memory/archive-reports/2026-06-19-doc-010-post-merge-hygiene.md`.
 
 **Goal:** Harden the docs site so it is findable, accessible, linkable, responsive, and validated in CI.
 

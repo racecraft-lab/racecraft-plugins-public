@@ -3,7 +3,7 @@
 **Date:** 2026-06-12  
 **Source PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Roadmap:** [docs/roadmap-interactive-documentation.md](roadmap-interactive-documentation.md)  
-**Status:** DOC-008 and DOC-009 completed and archived after PR #220 and PR #219; DOC-010 is ready
+**Status:** DOC-001 through DOC-010 completed and archived; interactive documentation roadmap complete
 
 Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back to exactly one PRD feature. Acceptance criteria are not shared across features.
 
@@ -18,13 +18,13 @@ Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back
 | DOC-FR-007 | Command, workflow, manifest, and file-layout reference | DOC-007 | AC-7.1, AC-7.2, AC-7.3, AC-7.4, AC-7.5, AC-7.6 | Users, agents, maintainers | README, skill files, agents, hooks, manifests, tests | Local link check; referenced-file existence check | Completed | DOC-007 shipped generated reference pages and generator-backed reference checks through PR #208; archived after merge. |
 | DOC-FR-008 | Troubleshooting, security, trust, update, and rollback model | DOC-008 | AC-8.1, AC-8.2, AC-8.3, AC-8.4, AC-8.5, AC-8.6 | Security/platform evaluator | OpenAI security docs; Claude settings/marketplace docs; repo hooks/manifests | Source-fact review; symptom matrix coverage | Completed | DOC-008 shipped troubleshooting, security/trust, update/rollback, and supporting install/reference content through PR #220; archived after merge. |
 | DOC-FR-009 | Maintainer and contributor release workflow | DOC-009 | AC-9.1, AC-9.2, AC-9.3, AC-9.4, AC-9.5, AC-9.6 | Maintainer/contributor | AGENTS.md, CLAUDE.md, CI workflows, scripts, tests | Command existence check; optional layer-1 test after docs edits | Completed | DOC-009 shipped the contributor/release workflow route through PR #219; archived after merge. |
-| DOC-FR-010 | Search, accessibility, deep links, responsive UX, and docs validation | DOC-010 | AC-10.1, AC-10.2, AC-10.3, AC-10.4, AC-10.5, AC-10.6, AC-10.7 | All users | W3C WAI, selected docs framework docs, existing validation scripts | Site build; markdown lint; link check; accessibility/responsive smoke tests | Ready | Ready to scaffold after DOC-008 and DOC-009 completed the trust, recovery, and release workflow content tier. |
+| DOC-FR-010 | Search, accessibility, deep links, responsive UX, and docs validation | DOC-010 | AC-10.1, AC-10.2, AC-10.3, AC-10.4, AC-10.5, AC-10.6, AC-10.7 | All users | W3C WAI, selected docs framework docs, existing validation scripts | Site build; docs quality validation; safe-aids validation; minimal Playwright smoke tests | Completed | DOC-010 shipped support anchors, accessible docs aids and fallbacks, one local docs validation path, the conditional `validate-docs` PR Checks gate, and compact smoke evidence through PRs #232-#236; archived after merge. |
 
 ## Traceability Checks
 
 - **PRD feature count:** 10
 - **Roadmap SPEC count:** 10
-- **Mapping status:** 1:1; DOC-001 through DOC-009 are complete and archived; DOC-010 is ready.
+- **Mapping status:** 1:1; DOC-001 through DOC-010 are complete and archived.
 - **Acceptance criteria ownership:** Each AC-N.* belongs only to DOC-FR-00N.
 - **Shared dependencies:** Allowed where platform pages feed first-run/reference/troubleshooting pages.
 - **Untraced items:** None.
