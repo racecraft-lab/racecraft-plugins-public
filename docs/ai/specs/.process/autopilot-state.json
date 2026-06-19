@@ -4,7 +4,7 @@
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
   "updated_at": "2026-06-19T01:06:35Z",
-  "active_step": "Phase 2: Clarify - Route List",
+  "active_step": "Phase 3: Plan",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -85,19 +85,72 @@
         "The before_specify git feature hook was intentionally skipped because the DOC-010 branch and spec directory already existed.",
         "Clarify will still run because the workflow contains explicit route list, CI condition, and Playwright evidence prompts."
       ]
+    },
+    "clarify": {
+      "route_list": {
+        "status": "completed",
+        "questions": 5,
+        "consensus": "not required; executor reported no unresolved items",
+        "decisions": [
+          "Keep the six logical routes: /, /choose-your-path/, /spec-kit-lifecycle/, /glossary/, /reference/skills/, and /contribute-and-release/.",
+          "Use logical Starlight routes in tests; Playwright baseURL owns the deployed /racecraft-plugins-public prefix.",
+          "Use deterministic validation for full internal link and anchor coverage; sample representative deep links in Playwright.",
+          "Focus browser accessibility smoke on SafeInstallAids at /choose-your-path/ and LifecycleFlow at /spec-kit-lifecycle/.",
+          "Run one global Starlight search smoke from / using high-value terms and a known result link."
+        ]
+      },
+      "ci_condition": {
+        "status": "completed",
+        "questions": 5,
+        "consensus": "completed; Round 2 resolved a Round 1 disagreement",
+        "consensus_log": [
+          {
+            "type": "Clarify",
+            "item": "Non-docs-site CI trigger allowlist",
+            "categories": "[codebase, spec]",
+            "round": "1->2",
+            "outcome": "2/3",
+            "analysts": [
+              "codebase-analyst",
+              "spec-context-analyst",
+              "domain-researcher"
+            ]
+          }
+        ],
+        "decisions": [
+          "Keep PR Checks triggered for all PRs; do not use workflow-level path filters for the docs gate.",
+          "Use job-level changed-file detection and expose one stable docs validation gate.",
+          "Distinguish rendered docs-site changes from generated-reference source changes and docs-validation contract changes.",
+          "Run full docs-site validation for rendered docs changes and reference drift validation for generated-reference source changes.",
+          "Workflow edits run affected docs checks while preserving existing plugin matrix semantics.",
+          "Generated-reference source detection must track the real transitive inputs to reference and safe-aids validation instead of a broad all-docs glob."
+        ]
+      },
+      "playwright_script_shape": {
+        "status": "completed",
+        "questions": 4,
+        "consensus": "not required; executor reported no unresolved items",
+        "decisions": [
+          "Use docs-site script `validate:smoke` for Playwright smoke.",
+          "Include `validate:smoke` in `pnpm --dir docs-site validate`.",
+          "Use stable PR Checks job/gate name `validate-docs`.",
+          "Upload one compact short-retention artifact named `docs-site-smoke-evidence`; do not commit screenshots.",
+          "Record manual/browser accessibility evidence in existing PR packet sections such as How To UAT, Verification, traceability, and Known Gaps."
+        ]
+      }
     }
   },
   "plan": [
     {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
     {"step": "Phase 0: Prerequisites", "status": "completed"},
     {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Route List", "status": "in_progress"},
-    {"step": "Phase 2: Clarify - Route List Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - CI Condition", "status": "pending"},
-    {"step": "Phase 2: Clarify - CI Condition Consensus", "status": "pending"},
-    {"step": "Phase 2: Clarify - Playwright Script Shape", "status": "pending"},
-    {"step": "Phase 2: Clarify - Playwright Script Shape Consensus", "status": "pending"},
-    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 2: Clarify - Route List", "status": "completed"},
+    {"step": "Phase 2: Clarify - Route List Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - CI Condition", "status": "completed"},
+    {"step": "Phase 2: Clarify - CI Condition Consensus", "status": "completed"},
+    {"step": "Phase 2: Clarify - Playwright Script Shape", "status": "completed"},
+    {"step": "Phase 2: Clarify - Playwright Script Shape Consensus", "status": "completed"},
+    {"step": "Phase 3: Plan", "status": "in_progress"},
     {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
     {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},
     {"step": "Phase 4: Checklist - UX", "status": "pending"},

@@ -286,9 +286,15 @@ Resolve the local script name, CI script name, whether screenshots are attached 
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Route list | | |
-| 2 | CI condition | | |
-| 3 | Playwright script shape | | |
+| 1 | Route list | 5 | Kept all six logical routes; Playwright base URL owns `/racecraft-plugins-public`; deterministic validation owns full links/anchors; Playwright samples search, deep links, and interactive routes |
+| 2 | CI condition | 5 plus 1 consensus item | Use job-level detection, not workflow-level `paths`; expose one stable docs validation gate; split rendered docs-site changes from generated-reference source and docs-validation contract changes; workflow edits run affected docs checks without changing plugin matrix semantics |
+| 3 | Playwright script shape | 4 | Use `validate:smoke` and include it in `pnpm --dir docs-site validate`; add stable `validate-docs`; upload short-retention `docs-site-smoke-evidence`; record manual accessibility evidence in existing PR packet sections |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Non-`docs-site/**` CI trigger allowlist | [codebase, spec] | 1→2 | 2/3 | Recorded split job-level detection: full docs-site validation for rendered docs changes, reference drift validation for generated-reference source changes, and docs-validation contract handling through the stable docs gate | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
