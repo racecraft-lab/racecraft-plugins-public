@@ -81,7 +81,7 @@ test.describe('DOC-010 route smoke', () => {
       const target = page.locator(sample.target);
       await expect(target).toBeVisible();
       await expect(target).toContainText(sample.heading);
-      await expect(page).toHaveURL(new RegExp(`${sample.target.replace('#', '#')}$`));
+      await expect(page).toHaveURL(new RegExp(`${sample.target}$`));
     }
   });
 

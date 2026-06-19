@@ -7,7 +7,7 @@ This document defines the **SPEC catalog** for Tool-Agnostic Capability Discover
 **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
 **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 **Spec ID prefix:** `TACD-###`
-**Branch:** one branch per TACD spec; TACD-001 and TACD-002 completed and archived their shipped stacks
+**Branch:** one branch per TACD spec; TACD-001, TACD-002, and TACD-003 completed and archived their shipped stacks
 **Tracker:** N/A
 
 ---
@@ -77,8 +77,8 @@ FEATURE COMPLETE
 |------|------|--------|---------------|------------|
 | TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
 | TACD-002 | Capability Discovery Directive and Agent Updates | Complete | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
-| TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Ready to scaffold from the implemented TACD-002 directive |
-| TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Blocked by TACD-003 |
+| TACD-003 | Prerequisite and Documentation Messaging | Complete | [.process/TACD-003-workflow.md](.process/TACD-003-workflow.md) | Archived after PR #230; use the generic advisory and active guidance updates as TACD-004 inputs |
+| TACD-004 | Verification Coverage | Pending | [TACD-004 section](#tacd-004-verification-coverage) | Ready to scaffold from archived TACD-001, TACD-002, and TACD-003 artifacts |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -178,6 +178,8 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** TACD-001, TACD-002 | **Enables:** TACD-004
 
+**Status:** Complete and archived after PR #230 merged the prerequisite advisory, active guidance, generated payload refresh, focused tests, and PR packet evidence.
+
 **Goal:** Replace hardcoded optional-MCP prerequisite and user-facing messaging with a generic capability advisory that matches the implemented directive.
 
 **Reviewability Budget:** Primary surface: docs/process |
@@ -201,6 +203,7 @@ Budget result: within budget
 **Key Decisions:**
 - **Prerequisite decision (2026-06-17):** Keep a non-blocking advisory, but make it generic rather than tied to a specific optional MCP set.
 - **Wording decision (2026-06-17):** Active guidance names capabilities, not tool IDs.
+- **Archive decision (2026-06-19):** The active spec folder was removed after post-merge provenance was recorded. The advisory behavior, active guidance, generated payloads, and focused tests remain in source and generated payload paths; raw spec artifacts remain recoverable through `.specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md`.
 
 **Key Files:**
 - `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` - prerequisite advisory behavior.
@@ -297,5 +300,6 @@ When breaking this feature into specs:
 - **TACD-001 spike report:** [../research/tool-agnostic-capability-discovery-spike.md](../research/tool-agnostic-capability-discovery-spike.md)
 - **TACD-001 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md)
 - **TACD-002 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md)
+- **TACD-003 archive report:** [../../../.specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md)
 - **Constitution:** [.specify/memory/constitution.md](../../../.specify/memory/constitution.md)
 - **Project Standards:** [AGENTS.md](../../../AGENTS.md), [CLAUDE.md](../../../CLAUDE.md)

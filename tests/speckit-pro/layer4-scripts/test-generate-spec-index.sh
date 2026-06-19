@@ -499,9 +499,9 @@ assert_contains "$home_k" "- [PRSG-001](../../../specs/prsg-001-foo/SPEC-MOC.md)
 set_test "home INDEX has the PRSG-010 row with exact bytes"
 assert_contains "$home_k" "- [PRSG-010](../../../specs/prsg-010-baz/SPEC-MOC.md) ${PRS_SEP} in-progress" "FR-012/FR-014 exact row bytes"
 # (3) empty-status spec STILL emits a row, separator present + blank status — pin the
-# frozen byte form (separator, one trailing space, end of line) (FR-015, SC-004).
-set_test "empty-status spec still emits a row with the frozen blank-status bytes (FR-015)"
-assert_contains "$home_k" $'- [PRSG-002](../../../specs/prsg-002-bar/SPEC-MOC.md) \xc2\xb7 \n' "FR-015 blank-status row: separator + trailing space, row not dropped"
+# frozen byte form (separator, no trailing whitespace, end of line) (FR-015, SC-004).
+set_test "empty-status spec still emits a row without trailing whitespace (FR-015)"
+assert_contains "$home_k" $'- [PRSG-002](../../../specs/prsg-002-bar/SPEC-MOC.md) \xc2\xb7\n' "FR-015 blank-status row: separator without trailing whitespace, row not dropped"
 
 # (2) every INDEX link is a relative []() target, NEVER a [[wikilink]] (FR-014/SC-006).
 set_test "the home INDEX zone contains no [[wikilink]] targets (relative links only)"

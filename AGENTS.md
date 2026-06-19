@@ -63,6 +63,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - DOC-008 and DOC-009 are archived in `.specify/memory/` as completed on 2026-06-18 after PR #220 and PR #219 merged.
 - TACD-001 is archived in `.specify/memory/` as completed on 2026-06-18 after PRs #211-#214 and #216 merged.
 - TACD-002 is archived in `.specify/memory/` as completed on 2026-06-18 after PRs #221-#226 merged.
+- TACD-003 is archived in `.specify/memory/` as completed on 2026-06-19 after PR #230 merged.
 - `specs/prsg-007-atomicity-router` and `specs/prsg-011-retro-migration` were removed from active `specs/**` cleanup after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory.
 - `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup after the planner schema fixture was vendored under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/`.
 - `specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup after PR #145 merged and the PRSG-009 contract schemas were preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
@@ -79,6 +80,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - `specs/doc-008-troubleshooting-security-trust-update-rollback` and `specs/doc-009-maintainer-contributor-release-workflow` were removed from active `specs/**` cleanup after PR #220 and PR #219 merged, the canonical docs-site support/release workflow pages landed, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-18-doc-008-009-post-merge-hygiene.md`.
 - `specs/tacd-001-platform-mechanics-spike` was removed from active `specs/**` cleanup after PRs #211-#214 and #216 merged, the canonical spike report landed at `docs/ai/research/tool-agnostic-capability-discovery-spike.md`, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md`.
 - `specs/tacd-002-capability-discovery-directive-and-agent-updates` was removed from active `specs/**` cleanup after PRs #221-#226 merged, the shared capability directive and marker-emission hardening landed in source/generator/test paths, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md`.
+- `specs/tacd-003-prerequisite-and-documentation-messaging` was removed from active `specs/**` cleanup after PR #230 merged, the generic `capability_coverage` advisory, active guidance, generated payloads, focused tests, and PR packet evidence landed, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md`.
 - `.specify/feature.json` is transient local state. Do not commit a stale completed-spec pointer back to `main`.
 
 ## Active Technologies
