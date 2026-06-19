@@ -49,7 +49,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and three contracts; G3 and reviewability estimator passed |
 | Checklist | `/speckit-checklist` | Complete | Accessibility, UX, reliability, and security checklists completed; G4 passed with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Generated 40 tasks; G5 passed; size-only task reviewability block persisted as marker-plan evidence |
-| Analyze | `/speckit-analyze` | Pending | Check design-concept, spec, plan, and tasks consistency |
+| Analyze | `/speckit-analyze` | Complete | G6 passed with 0 findings; no consensus remediation required |
 | Implement | `/speckit-implement` | Pending | Execute focused docs-site hardening with validation evidence |
 
 ### Phase Gates
@@ -607,7 +607,38 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| ANALYZE-000 | None | No cross-artifact drift found across design concept, spec, plan, contracts, tasks, and DOC-FR-010 AC-10.1 through AC-10.7 coverage | No remediation required |
+
+G6 output:
+
+```json
+{"gate":"G6","pass":true,"reason":"0 CRITICAL/HIGH findings","markers":0,"details":[]}
+```
+
+Marker count:
+
+```json
+{"type":"findings","total":0,"critical":0,"high":0,"medium":0,"low":0}
+```
+
+Analyze notes:
+
+- Native prerequisite check rejected the DOC-prefixed branch naming unless `SPECIFY_FEATURE=010-search-accessibility-deep-links-docs-validation` is supplied; the feature directory and branch were already pinned by the workflow and autopilot state.
+- No unresolved consensus categories remain for DOC-010 artifact drift.
+
+📊 Confidence: 0.96
+
+- Task understanding: 0.96
+- Approach clarity: 0.94
+- Requirements alignment: 0.96
+- Risk assessment: 1.00
+- Completeness: 0.96
+
+G6.5 confidence gate output:
+
+```json
+{"pass":true,"composite":0.96,"criteria":{"task_understanding":0.96,"approach_clarity":0.94,"requirements_alignment":0.96,"risk_assessment":1.00,"completeness":0.96},"threshold":0.90,"mode":"advisory","recommended_action":"proceed","reason":"composite at or above threshold","input":"docs/ai/specs/.process/DOC-010-workflow.md"}
+```
 
 ---
 
