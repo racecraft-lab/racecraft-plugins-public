@@ -6,7 +6,7 @@
 
 **Tests**: Required for this slice. Use TDD for prerequisite script output changes: focused test or fixture first, prerequisite script update second, docs third, `bash -n` and focused validation last.
 
-**Reviewability**: Keep the implementation inside the declared file operations in `plan.md`. Do not edit archives, generated payloads, installers, marketplace integration, broad scanners, or evals. If the implementation must exceed the declared file set, stop and amend the plan before continuing.
+**Reviewability**: Keep the implementation inside the declared file operations in `plan.md`. Do not edit archives, hand-edit generated payloads, installers, marketplace integration, broad scanners, or evals; source-derived `dist/` regeneration is allowed when required by declared source changes. If the implementation must exceed the declared file set, stop and amend the plan before continuing.
 
 **Organization**: Tasks are grouped by user story so each story can be implemented and verified independently.
 
@@ -24,7 +24,7 @@
 - [x] T002 Review `docs/ai/specs/.process/TACD-003-design-concept.md` Goals, Non-goals, and Q1-Q6 before editing so advisory wording stays capability-first, non-blocking, and within one slice. (AC-3.1, AC-3.2, AC-3.3, AC-3.4)
 - [x] T003 Inspect `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` to identify the current optional-tool report and one existing true prerequisite blocker path before adding tests. (FR-001, FR-011, FR-014, SC-007, SC-008)
 
-**Checkpoint**: Scope is confirmed; no archive, generated payload, installer, marketplace, scanner, or eval file is in the edit plan.
+**Checkpoint**: Scope is confirmed; no archive, hand-edited generated payload, installer, marketplace, scanner, or eval file is in the edit plan. Source-derived `dist/` regeneration remains allowed when required by declared source changes.
 
 ---
 
@@ -158,7 +158,7 @@
 
 ### Scope Boundaries
 
-- Do not edit archives, changelogs, fixture-only prose, generated payloads, installers, marketplace integration, broad scanners, or evals.
+- Do not edit archives, changelogs, fixture-only prose, hand-edit generated payloads, installers, marketplace integration, broad scanners, or evals; allow source-derived `dist/` regeneration only when required by declared source changes.
 - Do not add broad named-tool static enforcement, Layer 3 eval expectation updates, Layer 5 pointer coverage, or broad named-tool detection in TACD-003.
 - Do not introduce a fixed recommended optional-tool set.
 
