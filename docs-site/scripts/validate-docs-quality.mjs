@@ -66,6 +66,193 @@ const DOC010_FOUNDATION_FILES = Object.freeze([
   'docs-site/tests/docs-smoke.spec.mjs',
 ]);
 
+const SUPPORT_ANCHOR_INVENTORY = Object.freeze([
+  {
+    publicPath: '/racecraft-plugins-public/choose-your-path/',
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    anchors: Object.freeze([
+      'route-shell',
+      'static-selector-fallback',
+      'support-link-map',
+      'install-source-update-guidance',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/install/claude-code/',
+    sourcePath: 'docs-site/src/content/docs/install/claude-code.md',
+    anchors: Object.freeze([
+      'install-decision',
+      'source-payload-and-cache',
+      'install-path-matrix',
+      'verify-the-install',
+      'stale-update-checkpoint',
+      'install-safety',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/install/codex/',
+    sourcePath: 'docs-site/src/content/docs/install/codex.md',
+    anchors: Object.freeze([
+      'install-decision',
+      'source-payload-and-cache',
+      'install-path-matrix',
+      'register-custom-agents',
+      'verify-the-install',
+      'stale-update-checkpoint',
+      'install-safety',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/troubleshooting/',
+    sourcePath: 'docs-site/src/content/docs/troubleshooting.md',
+    anchors: Object.freeze([
+      'symptom-matrix',
+      'read-only-inspection-boundary',
+      'when-to-switch-pages',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/update-and-rollback/',
+    sourcePath: 'docs-site/src/content/docs/update-and-rollback.md',
+    anchors: Object.freeze([
+      'recovery-cases',
+      'case-notes',
+      'stale-cache',
+      'rollback-anchors',
+      'where-to-go-next',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/glossary/',
+    sourcePath: 'docs-site/src/content/docs/glossary.md',
+    anchors: Object.freeze([
+      'marketplace',
+      'payload',
+      'source-tree',
+      'skill',
+      'agent',
+      'hook',
+      'cache',
+      'constitution',
+      'lifecycle',
+      'generated-reference',
+      'source-update-guidance',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/reference/',
+    sourcePath: 'docs-site/src/content/docs/reference.md',
+    anchors: Object.freeze([
+      'generated-reference-subpages',
+      'generated-page-boundary',
+      'doc-008-support-handoffs',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/reference/skills/',
+    sourcePath: 'docs-site/src/content/docs/reference/skills.md',
+    anchors: Object.freeze([
+      'page-summary',
+      'records',
+      'install',
+      'speckit-autopilot',
+      'speckit-status',
+    ]),
+  },
+  {
+    publicPath: '/racecraft-plugins-public/contribute-and-release/',
+    sourcePath: 'docs-site/src/content/docs/contribute-and-release.md',
+    anchors: Object.freeze([
+      'source-of-truth',
+      'change-type-matrix',
+      'contributor-path',
+      'maintainer-release-readiness',
+      'version-fields',
+      'release-automation',
+      'current-pr-checks-behavior',
+      'final-checklist',
+    ]),
+  },
+]);
+
+const REQUIRED_SUPPORT_LINKS = Object.freeze([
+  {
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    href: '/racecraft-plugins-public/install/claude-code/#install-decision',
+    label: 'Claude Code install decision deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    href: '/racecraft-plugins-public/install/codex/#install-decision',
+    label: 'Codex install decision deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    href: '/racecraft-plugins-public/troubleshooting/#symptom-matrix',
+    label: 'troubleshooting symptom matrix deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    href: '/racecraft-plugins-public/glossary/#marketplace',
+    label: 'marketplace glossary deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    href: '/racecraft-plugins-public/glossary/#payload',
+    label: 'payload glossary deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    href: '/racecraft-plugins-public/glossary/#source-tree',
+    label: 'source tree glossary deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/glossary.md',
+    href: '/racecraft-plugins-public/choose-your-path/#support-link-map',
+    label: 'choose-your-path support link map deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/glossary.md',
+    href: '/racecraft-plugins-public/reference/skills/#install',
+    label: 'generated skills install reference deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/glossary.md',
+    href: '/racecraft-plugins-public/contribute-and-release/#change-type-matrix',
+    label: 'release workflow change matrix deep link',
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/glossary.md',
+    href: '/racecraft-plugins-public/update-and-rollback/#recovery-cases',
+    label: 'recovery cases deep link',
+  },
+]);
+
+const SOURCE_UPDATE_GUIDANCE = Object.freeze([
+  {
+    sourcePath: 'docs-site/src/content/docs/choose-your-path.mdx',
+    heading: 'Install Source Update Guidance',
+    requiredSnippets: Object.freeze([
+      'external platform',
+      'Claude Code',
+      'Codex',
+      'source update',
+      'docs-site/scripts/validate-docs-quality.mjs',
+    ]),
+  },
+  {
+    sourcePath: 'docs-site/src/content/docs/glossary.md',
+    heading: 'Source Update Guidance',
+    requiredSnippets: Object.freeze([
+      'external platform',
+      'Claude Code',
+      'Codex',
+      'source update',
+      'docs-site/scripts/validate-docs-quality.mjs',
+    ]),
+  },
+]);
+
 const FORBIDDEN_SOURCE_PATTERNS = Object.freeze([
   { label: 'child process execution', pattern: /\bchild_process\b|\bexec(?:File)?\s*\(|\bspawn\s*\(/ },
   { label: 'browser local file reads', pattern: /\bFileReader\b|<input[^>]+type=["']file["']/i },
@@ -79,6 +266,40 @@ function repoResolve(relativePath) {
 
 function escapeRegExp(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function normalizeSlugText(value) {
+  return value
+    .replace(/<[^>]+>/g, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/&/g, ' and ')
+    .replace(/[^A-Za-z0-9 -]/g, '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
+function collectAnchors(source) {
+  const anchors = new Set();
+  const slugCounts = new Map();
+
+  for (const match of source.matchAll(/(?:^|\n)#{2,6}\s+(.+?)\s*(?:\{#([A-Za-z0-9_-]+)\})?\s*(?=\n|$)/g)) {
+    const explicitId = match[2];
+    const baseSlug = explicitId || normalizeSlugText(match[1]);
+    if (!baseSlug) continue;
+
+    const seenCount = slugCounts.get(baseSlug) || 0;
+    slugCounts.set(baseSlug, seenCount + 1);
+    anchors.add(seenCount === 0 ? baseSlug : `${baseSlug}-${seenCount}`);
+  }
+
+  for (const match of source.matchAll(/\sid=["']([^"']+)["']/g)) {
+    anchors.add(match[1]);
+  }
+
+  return anchors;
 }
 
 function readRepoText(relativePath, diagnostics) {
@@ -126,6 +347,59 @@ function validateFoundationFiles(diagnostics) {
   }
 }
 
+function validateSupportAnchorInventory(diagnostics) {
+  for (const page of SUPPORT_ANCHOR_INVENTORY) {
+    assertRepoRelative(page.sourcePath, diagnostics);
+
+    const source = readRepoText(page.sourcePath, diagnostics);
+    if (!source) continue;
+
+    const anchors = collectAnchors(source);
+    for (const anchor of page.anchors) {
+      if (!anchors.has(anchor)) {
+        diagnostics.push(
+          `${page.sourcePath}: missing stable support anchor "${anchor}" for ${page.publicPath}#${anchor}.`,
+        );
+      }
+    }
+  }
+}
+
+function validateSupportCrossLinks(diagnostics) {
+  for (const link of REQUIRED_SUPPORT_LINKS) {
+    assertRepoRelative(link.sourcePath, diagnostics);
+
+    const source = readRepoText(link.sourcePath, diagnostics);
+    if (source && !source.includes(link.href)) {
+      diagnostics.push(`${link.sourcePath}: missing ${link.label}: ${link.href}.`);
+    }
+  }
+}
+
+function validateSourceUpdateGuidance(diagnostics) {
+  for (const guidance of SOURCE_UPDATE_GUIDANCE) {
+    assertRepoRelative(guidance.sourcePath, diagnostics);
+
+    const source = readRepoText(guidance.sourcePath, diagnostics);
+    if (!source) continue;
+
+    const headingPattern = new RegExp(`^##\\s+${escapeRegExp(guidance.heading)}\\s*$`, 'm');
+    if (!headingPattern.test(source)) {
+      diagnostics.push(
+        `${guidance.sourcePath}: missing "${guidance.heading}" for DOC-010 external platform source-update guidance.`,
+      );
+    }
+
+    for (const snippet of guidance.requiredSnippets) {
+      if (!source.includes(snippet)) {
+        diagnostics.push(
+          `${guidance.sourcePath}: source-update guidance must mention "${snippet}" for external platform claims.`,
+        );
+      }
+    }
+  }
+}
+
 function validateSafetyBoundaries(diagnostics) {
   for (const [group, entries] of Object.entries(DOC010_SAFETY_BOUNDARIES)) {
     if (entries.length === 0) {
@@ -139,6 +413,9 @@ export function validateDocsQuality() {
 
   validateRouteSources(diagnostics);
   validateFoundationFiles(diagnostics);
+  validateSupportAnchorInventory(diagnostics);
+  validateSupportCrossLinks(diagnostics);
+  validateSourceUpdateGuidance(diagnostics);
   validateSafetyBoundaries(diagnostics);
 
   return diagnostics;

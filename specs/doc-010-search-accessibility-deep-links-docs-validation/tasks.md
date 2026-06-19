@@ -33,19 +33,19 @@
 
 ### Validation for User Story 1
 
-- [ ] T007 [US1] Add failing support-anchor inventory checks for install, recovery, troubleshooting, glossary, generated reference, and release workflow anchors in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
-- [ ] T008 [US1] Add failing source-update guidance checks for external platform claims touched by DOC-010 in `docs-site/scripts/validate-docs-quality.mjs` (FR-012)
+- [X] T007 [US1] Add failing support-anchor inventory checks for install, recovery, troubleshooting, glossary, generated reference, and release workflow anchors in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
+- [X] T008 [US1] Add failing source-update guidance checks for external platform claims touched by DOC-010 in `docs-site/scripts/validate-docs-quality.mjs` (FR-012)
 
 ### Implementation for User Story 1
 
-- [ ] T009 [P] [US1] Add stable glossary term anchors and support-oriented cross-links in `docs-site/src/content/docs/glossary.md` (FR-003, FR-004)
-- [ ] T010 [P] [US1] Add support-link and static fallback anchor guidance for install decisions in `docs-site/src/content/docs/choose-your-path.mdx` (FR-002, FR-004)
-- [ ] T011 [US1] Finish docs-quality anchor, glossary, generated-reference, release workflow, and source-update validation logic in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
+- [X] T009 [P] [US1] Add stable glossary term anchors and support-oriented cross-links in `docs-site/src/content/docs/glossary.md` (FR-003, FR-004)
+- [X] T010 [P] [US1] Add support-link and static fallback anchor guidance for install decisions in `docs-site/src/content/docs/choose-your-path.mdx` (FR-002, FR-004)
+- [X] T011 [US1] Finish docs-quality anchor, glossary, generated-reference, release workflow, and source-update validation logic in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
 
 ### Verification for User Story 1
 
-- [ ] T012 [US1] Run `pnpm --dir docs-site validate:quality` and confirm failures or output cite repo-relative paths from `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011, FR-012)
-- [ ] T013 [US1] Run `pnpm --dir docs-site reference:check` and confirm generated reference anchors remain deterministic from `docs-site/scripts/generate-reference-pages.mjs` (FR-003, FR-007)
+- [X] T012 [US1] Run `pnpm --dir docs-site validate:quality` and confirm failures or output cite repo-relative paths from `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011, FR-012)
+- [X] T013 [US1] Run `pnpm --dir docs-site reference:check` and confirm generated reference anchors remain deterministic from `docs-site/scripts/generate-reference-pages.mjs` (FR-003, FR-007)
 
 **Checkpoint**: User Story 1 is searchable, linkable, and protected by deterministic validation.
 
