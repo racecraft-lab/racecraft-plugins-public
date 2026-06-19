@@ -189,9 +189,9 @@ questions, gaps, and findings.
 
 | Agent | Perspective | What It Does |
 | ----- | ----------- | ------------ |
-| **codebase-analyst** | What does the code show? | Searches existing code (via RepoPrompt or Grep/Glob/Read) for established patterns, types, naming conventions |
+| **codebase-analyst** | What does the code show? | Uses available codebase context capabilities or local repository search to find established patterns, types, and naming conventions |
 | **spec-context-analyst** | What do decisions say? | Reads constitution, technical roadmap, prior specs for established principles and precedent |
-| **domain-researcher** | What do best practices say? | Searches web (via Tavily/Context7 or WebSearch/WebFetch) for official docs, standards, community patterns |
+| **domain-researcher** | What do best practices say? | Uses available library documentation, web/domain research, and source extraction capabilities; records fallback confidence when coverage is lighter |
 
 ### Consensus Modes
 
