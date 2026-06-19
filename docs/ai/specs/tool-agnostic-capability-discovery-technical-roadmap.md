@@ -78,7 +78,7 @@ FEATURE COMPLETE
 | TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
 | TACD-002 | Capability Discovery Directive and Agent Updates | Complete | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
 | TACD-003 | Prerequisite and Documentation Messaging | Complete | [.process/TACD-003-workflow.md](.process/TACD-003-workflow.md) | Archived after PR #230; use the generic advisory and active guidance updates as TACD-004 inputs |
-| TACD-004 | Verification Coverage | Pending | [TACD-004 section](#tacd-004-verification-coverage) | Ready to scaffold from archived TACD-001, TACD-002, and TACD-003 artifacts |
+| TACD-004 | Verification Coverage | In Progress | [TACD-004 section](#tacd-004-verification-coverage) | Scaffolded on `tacd-004-verification-coverage`; workflow at `.process/TACD-004-workflow.md`. Scope now also bundles the Claude payload-build fix (`strip_codex_guard`) and a body-completeness regression check |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -218,33 +218,40 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** TACD-001, TACD-002, TACD-003 | **Enables:** Complete feature
 
-**Goal:** Add deterministic checks and functional eval coverage so SpecKit Pro stays vendor-neutral about optional research/context tools.
+**Goal:** Add deterministic checks and functional eval coverage so SpecKit Pro stays vendor-neutral about optional research/context tools, and fix the Claude payload-build defect (`strip_codex_guard`) that truncates skill bodies — locking it with a body-completeness regression check.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 202 |
-Production files: 0 |
-Total files: 7 |
+Projected reviewable LOC: 292 |
+Production files: 1 |
+Total files: 10 |
 Budget result: within budget
 
 **Scope:**
-- Add or update deterministic tests that fail when active runtime guidance reintroduces a hardcoded named optional-tool contract outside the TACD-001 category allowlist.
-- Update Layer 5 tool-scoping or structural tests to verify relevant agents point to the shared capability-discovery reference or carry an approved runtime-specific equivalent.
-- Add target-resolution checks so directive pointers resolve from installed Claude and Codex runtime contexts.
-- Update Claude and Codex functional eval expectations so optional-tool setup questions are answered in vendor-neutral capability-discovery terms.
-- Include behavior-observable eval scenarios for installed-capability discovery, fallback behavior, evidence path, citations or local file references, and lower-confidence reporting when fallback quality is lower.
+- Add or update deterministic tests that fail when active runtime guidance reintroduces a hardcoded named optional-tool contract outside the TACD-001 category allowlist (named-tool guard in Layer 5).
+- Verify relevant Claude and Codex agents point to the shared capability-discovery reference or carry an approved runtime-specific equivalent, using a literal path match plus a small enumerated approved-equivalent allowlist (Layer 1 pointer coverage).
+- Add target-resolution checks so directive pointers resolve from the installed `dist/claude/**` and `dist/codex/**` payload layouts, not just the source tree.
+- Rework the Layer 5 block so the formerly-required named MCP tools (`mcp__tavily-mcp__*`, `mcp__context7__*`, `mcp__RepoPrompt__*`) are removed from the scoping contract entirely.
+- Update Claude and Codex functional eval expectations across all four eval files so optional-tool questions are answered in vendor-neutral terms, asserting both the absence of a preferred named set and an affirmative capability-first answer.
+- Include behavior-observable eval scenarios for installed-capability discovery, fallback behavior, evidence path, citations or local file references, and lower-confidence reporting when fallback quality is lower (validated against committed fixtures; no live run gates merge).
+- Fix `strip_codex_guard` in `scripts/build-plugin-payloads.sh` to strip only the Codex guard block (to the next heading / EOF) instead of truncating to end-of-file, rebuild `dist/` so all skill bodies are restored, and add a deterministic body-completeness check that fails if any `dist/claude` SKILL.md is truncated relative to its source minus the guard section.
 - Verify the default deterministic suite with `bash tests/speckit-pro/run-all.sh`.
 
 **Out of Scope:**
 - Live AI eval execution unless the implementation PR explicitly chooses to run the slower local eval suite.
 - New test layers or broad harness rewrites.
 - Behavior changes outside the directive and messaging already implemented.
+- A separate hotfix branch for the payload-build defect — it is bundled into this spec.
 
 **Key Decisions:**
 - **Verification decision (2026-06-17):** Use static checks plus eval coverage; static-only is insufficient for behavior, eval-only is too costly and non-deterministic.
+- **Payload-fix bundling (2026-06-19):** A pre-existing `strip_codex_guard` defect truncated the Claude payload body for 8 of 10 skills (those whose Codex guard block lacked an exact terminator string). The fix, the `dist/` rebuild, and a body-completeness regression check are bundled into TACD-004 rather than fast-tracked as a separate hotfix.
+- **Tool-scoping decision (2026-06-19):** Remove the named MCP tool assertions from Layer 5 entirely (vendor neutrality enforced at the contract level) rather than retaining them as optional-but-named.
 
 **Key Files:**
-- `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh` - tool/directive enforcement candidate.
-- `tests/speckit-pro/layer1-structural/` - structural enforcement candidate.
+- `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh` - named-tool guard + removal of the named-MCP assertions.
+- `tests/speckit-pro/layer1-structural/` - pointer-coverage, target-resolution, and payload body-completeness validators.
+- `scripts/build-plugin-payloads.sh` - `strip_codex_guard` fix.
+- `dist/claude/**` and `dist/codex/**` - regenerated payload copies (source-derived).
 - `tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json` - Claude functional evals.
 - `tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json` - Codex functional evals.
 - `tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json` - Claude coaching evals.
