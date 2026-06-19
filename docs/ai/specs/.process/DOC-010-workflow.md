@@ -50,7 +50,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Checklist | `/speckit-checklist` | Complete | Accessibility, UX, reliability, and security checklists completed; G4 passed with 0 remaining gaps |
 | Tasks | `/speckit-tasks` | Complete | Generated 40 tasks; G5 passed; size-only task reviewability block persisted as marker-plan evidence |
 | Analyze | `/speckit-analyze` | Complete | G6 passed with 0 findings; no consensus remediation required |
-| Implement | `/speckit-implement` | In Progress | Foundation, search/deep-link, accessibility, and validation/CI markers complete; smoke evidence marker remains |
+| Implement | `/speckit-implement` | Complete | All 40 tasks complete; G7 passed with compact browser smoke and validation evidence |
 
 ### Phase Gates
 
@@ -545,12 +545,12 @@ Authoritative marker state is stored in `docs/ai/specs/.process/autopilot-state.
 | Field | Value |
 |-------|-------|
 | Schema version | `pr-marker-plan.v1` |
-| Status | `planned` |
+| Status | `emission_ready` |
 | Evidence path | `specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/pr-marker-plan.json` |
 | Fingerprint status | current |
 | Ordered marker IDs | `foundation`, `us1`, `us2`, `us3`, `us4` |
 | Review order | foundation -> us1 -> us2 -> us3 -> us4 |
-| Marker checkpoints | `foundation` completed at `2f21220e`; `us1` completed at `147559bb`; `us2` completed at `a828f29a`; `us3` completed at `0fc3f0c6`; remaining markers pending |
+| Marker checkpoints | `foundation` completed at `2f21220e`; `us1` completed at `147559bb`; `us2` completed at `a828f29a`; `us3` completed at `0fc3f0c6`; `us4` completed at `63ac46f0` |
 | Final marker split | pending |
 | Packet validation | pending |
 | PR mappings | pending |
@@ -574,7 +574,7 @@ Source fingerprint:
 | `us1` | 2 | T007-T013 | none | `147559bb` |
 | `us2` | 3 | T014-T019 | none | `a828f29a` |
 | `us3` | 4 | T020-T027 | none | `0fc3f0c6` |
-| `us4` | 5 | T028-T033 | T034-T040 | pending |
+| `us4` | 5 | T028-T033 | T034-T040 | `63ac46f0` |
 
 ---
 
@@ -681,8 +681,14 @@ Follow the tasks in order. Use the design concept Q&A log for the reason behind 
 | Search/deep links | T007-T013 | Yes | Added support-anchor inventory validation, source-update guidance checks, glossary definitions, install/support deep links, and refreshed generated reference pages. Parent verification passed for `pnpm --dir docs-site validate:quality`, `pnpm --dir docs-site reference:check`, and `git diff --check`. |
 | Accessibility/responsive | T014-T019 | Yes | Hardened safe install aid guardrails, static fallback copy, lifecycle semantic/focus/reflow behavior, and reviewer-visible accessibility evidence. Parent verification passed for `pnpm --dir docs-site validate:safe-aids`, `pnpm --dir docs-site validate:quality`, `pnpm --dir docs-site check`, and `git diff --check`. |
 | Docs validation/CI | T020-T027 | Yes | Added command-chain enforcement for the DOC-010 validation path and a stable `validate-docs` PR Checks job with job-level changed-file detection, skip success, and preserved plugin matrix semantics. Parent verification passed for `pnpm --dir docs-site validate:quality`, `pnpm --dir docs-site reference:check`, `bash tests/speckit-pro/run-all.sh --layer 1`, `git diff --check`, and full `pnpm --dir docs-site validate` after installing Playwright Chromium and allowing localhost smoke. |
-| Playwright smoke | | | |
-| Polish | | | |
+| Playwright smoke | T028-T033 | Yes | Expanded browser smoke to 20 checks across desktop and mobile for the six DOC-010 routes, support search, representative deep links, SafeInstallAids, and LifecycleFlow; added the `docs-site-smoke-evidence` CI artifact upload with 7-day retention. Parent verification passed for `pnpm --dir docs-site validate:smoke`. |
+| Polish | T034-T040 | Yes | Completed final reference, quality, safe-aids, smoke, full docs validation, diff whitespace, Layer 1 structural validation, and PR packet evidence. Parent verification passed for `pnpm --dir docs-site validate`, `bash tests/speckit-pro/run-all.sh --layer 1`, and G7. |
+
+G7 output:
+
+```json
+{"gate":"G7","pass":true,"reason":"All 40 tasks complete","markers":0,"total":40,"done":40}
+```
 
 ---
 

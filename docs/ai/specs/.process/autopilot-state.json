@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
-  "updated_at": "2026-06-19T03:41:23Z",
-  "active_step": "Phase 7: Implement - us4 smoke evidence plus polish (T028-T040)",
+  "updated_at": "2026-06-19T03:52:25Z",
+  "active_step": "Post: Doctor Extension Check",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -286,7 +286,11 @@
       ]
     },
     "implement": {
-      "status": "in_progress",
+      "status": "completed",
+      "gate": "G7",
+      "gate_status": "pass",
+      "total_tasks": 40,
+      "completed_tasks": 40,
       "markers": {
         "foundation": {
           "status": "completed",
@@ -376,6 +380,38 @@
           ],
           "notes": [
             "Full docs validation passed after installing Playwright Chromium and allowing localhost browser smoke."
+          ]
+        },
+        "us4": {
+          "status": "completed",
+          "task_ids": [
+            "T028",
+            "T029",
+            "T030",
+            "T031",
+            "T032",
+            "T033",
+            "T034",
+            "T035",
+            "T036",
+            "T037",
+            "T038",
+            "T039",
+            "T040"
+          ],
+          "commit_sha": "63ac46f0",
+          "verification": [
+            "pnpm --dir docs-site reference:check",
+            "pnpm --dir docs-site validate:quality",
+            "pnpm --dir docs-site validate:safe-aids",
+            "git diff --check",
+            "pnpm --dir docs-site validate:smoke",
+            "pnpm --dir docs-site validate",
+            "bash tests/speckit-pro/run-all.sh --layer 1",
+            "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/doc-010-search-accessibility-deep-links-docs-validation"
+          ],
+          "notes": [
+            "Browser smoke passed 20 checks across desktop and mobile; CI uploads docs-site-smoke-evidence with 7-day retention."
           ]
         }
       }
@@ -489,11 +525,11 @@
     },
     {
       "step": "Phase 7: Implement - us4 smoke evidence plus polish (T028-T040)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",
@@ -583,7 +619,7 @@
     "schema_version": "pr-marker-plan.v1",
     "kind": "pr_marker_plan",
     "feature_id": "doc-010-search-accessibility-deep-links-docs-validation",
-    "status": "planned",
+    "status": "emission_ready",
     "source_fingerprint": {
       "feature_spec_sha": "6ac0a5a8c6d745b0402c7bfd106cd073967f113ba65a0a29521abb1500599e06",
       "plan_declared_scope_sha": "4b629f67917e00c4135561a9310598beb853352464b839914b809f5e7a65d5a4",
@@ -652,7 +688,7 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "completed",
+          "status": "complete",
           "commit_sha": "2f21220e",
           "head_sha": "2f21220e",
           "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
@@ -717,7 +753,7 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "completed",
+          "status": "complete",
           "commit_sha": "147559bb",
           "head_sha": "147559bb",
           "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
@@ -781,7 +817,7 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "completed",
+          "status": "complete",
           "commit_sha": "a828f29a",
           "head_sha": "a828f29a",
           "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
@@ -845,7 +881,7 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "completed",
+          "status": "complete",
           "commit_sha": "0fc3f0c6",
           "head_sha": "0fc3f0c6",
           "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
@@ -928,7 +964,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "complete",
+          "commit_sha": "63ac46f0",
+          "head_sha": "63ac46f0",
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
