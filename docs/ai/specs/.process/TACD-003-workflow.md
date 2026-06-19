@@ -39,8 +39,8 @@ concept is the source of truth for setup-time scoping decisions.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Produce `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md` |
-| Clarify | `/speckit-clarify` | Pending | Focus on advisory wording, docs boundary, and test boundary |
+| Specify | `/speckit-specify` | Complete | `spec.md` created; G1 passed with 0 clarification markers |
+| Clarify | `/speckit-clarify` | In Progress | Focus on advisory wording, docs boundary, and test boundary |
 | Plan | `/speckit-plan` | Pending | Plan script/docs updates with focused deterministic coverage |
 | Checklist | `/speckit-checklist` | Pending | Run enriched checklists after spec and plan exist |
 | Tasks | `/speckit-tasks` | Pending | Generate small TDD-oriented tasks |
@@ -81,7 +81,7 @@ Before starting any workflow phase, verify alignment with
 | Conventional Commits | Setup and implementation commits use conventional commit format | Git commit message review |
 | KISS, Simplicity & YAGNI | Keep advisory behavior explicit and small; do not add installers, broad scanners, or speculative abstractions | Plan and code review |
 
-**Constitution Check:** Pending
+**Constitution Check:** Verified
 
 ### Reviewability Setup Gate
 
@@ -101,6 +101,16 @@ entry itself records:
 - Budget result: within budget
 
 Split decision from Grill Me: keep TACD-003 as one vertical slice.
+
+### Autopilot Preflight
+
+| Check | Status | Evidence |
+|-------|--------|----------|
+| Model and effort | Verified | Codex config uses `gpt-5.5` with `model_reasoning_effort = "xhigh"`; required custom agents are installed at `gpt-5.5`/`xhigh` |
+| Prerequisites script | Passed | `check-prerequisites.sh docs/ai/specs/.process/TACD-003-workflow.md` returned `all_pass=true` |
+| Confidence gate mode | Advisory | `resolve-confidence-mode.sh --` returned `advisory` |
+| Archive sweep | Completed | No eligible previous active specs; current target excluded; cleanup disabled on feature branch |
+| Tier-2 relocation | Suppressed | Active target already has `SPEC-MOC.md` with `structureVersion: 1`; no root PROCESS artifacts |
 
 ---
 
@@ -218,13 +228,16 @@ align setup output and active docs with that implemented behavior.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 10 |
+| User Stories | 3 |
+| Acceptance Criteria | 6 |
+| G1 Gate | Passed: `spec.md` exists with 0 `[NEEDS CLARIFICATION]` markers |
+| Reviewability Budget | Primary `docs/process`; secondary `harness/adapter`; 250 reviewable LOC; 6 production files; 9 total files; within budget |
 
 ### Files Generated
 
-- [ ] `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md`
+- [x] `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md`
+- [x] `specs/tacd-003-prerequisite-and-documentation-messaging/checklists/requirements.md`
 
 ### SpecKit Traceability Markers
 
