@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
-  "updated_at": "2026-06-19T03:16:13Z",
-  "active_step": "Phase 7: Implement - us1 support anchors and source guidance (T007-T013)",
+  "updated_at": "2026-06-19T03:23:28Z",
+  "active_step": "Phase 7: Implement - us2 accessible aids and fallbacks (T014-T019)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -311,6 +311,27 @@
           "notes": [
             "Full validate:smoke browser execution awaits installed Playwright browser binaries; test discovery listed 12 tests."
           ]
+        },
+        "us1": {
+          "status": "completed",
+          "task_ids": [
+            "T007",
+            "T008",
+            "T009",
+            "T010",
+            "T011",
+            "T012",
+            "T013"
+          ],
+          "commit_sha": "147559bb",
+          "verification": [
+            "pnpm --dir docs-site validate:quality",
+            "pnpm --dir docs-site reference:check",
+            "git diff --check"
+          ],
+          "notes": [
+            "Generated reference pages refreshed for deterministic reference:check output after source inventory changed."
+          ]
         }
       }
     }
@@ -411,7 +432,7 @@
     },
     {
       "step": "Phase 7: Implement - us1 support anchors and source guidance (T007-T013)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - us2 accessible aids and fallbacks (T014-T019)",
@@ -651,7 +672,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "completed",
+          "commit_sha": "147559bb",
+          "head_sha": "147559bb",
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"

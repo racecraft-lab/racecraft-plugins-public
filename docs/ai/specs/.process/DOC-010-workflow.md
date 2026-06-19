@@ -550,7 +550,7 @@ Authoritative marker state is stored in `docs/ai/specs/.process/autopilot-state.
 | Fingerprint status | current |
 | Ordered marker IDs | `foundation`, `us1`, `us2`, `us3`, `us4` |
 | Review order | foundation -> us1 -> us2 -> us3 -> us4 |
-| Marker checkpoints | `foundation` completed at `2f21220e`; remaining markers pending |
+| Marker checkpoints | `foundation` completed at `2f21220e`; `us1` completed at `147559bb`; remaining markers pending |
 | Final marker split | pending |
 | Packet validation | pending |
 | PR mappings | pending |
@@ -571,7 +571,7 @@ Source fingerprint:
 | Marker | Review order | Tasks | Folded polish tasks | Checkpoint |
 |--------|--------------|-------|---------------------|------------|
 | `foundation` | 1 | T001-T006 | none | `2f21220e` |
-| `us1` | 2 | T007-T013 | none | pending |
+| `us1` | 2 | T007-T013 | none | `147559bb` |
 | `us2` | 3 | T014-T019 | none | pending |
 | `us3` | 4 | T020-T027 | none | pending |
 | `us4` | 5 | T028-T033 | T034-T040 | pending |
