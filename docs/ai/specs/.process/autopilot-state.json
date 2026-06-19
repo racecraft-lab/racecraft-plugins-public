@@ -1,63 +1,12 @@
 {
   "schemaVersion": 1,
-  "workflow_file": "docs/ai/specs/.process/DOC-009-workflow.md",
-  "workflow_files": [
-    "docs/ai/specs/.process/DOC-008-workflow.md",
-    "docs/ai/specs/.process/DOC-009-workflow.md"
-  ],
-  "feature_dir": "specs/doc-009-maintainer-contributor-release-workflow",
-  "feature_dirs": [
-    "specs/doc-008-troubleshooting-security-trust-update-rollback",
-    "specs/doc-009-maintainer-contributor-release-workflow"
-  ],
-  "feature_branch": "doc-009-maintainer-contributor-release-workflow",
-  "feature_branches": [
-    "doc-008-troubleshooting-security-trust-update-rollback",
-    "doc-009-maintainer-contributor-release-workflow"
-  ],
-  "updated_at": "2026-06-18T16:37:02Z",
-  "active_step": "Archive Cleanup",
-  "status": "completed",
-  "archive_sweep": {
-    "status": "completed",
-    "archive_extension_installed": true,
-    "cleanup_mode": "multi-feature-apply",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/doc-008-troubleshooting-security-trust-update-rollback",
-      "specs/doc-009-maintainer-contributor-release-workflow"
-    ],
-    "safeToApplyCleanup": true,
-    "dryRunProvenanceOnly": false,
-    "archive_report": ".specify/memory/archive-reports/2026-06-18-doc-008-009-post-merge-hygiene.md",
-    "cleanup_branch": "codex/doc-specs-post-merge-hygiene",
-    "notes": [
-      "PR #220 and PR #219 are merged into main.",
-      "The completed DOC-008 and DOC-009 active spec folders are removed from specs/** cleanup.",
-      "Process files under docs/ai/specs/.process/ are retained for workflow provenance."
-    ]
-  },
-  "provenance": {
-    "merged_prs": [
-      {
-        "number": 220,
-        "title": "docs(DOC-008): Add troubleshooting, Security, Trust, Update, and Rollback",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/220",
-        "merged_at": "2026-06-18T15:16:34Z",
-        "merge_commit": "a27fc5dcb2b295fd7ea2d3250d2df58692a7408b",
-        "head_ref": "doc-008-troubleshooting-security-trust-update-rollback"
-      },
-      {
-        "number": 219,
-        "title": "docs(DOC-009): document maintainer contributor release workflow",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/219",
-        "merged_at": "2026-06-18T16:37:02Z",
-        "merge_commit": "2686caa2a12dbaf460c33f37f054f40765fb2b35",
-        "head_ref": "doc-009-maintainer-contributor-release-workflow"
-      }
-    ]
-  },
+  "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
+  "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
+  "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
+  "updated_at": "2026-06-19T01:06:35Z",
+  "active_step": "Phase 2: Clarify - Route List",
+  "status": "in_progress",
+  "confidence_gate_mode": "advisory",
   "project_commands": {
     "BUILD": "N/A",
     "TYPECHECK": "N/A",
@@ -67,62 +16,113 @@
     "INTEGRATION_TEST": "N/A",
     "SINGLE_FILE_TEST": "N/A",
     "SINGLE_FILE_INTEGRATION": "N/A",
-    "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
+    "FULL_VERIFY": "N/A"
   },
-  "post_results": {
-    "doc_008_before_merge": {
-      "status": "completed",
-      "commands": [
-        "pnpm --dir docs-site reference:check",
-        "pnpm --dir docs-site validate",
-        "pnpm --dir docs-site validate:links"
-      ],
-      "result": "recorded in docs/ai/specs/.process/DOC-008-workflow.md"
+  "preset_conventions": {
+    "has_presets": true,
+    "presets": [
+      {
+        "name": "speckit-pro-reviewability",
+        "version": "schema_version: \"1.0\"",
+        "templates": "template,--,template,--,"
+      }
+    ],
+    "templates": {
+      "spec": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
+      "plan": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+      "tasks": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
+    }
+  },
+  "archive_sweep": {
+    "status": "completed",
+    "archive_extension_installed": true,
+    "cleanup_mode": "feature-branch-apply-eligible",
+    "current_target": "specs/doc-010-search-accessibility-deep-links-docs-validation",
+    "excluded_current_spec": "specs/doc-010-search-accessibility-deep-links-docs-validation",
+    "eligible_previous_specs": [],
+    "safeToApplyCleanup": false,
+    "notes": [
+      "Archive extension is installed and enabled.",
+      "Active specs/** contains only the current DOC-010 target, so there are no previous merged active specs to clean up before this run.",
+      "No archive cleanup mutation was required."
+    ]
+  },
+  "prerequisites": {
+    "status": "completed",
+    "branch": "doc-010-search-accessibility-deep-links-docs-validation",
+    "is_worktree": true,
+    "on_feature_branch": false,
+    "specify": "specify 0.10.3.dev0",
+    "mcp_servers": "Missing: tavily-mcp context7 RepoPrompt; agents will use built-in fallbacks",
+    "confidence_gate_mode": "advisory",
+    "reviewability_setup_gate": {
+      "status": "pass",
+      "reviewable_loc": 395,
+      "production_files": 0,
+      "total_files": 6
     },
-    "doc_009_before_merge": {
+    "agents": {
+      "required": "installed",
+      "optional_autopilot_fast_helper": "installed",
+      "model": "gpt-5.5",
+      "reasoning_effort": "xhigh"
+    }
+  },
+  "phase_results": {
+    "specify": {
       "status": "completed",
-      "commands": [
-        "pnpm --dir docs-site reference:check",
-        "pnpm --dir docs-site validate",
-        "bash tests/speckit-pro/run-all.sh"
+      "gate": "G1",
+      "gate_status": "pass",
+      "functional_requirements": 13,
+      "user_stories": 4,
+      "acceptance_scenarios": 11,
+      "clarification_markers": 0,
+      "files": [
+        "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
+        "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/requirements.md"
       ],
-      "result": "recorded in docs/ai/specs/.process/DOC-009-workflow.md"
-    },
-    "archive_cleanup": {
-      "status": "completed",
-      "report": ".specify/memory/archive-reports/2026-06-18-doc-008-009-post-merge-hygiene.md",
-      "cleanup_command": "git rm -r specs/doc-008-troubleshooting-security-trust-update-rollback specs/doc-009-maintainer-contributor-release-workflow",
-      "verification": [
-        "python3 -m json.tool docs/ai/specs/.process/autopilot-state.json: passed",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .: regenerated interactive-documentation-roadmap-MOC.md and tool-agnostic-capability-discovery-roadmap-MOC.md",
-        "bash tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh: 90/90 passed",
-        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .: passed",
-        "find specs -mindepth 1 -maxdepth 4 -print: only specs/.gitkeep remains",
-        "git diff --check: passed",
-        "bash tests/speckit-pro/run-all.sh: 3070/3070 passed"
+      "notes": [
+        "The before_specify git feature hook was intentionally skipped because the DOC-010 branch and spec directory already existed.",
+        "Clarify will still run because the workflow contains explicit route list, CI condition, and Playwright evidence prompts."
       ]
     }
   },
   "plan": [
-    {
-      "step": "Confirm merged PRs #220 and #219",
-      "status": "completed"
-    },
-    {
-      "step": "Record archive provenance and memory entries",
-      "status": "completed"
-    },
-    {
-      "step": "Remove completed active spec folders",
-      "status": "completed"
-    },
-    {
-      "step": "Regenerate and verify spec indexes",
-      "status": "completed"
-    },
-    {
-      "step": "Run cleanup verification suite",
-      "status": "completed"
-    }
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - Route List", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - Route List Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - CI Condition", "status": "pending"},
+    {"step": "Phase 2: Clarify - CI Condition Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Playwright Script Shape", "status": "pending"},
+    {"step": "Phase 2: Clarify - Playwright Script Shape Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX", "status": "pending"},
+    {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Reliability", "status": "pending"},
+    {"step": "Phase 4: Checklist - Reliability Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - Security", "status": "pending"},
+    {"step": "Phase 4: Checklist - Security Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review", "status": "pending"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Cleanup", "status": "pending"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }

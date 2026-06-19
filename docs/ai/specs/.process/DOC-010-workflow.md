@@ -44,7 +44,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Create `specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md` |
+| Specify | `/speckit-specify` | Complete | Created `spec.md`; G1 passed with 13 FRs, 4 user stories, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Pending | Resolve route list, CI condition, and Playwright script naming if needed |
 | Plan | `/speckit-plan` | Pending | Plan docs-site scripts, PR Checks job, and minimal Playwright smoke |
 | Checklist | `/speckit-checklist` | Pending | Accessibility, UX, reliability, and security/safety checklists |
@@ -230,10 +230,10 @@ After running Specify, fill in:
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | |
-| User Stories | |
-| Acceptance Criteria | |
-| Clarification markers | |
+| Functional Requirements | 13 |
+| User Stories | 4 |
+| Acceptance Criteria | 11 acceptance scenarios |
+| Clarification markers | 0 |
 
 ### Files Generated
 
