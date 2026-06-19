@@ -40,8 +40,8 @@ concept is the source of truth for setup-time scoping decisions.
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | `spec.md` created; G1 passed with 0 clarification markers |
-| Clarify | `/speckit-clarify` | In Progress | Focus on advisory wording, docs boundary, and test boundary |
-| Plan | `/speckit-plan` | Pending | Plan script/docs updates with focused deterministic coverage |
+| Clarify | `/speckit-clarify` | Complete | Three sessions answered; G2 passed with 0 clarification markers |
+| Plan | `/speckit-plan` | In Progress | Plan script/docs updates with focused deterministic coverage |
 | Checklist | `/speckit-checklist` | Pending | Run enriched checklists after spec and plan exist |
 | Tasks | `/speckit-tasks` | Pending | Generate small TDD-oriented tasks |
 | Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
@@ -291,9 +291,11 @@ can be interpreted multiple ways. Maximum 5 targeted questions.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Advisory wording | Pending | Pending |
-| 2 | Active docs boundary | Pending | Pending |
-| 3 | Focused verification boundary | Pending | Pending |
+| 1 | Advisory wording | 4 answered | Use categories `codebase context`, `library documentation`, `web/domain research`, and `source extraction`; emit one non-blocking `capability_coverage` advisory with `pass=true`; escalate only when no acceptable evidence path exists after fallback; concrete names allowed only for metadata, exact file references, generated source-derived duplicates, or historical provenance |
+| 2 | Active docs boundary | 5 answered | Active scope is the four roadmap docs plus adjacent autopilot entrypoint summaries only when they repeat preflight or limitation wording; generated payloads are regenerated from source rather than hand-edited; archives/changelogs/fixtures stay out unless reused as current setup guidance or expected behavior; setup docs use the four Session 1 categories and point to the broader directive for agent behavior; platform behavior claims require official vendor evidence |
+| 3 | Focused verification boundary | 5 answered | Extend `test-check-prerequisites.sh` for `capability_coverage` JSON behavior; add narrow assertions only for changed active docs; keep `test-generate-spec-index.sh` as Phase 1 blocker coverage only; defer Layer 3 eval expectation updates, Layer 5 pointer coverage, and broad named-tool enforcement to TACD-004; completion test plan is `bash -n` for the prerequisite script, focused Layer 4 tests, and the default deterministic suite before PR |
+
+Consensus: Sessions 1, 2, and 3 had no unresolved items; consensus steps skipped.
 
 ---
 
@@ -349,6 +351,8 @@ can be interpreted multiple ways. Maximum 5 targeted questions.
 - `speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md`
 - `speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md`
 - `speckit-pro/skills/speckit-coach/references/autopilot-guide.md`
+- Adjacent autopilot skill entrypoint summaries only when they repeat active
+  preflight or limitation wording.
 - Relevant focused tests under `tests/speckit-pro/`
 ```
 

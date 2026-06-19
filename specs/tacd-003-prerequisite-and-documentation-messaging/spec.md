@@ -88,7 +88,8 @@ running the existing structural and default verification commands.
 ### Edge Cases
 
 - Optional research and context capabilities are missing, but local fallbacks
-  can still support the workflow with reduced confidence.
+  can still support the workflow with reduced confidence; setup should continue
+  with an advisory rather than fail.
 - Optional research and context capabilities are present, and guidance must not
   reduce them to a hardcoded vendor preference.
 - Active guidance needs an exact repository file reference, platform metadata
@@ -103,7 +104,7 @@ running the existing structural and default verification commands.
 ### Functional Requirements
 
 - **FR-001**: Prerequisite checking MUST replace the fixed named optional-tool
-  report with a generic non-blocking advisory about research and context
+  report with one generic non-blocking advisory about research and context
   capability coverage.
 - **FR-002**: Prerequisite checking MUST preserve successful setup when optional
   research or context capabilities are missing and an acceptable fallback path
@@ -112,22 +113,27 @@ running the existing structural and default verification commands.
   coverage may reduce confidence or require fallback behavior without presenting
   the missing capability as a hard setup failure.
 - **FR-004**: Active prerequisite and limitation guidance MUST explain
-  capability-first discovery and fallback behavior in user-facing language.
+  capability-first discovery and fallback behavior for codebase context, library
+  documentation, web/domain research, and source extraction in user-facing
+  language.
 - **FR-005**: Active coach and autopilot guidance MUST align with TACD-002
   behavior by directing agents and users toward capability discovery rather than
   a hardcoded optional-tool contract.
 - **FR-006**: Active guidance MUST avoid concrete optional tool identifiers
-  except where they are platform metadata, exact file references, or historical
-  provenance.
+  except where they are platform metadata, exact repository file references,
+  generated source-derived duplicates, or historical provenance.
 - **FR-007**: TACD-003 MUST NOT rework agent behavior already shipped by
   TACD-002, add installers, add marketplace integration, or introduce a new
   recommended optional-tool set.
-- **FR-008**: TACD-003 MUST add or update focused deterministic coverage for the
-  changed prerequisite output or active documentation assertions.
+- **FR-008**: TACD-003 MUST add or update focused deterministic Layer 4
+  coverage for the changed prerequisite JSON output and narrow assertions for
+  changed active guidance.
 - **FR-009**: TACD-003 MUST leave broad static enforcement, final eval
   expectation changes, and broader fixed-tool detection to TACD-004.
 - **FR-010**: Generated payloads MUST NOT be hand-edited unless a source change
   requires and documents the regeneration step.
+- **FR-011**: Prerequisite output MUST expose the advisory as a successful
+  `capability_coverage` check with no per-tool available/missing inventory.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -139,6 +145,13 @@ running the existing structural and default verification commands.
 - Concrete repository file references may appear in the implementation plan and
   PR packet for traceability, but active user-facing guidance should remain
   capability-first.
+- Active documentation scope includes the prerequisite, limitation,
+  coach/autopilot, and Codex prerequisite references named by the TACD-003
+  roadmap, plus adjacent autopilot entrypoint summaries only when they repeat
+  current preflight or limitation wording.
+- Generated payload copies are source-derived outputs. They should be
+  regenerated from source when source wording changes require parity, not
+  patched directly.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -164,8 +177,52 @@ running the existing structural and default verification commands.
 - The review packet MUST call out that missing optional research or context
   capabilities remain non-blocking when acceptable fallbacks exist.
 - The review packet MUST identify any exact file references, platform metadata,
-  or historical provenance that still contains concrete optional-tool names and
-  explain why each is outside active guidance.
+  generated source-derived duplicates, or historical provenance that still
+  contains concrete optional-tool names and explain why each is outside active
+  guidance or source-derived.
+- The review packet MUST separate repository-specific guidance from
+  platform/vendor behavior; platform behavior claims require official vendor
+  evidence, while repository facts should cite Racecraft source or generated
+  artifacts.
+
+## Clarifications
+
+### Session 1 - Advisory Wording
+
+- The prerequisite advisory reports four setup-facing capability categories:
+  codebase context, library documentation, web/domain research, and source
+  extraction.
+- The prerequisite output uses one successful `capability_coverage` advisory
+  and does not emit a per-tool available/missing inventory.
+- Missing optional research or context coverage lowers confidence or requires
+  fallback evidence notes; it escalates only when no acceptable evidence path
+  exists or a true gate fails.
+- Concrete optional tool identifiers are allowed only for platform metadata,
+  exact repository file references, generated source-derived duplicates, or
+  historical provenance.
+
+### Session 2 - Active Documentation Boundary
+
+- Active TACD-003 documentation scope is the four roadmap docs plus adjacent
+  autopilot entrypoint summaries only when they repeat active preflight or
+  limitation wording.
+- Generated payload copies are source-derived and should be regenerated from
+  changed sources when needed, not patched directly.
+- Archives, changelogs, and fixture prose stay out of scope unless reused as
+  current setup guidance or expected current behavior.
+- Repository-specific guidance must cite Racecraft source or generated
+  artifacts; platform/vendor behavior claims require official vendor evidence.
+
+### Session 3 - Focused Verification Boundary
+
+- `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` owns focused
+  `capability_coverage` JSON behavior coverage.
+- TACD-003 may add narrow deterministic assertions for changed active guidance
+  files only.
+- The Phase 1 `generate-spec-index.sh` whitespace fix remains a checkpoint
+  unblocker and is not part of the TACD-003 messaging test scope.
+- Layer 3 eval expectation updates, Layer 5 pointer coverage, and broad
+  named-tool enforcement remain TACD-004 scope.
 
 ## Success Criteria *(mandatory)*
 
@@ -173,16 +230,17 @@ running the existing structural and default verification commands.
 
 - **SC-001**: In a missing-optional-capability setup path with acceptable
   fallback coverage, prerequisite checking completes successfully and emits
-  exactly one generic non-blocking capability advisory.
+  exactly one generic non-blocking `capability_coverage` advisory.
 - **SC-002**: 100% of changed active prerequisite, limitation, coach, and
   autopilot guidance uses capability-first language for research and context
   support.
 - **SC-003**: 0 changed active user-facing guidance passages introduce a fixed
-  optional-tool installation contract, excluding platform metadata, exact file
-  references, and historical provenance.
-- **SC-004**: Focused deterministic coverage verifies the changed prerequisite
-  output or active guidance assertions before implementation is considered
-  complete.
+  optional-tool installation contract or per-tool available/missing inventory,
+  excluding platform metadata, exact file references, generated source-derived
+  duplicates, and historical provenance.
+- **SC-004**: Focused deterministic coverage verifies the changed
+  `capability_coverage` JSON behavior and any changed active guidance
+  assertions before implementation is considered complete.
 - **SC-005**: Maintainers can review the TACD-003 PR within the declared budget
   using a traceability packet that maps every functional requirement to changed
   files and verification evidence.
@@ -194,9 +252,16 @@ running the existing structural and default verification commands.
   guidance with that behavior.
 - Missing optional research or context coverage can still have an acceptable
   fallback path, but the user should be told that confidence may be lower.
+- User escalation happens when a task has no acceptable evidence path after
+  fallback attempts or when a true prerequisite/gate fails, not merely because
+  optional research or context capability coverage is absent at setup.
 - Active guidance includes prerequisite, limitation, coach, and autopilot
   messaging that users or agents rely on during current workflows.
 - Historical archive, changelog, fixture-only, and provenance references are
-  not active guidance unless they are reused as current setup instructions.
+  not active guidance unless they are reused as current setup instructions or
+  expected current behavior.
+- Adjacent skill entrypoint summaries are active guidance only when they repeat
+  current preflight or limitation wording. Broader docs-site pages and generated
+  payloads are out of scope unless source changes require regeneration.
 - TACD-004 will own broader enforcement against fixed optional-tool guidance,
   including broad static checks or eval expectation changes.
