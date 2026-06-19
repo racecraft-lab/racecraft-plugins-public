@@ -550,7 +550,7 @@ Authoritative marker state is stored in `docs/ai/specs/.process/autopilot-state.
 | Fingerprint status | current |
 | Ordered marker IDs | `foundation`, `us1`, `us2`, `us3`, `us4` |
 | Review order | foundation -> us1 -> us2 -> us3 -> us4 |
-| Marker checkpoints | `foundation` completed at `2f21220e`; `us1` completed at `147559bb`; remaining markers pending |
+| Marker checkpoints | `foundation` completed at `2f21220e`; `us1` completed at `147559bb`; `us2` completed at `a828f29a`; `us3` and `us4` pending |
 | Final marker split | pending |
 | Packet validation | pending |
 | PR mappings | pending |
@@ -572,7 +572,7 @@ Source fingerprint:
 |--------|--------------|-------|---------------------|------------|
 | `foundation` | 1 | T001-T006 | none | `2f21220e` |
 | `us1` | 2 | T007-T013 | none | `147559bb` |
-| `us2` | 3 | T014-T019 | none | pending |
+| `us2` | 3 | T014-T019 | none | `a828f29a` |
 | `us3` | 4 | T020-T027 | none | pending |
 | `us4` | 5 | T028-T033 | T034-T040 | pending |
 
@@ -679,7 +679,7 @@ Follow the tasks in order. Use the design concept Q&A log for the reason behind 
 |-------|-------|-----------|-------|
 | Foundation | T001-T006 | Yes | Added docs-site validation scripts, Playwright dependency/config, initial six-route desktop/mobile smoke scaffold, and focused docs-quality validator. Parent verification passed for syntax, `validate:quality`, `validate:safe-aids`, Playwright test discovery, and `git diff --check`; full browser smoke awaits installed Playwright browser binaries. |
 | Search/deep links | T007-T013 | Yes | Added support-anchor inventory validation, source-update guidance checks, glossary definitions, install/support deep links, and refreshed generated reference pages. Parent verification passed for `pnpm --dir docs-site validate:quality`, `pnpm --dir docs-site reference:check`, and `git diff --check`. |
-| Accessibility/responsive | | | |
+| Accessibility/responsive | T014-T019 | Yes | Added DOC-010 safe-aids guardrails, accessible interactive-aid semantics, keyboard/status/fallback hardening, and manual evidence in quickstart. Parent verification passed for `pnpm --dir docs-site validate:safe-aids`, `pnpm --dir docs-site validate:quality`, and `git diff --check`. |
 | Docs validation/CI | | | |
 | Playwright smoke | | | |
 | Polish | | | |

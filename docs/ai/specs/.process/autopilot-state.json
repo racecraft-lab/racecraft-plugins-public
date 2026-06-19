@@ -332,6 +332,26 @@
           "notes": [
             "Generated reference pages refreshed for deterministic reference:check output after source inventory changed."
           ]
+        },
+        "us2": {
+          "status": "completed",
+          "task_ids": [
+            "T014",
+            "T015",
+            "T016",
+            "T017",
+            "T018",
+            "T019"
+          ],
+          "commit_sha": "a828f29a",
+          "verification": [
+            "pnpm --dir docs-site validate:safe-aids",
+            "pnpm --dir docs-site validate:quality",
+            "git diff --check"
+          ],
+          "notes": [
+            "Added DOC-010 safe-aids guardrails, accessible interactive-aid semantics, keyboard/status/fallback hardening, and manual evidence in quickstart."
+          ]
         }
       }
     }
@@ -436,7 +456,7 @@
     },
     {
       "step": "Phase 7: Implement - us2 accessible aids and fallbacks (T014-T019)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - us3 validation path and CI gate (T020-T027)",
@@ -736,7 +756,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "completed",
+          "commit_sha": "a828f29a",
+          "head_sha": "a828f29a",
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
