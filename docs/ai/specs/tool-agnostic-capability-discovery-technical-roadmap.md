@@ -244,7 +244,7 @@ Budget result: within budget
 
 **Key Decisions:**
 - **Verification decision (2026-06-17):** Use static checks plus eval coverage; static-only is insufficient for behavior, eval-only is too costly and non-deterministic.
-- **Payload-fix bundling (2026-06-19):** A pre-existing `strip_codex_guard` defect truncated the Claude payload body for 8 of 10 skills (those whose Codex guard block lacked an exact terminator string). The fix, the `dist/` rebuild, and a body-completeness regression check are bundled into TACD-004 rather than fast-tracked as a separate hotfix.
+- **Payload-fix bundling (2026-06-19):** A pre-existing `strip_codex_guard` defect truncated the Claude payload body for 8 of 10 skills. The builder scans for a single-line terminator phrase to end the guard block; in the 8 affected skills that phrase is line-wrapped across two source lines, so the single-line check never matches and the strip runs to end-of-file, dropping the whole body. (The 2 unaffected skills keep the phrase on one unbroken line.) The fix replaces the terminator scan with a section-boundary scan; it, the `dist/` rebuild, and a body-completeness regression check are bundled into TACD-004 rather than fast-tracked as a separate hotfix.
 - **Tool-scoping decision (2026-06-19):** Remove the named MCP tool assertions from Layer 5 entirely (vendor neutrality enforced at the contract level) rather than retaining them as optional-but-named.
 
 **Key Files:**

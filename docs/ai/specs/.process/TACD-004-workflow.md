@@ -190,8 +190,9 @@ capability-discovery directive, nothing proves those pointers resolve from the
 installed runtime layout, and no behavior-observable eval scenarios cover discovery,
 fallback, evidence path, citations, and lowered confidence. Separately, a defect in
 the payload builder's `strip_codex_guard` truncates the Claude SKILL.md body for
-every skill whose Codex guard block lacks an exact terminator string, so most Claude
-skills currently install with empty bodies. TACD-004 is the final spec: it locks the
+every skill whose guard-block terminator phrase is line-wrapped across two source
+lines (so the builder's single-line check never matches it and the strip runs to
+end-of-file), so most Claude skills currently install with empty bodies. TACD-004 is the final spec: it locks the
 vendor-neutral contract with deterministic checks plus functional eval coverage, and
 repairs the payload-build defect with a regression check so neither can silently
 regress.
