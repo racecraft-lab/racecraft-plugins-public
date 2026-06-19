@@ -59,18 +59,18 @@
 
 ### Validation for User Story 2
 
-- [ ] T014 [US2] Add failing DOC-010 guardrails for labels, status regions, keyboard reachability, fallback content, and forbidden local-state behavior in `docs-site/scripts/validate-doc006-safe-aids.mjs` (FR-005, FR-006, FR-011)
+- [X] T014 [US2] Add failing DOC-010 guardrails for labels, status regions, keyboard reachability, fallback content, and forbidden local-state behavior in `docs-site/scripts/validate-doc006-safe-aids.mjs` (FR-005, FR-006, FR-011)
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Update install-aid static fallback and guidance text on `docs-site/src/content/docs/choose-your-path.mdx` so essential guidance remains available without dynamic behavior (FR-005)
-- [ ] T016 [P] [US2] Improve semantic lifecycle content, fallback readability, focus/reflow behavior, and responsive layout in `docs-site/src/components/LifecycleFlow.astro` (FR-006)
-- [ ] T017 [US2] Finish `SafeInstallAids.astro` source-backed validation coverage in `docs-site/scripts/validate-doc006-safe-aids.mjs` without executing snippets or reading local user state (FR-005, FR-011)
+- [X] T015 [US2] Update install-aid static fallback and guidance text on `docs-site/src/content/docs/choose-your-path.mdx` so essential guidance remains available without dynamic behavior (FR-005)
+- [X] T016 [P] [US2] Improve semantic lifecycle content, fallback readability, focus/reflow behavior, and responsive layout in `docs-site/src/components/LifecycleFlow.astro` (FR-006)
+- [X] T017 [US2] Finish `SafeInstallAids.astro` source-backed validation coverage in `docs-site/scripts/validate-doc006-safe-aids.mjs` without executing snippets or reading local user state (FR-005, FR-011)
 
 ### Verification for User Story 2
 
-- [ ] T018 [US2] Run `pnpm --dir docs-site validate:safe-aids` and confirm `docs-site/scripts/validate-doc006-safe-aids.mjs` reports sanitized repo-relative diagnostics (FR-005, FR-006, FR-011)
-- [ ] T019 [US2] Record manual keyboard, screen-reader-oriented, responsive, and static fallback evidence using the checklist in `specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md` (FR-013)
+- [X] T018 [US2] Run `pnpm --dir docs-site validate:safe-aids` and confirm `docs-site/scripts/validate-doc006-safe-aids.mjs` reports sanitized repo-relative diagnostics (FR-005, FR-006, FR-011)
+- [X] T019 [US2] Record manual keyboard, screen-reader-oriented, responsive, and static fallback evidence using the checklist in `specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md` (FR-013)
 
 **Checkpoint**: User Story 2 has validator coverage plus reviewer-visible accessibility evidence.
 

@@ -68,6 +68,30 @@ Record reviewer-visible evidence in the PR packet:
 - Static fallback review for the install aid and lifecycle flow.
 - Known gaps or deferred work, if any.
 
+### User Story 2 Evidence
+
+Recorded for T019 against the checklist above:
+
+- Keyboard-oriented review: `SafeInstallAids.astro` keeps native radio inputs,
+  native copy buttons, explicit arrow/Home/End key handling, and visible
+  `:focus-visible` treatment. `LifecycleFlow.astro` now exposes
+  keyboard-reachable links to the related static tables before the ordered
+  lifecycle content.
+- Screen-reader-oriented review: the install aid keeps a `fieldset`/`legend`,
+  label text from checked-in selector records, `aria-describedby` links to
+  visible status text, and polite selector/copy status updates. The lifecycle
+  flow now connects its heading to summary and fallback text and exposes phase
+  facts in description lists.
+- Responsive review: install-aid cards keep equal-height tracks and contained
+  table scrolling. The lifecycle flow wraps long artifact names, keeps link
+  labels visible, and switches to a one-column layout below 48rem.
+- Static fallback review: `choose-your-path.mdx` now includes an install aid
+  static fallback checklist with platform/scope, source/payload, copyable
+  guidance, and manual-only safety boundaries. The install aid table and
+  lifecycle ordered list remain available without JavaScript.
+- Known gap: this is reviewer-visible manual/source evidence for US2, not the
+  later compact browser smoke artifact. Browser smoke remains owned by US4.
+
 ## CI Expectations
 
 The `validate-docs` gate should:

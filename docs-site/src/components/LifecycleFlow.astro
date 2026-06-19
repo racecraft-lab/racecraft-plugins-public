@@ -1,79 +1,172 @@
-<section class="lifecycle-flow" aria-labelledby="lifecycle-flow-title">
+---
+const lifecycleSteps = [
+  {
+    id: 'idea',
+    title: 'Idea',
+    summary: 'Problem, request, support note, or transcript.',
+    artifact: 'Raw note or scoped request',
+    gate: 'Specific enough to become a PRD',
+    next: 'Create or update the PRD',
+    badge: 'Input',
+  },
+  {
+    id: 'prd',
+    title: 'PRD',
+    summary: 'Requirements, success criteria, and SPEC catalog.',
+    artifact: 'Product requirements and acceptance criteria',
+    gate: 'A SPEC-ID is visible',
+    next: 'Add or confirm the roadmap entry',
+    badge: 'Product artifact',
+  },
+  {
+    id: 'roadmap',
+    title: 'Roadmap',
+    summary: 'SPEC-ID, dependencies, status, and execution order.',
+    artifact: 'Roadmap row with status and dependencies',
+    gate: 'Ready status or a named blocker',
+    next: 'Scaffold the SPEC',
+    badge: 'Planning artifact',
+  },
+  {
+    id: 'scaffold',
+    title: 'Scaffold',
+    summary: 'Workflow file, design concept, spec folder, and MOC.',
+    artifact: 'Workflow, design concept, SPEC-MOC, and initial spec',
+    gate: 'Setup gates pass and the feature directory exists',
+    next: 'Start the implementation workflow',
+    badge: 'Setup gate',
+  },
+  {
+    id: 'specify',
+    title: 'Specify',
+    summary: 'User stories and functional requirements.',
+    artifact: 'spec.md',
+    gate: 'G1: spec exists and the request is captured',
+    next: 'Clarify remaining decisions',
+    badge: 'G1',
+  },
+  {
+    id: 'clarify',
+    title: 'Clarify',
+    summary: 'Open questions resolved before planning starts.',
+    artifact: 'Updated spec and clarification notes',
+    gate: 'G2: no unresolved clarification markers remain',
+    next: 'Plan implementation',
+    badge: 'G2',
+  },
+  {
+    id: 'plan',
+    title: 'Plan',
+    summary: 'Implementation approach, contracts, research, and quickstart.',
+    artifact: 'plan.md, research, data model, contracts, and quickstart',
+    gate: 'G3: plan exists with concrete files and validation',
+    next: 'Generate checklists',
+    badge: 'G3',
+  },
+  {
+    id: 'checklist',
+    title: 'Checklist',
+    summary: 'UX, accessibility, integration, and error-handling gaps.',
+    artifact: 'checklists/*.md',
+    gate: 'G4: gaps are resolved or intentionally deferred',
+    next: 'Generate tasks',
+    badge: 'G4',
+  },
+  {
+    id: 'tasks',
+    title: 'Tasks',
+    summary: 'Reviewable work items grouped by user story.',
+    artifact: 'tasks.md and reviewability evidence',
+    gate: 'G5: tasks exist and route planning is recorded',
+    next: 'Analyze drift',
+    badge: 'G5',
+  },
+  {
+    id: 'analyze',
+    title: 'Analyze',
+    summary: 'Cross-artifact drift review before implementation.',
+    artifact: 'Analysis results in the workflow file',
+    gate: 'G6: no Critical or High findings remain',
+    next: 'Pass the confidence gate',
+    badge: 'G6',
+  },
+  {
+    id: 'implement',
+    title: 'Implement',
+    summary: 'Docs changes, validation evidence, and PR packet.',
+    artifact: 'Changed files, validation output, and PR packet',
+    gate: 'G7: tasks complete and evidence is present',
+    next: 'Prepare review',
+    badge: 'G7',
+  },
+];
+---
+
+<section
+  class="lifecycle-flow"
+  data-lifecycle-flow
+  aria-labelledby="lifecycle-flow-title"
+  aria-describedby="lifecycle-flow-summary lifecycle-flow-fallback"
+>
   <div class="lifecycle-flow__header">
     <h2 id="lifecycle-flow-title">Lifecycle Artifact Flow</h2>
-    <p>
+    <p id="lifecycle-flow-summary">
       Each step leaves evidence for the next step. Gates check that the evidence
       is ready before the workflow moves forward.
     </p>
+    <p id="lifecycle-flow-fallback" class="lifecycle-flow__fallback-note">
+      Static fallback: No JavaScript is required. The ordered list keeps the
+      lifecycle in reading order, and the tables below repeat the phase,
+      artifact, gate, and next-action guidance.
+    </p>
   </div>
 
+  <nav class="lifecycle-flow__jump-links" aria-label="Lifecycle fallback references">
+    <a href="#lifecycle-overview">Lifecycle overview table</a>
+    <a href="#platform-actions-stay-separate">Platform action table</a>
+    <a href="#what-each-gate-means">Gate meaning table</a>
+  </nav>
+
+  <p class="lifecycle-flow__review-note">
+    Keyboard review: Tab reaches the related table links before the static flow,
+    and each table remains available as plain content when dynamic behavior is
+    unavailable.
+  </p>
+
   <ol class="lifecycle-flow__list">
-    <li>
-      <h3>Idea</h3>
-      <p>Problem, request, support note, or transcript.</p>
-      <span>Input</span>
-    </li>
-    <li>
-      <h3>PRD</h3>
-      <p>Requirements, success criteria, and SPEC catalog.</p>
-      <span>Product artifact</span>
-    </li>
-    <li>
-      <h3>Roadmap</h3>
-      <p>SPEC-ID, dependencies, status, and execution order.</p>
-      <span>Planning artifact</span>
-    </li>
-    <li>
-      <h3>Scaffold</h3>
-      <p>Workflow file, design concept, spec folder, and MOC.</p>
-      <span>Setup gate</span>
-    </li>
-    <li>
-      <h3>Specify</h3>
-      <p>User stories and functional requirements in <code>spec.md</code>.</p>
-      <span>G1</span>
-    </li>
-    <li>
-      <h3>Clarify</h3>
-      <p>Open questions resolved before planning starts.</p>
-      <span>G2</span>
-    </li>
-    <li>
-      <h3>Plan</h3>
-      <p>Implementation approach, contracts, research, and quickstart.</p>
-      <span>G3</span>
-    </li>
-    <li>
-      <h3>Checklist</h3>
-      <p>UX, accessibility, integration, and error-handling gaps.</p>
-      <span>G4</span>
-    </li>
-    <li>
-      <h3>Tasks</h3>
-      <p>Reviewable work items grouped by user story.</p>
-      <span>G5</span>
-    </li>
-    <li>
-      <h3>Analyze</h3>
-      <p>Cross-artifact drift review before implementation.</p>
-      <span>G6</span>
-    </li>
-    <li>
-      <h3>Implement</h3>
-      <p>Docs changes, validation evidence, and PR packet.</p>
-      <span>G7</span>
-    </li>
+    {lifecycleSteps.map((step) => (
+      <li>
+        <h3 id={`lifecycle-step-${step.id}`}>{step.title}</h3>
+        <p>{step.summary}</p>
+        <dl>
+          <div>
+            <dt>Artifact</dt>
+            <dd>{step.artifact}</dd>
+          </div>
+          <div>
+            <dt>Gate</dt>
+            <dd>{step.gate}</dd>
+          </div>
+          <div>
+            <dt>Next</dt>
+            <dd>{step.next}</dd>
+          </div>
+        </dl>
+        <span>{step.badge}</span>
+      </li>
+    ))}
   </ol>
 </section>
 
 <style>
   .lifecycle-flow {
+    display: grid;
+    gap: 1rem;
     margin: 2rem 0;
   }
 
   .lifecycle-flow__header {
     max-width: 64rem;
-    margin-bottom: 1.125rem;
   }
 
   .lifecycle-flow__header h2 {
@@ -82,14 +175,41 @@
     letter-spacing: 0;
   }
 
-  .lifecycle-flow__header p {
+  .lifecycle-flow__header p,
+  .lifecycle-flow__review-note {
     margin: 0;
+  }
+
+  .lifecycle-flow__fallback-note,
+  .lifecycle-flow__review-note {
+    margin-top: 0.6rem;
+    color: var(--sl-color-text);
+  }
+
+  .lifecycle-flow__jump-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .lifecycle-flow__jump-links a {
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 8px;
+    padding: 0.35rem 0.55rem;
+    text-decoration: none;
+    color: var(--sl-color-text);
+    background: var(--sl-color-bg-nav);
+  }
+
+  .lifecycle-flow__jump-links a:focus-visible {
+    outline: 3px solid var(--sl-color-accent);
+    outline-offset: 3px;
   }
 
   .lifecycle-flow__list {
     counter-reset: lifecycle-step;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
     gap: 0.75rem;
     list-style: none;
     margin: 0;
@@ -98,14 +218,15 @@
 
   .lifecycle-flow__list li {
     counter-increment: lifecycle-step;
-    min-height: 10.5rem;
+    min-height: 13rem;
     border: 1px solid var(--sl-color-gray-5);
     border-radius: 8px;
     padding: 0.9rem;
     display: flex;
     flex-direction: column;
-    gap: 0.55rem;
+    gap: 0.6rem;
     background: var(--sl-color-bg-nav);
+    overflow-wrap: anywhere;
   }
 
   .lifecycle-flow__list li::before {
@@ -129,13 +250,34 @@
 
   .lifecycle-flow__list p {
     margin: 0;
-    flex: 1;
     font-size: 0.95rem;
     color: var(--sl-color-text);
   }
 
+  .lifecycle-flow__list dl {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0;
+    font-size: 0.88rem;
+  }
+
+  .lifecycle-flow__list dl div {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .lifecycle-flow__list dt {
+    font-weight: 700;
+  }
+
+  .lifecycle-flow__list dd {
+    margin: 0;
+    color: var(--sl-color-gray-2);
+  }
+
   .lifecycle-flow__list span {
     align-self: flex-start;
+    margin-top: auto;
     border: 1px solid var(--sl-color-gray-5);
     border-radius: 999px;
     padding: 0.15rem 0.55rem;
@@ -146,7 +288,23 @@
     background: var(--sl-color-bg);
   }
 
+  @media (max-width: 48rem) {
+    .lifecycle-flow__jump-links {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .lifecycle-flow__list {
+      grid-template-columns: 1fr;
+    }
+
+    .lifecycle-flow__list li {
+      min-height: 0;
+    }
+  }
+
   @media (forced-colors: active) {
+    .lifecycle-flow__jump-links a,
     .lifecycle-flow__list li,
     .lifecycle-flow__list li::before,
     .lifecycle-flow__list span {

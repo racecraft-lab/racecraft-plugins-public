@@ -20,7 +20,26 @@ platform, install scope, metadata check, or first-run checkpoint.
 
 ## Static Selector Fallback
 
-These route links remain available without JavaScript:
+Essential install guidance remains available without JavaScript:
+
+- **Platform and scope decision:** Choose Claude Code or Codex first, then pick
+  the marketplace, repository inspection, personal payload, or CLI marketplace
+  path that matches your environment.
+- **Source and payload boundary:** Treat checked-in marketplace manifests and
+  generated payload metadata as the source-backed facts. Runtime caches,
+  installed plugin views, and local user configuration are observation only.
+- **Copyable command guidance:** Commands shown by the aid are text to review
+  and copy manually. The docs page does not execute commands, install plugins,
+  write configuration, or invoke local workflows.
+- **Manual-only safety boundary:** Marketplace refreshes, plugin installs, local
+  file writes, and troubleshooting checks stay manual-only and follow the
+  install, first-run, or troubleshooting pages.
+
+## Install Aid Static Fallback Checklist
+
+Use these links when the enhanced selector is unavailable, unsupported, or
+ambiguous. They preserve the platform choice, install scope, source boundary,
+copyable guidance, and manual-only safety handoffs without dynamic behavior:
 
 - [Install for Claude Code](/racecraft-plugins-public/install/claude-code/#install-decision) for Claude Code plugin commands.
 - [Install for Codex](/racecraft-plugins-public/install/codex/#install-decision) for Codex skills, agents, and plugin surfaces.

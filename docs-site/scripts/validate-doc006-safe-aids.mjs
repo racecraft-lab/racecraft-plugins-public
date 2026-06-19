@@ -7,6 +7,7 @@ const repoRoot = path.resolve(fileURLToPath(new URL('../..', import.meta.url)));
 const routeMdx = path.join(repoRoot, 'docs-site/src/content/docs/choose-your-path.mdx');
 const routeMd = path.join(repoRoot, 'docs-site/src/content/docs/choose-your-path.md');
 const componentPath = path.join(repoRoot, 'docs-site/src/components/SafeInstallAids.astro');
+const lifecyclePath = path.join(repoRoot, 'docs-site/src/components/LifecycleFlow.astro');
 const dataPath = path.join(repoRoot, 'docs-site/src/data/safe-install-aids.ts');
 
 const requiredManifestPaths = [
@@ -24,11 +25,19 @@ function assert(condition, message) {
   if (!condition) failures.push(message);
 }
 
+function repoRelative(filePath) {
+  return path.relative(repoRoot, filePath).split(path.sep).join('/');
+}
+
+function sanitizeDiagnosticText(value) {
+  return String(value).replaceAll(repoRoot, '.');
+}
+
 function readText(filePath) {
   try {
     return fs.readFileSync(filePath, 'utf8');
   } catch (error) {
-    failures.push(`Missing or unreadable file: ${path.relative(repoRoot, filePath)} (${error.message})`);
+    failures.push(`Missing or unreadable file: ${repoRelative(filePath)} (${sanitizeDiagnosticText(error.message)})`);
     return '';
   }
 }
@@ -38,7 +47,7 @@ function readJson(relativePath) {
   try {
     return JSON.parse(fs.readFileSync(fullPath, 'utf8'));
   } catch (error) {
-    failures.push(`Missing or invalid manifest JSON: ${relativePath} (${error.message})`);
+    failures.push(`Missing or invalid manifest JSON: ${relativePath} (${sanitizeDiagnosticText(error.message)})`);
     return null;
   }
 }
@@ -61,7 +70,9 @@ async function loadDataModule() {
   try {
     return await import(`${pathToFileURL(tempPath).href}?cacheBust=${Date.now()}`);
   } catch (error) {
-    failures.push(`Unable to import data helper as JavaScript-compatible TypeScript: ${error.message}`);
+    failures.push(
+      `Unable to import data helper as JavaScript-compatible TypeScript from ${repoRelative(dataPath)}: ${sanitizeDiagnosticText(error.message)}`,
+    );
     return null;
   } finally {
     try {
@@ -77,6 +88,26 @@ function validateRoute(routeSource) {
   assert(!fs.existsSync(routeMd), 'old choose-your-path.md source should not remain beside the MDX route.');
   assert(routeSource.includes('SafeInstallAids'), 'choose-your-path.mdx must import and render SafeInstallAids.');
   assert(routeSource.includes('title: "Choose Your Path"'), 'choose-your-path route frontmatter title must be preserved.');
+}
+
+function validateRouteAccessibilityFallback(routeSource) {
+  assert(
+    routeSource.includes('## Install Aid Static Fallback Checklist'),
+    'docs-site/src/content/docs/choose-your-path.mdx must include an install aid static fallback checklist.',
+  );
+
+  for (const requiredText of [
+    'platform and scope decision',
+    'source and payload boundary',
+    'copyable command guidance',
+    'manual-only safety boundary',
+    'without JavaScript',
+  ]) {
+    assert(
+      routeSource.toLowerCase().includes(requiredText.toLowerCase()),
+      `docs-site/src/content/docs/choose-your-path.mdx static fallback must preserve ${requiredText}.`,
+    );
+  }
 }
 
 function validateManifests() {
@@ -120,6 +151,14 @@ function validateData(dataModule) {
     assert(selectorPath.commands?.length > 0, `selectorPath ${selectorPath.id} must include commands.`);
     assert(selectorPath.successSignals?.length > 0, `selectorPath ${selectorPath.id} must include success signals.`);
     assert(selectorPath.nextLinks?.length > 0, `selectorPath ${selectorPath.id} must include next links.`);
+    assert(
+      selectorPath.commands.every((command) => command.copyable === true),
+      `selectorPath ${selectorPath.id} commands must be marked copyable guidance only.`,
+    );
+    assert(
+      selectorPath.commands.every((command) => command.expectedSignal && !command.autoRun),
+      `selectorPath ${selectorPath.id} commands must expose expected signals and must not opt into automated execution.`,
+    );
 
     const commandText = selectorPath.commands.map((command) => command.command).join('\n');
     if (selectorPath.platform === 'claude-code') {
@@ -194,6 +233,24 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
   assert(componentSource.includes('align-items: stretch'), 'selector choice grid must stretch cards within equal-height tracks.');
   assert(componentSource.includes('box-sizing: border-box'), 'selector choice cards must include padding inside equal-height tracks.');
   assert(componentSource.includes('margin: 0'), 'selector choice cards must not inherit markdown flow margins.');
+  assert(
+    (componentSource.match(/aria-live="polite"/g) ?? []).length >= 2,
+    'selector and copy result changes must expose polite status text.',
+  );
+  assert(
+    componentSource.includes('aria-describedby="safe-aids-selector-status"') &&
+      componentSource.includes('aria-describedby={`${selectorPath.id}-${command.id}-status`}'),
+    'selector form and copy buttons must be associated with their status text.',
+  );
+  assert(
+    componentSource.includes('<legend>Platform and install scope</legend>') &&
+      componentSource.includes('data-path-label={selectorPath.label}'),
+    'selector controls must expose meaningful labels from checked-in source.',
+  );
+  assert(
+    componentSource.includes('Static Selector Fallback') && componentSource.includes('This table is complete static content'),
+    'SafeInstallAids must render complete static fallback content.',
+  );
 
   const combined = `${routeSource}\n${componentSource}\n${dataSource}`;
   const forbiddenPatterns = [
@@ -203,6 +260,15 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
     /\beval\s*\(/,
     /FileReader/,
     /localStorage/,
+    /sessionStorage/,
+    /indexedDB/,
+    /document\.cookie/,
+    /navigator\.storage/,
+    /showOpenFilePicker/,
+    /webkitdirectory/,
+    /<input[^>]+type=["']file/i,
+    /process\.env/,
+    /os\.homedir/,
     /contenteditable/i,
     /<textarea/i,
     /paste(?:d)? user json/i,
@@ -220,16 +286,37 @@ function validateRenderingSources(routeSource, componentSource, dataSource) {
   assert(dataSource.includes('sanitizeManifestError'), 'data helper must sanitize manifest read errors before rendering them.');
 }
 
-validateRoute(readText(routeMdx));
-validateManifests();
+function validateLifecycleFlow(componentSource) {
+  assert(componentSource.includes('data-lifecycle-flow'), 'LifecycleFlow must expose a stable root data attribute.');
+  assert(
+    componentSource.includes('aria-describedby="lifecycle-flow-summary lifecycle-flow-fallback"'),
+    'LifecycleFlow section must connect its heading to summary and static fallback text.',
+  );
+  assert(componentSource.includes('id="lifecycle-flow-fallback"'), 'LifecycleFlow must include explicit static fallback text.');
+  assert(componentSource.includes('No JavaScript is required'), 'LifecycleFlow static fallback must state that no JavaScript is required.');
+  assert(componentSource.includes('<dl'), 'LifecycleFlow must expose phase facts with semantic description lists.');
+  assert(componentSource.includes('Keyboard review'), 'LifecycleFlow must include keyboard review language for static content and links.');
+  assert(componentSource.includes('lifecycle-flow__jump-links'), 'LifecycleFlow must expose keyboard-reachable links to related static tables.');
+  assert(componentSource.includes(':focus-visible'), 'LifecycleFlow must define visible focus treatment for links.');
+  assert(componentSource.includes('overflow-wrap: anywhere'), 'LifecycleFlow text must reflow long artifact names without overlap.');
+  assert(componentSource.includes('@media (max-width: 48rem)'), 'LifecycleFlow must define a narrow-viewport layout.');
+  assert(componentSource.includes('grid-template-columns: 1fr'), 'LifecycleFlow narrow viewport must reduce layout to one column.');
+}
 
 const routeSource = readText(routeMdx);
 const componentSource = readText(componentPath);
+const lifecycleSource = readText(lifecyclePath);
 const dataSource = readText(dataPath);
+
+validateRoute(routeSource);
+validateRouteAccessibilityFallback(routeSource);
+validateManifests();
+
 const dataModule = await loadDataModule();
 
 validateData(dataModule);
 validateRenderingSources(routeSource, componentSource, dataSource);
+validateLifecycleFlow(lifecycleSource);
 
 if (failures.length > 0) {
   console.error('DOC-006 focused validation failed:');
