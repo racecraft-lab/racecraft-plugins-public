@@ -10,7 +10,7 @@ This is the Codex-specific mirror of `prerequisites.md`. Same checks, Codex-spec
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — locate the plugin's `SKILL_SCRIPTS` directory
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites.sh` JSON parsing, branch detection
 - [Step 0.6: Load Settings](#step-06-load-settings) — project settings YAML frontmatter
-- [Step 0.8: MCP Server & Plugin Limitation Check](#step-08-mcp-server--plugin-limitation-check) — informational MCP report
+- [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
 - [Step 0.10: Codex Agent Availability Check](#step-010-codex-agent-availability-check) — verify installed custom agents under `.codex/agents/`
 - [Step 0.10b: Implementation Agent Detection](#step-010b-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
@@ -106,12 +106,19 @@ frontmatter for: `consensus-mode` (default: `moderate`),
 `per-phase`), `security-keywords` (default: standard list).
 If the file doesn't exist, use all defaults.
 
-### 0.8 MCP Server & Plugin Limitation Check
+### 0.8 Capability Coverage & Plugin Limitation Check
 
-The prerequisite script reports MCP server availability. This is
-**informational, not blocking** — all agents include built-in
-fallbacks. Parse the `mcp_servers` check from the JSON output
-and report which servers are available vs. missing.
+The prerequisite script reports one `capability_coverage` advisory. This is
+**informational, not blocking** — agents discover available capabilities at
+runtime and use acceptable fallbacks when coverage is lighter. Parse the
+`capability_coverage` check from the JSON output and report the setup-facing
+categories: codebase context, library documentation, web/domain research, and
+source extraction.
+
+Missing optional research/context coverage can lower confidence or require
+fallback evidence notes. It does not fail setup by itself. Escalate only when
+no acceptable evidence path exists after fallback attempts or when a true
+prerequisite/gate fails.
 
 ### 0.9 Constitution Validation
 

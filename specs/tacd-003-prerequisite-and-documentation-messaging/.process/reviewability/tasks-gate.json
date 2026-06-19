@@ -4,7 +4,7 @@
   "pass": false,
   "reviewable_loc": 1280,
   "production_files": 1,
-  "total_files": 43,
+  "total_files": 46,
   "primary_surface_count": 3,
   "primary_surfaces": [
     "docs/process",
@@ -34,12 +34,12 @@
   },
   "warnings": [
     "reviewable LOC 1280 exceeds warn threshold 400",
-    "total files 43 exceeds warn threshold 15",
+    "total files 46 exceeds warn threshold 15",
     "primary surfaces 3 exceeds warn threshold 1"
   ],
   "blockers": [
     "reviewable LOC 1280 exceeds block threshold 800",
-    "total files 43 exceeds block threshold 25"
+    "total files 46 exceeds block threshold 25"
   ],
   "exit_code": 1,
   "proceed_decision": "size_only_block_continue_to_marker_planning",

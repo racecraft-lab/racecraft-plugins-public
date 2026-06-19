@@ -20,9 +20,9 @@
 
 **Purpose**: Confirm the implementation boundary before editing source files.
 
-- [ ] T001 Review `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` declared file operations and confirm implementation remains limited to the planned script, focused Layer 4 test, and declared active guidance files. (FR-007, FR-009, FR-010, SC-005)
-- [ ] T002 Review `docs/ai/specs/.process/TACD-003-design-concept.md` Goals, Non-goals, and Q1-Q6 before editing so advisory wording stays capability-first, non-blocking, and within one slice. (AC-3.1, AC-3.2, AC-3.3, AC-3.4)
-- [ ] T003 Inspect `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` to identify the current optional-tool report and one existing true prerequisite blocker path before adding tests. (FR-001, FR-011, FR-014, SC-007, SC-008)
+- [x] T001 Review `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` declared file operations and confirm implementation remains limited to the planned script, focused Layer 4 test, and declared active guidance files. (FR-007, FR-009, FR-010, SC-005)
+- [x] T002 Review `docs/ai/specs/.process/TACD-003-design-concept.md` Goals, Non-goals, and Q1-Q6 before editing so advisory wording stays capability-first, non-blocking, and within one slice. (AC-3.1, AC-3.2, AC-3.3, AC-3.4)
+- [x] T003 Inspect `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` to identify the current optional-tool report and one existing true prerequisite blocker path before adding tests. (FR-001, FR-011, FR-014, SC-007, SC-008)
 
 **Checkpoint**: Scope is confirmed; no archive, generated payload, installer, marketplace, scanner, or eval file is in the edit plan.
 
@@ -34,11 +34,11 @@
 
 **Critical**: Complete this phase before updating `check-prerequisites.sh`.
 
-- [ ] T004 [US1] Add focused assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` that expect exactly one successful `capability_coverage` check with stable `check`, `pass`, `message`, and `detail` fields. (AC-3.1, FR-001, FR-011, FR-013, SC-001, SC-007)
-- [ ] T005 [US1] Add focused assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` that the missing optional research/context capability path remains `all_pass=true`, has no per-tool available/missing inventory, and communicates confidence or fallback impact. (AC-3.1, AC-3.4, FR-002, FR-003, FR-012, SC-001, SC-006)
-- [ ] T006 [US1] Add focused assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` for at least one true prerequisite blocker path that remains `all_pass=false` with an actionable failure message. (FR-014, SC-008)
-- [ ] T007 [US1] Add JSON parseability assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` that stdout is one JSON document with stable top-level pass state, branch context, worktree context, feature-branch context, and checks fields. (FR-013, SC-007)
-- [ ] T008 [US1] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm the new focused assertions fail for the old optional-tool report before implementing the script change. (FR-008, SC-004)
+- [x] T004 [US1] Add focused assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` that expect exactly one successful `capability_coverage` check with stable `check`, `pass`, `message`, and `detail` fields. (AC-3.1, FR-001, FR-011, FR-013, SC-001, SC-007)
+- [x] T005 [US1] Add focused assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` that the missing optional research/context capability path remains `all_pass=true`, has no per-tool available/missing inventory, and communicates confidence or fallback impact. (AC-3.1, AC-3.4, FR-002, FR-003, FR-012, SC-001, SC-006)
+- [x] T006 [US1] Add focused assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` for at least one true prerequisite blocker path that remains `all_pass=false` with an actionable failure message. (FR-014, SC-008)
+- [x] T007 [US1] Add JSON parseability assertions in `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` that stdout is one JSON document with stable top-level pass state, branch context, worktree context, feature-branch context, and checks fields. (FR-013, SC-007)
+- [x] T008 [US1] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm the new focused assertions fail for the old optional-tool report before implementing the script change. (FR-008, SC-004)
 
 **Checkpoint**: Layer 4 captures the desired advisory contract and still protects true blocker behavior.
 
@@ -52,11 +52,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Replace the hardcoded optional-tool report in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` with one successful `capability_coverage` result. (AC-3.1, FR-001, FR-011, SC-001)
-- [ ] T010 [US1] Update `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` advisory message/detail text to name the four capability categories: codebase context, library documentation, web/domain research, and source extraction. (AC-3.1, AC-3.3, FR-003, FR-011, SC-003)
-- [ ] T011 [US1] Preserve JSON-only stdout and stable output shape in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` while moving any failure diagnostics out of stdout. (FR-013, SC-007)
-- [ ] T012 [US1] Preserve blocking behavior in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` for true prerequisites such as missing SpecKit CLI, project initialization, constitution, phase command installation, or workflow-file inputs. (AC-3.4, FR-012, FR-014, SC-006, SC-008)
-- [ ] T013 [US1] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `bash tests/speckit-pro/run-all.sh --layer 4`, then confirm the prerequisite output assertions pass after the script update. (FR-008, SC-004, SC-007, SC-008)
+- [x] T009 [US1] Replace the hardcoded optional-tool report in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` with one successful `capability_coverage` result. (AC-3.1, FR-001, FR-011, SC-001)
+- [x] T010 [US1] Update `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` advisory message/detail text to name the four capability categories: codebase context, library documentation, web/domain research, and source extraction. (AC-3.1, AC-3.3, FR-003, FR-011, SC-003)
+- [x] T011 [US1] Preserve JSON-only stdout and stable output shape in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` while moving any failure diagnostics out of stdout. (FR-013, SC-007)
+- [x] T012 [US1] Preserve blocking behavior in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` for true prerequisites such as missing SpecKit CLI, project initialization, constitution, phase command installation, or workflow-file inputs. (AC-3.4, FR-012, FR-014, SC-006, SC-008)
+- [x] T013 [US1] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `bash tests/speckit-pro/run-all.sh --layer 4`, then confirm the prerequisite output assertions pass after the script update. (FR-008, SC-004, SC-007, SC-008)
 
 **Checkpoint**: User Story 1 is independently functional and testable.
 
@@ -70,14 +70,14 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Update `speckit-pro/skills/speckit-autopilot/references/prerequisites.md` so Claude prerequisite guidance describes `capability_coverage`, the four capability categories, fallback behavior, and true escalation boundaries without per-tool inventory wording. (AC-3.2, AC-3.3, AC-3.4, FR-004, FR-006, FR-012, SC-002, SC-003, SC-006)
-- [ ] T015 [US2] Update `speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md` so Codex prerequisite guidance matches the Claude capability-first contract, category set, fallback/escalation boundary, and concrete-identifier exception policy. (AC-3.2, AC-3.3, AC-3.4, FR-004, FR-006, FR-012, SC-002, SC-003, SC-006)
-- [ ] T016 [P] [US2] Update `speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md` to describe optional research/context support as capability coverage with built-in fallbacks, not as a preferred named optional-tool set. (AC-3.2, AC-3.3, FR-004, FR-006, SC-002, SC-003)
-- [ ] T017 [P] [US2] Update `speckit-pro/skills/speckit-coach/references/autopilot-guide.md` so coaching guidance explains capability-first discovery, confidence impact, and fallback behavior without adding installer or marketplace guidance. (AC-3.2, AC-3.3, AC-3.4, FR-005, FR-007, SC-002, SC-003, SC-006)
-- [ ] T018 [P] [US2] Update adjacent active preflight or limitation wording in `speckit-pro/skills/speckit-autopilot/SKILL.md` only where it repeats the old optional-tool framing. (AC-3.2, AC-3.3, FR-005, FR-006, FR-007, SC-002, SC-003)
-- [ ] T019 [P] [US2] Update adjacent active preflight or limitation wording in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` only where it repeats the old optional-tool framing. (AC-3.2, AC-3.3, FR-005, FR-006, FR-007, SC-002, SC-003)
-- [ ] T020 [US2] Review declared active guidance files `speckit-pro/skills/speckit-autopilot/references/prerequisites.md`, `speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md`, `speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md`, `speckit-pro/skills/speckit-coach/references/autopilot-guide.md`, `speckit-pro/skills/speckit-autopilot/SKILL.md`, and `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` for any remaining concrete optional-tool names and classify each as platform metadata, exact repository file reference, generated source-derived duplicate, historical provenance, or a wording issue to remove. (AC-3.3, FR-006, FR-010, SC-003, SC-005)
-- [ ] T021 [US2] Compare `git diff --name-only` against `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` declared file operations and confirm no archive, changelog, fixture-only, generated payload, installer, marketplace, broad scanner, or eval file was edited while completing the docs pass. (FR-007, FR-009, FR-010, SC-005)
+- [x] T014 [US2] Update `speckit-pro/skills/speckit-autopilot/references/prerequisites.md` so Claude prerequisite guidance describes `capability_coverage`, the four capability categories, fallback behavior, and true escalation boundaries without per-tool inventory wording. (AC-3.2, AC-3.3, AC-3.4, FR-004, FR-006, FR-012, SC-002, SC-003, SC-006)
+- [x] T015 [US2] Update `speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md` so Codex prerequisite guidance matches the Claude capability-first contract, category set, fallback/escalation boundary, and concrete-identifier exception policy. (AC-3.2, AC-3.3, AC-3.4, FR-004, FR-006, FR-012, SC-002, SC-003, SC-006)
+- [x] T016 [P] [US2] Update `speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md` to describe optional research/context support as capability coverage with built-in fallbacks, not as a preferred named optional-tool set. (AC-3.2, AC-3.3, FR-004, FR-006, SC-002, SC-003)
+- [x] T017 [P] [US2] Update `speckit-pro/skills/speckit-coach/references/autopilot-guide.md` so coaching guidance explains capability-first discovery, confidence impact, and fallback behavior without adding installer or marketplace guidance. (AC-3.2, AC-3.3, AC-3.4, FR-005, FR-007, SC-002, SC-003, SC-006)
+- [x] T018 [P] [US2] Update adjacent active preflight or limitation wording in `speckit-pro/skills/speckit-autopilot/SKILL.md` only where it repeats the old optional-tool framing. (AC-3.2, AC-3.3, FR-005, FR-006, FR-007, SC-002, SC-003)
+- [x] T019 [P] [US2] Update adjacent active preflight or limitation wording in `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` only where it repeats the old optional-tool framing. (AC-3.2, AC-3.3, FR-005, FR-006, FR-007, SC-002, SC-003)
+- [x] T020 [US2] Review declared active guidance files `speckit-pro/skills/speckit-autopilot/references/prerequisites.md`, `speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md`, `speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md`, `speckit-pro/skills/speckit-coach/references/autopilot-guide.md`, `speckit-pro/skills/speckit-autopilot/SKILL.md`, and `speckit-pro/codex-skills/speckit-autopilot/SKILL.md` for any remaining concrete optional-tool names and classify each as platform metadata, exact repository file reference, generated source-derived duplicate, historical provenance, or a wording issue to remove. (AC-3.3, FR-006, FR-010, SC-003, SC-005)
+- [x] T021 [US2] Compare `git diff --name-only` against `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` declared file operations and confirm no archive, changelog, fixture-only, installer, marketplace, broad scanner, or eval file was edited while completing the docs pass; allow source-derived `dist/` payload copies only when regenerated from declared source changes. (FR-007, FR-009, FR-010, SC-005)
 
 **Checkpoint**: User Story 2 is independently reviewable against the active guidance contract.
 
@@ -91,11 +91,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [US3] Add narrow changed-doc assertions to `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` only if they stay focused on the declared active guidance files and do not become broad named-tool enforcement. (FR-008, FR-009, SC-002, SC-003, SC-004)
-- [ ] T023 [US3] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `bash tests/speckit-pro/run-all.sh --layer 4`, then record evidence for `capability_coverage`, JSON parseability, missing-optional success, true-blocker failure, and any narrow changed-doc assertions. (FR-008, FR-013, FR-014, SC-004, SC-007, SC-008)
-- [ ] T024 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` and confirm structural validation still passes with the active guidance changes. (FR-004, FR-005, FR-008, SC-004)
-- [ ] T025 [US3] Run `bash tests/speckit-pro/run-all.sh` and confirm the default deterministic suite passes without Layer 3 eval changes or Layer 5 pointer-coverage expansion. (FR-008, FR-009, SC-004)
-- [ ] T026 [US3] Confirm `git diff --name-only` stays inside the TACD-003 declared file set plus `specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md`; if not, stop and update the plan before continuing. (FR-007, FR-009, FR-010, SC-005)
+- [x] T022 [US3] Add narrow changed-doc assertions to `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` only if they stay focused on the declared active guidance files and do not become broad named-tool enforcement. (FR-008, FR-009, SC-002, SC-003, SC-004)
+- [x] T023 [US3] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `bash tests/speckit-pro/run-all.sh --layer 4`, then record evidence for `capability_coverage`, JSON parseability, missing-optional success, true-blocker failure, and any narrow changed-doc assertions. (FR-008, FR-013, FR-014, SC-004, SC-007, SC-008)
+- [x] T024 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` and confirm structural validation still passes with the active guidance changes. (FR-004, FR-005, FR-008, SC-004)
+- [x] T025 [US3] Run `bash tests/speckit-pro/run-all.sh` and confirm the default deterministic suite passes without Layer 3 eval changes or Layer 5 pointer-coverage expansion. (FR-008, FR-009, SC-004)
+- [x] T026 [US3] Confirm `git diff --name-only` stays inside the TACD-003 declared file set plus `specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md` and regenerated source-derived `dist/` payload copies; if not, stop and update the plan before continuing. (FR-007, FR-009, FR-010, SC-005)
 
 **Checkpoint**: User Story 3 is independently verified with focused deterministic coverage.
 
@@ -105,12 +105,12 @@
 
 **Purpose**: Prepare review evidence without expanding implementation scope.
 
-- [ ] T027 Build PR packet traceability from `specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md` that maps AC-3.1 through AC-3.4, FR-001 through FR-014, and SC-001 through SC-008 to changed files and verification evidence. (AC-3.1, AC-3.2, AC-3.3, AC-3.4, SC-005)
-- [ ] T028 Include a PR packet section based on `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md` stating that missing optional research or context capabilities remain non-blocking when acceptable fallback evidence exists and escalate only when no acceptable evidence path exists or a true gate fails. (AC-3.4, FR-002, FR-003, FR-012, FR-014, SC-001, SC-006, SC-008)
-- [ ] T029 Include a `Repo vs Platform Evidence` PR packet section based on `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` that separates repository-specific guidance backed by Racecraft sources or generated artifacts from platform/vendor behavior backed by official vendor evidence. (FR-004, FR-006, SC-005)
-- [ ] T030 Include a PR packet exception inventory from the changed active guidance paths listed in `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` for any remaining concrete optional-tool names, limited to platform metadata, exact repository file references, generated source-derived duplicates, or historical provenance. (AC-3.3, FR-006, FR-010, SC-003, SC-005)
-- [ ] T031 Include a TACD-004 handoff in the PR packet from `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md` for broad static or eval enforcement, Layer 3 expectation updates, Layer 5 pointer coverage, and broad named-tool detection. (FR-009, SC-005)
-- [ ] T032 Record rollback notes in the PR packet using `specs/tacd-003-prerequisite-and-documentation-messaging/quickstart.md`: revert the prerequisite script advisory change, focused Layer 4 assertions, and active guidance edits together because the docs describe the script contract. (FR-001, FR-004, FR-008, SC-005)
+- [x] T027 Build PR packet traceability from `specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md` that maps AC-3.1 through AC-3.4, FR-001 through FR-014, and SC-001 through SC-008 to changed files and verification evidence. (AC-3.1, AC-3.2, AC-3.3, AC-3.4, SC-005)
+- [x] T028 Include a PR packet section based on `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md` stating that missing optional research or context capabilities remain non-blocking when acceptable fallback evidence exists and escalate only when no acceptable evidence path exists or a true gate fails. (AC-3.4, FR-002, FR-003, FR-012, FR-014, SC-001, SC-006, SC-008)
+- [x] T029 Include a `Repo vs Platform Evidence` PR packet section based on `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` that separates repository-specific guidance backed by Racecraft sources or generated artifacts from platform/vendor behavior backed by official vendor evidence. (FR-004, FR-006, SC-005)
+- [x] T030 Include a PR packet exception inventory from the changed active guidance paths listed in `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` for any remaining concrete optional-tool names, limited to platform metadata, exact repository file references, generated source-derived duplicates, or historical provenance. (AC-3.3, FR-006, FR-010, SC-003, SC-005)
+- [x] T031 Include a TACD-004 handoff in the PR packet from `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md` for broad static or eval enforcement, Layer 3 expectation updates, Layer 5 pointer coverage, and broad named-tool detection. (FR-009, SC-005)
+- [x] T032 Record rollback notes in the PR packet using `specs/tacd-003-prerequisite-and-documentation-messaging/quickstart.md`: revert the prerequisite script advisory change, focused Layer 4 assertions, and active guidance edits together because the docs describe the script contract. (FR-001, FR-004, FR-008, SC-005)
 
 **Checkpoint**: Review packet evidence is ready and broad TACD-004 work remains explicitly deferred.
 

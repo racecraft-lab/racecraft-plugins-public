@@ -8,7 +8,7 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites.sh` JSON parsing, branch detection
 - [Step 0.6: Load Settings](#step-06-load-settings) — `.claude/speckit-pro.local.md` YAML frontmatter
-- [Step 0.8: MCP Server & Plugin Limitation Check](#step-08-mcp-server--plugin-limitation-check) — informational MCP report + plugin-agent caveats
+- [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory + plugin-agent caveats
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
 - [Step 0.10: Implementation Agent Detection](#step-010-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands.sh` → `PROJECT_COMMANDS`
@@ -164,12 +164,19 @@ The full **use-site map** (post-impl, consensus, Phase 7 `[P]` tasks,
 parallel checklist/analyze) and lifecycle policy live in
 [`agent-teams-integration.md`](./agent-teams-integration.md).
 
-## Step 0.8: MCP Server & Plugin Limitation Check
+## Step 0.8: Capability Coverage & Plugin Limitation Check
 
-The prerequisite script now reports MCP server availability.
-This is **informational, not blocking** — all agents include
-built-in fallbacks. Parse the `mcp_servers` check from the
-JSON output and report which servers are available vs. missing.
+The prerequisite script reports one `capability_coverage` advisory.
+This is **informational, not blocking** — agents discover available
+capabilities at runtime and use acceptable fallbacks when coverage is
+lighter. Parse the `capability_coverage` check from the JSON output and
+report the setup-facing categories: codebase context, library
+documentation, web/domain research, and source extraction.
+
+Missing optional research/context coverage can lower confidence or require
+fallback evidence notes. It does not fail setup by itself. Escalate only
+when no acceptable evidence path exists after fallback attempts or when a
+true prerequisite/gate fails.
 
 **Plugin agent limitations:** Because these agents run from a
 plugin, Claude Code silently ignores `permissionMode`, `hooks`,

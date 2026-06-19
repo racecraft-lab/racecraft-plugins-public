@@ -132,9 +132,10 @@ both covered by the implementation plan and focused shell tests.
    preflight, limitation, or research-capability wording. If review finds a
    declared adjacent file needs no source edit, record the no-op decision in the
    PR packet rather than expanding scope elsewhere.
-6. Do not touch Layer 3 evals, Layer 5 pointer coverage, broad named-tool
-   enforcement, or generated payload copies unless a declared source change
-   requires parity regeneration.
+6. Do not touch Layer 3 evals, Layer 5 pointer coverage, or broad named-tool
+   enforcement. Generated payload copies are regenerated only from the declared
+   source changes when payload parity requires it; Layer 1 payload validation
+   rebuilds `dist/claude/speckit-pro` and `dist/codex/speckit-pro`.
 
 ## PR Review Packet Traceability
 
@@ -147,7 +148,7 @@ both covered by the implementation plan and focused shell tests.
 | Repo/platform evidence boundary | Declared active guidance docs and PR packet traceability | Review evidence classifies repository-specific claims with Racecraft source or generated-artifact citations and platform/vendor behavior claims with official vendor evidence; reviewer checks that no uncited platform behavior claim is introduced |
 | FR-007, FR-009 | Plan scope and PR packet non-goals | Review packet names TACD-004 for broad enforcement, eval expectation changes, and pointer coverage |
 | FR-008 | `test-check-prerequisites.sh` | `bash tests/speckit-pro/run-all.sh --layer 4` |
-| FR-010 | Source docs only; generated payloads only if regenerated from source | PR packet records any regeneration command or states none was required |
+| FR-010 | Source docs plus source-derived payload copies only when regenerated from source | PR packet records the payload regeneration command/evidence or states none was required |
 | SC-007, SC-008 | `test-check-prerequisites.sh`; PR packet verification evidence | Review packet reports focused JSON parseability and true-blocker preservation evidence from Layer 4, not TACD-004 static/eval enforcement |
 
 The PR description must include what changed, why, non-goals, review order,
