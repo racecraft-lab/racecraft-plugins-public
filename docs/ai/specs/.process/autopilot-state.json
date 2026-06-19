@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
-  "updated_at": "2026-06-19T03:30:38Z",
-  "active_step": "Phase 7: Implement - us3 validation path and CI gate (T020-T027)",
+  "updated_at": "2026-06-19T03:41:23Z",
+  "active_step": "Phase 7: Implement - us4 smoke evidence plus polish (T028-T040)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -353,6 +353,30 @@
           "notes": [
             "Accessibility/static-fallback evidence recorded in quickstart.md; browser smoke evidence remains owned by US4."
           ]
+        },
+        "us3": {
+          "status": "completed",
+          "task_ids": [
+            "T020",
+            "T021",
+            "T022",
+            "T023",
+            "T024",
+            "T025",
+            "T026",
+            "T027"
+          ],
+          "commit_sha": "0fc3f0c6",
+          "verification": [
+            "pnpm --dir docs-site validate:quality",
+            "pnpm --dir docs-site reference:check",
+            "bash tests/speckit-pro/run-all.sh --layer 1",
+            "git diff --check",
+            "pnpm --dir docs-site validate"
+          ],
+          "notes": [
+            "Full docs validation passed after installing Playwright Chromium and allowing localhost browser smoke."
+          ]
         }
       }
     }
@@ -461,11 +485,11 @@
     },
     {
       "step": "Phase 7: Implement - us3 validation path and CI gate (T020-T027)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - us4 smoke evidence plus polish (T028-T040)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -821,7 +845,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "completed",
+          "commit_sha": "0fc3f0c6",
+          "head_sha": "0fc3f0c6",
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
