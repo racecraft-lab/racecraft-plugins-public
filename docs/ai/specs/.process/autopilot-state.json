@@ -12,8 +12,8 @@
   "feature_branches": [
     "tacd-003-prerequisite-and-documentation-messaging"
   ],
-  "updated_at": "2026-06-19T02:00:10Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-19T02:20:00Z",
+  "active_step": "Phase 6: Analyze",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "skill_scripts": "/Users/fredrickgabelmann/.codex/plugins/cache/racecraft-plugins-public/speckit-pro/2.14.4/skills/speckit-autopilot/scripts",
@@ -260,20 +260,22 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress",
+      "status": "completed",
       "evidence": {
-        "g4": "passed",
-        "gap_markers": 0,
-        "checklists": {
-          "total_items": 42,
-          "gaps_before": 6,
-          "gaps_after": 0
-        }
+        "tasks": "specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md",
+        "task_count": 32,
+        "task_phases": 6,
+        "planner_increments": 5,
+        "parallel_opportunities": 4,
+        "user_stories_covered": 3,
+        "gate": "G5 passed",
+        "reviewability_gate": "size-only block captured and continued to marker planning",
+        "atomicity_route": "one-navigable-PR"
       }
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -284,8 +286,46 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "pending"
+      "step": "Phase 7: Implement full-spec marker (T001-T032)",
+      "status": "pending",
+      "evidence": {
+        "marker_id": "full-spec",
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015",
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026",
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032"
+        ],
+        "marker_plan_status": "collapsed"
+      }
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -339,5 +379,217 @@
       "step": "Post: Retrospective",
       "status": "pending"
     }
-  ]
+  ],
+  "current_source_fingerprint": {
+    "feature_spec_sha": "b5aa4fdc5cead7ecd3c5bfa407676930a9166302",
+    "plan_declared_scope_sha": "f4946acafc867780bd55fdb99f7b631d4cead819",
+    "tasks_sha": "6cef95ba099b264f0ea01599c2cfd8c2a934ec19",
+    "reviewability_sha": "912353425900a7e66019073504484421e0f3334e",
+    "hazard_route_sha": "42d63e463419487d6d9b2a07d95838b36bf76493"
+  },
+  "pr_marker_plan_current_source_fingerprint": {
+    "feature_spec_sha": "b5aa4fdc5cead7ecd3c5bfa407676930a9166302",
+    "plan_declared_scope_sha": "f4946acafc867780bd55fdb99f7b631d4cead819",
+    "tasks_sha": "6cef95ba099b264f0ea01599c2cfd8c2a934ec19",
+    "reviewability_sha": "912353425900a7e66019073504484421e0f3334e",
+    "hazard_route_sha": "42d63e463419487d6d9b2a07d95838b36bf76493"
+  },
+  "reviewability_task_gate": {
+    "status": "block",
+    "mode": "tasks",
+    "exit_code": 1,
+    "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
+    "proceed_decision": "size_only_block_continue_to_marker_planning",
+    "reason": "valid current size-only block; no correctness or safety issue present"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/atomicity-route.json"
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "TACD-003",
+    "status": "collapsed",
+    "source_fingerprint": {
+      "feature_spec_sha": "b5aa4fdc5cead7ecd3c5bfa407676930a9166302",
+      "plan_declared_scope_sha": "f4946acafc867780bd55fdb99f7b631d4cead819",
+      "tasks_sha": "6cef95ba099b264f0ea01599c2cfd8c2a934ec19",
+      "reviewability_sha": "912353425900a7e66019073504484421e0f3334e",
+      "hazard_route_sha": "42d63e463419487d6d9b2a07d95838b36bf76493"
+    },
+    "markers": [
+      {
+        "id": "full-spec",
+        "review_order": 1,
+        "kind": "full_spec",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "TACD-003 full implementation and PR packet readiness",
+          "story_id": null,
+          "start_task_id": "T001",
+          "end_task_id": "T032"
+        },
+        "title_description": "TACD-003 prerequisite advisory, active guidance, focused verification, and review packet evidence",
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015",
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026",
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032"
+        ],
+        "folded_polish_task_ids": [
+          "T027",
+          "T028",
+          "T029",
+          "T030",
+          "T031",
+          "T032"
+        ],
+        "folded_polish_target_reason": "Polish tasks prepare review evidence for the same TACD-003 slice and are folded into the collapsed full-spec marker.",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/prerequisites.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-coach/references/autopilot-guide.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/codex-skills/speckit-autopilot/SKILL.md"
+          },
+          {
+            "operation": "NEW",
+            "path": "specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh",
+          "bash tests/speckit-pro/run-all.sh --layer 4",
+          "bash tests/speckit-pro/run-all.sh --layer 1",
+          "bash tests/speckit-pro/run-all.sh"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "specs/tacd-003-prerequisite-and-documentation-messaging",
+          "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
+          "exit_code": 1,
+          "reason": "valid current size-only task gate block"
+        },
+        "hazards": [
+          "tasks-mode size heuristic block",
+          "atomicity route one-navigable-PR with releasable=true"
+        ],
+        "subdivision": {
+          "status": "hazard_collapsed",
+          "details": {
+            "route": "one-navigable-PR",
+            "releasable": true,
+            "reason": "The implementation is one vertical messaging slice; marker state is retained for reviewability evidence rather than task-driven split emission."
+          }
+        },
+        "implementation_checkpoint": {
+          "status": "pending",
+          "evidence_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/marker-plan/full-spec-checkpoint.json"
+        },
+        "emission_mapping": {
+          "status": "hazard_collapsed",
+          "source_marker_ids": [
+            "full-spec"
+          ],
+          "packet_path": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/pr-packet.json"
+        },
+        "warnings": [
+          {
+            "code": "tasks_reviewability_size_block",
+            "severity": "warning",
+            "message": "Task-mode reviewability gate returned a size-only block; autopilot proceeds with collapsed full-spec marker planning.",
+            "source": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
+            "details": {
+              "reviewable_loc": 1280,
+              "total_files": 41,
+              "blockers": [
+                "reviewable LOC 1280 exceeds block threshold 800",
+                "total files 41 exceeds block threshold 25"
+              ],
+              "proceed_decision": "size_only_block_continue_to_marker_planning"
+            }
+          }
+        ]
+      }
+    ],
+    "warnings": [
+      {
+        "code": "tasks_reviewability_size_block",
+        "severity": "warning",
+        "message": "Task-mode reviewability gate returned a size-only block; autopilot proceeds with collapsed full-spec marker planning.",
+        "source": "specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json",
+        "details": {
+          "reviewable_loc": 1280,
+          "total_files": 41,
+          "blockers": [
+            "reviewable LOC 1280 exceeds block threshold 800",
+            "total files 41 exceeds block threshold 25"
+          ],
+          "proceed_decision": "size_only_block_continue_to_marker_planning"
+        }
+      }
+    ],
+    "created_at": "2026-06-19T02:20:00Z",
+    "updated_at": "2026-06-19T02:20:00Z"
+  }
 }

@@ -43,8 +43,8 @@ concept is the source of truth for setup-time scoping decisions.
 | Clarify | `/speckit-clarify` | Complete | Three sessions answered; G2 passed with 0 clarification markers |
 | Plan | `/speckit-plan` | Complete | `plan.md`, `research.md`, and `quickstart.md` created; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | Three checklists complete; G4 passed with 0 `[Gap]` markers |
-| Tasks | `/speckit-tasks` | In Progress | Generate small TDD-oriented tasks |
-| Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
+| Tasks | `/speckit-tasks` | Complete | `tasks.md` created; G5 passed with 32 tasks |
+| Analyze | `/speckit-analyze` | In Progress | Cross-check spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Implement one vertical slice |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -482,10 +482,13 @@ Focus on TACD-003 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 32 |
+| Phases | 6 task phases; 5 planner increments |
+| Parallel Opportunities | 4 docs-only tasks marked `[P]` (`T016`-`T019`) |
+| User Stories Covered | 3 |
+| G5 Gate | Passed: 32 tasks found |
+| Reviewability Task Gate | Size-only `block`; continued to marker planning |
+| Evidence | `specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/tasks-gate.json` |
 
 ---
 
@@ -496,16 +499,27 @@ only here in the workflow file.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Pending | `true`, or `false` for release-safety risks |
-| Signals | Pending | Decisive detector findings |
-| Warnings | Pending | Release-safety warnings |
+| Route | `one-navigable-PR` | Structural route from `atomicity-route.sh` |
+| Releasable | `true` | No release-safety warning returned |
+| Signals | `change-shape:modify-heavy` | Decisive detector finding |
+| Warnings | None | No route warnings returned |
+| Evidence | `specs/tacd-003-prerequisite-and-documentation-messaging/.process/reviewability/atomicity-route.json` | Repo-relative route evidence |
 
-Run the classifier against the feature directory after tasks exist:
+### Reviewability Marker Plan
 
-```bash
-bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/tacd-003-prerequisite-and-documentation-messaging
-```
+| Field | Value |
+|-------|-------|
+| Gate status / mode / exit | `block` / `tasks` / `1` |
+| Proceed decision | Valid current size-only block; continue to marker planning |
+| Fingerprint status | Current in `autopilot-state.json` |
+| Marker plan status | `collapsed` |
+| Ordered marker IDs | `full-spec` |
+| Review order | `full-spec` executes `T001`-`T032` |
+| Checkpoints | Pending: `specs/tacd-003-prerequisite-and-documentation-messaging/.process/marker-plan/full-spec-checkpoint.json` |
+| Warnings | Task heuristic estimates 1280 reviewable LOC and 41 referenced files |
+| Final marker split | Placeholder: `hazard_collapsed` single-marker path |
+| Packet validation | Pending |
+| PR mappings | Pending |
 
 ---
 
