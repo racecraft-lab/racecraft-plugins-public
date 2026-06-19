@@ -64,7 +64,7 @@ DOC-007 -> DOC-008
 | DOC-007 | Command, workflow, manifest, and file-layout reference | Completed/archived | `.process/DOC-007-workflow.md` | Archived after PR #208 |
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Completed/archived | `.process/DOC-008-workflow.md` | Archived after PR #220 |
 | DOC-009 | Maintainer and contributor release workflow | Completed/archived | `.process/DOC-009-workflow.md` | Archived after PR #219 |
-| DOC-010 | Search, accessibility, deep links, docs validation | Pending | DOC-010-workflow.md | Ready to scaffold after DOC-008/DOC-009 archive cleanup |
+| DOC-010 | Search, accessibility, deep links, docs validation | In progress | `.process/DOC-010-workflow.md` | Scaffolded; ready for autopilot |
 
 ## Specification Sections
 
@@ -354,8 +354,10 @@ Budget result: within budget
 
 **Priority:** P2 | **Depends On:** DOC-001, DOC-002, DOC-006 | **Enables:** Feature complete
 
-**Status:** Pending and ready to scaffold after DOC-008 and DOC-009 completed
-the trust, recovery, and release workflow content tier.
+**Status:** In progress. Scaffolded on branch
+`doc-010-search-accessibility-deep-links-docs-validation` after DOC-008 and DOC-009
+completed the trust, recovery, and release workflow content tier. Ready for
+autopilot via `docs/ai/specs/.process/DOC-010-workflow.md`.
 
 **Goal:** Harden the docs site so it is findable, accessible, linkable, responsive, and validated in CI.
 
@@ -383,9 +385,9 @@ Budget result: within budget
 
 | Resource | Detail |
 |---|---|
-| Current docs | Markdown files in repo root, `docs/`, `docs/ai/specs/`, and `speckit-pro/README.md`. |
-| Current site tooling | No `package.json`, lockfile, or known static site config found in this checkout. |
-| Existing validation | Shell-based repo tests under `tests/speckit-pro/`, plus marketplace/payload scripts. |
+| Current docs | Markdown/MDX content under `docs-site/src/content/docs/`, plus source planning docs under `docs/` and `docs/ai/specs/`. |
+| Current site tooling | `docs-site/package.json` with pnpm 10.25.0, Astro 6.4.6, Starlight 0.40.0, `starlight-links-validator`, and scripts for reference generation, Astro check, build, and validation. |
+| Existing validation | Shell-based repo tests under `tests/speckit-pro/`, docs-site `reference:check` / `validate`, generated reference checks, and DOC-006 safe-aids validation. |
 | Product-code constraint | This roadmap changes documentation planning and future docs-site files only; no plugin behavior changes. |
 
 ## References
