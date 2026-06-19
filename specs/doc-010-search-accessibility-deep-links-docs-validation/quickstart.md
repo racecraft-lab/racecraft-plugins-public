@@ -73,7 +73,7 @@ Record reviewer-visible evidence in the PR packet:
 Recorded for T019 against the checklist above:
 
 - Keyboard-oriented review: `SafeInstallAids.astro` keeps native radio inputs,
-  native copy buttons, explicit arrow/Home/End key handling, and visible
+  native copy buttons, explicit arrow, Home, and End key handling, and visible
   `:focus-visible` treatment. `LifecycleFlow.astro` now exposes
   keyboard-reachable links to the related static tables before the ordered
   lifecycle content.

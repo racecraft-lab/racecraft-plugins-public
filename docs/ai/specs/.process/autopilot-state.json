@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
-  "updated_at": "2026-06-19T03:52:25Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-06-19T14:43:57Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -529,31 +529,31 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "skipped"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Cleanup",
-      "status": "pending"
+      "status": "skipped"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Self-Review",
@@ -691,7 +691,8 @@
           "status": "complete",
           "commit_sha": "2f21220e",
           "head_sha": "2f21220e",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
+          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
@@ -756,7 +757,8 @@
           "status": "complete",
           "commit_sha": "147559bb",
           "head_sha": "147559bb",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
+          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
@@ -820,7 +822,8 @@
           "status": "complete",
           "commit_sha": "a828f29a",
           "head_sha": "a828f29a",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
+          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
@@ -884,7 +887,8 @@
           "status": "complete",
           "commit_sha": "0fc3f0c6",
           "head_sha": "0fc3f0c6",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
+          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
@@ -967,7 +971,8 @@
           "status": "complete",
           "commit_sha": "63ac46f0",
           "head_sha": "63ac46f0",
-          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress",
+          "evidence_path": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
@@ -1018,5 +1023,59 @@
     },
     "recommended_action": "proceed",
     "reason": "composite at or above threshold"
+  },
+  "post_implementation": {
+    "updated_at": "2026-06-19T14:43:57Z",
+    "results": {
+      "doctor_extension_check": {
+        "status": "completed",
+        "summary": "Doctor extension check completed in prior resumed post track; project root, SpecKit templates, Claude command registration, scripts, constitution, DOC-010 artifacts, and clean git state verified.",
+        "evidence": [
+          "doctor extension agent result recorded in resumed post track"
+        ]
+      },
+      "verify_implementation": {
+        "status": "completed",
+        "summary": "Manual execution of $speckit-verify contract passed within read-only non-browser scope: 13/13 functional requirements, 4/4 user stories, 11/11 scenarios, 40/40 tasks, 0 critical/high findings.",
+        "evidence": [
+          "pnpm --dir docs-site reference:check",
+          "pnpm --dir docs-site validate:quality",
+          "pnpm --dir docs-site validate:safe-aids",
+          "git diff --check",
+          "bash tests/speckit-pro/run-all.sh --layer 1"
+        ]
+      },
+      "verify_tasks_phantom_check": {
+        "status": "completed",
+        "summary": "Manual execution of $speckit-verify-tasks contract wrote verify-tasks-report.md with 40/40 completed tasks verified and no flagged items.",
+        "report_path": "specs/doc-010-search-accessibility-deep-links-docs-validation/.process/verify-tasks-report.md",
+        "counts": {
+          "verified": 40,
+          "partial": 0,
+          "weak": 0,
+          "not_found": 0,
+          "skipped": 0
+        }
+      },
+      "code_review": {
+        "status": "skipped",
+        "reason": "review extension not installed; no .registry review entry and no .claude/.codex speckit-review command found."
+      },
+      "integration_suite": {
+        "status": "completed",
+        "summary": "Full docs-site validation and deterministic SpecKit Pro suite passed after rewording quickstart keyboard evidence to avoid a privacy-scan false positive.",
+        "evidence": [
+          "pnpm --dir docs-site validate: passed, including 20 Playwright smoke tests",
+          "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh: 9/9 passed",
+          "bash tests/speckit-pro/run-all.sh: 3128/3128 passed",
+          "git diff --check: passed"
+        ],
+        "remediation": "Changed quickstart wording from slash-separated key to arrow, Home, and End to avoid matching local-home-path privacy regex."
+      },
+      "cleanup": {
+        "status": "skipped",
+        "reason": "cleanup extension not installed; no cleanup entry in .specify/extensions/.registry and no $speckit-cleanup command found. Archive cleanup is a separate post-merge extension and not the Post: Cleanup command."
+      }
+    }
   }
 }

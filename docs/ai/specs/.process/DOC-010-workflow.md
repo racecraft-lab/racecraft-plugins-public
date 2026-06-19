@@ -694,16 +694,30 @@ G7 output:
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`
-- [ ] `pnpm --dir docs-site reference:check`
-- [ ] `pnpm --dir docs-site validate`
-- [ ] DOC-010 focused validator command, if added
-- [ ] Minimal Playwright smoke command, if added
-- [ ] `git diff --check`
-- [ ] Relevant SpecKit Pro structural/workflow checks if workflow or scripts changed
-- [ ] Manual/browser accessibility and responsive review evidence recorded
+- [x] All tasks marked complete in `tasks.md`
+- [x] `pnpm --dir docs-site reference:check`
+- [x] `pnpm --dir docs-site validate`
+- [x] DOC-010 focused validator command, if added
+- [x] Minimal Playwright smoke command, if added
+- [x] `git diff --check`
+- [x] Relevant SpecKit Pro structural/workflow checks if workflow or scripts changed
+- [x] Manual/browser accessibility and responsive review evidence recorded
 - [ ] PR packet includes docs-site validation, Playwright/manual evidence, and source-backed summary
 - [ ] Roadmap and traceability records updated only after implementation is complete
+
+### Canonical Post Item Results
+
+| Post Item | Status | Evidence |
+| --- | --- | --- |
+| Doctor Extension Check | Complete | Doctor extension check completed in the resumed post track; project root, templates, Claude command registration, scripts, constitution, DOC-010 artifacts, and clean git state verified. |
+| Verify Implementation | Complete | `$speckit-verify` contract executed manually because Codex could not invoke the command directly; 13/13 FRs, 4/4 user stories, 11/11 scenarios, 40/40 tasks covered, 0 critical/high findings. |
+| Verify Tasks Phantom Check | Complete | `specs/doc-010-search-accessibility-deep-links-docs-validation/.process/verify-tasks-report.md` written; 40/40 completed tasks verified, 0 partial/weak/not-found/skipped, no flagged items. |
+| Code Review | Skipped | `review` extension is not installed; no `.registry` review entry and no `.claude`/`.codex` `$speckit-review` command found. |
+| Integration Suite | Complete | `pnpm --dir docs-site validate` passed including 20 Playwright smoke tests; `bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh` passed 9/9; `bash tests/speckit-pro/run-all.sh` passed 3128/3128; `git diff --check` passed. |
+| Cleanup | Skipped | Cleanup extension is not installed; only archive-extension cleanup references were found, and archive cleanup is separate post-merge behavior. |
+| Reviewability Diff Gate | In progress | Pending final `final-reviewability-backstop.sh` run before PR packet or marker emission. |
+
+Integration note: the first full `bash tests/speckit-pro/run-all.sh` pass failed privacy scan on slash-separated key wording in `quickstart.md`; wording was changed to `arrow, Home, and End`, targeted privacy scan passed, and the full suite passed 3128/3128 afterward.
 
 ---
 
