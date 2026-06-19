@@ -21,6 +21,7 @@
 - Extension command contract: `.specify/extensions/archive/commands/archive.md`
 - Execution note: Codex executed the installed archive contract directly through the `speckit-archive-cleanup` plugin skill.
 - Cleanup branch: `codex/tacd-003-archive-cleanup`, based on updated `origin/main`
+- Cleanup PR: `https://github.com/racecraft-lab/racecraft-plugins-public/pull/231`
 - Worktree state before archival edits: clean
 - `.specify/feature.json`: absent
 - Current target exclusion: none; TACD-003 was archived after PR #230 merged.
