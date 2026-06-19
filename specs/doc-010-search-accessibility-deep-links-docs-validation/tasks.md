@@ -14,12 +14,12 @@
 
 **Purpose**: Establish the shared command names, dependency surface, and route/test configuration used by every story.
 
-- [X] T001 Define the DOC-010 focused script names and combined docs validation command chain in `docs-site/package.json` for `validate`, `validate:quality`, `validate:safe-aids`, and `validate:smoke` (FR-007, FR-008)
-- [X] T002 Add the minimal Playwright dev dependency needed for `validate:smoke` in `docs-site/package.json` and update `docs-site/pnpm-lock.yaml` (FR-010)
-- [X] T003 [P] Create the focused docs-quality validator entrypoint with repo-relative diagnostics and safety-boundary constants in `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011)
-- [X] T004 [P] Create Playwright configuration with local preview baseURL ownership, `/racecraft-plugins-public` base path handling, desktop/mobile projects, and compact artifact output in `docs-site/playwright.config.mjs` (FR-010, FR-013)
-- [X] T005 [P] Create the initial browser smoke spec scaffold with the six logical DOC-010 routes in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
-- [X] T006 Verify the setup file list still matches the declared DOC-010 budget in `specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md` before user-story implementation starts (FR-013)
+- [x] T001 Define the DOC-010 focused script names and combined docs validation command chain in `docs-site/package.json` for `validate`, `validate:quality`, `validate:safe-aids`, and `validate:smoke` (FR-007, FR-008)
+- [x] T002 Add the minimal Playwright dev dependency needed for `validate:smoke` in `docs-site/package.json` and update `docs-site/pnpm-lock.yaml` (FR-010)
+- [x] T003 [P] Create the focused docs-quality validator entrypoint with repo-relative diagnostics and safety-boundary constants in `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011)
+- [x] T004 [P] Create Playwright configuration with local preview baseURL ownership, `/racecraft-plugins-public` base path handling, desktop/mobile projects, and compact artifact output in `docs-site/playwright.config.mjs` (FR-010, FR-013)
+- [x] T005 [P] Create the initial browser smoke spec scaffold with the six logical DOC-010 routes in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
+- [x] T006 Verify the setup file list still matches the declared DOC-010 budget in `specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md` before user-story implementation starts (FR-013)
 
 **Checkpoint**: Shared command names, validator entrypoints, and smoke configuration exist.
 
@@ -33,19 +33,19 @@
 
 ### Validation for User Story 1
 
-- [X] T007 [US1] Add failing support-anchor inventory checks for install, recovery, troubleshooting, glossary, generated reference, and release workflow anchors in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
-- [X] T008 [US1] Add failing source-update guidance checks for external platform claims touched by DOC-010 in `docs-site/scripts/validate-docs-quality.mjs` (FR-012)
+- [x] T007 [US1] Add failing support-anchor inventory checks for install, recovery, troubleshooting, glossary, generated reference, and release workflow anchors in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
+- [x] T008 [US1] Add failing source-update guidance checks for external platform claims touched by DOC-010 in `docs-site/scripts/validate-docs-quality.mjs` (FR-012)
 
 ### Implementation for User Story 1
 
-- [X] T009 [P] [US1] Add stable glossary term anchors and support-oriented cross-links in `docs-site/src/content/docs/glossary.md` (FR-003, FR-004)
-- [X] T010 [P] [US1] Add support-link and static fallback anchor guidance for install decisions in `docs-site/src/content/docs/choose-your-path.mdx` (FR-002, FR-004)
-- [X] T011 [US1] Finish docs-quality anchor, glossary, generated-reference, release workflow, and source-update validation logic in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
+- [x] T009 [P] [US1] Add stable glossary term anchors and support-oriented cross-links in `docs-site/src/content/docs/glossary.md` (FR-003, FR-004)
+- [x] T010 [P] [US1] Add support-link and static fallback anchor guidance for install decisions in `docs-site/src/content/docs/choose-your-path.mdx` (FR-002, FR-004)
+- [x] T011 [US1] Finish docs-quality anchor, glossary, generated-reference, release workflow, and source-update validation logic in `docs-site/scripts/validate-docs-quality.mjs` (FR-002, FR-003, FR-007, FR-012)
 
 ### Verification for User Story 1
 
-- [X] T012 [US1] Run `pnpm --dir docs-site validate:quality` and confirm failures or output cite repo-relative paths from `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011, FR-012)
-- [X] T013 [US1] Run `pnpm --dir docs-site reference:check` and confirm generated reference anchors remain deterministic from `docs-site/scripts/generate-reference-pages.mjs` (FR-003, FR-007)
+- [x] T012 [US1] Run `pnpm --dir docs-site validate:quality` and confirm failures or output cite repo-relative paths from `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011, FR-012)
+- [x] T013 [US1] Run `pnpm --dir docs-site reference:check` and confirm generated reference anchors remain deterministic from `docs-site/scripts/generate-reference-pages.mjs` (FR-003, FR-007)
 
 **Checkpoint**: User Story 1 is searchable, linkable, and protected by deterministic validation.
 
@@ -59,18 +59,18 @@
 
 ### Validation for User Story 2
 
-- [X] T014 [US2] Add failing DOC-010 guardrails for labels, status regions, keyboard reachability, fallback content, and forbidden local-state behavior in `docs-site/scripts/validate-doc006-safe-aids.mjs` (FR-005, FR-006, FR-011)
+- [x] T014 [US2] Add failing DOC-010 guardrails for labels, status regions, keyboard reachability, fallback content, and forbidden local-state behavior in `docs-site/scripts/validate-doc006-safe-aids.mjs` (FR-005, FR-006, FR-011)
 
 ### Implementation for User Story 2
 
-- [X] T015 [US2] Update install-aid static fallback and guidance text on `docs-site/src/content/docs/choose-your-path.mdx` so essential guidance remains available without dynamic behavior (FR-005)
-- [X] T016 [P] [US2] Improve semantic lifecycle content, fallback readability, focus/reflow behavior, and responsive layout in `docs-site/src/components/LifecycleFlow.astro` (FR-006)
-- [X] T017 [US2] Finish `SafeInstallAids.astro` source-backed validation coverage in `docs-site/scripts/validate-doc006-safe-aids.mjs` without executing snippets or reading local user state (FR-005, FR-011)
+- [x] T015 [US2] Update install-aid static fallback and guidance text on `docs-site/src/content/docs/choose-your-path.mdx` so essential guidance remains available without dynamic behavior (FR-005)
+- [x] T016 [P] [US2] Improve semantic lifecycle content, fallback readability, focus/reflow behavior, and responsive layout in `docs-site/src/components/LifecycleFlow.astro` (FR-006)
+- [x] T017 [US2] Finish `SafeInstallAids.astro` source-backed validation coverage in `docs-site/scripts/validate-doc006-safe-aids.mjs` without executing snippets or reading local user state (FR-005, FR-011)
 
 ### Verification for User Story 2
 
-- [X] T018 [US2] Run `pnpm --dir docs-site validate:safe-aids` and confirm `docs-site/scripts/validate-doc006-safe-aids.mjs` reports sanitized repo-relative diagnostics (FR-005, FR-006, FR-011)
-- [X] T019 [US2] Record manual keyboard, screen-reader-oriented, responsive, and static fallback evidence using the checklist in `specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md` (FR-013)
+- [x] T018 [US2] Run `pnpm --dir docs-site validate:safe-aids` and confirm `docs-site/scripts/validate-doc006-safe-aids.mjs` reports sanitized repo-relative diagnostics (FR-005, FR-006, FR-011)
+- [x] T019 [US2] Record manual keyboard, screen-reader-oriented, responsive, and static fallback evidence using the checklist in `specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md` (FR-013)
 
 **Checkpoint**: User Story 2 has validator coverage plus reviewer-visible accessibility evidence.
 
@@ -84,20 +84,20 @@
 
 ### Validation for User Story 3
 
-- [X] T020 [US3] Add failing command-chain checks in `docs-site/scripts/validate-docs-quality.mjs` so `docs-site/package.json` must include `reference:check`, `check`, `build`, `validate:safe-aids`, `validate:quality`, and `validate:smoke` under the DOC-010 validation path (FR-007, FR-008)
-- [X] T021 [US3] Add failing CI docs-surface detection expectations for rendered docs-site, generated-reference source, docs-validation contract, and plugin-only changes in `.github/workflows/pr-checks.yml` comments or job logic review points (FR-009, FR-011)
+- [x] T020 [US3] Add failing command-chain checks in `docs-site/scripts/validate-docs-quality.mjs` so `docs-site/package.json` must include `reference:check`, `check`, `build`, `validate:safe-aids`, `validate:quality`, and `validate:smoke` under the DOC-010 validation path (FR-007, FR-008)
+- [x] T021 [US3] Add failing CI docs-surface detection expectations for rendered docs-site, generated-reference source, docs-validation contract, and plugin-only changes in `.github/workflows/pr-checks.yml` comments or job logic review points (FR-009, FR-011)
 
 ### Implementation for User Story 3
 
-- [X] T022 [US3] Update `docs-site/package.json` so `pnpm --dir docs-site validate` runs generated reference checks, Astro checks, build/link validation, safe-aids validation, docs-quality validation, and `validate:smoke` (FR-007, FR-008)
-- [X] T023 [US3] Update `.github/workflows/pr-checks.yml` with a stable `validate-docs` job using job-level changed-file detection and successful skip behavior for unrelated changes (FR-009)
-- [X] T024 [US3] Keep existing `detect`, `test`, `validate-pr-title`, and `validate-plugins` plugin matrix semantics intact while adding docs validation logic in `.github/workflows/pr-checks.yml` (FR-009)
+- [x] T022 [US3] Update `docs-site/package.json` so `pnpm --dir docs-site validate` runs generated reference checks, Astro checks, build/link validation, safe-aids validation, docs-quality validation, and `validate:smoke` (FR-007, FR-008)
+- [x] T023 [US3] Update `.github/workflows/pr-checks.yml` with a stable `validate-docs` job using job-level changed-file detection and successful skip behavior for unrelated changes (FR-009)
+- [x] T024 [US3] Keep existing `detect`, `test`, `validate-pr-title`, and `validate-plugins` plugin matrix semantics intact while adding docs validation logic in `.github/workflows/pr-checks.yml` (FR-009)
 
 ### Verification for User Story 3
 
-- [X] T025 [US3] Run `pnpm --dir docs-site reference:check` and confirm generated reference drift is caught before review (FR-003, FR-007)
-- [X] T026 [US3] Run `pnpm --dir docs-site validate` and confirm the full DOC-010 local validation path includes `validate:smoke` (FR-007, FR-008)
-- [X] T027 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` after `.github/workflows/pr-checks.yml` or structural spec-marker surfaces change (FR-009, FR-013)
+- [x] T025 [US3] Run `pnpm --dir docs-site reference:check` and confirm generated reference drift is caught before review (FR-003, FR-007)
+- [x] T026 [US3] Run `pnpm --dir docs-site validate` and confirm the full DOC-010 local validation path includes `validate:smoke` (FR-007, FR-008)
+- [x] T027 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` after `.github/workflows/pr-checks.yml` or structural spec-marker surfaces change (FR-009, FR-013)
 
 **Checkpoint**: User Story 3 has one local docs validation path and a conditional CI docs gate without plugin matrix fan-out for docs-only changes.
 
@@ -111,18 +111,18 @@
 
 ### Validation for User Story 4
 
-- [X] T028 [US4] Add failing route-load and viewport smoke assertions for `/`, `/choose-your-path/`, `/spec-kit-lifecycle/`, `/glossary/`, `/reference/skills/`, and `/contribute-and-release/` in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
+- [x] T028 [US4] Add failing route-load and viewport smoke assertions for `/`, `/choose-your-path/`, `/spec-kit-lifecycle/`, `/glossary/`, `/reference/skills/`, and `/contribute-and-release/` in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
 
 ### Implementation for User Story 4
 
-- [X] T029 [US4] Implement desktop and mobile route heading or landmark assertions in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
-- [X] T030 [US4] Implement one support-oriented search smoke from `/` plus representative deep-link samples in `docs-site/tests/docs-smoke.spec.mjs` (FR-002, FR-004, FR-010)
-- [X] T031 [US4] Implement focused `SafeInstallAids` and `LifecycleFlow` smoke checks without browser-side local command execution in `docs-site/tests/docs-smoke.spec.mjs` (FR-005, FR-006, FR-011)
-- [X] T032 [US4] Add `docs-site-smoke-evidence` artifact upload with 7-day retention in `.github/workflows/pr-checks.yml` when smoke artifacts exist (FR-013)
+- [x] T029 [US4] Implement desktop and mobile route heading or landmark assertions in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
+- [x] T030 [US4] Implement one support-oriented search smoke from `/` plus representative deep-link samples in `docs-site/tests/docs-smoke.spec.mjs` (FR-002, FR-004, FR-010)
+- [x] T031 [US4] Implement focused `SafeInstallAids` and `LifecycleFlow` smoke checks without browser-side local command execution in `docs-site/tests/docs-smoke.spec.mjs` (FR-005, FR-006, FR-011)
+- [x] T032 [US4] Add `docs-site-smoke-evidence` artifact upload with 7-day retention in `.github/workflows/pr-checks.yml` when smoke artifacts exist (FR-013)
 
 ### Verification for User Story 4
 
-- [X] T033 [US4] Run `pnpm --dir docs-site validate:smoke` and confirm `docs-site/playwright.config.mjs` keeps smoke limited to the configured baseURL, route set, and compact artifacts (FR-010, FR-011, FR-013)
+- [x] T033 [US4] Run `pnpm --dir docs-site validate:smoke` and confirm `docs-site/playwright.config.mjs` keeps smoke limited to the configured baseURL, route set, and compact artifacts (FR-010, FR-011, FR-013)
 
 **Checkpoint**: User Story 4 produces compact, bounded smoke evidence for reviewer use.
 
@@ -132,13 +132,13 @@
 
 **Purpose**: Final validation, generated reference checks, PR evidence, and review packet readiness.
 
-- [X] T034 Run `pnpm --dir docs-site reference:check` for generated reference drift from `docs-site/scripts/generate-reference-pages.mjs` (FR-003, FR-007)
-- [X] T035 Run `pnpm --dir docs-site validate:quality` and `pnpm --dir docs-site validate:safe-aids` for focused docs quality and safe-aids validation in `docs-site/scripts/` (FR-005, FR-006, FR-007, FR-011, FR-012)
-- [X] T036 Run `pnpm --dir docs-site validate:smoke` for minimal browser smoke coverage in `docs-site/tests/docs-smoke.spec.mjs` (FR-010, FR-013)
-- [X] T037 Run `pnpm --dir docs-site validate` for the complete local DOC-010 docs validation path from `docs-site/package.json` (FR-007, FR-008)
-- [X] T038 Run `git diff --check` for all DOC-010 changes listed in `specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md` (FR-013)
-- [X] T039 Run `bash tests/speckit-pro/run-all.sh --layer 1` because DOC-010 changes `.github/workflows/pr-checks.yml`, docs-site scripts, and validation surfaces (FR-009, FR-013)
-- [X] T040 Prepare PR packet evidence from `specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md`, including review order, scope budget, traceability, validation output, manual accessibility evidence, compact smoke artifact summary, known gaps, automation-safety notes, and rollback/fallback notes (FR-011, FR-013)
+- [x] T034 Run `pnpm --dir docs-site reference:check` for generated reference drift from `docs-site/scripts/generate-reference-pages.mjs` (FR-003, FR-007)
+- [x] T035 Run `pnpm --dir docs-site validate:quality` and `pnpm --dir docs-site validate:safe-aids` for focused docs quality and safe-aids validation in `docs-site/scripts/` (FR-005, FR-006, FR-007, FR-011, FR-012)
+- [x] T036 Run `pnpm --dir docs-site validate:smoke` for minimal browser smoke coverage in `docs-site/tests/docs-smoke.spec.mjs` (FR-010, FR-013)
+- [x] T037 Run `pnpm --dir docs-site validate` for the complete local DOC-010 docs validation path from `docs-site/package.json` (FR-007, FR-008)
+- [x] T038 Run `git diff --check` for all DOC-010 changes listed in `specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md` (FR-013)
+- [x] T039 Run `bash tests/speckit-pro/run-all.sh --layer 1` because DOC-010 changes `.github/workflows/pr-checks.yml`, docs-site scripts, and validation surfaces (FR-009, FR-013)
+- [x] T040 Prepare PR packet evidence from `specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md`, including review order, scope budget, traceability, validation output, manual accessibility evidence, compact smoke artifact summary, known gaps, automation-safety notes, and rollback/fallback notes (FR-011, FR-013)
 
 ---
 
