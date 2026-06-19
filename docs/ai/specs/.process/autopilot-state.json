@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
-  "updated_at": "2026-06-19T03:03:33Z",
-  "active_step": "Phase 7: Implement - foundation (T001-T006)",
+  "updated_at": "2026-06-19T03:16:13Z",
+  "active_step": "Phase 7: Implement - us1 support anchors and source guidance (T007-T013)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -284,6 +284,35 @@
         "Native prerequisite check rejected the DOC-prefixed branch naming unless SPECIFY_FEATURE=010-search-accessibility-deep-links-docs-validation is supplied.",
         "Coverage checked against design concept, spec.md, plan.md, contracts, tasks.md, marker-plan state, and DOC-FR-010 AC-10.1 through AC-10.7."
       ]
+    },
+    "implement": {
+      "status": "in_progress",
+      "markers": {
+        "foundation": {
+          "status": "completed",
+          "task_ids": [
+            "T001",
+            "T002",
+            "T003",
+            "T004",
+            "T005",
+            "T006"
+          ],
+          "commit_sha": "2f21220e",
+          "verification": [
+            "node -c docs-site/scripts/validate-docs-quality.mjs",
+            "node -c docs-site/playwright.config.mjs",
+            "node -c docs-site/tests/docs-smoke.spec.mjs",
+            "pnpm --dir docs-site validate:quality",
+            "pnpm --dir docs-site validate:safe-aids",
+            "pnpm --dir docs-site exec playwright test --list",
+            "git diff --check"
+          ],
+          "notes": [
+            "Full validate:smoke browser execution awaits installed Playwright browser binaries; test discovery listed 12 tests."
+          ]
+        }
+      }
     }
   },
   "plan": [
@@ -378,7 +407,7 @@
     },
     {
       "step": "Phase 7: Implement - foundation (T001-T006)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - us1 support anchors and source guidance (T007-T013)",
@@ -557,7 +586,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "completed",
+          "commit_sha": "2f21220e",
+          "head_sha": "2f21220e",
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
