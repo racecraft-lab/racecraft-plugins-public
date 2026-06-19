@@ -39,8 +39,8 @@ concept is the source of truth for setup-time scoping decisions.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | Pending | Focus on the deterministic + eval contract and the bundled payload fix |
-| Clarify | `/speckit-clarify` | Pending | Three sessions: verification layering, payload-build correctness, eval proof/wording |
+| Specify | `/speckit-specify` | ✅ Complete | spec.md: 13 FR, 4 US, 15 acceptance scenarios, SC-001…SC-005; 0 `[NEEDS CLARIFICATION]` |
+| Clarify | `/speckit-clarify` | ✅ Complete | Skipped — G1 found 0 markers; grill-me Q1–Q8 already encoded in spec (FR/SC traceability) |
 | Plan | `/speckit-plan` | Pending | |
 | Checklist | `/speckit-checklist` | Pending | Run for each recommended domain |
 | Tasks | `/speckit-tasks` | Pending | |
@@ -106,11 +106,20 @@ Re-run `reviewability-gate.sh setup` after Plan if the implementation file set g
 
 | Check | Status | Evidence |
 |-------|--------|----------|
-| Model and effort | Pending | Confirm required custom agents are installed at the configured model/effort |
-| Prerequisites script | Pending | `check-prerequisites.sh docs/ai/specs/.process/TACD-004-workflow.md` — `on_feature_branch=false` is EXPECTED for a `tacd-` branch and never sets `all_pass=false` |
-| Confidence gate mode | Pending | `resolve-confidence-mode.sh --` |
-| Archive sweep | Pending | Cleanup disabled on feature branch |
-| Tier-2 relocation | Pending | Active target has `SPEC-MOC.md` with `structureVersion: 1`; no root PROCESS artifacts expected |
+| Model and effort | ✅ | Opus 4.8 (≥ 4.6) + effort `max`. `AGENT_TEAMS_AVAILABLE=true`; `CONFIDENCE_GATE_MODE=advisory` |
+| Prerequisites script | ✅ | `all_pass=true`, SpecKit 0.10.3.dev0; `on_feature_branch=false` EXPECTED for a `tacd-` branch. Green baseline: `tests/speckit-pro/run-all.sh` 3163/3163 (L1 573+451, L4 1949, L5 190) |
+| Confidence gate mode | ✅ | `advisory` (`resolve-confidence-mode.sh --` exit 0; no flag/config override) |
+| Archive sweep | ✅ | Dry-run/report-only on feature branch; cleanup disabled. TACD-001/002/003 already archived |
+| Tier-2 relocation | ✅ | Suppressed — active target `SPEC-MOC.md` is `structureVersion: 1` (already current); no relocatable PROCESS artifacts |
+
+**Resolved pre-flight context** (passed to every subagent):
+
+- **PROJECT_COMMANDS:** stack `unknown` (no package manager). Verification harness = `bash tests/speckit-pro/run-all.sh` (Layers 1/4/5); focused: `--layer 1` structural, `--layer 4` script-unit, `--layer 5` tool-scoping. Payload rebuild: `bash scripts/build-plugin-payloads.sh`.
+- **PRESET_CONVENTIONS:** `speckit-pro-reviewability` v1.0.0 (custom spec/plan/tasks templates; 18 hook events).
+- **MCP availability:** `tavily-mcp`, `context7`, `RepoPrompt` not configured → consensus/research agents use built-in WebSearch/Read/Grep fallbacks.
+- **PROJECT_IMPLEMENTATION_AGENT:** fallback `speckit-pro:phase-executor` (no host impl agent; `.claude/agents/` = auditor + skill-reviewer only).
+- **Hook policy:** `git`-extension auto-commit hooks SKIPPED (duplicate the autopilot's own per-phase commit); after_specify `doctor` hook SKIPPED (duplicates Phase 0 doctor); `verify` / `verify-tasks` / `retrospective` after_implement hooks handled in post-implementation.
+- **Pre-flight diagnostics:** Doctor HEALTHY (6 PASS / 1 expected WARN / 0 FAIL); Archive dry-run sweep found no candidates (current target excluded; TACD-001/002/003 already archived). Spec-MOC index regenerated each phase boundary — the global active-spec index injects a `[TACD-004]` nav entry into every roadmap-MOC `GENERATED:INDEX` zone (generated content, not a manual edit).
 
 ---
 
@@ -264,14 +273,14 @@ regress.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | _TBD after run_ |
-| User Stories | _TBD after run_ |
-| Acceptance Criteria | _TBD after run_ |
-| G1 Gate | _Pending: `spec.md` exists with 0 `[NEEDS CLARIFICATION]` markers_ |
+| Functional Requirements | 13 (FR-001 … FR-013) |
+| User Stories | 4 (US1/US2/US4 = P1, US3 = P2) |
+| Acceptance Criteria | 15 acceptance scenarios + 5 success criteria (SC-001 … SC-005) |
+| G1 Gate | ✅ Satisfied — `spec.md` exists, 0 `[NEEDS CLARIFICATION]` markers (disk-verified) |
 
 ### Files Generated
 
-- [ ] `specs/tacd-004-verification-coverage/spec.md`
+- [x] `specs/tacd-004-verification-coverage/spec.md` (+ `checklists/requirements.md`, preset quality checklist)
 
 ### SpecKit Traceability Markers
 
@@ -332,9 +341,11 @@ can be interpreted multiple ways. Maximum 5 targeted questions per session.
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Verification layering & pointer contract | _TBD_ | _TBD_ |
-| 2 | Payload-build correctness | _TBD_ | _TBD_ |
-| 3 | Eval proof bar & wording | _TBD_ | _TBD_ |
+| 1 | Verification layering & pointer contract | 0 (skipped) | Locked in spec: FR-001/002 (L5 guard + full named-assertion removal), FR-003/004 (pointer + dist/** resolution) |
+| 2 | Payload-build correctness | 0 (skipped) | Locked in spec: FR-007 (section-boundary strip + rebuild), FR-008 (body-completeness vs source) |
+| 3 | Eval proof bar & wording | 0 (skipped) | Locked in spec: FR-005 (absence + affirmative), FR-006 (replay fixtures), FR-009 (Claude/Codex parity) |
+
+> **Clarify skipped per G1** (0 `[NEEDS CLARIFICATION]` markers in spec.md). The pre-workflow Grill Me interview already resolved scope (Q1–Q8); each decision is encoded as a functional requirement / success criterion with traceability, so no in-loop clarification was warranted.
 
 ---
 
