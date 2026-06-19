@@ -41,9 +41,9 @@ concept is the source of truth for setup-time scoping decisions.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 13 FR, 4 US, 15 acceptance scenarios, SC-001…SC-005; 0 `[NEEDS CLARIFICATION]` |
 | Clarify | `/speckit-clarify` | ✅ Complete | Skipped — G1 found 0 markers; grill-me Q1–Q8 already encoded in spec (FR/SC traceability) |
-| Plan | `/speckit-plan` | Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | plan.md/research.md/quickstart.md; G3 PASS; reviewability est. ~40 LOC |
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains; 8 `[Gap]` resolved; G4 PASS (0 markers) |
-| Tasks | `/speckit-tasks` | Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | 37 tasks, 7 groups; G5 PASS; route = one-navigable-PR |
 | Analyze | `/speckit-analyze` | Pending | |
 | Implement | `/speckit-implement` | Pending | TDD where checks/build behavior change |
 
@@ -406,11 +406,11 @@ can be interpreted multiple ways. Maximum 5 targeted questions per session.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, affected files, verification plan |
-| `research.md` | Pending | Pointer rule, dist resolution model, payload-fix shape |
+| `plan.md` | ✅ Created | Technical context, affected files, verification plan; constitution 6/6 PASS |
+| `research.md` | ✅ Created | 6 decisions; Decision 3 = dist/** prefix re-rooting (corrected in Checklist) |
 | `data-model.md` | Not expected | No database or persistent data model |
 | `contracts/` | Not expected | No API contract |
-| `quickstart.md` | Pending | Verification commands and PR packet checklist |
+| `quickstart.md` | ✅ Created | Verification commands and PR packet checklist |
 
 ---
 
@@ -518,11 +518,11 @@ Focus on TACD-004 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | _TBD_ |
-| Phases | _TBD_ |
-| Parallel Opportunities | _TBD_ |
-| User Stories Covered | _TBD_ |
-| G5 Gate | _Pending_ |
+| Total Tasks | 37 (T001–T038; T009A preset reviewability-checkpoint slot) |
+| Phases | 7 (Setup, Foundational, US1, US2, US4, US3, Polish) |
+| Parallel Opportunities | 6 `[P]` tasks (T003; eval edits T029–T032; T036) |
+| User Stories Covered | US1/US2/US3/US4 — all FR-001..FR-013 mapped |
+| G5 Gate | ✅ PASS (37 tasks; every FR has ≥1 task) |
 
 ---
 
@@ -533,16 +533,21 @@ only here in the workflow file. Leave the cells blank during scoping.
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| Releasable | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| Signals | | Decisive detector findings behind the route. |
-| Warnings | | Any release-safety warning attached to the change. |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
+| Releasable | `true` | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings behind the route. |
+| Warnings | (none) | Any release-safety warning attached to the change. |
 
 To produce the decision, run the classifier against the feature directory:
 
 ```bash
 bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/tacd-004-verification-coverage
 ```
+
+### Layer Plan & Reviewability (post-G5)
+
+- **Layer plan:** `skipped` — route is `one-navigable-PR` (non-split). The PRSG layer planner runs only for a `split-PR` route; this change ships as a single navigable PR.
+- **Reviewability (tasks mode):** `reviewability-gate.sh tasks` returned `status=block` (reviewable_loc 1480, total_files 88, primary_surfaces 6). This is a **known-coarse, size-only heuristic**, not a correctness stop: `reviewable_loc = 37 tasks × 40` and `total_files` is a path-token grep across tasks.md (it counts every path mention, including regenerated `dist/**`). It is contradicted by the authoritative signals — the plan-phase estimator (`status=pass`, **~40 projected LOC**, 1 production file), the atomicity route (`one-navigable-PR`), and the spec's explicit one-PR split decision. Per the Post-G5 matrix a size-only `tasks` block is a *proceed* input, not a manual re-slice; the binding budget check is the PR-time **diff-mode** gate against the actual diff. No PR marker plan is created (non-split route).
 
 ---
 
