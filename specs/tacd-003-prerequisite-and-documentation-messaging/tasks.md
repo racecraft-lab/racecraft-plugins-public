@@ -4,7 +4,7 @@
 
 **Prerequisites**: `plan.md`, `spec.md`, `research.md`, `quickstart.md`, `checklists/`
 
-**Tests**: Required for this slice. Use TDD for prerequisite script output changes: focused test or fixture first, prerequisite script update second, docs third, validation last.
+**Tests**: Required for this slice. Use TDD for prerequisite script output changes: focused test or fixture first, prerequisite script update second, docs third, `bash -n` and focused validation last.
 
 **Reviewability**: Keep the implementation inside the declared file operations in `plan.md`. Do not edit archives, generated payloads, installers, marketplace integration, broad scanners, or evals. If the implementation must exceed the declared file set, stop and amend the plan before continuing.
 
@@ -14,7 +14,7 @@
 
 - **[P]**: Can run in parallel because it touches a different file and does not depend on final script output wording.
 - **[Story]**: User story from `spec.md` (`US1`, `US2`, `US3`).
-- Every implementation task includes exact file paths and traceability to AC-3.1 through AC-3.4, FR-001 through FR-014, or SC-001 through SC-008.
+- Every implementation task includes exact file paths and traceability to AC-3.1 through AC-3.4 or the approved validation task mapping below. FR-001 through FR-014 and SC-001 through SC-008 references provide finer-grained coverage.
 
 ## Phase 1: Setup and Scope Guard
 
@@ -56,7 +56,7 @@
 - [ ] T010 [US1] Update `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` advisory message/detail text to name the four capability categories: codebase context, library documentation, web/domain research, and source extraction. (AC-3.1, AC-3.3, FR-003, FR-011, SC-003)
 - [ ] T011 [US1] Preserve JSON-only stdout and stable output shape in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` while moving any failure diagnostics out of stdout. (FR-013, SC-007)
 - [ ] T012 [US1] Preserve blocking behavior in `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` for true prerequisites such as missing SpecKit CLI, project initialization, constitution, phase command installation, or workflow-file inputs. (AC-3.4, FR-012, FR-014, SC-006, SC-008)
-- [ ] T013 [US1] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm the prerequisite output assertions pass after the script update. (FR-008, SC-004, SC-007, SC-008)
+- [ ] T013 [US1] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `bash tests/speckit-pro/run-all.sh --layer 4`, then confirm the prerequisite output assertions pass after the script update. (FR-008, SC-004, SC-007, SC-008)
 
 **Checkpoint**: User Story 1 is independently functional and testable.
 
@@ -92,7 +92,7 @@
 ### Implementation for User Story 3
 
 - [ ] T022 [US3] Add narrow changed-doc assertions to `tests/speckit-pro/layer4-scripts/test-check-prerequisites.sh` only if they stay focused on the declared active guidance files and do not become broad named-tool enforcement. (FR-008, FR-009, SC-002, SC-003, SC-004)
-- [ ] T023 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 4` and record evidence for `capability_coverage`, JSON parseability, missing-optional success, true-blocker failure, and any narrow changed-doc assertions. (FR-008, FR-013, FR-014, SC-004, SC-007, SC-008)
+- [ ] T023 [US3] Run `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` and `bash tests/speckit-pro/run-all.sh --layer 4`, then record evidence for `capability_coverage`, JSON parseability, missing-optional success, true-blocker failure, and any narrow changed-doc assertions. (FR-008, FR-013, FR-014, SC-004, SC-007, SC-008)
 - [ ] T024 [US3] Run `bash tests/speckit-pro/run-all.sh --layer 1` and confirm structural validation still passes with the active guidance changes. (FR-004, FR-005, FR-008, SC-004)
 - [ ] T025 [US3] Run `bash tests/speckit-pro/run-all.sh` and confirm the default deterministic suite passes without Layer 3 eval changes or Layer 5 pointer-coverage expansion. (FR-008, FR-009, SC-004)
 - [ ] T026 [US3] Confirm `git diff --name-only` stays inside the TACD-003 declared file set plus `specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md`; if not, stop and update the plan before continuing. (FR-007, FR-009, FR-010, SC-005)
@@ -105,7 +105,7 @@
 
 **Purpose**: Prepare review evidence without expanding implementation scope.
 
-- [ ] T027 Build PR packet traceability from `specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md` that maps AC-3.1 through AC-3.4, FR-001 through FR-014, and SC-001 through SC-008 to changed files and verification evidence. (SC-005)
+- [ ] T027 Build PR packet traceability from `specs/tacd-003-prerequisite-and-documentation-messaging/tasks.md` that maps AC-3.1 through AC-3.4, FR-001 through FR-014, and SC-001 through SC-008 to changed files and verification evidence. (AC-3.1, AC-3.2, AC-3.3, AC-3.4, SC-005)
 - [ ] T028 Include a PR packet section based on `specs/tacd-003-prerequisite-and-documentation-messaging/spec.md` stating that missing optional research or context capabilities remain non-blocking when acceptable fallback evidence exists and escalate only when no acceptable evidence path exists or a true gate fails. (AC-3.4, FR-002, FR-003, FR-012, FR-014, SC-001, SC-006, SC-008)
 - [ ] T029 Include a `Repo vs Platform Evidence` PR packet section based on `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` that separates repository-specific guidance backed by Racecraft sources or generated artifacts from platform/vendor behavior backed by official vendor evidence. (FR-004, FR-006, SC-005)
 - [ ] T030 Include a PR packet exception inventory from the changed active guidance paths listed in `specs/tacd-003-prerequisite-and-documentation-messaging/plan.md` for any remaining concrete optional-tool names, limited to platform metadata, exact repository file references, generated source-derived duplicates, or historical provenance. (AC-3.3, FR-006, FR-010, SC-003, SC-005)
@@ -168,8 +168,8 @@
 |-----------------|-------|
 | AC-3.1 | T004, T005, T009, T010, T027 |
 | AC-3.2 | T014, T015, T016, T017, T018, T019, T027 |
-| AC-3.3 | T010, T014, T015, T016, T017, T018, T019, T020, T030 |
-| AC-3.4 | T005, T012, T014, T015, T017, T028 |
+| AC-3.3 | T010, T014, T015, T016, T017, T018, T019, T020, T027, T030 |
+| AC-3.4 | T005, T012, T014, T015, T017, T027, T028 |
 | FR-001 | T004, T009, T027, T032 |
 | FR-002 | T005, T028 |
 | FR-003 | T005, T010, T028 |
@@ -192,6 +192,14 @@
 | SC-006 | T005, T012, T014, T015, T017, T028 |
 | SC-007 | T004, T007, T011, T023 |
 | SC-008 | T006, T012, T023, T028 |
+
+## Approved Validation Task Mapping
+
+| Validation Target | Tasks | Why approved |
+|-------------------|-------|--------------|
+| Scope and design guard | T001, T002, T003 | Confirms the edit set, design concept, and existing prerequisite/test surfaces before source changes. |
+| Script safety and focused regression evidence | T006, T007, T008, T011, T013, T022, T023, T024, T025 | Validates true-blocker preservation, JSON parseability, `bash -n`, focused Layer 4 assertions, structural validation, and the default deterministic suite without adding TACD-004 enforcement. |
+| Scope drift and review packet evidence | T021, T026, T027, T028, T029, T030, T031, T032 | Confirms the diff stays inside the declared TACD-003 file set and records traceability, repo/platform evidence, concrete-name exceptions, TACD-004 handoff, and rollback notes. |
 
 ## Metrics
 

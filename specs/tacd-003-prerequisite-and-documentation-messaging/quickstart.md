@@ -16,6 +16,7 @@
 ## Verification Commands
 
 ```bash
+bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh
 bash tests/speckit-pro/run-all.sh --layer 4
 bash tests/speckit-pro/run-all.sh --layer 1
 bash tests/speckit-pro/run-all.sh

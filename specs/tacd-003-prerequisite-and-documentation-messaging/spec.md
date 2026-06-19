@@ -178,14 +178,14 @@ running the existing structural and default verification commands.
 
 - **Primary surface**: docs/process
 - **Secondary surfaces, if any**: harness/adapter
-- **Projected reviewable LOC**: 250
-- **Projected production files**: 6
-- **Projected total files**: 9
+- **Projected reviewable LOC**: 190
+- **Projected production files**: 1
+- **Projected total files**: 8
 - **Budget result**: within budget
 - **Split decision**: Keep as one spec because the slice changes one
-  prerequisite messaging path, a small set of active guidance references, and
-  focused deterministic coverage. Any broader enforcement or eval rewrites are
-  deferred to TACD-004.
+  prerequisite messaging path, focused deterministic coverage, and the active
+  guidance references declared in `plan.md`. Any broader enforcement or eval
+  rewrites are deferred to TACD-004.
 
 ### PR Review Packet Requirements *(mandatory)*
 

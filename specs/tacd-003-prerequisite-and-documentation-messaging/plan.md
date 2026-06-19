@@ -22,7 +22,8 @@ SpecKit Pro shell helpers and docs sources
 **Storage**: Checked-in repository files only; no database, browser storage, or
 runtime service state
 
-**Testing**: `bash tests/speckit-pro/run-all.sh --layer 4`,
+**Testing**: `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh`,
+`bash tests/speckit-pro/run-all.sh --layer 4`,
 `bash tests/speckit-pro/run-all.sh --layer 1`, and
 `bash tests/speckit-pro/run-all.sh`
 
@@ -47,9 +48,11 @@ research-capability wording, and focused deterministic regression coverage
 
 **Reviewability Budget**: Primary surface docs/process; secondary surface
 harness/adapter; projected 190 reviewable LOC, 1 production file, 8 total
-implementation files; within the TACD-003 roadmap budget. Setup gate warning:
-the broader roadmap spans two primary surfaces, but this slice stays as one
-spec unless implementation grows beyond this plan.
+implementation files; within the TACD-003 roadmap budget. The current plan
+estimator reports 8 modified declared entries and 0 new production LOC because
+this slice edits existing files. Setup gate warning: the broader roadmap spans
+two primary surfaces, but this slice stays as one spec unless implementation
+grows beyond this plan.
 
 ## Declared File Operations
 
@@ -69,7 +72,7 @@ spec unless implementation grows beyond this plan.
 | Principle | Status | Plan Alignment |
 |-----------|--------|----------------|
 | I. Plugin Structure Compliance | PASS | Existing plugin layout is preserved; no new plugin component type is introduced. |
-| II. Script Safety | PASS | The prerequisite script remains Bash with safe mode and JSON work handled through `jq` helpers. |
+| II. Script Safety | PASS | The prerequisite script remains Bash with safe mode, syntax validation through `bash -n`, and JSON work handled through `jq` helpers. |
 | III. Semantic Versioning | PASS | No plugin version or release metadata change is planned. |
 | IV. Test Coverage Before Merge | PASS | Focused Layer 4 coverage is extended for the changed JSON output; Layer 1 and full verify remain required before implementation completion. |
 | V. Conventional Commits | PASS | No commit is created in this phase; later PR title/commit must use an accepted conventional scope. |
@@ -116,7 +119,8 @@ both covered by the implementation plan and focused shell tests.
    successful setup when optional capability coverage is absent. Keep the
    existing valid-JSON coverage and add focused assertions for the changed
    advisory field shape plus at least one true prerequisite blocker that remains
-   `all_pass=false` with an actionable message.
+   `all_pass=false` with an actionable message. Run `bash -n` against the
+   edited prerequisite script before the focused Layer 4 suite.
 3. Update active prerequisite, limitation, coach, and autopilot guidance in the
    declared Markdown files to explain capability-first discovery and fallback
    behavior in vendor-neutral language.
@@ -136,7 +140,7 @@ both covered by the implementation plan and focused shell tests.
 
 | Requirement | Planned Files | Verification Evidence |
 |-------------|---------------|-----------------------|
-| FR-001, FR-011, FR-013 | `check-prerequisites.sh`; `test-check-prerequisites.sh` | Layer 4 assertions for one successful `capability_coverage` result, no per-tool inventory, JSON-parseable stdout, stable top-level/check fields, and no non-JSON stdout diagnostics |
+| FR-001, FR-011, FR-013 | `check-prerequisites.sh`; `test-check-prerequisites.sh` | `bash -n` for script syntax plus Layer 4 assertions for one successful `capability_coverage` result, no per-tool inventory, JSON-parseable stdout, stable top-level/check fields, and no non-JSON stdout diagnostics |
 | FR-002, FR-003, FR-012, FR-014 | `check-prerequisites.sh`; `test-check-prerequisites.sh`; declared active guidance docs | Layer 4 missing-optional-capability fixture remains successful and advisory-only; existing true-blocker fixture remains `all_pass=false` with an actionable message; changed guidance has no escalation instruction triggered solely by absent optional coverage |
 | FR-004 | `prerequisites.md`; `prerequisites-codex.md`; `plugin-limitations.md` | Focused changed-doc assertions if the test file adds them; otherwise reviewer traceability plus Layer 1 structural validation |
 | FR-005, FR-006 | `autopilot-guide.md`; `speckit-autopilot/SKILL.md`; `codex-skills/speckit-autopilot/SKILL.md`; declared prerequisite and limitation docs | Review packet lists any concrete optional-tool names that remain as platform metadata, exact file references, generated content, or historical provenance |

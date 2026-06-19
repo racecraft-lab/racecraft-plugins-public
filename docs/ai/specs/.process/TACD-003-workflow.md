@@ -44,8 +44,8 @@ concept is the source of truth for setup-time scoping decisions.
 | Plan | `/speckit-plan` | Complete | `plan.md`, `research.md`, and `quickstart.md` created; G3 passed |
 | Checklist | `/speckit-checklist` | Complete | Three checklists complete; G4 passed with 0 `[Gap]` markers |
 | Tasks | `/speckit-tasks` | Complete | `tasks.md` created; G5 passed with 32 tasks |
-| Analyze | `/speckit-analyze` | In Progress | Cross-check spec, plan, tasks, and design concept |
-| Implement | `/speckit-implement` | Pending | Implement one vertical slice |
+| Analyze | `/speckit-analyze` | Complete | 3 findings remediated; marker counter clean; G6 ready |
+| Implement | `/speckit-implement` | In Progress | Execute collapsed `full-spec` marker (`T001`-`T032`) |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -91,8 +91,8 @@ The setup gate was run against the technical roadmap:
 {"mode":"setup","status":"warn","pass":true,"reviewable_loc":202,"production_files":0,"total_files":7,"primary_surface_count":2,"primary_surfaces":["docs/process","harness/adapter"],"warnings":["primary surfaces 2 exceeds warn threshold 1"],"blockers":[]}
 ```
 
-This warning comes from the broader roadmap including TACD-004. The TACD-003
-entry itself records:
+This warning comes from the broader roadmap including TACD-004. The initial
+TACD-003 roadmap entry itself recorded:
 
 - Primary surface: docs/process
 - Projected reviewable LOC: 142
@@ -100,7 +100,10 @@ entry itself records:
 - Total files: 5
 - Budget result: within budget
 
-Split decision from Grill Me: keep TACD-003 as one vertical slice.
+Split decision from Grill Me: keep TACD-003 as one vertical slice. Later
+checklist remediation expanded the active guidance file set; `plan.md` now
+declares 8 modified implementation files, while the task-mode reviewability
+gate below is a separate size-only marker-planning input.
 
 ### Autopilot Preflight
 
@@ -360,7 +363,7 @@ Consensus: Sessions 1, 2, and 3 had no unresolved items; consensus steps skipped
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Complete | Declares 5 modified files and focused verification |
+| `plan.md` | Complete | Declares 8 modified files and focused verification |
 | `research.md` | Complete | Records advisory shape, category list, docs boundary, generated payload rule, and verification boundary |
 | `data-model.md` | Not expected | No database or persistent data model planned |
 | `contracts/` | Not expected | No API contract planned |
@@ -369,9 +372,9 @@ Consensus: Sessions 1, 2, and 3 had no unresolved items; consensus steps skipped
 Plan gate: G3 passed with `plan.md` present and 0 unresolved markers.
 
 Reviewability estimator: `estimate-reviewable-loc.sh plan.md` returned
-`status=pass`, `projected=0`, `declared_files.modified=5`,
-`declared_files.total_entries=5`. The plan also records the roadmap budget:
-142 projected reviewable LOC, 1 production file, 5 total implementation files.
+`status=pass`, `projected=0`, `declared_files.modified=8`,
+`declared_files.total_entries=8`. The plan records the current budget:
+190 projected reviewable LOC, 1 production file, 8 total implementation files.
 
 ---
 
@@ -516,7 +519,7 @@ only here in the workflow file.
 | Ordered marker IDs | `full-spec` |
 | Review order | `full-spec` executes `T001`-`T032` |
 | Checkpoints | Pending: `specs/tacd-003-prerequisite-and-documentation-messaging/.process/marker-plan/full-spec-checkpoint.json` |
-| Warnings | Task heuristic estimates 1280 reviewable LOC and 41 referenced files |
+| Warnings | Task heuristic estimates 1280 reviewable LOC and 43 referenced files |
 | Final marker split | Placeholder: `hazard_collapsed` single-marker path |
 | Packet validation | Pending |
 | PR mappings | Pending |
@@ -548,7 +551,21 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | HIGH | Script-safety validation was implied but not explicit in `plan.md`, `tasks.md`, and `quickstart.md`, even though the constitution and clarify record require Bash syntax validation for the edited prerequisite script. | Added `bash -n speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` to the plan testing contract, T013, T023, and quickstart verification. |
+| A2 | MEDIUM | Reviewability/file-count bookkeeping drifted across spec, plan, and workflow evidence after checklist remediation expanded the active guidance file set from 5 to 8 implementation files. | Reconciled `spec.md`, `plan.md`, and this workflow log to the current 8-file declared plan while preserving the G5 size-only task gate evidence. |
+| A3 | MEDIUM | Task traceability for validation-only work was present through FR/SC references, but `tasks.md` did not explicitly show which non-AC tasks were approved validation tasks; T027 also claimed AC traceability in the summary without citing AC-3.1 through AC-3.4 on the task line. | Added AC-3.1 through AC-3.4 to T027, updated the AC coverage rows, and added an approved validation task mapping that preserves the 32-task count. |
+
+G6 verification: marker counter returned `{"type":"findings","total":0,"critical":0,"high":0,"medium":0,"low":0}` after remediation, and `validate-gate.sh G6` returned pass with 0 CRITICAL/HIGH findings.
+
+### Pre-Implementation Confidence Gate
+
+| Field | Value |
+|-------|-------|
+| Mode | `advisory` |
+| Status | `soft_skip` |
+| Reason | No synthesizer confidence emit was present in the workflow file |
+| Recommended action | Continue; no blocking confidence result exists |
+| Evidence | `confidence-gate.sh docs/ai/specs/.process/TACD-003-workflow.md --mode advisory` returned `NO_DATA` |
 
 ---
 
