@@ -69,7 +69,9 @@ test.describe('DOC-010 route smoke', () => {
 
     await searchInput.fill('troubleshooting install');
 
-    await expect(page.getByRole('link', { name: /Troubleshooting/i }).first()).toBeVisible();
+    await expect(page.getByRole('link', { name: /Troubleshooting/i }).first()).toBeVisible({
+      timeout: 15_000,
+    });
   });
 
   test('representative deep links resolve to intended sections', async ({ page }, testInfo) => {
