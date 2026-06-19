@@ -32,7 +32,7 @@ The Playwright configuration owns the deployed base path, including `/racecraft-
 
 ## Artifact Contract
 
-- CI uploads one short-retention artifact named `docs-site-smoke-evidence`.
+- CI uploads one artifact named `docs-site-smoke-evidence` with 7-day retention.
 - Artifact may contain Playwright report, screenshots, traces, or compact output.
 - Artifact files are not committed.
 

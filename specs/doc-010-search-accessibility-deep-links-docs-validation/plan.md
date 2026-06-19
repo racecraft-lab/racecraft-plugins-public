@@ -8,7 +8,7 @@
 
 ## Summary
 
-DOC-010 hardens the existing Astro/Starlight docs site for support-oriented search, stable deep links, accessible interactive aids, and deterministic docs validation. The implementation keeps the six existing logical routes, extends the current docs-site validation path, adds minimal Playwright smoke coverage with `/racecraft-plugins-public` owned by Playwright baseURL configuration, and adds a job-level `validate-docs` PR Checks gate without changing plugin matrix semantics.
+DOC-010 hardens the existing Astro/Starlight docs site for support-oriented search, stable deep links, accessible interactive aids, and deterministic docs validation. The implementation keeps the six existing logical routes, extends the current docs-site validation path, adds minimal Playwright smoke coverage with `/racecraft-plugins-public` owned by Playwright baseURL configuration, and adds a job-level `validate-docs` PR Checks gate without changing plugin matrix semantics or forcing plugin matrix jobs for docs-site-only PRs.
 
 ## Technical Context
 
@@ -18,7 +18,7 @@ DOC-010 hardens the existing Astro/Starlight docs site for support-oriented sear
 
 **Storage**: Checked-in Markdown, Astro components, package scripts, generated reference files, and CI artifacts only; no database or browser storage
 
-**Testing**: `pnpm --dir docs-site reference:check`, `pnpm --dir docs-site check`, `pnpm --dir docs-site build`, focused docs quality validation, `pnpm --dir docs-site validate:smoke`, and combined `pnpm --dir docs-site validate`
+**Testing**: `pnpm --dir docs-site reference:check`, `pnpm --dir docs-site check`, `pnpm --dir docs-site build`, focused docs quality validation, `pnpm --dir docs-site validate:smoke`, and combined `pnpm --dir docs-site validate`. Security/safety evidence is verified by source review and validation output review: validators emit repo-relative paths, avoid local absolute paths and sensitive values, treat unsafe commands as manual-only/copyable guidance, avoid user-local inputs, and keep Playwright evidence limited to the configured local docs preview route and viewport set.
 
 **Target Platform**: GitHub Pages hosted Astro/Starlight docs site under `/racecraft-plugins-public/`; GitHub Actions PR Checks on `ubuntu-latest`
 
@@ -27,6 +27,8 @@ DOC-010 hardens the existing Astro/Starlight docs site for support-oriented sear
 **Performance Goals**: Keep validation deterministic and smoke-level; avoid broad visual snapshots; keep CI docs validation limited to docs-site/reference-source/doc-contract changes
 
 **Constraints**: No new top-level route, no search replacement, no analytics, no live plugin install commands in CI, no browser-side local command execution, no local-user-file inspection, no destructive validation, no workflow-level `paths` filters
+
+**Security/Safety Planning Boundaries**: DOC-010 validation uses checked-in repository sources, generated docs output, and a local docs-site preview only. It does not inspect user home directories, local JSON/config/cache, browser profiles, environment secrets, or user-supplied payloads. Command snippets, manifests, payload references, and generated-reference facts are checked through source-backed static validation and copyable-guidance review, not execution. Playwright smoke stays on the configured docs-site baseURL and must not perform live installs, destructive actions, analytics, production telemetry, external marketplace navigation, or browser-side local command execution. Validation output and smoke artifacts use repo-relative paths and sanitized evidence. The `validate-docs` gate must not add new permissions, credentials, secrets, marketplace access, or plugin matrix fan-out for docs-site-only PRs.
 
 **Scale/Scope**: Six logical routes (`/`, `/choose-your-path/`, `/spec-kit-lifecycle/`, `/glossary/`, `/reference/skills/`, `/contribute-and-release/`), two viewports, one compact smoke artifact, and deterministic validation for full internal links/anchors
 
@@ -67,7 +69,7 @@ DOC-010 hardens the existing Astro/Starlight docs site for support-oriented sear
 
 **Reviewability gate**: PASS. Primary surface is docs/process with bounded UI and harness/adapter secondary surfaces. The file and LOC estimates stay below warning thresholds.
 
-**PR review packet source**: PR description must include what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, rollback/fallback notes, browser smoke evidence, and manual accessibility/responsive review evidence.
+**PR review packet source**: PR description must include what changed, why, non-goals, review order, scope budget, traceability, verification, known gaps, rollback/fallback notes, browser smoke evidence, and manual accessibility/responsive review evidence. It must also include automation-safety evidence: commands run, confirmation that copyable snippets were not executed, confirmation that local user files/JSON/cache and environment secrets were not inspected, confirmation that no live plugin or marketplace install/destructive/browser-side command behavior occurred, and a sanitized summary of the compact `docs-site-smoke-evidence` artifact.
 
 ## Project Structure
 
@@ -127,7 +129,10 @@ Research resolved the planning choices without open clarifications:
 - Extend current validators with one focused docs quality validator instead of creating a broad new framework.
 - Add minimal Playwright smoke coverage for six logical routes, two viewports, representative deep links, and selected interactive aid checks.
 - Add a job-level `validate-docs` gate with changed-file detection for rendered docs-site, generated-reference source, and docs-validation contract surfaces.
+- Keep docs-site-only PRs on the docs validation path without making `detect.outputs.plugins` non-empty or running unrelated plugin matrix jobs unless the same PR also touches plugin or generated-reference source inputs.
 - Treat accessibility automation as guardrails and record manual/browser evidence in the existing PR packet sections.
+- Preserve native controls and semantic HTML in the interactive aids where possible: `SafeInstallAids.astro` keeps radio inputs, copy buttons, semantic tables/code blocks, and polite status text for selector or copy-result changes; `LifecycleFlow.astro` stays readable as ordered semantic content before adding any custom interaction.
+- Manual/browser evidence must explicitly cover visible unclipped focus, status announcement text, screen-reader-oriented label/state inspection, contrast and reflow across desktop and mobile-sized layouts, and static fallback/non-JavaScript readability. This evidence is a review record, not an accessibility certification claim.
 
 See `research.md` for decisions, rationale, and alternatives.
 
@@ -140,6 +145,9 @@ Design artifacts define the docs entities, validation contracts, browser smoke b
 - `contracts/browser-smoke-contract.md`: route, viewport, baseURL, and artifact expectations.
 - `contracts/pr-checks-docs-gate-contract.md`: CI changed-file detection and `validate-docs` behavior.
 - `quickstart.md`: local verification path and manual evidence checklist.
+- Support anchor scope is defined by page family and support purpose: install, recovery/troubleshooting, generated reference, glossary, and release workflow pages must expose stable support anchors or documented exceptions. Deterministic docs validation owns full link and anchor coverage.
+- Browser smoke route rationale maps the six logical routes to critical journeys: entry/search, install selection, lifecycle guidance, glossary terminology, generated skills reference, and contributor/release workflow. Playwright remains representative and does not become an exhaustive crawl or visual snapshot suite.
+- Accessibility review detail: focused validators and Playwright smoke may catch missing labels, status regions, unsafe controls, broken fallback content, and representative reflow failures; manual PR packet evidence remains required for contrast judgment, focus quality, screen-reader-oriented state inspection, and any known gaps.
 
 ## Post-Design Constitution Check
 

@@ -4,7 +4,7 @@
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
   "updated_at": "2026-06-19T01:06:35Z",
-  "active_step": "Phase 4: Checklist - Accessibility",
+  "active_step": "Phase 5: Tasks",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -160,6 +160,74 @@
         "modified": 7,
         "total_entries": 10
       }
+    },
+    "checklists": {
+      "accessibility": {
+        "status": "completed",
+        "items": 21,
+        "gaps_before": 3,
+        "gaps_after": 0,
+        "consensus": "not required; executor reported no unresolved items",
+        "files": [
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/accessibility.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md"
+        ]
+      },
+      "ux": {
+        "status": "completed",
+        "items": 18,
+        "gaps_before": 2,
+        "gaps_after": 0,
+        "consensus": "not required; executor reported no unresolved items",
+        "files": [
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/ux.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md"
+        ]
+      },
+      "reliability": {
+        "status": "completed",
+        "items": 23,
+        "gaps_before": 2,
+        "gaps_after": 0,
+        "consensus": "not required; executor reported no unresolved items",
+        "files": [
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/reliability.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/browser-smoke-contract.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/pr-checks-docs-gate-contract.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/quickstart.md"
+        ]
+      },
+      "security": {
+        "status": "completed",
+        "items": 22,
+        "gaps_before": 11,
+        "gaps_after": 0,
+        "consensus": "completed; security keyword item routed to all three analysts",
+        "files": [
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/checklists/security.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/spec.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md",
+          "specs/doc-010-search-accessibility-deep-links-docs-validation/contracts/pr-checks-docs-gate-contract.md"
+        ],
+        "consensus_log": [
+          {
+            "type": "Gap",
+            "item": "Permission, credential, secret, token, marketplace, plugin-runtime, and plugin-matrix boundaries for validate-docs",
+            "categories": "[security]",
+            "round": "2",
+            "outcome": "3/3",
+            "analysts": [
+              "codebase-analyst",
+              "spec-context-analyst",
+              "domain-researcher"
+            ]
+          }
+        ]
+      }
     }
   },
   "plan": [
@@ -173,15 +241,15 @@
     {"step": "Phase 2: Clarify - Playwright Script Shape", "status": "completed"},
     {"step": "Phase 2: Clarify - Playwright Script Shape Consensus", "status": "completed"},
     {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - Accessibility", "status": "in_progress"},
-    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - UX", "status": "pending"},
-    {"step": "Phase 4: Checklist - UX Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Reliability", "status": "pending"},
-    {"step": "Phase 4: Checklist - Reliability Consensus", "status": "pending"},
-    {"step": "Phase 4: Checklist - Security", "status": "pending"},
-    {"step": "Phase 4: Checklist - Security Consensus", "status": "pending"},
-    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 4: Checklist - Accessibility", "status": "completed"},
+    {"step": "Phase 4: Checklist - Accessibility Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - UX", "status": "completed"},
+    {"step": "Phase 4: Checklist - UX Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Reliability", "status": "completed"},
+    {"step": "Phase 4: Checklist - Reliability Consensus", "status": "completed"},
+    {"step": "Phase 4: Checklist - Security", "status": "completed"},
+    {"step": "Phase 4: Checklist - Security Consensus", "status": "completed"},
+    {"step": "Phase 5: Tasks", "status": "in_progress"},
     {"step": "Phase 6: Analyze", "status": "pending"},
     {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
     {"step": "Phase 6.5: Confidence Gate", "status": "pending"},

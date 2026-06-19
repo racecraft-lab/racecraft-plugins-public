@@ -37,6 +37,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [contracts/browser-smoke-contract.md](contracts/browser-smoke-contract.md)
 - [contracts/docs-validation-contract.md](contracts/docs-validation-contract.md)
 - [contracts/pr-checks-docs-gate-contract.md](contracts/pr-checks-docs-gate-contract.md)
+- [checklists/accessibility.md](checklists/accessibility.md)
+- [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/security.md](checklists/security.md)
+- [checklists/ux.md](checklists/ux.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

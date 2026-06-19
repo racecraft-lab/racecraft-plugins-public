@@ -80,6 +80,9 @@ Reviewers can inspect compact browser smoke evidence for key existing docs route
 - Dynamic behavior fails or is disabled, leaving only static fallback content.
 - CI runs on changes that do not touch docs-site files and must not trigger a new docs job.
 - Validation encounters commands that would require network access, live plugin installation, destructive actions, or local user files.
+- Automated validation encounters install, recovery, cleanup, marketplace, or credentialed guidance that would mutate a machine, call a live service, require credentials, inspect local user state, or rely on hidden permission grants.
+- Manifest, payload, generated-reference, log, smoke artifact, or PR packet evidence could expose local absolute paths, secrets, tokens, environment values, browser profile state, or user-specific filesystem details.
+- Browser smoke encounters external platform links, marketplace links, analytics, telemetry, or production-only navigation that cannot be proven from the configured local docs preview.
 - External platform behavior changes after the docs make a source-backed claim.
 
 ## Requirements *(mandatory)*
@@ -90,15 +93,59 @@ Reviewers can inspect compact browser smoke evidence for key existing docs route
 - **FR-002**: Existing support-heavy pages MUST define stable heading and deep-link conventions for install, recovery, troubleshooting, glossary, generated reference, and release workflow content.
 - **FR-003**: Glossary terms and generated reference sections MUST expose shareable anchors that remain stable unless an intentional source update records the change.
 - **FR-004**: Users MUST be able to find install, recovery, troubleshooting, reference, and release workflow guidance from existing docs-site navigation, search, or linked sections.
-- **FR-005**: `SafeInstallAids.astro` MUST preserve or improve keyboard navigation, visible focus, labels, contrast, static fallback content, and responsive behavior.
-- **FR-006**: `LifecycleFlow.astro` MUST preserve or improve keyboard navigation, visible focus, labels, contrast, static fallback content, and responsive behavior.
+- **FR-005**: `SafeInstallAids.astro` MUST preserve or improve keyboard navigation, visible focus, labels, native or semantic controls, accessible status announcements for selector and copy-result changes, contrast, static fallback content, and responsive behavior.
+- **FR-006**: `LifecycleFlow.astro` MUST preserve or improve keyboard navigation, visible focus, labels, native or semantic HTML before custom ARIA patterns, contrast, static fallback content, and responsive behavior.
 - **FR-007**: Existing docs-site validators MUST be extended to cover generated reference checks, deterministic internal link and anchor validation, site checks, build/link validation, safe-aids validation, and minimal browser smoke without creating a broad new validation framework.
 - **FR-008**: The docs-site package scripts MUST provide one local docs validation path that runs the full DOC-010 validation set and focused subcommands where useful.
-- **FR-009**: PR Checks MUST include a stable docs validation gate that uses job-level changed-file detection rather than workflow-level path filters, preserves existing plugin test matrix semantics, and distinguishes rendered docs-site changes, generated-reference source changes, and docs-validation contract changes.
+- **FR-009**: PR Checks MUST include a stable docs validation gate that uses job-level changed-file detection rather than workflow-level path filters, preserves existing plugin test matrix semantics, distinguishes rendered docs-site changes, generated-reference source changes, and docs-validation contract changes, and ensures docs-site-only PRs do not force unrelated plugin matrix jobs unless those PRs also touch plugin or generated-reference source inputs.
 - **FR-010**: Browser smoke coverage MUST remain minimal, cover the logical route set `/`, `/choose-your-path/`, `/spec-kit-lifecycle/`, `/glossary/`, `/reference/skills/`, and `/contribute-and-release/`, and include both mobile and desktop viewports while relying on the Playwright base URL for the deployed `/racecraft-plugins-public` path prefix.
 - **FR-011**: Automated validation MUST avoid networked, destructive, live plugin install, browser-side local command execution, and local-user-file inspection commands unless such actions are explicitly documented as manual-only.
 - **FR-012**: Documentation that makes external platform claims MUST include source-update guidance so future changes become explicit maintenance work rather than stale assertions.
-- **FR-013**: Reviewer-facing evidence MUST connect changed docs-site surfaces to validation output, browser smoke coverage, the short-retention `docs-site-smoke-evidence` artifact, manual accessibility review notes, known gaps, and rollback or fallback notes.
+- **FR-013**: Reviewer-facing evidence MUST connect changed docs-site surfaces to validation output, browser smoke coverage, the 7-day-retention `docs-site-smoke-evidence` artifact, manual accessibility review notes, known gaps, and rollback or fallback notes.
+
+### Validation Safety Boundaries
+
+- Automated DOC-010 validation MUST use checked-in repository sources, generated docs output, and the local docs-site preview as inputs. It MUST NOT read local user files, user JSON/config/cache, browser profiles, environment secrets or values, or user-supplied payloads, and it MUST NOT request or rely on hidden permission grants.
+- Command snippets, install guidance, rollback guidance, manifest references, payload references, and generated-reference facts MUST be validated by source-backed static inspection and copyable-guidance review only. Automated validation MUST NOT execute copyable commands, browser-side local commands, live plugin or marketplace installs, destructive cleanup, or local machine inspection.
+- Playwright smoke MUST be limited to the configured docs-site baseURL, the six logical DOC-010 routes, sampled internal links, and local preview or build artifacts. It MUST NOT submit analytics or production telemetry, follow unintended external navigation, execute install flows, or use production services to prove claims.
+- Validation output, logs, smoke artifacts, and PR packet evidence MUST use repo-relative paths and actionable source references. They MUST avoid local absolute paths, secrets, tokens, environment values, user-specific filesystem details, browser profile state, and broad unrelated browser artifacts.
+- Manual-only actions MUST be labeled as manual-only and MUST NOT be implied as CI execution. Copy buttons and selectors expose guidance text only and do not create an automated execution contract.
+- If a command snippet, manifest field, payload value, generated-reference claim, or external-platform assertion cannot be verified from checked-in source without local user state, user JSON, credentials, or networked marketplace behavior, validation MUST fail with a sanitized repo-relative remediation message or require a documented manual-only/source-update exception.
+- The `validate-docs` PR gate MUST preserve existing plugin test semantics and docs-only scope. Docs-site-only PRs MUST NOT require new workflow permissions, credentials, secrets, marketplace access, plugin runtime execution, or plugin-matrix fan-out unless the PR also changes plugin or generated-reference source inputs covered by existing semantics.
+
+### Support Anchor Inventory Scope
+
+DOC-010 defines support-ready anchors by owning page family and support purpose, not by freezing every generated Starlight slug in the spec.
+
+The anchor inventory scope is:
+
+- **Install guidance**: `/install/claude-code/`, `/install/codex/`, and `/choose-your-path/` sections for install decisions, source/payload/cache separation, install path matrices, verification, stale update checkpoints, install safety, selector results, and static fallback links.
+- **Recovery and troubleshooting**: `/troubleshooting/` and `/update-and-rollback/` sections for symptom matrix entries, read-only inspection boundaries, recovery cases, stale cache, rollback, and version sync.
+- **Generated reference**: `/reference/` and generated `/reference/**` pages, especially `/reference/skills/`, including generated record headings, command or skill reference sections, prerequisites, source facts, and inferred notes.
+- **Glossary**: `/glossary/` terms for marketplace, payload, source tree, skill, agent, hook, cache, constitution, lifecycle, and other DOC-010 support terms.
+- **Release workflow**: `/contribute-and-release/` sections for source of truth, change type matrix, contributor path, release readiness, version fields, release automation, PR Checks behavior, and final checklist.
+
+Scope rules:
+
+- Designated support-heavy headings, glossary terms, troubleshooting entries, generated reference records, and release workflow sections MUST expose stable shareable anchors or document an intentional exception.
+- Generated reference anchors are owned by the generator and `reference:check` validation.
+- Renamed or removed anchors MUST include an intentional source update, redirecting link update, or documented exception.
+- Deterministic docs validation owns complete internal link and anchor coverage; Playwright samples representative deep links only.
+
+### Browser Smoke Route Rationale
+
+The six DOC-010 smoke routes are representative critical journeys, not an exhaustive page crawl:
+
+| Route | Critical journey represented |
+|-------|------------------------------|
+| `/` | Entry, platform choice, and search start point for install, reference, and release guidance. |
+| `/choose-your-path/` | Install path selection, `SafeInstallAids` interaction, copyable guidance, and static fallback links. |
+| `/spec-kit-lifecycle/` | Lifecycle and gate understanding, `LifecycleFlow` content, platform action comparison, and fallback readability. |
+| `/glossary/` | Support terminology discovery and shareable glossary anchors. |
+| `/reference/skills/` | Representative generated reference page with source-cited records and stable generated anchors. |
+| `/contribute-and-release/` | Maintainer and contributor release workflow, PR evidence, validation, and rollback-oriented support content. |
+
+This route set stays small because it covers entry/search, install selection, lifecycle guidance, glossary terms, generated reference behavior, and release workflow evidence. Install, troubleshooting, and recovery pages remain in the full support-anchor validation scope, but Playwright only samples representative links and interactions.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -121,7 +168,19 @@ Reviewers can inspect compact browser smoke evidence for key existing docs route
 - PR description MUST include: what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes.
 - Traceability MUST map each major requirement or success criterion to changed files and verification evidence.
 - Browser and manual accessibility evidence MUST be recorded in existing reviewer-visible PR packet sections, including `How To UAT`, `Verification`, traceability, and `Known Gaps` when applicable.
+- PR packet evidence MUST include an automation-safety note listing validation commands run and confirming that command snippets and copyable guidance were statically inspected rather than executed.
+- PR packet evidence MUST confirm that automated validation did not use live plugin or marketplace installs, destructive cleanup, browser-side local commands, local user files, user JSON/cache, environment secrets or values, hidden permission grants, analytics, or production telemetry.
+- Browser smoke evidence MUST summarize the compact `docs-site-smoke-evidence` artifact, including routes, viewports, included report/screenshot/trace files, retention, and confirmation that artifacts omit local absolute paths, sensitive values, user-specific state, and unrelated broad browser captures.
+- Validation findings shown in the PR packet MUST use repo-relative source references and sanitized messages suitable for reviewer-visible evidence.
 - Deferred work MUST name the follow-up spec or issue.
+
+### Accessibility Review Requirements
+
+- Interactive aid controls MUST use native HTML controls where they satisfy the interaction need; any custom control pattern MUST document its role, name, state, keyboard operation, and fallback relationship.
+- `SafeInstallAids.astro` MUST expose changed selector guidance and copy-result outcomes as visible text and programmatically determinable polite status updates without moving focus.
+- Manual review MUST check that focus indicators remain visible and unclipped, text and meaningful control indicators retain sufficient contrast, and non-excepted content reflows without overlapped labels or required two-dimensional scrolling on both desktop and mobile-sized layouts.
+- Tables, command blocks, and generated reference content MAY use contained horizontal scrolling where their structure requires it, but surrounding prose, labels, controls, and individual readable content MUST remain usable in one scrolling direction.
+- Automation MAY provide guardrails for labels, status regions, focus targets, fallback content, smoke routes, and link/anchor drift; it MUST NOT be described as proving full accessibility conformance.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -140,10 +199,10 @@ Reviewers can inspect compact browser smoke evidence for key existing docs route
 
 - **SC-001**: 100% of DOC-010-designated support-heavy headings, glossary terms, generated reference sections, troubleshooting entries, and release workflow details have stable links or an intentional documented exception.
 - **SC-002**: A user can locate install, recovery, troubleshooting, reference, and release workflow guidance from existing docs navigation, search, or shared links in no more than three meaningful interactions per topic.
-- **SC-003**: Keyboard-only review of the interactive aids can complete every primary action with visible focus and without pointer-only behavior on both desktop and mobile-sized layouts.
+- **SC-003**: Keyboard-only review of the interactive aids can complete every primary action with visible, unclipped focus and without pointer-only behavior on both desktop and mobile-sized layouts.
 - **SC-004**: Static fallback review confirms that each interactive aid preserves the essential install or lifecycle guidance when dynamic behavior is unavailable.
-- **SC-005**: One local docs validation command covers generated reference checks, site checks, build/link validation, safe-aids validation, and minimal browser smoke; PR Checks expose one stable docs validation gate that runs full docs-site validation for rendered docs changes and reference drift validation for generated-reference source changes.
-- **SC-006**: Minimal browser smoke evidence covers the six DOC-010 logical routes across desktop and mobile viewports, with one search smoke from `/`, sampled representative deep links, focused interactive checks on `/choose-your-path/` and `/spec-kit-lifecycle/`, and no broad visual snapshot suite.
+- **SC-005**: One local docs validation command covers generated reference checks, site checks, build/link validation, safe-aids validation, and minimal browser smoke; PR Checks expose one stable docs validation gate that runs full docs-site validation for rendered docs changes and reference drift validation for generated-reference source changes. Reviewers can also verify from local or CI output that automated validation stayed within checked-in source and local preview boundaries and did not execute snippets, inspect local user files, inspect user JSON, read environment secrets, perform live installs, run destructive commands, execute browser-side local commands, or request hidden permission grants.
+- **SC-006**: Minimal browser smoke evidence covers the six DOC-010 logical routes across desktop and mobile viewports, with one search smoke from `/`, sampled representative deep links, focused interactive checks on `/choose-your-path/` and `/spec-kit-lifecycle/`, and no broad visual snapshot suite. Smoke evidence remains limited to compact `docs-site-smoke-evidence` artifacts that omit local absolute paths, sensitive values, user-state traces, and unrelated broad browser artifacts.
 - **SC-007**: 100% of external platform claims touched by DOC-010 include source-update guidance or are removed if no supportable source-update path exists.
 
 ## Assumptions
@@ -152,7 +211,7 @@ Reviewers can inspect compact browser smoke evidence for key existing docs route
 - Existing Starlight search remains the search experience, and this feature improves findability through content, anchors, and validation rather than replacing search.
 - The Playwright smoke script is `validate:smoke`; it is included in `pnpm --dir docs-site validate`, and Playwright configuration handles CI-specific reporter/artifact behavior.
 - The stable PR Checks docs job or gate name is `validate-docs`.
-- CI uploads one compact short-retention smoke artifact named `docs-site-smoke-evidence`; screenshots and reports are review artifacts and are not committed.
+- CI uploads one compact smoke artifact named `docs-site-smoke-evidence` with 7-day retention; screenshots and reports are review artifacts and are not committed.
 - Browser smoke uses logical Starlight routes while Playwright configuration owns the deployed base path, including `/racecraft-plugins-public`.
 - Deterministic docs validation owns full internal link and anchor coverage; Playwright samples representative deep links instead of visiting every support anchor.
 - Automated search smoke starts from `/` with high-value terms such as install, release, or reference and asserts at least one known result link.

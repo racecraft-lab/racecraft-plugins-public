@@ -295,6 +295,7 @@ Resolve the local script name, CI script name, whether screenshots are attached 
 | # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
 |---|------|----------------------|------------|-------|---------|------------|---------------|
 | 1 | Clarify | Non-`docs-site/**` CI trigger allowlist | [codebase, spec] | 1→2 | 2/3 | Recorded split job-level detection: full docs-site validation for rendered docs changes, reference drift validation for generated-reference source changes, and docs-validation contract handling through the stable docs gate | codebase-analyst, spec-context-analyst, domain-researcher |
+| 2 | Gap | Permission, credential, secret, token, marketplace, plugin-runtime, and plugin-matrix boundaries for `validate-docs` | [security] | 2 | 3/3 | Added least-privilege required and forbidden CI behavior to `contracts/pr-checks-docs-gate-contract.md` | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
@@ -434,11 +435,11 @@ Focus on DOC-010 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| Accessibility | | | |
-| UX | | | |
-| Reliability | | | |
-| Security | | | |
-| Total | | | |
+| Accessibility | 21 | 3 found, 3 remediated, 0 remaining | FR-005, FR-006, SC-003, SC-004 |
+| UX | 18 | 2 found, 2 remediated, 0 remaining | FR-002, FR-003, FR-004, FR-010, SC-001, SC-002, SC-006 |
+| Reliability | 23 | 2 found, 2 remediated, 0 remaining | FR-007, FR-008, FR-009, FR-013, SC-005, SC-006 |
+| Security | 22 | 11 found, 11 remediated, 0 remaining | FR-011, FR-013, SC-005, SC-006 |
+| Total | 84 | 18 found, 18 remediated, 0 remaining | All DOC-010 requirements |
 
 ---
 

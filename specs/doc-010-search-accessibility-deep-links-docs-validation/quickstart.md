@@ -75,7 +75,8 @@ The `validate-docs` gate should:
 - Run when docs-site content/config/scripts, generated-reference source inputs, or docs-validation contracts change.
 - Avoid workflow-level `paths` filters.
 - Preserve existing plugin matrix detection and `validate-plugins` semantics.
-- Upload one short-retention artifact named `docs-site-smoke-evidence` when smoke evidence exists.
+- Upload one artifact named `docs-site-smoke-evidence` with 7-day retention when smoke evidence exists.
+- Leave plugin matrix jobs unforced for docs-site-only changes unless the PR also touches plugin or generated-reference source inputs.
 
 ## Forbidden In Automated Validation
 

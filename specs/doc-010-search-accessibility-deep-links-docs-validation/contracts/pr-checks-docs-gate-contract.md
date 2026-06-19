@@ -26,8 +26,10 @@
 ## Required CI Behavior
 
 - `validate-docs` exits successfully with a clear skip message when no docs validation surface changed.
+- Rendered docs-site-only changes run docs validation without forcing `detect.outputs.plugins` to become non-empty or running unrelated plugin matrix jobs, unless the PR also touches plugin or generated-reference source inputs.
 - Docs validation installs docs-site dependencies using pnpm and runs non-destructive local validation.
-- The job uploads `docs-site-smoke-evidence` with short retention when smoke artifacts exist.
+- Docs-site-only validation, including docs-site validators, command-snippet validation, Playwright smoke, and `docs-site-smoke-evidence` artifact upload, uses only checked-out repository contents and local docs-site build or test outputs; it does not require new workflow or job permissions, credentials, secrets, API tokens, marketplace access, plugin runtime execution, or plugin matrix fan-out unless the PR also touches plugin or generated-reference source inputs.
+- The job uploads `docs-site-smoke-evidence` with 7-day retention when smoke artifacts exist.
 - Existing `detect`, `test`, `validate-pr-title`, and `validate-plugins` semantics remain intact.
 
 ## Forbidden CI Behavior
@@ -36,4 +38,5 @@
 - Live plugin marketplace install commands.
 - Browser-side local command execution.
 - Local user file or user JSON inspection.
+- Requiring new workflow or job permissions, credentials, secrets, API tokens, marketplace access, plugin runtime execution, or plugin matrix fan-out for docs-site-only validation, command-snippet validation, Playwright smoke, or smoke artifact upload.
 - Analytics.
