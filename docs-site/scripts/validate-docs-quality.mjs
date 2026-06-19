@@ -279,7 +279,6 @@ function escapeRegExp(value) {
 
 function normalizeSlugText(value) {
   return value
-    .replace(/<[^>]+>/g, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/`([^`]+)`/g, '$1')
     .replace(/&/g, ' and ')
