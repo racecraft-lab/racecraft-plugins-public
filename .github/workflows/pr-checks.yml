@@ -272,6 +272,15 @@ jobs:
           DOCS_SITE_SMOKE_ARTIFACT_DIR: ${{ runner.temp }}/docs-site-smoke-evidence
         run: pnpm --dir docs-site validate
 
+      - name: Upload docs-site smoke evidence
+        if: always() && steps.docs.outputs.validation_mode == 'full'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-site-smoke-evidence
+          path: ${{ runner.temp }}/docs-site-smoke-evidence
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Run generated-reference docs validation
         if: steps.docs.outputs.validation_mode == 'reference'
         run: |

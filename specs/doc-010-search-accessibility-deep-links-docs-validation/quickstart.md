@@ -92,6 +92,58 @@ Recorded for T019 against the checklist above:
 - Known gap: this is reviewer-visible manual/source evidence for US2, not the
   later compact browser smoke artifact. Browser smoke remains owned by US4.
 
+### PR Packet Evidence
+
+Recorded for T040:
+
+- Review order: inspect `docs-site/tests/docs-smoke.spec.mjs` first for the
+  bounded browser contract, then `.github/workflows/pr-checks.yml` for the
+  smoke artifact upload, then this quickstart and `tasks.md` for evidence and
+  traceability.
+- Scope budget: final DOC-010 Phase 7 changes stay inside the declared
+  docs/process, UI, and harness/adapter surfaces. No plugin runtime payloads,
+  generated reference pages, package lockfiles, workflow state, or autopilot
+  state were edited.
+- Traceability: T028-T031 cover route, viewport, search, deep-link,
+  SafeInstallAids, and LifecycleFlow smoke assertions for FR-002, FR-004,
+  FR-005, FR-006, FR-010, and FR-011. T032 covers the 7-day CI artifact
+  contract for FR-013. T033-T039 record the validation bundle. T040 records
+  reviewer-facing PR evidence.
+- Validation output: `pnpm --dir docs-site validate:smoke` passed with
+  20 Playwright tests across `desktop-chromium` and `mobile-chromium`.
+  `pnpm --dir docs-site reference:check` passed with reference pages current.
+  `pnpm --dir docs-site validate:quality` passed.
+  `pnpm --dir docs-site validate:safe-aids` passed.
+  `pnpm --dir docs-site validate` passed with
+  Astro check reporting 0 errors, 0 warnings, and 0 hints, all internal links
+  valid, and the same 20 smoke tests passing. `git diff --check` passed.
+  `bash tests/speckit-pro/run-all.sh --layer 1` passed 1024/1024 checks.
+- Manual accessibility evidence: US2 source/manual evidence remains above.
+  US4 browser smoke adds representative route heading/landmark checks, desktop
+  and mobile viewport checks, search result discovery, sampled deep links,
+  visible install-aid controls and status text, static fallback visibility,
+  and lifecycle fallback/phase evidence. This remains representative smoke
+  evidence, not a full accessibility certification.
+- Compact smoke artifact summary: CI sets `DOCS_SITE_SMOKE_ARTIFACT_DIR` to
+  the runner temp `docs-site-smoke-evidence` directory, then uploads
+  `docs-site-smoke-evidence` with `retention-days: 7` and
+  `if-no-files-found: ignore`. Passing local smoke runs produced no committed
+  artifact files, screenshots, videos, or traces.
+- Known gaps: no broad visual snapshot suite, no full accessibility audit, no
+  production telemetry check, and no live plugin install validation were added.
+  The first unapproved local smoke run was blocked by sandbox localhost
+  permissions on `127.0.0.1:4321`; approved local-server reruns passed.
+- Automation-safety notes: smoke navigation stays on the configured local
+  docs-site baseURL and the six DOC-010 logical routes. Tests do not execute
+  browser-side local commands, inspect local user files or user JSON, install
+  plugins, submit analytics, follow external marketplace flows, or perform
+  destructive behavior. Copy buttons are asserted as visible guidance only.
+- Rollback/fallback notes: if smoke artifacts become noisy, rollback is limited
+  to the Playwright smoke spec and the upload-artifact step. Static docs,
+  SafeInstallAids fallback content, LifecycleFlow fallback content, focused
+  validators, and generated-reference validation continue to provide the
+  non-browser fallback path.
+
 ## CI Expectations
 
 The `validate-docs` gate should:
