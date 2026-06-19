@@ -112,10 +112,11 @@ running the existing structural and default verification commands.
 - **FR-003**: The advisory MUST explain that missing optional capability
   coverage may reduce confidence or require fallback behavior without presenting
   the missing capability as a hard setup failure.
-- **FR-004**: Active prerequisite and limitation guidance MUST explain
-  capability-first discovery and fallback behavior for codebase context, library
-  documentation, web/domain research, and source extraction in user-facing
-  language.
+- **FR-004**: Active Claude and Codex prerequisite guidance MUST be treated as
+  peer active prerequisite surfaces that express the same capability-first
+  contract for codebase context, library documentation, web/domain research, and
+  source extraction, including fallback and escalation behavior, in user-facing
+  language. Active limitation guidance MUST align with that same contract.
 - **FR-005**: Active coach and autopilot guidance MUST align with TACD-002
   behavior by directing agents and users toward capability discovery rather than
   a hardcoded optional-tool contract.
@@ -134,6 +135,21 @@ running the existing structural and default verification commands.
   requires and documents the regeneration step.
 - **FR-011**: Prerequisite output MUST expose the advisory as a successful
   `capability_coverage` check with no per-tool available/missing inventory.
+- **FR-012**: Active prerequisite output and guidance MUST require user
+  escalation only when no acceptable evidence path exists after fallback
+  attempts or when a true prerequisite/gate fails; missing optional research or
+  context capability coverage alone MUST remain advisory.
+- **FR-013**: Prerequisite output MUST remain deterministic and
+  machine-parseable for downstream consumers. Standard output MUST contain one
+  JSON document with stable top-level fields for overall pass state, branch
+  context, worktree context, feature-branch context, and checks; the changed
+  `capability_coverage` advisory MUST retain stable check, pass, message, and
+  detail fields. Diagnostic text for failures MUST NOT be mixed into JSON
+  stdout.
+- **FR-014**: Changing optional capability coverage MUST preserve existing true
+  prerequisite checks. Missing SpecKit CLI, project initialization,
+  constitution, phase command installation, or workflow-file inputs MUST still
+  fail the overall prerequisite result with actionable failure messages.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -145,10 +161,15 @@ running the existing structural and default verification commands.
 - Concrete repository file references may appear in the implementation plan and
   PR packet for traceability, but active user-facing guidance should remain
   capability-first.
-- Active documentation scope includes the prerequisite, limitation,
-  coach/autopilot, and Codex prerequisite references named by the TACD-003
-  roadmap, plus adjacent autopilot entrypoint summaries only when they repeat
-  current preflight or limitation wording.
+- Active documentation scope includes Claude prerequisite guidance
+  (`speckit-pro/skills/speckit-autopilot/references/prerequisites.md`) and
+  Codex prerequisite guidance
+  (`speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md`)
+  as peer active prerequisite surfaces. They must express the same
+  capability-first contract, category set, fallback/escalation boundary, and
+  concrete-identifier exception policy. The scope also includes limitation,
+  coach/autopilot, and adjacent autopilot entrypoint summaries only when they
+  repeat current preflight or limitation wording.
 - Generated payload copies are source-derived outputs. They should be
   regenerated from source when source wording changes require parity, not
   patched directly.
@@ -206,6 +227,9 @@ running the existing structural and default verification commands.
 - Active TACD-003 documentation scope is the four roadmap docs plus adjacent
   autopilot entrypoint summaries only when they repeat active preflight or
   limitation wording.
+- Claude prerequisite guidance and Codex prerequisite guidance are integration
+  peers. Both must express the same capability categories,
+  fallback/escalation boundary, and concrete-identifier exception policy.
 - Generated payload copies are source-derived and should be regenerated from
   changed sources when needed, not patched directly.
 - Archives, changelogs, and fixture prose stay out of scope unless reused as
@@ -231,9 +255,9 @@ running the existing structural and default verification commands.
 - **SC-001**: In a missing-optional-capability setup path with acceptable
   fallback coverage, prerequisite checking completes successfully and emits
   exactly one generic non-blocking `capability_coverage` advisory.
-- **SC-002**: 100% of changed active prerequisite, limitation, coach, and
-  autopilot guidance uses capability-first language for research and context
-  support.
+- **SC-002**: 100% of changed active Claude prerequisite, Codex prerequisite,
+  limitation, coach, and autopilot guidance uses capability-first language for
+  research and context support.
 - **SC-003**: 0 changed active user-facing guidance passages introduce a fixed
   optional-tool installation contract or per-tool available/missing inventory,
   excluding platform metadata, exact file references, generated source-derived
@@ -244,6 +268,15 @@ running the existing structural and default verification commands.
 - **SC-005**: Maintainers can review the TACD-003 PR within the declared budget
   using a traceability packet that maps every functional requirement to changed
   files and verification evidence.
+- **SC-006**: Changed prerequisite output and active guidance contain no
+  escalation instruction triggered solely by absent optional research or context
+  capability coverage when acceptable fallback evidence exists.
+- **SC-007**: Focused Layer 4 coverage proves prerequisite stdout parses as
+  JSON, includes the stable top-level and check fields, and contains exactly one
+  `capability_coverage` advisory without non-JSON diagnostic text on stdout.
+- **SC-008**: Focused Layer 4 coverage includes at least one true prerequisite
+  blocker path that still reports `all_pass=false` with an actionable failure
+  message while the missing-optional-capability path remains successful.
 
 ## Assumptions
 
@@ -255,6 +288,9 @@ running the existing structural and default verification commands.
 - User escalation happens when a task has no acceptable evidence path after
   fallback attempts or when a true prerequisite/gate fails, not merely because
   optional research or context capability coverage is absent at setup.
+- Prerequisite stdout is consumed by deterministic tests and workflow callers as
+  JSON; human-facing diagnostics for blockers belong in JSON fields or stderr,
+  not as extra stdout prose.
 - Active guidance includes prerequisite, limitation, coach, and autopilot
   messaging that users or agents rely on during current workflows.
 - Historical archive, changelog, fixture-only, and provenance references are

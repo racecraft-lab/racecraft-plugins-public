@@ -42,8 +42,8 @@ concept is the source of truth for setup-time scoping decisions.
 | Specify | `/speckit-specify` | Complete | `spec.md` created; G1 passed with 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Three sessions answered; G2 passed with 0 clarification markers |
 | Plan | `/speckit-plan` | Complete | `plan.md`, `research.md`, and `quickstart.md` created; G3 passed |
-| Checklist | `/speckit-checklist` | In Progress | Run enriched checklists after spec and plan exist |
-| Tasks | `/speckit-tasks` | Pending | Generate small TDD-oriented tasks |
+| Checklist | `/speckit-checklist` | Complete | Three checklists complete; G4 passed with 0 `[Gap]` markers |
+| Tasks | `/speckit-tasks` | In Progress | Generate small TDD-oriented tasks |
 | Analyze | `/speckit-analyze` | Pending | Cross-check spec, plan, tasks, and design concept |
 | Implement | `/speckit-implement` | Pending | Implement one vertical slice |
 
@@ -438,10 +438,10 @@ Focus on TACD-003 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| error-handling | Pending | Pending | Pending |
-| integration | Pending | Pending | Pending |
-| reliability | Pending | Pending | Pending |
-| Total | Pending | Pending | Pending |
+| error-handling | 14 | 2 found, 0 remaining | Added FR-012 and SC-006 for escalation boundary; expanded plan scope for adjacent active guidance |
+| integration | 13 | 2 found, 0 remaining | Clarified Claude/Codex prerequisite parity and repo-vs-platform evidence boundary |
+| reliability | 15 | 2 found, 0 remaining | Added FR-013/FR-014 and SC-007/SC-008 for JSON parseability and true-blocker preservation |
+| Total | 42 | 6 found, 0 remaining | G4 passed: 0 `[Gap]` markers |
 
 ---
 

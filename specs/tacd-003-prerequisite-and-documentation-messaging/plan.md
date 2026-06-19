@@ -42,10 +42,11 @@ for platform metadata, exact file references, generated source-derived content,
 or historical provenance; leave broad enforcement and eval updates to TACD-004
 
 **Scale/Scope**: One prerequisite output path, active prerequisite/limitation
-guidance, and focused deterministic regression coverage
+guidance, adjacent coach/autopilot guidance that repeats active preflight or
+research-capability wording, and focused deterministic regression coverage
 
 **Reviewability Budget**: Primary surface docs/process; secondary surface
-harness/adapter; projected 142 reviewable LOC, 1 production file, 5 total
+harness/adapter; projected 190 reviewable LOC, 1 production file, 8 total
 implementation files; within the TACD-003 roadmap budget. Setup gate warning:
 the broader roadmap spans two primary surfaces, but this slice stays as one
 spec unless implementation grows beyond this plan.
@@ -57,6 +58,9 @@ spec unless implementation grows beyond this plan.
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/prerequisites.md
 - MODIFIED speckit-pro/codex-skills/speckit-autopilot/references/prerequisites-codex.md
 - MODIFIED speckit-pro/skills/speckit-autopilot/references/plugin-limitations.md
+- MODIFIED speckit-pro/skills/speckit-coach/references/autopilot-guide.md
+- MODIFIED speckit-pro/skills/speckit-autopilot/SKILL.md
+- MODIFIED speckit-pro/codex-skills/speckit-autopilot/SKILL.md
 
 ## Constitution Check
 
@@ -72,8 +76,8 @@ spec unless implementation grows beyond this plan.
 | VI. KISS, Simplicity & YAGNI | PASS | One advisory replaces the named optional-tool inventory; no installer, marketplace integration, broad scanner, or eval rewrite is added. |
 
 **Constitution concerns**: None. The only recorded warning is reviewability
-surface breadth from the roadmap; the current five-file plan does not require a
-split.
+surface breadth from the roadmap; the current eight-file plan remains within
+the TACD-003 spec budget and does not require a split.
 
 ### Post-Design Constitution Re-check
 
@@ -104,18 +108,27 @@ both covered by the implementation plan and focused shell tests.
 1. Update `check-prerequisites.sh` so the old named optional-server result is
    replaced by one successful `capability_coverage` result. The message should
    describe the four capability categories and note confidence/fallback impact
-   without reporting per-tool availability.
+   without reporting per-tool availability. Preserve JSON-only stdout and the
+   existing stable top-level/check fields so workflow callers and tests can
+   parse the output deterministically.
 2. Extend `test-check-prerequisites.sh` to assert the new result name, `pass=true`
    behavior, absence of fixed optional-tool inventory, and preservation of
-   successful setup when optional capability coverage is absent.
-3. Update active prerequisite and limitation guidance in the declared Markdown
-   files to explain capability-first discovery and fallback behavior in
-   vendor-neutral language.
-4. Review `speckit-pro/skills/speckit-coach/references/autopilot-guide.md` and
-   adjacent autopilot entrypoint summaries for repeated active preflight or
-   limitation wording. If an edit is required, amend the plan and budget before
-   implementation expands past the five declared files.
-5. Do not touch Layer 3 evals, Layer 5 pointer coverage, broad named-tool
+   successful setup when optional capability coverage is absent. Keep the
+   existing valid-JSON coverage and add focused assertions for the changed
+   advisory field shape plus at least one true prerequisite blocker that remains
+   `all_pass=false` with an actionable message.
+3. Update active prerequisite, limitation, coach, and autopilot guidance in the
+   declared Markdown files to explain capability-first discovery and fallback
+   behavior in vendor-neutral language.
+4. During docs review, classify any repository-specific claim against Racecraft
+   source or generated artifacts and any platform/vendor behavior claim against
+   official vendor evidence. Remove or reword claims without the required
+   evidence, then record the evidence class in the PR packet.
+5. Update adjacent autopilot entrypoint summaries only where they repeat current
+   preflight, limitation, or research-capability wording. If review finds a
+   declared adjacent file needs no source edit, record the no-op decision in the
+   PR packet rather than expanding scope elsewhere.
+6. Do not touch Layer 3 evals, Layer 5 pointer coverage, broad named-tool
    enforcement, or generated payload copies unless a declared source change
    requires parity regeneration.
 
@@ -123,18 +136,28 @@ both covered by the implementation plan and focused shell tests.
 
 | Requirement | Planned Files | Verification Evidence |
 |-------------|---------------|-----------------------|
-| FR-001, FR-011 | `check-prerequisites.sh`; `test-check-prerequisites.sh` | Layer 4 assertions for one successful `capability_coverage` result and no per-tool inventory |
-| FR-002, FR-003 | `check-prerequisites.sh`; `test-check-prerequisites.sh` | Layer 4 missing-optional-capability fixture remains successful and advisory-only |
+| FR-001, FR-011, FR-013 | `check-prerequisites.sh`; `test-check-prerequisites.sh` | Layer 4 assertions for one successful `capability_coverage` result, no per-tool inventory, JSON-parseable stdout, stable top-level/check fields, and no non-JSON stdout diagnostics |
+| FR-002, FR-003, FR-012, FR-014 | `check-prerequisites.sh`; `test-check-prerequisites.sh`; declared active guidance docs | Layer 4 missing-optional-capability fixture remains successful and advisory-only; existing true-blocker fixture remains `all_pass=false` with an actionable message; changed guidance has no escalation instruction triggered solely by absent optional coverage |
 | FR-004 | `prerequisites.md`; `prerequisites-codex.md`; `plugin-limitations.md` | Focused changed-doc assertions if the test file adds them; otherwise reviewer traceability plus Layer 1 structural validation |
-| FR-005, FR-006 | Declared active docs plus reviewed adjacent guide scope | Review packet lists any concrete optional-tool names that remain as platform metadata, exact file references, generated content, or historical provenance |
+| FR-005, FR-006 | `autopilot-guide.md`; `speckit-autopilot/SKILL.md`; `codex-skills/speckit-autopilot/SKILL.md`; declared prerequisite and limitation docs | Review packet lists any concrete optional-tool names that remain as platform metadata, exact file references, generated content, or historical provenance |
+| Repo/platform evidence boundary | Declared active guidance docs and PR packet traceability | Review evidence classifies repository-specific claims with Racecraft source or generated-artifact citations and platform/vendor behavior claims with official vendor evidence; reviewer checks that no uncited platform behavior claim is introduced |
 | FR-007, FR-009 | Plan scope and PR packet non-goals | Review packet names TACD-004 for broad enforcement, eval expectation changes, and pointer coverage |
 | FR-008 | `test-check-prerequisites.sh` | `bash tests/speckit-pro/run-all.sh --layer 4` |
 | FR-010 | Source docs only; generated payloads only if regenerated from source | PR packet records any regeneration command or states none was required |
+| SC-007, SC-008 | `test-check-prerequisites.sh`; PR packet verification evidence | Review packet reports focused JSON parseability and true-blocker preservation evidence from Layer 4, not TACD-004 static/eval enforcement |
 
 The PR description must include what changed, why, non-goals, review order,
 scope budget, traceability, verification, known gaps, and rollback/flag notes.
 It must also state that missing optional research or context capabilities remain
 non-blocking when acceptable fallbacks exist.
+
+Repository-specific guidance separation is verified through review evidence,
+not broad static enforcement in TACD-003. The PR packet must include a
+`Repo vs Platform Evidence` subsection that lists changed repository-specific
+claims with Racecraft source or generated-artifact citations and any
+platform/vendor behavior claims with official vendor evidence. Missing evidence
+is a docs review blocker for TACD-003; broad automated detection remains
+TACD-004 scope.
 
 ## Project Structure
 
@@ -156,12 +179,17 @@ specs/tacd-003-prerequisite-and-documentation-messaging/
 ```text
 speckit-pro/
 ├── skills/speckit-autopilot/
+│   ├── SKILL.md
 │   ├── scripts/check-prerequisites.sh
 │   └── references/
 │       ├── prerequisites.md
 │       └── plugin-limitations.md
-├── codex-skills/speckit-autopilot/references/
-│   └── prerequisites-codex.md
+├── skills/speckit-coach/references/
+│   └── autopilot-guide.md
+├── codex-skills/speckit-autopilot/
+│   ├── SKILL.md
+│   └── references/
+│       └── prerequisites-codex.md
 └── tests/speckit-pro/layer4-scripts/
     └── test-check-prerequisites.sh
 ```

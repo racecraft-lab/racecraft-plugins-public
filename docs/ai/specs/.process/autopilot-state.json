@@ -12,8 +12,8 @@
   "feature_branches": [
     "tacd-003-prerequisite-and-documentation-messaging"
   ],
-  "updated_at": "2026-06-19T01:35:45Z",
-  "active_step": "Phase 4: Checklist - error-handling",
+  "updated_at": "2026-06-19T02:00:10Z",
+  "active_step": "Phase 5: Tasks",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "skill_scripts": "/Users/fredrickgabelmann/.codex/plugins/cache/racecraft-plugins-public/speckit-pro/2.14.4/skills/speckit-autopilot/scripts",
@@ -194,31 +194,82 @@
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "in_progress"
+      "status": "completed",
+      "evidence": {
+        "checklist": "specs/tacd-003-prerequisite-and-documentation-messaging/checklists/error-handling.md",
+        "items": 14,
+        "gaps_before": 2,
+        "gaps_after": 0,
+        "edits": [
+          "Added FR-012 and SC-006 for escalation boundary.",
+          "Expanded plan scope to include adjacent active guidance surfaces."
+        ],
+        "consensus": "skipped: no unresolved items"
+      }
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "evidence": {
+        "reason": "checklist-executor returned no unresolved items"
+      }
     },
     {
       "step": "Phase 4: Checklist - integration",
-      "status": "pending"
+      "status": "completed",
+      "evidence": {
+        "checklist": "specs/tacd-003-prerequisite-and-documentation-messaging/checklists/integration.md",
+        "items": 13,
+        "gaps_before": 2,
+        "gaps_after": 0,
+        "edits": [
+          "Clarified Claude and Codex prerequisite guidance as peer active surfaces.",
+          "Mapped repo-vs-platform guidance separation to review evidence and traceability."
+        ],
+        "consensus": "skipped: no unresolved items"
+      }
     },
     {
       "step": "Phase 4: Checklist - integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "evidence": {
+        "reason": "checklist-executor returned no unresolved items"
+      }
     },
     {
       "step": "Phase 4: Checklist - reliability",
-      "status": "pending"
+      "status": "completed",
+      "evidence": {
+        "checklist": "specs/tacd-003-prerequisite-and-documentation-messaging/checklists/reliability.md",
+        "items": 15,
+        "gaps_before": 2,
+        "gaps_after": 0,
+        "edits": [
+          "Added FR-013 and SC-007 for deterministic JSON output and stable advisory fields.",
+          "Added FR-014 and SC-008 for actionable true-blocker preservation."
+        ],
+        "consensus": "skipped: no unresolved items"
+      }
     },
     {
       "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "evidence": {
+        "reason": "checklist-executor returned no unresolved items"
+      }
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress",
+      "evidence": {
+        "g4": "passed",
+        "gap_markers": 0,
+        "checklists": {
+          "total_items": 42,
+          "gaps_before": 6,
+          "gaps_after": 0
+        }
+      }
     },
     {
       "step": "Phase 6: Analyze",
