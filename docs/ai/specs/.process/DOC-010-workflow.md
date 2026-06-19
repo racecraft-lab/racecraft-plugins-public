@@ -46,7 +46,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md`; G1 passed with 13 FRs, 4 user stories, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Pending | Resolve route list, CI condition, and Playwright script naming if needed |
-| Plan | `/speckit-plan` | Pending | Plan docs-site scripts, PR Checks job, and minimal Playwright smoke |
+| Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and three contracts; G3 and reviewability estimator passed |
 | Checklist | `/speckit-checklist` | Pending | Accessibility, UX, reliability, and security/safety checklists |
 | Tasks | `/speckit-tasks` | Pending | Organize by user story, not by technical layer |
 | Analyze | `/speckit-analyze` | Pending | Check design-concept, spec, plan, and tasks consistency |
@@ -350,11 +350,17 @@ Resolve the local script name, CI script name, whether screenshots are attached 
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, reviewability, and implementation plan |
-| `research.md` | Pending | Package/script/CI decisions and tradeoffs |
-| `data-model.md` | Pending | Likely N/A; note if no data model exists |
-| `contracts/` | Pending | Likely docs validation contract or CI trigger contract if useful |
-| `quickstart.md` | Pending | Local validation and reviewer evidence commands |
+| `plan.md` | Complete | Technical context, reviewability, file operations, and implementation plan |
+| `research.md` | Complete | Package/script/CI decisions and tradeoffs |
+| `data-model.md` | Complete | Docs validation and browser evidence entities |
+| `contracts/` | Complete | Browser smoke, docs validation, and PR Checks docs gate contracts |
+| `quickstart.md` | Complete | Local validation and reviewer evidence commands |
+
+Plan-phase reviewability estimate:
+
+```json
+{"tool":"estimate-reviewable-loc","status":"pass","projected":160,"declared_files":{"production":4,"new":3,"modified":7,"total_entries":10},"greenfield":false}
+```
 
 ---
 
