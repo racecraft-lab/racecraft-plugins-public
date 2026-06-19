@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Current SpecKit plan: none active; latest DOC archive report: `.specify/memory/archive-reports/2026-06-19-doc-010-post-merge-hygiene.md`
+Current SpecKit plan: `specs/tacd-004-verification-coverage/plan.md` (TACD-004 — Verification Coverage)
 <!-- SPECKIT END -->
 
 ## Working in This Repo
