@@ -78,7 +78,7 @@ FEATURE COMPLETE
 | TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
 | TACD-002 | Capability Discovery Directive and Agent Updates | Complete | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
 | TACD-003 | Prerequisite and Documentation Messaging | Complete | [.process/TACD-003-workflow.md](.process/TACD-003-workflow.md) | Archived after PR #230; use the generic advisory and active guidance updates as TACD-004 inputs |
-| TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Ready to scaffold from archived TACD-001, TACD-002, and TACD-003 artifacts |
+| TACD-004 | Verification Coverage | Pending | [TACD-004 section](#tacd-004-verification-coverage) | Ready to scaffold from archived TACD-001, TACD-002, and TACD-003 artifacts |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
