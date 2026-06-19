@@ -3,8 +3,8 @@
   "workflow_file": "docs/ai/specs/.process/DOC-010-workflow.md",
   "feature_dir": "specs/doc-010-search-accessibility-deep-links-docs-validation",
   "feature_branch": "doc-010-search-accessibility-deep-links-docs-validation",
-  "updated_at": "2026-06-19T03:23:28Z",
-  "active_step": "Phase 7: Implement - us2 accessible aids and fallbacks (T014-T019)",
+  "updated_at": "2026-06-19T03:30:38Z",
+  "active_step": "Phase 7: Implement - us3 validation path and CI gate (T020-T027)",
   "status": "in_progress",
   "confidence_gate_mode": "advisory",
   "project_commands": {
@@ -332,6 +332,27 @@
           "notes": [
             "Generated reference pages refreshed for deterministic reference:check output after source inventory changed."
           ]
+        },
+        "us2": {
+          "status": "completed",
+          "task_ids": [
+            "T014",
+            "T015",
+            "T016",
+            "T017",
+            "T018",
+            "T019"
+          ],
+          "commit_sha": "a828f29a",
+          "verification": [
+            "pnpm --dir docs-site validate:safe-aids",
+            "pnpm --dir docs-site validate:quality",
+            "pnpm --dir docs-site check",
+            "git diff --check"
+          ],
+          "notes": [
+            "Accessibility/static-fallback evidence recorded in quickstart.md; browser smoke evidence remains owned by US4."
+          ]
         }
       }
     }
@@ -436,11 +457,11 @@
     },
     {
       "step": "Phase 7: Implement - us2 accessible aids and fallbacks (T014-T019)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - us3 validation path and CI gate (T020-T027)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - us4 smoke evidence plus polish (T028-T040)",
@@ -736,7 +757,10 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "completed",
+          "commit_sha": "a828f29a",
+          "head_sha": "a828f29a",
+          "verification_evidence": "docs/ai/specs/.process/DOC-010-workflow.md#implementation-progress"
         },
         "emission_mapping": {
           "status": "pending"
