@@ -69,10 +69,10 @@ const DOC010_FOUNDATION_FILES = Object.freeze([
 const REQUIRED_DOC010_VALIDATE_CHAIN = Object.freeze([
   'pnpm reference:check',
   'pnpm check',
-  'pnpm build',
+  'pnpm validate:links',
   'pnpm validate:safe-aids',
   'pnpm validate:quality',
-  'pnpm validate:smoke',
+  'pnpm validate:smoke:preview',
 ]);
 
 const SUPPORT_ANCHOR_INVENTORY = Object.freeze([
@@ -311,13 +311,24 @@ function collectAnchors(source) {
   return anchors;
 }
 
+function normalizeMarkdownHeadingText(value) {
+  return value
+    .replace(/\s+\{#[A-Za-z0-9_-]+\}\s*$/, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[`*_~]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
 function readRepoText(relativePath, diagnostics) {
   const absolutePath = repoResolve(relativePath);
 
   try {
     return fs.readFileSync(absolutePath, 'utf8');
   } catch (error) {
-    diagnostics.push(`${relativePath}: missing or unreadable file (${error.message})`);
+    const errorCode = typeof error?.code === 'string' ? error.code : 'READ_ERROR';
+    diagnostics.push(`${relativePath}: missing or unreadable file (${errorCode}).`);
     return '';
   }
 }
@@ -379,7 +390,7 @@ function validateDocsCommandChain(diagnostics) {
   const expectedChain = REQUIRED_DOC010_VALIDATE_CHAIN.join(' && ');
   const actualChain = normalizeCommand(scripts.validate);
   const actualCommands = actualChain
-    .split(/\s+&&\s+/)
+    .split(/\s*&&\s*/)
     .map((command) => normalizeCommand(command))
     .filter(Boolean);
 
@@ -436,15 +447,19 @@ function validateSourceUpdateGuidance(diagnostics) {
     const source = readRepoText(guidance.sourcePath, diagnostics);
     if (!source) continue;
 
-    const headingPattern = new RegExp(`^##\\s+${escapeRegExp(guidance.heading)}\\s*$`, 'm');
-    if (!headingPattern.test(source)) {
+    const expectedHeading = normalizeMarkdownHeadingText(guidance.heading);
+    const hasHeading = Array.from(source.matchAll(/^##\s+(.+)$/gm)).some(
+      (match) => normalizeMarkdownHeadingText(match[1]) === expectedHeading,
+    );
+    if (!hasHeading) {
       diagnostics.push(
         `${guidance.sourcePath}: missing "${guidance.heading}" for DOC-010 external platform source-update guidance.`,
       );
     }
 
+    const normalizedSource = source.toLowerCase();
     for (const snippet of guidance.requiredSnippets) {
-      if (!source.includes(snippet)) {
+      if (!normalizedSource.includes(snippet.toLowerCase())) {
         diagnostics.push(
           `${guidance.sourcePath}: source-update guidance must mention "${snippet}" for external platform claims.`,
         );

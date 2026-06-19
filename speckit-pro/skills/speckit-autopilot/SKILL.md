@@ -324,7 +324,7 @@ frontmatter are silently ignored on plugin agents. Run the parent
 session in `acceptEdits` or `bypassPermissions` for smooth execution.
 See `references/plugin-limitations.md`.
 
-**Full per-step details, JSON schemas, MCP fallback behavior, and
+**Full per-step details, JSON schemas, capability fallback behavior, and
 failure-escalation rules:** see [`references/prerequisites.md`](./references/prerequisites.md).
 
 ## Step 1: Parse Workflow State
@@ -600,8 +600,9 @@ schema live in
   setting (default `stop`); on STOP, show gate script output.
 - **Consensus all-disagree** (Round 2): flag `[HUMAN REVIEW NEEDED]`,
   STOP, and present all 3 perspectives to the user.
-- **MCP tool unavailable:** skip dependent research; use Read/Grep
-  fallback; log a warning.
+- **Research/context capability unavailable:** use the next acceptable
+  evidence path, record any confidence impact, and escalate only when no
+  acceptable evidence path remains or a true gate fails.
 - **Context window pressure:** keep subagent summaries concise; the
   workflow file is the durable record (re-read after compaction).
 
@@ -619,7 +620,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + Consensus Resolution Log column schema
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
 - [TDD Protocol](./references/tdd-protocol.md) — Red-green-refactor rules injected into implementation agent prompts
-- [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats, MCP fallback behavior
+- [Plugin Limitations](./references/plugin-limitations.md) — permissionMode/hooks/mcpServers caveats and capability fallback behavior
 - [Agent Teams Integration](./references/agent-teams-integration.md) — Use-site map (current + planned), capability detection, lifecycle policy
 - [Token Discipline](./references/token-discipline.md) — Opt-in compressed vocabulary for inter-agent transcripts (off by default; never applied to PR bodies, logs, or artifacts)
 

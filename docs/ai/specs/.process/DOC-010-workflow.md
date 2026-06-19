@@ -47,7 +47,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Specify | `/speckit-specify` | Complete | Created `spec.md`; G1 passed with 13 FRs, 4 user stories, and 0 clarification markers |
 | Clarify | `/speckit-clarify` | Complete | Resolved route list, CI condition, and Playwright smoke/evidence shape; G2 passed |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and three contracts; G3 and reviewability estimator passed |
-| Checklist | `/speckit-checklist` | Complete | Accessibility, UX, reliability, and security checklists completed; G4 passed with 0 remaining gaps |
+| Checklist | `/speckit-checklist` | Complete | Accessibility, UX, reliability, and security remediation evidence was appended; original checklist prompts remain as audit records |
 | Tasks | `/speckit-tasks` | Complete | Generated 40 tasks; G5 passed; size-only task reviewability block persisted as marker-plan evidence |
 | Analyze | `/speckit-analyze` | Complete | G6 passed with 0 findings; no consensus remediation required |
 | Implement | `/speckit-implement` | In Progress | Foundation, search/deep-link, and accessibility markers complete; validation/CI and smoke evidence markers remain |
@@ -435,11 +435,11 @@ Focus on DOC-010 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| Accessibility | 21 | 3 found, 3 remediated, 0 remaining | FR-005, FR-006, SC-003, SC-004 |
-| UX | 18 | 2 found, 2 remediated, 0 remaining | FR-002, FR-003, FR-004, FR-010, SC-001, SC-002, SC-006 |
-| Reliability | 23 | 2 found, 2 remediated, 0 remaining | FR-007, FR-008, FR-009, FR-013, SC-005, SC-006 |
-| Security | 22 | 11 found, 11 remediated, 0 remaining | FR-011, FR-013, SC-005, SC-006 |
-| Total | 84 | 18 found, 18 remediated, 0 remaining | All DOC-010 requirements |
+| Accessibility | 21 | 3 remediation entries appended; original prompts retained for audit | FR-005, FR-006, SC-003, SC-004 |
+| UX | 18 | 2 remediation entries appended; original prompts retained for audit | FR-002, FR-003, FR-004, FR-010, SC-001, SC-002, SC-006 |
+| Reliability | 23 | 2 remediation entries appended; original prompts retained for audit | FR-007, FR-008, FR-009, FR-013, SC-005, SC-006 |
+| Security | 22 | 11 remediation entries appended; original prompts retained for audit | FR-011, FR-013, SC-005, SC-006 |
+| Total | 84 | 18 remediation entries appended; original prompts retained for audit | All DOC-010 requirements |
 
 ---
 
@@ -550,7 +550,7 @@ Authoritative marker state is stored in `docs/ai/specs/.process/autopilot-state.
 | Fingerprint status | current |
 | Ordered marker IDs | `foundation`, `us1`, `us2`, `us3`, `us4` |
 | Review order | foundation -> us1 -> us2 -> us3 -> us4 |
-| Marker checkpoints | `foundation` completed at `2f21220e`; `us1` completed at `147559bb`; `us2` completed at `a828f29a`; remaining markers pending |
+| Marker checkpoints | `foundation` completed at `2f21220e`; `us1` completed at `147559bb`; `us2` completed at `a828f29a`; `us3` and `us4` pending |
 | Final marker split | pending |
 | Packet validation | pending |
 | PR mappings | pending |

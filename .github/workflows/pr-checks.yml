@@ -187,6 +187,12 @@ jobs:
           # All files changed relative to the base branch.
           changed_files=$(git diff --name-only "origin/${BASE_REF}...HEAD")
 
+          path_is_under() {
+            local file="$1"
+            local directory="$2"
+            [[ "$file" == "$directory"/* ]]
+          }
+
           # DOC-010 changed-file surfaces:
           # - Rendered docs-site: docs-site/src/content/docs/**,
           #   docs-site/src/components/**, docs-site/astro.config.mjs -> full validate.
@@ -204,20 +210,17 @@ jobs:
           while IFS= read -r file; do
             [ -n "$file" ] || continue
 
-            case "$file" in
-              docs-site/src/content/docs/*|docs-site/src/components/*|docs-site/astro.config.mjs)
-                rendered_docs=true
-                ;;
-            esac
+            if path_is_under "$file" "docs-site/src/content/docs" \
+              || path_is_under "$file" "docs-site/src/components" \
+              || [[ "$file" == "docs-site/astro.config.mjs" ]]; then
+              rendered_docs=true
+            fi
 
             case "$file" in
               */.claude-plugin/plugin.json|*/.codex-plugin/plugin.json|.claude-plugin/marketplace.json|.agents/plugins/marketplace.json)
                 generated_reference=true
                 ;;
-              speckit-pro/skills/*|speckit-pro/codex-skills/*|speckit-pro/agents/*|speckit-pro/codex-agents/*|speckit-pro/hooks/*|speckit-pro/codex-hooks.json|speckit-pro/scripts/*)
-                generated_reference=true
-                ;;
-              scripts/*|README.md|*/README.md|tests/speckit-pro/*|dist/claude/*|dist/codex/*)
+              speckit-pro/codex-hooks.json|README.md|*/README.md)
                 generated_reference=true
                 ;;
               .specify/integrations/*|docs/prd-interactive-documentation.md|docs/roadmap-interactive-documentation.md)
@@ -225,11 +228,27 @@ jobs:
                 ;;
             esac
 
-            case "$file" in
-              docs-site/scripts/*|docs-site/src/data/safe-install-aids.ts|docs-site/package.json|docs-site/playwright.config.mjs|docs-site/tests/docs-smoke.spec.mjs|.github/workflows/pr-checks.yml)
-                docs_contract=true
-                ;;
-            esac
+            if path_is_under "$file" "speckit-pro/skills" \
+              || path_is_under "$file" "speckit-pro/codex-skills" \
+              || path_is_under "$file" "speckit-pro/agents" \
+              || path_is_under "$file" "speckit-pro/codex-agents" \
+              || path_is_under "$file" "speckit-pro/hooks" \
+              || path_is_under "$file" "speckit-pro/scripts" \
+              || path_is_under "$file" "scripts" \
+              || path_is_under "$file" "tests/speckit-pro" \
+              || path_is_under "$file" "dist/claude" \
+              || path_is_under "$file" "dist/codex"; then
+              generated_reference=true
+            fi
+
+            if path_is_under "$file" "docs-site/scripts" \
+              || [[ "$file" == "docs-site/src/data/safe-install-aids.ts" ]] \
+              || [[ "$file" == "docs-site/package.json" ]] \
+              || [[ "$file" == "docs-site/playwright.config.mjs" ]] \
+              || [[ "$file" == "docs-site/tests/docs-smoke.spec.mjs" ]] \
+              || [[ "$file" == ".github/workflows/pr-checks.yml" ]]; then
+              docs_contract=true
+            fi
           done <<< "$changed_files"
 
           should_validate_docs=false

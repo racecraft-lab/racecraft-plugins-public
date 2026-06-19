@@ -157,7 +157,7 @@ SPECS_DIR="$REPO_ROOT/specs"
 # $SPECS_DIR: one row `- [<spec_id>](../../../specs/<dir>/SPEC-MOC.md) · <status>`,
 # normalized-ID ascending (FR-013), spec_id/status read from frontmatter (FR-012),
 # rows whose spec_id is absent/empty skipped (FR-015a), empty status still emits a
-# row with a blank status field (FR-015), the separator the U+00B7 PRS_SEP framing
+# row with only the separator and no trailing whitespace (FR-015), the U+00B7 PRS_SEP framing
 # (FR-012/FR-014). A relative []() target, never a [[wikilink]] (SC-006). spec_dir
 # is unused in the home-note path (the scan is repo-wide), kept for signature parity
 # with the spec-MOC call. Link + status only — no table, no H1 parse (FR-022).
@@ -175,14 +175,19 @@ render_index() {
     # spec_id is the link text AND the sort key; absent/empty => skip (FR-015a).
     spec_id="$(moc_frontmatter_field "$moc" spec_id)" || continue
     [ -n "$spec_id" ] || continue
-    # status is display-only; absent/empty still emits a row (FR-015).
+    # status is display-only; absent/empty still emits the separator (FR-015).
     status="$(moc_frontmatter_field "$moc" status)" || status=""
     norm="$(moc_normalize "$spec_id")"
     # Sort key (col1) = normalized id; the rendered row (col2) follows. Sorting the
     # whole line is fully deterministic: normalized-id ascending, ties broken by the
     # row bytes. The link is relative docs/ai/specs -> repo-root specs (../../../).
-    sortable+="$(printf '%s\t- [%s](../../../specs/%s/SPEC-MOC.md) %s %s' \
-      "$norm" "$spec_id" "$(basename "$d")" "$PRS_SEP" "$status")"$'\n'
+    if [ -n "$status" ]; then
+      sortable+="$(printf '%s\t- [%s](../../../specs/%s/SPEC-MOC.md) %s %s' \
+        "$norm" "$spec_id" "$(basename "$d")" "$PRS_SEP" "$status")"$'\n'
+    else
+      sortable+="$(printf '%s\t- [%s](../../../specs/%s/SPEC-MOC.md) %s' \
+        "$norm" "$spec_id" "$(basename "$d")" "$PRS_SEP")"$'\n'
+    fi
   done < <(find "$SPECS_DIR" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort)
 
   if repo_structure_marker_current; then
@@ -208,8 +213,8 @@ render_index() {
       target="../../../specs/$branch/spec.md"
       label="$(printf '%s' "$branch" | tr '[:lower:]' '[:upper:]')"
       norm="$(moc_normalize "$branch")"
-      sortable+="$(printf '%s\t- [%s](%s) %s %s' \
-        "$norm" "$label" "$target" "$PRS_SEP" "")"$'\n'
+      sortable+="$(printf '%s\t- [%s](%s) %s' \
+        "$norm" "$label" "$target" "$PRS_SEP")"$'\n'
     done < <(find "$SPECS_DIR" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort)
 
     local memory="$REPO_ROOT/.specify/memory/spec.md"
@@ -225,8 +230,8 @@ render_index() {
         norm="$(moc_normalize "$slug")"
         label="$(printf '%s' "${slug%%-*}-${slug#*-}" | tr '[:lower:]' '[:upper:]')"
         target="../../../.specify/memory/spec.md#$slug"
-        sortable+="$(printf '%s\t- [%s](%s) %s %s' \
-          "$norm" "$label" "$target" "$PRS_SEP" "")"$'\n'
+        sortable+="$(printf '%s\t- [%s](%s) %s' \
+          "$norm" "$label" "$target" "$PRS_SEP")"$'\n'
       done < <(grep -E '^##[[:space:]]+' "$memory" 2>/dev/null || true)
     fi
   fi
