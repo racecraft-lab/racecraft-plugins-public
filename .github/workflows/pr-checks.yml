@@ -260,7 +260,9 @@ jobs:
 
       - name: Enable pnpm
         if: steps.docs.outputs.should_validate_docs == 'true'
-        run: corepack enable
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.25.0 --activate
 
       - name: Install docs-site dependencies
         if: steps.docs.outputs.should_validate_docs == 'true'
