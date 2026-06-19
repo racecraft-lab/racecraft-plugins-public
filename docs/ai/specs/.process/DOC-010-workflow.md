@@ -45,10 +45,10 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | Complete | Created `spec.md`; G1 passed with 13 FRs, 4 user stories, and 0 clarification markers |
-| Clarify | `/speckit-clarify` | Pending | Resolve route list, CI condition, and Playwright script naming if needed |
+| Clarify | `/speckit-clarify` | Complete | Resolved route list, CI condition, and Playwright smoke/evidence shape; G2 passed |
 | Plan | `/speckit-plan` | Complete | Created plan, research, data model, quickstart, and three contracts; G3 and reviewability estimator passed |
-| Checklist | `/speckit-checklist` | Pending | Accessibility, UX, reliability, and security/safety checklists |
-| Tasks | `/speckit-tasks` | Pending | Organize by user story, not by technical layer |
+| Checklist | `/speckit-checklist` | Complete | Accessibility, UX, reliability, and security checklists completed; G4 passed with 0 remaining gaps |
+| Tasks | `/speckit-tasks` | Complete | Generated 40 tasks; G5 passed; size-only task reviewability block persisted as marker-plan evidence |
 | Analyze | `/speckit-analyze` | Pending | Check design-concept, spec, plan, and tasks consistency |
 | Implement | `/speckit-implement` | Pending | Execute focused docs-site hardening with validation evidence |
 
@@ -487,10 +487,27 @@ Focus on DOC-010 requirements:
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | |
-| Phases | |
-| Parallel Opportunities | |
-| User Stories Covered | |
+| Total Tasks | 40 |
+| Phases | Setup 6; US1 7; US2 6; US3 8; US4 6; polish/cross-cutting verification 7 |
+| Parallel Opportunities | 6 `[P]` tasks |
+| User Stories Covered | US1, US2, US3, US4 |
+
+G5 output:
+
+```json
+{"gate":"G5","pass":true,"reason":"40 tasks found","markers":0,"task_count":40}
+```
+
+Task reviewability gate:
+
+| Field | Value |
+|-------|-------|
+| Status | `block` |
+| Mode | `tasks` |
+| Exit code | `1` |
+| Evidence path | `specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/tasks-gate.json` |
+| Proceed decision | Size-only task-mode block; continue into marker planning |
+| Blockers | reviewable LOC 1600 exceeds block threshold 800; total files 58 exceeds block threshold 25 |
 
 ---
 
@@ -506,12 +523,58 @@ Record the emitted decision here:
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | | `true` or `false` |
-| Signals | | Decisive detector findings |
-| Warnings | | Release-safety warning, if any |
+| Route | `one-navigable-PR` | Default/modify-heavy route; do not run PRSG-008 split-PR layer planner |
+| Releasable | `true` | `true` or `false` |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings |
+| Warnings | none | Release-safety warning, if any |
 
 Expected bias from setup: one small docs-site hardening PR unless Tasks reveal independent slices.
+
+## Layer Plan
+
+| Field | Value |
+|-------|-------|
+| Status | `skipped` |
+| Reason | Atomicity route is `one-navigable-PR`, so PRSG-008 split-PR layer planning is not required |
+| Planner command | Not run |
+
+## PR Marker Plan Evidence
+
+Authoritative marker state is stored in `docs/ai/specs/.process/autopilot-state.json` as top-level `pr_marker_plan`.
+
+| Field | Value |
+|-------|-------|
+| Schema version | `pr-marker-plan.v1` |
+| Status | `planned` |
+| Evidence path | `specs/doc-010-search-accessibility-deep-links-docs-validation/.process/reviewability/pr-marker-plan.json` |
+| Fingerprint status | current |
+| Ordered marker IDs | `foundation`, `us1`, `us2`, `us3`, `us4` |
+| Review order | foundation -> us1 -> us2 -> us3 -> us4 |
+| Marker checkpoints | pending |
+| Final marker split | pending |
+| Packet validation | pending |
+| PR mappings | pending |
+| Warnings | `reviewability_size_warning` from task reviewability gate |
+
+Source fingerprint:
+
+```json
+{
+  "feature_spec_sha": "6ac0a5a8c6d745b0402c7bfd106cd073967f113ba65a0a29521abb1500599e06",
+  "plan_declared_scope_sha": "4b629f67917e00c4135561a9310598beb853352464b839914b809f5e7a65d5a4",
+  "tasks_sha": "b7d6780d04697cc03a5e974673bdf97bd884d52e48412fc1d1421ce74669d552",
+  "reviewability_sha": "195268e9fcec1e6a2828d31e9153a81f2a6ccc7f0a455c4cc8f0faf28ee35a79",
+  "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+}
+```
+
+| Marker | Review order | Tasks | Folded polish tasks | Checkpoint |
+|--------|--------------|-------|---------------------|------------|
+| `foundation` | 1 | T001-T006 | none | pending |
+| `us1` | 2 | T007-T013 | none | pending |
+| `us2` | 3 | T014-T019 | none | pending |
+| `us3` | 4 | T020-T027 | none | pending |
+| `us4` | 5 | T028-T033 | T034-T040 | pending |
 
 ---
 
