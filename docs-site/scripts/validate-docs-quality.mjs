@@ -87,7 +87,8 @@ function readRepoText(relativePath, diagnostics) {
   try {
     return fs.readFileSync(absolutePath, 'utf8');
   } catch (error) {
-    diagnostics.push(`${relativePath}: missing or unreadable file (${error.message})`);
+    const errorCode = typeof error?.code === 'string' ? error.code : 'READ_ERROR';
+    diagnostics.push(`${relativePath}: missing or unreadable file (${errorCode}).`);
     return '';
   }
 }

@@ -130,21 +130,23 @@ Root scripts and SpecKit Pro helper scripts with repository-role classification.
 - **Purpose:** Root scripts used for payload building and marketplace version synchronization.
 - **Classification:** `release-infrastructure`
 - **Platform concept:** Repository script group
-- **Claude Code:** scripts/build-plugin-payloads.sh, scripts/sync-marketplace-versions.sh
-- **Codex:** scripts/build-plugin-payloads.sh, scripts/sync-marketplace-versions.sh
+- **Claude Code:** scripts/build-plugin-payloads.sh, scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
+- **Codex:** scripts/build-plugin-payloads.sh, scripts/refresh-local-plugin.sh, scripts/sync-marketplace-versions.sh
 - **Runtime difference:** Script groups are repository role inventories; paths are shared unless an individual script name or source file declares a runtime-specific purpose.
 
 #### Source Facts
 
 - scripts/build-plugin-payloads.sh is a checked-in release-infrastructure file. Source refs: `scripts/build-plugin-payloads.sh`.
+- scripts/refresh-local-plugin.sh is a checked-in release-infrastructure file. Source refs: `scripts/refresh-local-plugin.sh`.
 - scripts/sync-marketplace-versions.sh is a checked-in release-infrastructure file. Source refs: `scripts/sync-marketplace-versions.sh`.
 
 #### Sources
 
 - [scripts/build-plugin-payloads.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.sh)
+- [scripts/refresh-local-plugin.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/refresh-local-plugin.sh)
 - [scripts/sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh)
 
 #### Inferred Notes
 
 - Review script behavior in its owning source files before changing generated docs that describe the group.
-  - Based on: `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`
+  - Based on: `scripts/build-plugin-payloads.sh`, `scripts/refresh-local-plugin.sh`, `scripts/sync-marketplace-versions.sh`
