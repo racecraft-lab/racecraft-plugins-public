@@ -2,7 +2,7 @@
 up: "[Tool-Agnostic Capability Discovery Roadmap](tool-agnostic-capability-discovery-technical-roadmap.md)"
 related:
   - "[Tool-Agnostic Capability Discovery PRD](../../prd-tool-agnostic-capability-discovery.md)"
-status: "TACD-002 archived; TACD-003 ready"
+status: "TACD-003 in progress"
 rank:
 spec_id: "tool-agnostic-capability-discovery"
 structureVersion: 1
@@ -30,7 +30,7 @@ Why: Move active Claude and Codex agents from named optional tools to capability
 
 Why: Align prerequisites and docs with the implemented vendor-neutral behavior.
 
-- [TACD-003 Prerequisite and Documentation Messaging](../../../specs/tacd-003-prerequisite-and-documentation-messaging/SPEC-MOC.md)
+- [TACD-003 Prerequisite and Documentation Messaging](../../../specs/tacd-003-prerequisite-and-documentation-messaging/SPEC-MOC.md) - scaffolded on `tacd-003-prerequisite-and-documentation-messaging`
 
 ### Verification
 

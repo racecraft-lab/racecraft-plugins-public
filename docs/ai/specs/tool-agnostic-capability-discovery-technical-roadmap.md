@@ -77,7 +77,7 @@ FEATURE COMPLETE
 |------|------|--------|---------------|------------|
 | TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
 | TACD-002 | Capability Discovery Directive and Agent Updates | Complete | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
-| TACD-003 | Prerequisite and Documentation Messaging | Pending | [TACD-003-workflow.md](TACD-003-workflow.md) | Ready to scaffold from the implemented TACD-002 directive |
+| TACD-003 | Prerequisite and Documentation Messaging | In Progress | [.process/TACD-003-workflow.md](.process/TACD-003-workflow.md) | Scaffolded on `tacd-003-prerequisite-and-documentation-messaging`; next run `$speckit-autopilot docs/ai/specs/.process/TACD-003-workflow.md` |
 | TACD-004 | Verification Coverage | Pending | [TACD-004-workflow.md](TACD-004-workflow.md) | Blocked by TACD-003 |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -177,6 +177,8 @@ Budget result: within budget
 ### TACD-003: Prerequisite and Documentation Messaging
 
 **Priority:** P1 | **Depends On:** TACD-001, TACD-002 | **Enables:** TACD-004
+
+**Status:** In Progress. Scaffolded on branch `tacd-003-prerequisite-and-documentation-messaging` with setup artifacts at `docs/ai/specs/.process/TACD-003-design-concept.md`, `docs/ai/specs/.process/TACD-003-workflow.md`, and `specs/tacd-003-prerequisite-and-documentation-messaging/SPEC-MOC.md`.
 
 **Goal:** Replace hardcoded optional-MCP prerequisite and user-facing messaging with a generic capability advisory that matches the implemented directive.
 
