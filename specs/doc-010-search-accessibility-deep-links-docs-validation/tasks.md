@@ -14,12 +14,12 @@
 
 **Purpose**: Establish the shared command names, dependency surface, and route/test configuration used by every story.
 
-- [ ] T001 Define the DOC-010 focused script names and combined docs validation command chain in `docs-site/package.json` for `validate`, `validate:quality`, `validate:safe-aids`, and `validate:smoke` (FR-007, FR-008)
-- [ ] T002 Add the minimal Playwright dev dependency needed for `validate:smoke` in `docs-site/package.json` and update `docs-site/pnpm-lock.yaml` (FR-010)
-- [ ] T003 [P] Create the focused docs-quality validator entrypoint with repo-relative diagnostics and safety-boundary constants in `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011)
-- [ ] T004 [P] Create Playwright configuration with local preview baseURL ownership, `/racecraft-plugins-public` base path handling, desktop/mobile projects, and compact artifact output in `docs-site/playwright.config.mjs` (FR-010, FR-013)
-- [ ] T005 [P] Create the initial browser smoke spec scaffold with the six logical DOC-010 routes in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
-- [ ] T006 Verify the setup file list still matches the declared DOC-010 budget in `specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md` before user-story implementation starts (FR-013)
+- [X] T001 Define the DOC-010 focused script names and combined docs validation command chain in `docs-site/package.json` for `validate`, `validate:quality`, `validate:safe-aids`, and `validate:smoke` (FR-007, FR-008)
+- [X] T002 Add the minimal Playwright dev dependency needed for `validate:smoke` in `docs-site/package.json` and update `docs-site/pnpm-lock.yaml` (FR-010)
+- [X] T003 [P] Create the focused docs-quality validator entrypoint with repo-relative diagnostics and safety-boundary constants in `docs-site/scripts/validate-docs-quality.mjs` (FR-007, FR-011)
+- [X] T004 [P] Create Playwright configuration with local preview baseURL ownership, `/racecraft-plugins-public` base path handling, desktop/mobile projects, and compact artifact output in `docs-site/playwright.config.mjs` (FR-010, FR-013)
+- [X] T005 [P] Create the initial browser smoke spec scaffold with the six logical DOC-010 routes in `docs-site/tests/docs-smoke.spec.mjs` (FR-010)
+- [X] T006 Verify the setup file list still matches the declared DOC-010 budget in `specs/doc-010-search-accessibility-deep-links-docs-validation/plan.md` before user-story implementation starts (FR-013)
 
 **Checkpoint**: Shared command names, validator entrypoints, and smoke configuration exist.
 

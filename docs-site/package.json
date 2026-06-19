@@ -10,8 +10,11 @@
     "build": "astro build",
     "reference:generate": "node scripts/generate-reference-pages.mjs",
     "reference:check": "node scripts/generate-reference-pages.mjs --check",
-    "validate": "pnpm reference:check && pnpm check && pnpm build",
+    "validate": "pnpm reference:check && pnpm check && pnpm build && pnpm validate:safe-aids && pnpm validate:quality && pnpm validate:smoke",
     "validate:links": "pnpm build",
+    "validate:safe-aids": "node scripts/validate-doc006-safe-aids.mjs",
+    "validate:quality": "node scripts/validate-docs-quality.mjs",
+    "validate:smoke": "playwright test",
     "preview": "astro preview"
   },
   "dependencies": {
@@ -20,6 +23,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.9",
+    "@playwright/test": "1.61.0",
     "starlight-links-validator": "0.24.1"
   },
   "pnpm": {
