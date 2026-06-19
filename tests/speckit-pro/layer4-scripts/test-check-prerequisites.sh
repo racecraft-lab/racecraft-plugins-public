@@ -33,6 +33,22 @@ make_project() {
   echo "$dir"
 }
 
+install_fake_specify() {
+  local dir="$1"
+  local fake_home="$dir/home"
+  mkdir -p "$fake_home/.local/bin"
+  cat > "$fake_home/.local/bin/specify" <<'SH'
+#!/usr/bin/env bash
+if [ "${1:-}" = "--version" ]; then
+  printf 'specify 9.9.9-test\n'
+  exit 0
+fi
+exit 0
+SH
+  chmod +x "$fake_home/.local/bin/specify"
+  echo "$fake_home"
+}
+
 # ─────────────────────────────────────────
 section "Missing prerequisites"
 # ─────────────────────────────────────────
@@ -99,17 +115,7 @@ assert_contains "$output" "All SpecKit commands installed"
 
 set_test "SpecKit CLI in HOME/.local/bin → detected when PATH omits it"
 dir=$(make_project "home-local-specify")
-fake_home="$dir/home"
-mkdir -p "$fake_home/.local/bin"
-cat > "$fake_home/.local/bin/specify" <<'SH'
-#!/usr/bin/env bash
-if [ "${1:-}" = "--version" ]; then
-  printf 'specify 9.9.9-test\n'
-  exit 0
-fi
-exit 0
-SH
-chmod +x "$fake_home/.local/bin/specify"
+fake_home=$(install_fake_specify "$dir")
 limited_path="/usr/bin:/bin:/usr/sbin:/sbin"
 output=$(cd "$dir" && HOME="$fake_home" PATH="$limited_path" bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
 assert_contains "$output" "specify 9.9.9-test"
@@ -154,6 +160,88 @@ assert_json_field_exists "$output" "checks"
 
 set_test "Output has branch field"
 assert_json_field_exists "$output" "branch"
+
+set_test "Output exposes stable top-level context fields"
+dir=$(make_project "stable-top-level")
+fake_home=$(install_fake_specify "$dir")
+output=$(cd "$dir" && HOME="$fake_home" PATH="/usr/bin:/bin:/usr/sbin:/sbin" bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || true
+stable_fields=$(printf '%s' "$output" | jq -r 'has("all_pass") and has("branch") and has("is_worktree") and has("on_feature_branch") and has("checks")')
+assert_eq "true" "$stable_fields" "stable top-level fields"
+printf '%s' "$output" | python3 -m json.tool >/dev/null 2>&1
+assert_eq "0" "$?" "single JSON document"
+
+set_test "Capability coverage advisory present exactly once and passes"
+capability_count=$(printf '%s' "$output" | jq -r '[.checks[] | select(.check == "capability_coverage")] | length')
+assert_eq "1" "$capability_count" "capability_coverage count"
+capability_pass=$(printf '%s' "$output" | jq -r '.checks[] | select(.check == "capability_coverage") | .pass')
+assert_eq "true" "$capability_pass" "capability_coverage pass"
+capability_fields=$(printf '%s' "$output" | jq -r '.checks[] | select(.check == "capability_coverage") | has("check") and has("pass") and has("message") and has("detail")')
+assert_eq "true" "$capability_fields" "capability_coverage stable fields"
+
+set_test "Missing optional capability coverage remains non-blocking"
+assert_json_field "$output" "all_pass" "True"
+capability_text=$(printf '%s' "$output" | jq -r '.checks[] | select(.check == "capability_coverage") | .message + " " + .detail')
+assert_contains "$capability_text" "codebase context"
+assert_contains "$capability_text" "library documentation"
+assert_contains "$capability_text" "web/domain research"
+assert_contains "$capability_text" "source extraction"
+assert_contains "$capability_text" "confidence"
+assert_contains "$capability_text" "fallback"
+
+set_test "Capability advisory has no per-tool inventory"
+tool_inventory_count=$(printf '%s' "$output" | jq -r '[.checks[] | select(.check == "mcp_servers" or .check == "optional_mcp_servers")] | length')
+assert_eq "0" "$tool_inventory_count" "legacy optional-tool checks"
+assert_not_contains "$output" "tavily-mcp"
+assert_not_contains "$output" "context7"
+assert_not_contains "$output" "RepoPrompt"
+
+set_test "True prerequisite blocker remains actionable"
+dir=$(make_project "true-blocker-actionable")
+fake_home=$(install_fake_specify "$dir")
+rm -rf "$dir/.claude/skills/speckit-plan"
+result=0
+output=$(cd "$dir" && HOME="$fake_home" PATH="/usr/bin:/bin:/usr/sbin:/sbin" bash "$SCRIPT" "$dir/workflow.md" 2>/dev/null) || result=$?
+assert_eq "1" "$result" "exit code"
+blocker_pass=$(printf '%s' "$output" | jq -r '.all_pass')
+assert_eq "false" "$blocker_pass" "all_pass for true blocker"
+commands_message=$(printf '%s' "$output" | jq -r '.checks[] | select(.check == "commands") | .message')
+assert_contains "$commands_message" "Missing commands: speckit-plan"
+assert_contains "$commands_message" "Run: specify integration install"
+
+# ─────────────────────────────────────────
+section "Active guidance assertions"
+# ─────────────────────────────────────────
+
+claude_prereq="$PLUGIN_ROOT/skills/speckit-autopilot/references/prerequisites.md"
+codex_prereq="$PLUGIN_ROOT/codex-skills/speckit-autopilot/references/prerequisites-codex.md"
+limitations="$PLUGIN_ROOT/skills/speckit-autopilot/references/plugin-limitations.md"
+coach="$PLUGIN_ROOT/skills/speckit-coach/references/autopilot-guide.md"
+claude_skill="$PLUGIN_ROOT/skills/speckit-autopilot/SKILL.md"
+codex_skill="$PLUGIN_ROOT/codex-skills/speckit-autopilot/SKILL.md"
+
+set_test "Prerequisite docs describe capability coverage"
+prereq_body="$(cat "$claude_prereq" "$codex_prereq")"
+assert_contains "$prereq_body" "capability_coverage"
+assert_contains "$prereq_body" "codebase context"
+assert_contains "$prereq_body" "library documentation"
+assert_contains "$prereq_body" "web/domain research"
+assert_contains "$prereq_body" "source extraction"
+assert_not_contains "$prereq_body" "mcp_servers"
+
+set_test "Guidance docs avoid fixed optional provider contract"
+guidance_body="$(cat "$claude_prereq" "$codex_prereq" "$limitations" "$coach")"
+assert_contains "$guidance_body" "Missing optional research/context coverage"
+assert_contains "$guidance_body" "Research/Context Capability Coverage"
+assert_not_contains "$guidance_body" "tavily-mcp"
+assert_not_contains "$guidance_body" "RepoPrompt"
+assert_not_contains "$guidance_body" "mcp__"
+assert_not_contains "$guidance_body" "MCP Server Prerequisites"
+
+set_test "Autopilot skill summaries use capability wording"
+skill_body="$(cat "$claude_skill" "$codex_skill")"
+assert_contains "$skill_body" "Capability Coverage Check"
+assert_contains "$skill_body" "capability fallback behavior"
+assert_not_contains "$skill_body" "MCP Server Check"
 
 # ─────────────────────────────────────────
 # Live project tests (optional)
