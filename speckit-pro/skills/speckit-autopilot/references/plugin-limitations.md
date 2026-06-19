@@ -27,15 +27,15 @@ documented in the official Anthropic docs.
    claude --permission-mode acceptEdits
    ```
 
-2. **MCP tool availability:** Agents that reference MCP tools
-   (`mcp__tavily-mcp__*`, `mcp__context7__*`,
-   `mcp__RepoPrompt__*`) can only use them if the parent
-   session has those MCP servers configured and connected.
+2. **Research/context capability coverage:** Agents can only use evidence
+   capabilities that are available in the parent session. This includes
+   codebase context, library documentation, web/domain research, and source
+   extraction.
 
-   The agents define fallback tool chains (e.g.,
-   `mcp__tavily-mcp__tavily-search` falls back to
-   `WebSearch`), so the autopilot functions without MCP —
-   but with reduced research quality.
+   When a stronger capability is unavailable, agents use their built-in
+   fallback paths and record any confidence impact in the relevant workflow
+   evidence. Missing optional coverage is advisory; it becomes blocking only
+   when no acceptable evidence path remains or a true prerequisite/gate fails.
 
 3. **Consensus agents are not read-only:** The consensus
    agents (`codebase-analyst`, `spec-context-analyst`,
@@ -63,27 +63,20 @@ Agents in `.claude/agents/` or `~/.claude/agents/` have full
 frontmatter support including `permissionMode`, `hooks`, and
 `mcpServers`.
 
-## MCP Server Prerequisites
+## Research/Context Capability Coverage
 
-The following MCP servers enhance agent capabilities. All are
-optional — agents include built-in fallbacks.
+The following capabilities improve evidence quality. All are optional when an
+acceptable fallback path exists:
 
-| MCP Server | Used By | Fallback |
-|------------|---------|----------|
-| `tavily-mcp` | analyze-executor, checklist-executor, clarify-executor, domain-researcher | `WebSearch` + `WebFetch` |
-| `context7` | analyze-executor, checklist-executor, clarify-executor, domain-researcher | `WebSearch` for "[library] docs" |
-| `RepoPrompt` | analyze-executor, checklist-executor, clarify-executor, codebase-analyst | `Grep` + `Glob` + `Read` |
+| Capability | Used By | Fallback behavior |
+|------------|---------|-------------------|
+| Codebase context | analyze-executor, checklist-executor, clarify-executor, codebase-analyst | Use local repository reads and searches |
+| Library documentation | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Use available docs evidence or cite the fallback confidence limit |
+| Web/domain research | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Use available public-source evidence or mark reduced confidence |
+| Source extraction | analyze-executor, checklist-executor, clarify-executor, domain-researcher | Use accessible source text or request escalation when no acceptable evidence path remains |
 
-### Verifying MCP connectivity
-
-Before running the autopilot, verify connected MCP servers:
-```
-/mcp
-```
-
-If a required server is not connected, the agent will
-automatically fall back to built-in tools. Functionality
-is preserved but research quality may be reduced.
+The prerequisite check reports this as a single `capability_coverage`
+advisory. It does not ask users to install a fixed optional provider set.
 
 ## Skills the autopilot must not invoke
 

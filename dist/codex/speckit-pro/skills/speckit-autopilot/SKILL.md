@@ -535,7 +535,7 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   `advisory`. If the script exits 2 (both flags passed), STOP
   before Phase 0 with the conflict message. **Do not re-run the
   script at G6.5; the gate reads `CONFIDENCE_GATE_MODE` directly.**
-- **Step 0.8: MCP Server Check** — informational MCP report (agents have fallbacks)
+- **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — verify installed SpecKit Pro custom agents under `.codex/agents/<agent>.toml` or `~/.codex/agents/<agent>.toml`. If any required agent is missing from both locations, STOP and instruct the user to run `$install`, then restart Codex.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
@@ -954,7 +954,7 @@ PR URL.
   Red-green-refactor rules injected into implementation agent prompts
 - [Plugin Limitations](references/plugin-limitations.md) —
   permissionMode, hooks, mcpServers restrictions for plugin agents;
-  MCP server prerequisites and fallback behavior
+  research/context capability coverage and fallback behavior
 - [Token Discipline](references/token-discipline.md) —
   Opt-in compressed vocabulary for inter-agent transcripts
   (off by default; never applied to PR bodies, logs, or artifacts)
