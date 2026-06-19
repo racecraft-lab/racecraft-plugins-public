@@ -188,11 +188,27 @@ built SKILL.md and confirm the body-completeness check FAILS.
   specific vendor MCP set by name — the named MCP tool assertions are removed entirely
   from the tool-scoping checks. [US1]
 - **FR-003**: The verification suite MUST include static pointer-coverage checks proving
-  each active agent references `capability-discovery.md` or an enumerated approved
-  equivalent. [US2]
+  each capability-dependent active agent references `capability-discovery.md` or an
+  enumerated approved equivalent. The in-scope set is the agents whose work is governed
+  by the directive (research / context-gathering / consensus / gate-remediation agents);
+  agents that perform no capability-dependent work (terminal validation or synthesis-only
+  workers that gather no external context) are explicitly out of pointer scope and MUST
+  be listed in an enumerated exclusion set with a one-line reason each, so "uncovered"
+  cannot be confused with "out of scope." The approved-equivalent allowlist MUST be
+  enumerated literally and kept minimal: it MUST NOT be widened to silence an in-scope
+  agent that simply omits the pointer (see FR-012). [US2]
 - **FR-004**: The verification suite MUST include target-resolution checks proving the
   referenced directive resolves and exists at the path each runtime loads it from inside
-  the built Claude payload and the built Codex payload. [US2]
+  the built Claude payload and the built Codex payload. "The path each runtime loads it
+  from" is the agent's in-source, repo-root-relative path token (today
+  `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`, cited
+  verbatim by both the Claude `.md` agents and the Codex `.toml` "equivalent" line)
+  re-rooted under each built tree — i.e. the check asserts `dist/claude/<path-token>` AND
+  `dist/codex/<path-token>` both exist. Resolution is this prefix re-rooting (the builder
+  copies source under `dist/<runtime>/` preserving the `speckit-pro/**` sub-path), NOT a
+  runtime-relative `../references/…` walk; no active agent uses a runtime-relative
+  reference. The check MUST fail when a path is correct in source but absent in either
+  built tree. [US2]
 - **FR-005**: The optional-tool eval expected outputs across all four eval files MUST be
   rewritten so each asserts BOTH the absence of a preferred named-tool set AND an
   affirmative capability-first answer. [US3]
@@ -207,17 +223,31 @@ built SKILL.md and confirm the body-completeness check FAILS.
   so all skill bodies are restored. [US4]
 - **FR-008**: The verification suite MUST include a deterministic body-completeness check
   that FAILS if any built Claude SKILL.md is truncated relative to its source minus the
-  guard section. [US4]
+  guard section. The length-tolerance baseline MUST be computed PER SKILL from that
+  skill's own guard-section boundary (source line count minus the lines of its stripped
+  guard section), never from a single fixed line-count constant shared across skills, so
+  the check does not flake across skills of differing size or guard-section length. The
+  guard-section boundary used by this check MUST be the same heading-to-next-`##`/EOF
+  boundary the builder's guard-stripping step uses (FR-007), so the check and the builder
+  cannot disagree on what was stripped. [US4]
 - **FR-009**: Every eval and every pointer/resolution check MUST maintain Claude/Codex
   parity (equivalent expectations and coverage across both runtimes). [US2] [US3]
 - **FR-010**: The default deterministic suite MUST remain green without depending on live
   AI eval execution. [US1] [US2] [US3] [US4]
 - **FR-011**: All new and reworked verification MUST extend the existing deterministic
-  test surfaces in place; no new test layer and no broad scanner are introduced. [US1]
-  [US2] [US4]
+  test surfaces in place; no new test layer and no broad scanner are introduced. Each new
+  Layer 1 validator MUST be REGISTERED in the suite runner (`tests/speckit-pro/run-all.sh`,
+  which enumerates Layer 1 validators explicitly) so it actually executes in the default
+  run — a validator file that exists but is not registered does not satisfy this
+  requirement. [US1] [US2] [US4]
 - **FR-012**: Each new deterministic guard MUST be non-vacuous: a deliberate regression
   (a named tool re-added, a missing or unresolved directive pointer, a truncated payload)
-  MUST make the corresponding guard fail. [US1] [US2] [US4]
+  MUST make the corresponding guard fail. Each guard MUST also be fail-closed: if its
+  input set is empty or missing (e.g., the active-agent glob matches nothing, a referenced
+  `dist/**` target is absent, or a `jq`/file read fails), the guard MUST fail rather than
+  silently report success on zero work, so a guard cannot pass vacuously by examining
+  nothing. The validators rely on `set -euo pipefail` and explicit empty-set / missing-
+  target assertions to enforce this. [US1] [US2] [US4]
 - **FR-013**: The built payload MUST be regenerated only from source via the build
   script; built payloads MUST NOT be hand-edited. [US4]
 
@@ -288,10 +318,25 @@ built SKILL.md and confirm the body-completeness check FAILS.
   capability-discovery work; this feature reuses it rather than redefining it.
 - **Approved-equivalent allowlist**: The enumerated set of approved runtime-specific
   equivalents to a literal `capability-discovery.md` reference is kept as small as the
-  actual active-agent inventory requires; if every active agent references the directive
-  directly, the allowlist is empty.
+  actual capability-dependent agent inventory requires. An entry is LEGITIMATE only when
+  the agent demonstrably carries the capability-first guidance in a machine-checkable form
+  (for the Codex TOML runtime this is the literal "Capability discovery equivalent:
+  mirrors …/capability-discovery.md" line; for Claude it is the literal path reference).
+  An agent that carries neither the literal reference nor a real equivalent is NOT
+  allowlisted to pass — it either gains the pointer or is recorded in the out-of-scope
+  exclusion set with a reason. The allowlist and the exclusion set are both literal
+  enumerations in the validator (not heuristics) so they stay auditable, and neither may
+  be widened merely to turn a red check green. If every capability-dependent agent
+  references the directive directly, the equivalent-allowlist is empty.
 - **"Active agent" inventory**: "Active" refers to the agents that ship in the built
   payloads (and their source), excluding archived, historical, or provenance material.
+  The pointer-coverage in-scope subset is the capability-dependent agents within that
+  inventory; non-capability-dependent agents (e.g., `gate-validator`,
+  `consensus-synthesizer`, `phase-executor`, `spec-context-analyst`, `uat-runbook-author`
+  on the Claude side, and `phase-executor`, `spec-context-analyst`, `uat-runbook-author`,
+  `autopilot-fast-helper` on the Codex side) are out of pointer scope per the directive's
+  own applicability rule ("Use this directive whenever research or context gathering
+  informs an answer …") and belong in the enumerated exclusion set.
 - **Pointer rule**: "Points to the directive" means a literal path match to
   `capability-discovery.md` plus the small enumerated approved-equivalent allowlist above.
 - **Target resolution model**: Resolution is verified against the directory layout each

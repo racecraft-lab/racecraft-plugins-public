@@ -112,13 +112,23 @@ and `dist/codex/speckit-pro/**`.
 - `dist/claude/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
 - `dist/codex/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
 
-**Resolution semantics**: For each pointer found in Decision 2, compute the path the
-agent loads the directive from (a relative reference like
-`../references/capability-discovery.md` resolved from the agent/skill's own location in
-the built tree) and assert that file exists in BOTH `dist/claude/**` and
-`dist/codex/**`. The check fails on a referenced path that is correct in source but
-absent in the built payload — it must NOT pass on source-tree presence alone (spec
-edge case "Unresolved payload path"; US2 acceptance scenarios 3–4).
+**Resolution semantics**: Each pointer found in Decision 2 references the directive by
+its **repo-root-relative source path** — verified across the current inventory, every
+Claude `.md` agent cites
+`` `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` `` and every
+covered Codex `.toml` agent cites the same path inside its "Capability discovery
+equivalent: mirrors speckit-pro/skills/…/capability-discovery.md …" line. There is **no**
+runtime-relative (`../references/…`) reference in any active agent. Resolution is
+therefore a **prefix re-rooting**, not a relative-path walk: extract the in-source path
+token verbatim and assert the same token resolves under BOTH built trees — i.e.
+`dist/claude/<source-path-token>` and `dist/codex/<source-path-token>` both exist (both
+currently resolve to
+`dist/<runtime>/speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`).
+The check fails on a referenced path that is correct in source but absent in the built
+payload — it must NOT pass on source-tree presence alone (spec edge case "Unresolved
+payload path"; US2 acceptance scenarios 3–4). The check and the builder agree on the
+re-rooting because the builder copies source under `dist/<runtime>/` preserving the
+`speckit-pro/**` sub-path.
 
 **Build dependency**: `validate-plugin-payload.sh` already rebuilds `dist/**` via the
 builder and runs `git diff --exit-code -- dist` to prove the committed payload matches

@@ -42,7 +42,7 @@ concept is the source of truth for setup-time scoping decisions.
 | Specify | `/speckit-specify` | ✅ Complete | spec.md: 13 FR, 4 US, 15 acceptance scenarios, SC-001…SC-005; 0 `[NEEDS CLARIFICATION]` |
 | Clarify | `/speckit-clarify` | ✅ Complete | Skipped — G1 found 0 markers; grill-me Q1–Q8 already encoded in spec (FR/SC traceability) |
 | Plan | `/speckit-plan` | Pending | |
-| Checklist | `/speckit-checklist` | Pending | Run for each recommended domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | 3 domains; 8 `[Gap]` resolved; G4 PASS (0 markers) |
 | Tasks | `/speckit-tasks` | Pending | |
 | Analyze | `/speckit-analyze` | Pending | |
 | Implement | `/speckit-implement` | Pending | TDD where checks/build behavior change |
@@ -473,10 +473,10 @@ Focus on TACD-004 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| reliability | _TBD_ | _TBD_ | |
-| integration | _TBD_ | _TBD_ | |
-| maintainability | _TBD_ | _TBD_ | |
-| Total | _TBD_ | _TBD_ | _Pending G4_ |
+| reliability | 42 | 5 found / 5 resolved | FR-003/008/011/012 + 2 assumptions |
+| integration | 27 | 1 found / 1 resolved | FR-004 + research Decision 3 (dist/** prefix re-rooting) |
+| maintainability | 30 | 2 found / 2 resolved | already covered (no spec edit; boundaries confirmed) |
+| Total | 99 | 8 found / 8 resolved | ✅ G4 PASS (0 `[Gap]` markers; 0 unresolved for consensus) |
 
 ---
 
