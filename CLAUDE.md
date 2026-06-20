@@ -244,18 +244,18 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 
 1. **Conventional commit analysis:** After a PR is squash-merged to `main`, the Release workflow (`.github/workflows/release.yml`) runs. release-please scans new conventional commits and determines whether a release is warranted. Only `fix:`, `feat:`, and breaking-change commits trigger a release PR — `chore:` and `docs:` commits alone do not.
 
-2. **Release PR creation:** When releasable commits exist, release-please opens or updates a PR that bumps `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json` and `speckit-pro/.codex-plugin/plugin.json`. The Release workflow then checks out the release PR branch, rebuilds generated `dist/**` payload files, commits them back to that branch when needed, and dispatches `PR Checks` for the branch. This keeps release PR payloads current before the maintainer merges them.
+2. **Release PR creation:** When releasable commits exist, release-please opens or updates a PR that bumps `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json` and `speckit-pro/.codex-plugin/plugin.json`. The Release workflow then checks out the release PR branch, rebuilds generated `dist/**` payload files, syncs the `marketplace.json` versions (`scripts/sync-marketplace-versions.sh`), regenerates the docs reference (`pnpm --dir docs-site reference:generate`), commits them back to that branch when needed, and dispatches `PR Checks` for the branch. This keeps the release PR **fully self-consistent** — source, dist, marketplace, and docs reference all at the new version — so **merging the release PR completes the release with no follow-up sync PR**.
 
 3. **GitHub Release publication:** When the release PR is merged, release-please creates a GitHub Release with a version tag (e.g., `speckit-pro-v1.2.0`).
 
-4. **Payload and marketplace sync:** The Release workflow detects the new release (via `steps.release.outputs['speckit-pro--release_created'] == 'true'`), rebuilds `dist/**`, and runs `scripts/sync-marketplace-versions.sh`. If generated payloads or marketplace files changed, the workflow pushes an automation branch named `release/sync-speckit-pro-v<X.Y.Z>` and opens or updates a PR titled `chore: sync plugin payloads and marketplace versions`.
+4. **Post-release consistency check:** After the release publishes (`steps.release.outputs['speckit-pro--release_created'] == 'true'`), the workflow rebuilds `dist/**`, re-syncs marketplace versions, and regenerates the docs reference, then **verifies** that `main` is already consistent — because the release PR (step 2) carried the full sync. It does **not** open a separate sync PR. If it ever detects drift, it fails the workflow so a maintainer can re-run the Release workflow to re-sync the release PR.
 
 5. **End-user update:** Plugin consumers run the following to receive the updated version:
    ```
    /plugin marketplace update racecraft-plugins-public
    ```
 
-**Why sync is PR-based:** `main` is protected and this repository lives under the `racecraft-lab` organization, so Release must not rely on a GitHub Actions token direct-pushing through required status checks. The generated sync PR follows the same branch-protection path as human changes. The `permissions: actions: write`, `contents: write`, and `pull-requests: write` declarations in `release.yml` are required so the workflow can dispatch PR checks, push release/sync branches, and create or update PRs.
+**Why the release PR carries the sync:** `main` is protected and this repository lives under the `racecraft-lab` organization, so Release must not direct-push generated changes to `main`. Rather than a second post-release sync PR, the sync (dist, marketplace versions, docs reference) is committed onto the **release PR branch** itself, which already flows through branch protection before a human merges it. The `permissions: actions: write`, `contents: write`, and `pull-requests: write` declarations in `release.yml` remain required so release-please can open/update the release PR, the workflow can push the sync commit onto that branch, and dispatch PR checks.
 
 ## Adding a New Plugin to Release Automation
 
@@ -317,15 +317,15 @@ All commands below are written for this repository (`racecraft-lab/racecraft-plu
 
 ---
 
-### Scenario 1: Re-trigger payload and marketplace sync after a failed or missing sync
+### Scenario 1: Re-sync a release PR (or recover from a post-release drift failure)
 
-If the Release workflow ran but the payload or marketplace sync PR was not created or updated:
+If a release PR is missing its payload/marketplace/docs-reference sync (e.g., it predates this workflow, or the sync step failed), or the post-release **Verify release artifacts are consistent** step failed:
 
 ```bash
 gh workflow run release.yml --repo racecraft-lab/racecraft-plugins-public
 ```
 
-This manually triggers the Release workflow, which will re-run release-please (idempotent) and the payload/marketplace sync step if `speckit-pro--release_created` is still true.
+This manually triggers the Release workflow, which re-runs release-please (idempotent) and re-runs the release-PR payload-sync step (rebuild `dist/**` + sync marketplace versions + regenerate the docs reference, committed onto the release PR branch) so the release PR is self-consistent before merge.
 
 ---
 
@@ -361,24 +361,24 @@ release-please will pick up the `fix:` commit and create a patch version bump PR
 
 ---
 
-### Scenario 4: Release sync PR creation fails
+### Scenario 4: Post-release consistency check fails (drift detected)
 
-**Symptom:** The Release workflow publishes a GitHub Release, then fails while pushing the generated sync branch or creating/updating the sync PR.
+**Symptom:** The Release workflow publishes a GitHub Release, then the `Verify release artifacts are consistent` step fails — a clean rebuild on `main` differs from what was committed, meaning the release PR was merged without the full sync (dist / marketplace versions / docs reference).
 
 **Detection:**
 ```bash
 gh run view <run-id> --log-failed
 ```
 
-Look for the `Open payload and marketplace sync PR` step. A protected-branch rejection indicates the workflow regressed to direct-pushing `main`; a 403 on PR creation usually means `pull-requests: write` was removed or the workflow token permissions were restricted.
+Look for the `Verify release artifacts are consistent` step; its error prints the drifting paths. This usually means the release-PR payload-sync step did not run on the release PR before it was merged (e.g., a release PR created by an older workflow).
 
-**Recovery:** Restore `.github/workflows/release.yml` so it pushes `release/sync-speckit-pro-v<X.Y.Z>` and opens/updates the sync PR, with both `contents: write` and `pull-requests: write` permissions. Then re-trigger the Release workflow (Scenario 1).
+**Recovery:** Fix forward — push a sync commit through a normal PR that runs `bash scripts/build-plugin-payloads.sh`, `bash scripts/sync-marketplace-versions.sh`, and `pnpm --dir docs-site reference:generate`, then commits `dist/`, both `marketplace.json` files, and `docs-site/src/content/docs/reference/**`. For future releases the release PR carries this sync automatically; use Scenario 1 to re-sync a release PR before merge.
 
 ---
 
-### Scenario 5: Missing release workflow write permissions blocks sync PR creation
+### Scenario 5: Missing release workflow write permissions block the release-PR sync
 
-**Symptom:** The payload and marketplace sync step succeeds locally in the workflow, but the workflow fails when pushing the sync branch or opening/updating the PR.
+**Symptom:** The release-PR payload-sync step rebuilds artifacts in the workflow, but fails when pushing the sync commit onto the release PR branch or dispatching PR checks.
 
 **Detection:**
 ```bash
@@ -396,7 +396,7 @@ permissions:
   pull-requests: write
 ```
 
-Commit as `chore(release): restore sync PR workflow permissions` and push through a PR. Then re-trigger the Release workflow (Scenario 1).
+Commit as `chore(release): restore release workflow permissions` and push through a PR. Then re-trigger the Release workflow (Scenario 1).
 
 ---
 
@@ -428,8 +428,9 @@ Compare the version values against the GitHub Release tags. If they do not match
 ```bash
 bash scripts/build-plugin-payloads.sh
 bash scripts/sync-marketplace-versions.sh
-git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json
-git commit -m "chore: sync plugin payloads and marketplace versions"
+pnpm --dir docs-site reference:generate
+git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
+git commit -m "chore: sync plugin payloads, marketplace versions, and docs reference"
 git push origin <sync-branch>
 gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloads and marketplace versions"
 ```

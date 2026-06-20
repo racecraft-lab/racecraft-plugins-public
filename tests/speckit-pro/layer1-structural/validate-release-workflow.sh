@@ -68,34 +68,22 @@ assert_contains "$CONTENT" "bash scripts/build-plugin-payloads.sh"
 set_test "release workflow syncs marketplace versions"
 assert_contains "$CONTENT" "bash scripts/sync-marketplace-versions.sh"
 
-set_test "release workflow opens or updates a sync PR"
-if [[ "$CONTENT" == *"Open payload and marketplace sync PR"* \
-  && "$CONTENT" == *"gh pr list"* \
-  && "$CONTENT" == *"gh pr create --base main"* \
-  && "$CONTENT" == *"gh pr edit"* ]]; then
+set_test "release workflow regenerates the docs reference on sync"
+assert_contains "$CONTENT" "pnpm --dir docs-site reference:generate"
+
+set_test "release workflow verifies release artifacts are consistent after publishing"
+if [[ "$CONTENT" == *"Verify release artifacts are consistent"* ]]; then
   _pass
 else
-  _fail "expected release workflow to create or update a payload/marketplace sync PR"
+  _fail "expected release workflow to verify dist/marketplace/docs-reference consistency after a release"
 fi
 
-set_test "release workflow uses a versioned sync branch"
-sync_branch_push_regex='^[[:space:]]*git push([[:space:]]|$).*HEAD:\$\{sync_branch\}'
-if [[ "$CONTENT" == *'sync_branch="release/sync-speckit-pro-v${version}"'* ]] \
-  && grep -Eq "$sync_branch_push_regex" "$WORKFLOW_FILE"; then
-  _pass
+set_test "release workflow opens NO follow-up payload/marketplace sync PR"
+if [[ "$CONTENT" == *"gh pr create --base main"* || "$CONTENT" == *"release/sync-speckit-pro-v"* ]]; then
+  _fail "release workflow must NOT open a follow-up sync PR; the release PR's payload-sync step already commits dist, marketplace versions, and the docs reference"
 else
-  _fail "expected release workflow to push a versioned release/sync-speckit-pro-vX.Y.Z branch"
-fi
-
-set_test "release workflow sync-branch push regex allows alternate push flags"
-if printf '%s\n' 'git push --force-with-lease origin "HEAD:${sync_branch}"' | grep -Eq "$sync_branch_push_regex"; then
   _pass
-else
-  _fail "expected sync-branch push regex to allow valid push flag changes"
 fi
-
-set_test "release workflow sync PR title is conventional"
-assert_contains "$CONTENT" 'sync_title="chore: sync plugin payloads and marketplace versions"'
 
 set_test "release workflow sync commit does not skip required PR checks"
 assert_not_contains "$CONTENT" '[skip ci]'
