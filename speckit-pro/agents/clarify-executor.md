@@ -21,7 +21,6 @@ tools:
   - mcp__context7__get-library-docs
   - mcp__RepoPrompt__context_builder
   - mcp__RepoPrompt__file_search
-permissionMode: plan
 maxTurns: 35
 effort: max
 ---

@@ -19,7 +19,6 @@ tools:
   - Bash
   - Grep
   - Glob
-permissionMode: acceptEdits
 maxTurns: 30
 effort: max
 ---

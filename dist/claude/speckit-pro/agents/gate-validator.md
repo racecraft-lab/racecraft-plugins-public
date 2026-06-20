@@ -11,7 +11,6 @@ tools:
   - Bash
   - Read
   - Grep
-permissionMode: plan
 maxTurns: 10
 effort: max
 ---

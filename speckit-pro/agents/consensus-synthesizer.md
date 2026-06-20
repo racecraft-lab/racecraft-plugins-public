@@ -13,7 +13,6 @@ tools:
   - Read
   - Grep
   - Glob
-permissionMode: plan
 maxTurns: 15
 effort: max
 ---

@@ -81,6 +81,17 @@ strip_quotes() {
   printf '%s' "$v"
 }
 
+# fm_has_key <md-file> <key> — exit 0 iff the leading frontmatter declares a
+# top-level `<key>:` line (presence test, value-agnostic).
+fm_has_key() {
+  awk -v key="$2" '
+    NR == 1 { if ($0 == "---") { infm = 1; next } else { exit } }
+    infm && $0 == "---" { exit }
+    infm && index($0, key ":") == 1 { found = 1; exit }
+    END { exit(found ? 0 : 1) }
+  ' "$1" 2>/dev/null
+}
+
 # assert_md_frontmatter <label> <item> <md-file>
 # A Markdown component (skill or agent) must open with a `---` fence and carry a
 # non-empty kebab-case `name` + non-empty `description` — the identity fields
@@ -103,6 +114,20 @@ assert_md_frontmatter() {
   desc="$(fm_value "$file" description)"
   set_test "[$label/$item] frontmatter has a non-empty 'description' (required)"
   if [ -n "$desc" ]; then _pass; else _fail "$file frontmatter is missing 'description'"; fi
+}
+
+# assert_no_forbidden_agent_fields <label> <item> <md-file>
+# plugins-reference: "For security reasons, `hooks`, `mcpServers`, and
+# `permissionMode` are not supported for plugin-shipped agents." A built plugin
+# agent must therefore NOT declare any of these top-level frontmatter keys.
+assert_no_forbidden_agent_fields() {
+  local label="$1" item="$2" file="$3" k
+  for k in permissionMode hooks mcpServers; do
+    set_test "[$label/$item] does NOT declare plugin-unsupported '$k' (plugins-reference)"
+    if fm_has_key "$file" "$k"; then
+      _fail "$file declares '$k' — not supported for plugin-shipped agents per official docs"
+    else _pass; fi
+  done
 }
 
 # assert_toml_agent <label> <toml-file> — a built Codex agent must remain a
@@ -196,7 +221,9 @@ set_test "[claude] at least one agents/*.md is present"
 if [ "${#claude_agents[@]}" -gt 0 ]; then _pass; else
   _fail "no agents/*.md under $CLAUDE_ROOT/agents — refusing to pass vacuously"; test_summary; exit $?; fi
 for f in "${claude_agents[@]}"; do
-  assert_md_frontmatter "claude-agent" "$(basename "$f" .md)" "$f"
+  ag="$(basename "$f" .md)"
+  assert_md_frontmatter "claude-agent" "$ag" "$f"
+  assert_no_forbidden_agent_fields "claude-agent" "$ag" "$f"
 done
 
 # Hooks

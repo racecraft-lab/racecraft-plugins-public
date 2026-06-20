@@ -12,7 +12,6 @@ tools:
   - Read
   - Glob
   - Grep
-permissionMode: plan
 maxTurns: 25
 background: true
 effort: max

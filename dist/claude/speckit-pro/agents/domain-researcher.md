@@ -16,7 +16,6 @@ tools:
   - WebSearch
   - WebFetch
   - Read
-permissionMode: plan
 maxTurns: 25
 background: true
 effort: max

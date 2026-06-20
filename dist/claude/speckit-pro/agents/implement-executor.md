@@ -23,7 +23,6 @@ tools:
   - mcp__context7__get-library-docs
   - mcp__RepoPrompt__file_search
   - mcp__RepoPrompt__context_builder
-permissionMode: acceptEdits
 maxTurns: 50
 effort: max
 memory: project

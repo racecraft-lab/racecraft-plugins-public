@@ -128,10 +128,6 @@ done
 set_test "phase-executor has no mcp__ tools"
 assert_no_mcp_tools "$TOOLS" "phase-executor"
 
-set_test "phase-executor permissionMode is acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-assert_eq "acceptEdits" "$mode"
-
 set_test "phase-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
@@ -162,10 +158,6 @@ for tool in Skill Write Edit; do
   assert_tool_absent "$TOOLS" "$tool" "clarify-executor"
 done
 
-set_test "clarify-executor permissionMode is plan"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-assert_eq "plan" "$mode"
-
 set_test "clarify-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
@@ -187,10 +179,6 @@ for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
   assert_tool_present "$TOOLS" "$tool" "checklist-executor"
 done
 
-set_test "checklist-executor permissionMode is acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-assert_eq "acceptEdits" "$mode"
-
 set_test "checklist-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
@@ -211,10 +199,6 @@ for tool in Skill Read Write Edit Bash Grep Glob WebSearch WebFetch; do
   set_test "analyze-executor has $tool"
   assert_tool_present "$TOOLS" "$tool" "analyze-executor"
 done
-
-set_test "analyze-executor permissionMode is acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-assert_eq "acceptEdits" "$mode"
 
 set_test "analyze-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
@@ -251,10 +235,6 @@ done
 set_test "implement-executor does NOT have Skill"
 assert_tool_absent "$TOOLS" "Skill" "implement-executor"
 
-set_test "implement-executor permissionMode is acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-assert_eq "acceptEdits" "$mode"
-
 set_test "implement-executor maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
@@ -280,14 +260,6 @@ for tool in Write Edit Bash; do
   set_test "codebase-analyst does NOT have $tool"
   assert_tool_absent "$TOOLS" "$tool" "codebase-analyst"
 done
-
-set_test "codebase-analyst permissionMode is NOT acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-if [ "$mode" != "acceptEdits" ]; then
-  _pass
-else
-  _fail "codebase-analyst permissionMode should not be acceptEdits, got '$mode'"
-fi
 
 set_test "codebase-analyst maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
@@ -315,14 +287,6 @@ for tool in Write Edit Bash; do
   assert_tool_absent "$TOOLS" "$tool" "spec-context-analyst"
 done
 
-set_test "spec-context-analyst permissionMode is NOT acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-if [ "$mode" != "acceptEdits" ]; then
-  _pass
-else
-  _fail "spec-context-analyst permissionMode should not be acceptEdits, got '$mode'"
-fi
-
 set_test "spec-context-analyst maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
 assert_gt "$max_turns" 0
@@ -348,14 +312,6 @@ for tool in Write Edit Bash Glob Grep; do
   set_test "domain-researcher does NOT have $tool"
   assert_tool_absent "$TOOLS" "$tool" "domain-researcher"
 done
-
-set_test "domain-researcher permissionMode is NOT acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-if [ "$mode" != "acceptEdits" ]; then
-  _pass
-else
-  _fail "domain-researcher permissionMode should not be acceptEdits, got '$mode'"
-fi
 
 set_test "domain-researcher maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
@@ -385,14 +341,6 @@ done
 
 set_test "gate-validator has no mcp__ tools"
 assert_no_mcp_tools "$TOOLS" "gate-validator"
-
-set_test "gate-validator permissionMode is NOT acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-if [ "$mode" != "acceptEdits" ]; then
-  _pass
-else
-  _fail "gate-validator permissionMode should not be acceptEdits, got '$mode'"
-fi
 
 set_test "gate-validator model is sonnet (max-thinking policy: haiku does not support max)"
 model=$(extract_field "$AGENT_FILE" "model")
@@ -426,14 +374,6 @@ done
 
 set_test "consensus-synthesizer has no mcp__ tools"
 assert_no_mcp_tools "$TOOLS" "consensus-synthesizer"
-
-set_test "consensus-synthesizer permissionMode is NOT acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-if [ "$mode" != "acceptEdits" ]; then
-  _pass
-else
-  _fail "consensus-synthesizer permissionMode should not be acceptEdits, got '$mode'"
-fi
 
 set_test "consensus-synthesizer model is sonnet"
 model=$(extract_field "$AGENT_FILE" "model")
@@ -473,10 +413,6 @@ assert_eq "sonnet" "$model"
 set_test "uat-runbook-author effort is max (max-thinking policy)"
 effort=$(extract_field "$AGENT_FILE" "effort")
 assert_eq "max" "$effort"
-
-set_test "uat-runbook-author permissionMode is acceptEdits"
-mode=$(extract_field "$AGENT_FILE" "permissionMode")
-assert_eq "acceptEdits" "$mode"
 
 set_test "uat-runbook-author maxTurns exists and is positive"
 max_turns=$(extract_field "$AGENT_FILE" "maxTurns")
