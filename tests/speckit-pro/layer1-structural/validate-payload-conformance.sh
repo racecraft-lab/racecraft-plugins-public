@@ -2,33 +2,39 @@
 # validate-payload-conformance.sh — Layer 1 format conformance for BUILT payloads.
 #
 # Asserts that the BUILT `dist/claude/speckit-pro` and `dist/codex/speckit-pro`
-# payloads conform to each runtime's documented plugin/skill FORMAT. This is
+# payloads conform to each runtime's documented PLUGIN + skill format. This is
 # distinct from — and complementary to — the existing checks:
-#   - validate-skills / validate-plugin / validate-codex-*  → validate the SOURCE
-#     authoring tree (speckit-pro/), not the shipped payloads.
-#   - validate-payload-completeness                         → built Claude body
-#     truncation only.
+#   - validate-skills / validate-plugin / validate-agents / validate-hooks /
+#     validate-codex-*  → validate the SOURCE authoring tree (speckit-pro/), not
+#     the shipped payloads.
+#   - validate-payload-completeness  → built Claude skill body truncation only.
 # Nothing else asserts that the BUILT, shipped payloads match each runtime's
-# manifest + skill format. That gap is what this check closes.
+# manifest + component format. That gap is what this check closes — across the
+# WHOLE plugin (manifest, skills, agents, hooks), for both runtimes.
 #
 # Grounding — official documentation, captured 2026-06-20:
 #   Claude — https://code.claude.com/docs/en/plugins-reference
-#     • Manifest at `.claude-plugin/plugin.json`; quote: "If you include a
-#       manifest, `name` is the only required field." `version` is an optional
-#       string.
-#     • Skills live at `skills/<name>/SKILL.md`.
-#     • SKILL.md YAML frontmatter requires `name` and `description`.
+#     • Manifest `.claude-plugin/plugin.json`; quote: "If you include a manifest,
+#       `name` is the only required field." `version` optional string. Component
+#       pointers (`agents`, `hooks`, `mcpServers`, …) are optional string|array.
+#     • Skills: `skills/<name>/SKILL.md`; frontmatter requires `name` +
+#       `description`.
+#     • Agents: `agents/` directory of `.md` files with frontmatter (`name`,
+#       `description`, `model`, `effort`, `tools`, …).
+#     • Hooks: `hooks/hooks.json`; JSON with a top-level `hooks` object.
 #   Codex — https://developers.openai.com/codex/plugins/build
-#     • Manifest at `.codex-plugin/plugin.json` requires `name` (kebab-case),
-#       `version` (semver), and `description`.
-#     • Quote: "Only `plugin.json` belongs in `.codex-plugin/`. Keep `skills/`,
-#       `hooks/`, `assets/`, `.mcp.json`, and `.app.json` at the plugin root."
-#     • Skills live at `skills/<name>/SKILL.md`; frontmatter has `name` +
-#       `description`. (`agents/openai.yaml` is an OPTIONAL MCP-dependency
-#       sidecar — not required by the format — so it is NOT asserted here.)
+#     • Manifest `.codex-plugin/plugin.json` requires `name` (kebab-case),
+#       `version` (semver), `description`. Quote: "Only `plugin.json` belongs in
+#       `.codex-plugin/`." Component pointers (`skills`, `hooks`, …) are paths.
+#     • Skills: `skills/<name>/SKILL.md`; frontmatter `name` + `description`.
+#     • Agents: bundled as `codex-agents/*.toml` (name/description/model/…); the
+#       builder path-rewrites these, so the BUILT copies are verified here.
+#     • Hooks: `codex-hooks.json`; JSON with a top-level `hooks` object.
+#   (`agents/openai.yaml` is an OPTIONAL MCP-dependency sidecar — not a required
+#    format element — so it is NOT asserted here.)
 #
-# Fail-closed (FR-012): a missing built payload, an empty skills glob, malformed
-# JSON, or an unreadable file is a FAILURE, never a vacuous pass.
+# Fail-closed (FR-012): a missing built payload, an empty component glob,
+# malformed JSON, or an unreadable file is a FAILURE, never a vacuous pass.
 set -euo pipefail
 
 source "$(dirname "$0")/../lib/assertions.sh"
@@ -37,36 +43,35 @@ REPO_ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 CLAUDE_ROOT="$REPO_ROOT/dist/claude/speckit-pro"
 CODEX_ROOT="$REPO_ROOT/dist/codex/speckit-pro"
 
-# Skill/plugin name charset shared by both runtimes (lowercase kebab-case).
+# Skill/agent/plugin name charset shared by both runtimes (lowercase kebab-case).
 NAME_RE='^[a-z0-9][a-z0-9-]*$'
+
+# Documented manifest keys that, when set to a string, point at a bundled
+# component file/dir and therefore must resolve inside the payload.
+POINTER_KEYS="skills hooks mcpServers apps agents commands lsp"
 
 if ! command -v jq >/dev/null 2>&1; then
   echo "validate-payload-conformance.sh: jq is required" >&2
   exit 2
 fi
 
-# fm_value <skill-file> <key>
-# Print the scalar value of a TOP-LEVEL YAML frontmatter key (line begins with
-# `<key>:`), read only from the leading `---` … `---` block. Surrounding quotes
-# are stripped in the caller. A block scalar (`>` / `|`) prints the sentinel
-# `__BLOCK__` (value lives on following lines — treated as present + non-empty).
-# Empty output means the key is absent. TOTAL — never errors.
+# fm_value <md-file> <key> — print a TOP-LEVEL YAML frontmatter scalar (line
+# begins with `<key>:`), read only from the leading `---` … `---` block. A block
+# scalar (`>` / `|`) prints the sentinel `__BLOCK__` (value on following lines —
+# treated as present + non-empty). Empty output = key absent. TOTAL.
 fm_value() {
   awk -v key="$2" '
     NR == 1 { if ($0 == "---") { infm = 1; next } else { exit } }
     infm && $0 == "---" { exit }
     infm && index($0, key ":") == 1 {
       val = substr($0, length(key) + 2)
-      sub(/^[ \t]+/, "", val)
-      sub(/[ \t]+$/, "", val)
+      sub(/^[ \t]+/, "", val); sub(/[ \t]+$/, "", val)
       if (val ~ /^[>|][-+]?[0-9]*$/) { print "__BLOCK__"; exit }
-      print val
-      exit
+      print val; exit
     }
   ' "$1" 2>/dev/null || true
 }
 
-# strip_quotes <value> — remove a single matched pair of surrounding quotes.
 strip_quotes() {
   local v="$1"
   case "$v" in
@@ -76,35 +81,71 @@ strip_quotes() {
   printf '%s' "$v"
 }
 
-# assert_skill_frontmatter <runtime-label> <skill-file>
-# Assert the SKILL.md opens with a `---` frontmatter fence and carries non-empty
-# `name` and `description` keys; `name` must match the kebab-case charset.
-assert_skill_frontmatter() {
-  local label="$1" file="$2" name desc
-  local sk; sk="$(basename "$(dirname "$file")")"
+# assert_md_frontmatter <label> <item> <md-file>
+# A Markdown component (skill or agent) must open with a `---` fence and carry a
+# non-empty kebab-case `name` + non-empty `description` — the identity fields
+# both Claude skills and Claude agents require.
+assert_md_frontmatter() {
+  local label="$1" item="$2" file="$3" name desc
 
-  set_test "[$label/$sk] SKILL.md opens with a '---' frontmatter fence"
+  set_test "[$label/$item] opens with a '---' frontmatter fence"
   if [ "$(head -1 "$file" 2>/dev/null)" = "---" ]; then _pass; else
-    _fail "$file does not begin with a YAML frontmatter fence"; return
-  fi
+    _fail "$file does not begin with a YAML frontmatter fence"; return; fi
 
   name="$(strip_quotes "$(fm_value "$file" name)")"
-  set_test "[$label/$sk] frontmatter has a non-empty 'name' (required)"
+  set_test "[$label/$item] frontmatter has a non-empty 'name' (required)"
   if [ -n "$name" ]; then _pass; else _fail "$file frontmatter is missing 'name'"; fi
 
-  set_test "[$label/$sk] frontmatter 'name' is kebab-case ('$name')"
+  set_test "[$label/$item] frontmatter 'name' is kebab-case ('$name')"
   if printf '%s' "$name" | grep -Eq "$NAME_RE"; then _pass; else
-    _fail "$file 'name' ('$name') is not lowercase kebab-case ($NAME_RE)"; fi
+    _fail "$file 'name' ('$name') is not lowercase kebab-case"; fi
 
   desc="$(fm_value "$file" description)"
-  set_test "[$label/$sk] frontmatter has a non-empty 'description' (required)"
+  set_test "[$label/$item] frontmatter has a non-empty 'description' (required)"
   if [ -n "$desc" ]; then _pass; else _fail "$file frontmatter is missing 'description'"; fi
 }
 
-# collect_skills <skills-dir> — emit each `<skills-dir>/*/SKILL.md` that exists.
-collect_skills() {
-  local d="$1" f
-  for f in "$d"/*/SKILL.md; do [ -f "$f" ] && printf '%s\n' "$f"; done
+# assert_toml_agent <label> <toml-file> — a built Codex agent must remain a
+# readable TOML carrying its identity (`name = ` + `description = `) after the
+# builder's path rewrite. Light by design: the full TOML schema is pinned by the
+# SOURCE validator (validate-codex-agents); here we assert the BUILT copy did not
+# lose its identity.
+assert_toml_agent() {
+  local label="$1" file="$2" item; item="$(basename "$file" .toml)"
+  set_test "[$label/$item] built agent .toml has a 'name =' key"
+  if grep -Eq '^name[[:space:]]*=' "$file" 2>/dev/null; then _pass; else
+    _fail "$file is missing a top-level 'name =' key"; fi
+  set_test "[$label/$item] built agent .toml has a 'description =' key"
+  if grep -Eq '^description[[:space:]]*=' "$file" 2>/dev/null; then _pass; else
+    _fail "$file is missing a top-level 'description =' key"; fi
+}
+
+# assert_hooks_json <label> <hooks-file> — present, valid JSON, top-level `hooks`.
+assert_hooks_json() {
+  local label="$1" file="$2"
+  set_test "[$label] hooks file exists ($file)"
+  if [ -f "$file" ]; then _pass; else _fail "missing hooks file: $file"; return; fi
+  set_test "[$label] hooks file is valid JSON"
+  if jq -e . "$file" >/dev/null 2>&1; then _pass; else _fail "invalid JSON: $file"; return; fi
+  set_test "[$label] hooks file has a top-level 'hooks' object"
+  if jq -e '(.hooks|type)=="object"' "$file" >/dev/null 2>&1; then _pass; else
+    _fail "$file has no top-level 'hooks' object"; fi
+}
+
+# assert_pointers_resolve <label> <manifest> <payload-root>
+# Every documented manifest key that is a STRING path must resolve to a file or
+# directory inside the payload. (Array-form pointers are rare and not used here;
+# they are skipped with the count unaffected.)
+assert_pointers_resolve() {
+  local label="$1" manifest="$2" root="$3" key val rel
+  for key in $POINTER_KEYS; do
+    val="$(jq -r --arg k "$key" 'if (.[$k]|type)=="string" then .[$k] else empty end' "$manifest" 2>/dev/null || true)"
+    [ -n "$val" ] || continue
+    rel="${val#./}"; rel="${rel%/}"
+    set_test "[$label] manifest '$key' pointer resolves in payload ('$val')"
+    if [ -e "$root/$rel" ]; then _pass; else
+      _fail "manifest '$key' ('$val') does not resolve to a path under the payload"; fi
+  done
 }
 
 # ===========================================================================
@@ -114,8 +155,7 @@ section "Claude payload conformance (dist/claude/speckit-pro)"
 
 set_test "[claude] built payload root exists ($CLAUDE_ROOT)"
 if [ -d "$CLAUDE_ROOT" ]; then _pass; else
-  _fail "Claude payload missing — run scripts/build-plugin-payloads.sh"; test_summary; exit $?
-fi
+  _fail "Claude payload missing — run scripts/build-plugin-payloads.sh"; test_summary; exit $?; fi
 
 CLAUDE_MANIFEST="$CLAUDE_ROOT/.claude-plugin/plugin.json"
 set_test "[claude] manifest exists at .claude-plugin/plugin.json"
@@ -124,29 +164,43 @@ if [ -f "$CLAUDE_MANIFEST" ]; then _pass; else _fail "missing $CLAUDE_MANIFEST";
 set_test "[claude] manifest is valid JSON"
 if jq -e . "$CLAUDE_MANIFEST" >/dev/null 2>&1; then _pass; else _fail "invalid JSON: $CLAUDE_MANIFEST"; fi
 
-# Doc: `name` is the ONLY required manifest field.
 set_test "[claude] manifest has the required 'name' (string, non-empty)"
 cname="$(jq -r 'if (.name|type)=="string" then .name else empty end' "$CLAUDE_MANIFEST" 2>/dev/null || true)"
 if [ -n "$cname" ]; then _pass; else _fail "manifest 'name' missing or not a string"; fi
 
-# Doc: `version`, if present, is a string.
 set_test "[claude] manifest 'version', if present, is a string"
 if jq -e 'has("version")|not' "$CLAUDE_MANIFEST" >/dev/null 2>&1 \
    || jq -e '(.version|type)=="string"' "$CLAUDE_MANIFEST" >/dev/null 2>&1; then _pass; else
   _fail "manifest 'version' present but not a string"; fi
 
+assert_pointers_resolve "claude" "$CLAUDE_MANIFEST" "$CLAUDE_ROOT"
+
+# Skills
 set_test "[claude] skills/ directory exists in the payload"
 if [ -d "$CLAUDE_ROOT/skills" ]; then _pass; else _fail "missing $CLAUDE_ROOT/skills"; fi
-
-# Fail-closed: at least one built skill.
 claude_skills=()
-while IFS= read -r f; do claude_skills+=("$f"); done < <(collect_skills "$CLAUDE_ROOT/skills")
+for f in "$CLAUDE_ROOT"/skills/*/SKILL.md; do [ -f "$f" ] && claude_skills+=("$f"); done
 set_test "[claude] at least one skills/*/SKILL.md is present"
 if [ "${#claude_skills[@]}" -gt 0 ]; then _pass; else
-  _fail "no SKILL.md under $CLAUDE_ROOT/skills/*/ — refusing to pass vacuously"; test_summary; exit $?
-fi
+  _fail "no SKILL.md under $CLAUDE_ROOT/skills/*/ — refusing to pass vacuously"; test_summary; exit $?; fi
+for f in "${claude_skills[@]}"; do
+  assert_md_frontmatter "claude-skill" "$(basename "$(dirname "$f")")" "$f"
+done
 
-for f in "${claude_skills[@]}"; do assert_skill_frontmatter "claude" "$f"; done
+# Agents
+set_test "[claude] agents/ directory exists in the payload"
+if [ -d "$CLAUDE_ROOT/agents" ]; then _pass; else _fail "missing $CLAUDE_ROOT/agents"; fi
+claude_agents=()
+for f in "$CLAUDE_ROOT"/agents/*.md; do [ -f "$f" ] && claude_agents+=("$f"); done
+set_test "[claude] at least one agents/*.md is present"
+if [ "${#claude_agents[@]}" -gt 0 ]; then _pass; else
+  _fail "no agents/*.md under $CLAUDE_ROOT/agents — refusing to pass vacuously"; test_summary; exit $?; fi
+for f in "${claude_agents[@]}"; do
+  assert_md_frontmatter "claude-agent" "$(basename "$f" .md)" "$f"
+done
+
+# Hooks
+assert_hooks_json "claude" "$CLAUDE_ROOT/hooks/hooks.json"
 
 # ===========================================================================
 # Codex payload — developers.openai.com/codex/plugins/build
@@ -155,8 +209,7 @@ section "Codex payload conformance (dist/codex/speckit-pro)"
 
 set_test "[codex] built payload root exists ($CODEX_ROOT)"
 if [ -d "$CODEX_ROOT" ]; then _pass; else
-  _fail "Codex payload missing — run scripts/build-plugin-payloads.sh"; test_summary; exit $?
-fi
+  _fail "Codex payload missing — run scripts/build-plugin-payloads.sh"; test_summary; exit $?; fi
 
 CODEX_MANIFEST="$CODEX_ROOT/.codex-plugin/plugin.json"
 set_test "[codex] manifest exists at .codex-plugin/plugin.json"
@@ -165,7 +218,6 @@ if [ -f "$CODEX_MANIFEST" ]; then _pass; else _fail "missing $CODEX_MANIFEST"; f
 set_test "[codex] manifest is valid JSON"
 if jq -e . "$CODEX_MANIFEST" >/dev/null 2>&1; then _pass; else _fail "invalid JSON: $CODEX_MANIFEST"; fi
 
-# Doc: name (kebab-case) + version + description are all REQUIRED.
 set_test "[codex] manifest 'name' is present, a string, and kebab-case"
 xname="$(jq -r 'if (.name|type)=="string" then .name else empty end' "$CODEX_MANIFEST" 2>/dev/null || true)"
 if [ -n "$xname" ] && printf '%s' "$xname" | grep -Eq "$NAME_RE"; then _pass; else
@@ -185,28 +237,31 @@ extra="$(find "$CODEX_ROOT/.codex-plugin" -mindepth 1 -not -name plugin.json 2>/
 if [ -z "$extra" ]; then _pass; else
   _fail ".codex-plugin/ must contain only plugin.json; found also: $(printf '%s' "$extra" | tr '\n' ' ')"; fi
 
-# Doc: skills/ lives at the plugin ROOT; the manifest 'skills' pointer (if set)
-# must resolve to it.
+assert_pointers_resolve "codex" "$CODEX_MANIFEST" "$CODEX_ROOT"
+
+# Skills
 set_test "[codex] skills/ directory exists at the plugin root"
 if [ -d "$CODEX_ROOT/skills" ]; then _pass; else _fail "missing $CODEX_ROOT/skills"; fi
-
-set_test "[codex] manifest 'skills' pointer, if set, resolves to a real directory"
-skills_ptr="$(jq -r '.skills // empty' "$CODEX_MANIFEST" 2>/dev/null || true)"
-if [ -z "$skills_ptr" ]; then
-  _pass   # optional pointer absent — acceptable
-else
-  rel="${skills_ptr#./}"; rel="${rel%/}"
-  if [ -d "$CODEX_ROOT/$rel" ]; then _pass; else
-    _fail "manifest 'skills' ('$skills_ptr') does not resolve to a directory under the payload"; fi
-fi
-
 codex_skills=()
-while IFS= read -r f; do codex_skills+=("$f"); done < <(collect_skills "$CODEX_ROOT/skills")
+for f in "$CODEX_ROOT"/skills/*/SKILL.md; do [ -f "$f" ] && codex_skills+=("$f"); done
 set_test "[codex] at least one skills/*/SKILL.md is present"
 if [ "${#codex_skills[@]}" -gt 0 ]; then _pass; else
-  _fail "no SKILL.md under $CODEX_ROOT/skills/*/ — refusing to pass vacuously"; test_summary; exit $?
-fi
+  _fail "no SKILL.md under $CODEX_ROOT/skills/*/ — refusing to pass vacuously"; test_summary; exit $?; fi
+for f in "${codex_skills[@]}"; do
+  assert_md_frontmatter "codex-skill" "$(basename "$(dirname "$f")")" "$f"
+done
 
-for f in "${codex_skills[@]}"; do assert_skill_frontmatter "codex" "$f"; done
+# Agents (codex-agents/*.toml) — verified post-path-rewrite.
+set_test "[codex] codex-agents/ directory exists at the plugin root"
+if [ -d "$CODEX_ROOT/codex-agents" ]; then _pass; else _fail "missing $CODEX_ROOT/codex-agents"; fi
+codex_agents=()
+for f in "$CODEX_ROOT"/codex-agents/*.toml; do [ -f "$f" ] && codex_agents+=("$f"); done
+set_test "[codex] at least one codex-agents/*.toml is present"
+if [ "${#codex_agents[@]}" -gt 0 ]; then _pass; else
+  _fail "no codex-agents/*.toml under $CODEX_ROOT/codex-agents — refusing to pass vacuously"; test_summary; exit $?; fi
+for f in "${codex_agents[@]}"; do assert_toml_agent "codex-agent" "$f"; done
+
+# Hooks
+assert_hooks_json "codex" "$CODEX_ROOT/codex-hooks.json"
 
 test_summary
