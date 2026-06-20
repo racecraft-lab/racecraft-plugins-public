@@ -665,8 +665,8 @@ For the payload fix:
 - [x] All four eval files rewritten in parity; behavior scenarios added as fixtures
 - [x] `bash tests/speckit-pro/run-all.sh` passes (3269/3269)
 - [x] `git diff --check` passes — clean except 2 generated spec-index MOC trailing-space lines (generated content; out of scope; see G7 note)
-- [ ] Reviewability / final PR packet checks run per autopilot guidance (post-implementation)
-- [ ] PR created and reviewed (post-implementation)
+- [x] Reviewability / final PR packet checks run — final backstop honored an operator-approved `infra` exception; packet + workflow-contract validators passed
+- [x] PR created — **#240** https://github.com/racecraft-lab/racecraft-plugins-public/pull/240
 
 ---
 
@@ -686,15 +686,20 @@ For the payload fix:
 
 ### What Worked Well
 
-- Pending
+- The two-layer checklist/analyze consensus caught real, load-bearing defects before implementation: pointer-coverage scope (capability-dependent agents, not all agents), the dist/** resolution model (prefix re-rooting vs a wrong `../references` walk), and the 3→6 agent under-coverage in tasks.md T004.
+- TDD non-vacuity: every guard was proven to FAIL on a deliberate regression. The payload-completeness check's *natural* RED — 17/52 on the pre-fix dist — was the strongest proof.
+- The `strip_codex_guard` fix was exactly the minimal section-boundary change; all 8 truncated skills restored, dist/codex untouched.
 
 ### Challenges Encountered
 
-- Pending
+- The `tacd-` branch name trips `check-prerequisites.sh`'s `NNN-` regex (`on_feature_branch=false`); benign but recurs in every script. Handled by pinning the feature dir.
+- The final reviewability backstop blocked on `total_files` (36>25) — a coarse count inflated by 9 generated dist + 16 SDD paper-trail files; resolved with an operator-approved `infra` exception (real review surface 10 files / 4 LOC).
+- `generate-pr-body.sh` produced a generic fallback body (no host PR template) with SHA-protected sections; the live PR body was corrected via `gh pr edit`. The worktree `.git`-is-a-file required a **repo-relative** packet body path — the `git rev-parse --git-path` external path is rejected by `validate-pr-packet`.
 
 ### Patterns to Reuse
 
-- Pending
+- For verification-coverage specs, lead each guard with its deliberate-regression (RED) proof; leverage any *natural* RED (a pre-existing broken state) as the strongest non-vacuity evidence.
+- For a small-but-many-files autopilot PR, expect the `total_files` gate to fire on generated/process files; an `infra` typed exception (contract provenance, bare `Reviewability-Exception: infra` line, not in a code fence) is the sanctioned resolution for a one-navigable change.
 
 ---
 
@@ -726,3 +731,6 @@ docs/
 ---
 
 Template based on the shared SpecKit workflow template, populated for TACD-004.
+
+### PR packet validation events
+- <!-- speckit-pro-pr-packet-validation:event-id=speckit-pr-packet --> Blocked PR packet validation for `speckit-pr-packet`; result `specs/tacd-004-verification-coverage/.process/pr-packets/speckit-pr-packet/validation.json`; rules: `unknown`.
