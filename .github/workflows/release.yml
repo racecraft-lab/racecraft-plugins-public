@@ -35,6 +35,11 @@ jobs:
         run: |
           set -euo pipefail
 
+          # docs-site reference pages embed the plugin version, so the release
+          # branch needs them regenerated alongside the version bump (below).
+          corepack enable
+          corepack prepare pnpm@10.25.0 --activate
+
           release_prs="${RELEASE_PRS:-[]}"
           if [ -z "$release_prs" ] || [ "$release_prs" = "null" ]; then
             release_prs="[]"
@@ -68,12 +73,15 @@ jobs:
             git switch --detach "origin/${branch}"
 
             bash scripts/build-plugin-payloads.sh
+            bash scripts/sync-marketplace-versions.sh
+            pnpm --dir docs-site install --frozen-lockfile
+            pnpm --dir docs-site reference:generate
 
-            if git diff --quiet -- dist; then
+            if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference; then
               echo "Payloads already current for PR #${pr_number}."
             else
-              git add dist
-              git commit -m "chore(speckit-pro): sync release payloads"
+              git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
+              git commit -m "chore(speckit-pro): sync release payloads, marketplace versions, and docs reference"
               git push origin "HEAD:${branch}"
             fi
 
@@ -95,6 +103,15 @@ jobs:
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: bash scripts/sync-marketplace-versions.sh
 
+      - name: Regenerate docs reference
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        run: |
+          set -euo pipefail
+          corepack enable
+          corepack prepare pnpm@10.25.0 --activate
+          pnpm --dir docs-site install --frozen-lockfile
+          pnpm --dir docs-site reference:generate
+
       - name: Open payload and marketplace sync PR
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         env:
@@ -102,7 +119,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json; then
+          if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference; then
             echo "No payload or marketplace sync changes."
             exit 0
           fi
@@ -115,7 +132,7 @@ jobs:
           sync_title="chore: sync plugin payloads and marketplace versions"
 
           git switch -c "$sync_branch"
-          git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json
+          git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
           git commit -m "$sync_title"
           git push --force origin "HEAD:${sync_branch}"
 
@@ -128,6 +145,7 @@ jobs:
           ## Validation
           - `bash scripts/build-plugin-payloads.sh`
           - `bash scripts/sync-marketplace-versions.sh`
+          - `pnpm --dir docs-site reference:generate`
           BODY
 
           pr_number=$(gh pr list \
