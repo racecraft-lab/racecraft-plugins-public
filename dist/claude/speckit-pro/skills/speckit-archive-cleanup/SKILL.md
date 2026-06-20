@@ -9,18 +9,6 @@ license: MIT
 
 # SpecKit Archive Cleanup
 
-Use this skill after a SpecKit implementation PR has merged and the repository
-still contains active workflow or `specs/**` residue for that completed work.
-The goal is to preserve recovery evidence in project memory, remove only the
-completed active spec folder, refresh generated SpecKit indexes, and leave the
-roadmap ready for the next SPEC.
-
-This is a mutation-heavy archive workflow. Do not use it for normal status
-checks, scaffold setup, autopilot implementation, or read-only PR review. If
-merge status is unknown, first verify it. If the PR is still open, do not
-archive the spec unless the user explicitly requests an abandoned-spec cleanup
-and the repository has an established convention for that case.
-
 ## Inputs
 
 Accept a SPEC-ID such as `DOC-007` or `PRSG-014`, an active spec directory, a

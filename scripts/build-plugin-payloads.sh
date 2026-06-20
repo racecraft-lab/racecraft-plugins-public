@@ -76,18 +76,11 @@ def strip_codex_guard(skill_file: Path) -> None:
     while i < len(lines):
         if lines[i].rstrip("\n") == "## Codex Skill-Selection Guard":
             i += 1
-            while i < len(lines):
-                line = lines[i]
+            # Strip the guard section: consume up to (not including) the next
+            # level-2 "## " heading, or EOF. (startswith("## ") matches level-2
+            # only — "### " does not, so sub-headings inside the guard are consumed.)
+            while i < len(lines) and not lines[i].startswith("## "):
                 i += 1
-                if "fallback guard was triggered." in line:
-                    break
-            while i < len(lines) and lines[i].strip() == "":
-                i += 1
-            if i < len(lines) and lines[i].startswith("The Codex variant must"):
-                while i < len(lines) and lines[i].strip() != "":
-                    i += 1
-                while i < len(lines) and lines[i].strip() == "":
-                    i += 1
             continue
         out.append(lines[i])
         i += 1

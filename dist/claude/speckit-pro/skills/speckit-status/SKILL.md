@@ -9,3 +9,275 @@ license: MIT
 
 # SpecKit Status Dashboard
 
+## Invocation
+
+```text
+/speckit-pro:speckit-status          # Show full roadmap + active specs
+/speckit-pro:speckit-status all      # Same as above
+/speckit-pro:speckit-status SPEC-013 # Show specific spec detail
+```
+
+## What to Do
+
+### 1. Find All Data Sources
+
+Search for workflow files, technical roadmap files, and design concept docs:
+
+```text
+Workflow files:    **/*-workflow.md  (active/completed specs with phase detail)
+Technical roadmaps: **/*technical-roadmap*.md  OR  **/*-roadmap.md
+Design concepts:   **/*-design-concept.md  (grill-me output per spec)
+Also check:        docs/ai/specs/*-workflow.md
+                   docs/ai/specs/*-design-concept.md
+                   docs/ai/*roadmap*.md
+Archive state:     .specify/extensions.yml
+                   .specify/extensions/.registry
+                   .specify/extensions/archive/extension.yml
+                   .specify/extensions/archive/RACECRAFT-PIN.md
+```
+
+For each design concept doc found, record the SPEC-ID it corresponds to
+(parsed from the filename `SPEC-<ID>-design-concept.md` or from the doc's
+frontmatter). This drives the **DC** (Design Concept) column in the
+phase-detail dashboard and the per-spec detail view.
+
+### 2. Parse the Technical Roadmap (Full Roadmap)
+
+If a technical roadmap file exists, extract the **Progress Tracking**
+table. This contains ALL specs in the project — including those
+that haven't started the SpecKit workflow yet.
+
+For each spec in the progress table, extract:
+
+- **Spec ID** (e.g., SPEC-006)
+- **Name** (e.g., Notifications)
+- **Tools** count
+- **Status** (✅ Complete, 🔄 In Progress, ⏳ Pending, ⚠️ Blocked)
+- **Next Phase** or blocker info
+
+Also extract:
+
+- The **Dependency Graph** or tier information to show which
+  specs can run in parallel and which are blocked
+- Each spec's **Priority** (P1/P2/P3) from its section in the
+  technical roadmap (line format:
+  `**Priority:** P1 | **Depends On:** ...`)
+
+### 3. Parse Workflow Files (Phase Detail)
+
+For each workflow file found, extract:
+
+- **Spec ID and Name** from the header
+- **Phase statuses** from the "Workflow Overview" table
+  (look for ⏳, 🔄, ✅, ⚠️)
+- **Current phase** (the first ⏳ or 🔄 phase)
+- **Branch** from the "Specification Context" table
+
+### 4. Present Unified Dashboard
+
+Combine technical roadmap and workflow data into a single report:
+
+```markdown
+# SpecKit Project Status
+
+## Summary
+
+- **Total specs:** 14
+- **Complete:** 3 (SPEC-006, SPEC-007, SPEC-013)
+- **In progress:** 0
+- **Remaining:** 11
+- **Tools:** 16 of 59 new tools implemented (28 existing → 44 current → 87 target)
+
+## Completed Specs
+
+| Spec | Name | Tools | PR | Notes |
+|------|------|-------|----|-------|
+| SPEC-006 | Notifications | 5 | #40 | 240 tests |
+| SPEC-007 | Repetition | 5 | #38 | 292 tests |
+| SPEC-013 | Task Status | 6 | #39 | 367 tests |
+
+## Ready to Start (No Blockers)
+
+These specs have no dependencies beyond the completed foundation and can start now:
+
+| Spec | Name | Tools | Tier | Priority | Notes |
+|------|------|-------|------|----------|-------|
+| SPEC-009 | Search & Database | 10 | 2 | P1 | Largest spec |
+| SPEC-008 | Perspectives | 5 | 2 | P2 | 2 legacy tools to enhance |
+| SPEC-010 | Bulk Operations | 6 | 3 | P2 | |
+| SPEC-012 | TaskPaper | 3 | 3 | P2 | Smallest spec |
+| SPEC-011 | Attachments | 5 | 2 | P3 | |
+| ... | ... | ... | ... | ... | ... |
+
+## Blocked
+
+| Spec | Name | Blocked By | Reason |
+|------|------|------------|--------|
+| SPEC-020 | Server Optimization | All above | Must know final tool set |
+| SPEC-021 | Plugin & Skills | SPEC-020 | Packages the optimized server |
+
+## Active Workflows (Phase Detail)
+
+If any spec has a workflow file with phases in progress, show the phase-level
+table. The **DC** column (Design Concept) shows ✅ if a `SPEC-<ID>-design-concept.md`
+exists for the spec, ⏳ otherwise. A workflow file without a corresponding design
+concept doc is a yellow flag — the phase prompts may be undercooked relative to
+what `/speckit-pro:speckit-scaffold-spec` produces today:
+
+| Spec | Name | DC | Specify | Clarify | Plan | Check | Tasks | Analyze | Impl | Next |
+|------|------|----|---------|---------|------|-------|-------|---------|------|------|
+| SPEC-XXX | Feature | ✅ | ✅ | ✅ | 🔄 | ⏳ | ⏳ | ⏳ | ⏳ | Plan |
+| SPEC-YYY | Feature | ⏳ | ✅ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | ⏳ | Clarify (no design concept — re-run `/speckit-pro:speckit-scaffold-spec` or grill manually) |
+```
+
+Include an Archive Sweep summary when archive state exists:
+
+- whether the archive extension is installed/enabled
+- pinned source URL/ref/commit when available
+- excluded current spec from `autopilot-state.json.archive_sweep`
+- cleanup mode and `safeToApplyCleanup`
+- next step: install/vendor archive, keep dry-run-only, or perform reviewed
+  cleanup after archive success and recovery commands
+
+#### Spec-Map Index Freshness (read-only)
+
+As part of producing the dashboard, report whether each version-marked
+`SPEC-MOC.md`'s generated navigation zones are current. Run the shared
+generator in **read-only `--check` mode** — it regenerates the zones in
+memory, diffs them against the committed maps, and **writes nothing**:
+
+```text
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/generate-spec-index.sh --check \"$PWD\"")
+```
+
+Pass `"$PWD"` (the project root) explicitly. Without it the generator infers
+its repo root from the script's own location, which in a cached-plugin install
+is the plugin cache — not the user's project — so the freshness check would
+scan the wrong tree.
+
+Surface a single freshness line in the dashboard from the exit code:
+
+- exit `0` → **index current**
+- exit `1` → **index stale — run regen** (the maps drifted from their
+  sources; the fix is `/speckit-pro:speckit-autopilot`, whose phase gates
+  rebuild the zones — `speckit-status` does not regenerate them)
+- exit `2` → **index check error: `<message>`** — name the failure from the
+  generator's stderr line (e.g. a malformed `prs.json` or a non-regular-file
+  map target)
+
+**Read-only guarantee:** `speckit-status` MUST NOT write any file. It invokes
+the generator only with `--check`, which writes nothing on **any** path —
+including the exit-`2` error path. The dashboard never runs the generator in
+write mode and never regenerates the maps itself; reporting staleness here is
+purely advisory.
+
+#### O5 Parent Rollup And Re-Slicing Status
+
+When a spec directory contains `o5-parent-manifest.json`, validate topology
+before reporting child status:
+
+```text
+Bash("${CLAUDE_PLUGIN_ROOT}/skills/speckit-autopilot/scripts/o5-topology.sh specs/<parent-branch>")
+```
+
+This script is read-only and emits one JSON rollup. If `topologyStatus` is
+`invalid`, show `computedStatus: invalid_topology` plus the actionable
+`problems[]`; do not compute or invent a child rollup from invalid topology.
+If valid, show exactly one child row per manifest child, in manifest order, and
+surface `computedStatus`, `declaredRollupStatus`, and `declaredStatusDrift`.
+Treat `declaredRollupStatus` as drift-check metadata only, never as the source
+of truth.
+
+Also surface final-gate re-slicing state when present in workflow or
+`autopilot-state.json`: a blocked `final_reviewability_gate` means PR creation
+has not started and status should point to the recorded re-slicing packet,
+blocked operations, and next PRSG-007/008/009 resume action instead of marking
+implementation complete.
+
+### 5. Recommend Next Spec
+
+After the dashboard tables, add a `## Recommended Next` section
+that proposes the next spec to implement.
+
+**Algorithm:**
+
+1. From the technical roadmap, collect all unblocked specs with status
+   `⏳ Pending` (not `✅ Complete`, not `🔄 In Progress`, not
+   blocked by incomplete specs).
+2. For each, read its **Priority** (P1/P2/P3) from the spec's
+   section in the technical roadmap.
+3. Sort by: Priority (P1 first) → then technical roadmap order
+   (preserves tier sequencing).
+4. The **top recommendation** is the first spec in the sorted
+   list.
+5. Also list 1-2 **alternatives** from the same or next priority
+   level, especially if they are smaller (fewer tools) for a
+   quicker win.
+
+**Output format:**
+
+```markdown
+## Recommended Next
+
+**SPEC-009: Search & Database** (10 tools, P1, Tier 2)
+
+This is the highest-priority unblocked spec. It adds full-text search, smart
+queries, and database access — the most-requested capabilities for GTD workflows.
+
+To get started:
+
+```text
+/speckit-pro:speckit-scaffold-spec SPEC-009
+```
+
+This creates the worktree, branch, and populated workflow file.
+Then run `/speckit-pro:speckit-autopilot` to execute it.
+
+**Alternatives** (if you prefer a smaller spec first):
+
+- SPEC-008: Perspectives (5 tools, P2) — enhances 2 existing legacy tools
+- SPEC-010: Bulk Operations (6 tools, P2)
+```
+
+**Edge cases:**
+
+- If no unblocked specs remain, say "All unblocked specs are
+  complete. Remaining specs are blocked by dependencies."
+- If a spec is `🔄 In Progress`, recommend finishing it first:
+  "SPEC-XXX is already in progress — finish it before starting
+  a new spec."
+- If all specs are complete, say "All specs complete — project
+  roadmap is finished."
+
+### 6. If Specific Spec Requested
+
+Show detailed information for that spec:
+
+- All phase statuses with notes (from workflow file, if exists)
+- Technical roadmap scope description
+- Design Concept doc path (if `SPEC-<ID>-design-concept.md` exists) — also
+  surface its frontmatter `question_count` and Open Questions count for a
+  quick read on how thoroughly the spec was scoped
+- Dependencies and what it enables
+- Gate results and key artifacts produced
+- Current blockers (if any)
+- Files generated
+
+If no workflow file exists for the requested spec, show the
+technical roadmap scope and suggest creating a workflow file:
+
+```text
+SPEC-008 (Perspectives) — ⏳ Not Started
+No workflow file found. To begin:
+/speckit-pro:speckit-scaffold-spec SPEC-008
+```
+
+### 7. If No Technical Roadmap or Workflow Files Found
+
+Tell the user:
+
+- No technical roadmap or workflow files found in the project
+- Guide them to create a technical roadmap:
+  `/speckit-pro:speckit-coach help me create a technical roadmap`
+- Or create a single workflow: copy
+  `skills/speckit-coach/templates/workflow-template.md`
