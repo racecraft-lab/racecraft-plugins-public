@@ -110,14 +110,14 @@
     },
     {
       "id": 9,
-      "prompt": "I want to use the speckit-pro autopilot but I don't have Tavily, Context7, or RepoPrompt MCP servers installed. Will the autopilot still work? What am I missing without them?",
-      "expected_output": "Explains that MCP servers are optional enhancements. The autopilot works with built-in Codex tools as fallbacks. Tavily provides better search, Context7 gives library-specific docs, RepoPrompt enables deeper codebase exploration — but none are required.",
+      "prompt": "I want to use the speckit-pro autopilot but I don't have any extra MCP servers installed. Will the autopilot still work? What am I missing without them?",
+      "expected_output": "Answers vendor-neutrally. ABSENCE arm: the answer does NOT name a specific preferred MCP set (no Tavily/Context7/RepoPrompt ranking, no fixed tool order, no claim that any named server is required). AFFIRMATIVE arm: the answer explains installed-capability discovery — the autopilot identifies the capability category it needs (codebase context, library docs, web/domain research, source extraction, installed skills, repo-local helpers) and selects the best INSTALLED capability for that need by fit and evidence quality — and the vendor-neutral fallback: when no installed capability covers the need, it continues with local files, native platform context, or repo-local helpers at reduced (medium/low) confidence. The autopilot functions with zero extra servers installed.",
       "expectations": [
-        "States that Tavily, Context7, and RepoPrompt are NOT required for the autopilot to function",
-        "Explains graceful degradation to built-in Codex tools",
-        "Mentions built-in web search and web fetch as fallbacks for web research",
-        "Mentions built-in file search, file reading, or shell search as fallbacks for codebase exploration",
-        "Describes what quality improvements the MCP servers provide when available"
+        "ABSENCE: does NOT prescribe a specific named optional-tool set as preferred or required (no ranked Tavily/Context7/RepoPrompt default, no fixed tool order)",
+        "AFFIRMATIVE: states the autopilot functions with no extra MCP servers installed — none are required",
+        "AFFIRMATIVE: describes installed-capability discovery — identify the needed capability category, then pick the best INSTALLED capability for that need by task fit and evidence quality",
+        "AFFIRMATIVE: describes vendor-neutral fallback — when no installed capability is available, continue with local files, native platform context, or repo-local helpers",
+        "AFFIRMATIVE: notes that fallback evidence is reported at medium or low confidence, never high"
       ]
     },
     {
@@ -475,6 +475,61 @@
         "Requires each split PR creation to use packet-owned --base, --head, --title, and --body-file arguments",
         "States invalid packet, invalid workflow contract, stale validation, or aggregate split-contract failures block before PR creation",
         "Applies the same no-post-create-repair rule: do not create first and fix title/body/splitting afterward"
+      ]
+    },
+    {
+      "id": 101,
+      "prompt": "During the Codex autopilot, the implement-executor needs to match a new payment-retry module to the repo's existing error-handling pattern. Several capabilities could help. How does it decide which one to use to gather that codebase context, and what governs the choice?",
+      "expected_output": "Describes installed-capability discovery: the executor first identifies the needed capability category (codebase context), then selects the best INSTALLED capability for that need by task fit, source directness, and expected evidence quality — not by a fixed named-tool order or a preferred vendor set. Capability categories are a taxonomy, not an ordered fallback chain. A formerly named tool is used only when discovery selects it as the best available capability for that need.",
+      "expectations": [
+        "States the needed capability category is identified first (codebase context) before any tool is chosen",
+        "Selects the best INSTALLED capability for that need by task fit and evidence quality",
+        "ABSENCE: does not apply a fixed tool order or a preferred named-vendor set; capability categories are a taxonomy, not an ordered fallback chain",
+        "States a formerly named tool is used only when discovery selects it as the best available capability for the need"
+      ]
+    },
+    {
+      "id": 102,
+      "prompt": "During the Codex autopilot, the domain-researcher needs external library documentation for a dependency, but no capability that could supply library docs is installed or reachable in this environment. What must it do, and what must it NOT claim?",
+      "expected_output": "Falls back vendor-neutrally: when no installed capability is available, reachable, or usable for the library-documentation need, it continues with local files, native platform context, or repo-local helpers when they can support the work. It does NOT invent or require a specific named server. It emits the fallback disclosure 'No installed <capability> was available/usable; used <local/native/repo-local fallback>; confidence is <medium|low> because <reason>.' and reports the result at medium or low confidence, never high.",
+      "expectations": [
+        "Continues with local files, native platform context, or repo-local helpers when no installed capability is available, reachable, or usable",
+        "ABSENCE: does not require or invent a specific named server/tool to do the work",
+        "Emits the fallback disclosure line naming the missing capability, the fallback used, and the reason",
+        "Reports the fallback result at medium or low confidence, never high"
+      ]
+    },
+    {
+      "id": 103,
+      "prompt": "A Codex autopilot consensus analyst (spawned via spawn_agent) just answered a [codebase] question using a discovery-selected capability. What exact evidence note must accompany a discovery-informed answer, and what are its fields?",
+      "expected_output": "The answer includes the compact capability-path evidence note exactly in the form 'Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low> (<brief reason>)'. The note records the need, the selected capability or source it was routed to, the evidence backing the answer, and a calibrated confidence with a brief reason — so the capability path is observable without naming a preferred vendor set.",
+      "expectations": [
+        "Includes the compact evidence note in the form 'Capability path: <need> -> <selected capability/source>; Evidence: ...; Confidence: ...'",
+        "The note names the need and the selected capability/source it was routed to",
+        "The note records the evidence and a calibrated confidence with a brief reason",
+        "ABSENCE: the evidence note does not assert a preferred named-vendor set — only the capability/source actually selected for the need"
+      ]
+    },
+    {
+      "id": 104,
+      "prompt": "Two Codex autopilot findings were resolved with discovery-informed answers: one drew on an external standards source that supports citation, the other drew only on files in this repository. How should each answer present its Evidence field?",
+      "expected_output": "Evidence presentation depends on the source. When the selected source supports citations, the Evidence field uses citations. When the evidence comes from repository files or local artifacts, the Evidence field uses local file references (repo-relative paths). The form stays 'Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: ...' in both cases; only the Evidence contents differ by source type — citations for the citable external source, local file references for the repo-sourced finding.",
+      "expectations": [
+        "Uses citations in the Evidence field when the selected source supports citations",
+        "Uses local file references (repo-relative paths) in the Evidence field when the evidence comes from repository files or local artifacts",
+        "Keeps the same capability-path evidence-note form for both, differing only in Evidence contents",
+        "ABSENCE: cites the actual selected source, not a preferred named-vendor set"
+      ]
+    },
+    {
+      "id": 105,
+      "prompt": "In a Codex autopilot run, two findings were resolved: finding A used a high-fit installed capability with a direct authoritative source; finding B fell back to local files because no installed capability covered the need. How must the Confidence on each finding compare, and why?",
+      "expected_output": "Confidence is calibrated to evidence quality, so it is lower for the fallback finding. Finding A may carry high confidence because a high-fit installed capability supplied a direct, authoritative source. Finding B, resolved by fallback because no installed capability covered the need, MUST be reported at medium or low confidence — fallback evidence is never reported as high confidence — and carries the fallback disclosure line stating the missing capability, the local/native/repo-local fallback used, and the reason. Lower fallback quality yields a lower, explicitly calibrated confidence.",
+      "expectations": [
+        "States the fallback finding (B) is reported at medium or low confidence, never high",
+        "States the high-fit finding (A) may carry high confidence because a direct authoritative source backed it",
+        "Ties the confidence difference to evidence quality / source directness rather than to which named tool was used",
+        "Requires finding B to carry the fallback disclosure naming the missing capability, the fallback used, and the reason"
       ]
     }
   ]

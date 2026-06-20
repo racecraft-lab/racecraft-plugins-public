@@ -61,12 +61,12 @@
     {
       "id": 6,
       "prompt": "What MCP servers does speckit-pro need? I'm setting up a new machine and want to know what's required vs optional for the full autopilot experience.",
-      "expected_output": "Lists Tavily, Context7, and RepoPrompt as optional MCP server enhancements. Explains they improve research quality but the plugin works without them using built-in Codex tools.",
+      "expected_output": "Answers vendor-neutrally. ABSENCE arm: the answer does NOT prescribe a specific preferred MCP set as required (no Tavily/Context7/RepoPrompt ranking, no claim that any named server is mandatory). AFFIRMATIVE arm: explains that NO MCP server is required — speckit-pro works with the platform's built-in capabilities — and frames optional servers by the CAPABILITY CATEGORY they can serve (codebase context, library documentation, web/domain research, source extraction), with the coach recommending the best installed capability for a given need rather than a fixed named set. When no installed capability covers a need, the work continues with local files, native platform context, or repo-local helpers at reduced confidence.",
       "expectations": [
-        "Lists Tavily, Context7, and RepoPrompt as the three relevant MCP servers",
-        "States clearly that NONE are required — all are optional enhancements",
-        "Explains what each MCP server adds (better search, library docs, codebase exploration)",
-        "Mentions that built-in Codex web, file, and shell/search tools serve as automatic fallbacks"
+        "ABSENCE: does NOT present a specific named MCP set as required or as the single recommended default (no mandatory Tavily/Context7/RepoPrompt list)",
+        "AFFIRMATIVE: states clearly that NONE are required — speckit-pro works with the platform's built-in capabilities",
+        "AFFIRMATIVE: frames optional servers by the capability category they serve (codebase context, library documentation, web/domain research, source extraction) rather than a fixed named set",
+        "AFFIRMATIVE: explains that the best INSTALLED capability is chosen for a given need, and local files / native context / repo-local helpers are the fallback when none is installed"
       ]
     },
     {
@@ -157,6 +157,61 @@
         "Describes the `.specify/extensions.yml` hook block with `after_implement`, the extension id, the command (`speckit.archive.run`), and the `optional`/`prompt` keys",
         "Mentions that the autopilot picks up `.specify/extensions.yml` hooks dynamically — no plugin update or restart needed",
         "Points the user at `.specify/extensions/archive/archive-config.yml` (shared) and `archive-config.local.yml` (personal) for further configuration"
+      ]
+    },
+    {
+      "id": 101,
+      "prompt": "When SpecKit Pro agents need codebase context to answer a question — say, matching a new module to the repo's existing error-handling pattern — how do they decide which capability to use? Is there a fixed tool they always reach for first?",
+      "expected_output": "Explains installed-capability discovery: the agent first identifies the needed capability category (codebase context), then selects the best INSTALLED capability for that need by task fit, source directness, and expected evidence quality — not by a fixed named-tool order or a preferred vendor set. Capability categories are a taxonomy, not an ordered fallback chain. A formerly named tool is used only when discovery selects it as the best available capability for that need.",
+      "expectations": [
+        "States the needed capability category is identified first (codebase context) before any tool is chosen",
+        "Selects the best INSTALLED capability for that need by task fit and evidence quality",
+        "ABSENCE: does not name a fixed first tool or a preferred named-vendor set; capability categories are a taxonomy, not an ordered fallback chain",
+        "States a formerly named tool is used only when discovery selects it as the best available capability for the need"
+      ]
+    },
+    {
+      "id": 102,
+      "prompt": "What happens when a SpecKit Pro agent needs external library documentation but no capability that could supply library docs is installed or reachable in the environment? What does it do, and what does it avoid claiming?",
+      "expected_output": "Explains the vendor-neutral fallback: when no installed capability is available, reachable, or usable for the library-documentation need, the agent continues with local files, native platform context, or repo-local helpers when they can support the work. It does NOT invent or require a specific named server. It emits the fallback disclosure 'No installed <capability> was available/usable; used <local/native/repo-local fallback>; confidence is <medium|low> because <reason>.' and reports the result at medium or low confidence, never high.",
+      "expectations": [
+        "Continues with local files, native platform context, or repo-local helpers when no installed capability is available, reachable, or usable",
+        "ABSENCE: does not require or invent a specific named server/tool to do the work",
+        "Emits the fallback disclosure line naming the missing capability, the fallback used, and the reason",
+        "Reports the fallback result at medium or low confidence, never high"
+      ]
+    },
+    {
+      "id": 103,
+      "prompt": "You mentioned SpecKit Pro answers are 'discovery-informed.' What exact evidence note is attached to such an answer, and what fields does it carry?",
+      "expected_output": "Explains the compact capability-path evidence note in the form 'Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low> (<brief reason>)'. The note records the need, the selected capability or source it was routed to, the evidence backing the answer, and a calibrated confidence with a brief reason — so the capability path is observable without naming a preferred vendor set.",
+      "expectations": [
+        "Describes the compact evidence note in the form 'Capability path: <need> -> <selected capability/source>; Evidence: ...; Confidence: ...'",
+        "The note names the need and the selected capability/source it was routed to",
+        "The note records the evidence and a calibrated confidence with a brief reason",
+        "ABSENCE: the evidence note does not assert a preferred named-vendor set — only the capability/source actually selected for the need"
+      ]
+    },
+    {
+      "id": 104,
+      "prompt": "If one SpecKit Pro answer is backed by an external standards source that supports citation and another is backed only by files in the repository, how does each present its Evidence field?",
+      "expected_output": "Explains that Evidence presentation depends on the source. When the selected source supports citations, the Evidence field uses citations. When the evidence comes from repository files or local artifacts, the Evidence field uses local file references (repo-relative paths). The form stays 'Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: ...' in both cases; only the Evidence contents differ by source type — citations for the citable external source, local file references for the repo-sourced finding.",
+      "expectations": [
+        "Uses citations in the Evidence field when the selected source supports citations",
+        "Uses local file references (repo-relative paths) in the Evidence field when the evidence comes from repository files or local artifacts",
+        "Keeps the same capability-path evidence-note form for both, differing only in Evidence contents",
+        "ABSENCE: cites the actual selected source, not a preferred named-vendor set"
+      ]
+    },
+    {
+      "id": 105,
+      "prompt": "If one SpecKit Pro finding used a high-fit installed capability with a direct authoritative source and another fell back to local files because nothing was installed for that need, how should the Confidence on each compare, and why?",
+      "expected_output": "Explains that Confidence is calibrated to evidence quality, so it is lower for the fallback finding. The first finding may carry high confidence because a high-fit installed capability supplied a direct, authoritative source. The fallback finding, resolved because no installed capability covered the need, MUST be reported at medium or low confidence — fallback evidence is never reported as high confidence — and carries the fallback disclosure line stating the missing capability, the local/native/repo-local fallback used, and the reason. Lower fallback quality yields a lower, explicitly calibrated confidence.",
+      "expectations": [
+        "States the fallback finding is reported at medium or low confidence, never high",
+        "States the high-fit finding may carry high confidence because a direct authoritative source backed it",
+        "Ties the confidence difference to evidence quality / source directness rather than to which named tool was used",
+        "Requires the fallback finding to carry the fallback disclosure naming the missing capability, the fallback used, and the reason"
       ]
     }
   ]
