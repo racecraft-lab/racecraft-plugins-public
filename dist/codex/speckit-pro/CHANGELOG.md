@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.15.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.4...speckit-pro-v2.15.0) (2026-06-20)
+
+
+### Features
+
+* **skills:** add archive cleanup workflow ([e0b61f6](https://github.com/racecraft-lab/racecraft-plugins-public/commit/e0b61f6bd2122129722c9b9d7185a2dc3eaa368c))
+* **speckit-pro:** TACD-003 prerequisite advisory, active guidance, focused verification, and review packet evidence ([#230](https://github.com/racecraft-lab/racecraft-plugins-public/issues/230)) ([bcc8eed](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bcc8eedd2dd732b6f02e18ff68fd4de0e58396e9))
+* **TACD-002:** Add capability discovery foundation ([#221](https://github.com/racecraft-lab/racecraft-plugins-public/issues/221)) ([b63dfc9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b63dfc95525eb64f9f221d7f2513c9ab9c36b314))
+* **TACD-002:** Emit ordered slice PRs ([#226](https://github.com/racecraft-lab/racecraft-plugins-public/issues/226)) ([130abd2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/130abd2b6329e774207c84ab798cfb5b6dab7131))
+* **TACD-002:** Update agent capability selection ([#222](https://github.com/racecraft-lab/racecraft-plugins-public/issues/222)) ([da9a7c5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/da9a7c5cd6ba567f1530e396cfc69527948bf7a7))
+
+
+### Bug Fixes
+
+* **DOC-008:** handle zero active specs during DOC cleanup ([#229](https://github.com/racecraft-lab/racecraft-plugins-public/issues/229)) ([a12fd78](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a12fd781131baaeb477aade4423372206880c7ba))
+* **speckit-pro:** restore empty Claude skill payloads and add vendor-neutral checks ([#240](https://github.com/racecraft-lab/racecraft-plugins-public/issues/240)) ([b95d721](https://github.com/racecraft-lab/racecraft-plugins-public/commit/b95d721f107dd1a17cee88671dc48da791e8e54c))
+* **speckit:** handle zero active specs during DOC cleanup ([a12fd78](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a12fd781131baaeb477aade4423372206880c7ba))
+
 ## [2.14.4](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.3...speckit-pro-v2.14.4) (2026-06-17)
 
 
