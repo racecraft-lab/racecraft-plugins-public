@@ -237,15 +237,13 @@ for tool in Read Write Edit Bash Grep Glob; do
   assert_tool_present "$TOOLS" "$tool" "implement-executor"
 done
 
-# Research tools — added 2026-04-30 per agent-architecture-audit.md Tier 1.
-# Tasks that reference external APIs, RFCs, or library versions need a way
-# to look them up; prior allowlist excluded these and forced inference-only.
-for tool in WebSearch WebFetch \
-            mcp__tavily-mcp__tavily-search \
-            mcp__context7__resolve-library-id \
-            mcp__context7__get-library-docs \
-            mcp__RepoPrompt__file_search \
-            mcp__RepoPrompt__context_builder; do
+# Research tools — generic web capability only. The named vendor MCP set
+# (Tavily/Context7/RepoPrompt) was removed per TACD-004 FR-002 so the
+# tool-scoping contract no longer requires a specific vendor MCP set by
+# name; capability discovery (not a hardcoded tool list) governs which
+# optional tools an agent reaches for. The named-tool prose guard below
+# enforces that the removed preference does not creep back into guidance.
+for tool in WebSearch WebFetch; do
   set_test "implement-executor has $tool (research capability)"
   assert_tool_present "$TOOLS" "$tool" "implement-executor"
 done
@@ -589,6 +587,118 @@ if [ -d "$CODEX_AGENTS_DIR" ]; then
   done
 
 fi
+
+# ===========================================================================
+# Named-tool regression guard (TACD-004 FR-001 / US1)
+# ===========================================================================
+# Fails when an ACTIVE agent's guidance PROSE reintroduces a hardcoded named
+# optional-tool preference (a vendor-qualified `mcp__<vendor>__<tool>` token)
+# outside the approved category allowlist. This locks the vendor-neutral
+# capability-discovery decision (TACD-002): a future edit that re-teaches a
+# specific vendor tool by name in agent guidance is caught automatically.
+#
+# What is scanned (prose only):
+#   - Claude: the markdown BODY of speckit-pro/agents/*.md (everything AFTER
+#     the closing `---` of the YAML frontmatter).
+#   - Codex:  the instruction PROSE of speckit-pro/codex-agents/*.toml (the
+#     `developer_instructions = """ ... """` block, NOT the structured
+#     name/model/sandbox config keys).
+#
+# False-positive carve-outs honored BY CONSTRUCTION (spike-approved categories,
+# docs/ai/research/tool-agnostic-capability-discovery-spike.md §"TACD-004
+# Allowlist Recommendation" — reused, not redefined):
+#   - generic `mcp`/`MCP` vocabulary: a bare token with no `__<vendor>__`
+#     qualifier never matches the vendor-qualified pattern below;
+#   - runtime/dependency metadata IDs (the frontmatter `tools:` list, e.g.
+#     implement-executor's mcp__* entries): excluded because only the body/
+#     prose is scanned, never the frontmatter or TOML config keys;
+#   - fixtures and historical/provenance mentions: out of scope because only
+#     ACTIVE agent source is scanned (not tests/**/fixtures/** or docs/**).
+# An explicit literal allowlist (PROSE_TOKEN_ALLOWLIST) covers the rare case of
+# an active-agent prose token that is legitimate metadata; it is an enumerated
+# set (not a heuristic) and is empty by default — no active-agent prose
+# currently needs a vendor-qualified token.
+section "Named-tool regression guard (vendor-qualified tokens in agent prose)"
+
+# CODEX_AGENTS_DIR is already set above (Codex sandbox section).
+
+# Vendor-qualified detection shape: mcp__<vendor>__<tool>. A bare `mcp`/`MCP`
+# word with no `__<vendor>__` qualifier is allowed by construction.
+NAMED_TOOL_PATTERN='mcp__[A-Za-z0-9-]+__[A-Za-z0-9_-]+'
+
+# Literal, enumerated allowlist of vendor-qualified tokens that are legitimate
+# WHERE THEY APPEAR IN PROSE (e.g. an exact dependency/metadata identifier a
+# runtime requires). Kept minimal and auditable; empty by default. Do NOT
+# widen this to silence an agent that simply re-teaches a named preference.
+PROSE_TOKEN_ALLOWLIST=()
+
+# Extract the Claude markdown body: everything after the 2nd `---` line.
+extract_md_body() {
+  local file="$1"
+  awk 'BEGIN{d=0} /^---$/{d++; next} d>=2{print}' "$file"
+}
+
+# Extract the Codex developer_instructions prose: the lines between the
+# `developer_instructions = """` opener and its closing `"""`.
+extract_toml_prose() {
+  local file="$1"
+  awk '
+    /^developer_instructions = """/ { ins=1; next }
+    ins && /^"""[[:space:]]*$/      { ins=0; next }
+    ins                            { print }
+  ' "$file"
+}
+
+# Returns the first non-allowlisted vendor-qualified token in $1, else empty.
+first_named_tool_violation() {
+  local text="$1" tok allowed
+  while IFS= read -r tok; do
+    [ -z "$tok" ] && continue
+    allowed=false
+    for a in ${PROSE_TOKEN_ALLOWLIST+"${PROSE_TOKEN_ALLOWLIST[@]}"}; do
+      if [ "$tok" = "$a" ]; then allowed=true; break; fi
+    done
+    if [ "$allowed" = "false" ]; then
+      printf '%s' "$tok"
+      return
+    fi
+  done < <(printf '%s\n' "$text" | grep -oE "$NAMED_TOOL_PATTERN" | sort -u)
+}
+
+# Fail-closed: build the active-agent file list and assert it is non-empty so
+# the guard can never pass vacuously by scanning nothing (FR-012).
+named_guard_files=()
+for f in "$AGENTS_DIR"/*.md; do
+  [ -e "$f" ] && named_guard_files+=("$f")
+done
+if [ -d "$CODEX_AGENTS_DIR" ]; then
+  for f in "$CODEX_AGENTS_DIR"/*.toml; do
+    [ -e "$f" ] && named_guard_files+=("$f")
+  done
+fi
+
+set_test "named-tool guard: active-agent set is non-empty (fail-closed)"
+if [ "${#named_guard_files[@]}" -gt 0 ]; then
+  _pass
+else
+  _fail "no active agents matched speckit-pro/agents/*.md or codex-agents/*.toml — guard would pass vacuously"
+fi
+
+for agent_file in "${named_guard_files[@]}"; do
+  agent_name=$(basename "$agent_file")
+  case "$agent_file" in
+    *.md)   prose=$(extract_md_body "$agent_file") ;;
+    *.toml) prose=$(extract_toml_prose "$agent_file") ;;
+  esac
+
+  set_test "$agent_name guidance prose has no hardcoded named vendor tool"
+  violation=$(first_named_tool_violation "$prose")
+  if [ -z "$violation" ]; then
+    _pass
+  else
+    _fail "$agent_name prose names vendor-qualified optional tool '$violation' — use capability discovery, not a hardcoded tool (TACD-004 FR-001)"
+  fi
+done
 
 # ===========================================================================
 test_summary
