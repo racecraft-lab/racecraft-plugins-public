@@ -253,9 +253,19 @@ built SKILL.md and confirm the body-completeness check FAILS.
 
 ### Reviewability Notes *(if applicable)*
 
-- No typed reviewability exception is requested. Generated built payloads under the
-  Claude and Codex payload trees are source-derived regeneration and are excepted from
-  reviewable LOC; they are produced solely by re-running the build script, never by hand.
+Reviewability-Exception: infra
+
+- This `infra` exception (operator-approved at PR time) covers the **file-count** dimension
+  only. The final diff touches 36 files, but that count is inflated by source-derived
+  `dist/**` regeneration (9 files, excepted per FR-013) and the SDD process trail (16
+  spec/plan/tasks/checklist/MOC/workflow/UAT artifacts). The actual reviewable code surface
+  is **10 files / ~4 production LOC (1 production file)** — well within the reviewable-LOC
+  and production-file budgets. The change is one cohesive verification-coverage slice
+  (atomicity route `one-navigable-PR`); splitting would fragment the contract without
+  reducing review risk.
+- Generated built payloads under the Claude and Codex payload trees are source-derived
+  regeneration and are excepted from reviewable LOC; they are produced solely by re-running
+  the build script, never by hand.
 
 ### Reviewability Budget *(mandatory)*
 

@@ -29,5 +29,8 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/maintainability.md](checklists/maintainability.md)
 - [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [.process/final-reviewability/gate-state.json](.process/final-reviewability/gate-state.json)
+- [.process/final-reviewability/reslicing-packet.json](.process/final-reviewability/reslicing-packet.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

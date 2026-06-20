@@ -548,6 +548,7 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/tacd-
 
 - **Layer plan:** `skipped` — route is `one-navigable-PR` (non-split). The PRSG layer planner runs only for a `split-PR` route; this change ships as a single navigable PR.
 - **Reviewability (tasks mode):** `reviewability-gate.sh tasks` returned `status=block` (reviewable_loc 1480, total_files 88, primary_surfaces 6). This is a **known-coarse, size-only heuristic**, not a correctness stop: `reviewable_loc = 37 tasks × 40` and `total_files` is a path-token grep across tasks.md (it counts every path mention, including regenerated `dist/**`). It is contradicted by the authoritative signals — the plan-phase estimator (`status=pass`, **~40 projected LOC**, 1 production file), the atomicity route (`one-navigable-PR`), and the spec's explicit one-PR split decision. Per the Post-G5 matrix a size-only `tasks` block is a *proceed* input, not a manual re-slice; the binding budget check is the PR-time **diff-mode** gate against the actual diff. No PR marker plan is created (non-split route).
+- **Final reviewability backstop (post-impl):** the diff-mode gate (`origin/main...HEAD`) returned `block` on `total_files 36 > 25`, but `reviewable_loc=4` and `production_files=1` (both far under budget). The 36 = 9 source-derived `dist/**` (excepted) + 16 SDD process artifacts + 10 real code/test files + CLAUDE.md. **Operator-approved** `infra` typed reviewability exception (declared in `spec.md` Reviewability Notes, "contract" provenance) covers the file-count dimension only; the change ships as one navigable PR. Re-running the backstop with the exception in the diff flips `block → exception` (proceed).
 
 ---
 
@@ -666,6 +667,18 @@ For the payload fix:
 - [x] `git diff --check` passes — clean except 2 generated spec-index MOC trailing-space lines (generated content; out of scope; see G7 note)
 - [ ] Reviewability / final PR packet checks run per autopilot guidance (post-implementation)
 - [ ] PR created and reviewed (post-implementation)
+
+---
+
+## Self-Review (auto-generated)
+
+**Tests executed:** The full deterministic suite `bash tests/speckit-pro/run-all.sh` ran in this session (G7 verification) → **3269/3269** exit 0 (L1 662+451, L4 1949, L5 207); Layer 1 re-run independently 1113/1113; Layer 5 validator 207/207. BUILD/TYPECHECK/LINT are N/A for this repo (no such toolchain — the deterministic suite IS the verification). The four deliberate-regression proofs also executed and each guard FAILED correctly.
+
+**Edge cases:** Every spec edge case has a non-happy-path test: guard terminator line-wrap (8 skills restored; truncation caught — natural RED 17/52) · generic `mcp` vocabulary and frontmatter `tools:` IDs (named-tool guard does NOT flag — false-positive checks confirmed) · unresolved payload path (resolution RED failed both runtimes) · missing pointer (pointer RED named the agent) · skill with no guard block (left untouched) · live-eval unavailability (suite green with no live run). No `[edge-case-gap]`.
+
+**Requirements matched:** All FR-001..FR-013 trace to implementation + a passing test + a commit — FR-001/002 → `validate-tool-scoping.sh` (239232e8); FR-003 → `validate-capability-pointer.sh`, FR-004 → `validate-capability-resolution.sh` (42dd19b9); FR-005/006/009 → 4 eval files (c6af364f); FR-007 → `strip_codex_guard` + dist, FR-008 → `validate-payload-completeness.sh` (527b5d4d); FR-010..013 → suite-green / registration / non-vacuity / dist-sync. No orphans. (tasks.md items remain `[ ]` — the autopilot implements via subagents but does not tick `[X]`; the evidence is the commits + passing tests.)
+
+**Follow-up:** No `[TODO]`/`[DEFERRED]`/`[OUT-OF-SCOPE]` in the implementation. Two known items, both surfaced in the PR body: (1) the generated spec-index injects 2 MOC nav lines with a trailing space (`- [TACD-004](…) · `) — generated content matching the generator's output (`validate-spec-index-determinism` passes); fixing the generator is out of TACD-004 scope. (2) the approved-equivalent allowlist is empty by design (all in-scope agents reference the directive directly). No silent deferrals.
 
 ---
 
