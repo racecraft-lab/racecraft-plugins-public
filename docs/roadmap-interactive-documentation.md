@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12  
-**Status:** DOC-001 through DOC-010 completed and archived; interactive documentation roadmap complete
+**Status:** DOC-001 through DOC-010 completed and archived. DOC-011 through DOC-021 (production readiness + content/IA excellence) are PENDING — see the SpecKit copy [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md) for the full catalog and the domain-last launch sequencing.
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **SpecKit compatibility copy:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 

@@ -3,7 +3,7 @@ up: "[Interactive Documentation Roadmap](interactive-documentation-technical-roa
 related:
   - "[PRD](../../prd-interactive-documentation.md)"
   - "[Traceability](../../traceability-interactive-documentation.md)"
-status: "DOC-001 through DOC-010 archived"
+status: "DOC-001 through DOC-010 archived; DOC-011 through DOC-021 pending (production readiness + content/IA)"
 rank: 1
 spec_id: "interactive-documentation"
 structureVersion: 1

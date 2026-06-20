@@ -3,11 +3,11 @@
 > SpecKit-compatible roadmap copy for [../../roadmap-interactive-documentation.md](../../roadmap-interactive-documentation.md). The prompt-requested roadmap is canonical for product review; this file exists so SpecKit tools that search `docs/ai/specs/*roadmap*.md` can discover the DOC spec catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-001 through DOC-010 are complete and archived. Created 2026-06-12; refreshed 2026-06-19.
+> Status: DOC-001 through DOC-010 (content + IA) are complete and archived. **Phase 7 production-readiness specs DOC-011 - DOC-018 and Phase 8 content/IA-excellence specs DOC-019 - DOC-021 are PENDING** — added 2026-06-19 from a production-deployment audit, a live per-route preview review of all pages, and a cited deep-research report on best-in-class Astro/Starlight docs. The site builds and is CI-validated for content, but is not yet deployed, branded, SEO-ready, WCAG-AA-audited, voice-consistent, or task-IA-organized. Created 2026-06-12; refreshed 2026-06-19.
 
 ## Roadmap Overview
 
-The feature is decomposed into 10 specifications across 6 dependency tiers:
+The feature is decomposed into 21 specifications across 8 dependency tiers (Tiers 1-6 = content + IA, shipped; Tier 7 = production readiness, Tier 8 = content/IA excellence — both pending):
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
@@ -17,8 +17,12 @@ The feature is decomposed into 10 specifications across 6 dependency tiers:
 | 4 | DOC-005, DOC-006 | First-run tutorial and safe interactive aids | Parallel |
 | 5 | DOC-007, DOC-008, DOC-009 | Reference, troubleshooting/trust, maintainer workflow | Parallel |
 | 6 | DOC-010 | Search, accessibility, deep links, docs validation | Sequential hardening |
+| 7 | DOC-011 - DOC-018 | Production readiness: deploy, custom domain, branding/landing, SEO, editorial, accessibility, performance, launch hygiene | Mostly parallel after deploy + domain |
+| 8 | DOC-019 - DOC-021 | Content/IA excellence: voice & ELI5 tone, per-page value & right-sizing, task-based IA & wayfinding | Mostly parallel |
 
-**Execution Order:** DOC-001 -> DOC-002 -> DOC-003/DOC-004 -> DOC-005/DOC-006 -> DOC-007/DOC-008/DOC-009 -> DOC-010
+**Execution Order:** DOC-001 -> DOC-002 -> DOC-003/DOC-004 -> DOC-005/DOC-006 -> DOC-007/DOC-008/DOC-009 -> DOC-010 -> **[Phase 7]** DOC-011 (deploy + noindex) -> (DOC-013, DOC-014, DOC-015) -> (DOC-016, DOC-017) -> DOC-018 -> **[Phase 8]** DOC-019 -> DOC-020 ; DOC-021 -> **[Launch gate — DEAD LAST]** DOC-012 (flip to root, attach plugins.racecraft.co, remove noindex)
+
+**Public-exposure policy:** GitHub Pages is publicly reachable the moment DOC-011 deploys, so DOC-011 ships the site with a search-engine `noindex` + `robots` disallow and keeps it on the obscure `racecraft-lab.github.io/racecraft-plugins-public/` staging URL throughout build-out — reachable for team preview, but not indexed or discoverable. **DOC-012 is intentionally DEAD LAST**: attaching the custom domain and removing `noindex` is the single go-live action that makes the site overtly public, gated behind every content, branding, SEO, and accessibility spec.
 
 ## Reviewability Contract
 
@@ -65,6 +69,19 @@ DOC-007 -> DOC-008
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Completed/archived | `.process/DOC-008-workflow.md` | Archived after PR #220 |
 | DOC-009 | Maintainer and contributor release workflow | Completed/archived | `.process/DOC-009-workflow.md` | Archived after PR #219 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Completed/archived | `.process/DOC-010-workflow.md` | Archived after PRs #232-#236 |
+| DOC-011 | GitHub Pages build-and-deploy pipeline | ⏳ Pending | — | Not started — production readiness (P1) |
+| DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
+| DOC-013 | Brand identity and marketplace landing page | ⏳ Pending | — | Not started — production readiness (P1) |
+| DOC-014 | SEO and AI discoverability | ⏳ Pending | — | Not started — depends on DOC-011; URLs finalize at DOC-012 launch (P1) |
+| DOC-015 | Editorial and content-QA pass | ⏳ Pending | — | Not started — production readiness (P1) |
+| DOC-016 | WCAG 2.1 AA accessibility hardening | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
+| DOC-017 | Performance budget and Lighthouse CI | ⏳ Pending | — | Not started — depends on DOC-011/013/014 (P2) |
+| DOC-018 | Launch hygiene: analytics, 404, legal, contributor onboarding | ⏳ Pending | — | Not started — depends on DOC-011; activates at DOC-012 launch (P3) |
+| DOC-019 | Content voice and ELI5 tone system | ⏳ Pending | — | Not started — depends on DOC-015 (P1) |
+| DOC-020 | Per-page value alignment and right-sizing | ⏳ Pending | — | Not started — depends on DOC-019 (P2) |
+| DOC-021 | Task-based information architecture and wayfinding | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
+
+**Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
 ## Specification Sections
 
@@ -381,6 +398,346 @@ Budget result: within budget
 - DOC-002 site config and DOC-010 docs validation config after the Astro/Starlight shell exists.
 - `.github/workflows/pr-checks.yml` if docs CI is added.
 - Existing validation scripts where reusable.
+
+## Phase 7 — Production Readiness (DOC-011 - DOC-018)
+
+> Added 2026-06-19 from a production-deployment audit (PRD + technical roadmap cross-check plus a live per-page visual review of the running site). DOC-001 - DOC-010 delivered a *content + IA* product; these specs deliver a *deployed, branded, discoverable, accessible* product. Per the Reviewability Contract these are documentation/infra slices — low production-LOC, docs/config/CI heavy.
+
+### DOC-011: GitHub Pages build-and-deploy pipeline
+
+**Priority:** P1 | **Depends On:** DOC-010 (site builds + validates) | **Enables:** staged (noindex) preview of every later spec; DOC-012 go-live
+
+**Status:** Pending. The site builds and passes `pnpm --dir docs-site validate`, but there is no deploy workflow in `.github/workflows/` (only `pr-checks.yml` + `release.yml`) and GitHub Pages is not enabled, so the docs have never shipped to a URL. The PRD lists "GitHub Pages deployment policy and configuration" under "maintainer decisions still required." Per the public-exposure policy this deploy ships a `noindex`/`robots`-disallow guard so the staging github.io URL is previewable but not indexed; the guard is removed only by DOC-012 at go-live.
+
+**Goal:** Continuously build and deploy `docs-site/` to GitHub Pages so the documentation is reachable at a live URL.
+
+**Reviewability Budget:** Primary surface: harness/CI |
+Projected reviewable LOC: about 60 |
+Production files: 1 (deploy workflow) |
+Total files: 2-3 |
+Budget result: within budget
+
+**Scope:**
+- Add `.github/workflows/deploy-docs.yml` using `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`, with `permissions: pages: write, id-token: write` and a `github-pages` environment.
+- Trigger on push to `main` (path-filtered to `docs-site/**` and generated-reference sources) plus `workflow_dispatch`; build under Node >=22.12 with pnpm; gate deploy on `pnpm --dir docs-site validate`.
+- Enable Pages with source = GitHub Actions (or `enablement: true`) and document the one-time repo setting.
+- Ship a build-out `noindex` guard: a `robots.txt` disallow plus `<meta name="robots" content="noindex, nofollow">` (via Starlight `head`) so the staging site is not indexed or discoverable; DOC-012 removes it at launch.
+- Add a deploy runbook note to `docs/ai/specs/cicd-release-pipeline-verification.md` and a CLAUDE.md CI/CD note.
+
+**Out of Scope:**
+- Custom domain and DNS (DOC-012).
+- Branding, SEO, analytics (DOC-013/014/018).
+
+**Key Files:**
+- `.github/workflows/deploy-docs.yml` (new)
+- `docs-site/package.json` build/validate scripts
+- `docs/ai/specs/cicd-release-pipeline-verification.md`
+
+### DOC-012: Custom domain and base-path migration to plugins.racecraft.co
+
+**Priority:** P1 (LAST — public launch gate) | **Depends On:** DOC-011 and all content/branding/SEO/a11y specs (DOC-013 - DOC-021) launch-ready | **Enables:** public go-live
+
+**Status:** Pending. `astro.config.mjs` is pinned to `site: 'https://racecraft-lab.github.io'` and `base: '/racecraft-plugins-public'`. The base prefix is hardcoded across ~20 content files, in `generate-reference-pages.mjs` (the `Public path` line), and in `validate-docs-quality.mjs` fixtures (`SUPPORT_ANCHOR_INVENTORY`, `REQUIRED_SUPPORT_LINKS`). Target: serve at the root of `plugins.racecraft.co`; DNS will be a CNAME at Epik (decision: not Route53). **This spec is deliberately DEAD LAST** — it is the single go-live flip (attach the domain + remove the DOC-011 `noindex` guard), so it runs only after every other DOC spec is launch-ready, ensuring the site is not overtly public until then.
+
+**Goal:** Serve the docs at the root of `plugins.racecraft.co` with correct links, DNS, and validation.
+
+**Reviewability Budget:** Primary surface: docs/config |
+Projected reviewable LOC: about 0 (config + link rewrites) |
+Production files: 0 |
+Total files: about 24 |
+Budget result: within budget (docs/config heavy, low production LOC)
+
+**Scope:**
+- Set `site: 'https://plugins.racecraft.co'` and remove/blank `base` in `astro.config.mjs`.
+- Migrate every hardcoded `/racecraft-plugins-public/...` link in content, the reference generator, and the quality-validator fixtures — prefer a single base-aware helper over scattered literals.
+- Add `docs-site/public/CNAME` = `plugins.racecraft.co`; document the Epik CNAME record (`plugins` -> `racecraft-lab.github.io`) and enabling Enforce HTTPS.
+- Remove the DOC-011 `noindex`/`robots`-disallow guard and switch `robots.txt` to allow indexing — this is the go-live moment that makes the site publicly discoverable.
+- Re-run `pnpm --dir docs-site validate` to prove zero broken internal links after migration.
+
+**Out of Scope:**
+- Route53 / DNS migration of the apex (decision: stay on Epik).
+- Redirects from the old `/racecraft-plugins-public` path (note as a follow-up if needed).
+
+**Key Files:**
+- `docs-site/astro.config.mjs`
+- `docs-site/public/CNAME` (new)
+- `docs-site/scripts/generate-reference-pages.mjs`
+- `docs-site/scripts/validate-docs-quality.mjs`
+- `docs-site/src/content/docs/**` (link rewrites)
+
+### DOC-013: Brand identity and marketplace landing page
+
+**Priority:** P1 | **Depends On:** DOC-002 | **Enables:** DOC-016 (contrast), public launch
+
+**Status:** Pending. The site is stock Starlight — `astro.config.mjs` has no `customCss`, `logo`, `favicon`, `head`, or fonts, and there is no `docs-site/public/`. Visual review confirmed default blue/lavender accent, system font, no logo, and no hero in both light and dark mode; the landing route renders as a generic "Start" doc page, not a marketplace landing. A full brand kit already exists in the sibling `landing-page/website`.
+
+**Goal:** Apply Racecraft visual identity and turn the landing route into a real marketplace landing page.
+
+**Reviewability Budget:** Primary surface: docs/UI |
+Projected reviewable LOC: about 80 (CSS) |
+Production files: 1-2 (brand CSS) |
+Total files: 6-8 plus binary font/favicon assets |
+Budget result: within budget
+
+**Scope:**
+- Create `docs-site/public/`; port the favicon set and `site.webmanifest` from `landing-page/website/public/`.
+- Add `docs-site/src/styles/brand.css` mapping brand colors (red `#dc143c`, blue `#3c89c6`, orange `#e74900`) to Starlight `--sl-color-*` tokens for light and dark; wire via `customCss`.
+- Self-host Space Grotesk / Geist / Fira Code woff2 (port from sibling); set Starlight font tokens with `<link rel=preload>`.
+- Set `logo` + `favicon` in the Starlight config; add a branded hero / value-prop block to the landing route so it reads as a marketplace entry point, not a doc.
+
+**Out of Scope:**
+- Per-component restyle beyond tokens (a11y component fixes are DOC-016).
+- Performance budget (DOC-017).
+
+**Key Files:**
+- `docs-site/astro.config.mjs`
+- `docs-site/src/styles/brand.css` (new)
+- `docs-site/public/` favicon/font assets (new)
+- `docs-site/src/content/docs/index.mdx`
+- Brand source: `landing-page/website/public/` and `astro.config.mjs`
+
+### DOC-014: SEO and AI discoverability
+
+**Priority:** P1 | **Depends On:** DOC-011 (canonical/sitemap URLs derive from astro `site` and finalize automatically when DOC-012 flips the domain at launch) | **Enables:** public launch
+
+**Status:** Pending. 0 of 19 content pages carry `description:` frontmatter (no meta descriptions); there is no Open Graph / social-card setup, no `robots.txt`, no `llms.txt`, and no canonical-URL handling for the final domain. The sibling site already ships `astro-llms-txt`, a sitemap, and `robots.txt`.
+
+**Goal:** Make the docs indexable, shareable, and AI-discoverable with correct metadata for the production domain.
+
+**Reviewability Budget:** Primary surface: docs/config + content |
+Projected reviewable LOC: about 40 |
+Production files: 0 |
+Total files: about 22 (frontmatter + config) |
+Budget result: within budget
+
+**Scope:**
+- Add `description:` frontmatter to all content pages; add a `validate-docs-quality.mjs` rule requiring it.
+- Add Open Graph / social-card metadata and canonical URLs for `plugins.racecraft.co` (Starlight `head` or a card component).
+- Verify/emit a correct sitemap for the final domain and add `robots.txt` pointing at it.
+- Add `llms.txt` (port the three-tier `astro-llms-txt` pattern from the sibling site).
+
+**Out of Scope:**
+- Analytics (DOC-018).
+- Prose rewrites (DOC-015).
+
+**Key Files:**
+- `docs-site/astro.config.mjs`
+- `docs-site/src/content/docs/**` (frontmatter)
+- `docs-site/scripts/validate-docs-quality.mjs`
+- `docs-site/public/robots.txt` (new)
+
+### DOC-015: Editorial and content-QA pass
+
+**Priority:** P1 | **Depends On:** None | **Enables:** public launch
+
+**Status:** Pending. Visual review confirmed internal-authoring leakage in rendered pages: "Route Scope" / "Shell owner DOC: DOC-002" / "Full-content owner DOC" on the landing and `choose-your-path`, "Deferred Boundary" on `choose-your-path`, and generator mechanics ("Generated by ...", "Public path:", "Page Sources", title-cased "Speckit Prd") on the reference pages. Also: gate numbering shows G1-G7 while the autopilot source uses G0-G7; "Spec Kit" vs "SpecKit" drift; and `first-run.md` uses `specify version` vs the verified `specify --version`. `validate-docs-quality.mjs` checks structure, not prose.
+
+**Goal:** Make the public docs read cleanly and accurately by removing internal scaffolding and fixing factual drift.
+
+**Reviewability Budget:** Primary surface: docs/content |
+Projected reviewable LOC: about 30 (editorial linter) |
+Production files: 0 |
+Total files: 8-10 |
+Budget result: within budget
+
+**Scope:**
+- Strip internal scaffolding from rendered pages ("Route Scope" / "Route Shell", "owner DOC", "Deferred Boundary"); move any needed provenance to frontmatter/comments.
+- Reframe the generated reference pages for a public reader (drop or collapse generator mechanics, internal source paths, and base-path lines; fix title-casing such as "SpecKit PRD" / "SpecKit Resolve PR").
+- Reconcile gate numbering to G0-G7 in `spec-kit-lifecycle.mdx`; normalize "Spec Kit" vs "SpecKit" to one deliberate convention; fix `specify version` -> `specify --version`.
+- Add an editorial linter to `validate-docs-quality.mjs` (deny-list of internal tokens like `DOC-0\d\d`, "owner DOC", "Deferred Boundary") so leaks cannot recur.
+
+**Out of Scope:**
+- IA restructuring or new pages.
+- Reconciling the same `specify version` drift in plugin source (flag separately).
+
+**Key Files:**
+- `docs-site/src/content/docs/index.mdx`, `choose-your-path.mdx`, `spec-kit-lifecycle.mdx`, `first-run.md`
+- `docs-site/scripts/generate-reference-pages.mjs`
+- `docs-site/scripts/validate-docs-quality.mjs`
+
+### DOC-016: WCAG 2.1 AA accessibility hardening
+
+**Priority:** P2 | **Depends On:** DOC-013 (brand contrast), DOC-010 (smoke harness) | **Enables:** PRD AC-10.2
+
+**Status:** Pending. Today's a11y is smoke-tested only — no axe-core, no contrast verification. `SafeInstallAids.astro` reimplements radiogroup keyboard navigation with a custom `keydown` handler over loose `<input type=radio>` (no `role="radiogroup"`) and toggles `panel.hidden` with no `aria-controls` / `aria-expanded`. PRD AC-10.2 requires keyboard, focus, label, contrast, and static-fallback conformance; only static-fallback + basic keyboard are verified.
+
+**Goal:** Replace smoke-only a11y with verified WCAG 2.1 AA conformance and fix the custom-widget semantics.
+
+**Reviewability Budget:** Primary surface: docs/UI + tests |
+Projected reviewable LOC: about 70 |
+Production files: 1 (component fix) |
+Total files: 4-5 |
+Budget result: within budget
+
+**Scope:**
+- Add `@axe-core/playwright` checks across the route list in `docs-smoke.spec.mjs`; wire into `validate:smoke`.
+- Fix `SafeInstallAids.astro`: proper `role="radiogroup"` / `<fieldset>` semantics, reconcile or remove the custom `keydown` handler, and add `aria-controls` / `aria-expanded` (or a non-`hidden` pattern) for panel toggles.
+- Verify brand-token contrast (post-DOC-013) meets AA; fix muted-gray secondary text flagged on the lifecycle and selector components.
+- Add an accessibility-statement page.
+
+**Out of Scope:**
+- Manual screen-reader certification (advisory).
+
+**Key Files:**
+- `docs-site/src/components/SafeInstallAids.astro`, `LifecycleFlow.astro`
+- `docs-site/tests/docs-smoke.spec.mjs`
+- `docs-site/package.json`
+
+### DOC-017: Performance budget and Lighthouse CI
+
+**Priority:** P2 | **Depends On:** DOC-011, DOC-013, DOC-014 | **Enables:** PRD AC-10.7
+
+**Status:** Pending. No Lighthouse config or perf budget exists in `docs-site` (the sibling site has `lighthouserc.json`). Branding will add fonts/assets, so a budget is needed to prevent regression. PRD AC-10.7 ("visual regression or screenshot checks required once the site exists") is also unmet — the current smoke test checks element presence, not visual baselines.
+
+**Goal:** Guard load performance and core-web-vitals with a CI budget once branding/fonts land.
+
+**Reviewability Budget:** Primary surface: harness/CI |
+Projected reviewable LOC: about 30 |
+Production files: 0 |
+Total files: 2-3 |
+Budget result: within budget
+
+**Scope:**
+- Add `lighthouserc.json` + a Lighthouse CI step (port the sibling config) asserting perf/SEO/a11y/best-practices thresholds against the built preview.
+- Confirm font-loading strategy (preload + `font-display`) and optimize any images.
+- Add visual-regression / screenshot baselines to satisfy PRD AC-10.7.
+
+**Out of Scope:**
+- RUM / real-user analytics (DOC-018).
+
+**Key Files:**
+- `docs-site/lighthouserc.json` (new)
+- `.github/workflows/deploy-docs.yml` or a docs-CI job
+- `docs-site/tests/`
+
+### DOC-018: Launch hygiene — analytics, 404, legal, docs contributor onboarding
+
+**Priority:** P3 | **Depends On:** DOC-011 (analytics is configured here but activates at DOC-012 go-live) | **Enables:** Feature complete
+
+**Status:** Pending. The PRD deferred analytics "until the site foundation and hosting path exist" — that precondition is now met but the work is unstarted. There is no branded 404 page, no repo `LICENSE` / privacy notice, and `contribute-and-release.md` has no docs-site contributor section (how to run/preview/add a page).
+
+**Goal:** Close the remaining production-hygiene items now that hosting and domain exist.
+
+**Reviewability Budget:** Primary surface: docs/content + config |
+Projected reviewable LOC: about 20 |
+Production files: 0 |
+Total files: 5-6 |
+Budget result: within budget
+
+**Scope:**
+- Add a privacy-respecting analytics option (documented choice; PRD gated this on hosting, now satisfied).
+- Add a branded `src/pages/404.astro` (or Starlight 404 override).
+- Add a repo `LICENSE` and a short privacy notice page.
+- Extend `contribute-and-release.md` with a docs-site contributor section (`pnpm --dir docs-site dev`, adding a page, passing `validate`).
+
+**Out of Scope:**
+- Docs versioning (defer until a breaking plugin-docs change forces it).
+
+**Key Files:**
+- `docs-site/src/pages/404.astro` (new)
+- `docs-site/src/content/docs/contribute-and-release.md`
+- `LICENSE` (new), privacy notice page
+
+## Phase 8 — Content & IA Excellence (DOC-019 - DOC-021)
+
+> Added 2026-06-19 from (a) a live per-route preview audit of all 19 navigable pages and (b) a cited deep-research report on the best Astro/Starlight and developer-tool doc sites.
+>
+> **Exemplars to study** (verified real Astro/Starlight or best-in-class doc sites): Cloudflare Docs, Netlify Docs, freeCodeCamp, Biome, Knip, sharp, Font Awesome, OpenAI Agents SDK (all Starlight); Stripe (task-oriented landing + business-function IA); Google developer documentation style guide (non-condescending tone rules); Fern + Nielsen Norman Group (task-based IA, progressive disclosure).
+>
+> **Verified principles a stock Starlight site lacks:** organize IA around user goals/tasks, not raw Diátaxis labels or internal structure; lead the landing above the fold with use-case quick-start cards (Stripe); progressive disclosure via accordions (sequential), tabs (parallel paths, e.g. Claude vs Codex), and collapsible sidebar groups (Fern, NN/g); a "knowledgeable friend" voice — conversational, friendly, respectful, not pedantic or pushy — with a lint rule banning "simply / easy / just / quickly / it's that simple" (Google). Accessibility targets are falsifiable WCAG 2.2 AA thresholds: 4.5:1 / 3:1 contrast (SC 1.4.3), 200% text resize (SC 1.4.4), full keyboard operability (SC 2.1.1). Note: 320px / 400% reflow is the separate, stricter SC 1.4.10 — do not assert it as an AA baseline. Search (Pagefind) and code copy-to-clipboard (Expressive Code) already ship by default and need no new spec.
+
+### DOC-019: Content voice and ELI5 tone system
+
+**Priority:** P1 | **Depends On:** DOC-015 (editorial cleanup) | **Enables:** public launch
+
+**Status:** Pending. A live per-route preview audit found 11 of 19 pages open with the templated, self-referential formula "Use this route when ..." / "Use this page to ...", leading with internal "route" jargon instead of the reader's goal; several pages repeat defensive disclaimers ("does not run local diagnostics, grant permissions, invoke plugin workflows ..."). This is neither ELI5 nor warm. Google's developer style guide prescribes a "knowledgeable friend" voice (conversational, friendly, respectful; not pedantic or pushy) and a concrete lint rule against "simply / easy / quickly / it's that simple."
+
+**Goal:** Establish and enforce one friendly-but-not-condescending voice so every page opens with the reader's outcome in plain language.
+
+**Reviewability Budget:** Primary surface: docs/content |
+Projected reviewable LOC: about 40 (tone linter) |
+Production files: 0 |
+Total files: about 15 |
+Budget result: within budget
+
+**Scope:**
+- Write a short voice guide (the "knowledgeable friend" model) into the contributor docs.
+- Replace the "Use this route/page when ..." opener on every page with a value-first sentence (what you will accomplish + why it matters), dropping internal "route" jargon.
+- Consolidate the repeated safety disclaimers into one calm, reusable note rather than per-page legalese.
+- Add a tone linter to `validate-docs-quality.mjs`: deny-list condescending words ("simply", "just", "easy", "easily", "quickly", "it's that simple") and the "Use this route when" opener pattern.
+
+**Out of Scope:**
+- Right-sizing reference data tables (DOC-020).
+- IA / navigation restructuring (DOC-021).
+
+**Key Files:**
+- All hand-authored pages under `docs-site/src/content/docs/`
+- `docs-site/scripts/validate-docs-quality.mjs`
+- `docs-site/src/content/docs/contribute-and-release.md` (voice guide)
+
+**Research grounding:** Google developer documentation style guide — tone (`developers.google.com/style/tone`) and word-list (`developers.google.com/style/word-list`).
+
+### DOC-020: Per-page value alignment and right-sizing
+
+**Priority:** P2 | **Depends On:** DOC-019 | **Enables:** public launch
+
+**Status:** Pending. The per-route audit found uneven value delivery: generated reference pages are walls of data (`reference/tests` 5,844 words; `reference/skills` 2,058; `reference/agents` 1,455) with no "what is this / why you would care" framing or progressive disclosure, while others are thin (home 204 words; `reference/hooks` 304). No page consistently states what the reader will get, the prerequisites, and the next step.
+
+**Goal:** Make every page deliver its promised value at the right depth, scannably.
+
+**Reviewability Budget:** Primary surface: docs/content |
+Projected reviewable LOC: about 0 |
+Production files: 0 |
+Total files: about 12 |
+Budget result: within budget
+
+**Scope:**
+- Add a consistent page scaffold: a one-line "what you'll get," prerequisites, and an explicit "next step" link on each route.
+- Apply progressive disclosure to the heavy generated reference pages (collapsible/accordion sections, tabs for Claude vs Codex) so each opens with orientation, not a data wall; reconsider whether the 5,844-word Tests reference is reader-facing at all.
+- Strengthen thin pages (home, hooks) so each states its value; align every page against the PRD IA table's stated purpose + success criterion.
+- Add a per-route "promised-value" check to `validate-docs-quality.mjs` (each page has an intro sentence and a next-step link).
+
+**Out of Scope:**
+- New pages or IA regrouping (DOC-021).
+- Tone wording (DOC-019).
+
+**Key Files:**
+- `docs-site/src/content/docs/**`
+- `docs-site/scripts/generate-reference-pages.mjs` (progressive disclosure for generated pages)
+- `docs-site/scripts/validate-docs-quality.mjs`
+
+**Research grounding:** Fern + Nielsen Norman Group — progressive disclosure (accordions = sequential, tabs = parallel paths, collapsible sidebars = hierarchical).
+
+### DOC-021: Task-based information architecture and wayfinding
+
+**Priority:** P2 | **Depends On:** DOC-013 (landing), DOC-002 | **Enables:** public launch
+
+**Status:** Pending. The sidebar is grouped by raw Diátaxis mode labels (Tutorials / How-to / Reference / Explanation). Best-in-class docs (Stripe; Fern; Nielsen Norman Group) organize IA around user goals/tasks — not internal structure or Diátaxis labels — and add "where do I start" wayfinding plus progressive disclosure. The landing is a thin doc with no task-based quick-start (Stripe leads above the fold with use-case cards).
+
+**Goal:** Restructure navigation and the landing around user goals with clear wayfinding.
+
+**Reviewability Budget:** Primary surface: docs/UI + config |
+Projected reviewable LOC: about 30 |
+Production files: 0-1 |
+Total files: 3-5 |
+Budget result: within budget
+
+**Scope:**
+- Regroup the sidebar by user goal with plain labels (for example: Get started / Install / First success / Look it up / Trust & security / Contribute) instead of Diátaxis jargon.
+- Add "where do I start" wayfinding (Stripe-style use-case quick-start cards) to the landing — coordinate with DOC-013's hero.
+- Apply progressive disclosure: collapsible sidebar groups and tabs for the parallel Claude vs Codex paths, so a beginner is not shown the whole tree at once.
+- Verify keyboard operability of the new navigation controls (WCAG SC 2.1.1) — coordinate with DOC-016.
+
+**Out of Scope:**
+- Per-page prose/tone (DOC-019/020).
+- Brand tokens/fonts (DOC-013).
+
+**Key Files:**
+- `docs-site/astro.config.mjs` (sidebar config)
+- `docs-site/src/content/docs/index.mdx` (landing wayfinding)
+- Optional Hero / SiteTitle component override under `docs-site/src/components/`
+
+**Research grounding:** Stripe (`docs.stripe.com` — task-oriented landing + business-function IA); Fern + Nielsen Norman Group (task-based IA, progressive disclosure).
 
 ## Environment & Deployment Context
 
