@@ -45,7 +45,7 @@ concept is the source of truth for setup-time scoping decisions.
 | Checklist | `/speckit-checklist` | ✅ Complete | 3 domains; 8 `[Gap]` resolved; G4 PASS (0 markers) |
 | Tasks | `/speckit-tasks` | ✅ Complete | 37 tasks, 7 groups; G5 PASS; route = one-navigable-PR |
 | Analyze | `/speckit-analyze` | ✅ Complete | 1 HIGH resolved (T004 3→6 agents); G6 PASS; confidence 0.96 |
-| Implement | `/speckit-implement` | Pending | TDD where checks/build behavior change |
+| Implement | `/speckit-implement` | ✅ Complete | 4 user stories (US1/US2/US4/US3) committed; G7 non-vacuity: all 4 guards fail on a deliberate regression |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -645,27 +645,27 @@ For the payload fix:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Layer 5 named-tool guard + assertion removal | | | |
-| Layer 1 pointer-coverage / target-resolution | | | |
-| Payload fix + body-completeness + dist rebuild | | | |
-| Eval rewrites + behavior scenarios | | | |
-| Full-suite validation | | | |
+| Layer 5 named-tool guard + assertion removal | T010–T014 | ✅ | validate-tool-scoping.sh: −5 named-MCP, +22 body-prose guard, fail-closed; Layer 5 207/207 (commit 239232e8) |
+| Layer 1 pointer-coverage / target-resolution | T015–T021 | ✅ | 2 validators (pointer 16 + resolution 21) registered; dist/** prefix re-rooting (commit 42dd19b9) |
+| Payload fix + body-completeness + dist rebuild | T022–T028 | ✅ | strip_codex_guard section-boundary fix; 8 skill bodies restored; validate-payload-completeness 52/52 (commit 527b5d4d) |
+| Eval rewrites + behavior scenarios | T029–T034 | ✅ | 4 eval files: absence+affirmative + 5 scenarios (101–105), Claude/Codex parity (commit c6af364f) |
+| Full-suite validation | T035–T037 | ✅ | Layer 1 1113/1113; G7 non-vacuity all 4 guards proven; full suite 3269/3269 |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] `specs/tacd-004-verification-coverage/tasks.md` complete
-- [ ] Each new deterministic guard fails on a deliberate regression (non-vacuous)
-- [ ] Layer 5 no longer asserts the named MCP tools
-- [ ] Pointer-coverage and target-resolution checks pass for Claude and Codex
-- [ ] `strip_codex_guard` fixed; `dist/` rebuilt; all skill bodies restored
-- [ ] Body-completeness check fails on a truncated payload
-- [ ] All four eval files rewritten in parity; behavior scenarios added as fixtures
-- [ ] `bash tests/speckit-pro/run-all.sh` passes
-- [ ] `git diff --check` passes
-- [ ] Reviewability / final PR packet checks run per autopilot guidance
-- [ ] PR created and reviewed
+- [x] `specs/tacd-004-verification-coverage/tasks.md` complete
+- [x] Each new deterministic guard fails on a deliberate regression (non-vacuous) — all 4 proven at G7
+- [x] Layer 5 no longer asserts the named MCP tools
+- [x] Pointer-coverage and target-resolution checks pass for Claude and Codex
+- [x] `strip_codex_guard` fixed; `dist/` rebuilt; all skill bodies restored (8 skills)
+- [x] Body-completeness check fails on a truncated payload
+- [x] All four eval files rewritten in parity; behavior scenarios added as fixtures
+- [x] `bash tests/speckit-pro/run-all.sh` passes (3269/3269)
+- [x] `git diff --check` passes — clean except 2 generated spec-index MOC trailing-space lines (generated content; out of scope; see G7 note)
+- [ ] Reviewability / final PR packet checks run per autopilot guidance (post-implementation)
+- [ ] PR created and reviewed (post-implementation)
 
 ---
 
