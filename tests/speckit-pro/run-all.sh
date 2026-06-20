@@ -146,7 +146,9 @@ if should_run 1; then
     "$TESTS_DIR/layer1-structural/validate-process-gitattributes.sh" \
     "$TESTS_DIR/layer1-structural/validate-moc-orphan.sh" \
     "$TESTS_DIR/layer1-structural/validate-moc-stale-index.sh" \
-    "$TESTS_DIR/layer1-structural/validate-spec-index-determinism.sh"
+    "$TESTS_DIR/layer1-structural/validate-spec-index-determinism.sh" \
+    "$TESTS_DIR/layer1-structural/validate-capability-pointer.sh" \
+    "$TESTS_DIR/layer1-structural/validate-capability-resolution.sh"
 
   # Codex structural tests are part of the default layer 1 run.
   run_layer 1 "Codex Structural Validation" \
