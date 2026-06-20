@@ -127,7 +127,12 @@ collect_runtime() {
       continue
     fi
 
-    tok=$(grep -oE "$PATH_TOKEN_RE" "$f" | sort -u | head -1)
+    # `|| true`: under `set -euo pipefail` a no-match `grep` (exit 1) or a
+    # SIGPIPE from `head` closing `sort` early would make this command
+    # substitution fail and abort the script BEFORE the empty-token check
+    # below — bypassing the explicit `_fail`. Guard it so a missing token is
+    # always reported as an actionable failure instead of a silent abort.
+    tok=$(grep -oE "$PATH_TOKEN_RE" "$f" | sort -u | head -1 || true)
     set_test "${runtime}: extracted directive path token from in-scope agent '${agent_name}'"
     if [ -z "$tok" ]; then
       _fail "agent references ${DIRECTIVE_MARKER} but no repo-root-relative path token matched ${PATH_TOKEN_RE} in $f"

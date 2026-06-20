@@ -592,10 +592,13 @@ fi
 # Named-tool regression guard (TACD-004 FR-001 / US1)
 # ===========================================================================
 # Fails when an ACTIVE agent's guidance PROSE reintroduces a hardcoded named
-# optional-tool preference (a vendor-qualified `mcp__<vendor>__<tool>` token)
-# outside the approved category allowlist. This locks the vendor-neutral
-# capability-discovery decision (TACD-002): a future edit that re-teaches a
-# specific vendor tool by name in agent guidance is caught automatically.
+# optional-tool preference (a vendor-qualified `mcp__<vendor>__<tool>` token).
+# ANY vendor-qualified token found in prose is a violation unless it is an exact
+# literal entry in PROSE_TOKEN_ALLOWLIST (an enumerated token list, empty by
+# default — there is no category or heuristic matching here). This locks the
+# vendor-neutral capability-discovery decision (TACD-002): a future edit that
+# re-teaches a specific vendor tool by name in agent guidance is caught
+# automatically.
 #
 # What is scanned (prose only):
 #   - Claude: the markdown BODY of speckit-pro/agents/*.md (everything AFTER
