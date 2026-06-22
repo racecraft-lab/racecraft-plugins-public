@@ -7,7 +7,7 @@ This document defines the **SPEC catalog** for Tool-Agnostic Capability Discover
 **Source PRD:** [../../prd-tool-agnostic-capability-discovery.md](../../prd-tool-agnostic-capability-discovery.md)
 **Roadmap MOC:** [tool-agnostic-capability-discovery-roadmap-MOC.md](tool-agnostic-capability-discovery-roadmap-MOC.md)
 **Spec ID prefix:** `TACD-###`
-**Branch:** one branch per TACD spec; TACD-001, TACD-002, and TACD-003 completed and archived their shipped stacks
+**Branch:** one branch per TACD spec; TACD-001, TACD-002, TACD-003, and TACD-004 completed and archived their shipped stacks
 **Tracker:** N/A
 
 ---
@@ -78,7 +78,7 @@ FEATURE COMPLETE
 | TACD-001 | Platform Mechanics Spike | Complete | [.process/TACD-001-workflow.md](.process/TACD-001-workflow.md) | Archived after PRs #211-#214 and #216; use the spike report's directive-home and allowlist recommendations to scaffold TACD-002 |
 | TACD-002 | Capability Discovery Directive and Agent Updates | Complete | [.process/TACD-002-workflow.md](.process/TACD-002-workflow.md) | Archived after PRs #221-#226; use the shared directive and marker-emission hardening as TACD-003/TACD-004 inputs |
 | TACD-003 | Prerequisite and Documentation Messaging | Complete | [.process/TACD-003-workflow.md](.process/TACD-003-workflow.md) | Archived after PR #230; use the generic advisory and active guidance updates as TACD-004 inputs |
-| TACD-004 | Verification Coverage | In Progress | [TACD-004 section](#tacd-004-verification-coverage) | Scaffolded on `tacd-004-verification-coverage`; workflow at `.process/TACD-004-workflow.md`. Scope now also bundles the Claude payload-build fix (`strip_codex_guard`) and a body-completeness regression check |
+| TACD-004 | Verification Coverage | Complete | [.process/TACD-004-workflow.md](.process/TACD-004-workflow.md) | Archived after PR #240; the vendor-neutral verification guards, the `strip_codex_guard` payload fix, rebuilt payloads, and rewritten evals now live in source/generator/test paths |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -218,6 +218,8 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** TACD-001, TACD-002, TACD-003 | **Enables:** Complete feature
 
+**Status:** Complete and archived after PR #240 merged the vendor-neutral verification guards, the `strip_codex_guard` payload-build fix, rebuilt payloads, and the rewritten functional evals.
+
 **Goal:** Add deterministic checks and functional eval coverage so SpecKit Pro stays vendor-neutral about optional research/context tools, and fix the Claude payload-build defect (`strip_codex_guard`) that truncates skill bodies — locking it with a body-completeness regression check.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
@@ -246,6 +248,7 @@ Budget result: within budget
 - **Verification decision (2026-06-17):** Use static checks plus eval coverage; static-only is insufficient for behavior, eval-only is too costly and non-deterministic.
 - **Payload-fix bundling (2026-06-19):** A pre-existing `strip_codex_guard` defect truncated the Claude payload body for 8 of 10 skills. The builder scans for a single-line terminator phrase to end the guard block; in the 8 affected skills that phrase is line-wrapped across two source lines, so the single-line check never matches and the strip runs to end-of-file, dropping the whole body. (The 2 unaffected skills keep the phrase on one unbroken line.) The fix replaces the terminator scan with a section-boundary scan; it, the `dist/` rebuild, and a body-completeness regression check are bundled into TACD-004 rather than fast-tracked as a separate hotfix.
 - **Tool-scoping decision (2026-06-19):** Remove the named MCP tool assertions from Layer 5 entirely (vendor neutrality enforced at the contract level) rather than retaining them as optional-but-named.
+- **Archive decision (2026-06-22):** The active spec folder was removed after post-merge provenance was recorded. The payload-build fix, deterministic verification guards, rewritten evals, and regenerated payloads remain in source and generated payload paths; raw spec artifacts remain recoverable through `.specify/memory/archive-reports/2026-06-22-tacd-004-post-merge-hygiene.md`.
 
 **Key Files:**
 - `tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh` - named-tool guard + removal of the named-MCP assertions.
@@ -308,5 +311,6 @@ When breaking this feature into specs:
 - **TACD-001 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-001-post-merge-hygiene.md)
 - **TACD-002 archive report:** [../../../.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-18-tacd-002-post-merge-hygiene.md)
 - **TACD-003 archive report:** [../../../.specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md)
+- **TACD-004 archive report:** [../../../.specify/memory/archive-reports/2026-06-22-tacd-004-post-merge-hygiene.md](../../../.specify/memory/archive-reports/2026-06-22-tacd-004-post-merge-hygiene.md)
 - **Constitution:** [.specify/memory/constitution.md](../../../.specify/memory/constitution.md)
 - **Project Standards:** [AGENTS.md](../../../AGENTS.md), [CLAUDE.md](../../../CLAUDE.md)
