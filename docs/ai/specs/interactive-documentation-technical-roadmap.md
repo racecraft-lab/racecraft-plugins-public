@@ -69,7 +69,7 @@ DOC-007 -> DOC-008
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Completed/archived | `.process/DOC-008-workflow.md` | Archived after PR #220 |
 | DOC-009 | Maintainer and contributor release workflow | Completed/archived | `.process/DOC-009-workflow.md` | Archived after PR #219 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Completed/archived | `.process/DOC-010-workflow.md` | Archived after PRs #232-#236 |
-| DOC-011 | GitHub Pages build-and-deploy pipeline | ⏳ Pending | — | Not started — production readiness (P1) |
+| DOC-011 | GitHub Pages build-and-deploy pipeline | 🔄 In Progress | `.process/DOC-011-workflow.md` | Scaffolded on `doc-011-github-pages-build-and-deploy-pipeline`; next phase is `$speckit-autopilot docs/ai/specs/.process/DOC-011-workflow.md` |
 | DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
 | DOC-013 | Brand identity and marketplace landing page | ⏳ Pending | — | Not started — production readiness (P1) |
 | DOC-014 | SEO and AI discoverability | ⏳ Pending | — | Not started — depends on DOC-011; URLs finalize at DOC-012 launch (P1) |
@@ -407,7 +407,7 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-010 (site builds + validates) | **Enables:** staged (noindex) preview of every later spec; DOC-012 go-live
 
-**Status:** Pending. The site builds and passes `pnpm --dir docs-site validate`, but there is no deploy workflow in `.github/workflows/` (only `pr-checks.yml` + `release.yml`) and GitHub Pages is not enabled, so the docs have never shipped to a URL. The PRD lists "GitHub Pages deployment policy and configuration" under "maintainer decisions still required." Per the public-exposure policy this deploy ships a `noindex`/`robots`-disallow guard so the staging github.io URL is previewable but not indexed; the guard is removed only by DOC-012 at go-live.
+**Status:** In Progress. Scaffolded on branch `doc-011-github-pages-build-and-deploy-pipeline`; workflow lives at `.process/DOC-011-workflow.md` and the design concept lives at `.process/DOC-011-design-concept.md`. The site builds and passes `pnpm --dir docs-site validate`, but there is no deploy workflow in `.github/workflows/` (only `pr-checks.yml` + `release.yml`) and GitHub Pages is not enabled, so the docs have never shipped to a URL. The PRD lists "GitHub Pages deployment policy and configuration" under "maintainer decisions still required." Per the public-exposure policy this deploy ships a `noindex`/`robots`-disallow guard so the staging github.io URL is previewable but not indexed; the guard is removed only by DOC-012 at go-live.
 
 **Goal:** Continuously build and deploy `docs-site/` to GitHub Pages so the documentation is reachable at a live URL.
 
