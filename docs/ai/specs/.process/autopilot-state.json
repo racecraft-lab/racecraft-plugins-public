@@ -41,7 +41,7 @@
     "workflow_file": "docs/ai/specs/.process/TACD-004-workflow.md",
     "design_concept": "docs/ai/specs/.process/TACD-004-design-concept.md",
     "archive_report": ".specify/memory/archive-reports/2026-06-22-tacd-004-post-merge-hygiene.md",
-    "cleanup_pr": "<CLEANUP_PR_URL>",
+    "cleanup_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/242",
     "cleanup_branch": "tacd-004-archive-cleanup",
     "cleanup_command": "git rm -r specs/tacd-004-verification-coverage",
     "active_spec_removed": true,
@@ -132,7 +132,7 @@
       "status": "completed",
       "evidence": {
         "cleanup_branch": "tacd-004-archive-cleanup",
-        "cleanup_pr": "<CLEANUP_PR_URL>"
+        "cleanup_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/242"
       }
     }
   ]

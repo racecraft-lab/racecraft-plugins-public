@@ -20,7 +20,7 @@
 - Installed extension: `archive` v1.1.0 from `.specify/extensions/archive/extension.yml`
 - Pinned source: `racecraft-lab/spec-kit-archive` @ `v1.1.0` (commit `08ee0e919a72ccb254758a2b6f51d58196490ea7`)
 - Cleanup branch: `tacd-004-archive-cleanup`, based on `origin/main`
-- Cleanup PR: <CLEANUP_PR_URL>
+- Cleanup PR: https://github.com/racecraft-lab/racecraft-plugins-public/pull/242
 - Worktree state before archival edits: clean
 - `.specify/feature.json`: absent (not created)
 - Current target exclusion: none; TACD-004 was archived after PR #240 merged.
