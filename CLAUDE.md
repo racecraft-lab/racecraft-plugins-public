@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Current SpecKit plan: `specs/tacd-004-verification-coverage/plan.md` (TACD-004 — Verification Coverage)
+No active SpecKit plan — TACD-004 (Verification Coverage) shipped and was archived; the Tool-Agnostic Capability Discovery roadmap is complete. Run `/speckit-pro:speckit-status` for the roadmap dashboard and the recommended next spec.
 <!-- SPECKIT END -->
 
 ## Working in This Repo

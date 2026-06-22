@@ -123,7 +123,7 @@ git checkout b95d721f107dd1a17cee88671dc48da791e8e54c -- specs/tacd-004-verifica
 - PASS: `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .`
 - PASS: `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .`
 - PASS: `find specs -mindepth 1 -maxdepth 4 -print` returned only `specs/.gitkeep`.
-- PASS: stale active spec path scan found only intentional archive, memory, and recovery-command references.
+- PASS: stale active spec path scan found only intentional references — archive report, project memory, recovery commands, the `autopilot-state.json` archive record, and preserved `.process/` workflow evidence. The previously-active `CLAUDE.md` "Current SpecKit plan" pointer to the removed spec was updated to a no-active-plan note in this cleanup PR.
 - PASS: `git diff --check`
 - PASS: `bash tests/speckit-pro/run-all.sh`
 
