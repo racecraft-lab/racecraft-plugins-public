@@ -287,7 +287,7 @@
     ],
     "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-spec/no_scoped_tests.txt",
     "status": "pending",
-    "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+    "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
     "merged_sha": null
   },
   "marker_id": "full-spec",

@@ -20,8 +20,8 @@ Fresh session advisory: for maximum reliability, `/speckit.verify-tasks` should 
 - Referenced project paths checked: 16.
 - Missing project paths: 0.
 - Full docs deploy gate passed: `pnpm --dir docs-site validate`.
-- Repo regression suite passed: `bash tests/speckit-pro/run-all.sh` (`3466/3466`).
-- Workflow contract checks passed: `actionlint .github/workflows/deploy-docs.yml`, no `${{ secrets.* }}`, no custom `token:`, no `continue-on-error`, and no broad write permissions.
+- Repo regression suite passed: `bash tests/speckit-pro/run-all.sh` (`3467/3467`).
+- Workflow contract checks passed: `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml`, no `${{ secrets.* }}`, no custom `token:`, no `continue-on-error`, and no broad write permissions.
 
 ## Verified Items
 

@@ -523,8 +523,8 @@
           "mode": "final-diff",
           "scope": "full-spec",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-          "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
-          "commit_sha": "ec47b484d6ec5e60dd66604e820001928e26310e"
+          "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
+          "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0"
         },
         "hazards": [
           "change-shape:modify-heavy",
@@ -541,8 +541,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-          "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
-          "commit_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+          "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
+          "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0",
           "task_ids": [
             "T001",
             "T002",
@@ -698,7 +698,7 @@
       }
     ],
     "checkpoint": {
-      "commit_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+      "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0",
       "marker_plan_status": "emission_ready",
       "marker_count": 5
     }
@@ -729,7 +729,7 @@
     "integration_suite": {
       "status": "pass",
       "command": "bash tests/speckit-pro/run-all.sh",
-      "result": "3466/3466 passed"
+      "result": "3467/3467 passed"
     },
     "uat_runbook": {
       "status": "generated",
@@ -742,7 +742,7 @@
       "title": "docs(DOC-011): add GitHub Pages deploy pipeline",
       "base_branch": "main",
       "head_branch": "doc-011-github-pages-build-and-deploy-pipeline",
-      "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+      "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
       "packet_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
       "body_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
       "workflow_contract": "passed",
@@ -782,7 +782,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+        "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           ".github/workflows/pr-checks.yml",
@@ -845,6 +845,6 @@
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
     ],
-    "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e"
+    "head_sha": "e117785a57610fe901aca3015aaf92de808661e0"
   }
 }

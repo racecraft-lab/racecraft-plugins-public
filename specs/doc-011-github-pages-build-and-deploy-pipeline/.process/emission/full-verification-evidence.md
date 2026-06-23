@@ -4,14 +4,14 @@
 
 | Command | Result |
 |---------|--------|
-| `actionlint .github/workflows/deploy-docs.yml` | Pass |
+| `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml` | Pass |
 | `pnpm --dir docs-site install --frozen-lockfile` | Pass |
 | `pnpm --dir docs-site exec playwright install --with-deps chromium` | Pass |
 | `rm -rf docs-site/dist` then `pnpm --dir docs-site validate` | Pass after rerun with elevated permissions because sandbox blocked localhost preview binding |
 | `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/doc-011-github-pages-build-and-deploy-pipeline` | Pass, 28/28 tasks complete |
 | `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` | Pass |
 | `git diff --check` | Pass |
-| `bash tests/speckit-pro/run-all.sh` | Pass, 3466/3466 |
+| `bash tests/speckit-pro/run-all.sh` | Pass, 3467/3467 |
 
 ## Notes
 

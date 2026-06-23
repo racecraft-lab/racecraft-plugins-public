@@ -564,7 +564,7 @@ Verification should include:
 | Verify Implementation | Complete | 28/28 tasks complete, 16 referenced project paths checked, 0 missing project paths. Requirements are represented by the deploy workflow, staging guard, runbook, CLAUDE.md pointer, and validation evidence. | None. |
 | Verify Tasks Phantom Check | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md` reports 28 verified tasks and no flagged items. | None. |
 | Code Review | Skipped | Review extension is not installed. Self-review remains in the serial post-implementation tail. | Run manual self-review before PR creation. |
-| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed `3466/3466`. | None. |
+| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed `3467/3467`. | None. |
 | UAT Runbook | Complete | Generated `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md` for PR packet inclusion. | None. |
 
 ### Self-Review

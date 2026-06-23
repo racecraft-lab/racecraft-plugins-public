@@ -255,8 +255,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
-        "commit_sha": "ec47b484d6ec5e60dd66604e820001928e26310e"
+        "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
+        "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -273,8 +273,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
-        "commit_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+        "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
+        "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0",
         "task_ids": [
           "T001",
           "T002",
