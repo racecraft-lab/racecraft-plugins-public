@@ -266,6 +266,10 @@
         },
         {
           "operation": "MODIFIED",
+          "path": "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh"
+        },
+        {
+          "operation": "MODIFIED",
           "path": "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
         }
       ],

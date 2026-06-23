@@ -50,4 +50,5 @@ specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md
 specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md
 tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/docs/ai/specs/partial-roadmap-MOC.md
 tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/specs/prsg-001-foo/SPEC-MOC.md
+tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh
 tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh

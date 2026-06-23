@@ -4,7 +4,7 @@
 
 | Command | Result |
 |---------|--------|
-| `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml .github/workflows/release.yml` | Pass |
+| `actionlint .github/workflows/*.yml` | Pass |
 | `pnpm --dir docs-site install --frozen-lockfile` | Pass |
 | `pnpm --dir docs-site exec playwright install --with-deps chromium` | Pass |
 | `pnpm --dir docs-site validate:quality` | Pass; includes DOC-011 staging robots and noindex guard assertions |
@@ -12,7 +12,7 @@
 | `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/doc-011-github-pages-build-and-deploy-pipeline` | Pass, 28/28 tasks complete |
 | `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` | Pass |
 | `git diff --check` | Pass |
-| `bash tests/speckit-pro/run-all.sh` | Pass, 3474/3474 |
+| `bash tests/speckit-pro/run-all.sh` | Pass, 3478/3478 |
 
 ## Notes
 

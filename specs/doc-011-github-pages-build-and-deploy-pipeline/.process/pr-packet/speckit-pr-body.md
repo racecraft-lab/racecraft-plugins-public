@@ -48,7 +48,7 @@ Use `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.m
 
 - `actionlint .github/workflows/*.yml` passed.
 - `pnpm --dir docs-site validate` passed.
-- `bash tests/speckit-pro/run-all.sh` passed `3474/3474`.
+- `bash tests/speckit-pro/run-all.sh` passed `3478/3478`.
 - `validate-pr-packet.sh` and `validate-pr-workflow-contract.sh` passed.
 - GitHub PR Checks and CodeQL passed on PR #243.
 
@@ -58,7 +58,7 @@ Source: generated PR packet.
 
 - Source feature: GitHub Pages docs deployment workflow and staging crawler guard.
 - Scope: this PR adds the deploy workflow, workflow-lint PR check, docs-site noindex/robots guard, release PR docs-reference runtime alignment, deploy verification runbook, CLAUDE.md pointer, shared spec-index guard hardening with dist/test coverage, and SpecKit evidence for DOC-011.
-- Size: the packet records 53 changed files. The reviewability gate's production-only metrics are 36 LOC across 2 production files; the final gate is size-blocked by total-file count and proceeds through one atomic PR marker.
+- Size: the packet records 54 changed files. The reviewability gate's production-only metrics are 36 LOC across 2 production files; the final gate is size-blocked by total-file count and proceeds through one atomic PR marker.
 - Traceability: feature spec, rendered body, final reviewability gate, validation output, and changed-file scope are recorded in the packet metadata.
 - Non-goals: automating repository Pages settings, custom domain launch, public indexing, and removing staging noindex controls.
 

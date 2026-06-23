@@ -534,6 +534,10 @@
           },
           {
             "operation": "MODIFIED",
+            "path": "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh"
+          },
+          {
+            "operation": "MODIFIED",
             "path": "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
           }
         ],
@@ -543,8 +547,8 @@
           "mode": "final-diff",
           "scope": "full-spec",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-          "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
-          "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3"
+          "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
+          "commit_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438"
         },
         "hazards": [
           "change-shape:modify-heavy",
@@ -561,8 +565,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-          "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
-          "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+          "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
+          "commit_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
           "task_ids": [
             "T001",
             "T002",
@@ -693,7 +697,7 @@
     ],
     "validation": [
       {
-        "command": "actionlint .github/workflows/deploy-docs.yml",
+        "command": "actionlint .github/workflows/*.yml",
         "status": "pass"
       },
       {
@@ -719,7 +723,7 @@
       }
     ],
     "checkpoint": {
-      "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0",
+      "commit_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
       "marker_plan_status": "emission_ready",
       "marker_count": 5
     }
@@ -750,7 +754,7 @@
     "integration_suite": {
       "status": "pass",
       "command": "bash tests/speckit-pro/run-all.sh",
-      "result": "3474/3474 passed"
+      "result": "3478/3478 passed"
     },
     "uat_runbook": {
       "status": "generated",
@@ -763,7 +767,7 @@
       "title": "docs(DOC-011): add GitHub Pages deploy pipeline",
       "base_branch": "main",
       "head_branch": "doc-011-github-pages-build-and-deploy-pipeline",
-      "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
+      "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
       "packet_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
       "body_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
       "workflow_contract": "passed",
@@ -803,7 +807,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+        "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           ".github/workflows/pr-checks.yml",
@@ -857,6 +861,7 @@
           "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
           "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/docs/ai/specs/partial-roadmap-MOC.md",
           "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/specs/prsg-001-foo/SPEC-MOC.md",
+          "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh",
           "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
         ],
         "declared_scoped_tests": [],
@@ -871,6 +876,6 @@
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
     ],
-    "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3"
+    "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438"
   }
 }
