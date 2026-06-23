@@ -14,7 +14,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline/01-full-spec",
         "expected_base_branch": "main",
-        "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+        "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           "CLAUDE.md",

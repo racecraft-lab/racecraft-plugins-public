@@ -330,6 +330,10 @@
           },
           {
             "operation": "MODIFIED",
+            "path": ".github/workflows/pr-checks.yml"
+          },
+          {
+            "operation": "MODIFIED",
             "path": "CLAUDE.md"
           },
           {
@@ -367,6 +371,10 @@
           {
             "operation": "MODIFIED",
             "path": "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh"
           },
           {
             "operation": "MODIFIED",
@@ -495,6 +503,10 @@
           {
             "operation": "MODIFIED",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
           }
         ],
         "declared_tests": [],
@@ -503,8 +515,8 @@
           "mode": "final-diff",
           "scope": "full-spec",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-          "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
-          "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f"
+          "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
+          "commit_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd"
         },
         "hazards": [
           "change-shape:modify-heavy",
@@ -521,8 +533,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-          "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
-          "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+          "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
+          "commit_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
           "task_ids": [
             "T001",
             "T002",
@@ -678,7 +690,7 @@
       }
     ],
     "checkpoint": {
-      "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+      "commit_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
       "marker_plan_status": "emission_ready",
       "marker_count": 5
     }
@@ -722,7 +734,7 @@
       "title": "docs(DOC-011): add GitHub Pages deploy pipeline",
       "base_branch": "main",
       "head_branch": "doc-011-github-pages-build-and-deploy-pipeline",
-      "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+      "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
       "packet_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
       "body_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
       "workflow_contract": "passed",
@@ -762,9 +774,10 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+        "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
+          ".github/workflows/pr-checks.yml",
           "CLAUDE.md",
           "docs-site/astro.config.mjs",
           "docs-site/public/robots.txt",
@@ -775,6 +788,7 @@
           "docs/ai/specs/interactive-documentation-roadmap-MOC.md",
           "docs/ai/specs/interactive-documentation-technical-roadmap.md",
           "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md",
+          "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json",
@@ -806,7 +820,8 @@
           "specs/doc-011-github-pages-build-and-deploy-pipeline/research.md",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md",
-          "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
+          "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
+          "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
         ],
         "declared_scoped_tests": [],
         "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
@@ -820,6 +835,6 @@
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
     ],
-    "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f"
+    "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd"
   }
 }

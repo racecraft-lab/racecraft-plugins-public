@@ -50,10 +50,11 @@
   "scope_evidence": {
     "reviewable_loc": 7,
     "production_files": 1,
-    "total_files": 43,
+    "total_files": 46,
     "budget_result": "size_blocked",
     "changed_files": [
       ".github/workflows/deploy-docs.yml",
+      ".github/workflows/pr-checks.yml",
       "CLAUDE.md",
       "docs-site/astro.config.mjs",
       "docs-site/public/robots.txt",
@@ -64,6 +65,7 @@
       "docs/ai/specs/interactive-documentation-roadmap-MOC.md",
       "docs/ai/specs/interactive-documentation-technical-roadmap.md",
       "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md",
+      "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json",
@@ -95,7 +97,8 @@
       "specs/doc-011-github-pages-build-and-deploy-pipeline/research.md",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md",
-      "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
+      "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
     ],
     "non_goals": [
       "Repository Pages settings automation is out of scope.",
@@ -103,7 +106,7 @@
       "Removing staging noindex controls is reserved for the public-launch follow-up."
     ],
     "reviewability_status": "block",
-    "gate_reason": "total files 43 exceeds block threshold 25",
+    "gate_reason": "total files 46 exceeds block threshold 25",
     "final_reviewability_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json"
   },
   "uat": {
@@ -150,7 +153,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "1d48f64529ce8529b6e97c34f9b34abc37700842cbf8c70b4860e3fbf38065a5",
+    "value": "d4fe9f3eac195771f65e51be1acd5200432b0b68f020bbf779b3467ecbc8c6cc",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

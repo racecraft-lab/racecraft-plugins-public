@@ -1,4 +1,5 @@
 .github/workflows/deploy-docs.yml
+.github/workflows/pr-checks.yml
 CLAUDE.md
 docs-site/astro.config.mjs
 docs-site/public/robots.txt
@@ -9,6 +10,7 @@ docs/ai/specs/cicd-release-pipeline-verification.md
 docs/ai/specs/interactive-documentation-roadmap-MOC.md
 docs/ai/specs/interactive-documentation-technical-roadmap.md
 docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md
+speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json
@@ -41,3 +43,4 @@ specs/doc-011-github-pages-build-and-deploy-pipeline/research.md
 specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md
 specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md
 specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md
+tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh

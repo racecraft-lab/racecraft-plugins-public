@@ -11,6 +11,7 @@
       "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243",
       "declared_files": [
         ".github/workflows/deploy-docs.yml",
+        ".github/workflows/pr-checks.yml",
         "CLAUDE.md",
         "docs-site/astro.config.mjs",
         "docs-site/public/robots.txt",
@@ -21,6 +22,7 @@
         "docs/ai/specs/interactive-documentation-roadmap-MOC.md",
         "docs/ai/specs/interactive-documentation-technical-roadmap.md",
         "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md",
+        "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json",
@@ -52,11 +54,12 @@
         "specs/doc-011-github-pages-build-and-deploy-pipeline/research.md",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md",
-        "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
+        "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
       ],
       "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
       "status": "opened",
-      "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+      "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
       "merged_sha": null
     }
   ]

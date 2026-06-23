@@ -62,6 +62,10 @@
         },
         {
           "operation": "MODIFIED",
+          "path": ".github/workflows/pr-checks.yml"
+        },
+        {
+          "operation": "MODIFIED",
           "path": "CLAUDE.md"
         },
         {
@@ -99,6 +103,10 @@
         {
           "operation": "MODIFIED",
           "path": "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh"
         },
         {
           "operation": "MODIFIED",
@@ -227,6 +235,10 @@
         {
           "operation": "MODIFIED",
           "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
         }
       ],
       "declared_tests": [],
@@ -235,8 +247,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
-        "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f"
+        "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
+        "commit_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -253,8 +265,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
-        "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+        "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
+        "commit_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
         "task_ids": [
           "T001",
           "T002",
