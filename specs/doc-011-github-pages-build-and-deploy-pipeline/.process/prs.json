@@ -62,7 +62,7 @@
       ],
       "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
       "status": "opened",
-      "head_sha": "9144f3e803e74754731e396e794dae9b0b7ebb51",
+      "head_sha": "6610a504b30101f68ddf6c380f51f33cdc362166",
       "merged_sha": null
     }
   ]
