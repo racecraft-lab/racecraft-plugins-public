@@ -222,7 +222,7 @@ The Astro/Starlight docs site exists and passes `pnpm --dir docs-site validate`,
 ### Out of Scope
 - Custom domain/DNS/final base path.
 - SEO, sitemap, social cards, analytics, branding, Lighthouse CI.
-- Plugin behavior or release automation changes.
+- Plugin runtime behavior, release publication semantics, and repository Pages settings automation.
 ```
 
 ### Specify Results
@@ -554,7 +554,7 @@ Verification should include:
 | Deploy workflow | Complete | Added `.github/workflows/deploy-docs.yml` with `push` to `main`, `workflow_dispatch`, explicit broad paths plus fixture exclusions, least-privilege Pages permissions, fixed staging concurrency, validate-before-upload build job, and dependent `github-pages` deploy job. |
 | Noindex guard | Complete | Added one Starlight robots meta head entry with `noindex, nofollow` and DOC-012 removal comment; added `docs-site/public/robots.txt` with exactly `User-agent: *` and `Disallow: /`; extended docs-quality validation to enforce both guard surfaces. |
 | Runbook and CLAUDE.md | Complete | Created `docs/ai/specs/cicd-release-pipeline-verification.md` with Pages setup, validation, retry, rollback, deployment-history, crawler-policy, and DOC-012 handoff; updated `CLAUDE.md` with a concise deploy pointer. |
-| Validation | Complete | `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml`; `pnpm --dir docs-site install --frozen-lockfile`; `pnpm --dir docs-site exec playwright install --with-deps chromium`; `pnpm --dir docs-site validate:quality`; `pnpm --dir docs-site validate` passed after rerun with elevated permissions because sandbox blocked localhost preview binding. |
+| Validation | Complete | `actionlint .github/workflows/*.yml`; `pnpm --dir docs-site install --frozen-lockfile`; `pnpm --dir docs-site exec playwright install --with-deps chromium`; `pnpm --dir docs-site validate:quality`; `pnpm --dir docs-site validate` passed after rerun with elevated permissions because sandbox blocked localhost preview binding. |
 
 ### Post-Implementation Checklist
 

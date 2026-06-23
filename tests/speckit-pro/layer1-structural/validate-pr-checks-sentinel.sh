@@ -44,6 +44,35 @@ else
   _fail "expected title validation to pass changed-file evidence to the contract validator"
 fi
 
+section "pr-checks.yml — Workflow Validation"
+
+set_test "workflow validation job is defined"
+assert_contains "$CONTENT" "validate-workflows:"
+
+set_test "workflow validation installs pinned actionlint"
+if [[ "$CONTENT" == *'ACTIONLINT_VERSION: "1.7.12"'* \
+  && "$CONTENT" == *'ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"'* \
+  && "$CONTENT" == *"https://github.com/rhysd/actionlint/releases/download/v"* \
+  && "$CONTENT" == *"sha256sum -c"* ]]; then
+  _pass
+else
+  _fail "expected validate-workflows to install actionlint from a pinned release with checksum verification"
+fi
+
+set_test "workflow validation runs actionlint over all workflows"
+if [[ "$CONTENT" == *'"${RUNNER_TEMP}/actionlint" .github/workflows/*.yml'* ]]; then
+  _pass
+else
+  _fail "expected validate-workflows to run actionlint over all GitHub workflow YAML files"
+fi
+
+set_test "deploy-docs workflow changes trigger structural tests"
+if [[ "$CONTENT" == *".github/workflows/(pr-checks|release|deploy-docs)"* ]]; then
+  _pass
+else
+  _fail "expected workflow detector to include deploy-docs.yml so deploy workflow changes run plugin structural tests"
+fi
+
 section "pr-checks.yml — Release PR Dispatch"
 
 set_test "workflow_dispatch trigger is defined"
@@ -109,15 +138,23 @@ assert_contains "$CONTENT" '"failure"'
 set_test "sentinel exits 1 on detect cancellation"
 assert_contains "$CONTENT" '"cancelled"'
 
-section "pr-checks.yml — YAML Syntax"
+section "GitHub Workflows — YAML Syntax"
 
-set_test "pr-checks.yml is valid YAML"
-if python3 -c "import yaml, sys; yaml.safe_load(sys.stdin)" < "$WORKFLOW_FILE" 2>/dev/null; then
-  _pass
-elif ruby -e "require 'yaml'; YAML.load_file(ARGV.fetch(0))" "$WORKFLOW_FILE" >/dev/null 2>&1; then
+set_test "all GitHub workflow files are valid YAML"
+yaml_failures=()
+for workflow in "$REPO_ROOT"/.github/workflows/*.yml; do
+  if python3 -c "import yaml, sys; yaml.safe_load(sys.stdin)" < "$workflow" 2>/dev/null; then
+    continue
+  elif ruby -e "require 'yaml'; YAML.load_file(ARGV.fetch(0))" "$workflow" >/dev/null 2>&1; then
+    continue
+  fi
+  yaml_failures+=("$(basename "$workflow")")
+done
+
+if [ "${#yaml_failures[@]}" -eq 0 ]; then
   _pass
 else
-  _fail "pr-checks.yml failed YAML syntax validation"
+  _fail "GitHub workflow YAML syntax validation failed for: ${yaml_failures[*]}"
 fi
 
 test_summary

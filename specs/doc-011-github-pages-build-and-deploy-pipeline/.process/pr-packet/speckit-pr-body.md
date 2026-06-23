@@ -12,8 +12,11 @@ Source: feature specification defines reviewer-ready PR packet behavior.
 
 <!-- speckit-pro-editable:what_changed:start -->
 - Added `.github/workflows/deploy-docs.yml` with pinned actions, job-scoped Pages/OIDC permissions, serialized main deploy concurrency, non-`main` no-op isolation, docs validation before artifact upload, and main-only manual retry support.
+- Added PR workflow validation through pinned `actionlint` and expanded PR Checks docs/workflow detection so deploy workflow edits are validated before merge.
+- Updated release workflow docs-reference sync runtime so release PRs regenerate checked-in docs references with the same Node/pnpm toolchain used elsewhere.
 - Added `robots.txt` plus Starlight robots metadata to keep the pre-public staging docs non-indexable until DOC-012.
 - Extended docs-quality validation and PR Checks docs detection so staging indexing guard changes are covered before deploy.
+- Hardened the shared SpecKit roadmap-MOC index guard and synced/tested the generated Claude/Codex copies after PR review exposed a stale partial-home-note case.
 - Added the CI/CD release pipeline verification guide and updated roadmap/runbook evidence for DOC-011.
 <!-- speckit-pro-editable:what_changed:end -->
 
@@ -28,8 +31,10 @@ Docs can be built and deployed from `main` without exposing the staging site to 
 ## How To Review
 
 1. Review `.github/workflows/deploy-docs.yml` for the `main` push trigger, main-only manual retry guard, non-`main` no-op concurrency isolation, job-scoped Pages/OIDC permissions, serialized deploy concurrency, and validate-before-upload ordering.
-2. Review `docs-site/astro.config.mjs` and `docs-site/public/robots.txt` for the staging crawler guard.
-3. Review `docs/ai/specs/cicd-release-pipeline-verification.md` and `CLAUDE.md` for the deploy setup, retry, rollback, and DOC-012 handoff guidance.
+2. Review `.github/workflows/pr-checks.yml` and `.github/workflows/release.yml` for workflow lint coverage, docs-validation detection, and release PR docs-reference regeneration.
+3. Review `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh`, matching `dist/` copies, and the new Layer 4 fixture/test for the partial roadmap-MOC fail-safe.
+4. Review `docs-site/astro.config.mjs` and `docs-site/public/robots.txt` for the staging crawler guard.
+5. Review `docs/ai/specs/cicd-release-pipeline-verification.md` and `CLAUDE.md` for the deploy setup, retry, rollback, and DOC-012 handoff guidance.
 
 ## How To UAT
 
@@ -41,7 +46,7 @@ Use `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.m
 
 ## Verification
 
-- `actionlint .github/workflows/deploy-docs.yml` passed.
+- `actionlint .github/workflows/*.yml` passed.
 - `pnpm --dir docs-site validate` passed.
 - `bash tests/speckit-pro/run-all.sh` passed `3474/3474`.
 - `validate-pr-packet.sh` and `validate-pr-workflow-contract.sh` passed.
@@ -52,7 +57,8 @@ Source: generated PR packet.
 ## Scope
 
 - Source feature: GitHub Pages docs deployment workflow and staging crawler guard.
-- Scope: this PR adds the deploy workflow, docs-site noindex/robots guard, deploy verification runbook, CLAUDE.md pointer, and SpecKit evidence for DOC-011.
+- Scope: this PR adds the deploy workflow, workflow-lint PR check, docs-site noindex/robots guard, release PR docs-reference runtime alignment, deploy verification runbook, CLAUDE.md pointer, shared spec-index guard hardening with dist/test coverage, and SpecKit evidence for DOC-011.
+- Size: the packet records 53 changed files. The reviewability gate's production-only metrics are 36 LOC across 2 production files; the final gate is size-blocked by total-file count and proceeds through one atomic PR marker.
 - Traceability: feature spec, rendered body, final reviewability gate, validation output, and changed-file scope are recorded in the packet metadata.
 - Non-goals: automating repository Pages settings, custom domain launch, public indexing, and removing staging noindex controls.
 

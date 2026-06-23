@@ -43,7 +43,7 @@
     {
       "kind": "layer4_script",
       "source": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
-      "summary": "Focused generator, packet validation, and workflow-contract checks passed for the rendered PR body and metadata.",
+      "summary": "Workflow actionlint, focused generator, packet validation, and workflow-contract checks passed for the rendered PR body and metadata.",
       "result": "passed"
     }
   ],
@@ -160,7 +160,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "e0d5929bce1ba0c7d4516c10c40ee1ce9f1dfd305ff8eb3d53ffb9975bdee57a",
+    "value": "b72873cf98cfcb9c320100dc6583e1d59c830a69a23b07de8a5d5abc223638b6",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

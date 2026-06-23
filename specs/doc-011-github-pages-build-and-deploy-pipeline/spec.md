@@ -153,19 +153,20 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 
 ### Reviewability Notes *(if applicable)*
 
-- Expected file operations are limited to creating one deploy workflow, adding staging indexing protection in docs-site public/head configuration, creating or repairing one CI/CD verification runbook, updating `CLAUDE.md`, and updating DOC-011 process artifacts.
-- No plugin behavior, release automation behavior, custom domain setup, SEO launch work, analytics, social cards, or Lighthouse CI changes are included.
-- Any implementation that expands beyond the declared file operations must trim path-filter or runbook scope before splitting this feature.
+- Final file operations include creating one deploy workflow, adding PR workflow lint coverage, extending PR Checks docs/workflow detection, aligning release PR docs-reference regeneration with Node 22, adding staging indexing protection in docs-site public/head configuration, repairing one CI/CD verification runbook, updating `CLAUDE.md`, hardening the shared spec-index roadmap-MOC guard with synced `dist/` copies and focused tests, and updating DOC-011 process artifacts.
+- No plugin runtime behavior, release publication semantics, repository Pages settings automation, custom domain setup, SEO launch work, analytics, social cards, or Lighthouse CI changes are included.
+- The release workflow change is limited to checked-in docs-reference regeneration/runtime alignment for release PRs; it does not change release publication semantics.
+- The shared spec-index generator hardening was added during PR review because DOC-011 touched generated reference inputs and exposed a stale roadmap-MOC guard case.
 
 ### Reviewability Budget *(mandatory)*
 
 - **Primary surface**: docs/process
-- **Secondary surfaces, if any**: infra
-- **Projected reviewable LOC**: 180-320
-- **Projected production files**: 5
-- **Projected total files**: 8
-- **Budget result**: within budget
-- **Split decision**: Remains one spec because the deploy workflow, staging indexing guard, runbook repair, and agent guidance form one bounded staging-deploy slice for DOC-011.
+- **Secondary surfaces, if any**: infra, harness/CI, shared SpecKit generator maintenance
+- **Final production reviewable LOC**: 36 according to the production-only reviewability gate
+- **Final production files**: 2 according to the production-only reviewability gate
+- **Final total files**: 53
+- **Budget result**: size-blocked by total-file count; final marker emission proceeds as one atomic PR marker with explicit evidence
+- **Split decision**: Remains one PR because the deploy workflow, workflow validation, release docs-reference runtime alignment, staging indexing guard, runbook repair, generator guard fix, and agent guidance now form one already-reviewed staging-deploy/review-remediation slice. Splitting after PR review would misrepresent the coupled validation and evidence refresh.
 
 ### PR Review Packet Requirements *(mandatory)*
 

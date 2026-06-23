@@ -15,8 +15,8 @@
 
 ## Reviewable Scope Control
 
-- [x] CHK005 Are declared file operations bounded to one deploy workflow, one robots policy file, one Starlight config edit, one runbook, and concise CLAUDE.md guidance? [Completeness, Plan §Declared File Operations]
-- [x] CHK006 Does the spec define non-goals that keep plugin behavior, release automation, custom-domain launch, SEO launch work, analytics, and Lighthouse CI outside DOC-011? [Coverage, Spec §Reviewability Notes]
+- [x] CHK005 Are final file operations bounded to deploy workflow setup, workflow validation, staging crawler guard, release PR docs-reference runtime alignment, one runbook, shared spec-index guard remediation, and concise CLAUDE.md guidance? [Completeness, Spec §Reviewability Notes]
+- [x] CHK006 Does the spec define non-goals that keep plugin runtime behavior, release publication semantics, repository Pages settings automation, custom-domain launch, SEO launch work, analytics, and Lighthouse CI outside DOC-011? [Coverage, Spec §Reviewability Notes]
 - [x] CHK007 Is the reviewability budget measurable enough for reviewers to detect path-filter or runbook scope creep before implementation expands? [Measurability, Spec §Reviewability Budget, Plan §Reviewability Budget]
 - [x] CHK008 Are the roadmap, spec, and plan aligned that the slice stays one bounded staging-deploy capability rather than a broader production-launch effort? [Consistency, Roadmap §DOC-011, Spec §FR-013, Plan §Split decision]
 

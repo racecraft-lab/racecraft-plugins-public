@@ -81,7 +81,7 @@ jobs:
           for manifest in */.claude-plugin/plugin.json; do
             [ -e "$manifest" ] || continue
             dir="${manifest%%/.claude-plugin/plugin.json}"
-            if printf '%s\n' "$changed_files" | grep -qE "^(${dir}|tests/${dir}|dist/(claude|codex)/${dir})/|^\\.claude-plugin/marketplace\\.json$|^\\.agents/plugins/marketplace\\.json$|^scripts/(build-plugin-payloads|sync-marketplace-versions)\\.sh$|^release-please-config\\.json$|^\\.github/workflows/(pr-checks|release)\\.yml$"; then
+            if printf '%s\n' "$changed_files" | grep -qE "^(${dir}|tests/${dir}|dist/(claude|codex)/${dir})/|^\\.claude-plugin/marketplace\\.json$|^\\.agents/plugins/marketplace\\.json$|^scripts/(build-plugin-payloads|sync-marketplace-versions)\\.sh$|^release-please-config\\.json$|^\\.github/workflows/(pr-checks|release|deploy-docs)\\.yml$"; then
               plugins+=("$dir")
             fi
           done
@@ -162,7 +162,47 @@ jobs:
             --changed-files .git/pr-changed-files.txt
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 4: Validate docs-site and generated reference surfaces
+  # Job 4: Validate GitHub Actions workflow syntax and semantics
+  # ───────────────────────────────────────────────────────────────────
+  validate-workflows:
+    name: validate-workflows
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: "1.7.12"
+          ACTIONLINT_SHA256: "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8"
+        run: |
+          set -euo pipefail
+
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          archive_path="${tmp_dir}/${archive}"
+          curl -fsSL "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}" -o "$archive_path"
+
+          checksum_file="${tmp_dir}/checksums.txt"
+          printf '%s  %s\n' "$ACTIONLINT_SHA256" "$archive_path" > "$checksum_file"
+          sha256sum -c "$checksum_file"
+
+          tar -xzf "$archive_path" -C "$tmp_dir" actionlint
+          install -m 0755 "${tmp_dir}/actionlint" "${RUNNER_TEMP}/actionlint"
+
+      - name: Run actionlint
+        run: |
+          set -euo pipefail
+          "${RUNNER_TEMP}/actionlint" .github/workflows/*.yml
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 5: Validate docs-site and generated reference surfaces
   # ───────────────────────────────────────────────────────────────────
   validate-docs:
     name: validate-docs
@@ -321,7 +361,7 @@ jobs:
           pnpm --dir docs-site validate:quality
 
   # ───────────────────────────────────────────────────────────────────
-  # Job 5: Sentinel aggregator — provides stable check name for branch
+  # Job 6: Sentinel aggregator — provides stable check name for branch
   #         protection. Passes if test matrix passed or was skipped.
   # ───────────────────────────────────────────────────────────────────
   validate-plugins:
