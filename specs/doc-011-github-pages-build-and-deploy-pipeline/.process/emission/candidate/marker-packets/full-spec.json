@@ -33,6 +33,7 @@
   "declared_files": [
     ".github/workflows/deploy-docs.yml",
     ".github/workflows/pr-checks.yml",
+    ".github/workflows/release.yml",
     "CLAUDE.md",
     "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
     "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
@@ -239,11 +240,13 @@
     "declared_files": [
       ".github/workflows/deploy-docs.yml",
       ".github/workflows/pr-checks.yml",
+      ".github/workflows/release.yml",
       "CLAUDE.md",
       "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
       "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
       "docs-site/astro.config.mjs",
       "docs-site/public/robots.txt",
+      "docs-site/scripts/validate-docs-quality.mjs",
       "docs/ai/specs/.process/DOC-011-design-concept.md",
       "docs/ai/specs/.process/DOC-011-workflow.md",
       "docs/ai/specs/.process/autopilot-state.json",
@@ -288,7 +291,7 @@
     ],
     "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-spec/no_scoped_tests.txt",
     "status": "pending",
-    "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de",
+    "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
     "merged_sha": null
   },
   "marker_id": "full-spec",
@@ -346,5 +349,5 @@
     }
   ],
   "rollback_or_flags": "Use the recorded marker/base order for rollback or feature-flag review.",
-  "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de"
+  "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f"
 }

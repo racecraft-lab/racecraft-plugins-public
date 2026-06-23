@@ -12,6 +12,7 @@
       "declared_files": [
         ".github/workflows/deploy-docs.yml",
         ".github/workflows/pr-checks.yml",
+        ".github/workflows/release.yml",
         "CLAUDE.md",
         "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
         "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
@@ -62,7 +63,7 @@
       ],
       "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
       "status": "opened",
-      "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de",
+      "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
       "merged_sha": null
     }
   ]

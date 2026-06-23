@@ -4,7 +4,7 @@
 
 | Command | Result |
 |---------|--------|
-| `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml` | Pass |
+| `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml .github/workflows/release.yml` | Pass |
 | `pnpm --dir docs-site install --frozen-lockfile` | Pass |
 | `pnpm --dir docs-site exec playwright install --with-deps chromium` | Pass |
 | `pnpm --dir docs-site validate:quality` | Pass; includes DOC-011 staging robots and noindex guard assertions |

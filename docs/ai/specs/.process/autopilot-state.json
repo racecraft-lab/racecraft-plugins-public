@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
-  "updated_at": "2026-06-23T17:47:29Z",
+  "updated_at": "2026-06-23T18:06:57Z",
   "active_step": "Post: Reviewability Diff Gate",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "doc-011-github-pages-build-and-deploy-pipeline",
@@ -270,7 +270,7 @@
     "schema_version": "pr-marker-plan.v1",
     "kind": "pr_marker_plan",
     "feature_id": "doc-011-github-pages-build-and-deploy-pipeline",
-    "status": "emission_ready",
+    "status": "emitted",
     "source_fingerprint": {
       "feature_spec_sha": "c73ef79ad38ce8136056d84c9a3e7d5aff4b3c9227d5810f121a8f03d58b2340",
       "plan_declared_scope_sha": "9227b6a0d5fc01c31614ee4edbbd9bd1a98b466f17458b497071f3b7b265d697",
@@ -325,12 +325,16 @@
         "folded_polish_target_reason": "",
         "declared_files": [
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": ".github/workflows/deploy-docs.yml"
           },
           {
             "operation": "MODIFIED",
             "path": ".github/workflows/pr-checks.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/release.yml"
           },
           {
             "operation": "MODIFIED",
@@ -349,7 +353,7 @@
             "path": "docs-site/astro.config.mjs"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs-site/public/robots.txt"
           },
           {
@@ -357,11 +361,11 @@
             "path": "docs-site/scripts/validate-docs-quality.mjs"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs/ai/specs/.process/DOC-011-design-concept.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs/ai/specs/.process/DOC-011-workflow.md"
           },
           {
@@ -369,7 +373,7 @@
             "path": "docs/ai/specs/.process/autopilot-state.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "docs/ai/specs/cicd-release-pipeline-verification.md"
           },
           {
@@ -389,131 +393,131 @@
             "path": "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/pr-bodies/full-spec.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/prs.candidate.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/multi-pr-emission-state.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-marker-split-result.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packets/speckit-pr-packet/validation.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/prs.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/SPEC-MOC.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/integration.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/maintainability.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/reliability.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/requirements.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/security.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/data-model.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/research.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md"
           },
           {
-            "operation": "MODIFIED",
+            "operation": "NEW",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
           },
           {
@@ -527,8 +531,8 @@
           "mode": "final-diff",
           "scope": "full-spec",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-          "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
-          "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0"
+          "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
+          "commit_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f"
         },
         "hazards": [
           "change-shape:modify-heavy",
@@ -545,8 +549,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-          "head_sha": "e117785a57610fe901aca3015aaf92de808661e0",
-          "commit_sha": "e117785a57610fe901aca3015aaf92de808661e0",
+          "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
+          "commit_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
           "task_ids": [
             "T001",
             "T002",
@@ -624,7 +628,7 @@
         }
       }
     ],
-    "updated_at": "2026-06-23T02:38:04Z"
+    "updated_at": "2026-06-23T18:06:57Z"
   },
   "pr_marker_plan_current_source_fingerprint": {
     "feature_spec_sha": "c73ef79ad38ce8136056d84c9a3e7d5aff4b3c9227d5810f121a8f03d58b2340",
@@ -771,7 +775,7 @@
     "base_branch": "main",
     "base_sha": "d562aee06249c901f948f00ca72f0e2005f2efb0",
     "next_slice_id": null,
-    "reconciled_at": "2026-06-23T02:38:04Z",
+    "reconciled_at": "2026-06-23T18:06:57Z",
     "source_marker_plan": {
       "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json"
     },
@@ -787,10 +791,11 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de",
+        "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           ".github/workflows/pr-checks.yml",
+          ".github/workflows/release.yml",
           "CLAUDE.md",
           "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
           "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
@@ -851,6 +856,6 @@
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
     ],
-    "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de"
+    "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f"
   }
 }
