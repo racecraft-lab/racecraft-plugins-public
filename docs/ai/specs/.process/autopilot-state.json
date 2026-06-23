@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
-  "updated_at": "2026-06-23T17:31:27Z",
+  "updated_at": "2026-06-23T17:47:29Z",
   "active_step": "Post: Reviewability Diff Gate",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "doc-011-github-pages-build-and-deploy-pipeline",
@@ -787,7 +787,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "6610a504b30101f68ddf6c380f51f33cdc362166",
+        "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           ".github/workflows/pr-checks.yml",
@@ -851,6 +851,6 @@
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
     ],
-    "head_sha": "6610a504b30101f68ddf6c380f51f33cdc362166"
+    "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de"
   }
 }

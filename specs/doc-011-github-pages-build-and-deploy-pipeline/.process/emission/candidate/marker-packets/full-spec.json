@@ -288,7 +288,7 @@
     ],
     "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-spec/no_scoped_tests.txt",
     "status": "pending",
-    "head_sha": "6610a504b30101f68ddf6c380f51f33cdc362166",
+    "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de",
     "merged_sha": null
   },
   "marker_id": "full-spec",
@@ -346,5 +346,5 @@
     }
   ],
   "rollback_or_flags": "Use the recorded marker/base order for rollback or feature-flag review.",
-  "head_sha": "6610a504b30101f68ddf6c380f51f33cdc362166"
+  "head_sha": "7dc55f8a76294616835dab2dc4128acafbbc50de"
 }
