@@ -102,11 +102,43 @@
         },
         {
           "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/pr-bodies/full-spec.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/prs.candidate.json"
+        },
+        {
+          "operation": "MODIFIED",
           "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt"
         },
         {
           "operation": "MODIFIED",
           "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/multi-pr-emission-state.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-marker-split-result.json"
         },
         {
           "operation": "MODIFIED",
@@ -187,8 +219,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b",
-        "commit_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b"
+        "head_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
+        "commit_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -205,8 +237,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b",
-        "commit_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b",
+        "head_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
+        "commit_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
         "task_ids": [
           "T001",
           "T002",

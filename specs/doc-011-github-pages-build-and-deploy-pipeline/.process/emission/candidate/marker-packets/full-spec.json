@@ -42,8 +42,16 @@
     "docs/ai/specs/interactive-documentation-roadmap-MOC.md",
     "docs/ai/specs/interactive-documentation-technical-roadmap.md",
     "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/pr-bodies/full-spec.md",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/prs.candidate.json",
     "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt",
     "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/multi-pr-emission-state.json",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
+    "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-marker-split-result.json",
     "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json",
     "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json",
     "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json",
@@ -94,8 +102,16 @@
         "docs/ai/specs/interactive-documentation-roadmap-MOC.md",
         "docs/ai/specs/interactive-documentation-technical-roadmap.md",
         "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/pr-bodies/full-spec.md",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/prs.candidate.json",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/multi-pr-emission-state.json",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
+        "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-marker-split-result.json",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json",
@@ -134,12 +150,14 @@
       }
     },
     {
-      "code": "FINAL_DIFF_SIZE_BLOCKED",
+      "code": "MARKER_PLAN_HAZARD_COLLAPSED",
       "severity": "warning",
-      "message": "Final diff is size-blocked, but the current marker plan is valid for scoped PR emission.",
-      "source": "final-reviewability-backstop",
+      "message": "DOC-011 emits as one full-spec slice because the atomicity route is one navigable deploy capability and per-marker checkpoints are not safe.",
+      "source": "autopilot",
       "details": {
-        "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline"
+        "route": "single-atomic-PR",
+        "original_route": "one-navigable-PR",
+        "reason": "All implementation markers checkpointed at the same commit, so marker-split PRs would misrepresent reviewable slices."
       }
     },
     {
@@ -151,6 +169,15 @@
         "route": "single-atomic-PR",
         "original_route": "one-navigable-PR",
         "reason": "All implementation markers checkpointed at the same commit, so marker-split PRs would misrepresent reviewable slices."
+      }
+    },
+    {
+      "code": "FINAL_DIFF_SIZE_BLOCKED",
+      "severity": "warning",
+      "message": "Final diff is size-blocked, but the current marker plan is valid for scoped PR emission.",
+      "source": "final-reviewability-backstop",
+      "details": {
+        "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline"
       }
     },
     {
@@ -208,8 +235,16 @@
       "docs/ai/specs/interactive-documentation-roadmap-MOC.md",
       "docs/ai/specs/interactive-documentation-technical-roadmap.md",
       "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/commands.candidate.json",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/marker-packets/full-spec.json",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/multi-pr-emission-state.candidate.json",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/pr-bodies/full-spec.md",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/candidate/prs.candidate.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/multi-pr-emission-state.json",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-marker-split-result.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json",
@@ -231,7 +266,7 @@
     ],
     "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-spec/no_scoped_tests.txt",
     "status": "pending",
-    "head_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b",
+    "head_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
     "merged_sha": null
   },
   "marker_id": "full-spec",
@@ -257,12 +292,14 @@
       }
     },
     {
-      "code": "FINAL_DIFF_SIZE_BLOCKED",
+      "code": "MARKER_PLAN_HAZARD_COLLAPSED",
       "severity": "warning",
-      "message": "Final diff is size-blocked, but the current marker plan is valid for scoped PR emission.",
-      "source": "final-reviewability-backstop",
+      "message": "DOC-011 emits as one full-spec slice because the atomicity route is one navigable deploy capability and per-marker checkpoints are not safe.",
+      "source": "autopilot",
       "details": {
-        "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline"
+        "route": "single-atomic-PR",
+        "original_route": "one-navigable-PR",
+        "reason": "All implementation markers checkpointed at the same commit, so marker-split PRs would misrepresent reviewable slices."
       }
     },
     {
@@ -274,6 +311,15 @@
         "route": "single-atomic-PR",
         "original_route": "one-navigable-PR",
         "reason": "All implementation markers checkpointed at the same commit, so marker-split PRs would misrepresent reviewable slices."
+      }
+    },
+    {
+      "code": "FINAL_DIFF_SIZE_BLOCKED",
+      "severity": "warning",
+      "message": "Final diff is size-blocked, but the current marker plan is valid for scoped PR emission.",
+      "source": "final-reviewability-backstop",
+      "details": {
+        "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline"
       }
     }
   ],
