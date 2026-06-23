@@ -14,7 +14,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline/01-full-spec",
         "expected_base_branch": "main",
-        "head_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
+        "head_sha": "20524aa4ff7b0c0f8fb266155e9d360e9a36250a",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           "CLAUDE.md",
@@ -37,6 +37,8 @@
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/multi-pr-emission-state.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-marker-split-result.json",
+          "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
+          "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json",

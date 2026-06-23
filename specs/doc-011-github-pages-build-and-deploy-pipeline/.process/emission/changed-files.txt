@@ -19,6 +19,8 @@ specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-veri
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/multi-pr-emission-state.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-marker-split-result.json
+specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md
+specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json

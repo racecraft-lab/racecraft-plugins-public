@@ -142,6 +142,14 @@
         },
         {
           "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json"
+        },
+        {
+          "operation": "MODIFIED",
           "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json"
         },
         {
@@ -219,8 +227,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
-        "commit_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18"
+        "head_sha": "20524aa4ff7b0c0f8fb266155e9d360e9a36250a",
+        "commit_sha": "20524aa4ff7b0c0f8fb266155e9d360e9a36250a"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -237,8 +245,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
-        "commit_sha": "62ced87b75b9588d33c8a5ab193b25831276ef18",
+        "head_sha": "20524aa4ff7b0c0f8fb266155e9d360e9a36250a",
+        "commit_sha": "20524aa4ff7b0c0f8fb266155e9d360e9a36250a",
         "task_ids": [
           "T001",
           "T002",
