@@ -27,6 +27,12 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node
+        if: steps.release.outputs.prs_created == 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 22
+
       - name: Sync release PR payloads
         if: steps.release.outputs.prs_created == 'true'
         env:
@@ -102,6 +108,12 @@ jobs:
       - name: Sync marketplace versions
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: bash scripts/sync-marketplace-versions.sh
+
+      - name: Set up Node
+        if: steps.release.outputs['speckit-pro--release_created'] == 'true'
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+        with:
+          node-version: 22
 
       - name: Regenerate docs reference
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
