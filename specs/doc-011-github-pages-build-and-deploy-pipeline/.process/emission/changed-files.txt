@@ -9,6 +9,8 @@ docs/ai/specs/cicd-release-pipeline-verification.md
 docs/ai/specs/interactive-documentation-roadmap-MOC.md
 docs/ai/specs/interactive-documentation-technical-roadmap.md
 docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md
+specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt
+specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json
