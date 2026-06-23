@@ -17,11 +17,12 @@ Fresh session advisory: for maximum reliability, `/speckit.verify-tasks` should 
 ## Evidence
 
 - Completed tasks parsed: 28 of 28.
-- Referenced project paths checked: 16.
+- Referenced project paths checked: 17.
 - Missing project paths: 0.
 - Full docs deploy gate passed: `pnpm --dir docs-site validate`.
 - Repo regression suite passed: `bash tests/speckit-pro/run-all.sh` (`3467/3467`).
 - Workflow contract checks passed: `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml`, no `${{ secrets.* }}`, no custom `token:`, no `continue-on-error`, and no broad write permissions.
+- Docs quality validation now enforces the DOC-011 staging indexing guard for `docs-site/public/robots.txt` and `docs-site/astro.config.mjs`.
 
 ## Verified Items
 
@@ -44,7 +45,7 @@ Fresh session advisory: for maximum reliability, `/speckit.verify-tasks` should 
 | T015 | VERIFIED | Retry and concurrency behavior match the DOC-011 data model. |
 | T016 | VERIFIED | Starlight noindex/nofollow meta guard added with DOC-012 removal boundary comment. |
 | T017 | VERIFIED | `docs-site/public/robots.txt` created with exactly the two required policy lines. |
-| T018 | VERIFIED | Staging indexing guard validated in source and generated `docs-site/dist` output. |
+| T018 | VERIFIED | Staging indexing guard validated in source, docs-quality assertions, and generated `docs-site/dist` output. |
 | T019 | VERIFIED | CI/CD runbook created with Pages setup, validation, evidence, retry, rollback, and DOC-012 handoff. |
 | T020 | VERIFIED | Runbook documents crawler-policy nuance and GitHub Pages project-site `robots.txt` limitation. |
 | T021 | VERIFIED | `CLAUDE.md` updated with concise Deploy Docs guidance and runbook pointer. |

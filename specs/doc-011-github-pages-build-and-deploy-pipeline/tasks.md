@@ -6,7 +6,7 @@
 
 **Tests**: No new automated test files are requested. DOC-011 uses source inspection, workflow contract checks, and the existing `pnpm --dir docs-site validate` gate.
 
-**Reviewability**: Keep the slice bounded to the declared file operations: `.github/workflows/deploy-docs.yml`, `docs-site/public/robots.txt`, `docs-site/astro.config.mjs`, `docs/ai/specs/cicd-release-pipeline-verification.md`, `CLAUDE.md`, and DOC-011 process evidence. Do not add DOC-012 launch, custom-domain, base-path, SEO, analytics, Lighthouse, plugin behavior, or custom deploy-script work.
+**Reviewability**: Keep the slice bounded to the declared file operations: `.github/workflows/deploy-docs.yml`, `docs-site/public/robots.txt`, `docs-site/astro.config.mjs`, `docs-site/scripts/validate-docs-quality.mjs`, `docs/ai/specs/cicd-release-pipeline-verification.md`, `CLAUDE.md`, and DOC-011 process evidence. Do not add DOC-012 launch, custom-domain, base-path, SEO, analytics, Lighthouse, plugin behavior, or custom deploy-script work.
 
 **Organization**: Tasks are grouped by user story for traceability, but DOC-011 remains one vertical slice. The deploy workflow, noindex guard, runbook, and CLAUDE guidance must all land together.
 
@@ -77,7 +77,7 @@
 
 - [x] T016 [P] [US3] Add one DOC-011 Starlight robots meta guard with `noindex, nofollow` and DOC-012 removal boundary in `docs-site/astro.config.mjs`
 - [x] T017 [P] [US3] Create `docs-site/public/robots.txt` with exactly `User-agent: *` and `Disallow: /`
-- [x] T018 [US3] Check staging indexing guard content in `docs-site/astro.config.mjs` and `docs-site/public/robots.txt` against `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`
+- [x] T018 [US3] Check staging indexing guard content in `docs-site/astro.config.mjs`, `docs-site/public/robots.txt`, and `docs-site/scripts/validate-docs-quality.mjs` against `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`
 
 **Checkpoint**: User Story 3 is testable by static file and config inspection.
 
@@ -182,6 +182,7 @@ Review in this order:
 1. `.github/workflows/deploy-docs.yml`
 2. `docs-site/astro.config.mjs`
 3. `docs-site/public/robots.txt`
+4. `docs-site/scripts/validate-docs-quality.mjs`
 4. `docs/ai/specs/cicd-release-pipeline-verification.md`
 5. `CLAUDE.md`
 6. `specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md`

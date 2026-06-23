@@ -552,16 +552,16 @@ Verification should include:
 | Area | Status | Evidence |
 |------|--------|----------|
 | Deploy workflow | Complete | Added `.github/workflows/deploy-docs.yml` with `push` to `main`, `workflow_dispatch`, explicit broad paths plus fixture exclusions, least-privilege Pages permissions, fixed staging concurrency, validate-before-upload build job, and dependent `github-pages` deploy job. |
-| Noindex guard | Complete | Added one Starlight robots meta head entry with `noindex, nofollow` and DOC-012 removal comment; added `docs-site/public/robots.txt` with exactly `User-agent: *` and `Disallow: /`. |
+| Noindex guard | Complete | Added one Starlight robots meta head entry with `noindex, nofollow` and DOC-012 removal comment; added `docs-site/public/robots.txt` with exactly `User-agent: *` and `Disallow: /`; extended docs-quality validation to enforce both guard surfaces. |
 | Runbook and CLAUDE.md | Complete | Created `docs/ai/specs/cicd-release-pipeline-verification.md` with Pages setup, validation, retry, rollback, deployment-history, crawler-policy, and DOC-012 handoff; updated `CLAUDE.md` with a concise deploy pointer. |
-| Validation | Complete | `actionlint .github/workflows/deploy-docs.yml`; `pnpm --dir docs-site install --frozen-lockfile`; `pnpm --dir docs-site exec playwright install --with-deps chromium`; `rm -rf docs-site/dist`; `pnpm --dir docs-site validate` passed after rerun with elevated permissions because sandbox blocked localhost preview binding. |
+| Validation | Complete | `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml`; `pnpm --dir docs-site install --frozen-lockfile`; `pnpm --dir docs-site exec playwright install --with-deps chromium`; `pnpm --dir docs-site validate:quality`; `pnpm --dir docs-site validate` passed after rerun with elevated permissions because sandbox blocked localhost preview binding. |
 
 ### Post-Implementation Checklist
 
 | Task | Status | Findings | Action Needed |
 |------|--------|----------|---------------|
 | Doctor Extension Check | Complete with advisory | Templates, scripts, constitution, feature artifacts, and Claude command registration are present. The stock `.specify/scripts/bash/check-prerequisites.sh` rejected the `doc-011-...` branch because it expects numeric branch prefixes; the autopilot wrapper already accepted this DOC worktree. | None for DOC-011; keep the branch-name advisory visible. |
-| Verify Implementation | Complete | 28/28 tasks complete, 16 referenced project paths checked, 0 missing project paths. Requirements are represented by the deploy workflow, staging guard, runbook, CLAUDE.md pointer, and validation evidence. | None. |
+| Verify Implementation | Complete | 28/28 tasks complete, 17 referenced project paths checked, 0 missing project paths. Requirements are represented by the deploy workflow, staging guard, docs-quality assertions, runbook, CLAUDE.md pointer, and validation evidence. | None. |
 | Verify Tasks Phantom Check | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md` reports 28 verified tasks and no flagged items. | None. |
 | Code Review | Skipped | Review extension is not installed. Self-review remains in the serial post-implementation tail. | Run manual self-review before PR creation. |
 | Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed `3467/3467`. | None. |
@@ -570,7 +570,7 @@ Verification should include:
 ### Self-Review
 
 - Checked `.github/workflows/deploy-docs.yml` for the required push/manual triggers, explicit broad paths, ordered fixture exclusions, least-privilege Pages permissions, fixed concurrency, validate-before-upload ordering, same-run `docs-site/dist` artifact upload, and deploy-only `github-pages` job.
-- Checked staging protection in source and generated output: `docs-site/public/robots.txt` has exactly the two required policy lines, and built HTML contains the `noindex, nofollow` meta guard.
+- Checked staging protection in source, docs-quality assertions, and generated output: `docs-site/public/robots.txt` has exactly the two required policy lines, and built HTML contains the `noindex, nofollow` meta guard.
 - Checked runbook and CLAUDE guidance for manual Pages setup, retry/rollback distinction, deployment-history evidence, crawler-policy nuance, and DOC-012 launch boundary.
 - No blocking self-review findings remain.
 
@@ -578,7 +578,7 @@ Verification should include:
 
 | Area | Status | Evidence |
 |------|--------|----------|
-| Final reviewability backstop | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json` records a size-only block for 48 files, one `full-spec` marker, and the `hazard_collapsed` route. |
+| Final reviewability backstop | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json` records a size-only block for 49 files, one `full-spec` marker, and the `hazard_collapsed` route. |
 | PR packet and workflow contract | Complete | `validate-pr-packet.sh specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json` passed; `validate-pr-workflow-contract.sh --title "docs(DOC-011): add GitHub Pages deploy pipeline" --changed-files specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt` passed. |
 | GitHub PR | Opened | PR #243: https://github.com/racecraft-lab/racecraft-plugins-public/pull/243 from `doc-011-github-pages-build-and-deploy-pipeline` into `main`; initial GitHub checks were queued/in progress at creation. |
 

@@ -13,6 +13,7 @@ Source: feature specification defines reviewer-ready PR packet behavior.
 <!-- speckit-pro-editable:what_changed:start -->
 - Added `.github/workflows/deploy-docs.yml` with pinned actions, job-scoped Pages/OIDC permissions, serialized main deploy concurrency, non-`main` no-op isolation, docs validation before artifact upload, and main-only manual retry support.
 - Added `robots.txt` plus Starlight robots metadata to keep the pre-public staging docs non-indexable until DOC-012.
+- Extended docs-quality validation and PR Checks docs detection so staging indexing guard changes are covered before deploy.
 - Added the CI/CD release pipeline verification guide and updated roadmap/runbook evidence for DOC-011.
 <!-- speckit-pro-editable:what_changed:end -->
 

@@ -5,6 +5,7 @@ dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh
 dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh
 docs-site/astro.config.mjs
 docs-site/public/robots.txt
+docs-site/scripts/validate-docs-quality.mjs
 docs/ai/specs/.process/DOC-011-design-concept.md
 docs/ai/specs/.process/DOC-011-workflow.md
 docs/ai/specs/.process/autopilot-state.json
