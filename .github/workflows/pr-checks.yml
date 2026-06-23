@@ -195,7 +195,8 @@ jobs:
 
           # DOC-010 changed-file surfaces:
           # - Rendered docs-site: docs-site/src/content/docs/**,
-          #   docs-site/src/components/**, docs-site/astro.config.mjs -> full validate.
+          #   docs-site/src/components/**, docs-site/public/**,
+          #   docs-site/astro.config.mjs -> full validate.
           # - Generated-reference source: plugin manifests, skills, agents,
           #   hooks, scripts, README, tests, dist manifests, and source allowlists
           #   -> reference drift plus docs-quality validation.
@@ -213,6 +214,7 @@ jobs:
 
             if path_is_under "$file" "docs-site/src/content/docs" \
               || path_is_under "$file" "docs-site/src/components" \
+              || path_is_under "$file" "docs-site/public" \
               || [[ "$file" == "docs-site/astro.config.mjs" ]]; then
               rendered_docs=true
             fi

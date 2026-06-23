@@ -66,6 +66,12 @@ const DOC010_FOUNDATION_FILES = Object.freeze([
   'docs-site/tests/docs-smoke.spec.mjs',
 ]);
 
+const DOC011_STAGING_ROBOTS_PATH = 'docs-site/public/robots.txt';
+const DOC011_STAGING_ROBOTS_POLICY = 'User-agent: *\nDisallow: /\n';
+const DOC011_ASTRO_CONFIG_PATH = 'docs-site/astro.config.mjs';
+const DOC011_STAGING_ROBOTS_META_PATTERN =
+  /head:\s*\[[\s\S]*tag:\s*['"]meta['"][\s\S]*attrs:\s*\{[\s\S]*name:\s*['"]robots['"][\s\S]*content:\s*['"]noindex,\s*nofollow['"][\s\S]*\}[\s\S]*\]/;
+
 const REQUIRED_DOC010_VALIDATE_CHAIN = Object.freeze([
   'pnpm reference:check',
   'pnpm check',
@@ -342,6 +348,10 @@ function normalizeCommand(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+function normalizeLineEndings(value) {
+  return value.replace(/\r\n?/g, '\n');
+}
+
 function validateRouteSources(diagnostics) {
   for (const route of DOC010_ROUTES) {
     assertRepoRelative(route.sourcePath, diagnostics);
@@ -407,6 +417,24 @@ function validateDocsCommandChain(diagnostics) {
     if (!scripts[scriptName]) {
       diagnostics.push(`${packagePath}: missing focused DOC-010 script "${scriptName}" used by scripts.validate.`);
     }
+  }
+}
+
+function validateStagingIndexingGuard(diagnostics) {
+  assertRepoRelative(DOC011_STAGING_ROBOTS_PATH, diagnostics);
+  const robotsSource = readRepoText(DOC011_STAGING_ROBOTS_PATH, diagnostics);
+  if (robotsSource && normalizeLineEndings(robotsSource) !== DOC011_STAGING_ROBOTS_POLICY) {
+    diagnostics.push(
+      `${DOC011_STAGING_ROBOTS_PATH}: DOC-011 staging robots policy must exactly contain "User-agent: *" followed by "Disallow: /".`,
+    );
+  }
+
+  assertRepoRelative(DOC011_ASTRO_CONFIG_PATH, diagnostics);
+  const astroConfigSource = readRepoText(DOC011_ASTRO_CONFIG_PATH, diagnostics);
+  if (astroConfigSource && !DOC011_STAGING_ROBOTS_META_PATTERN.test(astroConfigSource)) {
+    diagnostics.push(
+      `${DOC011_ASTRO_CONFIG_PATH}: DOC-011 staging pages must keep the Starlight robots meta guard with content "noindex, nofollow".`,
+    );
   }
 }
 
@@ -481,6 +509,7 @@ export function validateDocsQuality() {
   validateRouteSources(diagnostics);
   validateFoundationFiles(diagnostics);
   validateDocsCommandChain(diagnostics);
+  validateStagingIndexingGuard(diagnostics);
   validateSupportAnchorInventory(diagnostics);
   validateSupportCrossLinks(diagnostics);
   validateSourceUpdateGuidance(diagnostics);
