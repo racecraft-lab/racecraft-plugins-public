@@ -349,6 +349,15 @@ moc_g_v2om="$(cat "$copy_g_v2_open_merge/$PRSV2_MOC" 2>/dev/null || true)"
 set_test "schemaVersion 2 open row does not leak merged_sha"
 assert_not_contains "$moc_g_v2om" "openmerge-sha"
 
+copy_g_v2_missing_merge="$(fresh_copy "$PRSV2_ROOT")"
+tmp_v2mm="$copy_g_v2_missing_merge/specs/prsg-921-prs-v2/.process/prs.json.tmp"
+jq '(.records[] | select(.slice_id == "us1")) |= del(.merged_sha)' \
+  "$copy_g_v2_missing_merge/specs/prsg-921-prs-v2/.process/prs.json" > "$tmp_v2mm"
+mv "$tmp_v2mm" "$copy_g_v2_missing_merge/specs/prsg-921-prs-v2/.process/prs.json"
+set_test "schemaVersion 2 merged rows require merged_sha"
+rc_gv2mm=0; "$GEN" "$copy_g_v2_missing_merge" >/dev/null 2>&1 || rc_gv2mm=$?
+assert_eq "2" "$rc_gv2mm" "merged rows must not fall back to head_sha when merged_sha is missing"
+
 # malformed: fail-safe exit 2, distinct from the absent/empty case above.
 copy_g_mal="$(fresh_copy "$PRSMAL_ROOT")"
 set_test "malformed prs.json -> exit 2 (error, distinct from absent/empty)"

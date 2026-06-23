@@ -308,8 +308,12 @@ render_prs() {
         | req_string("status") as $status
         | req_string("branch") as $branch
         | req_string("base_branch") as $base
-        | (if (.status == "merged" and (.merged_sha | type) == "string" and (.merged_sha | length) > 0)
-           then .merged_sha
+        | (if $status == "merged"
+           then
+             if ((.merged_sha | type) == "string" and (.merged_sha | length) > 0)
+             then .merged_sha
+             else error("merged_sha")
+             end
            else req_string("head_sha")
            end) as $sha
         | (if (.declared_files | type) == "array" then (.declared_files | join(", ")) else error("declared_files") end) as $scope

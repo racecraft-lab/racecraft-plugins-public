@@ -423,7 +423,7 @@ function validateDocsCommandChain(diagnostics) {
 function validateStagingIndexingGuard(diagnostics) {
   assertRepoRelative(DOC011_STAGING_ROBOTS_PATH, diagnostics);
   const robotsSource = readRepoText(DOC011_STAGING_ROBOTS_PATH, diagnostics);
-  if (robotsSource && normalizeLineEndings(robotsSource) !== DOC011_STAGING_ROBOTS_POLICY) {
+  if (normalizeLineEndings(robotsSource) !== DOC011_STAGING_ROBOTS_POLICY) {
     diagnostics.push(
       `${DOC011_STAGING_ROBOTS_PATH}: DOC-011 staging robots policy must exactly contain "User-agent: *" followed by "Disallow: /".`,
     );
@@ -431,7 +431,7 @@ function validateStagingIndexingGuard(diagnostics) {
 
   assertRepoRelative(DOC011_ASTRO_CONFIG_PATH, diagnostics);
   const astroConfigSource = readRepoText(DOC011_ASTRO_CONFIG_PATH, diagnostics);
-  if (astroConfigSource && !DOC011_STAGING_ROBOTS_META_PATTERN.test(astroConfigSource)) {
+  if (!DOC011_STAGING_ROBOTS_META_PATTERN.test(astroConfigSource)) {
     diagnostics.push(
       `${DOC011_ASTRO_CONFIG_PATH}: DOC-011 staging pages must keep the Starlight robots meta guard with content "noindex, nofollow".`,
     );
