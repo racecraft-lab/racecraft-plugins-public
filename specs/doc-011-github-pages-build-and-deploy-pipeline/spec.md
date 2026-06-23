@@ -128,7 +128,8 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - A manually dispatched retry MUST create and validate a new artifact for the `main` ref; it MUST NOT deploy an artifact produced by an earlier workflow run or from an unmerged branch.
 - The build/upload job MUST remove any pre-existing `docs-site/dist` before validation and MUST upload only the `docs-site/dist` generated after the current run's successful validation.
 - The deploy job MUST depend on the build/upload job and MUST NOT checkout source, rebuild, or upload an artifact itself.
-- The workflow MUST use one fixed staging concurrency group for the `github-pages` publication target and MUST set `cancel-in-progress: true` so a newer push or main-branch manual retry supersedes any older in-progress or pending staging deploy run.
+- The workflow MUST use one fixed staging concurrency group for `main` runs that target the `github-pages` publication environment and MUST set `cancel-in-progress: true` for those runs so a newer push or main-branch manual retry supersedes any older in-progress or pending staging deploy run.
+- A manually dispatched non-`main` run MUST use no-op concurrency behavior that cannot cancel an in-progress `main` deploy.
 - Dependency installation failure, validation failure, Pages artifact upload failure, and Pages deployment failure MUST surface as failed workflow steps/jobs without being masked by `continue-on-error` or unconditional success handling.
 - The runbook MUST describe how to identify the source ref/SHA, validation result, artifact upload result, deploy result, and deployed URL from the workflow run summary/logs and GitHub deployment history.
 - The runbook MUST distinguish retry from rollback: use `workflow_dispatch` from `main` for transient external failures when merged source remains correct; use a normal revert or fix-forward PR followed by a fresh deploy when bad source content was published.

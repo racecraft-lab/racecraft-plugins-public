@@ -43,8 +43,8 @@
 ### Implementation for User Story 1
 
 - [x] T009 [US1] Create `.github/workflows/deploy-docs.yml` with `Deploy Docs`, `push` to `main`, explicit broad `paths`, and ordered fixture-heavy negative exclusions
-- [x] T010 [US1] Add least-privilege `contents: read`, `pages: write`, and `id-token: write` permissions plus fixed staging concurrency in `.github/workflows/deploy-docs.yml`
-- [x] T011 [US1] Add the build/upload job in `.github/workflows/deploy-docs.yml` with checkout, Node 22, Corepack pnpm 10.25.0, frozen docs-site install, Chromium-only Playwright install, `rm -rf docs-site/dist`, `pnpm --dir docs-site validate`, Pages configuration, and `docs-site/dist` upload
+- [x] T010 [US1] Add least-privilege `contents: read`, `pages: write`, and `id-token: write` permissions plus main deploy concurrency with non-`main` no-op isolation in `.github/workflows/deploy-docs.yml`
+- [x] T011 [US1] Add the build/upload job in `.github/workflows/deploy-docs.yml` with checkout, Node 22, Corepack pnpm 10.25.0, frozen docs-site install, Chromium-only Playwright install, `rm -rf docs-site/dist`, `pnpm --dir docs-site validate`, and `docs-site/dist` upload
 - [x] T012 [US1] Add the dependent deploy job in `.github/workflows/deploy-docs.yml` with `github-pages` environment, `actions/deploy-pages`, page URL output, and no checkout, rebuild, or artifact upload
 - [x] T013 [US1] Check `.github/workflows/deploy-docs.yml` against `specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md` for validation-before-upload, standard Pages actions, and no broad deploy credentials
 

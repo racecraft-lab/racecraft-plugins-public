@@ -30,15 +30,15 @@ The workflow must not reference repository or organization secrets, deploy keys,
 
 ## Required Concurrency
 
-The workflow must define one fixed concurrency group for the staging Pages target:
+The workflow must define one fixed concurrency group for `main` runs that target the staging Pages environment:
 
 ```yaml
 concurrency:
-  group: deploy-docs-github-pages
-  cancel-in-progress: true
+  group: ${{ github.ref == 'refs/heads/main' && 'deploy-docs-github-pages' || format('deploy-docs-noop-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 ```
 
-This makes a newer `push` or `workflow_dispatch` run supersede older in-progress or pending staging deploy runs for the same publication target.
+This makes a newer `push` or main-branch `workflow_dispatch` run supersede older in-progress or pending staging deploy runs for the same publication target. A non-`main` manual dispatch is a skipped no-op run and must not cancel an in-progress `main` deploy.
 
 ## Required Path Filter Contract
 

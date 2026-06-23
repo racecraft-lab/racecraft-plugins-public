@@ -69,7 +69,7 @@ Run these from the repository root before walking the acceptance tests.
 
 ## Self-Review Findings
 
-- Checked `.github/workflows/deploy-docs.yml` for the required push/manual triggers, explicit broad paths, ordered fixture exclusions, job-scoped least-privilege Pages permissions, fixed concurrency, main-only manual retry guard, validate-before-upload ordering, same-run `docs-site/dist` artifact upload, and deploy-only `github-pages` job.
+- Checked `.github/workflows/deploy-docs.yml` for the required push/manual triggers, explicit broad paths, ordered fixture exclusions, job-scoped least-privilege Pages permissions, main deploy concurrency, non-`main` no-op concurrency isolation, main-only manual retry guard, validate-before-upload ordering, same-run `docs-site/dist` artifact upload, and deploy-only `github-pages` job.
 - Checked staging protection in source and generated output: `docs-site/public/robots.txt` has exactly the two required policy lines, and built HTML contains the `noindex, nofollow` meta guard.
 - Checked runbook and CLAUDE guidance for manual Pages setup, retry/rollback distinction, deployment-history evidence, crawler-policy nuance, and DOC-012 launch boundary.
 - No blocking self-review findings remain.

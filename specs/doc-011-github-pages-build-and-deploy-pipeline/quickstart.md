@@ -46,7 +46,7 @@ Expected result: validation succeeds and `docs-site/dist` exists.
 5. Confirm the artifact upload path is `docs-site/dist`.
 6. Confirm `docs-site/dist` is removed before validation and uploaded only after `pnpm --dir docs-site validate` succeeds.
 7. Confirm deploy uses the `github-pages` environment.
-8. Confirm workflow-level concurrency uses the fixed staging group `deploy-docs-github-pages` with `cancel-in-progress: true`.
+8. Confirm `main` deploys use the fixed staging group `deploy-docs-github-pages` with `cancel-in-progress: true`, and skipped non-`main` manual dispatch runs use a no-op group that cannot cancel a `main` deploy.
 9. Confirm the deploy job does not checkout, rebuild, or upload an artifact.
 
 ## Staging Indexing Checks

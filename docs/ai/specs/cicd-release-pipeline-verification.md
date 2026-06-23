@@ -23,7 +23,7 @@ Use this runbook when a change touches `.github/workflows/**`, release automatio
 - Validation gate: `pnpm --dir docs-site validate`.
 - Artifact: `docs-site/dist`, created after the workflow removes any stale local `docs-site/dist`.
 - Environment: `github-pages`.
-- Concurrency: fixed group `deploy-docs-github-pages` with `cancel-in-progress: true`.
+- Concurrency: `main` deploy runs use fixed group `deploy-docs-github-pages` with `cancel-in-progress: true`; skipped non-`main` manual dispatch runs use a unique no-op group and must not cancel a `main` deploy.
 - Credentials: build job has `contents: read`; deploy job has standard GitHub Pages `pages: write` and OIDC context only. No secrets, deploy keys, personal access tokens, GitHub App tokens, or custom deploy token inputs are used.
 
 ## One-Time Pages Setup

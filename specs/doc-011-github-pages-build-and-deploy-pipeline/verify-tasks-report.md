@@ -36,7 +36,7 @@ Fresh session advisory: for maximum reliability, `/speckit.verify-tasks` should 
 | T007 | VERIFIED | DOC-012 launch, custom-domain, base-path, and noindex-removal work stayed out of DOC-011. |
 | T008 | VERIFIED | Deploy workflow path-filter checklist was built from the contract. |
 | T009 | VERIFIED | `.github/workflows/deploy-docs.yml` created with `Deploy Docs`, broad `paths`, and ordered fixture exclusions. |
-| T010 | VERIFIED | Least-privilege Pages permissions and fixed staging concurrency added. |
+| T010 | VERIFIED | Least-privilege Pages permissions, main deploy concurrency, and non-`main` no-op isolation added. |
 | T011 | VERIFIED | Build/upload job validates docs before uploading `docs-site/dist`. |
 | T012 | VERIFIED | Deploy job depends on build/upload and deploys through `github-pages` without checkout, rebuild, or upload. |
 | T013 | VERIFIED | Workflow matches the DOC-011 contract for validation-before-upload and standard Pages actions. |

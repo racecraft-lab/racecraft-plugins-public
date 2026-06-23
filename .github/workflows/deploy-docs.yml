@@ -43,8 +43,8 @@ on:
 permissions: {}
 
 concurrency:
-  group: deploy-docs-github-pages
-  cancel-in-progress: true
+  group: ${{ github.ref == 'refs/heads/main' && 'deploy-docs-github-pages' || format('deploy-docs-noop-{0}', github.run_id) }}
+  cancel-in-progress: ${{ github.ref == 'refs/heads/main' }}
 
 defaults:
   run:

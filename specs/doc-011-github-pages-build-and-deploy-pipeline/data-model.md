@@ -10,7 +10,7 @@
 - `permissions`: `contents: read`, `pages: write`, `id-token: write`
 - `credential_inputs`: none; no repository or organization secrets, deploy keys, personal access tokens, GitHub App installation tokens, or custom `token:` inputs
 - `environment`: `github-pages`
-- `concurrency_group`: fixed `deploy-docs-github-pages` group for the staging Pages target
+- `concurrency_group`: fixed `deploy-docs-github-pages` group for `main` staging Pages deploys; unique no-op group for skipped non-`main` manual dispatch runs
 - `cancel_in_progress`: `true`
 - `jobs`: validated build/upload job and dependent deploy job
 
