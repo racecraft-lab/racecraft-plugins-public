@@ -272,7 +272,7 @@
     "feature_id": "doc-011-github-pages-build-and-deploy-pipeline",
     "status": "emitted",
     "source_fingerprint": {
-      "feature_spec_sha": "c73ef79ad38ce8136056d84c9a3e7d5aff4b3c9227d5810f121a8f03d58b2340",
+      "feature_spec_sha": "ebbc74f82b58d31a71df2092587eab6815591e59d0071670a809e7ee88524140",
       "plan_declared_scope_sha": "9227b6a0d5fc01c31614ee4edbbd9bd1a98b466f17458b497071f3b7b265d697",
       "tasks_sha": "00198fd9dfd822fc6faa1110bd918ab91da1ec8506a81dacd86a892d2e591b34",
       "reviewability_sha": "243f499e8665ec61addd52e079383208a83a1b9247768d52c3dbc9153ea8594d",
@@ -547,8 +547,8 @@
           "mode": "final-diff",
           "scope": "full-spec",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-          "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
-          "commit_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438"
+          "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
+          "commit_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499"
         },
         "hazards": [
           "change-shape:modify-heavy",
@@ -565,8 +565,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-          "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
-          "commit_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
+          "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
+          "commit_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
           "task_ids": [
             "T001",
             "T002",
@@ -647,7 +647,7 @@
     "updated_at": "2026-06-23T18:31:58Z"
   },
   "pr_marker_plan_current_source_fingerprint": {
-    "feature_spec_sha": "c73ef79ad38ce8136056d84c9a3e7d5aff4b3c9227d5810f121a8f03d58b2340",
+    "feature_spec_sha": "ebbc74f82b58d31a71df2092587eab6815591e59d0071670a809e7ee88524140",
     "plan_declared_scope_sha": "9227b6a0d5fc01c31614ee4edbbd9bd1a98b466f17458b497071f3b7b265d697",
     "tasks_sha": "00198fd9dfd822fc6faa1110bd918ab91da1ec8506a81dacd86a892d2e591b34",
     "reviewability_sha": "243f499e8665ec61addd52e079383208a83a1b9247768d52c3dbc9153ea8594d",
@@ -723,13 +723,13 @@
       }
     ],
     "checkpoint": {
-      "commit_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
+      "commit_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
       "marker_plan_status": "emission_ready",
       "marker_count": 5
     }
   },
   "current_source_fingerprint": {
-    "feature_spec_sha": "c73ef79ad38ce8136056d84c9a3e7d5aff4b3c9227d5810f121a8f03d58b2340",
+    "feature_spec_sha": "ebbc74f82b58d31a71df2092587eab6815591e59d0071670a809e7ee88524140",
     "plan_declared_scope_sha": "9227b6a0d5fc01c31614ee4edbbd9bd1a98b466f17458b497071f3b7b265d697",
     "tasks_sha": "00198fd9dfd822fc6faa1110bd918ab91da1ec8506a81dacd86a892d2e591b34",
     "reviewability_sha": "243f499e8665ec61addd52e079383208a83a1b9247768d52c3dbc9153ea8594d",
@@ -767,7 +767,7 @@
       "title": "docs(DOC-011): add GitHub Pages deploy pipeline",
       "base_branch": "main",
       "head_branch": "doc-011-github-pages-build-and-deploy-pipeline",
-      "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
+      "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
       "packet_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
       "body_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
       "workflow_contract": "passed",
@@ -807,7 +807,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
+        "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           ".github/workflows/pr-checks.yml",
@@ -876,6 +876,6 @@
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
     ],
-    "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438"
+    "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499"
   }
 }

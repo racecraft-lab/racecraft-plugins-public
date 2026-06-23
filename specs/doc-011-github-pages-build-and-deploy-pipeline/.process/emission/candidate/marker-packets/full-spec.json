@@ -306,11 +306,12 @@
       "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
       "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/docs/ai/specs/partial-roadmap-MOC.md",
       "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/specs/prsg-001-foo/SPEC-MOC.md",
+      "tests/speckit-pro/layer1-structural/validate-pr-checks-sentinel.sh",
       "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
     ],
     "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-spec/no_scoped_tests.txt",
     "status": "pending",
-    "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+    "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
     "merged_sha": null
   },
   "marker_id": "full-spec",
@@ -368,5 +369,5 @@
     }
   ],
   "rollback_or_flags": "Use the recorded marker/base order for rollback or feature-flag review.",
-  "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438"
+  "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499"
 }

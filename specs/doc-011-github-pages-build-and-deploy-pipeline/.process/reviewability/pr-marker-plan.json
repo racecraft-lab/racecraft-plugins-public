@@ -4,7 +4,7 @@
   "feature_id": "doc-011-github-pages-build-and-deploy-pipeline",
   "status": "emitted",
   "source_fingerprint": {
-    "feature_spec_sha": "c73ef79ad38ce8136056d84c9a3e7d5aff4b3c9227d5810f121a8f03d58b2340",
+    "feature_spec_sha": "ebbc74f82b58d31a71df2092587eab6815591e59d0071670a809e7ee88524140",
     "plan_declared_scope_sha": "9227b6a0d5fc01c31614ee4edbbd9bd1a98b466f17458b497071f3b7b265d697",
     "tasks_sha": "00198fd9dfd822fc6faa1110bd918ab91da1ec8506a81dacd86a892d2e591b34",
     "reviewability_sha": "243f499e8665ec61addd52e079383208a83a1b9247768d52c3dbc9153ea8594d",
@@ -279,8 +279,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
-        "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3"
+        "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
+        "commit_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -297,8 +297,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
-        "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+        "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
+        "commit_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
         "task_ids": [
           "T001",
           "T002",

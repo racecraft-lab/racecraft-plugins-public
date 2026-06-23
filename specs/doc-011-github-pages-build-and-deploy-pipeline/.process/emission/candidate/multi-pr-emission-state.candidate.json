@@ -14,7 +14,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline/01-full-spec",
         "expected_base_branch": "main",
-        "head_sha": "c781b5ce6f1907d2d5e1aed47f654dbf31a6f438",
+        "head_sha": "19508b20ea77ffdfa71b521945b39e9ea6173499",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           ".github/workflows/pr-checks.yml",
