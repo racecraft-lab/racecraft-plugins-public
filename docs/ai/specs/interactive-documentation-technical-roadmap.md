@@ -3,7 +3,7 @@
 > **Authoritative SPEC catalog** for the Interactive Documentation initiative — the single source of truth for the DOC-001 through DOC-021 spec list, dependency tiers, dependency graph, and launch sequencing (SpecKit tools discover the catalog here). The [product-review companion](../../roadmap-interactive-documentation.md) carries the higher-level framing (autopilot-ready property, validation strategy, cut list) and points back here for the catalog.
 > **Source PRD:** [../../prd-interactive-documentation.md](../../prd-interactive-documentation.md)
 > **Roadmap-MOC home note:** [interactive-documentation-roadmap-MOC.md](interactive-documentation-roadmap-MOC.md)
-> Status: DOC-001 through DOC-010 (content + IA) are complete and archived. **Phase 7 production-readiness specs DOC-011 - DOC-018 and Phase 8 content/IA-excellence specs DOC-019 - DOC-021 are PENDING** — added 2026-06-19 from a production-deployment audit, a live per-route preview review of all pages, and a cited deep-research report on best-in-class Astro/Starlight docs. The site builds and is CI-validated for content, but is not yet deployed, branded, SEO-ready, WCAG-AA-audited, voice-consistent, or task-IA-organized. Created 2026-06-12; refreshed 2026-06-19.
+> Status: DOC-001 through DOC-011 are complete and archived. **Phase 7 production-readiness specs DOC-012 - DOC-018 and Phase 8 content/IA-excellence specs DOC-019 - DOC-021 are PENDING** — added 2026-06-19 from a production-deployment audit, a live per-route preview review of all pages, and a cited deep-research report on best-in-class Astro/Starlight docs. The site builds, is CI-validated, and has a deploy-ready GitHub Pages staging workflow with a noindex guard; repository Pages still requires the documented manual Settings -> Pages setup before the first successful publication. Created 2026-06-12; refreshed 2026-06-23.
 
 ## Roadmap Overview
 
@@ -17,7 +17,7 @@ The feature is decomposed into 21 specifications across 8 dependency tiers (Tier
 | 4 | DOC-005, DOC-006 | First-run tutorial and safe interactive aids | Parallel |
 | 5 | DOC-007, DOC-008, DOC-009 | Reference, troubleshooting/trust, maintainer workflow | Parallel |
 | 6 | DOC-010 | Search, accessibility, deep links, docs validation | Sequential hardening |
-| 7 | DOC-011 - DOC-018 | Production readiness: deploy, custom domain, branding/landing, SEO, editorial, accessibility, performance, launch hygiene | Mostly parallel after deploy + domain |
+| 7 | DOC-011 - DOC-018 | Production readiness: deploy, custom domain, branding/landing, SEO, editorial, accessibility, performance, launch hygiene | DOC-011 shipped; remaining specs are mostly parallel after deploy + domain constraints |
 | 8 | DOC-019 - DOC-021 | Content/IA excellence: voice & ELI5 tone, per-page value & right-sizing, task-based IA & wayfinding | Mostly parallel |
 
 **Execution Order:** DOC-001 -> DOC-002 -> DOC-003/DOC-004 -> DOC-005/DOC-006 -> DOC-007/DOC-008/DOC-009 -> DOC-010 -> **[Phase 7]** DOC-011 (deploy + noindex) -> (DOC-013, DOC-014, DOC-015) -> (DOC-016, DOC-017) -> DOC-018 -> **[Phase 8]** DOC-019 -> DOC-020 ; DOC-021 -> **[Launch gate — DEAD LAST]** DOC-012 (flip to root, attach plugins.racecraft.co, remove noindex)
@@ -69,14 +69,14 @@ DOC-007 -> DOC-008
 | DOC-008 | Troubleshooting, security, trust, update, rollback | Completed/archived | `.process/DOC-008-workflow.md` | Archived after PR #220 |
 | DOC-009 | Maintainer and contributor release workflow | Completed/archived | `.process/DOC-009-workflow.md` | Archived after PR #219 |
 | DOC-010 | Search, accessibility, deep links, docs validation | Completed/archived | `.process/DOC-010-workflow.md` | Archived after PRs #232-#236 |
-| DOC-011 | GitHub Pages build-and-deploy pipeline | 🔄 In Progress | `.process/DOC-011-workflow.md` | Scaffolded on `doc-011-github-pages-build-and-deploy-pipeline`; next phase is `$speckit-autopilot docs/ai/specs/.process/DOC-011-workflow.md` |
+| DOC-011 | GitHub Pages build-and-deploy pipeline | Completed/archived | `.process/DOC-011-workflow.md` | Archived after PR #243 |
 | DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
 | DOC-013 | Brand identity and marketplace landing page | ⏳ Pending | — | Not started — production readiness (P1) |
-| DOC-014 | SEO and AI discoverability | ⏳ Pending | — | Not started — depends on DOC-011; URLs finalize at DOC-012 launch (P1) |
+| DOC-014 | SEO and AI discoverability | ⏳ Pending | — | Not started — staging deploy foundation exists from DOC-011; URLs finalize at DOC-012 launch (P1) |
 | DOC-015 | Editorial and content-QA pass | ⏳ Pending | — | Not started — production readiness (P1) |
 | DOC-016 | WCAG 2.1 AA accessibility hardening | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
-| DOC-017 | Performance budget and Lighthouse CI | ⏳ Pending | — | Not started — depends on DOC-011/013/014 (P2) |
-| DOC-018 | Launch hygiene: analytics, 404, legal, contributor onboarding | ⏳ Pending | — | Not started — depends on DOC-011; activates at DOC-012 launch (P3) |
+| DOC-017 | Performance budget and Lighthouse CI | ⏳ Pending | — | Not started — depends on DOC-013/014 plus the shipped DOC-011 deploy foundation (P2) |
+| DOC-018 | Launch hygiene: analytics, 404, legal, contributor onboarding | ⏳ Pending | — | Not started — uses the shipped DOC-011 deploy foundation and activates at DOC-012 launch (P3) |
 | DOC-019 | Content voice and ELI5 tone system | ⏳ Pending | — | Not started — depends on DOC-015 (P1) |
 | DOC-020 | Per-page value alignment and right-sizing | ⏳ Pending | — | Not started — depends on DOC-019 (P2) |
 | DOC-021 | Task-based information architecture and wayfinding | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
@@ -407,15 +407,16 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-010 (site builds + validates) | **Enables:** staged (noindex) preview of every later spec; DOC-012 go-live
 
-**Status:** In Progress. Scaffolded on branch `doc-011-github-pages-build-and-deploy-pipeline`; workflow lives at `.process/DOC-011-workflow.md` and the design concept lives at `.process/DOC-011-design-concept.md`. The site builds and passes `pnpm --dir docs-site validate`, but there is no deploy workflow in `.github/workflows/` (only `pr-checks.yml` + `release.yml`) and GitHub Pages is not enabled, so the docs have never shipped to a URL. The PRD lists "GitHub Pages deployment policy and configuration" under "maintainer decisions still required." Per the public-exposure policy this deploy ships a `noindex`/`robots`-disallow guard so the staging github.io URL is previewable but not indexed; the guard is removed only by DOC-012 at go-live.
+**Status:** Completed and archived after PR #243. Canonical implementation now lives in `.github/workflows/deploy-docs.yml`, the staging noindex/robots guard under `docs-site/`, and the CI/CD verification runbook at `docs/ai/specs/cicd-release-pipeline-verification.md`. The first post-merge Deploy Docs run failed because repository Pages was not yet enabled/configured for GitHub Actions; that is the documented manual operator prerequisite before expecting publication. The guard is removed only by DOC-012 at go-live.
 
 **Goal:** Continuously build and deploy `docs-site/` to GitHub Pages so the documentation is reachable at a live URL.
 
 **Reviewability Budget:** Primary surface: harness/CI |
 Projected reviewable LOC: about 60 |
-Production files: 1 (deploy workflow) |
-Total files: 2-3 |
-Budget result: within budget
+Final production reviewable LOC: 36 |
+Final production files: 2 |
+Final total files: 54 |
+Budget result: archived as one review-remediation slice after PR #243
 
 **Scope:**
 - Add `.github/workflows/deploy-docs.yml` using `actions/configure-pages`, `actions/upload-pages-artifact`, and `actions/deploy-pages`, with `permissions: pages: write, id-token: write` and a `github-pages` environment.

@@ -66,6 +66,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - TACD-003 is archived in `.specify/memory/` as completed on 2026-06-19 after PR #230 merged.
 - DOC-010 is archived in `.specify/memory/` as completed on 2026-06-19 after PRs #232-#236 merged.
 - TACD-004 is archived in `.specify/memory/` as completed on 2026-06-22 after PR #240 merged.
+- DOC-011 is archived in `.specify/memory/` as completed on 2026-06-23 after PR #243 merged.
 - `specs/prsg-007-atomicity-router` and `specs/prsg-011-retro-migration` were removed from active `specs/**` cleanup after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory.
 - `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup after the planner schema fixture was vendored under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/`.
 - `specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup after PR #145 merged and the PRSG-009 contract schemas were preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
@@ -85,6 +86,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - `specs/tacd-003-prerequisite-and-documentation-messaging` was removed from active `specs/**` cleanup after PR #230 merged, the generic `capability_coverage` advisory, active guidance, generated payloads, focused tests, and PR packet evidence landed, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-19-tacd-003-post-merge-hygiene.md`.
 - `specs/doc-010-search-accessibility-deep-links-docs-validation` was removed from active `specs/**` cleanup after PRs #232-#236 merged, the docs-site validation path, support anchors, accessibility/fallback updates, PR Checks docs gate, compact smoke coverage, and PR packet evidence landed, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-19-doc-010-post-merge-hygiene.md`.
 - `specs/tacd-004-verification-coverage` was removed from active `specs/**` cleanup after PR #240 merged, the `strip_codex_guard` payload-build fix, rebuilt payloads, the named-tool and pointer/resolution/body-completeness guards, and rewritten vendor-neutral evals landed in source/generator/test paths, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-22-tacd-004-post-merge-hygiene.md`.
+- `specs/doc-011-github-pages-build-and-deploy-pipeline` was removed from active `specs/**` cleanup after PR #243 merged, the Deploy Docs GitHub Pages workflow, staging noindex/robots guard, CI/CD verification runbook, workflow lint gate, release runtime alignment, shared index generator hardening, synced payloads, and focused tests landed, and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-23-doc-011-post-merge-hygiene.md`.
 - `.specify/feature.json` is transient local state. Do not commit a stale completed-spec pointer back to `main`.
 
 ## Active Technologies
@@ -93,8 +95,10 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - Markdown content rendered by Astro 6.4.6 and Starlight 0.40.0; docs-site JavaScript ESM on Node for generated references; `docs-site/package.json` declares Astro, Starlight, `@astrojs/check`, and `starlight-links-validator`; no new dependency planned. (doc-009-maintainer-contributor-release-workflow)
 - Checked-in repository files only; no database, browser storage, or runtime service state. (doc-009-maintainer-contributor-release-workflow)
 - Docs-site validation uses Node ESM scripts, Astro/Starlight build and link validation, focused safe-aids/docs-quality checks, and Playwright smoke through `pnpm --dir docs-site validate`; smoke evidence is a short-retention CI artifact, not a committed durable payload. (doc-010-search-accessibility-deep-links-docs-validation)
+- GitHub Actions deploys the docs-site through standard GitHub Pages Actions after `pnpm --dir docs-site validate`; repository Pages source remains a manual Settings -> Pages prerequisite until configured by an operator. (doc-011-github-pages-build-and-deploy-pipeline)
 
 ## Recent Changes
 - doc-007-command-workflow-manifest-and-file-layout-reference: Planned a docs-site reference generator that emits committed Markdown pages using Node built-ins and existing Astro/Starlight validation; no new runtime dependency planned.
 - doc-009-maintainer-contributor-release-workflow: Planned a docs-only release workflow page for maintainers and contributors using existing docs-site validation, release helper scripts, PR Checks, and release-please source evidence.
 - doc-010-search-accessibility-deep-links-docs-validation: Shipped support anchors, accessible docs aids and fallbacks, one local docs validation path, the conditional `validate-docs` PR Checks gate, and compact Playwright smoke evidence across PRs #232-#236.
+- doc-011-github-pages-build-and-deploy-pipeline: Shipped the Deploy Docs workflow, staging noindex/robots guard, CI/CD runbook, workflow lint gate, release runtime alignment, and shared index generator hardening; the first post-merge deploy failed until Pages is manually enabled for GitHub Actions.

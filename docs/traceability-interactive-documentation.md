@@ -3,7 +3,7 @@
 **Date:** 2026-06-12  
 **Source PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Roadmap:** [docs/roadmap-interactive-documentation.md](roadmap-interactive-documentation.md)  
-**Status:** DOC-001 through DOC-010 completed and archived; interactive documentation roadmap complete
+**Status:** DOC-001 through DOC-010 completed and archived for the original PRD feature traceability set; DOC-011 through DOC-021 are production-readiness/content-excellence roadmap extensions tracked in the SpecKit technical roadmap.
 
 Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back to exactly one PRD feature. Acceptance criteria are not shared across features.
 
@@ -27,4 +27,5 @@ Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back
 - **Mapping status:** 1:1; DOC-001 through DOC-010 are complete and archived.
 - **Acceptance criteria ownership:** Each AC-N.* belongs only to DOC-FR-00N.
 - **Shared dependencies:** Allowed where platform pages feed first-run/reference/troubleshooting pages.
-- **Untraced items:** None.
+- **Roadmap extension note:** DOC-011 shipped the staging GitHub Pages deploy foundation after the original PRD traceability set; DOC-012 through DOC-021 remain tracked in `docs/ai/specs/interactive-documentation-technical-roadmap.md`.
+- **Untraced items:** None for the original DOC-001 through DOC-010 PRD feature set.
