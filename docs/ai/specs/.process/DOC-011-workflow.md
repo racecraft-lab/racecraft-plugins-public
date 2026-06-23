@@ -48,7 +48,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Clarify | `$speckit-clarify` | Complete | Resolved trigger paths, validation/artifact setup, staging visibility, Pages setup wording, and runbook split |
 | Plan | `$speckit-plan` | Complete | Created plan/research/data-model/quickstart/workflow contract; G3 passed; reviewability estimate under budget |
 | Checklist | `$speckit-checklist` | Complete | reliability/security/integration/maintainability complete; G4 passed with 0 gap markers |
-| Tasks | `$speckit-tasks` | Pending | Preserve one-slice deploy/runbook flow |
+| Tasks | `$speckit-tasks` | Complete | Generated 28 task lines with 7 parallel markers; G5 passed |
 | Analyze | `$speckit-analyze` | Pending | Check drift between roadmap, design concept, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Implement only after prior gates pass |
 
@@ -449,9 +449,20 @@ Task ordering should start with tests/checks and source inspection, then workflo
 
 | Metric | Value |
 |--------|-------|
-| Task Count | Pending |
-| Parallel-safe tasks | Pending |
-| Reviewability Route | Pending |
+| Task Count | 28 |
+| Parallel-safe tasks | 7 |
+| Reviewability Route | Task gate size-block recorded; marker plan generated; atomicity route one-navigable-PR |
+
+### Post-G5 Reviewability Evidence
+
+| Item | Result |
+|------|--------|
+| Task Reviewability Gate | `status=block`, `mode=tasks`, size-only proceed; evidence `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json` |
+| Atomicity Route | `one-navigable-PR`, releasable, signal `change-shape:modify-heavy`; evidence `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json` |
+| Layer Plan | Skipped because route is not `split-PR` |
+| PR Marker Plan | Generated 5 markers: `foundation`, `us1`, `us2`, `us3`, `us4`; evidence `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json` |
+
+The task gate block is treated as marker-planning input, not a manual stop, because it is size-only and has current feature evidence.
 
 ---
 

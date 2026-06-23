@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
   "updated_at": "2026-06-23T00:00:00-05:00",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "doc-011-github-pages-build-and-deploy-pipeline",
   "confidence_gate_mode": "advisory",
@@ -39,41 +39,555 @@
     }
   },
   "plan": [
-    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
-    {"step": "Phase 0: Prerequisites", "status": "completed"},
-    {"step": "Phase 1: Specify", "status": "completed"},
-    {"step": "Phase 2: Clarify - Deploy trigger and changed paths", "status": "completed"},
-    {"step": "Phase 2: Clarify - Deploy trigger and changed paths Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Pages validation and artifact setup", "status": "completed"},
-    {"step": "Phase 2: Clarify - Pages validation and artifact setup Consensus", "status": "completed"},
-    {"step": "Phase 2: Clarify - Public exposure and runbook wording", "status": "completed"},
-    {"step": "Phase 2: Clarify - Public exposure and runbook wording Consensus", "status": "completed"},
-    {"step": "Phase 3: Plan", "status": "completed"},
-    {"step": "Phase 4: Checklist - reliability", "status": "completed"},
-    {"step": "Phase 4: Checklist - reliability Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - security", "status": "completed"},
-    {"step": "Phase 4: Checklist - security Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - integration", "status": "completed"},
-    {"step": "Phase 4: Checklist - integration Consensus", "status": "completed"},
-    {"step": "Phase 4: Checklist - maintainability", "status": "completed"},
-    {"step": "Phase 4: Checklist - maintainability Consensus", "status": "completed"},
-    {"step": "Phase 5: Tasks", "status": "in_progress"},
-    {"step": "Phase 6: Analyze", "status": "pending"},
-    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
-    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
-    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
-    {"step": "Post: Doctor Extension Check", "status": "pending"},
-    {"step": "Post: Verify Implementation", "status": "pending"},
-    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
-    {"step": "Post: Code Review (skipped: review extension not installed)", "status": "completed"},
-    {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Cleanup (skipped: cleanup extension not installed)", "status": "completed"},
-    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
-    {"step": "Post: Self-Review", "status": "pending"},
-    {"step": "Post: UAT Runbook Generation", "status": "pending"},
-    {"step": "Post: PR Body Generation", "status": "pending"},
-    {"step": "Post: PR Creation", "status": "pending"},
-    {"step": "Post: Review Remediation", "status": "pending"},
-    {"step": "Post: Retrospective", "status": "pending"}
-  ]
+    {
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 0: Prerequisites",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 1: Specify",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Deploy trigger and changed paths",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Deploy trigger and changed paths Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Pages validation and artifact setup",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Pages validation and artifact setup Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Public exposure and runbook wording",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - Public exposure and runbook wording Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - reliability",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - reliability Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - security",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - integration",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - integration Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - maintainability",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 4: Checklist - maintainability Consensus",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Setup and Scope Checks (T001-T008)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Workflow Deployment (T009-T015)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Staging Guard (T016-T018)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Runbook and Agent Guidance (T019-T022)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Validation and Reviewability Evidence (T023-T028)",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review (skipped: review extension not installed)",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Cleanup (skipped: cleanup extension not installed)",
+      "status": "completed"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
+    }
+  ],
+  "reviewability_task_gate": {
+    "mode": "tasks",
+    "status": "block",
+    "pass": false,
+    "feature_id": "doc-011-github-pages-build-and-deploy-pipeline",
+    "is_size_only": true,
+    "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json",
+    "reviewable_loc": 1120,
+    "production_files": 1,
+    "total_files": 45,
+    "primary_surface_count": 5,
+    "primary_surfaces": [
+      "API",
+      "docs/process",
+      "other",
+      "scheduler/runtime",
+      "seed/config"
+    ],
+    "greenfield": false,
+    "thresholds": {
+      "warn": {
+        "reviewable_loc": 400,
+        "production_files": 6,
+        "total_files": 15,
+        "primary_surfaces": 1
+      },
+      "block": {
+        "reviewable_loc": 800,
+        "production_files": 8,
+        "total_files": 25,
+        "primary_surfaces": 1
+      }
+    },
+    "exception_honored": false,
+    "exception_class": null,
+    "exceptions": {
+      "accepted": [],
+      "rejected": []
+    },
+    "warnings": [
+      "reviewable LOC 1120 exceeds warn threshold 400",
+      "total files 45 exceeds warn threshold 15",
+      "primary surfaces 5 exceeds warn threshold 1"
+    ],
+    "blockers": [
+      "reviewable LOC 1120 exceeds block threshold 800",
+      "total files 45 exceeds block threshold 25"
+    ],
+    "proceed_decision": {
+      "status": "proceed",
+      "reason": "Valid current task-mode size-only block; continue into marker planning and later marker emission."
+    }
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route is one-navigable-PR, not split-PR"
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "doc-011-github-pages-build-and-deploy-pipeline",
+    "status": "planned",
+    "source_fingerprint": {
+      "feature_spec_sha": "447454e4cd737fec67697931ad7cb43c6bf7d05df18fe8a091f9e7a3fdfee5f5",
+      "plan_declared_scope_sha": "9675e33fd651d4196cfe051c8871030f2d110a6427d290483e6f30534f826bf1",
+      "tasks_sha": "b6d152f54a9d027451e45e2b72f02f9cdf7567ccf06225399b60550a3191ce7e",
+      "reviewability_sha": "b0416f8e41e64e3f9f7f40f63562e4b331e8d0c2505aded88ab1d8df905d764e",
+      "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+    },
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "Foundation",
+          "story_id": null,
+          "start_task_id": "T001",
+          "end_task_id": "T008"
+        },
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/deploy-docs.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/pr-checks.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/release.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/astro.config.mjs"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/package.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/.process/DOC-011-design-concept.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "foundation",
+          "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Deploy Docs After Main Merge",
+          "story_id": 1,
+          "start_task_id": "T009",
+          "end_task_id": "T013"
+        },
+        "task_ids": [
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/deploy-docs.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us1",
+          "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - Manually Retry A Deploy",
+          "story_id": 2,
+          "start_task_id": "T014",
+          "end_task_id": "T015"
+        },
+        "task_ids": [
+          "T014",
+          "T015"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/deploy-docs.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/data-model.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us2",
+          "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Preview Staging Without Public Discovery",
+          "story_id": 3,
+          "start_task_id": "T016",
+          "end_task_id": "T018"
+        },
+        "task_ids": [
+          "T016",
+          "T017",
+          "T018"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/astro.config.mjs"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/public/robots.txt"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us3",
+          "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us4",
+        "review_order": 5,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 4 - Follow Deploy Setup And Recovery Runbook",
+          "story_id": 4,
+          "start_task_id": "T019",
+          "end_task_id": "T022"
+        },
+        "task_ids": [
+          "T019",
+          "T020",
+          "T021",
+          "T022"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/deploy-docs.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs/ai/specs/cicd-release-pipeline-verification.md"
+          }
+        ],
+        "declared_tests": [],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us4",
+          "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        }
+      }
+    ]
+  },
+  "pr_marker_plan_current_source_fingerprint": {
+    "feature_spec_sha": "447454e4cd737fec67697931ad7cb43c6bf7d05df18fe8a091f9e7a3fdfee5f5",
+    "plan_declared_scope_sha": "9675e33fd651d4196cfe051c8871030f2d110a6427d290483e6f30534f826bf1",
+    "tasks_sha": "b6d152f54a9d027451e45e2b72f02f9cdf7567ccf06225399b60550a3191ce7e",
+    "reviewability_sha": "b0416f8e41e64e3f9f7f40f63562e4b331e8d0c2505aded88ab1d8df905d764e",
+    "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  }
 }
