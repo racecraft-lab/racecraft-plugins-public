@@ -44,7 +44,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `$speckit-specify` | Pending | Start from DOC-011 roadmap plus the design concept |
+| Specify | `$speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Pending | Resolve exact path filters, Playwright browser setup, and Pages setting wording |
 | Plan | `$speckit-plan` | Pending | Produce workflow, docs-site guard, and runbook implementation plan |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: reliability, security, docs-ops, maintainability |
@@ -229,13 +229,14 @@ The Astro/Starlight docs site exists and passes `pnpm --dir docs-site validate`,
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 18 |
+| User Stories | 4 |
+| Acceptance Criteria | 9 |
 
 ### Files Generated
 
-- [ ] `specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md`
+- [x] `specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md`
+- [x] `specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/requirements.md`
 
 ---
 

@@ -1,139 +1,79 @@
 {
-  "schemaVersion": 1,
-  "status": "completed_archived",
-  "active_step": "Archive Cleanup",
-  "updated_at": "2026-06-22T13:37:33Z",
-  "workflow_file": "docs/ai/specs/.process/TACD-004-workflow.md",
-  "workflow_files": [
-    "docs/ai/specs/.process/TACD-004-workflow.md"
-  ],
-  "feature_dir": "specs/tacd-004-verification-coverage",
-  "feature_dirs": [
-    "specs/tacd-004-verification-coverage"
-  ],
-  "feature_branch": "tacd-004-archive-cleanup",
-  "completed_feature_branch": "tacd-004-verification-coverage",
+  "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
+  "updated_at": "2026-06-23T00:00:00-05:00",
+  "active_step": "Phase 2: Clarify - Deploy trigger and changed paths",
+  "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
+  "branch": "doc-011-github-pages-build-and-deploy-pipeline",
   "confidence_gate_mode": "advisory",
-  "skill_scripts": "speckit-pro/skills/speckit-autopilot/scripts",
-  "project_commands": {
-    "BUILD": "bash scripts/build-plugin-payloads.sh",
-    "TYPECHECK": "N/A",
-    "LINT": "N/A",
-    "LINT_FIX": "N/A",
-    "UNIT_TEST": "bash tests/speckit-pro/run-all.sh --layer 4",
-    "INTEGRATION_TEST": "bash tests/speckit-pro/run-all.sh --layer 1",
-    "SINGLE_FILE_TEST": "bash tests/speckit-pro/run-all.sh --layer 5",
-    "SINGLE_FILE_INTEGRATION": "bash tests/speckit-pro/run-all.sh --layer 1",
-    "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
-  },
-  "archive_cleanup": {
-    "status": "applied",
-    "spec_id": "TACD-004",
-    "pr_numbers": [
-      240
-    ],
-    "final_pr_number": 240,
-    "final_pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/240",
-    "final_pr_title": "fix(speckit-pro): restore empty Claude skill payloads and add vendor-neutral checks",
-    "merged_at": "2026-06-20T21:36:55Z",
-    "merge_commit": "b95d721f107dd1a17cee88671dc48da791e8e54c",
-    "source_spec_dir": "specs/tacd-004-verification-coverage",
-    "workflow_file": "docs/ai/specs/.process/TACD-004-workflow.md",
-    "design_concept": "docs/ai/specs/.process/TACD-004-design-concept.md",
-    "archive_report": ".specify/memory/archive-reports/2026-06-22-tacd-004-post-merge-hygiene.md",
-    "cleanup_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/242",
-    "cleanup_branch": "tacd-004-archive-cleanup",
-    "cleanup_command": "git rm -r specs/tacd-004-verification-coverage",
-    "active_spec_removed": true,
-    "safeToApplyCleanup": true,
-    "process_evidence_preserved": [
-      "docs/ai/specs/.process/TACD-004-workflow.md",
-      "docs/ai/specs/.process/TACD-004-design-concept.md"
-    ],
-    "canonical_artifacts": [
-      "scripts/build-plugin-payloads.sh",
-      "tests/speckit-pro/layer5-tool-scoping/validate-tool-scoping.sh",
-      "tests/speckit-pro/layer1-structural/validate-capability-pointer.sh",
-      "tests/speckit-pro/layer1-structural/validate-capability-resolution.sh",
-      "tests/speckit-pro/layer1-structural/validate-payload-completeness.sh",
-      "tests/speckit-pro/layer3-functional/evals/speckit-autopilot-evals.json",
-      "tests/speckit-pro/layer3-functional/evals/speckit-coach-evals.json",
-      "tests/speckit-pro/layer3-functional/codex-evals/speckit-autopilot-evals.json",
-      "tests/speckit-pro/layer3-functional/codex-evals/speckit-coach-evals.json",
-      "dist/claude/speckit-pro/",
-      "dist/codex/speckit-pro/"
-    ],
-    "roadmap_status": "tool_agnostic_capability_discovery_complete",
-    "next_tacd_spec": null
-  },
   "archive_sweep": {
-    "status": "completed",
     "archive_extension_installed": true,
-    "cleanup_mode": "post_merge_apply_cleanup",
-    "current_target": null,
-    "excluded_current_spec": null,
-    "eligible_previous_specs": [
-      "specs/tacd-004-verification-coverage"
-    ],
-    "already_archived_specs": [
-      "TACD-001",
-      "TACD-002",
-      "TACD-003",
-      "DOC-010"
-    ],
-    "safeToApplyCleanup": true,
-    "dryRunProvenanceOnly": false,
-    "cleanupApplied": true,
-    "notes": [
-      "PR #240 is merged.",
-      "Historical process evidence under docs/ai/specs/.process/ was preserved.",
-      "The active TACD-004 spec directory was removed after archive provenance and recovery commands were recorded.",
-      "The Tool-Agnostic Capability Discovery roadmap is feature-complete; no active TACD spec directory remains."
-    ]
+    "current_target": "specs/doc-011-github-pages-build-and-deploy-pipeline",
+    "cleanup_mode": "feature-branch-apply-eligible",
+    "safeToApplyCleanup": false,
+    "note": "Current target excluded; no cleanup applied during pre-flight."
+  },
+  "prerequisites": {
+    "all_pass": true,
+    "branch": "doc-011-github-pages-build-and-deploy-pipeline",
+    "is_worktree": true,
+    "specify": "specify 0.10.3.dev0",
+    "capability_coverage": "advisory coverage present",
+    "project_commands": {
+      "BUILD": "N/A",
+      "TYPECHECK": "N/A",
+      "LINT": "N/A",
+      "LINT_FIX": "N/A",
+      "UNIT_TEST": "N/A",
+      "INTEGRATION_TEST": "N/A",
+      "SINGLE_FILE_TEST": "N/A",
+      "SINGLE_FILE_INTEGRATION": "N/A",
+      "FULL_VERIFY": "N/A"
+    },
+    "preset_conventions": {
+      "active_preset": "speckit-pro-reviewability",
+      "templates": [
+        "spec-template",
+        "plan-template",
+        "tasks-template"
+      ]
+    }
   },
   "plan": [
-    {
-      "step": "Confirm merge provenance and branch safety",
-      "status": "completed",
-      "evidence": {
-        "final_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/240",
-        "merge_commit": "b95d721f107dd1a17cee88671dc48da791e8e54c",
-        "cleanup_branch": "tacd-004-archive-cleanup"
-      }
-    },
-    {
-      "step": "Archive project memory and roadmap state",
-      "status": "completed",
-      "evidence": {
-        "archive_report": ".specify/memory/archive-reports/2026-06-22-tacd-004-post-merge-hygiene.md"
-      }
-    },
-    {
-      "step": "Remove completed active spec residue",
-      "status": "completed",
-      "evidence": {
-        "removed": "specs/tacd-004-verification-coverage"
-      }
-    },
-    {
-      "step": "Regenerate indexes and verify cleanup",
-      "status": "completed",
-      "evidence": {
-        "json": "python3 -m json.tool docs/ai/specs/.process/autopilot-state.json",
-        "index_regenerated": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh .",
-        "index_check": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
-        "active_specs_audit": "find specs -mindepth 1 -maxdepth 4 -print returned only specs/.gitkeep",
-        "diff_check": "git diff --check",
-        "full_verify": "bash tests/speckit-pro/run-all.sh"
-      }
-    },
-    {
-      "step": "Commit, push, and open cleanup PR",
-      "status": "completed",
-      "evidence": {
-        "cleanup_branch": "tacd-004-archive-cleanup",
-        "cleanup_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/242"
-      }
-    }
+    {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+    {"step": "Phase 0: Prerequisites", "status": "completed"},
+    {"step": "Phase 1: Specify", "status": "completed"},
+    {"step": "Phase 2: Clarify - Deploy trigger and changed paths", "status": "in_progress"},
+    {"step": "Phase 2: Clarify - Deploy trigger and changed paths Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Pages validation and artifact setup", "status": "pending"},
+    {"step": "Phase 2: Clarify - Pages validation and artifact setup Consensus", "status": "pending"},
+    {"step": "Phase 2: Clarify - Public exposure and runbook wording", "status": "pending"},
+    {"step": "Phase 2: Clarify - Public exposure and runbook wording Consensus", "status": "pending"},
+    {"step": "Phase 3: Plan", "status": "pending"},
+    {"step": "Phase 4: Checklist - reliability", "status": "pending"},
+    {"step": "Phase 4: Checklist - reliability Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - security", "status": "pending"},
+    {"step": "Phase 4: Checklist - security Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - integration", "status": "pending"},
+    {"step": "Phase 4: Checklist - integration Consensus", "status": "pending"},
+    {"step": "Phase 4: Checklist - maintainability", "status": "pending"},
+    {"step": "Phase 4: Checklist - maintainability Consensus", "status": "pending"},
+    {"step": "Phase 5: Tasks", "status": "pending"},
+    {"step": "Phase 6: Analyze", "status": "pending"},
+    {"step": "Phase 6: Analyze - Consensus", "status": "pending"},
+    {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+    {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+    {"step": "Post: Doctor Extension Check", "status": "pending"},
+    {"step": "Post: Verify Implementation", "status": "pending"},
+    {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
+    {"step": "Post: Code Review (skipped: review extension not installed)", "status": "completed"},
+    {"step": "Post: Integration Suite", "status": "pending"},
+    {"step": "Post: Cleanup (skipped: cleanup extension not installed)", "status": "completed"},
+    {"step": "Post: Reviewability Diff Gate", "status": "pending"},
+    {"step": "Post: Self-Review", "status": "pending"},
+    {"step": "Post: UAT Runbook Generation", "status": "pending"},
+    {"step": "Post: PR Body Generation", "status": "pending"},
+    {"step": "Post: PR Creation", "status": "pending"},
+    {"step": "Post: Review Remediation", "status": "pending"},
+    {"step": "Post: Retrospective", "status": "pending"}
   ]
 }
