@@ -70,6 +70,14 @@
         },
         {
           "operation": "MODIFIED",
+          "path": "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh"
+        },
+        {
+          "operation": "MODIFIED",
           "path": "docs-site/astro.config.mjs"
         },
         {
@@ -247,8 +255,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
-        "commit_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd"
+        "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+        "commit_sha": "ec47b484d6ec5e60dd66604e820001928e26310e"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -265,8 +273,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
-        "commit_sha": "773ec58e278ac434d29b216209d9e6c1abc07bbd",
+        "head_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
+        "commit_sha": "ec47b484d6ec5e60dd66604e820001928e26310e",
         "task_ids": [
           "T001",
           "T002",

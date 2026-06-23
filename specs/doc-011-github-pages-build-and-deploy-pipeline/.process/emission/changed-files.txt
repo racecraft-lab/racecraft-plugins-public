@@ -1,6 +1,8 @@
 .github/workflows/deploy-docs.yml
 .github/workflows/pr-checks.yml
 CLAUDE.md
+dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh
+dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh
 docs-site/astro.config.mjs
 docs-site/public/robots.txt
 docs/ai/specs/.process/DOC-011-design-concept.md
