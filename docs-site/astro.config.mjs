@@ -10,6 +10,13 @@ export default defineConfig({
     starlight({
       title: 'Racecraft Public Plugins',
       plugins: [starlightLinksValidator()],
+      // DOC-012 removes this staging-only indexing guard at public launch.
+      head: [
+        {
+          tag: 'meta',
+          attrs: { name: 'robots', content: 'noindex, nofollow' },
+        },
+      ],
       sidebar: [
         {
           label: 'Tutorials',

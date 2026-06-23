@@ -37,7 +37,7 @@ Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, us
 
 - **Marketplace registry:** `.claude-plugin/marketplace.json` (must be updated when adding a plugin)
 - **Release config:** `release-please-config.json` + `.release-please-manifest.json` (kept in sync; see "Adding a New Plugin to Release Automation" below)
-- **Pipeline verification runbook:** `docs/ai/specs/cicd-release-pipeline-verification.md` (authoritative for branch-protection + release-please setup)
+- **Pipeline verification runbook:** `docs/ai/specs/cicd-release-pipeline-verification.md` (authoritative for branch-protection, release-please, and docs deploy setup)
 - **Per-plugin entry:** `<plugin>/.claude-plugin/plugin.json` (name, version, description)
 - **Test runner:** `tests/<plugin>/run-all.sh` (see "Running Tests") — lives at the repo root, outside the plugin dir, so it is not shipped to consumers
 
@@ -235,6 +235,10 @@ gh api /repos/racecraft-lab/racecraft-plugins-public/branches/main/protection \
 Compare the output against the actual job names in `pr-checks.yml`. Recovery: re-run the Stage 1 branch protection setup command from `docs/ai/specs/cicd-release-pipeline-verification.md` with the corrected check names.
 
 When modifying `.github/workflows/pr-checks.yml` or `.github/workflows/release.yml`, include a note in the PR description confirming whether CLAUDE.md's CI/CD sections require updates.
+
+## Docs Site Deployment
+
+The Deploy Docs workflow (`.github/workflows/deploy-docs.yml`) publishes the Astro/Starlight docs site to GitHub Pages after `pnpm --dir docs-site validate` succeeds. It uses the manual Pages source setting `GitHub Actions`, the `github-pages` environment, least-privilege Pages permissions, and a fixed staging concurrency group. Keep setup, retry, rollback, deployment-history, and DOC-012 staging-versus-launch details in `docs/ai/specs/cicd-release-pipeline-verification.md` rather than duplicating them here.
 
 ## Release Process
 

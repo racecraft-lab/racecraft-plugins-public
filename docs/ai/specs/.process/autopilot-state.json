@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
-  "updated_at": "2026-06-23T00:00:00-05:00",
-  "active_step": "Phase 7: Setup and Scope Checks (T001-T008)",
+  "updated_at": "2026-06-23T02:09:39.204Z",
+  "active_step": "Post: Doctor Extension Check",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "doc-011-github-pages-build-and-deploy-pipeline",
   "confidence_gate_mode": "advisory",
@@ -129,27 +129,27 @@
     },
     {
       "step": "Phase 7: Setup and Scope Checks (T001-T008)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Workflow Deployment (T009-T015)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Staging Guard (T016-T018)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Runbook and Agent Guidance (T019-T022)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Validation and Reviewability Evidence (T023-T028)",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",
@@ -615,5 +615,49 @@
       "risk_assessment": 0.94,
       "completeness": 0.93
     }
+  },
+  "implementation": {
+    "gate": {
+      "name": "G7",
+      "pass": true,
+      "total_tasks": 28,
+      "completed_tasks": 28
+    },
+    "files": [
+      ".github/workflows/deploy-docs.yml",
+      "docs-site/astro.config.mjs",
+      "docs-site/public/robots.txt",
+      "docs/ai/specs/cicd-release-pipeline-verification.md",
+      "CLAUDE.md",
+      "docs/ai/specs/.process/DOC-011-workflow.md",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md"
+    ],
+    "validation": [
+      {
+        "command": "actionlint .github/workflows/deploy-docs.yml",
+        "status": "pass"
+      },
+      {
+        "command": "pnpm --dir docs-site install --frozen-lockfile",
+        "status": "pass"
+      },
+      {
+        "command": "pnpm --dir docs-site exec playwright install --with-deps chromium",
+        "status": "pass"
+      },
+      {
+        "command": "rm -rf docs-site/dist && pnpm --dir docs-site validate",
+        "status": "pass",
+        "note": "Initial sandboxed validate failed at localhost bind; rerun with elevated permissions passed."
+      },
+      {
+        "command": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check \"$PWD\"",
+        "status": "pass"
+      },
+      {
+        "command": "git diff --check",
+        "status": "pass"
+      }
+    ]
   }
 }

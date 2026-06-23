@@ -14,11 +14,11 @@
 
 **Purpose**: Start with checks and source inspection before editing workflow, docs-site, or runbook files.
 
-- [ ] T001 [P] Inspect docs validation and package-manager commands in `docs-site/package.json` before writing `.github/workflows/deploy-docs.yml`
-- [ ] T002 [P] Inspect existing GitHub Actions conventions in `.github/workflows/pr-checks.yml` and `.github/workflows/release.yml` before writing `.github/workflows/deploy-docs.yml`
-- [ ] T003 [P] Inspect existing Starlight config shape in `docs-site/astro.config.mjs` before adding the DOC-011 robots head guard
-- [ ] T004 [P] Inspect existing agent CI/CD guidance in `CLAUDE.md` before adding the DOC-011 deploy pointer
-- [ ] T005 Review workflow contract and validation checklist in `specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md` and `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`
+- [x] T001 [P] Inspect docs validation and package-manager commands in `docs-site/package.json` before writing `.github/workflows/deploy-docs.yml`
+- [x] T002 [P] Inspect existing GitHub Actions conventions in `.github/workflows/pr-checks.yml` and `.github/workflows/release.yml` before writing `.github/workflows/deploy-docs.yml`
+- [x] T003 [P] Inspect existing Starlight config shape in `docs-site/astro.config.mjs` before adding the DOC-011 robots head guard
+- [x] T004 [P] Inspect existing agent CI/CD guidance in `CLAUDE.md` before adding the DOC-011 deploy pointer
+- [x] T005 Review workflow contract and validation checklist in `specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md` and `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`
 
 ---
 
@@ -26,9 +26,9 @@
 
 **Purpose**: Confirm the bounded DOC-011 scope before implementation starts.
 
-- [ ] T006 Verify reviewability budget and declared file operations in `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md`
-- [ ] T007 Confirm DOC-011 keeps DOC-012 launch, custom-domain, base-path, and noindex removal work out of scope using `docs/ai/specs/.process/DOC-011-design-concept.md`
-- [ ] T008 Build a path-filter checklist from `specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md` for `.github/workflows/deploy-docs.yml`
+- [x] T006 Verify reviewability budget and declared file operations in `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md`
+- [x] T007 Confirm DOC-011 keeps DOC-012 launch, custom-domain, base-path, and noindex removal work out of scope using `docs/ai/specs/.process/DOC-011-design-concept.md`
+- [x] T008 Build a path-filter checklist from `specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md` for `.github/workflows/deploy-docs.yml`
 
 **Checkpoint**: Scope and source evidence are ready. Implementation can begin without expanding the review surface.
 
@@ -42,11 +42,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T009 [US1] Create `.github/workflows/deploy-docs.yml` with `Deploy Docs`, `push` to `main`, explicit broad `paths`, and ordered fixture-heavy negative exclusions
-- [ ] T010 [US1] Add least-privilege `contents: read`, `pages: write`, and `id-token: write` permissions plus fixed staging concurrency in `.github/workflows/deploy-docs.yml`
-- [ ] T011 [US1] Add the build/upload job in `.github/workflows/deploy-docs.yml` with checkout, Node 22, Corepack pnpm 10.25.0, frozen docs-site install, Chromium-only Playwright install, `rm -rf docs-site/dist`, `pnpm --dir docs-site validate`, Pages configuration, and `docs-site/dist` upload
-- [ ] T012 [US1] Add the dependent deploy job in `.github/workflows/deploy-docs.yml` with `github-pages` environment, `actions/deploy-pages`, page URL output, and no checkout, rebuild, or artifact upload
-- [ ] T013 [US1] Check `.github/workflows/deploy-docs.yml` against `specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md` for validation-before-upload, standard Pages actions, and no broad deploy credentials
+- [x] T009 [US1] Create `.github/workflows/deploy-docs.yml` with `Deploy Docs`, `push` to `main`, explicit broad `paths`, and ordered fixture-heavy negative exclusions
+- [x] T010 [US1] Add least-privilege `contents: read`, `pages: write`, and `id-token: write` permissions plus fixed staging concurrency in `.github/workflows/deploy-docs.yml`
+- [x] T011 [US1] Add the build/upload job in `.github/workflows/deploy-docs.yml` with checkout, Node 22, Corepack pnpm 10.25.0, frozen docs-site install, Chromium-only Playwright install, `rm -rf docs-site/dist`, `pnpm --dir docs-site validate`, Pages configuration, and `docs-site/dist` upload
+- [x] T012 [US1] Add the dependent deploy job in `.github/workflows/deploy-docs.yml` with `github-pages` environment, `actions/deploy-pages`, page URL output, and no checkout, rebuild, or artifact upload
+- [x] T013 [US1] Check `.github/workflows/deploy-docs.yml` against `specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md` for validation-before-upload, standard Pages actions, and no broad deploy credentials
 
 **Checkpoint**: User Story 1 is testable by workflow contract inspection.
 
@@ -60,8 +60,8 @@
 
 ### Implementation for User Story 2
 
-- [ ] T014 [US2] Add `workflow_dispatch` to `.github/workflows/deploy-docs.yml` so manual retries use the same build/upload and deploy jobs as `push` runs
-- [ ] T015 [US2] Check retry and concurrency behavior in `.github/workflows/deploy-docs.yml` against `specs/doc-011-github-pages-build-and-deploy-pipeline/data-model.md`
+- [x] T014 [US2] Add `workflow_dispatch` to `.github/workflows/deploy-docs.yml` so manual retries use the same build/upload and deploy jobs as `push` runs
+- [x] T015 [US2] Check retry and concurrency behavior in `.github/workflows/deploy-docs.yml` against `specs/doc-011-github-pages-build-and-deploy-pipeline/data-model.md`
 
 **Checkpoint**: User Story 2 is testable by workflow trigger and concurrency inspection.
 
@@ -75,9 +75,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T016 [P] [US3] Add one DOC-011 Starlight robots meta guard with `noindex, nofollow` and DOC-012 removal boundary in `docs-site/astro.config.mjs`
-- [ ] T017 [P] [US3] Create `docs-site/public/robots.txt` with exactly `User-agent: *` and `Disallow: /`
-- [ ] T018 [US3] Check staging indexing guard content in `docs-site/astro.config.mjs` and `docs-site/public/robots.txt` against `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`
+- [x] T016 [P] [US3] Add one DOC-011 Starlight robots meta guard with `noindex, nofollow` and DOC-012 removal boundary in `docs-site/astro.config.mjs`
+- [x] T017 [P] [US3] Create `docs-site/public/robots.txt` with exactly `User-agent: *` and `Disallow: /`
+- [x] T018 [US3] Check staging indexing guard content in `docs-site/astro.config.mjs` and `docs-site/public/robots.txt` against `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`
 
 **Checkpoint**: User Story 3 is testable by static file and config inspection.
 
@@ -91,10 +91,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T019 [US4] Create or repair `docs/ai/specs/cicd-release-pipeline-verification.md` with Pages setup, validation gate, source ref/SHA evidence, artifact upload result, deploy result, deployed URL, retry, rollback, and DOC-012 handoff
-- [ ] T020 [US4] Document crawler-policy nuance and the GitHub Pages project-site `robots.txt` limitation in `docs/ai/specs/cicd-release-pipeline-verification.md`
-- [ ] T021 [US4] Update `CLAUDE.md` with concise Deploy Docs workflow guidance and a pointer to `docs/ai/specs/cicd-release-pipeline-verification.md`
-- [ ] T022 [US4] Check `CLAUDE.md` summarizes rather than duplicates the runbook and names `.github/workflows/deploy-docs.yml`
+- [x] T019 [US4] Create or repair `docs/ai/specs/cicd-release-pipeline-verification.md` with Pages setup, validation gate, source ref/SHA evidence, artifact upload result, deploy result, deployed URL, retry, rollback, and DOC-012 handoff
+- [x] T020 [US4] Document crawler-policy nuance and the GitHub Pages project-site `robots.txt` limitation in `docs/ai/specs/cicd-release-pipeline-verification.md`
+- [x] T021 [US4] Update `CLAUDE.md` with concise Deploy Docs workflow guidance and a pointer to `docs/ai/specs/cicd-release-pipeline-verification.md`
+- [x] T022 [US4] Check `CLAUDE.md` summarizes rather than duplicates the runbook and names `.github/workflows/deploy-docs.yml`
 
 **Checkpoint**: User Story 4 is testable by runbook and CLAUDE guidance inspection.
 
@@ -104,12 +104,12 @@
 
 **Purpose**: Validate the one vertical slice and prepare review evidence.
 
-- [ ] T023 Run `pnpm --dir docs-site install --frozen-lockfile` for `docs-site/package.json`
-- [ ] T024 Run `pnpm --dir docs-site exec playwright install --with-deps chromium` for `docs-site/package.json` smoke prerequisites
-- [ ] T025 Remove `docs-site/dist` and run `pnpm --dir docs-site validate` for `docs-site/package.json`
-- [ ] T026 Check `.github/workflows/deploy-docs.yml` for no `${{ secrets.* }}`, no custom `token:`, no broad write permissions, and no `continue-on-error`
-- [ ] T027 Check changed files stay within declared operations in `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md` and update `specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md` task states as work completes
-- [ ] T028 Prepare PR review packet content from `specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md`, `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md`, `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`, and validation evidence
+- [x] T023 Run `pnpm --dir docs-site install --frozen-lockfile` for `docs-site/package.json`
+- [x] T024 Run `pnpm --dir docs-site exec playwright install --with-deps chromium` for `docs-site/package.json` smoke prerequisites
+- [x] T025 Remove `docs-site/dist` and run `pnpm --dir docs-site validate` for `docs-site/package.json`
+- [x] T026 Check `.github/workflows/deploy-docs.yml` for no `${{ secrets.* }}`, no custom `token:`, no broad write permissions, and no `continue-on-error`
+- [x] T027 Check changed files stay within declared operations in `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md` and update `specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md` task states as work completes
+- [x] T028 Prepare PR review packet content from `specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md`, `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md`, `specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md`, and validation evidence
 
 ---
 

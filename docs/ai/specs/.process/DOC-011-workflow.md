@@ -50,7 +50,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Checklist | `$speckit-checklist` | Complete | reliability/security/integration/maintainability complete; G4 passed with 0 gap markers |
 | Tasks | `$speckit-tasks` | Complete | Generated 28 task lines with 7 parallel markers; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Remediated one HIGH spec conflict; G6 passed with 0 findings |
-| Implement | `$speckit-implement` | Pending | Implement only after prior gates pass |
+| Implement | `$speckit-implement` | Complete | DOC-011 workflow, staging guard, runbook, CLAUDE.md pointer, and validation evidence complete |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -551,10 +551,10 @@ Verification should include:
 
 | Area | Status | Evidence |
 |------|--------|----------|
-| Deploy workflow | Pending | |
-| Noindex guard | Pending | |
-| Runbook and CLAUDE.md | Pending | |
-| Validation | Pending | |
+| Deploy workflow | Complete | Added `.github/workflows/deploy-docs.yml` with `push` to `main`, `workflow_dispatch`, explicit broad paths plus fixture exclusions, least-privilege Pages permissions, fixed staging concurrency, validate-before-upload build job, and dependent `github-pages` deploy job. |
+| Noindex guard | Complete | Added one Starlight robots meta head entry with `noindex, nofollow` and DOC-012 removal comment; added `docs-site/public/robots.txt` with exactly `User-agent: *` and `Disallow: /`. |
+| Runbook and CLAUDE.md | Complete | Created `docs/ai/specs/cicd-release-pipeline-verification.md` with Pages setup, validation, retry, rollback, deployment-history, crawler-policy, and DOC-012 handoff; updated `CLAUDE.md` with a concise deploy pointer. |
+| Validation | Complete | `actionlint .github/workflows/deploy-docs.yml`; `pnpm --dir docs-site install --frozen-lockfile`; `pnpm --dir docs-site exec playwright install --with-deps chromium`; `rm -rf docs-site/dist`; `pnpm --dir docs-site validate` passed after rerun with elevated permissions because sandbox blocked localhost preview binding. |
 
 ---
 
