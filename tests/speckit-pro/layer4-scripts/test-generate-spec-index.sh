@@ -102,6 +102,9 @@ RMOC_LEGACY="specs/legacy-thing/SPEC-MOC.md"    # NOT gated                -> SK
 RMOCNI_ROOT="$FIX/roadmap-moc-no-index"
 RMOCNI_HOME="docs/ai/specs/broken-roadmap-MOC.md"
 RMOCNI_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"
+RMOCNIP_ROOT="$FIX/roadmap-moc-no-index-partial"
+RMOCNIP_HOME="docs/ai/specs/partial-roadmap-MOC.md"
+RMOCNIP_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"
 
 # The middle dot in a PRS row is U+00B7 (· — two bytes 0xC2 0xB7), NOT an ASCII
 # dot. Pin the exact bytes the renderer must emit (D3 worked example).
@@ -620,5 +623,30 @@ assert_contains "$lerr" "broken-roadmap-MOC.md" "FR-017a: stderr must name the m
 set_test "FR-017a --check also fails safe (exit 2, read-only error path)"
 rc_lc=0; "$GEN" --check "$RMOCNI_ROOT" >/dev/null 2>&1 || rc_lc=$?
 assert_eq "2" "$rc_lc" "FR-017a: --check on a malformed home note is exit 2, never exit 0/1"
+
+# ───────────────────────────────────────────────────────────────────────────
+section "(l2) FR-017a — a gated home note missing INDEX fails safe even with other pairs"
+# ───────────────────────────────────────────────────────────────────────────
+# roadmap-moc-no-index-partial/ has a version-gated home note with PRS and
+# BACKLINKS pairs, but no INDEX pair. Home notes are only supported through INDEX,
+# so this must take the same fail-safe as the all-absent malformed home note.
+copy_l2="$(fresh_copy "$RMOCNIP_ROOT")"
+home_before_l2="$(shasum "$copy_l2/$RMOCNIP_HOME" | awk '{print $1}')"
+spec_before_l2="$(shasum "$copy_l2/$RMOCNIP_SPEC1" | awk '{print $1}')"
+set_test "write run over a gated home note missing INDEX but carrying PRS/BACKLINKS -> exit 2"
+rc_l2=0; l2err="$("$GEN" "$copy_l2" 2>&1 >/dev/null)" || rc_l2=$?
+assert_eq "2" "$rc_l2" "FR-017a: a gated home note without INDEX must fail safe even when other generated pairs exist"
+set_test "the partial malformed home note is left wholly unmodified"
+assert_eq "$home_before_l2" "$(shasum "$copy_l2/$RMOCNIP_HOME" | awk '{print $1}')" "FR-017a: no write on partial home-note fail-safe path"
+set_test "the partial malformed home note did NOT gain an injected INDEX zone"
+home_after_l2="$(cat "$copy_l2/$RMOCNIP_HOME" 2>/dev/null || true)"
+assert_not_contains "$home_after_l2" "GENERATED:INDEX:START" "FR-017a: inject-if-missing must NOT fire when INDEX alone is absent"
+set_test "the sibling gated spec-MOC is untouched after the partial-home fail-safe"
+assert_eq "$spec_before_l2" "$(shasum "$copy_l2/$RMOCNIP_SPEC1" | awk '{print $1}')" "FR-017a: partial-home fail-safe aborts the batch before any write"
+set_test "the partial FR-017a error message names the offending home note on stderr"
+assert_contains "$l2err" "partial-roadmap-MOC.md" "FR-017a: stderr must name the malformed partial home note"
+set_test "partial FR-017a --check also fails safe (exit 2, read-only error path)"
+rc_l2c=0; "$GEN" --check "$RMOCNIP_ROOT" >/dev/null 2>&1 || rc_l2c=$?
+assert_eq "2" "$rc_l2c" "FR-017a: --check on a partial malformed home note is exit 2"
 
 test_summary

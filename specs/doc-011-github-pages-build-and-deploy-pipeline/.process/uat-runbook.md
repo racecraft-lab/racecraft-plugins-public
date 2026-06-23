@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | doc-011-github-pages-build-and-deploy-pipeline |
 | Branch | doc-011-github-pages-build-and-deploy-pipeline |
-| PR | **PR:** <set on PR open> |
+| PR | **PR:** [#243](https://github.com/racecraft-lab/racecraft-plugins-public/pull/243) |
 | Generated from | 2026-06-23T01:51:13Z |
 
 

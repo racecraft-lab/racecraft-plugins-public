@@ -554,12 +554,10 @@ rebuild_map() {
   if [ "$st_prs" = present ];       then render_prs_into_or_die2 prs_body "$spec_dir"; fi
   if [ "$st_backlinks" = present ]; then bl_body="$(render_backlinks "$spec_dir")"; fi
 
-  # FR-017a fail-safe: a home-note target with ALL three pairs absent is a MALFORMED
-  # home note (a gated home note must carry its INDEX pair — FR-002), NOT a fresh
-  # spec-MOC awaiting injection. It MUST NOT take the inject-if-missing path below
-  # (which would inject all three zones and render PRS/BACKLINKS against the home
-  # note's non-spec directory). Fail safe: exit 2, no write, naming the home note.
-  if [ "$is_home" = 1 ] && [ "$st_index" = absent ] && [ "$st_prs" = absent ] && [ "$st_backlinks" = absent ]; then
+  # FR-017a fail-safe: a home-note target missing INDEX is malformed (FR-002),
+  # even if PRS/BACKLINKS pairs are present. It MUST NOT take the inject-if-missing
+  # path below, which would render spec-style zones against docs/ai/specs/.
+  if [ "$is_home" = 1 ] && [ "$st_index" = absent ]; then
     err "roadmap-MOC home note is gated but missing its GENERATED:INDEX zone: $moc"
   fi
 
