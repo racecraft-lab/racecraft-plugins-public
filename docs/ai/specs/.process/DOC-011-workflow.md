@@ -46,7 +46,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Resolved trigger paths, validation/artifact setup, staging visibility, Pages setup wording, and runbook split |
-| Plan | `$speckit-plan` | Pending | Produce workflow, docs-site guard, and runbook implementation plan |
+| Plan | `$speckit-plan` | Complete | Created plan/research/data-model/quickstart/workflow contract; G3 passed; reviewability estimate under budget |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: reliability, security, docs-ops, maintainability |
 | Tasks | `$speckit-tasks` | Pending | Preserve one-slice deploy/runbook flow |
 | Analyze | `$speckit-analyze` | Pending | Check drift between roadmap, design concept, spec, plan, and tasks |
@@ -329,11 +329,17 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, execution flow |
-| `research.md` | Pending | GitHub Pages/Astro decisions if needed |
-| `data-model.md` | Pending | Likely not needed; no data entities |
-| `contracts/` | Pending | Optional workflow/runbook contract if useful |
-| `quickstart.md` | Pending | Maintainer verification commands and setup notes |
+| `plan.md` | Complete | Technical context, declared file operations, constitution check, reviewability WARN rationale |
+| `research.md` | Complete | GitHub Pages, Astro artifact path, Playwright, path filters, noindex/robots decisions |
+| `data-model.md` | Complete | Configuration artifacts and operator-state relationships |
+| `contracts/` | Complete | `deploy-docs-workflow.md` workflow/runbook contract |
+| `quickstart.md` | Complete | Maintainer verification commands and setup notes |
+
+Plan reviewability estimate:
+
+```json
+{"tool":"estimate-reviewable-loc","status":"pass","projected":40,"declared_files":{"production":1,"new":3,"modified":2,"total_entries":5}}
+```
 
 ---
 

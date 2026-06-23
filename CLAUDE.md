@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-No active SpecKit plan — TACD-004 (Verification Coverage) shipped and was archived; the Tool-Agnostic Capability Discovery roadmap is complete. Run `/speckit-pro:speckit-status` for the roadmap dashboard and the recommended next spec.
+Active SpecKit plan: `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md` (DOC-011 GitHub Pages build-and-deploy pipeline). Use the plan, spec, and generated design artifacts in that feature directory as the current implementation source of truth.
 <!-- SPECKIT END -->
 
 ## Working in This Repo
@@ -451,6 +451,8 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 - Checked-in Markdown/MDX files only; no database, browser storage, or runtime state (doc-008-troubleshooting-security-trust-update-rollback)
 - JavaScript ESM on Node.js for docs-site scripts; Astro 6.4.6 and Starlight 0.40.0 in `docs-site/`; pnpm 10.25.0 scoped with `pnpm --dir docs-site ...` + Existing `astro`, `@astrojs/starlight`, `@astrojs/check`, `starlight-links-validator`; add minimal Playwright dev dependency only for `validate:smoke` (doc-010-search-accessibility-deep-links-docs-validation)
 - Checked-in Markdown, Astro components, package scripts, generated reference files, and CI artifacts only; no database or browser storage (doc-010-search-accessibility-deep-links-docs-validation)
+- Docs-site JavaScript ESM on Node >=22.12; GitHub Actions YAML; Markdown operator guidance + Astro 6.4.6, Starlight 0.40.0, `@astrojs/check`, `starlight-links-validator`, Playwright 1.61.0, pnpm 10.25.0 via Corepack, standard GitHub Pages Actions (doc-011-github-pages-build-and-deploy-pipeline)
+- Checked-in repository files only; GitHub Pages stores the uploaded `docs-site/dist` static artifact outside repository source control (doc-011-github-pages-build-and-deploy-pipeline)
 
 ## Recent Changes
 - prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.

@@ -1,0 +1,91 @@
+# Data Model: GitHub Pages Build-And-Deploy Pipeline
+
+## Entity: Docs Deploy Workflow
+
+**Fields**
+
+- `path`: `.github/workflows/deploy-docs.yml`
+- `automatic_trigger`: `push` to `main` with explicit broad `paths`
+- `manual_trigger`: `workflow_dispatch`
+- `permissions`: `contents: read`, `pages: write`, `id-token: write`
+- `environment`: `github-pages`
+- `concurrency_group`: one group for the staging Pages target
+- `jobs`: validated build/upload job and dependent deploy job
+
+**Validation Rules**
+
+- Must not combine `paths` and `paths-ignore` for the same push event.
+- Must include ordered negative `!` path patterns after `tests/speckit-pro/**`.
+- Must validate before artifact upload.
+- Must prevent overlapping deploys for the same staging target.
+- Must use standard Pages deployment actions.
+
+**State Transitions**
+
+- `not_present` -> `configured` when the workflow file exists.
+- `configured` -> `validated_artifact_ready` after docs validation and upload succeed.
+- `validated_artifact_ready` -> `deployed` after `actions/deploy-pages` succeeds.
+- `configured` -> `failed_no_publish` when validation or upload fails.
+
+## Entity: Validated Pages Artifact
+
+**Fields**
+
+- `source_directory`: `docs-site/dist`
+- `build_gate`: `pnpm --dir docs-site validate`
+- `dependency_install`: `pnpm --dir docs-site install --frozen-lockfile`
+- `browser_install`: `pnpm --dir docs-site exec playwright install --with-deps chromium`
+- `package_manager`: `pnpm@10.25.0` activated through Corepack
+- `runtime`: Node 22
+
+**Validation Rules**
+
+- Artifact upload must happen only after the validation command succeeds.
+- Artifact path must match Astro's default output path unless `astro.config.mjs` later changes output configuration.
+- Failed validation must leave the current published staging site unchanged.
+
+## Entity: Staging Indexing Guard
+
+**Fields**
+
+- `meta_guard`: Starlight `head` entry with `name="robots"` and `content="noindex, nofollow"`
+- `robots_policy`: `docs-site/public/robots.txt`
+- `robots_content`: exactly `User-agent: *` and `Disallow: /`
+- `removal_owner`: DOC-012
+
+**Validation Rules**
+
+- The meta guard and `robots.txt` must both identify DOC-012 as the removal boundary in nearby implementation comments or runbook guidance.
+- The runbook must distinguish crawler blocking from indexing blocking.
+- The staging site must remain directly previewable by known URL.
+
+## Entity: CI/CD Verification Runbook
+
+**Fields**
+
+- `path`: `docs/ai/specs/cicd-release-pipeline-verification.md`
+- `pages_setup`: manual Settings -> Pages -> Build and deployment -> Source = GitHub Actions
+- `validation_gate`: `pnpm --dir docs-site validate`
+- `retry_path`: manual workflow dispatch
+- `rollback_path`: revert/fix-forward source change and redeploy, or rerun a known-good workflow when appropriate
+- `history_path`: GitHub Actions run and deployment history
+- `handoff`: DOC-012 launch/domain/base/indexing removal boundary
+
+**Validation Rules**
+
+- Must not claim the repository Pages setting is automated.
+- Must explain the `github-pages` environment expectation.
+- Must include setup, retry, rollback, deployment-history, and DOC-012 handoff steps.
+
+## Entity: Agent Guidance Update
+
+**Fields**
+
+- `path`: `CLAUDE.md`
+- `active_plan_reference`: `specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md`
+- `cicd_summary`: deploy workflow plus runbook pointer
+
+**Validation Rules**
+
+- Must summarize, not duplicate, the runbook.
+- Must point future agents to `.github/workflows/deploy-docs.yml` and the CI/CD verification runbook.
