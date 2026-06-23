@@ -19,12 +19,12 @@ Use this runbook when a change touches `.github/workflows/**`, release automatio
 `.github/workflows/deploy-docs.yml` publishes the Astro/Starlight docs site to the staging GitHub Pages environment after docs validation succeeds.
 
 - Automatic trigger: `push` to `main` for docs-site, generated-reference, marketplace, release, workflow, and plugin-source paths that can affect published docs.
-- Manual retry trigger: `workflow_dispatch`.
+- Manual retry trigger: `workflow_dispatch` from `main` only; manually selected non-`main` refs do not deploy to the shared staging environment.
 - Validation gate: `pnpm --dir docs-site validate`.
 - Artifact: `docs-site/dist`, created after the workflow removes any stale local `docs-site/dist`.
 - Environment: `github-pages`.
 - Concurrency: fixed group `deploy-docs-github-pages` with `cancel-in-progress: true`.
-- Credentials: standard GitHub Pages workflow token/OIDC context only; no secrets, deploy keys, personal access tokens, GitHub App tokens, or custom deploy token inputs.
+- Credentials: build job has `contents: read`; deploy job has standard GitHub Pages `pages: write` and OIDC context only. No secrets, deploy keys, personal access tokens, GitHub App tokens, or custom deploy token inputs are used.
 
 ## One-Time Pages Setup
 
@@ -72,10 +72,10 @@ Use `workflow_dispatch` only for transient dependency, Actions, artifact upload,
 
 1. Open `Actions -> Deploy Docs`.
 2. Select `Run workflow`.
-3. Run from the intended branch/ref.
+3. Select `main` as the branch.
 4. Confirm the new run repeats dependency install, docs validation, artifact upload, and deploy.
 
-Do not use manual retry to bypass a validation failure. Fix the source problem through a PR first.
+Do not use manual retry to bypass a validation failure or deploy an unmerged branch. Fix the source problem through a PR first, then retry from `main` if the merged source is still correct.
 
 ## Rollback
 

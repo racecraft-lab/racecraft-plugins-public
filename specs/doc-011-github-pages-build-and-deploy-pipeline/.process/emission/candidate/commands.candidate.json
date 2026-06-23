@@ -4,7 +4,7 @@
   "declared_scope_guard": {
     "status": "passed",
     "changed_files_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt",
-    "changed_files_count": 42,
+    "changed_files_count": 43,
     "allowed_files_count": 44
   },
   "operations": [

@@ -63,13 +63,13 @@ Run these from the repository root before walking the acceptance tests.
 - A docs-impacting change outside `docs-site/src/content/docs/**` must still be eligible for automatic deployment if it can affect the rendered docs site.
 - Multiple deploy runs for the same branch or environment must not publish overlapping artifacts unpredictably.
 - A validation failure must leave the currently published staging site unchanged.
-- A transient GitHub Pages or Actions failure must be recoverable through manual dispatch without changing source files.
+- A transient GitHub Pages or Actions failure on `main` must be recoverable through manual dispatch from `main` without changing source files.
 - The staging site must remain directly previewable even while indexing and crawler discovery are blocked.
 - The runbook must not imply that repository Pages settings are automated; maintainers perform one-time setup manually.
 
 ## Self-Review Findings
 
-- Checked `.github/workflows/deploy-docs.yml` for the required push/manual triggers, explicit broad paths, ordered fixture exclusions, least-privilege Pages permissions, fixed concurrency, validate-before-upload ordering, same-run `docs-site/dist` artifact upload, and deploy-only `github-pages` job.
+- Checked `.github/workflows/deploy-docs.yml` for the required push/manual triggers, explicit broad paths, ordered fixture exclusions, job-scoped least-privilege Pages permissions, fixed concurrency, main-only manual retry guard, validate-before-upload ordering, same-run `docs-site/dist` artifact upload, and deploy-only `github-pages` job.
 - Checked staging protection in source and generated output: `docs-site/public/robots.txt` has exactly the two required policy lines, and built HTML contains the `noindex, nofollow` meta guard.
 - Checked runbook and CLAUDE guidance for manual Pages setup, retry/rollback distinction, deployment-history evidence, crawler-policy nuance, and DOC-012 launch boundary.
 - No blocking self-review findings remain.

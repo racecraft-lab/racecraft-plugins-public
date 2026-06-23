@@ -11,7 +11,7 @@ Source: feature specification defines reviewer-ready PR packet behavior.
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- Added `.github/workflows/deploy-docs.yml` with pinned actions, minimal Pages permissions, serialized deploy concurrency, docs validation before artifact upload, and manual dispatch support.
+- Added `.github/workflows/deploy-docs.yml` with pinned actions, job-scoped Pages/OIDC permissions, serialized deploy concurrency, docs validation before artifact upload, and main-only manual retry support.
 - Added `robots.txt` plus Starlight robots metadata to keep the pre-public staging docs non-indexable until DOC-012.
 - Added the CI/CD release pipeline verification guide and updated roadmap/runbook evidence for DOC-011.
 <!-- speckit-pro-editable:what_changed:end -->
@@ -26,7 +26,7 @@ Docs can be built and deployed from `main` without exposing the staging site to 
 
 ## How To Review
 
-1. Review `.github/workflows/deploy-docs.yml` for the `main` push/manual triggers, least-privilege Pages permissions, serialized deploy concurrency, and validate-before-upload ordering.
+1. Review `.github/workflows/deploy-docs.yml` for the `main` push trigger, main-only manual retry guard, job-scoped Pages/OIDC permissions, serialized deploy concurrency, and validate-before-upload ordering.
 2. Review `docs-site/astro.config.mjs` and `docs-site/public/robots.txt` for the staging crawler guard.
 3. Review `docs/ai/specs/cicd-release-pipeline-verification.md` and `CLAUDE.md` for the deploy setup, retry, rollback, and DOC-012 handoff guidance.
 

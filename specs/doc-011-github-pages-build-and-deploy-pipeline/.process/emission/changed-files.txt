@@ -22,6 +22,7 @@ specs/doc-011-github-pages-build-and-deploy-pipeline/.process/marker-plan/final-
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packets/speckit-pr-packet/validation.json
+specs/doc-011-github-pages-build-and-deploy-pipeline/.process/prs.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json
 specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json

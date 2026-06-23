@@ -50,7 +50,7 @@
   "scope_evidence": {
     "reviewable_loc": 7,
     "production_files": 1,
-    "total_files": 42,
+    "total_files": 43,
     "budget_result": "size_blocked",
     "changed_files": [
       ".github/workflows/deploy-docs.yml",
@@ -77,6 +77,7 @@
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packets/speckit-pr-packet/validation.json",
+      "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/prs.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json",
@@ -102,7 +103,7 @@
       "Removing staging noindex controls is reserved for the public-launch follow-up."
     ],
     "reviewability_status": "block",
-    "gate_reason": "total files 42 exceeds block threshold 25",
+    "gate_reason": "total files 43 exceeds block threshold 25",
     "final_reviewability_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json"
   },
   "uat": {
@@ -149,7 +150,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "15b056a09166b39a92ff0c756838f63423b3ebfec0b3a76c0f50e772525d1e96",
+    "value": "1d48f64529ce8529b6e97c34f9b34abc37700842cbf8c70b4860e3fbf38065a5",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

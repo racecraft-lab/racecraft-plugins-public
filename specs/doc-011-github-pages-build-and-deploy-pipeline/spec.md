@@ -32,11 +32,11 @@ Maintainers can manually dispatch the deploy workflow to recover from transient 
 
 **Why this priority**: Deployment recovery must be available when the source state is already correct but external service execution failed.
 
-**Independent Test**: Can be tested by verifying the workflow exposes a manual dispatch path with the same validation and deployment gates as the automatic path.
+**Independent Test**: Can be tested by verifying the workflow exposes a main-only manual dispatch retry path with the same validation and deployment gates as the automatic path.
 
 **Acceptance Scenarios**:
 
-1. **Given** a transient deployment failure occurred, **When** a maintainer manually dispatches the deploy workflow, **Then** the workflow repeats validation and deploys only if validation passes.
+1. **Given** a transient deployment failure occurred on `main`, **When** a maintainer manually dispatches the deploy workflow from `main`, **Then** the workflow repeats validation and deploys only if validation passes.
 2. **Given** a manual deploy is already in progress, **When** another deploy run starts for the same staging target, **Then** overlapping publication is prevented or superseded predictably.
 
 ---
@@ -74,7 +74,7 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - A docs-impacting change outside `docs-site/src/content/docs/**` must still be eligible for automatic deployment if it can affect the rendered docs site.
 - Multiple deploy runs for the same branch or environment must not publish overlapping artifacts unpredictably.
 - A validation failure must leave the currently published staging site unchanged.
-- A transient GitHub Pages or Actions failure must be recoverable through manual dispatch without changing source files.
+- A transient GitHub Pages or Actions failure on `main` must be recoverable through manual dispatch from `main` without changing source files.
 - The staging site must remain directly previewable even while indexing and crawler discovery are blocked.
 - The runbook must not imply that repository Pages settings are automated; maintainers perform one-time setup manually.
 
@@ -87,7 +87,7 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - **FR-003**: The deploy workflow MUST publish through a `github-pages` deployment environment.
 - **FR-004**: The deploy workflow MUST prevent overlapping deploys for the same staging publication target.
 - **FR-005**: The deploy workflow MUST run automatically after pushes to `main` when files with plausible docs-site impact change.
-- **FR-006**: The deploy workflow MUST support manual dispatch by maintainers.
+- **FR-006**: The deploy workflow MUST support manual dispatch by maintainers from `main` for retrying the shared staging deployment.
 - **FR-007**: The deploy workflow MUST install the repository's docs-site toolchain using the checked-in lockfile before validation.
 - **FR-008**: The deploy workflow MUST validate the docs site with the existing docs validation path before uploading any deploy artifact.
 - **FR-009**: The deploy workflow MUST upload the generated docs-site output that corresponds to the existing docs build output location.
@@ -124,14 +124,14 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 
 #### Reliability, Retry, Failure Visibility, And Rollback
 
-- The deploy workflow MUST apply the same dependency install, validation, clean build-output, artifact upload, and deploy sequence for both `push` and `workflow_dispatch` runs.
-- A manually dispatched retry MUST create and validate a new artifact for the selected ref; it MUST NOT deploy an artifact produced by an earlier workflow run.
+- The deploy workflow MUST apply the same dependency install, validation, clean build-output, artifact upload, and deploy sequence for both `push` and `workflow_dispatch` runs on `main`.
+- A manually dispatched retry MUST create and validate a new artifact for the `main` ref; it MUST NOT deploy an artifact produced by an earlier workflow run or from an unmerged branch.
 - The build/upload job MUST remove any pre-existing `docs-site/dist` before validation and MUST upload only the `docs-site/dist` generated after the current run's successful validation.
 - The deploy job MUST depend on the build/upload job and MUST NOT checkout source, rebuild, or upload an artifact itself.
-- The workflow MUST use one fixed staging concurrency group for the `github-pages` publication target and MUST set `cancel-in-progress: true` so a newer push or manual retry supersedes any older in-progress or pending staging deploy run.
+- The workflow MUST use one fixed staging concurrency group for the `github-pages` publication target and MUST set `cancel-in-progress: true` so a newer push or main-branch manual retry supersedes any older in-progress or pending staging deploy run.
 - Dependency installation failure, validation failure, Pages artifact upload failure, and Pages deployment failure MUST surface as failed workflow steps/jobs without being masked by `continue-on-error` or unconditional success handling.
 - The runbook MUST describe how to identify the source ref/SHA, validation result, artifact upload result, deploy result, and deployed URL from the workflow run summary/logs and GitHub deployment history.
-- The runbook MUST distinguish retry from rollback: use `workflow_dispatch` for transient external failures when source remains correct; use a normal revert or fix-forward PR followed by a fresh deploy when bad source content was published.
+- The runbook MUST distinguish retry from rollback: use `workflow_dispatch` from `main` for transient external failures when merged source remains correct; use a normal revert or fix-forward PR followed by a fresh deploy when bad source content was published.
 
 #### Credential And Token Boundaries
 

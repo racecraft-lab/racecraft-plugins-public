@@ -422,6 +422,10 @@
           },
           {
             "operation": "MODIFIED",
+            "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/prs.json"
+          },
+          {
+            "operation": "MODIFIED",
             "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json"
           },
           {
@@ -499,8 +503,8 @@
           "mode": "final-diff",
           "scope": "full-spec",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-          "head_sha": "a710cf9cdfa2025426c8154b2cba413b75be4a98",
-          "commit_sha": "a710cf9cdfa2025426c8154b2cba413b75be4a98"
+          "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+          "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f"
         },
         "hazards": [
           "change-shape:modify-heavy",
@@ -517,8 +521,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-          "head_sha": "a710cf9cdfa2025426c8154b2cba413b75be4a98",
-          "commit_sha": "a710cf9cdfa2025426c8154b2cba413b75be4a98",
+          "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
+          "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
           "task_ids": [
             "T001",
             "T002",
@@ -674,7 +678,7 @@
       }
     ],
     "checkpoint": {
-      "commit_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
+      "commit_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
       "marker_plan_status": "emission_ready",
       "marker_count": 5
     }
@@ -718,7 +722,7 @@
       "title": "docs(DOC-011): add GitHub Pages deploy pipeline",
       "base_branch": "main",
       "head_branch": "doc-011-github-pages-build-and-deploy-pipeline",
-      "head_sha": "b939dd6caf379c987595330f2b62a216b3b20c2c",
+      "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
       "packet_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
       "body_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
       "workflow_contract": "passed",
@@ -758,7 +762,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "b939dd6caf379c987595330f2b62a216b3b20c2c",
+        "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           "CLAUDE.md",
@@ -784,6 +788,7 @@
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packets/speckit-pr-packet/validation.json",
+          "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/prs.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json",
           "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json",
@@ -814,6 +819,7 @@
         "pr_number": 243,
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
-    ]
+    ],
+    "head_sha": "1c1b8700678271721a25f586cb5722aa87cf907f"
   }
 }

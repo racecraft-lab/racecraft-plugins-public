@@ -11,13 +11,20 @@
 ## Required Permissions
 
 ```yaml
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+permissions: {}
+
+jobs:
+  build:
+    permissions:
+      contents: read
+
+  deploy:
+    permissions:
+      pages: write
+      id-token: write
 ```
 
-No broader default token permissions are allowed for DOC-011 unless implementation finds a documented Pages Actions requirement that this contract does not cover.
+No broader default token permissions are allowed for DOC-011 unless implementation finds a documented Pages Actions requirement that this contract does not cover. Pages write and OIDC permissions must not be available to dependency installation or docs build steps.
 
 The workflow must not reference repository or organization secrets, deploy keys, personal access tokens, GitHub App installation tokens, or custom `token:` inputs for the Pages deploy path. It must not reference `${{ secrets.* }}`. Standard Pages actions must rely on the GitHub-provided workflow token/OIDC context made available by the explicit permissions above.
 
@@ -81,6 +88,8 @@ on:
 
 The broad-path tradeoff is intentional: DOC-011 favors avoiding missed generated-reference deploys over minimizing every deploy run. Non-rendered process/archive state such as `docs/ai/specs/**`, `specs/**`, and `.specify/memory/**` remains excluded unless later identified as a docs-site or generated-reference input.
 
+Manual dispatch is a main-branch retry path. A manually selected non-`main` ref must not deploy to the shared `github-pages` environment.
+
 ## Required Jobs
 
 ### Build And Upload Job
@@ -95,18 +104,18 @@ Required behavior:
 6. Remove any pre-existing `docs-site/dist`.
 7. Run `pnpm --dir docs-site validate`.
 8. Confirm `docs-site/dist` exists and is non-empty after validation.
-9. Configure Pages.
-10. Upload `docs-site/dist` with `actions/upload-pages-artifact`.
+9. Upload `docs-site/dist` with `actions/upload-pages-artifact`.
 
 ### Deploy Job
 
 Required behavior:
 
 1. Depend on the build/upload job.
-2. Deploy with `actions/deploy-pages`.
-3. Use the `github-pages` environment.
-4. Expose the deployed page URL from the Pages deploy step when GitHub provides it.
-5. Do not checkout source, rebuild docs, or upload a Pages artifact in the deploy job.
+2. Configure Pages.
+3. Deploy with `actions/deploy-pages`.
+4. Use the `github-pages` environment.
+5. Expose the deployed page URL from the Pages deploy step when GitHub provides it.
+6. Do not checkout source, rebuild docs, or upload a Pages artifact in the deploy job.
 
 ## Required Failure Visibility
 
