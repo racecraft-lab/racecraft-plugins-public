@@ -323,7 +323,7 @@ render_prs() {
     fi
 
     [ -n "$v2_rows" ] || return 0
-    printf 'Note: `SHA` records the PR evidence snapshot commit. It is not expected to equal the later commit that contains the refreshed generated metadata.\n\n'
+    printf 'Note: for open PR rows, `SHA` records the PR evidence snapshot head commit; for merged rows, `SHA` records the merged commit. Open-row snapshot SHAs are not expected to equal later commits that contain refreshed generated metadata.\n\n'
     printf '| Order | Slice | PR | Status | Branch | Base | SHA | Scope | Verification |\n'
     printf '|---|---|---|---|---|---|---|---|---|\n'
     while IFS=$'\t' read -r order slice pr status branch base sha scope verification; do

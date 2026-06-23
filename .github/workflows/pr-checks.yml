@@ -200,8 +200,8 @@ jobs:
           #   hooks, scripts, README, tests, dist manifests, and source allowlists
           #   -> reference drift plus docs-quality validation.
           # - Docs-validation contract: docs-site scripts, package scripts,
-          #   Playwright config/spec, PR Checks docs-gate logic, and the docs deploy
-          #   workflow -> full validate.
+          #   Playwright config/spec, PR Checks docs-gate logic, docs deploy
+          #   workflow, and release workflow -> full validate.
           # - Plugin-only changes outside those inputs keep the existing plugin
           #   matrix semantics and skip docs validation successfully.
           rendered_docs=false
@@ -248,7 +248,8 @@ jobs:
               || [[ "$file" == "docs-site/playwright.config.mjs" ]] \
               || [[ "$file" == "docs-site/tests/docs-smoke.spec.mjs" ]] \
               || [[ "$file" == ".github/workflows/pr-checks.yml" ]] \
-              || [[ "$file" == ".github/workflows/deploy-docs.yml" ]]; then
+              || [[ "$file" == ".github/workflows/deploy-docs.yml" ]] \
+              || [[ "$file" == ".github/workflows/release.yml" ]]; then
               docs_contract=true
             fi
           done <<< "$changed_files"
