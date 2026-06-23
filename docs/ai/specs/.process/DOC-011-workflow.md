@@ -574,6 +574,14 @@ Verification should include:
 - Checked runbook and CLAUDE guidance for manual Pages setup, retry/rollback distinction, deployment-history evidence, crawler-policy nuance, and DOC-012 launch boundary.
 - No blocking self-review findings remain.
 
+### PR Emission
+
+| Area | Status | Evidence |
+|------|--------|----------|
+| Final reviewability backstop | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json` records a size-only block for 42 files, one `full-spec` marker, and the `hazard_collapsed` route. |
+| PR packet and workflow contract | Complete | `validate-pr-packet.sh specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json` passed; `validate-pr-workflow-contract.sh --title "docs(DOC-011): add GitHub Pages deploy pipeline" --changed-files specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt` passed. |
+| GitHub PR | Opened | PR #243: https://github.com/racecraft-lab/racecraft-plugins-public/pull/243 from `doc-011-github-pages-build-and-deploy-pipeline` into `main`; initial GitHub checks were queued/in progress at creation. |
+
 ---
 
 ## Expected File Tree

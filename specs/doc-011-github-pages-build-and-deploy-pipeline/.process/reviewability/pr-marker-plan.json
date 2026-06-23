@@ -2,7 +2,7 @@
   "schema_version": "pr-marker-plan.v1",
   "kind": "pr_marker_plan",
   "feature_id": "doc-011-github-pages-build-and-deploy-pipeline",
-  "status": "emission_ready",
+  "status": "emitted",
   "source_fingerprint": {
     "feature_spec_sha": "0b05b7144599321d2dd7c92aba87acd5ec1c8729e7561d952ca2b4fdb1d1928b",
     "plan_declared_scope_sha": "9675e33fd651d4196cfe051c8871030f2d110a6427d290483e6f30534f826bf1",
@@ -283,7 +283,10 @@
         ]
       },
       "emission_mapping": {
-        "status": "hazard_collapsed"
+        "status": "emitted",
+        "packet_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json",
+        "pr_number": 243,
+        "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       },
       "warnings": [
         {
@@ -323,5 +326,6 @@
         "reason": "All implementation markers checkpointed at the same commit, so marker-split PRs would misrepresent reviewable slices."
       }
     }
-  ]
+  ],
+  "updated_at": "2026-06-23T02:38:04Z"
 }
