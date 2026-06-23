@@ -101,6 +101,36 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - **FR-017**: The feature MUST preserve existing site and base assumptions until DOC-012.
 - **FR-018**: The feature MUST avoid new custom deployment scripts unless standard Pages deployment cannot satisfy DOC-011.
 
+### Clarifications
+
+#### Deploy Trigger Coverage
+
+- The deploy workflow MUST use an explicit `push.paths` list rather than triggering on every `main` push.
+- The positive path list MUST cover rendered docs sources, docs-site validation/config files, generated-reference source inputs, marketplace manifests, plugin source surfaces, root scripts, and generated payload directories.
+- The positive path list MUST include `tests/speckit-pro/**` because test harness files feed the generated tests reference page.
+- The path list MUST use ordered negative `!` patterns for fixture-heavy test paths such as `tests/speckit-pro/**/fixtures/**`, `tests/speckit-pro/**/fixtures-codex/**`, and explicit layer7/layer8 fixture directories when those exclusions avoid deploy churn without hiding normal harness changes.
+- The path list MUST exclude non-rendered process/archive state such as `docs/ai/specs/**`, `specs/**`, and `.specify/memory/**` unless a file is explicitly identified as a docs-site or generated-reference input.
+- Negative exclusions MUST be encoded inside `paths:` after the relevant positive patterns; the workflow MUST NOT combine `paths` and `paths-ignore` for the same event.
+
+#### Pages Validation And Artifact Setup
+
+- The deploy workflow MUST use Node 22 and activate pnpm 10.25.0 through Corepack before installing dependencies.
+- The deploy workflow MUST install docs-site dependencies with `pnpm --dir docs-site install --frozen-lockfile`.
+- The deploy workflow MUST install only the Chromium Playwright browser/dependencies needed by the docs smoke test before running `pnpm --dir docs-site validate`.
+- The deploy workflow MUST treat `pnpm --dir docs-site validate` as the build and quality gate before upload.
+- The deploy workflow MUST upload `docs-site/dist` as the Pages artifact because the existing Astro config does not override the default output directory and `validate` already runs the docs build.
+- The deploy workflow MUST keep build/upload and deploy as separate jobs where the deploy job depends on the validated build job.
+
+#### Staging Visibility And Operator Documentation
+
+- The noindex guard MUST be a single Starlight `head` entry equivalent to `{ tag: 'meta', attrs: { name: 'robots', content: 'noindex, nofollow' } }`.
+- `docs-site/public/robots.txt` MUST contain exactly `User-agent: *` and `Disallow: /`.
+- The runbook MUST explain that, on a GitHub Pages project site, `robots.txt` is policy/signaling because crawlers look for it at the host root, while the rendered-page `noindex,nofollow` meta tag is the primary DOC-011 guard.
+- The runbook MUST phrase crawler behavior accurately: `robots.txt` blocks crawling, while `noindex` blocks indexing when crawlers can see the page.
+- The noindex meta entry, `robots.txt`, and runbook MUST each identify DOC-012 as the spec that removes staging indexing protection for launch.
+- The one-time Pages setup guidance MUST say: in GitHub repository settings, go to `Settings -> Pages -> Build and deployment`, set `Source` to `GitHub Actions`, do not select branch-based publishing, and verify the workflow deploys through the `github-pages` environment.
+- The runbook MUST carry the full setup, retry, rollback, deployment-history, and DOC-012 handoff steps; `CLAUDE.md` MUST only summarize the workflow and point to the runbook.
+
 ### Reviewability Notes *(if applicable)*
 
 - Expected file operations are limited to creating one deploy workflow, adding staging indexing protection in docs-site public/head configuration, creating or repairing one CI/CD verification runbook, updating `CLAUDE.md`, and updating DOC-011 process artifacts.
@@ -140,3 +170,4 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - Direct staging preview access is acceptable for maintainers and reviewers even though indexing and crawler discovery remain blocked.
 - Existing docs-site validation remains the authoritative local quality gate for this feature.
 - GitHub's standard Pages deployment actions are sufficient for the DOC-011 staging deployment path.
+- Deploy triggers intentionally favor broad generated-reference coverage over missed docs-impacting deploys, but fixture-heavy test and non-rendered SpecKit process/archive churn should not publish a no-op staging artifact.

@@ -45,7 +45,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
-| Clarify | `$speckit-clarify` | Pending | Resolve exact path filters, Playwright browser setup, and Pages setting wording |
+| Clarify | `$speckit-clarify` | Complete | Resolved trigger paths, validation/artifact setup, staging visibility, Pages setup wording, and runbook split |
 | Plan | `$speckit-plan` | Pending | Produce workflow, docs-site guard, and runbook implementation plan |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: reliability, security, docs-ops, maintainability |
 | Tasks | `$speckit-tasks` | Pending | Preserve one-slice deploy/runbook flow |
@@ -268,9 +268,17 @@ $speckit-clarify Focus on staging visibility and operator documentation: define 
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Deploy trigger and changed paths | Pending | Pending |
-| 2 | Pages validation and artifact setup | Pending | Pending |
-| 3 | Public exposure and runbook wording | Pending | Pending |
+| 1 | Deploy trigger and changed paths | 5 | Use explicit `push.paths`; include generated-reference sources, plugin surfaces, dist payloads, and `tests/speckit-pro/**`; exclude fixture-heavy test paths and non-rendered process/archive churn with ordered `!` patterns. |
+| 2 | Pages validation and artifact setup | 5 | Use Node 22, Corepack pnpm 10.25.0, `pnpm --dir docs-site install --frozen-lockfile`, Chromium-only Playwright install, `pnpm --dir docs-site validate`, upload `docs-site/dist`, and deploy from a dependent Pages job. |
+| 3 | Public exposure and runbook wording | 5 | Use one Starlight robots meta entry, `robots.txt` with `User-agent: *` and `Disallow: /`, DOC-012 removal notes near both guards, manual Pages Source = GitHub Actions setup wording, full operator steps in runbook with concise `CLAUDE.md` pointer. |
+
+### Consensus Resolution Log
+
+| Round | Routed Categories | Outcome | Analysts Used |
+|-------|-------------------|---------|---------------|
+| 1 | `[codebase, spec]` | Include `tests/speckit-pro/**` because generated reference docs consume test harness files; add fixture-heavy exclusions as a pragmatic noise filter, with the tradeoff documented. | codebase-analyst, spec-context-analyst |
+| 1 | `[domain, spec]` | Use `User-agent: *` plus `Disallow: /` for `docs-site/public/robots.txt`; document that on project Pages this is policy/signaling and page-level `noindex,nofollow` is the primary rendered-page guard. | domain-researcher, spec-context-analyst |
+| 1 | `[security, domain]` | Document manual Pages setup only: Settings -> Pages -> Build and deployment -> Source = GitHub Actions; do not use branch publishing or CLI/API mutation; deploy through `github-pages`. | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
