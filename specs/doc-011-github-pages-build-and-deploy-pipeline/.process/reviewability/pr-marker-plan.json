@@ -12,16 +12,17 @@
   },
   "markers": [
     {
-      "id": "foundation",
+      "id": "full-spec",
       "review_order": 1,
-      "kind": "foundation",
+      "kind": "full_spec",
       "parent_marker_id": null,
       "source_boundary": {
-        "section": "Foundation",
+        "section": "Full DOC-011 vertical slice",
         "story_id": null,
         "start_task_id": "T001",
-        "end_task_id": "T008"
+        "end_task_id": "T028"
       },
+      "title_description": "Add GitHub Pages docs deploy pipeline",
       "task_ids": [
         "T001",
         "T002",
@@ -30,220 +31,39 @@
         "T005",
         "T006",
         "T007",
-        "T008"
-      ],
-      "folded_polish_task_ids": [],
-      "folded_polish_target_reason": "",
-      "declared_files": [
-        {
-          "operation": "MODIFIED",
-          "path": ".github/workflows/deploy-docs.yml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": ".github/workflows/pr-checks.yml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": ".github/workflows/release.yml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs-site/astro.config.mjs"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs-site/package.json"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "docs/ai/specs/.process/DOC-011-design-concept.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md"
-        }
-      ],
-      "declared_tests": [],
-      "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "foundation",
-        "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
-      },
-      "hazards": [
-        "change-shape:modify-heavy"
-      ],
-      "subdivision": {
-        "status": "none",
-        "details": {}
-      },
-      "implementation_checkpoint": {
-        "status": "complete",
-        "evidence_path": "docs/ai/specs/.process/DOC-011-workflow.md",
-        "head_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "commit_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "task_ids": [
-          "T001",
-          "T002",
-          "T003",
-          "T004",
-          "T005",
-          "T006",
-          "T007",
-          "T008"
-        ]
-      },
-      "emission_mapping": {
-        "status": "pending"
-      },
-      "warnings": []
-    },
-    {
-      "id": "us1",
-      "review_order": 2,
-      "kind": "user_story",
-      "parent_marker_id": null,
-      "source_boundary": {
-        "section": "User Story 1 - Deploy Docs After Main Merge",
-        "story_id": 1,
-        "start_task_id": "T009",
-        "end_task_id": "T013"
-      },
-      "task_ids": [
+        "T008",
         "T009",
         "T010",
         "T011",
         "T012",
-        "T013"
-      ],
-      "folded_polish_task_ids": [],
-      "folded_polish_target_reason": "",
-      "declared_files": [
-        {
-          "operation": "MODIFIED",
-          "path": ".github/workflows/deploy-docs.yml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md"
-        }
-      ],
-      "declared_tests": [],
-      "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us1",
-        "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
-      },
-      "hazards": [
-        "change-shape:modify-heavy"
-      ],
-      "subdivision": {
-        "status": "none",
-        "details": {}
-      },
-      "implementation_checkpoint": {
-        "status": "complete",
-        "evidence_path": "docs/ai/specs/.process/DOC-011-workflow.md",
-        "head_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "commit_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "task_ids": [
-          "T009",
-          "T010",
-          "T011",
-          "T012",
-          "T013"
-        ]
-      },
-      "emission_mapping": {
-        "status": "pending"
-      },
-      "warnings": []
-    },
-    {
-      "id": "us2",
-      "review_order": 3,
-      "kind": "user_story",
-      "parent_marker_id": null,
-      "source_boundary": {
-        "section": "User Story 2 - Manually Retry A Deploy",
-        "story_id": 2,
-        "start_task_id": "T014",
-        "end_task_id": "T015"
-      },
-      "task_ids": [
+        "T013",
         "T014",
-        "T015"
-      ],
-      "folded_polish_task_ids": [],
-      "folded_polish_target_reason": "",
-      "declared_files": [
-        {
-          "operation": "MODIFIED",
-          "path": ".github/workflows/deploy-docs.yml"
-        },
-        {
-          "operation": "MODIFIED",
-          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/data-model.md"
-        }
-      ],
-      "declared_tests": [],
-      "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us2",
-        "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
-      },
-      "hazards": [
-        "change-shape:modify-heavy"
-      ],
-      "subdivision": {
-        "status": "none",
-        "details": {}
-      },
-      "implementation_checkpoint": {
-        "status": "complete",
-        "evidence_path": "docs/ai/specs/.process/DOC-011-workflow.md",
-        "head_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "commit_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "task_ids": [
-          "T014",
-          "T015"
-        ]
-      },
-      "emission_mapping": {
-        "status": "pending"
-      },
-      "warnings": []
-    },
-    {
-      "id": "us3",
-      "review_order": 4,
-      "kind": "user_story",
-      "parent_marker_id": null,
-      "source_boundary": {
-        "section": "User Story 3 - Preview Staging Without Public Discovery",
-        "story_id": 3,
-        "start_task_id": "T016",
-        "end_task_id": "T018"
-      },
-      "task_ids": [
+        "T015",
         "T016",
         "T017",
-        "T018"
+        "T018",
+        "T019",
+        "T020",
+        "T021",
+        "T022",
+        "T023",
+        "T024",
+        "T025",
+        "T026",
+        "T027",
+        "T028"
       ],
       "folded_polish_task_ids": [],
       "folded_polish_target_reason": "",
       "declared_files": [
+        {
+          "operation": "MODIFIED",
+          "path": ".github/workflows/deploy-docs.yml"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "CLAUDE.md"
+        },
         {
           "operation": "MODIFIED",
           "path": "docs-site/astro.config.mjs"
@@ -254,98 +74,186 @@
         },
         {
           "operation": "MODIFIED",
-          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md"
-        }
-      ],
-      "declared_tests": [],
-      "reviewability": {
-        "status": "block",
-        "mode": "tasks",
-        "scope": "us3",
-        "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
-      },
-      "hazards": [
-        "change-shape:modify-heavy"
-      ],
-      "subdivision": {
-        "status": "none",
-        "details": {}
-      },
-      "implementation_checkpoint": {
-        "status": "complete",
-        "evidence_path": "docs/ai/specs/.process/DOC-011-workflow.md",
-        "head_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "commit_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "task_ids": [
-          "T016",
-          "T017",
-          "T018"
-        ]
-      },
-      "emission_mapping": {
-        "status": "pending"
-      },
-      "warnings": []
-    },
-    {
-      "id": "us4",
-      "review_order": 5,
-      "kind": "user_story",
-      "parent_marker_id": null,
-      "source_boundary": {
-        "section": "User Story 4 - Follow Deploy Setup And Recovery Runbook",
-        "story_id": 4,
-        "start_task_id": "T019",
-        "end_task_id": "T022"
-      },
-      "task_ids": [
-        "T019",
-        "T020",
-        "T021",
-        "T022"
-      ],
-      "folded_polish_task_ids": [],
-      "folded_polish_target_reason": "",
-      "declared_files": [
+          "path": "docs/ai/specs/.process/DOC-011-design-concept.md"
+        },
         {
           "operation": "MODIFIED",
-          "path": ".github/workflows/deploy-docs.yml"
+          "path": "docs/ai/specs/.process/DOC-011-workflow.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/.process/autopilot-state.json"
         },
         {
           "operation": "MODIFIED",
           "path": "docs/ai/specs/cicd-release-pipeline-verification.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/interactive-documentation-roadmap-MOC.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/interactive-documentation-technical-roadmap.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "docs/ai/specs/tool-agnostic-capability-discovery-roadmap-MOC.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/atomicity-route.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/SPEC-MOC.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/integration.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/maintainability.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/reliability.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/requirements.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/checklists/security.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/contracts/deploy-docs-workflow.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/data-model.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/plan.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/quickstart.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/research.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md"
+        },
+        {
+          "operation": "MODIFIED",
+          "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
         }
       ],
       "declared_tests": [],
       "reviewability": {
         "status": "block",
-        "mode": "tasks",
-        "scope": "us4",
-        "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+        "mode": "final-diff",
+        "scope": "full-spec",
+        "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
+        "head_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b",
+        "commit_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b"
       },
       "hazards": [
-        "change-shape:modify-heavy"
+        "change-shape:modify-heavy",
+        "one-navigable-vertical-slice",
+        "marker-checkpoints-not-independent"
       ],
       "subdivision": {
-        "status": "none",
-        "details": {}
+        "status": "hazard_collapsed",
+        "details": {
+          "reason": "DOC-011 shipped as one navigable deploy capability; no safe per-marker checkpoints exist.",
+          "route": "single-atomic-PR"
+        }
       },
       "implementation_checkpoint": {
         "status": "complete",
-        "evidence_path": "docs/ai/specs/.process/DOC-011-workflow.md",
-        "head_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
-        "commit_sha": "ebf77e59d3b9756d666ba651399216c6b579aa02",
+        "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
+        "head_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b",
+        "commit_sha": "e3e8dbbbd74b4c9355ae6ff7495374e64dce7f9b",
         "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013",
+          "T014",
+          "T015",
+          "T016",
+          "T017",
+          "T018",
           "T019",
           "T020",
           "T021",
-          "T022"
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026",
+          "T027",
+          "T028"
         ]
       },
       "emission_mapping": {
-        "status": "pending"
+        "status": "hazard_collapsed"
       },
-      "warnings": []
+      "warnings": [
+        {
+          "code": "MARKER_PLAN_HAZARD_COLLAPSED",
+          "severity": "warning",
+          "message": "DOC-011 emits as one full-spec slice because the atomicity route is one navigable deploy capability and per-marker checkpoints are not safe.",
+          "source": "autopilot",
+          "details": {
+            "route": "single-atomic-PR",
+            "original_route": "one-navigable-PR",
+            "reason": "All implementation markers checkpointed at the same commit, so marker-split PRs would misrepresent reviewable slices."
+          }
+        }
+      ]
     }
   ],
   "warnings": [
@@ -358,6 +266,17 @@
         "status": "block",
         "mode": "tasks",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/tasks-gate.json"
+      }
+    },
+    {
+      "code": "MARKER_PLAN_HAZARD_COLLAPSED",
+      "severity": "warning",
+      "message": "DOC-011 emits as one full-spec slice because the atomicity route is one navigable deploy capability and per-marker checkpoints are not safe.",
+      "source": "autopilot",
+      "details": {
+        "route": "single-atomic-PR",
+        "original_route": "one-navigable-PR",
+        "reason": "All implementation markers checkpointed at the same commit, so marker-split PRs would misrepresent reviewable slices."
       }
     }
   ]
