@@ -556,6 +556,24 @@ Verification should include:
 | Runbook and CLAUDE.md | Complete | Created `docs/ai/specs/cicd-release-pipeline-verification.md` with Pages setup, validation, retry, rollback, deployment-history, crawler-policy, and DOC-012 handoff; updated `CLAUDE.md` with a concise deploy pointer. |
 | Validation | Complete | `actionlint .github/workflows/deploy-docs.yml`; `pnpm --dir docs-site install --frozen-lockfile`; `pnpm --dir docs-site exec playwright install --with-deps chromium`; `rm -rf docs-site/dist`; `pnpm --dir docs-site validate` passed after rerun with elevated permissions because sandbox blocked localhost preview binding. |
 
+### Post-Implementation Checklist
+
+| Task | Status | Findings | Action Needed |
+|------|--------|----------|---------------|
+| Doctor Extension Check | Complete with advisory | Templates, scripts, constitution, feature artifacts, and Claude command registration are present. The stock `.specify/scripts/bash/check-prerequisites.sh` rejected the `doc-011-...` branch because it expects numeric branch prefixes; the autopilot wrapper already accepted this DOC worktree. | None for DOC-011; keep the branch-name advisory visible. |
+| Verify Implementation | Complete | 28/28 tasks complete, 16 referenced project paths checked, 0 missing project paths. Requirements are represented by the deploy workflow, staging guard, runbook, CLAUDE.md pointer, and validation evidence. | None. |
+| Verify Tasks Phantom Check | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md` reports 28 verified tasks and no flagged items. | None. |
+| Code Review | Skipped | Review extension is not installed. Self-review remains in the serial post-implementation tail. | Run manual self-review before PR creation. |
+| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed `3466/3466`. | None. |
+| UAT Runbook | Complete | Generated `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md` for PR packet inclusion. | None. |
+
+### Self-Review
+
+- Checked `.github/workflows/deploy-docs.yml` for the required push/manual triggers, explicit broad paths, ordered fixture exclusions, least-privilege Pages permissions, fixed concurrency, validate-before-upload ordering, same-run `docs-site/dist` artifact upload, and deploy-only `github-pages` job.
+- Checked staging protection in source and generated output: `docs-site/public/robots.txt` has exactly the two required policy lines, and built HTML contains the `noindex, nofollow` meta guard.
+- Checked runbook and CLAUDE guidance for manual Pages setup, retry/rollback distinction, deployment-history evidence, crawler-policy nuance, and DOC-012 launch boundary.
+- No blocking self-review findings remain.
+
 ---
 
 ## Expected File Tree

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
-  "updated_at": "2026-06-23T02:11:43.946Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-06-23T02:19:22.561Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "doc-011-github-pages-build-and-deploy-pipeline",
   "confidence_gate_mode": "advisory",
@@ -149,15 +149,15 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Code Review (skipped: review extension not installed)",
@@ -165,7 +165,7 @@
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: Cleanup (skipped: cleanup extension not installed)",
@@ -173,15 +173,15 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Post: PR Body Generation",
@@ -718,5 +718,40 @@
     "tasks_sha": "e155514bf3fe89bab123711b90bd17d5f9ceadfbbff8e72155aef83bfdad50ec",
     "reviewability_sha": "b0416f8e41e64e3f9f7f40f63562e4b331e8d0c2505aded88ab1d8df905d764e",
     "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  },
+  "post_implementation": {
+    "doctor": {
+      "status": "complete_with_advisory",
+      "advisory": "Stock .specify check-prerequisites rejects doc-011 branch naming; autopilot prerequisite wrapper accepted the DOC worktree."
+    },
+    "verify": {
+      "status": "pass",
+      "completed_tasks": 28,
+      "referenced_project_paths": 16,
+      "missing_project_paths": 0
+    },
+    "verify_tasks": {
+      "status": "pass",
+      "report": "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
+      "flagged_items": 0
+    },
+    "integration_suite": {
+      "status": "pass",
+      "command": "bash tests/speckit-pro/run-all.sh",
+      "result": "3466/3466 passed"
+    },
+    "uat_runbook": {
+      "status": "generated",
+      "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md"
+    }
+  },
+  "self_review": {
+    "status": "pass",
+    "blocking_findings": 0,
+    "notes": [
+      "Workflow triggers, permissions, concurrency, validation, upload, and deploy job separation checked.",
+      "Staging robots/noindex guard checked in source and generated output.",
+      "Runbook and CLAUDE guidance checked for setup, retry, rollback, deployment history, crawler nuance, and DOC-012 boundary."
+    ]
   }
 }
