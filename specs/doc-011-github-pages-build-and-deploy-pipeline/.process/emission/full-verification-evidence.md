@@ -12,7 +12,7 @@
 | `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/doc-011-github-pages-build-and-deploy-pipeline` | Pass, 28/28 tasks complete |
 | `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` | Pass |
 | `git diff --check` | Pass |
-| `bash tests/speckit-pro/run-all.sh` | Pass, 3468/3468 |
+| `bash tests/speckit-pro/run-all.sh` | Pass, 3474/3474 |
 
 ## Notes
 

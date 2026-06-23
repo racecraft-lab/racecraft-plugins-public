@@ -50,7 +50,7 @@
   "scope_evidence": {
     "reviewable_loc": 36,
     "production_files": 2,
-    "total_files": 50,
+    "total_files": 52,
     "budget_result": "size_blocked",
     "changed_files": [
       ".github/workflows/deploy-docs.yml",
@@ -102,6 +102,8 @@
       "specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md",
       "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
+      "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/docs/ai/specs/partial-roadmap-MOC.md",
+      "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/specs/prsg-001-foo/SPEC-MOC.md",
       "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
     ],
     "non_goals": [
@@ -110,7 +112,7 @@
       "Removing staging noindex controls is reserved for the public-launch follow-up."
     ],
     "reviewability_status": "block",
-    "gate_reason": "total files 50 exceeds block threshold 25",
+    "gate_reason": "total files 52 exceeds block threshold 25",
     "final_reviewability_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json"
   },
   "uat": {
@@ -157,7 +159,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "f9edc703604341e256f71cc8fa214dac379b88499f7881ce2a6832d358452e85",
+    "value": "e0d5929bce1ba0c7d4516c10c40ee1ce9f1dfd305ff8eb3d53ffb9975bdee57a",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

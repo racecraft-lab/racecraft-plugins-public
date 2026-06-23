@@ -59,11 +59,13 @@
         "specs/doc-011-github-pages-build-and-deploy-pipeline/spec.md",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/tasks.md",
         "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/docs/ai/specs/partial-roadmap-MOC.md",
+        "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/specs/prsg-001-foo/SPEC-MOC.md",
         "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
       ],
       "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
       "status": "opened",
-      "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
+      "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
       "merged_sha": null
     }
   ]

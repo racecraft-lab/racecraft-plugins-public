@@ -20,7 +20,7 @@ Fresh session advisory: for maximum reliability, `/speckit.verify-tasks` should 
 - Referenced project paths checked: 17.
 - Missing project paths: 0.
 - Full docs deploy gate passed: `pnpm --dir docs-site validate`.
-- Repo regression suite passed: `bash tests/speckit-pro/run-all.sh` (`3468/3468`).
+- Repo regression suite passed: `bash tests/speckit-pro/run-all.sh` (`3474/3474`).
 - Workflow contract checks passed: `actionlint .github/workflows/deploy-docs.yml .github/workflows/pr-checks.yml .github/workflows/release.yml`, no `${{ secrets.* }}`, no custom `token:`, no `continue-on-error`, and no broad write permissions.
 - Docs quality validation now enforces the DOC-011 staging indexing guard for `docs-site/public/robots.txt` and `docs-site/astro.config.mjs`.
 

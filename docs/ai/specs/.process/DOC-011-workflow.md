@@ -564,7 +564,7 @@ Verification should include:
 | Verify Implementation | Complete | 28/28 tasks complete, 17 referenced project paths checked, 0 missing project paths. Requirements are represented by the deploy workflow, staging guard, docs-quality assertions, runbook, CLAUDE.md pointer, and validation evidence. | None. |
 | Verify Tasks Phantom Check | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md` reports 28 verified tasks and no flagged items. | None. |
 | Code Review | Skipped | Review extension is not installed. Self-review remains in the serial post-implementation tail. | Run manual self-review before PR creation. |
-| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed `3468/3468`. | None. |
+| Integration Suite | Complete | `bash tests/speckit-pro/run-all.sh` passed `3474/3474`. | None. |
 | UAT Runbook | Complete | Generated `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md` for PR packet inclusion. | None. |
 
 ### Self-Review
@@ -578,7 +578,7 @@ Verification should include:
 
 | Area | Status | Evidence |
 |------|--------|----------|
-| Final reviewability backstop | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json` records a size-only block for 50 files, one `full-spec` marker, and the `hazard_collapsed` route. |
+| Final reviewability backstop | Complete | `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json` records a size-only block for 52 files, one `full-spec` marker, and the `hazard_collapsed` route. |
 | PR packet and workflow contract | Complete | `validate-pr-packet.sh specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-packet.json` passed; `validate-pr-workflow-contract.sh --title "docs(DOC-011): add GitHub Pages deploy pipeline" --changed-files specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/changed-files.txt` passed. |
 | GitHub PR | Opened | PR #243: https://github.com/racecraft-lab/racecraft-plugins-public/pull/243 from `doc-011-github-pages-build-and-deploy-pipeline` into `main`; initial GitHub checks were queued/in progress at creation. |
 

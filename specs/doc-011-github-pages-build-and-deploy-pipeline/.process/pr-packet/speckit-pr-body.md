@@ -43,7 +43,7 @@ Use `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.m
 
 - `actionlint .github/workflows/deploy-docs.yml` passed.
 - `pnpm --dir docs-site validate` passed.
-- `bash tests/speckit-pro/run-all.sh` passed `3468/3468`.
+- `bash tests/speckit-pro/run-all.sh` passed `3474/3474`.
 - `validate-pr-packet.sh` and `validate-pr-workflow-contract.sh` passed.
 - GitHub PR Checks and CodeQL passed on PR #243.
 

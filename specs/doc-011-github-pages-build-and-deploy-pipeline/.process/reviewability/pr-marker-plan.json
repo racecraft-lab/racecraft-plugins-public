@@ -253,6 +253,14 @@
           "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
         },
         {
+          "operation": "NEW",
+          "path": "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/docs/ai/specs/partial-roadmap-MOC.md"
+        },
+        {
+          "operation": "NEW",
+          "path": "tests/speckit-pro/layer1-structural/fixtures/spec-index/roadmap-moc-no-index-partial/specs/prsg-001-foo/SPEC-MOC.md"
+        },
+        {
           "operation": "MODIFIED",
           "path": "tests/speckit-pro/layer4-scripts/test-generate-spec-index.sh"
         }
@@ -263,8 +271,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
-        "commit_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f"
+        "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
+        "commit_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -281,8 +289,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
-        "commit_sha": "45657a3e81a07c9a3a97569889e77e0f5c13920f",
+        "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
+        "commit_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
         "task_ids": [
           "T001",
           "T002",
@@ -360,5 +368,5 @@
       }
     }
   ],
-  "updated_at": "2026-06-23T18:06:57Z"
+  "updated_at": "2026-06-23T18:24:13Z"
 }
