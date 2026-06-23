@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
   "updated_at": "2026-06-23T00:00:00-05:00",
-  "active_step": "Phase 6: Analyze",
+  "active_step": "Phase 7: Setup and Scope Checks (T001-T008)",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "doc-011-github-pages-build-and-deploy-pipeline",
   "confidence_gate_mode": "advisory",
@@ -117,19 +117,19 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Setup and Scope Checks (T001-T008)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Workflow Deployment (T009-T015)",
@@ -589,5 +589,31 @@
     "tasks_sha": "b6d152f54a9d027451e45e2b72f02f9cdf7567ccf06225399b60550a3191ce7e",
     "reviewability_sha": "b0416f8e41e64e3f9f7f40f63562e4b331e8d0c2505aded88ab1d8df905d764e",
     "hazard_route_sha": "5ec383c17e5e7102cc97e81882f023da85a301abb73f39023ddea31b24e349f0"
+  },
+  "analyze": {
+    "findings": {
+      "critical": 0,
+      "high": 1,
+      "medium": 0,
+      "low": 0,
+      "remaining": 0
+    },
+    "remediations": [
+      "Resolved robots.txt exact-content conflict by keeping robots.txt to two crawler-policy lines and documenting DOC-012 removal boundary in the runbook/meta guidance."
+    ]
+  },
+  "confidence_gate": {
+    "pass": true,
+    "composite": 0.94,
+    "threshold": 0.9,
+    "mode": "advisory",
+    "recommended_action": "proceed",
+    "criteria": {
+      "task_understanding": 0.96,
+      "approach_clarity": 0.94,
+      "requirements_alignment": 0.93,
+      "risk_assessment": 0.94,
+      "completeness": 0.93
+    }
   }
 }

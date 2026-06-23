@@ -146,7 +146,7 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - `docs-site/public/robots.txt` MUST contain exactly `User-agent: *` and `Disallow: /`.
 - The runbook MUST explain that, on a GitHub Pages project site, `robots.txt` is policy/signaling because crawlers look for it at the host root, while the rendered-page `noindex,nofollow` meta tag is the primary DOC-011 guard.
 - The runbook MUST phrase crawler behavior accurately: `robots.txt` blocks crawling, while `noindex` blocks indexing when crawlers can see the page.
-- The noindex meta entry, `robots.txt`, and runbook MUST each identify DOC-012 as the spec that removes staging indexing protection for launch.
+- The noindex meta entry and runbook MUST identify DOC-012 as the spec that removes staging indexing protection for launch; `robots.txt` MUST remain the exact two-line crawler policy and the runbook MUST document its DOC-012 removal boundary.
 - The one-time Pages setup guidance MUST say: in GitHub repository settings, go to `Settings -> Pages -> Build and deployment`, set `Source` to `GitHub Actions`, do not select branch-based publishing, and verify the workflow deploys through the `github-pages` environment.
 - The runbook MUST carry the full setup, retry, rollback, deployment-history, and DOC-012 handoff steps; `CLAUDE.md` MUST only summarize the workflow and point to the runbook.
 
