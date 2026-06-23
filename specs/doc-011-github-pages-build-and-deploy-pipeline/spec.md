@@ -164,7 +164,7 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - **Secondary surfaces, if any**: infra, harness/CI, shared SpecKit generator maintenance
 - **Final production reviewable LOC**: 36 according to the production-only reviewability gate
 - **Final production files**: 2 according to the production-only reviewability gate
-- **Final total files**: 53
+- **Final total files**: 54
 - **Budget result**: size-blocked by total-file count; final marker emission proceeds as one atomic PR marker with explicit evidence
 - **Split decision**: Remains one PR because the deploy workflow, workflow validation, release docs-reference runtime alignment, staging indexing guard, runbook repair, generator guard fix, and agent guidance now form one already-reviewed staging-deploy/review-remediation slice. Splitting after PR review would misrepresent the coupled validation and evidence refresh.
 

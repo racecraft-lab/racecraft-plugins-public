@@ -5,7 +5,7 @@ Use this runbook when a change touches `.github/workflows/**`, release automatio
 ## Baseline Checks
 
 1. Confirm PR titles still use Conventional Commits.
-2. Confirm `.github/workflows/pr-checks.yml` still exposes the expected branch-protection checks: `validate-pr-title`, `validate-docs`, and `validate-plugins`.
+2. Confirm `.github/workflows/pr-checks.yml` still exposes the expected branch-protection checks: `validate-pr-title`, `validate-workflows`, `validate-docs`, and `validate-plugins`.
 3. Confirm `.github/workflows/release.yml` still lets release-please open or update release PRs, sync generated plugin payloads, regenerate docs reference pages, and dispatch PR Checks for release PR branches.
 4. If any workflow job is renamed, compare branch protection against the workflow names before merging:
 
