@@ -31,6 +31,7 @@
 4. Run the deploy gate locally.
 
    ```bash
+   rm -rf docs-site/dist
    pnpm --dir docs-site validate
    ```
 
@@ -40,9 +41,13 @@ Expected result: validation succeeds and `docs-site/dist` exists.
 
 1. Confirm `.github/workflows/deploy-docs.yml` uses `workflow_dispatch` and `push` to `main` with explicit `paths`.
 2. Confirm the workflow declares only `contents: read`, `pages: write`, and `id-token: write`.
-3. Confirm the workflow has separate build/upload and deploy jobs, with deploy depending on the validated artifact job.
-4. Confirm the artifact upload path is `docs-site/dist`.
-5. Confirm deploy uses the `github-pages` environment.
+3. Confirm the workflow does not reference `${{ secrets.* }}`, deploy keys, personal access tokens, GitHub App tokens, custom `token:` inputs, or broad/default write permissions.
+4. Confirm the workflow has separate build/upload and deploy jobs, with deploy depending on the validated artifact job.
+5. Confirm the artifact upload path is `docs-site/dist`.
+6. Confirm `docs-site/dist` is removed before validation and uploaded only after `pnpm --dir docs-site validate` succeeds.
+7. Confirm deploy uses the `github-pages` environment.
+8. Confirm workflow-level concurrency uses the fixed staging group `deploy-docs-github-pages` with `cancel-in-progress: true`.
+9. Confirm the deploy job does not checkout, rebuild, or upload an artifact.
 
 ## Staging Indexing Checks
 
@@ -62,8 +67,10 @@ Expected result: validation succeeds and `docs-site/dist` exists.
 1. In repository settings, configure Pages source as GitHub Actions.
 2. Merge a DOC-011 implementation PR to `main`.
 3. Observe the `Deploy Docs` workflow.
-4. If a transient external failure occurs, manually dispatch the workflow from GitHub Actions.
-5. If a bad source change deployed, revert or fix forward through a normal PR and let the deploy workflow publish the corrected staging site.
+4. For any run, record the source ref/SHA, validation result, artifact upload result, deploy result, and deployed URL from the workflow run summary/logs and GitHub deployment history.
+5. If dependency installation, artifact upload, or Pages deployment fails for a transient external reason while source remains correct, manually dispatch the workflow from GitHub Actions so a new artifact is built and validated before deployment.
+6. If validation fails, fix the source problem first; do not use a deploy-only rerun as a bypass.
+7. If a bad source change deployed, revert or fix forward through a normal PR and let a fresh successful deploy workflow publish the corrected staging site.
 
 ## DOC-012 Handoff
 

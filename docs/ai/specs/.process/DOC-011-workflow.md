@@ -47,7 +47,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Specify | `$speckit-specify` | Complete | Created spec.md and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Resolved trigger paths, validation/artifact setup, staging visibility, Pages setup wording, and runbook split |
 | Plan | `$speckit-plan` | Complete | Created plan/research/data-model/quickstart/workflow contract; G3 passed; reviewability estimate under budget |
-| Checklist | `$speckit-checklist` | Pending | Recommended domains: reliability, security, docs-ops, maintainability |
+| Checklist | `$speckit-checklist` | Complete | reliability/security/integration/maintainability complete; G4 passed with 0 gap markers |
 | Tasks | `$speckit-tasks` | Pending | Preserve one-slice deploy/runbook flow |
 | Analyze | `$speckit-analyze` | Pending | Check drift between roadmap, design concept, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Implement only after prior gates pass |
@@ -279,6 +279,7 @@ $speckit-clarify Focus on staging visibility and operator documentation: define 
 | 1 | `[codebase, spec]` | Include `tests/speckit-pro/**` because generated reference docs consume test harness files; add fixture-heavy exclusions as a pragmatic noise filter, with the tradeoff documented. | codebase-analyst, spec-context-analyst |
 | 1 | `[domain, spec]` | Use `User-agent: *` plus `Disallow: /` for `docs-site/public/robots.txt`; document that on project Pages this is policy/signaling and page-level `noindex,nofollow` is the primary rendered-page guard. | domain-researcher, spec-context-analyst |
 | 1 | `[security, domain]` | Document manual Pages setup only: Settings -> Pages -> Build and deployment -> Source = GitHub Actions; do not use branch publishing or CLI/API mutation; deploy through `github-pages`. | codebase-analyst, spec-context-analyst, domain-researcher |
+| 1 | `[security, domain]` | Security checklist credential boundary approved: prohibit secret-backed or custom deploy credentials and broad write scopes while allowing the standard GitHub-provided workflow token/OIDC flow. | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
@@ -403,10 +404,10 @@ Focus on DOC-011 requirements:
 
 | Domain | Status | Gap Count | Notes |
 |--------|--------|-----------|-------|
-| reliability | Pending | Pending | |
-| security | Pending | Pending | |
-| integration | Pending | Pending | |
-| maintainability | Pending | Pending | |
+| reliability | Complete | 8 remediated, 0 remaining | Added same-run validation/artifact provenance, fixed concurrency group, failure visibility, retry-vs-rollback, deployment history, and stale-output assumptions. |
+| security | Complete | 1 remediated, 0 remaining | Added explicit credential/token boundary: no secrets, deploy keys, PATs, GitHub App tokens, custom token inputs, or broad write permissions; default GitHub token/OIDC remains allowed for standard Pages Actions. |
+| integration | Complete | 0 | No gaps; docs-site validation, generated-reference path coverage, runbook repair, `CLAUDE.md` pointer, one-time Pages setting, and DOC-012 boundary are already covered. |
+| maintainability | Complete | 0 | No gaps; standard Pages workflow, no custom helper, easy DOC-012 guard removal, and concise `CLAUDE.md` pointer already covered. |
 
 ---
 

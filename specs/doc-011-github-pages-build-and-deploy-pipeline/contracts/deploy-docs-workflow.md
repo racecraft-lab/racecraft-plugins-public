@@ -19,6 +19,20 @@ permissions:
 
 No broader default token permissions are allowed for DOC-011 unless implementation finds a documented Pages Actions requirement that this contract does not cover.
 
+The workflow must not reference repository or organization secrets, deploy keys, personal access tokens, GitHub App installation tokens, or custom `token:` inputs for the Pages deploy path. It must not reference `${{ secrets.* }}`. Standard Pages actions must rely on the GitHub-provided workflow token/OIDC context made available by the explicit permissions above.
+
+## Required Concurrency
+
+The workflow must define one fixed concurrency group for the staging Pages target:
+
+```yaml
+concurrency:
+  group: deploy-docs-github-pages
+  cancel-in-progress: true
+```
+
+This makes a newer `push` or `workflow_dispatch` run supersede older in-progress or pending staging deploy runs for the same publication target.
+
 ## Required Path Filter Contract
 
 The push trigger must use explicit `paths`, not `paths-ignore`. It must include broad docs-impacting source coverage and ordered fixture exclusions:
@@ -78,9 +92,11 @@ Required behavior:
 3. Enable Corepack and activate pnpm 10.25.0.
 4. Install docs-site dependencies with `pnpm --dir docs-site install --frozen-lockfile`.
 5. Install Chromium only with `pnpm --dir docs-site exec playwright install --with-deps chromium`.
-6. Run `pnpm --dir docs-site validate`.
-7. Configure Pages.
-8. Upload `docs-site/dist` with `actions/upload-pages-artifact`.
+6. Remove any pre-existing `docs-site/dist`.
+7. Run `pnpm --dir docs-site validate`.
+8. Confirm `docs-site/dist` exists and is non-empty after validation.
+9. Configure Pages.
+10. Upload `docs-site/dist` with `actions/upload-pages-artifact`.
 
 ### Deploy Job
 
@@ -90,6 +106,13 @@ Required behavior:
 2. Deploy with `actions/deploy-pages`.
 3. Use the `github-pages` environment.
 4. Expose the deployed page URL from the Pages deploy step when GitHub provides it.
+5. Do not checkout source, rebuild docs, or upload a Pages artifact in the deploy job.
+
+## Required Failure Visibility
+
+- Dependency install, docs validation, artifact upload, and Pages deployment failures must fail their step/job visibly.
+- The workflow must not use `continue-on-error` or unconditional success handling around the validation, upload, or deploy gates.
+- The runbook must point maintainers to workflow run logs and deployment history for source ref/SHA, validation status, upload status, deploy status, and deployed URL.
 
 ## Staging Indexing Contract
 

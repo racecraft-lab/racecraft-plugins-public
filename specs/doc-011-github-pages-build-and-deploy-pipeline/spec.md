@@ -100,6 +100,7 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - **FR-016**: The feature MUST NOT automate repository Pages settings through CLI or API.
 - **FR-017**: The feature MUST preserve existing site and base assumptions until DOC-012.
 - **FR-018**: The feature MUST avoid new custom deployment scripts unless standard Pages deployment cannot satisfy DOC-011.
+- **FR-019**: The deploy workflow MUST NOT require or reference repository or organization secrets, deploy keys, personal access tokens, GitHub App installation tokens, or other long-lived deploy credentials; it MUST rely only on the GitHub-provided workflow token/OIDC flow with the explicit least-privilege permissions in FR-002.
 
 ### Clarifications
 
@@ -120,6 +121,24 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - The deploy workflow MUST treat `pnpm --dir docs-site validate` as the build and quality gate before upload.
 - The deploy workflow MUST upload `docs-site/dist` as the Pages artifact because the existing Astro config does not override the default output directory and `validate` already runs the docs build.
 - The deploy workflow MUST keep build/upload and deploy as separate jobs where the deploy job depends on the validated build job.
+
+#### Reliability, Retry, Failure Visibility, And Rollback
+
+- The deploy workflow MUST apply the same dependency install, validation, clean build-output, artifact upload, and deploy sequence for both `push` and `workflow_dispatch` runs.
+- A manually dispatched retry MUST create and validate a new artifact for the selected ref; it MUST NOT deploy an artifact produced by an earlier workflow run.
+- The build/upload job MUST remove any pre-existing `docs-site/dist` before validation and MUST upload only the `docs-site/dist` generated after the current run's successful validation.
+- The deploy job MUST depend on the build/upload job and MUST NOT checkout source, rebuild, or upload an artifact itself.
+- The workflow MUST use one fixed staging concurrency group for the `github-pages` publication target and MUST set `cancel-in-progress: true` so a newer push or manual retry supersedes any older in-progress or pending staging deploy run.
+- Dependency installation failure, validation failure, Pages artifact upload failure, and Pages deployment failure MUST surface as failed workflow steps/jobs without being masked by `continue-on-error` or unconditional success handling.
+- The runbook MUST describe how to identify the source ref/SHA, validation result, artifact upload result, deploy result, and deployed URL from the workflow run summary/logs and GitHub deployment history.
+- The runbook MUST distinguish retry from rollback: use `workflow_dispatch` for transient external failures when source remains correct; use a normal revert or fix-forward PR followed by a fresh deploy when bad source content was published.
+
+#### Credential And Token Boundaries
+
+- The deploy workflow MUST NOT reference `${{ secrets.* }}`, deploy keys, personal access tokens, GitHub App installation tokens, or custom `token:` inputs for the Pages deploy path.
+- The deploy workflow MUST NOT request `contents: write`, `actions: write`, `deployments: write`, `pull-requests: write`, `packages: write`, or broad/default write permissions for DOC-011.
+- The deploy workflow MUST use only the GitHub-provided workflow token/OIDC context made available by the explicit `contents: read`, `pages: write`, and `id-token: write` permissions.
+- If a future implementation needs credentials beyond the standard GitHub Pages Actions path, that work is out of scope for DOC-011 and MUST be handled by a later spec before implementation.
 
 #### Staging Visibility And Operator Documentation
 
@@ -171,3 +190,5 @@ Contributors and reviewers can read a CI/CD verification runbook that explains t
 - Existing docs-site validation remains the authoritative local quality gate for this feature.
 - GitHub's standard Pages deployment actions are sufficient for the DOC-011 staging deployment path.
 - Deploy triggers intentionally favor broad generated-reference coverage over missed docs-impacting deploys, but fixture-heavy test and non-rendered SpecKit process/archive churn should not publish a no-op staging artifact.
+- GitHub-hosted runners are expected to provide a fresh VM per job, but DOC-011 still requires deleting `docs-site/dist` before validation so stale local or future runner state cannot become the uploaded Pages artifact.
+- Pages artifacts are treated as run-scoped deployment inputs, not rollback assets; rollback relies on source revert/fix-forward plus a fresh validated deploy.
