@@ -50,7 +50,7 @@
   "scope_evidence": {
     "reviewable_loc": 36,
     "production_files": 2,
-    "total_files": 52,
+    "total_files": 53,
     "budget_result": "size_blocked",
     "changed_files": [
       ".github/workflows/deploy-docs.yml",
@@ -62,6 +62,7 @@
       "docs-site/astro.config.mjs",
       "docs-site/public/robots.txt",
       "docs-site/scripts/validate-docs-quality.mjs",
+      "docs-site/src/content/docs/reference/tests.md",
       "docs/ai/specs/.process/DOC-011-design-concept.md",
       "docs/ai/specs/.process/DOC-011-workflow.md",
       "docs/ai/specs/.process/autopilot-state.json",
@@ -112,7 +113,7 @@
       "Removing staging noindex controls is reserved for the public-launch follow-up."
     ],
     "reviewability_status": "block",
-    "gate_reason": "total files 52 exceeds block threshold 25",
+    "gate_reason": "total files 53 exceeds block threshold 25",
     "final_reviewability_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json"
   },
   "uat": {

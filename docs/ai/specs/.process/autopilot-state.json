@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
-  "updated_at": "2026-06-23T18:24:13Z",
+  "updated_at": "2026-06-23T18:31:58Z",
   "active_step": "Post: Reviewability Diff Gate",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "doc-011-github-pages-build-and-deploy-pipeline",
@@ -361,6 +361,10 @@
             "path": "docs-site/scripts/validate-docs-quality.mjs"
           },
           {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/reference/tests.md"
+          },
+          {
             "operation": "NEW",
             "path": "docs/ai/specs/.process/DOC-011-design-concept.md"
           },
@@ -539,8 +543,8 @@
           "mode": "final-diff",
           "scope": "full-spec",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-          "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
-          "commit_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7"
+          "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+          "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3"
         },
         "hazards": [
           "change-shape:modify-heavy",
@@ -557,8 +561,8 @@
         "implementation_checkpoint": {
           "status": "complete",
           "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-          "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
-          "commit_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
+          "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+          "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
           "task_ids": [
             "T001",
             "T002",
@@ -636,7 +640,7 @@
         }
       }
     ],
-    "updated_at": "2026-06-23T18:24:13Z"
+    "updated_at": "2026-06-23T18:31:58Z"
   },
   "pr_marker_plan_current_source_fingerprint": {
     "feature_spec_sha": "c73ef79ad38ce8136056d84c9a3e7d5aff4b3c9227d5810f121a8f03d58b2340",
@@ -783,7 +787,7 @@
     "base_branch": "main",
     "base_sha": "d562aee06249c901f948f00ca72f0e2005f2efb0",
     "next_slice_id": null,
-    "reconciled_at": "2026-06-23T18:24:13Z",
+    "reconciled_at": "2026-06-23T18:31:58Z",
     "source_marker_plan": {
       "path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/reviewability/pr-marker-plan.json"
     },
@@ -799,7 +803,7 @@
         "review_order": 1,
         "expected_branch": "doc-011-github-pages-build-and-deploy-pipeline",
         "expected_base_branch": "main",
-        "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
+        "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
         "declared_files": [
           ".github/workflows/deploy-docs.yml",
           ".github/workflows/pr-checks.yml",
@@ -810,6 +814,7 @@
           "docs-site/astro.config.mjs",
           "docs-site/public/robots.txt",
           "docs-site/scripts/validate-docs-quality.mjs",
+          "docs-site/src/content/docs/reference/tests.md",
           "docs/ai/specs/.process/DOC-011-design-concept.md",
           "docs/ai/specs/.process/DOC-011-workflow.md",
           "docs/ai/specs/.process/autopilot-state.json",
@@ -866,6 +871,6 @@
         "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243"
       }
     ],
-    "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7"
+    "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3"
   }
 }

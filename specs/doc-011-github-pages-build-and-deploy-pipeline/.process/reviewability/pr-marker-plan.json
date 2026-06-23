@@ -93,6 +93,10 @@
           "path": "docs-site/scripts/validate-docs-quality.mjs"
         },
         {
+          "operation": "MODIFIED",
+          "path": "docs-site/src/content/docs/reference/tests.md"
+        },
+        {
           "operation": "NEW",
           "path": "docs/ai/specs/.process/DOC-011-design-concept.md"
         },
@@ -271,8 +275,8 @@
         "mode": "final-diff",
         "scope": "full-spec",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json",
-        "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
-        "commit_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7"
+        "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+        "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3"
       },
       "hazards": [
         "change-shape:modify-heavy",
@@ -289,8 +293,8 @@
       "implementation_checkpoint": {
         "status": "complete",
         "evidence_path": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
-        "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
-        "commit_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
+        "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
+        "commit_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
         "task_ids": [
           "T001",
           "T002",
@@ -368,5 +372,5 @@
       }
     }
   ],
-  "updated_at": "2026-06-23T18:24:13Z"
+  "updated_at": "2026-06-23T18:31:58Z"
 }

@@ -19,6 +19,7 @@
         "docs-site/astro.config.mjs",
         "docs-site/public/robots.txt",
         "docs-site/scripts/validate-docs-quality.mjs",
+        "docs-site/src/content/docs/reference/tests.md",
         "docs/ai/specs/.process/DOC-011-design-concept.md",
         "docs/ai/specs/.process/DOC-011-workflow.md",
         "docs/ai/specs/.process/autopilot-state.json",
@@ -65,7 +66,7 @@
       ],
       "verification_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/emission/full-verification-evidence.md",
       "status": "opened",
-      "head_sha": "e83228c8809bc300fc3182b20c09c5453de7ead7",
+      "head_sha": "bed0849b5f9f3b3a9cc1f5b194fd1ba6820bd2b3",
       "merged_sha": null
     }
   ]
