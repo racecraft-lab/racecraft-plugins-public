@@ -26,31 +26,35 @@ Docs can be built and deployed from `main` without exposing the staging site to 
 
 ## How To Review
 
-1. Inspect the generated packet JSON for mode, target, title, body path, and validation path.
-2. Inspect this body for required reviewer headings, editable markers, and source evidence.
+1. Review `.github/workflows/deploy-docs.yml` for the `main` push/manual triggers, least-privilege Pages permissions, serialized deploy concurrency, and validate-before-upload ordering.
+2. Review `docs-site/astro.config.mjs` and `docs-site/public/robots.txt` for the staging crawler guard.
+3. Review `docs/ai/specs/cicd-release-pipeline-verification.md` and `CLAUDE.md` for the deploy setup, retry, rollback, and DOC-012 handoff guidance.
 
 ## How To UAT
 
-Run the focused Layer 4 PR body generation test and confirm the packet metadata assertions pass.
+Before merge, use the local docs validation evidence in the PR packet. After merge, confirm the `Deploy Docs` workflow publishes the `docs-site/dist` artifact to GitHub Pages and keep the staging noindex guard in place until the public-launch follow-up removes it.
 
 ## UAT Runbook
 
-Manual UAT is not required for this packet metadata task. The compatibility heading remains present for downstream PR body checks.
+Use `specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md` for the post-merge deploy confirmation path. Live GitHub Pages verification is intentionally post-merge because DOC-011 does not automate repository Pages settings.
 
 ## Verification
 
-- Focused packet generation checks passed.
-- Packet metadata and rendered body assertions passed.
+- `actionlint .github/workflows/deploy-docs.yml` passed.
+- `pnpm --dir docs-site validate` passed.
+- `bash tests/speckit-pro/run-all.sh` passed `3466/3466`.
+- `validate-pr-packet.sh` and `validate-pr-workflow-contract.sh` passed.
+- GitHub PR Checks and CodeQL passed on PR #243.
 
 Source: generated PR packet.
 
 ## Scope
 
-- Source feature: recorded in packet metadata.
-- Scope: this PR is limited to generated PR packet title and body behavior.
-- Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
-- Non-goals: split title generation and multi-PR emission behavior.
+- Source feature: GitHub Pages docs deployment workflow and staging crawler guard.
+- Scope: this PR adds the deploy workflow, docs-site noindex/robots guard, deploy verification runbook, CLAUDE.md pointer, and SpecKit evidence for DOC-011.
+- Traceability: feature spec, rendered body, final reviewability gate, validation output, and changed-file scope are recorded in the packet metadata.
+- Non-goals: automating repository Pages settings, custom domain launch, public indexing, and removing staging noindex controls.
 
 ## Known Gaps
 
-No known gaps for single-PR packet title metadata. Split packet title generation remains deferred.
+Live GitHub Pages deployment can only be confirmed after merge and repository Pages settings are available.

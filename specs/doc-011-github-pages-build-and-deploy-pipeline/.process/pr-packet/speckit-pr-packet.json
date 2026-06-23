@@ -43,15 +43,15 @@
     {
       "kind": "layer4_script",
       "source": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
-      "summary": "Focused generator test covers single packet metadata and rendered body paths.",
-      "result": "pending"
+      "summary": "Focused generator, packet validation, and workflow-contract checks passed for the rendered PR body and metadata.",
+      "result": "passed"
     }
   ],
   "scope_evidence": {
-    "reviewable_loc": 0,
-    "production_files": 0,
+    "reviewable_loc": 7,
+    "production_files": 1,
     "total_files": 42,
-    "budget_result": "within_budget",
+    "budget_result": "size_blocked",
     "changed_files": [
       ".github/workflows/deploy-docs.yml",
       "CLAUDE.md",
@@ -97,14 +97,18 @@
       "specs/doc-011-github-pages-build-and-deploy-pipeline/verify-tasks-report.md"
     ],
     "non_goals": [
-      "Split title generation is not implemented by this single-packet task.",
-      "Multi-PR emission behavior is not modified by this single-packet task."
-    ]
+      "Repository Pages settings automation is out of scope.",
+      "Custom domain launch and public indexing are out of scope.",
+      "Removing staging noindex controls is reserved for the public-launch follow-up."
+    ],
+    "reviewability_status": "block",
+    "gate_reason": "total files 42 exceeds block threshold 25",
+    "final_reviewability_evidence": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/final-reviewability/gate-state.json"
   },
   "uat": {
-    "how_to_uat": "Run the focused Layer 4 PR body generation test and inspect the generated single-packet metadata.",
+    "how_to_uat": "After merge, confirm the Deploy Docs workflow publishes the docs-site/dist artifact to GitHub Pages; pre-merge validation is local and CI-backed.",
     "uat_runbook_heading": "## UAT Runbook",
-    "uat_source": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/pr-packet/speckit-pr-body.md"
+    "uat_source": "specs/doc-011-github-pages-build-and-deploy-pipeline/.process/uat-runbook.md"
   },
   "source_markers": [
     {
@@ -145,7 +149,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "df8dcb6b2920fb48950fc3786ce02aab88eff9db05297526420e6f3d54fda7c9",
+    "value": "15b056a09166b39a92ff0c756838f63423b3ebfec0b3a76c0f50e772525d1e96",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",
