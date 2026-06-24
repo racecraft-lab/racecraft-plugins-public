@@ -91,6 +91,11 @@
   --sl-color-bg-nav: #f7f6f4;
   --sl-color-bg-sidebar: #f7f6f4;
   --sl-color-gray-7: #eeecea;
+  /* gray-6 backs Starlight's light-mode inline-code background. The dark :root
+   * sets it to #1e1e1e, so light mode MUST define its own light value or inline
+   * code renders dark text on a dark chip (invisible). Warm light gray to match
+   * the neutral palette; #111827 text on it is ~14:1. */
+  --sl-color-gray-6: #e8e5df;
   --sl-color-hairline: #e8e7e3;
   --sl-color-white: #111827;
 }
