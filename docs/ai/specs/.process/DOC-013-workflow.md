@@ -455,12 +455,28 @@ Self-review is a reporting step (never gates the PR) but here it caught a real d
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in tasks.md
-- [ ] `pnpm --dir docs-site validate` passes
-- [ ] `pnpm --dir docs-site build` succeeds
-- [ ] Light + dark mode visually verified; both meet WCAG AA
-- [ ] `bash tests/speckit-pro/run-all.sh` (repo structural layers) passes
-- [ ] PR created with a plain-English, conventional-commits title (e.g. `feat(docs-site): apply Racecraft brand identity and marketplace landing page`)
+- [x] All tasks marked complete in tasks.md (T001–T016)
+- [x] `pnpm --dir docs-site validate` passes (incl. 20/20 Playwright smoke)
+- [x] `pnpm --dir docs-site build` succeeds (part of validate)
+- [x] Light + dark mode WCAG AA verified (full contrast table, all pairs pass)
+- [x] `bash tests/speckit-pro/run-all.sh` passes (3478/3478 after the privacy-scan fix)
+- [x] **PR created:** [#246](https://github.com/racecraft-lab/racecraft-plugins-public/pull/246) — `feat(docs-site): apply Racecraft brand identity and marketplace landing page`
+
+### Post-Implementation Summary (2026-06-24)
+
+- **PR #246** opened on `doc-013-brand-identity-marketplace-landing` (11 commits → squash-merges as one).
+- **Verification:** validate green (20/20 smoke); repo structural suite 3478/3478; full WCAG-AA contrast table all-pass; privacy scan 9/9.
+- **Self-review caught + fixed** a real bug: brand fonts wouldn't render (system font led every stack); now brand-first.
+- **Cross-spec contract update (DOC-010):** home `/` `<h1>` is now the hero headline; frontmatter `title: Start` kept as the IA label; only the smoke test's expected home heading updated (documented in PR body).
+- **Reviewability override (operator-approved):** the final backstop blocked on `total_files 41 > 25`, inflated by 19 non-reviewable binary assets + SDD docs; `reviewable_loc` is 76, route is `one-navigable-PR`. Proceeded with a documented override (PR body §Scope). The backstop scratch (`gate-state.json`/`reslicing-packet.json`) was removed so it doesn't contradict the decision or pollute the spec map.
+- **Two justified implement deviations:** derived `mark-light.svg` for dark-hero legibility; one-line `passthroughImageService()` to serve SVG logos without Sharp.
+- **Privacy fix:** removed absolute local paths leaked from subagent prompts into `research.md`/`tasks.md`/`quickstart.md`.
+
+### Follow-ups (separate from this PR)
+
+- **PR #245** — `fix: honor feature.json branch bypass in SpecKit check-prerequisites` (the non-numeric-branch bug found at pre-flight; already open off `main`).
+- **Reviewability-gate hardening (operator-approved follow-up):** exclude declared-non-reviewable binary assets from the `total_files` metric so asset-heavy specs don't false-trip the gate — its own plugin PR.
+- **Review remediation `/loop`:** available but **not auto-scheduled** (a 3-day autonomous code-modifying cron — offered to the operator rather than started unprompted).
 
 ---
 
