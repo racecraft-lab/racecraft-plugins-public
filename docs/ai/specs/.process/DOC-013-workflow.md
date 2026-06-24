@@ -38,7 +38,7 @@ design concept is the source of truth for any decision captured during scoping.
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 0 `[NEEDS CLARIFICATION]`, 17 FRs, 8 SCs, 2 stories, 9 scenarios |
 | Clarify | `/speckit-clarify` | ✅ Skipped | G1 clean (0 markers); open questions deferred by design — fonts→Plan, hero copy→Implement |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass — plan/research/data-model/quickstart, 0 markers, reviewability `pass` (~40 LOC), constitution ✅ |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
@@ -230,6 +230,23 @@ concept's Open Questions only.
 ## Phase 3: Plan
 
 **Output:** `specs/doc-013-brand-identity-marketplace-landing/plan.md`
+
+### Plan Results (G3 ✅ — 2026-06-23)
+
+Artifacts: `plan.md`, `research.md`, `data-model.md`, `quickstart.md` (no `contracts/` — UI + Starlight config is the contract, validated by `pnpm --dir docs-site validate`). 0 `[NEEDS CLARIFICATION]`, no `[Gap]`/`[CRITICAL]`. Constitution v1.1.0 passes (I/II/III N/A; IV/V/VI pass). Reviewability estimator: `status: pass`, projected ~40 LOC, 21 file ops (19 NEW + 2 MODIFIED), single slice — no split.
+
+**Resolved open questions (from real file investigation of `landing-page/website`):**
+- **Fonts → COPY VERBATIM** (already small subset woff2; re-subsetting would add a `fonttools` dep — rejected on KISS/YAGNI + DOC-017). Port 5: `space-grotesk-400.woff2`, `space-grotesk-700.woff2` (preload), `geist-400.woff2` (preload), `geist-600.woff2`, **`fira-code-regular.woff2`** (source names mono `-regular`, not `-400`).
+- **Assets present** — favicons/manifest (10) → `public/`; logos (3: `logo.svg` dark wordmark vbox `0 0 1956 287`, `logo-light.svg` white wordmark, `mark.svg` logomark vbox `0 0 1250 1041`) → `src/assets/`. Wordmarks bake fills via `style="fill:"` (not `currentColor`) → light/dark handled by Starlight `logo.light`/`logo.dark` file selection.
+- **Primary CTA slug → `/racecraft-plugins-public/first-run/`** (`docs-site/src/content/docs/first-run.md`); secondary → `https://github.com/racecraft-lab/racecraft-plugins-public`. Link build-verified by `starlight-links-validator`.
+
+**Token map (brand → `--sl-color-*`):**
+- Light: `bg #f1f0ec`, `text #111827`, `accent #3c89c6` (non-text), `text-accent/accent-high #2a6a99` (AA link text ≥5.0:1), `accent-low #d6e4f0`.
+- Dark (default): `bg #1a1a1a` (soft gray, not pure black), `text #e6e6e6`, `accent #3c89c6`, `text-accent/accent-high #7cb3dd` (lightened for AA-on-dark), `accent-low #13283a`; hero block true-black `#0a0a0a` scoped to splash only. Red `#dc143c` = punctuation only (mark / `theme_color` / hero CTA), never `--sl-color-accent`.
+
+**File-by-file:** NEW `docs-site/src/styles/brand.css` (~80 CSS LOC: tokens light+dark, 5 `@font-face` swap, font-token assignments, scoped red/hero true-black, `prefers-reduced-motion` guard) · MODIFIED `docs-site/astro.config.mjs` (add `customCss`, `logo`, `favicon`; **append** preload + favicon/theme-color to existing `head`) · MODIFIED `docs-site/src/content/docs/index.mdx` (→ `template: splash` + hero + CardGrid ×3) · ported binary assets (`public/robots.txt` untouched).
+
+**Deferred to Implement (by design):** hero copy + 3 card blurbs (direction locked: plain-English anti-hype); dark-hero `mark.svg` legibility on `#0a0a0a` (visual check, add light variant only if weak); lab grid/dot texture (omit unless plain); webmanifest icon `src` base-path.
 
 ### Plan Prompt
 
