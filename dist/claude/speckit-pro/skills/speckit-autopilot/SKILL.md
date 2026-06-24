@@ -332,7 +332,7 @@ prompt/session. **Every Clarify session, every Checklist domain, and
 the Analyze phase MUST have a paired Consensus task** immediately
 after (skipped only if the executor reports zero unresolved items).
 
-The full **13-entry Post-Implementation task list** and the task
+The full **12-entry Post-Implementation task list** and the task
 naming pattern live in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
 Every entry there MUST appear in the visible progress panel before
@@ -415,7 +415,7 @@ details, hook events, and the dispatcher-agent table:**
 see [`references/phase-execution.md`](./references/phase-execution.md).
 
 After all 7 phases pass G7, execute the post-implementation task list.
-The 13 tasks, detailed prompts, and extension routing live in
+The 12 tasks, detailed prompts, and extension routing live in
 [`references/post-implementation.md`](./references/post-implementation.md);
 the canonical name list is in
 [`references/task-list-canonical.md`](./references/task-list-canonical.md).
@@ -600,7 +600,7 @@ in [`references/error-recovery.md`](./references/error-recovery.md).
 - [Phase Execution](./references/phase-execution.md) — Per-phase prompt construction, dispatch templates, branch-aware/Clarify/Multi-prompt prefixes
 - [Consensus Protocol](./references/consensus-protocol.md) — Category-routed dispatch, Round 1/2, per-phase flows, Logging schema
 - [Gate Validation](./references/gate-validation.md) — Programmatic gate checks (G0–G7), auto-fix loops, escalation
-- [Post-Implementation](./references/post-implementation.md) — 13-task post-impl sequence (incl. self-review, UAT runbook), integration suite, PR creation, review loop
+- [Post-Implementation](./references/post-implementation.md) — 12-task post-impl sequence (incl. self-review, UAT runbook), integration suite, PR creation, review loop
 - [Task List Canonical](./references/task-list-canonical.md) — Task naming pattern + canonical post-implementation entries
 - [Workflow File Protocol](./references/workflow-file-protocol.md) — Per-phase update table + Consensus Resolution Log column schema
 - [Error Recovery](./references/error-recovery.md) — Resume, common issues, context-window management
