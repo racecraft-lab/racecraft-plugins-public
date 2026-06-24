@@ -13,9 +13,9 @@ implementation code.
 - Node **>=22.12** (the design uses nvm `v22.22.2`).
 - pnpm **10.25.0** (declared in `docs-site/package.json` `packageManager`).
 - Brand source assets available (already confirmed present) at
-  `/Users/.../landing-page/website/{public,src/assets/images/logos}`.
+  the sibling `landing-page/website` checkout (`public/` and `src/assets/images/logos/`).
 - Run all commands from the worktree root
-  `/Users/.../​.worktrees/doc-013-brand-identity-marketplace-landing`.
+  `.worktrees/doc-013-brand-identity-marketplace-landing`.
 
 ## Setup (what Implement produces)
 

@@ -5,7 +5,7 @@
 This document records the file-evidence investigation that resolves the three
 open questions deferred from the design concept, plus the concrete brand → Starlight
 token map. All findings come from inspecting (not modifying) the sibling brand-source
-project at `/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/landing-page`
+project (the `landing-page` checkout, a peer directory alongside this repository)
 and the current `docs-site/` config. Where the brand guide disagreed with the live
 source, the live source wins (FR-016).
 

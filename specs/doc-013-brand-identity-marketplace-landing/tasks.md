@@ -41,8 +41,8 @@ build on.
 ## Path Conventions
 
 All paths are under the existing `docs-site/` Astro/Starlight tree. Binary
-brand assets are ported verbatim from the sibling brand-source project at
-`/Users/fredrickgabelmann/Documents/Business_Documents/RSE_Documents/Projects/landing-page/website`.
+brand assets are ported verbatim from the sibling brand-source project (the
+`landing-page/website` checkout, a peer directory alongside this repository).
 **`docs-site/public/robots.txt` MUST NOT be modified.** No files are created or
 modified outside `docs-site/`.
 
