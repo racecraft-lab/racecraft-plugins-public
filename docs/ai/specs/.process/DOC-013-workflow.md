@@ -40,7 +40,7 @@ design concept is the source of truth for any decision captured during scoping.
 | Clarify | `/speckit-clarify` | ✅ Skipped | G1 clean (0 markers); open questions deferred by design — fonts→Plan, hero copy→Implement |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — plan/research/data-model/quickstart, 0 markers, reviewability `pass` (~40 LOC), constitution ✅ |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — accessibility/ux/performance, 14 gaps fixed, 0 remaining, 0 unresolved (no consensus) |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 16 tasks (T001–T016, 3 `[P]`), every FR covered, explicit verify tasks (validate/contrast/reduced-motion), 0 markers; route `one-navigable-PR` (no split) |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
@@ -357,14 +357,18 @@ Focus on DOC-013 requirements:
 
 ## Atomicity Route
 
-*Placeholder — filled by the autopilot after Tasks/G5 via the read-only classifier.*
+*Recorded by the autopilot after Tasks/G5 (2026-06-23) via the read-only classifier.*
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for destructive-migration/concurrency-sensitive changes. |
-| **Signals** | | Decisive detector findings. |
-| **Warnings** | | Release-safety warnings (empty when none). |
+| **Route** | `one-navigable-PR` | Single navigable PR — not a split. |
+| **Releasable** | `true` | No destructive migration / concurrency hazard. |
+| **Signals** | `change-shape:modify-heavy` | Cohesive brand slice across a few files. |
+| **Warnings** | (none) | — |
+
+**Layer Plan:** `skipped` — route is not `split-PR`, so the PRSG-008 layer planner does not run. Ships as one navigable PR.
+
+**Reviewability tasks-gate (advisory):** `status: block` but **size-only and a known coarse false positive** — the blocker is `total_files: 132 > 25`, where the tasks-gate counts path-tokens in `tasks.md` (18 binary font/favicon/logo assets — explicitly **non-reviewable** per the spec's Reviewability Budget — plus source/reference paths). `reviewable_loc: 640` is the coarse `tasks×40` heuristic and is only a warn (< 800 block). The **accurate plan-phase estimator** reported **40 reviewable LOC, `status: pass`, single slice**. Per the skill, a size-only tasks-gate block is **not** a manual re-slicing stop; the authoritative reviewability gate is the **PR-time `final-reviewability-backstop` (diff-mode)** on the real `origin/main...HEAD` diff, where binary assets don't count as reviewable LOC. **No re-slice; no `pr_marker_plan` (single-PR path).**
 
 ```bash
 bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-013-brand-identity-marketplace-landing
