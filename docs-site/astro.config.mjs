@@ -37,7 +37,7 @@ export default defineConfig({
             href: '/racecraft-plugins-public/fonts/space-grotesk-700.woff2',
             as: 'font',
             type: 'font/woff2',
-            crossorigin: true,
+            crossorigin: 'anonymous',
           },
         },
         {
@@ -47,7 +47,7 @@ export default defineConfig({
             href: '/racecraft-plugins-public/fonts/geist-400.woff2',
             as: 'font',
             type: 'font/woff2',
-            crossorigin: true,
+            crossorigin: 'anonymous',
           },
         },
         // DOC-013 — brand favicon set + theme color (base-path-prefixed hrefs).
