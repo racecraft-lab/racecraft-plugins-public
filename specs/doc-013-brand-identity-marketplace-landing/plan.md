@@ -134,10 +134,13 @@ split of this slice): per-component restyle **DOC-016**, perf/Lighthouse budget
 - **Review order**: (1) `brand.css` token map + `@font-face`; (2) `astro.config.mjs`
   wiring; (3) `index.mdx` landing content; (4) spot-check ported assets exist.
 - **Scope budget**: as in Reviewability Budget above.
-- **Traceability**: FR-005/006 → `brand.css` token map + recorded contrast ratios;
-  FR-007/008 → `@font-face` set + preload tags; FR-009/010/011 → `astro.config.mjs`
-  `logo`/`favicon` + ported assets + `index.mdx` `hero.image`; FR-001–004 →
-  `index.mdx` splash content; FR-013 → scoped hero-block rule in `brand.css`.
+- **Traceability**: FR-005/005a/006 → `brand.css` token map + recorded contrast ratios
+  (red-as-punctuation guard: white-on-red CTA fill, no failing red text); FR-007/008 →
+  `@font-face` set + preload tags; FR-009/010/011 → `astro.config.mjs` `logo`/`favicon`
+  + ported assets + `index.mdx` `hero.image` (with `alt` per FR-010); FR-001–004 →
+  `index.mdx` splash content; FR-013 → scoped hero-block rule + soft-dark `#1a1a1a`
+  surface in `brand.css`; FR-014a → visible focus-ring rule (`#3c89c6`, ≥3:1 both
+  modes) in `brand.css`.
 - **Verification**: `pnpm --dir docs-site validate` passing + a recorded WCAG AA
   contrast check for brand-accent text in BOTH modes.
 - **Known gaps**: hero copy authored at Implement; dark-hero logomark legibility
@@ -213,9 +216,15 @@ top-level directory; `src/styles/` is the only new subdirectory.
    `--sl-color-*` token map from research.md Decision 5; five `@font-face` blocks
    (`font-display: swap`) for the ported woff2; font-token assignments
    (`--sl-font` → Geist, `--sl-font-mono` → Fira Code, heading selectors → Space
-   Grotesk); a scoped rule applying brand red `#dc143c` to the splash hero CTA and a
-   true-black `#0a0a0a` hero block only; a `@media (prefers-reduced-motion: reduce)`
-   guard suppressing entrance animation.
+   Grotesk); a scoped rule applying brand red `#dc143c` to the splash hero CTA **as
+   white-text-on-red fill** (`#ffffff` on `#dc143c` = 4.99:1, AA-pass per FR-005a —
+   red is NOT applied as normal-size red text on the warm base `#f1f0ec` 4.38:1 or the
+   hero block `#0a0a0a` 3.97:1, both of which fail AA normal-text) and a true-black
+   `#0a0a0a` hero block only; a visible keyboard focus-ring using the non-text blue
+   `#3c89c6` meeting ≥3:1 in both modes (3.30:1 on `#f1f0ec`, 4.63:1 on `#1a1a1a`) per
+   FR-014a; dark-mode body text set to near-white `#e6e6e6` (not pure white) per
+   FR-014; and a `@media (prefers-reduced-motion: reduce)` guard suppressing entrance
+   animation.
 2. **`docs-site/astro.config.mjs`** *(MODIFIED)*: inside the existing `starlight({…})`
    call add `customCss: ['./src/styles/brand.css']`, `logo: { light:
    './src/assets/logo.svg', dark: './src/assets/logo-light.svg', replacesTitle: true,
@@ -224,11 +233,17 @@ top-level directory; `src/styles/` is the only new subdirectory.
    base-path-prefixed) plus any favicon/`apple-touch-icon`/manifest `<link>` and
    `theme-color` `<meta>` tags. Leave the existing robots `<meta>` and `sidebar` intact.
 3. **`docs-site/src/content/docs/index.mdx`** *(MODIFIED, rewrite)*: frontmatter
-   `template: splash` + `hero` (title, tagline, `image: { light/dark: mark.svg }`,
-   `actions`: primary → `/racecraft-plugins-public/first-run/`, secondary → GitHub
-   repo); body imports `CardGrid`/`Card` from `@astrojs/starlight/components` and
-   renders ~3 plain-English value-prop cards. Copy authored at Implement (direction
-   locked: anti-hype value prop for spec-driven development).
+   `template: splash` + `hero` (benefit-led `title` per FR-002, plain-English
+   `tagline` value-prop, `image: { light/dark: mark.svg }`, `actions`: **exactly one
+   primary** → `/racecraft-plugins-public/first-run/` with `variant: 'primary'`, and
+   **one subordinate secondary** → GitHub repo with `variant: 'secondary'` or
+   `'minimal'` — no third/competing action, per FR-003a); body imports
+   `CardGrid`/`Card` from `@astrojs/starlight/components` and renders the value-prop
+   cards (3 by default, 2–4 range per FR-004), each a scannable benefit-led title +
+   plain-English blurb. The above-the-fold set {mark, headline, value-prop, primary
+   CTA} must fit the first screen on desktop and mobile (FR-001a). Copy authored at
+   Implement against the brand-guide §6 anti-hype tone made testable in FR-004a
+   (no hype/superlatives, no unexplained jargon); direction locked.
 4. **`docs-site/src/assets/{logo.svg, logo-light.svg, mark.svg}`** *(NEW, ported
    verbatim)*: wordmark + logomark SVGs (Starlight imports `logo` from `src/`).
 5. **`docs-site/public/{favicon set + site.webmanifest}`** *(NEW, ported verbatim,
@@ -251,9 +266,12 @@ top-level directory; `src/styles/` is the only new subdirectory.
   hero copy + ~3 cards; set primary CTA → `/racecraft-plugins-public/first-run/`,
   secondary → GitHub.
 - **Phase E — Validate**: run `pnpm --dir docs-site validate`; walk quickstart.md
-  scenarios 1–16 in both light and dark mode; **record the WCAG AA contrast ratios**
-  for link + body text in both modes as PR evidence. Confirm no scope leaked into
-  DOC-016/017/019/012.
+  scenarios 1–16 in both light and dark mode; **record the WCAG AA contrast ratios as
+  an enumerated table** covering link text, body text, the non-text blue accent, the
+  keyboard focus ring, and red punctuation in both modes as PR evidence (each pair with
+  its measured ratio + threshold; confirm red appears only in a passing pattern and the
+  focus ring meets ≥3:1). Spot-check that the hero `hero.image` carries an `alt` value.
+  Confirm no scope leaked into DOC-016/017/019/012.
 
 Dependencies: B depends on A (the `@font-face` `src` paths reference the ported
 files); C depends on A+B (config references `brand.css` + the logo/favicon assets);

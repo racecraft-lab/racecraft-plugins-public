@@ -25,7 +25,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [plan.md](plan.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
+- [checklists/accessibility.md](checklists/accessibility.md)
+- [checklists/performance.md](checklists/performance.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/ux.md](checklists/ux.md)
 - [brand-guide.md](brand-guide.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

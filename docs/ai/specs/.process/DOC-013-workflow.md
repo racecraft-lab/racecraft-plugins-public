@@ -39,7 +39,7 @@ design concept is the source of truth for any decision captured during scoping.
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass — 0 `[NEEDS CLARIFICATION]`, 17 FRs, 8 SCs, 2 stories, 9 scenarios |
 | Clarify | `/speckit-clarify` | ✅ Skipped | G1 clean (0 markers); open questions deferred by design — fonts→Plan, hero copy→Implement |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — plan/research/data-model/quickstart, 0 markers, reviewability `pass` (~40 LOC), constitution ✅ |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — accessibility/ux/performance, 14 gaps fixed, 0 remaining, 0 unresolved (no consensus) |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | |
 | Implement | `/speckit-implement` | ⏳ Pending | |
@@ -278,6 +278,16 @@ Artifacts: `plan.md`, `research.md`, `data-model.md`, `quickstart.md` (no `contr
 ---
 
 ## Phase 4: Domain Checklists
+
+### Checklist Results (G4 ✅ — 2026-06-23)
+
+All three domains ran sequentially (checklist-executor: research → remediate → re-verify). **14 gaps found, 14 remediated, 0 remaining, 0 unresolved for consensus.** Every fix cited an authoritative source. Checklist files: `checklists/{accessibility,ux,performance}.md`.
+
+- **accessibility** (6 gaps) — caught a real WCAG issue: **red `#dc143c` as small text FAILS AA** (4.38:1 on `#f1f0ec`, 3.97:1 on `#0a0a0a`). New **FR-005a** constrains red to passing patterns only (white-on-red fill 4.99:1, large/non-text ≥3:1, or logo-mark logotype exception — never small red text). Also: FR-006/FR-014 numeric AA thresholds; FR-010 hero `alt`; FR-013 soft-dark range + halation rationale; **FR-014a** visible focus indicator (ring `#3c89c6` = 3.30:1 light / 4.63:1 dark, both ≥3:1) + acceptance scenario US2.6.
+- **ux** (6 gaps) — **FR-001a** above-the-fold element set {logo, benefit headline, value-prop, primary CTA}, holds on mobile; **FR-003a** exactly one primary + at-most-one *visually subordinate* secondary CTA (Starlight `hero.actions` `variant`); FR-002 tightened to benefit-led (outcome, not product name); **FR-004a** anti-hype made testable (no hype superlatives, no unexplained jargon, concrete over fluff). Sources: NN/g, CXL, Starlight docs.
+- **performance** (2 gaps, light-touch) — **FR-007** mandates woff2 (prohibits TTF/OTF/WOFF; exactly 5 faces); **FR-008** adds preload *ceiling* (only Space Grotesk 700 + Geist 400; other 3 MUST NOT preload), `font-display: swap` on every `@font-face`, and `crossorigin` on each preload. **Scope boundary held** — no perf budget / CWV threshold added (those stay DOC-017). Sources: web.dev, MDN.
+
+Requirements after Checklist: 17 base FRs + 5 sub-FRs (FR-001a/003a/004a/005a/014a) + 1 acceptance scenario (US2.6).
 
 ### Recommended domains (from grill-me design tree)
 
