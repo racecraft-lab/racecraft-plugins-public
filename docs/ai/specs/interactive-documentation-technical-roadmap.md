@@ -71,7 +71,7 @@ DOC-007 -> DOC-008
 | DOC-010 | Search, accessibility, deep links, docs validation | Completed/archived | `.process/DOC-010-workflow.md` | Archived after PRs #232-#236 |
 | DOC-011 | GitHub Pages build-and-deploy pipeline | Completed/archived | `.process/DOC-011-workflow.md` | Archived after PR #243 |
 | DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
-| DOC-013 | Brand identity and marketplace landing page | ⏳ Pending | — | Not started — production readiness (P1) |
+| DOC-013 | Brand identity and marketplace landing page | 🔄 In Progress | `.process/DOC-013-workflow.md` | Scaffolded — autopilot-ready; brand guide ported from landing-page (P1) |
 | DOC-014 | SEO and AI discoverability | ⏳ Pending | — | Not started — staging deploy foundation exists from DOC-011; URLs finalize at DOC-012 launch (P1) |
 | DOC-015 | Editorial and content-QA pass | ⏳ Pending | — | Not started — production readiness (P1) |
 | DOC-016 | WCAG 2.1 AA accessibility hardening | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
