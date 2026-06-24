@@ -97,6 +97,9 @@
    * the neutral palette; #111827 text on it is ~14:1. */
   --sl-color-gray-6: #e8e5df;
   --sl-color-hairline: #e8e7e3;
+  /* Starlight's --sl-color-white means "highest-emphasis text" (its own light
+   * theme sets it near-black), NOT literal white. Keep this dark — the hero CTA
+   * color rules below depend on it; reverting it to white hides the CTA labels. */
   --sl-color-white: #111827;
 }
 
@@ -172,7 +175,6 @@ button:focus-visible,
 summary:focus-visible {
   outline: 2px solid #3c89c6;
   outline-offset: 2px;
-  border-radius: 2px;
 }
 
 /* (d) Reduced-motion guard — suppress entrance animation/transitions for
