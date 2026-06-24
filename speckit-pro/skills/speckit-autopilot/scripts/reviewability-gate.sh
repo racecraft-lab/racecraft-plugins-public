@@ -70,10 +70,10 @@ is_production_file() {
 # from the diff-mode total-files count (a brand/icon set is otherwise blocked on
 # file count alone when the reviewable change is tiny). This affects ONLY the
 # file count, NOT reviewable_loc: git numstat already reports "-" (no lines) for
-# truly-opaque binaries (fonts, raster images), while SVG — which is text/XML and
-# may be hand-authored or carry a script — keeps registering its added lines as
-# review burden via is_production_file. So an oversized or scripted SVG is never
-# invisible. Matching is case-sensitive, consistent with is_excluded_generated /
+# truly-opaque binaries (fonts, raster images). SVG is text/XML and may be
+# hand-authored or carry a script, so when it appears under a production path
+# (per is_production_file) its added lines still register as reviewable_loc.
+# Matching is case-sensitive, consistent with is_excluded_generated /
 # is_production_file (this fails safe: an uppercase asset over-counts, never
 # under-counts).
 is_binary_asset() {
