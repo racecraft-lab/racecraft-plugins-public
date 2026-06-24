@@ -72,10 +72,12 @@
   --sl-color-hairline: rgba(255, 255, 255, 0.1);
   --sl-color-white: #ffffff;
 
-  /* Font tokens — system fallback FIRST in each stack so text is visible
-   * immediately if a webfont fails to load. */
-  --sl-font: system-ui, 'Geist', sans-serif;
-  --sl-font-mono: ui-monospace, 'Fira Code', monospace;
+  /* Font tokens — brand face FIRST, system fallback after. font-family is a
+   * preference list (first AVAILABLE font wins), so the brand face must lead or
+   * the always-present system font would shadow it. font-display: swap (above)
+   * keeps text visible in the fallback during load, then swaps the brand face in. */
+  --sl-font: 'Geist', system-ui, sans-serif;
+  --sl-font-mono: 'Fira Code', ui-monospace, monospace;
 }
 
 /* Light mode override */
@@ -104,7 +106,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: system-ui, 'Space Grotesk', sans-serif;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
 }
 
 /* ------------------------------------------------------------------ */

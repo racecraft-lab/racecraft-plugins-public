@@ -442,6 +442,15 @@ For each task:
 - **`passthroughImageService()` added** to `astro.config.mjs` (one line) — Starlight's Hero renders `image` via Astro `<Image>`, which needs Sharp (only a transitive dep, unresolvable from docs-site root → `MissingSharp` build error). Passthrough serves the SVG vectors as-is (correct for logos; no rasterization) and adds no dependency.
 - **Cross-spec contract update (DOC-010):** DOC-013's US1 intentionally makes the home `/` a marketplace splash whose `<h1>` is the hero headline. DOC-010 had hard-coded the home h1 as "Start". Resolution: kept the home **frontmatter `title: Start`** (preserves the DOC-010/DOC-002 IA label; the quality validator passes untouched), and updated **only** the smoke test's expected `/` h1 → the hero headline (with an explanatory comment). This is a sanctioned contract update reflecting the approved home-route change — not a test hack; the splash rewrite was not reverted.
 
+### Self-Review (mandatory 4-question audit — 2026-06-23)
+
+1. **Does it meet the spec?** Yes — all FRs/SCs implemented; full contrast table AA; red only in passing patterns; soft-dark surface; reduced-motion guard; preloads = exactly 2 with `crossorigin`.
+2. **Any bug the validators would miss?** **YES — found + fixed.** `brand.css` initially listed the system font FIRST in every font stack (`system-ui, 'Geist', …`). Because `font-family` is a *preference* list (first AVAILABLE font wins) and the system font is always available, the brand faces (Geist / Space Grotesk / Fira Code) **would never render** — the site would ship+preload the fonts but show the system font. `validate` passes anyway (smoke checks heading *text*, not font-family). Fixed to brand-face-first (`'Geist', system-ui, …`), with `font-display: swap` preserving load-time visibility. Re-validated **green**.
+3. **Did anything leak out of scope?** No — all changes inside `docs-site/`; `robots.txt` + DOC-012 meta preserved; no per-component restyle, perf budget, or tone system.
+4. **Verified against the built DOM?** Yes — red hero CTA selector matches (`.hero .actions .sl-link-button.primary`); hero renders `mark-light.svg` + `alt`; brand fonts now lead the built CSS stacks; `mark-light.svg` differs from `mark.svg` only in the shape fill.
+
+Self-review is a reporting step (never gates the PR) but here it caught a real defect before review.
+
 ---
 
 ## Post-Implementation Checklist
