@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
-  "updated_at": "2026-06-23T23:05:21Z",
-  "active_step": "Post: Archive Cleanup",
+  "updated_at": "2026-06-24T00:14:13Z",
+  "active_step": "Regenerate indexes and verify archive cleanup",
   "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
   "branch": "codex/doc-011-archive-cleanup",
   "status": "completed archived",

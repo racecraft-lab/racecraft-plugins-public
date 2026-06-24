@@ -5,7 +5,7 @@
 **Roadmap:** [docs/roadmap-interactive-documentation.md](roadmap-interactive-documentation.md)  
 **Status:** DOC-001 through DOC-010 completed and archived for the original PRD feature traceability set; DOC-011 through DOC-021 are production-readiness/content-excellence roadmap extensions tracked in the SpecKit technical roadmap.
 
-Every PRD feature maps to exactly one roadmap SPEC. Every roadmap SPEC maps back to exactly one PRD feature. Acceptance criteria are not shared across features.
+For the original DOC-001 through DOC-010 PRD feature set, every PRD feature maps to exactly one roadmap SPEC and every roadmap SPEC maps back to exactly one PRD feature. Acceptance criteria are not shared across those original features.
 
 | PRD feature ID | PRD feature name | Roadmap SPEC ID | Acceptance criteria IDs | Primary user | Source evidence | Validation method | Status | Notes |
 |---|---|---|---|---|---|---|---|---|

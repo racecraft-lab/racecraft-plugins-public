@@ -16,7 +16,7 @@ Every user-visible PRD feature group has exactly one roadmap SPEC with stable ID
 
 ## 2. Spec catalog, tiers, and sequencing → see the SpecKit technical roadmap
 
-The authoritative catalog of every DOC spec (DOC-001 through DOC-021), the dependency tiers, the dependency graph, and the execution/launch order live in **[docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)**. Snapshot as of 2026-06-19:
+The authoritative catalog of every DOC spec (DOC-001 through DOC-021), the dependency tiers, the dependency graph, and the execution/launch order live in **[docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)**. Snapshot as of 2026-06-23:
 
 - **Shipped and archived — content + IA plus staging deploy foundation:** DOC-001 through DOC-011.
 - **Pending — production readiness (Tier 7):** DOC-012 (custom domain — runs last), DOC-013 (brand identity + landing page), DOC-014 (SEO), DOC-015 (editorial), DOC-016 (accessibility), DOC-017 (performance), DOC-018 (launch hygiene).
