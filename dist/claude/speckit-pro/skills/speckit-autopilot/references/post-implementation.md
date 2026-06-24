@@ -19,11 +19,13 @@ sites (consensus debate, Phase 7 `[P]` tasks, parallel
 checklist/analyze).
 
 Tasks 10/11/12/13/14 are independent post-implementation work that
-benefits from parallel dispatch. Tasks **15-19 are unaffected** — they
-remain strictly sequential because of hard dependencies (Reviewability
-reads the resulting diff, PR Body needs the reviewability result and
-Self-Review, PR Creation needs PR Body, Review Remediation needs the
-PR URL, Retrospective needs all of the above).
+benefits from parallel dispatch. The serial tail — tasks 15-19, the
+renumbered remainder after the standalone Cleanup step was removed — is
+**not** part of that parallel group: each step stays strictly sequential
+because of hard dependencies (Reviewability reads the resulting diff, PR
+Body needs the reviewability result and Self-Review, PR Creation needs
+PR Body, Review Remediation needs the PR URL, Retrospective needs all of
+the above).
 
 **Both code paths are parallel.** The autopilot auto-routes based on
 `AGENT_TEAMS_AVAILABLE` from Step 0.6's capability probe — there is

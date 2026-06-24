@@ -41,8 +41,10 @@ Retrospective): Spawn `phase-executor` with instructions to run the
 Code Review (13) is built-in — no extension; it runs as the
 parallel-group Track B subagent (see below), reviewing the diff and
 reporting findings by severity.
-Non-extension items (14, 15, 16, 17, 18): execute directly in the parent
-session.
+Non-extension items 15, 16, 17, 18: execute directly in the parent
+session. (Item 14 Integration Suite is also non-extension but runs in
+the parallel group's Track C verify-chain subagent — see below — not the
+parent session.)
 Missing extension: log warning and mark the item `skipped: <ext> not
 installed`. The item MUST still appear in the plan — never drop it silently.
 
