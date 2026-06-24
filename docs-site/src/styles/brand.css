@@ -1,0 +1,182 @@
+/* DOC-013 — Racecraft brand identity for the docs site.
+ *
+ * Maps the Racecraft palette onto Starlight's documented custom properties.
+ * Accent = blue family (links / active nav); brand red #dc143c is punctuation
+ * only (logo mark, theme color, scoped hero CTA) and is NEVER wired into
+ * --sl-color-accent. Link-sized blue text uses the AA-safe #2a6a99 (light) /
+ * #7cb3dd (dark). See specs/doc-013-brand-identity-marketplace-landing/.
+ *
+ * Starlight default theme is dark, so :root holds the dark tokens and
+ * :root[data-theme='light'] overrides for light mode.
+ */
+
+/* ------------------------------------------------------------------ */
+/* @font-face — five ported lean-set woff2, each font-display: swap    */
+/* ------------------------------------------------------------------ */
+
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/racecraft-plugins-public/fonts/space-grotesk-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/racecraft-plugins-public/fonts/space-grotesk-700.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/racecraft-plugins-public/fonts/geist-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/racecraft-plugins-public/fonts/geist-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Fira Code';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/racecraft-plugins-public/fonts/fira-code-regular.woff2') format('woff2');
+}
+
+/* ------------------------------------------------------------------ */
+/* Color tokens — dark (default) + light override                      */
+/* ------------------------------------------------------------------ */
+
+/* Dark mode (Starlight default) */
+:root {
+  --sl-color-accent-low: #13283a;
+  --sl-color-accent: #3c89c6;
+  --sl-color-accent-high: #7cb3dd;
+  --sl-color-text-accent: #7cb3dd;
+  --sl-color-text: #e6e6e6;
+  --sl-color-bg: #1a1a1a;
+  --sl-color-bg-nav: #1f2937;
+  --sl-color-bg-sidebar: #1f2937;
+  --sl-color-gray-6: #1e1e1e;
+  --sl-color-hairline: rgba(255, 255, 255, 0.1);
+  --sl-color-white: #ffffff;
+
+  /* Font tokens — system fallback FIRST in each stack so text is visible
+   * immediately if a webfont fails to load. */
+  --sl-font: system-ui, 'Geist', sans-serif;
+  --sl-font-mono: ui-monospace, 'Fira Code', monospace;
+}
+
+/* Light mode override */
+:root[data-theme='light'] {
+  --sl-color-accent-low: #d6e4f0;
+  --sl-color-accent: #3c89c6;
+  --sl-color-accent-high: #2a6a99;
+  --sl-color-text-accent: #2a6a99;
+  --sl-color-text: #111827;
+  --sl-color-bg: #f1f0ec;
+  --sl-color-bg-nav: #f7f6f4;
+  --sl-color-bg-sidebar: #f7f6f4;
+  --sl-color-gray-7: #eeecea;
+  --sl-color-hairline: #e8e7e3;
+  --sl-color-white: #111827;
+}
+
+/* ------------------------------------------------------------------ */
+/* Headings / display use Space Grotesk (system fallback first).       */
+/* Starlight has no dedicated display token, so apply to headings.     */
+/* ------------------------------------------------------------------ */
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: system-ui, 'Space Grotesk', sans-serif;
+}
+
+/* ------------------------------------------------------------------ */
+/* T007 — scoped non-token brand rules                                 */
+/* ------------------------------------------------------------------ */
+
+/* (a) True-black hero panel — scoped to the splash hero ONLY.
+ * Starlight sets data-has-hero on <html> for hero pages, and Hero.astro
+ * wraps everything in .hero. True black #0a0a0a must NEVER touch the
+ * #1a1a1a reading surface, so it is keyed to the hero block alone and
+ * applies in both light and dark mode (the hero is a deliberate dark panel). */
+[data-has-hero] .hero {
+  background-color: #0a0a0a;
+  border-radius: 0.5rem;
+  padding: clamp(2rem, 4vw, 4rem);
+}
+
+/* Hero copy is light text on the true-black panel in both modes.
+ * Title #ffffff on #0a0a0a = 19.8:1; tagline #cccccc on #0a0a0a = 12.3:1. */
+[data-has-hero] .hero h1 {
+  color: #ffffff;
+}
+
+[data-has-hero] .hero .tagline {
+  color: #cccccc;
+}
+
+/* (b) Hero primary CTA — white text on a brand-red fill.
+ * #ffffff on #dc143c = 4.99:1 (AA for normal text). Overrides Starlight's
+ * default accent-fill primary button, scoped to the hero so brand red is
+ * never used as small foreground text elsewhere. */
+[data-has-hero] .hero .actions .sl-link-button.primary {
+  background: #dc143c;
+  border-color: #dc143c;
+  color: #ffffff;
+}
+
+[data-has-hero] .hero .actions .sl-link-button.primary:hover {
+  background: #b91032;
+  border-color: #b91032;
+  color: #ffffff;
+}
+
+/* The subordinate secondary/minimal CTA stays low-emphasis: light text,
+ * no fill, on the true-black panel (#ffffff on #0a0a0a = 19.8:1). */
+[data-has-hero] .hero .actions .sl-link-button.secondary,
+[data-has-hero] .hero .actions .sl-link-button.minimal {
+  color: #ffffff;
+}
+
+/* (c) Visible keyboard focus ring — non-text brand blue #3c89c6,
+ * meeting >=3:1 in both modes (3.30:1 on #f1f0ec, 4.63:1 on #1a1a1a,
+ * 5.27:1 on the #0a0a0a hero). Applied to interactive surfaces. */
+a:focus-visible,
+button:focus-visible,
+.sl-link-button:focus-visible,
+[tabindex]:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #3c89c6;
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* (d) Reduced-motion guard — suppress entrance animation/transitions for
+ * users who request reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

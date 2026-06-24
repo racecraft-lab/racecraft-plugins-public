@@ -42,7 +42,7 @@ design concept is the source of truth for any decision captured during scoping.
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — accessibility/ux/performance, 14 gaps fixed, 0 remaining, 0 unresolved (no consensus) |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 16 tasks (T001–T016, 3 `[P]`), every FR covered, explicit verify tasks (validate/contrast/reduced-motion), 0 markers; route `one-navigable-PR` (no split) |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 0 CRITICAL; no drift; values verified vs real filesystem; 2 non-blocking citation/prose items fixed by orchestrator; 0 unresolved (no consensus) |
-| Implement | `/speckit-implement` | ⏳ Pending | |
+| Implement | `/speckit-implement` | ✅ Complete | G7 pass — `validate` GREEN (incl. 20/20 Playwright smoke); all contrast AA; 1 cross-spec contract update (DOC-010 home `/` h1) |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -425,10 +425,22 @@ For each task:
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - public/ assets (favicons, fonts) | | | |
-| 2 - brand.css tokens (light + dark) | | | |
-| 3 - astro.config wiring (customCss, logo, favicon, fonts) | | | |
-| 4 - landing hero (index.mdx splash + CardGrid) | | | |
+| 1 - public/ assets (favicons, fonts) | T001–T004 | ✅ | 5 woff2 → `public/fonts/`, 10 favicons/manifest → `public/`, 3 logos → `src/assets/`; `robots.txt` untouched |
+| 2 - brand.css tokens (light + dark) | T005–T007 | ✅ | `src/styles/brand.css` — token map, 5 `@font-face` (swap), font tokens, scoped hero/CTA/focus/reduced-motion |
+| 3 - astro.config wiring (customCss, logo, favicon, fonts) | T011–T012 | ✅ | `customCss`/`logo`/`favicon`; appended 2 preloads (crossorigin) + favicon/theme to existing `head`; DOC-012 robots meta preserved |
+| 4 - landing hero (index.mdx splash + CardGrid) | T008–T010 | ✅ | `template: splash` + hero (logomark, headline, value-prop, primary→`/first-run/`, secondary→GitHub) + 3 CardGrid cards |
+| 5 - verify (validate, contrast, reduced-motion) | T013–T015 | ✅ | `validate` GREEN incl. 20/20 smoke; full contrast table all-AA; reduced-motion + soft-dark verified |
+
+### Implementation Results (G7 ✅ — 2026-06-23)
+
+`pnpm --dir docs-site validate` → **GREEN** (reference-check, astro check, links/build, safe-aids, quality, **20/20 Playwright smoke** — browser installed locally). Baseline confirmed pre-change. **23 files**: 19 new (5 woff2 + 10 favicon/manifest + 4 logo SVGs + `brand.css`) + 3 modified (`astro.config.mjs`, `index.mdx`, `tests/docs-smoke.spec.mjs`).
+
+**WCAG-AA contrast — every pair PASSES** (measured): light link `#2a6a99`/`#f1f0ec` 5.09:1 · dark link `#7cb3dd`/`#1a1a1a` 7.75:1 · hero title `#fff`/`#0a0a0a` 19.8:1 · hero tagline `#ccc`/`#0a0a0a` 12.33:1 · white-on-red CTA `#fff`/`#dc143c` 4.99:1 · focus ring `#3c89c6` 3.30:1 light / 4.63:1 dark / 5.27:1 hero. **Red `#dc143c` appears ONLY in passing patterns** (white-on-red CTA, logo mark, `theme_color`) — never as small text, never `--sl-color-accent`. Soft-dark `#1a1a1a` reading surface; true-black `#0a0a0a` scoped to the splash hero only; reduced-motion guard present.
+
+**Implement-time decisions / deviations (all justified):**
+- **`mark-light.svg` created** (`mark.svg` shape `#111827`→`#ffffff`, red accent kept) — the dark logomark is illegible on the `#0a0a0a` hero; the brand source itself uses the white wordmark on its dark surface. Mirrors the `logo.svg`→`logo-light.svg` pattern. Hero uses the light mark in both modes; hero text is light; CTA is white-on-red.
+- **`passthroughImageService()` added** to `astro.config.mjs` (one line) — Starlight's Hero renders `image` via Astro `<Image>`, which needs Sharp (only a transitive dep, unresolvable from docs-site root → `MissingSharp` build error). Passthrough serves the SVG vectors as-is (correct for logos; no rasterization) and adds no dependency.
+- **Cross-spec contract update (DOC-010):** DOC-013's US1 intentionally makes the home `/` a marketplace splash whose `<h1>` is the hero headline. DOC-010 had hard-coded the home h1 as "Start". Resolution: kept the home **frontmatter `title: Start`** (preserves the DOC-010/DOC-002 IA label; the quality validator passes untouched), and updated **only** the smoke test's expected `/` h1 → the hero headline (with an explanatory comment). This is a sanctioned contract update reflecting the approved home-route change — not a test hack; the splash rewrite was not reverted.
 
 ---
 

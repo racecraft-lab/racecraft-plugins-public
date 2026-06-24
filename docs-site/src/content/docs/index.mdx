@@ -1,34 +1,32 @@
 ---
 title: Start
+template: splash
+hero:
+  title: From spec to a reviewable pull request.
+  tagline: speckit-pro runs the GitHub Spec Kit workflow inside Claude Code — specify, plan, break the work into tasks, then build and verify each one — so changes land in small, reviewable slices instead of one big diff.
+  image:
+    light: ../../assets/mark-light.svg
+    dark: ../../assets/mark-light.svg
+    alt: Racecraft logomark
+  actions:
+    - text: Start your first workflow
+      link: /racecraft-plugins-public/first-run/
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/racecraft-lab/racecraft-plugins-public
+      variant: minimal
 ---
 
-Racecraft Public Plugins is the public marketplace for Racecraft-maintained agent plugins. The current plugin is `speckit-pro`, which gives teams a structured SpecKit workflow for moving from specifications to reviewable implementation work in Claude Code and Codex.
+import { Card, CardGrid } from '@astrojs/starlight/components';
 
-Choose the platform you use:
-
-- [Install speckit-pro for Claude Code](/racecraft-plugins-public/install/claude-code/) if your workflow runs through Claude Code plugin commands.
-- [Install speckit-pro for Codex](/racecraft-plugins-public/install/codex/) if your workflow runs through Codex skills, agents, and plugin surfaces.
-
-## Route Scope
-
-- **Audience:** First-time user
-- **Purpose:** Explain Racecraft Public Plugins, speckit-pro, platform choice, and first next step.
-- **Shell owner DOC:** DOC-002
-- **Full-content owner DOC:** DOC-002
-- **Success criterion:** User chooses Claude Code or Codex path within one screen.
-
-## Source Evidence
-
-- [docs/prd-interactive-documentation.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs/prd-interactive-documentation.md)
-- [docs/roadmap-interactive-documentation.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs/roadmap-interactive-documentation.md)
-- [docs/ai/research/interactive-documentation-framework-spike.md](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs/ai/research/interactive-documentation-framework-spike.md)
-
-## What You Get
-
-`speckit-pro` helps keep specification, planning, autopilot execution, review, and status workflows connected to the same project evidence. Start with the platform path that matches your agent environment.
-
-## Source And Payloads
-
-The authoring source lives in `speckit-pro/`. Installable payloads are generated under `dist/claude/**` and `dist/codex/**` for their target platforms, so generated package layout can differ from the source tree.
-
-[Review source and generated payloads](/racecraft-plugins-public/reference/) before comparing files or reporting packaging issues.
+<CardGrid>
+	<Card title="Structured, not improvised">
+		Each feature moves through clear phases — specify, plan, tasks, implement — so nothing gets built before it's understood.
+	</Card>
+	<Card title="Sized for review">
+		Work is sliced into small, self-contained pull requests with a trail from requirement to code, so reviewers aren't handed a wall of diff.
+	</Card>
+	<Card title="Runs in your editor">
+		Install it as a Claude Code plugin and drive the whole workflow with a few commands — no extra services to wire up.
+	</Card>
+</CardGrid>

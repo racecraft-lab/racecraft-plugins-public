@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 
 const DOC010_ROUTES = [
-  { logicalPath: '/', heading: 'Start' },
+  // DOC-013: the home route is now a marketplace splash landing; its visible <h1> is
+  // the hero headline. The frontmatter title stays "Start" (the DOC-010/DOC-002 IA label).
+  { logicalPath: '/', heading: 'From spec to a reviewable pull request.' },
   { logicalPath: '/choose-your-path/', heading: 'Choose Your Path' },
   { logicalPath: '/spec-kit-lifecycle/', heading: 'Spec Kit Lifecycle' },
   { logicalPath: '/glossary/', heading: 'Glossary' },
