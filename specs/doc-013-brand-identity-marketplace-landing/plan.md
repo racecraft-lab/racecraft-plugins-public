@@ -229,9 +229,10 @@ top-level directory; `src/styles/` is the only new subdirectory.
    call add `customCss: ['./src/styles/brand.css']`, `logo: { light:
    './src/assets/logo.svg', dark: './src/assets/logo-light.svg', replacesTitle: true,
    alt: 'Racecraft' }`, `favicon: '/favicon.svg'`; **append** to the existing `head`
-   array the two font `<link rel="preload">` tags (Space Grotesk 700, Geist 400 —
-   base-path-prefixed) plus any favicon/`apple-touch-icon`/manifest `<link>` and
-   `theme-color` `<meta>` tags. Leave the existing robots `<meta>` and `sidebar` intact.
+   array the two font `<link rel="preload">` tags ONLY (Space Grotesk 700 + Geist 400 —
+   base-path-prefixed, **each carrying the `crossorigin` attribute** per FR-008; the
+   other 3 faces MUST NOT be preloaded) plus any favicon/`apple-touch-icon`/manifest
+   `<link>` and `theme-color` `<meta>` tags. Leave the existing robots `<meta>` and `sidebar` intact.
 3. **`docs-site/src/content/docs/index.mdx`** *(MODIFIED, rewrite)*: frontmatter
    `template: splash` + `hero` (benefit-led `title` per FR-002, plain-English
    `tagline` value-prop, `image: { light/dark: mark.svg }`, `actions`: **exactly one

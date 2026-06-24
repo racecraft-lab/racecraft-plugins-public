@@ -41,7 +41,7 @@ design concept is the source of truth for any decision captured during scoping.
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass — plan/research/data-model/quickstart, 0 markers, reviewability `pass` (~40 LOC), constitution ✅ |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass — accessibility/ux/performance, 14 gaps fixed, 0 remaining, 0 unresolved (no consensus) |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass — 16 tasks (T001–T016, 3 `[P]`), every FR covered, explicit verify tasks (validate/contrast/reduced-motion), 0 markers; route `one-navigable-PR` (no split) |
-| Analyze | `/speckit-analyze` | ⏳ Pending | |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass — 0 CRITICAL; no drift; values verified vs real filesystem; 2 non-blocking citation/prose items fixed by orchestrator; 0 unresolved (no consensus) |
 | Implement | `/speckit-implement` | ⏳ Pending | |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -377,6 +377,16 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/doc-0
 ---
 
 ## Phase 6: Analyze
+
+### Analyze Results (G6 ✅ — 2026-06-23)
+
+Cross-artifact analysis (spec/plan/tasks/research/data-model/design-concept). **0 CRITICAL, 0 HIGH.** 100% FR coverage by substance, 2/2 stories, 0 ambiguity, 0 duplication. **No design-concept drift** — all four locked decisions preserved (blue accent + red-as-punctuation, soft-dark not true-black, Starlight-native splash, primary CTA → getting-started); the checklist sub-FRs and concrete values (`#7cb3dd` dark link, `#1a1a1a` surface, verbatim fonts) confirmed as evidence-based refinements *within* the locked direction. Concrete values verified consistent across all artifacts **and against the real filesystem** (5 woff2 incl. `fira-code-regular.woff2`, 3 logo SVGs, 10 favicons all confirmed present; `first-run.md` route confirmed → links-validator will pass).
+
+Two non-blocking findings, both **fixed by the orchestrator** (deterministic, no consensus):
+- **C1 (MEDIUM, citation):** FR-016 had no explicit task citation → added to **T004** (the port-verification gate confirms the sourced/reconciled brand values landed).
+- **C2 (LOW, prose):** plan's preload prose omitted the literal `crossorigin` → added (`each carrying crossorigin per FR-008; other 3 faces not preloaded`) for spec/plan parity.
+
+**0 unresolved for consensus.**
 
 ```bash
 /speckit-analyze
