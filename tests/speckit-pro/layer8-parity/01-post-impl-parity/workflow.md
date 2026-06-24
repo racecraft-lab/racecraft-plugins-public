@@ -4,7 +4,7 @@
 
 Tiny synthetic workflow used by Layer 8 parity fixture 01. All 7
 phases pre-populated as `✅ Complete` so autopilot runs only the
-post-impl parallel group (tasks 10-14) and the serial tail (15-20)
+post-impl parallel group (tasks 10-14) and the serial tail (15-19)
 for parity comparison.
 
 | Field | Value |
@@ -57,8 +57,8 @@ the post-impl parallel group + serial tail plus ordered multi-PR emission.
 The `--from-phase post` flag (or equivalent) skips phases 1-7. Both
 Path A (teams) and Path B (parallel subagents) dispatch the same 3
 tracks (Doctor / Code Review / Verify-chain) and apply the serial tail
-(15 Cleanup → 16 Reviewability → 17 PR Body → 18 PR Create → 19 Loop
-→ 20 Retrospective). The serial tail runs the final reviewability
+(15 Reviewability → 16 PR Body → 17 PR Create → 18 Loop
+→ 19 Retrospective). The serial tail runs the final reviewability
 backstop before packet generation, renders `.git/speckit-pr-packet.json`
 and `.git/speckit-pr-body.md`, validates the current packet with the
 shared `validate-pr-packet.sh`, then creates PRs only with explicit

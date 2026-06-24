@@ -19,10 +19,13 @@ sites (consensus debate, Phase 7 `[P]` tasks, parallel
 checklist/analyze).
 
 Tasks 10/11/12/13/14 are independent post-implementation work that
-benefits from parallel dispatch. Tasks **15-20 are unaffected** — they
-remain strictly sequential because of hard dependencies (Cleanup edits
-code, PR Body needs Cleanup done, PR Creation needs PR Body, Review
-Remediation needs PR URL, Retrospective needs all of the above).
+benefits from parallel dispatch. The serial tail — tasks 15-19, the
+renumbered remainder after the standalone Cleanup step was removed — is
+**not** part of that parallel group: each step stays strictly sequential
+because of hard dependencies (Reviewability reads the resulting diff, PR
+Body needs the reviewability result and Self-Review, PR Creation needs
+PR Body, Review Remediation needs the PR URL, Retrospective needs all of
+the above).
 
 **Both code paths are parallel.** The autopilot auto-routes based on
 `AGENT_TEAMS_AVAILABLE` from Step 0.6's capability probe — there is
@@ -37,15 +40,15 @@ same wall-clock parallelism via background dispatch.
 11 Verify Implementation         ─┐
 12 Verify Tasks Phantom Check    ─┼── may share test fixtures
 14 Integration Suite             ─┘   (chain serially within this group)
-13 Code Review                    — reads diff, no deps
+13 Code Review                    — built-in independent review of the diff, no deps
 
-→ all 5 complete before 15 Cleanup begins
+→ all 5 complete before 15 Reviewability Diff Gate begins
 ```
 
 **Three parallel tracks** (same in both code paths):
 
 - Track A: `10 Doctor` (singleton, read-only)
-- Track B: `13 Code Review` (singleton, reads diff)
+- Track B: `13 Code Review` (singleton, independent review of the diff)
 - Track C: `11 Verify` → `12 Verify-Tasks` → `14 Integration Suite`
   (chained — shared test fixtures, serialize within track)
 
@@ -75,8 +78,13 @@ needed. The lead stays on opus for synthesis.
 
 - Name: "doctor"   — Task: Run /<doctor-cmd> for SPEC-XXX. Report
                      extension health and any blocking issues.
-- Name: "reviewer" — Task: Run /<review-cmd> for SPEC-XXX. Report
-                     code-review findings by severity.
+- Name: "reviewer" — Task: Independently review the implemented change
+                     for SPEC-XXX against spec.md/plan.md and the diff
+                     `origin/main...HEAD` — correctness, regressions,
+                     scope, missed edge cases. Report findings by
+                     severity (CRITICAL/HIGH/MEDIUM/LOW). This is a
+                     fresh-eyes review, distinct from the orchestrator's
+                     Self-Review. No extension required.
 - Name: "verifier" — Tasks (chain in order):
                      1. Run /<verify-cmd> for SPEC-XXX
                      2. Run /<verify-tasks-cmd> for SPEC-XXX
@@ -131,8 +139,8 @@ session, so the `/speckit.*` extension commands remain invocable.
    workflow file with one row per task (10/11/12/13/14):
      | Task | Status | Findings | Action Needed |
 4. Ask the lead: "Clean up the team"
-5. Continue to Task 15 (Cleanup) — Path B subagents mode for the
-   serial tail
+5. Continue to Task 15 (Reviewability Diff Gate) — serial tail in the
+   parent session
 ```
 
 **Quality gate via `TaskCompleted` hook (optional but recommended):**
@@ -196,8 +204,12 @@ Agent(subagent_type: "general-purpose",
 Agent(subagent_type: "general-purpose",
       run_in_background: true,
       description: "SPEC-XXX Code Review",
-      prompt: "Run /<review-cmd> for SPEC-XXX. Return findings by
-               severity (CRITICAL/HIGH/MEDIUM/LOW).")
+      prompt: "Independently review the implemented change for SPEC-XXX
+               against spec.md/plan.md and the diff origin/main...HEAD —
+               correctness, regressions, scope, missed edge cases. Return
+               findings by severity (CRITICAL/HIGH/MEDIUM/LOW). This is a
+               fresh-eyes review, distinct from the orchestrator's
+               Self-Review. No extension required.")
 
 Agent(subagent_type: "general-purpose",
       run_in_background: true,
@@ -222,7 +234,7 @@ synthesizing.
 2. Write a consolidated Post-Implementation Checklist entry to the
    workflow file with one row per task (10/11/12/13/14):
      | Task | Status | Findings | Action Needed |
-3. Continue to Task 15 (Cleanup) — serial
+3. Continue to Task 15 (Reviewability Diff Gate) — serial
 ```
 
 **Path B failure modes:**
@@ -681,12 +693,16 @@ The four questions, in order:
    evidence (commit hash + passing test). List any orphans in
    either direction.
 
-4. **Follow-up?** Are there `[TODO]`, `[DEFERRED]`, or
+4. **Follow-up & tidiness?** Are there `[TODO]`, `[DEFERRED]`, or
    `[OUT-OF-SCOPE]` markers in `spec.md`, `plan.md`, `tasks.md`,
    or commit messages? Each one needs an explicit landing place
    — a new spec entry on the technical roadmap, a tracked issue,
    or a clearly-marked section in the PR body. Silent deferral
-   is a defect.
+   is a defect. Also scan the diff for leftover scaffolding —
+   debug logging, commented-out code, stray `console.log`/`print`,
+   temporary fixtures, or files the change orphaned — and flag each
+   with a `[tidiness]` note so it is cleaned up or explicitly
+   called out before the PR opens.
 
 **Block format in the workflow log:**
 
@@ -703,9 +719,10 @@ tests. No `[edge-case-gap]` markers.
 **Requirements matched:** FR-001 → T015, T022. FR-002 → T030.
 ... [enumerate all]. No orphans.
 
-**Follow-up:** 1 deferred item — `[DEFERRED] Postgres connection
-pooling under load testing`. Landed in PR body §Out of scope.
-No silent deferrals.
+**Follow-up & tidiness:** 1 deferred item — `[DEFERRED] Postgres
+connection pooling under load testing`. Landed in PR body §Out of
+scope. No silent deferrals. No leftover scaffolding or debug code in
+the diff — no `[tidiness]` flags.
 ```
 
 **On gap detection:** the self-review **does not gate PR

@@ -8,7 +8,7 @@ list, Codex-specific persistence primitives.
 ## Contents
 
 - [Checklist Naming Pattern](#checklist-naming-pattern) — exact item-name templates parsed from the workflow file
-- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 13 mandatory Post items + missing-extension behavior
+- [Canonical Post-Implementation Item List](#canonical-post-implementation-item-list) — 12 mandatory Post items + missing-extension behavior
 - [Item Naming Rules](#item-naming-rules) — same names across both stores, completed-then-in_progress sequencing
 - [Reference `autopilot-state.json` Schema](#reference-autopilot-statejson-schema) — full example JSON document
 
@@ -47,9 +47,8 @@ extension is missing, still create the item but mark it
   "Post: Doctor Extension Check"        ← doctor / speckit-utils ext
   "Post: Verify Implementation"         ← verify ext
   "Post: Verify Tasks Phantom Check"    ← verify-tasks ext
-  "Post: Code Review"                   ← review ext
+  "Post: Code Review"                   ← built-in independent review (no ext)
   "Post: Integration Suite"             ← always required (no ext)
-  "Post: Cleanup"                       ← cleanup ext
   "Post: Reviewability Diff Gate"       ← always required (no ext)
   "Post: Self-Review"                   ← always required (no ext, 4-question audit)
   "Post: UAT Runbook Generation"        ← always required (no ext, skeleton script + author agent)
@@ -66,7 +65,7 @@ in the plan with status `skipped: <ext-name> not installed`. Never
 silently drop it.
 
 **Verify item-list completeness before starting Phase 1**: count
-the 13 entries above and confirm every single one is present in
+the 12 entries above and confirm every single one is present in
 both `update_plan` and `autopilot-state.json` (in addition to all
 Phase / Consensus items). If any are missing, ADD them before
 advancing.
@@ -78,8 +77,8 @@ advancing.
   as a single placeholder once tasks can be parsed.
 - Phase 7 decomposed into groups after tasks.md is created
   (test/impl/verify per phase, see [phase-execution-codex.md](./phase-execution-codex.md))
-- Extension items (doctor, verify-tasks, verify, review,
-  cleanup, retrospective): add if extension is in `.registry`
+- Extension items (doctor, verify-tasks, verify,
+  retrospective): add if extension is in `.registry`
   with `enabled: true`, or if extension directory exists
 - Mark completed phases immediately; first pending as `in_progress`
 - Use EXACTLY the same item names in `update_plan` and `autopilot-state.json`
@@ -112,7 +111,6 @@ advancing.
     {"step": "Post: Verify Tasks Phantom Check", "status": "pending"},
     {"step": "Post: Code Review", "status": "pending"},
     {"step": "Post: Integration Suite", "status": "pending"},
-    {"step": "Post: Cleanup", "status": "pending"},
     {"step": "Post: Reviewability Diff Gate", "status": "pending"},
     {"step": "Post: Self-Review", "status": "pending"},
     {"step": "Post: UAT Runbook Generation", "status": "pending"},

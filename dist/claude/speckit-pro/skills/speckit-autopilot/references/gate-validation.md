@@ -6,7 +6,7 @@ Programmatic gate checks performed after each SDD phase. The autopilot validates
 
 - [Gate Definitions](#gate-definitions) — G0 (prerequisites) through G7 (post-implement), with Check + Auto-Fix + Failure Escalation per gate
 - [Gate Summary Table](#gate-summary-table) — at-a-glance phase → gate → script mapping
-- [Additional Verification (Extension Commands)](#additional-verification-extension-commands) — `/speckit.verify`, `/speckit.review`, `/speckit.cleanup`
+- [Additional Verification (Extension Commands)](#additional-verification-extension-commands) — `/speckit.verify`, `/speckit.verify-tasks`
 - [Failure Escalation Protocol](#failure-escalation-protocol) — when to STOP vs. retry vs. skip-and-log
 
 ## Gate Definitions
