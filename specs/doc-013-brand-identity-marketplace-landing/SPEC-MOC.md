@@ -30,6 +30,7 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/performance.md](checklists/performance.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/ux.md](checklists/ux.md)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [brand-guide.md](brand-guide.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->
