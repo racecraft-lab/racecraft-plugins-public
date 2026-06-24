@@ -61,8 +61,10 @@ commands ARE available — run the item. If an extension is NOT in
 specific item (do NOT fail the entire autopilot). Recommend:
 `specify extension add <name>`.
 
-**CRITICAL:** Use subagents for ALL post-implementation items — NEVER
-invoke skills directly in your context. Rule 1 applies here too.
+**CRITICAL:** Use subagents only for extension-backed items and the
+parallel-group tracks defined below. Parent-session items stay in the parent
+session so durable state, PR side effects, and final reporting remain under
+the orchestrator's control.
 
 ## Parallel Group (Items 10-14)
 
