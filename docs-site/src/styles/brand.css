@@ -104,7 +104,7 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* Headings / display use Space Grotesk (system fallback first).       */
+/* Headings / display use Space Grotesk (brand face first).       */
 /* Starlight has no dedicated display token, so apply to headings.     */
 /* ------------------------------------------------------------------ */
 
