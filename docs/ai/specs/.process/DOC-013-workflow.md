@@ -36,8 +36,8 @@ design concept is the source of truth for any decision captured during scoping.
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
-| Clarify | `/speckit-clarify` | ⏳ Pending | Optional but recommended |
+| Specify | `/speckit-specify` | ✅ Complete | G1 pass — 0 `[NEEDS CLARIFICATION]`, 17 FRs, 8 SCs, 2 stories, 9 scenarios |
+| Clarify | `/speckit-clarify` | ✅ Skipped | G1 clean (0 markers); open questions deferred by design — fonts→Plan, hero copy→Implement |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Run for each domain |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
@@ -188,7 +188,8 @@ navigating the docs.
 
 ### Files Generated
 
-- [ ] `specs/doc-013-brand-identity-marketplace-landing/spec.md`
+- [x] `specs/doc-013-brand-identity-marketplace-landing/spec.md` — 17 FRs, 8 SCs, 2 user stories (US1 P1 landing, US2 P2 site-wide), 9 acceptance scenarios, Reviewability Budget within budget (single slice), 0 clarification markers
+- [x] `specs/doc-013-brand-identity-marketplace-landing/checklists/requirements.md` — spec quality checklist, all pass
 
 ---
 
@@ -196,6 +197,21 @@ navigating the docs.
 
 Most ambiguity was resolved during grill-me. Seed Clarify from the design
 concept's Open Questions only.
+
+> **Clarify SKIPPED (G1 clean, 2026-06-23).** Specify returned **0
+> `[NEEDS CLARIFICATION]` markers** — all ambiguity was resolved with informed
+> defaults documented in the spec's Assumptions section. The two seeded sessions
+> below target questions that are deferred **by design**, not spec-level
+> ambiguities: hero copy (headline/tagline/card text) is authored during
+> **Implement** against the brand guide's verbal-tone reference (direction
+> locked, wording flexible — Assumption + FR-002/FR-004); font subset mechanics
+> and the exact `--sl-color-*`/font token mapping are a **Plan**-phase
+> investigation of the actual `landing-page/website/public/fonts/` files (the
+> Plan prompt says so); the lab grid/dot texture defaults to omit. Running
+> clarify-executors here would only confirm these deferrals and risk
+> prematurely locking decisions Plan/Implement must make with file evidence.
+> Spec also corrected one fact: `docs-site/public/` already exists (holds
+> `robots.txt`) — assets are added alongside it.
 
 #### Session 1: Hero copy & content
 
