@@ -65,6 +65,27 @@ is_production_file() {
   esac
 }
 
+# Non-reviewable binary/static assets — fonts, raster and vector images, icons,
+# and web manifests, by extension. Added/ported verbatim, so they are excluded
+# from the diff-mode total-files count (a brand/icon set is otherwise blocked on
+# file count alone when the reviewable change is tiny). This affects ONLY the
+# file count, NOT reviewable_loc: git numstat already reports "-" (no lines) for
+# truly-opaque binaries (fonts, raster images). SVG is text/XML and may be
+# hand-authored or carry a script, so when it appears under a production path
+# (per is_production_file) its added lines still register as reviewable_loc.
+# Matching is case-sensitive, consistent with is_excluded_generated /
+# is_production_file (this fails safe: an uppercase asset over-counts, never
+# under-counts).
+is_binary_asset() {
+  local path="$1"
+  case "$path" in
+    *.woff2|*.woff|*.ttf|*.otf|*.eot) return 0 ;;
+    *.png|*.jpg|*.jpeg|*.gif|*.webp|*.avif|*.ico|*.bmp|*.svg) return 0 ;;
+    *.webmanifest) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 reviewable_loc_from_numstat() {
   # FR-008: count production-code additions only — a file must be a production
   # file (is_production_file) and not excluded/generated. Documentation, tests,
@@ -414,7 +435,11 @@ measure_diff() {
   files_text=$(git diff --name-only "$range" --)
   numstat=$(git diff --numstat "$range" --)
   loc=$(printf '%s\n' "$numstat" | reviewable_loc_from_numstat)
-  total=$(printf '%s\n' "$files_text" | sed '/^$/d' | wc -l | tr -d ' ')
+  total=$(printf '%s\n' "$files_text" | while read -r file; do
+    [ -n "$file" ] || continue
+    is_binary_asset "$file" && continue
+    printf '%s\n' "$file"
+  done | wc -l | tr -d ' ')
   prod=$(printf '%s\n' "$files_text" | while read -r file; do
     [ -n "$file" ] || continue
     if is_production_file "$file" && ! is_excluded_generated "$file"; then echo "$file"; fi

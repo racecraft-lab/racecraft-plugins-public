@@ -247,6 +247,102 @@ assert_json_field "$output" "reviewable_loc" "100"
 set_test "Production-only metric: no reviewable-LOC warning despite 600 total additions"
 assert_not_contains "$output" "reviewable LOC" "production-only metric must not warn on LOC"
 
+section "diff mode — binary assets excluded from total_files"
+
+# An asset-heavy slice: a small reviewable change (2 production .ts + 1 .css) plus
+# 29 ported binary/static assets — 10 fonts, 10 images, 5 logo SVGs, an icon, a
+# manifest, a jpeg, and a gif. The raw file count (32) exceeds the block threshold
+# (25); the assets must NOT count toward total_files, leaving only the 3 reviewable
+# files, so the gate does not block.
+asset_repo="$FIXTURE_DIR/asset-repo"
+asset_base=$(make_slice_repo "$asset_repo" 2 10 "" "")
+mkdir -p "$asset_repo/styles" "$asset_repo/public/fonts" "$asset_repo/public/icons" "$asset_repo/assets"
+printf ':root{--x:0}\n' > "$asset_repo/styles/brand.css"
+for i in $(seq 1 10); do printf 'font%s\n' "$i" > "$asset_repo/public/fonts/face$i.woff2"; done
+for i in $(seq 1 10); do printf 'img%s\n' "$i" > "$asset_repo/public/icons/icon$i.png"; done
+for i in $(seq 1 5); do printf '<svg/>\n' > "$asset_repo/assets/logo$i.svg"; done
+printf 'fav\n' > "$asset_repo/public/favicon.ico"
+printf '{}\n' > "$asset_repo/public/site.webmanifest"
+printf 'jpeg\n' > "$asset_repo/public/photo.jpeg"
+printf 'gif\n' > "$asset_repo/public/anim.gif"
+git -C "$asset_repo" add .
+git -C "$asset_repo" commit -qm assets >/dev/null
+
+set_test "Binary assets: gate runs clean over an asset-heavy diff"
+result=0
+output=$(cd "$asset_repo" && "$SCRIPT" diff "$asset_base"...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "Binary assets: total_files counts only the 3 reviewable files, not the 29 assets"
+assert_json_field "$output" "total_files" "3"
+
+set_test "Binary assets: production_files is the 2 .ts files"
+assert_json_field "$output" "production_files" "2"
+
+set_test "Binary assets: no total-files block despite 32 changed files"
+assert_not_contains "$output" "exceeds block threshold" "binary assets must not block on file count"
+
+# Safety: SVG is excluded only from the file COUNT, not from reviewable_loc. A
+# large (or scripted) SVG under src/ is reviewable text, so its added lines still
+# register — it is never silently invisible to the fail-closed gate.
+svg_repo="$FIXTURE_DIR/svg-repo"
+svg_base=$(make_slice_repo "$svg_repo" 1 10 "" "")
+mkdir -p "$svg_repo/src/assets"
+seq 1 300 | sed 's#^#  <rect id="r#; s#$#"/>#' > "$svg_repo/src/assets/big.svg"
+git -C "$svg_repo" add .
+git -C "$svg_repo" commit -qm bigsvg >/dev/null
+
+set_test "SVG visibility: a large SVG under src/ still counts toward reviewable_loc (10 ts + 300 svg)"
+result=0
+output=$(cd "$svg_repo" && "$SCRIPT" diff "$svg_base"...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+assert_json_field "$output" "reviewable_loc" "310"
+
+set_test "SVG visibility: the SVG is still excluded from the file count (total_files = 1 .ts)"
+assert_json_field "$output" "total_files" "1"
+
+# Entirely-binary diff (no reviewable files): the gate must not crash and must
+# pass with all metrics at 0.
+allbin_repo="$FIXTURE_DIR/allbin-repo"
+mkdir -p "$allbin_repo/public"
+git -C "$allbin_repo" init -q
+git -C "$allbin_repo" config user.email support@openai.com
+git -C "$allbin_repo" config user.name T
+git -C "$allbin_repo" config commit.gpgsign false
+printf 'seed\n' > "$allbin_repo/SEED"
+git -C "$allbin_repo" add .
+git -C "$allbin_repo" commit -qm init
+allbin_base=$(git -C "$allbin_repo" rev-parse HEAD)
+for i in $(seq 1 30); do printf 'b%s\n' "$i" > "$allbin_repo/public/a$i.png"; done
+git -C "$allbin_repo" add .
+git -C "$allbin_repo" commit -qm allbin >/dev/null
+
+set_test "All-binary diff: 30 assets, no reviewable files -> total_files 0, exit 0"
+result=0
+output=$(cd "$allbin_repo" && "$SCRIPT" diff "$allbin_base"...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+assert_json_field "$output" "total_files" "0"
+
+set_test "All-binary diff: production_files and reviewable_loc are 0, status pass"
+assert_json_field "$output" "production_files" "0"
+assert_json_field "$output" "reviewable_loc" "0"
+assert_json_field "$output" "status" "pass"
+
+# Case-sensitivity is intentional (matches the sibling predicates, fails safe):
+# an UPPERCASE asset extension is NOT excluded and still counts toward total_files.
+upper_repo="$FIXTURE_DIR/upper-repo"
+upper_base=$(make_slice_repo "$upper_repo" 1 5 "" "")
+mkdir -p "$upper_repo/public"
+printf 'x\n' > "$upper_repo/public/LOGO.PNG"
+git -C "$upper_repo" add .
+git -C "$upper_repo" commit -qm upper >/dev/null
+
+set_test "Case-sensitive: an uppercase .PNG is NOT excluded (total_files = 1 ts + 1 PNG)"
+result=0
+output=$(cd "$upper_repo" && "$SCRIPT" diff "$upper_base"...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+assert_json_field "$output" "total_files" "2"
+
 section "diff mode — greenfield allowance (FR-009)"
 
 # All-new production: 1 file × 500 lines. 500 > base warn 400 but < greenfield warn 600.
