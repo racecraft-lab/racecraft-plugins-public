@@ -60,7 +60,7 @@ orchestrator decides per call.
 | Consensus analysts (3 routed per unresolved item) | **Background** (`run_in_background: true` × N in one message) | Independent perspectives on the same item; isolated subagent contexts; merge via the synthesizer. |
 | Post-impl Path B (Doctor / Code Review / Verify-chain tracks) | **Background** (3 in one message) | Independent work, isolated contexts, merge in the lead. Layer 7 fixture 18 enforces. |
 | Phase 7 `[P]` tasks (WS-D2 forward design) | **Background** | Per-task parallelism for `[P]`-tagged tasks; serial for non-`[P]`. |
-| Post-impl serial tail (15 Cleanup → 16 Reviewability → 17 PR Body → 18 PR Creation → 19 Loop → 20 Retrospective) | **Foreground** | Hard dependency chain — Cleanup mutates code; Reviewability reads the resulting diff; PR Body needs both; etc. |
+| Post-impl serial tail (15 Reviewability → 16 PR Body → 17 PR Creation → 18 Loop → 19 Retrospective) | **Foreground** | Hard dependency chain — Reviewability reads the resulting diff; PR Body needs the reviewability result; PR Creation needs the body; etc. |
 | Gate validators | **Foreground** | One gate per phase, sequenced explicitly. |
 
 The architecture intentionally uses foreground for sequentially-dependent
@@ -406,8 +406,9 @@ or *"set a budget"* should be routed to this section per the
 
 **Summary:** 3 teammates (Doctor / Code Review / Verify-chain) run
 post-implementation tasks 10/11/12/13/14 in parallel after G7 passes.
-Lead synthesizes findings, cleans up team, continues serial tail
-(tasks 15-20).
+The Code Review teammate runs a built-in independent review of the diff
+(no extension). Lead synthesizes findings, cleans up team, continues
+serial tail (tasks 15-19).
 
 **Implementation reference:** [`post-implementation.md`](./post-implementation.md)
 §Post-Implementation Parallel Group.

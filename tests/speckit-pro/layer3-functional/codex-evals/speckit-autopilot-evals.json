@@ -80,7 +80,7 @@
     {
       "id": 7,
       "prompt": "What happens during the post-implementation phase of the autopilot after all 7 SDD phases complete? List the specific steps in order, including which ones use extensions and which are built-in.",
-      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, cleanup, reviewability diff gate, self-review, UAT runbook generation, PR packet/body generation, pre-create PR packet validation, pre-create PR workflow contract validation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
+      "expected_output": "Lists the post-implementation steps in order: verify, code review, integration tests, reviewability diff gate, self-review, UAT runbook generation, PR packet/body generation, pre-create PR packet validation, pre-create PR workflow contract validation, PR creation, review remediation loop, and retrospective — distinguishing extension-based vs built-in steps.",
       "expectations": [
         "Lists verify implementation as a post-implementation step",
         "Lists code review as a post-implementation step",
@@ -93,7 +93,7 @@
         "Lists PR creation with gh pr create --base --head --title --body-file using packet target/title/body values",
         "Lists the parent-session review remediation loop",
         "States invalid packets block before PR creation; no post-create auto-repair fallback is used",
-        "Distinguishes which steps require extensions (verify, review, cleanup, retrospective) vs built-in (integration tests, reviewability diff gate, self-review, UAT runbook generation, PR body generation, PR creation, review loop)"
+        "Distinguishes which steps require extensions (verify, retrospective) vs built-in (code review, integration tests, reviewability diff gate, self-review, UAT runbook generation, PR body generation, PR creation, review loop)"
       ]
     },
     {
@@ -326,7 +326,7 @@
         "Follow-up? — requires every [TODO], [DEFERRED], or [OUT-OF-SCOPE] marker to have an explicit landing place (roadmap entry, tracked issue, PR-body section)",
         "States the answers are reproduced in the generated PR body under a ## Self-Review Findings section",
         "States explicitly that self-review is a reporting step, NOT a gate — the PR opens regardless of what the review surfaces",
-        "Mentions that Post: Self-Review is item position #8 in the canonical 13-entry post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
+        "Mentions that Post: Self-Review is item position #7 in the canonical 12-entry post-implementation list, between Post: Reviewability Diff Gate and Post: UAT Runbook Generation",
         "Notes that the step transitions through update_plan + autopilot-state.json in pending → in_progress → completed states like every other canonical step"
       ]
     },

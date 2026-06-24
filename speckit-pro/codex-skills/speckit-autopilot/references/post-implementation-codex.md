@@ -10,13 +10,13 @@ and continue with the first incomplete Post item.
 
 ## Contents
 
-- [Canonical Post Items (10-20)](#canonical-post-items-10-20) — full numbered table with runtime + command per row
+- [Canonical Post Items (10-19)](#canonical-post-items-10-19) — full numbered table with runtime + command per row
 - [How Extension Commands Become Available](#how-extension-commands-become-available) — `$speckit-*` installation via `specify extension add`
 - [Parallel Group (Items 10-14)](#parallel-group-items-10-14) — Codex always uses parallel `spawn_agent` (no Agent Teams primitive)
 - [Rules](#rules) — extension dispatch, parent-session ownership, PR body, missing-extension behavior
 - [PR Body Generation Workflow](#pr-body-generation-workflow) — script invocation order pre-PR
 
-## Canonical Post Items (10-20)
+## Canonical Post Items (10-19)
 
 Every row below is an item that MUST appear in `update_plan` and
 `autopilot-state.json` (Step 1.1's Canonical Post-Implementation Item List). Run
@@ -27,25 +27,30 @@ in order; do not collapse or defer.
 | 10 | Doctor Extension Check | doctor / speckit-utils ext | `$speckit-speckit-utils-doctor` (or `$speckit-doctor`) |
 | 11 | Verify Implementation | verify ext | `$speckit-verify` |
 | 12 | Verify Tasks Phantom Check | verify-tasks ext | `$speckit-verify-tasks` |
-| 13 | Code Review | review ext | `$speckit-review` |
+| 13 | Code Review | (none) — built-in | spawn a subagent to independently review the diff `origin/main...HEAD`; report findings by severity |
 | 14 | Integration Suite | (none) | `PROJECT_COMMANDS.FULL_VERIFY` or detected full test command |
-| 15 | Cleanup | cleanup ext | `$speckit-cleanup` |
-| 16 | Final Reviewability Backstop | (none) | `final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> ...` |
-| 17 | PR Packet/Body Generation | final backstop proceeded | `generate-pr-body.sh --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
-| 18 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission.sh` for split-PR routes or marker-ready plans |
-| 19 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
-| 20 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
+| 15 | Final Reviewability Backstop | (none) | `final-reviewability-backstop.sh --feature-dir specs/<feature> --feature-branch <branch> ...` |
+| 16 | PR Packet/Body Generation | final backstop proceeded | `generate-pr-body.sh --packet-output .git/speckit-pr-packet.json "$PWD" specs/<feature> .git/speckit-pr-body.md origin/main...HEAD` |
+| 17 | PR Creation | current packet validation passed | single-PR path only when no split route and no current `pr_marker_plan`; `multi-pr-emission.sh` for split-PR routes or marker-ready plans |
+| 18 | Review Remediation | (none) | parent session loop — inspect PR feedback, dispatch fixes as needed |
+| 19 | Retrospective | retrospective ext | `$speckit-retrospective-analyze` (FINAL STEP) |
 
-Extension items: Spawn `phase-executor` with instructions to run the
+Extension items (10 Doctor, 11 Verify, 12 Verify-Tasks, 19
+Retrospective): Spawn `phase-executor` with instructions to run the
 `$speckit-*` extension skill for SPEC-XXX and return a summary.
-Non-extension items (14, 16, 17, 18, 19): execute directly in the parent
-session.
+Code Review (13) is built-in — no extension; it runs as the
+parallel-group Track B subagent (see below), reviewing the diff and
+reporting findings by severity.
+Non-extension items 15, 16, 17, 18: execute directly in the parent
+session. (Item 14 Integration Suite is also non-extension but runs in
+the parallel group's Track C verify-chain subagent — see below — not the
+parent session.)
 Missing extension: log warning and mark the item `skipped: <ext> not
 installed`. The item MUST still appear in the plan — never drop it silently.
 
 ## How Extension Commands Become Available
 
-Commands like `$speckit-verify`, `$speckit-review`, `$speckit-cleanup`,
+Commands like `$speckit-verify`, `$speckit-verify-tasks`,
 `$speckit-doctor`, `$speckit-retrospective-analyze` are INSTALLED by
 `specify extension add <name>`. The CLI creates command files in the
 project's commands directory (`.codex/commands/` for Codex CLI,
@@ -58,8 +63,10 @@ commands ARE available — run the item. If an extension is NOT in
 specific item (do NOT fail the entire autopilot). Recommend:
 `specify extension add <name>`.
 
-**CRITICAL:** Use subagents for ALL post-implementation items — NEVER
-invoke skills directly in your context. Rule 1 applies here too.
+**CRITICAL:** Use subagents only for extension-backed items and the
+parallel-group tracks defined below. Parent-session items stay in the parent
+session so durable state, PR side effects, and final reporting remain under
+the orchestrator's control.
 
 ## Parallel Group (Items 10-14)
 
@@ -69,8 +76,9 @@ have Agent Teams primitives — Codex always uses the parallel
 
 - **Track A:** Doctor (item 10) — spawn `phase-executor` for
   `$speckit-doctor`
-- **Track B:** Code Review (item 13) — spawn `phase-executor` for
-  `$speckit-review`
+- **Track B:** Code Review (item 13) — spawn a `general-purpose` (or
+  `phase-executor`) subagent to independently review the diff
+  `origin/main...HEAD` and report findings by severity (no extension)
 - **Track C:** Verify-chain (items 11 → 12 → 14) — single subagent that
   runs the 3 commands sequentially in its own context (shared test fixtures)
 
@@ -79,7 +87,7 @@ Dispatch the 3 tracks via `spawn_agent`, then `wait_agent` for each and
 the default `agents.max_threads` (6); if the session's cap is lower, dispatch
 in cap-bounded waves rather than all at once. The Lead synthesizes findings
 into the workflow file's Post-Implementation Checklist, then continues serial
-tail (15 → 16 → 17 → 18 → 19 → 20).
+tail (15 → 16 → 17 → 18 → 19).
 
 The Claude Code variant capability-detects Anthropic's Agent Teams
 (env var + version) and routes to a team when available, with parallel
@@ -337,10 +345,14 @@ Questions (Codex orchestrator answers each in order):
    `[X]` task must have implementation evidence (commit hash + passing
    test). List any orphans in either direction.
 
-4. **Follow-up?** Are there `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]`
-   markers in `spec.md`, `plan.md`, `tasks.md`, or commit messages? Each
-   one needs an explicit landing place — a roadmap entry, a tracked issue,
-   or a clearly-marked section in the PR body. Silent deferral is a defect.
+4. **Follow-up & tidiness?** Are there `[TODO]`, `[DEFERRED]`, or
+   `[OUT-OF-SCOPE]` markers in `spec.md`, `plan.md`, `tasks.md`, or commit
+   messages? Each one needs an explicit landing place — a roadmap entry, a
+   tracked issue, or a clearly-marked section in the PR body. Silent
+   deferral is a defect. Also scan the diff for leftover scaffolding —
+   debug logging, commented-out code, stray prints, temporary fixtures, or
+   orphaned files — and flag each with a `[tidiness]` note before the PR
+   opens.
 
 Block format in the workflow log mirrors
 [post-implementation.md §Self-Review Before Finalizing](../../skills/speckit-autopilot/references/post-implementation.md#self-review-before-finalizing)
