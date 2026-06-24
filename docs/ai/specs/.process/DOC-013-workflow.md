@@ -72,7 +72,23 @@ Verify alignment with the project constitution (`.specify/memory/constitution.md
 | Accessibility | WCAG AA contrast in both light and dark | Color contrast check; `pnpm --dir docs-site validate` |
 | Surgical edits | Touch only docs-site brand surfaces | Diff review |
 
-**Constitution Check:** ✅ / ❌ (mark before proceeding to G1)
+**Constitution Check:** ✅ (G0, 2026-06-23) — DOC-013 is a docs-site change: plugin-structure (I), script-safety (II), and semver (III) principles are N/A (no plugin/script/version touched); test-coverage (IV) = docs-site validators + repo structural suite; conventional-commits (V) honored via `feat(docs-site):`; KISS/YAGNI (VI) honored (Starlight-native, single vertical slice). Baseline `bash tests/speckit-pro/run-all.sh --layer 1` → **1325/1325 passed**. Accessibility build-baseline (`pnpm --dir docs-site validate`) deferred to Phase 7 Pre-Implementation Setup per this workflow.
+
+### Pre-Flight Record (2026-06-23, autopilot)
+
+| Item | Value |
+|------|-------|
+| Branch / worktree | `doc-013-brand-identity-marketplace-landing` (worktree; non-numeric → `feature.json` pins the feature dir) |
+| SpecKit CLI | specify 0.11.6 |
+| PROJECT_COMMANDS | BUILD `pnpm --dir docs-site build` · FULL_VERIFY `pnpm --dir docs-site validate` · REPO_TESTS `bash tests/speckit-pro/run-all.sh` (auto-detect found none at repo root; docs-site has its own package.json — workflow values are authoritative) |
+| PRESET_CONVENTIONS | `speckit-pro-reviewability` v1.0.0 (spec/plan/tasks templates resolve) |
+| Extensions (enabled) | verify, verify-tasks, checkpoint, retrospective, speckit-utils, git, archive · (review, cleanup absent → post-tasks skipped) |
+| Confidence gate mode | advisory (threshold 0.90) |
+| Agent Teams | Path B (batched background subagents) — right-sized for a single slice |
+| PROJECT_IMPLEMENTATION_AGENT | `speckit-pro:phase-executor` (no docs-site implementer in `.claude/agents/`); a11y-reviewer + performance-reviewer used for Phase-7 verification |
+| Archive sweep | no-op — current target is the only spec in the worktree |
+| SpecKit bug found + fixed | `.specify/scripts/bash/check-prerequisites.sh` lacked the `feature.json` branch-check bypass its siblings have (broke clarify/checklist/analyze/implement on `doc-`/`prsg-` branches). Fixed as its own PR off main (#245); applied locally via `skip-worktree` so it stays out of the DOC-013 brand PR. |
+| Doctor (Phase 0) | Health **OK** — templates 5/5, scripts 6/6 executable + `bash -n` clean (incl. the fixed `check-prerequisites.sh`), 7 extensions enabled, worktree/branch confirmed. No blocking items. Benign note: `extensions.yml installed:` lists only archive+git while `.registry` (authoritative) shows all 7 — representation mismatch, not a defect. |
 
 ### Project Commands
 
