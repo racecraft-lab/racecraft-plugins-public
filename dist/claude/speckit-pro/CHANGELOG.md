@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.15.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.15.0...speckit-pro-v2.15.1) (2026-06-24)
+
+
+### Bug Fixes
+
+* **speckit-pro:** exclude binary assets from the reviewability file-count gate ([#247](https://github.com/racecraft-lab/racecraft-plugins-public/issues/247)) ([7b02bd5](https://github.com/racecraft-lab/racecraft-plugins-public/commit/7b02bd5b709fba4bee872270da845f8298f5c735))
+
 ## [2.15.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.14.4...speckit-pro-v2.15.0) (2026-06-20)
 
 
