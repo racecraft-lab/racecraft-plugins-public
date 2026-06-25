@@ -302,6 +302,7 @@ extract_completed_tool_names() {
         | select(.type == "user")
         | (.message.content // [])[]
         | select(.type == "tool_result")
+        | select((.is_error // false) == false)   # a FAILED call grounds nothing
         | .tool_use_id ] ) as $results
     | [ .[]
         | select(.type == "assistant")
@@ -316,37 +317,65 @@ extract_completed_tool_names() {
   ' "$transcript" 2>/dev/null
 }
 
-# extract_capability_citations <transcript.jsonl>
-#   stdout: newline-separated unique cited capability tokens, parsed ONLY from
-#   the agent's own answer (assistant `text` blocks) — never from tool results,
-#   user prompts, or docs that merely contain the phrase. A citation must carry
-#   the full grounding Evidence-note structure:
-#     Capability path: <need> -> <source>; Evidence: ...; Confidence: ...
-#   A note missing the `-> <source>`, `; Evidence:`, or `; Confidence:` segments
-#   is malformed and is not counted as a citation. The <source> token is what
-#   the grounded claim asserts it came from.
-extract_capability_citations() {
+# extract_assistant_text <transcript.jsonl>
+#   stdout: every assistant `text` block — the agent's own answer text, where a
+#   grounded claim and its Evidence note live (never tool results or prompts).
+extract_assistant_text() {
   local transcript="$1"
   jq -r '
     select(.type == "assistant")
     | (.message.content // [])[]
     | select(.type == "text")
     | .text
-  ' "$transcript" 2>/dev/null \
-    | grep -oE 'Capability path:[^;]*->[[:space:]]*[^;[:space:]]+;[[:space:]]*Evidence:[^;]*;[[:space:]]*Confidence:' \
+  ' "$transcript" 2>/dev/null
+}
+
+# The strict, full grounding Evidence-note shape. A "Capability path:" note that
+# does not match this is MALFORMED (missing the `-> <source>`, `; Evidence:`, or
+# `; Confidence:` segment).
+GROUNDING_NOTE_RE='Capability path:[^;]*->[[:space:]]*[^;[:space:]]+;[[:space:]]*Evidence:[^;]*;[[:space:]]*Confidence:'
+
+# extract_capability_citations <transcript.jsonl>
+#   stdout: newline-separated unique cited capability <source> tokens, parsed
+#   ONLY from the agent's own answer (assistant `text` blocks) and ONLY from
+#   well-formed notes matching GROUNDING_NOTE_RE.
+extract_capability_citations() {
+  local transcript="$1"
+  extract_assistant_text "$transcript" \
+    | grep -oE "$GROUNDING_NOTE_RE" \
     | sed -E 's/.*->[[:space:]]*//; s/;.*//; s/[[:space:]]+$//' \
     | grep -v '^$' | sort -u || true
 }
 
+# has_malformed_citation <transcript.jsonl>
+#   exit 0 if the agent answer contains a "Capability path:" note that does NOT
+#   match the full required structure. A malformed note must not be silently
+#   ignored — otherwise it would pass as "no citation -> grounded" while actually
+#   asserting an unverifiable fact.
+has_malformed_citation() {
+  local transcript="$1" text all wf
+  text=$(extract_assistant_text "$transcript")
+  all=$(printf '%s\n' "$text" | grep -cE 'Capability path:' || true)
+  wf=$(printf '%s\n' "$text" | grep -oE "$GROUNDING_NOTE_RE" | grep -c . || true)
+  [ "${all:-0}" -gt "${wf:-0}" ]
+}
+
 # grounding_verdict <transcript.jsonl>
-#   stdout: "grounded" if every cited capability token maps to a tool that was
-#   actually invoked AND returned a result (see extract_completed_tool_names);
-#   "ungrounded" if any citation has no such completed invocation (a fabricated
-#   or non-returning citation). An answer with no tool citations is "grounded"
-#   (it asserted nothing it had to back with a tool — e.g. a correct abstention).
+#   stdout: "grounded" if every well-formed citation maps to a tool that was
+#   actually invoked AND returned a NON-ERROR result (see
+#   extract_completed_tool_names); "ungrounded" if any citation has no such
+#   completed invocation (fabricated / errored / non-returning), OR if the answer
+#   contains a malformed "Capability path:" note. An answer with no capability
+#   notes at all is "grounded" (it asserted nothing it had to back — e.g. a
+#   correct abstention).
 grounding_verdict() {
   local transcript="$1"
   local completed cite
+  # A malformed grounding note is a grounding failure, not a free pass.
+  if has_malformed_citation "$transcript"; then
+    printf 'ungrounded\n'
+    return 0
+  fi
   completed=$(extract_completed_tool_names "$transcript" "all")
   while read -r cite; do
     [ -z "$cite" ] && continue

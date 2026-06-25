@@ -1,0 +1,9 @@
+{
+  "fixture_id": "05-errored-tool",
+  "purpose": "NEGATIVE CONTROL. The cited tool WAS invoked, but its tool_result is is_error:true — the call failed and returned nothing usable. A grounded claim cannot rest on a failed call, so the verdict must be ungrounded even though the tool name appears as a tool_use.",
+  "expect_grounding_verdict": "ungrounded",
+  "must_invoke_tools": [
+    "mcp__context7__get-library-docs"
+  ],
+  "expect_citation_count": 1
+}

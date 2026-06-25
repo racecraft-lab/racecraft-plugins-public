@@ -350,7 +350,14 @@ if should_run 7; then
       failed=$((total - passed))
       layer7_pass=$((layer7_pass + passed))
       layer7_fail=$((layer7_fail + failed))
-    done < <(echo "$l7_output" | grep -E '^run-(dispatch|return-format|e2e)-fixtures: ')
+    done < <(echo "$l7_output" | grep -E '^run-(dispatch|return-format|e2e|grounding)-fixtures: ')
+
+    # Fail-closed on a non-zero runner exit that the per-class parse did not
+    # capture (e.g. a fixture class whose summary line is not matched above):
+    # the runner reported failure, so the suite must not report green.
+    if [ "$l7_exit" -ne 0 ] && [ "$layer7_fail" -eq 0 ]; then
+      layer7_fail=$((layer7_fail + 1))
+    fi
 
     # Failsafes: if the runner crashed OR if no summaries were parsed
     # for any reason (zero fixtures matched, summary-line format

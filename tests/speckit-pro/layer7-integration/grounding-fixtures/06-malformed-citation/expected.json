@@ -1,0 +1,9 @@
+{
+  "fixture_id": "06-malformed-citation",
+  "purpose": "NEGATIVE CONTROL. The answer carries a 'Capability path:' note that is MALFORMED — it omits the '; Confidence:' segment. The cited tool actually returned a result, so a naive check would pass it; but a malformed grounding note must not be silently ignored (which would let it slip through as 'no citation -> grounded'). The verdict must be ungrounded. Because no WELL-FORMED note was parsed, the well-formed citation count is 0.",
+  "expect_grounding_verdict": "ungrounded",
+  "must_invoke_tools": [
+    "mcp__context7__get-library-docs"
+  ],
+  "expect_citation_count": 0
+}
