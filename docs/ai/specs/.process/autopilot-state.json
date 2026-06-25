@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T00:28:00Z",
-  "active_step": "Phase 5: Tasks",
+  "updated_at": "2026-06-26T00:45:00Z",
+  "active_step": "Phase 6: Analyze",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
   "status": "in_progress",
@@ -55,6 +55,39 @@
       "extensions": "see .specify/extensions/.registry",
       "hooks": "18 hook events configured"
     }
+  },
+  "task_reviewability_gate": {
+    "mode": "tasks",
+    "status": "block",
+    "pass": false,
+    "reviewable_loc": 1280,
+    "production_files": 0,
+    "total_files": 51,
+    "primary_surface_count": 5,
+    "primary_surfaces": [
+      "docs/process",
+      "harness/adapter",
+      "other",
+      "scheduler/runtime",
+      "seed/config"
+    ],
+    "proceed_decision": "recorded as current size/scope evidence; no correctness blocker detected"
+  },
+  "atomicity_route": {
+    "route": "one-navigable-PR",
+    "releasable": true,
+    "signals": [
+      "change-shape:modify-heavy"
+    ],
+    "hints": [
+      "hint:flag-system:weak",
+      "hint:release-cadence:weak"
+    ],
+    "warnings": []
+  },
+  "layer_plan": {
+    "status": "skipped",
+    "reason": "atomicity route is one-navigable-PR, not split-PR"
   },
   "plan": [
     {
@@ -232,11 +265,24 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "tasks_path": "specs/xplat-001-runtime-inventory-constraints/tasks.md",
+        "total_tasks": 32,
+        "phase_count": 5,
+        "parallel_tasks": 11,
+        "user_story_coverage": {
+          "US1": 11,
+          "US2": 3,
+          "US3": 4
+        },
+        "gate": "G5 pass",
+        "task_reviewability_gate": "status=block; recorded as size/scope evidence"
+      }
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -247,7 +293,23 @@
       "status": "pending"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Foundation (T001-T007)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US1 Inventory (T008-T018)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US2 Runtime Rubric (T019-T021)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: US3 Supply-Chain Rubric (T022-T025)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Polish and Verification (T026-T032)",
       "status": "pending"
     },
     {

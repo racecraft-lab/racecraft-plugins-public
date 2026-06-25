@@ -49,7 +49,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Clarify | `$speckit-clarify` | In Progress | Session 1 accepted two-axis classification and static invocation-trace boundaries |
 | Plan | `$speckit-plan` | Complete | Created plan, research, data model, and quickstart; G3 and reviewability estimator passed |
 | Checklist | `$speckit-checklist` | Complete | Created four domain checklists; G4 passed with zero remaining gap markers |
-| Tasks | `$speckit-tasks` | Pending | Generate small report/scanning tasks with owner-bucket traceability |
+| Tasks | `$speckit-tasks` | Complete | Generated 32 report-focused tasks across 5 phases with 11 parallel-safe markers |
 | Analyze | `$speckit-analyze` | Pending | Check roadmap/design/spec/plan/tasks consistency |
 | Implement | `$speckit-implement` | Pending | Produce report, rubrics, static verification, and roadmap handoff notes |
 
@@ -438,10 +438,26 @@ $speckit-tasks
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 32 |
+| Phases | 5 |
+| Parallel Opportunities | 11 `[P]` tasks |
+| User Stories Covered | US1: 11 tasks; US2: 3 tasks; US3: 4 tasks |
+
+### Tasks Gate Result
+
+```json
+{"gate":"G5","pass":true,"reason":"32 tasks found","markers":0,"task_count":32}
+```
+
+### Task Reviewability Gate
+
+```json
+{"mode":"tasks","status":"block","pass":false,"reviewable_loc":1280,"production_files":0,"total_files":51,"primary_surface_count":5,"primary_surfaces":["docs/process","harness/adapter","other","scheduler/runtime","seed/config"],"warnings":["reviewable LOC 1280 exceeds warn threshold 400","total files 51 exceeds warn threshold 15","primary surfaces 5 exceeds warn threshold 1"],"blockers":["reviewable LOC 1280 exceeds block threshold 800","total files 51 exceeds block threshold 25"]}
+```
+
+Proceed decision: current task gate block is treated as size/scope evidence for
+this one report-focused docs/process spike, not as a correctness stop. It is
+recorded for final reviewability and PR packet handling.
 
 ---
 
@@ -451,16 +467,21 @@ This section is filled after the Tasks phase by the autopilot. Leave it blank du
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| Releasable | | `true`, or `false` for destructive/concurrency-sensitive changes. |
-| Signals | | Decisive detector findings. |
-| Warnings | | Release-safety warnings. |
+| Route | `one-navigable-PR` | Default navigable PR route because the change shape is modify-heavy/report-focused. |
+| Releasable | `true` | No destructive or concurrency-sensitive runtime change is planned. |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings. |
+| Warnings | None | Release-safety warnings. |
 
 To produce the decision:
 
 ```bash
 bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/xplat-001-runtime-inventory-constraints
 ```
+
+## Layer Plan
+
+Layer planner status: skipped. Atomicity route is `one-navigable-PR`, not
+`split-PR`, so no PRSG-008 layer plan is required before Analyze or Implement.
 
 ---
 
