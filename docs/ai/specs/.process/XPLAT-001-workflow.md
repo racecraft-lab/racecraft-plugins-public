@@ -47,7 +47,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created spec.md with 14 functional requirements, 3 user stories, and 0 clarification markers |
 | Clarify | `$speckit-clarify` | In Progress | Session 1 accepted two-axis classification and static invocation-trace boundaries |
-| Plan | `$speckit-plan` | Pending | Plan report structure, scan method, traceability rules, and verification |
+| Plan | `$speckit-plan` | Complete | Created plan, research, data model, and quickstart; G3 and reviewability estimator passed |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: data-integrity, error-handling, security, maintainability |
 | Tasks | `$speckit-tasks` | Pending | Generate small report/scanning tasks with owner-bucket traceability |
 | Analyze | `$speckit-analyze` | Pending | Check roadmap/design/spec/plan/tasks consistency |
@@ -310,11 +310,17 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, scan method, report structure |
-| `research.md` | Pending | Optional; prefer the durable docs/ai/research report for final output |
-| `data-model.md` | Pending | Inventory row schema and rubric fields if needed |
-| `contracts/` | Pending | Not expected unless report schema becomes machine-checked |
-| `quickstart.md` | Pending | Maintainer verification guide if useful |
+| `plan.md` | Complete | Defines docs/process spike, scan method, declared file operations, verification, and review packet order |
+| `research.md` | Complete | Records static scan, Markdown report, two-axis model, invocation-trace, and non-scoring rubric decisions |
+| `data-model.md` | Complete | Defines inventory row schema, classification values, active runtime statuses, owner buckets, and rubric fields |
+| `contracts/` | Skipped | Not needed because XPLAT-001 produces human-reviewable Markdown, not an API or machine-checked interchange contract |
+| `quickstart.md` | Complete | Maintainer verification guide for report coverage, traceability, and out-of-scope guard |
+
+Plan-phase reviewability estimator:
+
+```json
+{"tool":"estimate-reviewable-loc","status":"pass","projected":0,"declared_files":{"production":0,"new":1,"modified":1,"total_entries":2},"greenfield":false}
+```
 
 ---
 
