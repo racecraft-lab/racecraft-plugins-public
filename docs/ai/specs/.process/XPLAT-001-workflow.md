@@ -46,12 +46,12 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created spec.md with 14 functional requirements, 3 user stories, and 0 clarification markers |
-| Clarify | `$speckit-clarify` | In Progress | Session 1 accepted two-axis classification and static invocation-trace boundaries |
+| Clarify | `$speckit-clarify` | Complete | Three sessions accepted classification, owner-bucket, and non-scoring rubric boundaries |
 | Plan | `$speckit-plan` | Complete | Created plan, research, data model, and quickstart; G3 and reviewability estimator passed |
 | Checklist | `$speckit-checklist` | Complete | Created four domain checklists; G4 passed with zero remaining gap markers |
 | Tasks | `$speckit-tasks` | Complete | Generated 32 report-focused tasks across 5 phases with 11 parallel-safe markers |
-| Analyze | `$speckit-analyze` | Pending | Check roadmap/design/spec/plan/tasks consistency |
-| Implement | `$speckit-implement` | Pending | Produce report, rubrics, static verification, and roadmap handoff notes |
+| Analyze | `$speckit-analyze` | Complete | 5 findings remediated; G6 marker count clean; confidence 0.98 |
+| Implement | `$speckit-implement` | In Progress | Starting Foundation tasks T001-T007 after G6/G6.5 passed |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -506,7 +506,33 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | HIGH | Parent roadmap XPLAT-001 scope and reviewability budget still reflected the pre-setup installed-runtime-first estimate instead of the accepted whole-repo scan and setup warning. | Updated the XPLAT-001 roadmap section to require the whole-repo tracked-text scan, invocation-trace proof before proven-active-runtime status, and the warning-accepted 250 LOC / 4 production files / 10 total files budget. |
+| A2 | MEDIUM | `tasks.md` T019 omitted explicit path, JSON, stdout, stderr, and exit-code behavior from the runtime must-have gate coverage. | Expanded T019 to include structured filesystem, path, JSON, subprocess, stdout, stderr, and exit-code behavior. |
+| A3 | MEDIUM | `tasks.md` did not explicitly require `exclusion_or_exception_detail` handling for `follow-up-exception` rows. | Expanded T017 to require explicit exclusion detail coverage plus follow-up-exception reason, evidence gap, expiry or removal condition, and named follow-up decision where applicable. |
+| A4 | MEDIUM | `checklists/error-handling.md` still had unresolved checklist boxes while the workflow recorded error-handling as fixed with 0 remaining gaps. | Marked the covered error-handling checks resolved with references to the spec, plan, data model, and updated T017. |
+| A5 | LOW | Workflow metadata still showed Clarify in progress and Analyze pending after the artifacts had completed those phases. | Updated the phase table and Analysis Results section to reflect the completed Analyze pass and remediations. |
+
+**G6 Verification:** marker counter reports 0 findings (`0C/0H/0M/0L`) after
+remediation.
+
+### Pre-Implement Confidence (G6.5)
+
+Emitted at end of Phase 6 (advisory gate; threshold 0.90):
+
+```text
+📊 Confidence: 0.98
+
+- Task understanding: 0.97
+- Approach clarity: 0.96
+- Requirements alignment: 0.98
+- Risk assessment: 1.00
+- Completeness: 1.00
+```
+
+Aggregate **0.98 >= 0.90** -> G6.5 PASS (advisory). The remaining work is
+implementation of the already-planned report and roadmap handoff tasks; no
+runtime implementation or generated payload work is in scope for XPLAT-001
+Analyze.
 
 ---
 

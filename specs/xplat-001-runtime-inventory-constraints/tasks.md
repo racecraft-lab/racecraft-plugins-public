@@ -51,7 +51,7 @@
 - [ ] T014 [US1] Add static caller-to-callee invocation traces for every `proven-active-runtime` row in `docs/ai/research/cross-platform-runtime-inventory.md`
 - [ ] T015 [US1] Document evidence gaps for every `unproven-active-runtime` row in `docs/ai/research/cross-platform-runtime-inventory.md`
 - [ ] T016 [US1] Split mixed-mode helper findings by traced invocation mode and assign row-level owner buckets in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T017 [US1] Add explicit exclusion rows or rationale for non-text, binary, untracked, vendor cache, and other excluded inputs in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [ ] T017 [US1] Add explicit exclusion rows and `exclusion_or_exception_detail` coverage for non-text, binary, untracked, vendor cache, other excluded inputs, and any `follow-up-exception` rows, including reason, evidence gap, expiry or removal condition, and named follow-up decision where applicable in `docs/ai/research/cross-platform-runtime-inventory.md`
 - [ ] T018 [US1] Reconcile summary counts by `classification`, `active_runtime_status`, `owner_bucket`, and `follow_up_spec` in `docs/ai/research/cross-platform-runtime-inventory.md`
 
 **Checkpoint**: User Story 1 is independently reviewable when the inventory table and summary counts reconcile to the recorded scan results.
@@ -66,7 +66,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Add runtime must-have gates for installed-cache invocation, native platform behavior, structured filesystem and subprocess behavior, packaging, and update path in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [ ] T019 [P] [US2] Add runtime must-have gates for installed-cache invocation, native platform behavior, structured filesystem, path, JSON, subprocess, stdout, stderr, exit-code behavior, packaging, and update path in `docs/ai/research/cross-platform-runtime-inventory.md`
 - [ ] T020 [P] [US2] Add runtime weighted criteria totaling 100 for native platform behavior, installed-cache invocation, dependency footprint, packaging, offline behavior, diagnostics, maintainability, and compatibility adapters in `docs/ai/research/cross-platform-runtime-inventory.md`
 - [ ] T021 [US2] Add candidate evidence targets for XPLAT-002 without candidate scores, ranking, sample scoring, or winner selection in `docs/ai/research/cross-platform-runtime-inventory.md`
 

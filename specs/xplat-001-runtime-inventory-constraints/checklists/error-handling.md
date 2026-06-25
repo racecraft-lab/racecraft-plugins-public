@@ -8,27 +8,27 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Are ambiguous or incomplete invocation traces given a non-blocking classification path instead of being promoted to active runtime blockers? [Completeness, Spec Edge Cases, Spec §FR-002, Spec §FR-003]
-- [ ] CHK002 Are missing or partial traces required to record an evidence gap for `unproven-active-runtime` inventory rows? [Completeness, Data Model §Active Runtime Status Values]
-- [ ] CHK003 Are generated payload references required to link back to source rows and avoid authoritative edits in `dist/**`? [Completeness, Spec §Clarifications Session 2, Plan §Phase 1 Design]
+- [x] CHK001 Are ambiguous or incomplete invocation traces given a non-blocking classification path instead of being promoted to active runtime blockers? [Resolved, Completeness, Spec Edge Cases, Spec §FR-002, Spec §FR-003]
+- [x] CHK002 Are missing or partial traces required to record an evidence gap for `unproven-active-runtime` inventory rows? [Resolved, Completeness, Data Model §Active Runtime Status Values]
+- [x] CHK003 Are generated payload references required to link back to source rows and avoid authoritative edits in `dist/**`? [Resolved, Completeness, Spec §Clarifications Session 2, Plan §Phase 1 Design]
 - [x] CHK004 Are static verification failure outcomes paired with documented remediation steps for uncovered scan results, stale traces, docs-only promotion, spec-index drift, and diff hygiene failures? [Resolved] [Plan §Static Verification Failure Remediation]
 
 ## Requirement Clarity
 
-- [ ] CHK005 Is the distinction between `classification` and `active_runtime_status` explicit enough to prevent false active-runtime blockers? [Clarity, Spec §Clarifications Session 1, Data Model §Classification Values]
-- [ ] CHK006 Are mixed-mode helper ownership requirements clear at the inventory-row level rather than at the helper maximum-capability level? [Clarity, Spec §Clarifications Session 2, Plan §Inventory Method]
-- [ ] CHK007 Are public documentation references that mention installed prerequisites clearly kept as `public-docs-claim` rows unless separately traced? [Clarity, Spec §Edge Cases]
+- [x] CHK005 Is the distinction between `classification` and `active_runtime_status` explicit enough to prevent false active-runtime blockers? [Resolved, Clarity, Spec §Clarifications Session 1, Data Model §Classification Values]
+- [x] CHK006 Are mixed-mode helper ownership requirements clear at the inventory-row level rather than at the helper maximum-capability level? [Resolved, Clarity, Spec §Clarifications Session 2, Plan §Inventory Method]
+- [x] CHK007 Are public documentation references that mention installed prerequisites clearly kept as `public-docs-claim` rows unless separately traced? [Resolved, Clarity, Spec §Edge Cases]
 
 ## Scenario Coverage
 
-- [ ] CHK008 Are repository-only helpers that may become installed-runtime later handled with current-state rationale and follow-up ownership rather than speculative implementation work? [Coverage, Spec §Edge Cases]
-- [ ] CHK009 Are `follow-up-exception` rows constrained with reason, evidence gap, expiry or removal condition, and named follow-up decision? [Coverage, Spec §Clarifications Session 2, Data Model §Owner Buckets]
-- [ ] CHK010 Are generated payload rows with active installed-workflow relevance mapped to XPLAT-007 while preserving the source artifact as the edit target? [Coverage, Plan §Phase 1 Design]
+- [x] CHK008 Are repository-only helpers that may become installed-runtime later handled with current-state rationale and follow-up ownership rather than speculative implementation work? [Resolved, Coverage, Spec §Edge Cases]
+- [x] CHK009 Are `follow-up-exception` rows constrained with reason, evidence gap, expiry or removal condition, and named follow-up decision? [Resolved, Coverage, Spec §Clarifications Session 2, Data Model §Owner Buckets, Tasks T017]
+- [x] CHK010 Are generated payload rows with active installed-workflow relevance mapped to XPLAT-007 while preserving the source artifact as the edit target? [Resolved, Coverage, Plan §Phase 1 Design]
 
 ## Acceptance Criteria Quality
 
-- [ ] CHK011 Are scan coverage and invocation-trace success criteria objectively measurable against recorded scan commands and report rows? [Acceptance Criteria, Spec §SC-001, Spec §SC-002]
-- [ ] CHK012 Are static-only verification boundaries consistent across the spec, plan, and workflow, with runtime probes and native Windows UAT excluded from XPLAT-001? [Consistency, Spec §FR-012, Plan §Verification Plan, Workflow §Design Concept]
+- [x] CHK011 Are scan coverage and invocation-trace success criteria objectively measurable against recorded scan commands and report rows? [Resolved, Acceptance Criteria, Spec §SC-001, Spec §SC-002]
+- [x] CHK012 Are static-only verification boundaries consistent across the spec, plan, and workflow, with runtime probes and native Windows UAT excluded from XPLAT-001? [Resolved, Consistency, Spec §FR-012, Plan §Verification Plan, Workflow §Design Concept]
 
 ## Re-run After Remediation
 

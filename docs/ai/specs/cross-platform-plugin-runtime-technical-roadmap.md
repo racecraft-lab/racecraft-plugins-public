@@ -158,18 +158,23 @@ runtime and supply-chain choices. Do not choose or implement the replacement
 runtime in this spec.
 
 **Reviewability Budget:** Primary surface: docs/process |
-Projected reviewable LOC: 0-80 |
-Production files: 0 |
-Total files: 2-4 |
-Budget result: within budget (architecture/inventory spike)
+Secondary surface: harness/adapter evidence only if needed |
+Projected reviewable LOC: 250 |
+Production files: 4 |
+Total files: 10 |
+Budget result: warning accepted because setup identified two review surfaces,
+while XPLAT-001 remains one inventory/rubric spike with no runtime
+implementation.
 
 **Scope:**
 
-- Inventory all active Bash, `.sh`, `jq`, shell-quoting, Unix-path, `chmod`, and
-  line-ending assumptions reachable from installed Claude and Codex plugin
-  workflows.
+- Run a whole-repo tracked-text scan for Bash, `.sh`, `jq`, shell-quoting,
+  Unix-path, `chmod`, and line-ending assumptions, including generated payloads,
+  public docs, tests, fixtures, and historical/archive references.
 - Classify references as active runtime, generated payload, public docs,
   repository-only maintainer tooling, tests/fixtures, or historical/archive.
+- Require static caller-to-callee invocation-trace evidence before marking any
+  finding as a proven active installed-runtime dependency.
 - Map every active runtime dependency to an owner category: read-only helper,
   mutation/helper, cutover guidance, repository-only exclusion, or follow-up
   exception.
