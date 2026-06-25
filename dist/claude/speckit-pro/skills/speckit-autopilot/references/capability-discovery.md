@@ -6,6 +6,21 @@ Shared source directive:
 Use this directive whenever research or context gathering informs an answer,
 artifact edit, consensus recommendation, or gate-remediation decision.
 
+Pair it with [`grounding.md`](./grounding.md): discovery decides *which*
+capability to use; grounding requires that every asserted fact actually came
+from an invoked capability result. Open discovery is only safe when grounded.
+
+## Universal Scope
+
+This directive binds every component of the plugin, not only research agents:
+all subagents, the orchestrator (the main-session executor), and the
+user-invocable skills. Each proactively discovers and uses the capabilities its
+runtime actually exposes — within the role boundary defined below.
+
+The available set is unknown ahead of time and varies per user. Do not assume a
+fixed set of installed tools or skills; discover what is present before
+selecting, and never hardcode a particular tool or skill as the default.
+
 ## Capability Categories
 
 Capability categories are a taxonomy, not an ordered fallback chain. Identify
@@ -22,6 +37,20 @@ Required capability categories:
 - installed skills/plugins
 - repo-local helpers
 
+## Discovery Step
+
+Before selecting, enumerate the capabilities your runtime actually exposes right
+now — installed tools, MCP capabilities, and installed skills alike. Read the
+real, current inventory; do not work from a remembered or assumed list, and
+select capabilities by their exact runtime identifier rather than a guessed name.
+A component that cannot enumerate (its runtime exposes only a fixed set) selects
+directly from what it has.
+
+The orchestrator and the user-invocable skills run with the full session surface
+and enumerate it directly. A read-only subagent does not enumerate beyond its
+granted set; it works within its role boundary (below) and consumes capability
+results the orchestrator gathered and passed to it.
+
 ## Selection Rule
 
 1. Identify the needed capability category.
@@ -30,6 +59,28 @@ Required capability categories:
    and minimal necessary inventory disclosure.
 3. Use formerly named tools only when discovery selects them as the best available capability.
 4. Do not encode a fixed tool order or fixed capability fallback chain.
+
+## Capability Boundaries by Role
+
+Proactive discovery never overrides a component's role. A platform cannot
+categorically tell a "read" capability from a "write" one for an arbitrary
+installed tool, so the boundary is enforced by which capabilities a component is
+granted, not by inspecting each tool at call time.
+
+- A component declared **read-only** (research and context agents) must never
+  acquire or invoke a capability that writes, mutates, installs, pushes, or
+  otherwise changes state. It is granted only read/research capabilities, and it
+  gains breadth from results the orchestrator already gathered — not by reaching
+  for new write-capable capabilities itself.
+- A component declared **mutating** (the implementation and artifact executors,
+  the orchestrator) may use capabilities appropriate to its role, scoped to the
+  work it is authorized to perform.
+- A **mechanical** component (it returns an exit code or verbatim aggregation of
+  already-grounded input) acquires nothing new; it is exempt from discovery and
+  from grounding.
+
+A read-only component that finds it needs a write to make progress stops and
+reports that, rather than acquiring write capability.
 
 ## Fallback Rule
 

@@ -7,6 +7,7 @@ developer_instructions = """
 # Clarify Executor
 
 Capability discovery equivalent: mirrors speckit-pro/skills/speckit-autopilot/references/capability-discovery.md for installed Codex TOML runtime.
+Grounding contract: mirrors speckit-pro/skills/speckit-autopilot/references/grounding.md for installed Codex TOML runtime.
 
 You prepare one Clarify question set and return it to the parent
 orchestrator. The parent orchestrator answers the questions, applies

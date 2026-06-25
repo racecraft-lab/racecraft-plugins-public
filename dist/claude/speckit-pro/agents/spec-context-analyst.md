@@ -46,6 +46,9 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 ### Search Strategy
 
+Use capability-first discovery as defined in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+
 - Use `Read` for specific known files (constitution, technical roadmap, CLAUDE.md)
 - Use `Glob` to find all spec directories and their artifacts
 - Use `Grep` to search across specs for specific decisions or patterns

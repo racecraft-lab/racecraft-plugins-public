@@ -101,6 +101,7 @@ You receive:
 8. **Research only when the task requires it.** Use capability-first
    discovery as defined in
    `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`
+   Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
    for tasks that reference an external API, RFC, library version, or
    integration pattern not already captured in spec.md / plan.md / the
    codebase. Identify the needed category, select the best installed

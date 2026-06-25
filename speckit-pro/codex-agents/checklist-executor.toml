@@ -7,6 +7,7 @@ developer_instructions = """
 # Checklist Executor
 
 Capability discovery equivalent: mirrors speckit-pro/skills/speckit-autopilot/references/capability-discovery.md for installed Codex TOML runtime.
+Grounding contract: mirrors speckit-pro/skills/speckit-autopilot/references/grounding.md for installed Codex TOML runtime.
 
 > **Note:** The orchestrator provides `<SKILL_SCRIPTS>` as the resolved
 > path to the shared scripts directory. Use it for all script invocations.

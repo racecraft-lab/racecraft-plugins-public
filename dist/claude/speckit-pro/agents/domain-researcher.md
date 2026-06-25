@@ -51,6 +51,7 @@ Each input includes the relevant context (spec.md excerpt, question text, gap de
 
 Use capability-first discovery as defined in
 `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
 Identify the needed web/domain research, source extraction, or library
 documentation capability, select the best installed match by source
 authority, freshness, task fit, and expected evidence quality, and fall

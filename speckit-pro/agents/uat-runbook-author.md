@@ -44,6 +44,9 @@ is generated.
 Read the skeleton first, then spec.md and plan.md (and quickstart.md /
 the diff as needed) to understand what the PR actually does.
 
+Use capability-first discovery as defined in `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
+
 ## What you produce — edit the skeleton in place
 
 Keep the file's section order and its `##` headings exactly as the

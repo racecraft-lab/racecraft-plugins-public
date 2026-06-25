@@ -28,8 +28,10 @@ PLUGIN_ROOT="$(cd "$(dirname "$0")/../../../speckit-pro" && pwd)"
 AGENTS_DIR="$PLUGIN_ROOT/agents"
 CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
 
-# The literal path token an in-scope agent must reference.
+# The literal path tokens an in-scope agent must reference: the capability
+# discovery directive AND its companion grounding contract.
 DIRECTIVE_MARKER="capability-discovery.md"
+GROUNDING_MARKER="grounding.md"
 
 # ---------------------------------------------------------------------------
 # Out-of-scope EXCLUSION set — agents that perform NO capability-dependent work
@@ -44,16 +46,12 @@ CC_EXCLUSIONS=(
   "consensus-synthesizer"   # synthesis-only: aggregates prior agent output, gathers no external context
   "gate-validator"          # terminal validation: checks gate state, performs no capability-dependent research
   "phase-executor"          # orchestration shell: dispatches sub-agents, gathers no context itself
-  "spec-context-analyst"    # reads in-repo spec artifacts only; no external capability-dependent work
-  "uat-runbook-author"      # authors a runbook from existing artifacts; no external research
 )
 
 # Codex exclusions (speckit-pro/codex-agents/*.toml):
 CODEX_EXCLUSIONS=(
   "autopilot-fast-helper"   # fast-path helper: deterministic assists, gathers no external context
   "phase-executor"          # orchestration shell: dispatches sub-agents, gathers no context itself
-  "spec-context-analyst"    # reads in-repo spec artifacts only; no external capability-dependent work
-  "uat-runbook-author"      # authors a runbook from existing artifacts; no external research
 )
 
 # ---------------------------------------------------------------------------
@@ -133,7 +131,7 @@ check_runtime() {
       continue
     fi
 
-    # In-scope by default (the 6 known referencing agents PLUS any future
+    # In-scope by default (the known referencing agents PLUS any future
     # agent not in the exclusion set). It must EITHER reference the directive
     # by literal path OR appear in the approved-equivalent allowlist.
     set_test "${runtime}: in-scope agent '${agent_name}' references ${DIRECTIVE_MARKER} (or approved equivalent)"
@@ -143,6 +141,17 @@ check_runtime() {
       _pass
     else
       _fail "uncovered in-scope agent: ${runtime} '${agent_name}' references neither ${DIRECTIVE_MARKER} nor an approved equivalent (add the pointer, or record it in the exclusion set with a reason — do NOT widen the allowlist to silence it)"
+    fi
+
+    # The same in-scope set must also reference the grounding contract by
+    # literal path. Discovery without grounding lets a wider capability set
+    # widen hallucination; the two pointers travel together (no approved
+    # equivalent — grounding.md is referenced directly everywhere it applies).
+    set_test "${runtime}: in-scope agent '${agent_name}' references ${GROUNDING_MARKER}"
+    if grep -q "$GROUNDING_MARKER" "$f"; then
+      _pass
+    else
+      _fail "uncovered in-scope agent: ${runtime} '${agent_name}' does not reference ${GROUNDING_MARKER} (add the grounding pointer, or record it in the exclusion set with a reason)"
     fi
   done
 }

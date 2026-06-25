@@ -50,6 +50,7 @@ agent.
 3. **Research before recommending.** For each question, use
    capability-first discovery as defined in
    `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`.
+   Ground every asserted fact in an invoked-capability result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`.
    Identify the needed capability category, select the best installed
    match by task fit and evidence quality, and fall back to local,
    native platform, or repo-local sources when no installed capability

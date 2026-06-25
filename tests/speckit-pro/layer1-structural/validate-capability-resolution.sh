@@ -30,6 +30,7 @@ DIST_CLAUDE="$REPO_ROOT/dist/claude"
 DIST_CODEX="$REPO_ROOT/dist/codex"
 
 DIRECTIVE_MARKER="capability-discovery.md"
+GROUNDING_MARKER="grounding.md"
 
 # Extract the repo-root-relative path token verbatim. The token is the
 # `speckit-pro/…/capability-discovery.md` substring, cited the same way by both
@@ -39,20 +40,20 @@ DIRECTIVE_MARKER="capability-discovery.md"
 # excluded.
 PATH_TOKEN_RE='speckit-pro/[A-Za-z0-9._/-]*capability-discovery\.md'
 
+# The companion grounding-contract token, cited the same way alongside the
+# directive token. Resolved under both built trees identically.
+GROUNDING_TOKEN_RE='speckit-pro/[A-Za-z0-9._/-]*grounding\.md'
+
 # Out-of-scope EXCLUSION set — mirrors validate-capability-pointer.sh. Excluded
 # agents carry no directive reference, so there is no token to resolve for them.
 CC_EXCLUSIONS=(
   "consensus-synthesizer"
   "gate-validator"
   "phase-executor"
-  "spec-context-analyst"
-  "uat-runbook-author"
 )
 CODEX_EXCLUSIONS=(
   "autopilot-fast-helper"
   "phase-executor"
-  "spec-context-analyst"
-  "uat-runbook-author"
 )
 
 is_in_list() {
@@ -112,7 +113,7 @@ collect_runtime() {
   fi
   _pass
 
-  local agent_name tok
+  local agent_name tok gtok
   for f in "${files[@]}"; do
     agent_name=$(basename "$f" ".$ext")
     is_excluded "$runtime" "$agent_name" && continue
@@ -141,6 +142,20 @@ collect_runtime() {
     _pass
 
     token_seen "$tok" || FOUND_TOKENS+=("$tok")
+
+    # Companion grounding token (same in-scope set). Collected for resolution
+    # alongside the directive token; the pointer check enforces its presence,
+    # so here we only resolve the token of an agent that references it.
+    if grep -q "$GROUNDING_MARKER" "$f"; then
+      gtok=$(grep -oE "$GROUNDING_TOKEN_RE" "$f" | sort -u | head -1 || true)
+      set_test "${runtime}: extracted grounding path token from in-scope agent '${agent_name}'"
+      if [ -z "$gtok" ]; then
+        _fail "agent references ${GROUNDING_MARKER} but no repo-root-relative path token matched ${GROUNDING_TOKEN_RE} in $f"
+      else
+        _pass
+        token_seen "$gtok" || FOUND_TOKENS+=("$gtok")
+      fi
+    fi
   done
 }
 
