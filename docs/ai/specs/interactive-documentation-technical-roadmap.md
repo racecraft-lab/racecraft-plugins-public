@@ -71,7 +71,7 @@ DOC-007 -> DOC-008
 | DOC-010 | Search, accessibility, deep links, docs validation | Completed/archived | `.process/DOC-010-workflow.md` | Archived after PRs #232-#236 |
 | DOC-011 | GitHub Pages build-and-deploy pipeline | Completed/archived | `.process/DOC-011-workflow.md` | Archived after PR #243 |
 | DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
-| DOC-013 | Brand identity and marketplace landing page | 🔄 In Progress | `.process/DOC-013-workflow.md` | Scaffolded — autopilot-ready; brand guide ported from landing-page (P1) |
+| DOC-013 | Brand identity and marketplace landing page | Completed/archived | `.process/DOC-013-workflow.md` | Archived after PR #246 |
 | DOC-014 | SEO and AI discoverability | ⏳ Pending | — | Not started — staging deploy foundation exists from DOC-011; URLs finalize at DOC-012 launch (P1) |
 | DOC-015 | Editorial and content-QA pass | ⏳ Pending | — | Not started — production readiness (P1) |
 | DOC-016 | WCAG 2.1 AA accessibility hardening | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
@@ -470,7 +470,7 @@ Budget result: within budget (docs/config heavy, low production LOC)
 
 **Priority:** P1 | **Depends On:** DOC-002 | **Enables:** DOC-016 (contrast), public launch
 
-**Status:** Pending. The site is stock Starlight — `astro.config.mjs` has no `customCss`, `logo`, `favicon`, `head`, or fonts, and there is no `docs-site/public/`. Visual review confirmed default blue/lavender accent, system font, no logo, and no hero in both light and dark mode; the landing route renders as a generic "Start" doc page, not a marketplace landing. A full brand kit already exists in the sibling `landing-page/website`.
+**Status:** Completed/archived. Shipped via PR #246 (merge `6a0516ff`): `docs-site/src/styles/brand.css` maps the Racecraft palette onto Starlight tokens (light + dark), five self-hosted woff2 faces load with `font-display: swap`, `astro.config.mjs` wires the wordmark/favicon/customCss/preloads, and `index.mdx` is a Starlight-native splash landing with one primary CTA. WCAG AA contrast verified in both modes. Archived into project memory on 2026-06-24; recovery commands in `.specify/memory/archive-reports/2026-06-24-doc-013-post-merge-hygiene.md`.
 
 **Goal:** Apply Racecraft visual identity and turn the landing route into a real marketplace landing page.
 

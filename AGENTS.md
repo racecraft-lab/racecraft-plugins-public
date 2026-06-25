@@ -67,6 +67,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - DOC-010 is archived in `.specify/memory/` as completed on 2026-06-19 after PRs #232-#236 merged.
 - TACD-004 is archived in `.specify/memory/` as completed on 2026-06-22 after PR #240 merged.
 - DOC-011 is archived in `.specify/memory/` as completed on 2026-06-23 after PR #243 merged.
+- DOC-013 is archived in `.specify/memory/` as completed on 2026-06-24 after PR #246 merged; the `specs/doc-013-brand-identity-marketplace-landing/` folder remains under active `specs/**` (cleanup not yet applied — the worktree was unclean at archive time).
 - `specs/prsg-007-atomicity-router` and `specs/prsg-011-retro-migration` were removed from active `specs/**` cleanup after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory.
 - `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup after the planner schema fixture was vendored under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/`.
 - `specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup after PR #145 merged and the PRSG-009 contract schemas were preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
@@ -96,9 +97,11 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - Checked-in repository files only; no database, browser storage, or runtime service state. (doc-009-maintainer-contributor-release-workflow)
 - Docs-site validation uses Node ESM scripts, Astro/Starlight build and link validation, focused safe-aids/docs-quality checks, and Playwright smoke through `pnpm --dir docs-site validate`; smoke evidence is a short-retention CI artifact, not a committed durable payload. (doc-010-search-accessibility-deep-links-docs-validation)
 - GitHub Actions deploys the docs-site through standard GitHub Pages Actions after `pnpm --dir docs-site validate`; repository Pages source remains a manual Settings -> Pages prerequisite until configured by an operator. (doc-011-github-pages-build-and-deploy-pipeline)
+- Docs-site brand styling via a single `brand.css` mapping the Racecraft palette onto Starlight `--sl-color-*` tokens (light + dark), five self-hosted woff2 `@font-face`s (Space Grotesk/Geist/Fira Code) with `font-display: swap` and two `crossorigin` preloads, and a Starlight-native `template: splash` landing route; no new runtime dependency (fonts/favicons/logos ported verbatim). (doc-013-brand-identity-marketplace-landing)
 
 ## Recent Changes
 - doc-007-command-workflow-manifest-and-file-layout-reference: Planned a docs-site reference generator that emits committed Markdown pages using Node built-ins and existing Astro/Starlight validation; no new runtime dependency planned.
 - doc-009-maintainer-contributor-release-workflow: Planned a docs-only release workflow page for maintainers and contributors using existing docs-site validation, release helper scripts, PR Checks, and release-please source evidence.
 - doc-010-search-accessibility-deep-links-docs-validation: Shipped support anchors, accessible docs aids and fallbacks, one local docs validation path, the conditional `validate-docs` PR Checks gate, and compact Playwright smoke evidence across PRs #232-#236.
 - doc-011-github-pages-build-and-deploy-pipeline: Shipped the Deploy Docs workflow, staging noindex/robots guard, CI/CD runbook, workflow lint gate, release runtime alignment, and shared index generator hardening; the first post-merge deploy failed until Pages is manually enabled for GitHub Actions.
+- doc-013-brand-identity-marketplace-landing: Shipped the Racecraft docs-site brand identity (palette → Starlight tokens for light/dark, self-hosted woff2 typefaces, wordmark/favicon set) and a Starlight-native splash marketplace landing page with one primary CTA, WCAG AA contrast, and reduced-motion support, merged via PR #246.

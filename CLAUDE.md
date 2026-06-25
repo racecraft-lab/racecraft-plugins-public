@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Active SpecKit plan: `specs/doc-013-brand-identity-marketplace-landing/plan.md` (DOC-013 — brand identity + marketplace landing page for the docs-site).
+No active SpecKit implementation plan is pinned. Inspect current workflow state under `docs/ai/specs/.process/` and active `specs/**` directories before assuming a spec is in progress. (DOC-013 — brand identity + marketplace landing page — shipped via PR #246 and was archived into `.specify/memory/`.)
 <!-- SPECKIT END -->
 
 ## Working in This Repo
