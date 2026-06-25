@@ -148,12 +148,16 @@ section "clarify-executor"
 AGENT_FILE="$AGENTS_DIR/clarify-executor.md"
 TOOLS=$(extract_tools "$AGENT_FILE")
 
-for tool in Read Bash Grep Glob WebSearch WebFetch; do
+for tool in Read Grep Glob WebSearch WebFetch; do
   set_test "clarify-executor has $tool"
   assert_tool_present "$TOOLS" "$tool" "clarify-executor"
 done
 
-for tool in Skill Write Edit; do
+# Read-only contract: no write-capable tool (Bash/Write/Edit), no Skill, and no
+# ToolSearch. ToolSearch would let this closed-allowlist agent self-discover and
+# reach a write-capable MCP, defeating the provable read-only guarantee — open
+# discovery is the orchestrator's job, which feeds evidence down.
+for tool in Skill Write Edit Bash ToolSearch; do
   set_test "clarify-executor does NOT have $tool"
   assert_tool_absent "$TOOLS" "$tool" "clarify-executor"
 done
@@ -256,7 +260,9 @@ for tool in Read Glob Grep; do
   assert_tool_present "$TOOLS" "$tool" "codebase-analyst"
 done
 
-for tool in Write Edit Bash; do
+# Read-only contract: no write tool and no ToolSearch self-discovery (see
+# clarify-executor note). Reaches only its enumerated read capabilities.
+for tool in Write Edit Bash ToolSearch; do
   set_test "codebase-analyst does NOT have $tool"
   assert_tool_absent "$TOOLS" "$tool" "codebase-analyst"
 done
@@ -282,7 +288,9 @@ for tool in Read Glob Grep; do
   assert_tool_present "$TOOLS" "$tool" "spec-context-analyst"
 done
 
-for tool in Write Edit Bash; do
+# Read-only contract: no write tool and no ToolSearch self-discovery (see
+# clarify-executor note). Reaches only its enumerated read capabilities.
+for tool in Write Edit Bash ToolSearch; do
   set_test "spec-context-analyst does NOT have $tool"
   assert_tool_absent "$TOOLS" "$tool" "spec-context-analyst"
 done
@@ -308,7 +316,9 @@ for tool in Read WebSearch WebFetch; do
   assert_tool_present "$TOOLS" "$tool" "domain-researcher"
 done
 
-for tool in Write Edit Bash Glob Grep; do
+# Read-only contract: no write tool and no ToolSearch self-discovery (see
+# clarify-executor note). Reaches only its enumerated read capabilities.
+for tool in Write Edit Bash Glob Grep ToolSearch; do
   set_test "domain-researcher does NOT have $tool"
   assert_tool_absent "$TOOLS" "$tool" "domain-researcher"
 done

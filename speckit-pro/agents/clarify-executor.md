@@ -10,7 +10,6 @@ model: opus
 color: pink
 tools:
   - Read
-  - Bash
   - Grep
   - Glob
   - WebSearch
