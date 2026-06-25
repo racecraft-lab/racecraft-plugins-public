@@ -54,6 +54,12 @@ TOML file per custom agent, with required `name`, `description`, and
 `developer_instructions` fields plus Codex config such as `model`,
 `model_reasoning_effort`, and `sandbox_mode`.
 
+Operator note: on Codex, `sandbox_mode = "read-only"` does **not** sandbox
+MCP server processes. The agent TOML cannot restrict tools, so to keep a
+read-only agent provably unable to cause writes via MCP, the operator must
+curate write-capable MCP servers OUT at the profile/config level (`enabled =
+false`, or `enabled_tools`/`disabled_tools`).
+
 The bundled model policy: every execution and consensus agent runs
 on `gpt-5.5`. Reasoning effort is tuned per role — `high` for the
 phases the official GitHub SpecKit docs flag as heavy (Specify, Plan,
