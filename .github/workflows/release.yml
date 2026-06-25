@@ -33,7 +33,7 @@ jobs:
           # until the secret exists.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         if: steps.release.outputs.prs_created == 'true'
         with:
           fetch-depth: 0
@@ -115,7 +115,7 @@ jobs:
               -f base_ref="main"
           done
 
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
 
       - name: Build clean plugin payloads
