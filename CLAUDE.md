@@ -279,10 +279,13 @@ mergeable normally, add a `RELEASE_PLEASE_TOKEN` Actions secret:
 
 `release.yml` reads it as `${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}`
 in both the release-please step and the payload-sync checkout, so the release PR
-— and the sync commit pushed onto it — is authored by that identity and its
-`pull_request` checks run un-gated. The secret is optional: when it is absent the
-expression falls back to `GITHUB_TOKEN` and the workflow behaves exactly as
-before (release PR shows `BLOCKED`; an admin merges it).
+is opened — and its sync commit pushed — by that actor (the git commit author
+stays `github-actions[bot]`; what matters for branch protection is that a
+non-`GITHUB_TOKEN` actor performed the PR creation and push), and its
+`pull_request` checks run un-gated. The secret is optional: when it is absent
+`secrets.RELEASE_PLEASE_TOKEN` is empty, so the `||` resolves the expression to
+`github.token` and the workflow behaves exactly as before (release PR shows
+`BLOCKED`; an admin merges it).
 
 ## Adding a New Plugin to Release Automation
 
