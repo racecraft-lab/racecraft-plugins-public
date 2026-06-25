@@ -1,37 +1,41 @@
 {
-  "workflow_file": "docs/ai/specs/.process/DOC-011-workflow.md",
-  "updated_at": "2026-06-24T00:14:13Z",
-  "active_step": "Regenerate indexes and verify archive cleanup",
-  "feature_dir": "specs/doc-011-github-pages-build-and-deploy-pipeline",
-  "branch": "codex/doc-011-archive-cleanup",
-  "status": "completed archived",
+  "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
+  "updated_at": "2026-06-25T22:36:00Z",
+  "active_step": "Phase 2: Clarify - Inventory Boundaries",
+  "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
+  "branch": "codex/xplat-001-runtime-inventory-constraints",
+  "status": "in_progress",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "current_target": null,
-    "cleanup_mode": "post-merge-apply-cleanup",
+    "current_target": "specs/xplat-001-runtime-inventory-constraints",
+    "cleanup_mode": "feature-branch-sweep",
     "safeToApplyCleanup": true,
-    "cleanup_applied": true,
-    "archive_report": ".specify/memory/archive-reports/2026-06-23-doc-011-post-merge-hygiene.md",
-    "removed_active_spec": "specs/doc-011-github-pages-build-and-deploy-pipeline"
-  },
-  "provenance": {
-    "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/243",
-    "pr_number": 243,
-    "title": "docs(DOC-011): add GitHub Pages deploy pipeline",
-    "merged_at": "2026-06-23T23:02:27Z",
-    "merge_commit": "538fb63323cb8b8562a246167eea9a46abcbc499",
-    "tree_reference": "15a66732284ce5ff06b5821c8e3d44a63d20d0d3"
-  },
-  "post_merge_deploy": {
-    "run_url": "https://github.com/racecraft-lab/racecraft-plugins-public/actions/runs/28062949212",
-    "status": "failure",
-    "classification": "operational setup prerequisite",
-    "note": "Repository Pages is not yet enabled/configured to build using GitHub Actions. Enable Settings -> Pages -> Build and deployment -> Source: GitHub Actions before expecting publication."
+    "excluded_current_spec": "specs/xplat-001-runtime-inventory-constraints",
+    "eligible_previous_specs": [],
+    "note": "No previous active specs were eligible; specs/ contains only the current XPLAT-001 spec directory."
   },
   "prerequisites": {
     "all_pass": true,
-    "branch": "codex/doc-011-archive-cleanup",
+    "branch": "codex/xplat-001-runtime-inventory-constraints",
+    "is_worktree": true,
+    "on_feature_branch": false,
+    "confidence_gate_mode": "advisory",
     "capability_coverage": "advisory coverage present",
+    "agents": {
+      "required": [
+        "phase-executor",
+        "clarify-executor",
+        "checklist-executor",
+        "analyze-executor",
+        "implement-executor",
+        "codebase-analyst",
+        "spec-context-analyst",
+        "domain-researcher"
+      ],
+      "required_available": true,
+      "optional_fast_helper_available": true,
+      "project_implementation_agent": "implement-executor"
+    },
     "project_commands": {
       "BUILD": "N/A",
       "TYPECHECK": "N/A",
@@ -41,25 +45,165 @@
       "INTEGRATION_TEST": "N/A",
       "SINGLE_FILE_TEST": "N/A",
       "SINGLE_FILE_INTEGRATION": "N/A",
-      "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
+      "FULL_VERIFY": "N/A"
+    },
+    "preset_conventions": {
+      "has_presets": true,
+      "presets": [
+        "speckit-pro-reviewability"
+      ],
+      "extensions": "see .specify/extensions/.registry",
+      "hooks": "18 hook events configured"
     }
   },
   "plan": [
     {
-      "step": "Archive Sweep: confirm DOC-011 merge provenance",
+      "step": "Archive Sweep: previously merged specs dry-run/apply eligibility",
       "status": "completed"
     },
     {
-      "step": "Archive project memory and roadmap state",
+      "step": "Phase 0: Prerequisites",
       "status": "completed"
     },
     {
-      "step": "Remove completed active spec residue",
-      "status": "completed"
+      "step": "Phase 1: Specify",
+      "status": "completed",
+      "result": {
+        "functional_requirements": 14,
+        "user_stories": 3,
+        "acceptance_scenarios": 7,
+        "success_criteria": 8,
+        "clarification_markers": 0,
+        "gate": "G1 pass"
+      }
     },
     {
-      "step": "Regenerate indexes and verify archive cleanup",
-      "status": "completed"
+      "step": "Phase 2: Clarify - Inventory Boundaries",
+      "status": "in_progress"
+    },
+    {
+      "step": "Phase 2: Clarify - Inventory Boundaries Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Owner Buckets and Handoff",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Owner Buckets and Handoff Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Rubric Scope",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 2: Clarify - Rubric Scope Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 3: Plan",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - data-integrity Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - security",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - maintainability",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - maintainability Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 5: Tasks",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6: Analyze - Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 6.5: Confidence Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Doctor Extension Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Implementation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Verify Tasks Phantom Check",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Code Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Integration Suite",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Reviewability Diff Gate",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Self-Review",
+      "status": "pending"
+    },
+    {
+      "step": "Post: UAT Runbook Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Body Generation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: PR Creation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Review Remediation",
+      "status": "pending"
+    },
+    {
+      "step": "Post: Retrospective",
+      "status": "pending"
     }
   ]
 }

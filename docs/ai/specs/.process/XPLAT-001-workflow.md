@@ -45,7 +45,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `$speckit-specify` | Pending | Create the inventory/rubric spike spec; no runtime selection |
+| Specify | `$speckit-specify` | Complete | Created spec.md with 14 functional requirements, 3 user stories, and 0 clarification markers |
 | Clarify | `$speckit-clarify` | Pending | Resolve inventory boundaries, owner buckets, and evidence fields if needed |
 | Plan | `$speckit-plan` | Pending | Plan report structure, scan method, traceability rules, and verification |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: data-integrity, error-handling, security, maintainability |
@@ -121,6 +121,17 @@ Setup gate output:
 
 Record this warning in `plan.md`. It does not block setup.
 
+### Phase 0 Preflight Results
+
+| Check | Result | Evidence |
+|-------|--------|----------|
+| SpecKit prerequisites | Pass | `check-prerequisites.sh` returned `all_pass: true` on branch `codex/xplat-001-runtime-inventory-constraints` |
+| Archive Sweep | Pass | Archive extension installed; `specs/` contains only `specs/xplat-001-runtime-inventory-constraints`, so no previous active spec cleanup was eligible |
+| Confidence gate mode | Advisory | `resolve-confidence-mode.sh -- docs/ai/specs/.process/XPLAT-001-workflow.md` returned `advisory` |
+| Codex agents | Pass | Required agents are installed under `~/.codex/agents/`; optional `autopilot-fast-helper` is also installed |
+| Project commands | Recorded | `detect-commands.sh` returned all command slots as `N/A`; XPLAT-001 verification remains the workflow-listed static checks |
+| Presets/extensions | Recorded | `detect-presets.sh` found `speckit-pro-reviewability`, archive/git/verify/verify-tasks/retrospective/speckit-utils extension surfaces, and configured hooks |
+
 ---
 
 ## Specification Context
@@ -192,13 +203,14 @@ SpecKit Pro can install on multiple platforms, but active installed Claude and C
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 14 |
+| User Stories | 3 |
+| Acceptance Criteria | 7 acceptance scenarios; 8 measurable success criteria |
 
 ### Files Generated
 
-- [ ] `specs/xplat-001-runtime-inventory-constraints/spec.md`
+- [x] `specs/xplat-001-runtime-inventory-constraints/spec.md`
+- [x] `specs/xplat-001-runtime-inventory-constraints/checklists/requirements.md`
 
 ---
 
