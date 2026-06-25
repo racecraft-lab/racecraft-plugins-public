@@ -40,13 +40,21 @@ GROUNDING_TOKEN_RE='speckit-pro/[A-Za-z0-9._/-]*grounding\.md'
 # merged-spec residue — none enumerate installed capabilities or assert external
 # facts that need grounding. Applies to both runtimes (Codex also ships `install`).
 EXCLUSIONS=(
-  "speckit-autopilot"        # orchestrator: HOSTS capability-discovery.md + grounding.md in its own references/ and links them relatively (./references/...), not by repo-root token — its pointers live in the autopilot SKILL.md itself
   "speckit-install"          # installs the SpecKit CLI; mechanical, no external research
   "install"                  # Codex install skill; mechanical
   "speckit-upgrade"          # backup-and-restore upgrade; mechanical
   "speckit-status"           # reports roadmap state from direct repo-file reads; no open discovery
   "speckit-archive-cleanup"  # archives merged-spec residue; mechanical
 )
+
+# The orchestrator HOSTS capability-discovery.md and grounding.md in its own
+# references/ directory and links them with relative paths (./references/...),
+# so it carries no repo-root path token to resolve. It is NOT excluded — its
+# pointer PRESENCE is still enforced (so it cannot silently drop the references);
+# only the repo-root token resolution is skipped for it, because the files it
+# points at are the canonical sources and are already resolved under both dist
+# trees by validate-capability-resolution.sh.
+HOST_SKILL="speckit-autopilot"
 
 is_excluded() {
   local needle="$1" item
@@ -111,6 +119,20 @@ check_runtime() {
   for d in "${skill_dirs[@]}"; do
     skill=$(basename "$d")
     is_excluded "$skill" && continue
+    if [ "$skill" = "$HOST_SKILL" ]; then
+      # Presence-only: enforce that the host still references both markers (so it
+      # cannot silently drop them); skip repo-root token resolution since it
+      # links them relatively.
+      set_test "${runtime} host skill '${skill}' references ${DIRECTIVE_MARKER}"
+      if grep -q "$DIRECTIVE_MARKER" "${d}SKILL.md"; then _pass; else
+        _fail "host skill '${skill}' (${runtime}) dropped its ${DIRECTIVE_MARKER} reference"
+      fi
+      set_test "${runtime} host skill '${skill}' references ${GROUNDING_MARKER}"
+      if grep -q "$GROUNDING_MARKER" "${d}SKILL.md"; then _pass; else
+        _fail "host skill '${skill}' (${runtime}) dropped its ${GROUNDING_MARKER} reference"
+      fi
+      continue
+    fi
     collect_marker "$runtime" "$skill" "${d}SKILL.md" "$DIRECTIVE_MARKER" "$PATH_TOKEN_RE"
     collect_marker "$runtime" "$skill" "${d}SKILL.md" "$GROUNDING_MARKER" "$GROUNDING_TOKEN_RE"
   done

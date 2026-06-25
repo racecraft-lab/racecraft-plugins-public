@@ -111,6 +111,8 @@ Return your answer as a structured response:
 **Rationale**: [Why this confidence level — e.g., "Official API documentation confirms this behavior" or "Community consensus but no official documentation"]
 ```
 
+For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
+
 ## What You Excel At
 
 - API behavior questions: "What does `api.createResource()` do?" → finds official API docs

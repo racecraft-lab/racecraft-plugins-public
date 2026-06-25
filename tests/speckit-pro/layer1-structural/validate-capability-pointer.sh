@@ -153,6 +153,16 @@ check_runtime() {
     else
       _fail "uncovered in-scope agent: ${runtime} '${agent_name}' does not reference ${GROUNDING_MARKER} (add the grounding pointer, or record it in the exclusion set with a reason)"
     fi
+
+    # An agent follows its own output template over referenced prose, so the
+    # grounding evidence note must be REQUIRED in the agent's output format, not
+    # only in the linked contract. Assert the literal note format is present.
+    set_test "${runtime}: in-scope agent '${agent_name}' output requires the grounding evidence note"
+    if grep -qF 'Capability path:' "$f"; then
+      _pass
+    else
+      _fail "in-scope agent '${agent_name}' (${runtime}) output format does not require the 'Capability path: ... -> ...; Evidence: ...; Confidence: ...' grounding evidence note"
+    fi
   done
 }
 
