@@ -12,34 +12,42 @@ release blocker. Each SPEC is prepared for implementation with
 **Spec ID prefix:** `XPLAT-###`
 **Status:** Pending. Added 2026-06-24 after native-Windows install analysis found
 that the plugin can install but core Claude/Codex workflows break when they hit
-Bash-backed helper execution.
+Bash-backed helper execution. Refined 2026-06-25 after roadmap audit split the
+runtime decision and supply-chain security model out of the first implementation
+slice.
 
 ---
 
 ## Roadmap Overview
 
-The release-blocker work is decomposed into **5 specifications** across **5
+The release-blocker work is decomposed into **7 specifications** across **7
 dependency tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
-| 1 | XPLAT-001 | Inventory active Bash dependencies and select the runtime contract | Sequential |
-| 2 | XPLAT-002 | Build the cross-platform runner foundation and parity harness | Sequential after runtime decision |
-| 3 | XPLAT-003 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
-| 4 | XPLAT-004 | Port mutation, install, and PR-emission helpers | Can overlap late XPLAT-003 only after shared runner APIs are stable |
-| 5 | XPLAT-005 | Cut over Claude/Codex surfaces, rebuild payloads, and prove native Windows release readiness | Sequential release gate |
+| 1 | XPLAT-001 | Inventory active runtime dependencies and define evaluation constraints | Sequential |
+| 2 | XPLAT-002 | Research runtime implementation options and choose the contract | Sequential after inventory |
+| 3 | XPLAT-003 | Research and choose the supply-chain security / consumer-trust model | Sequential after runtime decision |
+| 4 | XPLAT-004 | Build the cross-platform runner foundation and parity harness | Sequential after runtime and security decisions |
+| 5 | XPLAT-005 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
+| 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Can overlap late XPLAT-005 only after shared runner APIs are stable |
+| 7 | XPLAT-007 | Cut over Claude/Codex surfaces, rebuild payloads, and prove native Windows release readiness | Sequential release gate |
 
-**Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005
+**Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007
 
 **Dependency Constraints:**
 
-- XPLAT-002 requires XPLAT-001 because the runner must implement one selected
-  runtime contract, not re-open the language/runtime decision.
-- XPLAT-003 requires XPLAT-002 because parity tests need the final runner command
+- XPLAT-002 requires XPLAT-001 because the runtime decision must be based on the
+  actual active installed-runtime surface, not an assumed helper list.
+- XPLAT-003 requires XPLAT-002 because the supply-chain model depends on the
+  selected runtime, packaging model, and generated artifact categories.
+- XPLAT-004 requires XPLAT-002 and XPLAT-003 because the runner must implement
+  one selected runtime contract and the first-release security controls.
+- XPLAT-005 requires XPLAT-004 because parity tests need the final runner command
   shape and shared JSON/path library.
-- XPLAT-004 requires XPLAT-002 and should reuse XPLAT-003 test patterns, but can
+- XPLAT-006 requires XPLAT-004 and should reuse XPLAT-005 test patterns, but can
   start once the runner's mutation-safe file APIs are stable.
-- XPLAT-005 requires XPLAT-003 and XPLAT-004 because no active Claude/Codex
+- XPLAT-007 requires XPLAT-005 and XPLAT-006 because no active Claude/Codex
   surface should switch until every plugin-runtime helper has a replacement.
 
 ## Reviewability Contract
@@ -58,9 +66,23 @@ before PR creation.
   non-goals, review order, scope budget, traceability, verification evidence,
   known gaps, and rollback/flag notes.
 
+## Audit Findings Resolved
+
+This roadmap originally combined inventory, runtime evaluation, and runtime
+contract selection into XPLAT-001. That made the first spec too broad and risked
+locking a public runtime strategy before enough evidence existed. The corrected
+sequence now separates:
+
+- XPLAT-001: inventory and evaluation rubric only.
+- XPLAT-002: implementation-option research and runtime contract decision.
+- XPLAT-003: supply-chain security and consumer-trust model.
+
+The runner foundation now starts only after both public-contract decisions are
+recorded.
+
 ## Non-Negotiable Product Constraint
 
-After XPLAT-005, installed Claude and Codex plugin workflows MUST NOT require
+After XPLAT-007, installed Claude and Codex plugin workflows MUST NOT require
 Bash, Git Bash, WSL, PowerShell, or `jq` as the implementation substrate on
 native Windows, macOS, or Linux. Shells may still exist in a user's environment,
 but SpecKit Pro cannot depend on them for installed plugin runtime behavior.
@@ -69,24 +91,37 @@ Repository-only maintainer scripts and GitHub Actions are outside this lane
 unless an active installed plugin skill, agent, hook, or generated payload
 invokes them.
 
+## Consumer Trust Constraint
+
+After XPLAT-007, public docs and release notes MUST accurately state how the
+runtime artifacts are built, what dependencies they include, what consumers can
+verify locally, and which security guarantees are intentionally not claimed.
+Supply-chain guarantees must be implemented before they are marketed.
+
 ---
 
 ## Dependency Graph
 
 ```text
-XPLAT-001 Runtime Inventory and Architecture Contract
+XPLAT-001 Runtime Inventory and Constraints
     |
     v
-XPLAT-002 Cross-Platform Runner Foundation
+XPLAT-002 Runtime Implementation Options and Contract Decision
     |
     v
-XPLAT-003 Read-Only Helper Port
+XPLAT-003 Supply-Chain Security and Consumer Trust Model
     |
     v
-XPLAT-004 Mutation, Install, and PR-Emission Helper Port
+XPLAT-004 Cross-Platform Runner Foundation
     |
     v
-XPLAT-005 Claude/Codex Cutover and Native Windows Release Gate
+XPLAT-005 Read-Only Helper Port
+    |
+    v
+XPLAT-006 Mutation, Install, and PR-Emission Helper Port
+    |
+    v
+XPLAT-007 Claude/Codex Cutover and Native Windows Release Gate
     |
     v
 PUBLIC RELEASE UNBLOCKED
@@ -98,11 +133,13 @@ PUBLIC RELEASE UNBLOCKED
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| XPLAT-001 | Runtime Inventory and Architecture Contract | Pending | — | Scaffold first; public release remains blocked until this lane completes |
-| XPLAT-002 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-001 runtime decision |
-| XPLAT-003 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-002 runner foundation |
-| XPLAT-004 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-002; should reuse XPLAT-003 parity harness |
-| XPLAT-005 | Claude/Codex Cutover and Native Windows Release Gate | Pending | — | Blocked by XPLAT-003 and XPLAT-004 |
+| XPLAT-001 | Runtime Inventory and Constraints | Pending | — | Scaffold first; produces the inventory and evaluation rubric |
+| XPLAT-002 | Runtime Implementation Options and Contract Decision | Pending | — | Blocked by XPLAT-001 inventory |
+| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Pending | — | Blocked by XPLAT-002 runtime decision; must finish before runner foundation |
+| XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-002 runtime decision and XPLAT-003 security model |
+| XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
+| XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-004; should reuse XPLAT-005 parity harness |
+| XPLAT-007 | Claude/Codex Cutover and Native Windows Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -110,17 +147,18 @@ PUBLIC RELEASE UNBLOCKED
 
 ## Specification Sections
 
-### XPLAT-001: Runtime Inventory and Architecture Contract
+### XPLAT-001: Runtime Inventory and Constraints
 
-**Priority:** P1 | **Depends On:** None | **Enables:** XPLAT-002, XPLAT-003, XPLAT-004, XPLAT-005
+**Priority:** P1 | **Depends On:** None | **Enables:** XPLAT-002, XPLAT-003, XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
 
 **Status:** Pending. This is the first spec to scaffold.
 
-**Goal:** Produce a complete active-runtime inventory and select the one
-cross-platform implementation contract that all later specs must follow.
+**Goal:** Produce a complete active-runtime inventory and a decision rubric for
+runtime and supply-chain choices. Do not choose or implement the replacement
+runtime in this spec.
 
 **Reviewability Budget:** Primary surface: docs/process |
-Projected reviewable LOC: 0-120 |
+Projected reviewable LOC: 0-80 |
 Production files: 0 |
 Total files: 2-4 |
 Budget result: within budget (architecture/inventory spike)
@@ -132,22 +170,24 @@ Budget result: within budget (architecture/inventory spike)
   workflows.
 - Classify references as active runtime, generated payload, public docs,
   repository-only maintainer tooling, tests/fixtures, or historical/archive.
-- Select one canonical implementation strategy for the plugin runtime. Candidate
-  strategies include JavaScript/TypeScript, Python, or small per-platform
-  binaries; Bash and PowerShell may be compatibility adapters only, not the
-  primary implementation.
-- Define the command contract: entrypoint name, argument parsing, JSON stdin/stdout
-  envelopes, exit-code mapping, stderr diagnostics, path normalization, subprocess
-  execution rules, and prerequisite reporting.
-- Define the enforcement allowlist that XPLAT-005 will use to prevent active
-  Bash runtime dependencies from returning.
+- Map every active runtime dependency to an owner category: read-only helper,
+  mutation/helper, cutover guidance, repository-only exclusion, or follow-up
+  exception.
+- Produce a runtime evaluation rubric covering native Windows/macOS/Linux
+  behavior, installed-cache invocation, dependency footprint, packaging,
+  offline behavior, diagnostics, maintainability, and compatibility adapters.
+- Produce a supply-chain evaluation rubric covering dependency policy,
+  lockfiles, generated payload integrity, vulnerability scanning, provenance,
+  checksums/signatures, SBOMs, and consumer-local verification.
 
 **Out of Scope:**
 
+- Selecting the runtime.
+- Selecting the supply-chain security approach.
 - Porting helpers.
 - Editing active Claude/Codex skill invocations.
 - Rebuilding generated payloads.
-- Making public docs claim Windows support before XPLAT-005 passes.
+- Making public docs claim Windows support before XPLAT-007 passes.
 
 **Key Files To Audit:**
 
@@ -162,19 +202,140 @@ Budget result: within budget (architecture/inventory spike)
 - `dist/codex/speckit-pro/**`
 - `docs-site/src/content/docs/**`
 - `speckit-pro/README.md`
+- Release/versioning files such as `.release-please-manifest.json`,
+  `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, and
+  plugin manifests.
 
 **Done When:**
 
-- A maintainer can point to the runtime contract and know exactly what XPLAT-002
-  must build.
-- Every active Bash dependency has an owner spec: XPLAT-003, XPLAT-004, or
-  XPLAT-005.
+- A maintainer can see the full active runtime surface and no longer has to
+  infer which Bash references matter.
+- XPLAT-002 has a clear runtime evaluation rubric and candidate evidence list.
+- XPLAT-003 has a clear security/trust evaluation rubric and artifact list.
+- Every active Bash dependency has a provisional owner spec: XPLAT-005,
+  XPLAT-006, XPLAT-007, or repository-only exclusion.
 
 ---
 
-### XPLAT-002: Cross-Platform Runner Foundation
+### XPLAT-002: Runtime Implementation Options and Contract Decision
 
-**Priority:** P1 | **Depends On:** XPLAT-001 | **Enables:** XPLAT-003, XPLAT-004, XPLAT-005
+**Priority:** P1 | **Depends On:** XPLAT-001 | **Enables:** XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
+
+**Status:** Pending.
+
+**Goal:** Research and evaluate implementation options, then select the one
+runtime contract that all later specs must implement.
+
+**Reviewability Budget:** Primary surface: docs/process |
+Projected reviewable LOC: 0-120 |
+Production files: 0 |
+Total files: 2-5 |
+Budget result: within budget (decision record and probes)
+
+**Scope:**
+
+- Compare credible implementation strategies including JavaScript/TypeScript,
+  Python, and small per-platform binaries.
+- Evaluate each candidate against the XPLAT-001 rubric: platform behavior,
+  Claude/Codex invocation reliability, installed-cache pathing, packaging,
+  dependency management, update path, performance, diagnostics, and maintainer
+  ergonomics.
+- Run smoke probes or gather documented platform evidence where invocation
+  mechanics are uncertain.
+- Select one canonical runtime strategy and document rejected options.
+- Define the command contract: entrypoint name, helper dispatch, argument
+  parsing, JSON stdin/stdout envelopes, exit-code mapping, stderr diagnostics,
+  path normalization, subprocess execution rules, prerequisite reporting, and
+  runtime version reporting.
+- Name temporary compatibility adapters, if any, and the spec that removes them.
+
+**Out of Scope:**
+
+- Building the runner.
+- Porting helper behavior.
+- Rewriting public docs beyond the decision record.
+- Selecting supply-chain controls beyond noting runtime-specific implications
+  for XPLAT-003.
+
+**Candidate Evidence To Capture:**
+
+- Runtime availability and invocation behavior in installed Claude and Codex
+  plugin caches.
+- Native Windows/macOS/Linux filesystem and subprocess behavior.
+- Dependency/bootstrap requirements for a first-time public user.
+- How generated Claude and Codex payloads would package or point to runtime
+  artifacts.
+- Failure modes and diagnosability when prerequisites are missing.
+
+**Done When:**
+
+- XPLAT-004 can build without reopening the runtime language/package decision.
+- The selected command contract is precise enough for fixture parity tests.
+- Rejected options are documented with enough rationale to avoid churn later.
+
+---
+
+### XPLAT-003: Supply-Chain Security and Consumer Trust Model
+
+**Priority:** P1 | **Depends On:** XPLAT-002 | **Enables:** XPLAT-004, XPLAT-007
+
+**Status:** Pending.
+
+**Goal:** Choose the security and provenance approach for the new runtime so
+consumers can understand what they are installing and what the project verifies
+before release.
+
+**Reviewability Budget:** Primary surface: docs/process |
+Projected reviewable LOC: 0-140 |
+Production files: 0 |
+Total files: 2-5 |
+Budget result: within budget (decision record and policy)
+
+**Scope:**
+
+- Evaluate runtime-specific dependency risk and packaging risk after XPLAT-002
+  narrows the candidate set.
+- Choose first-release requirements for dependency pinning/lockfiles,
+  reproducible or repeatable builds, generated payload integrity, vulnerability
+  scanning, and release verification.
+- Evaluate SBOMs, provenance/attestations, artifact checksums/signatures, and
+  dependency update cadence. Decide which controls are required before public
+  release and which are follow-up hardening.
+- Define what consumers can verify locally after plugin installation.
+- Define what maintainers must verify in CI before publishing a release.
+- Identify docs/release-note wording that is allowed, and wording that would
+  overclaim the implemented guarantees.
+
+**Out of Scope:**
+
+- Implementing CI/release changes.
+- Building the runner.
+- Selecting the runtime independent of XPLAT-002.
+- Formal third-party security audit procurement.
+
+**Security Questions To Answer:**
+
+- What is the minimal trustworthy first-release bar for this plugin marketplace?
+- Are checksums/signatures useful if plugin installation does not verify them
+  automatically?
+- Should generated Claude/Codex payloads include embedded integrity metadata?
+- Should the project produce an SBOM, provenance attestation, both, or neither
+  for the first public release?
+- Which controls belong in release automation versus local plugin runtime
+  preflight?
+
+**Done When:**
+
+- XPLAT-004 knows which security controls must be built into the runner and
+  generated runtime artifacts.
+- XPLAT-007 knows which release/docs claims are allowed.
+- Deferred supply-chain hardening is explicit and justified.
+
+---
+
+### XPLAT-004: Cross-Platform Runner Foundation
+
+**Priority:** P1 | **Depends On:** XPLAT-002, XPLAT-003 | **Enables:** XPLAT-005, XPLAT-006, XPLAT-007
 
 **Status:** Pending.
 
@@ -196,10 +357,12 @@ starts landing here.
   process execution without a shell, filesystem reads/writes, and platform
   detection.
 - Implement a preflight/helper-discovery command that returns runtime,
-  platform, executable availability, plugin root, and missing prerequisites as
-  structured JSON.
+  platform, executable availability, plugin root, missing prerequisites, and
+  runtime version as structured JSON.
 - Add a parity harness that can run old Bash helpers and new runner helpers over
   fixtures while Bash still exists.
+- Implement the XPLAT-003 first-release controls that apply to runtime source,
+  dependencies, and generated runtime artifacts.
 - Document how Claude and Codex skills will invoke the runner after cutover.
 
 **Out of Scope:**
@@ -208,6 +371,8 @@ starts landing here.
   prove the runner contract.
 - Removing Bash helpers.
 - Updating public install docs.
+- Implementing release automation controls that XPLAT-003 assigns outside the
+  runner foundation.
 
 **Key Files Likely To Change:**
 
@@ -221,13 +386,14 @@ starts landing here.
 
 - The runner executes on native Windows, macOS, and Linux.
 - The parity harness can compare old/new helper output deterministically.
+- First-release supply-chain controls assigned to the runner are in place.
 - No active skill has been switched yet; this spec only creates the safe runway.
 
 ---
 
-### XPLAT-003: Read-Only Helper Port
+### XPLAT-005: Read-Only Helper Port
 
-**Priority:** P1 | **Depends On:** XPLAT-002 | **Enables:** XPLAT-005 and reduces XPLAT-004 risk
+**Priority:** P1 | **Depends On:** XPLAT-004 | **Enables:** XPLAT-007 and reduces XPLAT-006 risk
 
 **Status:** Pending.
 
@@ -238,7 +404,7 @@ preserving current JSON and exit semantics.
 Projected reviewable LOC: 400-800 |
 Production files: 6-8 |
 Total files: 12-25 |
-Budget result: likely warn; split into XPLAT-003a/003b if the XPLAT-001
+Budget result: likely warn; split into XPLAT-005a/005b if the XPLAT-001
 inventory shows this cannot land reviewably.
 
 **Scope:**
@@ -252,7 +418,7 @@ inventory shows this cannot land reviewably.
   substitution with structured runtime APIs.
 - Add fixture parity for success, missing input, malformed input, and
   platform-specific path cases.
-- Keep the Bash helpers as temporary reference implementations until XPLAT-005.
+- Keep the Bash helpers as temporary reference implementations until XPLAT-007.
 
 **Out of Scope:**
 
@@ -285,9 +451,9 @@ inventory shows this cannot land reviewably.
 
 ---
 
-### XPLAT-004: Mutation, Install, and PR-Emission Helper Port
+### XPLAT-006: Mutation, Install, and PR-Emission Helper Port
 
-**Priority:** P1 | **Depends On:** XPLAT-002, XPLAT-003 | **Enables:** XPLAT-005
+**Priority:** P1 | **Depends On:** XPLAT-004, XPLAT-005 | **Enables:** XPLAT-007
 
 **Status:** Pending.
 
@@ -343,14 +509,15 @@ if XPLAT-001 inventory shows the combined scope is too large.
 
 ---
 
-### XPLAT-005: Claude/Codex Cutover and Native Windows Release Gate
+### XPLAT-007: Claude/Codex Cutover and Native Windows Release Gate
 
-**Priority:** P1 | **Depends On:** XPLAT-003, XPLAT-004 | **Enables:** Public release readiness
+**Priority:** P1 | **Depends On:** XPLAT-005, XPLAT-006 | **Enables:** Public release readiness
 
 **Status:** Pending.
 
 **Goal:** Switch active Claude and Codex plugin runtime surfaces to the
-cross-platform runner and prove public-release readiness with native Windows UAT.
+cross-platform runner and prove public-release readiness with native Windows UAT
+and accurate consumer-trust documentation.
 
 **Reviewability Budget:** Primary surfaces: docs/process + seed/config |
 Projected reviewable LOC: 250-500 |
@@ -370,6 +537,8 @@ split only if generated payload rebuilds make the review packet too large.
   assumptions outside the XPLAT-001 allowlist.
 - Add or update docs so Windows users see the supported native path, not a WSL or
   Git Bash workaround.
+- Document the implemented XPLAT-003 security model in public docs and release
+  notes without overstating guarantees.
 - Capture manual UAT evidence for Claude and Codex on native Windows, macOS, and
   Linux.
 
@@ -379,6 +548,7 @@ split only if generated payload rebuilds make the review packet too large.
 - Replacing repository maintainer scripts not shipped into the installed plugin.
 - Changing GitHub Spec Kit's own generated `.specify/scripts/bash/` helpers in
   consumer projects.
+- Claiming cryptographic guarantees that were not implemented.
 
 **Key Files Likely To Change:**
 
@@ -390,6 +560,7 @@ split only if generated payload rebuilds make the review packet too large.
 - `speckit-pro/codex-hooks.json`
 - `speckit-pro/README.md`
 - `docs-site/src/content/docs/install/**`
+- `docs-site/src/content/docs/security-and-trust.md`
 - `docs-site/src/content/docs/troubleshooting.md`
 - `docs-site/src/content/docs/first-run.md`
 - `dist/claude/speckit-pro/**`
@@ -403,14 +574,17 @@ split only if generated payload rebuilds make the review packet too large.
   `jq`.
 - A release-readiness guard blocks publication if active runtime Bash
   dependencies are reintroduced.
+- Public docs and release notes match the implemented consumer-trust model.
 
 ---
 
 ## Release Blocker Statement
 
 SpecKit Pro should not be marketed as a public, cross-platform Claude/Codex
-plugin until XPLAT-005 is complete. Before then, native Windows support is not a
-documentation problem; it is an implementation gap.
+plugin until XPLAT-007 is complete. Before then, native Windows support is not a
+documentation problem; it is an implementation gap. Consumer trust also remains a
+planning gap until XPLAT-003 is complete and an implementation gap until its
+required controls are wired into XPLAT-004 and XPLAT-007.
 
 ## References
 
