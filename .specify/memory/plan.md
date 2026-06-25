@@ -1109,8 +1109,6 @@ budget; single vertical slice, no split. Deferred: DOC-016/017/019/012.
 
 ### Cleanup Notes
 
-`specs/doc-013-brand-identity-marketplace-landing` was **NOT** removed from active
-`specs/**` in this archive run — `--apply-cleanup` was not requested and the
-worktree was unclean (untracked `docs/ai/prompts/`), so the cleanup gate did not
-pass. The folder remains under `specs/**` pending a clean-worktree cleanup pass.
-Recovery commands and provenance are recorded in the DOC-013 archive report.
+`specs/doc-013-brand-identity-marketplace-landing` was removed from active
+`specs/**` in the post-merge cleanup; only `specs/.gitkeep` remains. Recovery
+commands and provenance are recorded in the DOC-013 archive report.

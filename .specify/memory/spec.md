@@ -1581,7 +1581,7 @@ honored (SC-008).
 ### Cleanup Note
 
 Archived into project memory on 2026-06-24 (PR #246, `6a0516ff`). The active
-`specs/doc-013-brand-identity-marketplace-landing/` folder was **NOT** removed —
-`--apply-cleanup` was not requested and the worktree was not clean (untracked
-`docs/ai/prompts/`). Cleanup remains pending. Recovery commands and provenance are
-recorded in `.specify/memory/archive-reports/2026-06-24-doc-013-post-merge-hygiene.md`.
+`specs/doc-013-brand-identity-marketplace-landing/` folder was removed from
+`specs/**` in the post-merge cleanup; only `specs/.gitkeep` remains. Recovery
+commands and provenance are recorded in
+`.specify/memory/archive-reports/2026-06-24-doc-013-post-merge-hygiene.md`.

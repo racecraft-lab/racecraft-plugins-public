@@ -67,7 +67,7 @@ PRs should include a brief summary, affected plugin paths, test commands run, an
 - DOC-010 is archived in `.specify/memory/` as completed on 2026-06-19 after PRs #232-#236 merged.
 - TACD-004 is archived in `.specify/memory/` as completed on 2026-06-22 after PR #240 merged.
 - DOC-011 is archived in `.specify/memory/` as completed on 2026-06-23 after PR #243 merged.
-- DOC-013 is archived in `.specify/memory/` as completed on 2026-06-24 after PR #246 merged; the `specs/doc-013-brand-identity-marketplace-landing/` folder remains under active `specs/**` (cleanup not yet applied — the worktree was unclean at archive time).
+- DOC-013 is archived in `.specify/memory/` as completed on 2026-06-24 after PR #246 merged; `specs/doc-013-brand-identity-marketplace-landing/` was removed from active `specs/**` cleanup and recovery commands were recorded in `.specify/memory/archive-reports/2026-06-24-doc-013-post-merge-hygiene.md`.
 - `specs/prsg-007-atomicity-router` and `specs/prsg-011-retro-migration` were removed from active `specs/**` cleanup after PR #136 decoupled Layer 4 dogfood/schema tests from the live PRSG-007 spec directory.
 - `specs/prsg-008-layer-planner` was removed from active `specs/**` cleanup after the planner schema fixture was vendored under `tests/speckit-pro/layer4-scripts/fixtures/plan-layers/contracts/`.
 - `specs/prsg-009-multi-pr-emission` was removed from active `specs/**` cleanup after PR #145 merged and the PRSG-009 contract schemas were preserved under `speckit-pro/skills/speckit-autopilot/contracts/`.
