@@ -41,7 +41,7 @@ roadmap text / sibling site — keep them in view:
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass, 0 clarification markers; 29 FR / 6 US / 18 AC / 10 SC |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass; 3 sessions, 4 consensus resolutions. Key: custom `.md` endpoint, route-middleware JSON-LD, Person=F.Gabelmann, astro-og-canvas, git-lastmod serialize, retarget DOC-011 robots gate, fetch-depth:0 |
-| Plan | `/speckit-plan` | ⏳ Pending | |
+| Plan | `/speckit-plan` | ✅ Complete | G3 pass; 5 artifacts + 11 contracts (C1–C11), 6 entities, all 29 FR/10 SC traced. Advisory LOC estimate `pass` (proj 520 mechanical; real reviewable ~300–360 < 400). |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Domains: seo-metadata, performance, error-handling |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Watch for drift from the 3 divergences above |
@@ -268,11 +268,19 @@ Re-read docs/ai/specs/.process/DOC-014-design-concept.md for the full rationale 
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | ⏳ | Technical context, execution flow |
-| `research.md` | ⏳ | Decision rationales (carry the design-concept citations) |
-| `data-model.md` | ⏳ | Schema shapes (Organization/WebSite/SoftwareApplication/Person) |
-| `contracts/` | ⏳ | robots.txt taxonomy, JSON-LD field contracts, sitemap lastmod source |
-| `quickstart.md` | ⏳ | How to verify SEO surfaces locally |
+| `plan.md` | ✅ | Technical context, execution flow, Declared File Operations, Complexity Tracking (reviewability tension recorded) |
+| `research.md` | ✅ | D1–D12 decision rationales (design-concept citations carried) |
+| `data-model.md` | ✅ | 6 entities (content page, crawler policy, structured-data graph, agent content, sitemap, metric def) |
+| `contracts/` | ✅ | `build-output-contracts.md` C1–C11, each mapped to FRs + SCs + verification layer |
+| `quickstart.md` | ✅ | How to verify SEO surfaces locally |
+
+**Planning findings to carry into Tasks/Implement (all surfaced, none blocking):**
+1. CI checkout is `actions/checkout@…v7.0.0` (not v4) — add `fetch-depth: 0` to that step.
+2. **3 MDX pages**, not 2 (`index.mdx`, `choose-your-path.mdx`, `spec-kit-lifecycle.mdx`) — raw body acceptable per FR-007.
+3. **`playwright.config.mjs` pins `testMatch: 'docs-smoke.spec.mjs'`** — MUST broaden to a glob or the 4 new SEO specs won't execute (required surgical edit).
+4. CI installs `--frozen-lockfile` → the regenerated `docs-site/pnpm-lock.yaml` MUST be committed or the deploy job fails (declared MODIFIED, excluded from prod-LOC).
+5. `reference.md` is hand-authored → split is 12 hand-authored + 7 generated = 19; `0/19` have `description:` today (SC-003 baseline); the generator's `renderPage()` already has a `description` field (emit it as frontmatter — one-line change).
+6. doc-014 worktree `docs-site/node_modules` likely NOT installed — Implement runs `pnpm --dir docs-site install` after adding deps (`starlight-llms-txt`, `astro-og-canvas` + `canvaskit-wasm`, promote `@astrojs/sitemap`).
 
 ---
 
