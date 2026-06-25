@@ -193,6 +193,11 @@ from `Accept: text/markdown` content negotiation (out of scope — no crawler ho
 currently just speckit-pro) + Person/author. Under Starlight, injection must be redone
 (global `head:` + `Head.astro` override / route-data); the sibling's schema factory
 functions port, the layout-based injection does not.
+> **RESOLVED (Clarify S2, 2026-06-25):** injection mechanism = **route-data middleware**
+> (`routeMiddleware` + ported `src/lib/schema.ts`), NOT a `Head.astro` override — Starlight
+> 0.40 docs call Head-override "a last resort" and recommend route middleware (added v0.32).
+> The entity set is unchanged. "Plugin page" for SoftwareApplication resolves to the landing
+> page `index.mdx` (allowlist-matched). Person identity pending Clarify-S2 consensus.
 
 ---
 
@@ -324,8 +329,13 @@ recommend a split-PR emission at PR time — that is a separate, downstream deci
   `astro-markdown-for-agents`) and whether it composes cleanly with `starlight-llms-txt`.
   **Why deferred:** Plugin-selection detail; the decision to ship per-page `.md` is
   settled (Q4).
-  **Suggested next step:** Resolve during `/speckit-plan`; verify no build conflict
-  with `starlight-llms-txt` and the existing `starlight-links-validator`.
+  **RESOLVED (Clarify S1 consensus, 2026-06-25, 2/2 high-confidence):** Adopt **NO plugin** —
+  serve per-page `.md` from a **custom Astro endpoint** `src/pages/[...slug].md.ts` that reads
+  `getCollection('docs')` and returns each page's raw `body` as `text/markdown`. `astro-markdown-for-agents`
+  does not exist as a current package; `starlight-dot-md` (3★, Starlight 0.40 compat unverified) and
+  `starlight-md-txt` (`.md.txt` URL, unverifiable) both lose to a ~15-line dependency-free endpoint that
+  composes trivially (the links-validator validates HTML only; `starlight-llms-txt` emits only `.txt`).
+  This honors KISS/YAGNI and guarantees FR-008 via `getCollection`.
 - **What:** Whether the post-Tasks atomicity classifier recommends a split-PR emission
   despite the single-spec decision.
   **Why deferred:** The classifier inspects structural seams that only exist after Tasks.
