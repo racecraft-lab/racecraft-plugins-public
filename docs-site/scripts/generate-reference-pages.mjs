@@ -507,23 +507,29 @@ async function buildTestsPage() {
     if (!byLayer.has(layer)) byLayer.set(layer, []);
     byLayer.get(layer).push(repoPath);
   }
-  for (const [layer, files] of Array.from(byLayer.entries()).sort(([a], [b]) => a.localeCompare(b))) {
+  // Deterministic, platform-independent ordering. localeCompare is ICU/locale-
+  // dependent and produces a different file order on macOS vs CI Linux, which
+  // made the generated tests page fail reference:check after regenerating
+  // locally. A code-point comparison sorts identically on every platform.
+  const byCodePoint = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  for (const [layer, files] of Array.from(byLayer.entries()).sort(([a], [b]) => byCodePoint(a, b))) {
+    const orderedFiles = [...files].sort(byCodePoint);
     const sources = [];
-    for (const repoPath of files) sources.push(await citation(repoPath));
+    for (const repoPath of orderedFiles) sources.push(await citation(repoPath));
     records.push({
       id: layer.replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase(),
       heading: `tests/speckit-pro/${layer}`,
       purpose: `Validation files in ${layer}.`,
       platformMapping: {
         concept: 'SpecKit Pro validation layer',
-        claudeCode: files.join(', '),
-        codex: files.join(', '),
+        claudeCode: orderedFiles.join(', '),
+        codex: orderedFiles.join(', '),
         runtimeDifference: 'Layer 1 includes separate Claude Code and Codex structural checks where the repository has runtime-specific plugin surfaces.',
       },
-      sourceFacts: files.map((repoPath) => sourceFact(`${repoPath} is checked in under the SpecKit Pro test suite.`, [repoPath])),
+      sourceFacts: orderedFiles.map((repoPath) => sourceFact(`${repoPath} is checked in under the SpecKit Pro test suite.`, [repoPath])),
       sources,
       inferredNotes: [
-        inferredNote('These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.', files),
+        inferredNote('These files are validation evidence only; DOC-007 does not change test semantics unless a docs-site validation need explicitly requires it.', orderedFiles),
       ],
       classification: 'test-only',
     });
