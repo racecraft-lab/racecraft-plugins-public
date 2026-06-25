@@ -460,6 +460,17 @@ done
 # ─────────────────────────────────────────
 # Codex Agent Sandbox Mode Validation
 # ─────────────────────────────────────────
+#
+# Scope of the read-only guarantee on Codex: `sandbox_mode = "read-only"` is an
+# OS-level sandbox over the agent's OWN shell/file operations only. It does NOT
+# sandbox MCP server processes — a read-only Codex agent can still cause writes
+# through an enabled write-capable MCP tool (confirmed by openai/codex; see the
+# operator note in codex-skills/install/SKILL.md). Codex agent TOMLs cannot
+# restrict tools, so closing that gap is an OPERATOR responsibility (curate
+# write-capable MCP servers out at the profile level via enabled/enabled_tools/
+# disabled_tools). This test asserts the filesystem read-only boundary that the
+# plugin CAN enforce; the MCP boundary is documented for the operator, not
+# enforceable here.
 
 CODEX_AGENTS_DIR="$PLUGIN_ROOT/codex-agents"
 

@@ -9,6 +9,10 @@ compatibility: "Requires Claude Code with AskUserQuestion tool support. Codex va
 
 # SpecKit PRD — Collaborative PRD & Technical Roadmap Authoring
 
+## Capability discovery & grounding
+
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it. (This governs your research-backed recommended answers, not the interview mechanics.)
+
 ## Codex Skill-Selection Guard
 
 If this file is loaded in Codex, the runtime selected the Claude Code
