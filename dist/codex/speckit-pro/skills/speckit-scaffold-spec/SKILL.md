@@ -5,6 +5,10 @@ description: "Use this skill when the user wants to set up, scaffold, bootstrap,
 
 # SpecKit Scaffold Spec
 
+## Capability discovery & grounding
+
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
+
 ## Scope
 
 Use this skill when the user wants a SPEC-ID prepared for

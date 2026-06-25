@@ -113,7 +113,7 @@ collect_runtime() {
   fi
   _pass
 
-  local agent_name tok gtok
+  local agent_name tok found_dir found_gr
   for f in "${files[@]}"; do
     agent_name=$(basename "$f" ".$ext")
     is_excluded "$runtime" "$agent_name" && continue
@@ -128,32 +128,37 @@ collect_runtime() {
       continue
     fi
 
-    # `|| true`: under `set -euo pipefail` a no-match `grep` (exit 1) or a
-    # SIGPIPE from `head` closing `sort` early would make this command
-    # substitution fail and abort the script BEFORE the empty-token check
-    # below — bypassing the explicit `_fail`. Guard it so a missing token is
-    # always reported as an actionable failure instead of a silent abort.
-    tok=$(grep -oE "$PATH_TOKEN_RE" "$f" | sort -u | head -1 || true)
-    set_test "${runtime}: extracted directive path token from in-scope agent '${agent_name}'"
-    if [ -z "$tok" ]; then
+    # Collect EVERY unique directive token in the file, not just the first.
+    # A file with one valid reference and one stale/broken reference must not
+    # pass on the strength of the valid one — every token is resolved below.
+    found_dir=0
+    while read -r tok; do
+      [ -z "$tok" ] && continue
+      found_dir=1
+      token_seen "$tok" || FOUND_TOKENS+=("$tok")
+    done < <(grep -oE "$PATH_TOKEN_RE" "$f" | sort -u)
+    set_test "${runtime}: extracted directive path token(s) from in-scope agent '${agent_name}'"
+    if [ "$found_dir" -eq 1 ]; then
+      _pass
+    else
       _fail "agent references ${DIRECTIVE_MARKER} but no repo-root-relative path token matched ${PATH_TOKEN_RE} in $f"
-      continue
     fi
-    _pass
 
-    token_seen "$tok" || FOUND_TOKENS+=("$tok")
-
-    # Companion grounding token (same in-scope set). Collected for resolution
-    # alongside the directive token; the pointer check enforces its presence,
-    # so here we only resolve the token of an agent that references it.
+    # Companion grounding token(s) (same in-scope set). Also collect ALL unique
+    # matches; the pointer check enforces presence, so here we resolve every
+    # token an agent that references grounding actually carries.
     if grep -q "$GROUNDING_MARKER" "$f"; then
-      gtok=$(grep -oE "$GROUNDING_TOKEN_RE" "$f" | sort -u | head -1 || true)
-      set_test "${runtime}: extracted grounding path token from in-scope agent '${agent_name}'"
-      if [ -z "$gtok" ]; then
-        _fail "agent references ${GROUNDING_MARKER} but no repo-root-relative path token matched ${GROUNDING_TOKEN_RE} in $f"
-      else
+      found_gr=0
+      while read -r tok; do
+        [ -z "$tok" ] && continue
+        found_gr=1
+        token_seen "$tok" || FOUND_TOKENS+=("$tok")
+      done < <(grep -oE "$GROUNDING_TOKEN_RE" "$f" | sort -u)
+      set_test "${runtime}: extracted grounding path token(s) from in-scope agent '${agent_name}'"
+      if [ "$found_gr" -eq 1 ]; then
         _pass
-        token_seen "$gtok" || FOUND_TOKENS+=("$gtok")
+      else
+        _fail "agent references ${GROUNDING_MARKER} but no repo-root-relative path token matched ${GROUNDING_TOKEN_RE} in $f"
       fi
     fi
   done

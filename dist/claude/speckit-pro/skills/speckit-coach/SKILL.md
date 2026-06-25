@@ -8,6 +8,10 @@ license: MIT
 
 # SpecKit Coach & Enhancement Skill
 
+## Capability discovery & grounding
+
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
+
 ## Prerequisites
 
 This skill **enhances** the official SpecKit CLI — it does not replace it. The developer must first install SpecKit:

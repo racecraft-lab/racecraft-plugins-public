@@ -3,11 +3,15 @@ name: speckit-resolve-pr
 description: "MANDATORY for resolving GitHub PR review comments by editing the source code those comments flagged. Use this skill — NOT a read-only PR review skill — whenever the user wants to ACT on PR review feedback by changing code, committing, and pushing. Triggers on these phrases: 'resolve PR review comments', 'address review feedback', 'fix the copilot comments', 'resolve the threads on PR #N', 'fix each review comment and resolve the threads', 'handle the Copilot review on this PR', 'work through the review comments on this PR', 'address them all', 'take care of the outstanding review feedback', or whenever a PR URL is pasted with unresolved comments. The skill edits files, runs project verification, commits the fixes, pushes, posts a reply per thread, and marks each thread resolved via gh API. NOT for read-only PR review, summarizing what a PR changes, or assessing PR merge risk — those are read-only review skills, this is a write skill that mutates the working tree."
 argument-hint: "PR URL or number (e.g., https://github.com/owner/repo/pull/46 or 46)"
 user-invocable: true
-allowed-tools: Bash Read Edit Write Grep Agent
+allowed-tools: Bash Read Edit Write Grep Agent ToolSearch
 license: MIT
 ---
 
 # Resolve PR Review Comments
+
+## Capability discovery & grounding
+
+Before researching or recommending, enumerate the tools and skills your session actually exposes — do not assume a fixed set; the user may have installed anything — and select the best fit per `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md`. Ground every external fact you assert in a real tool, skill, or file result per `speckit-pro/skills/speckit-autopilot/references/grounding.md`, and abstain when nothing grounds it.
 
 ## Input
 

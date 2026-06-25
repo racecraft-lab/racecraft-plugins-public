@@ -180,3 +180,5 @@ headers cause the L7 dispatch contract check to fail.
 
 **Errors:** None (or describe any errors)
 ```
+
+For every externally-sourced fact in your output, include the grounding evidence note: `Capability path: <need> -> <selected capability/source>; Evidence: <citations or local file refs>; Confidence: <high|medium|low>`. If nothing grounds a claim, say so instead of asserting it.
