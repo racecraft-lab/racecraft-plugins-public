@@ -133,7 +133,7 @@ PUBLIC RELEASE UNBLOCKED
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| XPLAT-001 | Runtime Inventory and Constraints | Pending | — | Scaffold first; produces the inventory and evaluation rubric |
+| XPLAT-001 | Runtime Inventory and Constraints | In Progress | `.process/XPLAT-001-workflow.md` | Run `$speckit-autopilot docs/ai/specs/.process/XPLAT-001-workflow.md` |
 | XPLAT-002 | Runtime Implementation Options and Contract Decision | Pending | — | Blocked by XPLAT-001 inventory |
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Pending | — | Blocked by XPLAT-002 runtime decision; must finish before runner foundation |
 | XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-002 runtime decision and XPLAT-003 security model |
@@ -151,7 +151,7 @@ PUBLIC RELEASE UNBLOCKED
 
 **Priority:** P1 | **Depends On:** None | **Enables:** XPLAT-002, XPLAT-003, XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
 
-**Status:** Pending. This is the first spec to scaffold.
+**Status:** In Progress. Scaffolded on 2026-06-25 in branch `codex/xplat-001-runtime-inventory-constraints`; workflow file is `docs/ai/specs/.process/XPLAT-001-workflow.md`.
 
 **Goal:** Produce a complete active-runtime inventory and a decision rubric for
 runtime and supply-chain choices. Do not choose or implement the replacement
