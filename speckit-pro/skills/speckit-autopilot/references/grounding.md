@@ -59,6 +59,9 @@ its own grounding.
 
 The contract is written to be checkable from a run transcript: every cited claim
 must map to a real capability invocation in that transcript, and a cited result
-that has no corresponding invocation is a grounding failure, not a pass. The
-parity/integration suite asserts this for both subagent and orchestrator output;
-a fixture that cites a capability with no matching invocation must fail.
+that has no corresponding invocation is a grounding failure, not a pass. This is
+the contract a Layer-7 integration fixture is meant to assert for both subagent
+and orchestrator output — a fixture that cites a capability with no matching
+invocation must be reported ungrounded (the executable proof, including that
+negative control, ships in the companion change that adds the grounding-fixture
+class).
