@@ -18,8 +18,9 @@ set_test "release workflow uses release-please"
 assert_contains "$CONTENT" "googleapis/release-please-action@v5"
 
 set_test "release workflow pins checkout actions"
-checkout_pin='actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10'
-checkout_count=$(grep -Fc "$checkout_pin" "$WORKFLOW_FILE")
+# Count any SHA-pinned actions/checkout (version-agnostic) so routine
+# dependabot checkout bumps don't break this structural assertion.
+checkout_count=$(grep -Ec 'actions/checkout@[0-9a-f]{40}' "$WORKFLOW_FILE")
 assert_eq "2" "$checkout_count" "release workflow pinned checkout count"
 
 set_test "release workflow can dispatch PR checks"

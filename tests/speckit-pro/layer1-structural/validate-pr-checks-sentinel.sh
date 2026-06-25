@@ -26,7 +26,10 @@ assert_contains "$CONTENT" "name: validate-plugins"
 section "pr-checks.yml — PR Workflow Contract"
 
 set_test "title validation checks out repository history"
-if [[ "$CONTENT" == *"uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10"* \
+# Match any SHA-pinned actions/checkout (version-agnostic) so routine
+# dependabot checkout bumps don't break this structural assertion.
+checkout_pin_re='uses: actions/checkout@[0-9a-f]{40}'
+if [[ "$CONTENT" =~ $checkout_pin_re \
   && "$CONTENT" == *"fetch-depth: 0"* ]]; then
   _pass
 else
