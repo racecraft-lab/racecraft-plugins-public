@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# run-all-fixtures.sh — Run every Layer 7 fixture (Class 1, 2, 3).
+# run-all-fixtures.sh — Run every Layer 7 fixture (Class 1, 2, 3, 4).
 #
 # Usage:
 #   bash run-all-fixtures.sh                # all classes, replay

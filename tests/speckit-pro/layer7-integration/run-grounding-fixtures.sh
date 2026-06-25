@@ -79,14 +79,16 @@ assert_fixture() {
     fi
   fi
 
-  # Citation count (how many capability citations the answer makes).
+  # Distinct cited-capability count. extract_capability_citations is `sort -u`,
+  # so this counts UNIQUE capability tokens the answer cites, not total
+  # occurrences (citing the same tool twice still counts once).
   if jq -e '.expect_citation_count' "$expected" >/dev/null 2>&1; then
     local want_n got_n
     want_n=$(jq -r '.expect_citation_count' "$expected")
     got_n=$(extract_capability_citations "$transcript" | grep -c . || true)
-    set_test "$fixture_id: citation count == $want_n (got $got_n)"
+    set_test "$fixture_id: distinct cited-capability count == $want_n (got $got_n)"
     if [ "$got_n" -eq "$want_n" ]; then _pass; else
-      _fail "expected $want_n capability citations, got $got_n"
+      _fail "expected $want_n distinct capability citations, got $got_n"
     fi
   fi
 
