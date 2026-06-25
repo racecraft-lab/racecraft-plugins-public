@@ -1,0 +1,5 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"g1","name":"ToolSearch","input":{"query":"code graph repository structure index"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"g1","content":"Loaded schema for mcp__gitnexus__list_repos (an installed capability not in any curated agent allowlist)"}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"g2","name":"mcp__gitnexus__list_repos","input":{}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"g2","content":"5 indexed repositories returned."}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"The workspace has 5 indexed repositories.\nCapability path: code graph -> mcp__gitnexus__list_repos; Evidence: returned 5 repository records; Confidence: high (grounded in invoked result)."}]}}

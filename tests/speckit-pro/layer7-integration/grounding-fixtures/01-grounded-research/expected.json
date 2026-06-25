@@ -1,0 +1,10 @@
+{
+  "fixture_id": "01-grounded-research",
+  "purpose": "A grounded answer: the orchestrator discovers a library-docs capability via ToolSearch, invokes it, and cites the exact tool it used. The cited capability has a real tool_use, so the verdict is grounded.",
+  "expect_grounding_verdict": "grounded",
+  "must_invoke_tools": [
+    "ToolSearch",
+    "mcp__context7__get-library-docs"
+  ],
+  "expect_citation_count": 1
+}

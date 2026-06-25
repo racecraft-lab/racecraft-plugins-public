@@ -1,0 +1,1 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"Astro 6.4 supports content collections.\nCapability path: library documentation -> mcp__context7__get-library-docs; Evidence: docs; Confidence: high."}]}}

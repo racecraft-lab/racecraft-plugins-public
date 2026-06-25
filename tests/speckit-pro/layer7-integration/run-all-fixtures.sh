@@ -27,6 +27,7 @@ declare -A RUNNERS=(
   [1]="$SCRIPT_DIR/run-dispatch-fixtures.sh"
   [2]="$SCRIPT_DIR/run-return-format-fixtures.sh"
   [3]="$SCRIPT_DIR/run-e2e-fixtures.sh"
+  [4]="$SCRIPT_DIR/run-grounding-fixtures.sh"
 )
 
 OVERALL_FAIL=0
@@ -43,7 +44,7 @@ run_class() {
 }
 
 if [ "$SELECTED_CLASS" = "all" ]; then
-  for c in 1 2 3; do run_class "$c"; done
+  for c in 1 2 3 4; do run_class "$c"; done
 else
   run_class "$SELECTED_CLASS"
 fi

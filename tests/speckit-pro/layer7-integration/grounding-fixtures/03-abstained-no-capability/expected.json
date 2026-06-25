@@ -1,0 +1,10 @@
+{
+  "fixture_id": "03-abstained-no-capability",
+  "purpose": "Correct abstention. No installed capability can ground the needed fact, so the answer uses the fallback-disclosure block and says it could not confirm — it asserts no tool-cited fact. With zero tool citations the verdict is grounded (nothing was fabricated).",
+  "expect_grounding_verdict": "grounded",
+  "expect_citation_count": 0,
+  "must_include_terms": [
+    "No installed library documentation was available/usable",
+    "could not confirm"
+  ]
+}

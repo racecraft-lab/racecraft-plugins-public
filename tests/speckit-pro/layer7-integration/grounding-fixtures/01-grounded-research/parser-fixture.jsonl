@@ -1,0 +1,5 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"g1","name":"ToolSearch","input":{"query":"library documentation"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"g1","content":"Loaded schema for mcp__context7__get-library-docs"}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"g2","name":"mcp__context7__get-library-docs","input":{"libraryName":"astro"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"g2","content":"Astro 6.4 supports content collections."}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"Astro 6.4 supports content collections.\nCapability path: library documentation -> mcp__context7__get-library-docs; Evidence: returned docs excerpt; Confidence: high (grounded in invoked result)."}]}}

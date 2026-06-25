@@ -1,0 +1,10 @@
+{
+  "fixture_id": "04-discovered-tool-used",
+  "purpose": "Proactive discovery-and-use of an installed tool that is NOT in any curated agent allowlist. The orchestrator finds mcp__gitnexus__list_repos via ToolSearch, invokes it, and grounds its answer in the real result — demonstrating 'use any installed capability', not a fixed set.",
+  "expect_grounding_verdict": "grounded",
+  "must_invoke_tools": [
+    "ToolSearch",
+    "mcp__gitnexus__list_repos"
+  ],
+  "expect_citation_count": 1
+}

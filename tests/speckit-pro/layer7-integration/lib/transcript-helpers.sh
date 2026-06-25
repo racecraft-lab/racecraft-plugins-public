@@ -249,3 +249,77 @@ assert_transcript_not_contains_term() {
   local transcript="$1" term="$2"
   ! grep -F -q -- "$term" "$transcript"
 }
+
+# ===========================================================================
+# Tool-usage observability + grounding (capability-discovery / grounding.md)
+# ===========================================================================
+
+# extract_tool_uses <transcript.jsonl> [scope]
+#   scope: "orchestrator" (isSidechain false), "sidechain" (true), or "all".
+#   stdout: JSON array of EVERY tool_use (not just Agent/Skill) as
+#   {name, id, isSidechain}. This is the "what tools did the agents actually
+#   invoke" report — the observability the grounding proof is built on.
+extract_tool_uses() {
+  local transcript="$1" scope="${2:-all}"
+  jq -cs --arg scope "$scope" '
+    [
+      .[]
+      | select(.type == "assistant")
+      | (if $scope == "orchestrator" then select((.isSidechain // false) == false)
+         elif $scope == "sidechain" then select((.isSidechain // false) == true)
+         else . end)
+      | . as $e
+      | (.message.content // [])[]
+      | select(.type == "tool_use")
+      | {name: .name, id: .id, isSidechain: ($e.isSidechain // false)}
+    ]
+  ' "$transcript"
+}
+
+# extract_tool_use_names <transcript.jsonl> [scope]
+#   stdout: newline-separated unique tool names actually invoked.
+extract_tool_use_names() {
+  local transcript="$1" scope="${2:-all}"
+  extract_tool_uses "$transcript" "$scope" | jq -r '.[].name' | sort -u
+}
+
+# tool_invoked <transcript.jsonl> <name> [scope]
+#   exit 0 if a tool_use with exactly <name> appears in scope, else exit 1.
+tool_invoked() {
+  local transcript="$1" name="$2" scope="${3:-all}"
+  extract_tool_use_names "$transcript" "$scope" | grep -qxF "$name"
+}
+
+# extract_capability_citations <transcript.jsonl>
+#   stdout: newline-separated unique cited capability tokens, parsed from each
+#   grounding Evidence note of the form:
+#     Capability path: <need> -> <source>; Evidence: ...; Confidence: ...
+#   The <source> token (e.g. an exact tool name) is what a grounded claim
+#   asserts it came from. Parsed from the raw transcript text; the tokens and
+#   the literal "Capability path:" / "->" are not JSON-escaped.
+extract_capability_citations() {
+  local transcript="$1"
+  grep -oE 'Capability path:[^;"]*' "$transcript" 2>/dev/null \
+    | sed -E 's/.*->[[:space:]]*//; s/[[:space:]]+$//' \
+    | grep -v '^$' | sort -u || true
+}
+
+# grounding_verdict <transcript.jsonl>
+#   stdout: "grounded" if every cited capability token was actually invoked as
+#   a tool_use somewhere in the transcript; "ungrounded" if any citation has no
+#   matching invocation (a fabricated citation). An answer with no tool
+#   citations is "grounded" (it asserted nothing it had to back with a tool —
+#   e.g. a correct abstention).
+grounding_verdict() {
+  local transcript="$1"
+  local invoked cite
+  invoked=$(extract_tool_use_names "$transcript" "all")
+  while read -r cite; do
+    [ -z "$cite" ] && continue
+    if ! printf '%s\n' "$invoked" | grep -qxF "$cite"; then
+      printf 'ungrounded\n'
+      return 0
+    fi
+  done < <(extract_capability_citations "$transcript")
+  printf 'grounded\n'
+}

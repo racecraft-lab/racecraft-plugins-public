@@ -1,0 +1,3 @@
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"tool_use","id":"g1","name":"ToolSearch","input":{"query":"proprietary vendor X internal API behavior"}}]}}
+{"type":"user","isSidechain":false,"message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"g1","content":"No matching capability is installed for that need."}]}}
+{"type":"assistant","isSidechain":false,"message":{"role":"assistant","content":[{"type":"text","text":"No installed library documentation was available/usable; used local referenced docs fallback; confidence is low because no authoritative source was reachable. I could not confirm the exact internal API behavior for vendor X."}]}}

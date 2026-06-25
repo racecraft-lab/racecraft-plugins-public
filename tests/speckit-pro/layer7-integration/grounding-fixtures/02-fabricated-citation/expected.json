@@ -1,0 +1,9 @@
+{
+  "fixture_id": "02-fabricated-citation",
+  "purpose": "NEGATIVE CONTROL. The answer asserts a fact and cites a tool in its Evidence note, but the transcript contains NO tool_use for that tool — the citation is fabricated. The grounding check MUST return 'ungrounded'; if this fixture ever reports 'grounded', the check is rubber-stamping instead of detecting fabrication.",
+  "expect_grounding_verdict": "ungrounded",
+  "must_not_invoke_tools": [
+    "mcp__context7__get-library-docs"
+  ],
+  "expect_citation_count": 1
+}
