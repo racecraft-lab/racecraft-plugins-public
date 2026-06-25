@@ -290,33 +290,67 @@ tool_invoked() {
   extract_tool_use_names "$transcript" "$scope" | grep -qxF "$name"
 }
 
+# extract_completed_tool_names <transcript.jsonl> [scope]
+#   stdout: newline-separated unique tool names whose tool_use `id` has a
+#   matching `tool_result.tool_use_id` — i.e. the tool was invoked AND returned
+#   a result. A call that errored, was interrupted, or never returned is NOT
+#   listed, so grounding cannot rest on a tool that produced nothing.
+extract_completed_tool_names() {
+  local transcript="$1" scope="${2:-all}"
+  jq -rs --arg scope "$scope" '
+    ( [ .[]
+        | select(.type == "user")
+        | (.message.content // [])[]
+        | select(.type == "tool_result")
+        | .tool_use_id ] ) as $results
+    | [ .[]
+        | select(.type == "assistant")
+        | (if $scope == "orchestrator" then select((.isSidechain // false) == false)
+           elif $scope == "sidechain" then select((.isSidechain // false) == true)
+           else . end)
+        | (.message.content // [])[]
+        | select(.type == "tool_use")
+        | select(.id as $id | ($results | index($id)) != null)
+        | .name ]
+    | unique | .[]
+  ' "$transcript" 2>/dev/null
+}
+
 # extract_capability_citations <transcript.jsonl>
-#   stdout: newline-separated unique cited capability tokens, parsed from each
-#   grounding Evidence note of the form:
+#   stdout: newline-separated unique cited capability tokens, parsed ONLY from
+#   the agent's own answer (assistant `text` blocks) — never from tool results,
+#   user prompts, or docs that merely contain the phrase. A citation must carry
+#   the full grounding Evidence-note structure:
 #     Capability path: <need> -> <source>; Evidence: ...; Confidence: ...
-#   The <source> token (e.g. an exact tool name) is what a grounded claim
-#   asserts it came from. Parsed from the raw transcript text; the tokens and
-#   the literal "Capability path:" / "->" are not JSON-escaped.
+#   A note missing the `-> <source>`, `; Evidence:`, or `; Confidence:` segments
+#   is malformed and is not counted as a citation. The <source> token is what
+#   the grounded claim asserts it came from.
 extract_capability_citations() {
   local transcript="$1"
-  grep -oE 'Capability path:[^;"]*' "$transcript" 2>/dev/null \
-    | sed -E 's/.*->[[:space:]]*//; s/[[:space:]]+$//' \
+  jq -r '
+    select(.type == "assistant")
+    | (.message.content // [])[]
+    | select(.type == "text")
+    | .text
+  ' "$transcript" 2>/dev/null \
+    | grep -oE 'Capability path:[^;]*->[[:space:]]*[^;[:space:]]+;[[:space:]]*Evidence:[^;]*;[[:space:]]*Confidence:' \
+    | sed -E 's/.*->[[:space:]]*//; s/;.*//; s/[[:space:]]+$//' \
     | grep -v '^$' | sort -u || true
 }
 
 # grounding_verdict <transcript.jsonl>
-#   stdout: "grounded" if every cited capability token was actually invoked as
-#   a tool_use somewhere in the transcript; "ungrounded" if any citation has no
-#   matching invocation (a fabricated citation). An answer with no tool
-#   citations is "grounded" (it asserted nothing it had to back with a tool —
-#   e.g. a correct abstention).
+#   stdout: "grounded" if every cited capability token maps to a tool that was
+#   actually invoked AND returned a result (see extract_completed_tool_names);
+#   "ungrounded" if any citation has no such completed invocation (a fabricated
+#   or non-returning citation). An answer with no tool citations is "grounded"
+#   (it asserted nothing it had to back with a tool — e.g. a correct abstention).
 grounding_verdict() {
   local transcript="$1"
-  local invoked cite
-  invoked=$(extract_tool_use_names "$transcript" "all")
+  local completed cite
+  completed=$(extract_completed_tool_names "$transcript" "all")
   while read -r cite; do
     [ -z "$cite" ] && continue
-    if ! printf '%s\n' "$invoked" | grep -qxF "$cite"; then
+    if ! printf '%s\n' "$completed" | grep -qxF "$cite"; then
       printf 'ungrounded\n'
       return 0
     fi
