@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.16.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.15.1...speckit-pro-v2.16.0) (2026-06-25)
+
+
+### Features
+
+* **speckit-pro:** proactively discover installed tools and ground every asserted fact ([#258](https://github.com/racecraft-lab/racecraft-plugins-public/issues/258)) ([bb01ef2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/bb01ef2872762641c13713da03f52251533c463a))
+
 ## [2.15.1](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.15.0...speckit-pro-v2.15.1) (2026-06-24)
 
 

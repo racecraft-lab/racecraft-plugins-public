@@ -145,7 +145,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - dist/claude/speckit-pro/.claude-plugin/plugin.json is categorized as generated distribution plugin manifest. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
 - Top-level fields: `author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`, `version`. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
-- The manifest declares version `2.15.1`. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
+- The manifest declares version `2.16.0`. Source refs: `dist/claude/speckit-pro/.claude-plugin/plugin.json`.
 
 #### Sources
 
@@ -175,7 +175,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - dist/codex/speckit-pro/.codex-plugin/plugin.json is categorized as generated distribution plugin manifest. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
 - Top-level fields: `author`, `description`, `homepage`, `hooks`, `interface`, `keywords`, `license`, `name`, `repository`, `skills`, `version`. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
-- The manifest declares version `2.15.1`. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
+- The manifest declares version `2.16.0`. Source refs: `dist/codex/speckit-pro/.codex-plugin/plugin.json`.
 
 #### Sources
 
@@ -205,7 +205,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - speckit-pro/.claude-plugin/plugin.json is categorized as source plugin manifest. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
 - Top-level fields: `author`, `description`, `homepage`, `keywords`, `license`, `name`, `repository`, `version`. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
-- The manifest declares version `2.15.1`. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
+- The manifest declares version `2.16.0`. Source refs: `speckit-pro/.claude-plugin/plugin.json`.
 
 #### Sources
 
@@ -235,7 +235,7 @@ Marketplace, plugin, integration, and generated distribution manifests with runt
 
 - speckit-pro/.codex-plugin/plugin.json is categorized as source plugin manifest. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
 - Top-level fields: `author`, `description`, `homepage`, `hooks`, `interface`, `keywords`, `license`, `name`, `repository`, `skills`, `version`. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
-- The manifest declares version `2.15.1`. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
+- The manifest declares version `2.16.0`. Source refs: `speckit-pro/.codex-plugin/plugin.json`.
 
 #### Sources
 
