@@ -198,6 +198,35 @@ authoritative edit targets.
    `public-docs-claim`, `generated-payload-reference`,
    `historical-or-archive`, or `follow-up-exception`.
 
+### Row Aggregation and Match-Summary Rules
+
+The report may use aggregate or match-summary rows to keep PR review concise,
+but aggregation is a presentation choice only; it does not reduce the 100%
+scan coverage requirement.
+
+- Prefer individual rows for proven active runtime, unproven active runtime,
+  `follow-up-exception`, generated payload rows with source links, and
+  mixed-mode helper findings when row-level ownership or trace evidence would
+  otherwise be blurred.
+- Aggregate only matches that share the same recorded scan command or pattern
+  family, `classification`, `active_runtime_status`, `runtime_relevance`,
+  `owner_bucket`, `follow_up_spec`, invocation mode if applicable, and
+  rationale.
+- Each aggregate row must include a stable row id, matched token or pattern
+  family, match count, included path set or path pattern, representative
+  evidence excerpt, scan command reference, and grouping rationale.
+- Do not aggregate matches across different owner buckets, follow-up specs,
+  active-runtime proof states, invocation modes, exception rationales, or
+  source-of-truth boundaries.
+- Summary counts must count represented matches, not just table rows, so
+  aggregate rows reconcile to rerun scan output and SC-001 remains verifiable.
+- If review or verification finds one match inside an aggregate row that needs
+  a different classification, active runtime status, owner bucket,
+  follow-up spec, invocation trace, or rationale, split that match into its own
+  row.
+- These rules are satisfied in Markdown tables and summary counts; XPLAT-001
+  still does not require JSON, CSV, or a contract artifact.
+
 ## Runtime Rubric Scope
 
 The runtime rubric must be a non-scoring template for XPLAT-002. It includes
@@ -233,6 +262,21 @@ across:
 Controls may appear only as evidence targets. XPLAT-001 must not select the
 required security model or control set.
 
+The report's supply-chain rubric must include a `release_boundary` column or
+equivalent sectioning that separates:
+
+- `first-release-gate-question`: evidence XPLAT-003 must explicitly evaluate
+  before deciding first public release requirements.
+- `deferred-hardening-evidence`: evidence that may inform later hardening and
+  must not be treated as a release blocker unless XPLAT-003 promotes it.
+- `not-claimed-guarantee`: unsupported guarantee language that must remain
+  absent from the report and public docs until implemented by a later XPLAT
+  spec.
+
+This boundary is a handoff label, not a control selection. XPLAT-003 decides
+which supply-chain controls are required for first release, which belong to
+release automation, and which remain deferred hardening.
+
 ## Verification Plan
 
 Static verification only:
@@ -248,6 +292,32 @@ Static verification only:
 5. Run `git diff --check`.
 6. Run the smallest relevant repo validation command only if implementation
    changes files outside docs/process planning/report artifacts.
+
+### Static Verification Failure Remediation
+
+If a static verification step fails, remediation stays within the XPLAT-001
+docs/process scope and must not port helpers, change installed invocations,
+rebuild generated payloads, or introduce runtime probes.
+
+- **Uncovered scan result**: add or correct the inventory row, or add an
+  explicit exclusion with rationale, then update summary counts by
+  classification, active runtime status, owner bucket, and follow-up spec.
+- **Missing or stale invocation trace**: downgrade the row to
+  `unproven-active-runtime` with an evidence gap, or replace the trace with a
+  static caller-to-callee source citation before marking it
+  `proven-active-runtime`.
+- **Docs, test, fixture, archive, or repository-only reference promoted to an
+  active blocker**: split the row or reclassify it to the matching non-active
+  bucket unless a separate installed-runtime trace proves active relevance.
+- **Generated payload source mismatch**: keep the `dist/**` row as a
+  `generated-payload-reference`, link it to the authoritative source row when
+  known, and defer payload rebuild or cutover wording to XPLAT-007.
+- **Spec-index drift**: regenerate the SPEC-MOC index with
+  `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh "$PWD"`
+  and rerun the `--check` command before closing verification.
+- **Diff hygiene failure**: use the file and line reported by
+  `git diff --check` to remove whitespace or conflict-marker issues, then rerun
+  `git diff --check`.
 
 ## Review Packet Notes
 

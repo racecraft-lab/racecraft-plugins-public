@@ -89,6 +89,7 @@ As a security/trust decision-maker, I can use a weighted supply-chain evaluation
 ### Session 3: Rubric Scope
 
 - Runtime and supply-chain rubrics are non-scoring templates in XPLAT-001. Each rubric must include pass/fail must-have gates, explicit numeric criteria weights with a stated total, and candidate/control/artifact evidence targets.
+- The supply-chain rubric must separate first-release gate questions from deferred hardening evidence so XPLAT-003 can choose required controls without XPLAT-001 implying that every evaluated control is immediately mandatory.
 - XPLAT-001 must not include candidate scores, sample scoring, ranking, winner selection, required runtime choice, required security model, or required control set. Scoring and selection belong to XPLAT-002 and XPLAT-003.
 
 ## Requirements *(mandatory)*
@@ -103,7 +104,7 @@ As a security/trust decision-maker, I can use a weighted supply-chain evaluation
 - **FR-006**: Active installed-runtime findings MUST map to one of the follow-up owner buckets for XPLAT-005, XPLAT-006, XPLAT-007, repository-only exclusion, public-docs claim, generated-payload reference, historical/archive reference, or documented exception. For mixed-mode helpers, the owner bucket MUST follow the traced invocation mode at the inventory-row level.
 - **FR-007**: The report MUST separate active installed-runtime dependencies from generated payload, public docs, repository-only tooling, tests, fixtures, and historical/archive references.
 - **FR-008**: The runtime evaluation rubric MUST define pass/fail must-have gates, explicit numeric criteria weights with a stated total, and candidate evidence targets for XPLAT-002.
-- **FR-009**: The supply-chain evaluation rubric MUST define pass/fail must-have gates, explicit numeric criteria weights with a stated total, and artifact/control evidence targets for XPLAT-003.
+- **FR-009**: The supply-chain evaluation rubric MUST define pass/fail must-have gates, explicit numeric criteria weights with a stated total, artifact/control evidence targets for XPLAT-003, and a release-boundary distinction between first-release gate questions and deferred hardening evidence.
 - **FR-010**: XPLAT-001 artifacts MUST NOT score candidates, rank candidates, select a replacement runtime, or select supply-chain/security controls.
 - **FR-011**: XPLAT-001 artifacts MUST NOT port helpers, change active Claude or Codex invocations, rebuild generated payloads, or claim native Windows support in public docs.
 - **FR-012**: Verification MUST be static and source-traceable, with no native Windows UAT, runtime smoke probes, or platform execution probes required in this spec.
@@ -146,12 +147,12 @@ As a security/trust decision-maker, I can use a weighted supply-chain evaluation
 
 ### Measurable Outcomes
 
-- **SC-001**: 100% of whole-repo scan matches for the scoped Bash and Unix-runtime assumptions are represented in the report or explicitly excluded with rationale.
+- **SC-001**: 100% of whole-repo scan matches for the scoped Bash and Unix-runtime assumptions are represented in the report as individual rows or aggregate/match-summary rows, or explicitly excluded with rationale. Aggregate/match-summary rows MUST preserve scan-command traceability, match count, path set or path pattern, matched token or pattern family, classification, active runtime status, owner bucket, follow-up spec, and rationale without combining matches that need different ownership, proof state, invocation mode, or exception treatment.
 - **SC-002**: 100% of findings marked active installed-runtime dependency include invocation-trace evidence.
 - **SC-003**: 100% of inventory findings include source evidence, runtime relevance, owner bucket, follow-up spec, active runtime status, and classification rationale.
 - **SC-004**: The report includes summary counts for every classification, active runtime status, and owner bucket used in the inventory.
 - **SC-005**: The runtime rubric includes pass/fail must-have gates and numeric weighted criteria with a stated total covering native platform behavior, installed-cache invocation, dependency footprint, packaging, offline behavior, diagnostics, maintainability, and compatibility adapters.
-- **SC-006**: The supply-chain rubric includes pass/fail must-have gates and numeric weighted criteria with a stated total covering dependency policy, lockfiles, generated payload integrity, vulnerability scanning, provenance, checksums/signatures, SBOMs, and consumer-local verification.
+- **SC-006**: The supply-chain rubric includes pass/fail must-have gates and numeric weighted criteria with a stated total covering dependency policy, lockfiles, generated payload integrity, vulnerability scanning, provenance, checksums/signatures, SBOMs, and consumer-local verification, with each criterion or control evidence target clearly separated as a first-release gate question or deferred hardening evidence for XPLAT-003 decision-making.
 - **SC-007**: No XPLAT-001 artifact scores, ranks, or selects a runtime candidate or supply-chain/security model.
 - **SC-008**: No XPLAT-001 change ports helper behavior, changes active installed Claude/Codex invocation paths, rebuilds generated payloads, or claims native Windows support.
 

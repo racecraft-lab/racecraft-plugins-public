@@ -48,7 +48,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Specify | `$speckit-specify` | Complete | Created spec.md with 14 functional requirements, 3 user stories, and 0 clarification markers |
 | Clarify | `$speckit-clarify` | In Progress | Session 1 accepted two-axis classification and static invocation-trace boundaries |
 | Plan | `$speckit-plan` | Complete | Created plan, research, data model, and quickstart; G3 and reviewability estimator passed |
-| Checklist | `$speckit-checklist` | Pending | Recommended domains: data-integrity, error-handling, security, maintainability |
+| Checklist | `$speckit-checklist` | Complete | Created four domain checklists; G4 passed with zero remaining gap markers |
 | Tasks | `$speckit-tasks` | Pending | Generate small report/scanning tasks with owner-bucket traceability |
 | Analyze | `$speckit-analyze` | Pending | Check roadmap/design/spec/plan/tasks consistency |
 | Implement | `$speckit-implement` | Pending | Produce report, rubrics, static verification, and roadmap handoff notes |
@@ -391,10 +391,16 @@ Focus on XPLAT-001 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| data-integrity | Pending | Pending | Pending |
-| error-handling | Pending | Pending | Pending |
-| security | Pending | Pending | Pending |
-| maintainability | Pending | Pending | Pending |
+| data-integrity | 23 | 0 | `spec.md`, `plan.md`, `data-model.md`, `XPLAT-001-workflow.md` |
+| error-handling | 16 | 1 fixed; 0 remaining | Added `Static Verification Failure Remediation` to `plan.md` |
+| security | 18 | 1 fixed; 0 remaining | Added first-release vs deferred-hardening supply-chain release boundary labels to `spec.md` and `plan.md` |
+| maintainability | 24 | 1 fixed; 0 remaining | Added SC-001 aggregation constraints and plan row aggregation/match-summary rules |
+
+### Checklist Gate Result
+
+```json
+{"gate":"G4","pass":true,"reason":"0 [Gap] markers","markers":0,"details":[]}
+```
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-25T23:20:00Z",
-  "active_step": "Phase 4: Checklist - data-integrity",
+  "updated_at": "2026-06-26T00:28:00Z",
+  "active_step": "Phase 5: Tasks",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
   "status": "in_progress",
@@ -169,39 +169,70 @@
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/data-integrity.md",
+        "items": 23,
+        "gaps": 0,
+        "fixes_applied": "created checklist; no spec or plan remediation needed"
+      }
     },
     {
       "step": "Phase 4: Checklist - data-integrity Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/error-handling.md",
+        "items": 16,
+        "gaps": 1,
+        "remaining_gap_markers": 0,
+        "fixes_applied": "added static verification failure remediation steps to plan.md"
+      }
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/security.md",
+        "items": 18,
+        "gaps": 1,
+        "remaining_gap_markers": 0,
+        "fixes_applied": "added first-release vs deferred-hardening supply-chain release boundary labels to spec.md and plan.md"
+      }
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - maintainability",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/maintainability.md",
+        "items": 24,
+        "gaps": 1,
+        "remaining_gap_markers": 0,
+        "fixes_applied": "added SC-001 aggregation constraints and plan row aggregation/match-summary rules"
+      }
     },
     {
       "step": "Phase 4: Checklist - maintainability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
