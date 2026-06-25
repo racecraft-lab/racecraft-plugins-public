@@ -46,7 +46,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created spec.md with 14 functional requirements, 3 user stories, and 0 clarification markers |
-| Clarify | `$speckit-clarify` | Pending | Resolve inventory boundaries, owner buckets, and evidence fields if needed |
+| Clarify | `$speckit-clarify` | In Progress | Session 1 accepted two-axis classification and static invocation-trace boundaries |
 | Plan | `$speckit-plan` | Pending | Plan report structure, scan method, traceability rules, and verification |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: data-integrity, error-handling, security, maintainability |
 | Tasks | `$speckit-tasks` | Pending | Generate small report/scanning tasks with owner-bucket traceability |
@@ -242,9 +242,9 @@ $speckit-clarify Focus on rubric boundaries: confirm runtime and supply-chain ru
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Inventory boundaries | Pending | Pending |
-| 2 | Owner buckets and handoff | Pending | Pending |
-| 3 | Rubric scope | Pending | Pending |
+| 1 | Inventory boundaries | 5 | Accepted: two-axis row model; active-runtime requires static caller-to-callee trace; repo-only classification is invocation-based; scan covers all tracked text including hidden paths/dist/docs/tests/archive; docs-only rows remain public-docs claims unless separately traced |
+| 2 | Owner buckets and handoff | 5 | Accepted: owner bucket follows traced invocation mode, with consensus confirming separate rows for mixed read/write helpers; public docs claims remain docs-owned unless cutover changes are needed; generated payload rows map to XPLAT-007 with source links; repository-only rows require no installed trace; follow-up exceptions require reason, evidence gap, expiry/removal condition, and named decision |
+| 3 | Rubric scope | 1 | Accepted: runtime and supply-chain rubrics are non-scoring templates with pass/fail must-have gates, numeric weights with stated totals, and evidence targets only; XPLAT-001 does not include candidate scoring, ranking, selection, sample scoring, or required control/runtime choices |
 
 ---
 
@@ -268,18 +268,25 @@ $speckit-plan
 - Design concept source: `docs/ai/specs/.process/XPLAT-001-design-concept.md`.
 - Roadmap source: `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md`.
 - Output report target: `docs/ai/research/cross-platform-runtime-inventory.md` unless Plan identifies a clearer name.
-- The scan is whole-repo exhaustive for Bash, `.sh`, `jq`, shell quoting, Unix paths, `chmod`, and line-ending assumptions.
-- Active installed-runtime classification requires invocation-trace evidence from installed skills, agents, hooks, or generated payloads.
-- Classify every finding with evidence, runtime relevance, owner bucket, and follow-up spec.
+- The scan is whole-repo exhaustive for Bash, `.sh`, `jq`, shell quoting, Unix paths, `chmod`, and line-ending assumptions across tracked text files, including hidden tracked paths, `dist/**`, public docs, tests, fixtures, and archive reports. Exclude `.git/`, binary assets, untracked files, vendor caches, and non-text inputs only with rationale.
+- Active installed-runtime classification requires static caller-to-callee invocation-trace evidence from installed skills, agents, hooks, generated payloads, or other installed plugin surfaces.
+- Classify every finding with evidence, physical/source classification, active runtime status, runtime relevance, owner bucket, and follow-up spec.
+- Use a two-axis report row schema: `classification` for source/generated/docs/tests/archive/repo-only/exclusion and `active_runtime_status` for proven active runtime, unproven active runtime, or not active runtime.
 - Use Markdown tables with summary counts. Do not add JSON/CSV unless the plan records a concrete review benefit.
-- Define runtime and supply-chain criteria, must-have gates, and weights. Do not score candidates or choose a runtime/security model.
+- Define runtime and supply-chain criteria, pass/fail must-have gates, and explicit numeric weights with stated totals. Do not score candidates, include sample scoring, rank options, or choose a runtime/security model.
 - Static verification only: source scans, traceability review, spec-index check, `git diff --check`, and any relevant markdown/link validation already available.
 - Record the setup gate warning about two primary surfaces.
 
 ## Architecture Notes
 - Treat this as a docs/process spike. No active runtime invocation should change.
 - Prefer repo-local commands and deterministic grep/ripgrep scans over a new automation layer unless the plan proves a reusable helper is necessary.
-- Keep candidate runtime/security evidence lists separate from candidate scoring.
+- Classify repository-only tooling by invocation evidence, not path alone; root scripts, release helpers, CI-only helpers, and maintainer tools are not active runtime unless an installed plugin surface invokes them.
+- Treat public docs rows as `public-docs-claim`; link them to active-runtime findings only when static invocation traces prove the same dependency.
+- Owner bucket follows the traced active invocation mode, not the helper's maximum capability. For mixed read/write helpers, create separate rows when read-only and write/apply modes are traced or materially relevant.
+- Use `xplat-005-read-only-helper` only for traced read-only/advisory invocations that do not mutate repository, user-local, or external state. Use `xplat-006-mutation-helper` for traced write/apply/live/install/PR-emission behavior or mutation-capable dry-run/apply behavior whose parity must preserve apply semantics.
+- Map active generated payload rows to `xplat-007-cutover-guidance` with source links; do not treat generated payloads as authoritative edit targets.
+- Use `follow-up-exception` only for active or probably active rows that cannot honestly map to XPLAT-005, XPLAT-006, XPLAT-007, or an exclusion bucket; require reason, evidence gap, expiry/removal condition, and named follow-up decision.
+- Keep candidate runtime/security evidence lists separate from candidate scoring; candidates and controls are evidence targets only until XPLAT-002 and XPLAT-003.
 - Include owner buckets that later specs can consume directly:
   - `xplat-005-read-only-helper`
   - `xplat-006-mutation-helper`
@@ -292,7 +299,8 @@ $speckit-plan
 
 ## Verification Strategy
 - Re-run the search commands used for the inventory and confirm the report covers the result set or explains exclusions.
-- Verify active-runtime rows cite an invocation trace.
+- Verify active-runtime rows cite static caller-to-callee invocation traces.
+- Verify docs-only and repository-only rows are not promoted to active runtime without invocation evidence.
 - Run `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`.
 - Run `git diff --check`.
 - Run the smallest relevant repo validation command if files outside docs/process change.

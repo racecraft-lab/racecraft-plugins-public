@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-25T22:36:00Z",
-  "active_step": "Phase 2: Clarify - Inventory Boundaries",
+  "updated_at": "2026-06-25T23:08:00Z",
+  "active_step": "Phase 3: Plan",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
   "status": "in_progress",
@@ -79,31 +79,75 @@
     },
     {
       "step": "Phase 2: Clarify - Inventory Boundaries",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "two-axis classification plus active runtime status",
+          "static caller-to-callee invocation trace",
+          "repository-only by invocation evidence",
+          "all tracked text scan boundary",
+          "public docs claim unless separately traced"
+        ],
+        "unresolved_consensus_items": 0
+      }
     },
     {
       "step": "Phase 2: Clarify - Inventory Boundaries Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 2: Clarify - Owner Buckets and Handoff",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_without_consensus": [
+          "public docs rows use public-docs-claim with XPLAT-007 only for installed-workflow/cutover claims",
+          "generated dist rows use generated-payload-reference and active generated rows map to XPLAT-007 with source links",
+          "repository-only Bash tooling is repository-only-exclusion without installed-runtime invocation trace",
+          "follow-up-exception is allowed only for active or probably active rows that cannot honestly map elsewhere"
+        ],
+        "unresolved_consensus_items": 1
+      }
     },
     {
       "step": "Phase 2: Clarify - Owner Buckets and Handoff Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "round": 1,
+        "routed_categories": [
+          "codebase",
+          "spec"
+        ],
+        "outcome": "use traced invocation mode with separate rows for mixed read/write helpers",
+        "analysts_used": [
+          "codebase-analyst",
+          "spec-context-analyst"
+        ],
+        "confidence": "high",
+        "round_2_or_human_review_needed": false
+      }
     },
     {
       "step": "Phase 2: Clarify - Rubric Scope",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 1,
+        "accepted_answers": [
+          "pass/fail must-have gates, numeric criteria weights with stated totals, evidence targets only, no scoring or selection"
+        ],
+        "unresolved_consensus_items": 0
+      }
     },
     {
       "step": "Phase 2: Clarify - Rubric Scope Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - data-integrity",
