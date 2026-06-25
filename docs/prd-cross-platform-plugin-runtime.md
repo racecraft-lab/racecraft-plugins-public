@@ -2,8 +2,12 @@
 
 **Status**: Draft
 **Created**: 2026-06-24
+**Last updated**: 2026-06-24
 **Owner**: Racecraft Lab
+**Spec ID prefix**: `XPLAT-###`
 **Technical roadmap**: [docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md](ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)
+
+---
 
 ## Problem Statement
 
