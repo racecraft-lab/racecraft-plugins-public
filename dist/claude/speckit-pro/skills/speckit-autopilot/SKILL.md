@@ -9,7 +9,7 @@ description: >
   or has a workflow file ready for execution.
 user-invocable: true
 disable-model-invocation: true
-allowed-tools: Bash Read Edit Write Glob Grep Skill Agent WebFetch WebSearch
+allowed-tools: Bash Read Edit Write Glob Grep Skill Agent WebFetch WebSearch ToolSearch
 license: MIT
 ---
 
@@ -147,6 +147,12 @@ context; the command's "report completion" instruction makes you
 output plain text and the loop dies. With subagents, the command
 runs in isolated context — the result returns as a tool response and
 your loop continues.
+
+**Third-party skills:** the same hazard applies when capability discovery
+selects an *installed* skill you invoke via `Skill()` — its completion text
+can end your loop. Capture the skill's result as evidence and continue with a
+follow-up tool call; never treat a third-party skill's completion text as your
+own terminal output.
 
 ### 2. Use phase-specific executor agents
 
@@ -303,6 +309,20 @@ Run the pre-flight sequence before any phase work. STOP on failure.
    `CONFIDENCE_GATE_MODE` for use at G6.5. **Do not re-run the
    script at G6.5; G6.5 reads `CONFIDENCE_GATE_MODE` directly.**
    See [Gate Validation §G6.5](./references/gate-validation.md#g65--pre-implement-confidence-gate-between-analyze-and-implement).
+7. **Capability enumeration, grounding & feed-down** — you are the only
+   component that discovers openly. Before relying on any capability, enumerate
+   what this session actually exposes: surface deferred MCP tools with
+   `ToolSearch`, and treat the available-skills list as the installed-skill
+   registry. Select best-fit per
+   [`references/capability-discovery.md`](./references/capability-discovery.md) —
+   do not assume a fixed set; the user may have installed anything. Your phase
+   and consensus subagents run with **curated, bounded allowlists and do NOT
+   self-discover**, so when you dispatch one, pass the discovered evidence and
+   capability context it needs directly in its prompt. Ground your OWN output
+   (gate decisions, consensus synthesis, generated PR bodies) per
+   [`references/grounding.md`](./references/grounding.md): every external fact
+   you assert must cite a real tool/skill/file result, and you abstain when
+   nothing grounds it.
 
 **Plugin agent caveat:** `permissionMode`, `hooks`, and `mcpServers`
 frontmatter are silently ignored on plugin agents. Run the parent

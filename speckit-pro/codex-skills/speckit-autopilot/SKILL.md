@@ -276,6 +276,11 @@ WRONG:
      → loop terminates
 ```
 
+**Third-party skills:** when capability discovery selects an installed skill you
+$-invoke, its completion text can likewise end the loop. Capture the skill's
+result as durable state/evidence and continue; never treat a third-party skill's
+completion text as your own terminal output.
+
 ### 3. Use phase-specific executor agents
 
 Each phase type has its own specialized executor agent:
@@ -536,6 +541,7 @@ See [prerequisites-codex.md](./references/prerequisites-codex.md) for the full p
   before Phase 0 with the conflict message. **Do not re-run the
   script at G6.5; the gate reads `CONFIDENCE_GATE_MODE` directly.**
 - **Step 0.8: Capability Coverage Check** — informational research/context advisory (agents have fallbacks)
+- **Step 0.8b: Capability Enumeration, Grounding & Feed-down** — you are the only component that discovers openly. Enumerate the tools and installed skills this session actually exposes and select best-fit per the capability-discovery directive (speckit-pro/skills/speckit-autopilot/references/capability-discovery.md); assume no fixed set — the user may have installed anything. Subagents run with curated, bounded access and do NOT self-discover, so pass the discovered evidence they need directly in each prompt. Ground your OWN output (gate decisions, consensus synthesis, PR bodies) per the grounding contract (speckit-pro/skills/speckit-autopilot/references/grounding.md): cite a real tool/skill/file result for every external fact, and abstain when none grounds it.
 - **Step 0.9: Constitution Validation** — principle checks against current codebase
 - **Step 0.10: Codex Agent Availability Check** — verify installed SpecKit Pro custom agents under `.codex/agents/<agent>.toml` or `~/.codex/agents/<agent>.toml`. If any required agent is missing from both locations, STOP and instruct the user to run `$install`, then restart Codex.
 - **Step 0.10b: Implementation Agent Detection** — discover `PROJECT_IMPLEMENTATION_AGENT` from `.codex/agents/`
