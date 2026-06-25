@@ -501,31 +501,45 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-011 (canonical/sitemap URLs derive from astro `site` and finalize automatically when DOC-012 flips the domain at launch) | **Enables:** public launch
 
-**Status:** Pending. 0 of 19 content pages carry `description:` frontmatter (no meta descriptions); there is no Open Graph / social-card setup, no `robots.txt`, no `llms.txt`, and no canonical-URL handling for the final domain. The sibling site already ships `astro-llms-txt`, a sitemap, and `robots.txt`.
+**Status:** Pending. 0 of 19 content pages carry `description:` frontmatter (no meta descriptions); there is no Open Graph / social-card setup, no `robots.txt`, no `llms.txt`, no JSON-LD structured data, and no canonical-URL handling for the final domain. The sibling site already ships `astro-llms-txt`, a sitemap, a 3-tier crawler `robots.txt` (`landing-page/website/e2e/seo-robots-txt.spec.ts`), and a JSON-LD `@graph` (`landing-page/website/e2e/seo-schema-org.spec.ts`) — most of this spec is a **port of proven sibling artifacts**, not new research.
 
-**Goal:** Make the docs indexable, shareable, and AI-discoverable with correct metadata for the production domain.
+**Goal:** Make the docs indexable, shareable, and discoverable across both classic search and AI answer engines, with correct metadata for the production domain. Serve two distinct AI surfaces deliberately: **answer-engine citation** (ChatGPT Search, Perplexity, Google AI Overviews, Claude) is won by crawler access + entity clarity, **not** by `llms.txt`; **coding-agent retrieval** (Cursor, Claude Code, Copilot) is the one surface `llms.txt` measurably serves.
+
+**Research basis (apply it — do not assume):**
+- **Crawler access is the binary AI-discoverability gate.** A citation crawler that cannot fetch a page cannot cite it, and AI-search referral is the fastest-growing discovery channel. Port the sibling's 3-tier `robots.txt` taxonomy: allow citation/retrieval bots (`OAI-SearchBot`, `ChatGPT-User`, `Claude-SearchBot`, `Claude-User`, `PerplexityBot`, `Perplexity-User`), take a **deliberate, documented stance** on training bots (`GPTBot`, `Google-Extended`, `CCBot`, `anthropic-ai`, `ClaudeBot` — the sibling blocks these; a max-discoverability dev-tools posture may allow them), default-allow everything else. If a CDN ever fronts the site, the citation bots must be re-allowed at the network layer (Cloudflare default-blocks AI crawlers).
+- **`llms.txt` does not drive answer-engine citation.** Google has stated it does not use it, and server-log studies show answer-bots fetch it at roughly 0.1%. Keep/port the three-tier `astro-llms-txt` file, but document its purpose as a **coding-agent retrieval aid** — do not count it toward answer-engine discoverability.
+- **Structured data is entity infrastructure, not an LLM-citation lever.** Third-party LLMs strip JSON-LD and read visible HTML, so justify schema on entity disambiguation + still-living Google/Bing rich results only. Marketplace-relevant types: `SoftwareApplication` per plugin page (`offers.price: 0` marks free/OSS — the single most on-point still-supported rich result), plus one `Organization` entity anchor (`@id` + `sameAs` to the GitHub org / Wikidata) and `WebSite`. An optional `Person`/author entity carries E-E-A-T author-disambiguation signal.
+- **Evidence anchors:** Princeton "GEO: Generative Engine Optimization" (Aggarwal et al., ACM KDD 2024) for the content levers; the citation-vs-training crawler split; the `llms.txt` reality check above. The content-side levers are owned by DOC-015 (lightly) — see its scope; do **not** import a statistics/citation-density program here.
 
 **Reviewability Budget:** Primary surface: docs/config + content |
-Projected reviewable LOC: about 40 |
-Production files: 0 |
-Total files: about 22 (frontmatter + config) |
-Budget result: within budget
+Projected reviewable LOC: about 150 (robots.txt + JSON-LD head + lastmod wiring + validator rule; ~19 one-line frontmatter additions) |
+Production files: 2-3 (schema/head component, `robots.txt`, sitemap lastmod wiring) |
+Total files: about 26 (mostly single-line frontmatter) |
+Budget result: within block thresholds; total-file and surface counts cross the warn line — acknowledged (additions are mostly one-line frontmatter + ported artifacts), no split required.
 
 **Scope:**
-- Add `description:` frontmatter to all content pages; add a `validate-docs-quality.mjs` rule requiring it.
+- Add `description:` frontmatter to all content pages; add a `validate-docs-quality.mjs` rule requiring presence. Note: descriptions are hand-authored strings that do **not** auto-derive from body copy — author or refresh them **after** the DOC-015/DOC-019 prose passes so they don't go stale.
 - Add Open Graph / social-card metadata and canonical URLs for `plugins.racecraft.co` (Starlight `head` or a card component).
-- Verify/emit a correct sitemap for the final domain and add `robots.txt` pointing at it.
-- Add `llms.txt` (port the three-tier `astro-llms-txt` pattern from the sibling site).
+- Emit a correct sitemap for the final domain with `<lastmod>` wired to real git/content modification (not build time); surface a visible "Last updated" stamp. Do not bump dates cosmetically.
+- Port the sibling 3-tier crawler `robots.txt` (citation-bot allow + documented training-bot stance + `Sitemap:` directive) — not merely a sitemap pointer.
+- Add JSON-LD via Starlight `head` injection: `Organization` (`@id` + `sameAs` → GitHub org) + `WebSite`, and `SoftwareApplication` per plugin page. Justify as entity infra + Google/Bing rich results, not LLM citation (port the sibling `@graph` pattern).
+- Port `llms.txt` / `llms-full.txt` (`astro-llms-txt`), documented as a coding-agent retrieval aid.
+- Define the AI-discoverability success metric and its measurement source: Google Search Console **Generative AI performance reports** (URL-level impressions in AI Overviews / AI Mode) and a GA4 AI-referrer channel group (`chatgpt.com`, `perplexity.ai`, `claude.ai`, `gemini`). DOC-014 defines the metric so its "AI-discoverable" goal is verifiable; DOC-018 owns analytics activation — coordinate.
+
+**Open decision (resolve at scaffold time):**
+- **Per-page Markdown (`.md`) serving** for coding agents (Cloudflare "Markdown for Agents", Mintlify expose-`.md`-by-default) is now a shipping docs-platform norm and is arguably more on-target than `llms.txt` for this audience. Decide whether to expose per-page `.md` — distinct from, and not blocked by, `Accept: text/markdown` content negotiation (which no crawler honors yet). Medium confidence; may partially overlap `llms-full.txt`.
 
 **Out of Scope:**
-- Analytics (DOC-018).
-- Prose rewrites (DOC-015).
+- Analytics **activation** and the 404/legal/launch-hygiene surface (DOC-018) — DOC-014 defines the AI-discoverability metric; DOC-018 wires the analytics that report it.
+- Prose rewrites, voice/tone, and answer-first restructuring (DOC-015 / DOC-019).
+- **Do NOT chase** (unproven or dead): `llms.txt` as a ranking/citation lever; `FAQPage` / `HowTo` schema as a rich-result play (Google sunset FAQ May 2026, HowTo desktop 2023 — the sibling still emits `FAQPage`, harmless but not a SERP win); schema justified as "gets us cited by ChatGPT"; the IETF AIPREF `Content-Usage` header and `Accept: text/markdown` negotiation (no crawler honors either yet); cosmetic `lastmod` bumping; blanket AI-bot blocking.
 
 **Key Files:**
 - `docs-site/astro.config.mjs`
 - `docs-site/src/content/docs/**` (frontmatter)
 - `docs-site/scripts/validate-docs-quality.mjs`
-- `docs-site/public/robots.txt` (new)
+- `docs-site/public/robots.txt` (new — port the `landing-page/website` `seo-robots-txt` 3-tier taxonomy)
+- `docs-site/src/components/` head/schema component (new — JSON-LD `@graph`; port the `landing-page/website` `seo-schema-org` pattern)
 
 ### DOC-015: Editorial and content-QA pass
 
@@ -533,7 +547,7 @@ Budget result: within budget
 
 **Status:** Pending. Visual review confirmed internal-authoring leakage in rendered pages: "Route Scope" / "Shell owner DOC: DOC-002" / "Full-content owner DOC" on the landing and `choose-your-path`, "Deferred Boundary" on `choose-your-path`, and generator mechanics ("Generated by ...", "Public path:", "Page Sources", title-cased "Speckit Prd") on the reference pages. Also: gate numbering shows G1-G7 while the autopilot source uses G0-G7; "Spec Kit" vs "SpecKit" drift; and `first-run.md` uses `specify version` vs the verified `specify --version`. `validate-docs-quality.mjs` checks structure, not prose.
 
-**Goal:** Make the public docs read cleanly and accurately by removing internal scaffolding and fixing factual drift.
+**Goal:** Make the public docs read cleanly, accurately, and answer-first by removing internal scaffolding, fixing factual drift, and leading with the answer so content is cleanly retrievable by AI engines.
 
 **Reviewability Budget:** Primary surface: docs/content |
 Projected reviewable LOC: about 30 (editorial linter) |
@@ -546,6 +560,7 @@ Budget result: within budget
 - Reframe the generated reference pages for a public reader (drop or collapse generator mechanics, internal source paths, and base-path lines; fix title-casing such as "SpecKit PRD" / "SpecKit Resolve PR").
 - Reconcile gate numbering to G0-G7 in `spec-kit-lifecycle.mdx`; normalize "Spec Kit" vs "SpecKit" to one deliberate convention; fix `specify version` -> `specify --version`.
 - Add an editorial linter to `validate-docs-quality.mjs` (deny-list of internal tokens like `DOC-0\d\d`, "owner DOC", "Deferred Boundary") so leaks cannot recur.
+- Apply a light answer-first style in the same pass: lead each page/section with the answer (BLUF) and keep sections self-contained, so prose is cleanly chunked and citable by AI engines. Style only — do **not** inject manufactured statistics or citation density (install/reference docs have little to legitimately cite; manufacturing it is anti-value). This is the single content-side GEO lever the roadmap owns: DOC-014 owns the metadata, DOC-015 owns the prose.
 
 **Out of Scope:**
 - IA restructuring or new pages.
