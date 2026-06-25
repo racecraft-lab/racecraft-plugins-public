@@ -21,11 +21,28 @@ jobs:
     steps:
       - id: release
         uses: googleapis/release-please-action@v5
+        with:
+          # Open the release PR with a maintainer PAT / GitHub App token when
+          # one is configured, so the PR is created and its branch pushed by a
+          # non-GITHUB_TOKEN actor. That lets its pull_request checks run
+          # un-gated and satisfy branch protection (PRs created by GITHUB_TOKEN
+          # have their checks held as action_required, leaving the release PR
+          # permanently BLOCKED). When the secret is absent,
+          # secrets.RELEASE_PLEASE_TOKEN is empty so the || falls through and the
+          # expression resolves to github.token — the workflow keeps working
+          # until the secret exists.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         if: steps.release.outputs.prs_created == 'true'
         with:
           fetch-depth: 0
+          # Persist the same token so the payload-sync commit below is PUSHED by
+          # that actor too (the git author stays github-actions[bot]; what gates
+          # the checks is the pushing actor, not the commit author) — otherwise
+          # the final release-PR head SHA is GITHUB_TOKEN-pushed and its checks
+          # get gated again.
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
       - name: Set up Node
         if: steps.release.outputs.prs_created == 'true'

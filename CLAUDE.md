@@ -223,7 +223,7 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 
 **Docs-only PRs:** When a PR touches only documentation (no plugin directory and no `tests/<plugin>/` suite), `detect` outputs `[]`, `test` is skipped (job-level `if:` evaluates to false — GitHub treats a skipped job as passing, not pending), and `validate-plugins` also passes. Docs-only PRs are not blocked by the test matrix. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` runs the matching docs validation mode.
 
-**Release-please PRs:** GitHub suppresses normal `pull_request` workflow runs for PRs created or updated by `GITHUB_TOKEN`, so the Release workflow dispatches `PR Checks` manually after it syncs generated `dist/**` payloads onto the release PR branch.
+**Release-please PRs:** GitHub suppresses normal `pull_request` workflow runs for PRs created or updated by `GITHUB_TOKEN`, so the Release workflow dispatches `PR Checks` manually after it syncs generated `dist/**` payloads onto the release PR branch. Those dispatched (`workflow_dispatch`) check runs are visible on the PR but live in a check suite that is **not associated with the PR**, so branch protection does not count them — which is why a `GITHUB_TOKEN`-authored release PR shows `BLOCKED` even with everything green. When the optional `RELEASE_PLEASE_TOKEN` secret is configured (see **Release Process → Release token**), the release PR is authored by that identity instead, its `pull_request` checks run un-gated and satisfy branch protection directly, and the manual dispatch becomes a fallback. Without the secret the workflow falls back to `GITHUB_TOKEN` and behaves as before.
 
 **Maintenance warning:** If any job in `pr-checks.yml` is renamed, the corresponding required status check name in branch protection MUST be updated manually — GitHub does NOT automatically track job renames. A stale check name silently degrades protection: the renamed check never reports, the branch protection rule becomes vacuous, and PRs become mergeable without the check passing.
 
@@ -261,6 +261,31 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
    ```
 
 **Why the release PR carries the sync:** `main` is protected and this repository lives under the `racecraft-lab` organization, so Release must not direct-push generated changes to `main`. Rather than a second post-release sync PR, the sync (dist, marketplace versions, docs reference) is committed onto the **release PR branch** itself, which already flows through branch protection before a human merges it. The `permissions: actions: write`, `contents: write`, and `pull-requests: write` declarations in `release.yml` remain required so release-please can open/update the release PR, the workflow can push the sync commit onto that branch, and dispatch PR checks.
+
+### Release token (optional, recommended)
+
+By default the Release workflow authenticates as the built-in `GITHUB_TOKEN`.
+GitHub holds the `pull_request` checks on any PR authored by `GITHUB_TOKEN` as
+`action_required` (a recursion guard), so the release PR's required checks
+(`validate-plugins`, `validate-pr-title`) never report against the PR and it
+shows `BLOCKED` — only a repo admin can merge past it. To make release PRs
+mergeable normally, add a `RELEASE_PLEASE_TOKEN` Actions secret:
+
+1. Create a **fine-grained PAT** (or a GitHub App installation token) scoped to
+   this repository with **Contents: Read and write** and **Pull requests: Read
+   and write**.
+2. Save it under `Settings → Secrets and variables → Actions` as
+   `RELEASE_PLEASE_TOKEN`.
+
+`release.yml` reads it as `${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}`
+in both the release-please step and the payload-sync checkout, so the release PR
+is opened — and its sync commit pushed — by that actor (the git commit author
+stays `github-actions[bot]`; what matters for branch protection is that a
+non-`GITHUB_TOKEN` actor performed the PR creation and push), and its
+`pull_request` checks run un-gated. The secret is optional: when it is absent
+`secrets.RELEASE_PLEASE_TOKEN` is empty, so the `||` resolves the expression to
+`github.token` and the workflow behaves exactly as before (release PR shows
+`BLOCKED`; an admin merges it).
 
 ## Adding a New Plugin to Release Automation
 
