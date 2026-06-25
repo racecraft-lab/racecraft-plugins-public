@@ -39,7 +39,7 @@ roadmap text / sibling site — keep them in view:
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `/speckit-specify` | ⏳ Pending | |
+| Specify | `/speckit-specify` | ✅ Complete | G1 pass, 0 clarification markers; 29 FR / 6 US / 18 AC / 10 SC |
 | Clarify | `/speckit-clarify` | ⏳ Pending | Seed from design-concept Open Questions (plugin choices) |
 | Plan | `/speckit-plan` | ⏳ Pending | |
 | Checklist | `/speckit-checklist` | ⏳ Pending | Domains: seo-metadata, performance, error-handling |
@@ -78,7 +78,7 @@ Each phase requires **human review and approval** before proceeding:
 | IV. Test Coverage | New behavior is e2e-tested (port sibling `seo-*.spec` patterns); docs validation green | `pnpm --dir docs-site validate` + `validate:smoke` |
 | V. Conventional Commits | PR title `feat(...)` / `docs(...)`, public-readable plain English | CI `validate-pr-title` |
 
-**Constitution Check:** ⏳ (mark before proceeding to G1)
+**Constitution Check:** ✅ initial (Specify) — spec aligns with KISS (one spec, no split), test coverage (e2e planned for every SEO surface), and conventional-commits PR policy. Full command verification (`pnpm --dir docs-site validate` / `build` / `validate:smoke`) runs at the Implement gate.
 
 ---
 
@@ -172,13 +172,14 @@ search and AI answer/coding engines.
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | <!-- fill after running --> |
-| User Stories | 6 (US1-US6 above) |
-| Acceptance Criteria | <!-- fill after running --> |
+| Functional Requirements | 29 (FR-001–FR-029; incl. 6 scope-boundary negatives FR-024–029) |
+| User Stories | 6 (US1-US6; P1: US1/US4, P2: US2/US3, P3: US5/US6) |
+| Acceptance Criteria | 18 acceptance scenarios + 10 measurable success criteria (SC-001–SC-010) |
 
 ### Files Generated
 
-- [ ] `specs/doc-014-seo-and-ai-discoverability/spec.md`
+- [x] `specs/doc-014-seo-and-ai-discoverability/spec.md`
+- [x] `specs/doc-014-seo-and-ai-discoverability/checklists/requirements.md` (requirements quality checklist, all-pass)
 
 ---
 
