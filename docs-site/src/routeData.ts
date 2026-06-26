@@ -55,6 +55,16 @@ function siteBase(): string {
 
 const SITE_BASE = siteBase();
 
+/**
+ * Map a route id to its OG card key — identical to `og/[...slug].ts`'s mapping so
+ * the `og:image` URL references the card that endpoint actually generates. Root
+ * (`index` or empty) → `index`; otherwise the id minus any trailing `/index`.
+ */
+function ogCardKey(id: string): string {
+  if (id === 'index' || id === '' || id === '/') return 'index';
+  return (id.endsWith('/index') ? id.slice(0, -'/index'.length) : id).normalize();
+}
+
 /** Build the per-route `@graph`: site-wide entities + SoftwareApplication on plugin pages. */
 function buildRouteGraph(slug: string) {
   const items: SchemaItem[] = [
@@ -83,6 +93,15 @@ export const onRequest = defineRouteMiddleware((context) => {
     content: JSON.stringify(graph),
   });
 
-  // TODO(WP5/T029): push og:image / twitter:image <meta> tags for this route
-  // onto starlightRoute.head (pointing at og/[...slug].ts for the current slug).
+  // WP5/T029 — per-page Open Graph card (astro-og-canvas, C6 / FR-019, FR-020).
+  // og:image / twitter:image point at THIS route's card from `og/[...slug].ts`,
+  // referenced only in <head> (not an on-page / render-blocking asset). The card
+  // URL derives from SITE_BASE, so it finalizes at the DOC-012 launch flip.
+  // Starlight 0.40 already emits `twitter:card = summary_large_image`, so we add
+  // ONLY the image tags it lacks (no default image) — never a duplicate card tag.
+  const ogImage = `${SITE_BASE}/og/${ogCardKey(slug)}.png`;
+  starlightRoute.head.push(
+    { tag: 'meta', attrs: { property: 'og:image', content: ogImage } },
+    { tag: 'meta', attrs: { name: 'twitter:image', content: ogImage } },
+  );
 });
