@@ -1,5 +1,6 @@
 ---
 title: "Update & Rollback"
+description: "Operator recovery choices for when a SpecKit Pro install is stale, incorrect, removed, or needs to return to a known working version — each mutating action names its side effect first."
 ---
 
 Use this route when a SpecKit Pro install is stale, incorrect, removed, or

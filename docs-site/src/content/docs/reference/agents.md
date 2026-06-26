@@ -1,5 +1,6 @@
 ---
 title: "Agents Reference"
+description: "Claude Code plugin agents and Codex custom-agent templates with runtime-specific source paths."
 ---
 
 Claude Code plugin agents and Codex custom-agent templates with runtime-specific source paths.

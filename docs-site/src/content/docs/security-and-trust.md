@@ -1,5 +1,6 @@
 ---
 title: "Security & Trust"
+description: "Understand what SpecKit Pro can package or invoke on Claude Code and Codex, and which claims come from platform docs, repository files, or derived operating guidance."
 ---
 
 Use this route when you need to understand what SpecKit Pro can package or

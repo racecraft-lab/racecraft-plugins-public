@@ -1,5 +1,6 @@
 ---
 title: "Tests Reference"
+description: "SpecKit Pro validation layers and test-only files."
 ---
 
 SpecKit Pro validation layers and test-only files.

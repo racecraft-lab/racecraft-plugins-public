@@ -1,5 +1,6 @@
 ---
 title: "Scripts Reference"
+description: "Root scripts and SpecKit Pro helper scripts with repository-role classification."
 ---
 
 Root scripts and SpecKit Pro helper scripts with repository-role classification.

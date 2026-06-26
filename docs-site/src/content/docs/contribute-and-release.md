@@ -1,5 +1,6 @@
 ---
 title: "Contribute & Release"
+description: "Move from a source edit to a release-ready pull request — how source files, generated payloads, marketplace registries, version fields, CI behavior, and release automation fit together."
 ---
 
 Use this page when a maintainer or contributor needs to move from a source edit

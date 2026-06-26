@@ -1,5 +1,6 @@
 ---
 title: "Manifests Reference"
+description: "Marketplace, plugin, integration, and generated distribution manifests with runtime field sets."
 ---
 
 Marketplace, plugin, integration, and generated distribution manifests with runtime field sets.

@@ -1,5 +1,6 @@
 ---
 title: "Install: Claude Code"
+description: "Install SpecKit Pro in Claude Code — choose the right marketplace, plugin payload, reload path, and verification step for your install context."
 ---
 
 Use this route when you are installing SpecKit Pro in Claude Code and need to

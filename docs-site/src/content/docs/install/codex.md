@@ -1,5 +1,6 @@
 ---
 title: "Install: Codex"
+description: "Install SpecKit Pro in Codex — choose the right marketplace, plugin payload, custom-agent destination, and verification step for your install context."
 ---
 
 Use this route when you are installing SpecKit Pro in Codex and need to choose

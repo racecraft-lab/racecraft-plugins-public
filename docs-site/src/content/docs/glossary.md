@@ -1,5 +1,6 @@
 ---
 title: "Glossary"
+description: "Definitions for the SpecKit Pro terms that recur across install, troubleshooting, generated reference, and release guidance — marketplace, payload, source tree, skill, agent, hook, cache, and more."
 ---
 
 Use this route to orient users, support responders, and reviewers to the terms

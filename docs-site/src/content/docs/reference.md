@@ -1,5 +1,6 @@
 ---
 title: "Reference"
+description: "The reference shell for SpecKit Pro repository surfaces and generated payloads — your index into skills, agents, manifests, marketplace files, hooks, scripts, tests, and file layout."
 ---
 
 Use this route as the stable reference shell for repository surfaces and generated payload orientation.

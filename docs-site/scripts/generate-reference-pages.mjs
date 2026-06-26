@@ -670,6 +670,7 @@ function renderPage(generatedPage) {
   const lines = [
     '---',
     `title: "${generatedPage.title}"`,
+    `description: "${generatedPage.description.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`,
     '---',
     '',
     generatedPage.description,

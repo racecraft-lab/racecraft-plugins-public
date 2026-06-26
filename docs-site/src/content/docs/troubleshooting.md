@@ -1,5 +1,6 @@
 ---
 title: "Troubleshooting"
+description: "Diagnose SpecKit Pro when it is missing, stale, blocked by policy, or behaving differently from the checked-in source — match the symptom, then take a read-only inspection step first."
 ---
 
 Use this route when SpecKit Pro is missing, stale, blocked by policy, or

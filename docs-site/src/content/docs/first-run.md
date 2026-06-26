@@ -1,5 +1,6 @@
 ---
 title: "First Run"
+description: "Walk through your first SpecKit Pro run on Claude Code or Codex and recognize success by the artifact trail it produces, not a merged pull request."
 ---
 
 Use this route after installing SpecKit Pro for Claude Code or Codex. The first

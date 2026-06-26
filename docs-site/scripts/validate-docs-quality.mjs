@@ -562,6 +562,54 @@ function validateSafetyBoundaries(diagnostics) {
   }
 }
 
+// DOC-014 (T025 / C9 / FR-010): every content page MUST carry a non-empty
+// `description:` frontmatter line. Presence is enforced (not advisory), so a
+// missing/empty description FAILS validation. DOC-015 later refreshes the prose.
+const DOC014_CONTENT_DOCS_DIR = 'docs-site/src/content/docs';
+
+function validateMetaDescriptions(diagnostics) {
+  const docsDirAbs = repoResolve(DOC014_CONTENT_DOCS_DIR);
+  let dirents;
+  try {
+    dirents = fs.readdirSync(docsDirAbs, { recursive: true, withFileTypes: true });
+  } catch (error) {
+    const code = typeof error?.code === 'string' ? error.code : 'READ_ERROR';
+    diagnostics.push(
+      `${DOC014_CONTENT_DOCS_DIR}: unable to enumerate content pages for description validation (${code}).`,
+    );
+    return;
+  }
+
+  const pages = dirents
+    .filter((entry) => entry.isFile() && /\.(md|mdx)$/.test(entry.name))
+    .map((entry) => path.relative(REPO_ROOT, path.join(entry.parentPath ?? entry.path, entry.name)))
+    .sort();
+
+  if (pages.length === 0) {
+    diagnostics.push(`${DOC014_CONTENT_DOCS_DIR}: no content pages found for description validation.`);
+    return;
+  }
+
+  for (const relativePath of pages) {
+    const source = readRepoText(relativePath, diagnostics);
+    if (!source) continue;
+
+    const frontmatter = source.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+    if (!frontmatter) {
+      diagnostics.push(`${relativePath}: missing frontmatter; DOC-014 (FR-010) requires a non-empty description.`);
+      continue;
+    }
+
+    const descLine = frontmatter[1].match(/^description:[ \t]*(.*)$/m);
+    const value = descLine ? descLine[1].trim().replace(/^["']|["']$/g, '').trim() : '';
+    if (!value) {
+      diagnostics.push(
+        `${relativePath}: missing or empty \`description:\` frontmatter (DOC-014 FR-010 requires one on every content page).`,
+      );
+    }
+  }
+}
+
 export function validateDocsQuality() {
   const diagnostics = [];
 
@@ -573,6 +621,7 @@ export function validateDocsQuality() {
   validateSupportCrossLinks(diagnostics);
   validateSourceUpdateGuidance(diagnostics);
   validateSafetyBoundaries(diagnostics);
+  validateMetaDescriptions(diagnostics);
 
   return diagnostics;
 }

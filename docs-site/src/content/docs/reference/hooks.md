@@ -1,5 +1,6 @@
 ---
 title: "Hooks Reference"
+description: "Runtime hook configuration surfaces and source boundaries."
 ---
 
 Runtime hook configuration surfaces and source boundaries.

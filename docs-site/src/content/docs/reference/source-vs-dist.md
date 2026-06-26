@@ -1,5 +1,6 @@
 ---
 title: "Source Vs Dist Reference"
+description: "Editability and responsibility map for source, generated payloads, tests, release files, and docs-site files."
 ---
 
 Editability and responsibility map for source, generated payloads, tests, release files, and docs-site files.

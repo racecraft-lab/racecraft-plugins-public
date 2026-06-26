@@ -1,5 +1,6 @@
 ---
 title: "Skills Reference"
+description: "Claude Code and Codex skill surfaces, invocations, prerequisites, expected artifacts, and source citations."
 ---
 
 Claude Code and Codex skill surfaces, invocations, prerequisites, expected artifacts, and source citations.
