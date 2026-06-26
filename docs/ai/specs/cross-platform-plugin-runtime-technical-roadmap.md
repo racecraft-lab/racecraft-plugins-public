@@ -222,7 +222,7 @@ implementation.
 
 **Completion Handoff:**
 
-- Inventory represented 21,132 scan hits across the scoped runtime-assumption
+- Inventory represented 21,141 scan hits across the scoped runtime-assumption
   families: shell substrate, script-file references, JSON query usage, shell
   quoting/operators, Unix paths, file-mode changes, and newline policy.
 - Active installed-runtime rows map to XPLAT-005 read-only helper work,

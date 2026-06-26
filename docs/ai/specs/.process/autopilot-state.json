@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T02:24:37Z",
+  "updated_at": "2026-06-26T02:36:17Z",
   "active_step": "Complete",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
@@ -410,11 +410,19 @@
       "step": "Post: Reviewability Diff Gate",
       "status": "completed",
       "result": {
-        "status": "warn",
+        "status": "scoped_pre_pr_warn",
         "gate_result": "warn",
-        "reason": "total files 20 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1",
+        "reason": "scoped pre-PR gate input: total files 20 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1",
         "blocked_operations": [],
-        "evidence": "specs/xplat-001-runtime-inventory-constraints/.process/final-reviewability/gate-state.json"
+        "evidence": "specs/xplat-001-runtime-inventory-constraints/.process/final-reviewability/gate-state.json",
+        "full_diff": {
+          "status": "block",
+          "command": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff main",
+          "reason": "total files 31 exceeds block threshold 25",
+          "total_files": 31,
+          "primary_surface_count": 4,
+          "note": "post-review remediation evidence; the original final gate remains scoped pre-PR warn/proceed evidence"
+        }
       }
     },
     {
@@ -466,8 +474,8 @@
       "result": {
         "status": "rp_review_findings_remediated",
         "tool": "rp-review-cli",
-        "findings": 9,
-        "review_passes": 3,
+        "findings": 11,
+        "review_passes": 4,
         "review_decision": "",
         "merge_state_status": "CLEAN",
         "checks": "local suite passed 3619/3619 after structure-version fallback scoping remediation; PR checks pending rerun after push"
