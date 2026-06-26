@@ -325,6 +325,11 @@ recommend a split-PR emission at PR time — that is a separate, downstream deci
   approaches; both satisfy the per-page-card decision (Q6).
   **Suggested next step:** Resolve during `/speckit-plan` based on which integrates
   more cleanly with the existing brand assets and `passthroughImageService` config.
+  **RESOLVED (Clarify S3 consensus, 2026-06-25, 2/2 high-confidence):** `astro-og-canvas`
+  v0.11.1 + an `OGImageRoute` endpoint `src/pages/og/[...slug].ts` (static `prerender`) +
+  `og:image`/`twitter:image` injected by the same route-data middleware. `starlight-og` is
+  proven non-existent (4 negative signals). The card uses a build-only `.ttf` face + PNG logo
+  (canvaskit/skia rejects woff2/SVG); `passthroughImageService` is orthogonal (canvas render path).
 - **What:** Which Starlight per-page-`.md` plugin to adopt (`starlight-md-txt` vs
   `astro-markdown-for-agents`) and whether it composes cleanly with `starlight-llms-txt`.
   **Why deferred:** Plugin-selection detail; the decision to ship per-page `.md` is

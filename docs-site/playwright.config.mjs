@@ -11,7 +11,7 @@ const artifactRoot =
 
 export default defineConfig({
   testDir: './tests',
-  testMatch: 'docs-smoke.spec.mjs',
+  testMatch: '**/*.spec.mjs',
   timeout: 30_000,
   expect: {
     timeout: 5_000,
