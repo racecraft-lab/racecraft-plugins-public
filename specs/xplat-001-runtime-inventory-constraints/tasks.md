@@ -22,13 +22,13 @@
 
 **Purpose**: Establish the durable report target, report outline, scan command set, row schema, and owner buckets before story work starts.
 
-- [ ] T001 Create the report skeleton with scope, non-goals, review order, and handoff sections in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T002 Record the whole-repo tracked-text scan boundary and explicit exclusion rules in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T003 Record the accepted reviewability warning, split decision, and no-runtime-change constraint in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T004 Define the reproducible scan command set for Bash, `.sh`, `jq`, shell quoting, Unix paths, `chmod`, and line-ending assumptions in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T005 Define the inventory row schema with required fields from `data-model.md` in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T006 Define allowed `classification`, `active_runtime_status`, `owner_bucket`, and `follow_up_spec` values in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T007 Define aggregation and match-summary rules that preserve scan-command traceability, match counts, ownership, proof state, and rationale in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T001 Create the report skeleton with scope, non-goals, review order, and handoff sections in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T002 Record the whole-repo tracked-text scan boundary and explicit exclusion rules in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T003 Record the accepted reviewability warning, split decision, and no-runtime-change constraint in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T004 Define the reproducible scan command set for Bash, `.sh`, `jq`, shell quoting, Unix paths, `chmod`, and line-ending assumptions in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T005 Define the inventory row schema with required fields from `data-model.md` in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T006 Define allowed `classification`, `active_runtime_status`, `owner_bucket`, and `follow_up_spec` values in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T007 Define aggregation and match-summary rules that preserve scan-command traceability, match counts, ownership, proof state, and rationale in `docs/ai/research/cross-platform-runtime-inventory.md`
 
 **Checkpoint**: Foundation ready. User story work can begin after the report outline and schema are in place.
 
@@ -42,17 +42,17 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Run the tracked-text universe command and record the file-count scope summary in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T009 [US1] Run each recorded scan command and capture the result-count summary by pattern family in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T010 [P] [US1] Classify installed source references from `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `speckit-pro/agents/`, `speckit-pro/codex-agents/`, `speckit-pro/hooks/`, `speckit-pro/codex-hooks.json`, and `speckit-pro/scripts/` in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T011 [P] [US1] Classify generated payload references from `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T012 [P] [US1] Classify public documentation claims from `docs-site/src/content/docs/`, `speckit-pro/README.md`, and marketplace metadata in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T013 [P] [US1] Classify tests, fixtures, expected outputs, and historical/archive references from `tests/`, `specs/`, and `.specify/memory/` in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T014 [US1] Add static caller-to-callee invocation traces for every `proven-active-runtime` row in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T015 [US1] Document evidence gaps for every `unproven-active-runtime` row in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T016 [US1] Split mixed-mode helper findings by traced invocation mode and assign row-level owner buckets in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T017 [US1] Add explicit exclusion rows and `exclusion_or_exception_detail` coverage for non-text, binary, untracked, vendor cache, other excluded inputs, and any `follow-up-exception` rows, including reason, evidence gap, expiry or removal condition, and named follow-up decision where applicable in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T018 [US1] Reconcile summary counts by `classification`, `active_runtime_status`, `owner_bucket`, and `follow_up_spec` in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T008 [US1] Run the tracked-text universe command and record the file-count scope summary in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T009 [US1] Run each recorded scan command and capture the result-count summary by pattern family in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T010 [P] [US1] Classify installed source references from `speckit-pro/skills/`, `speckit-pro/codex-skills/`, `speckit-pro/agents/`, `speckit-pro/codex-agents/`, `speckit-pro/hooks/`, `speckit-pro/codex-hooks.json`, and `speckit-pro/scripts/` in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T011 [P] [US1] Classify generated payload references from `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/` in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T012 [P] [US1] Classify public documentation claims from `docs-site/src/content/docs/`, `speckit-pro/README.md`, and marketplace metadata in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T013 [P] [US1] Classify tests, fixtures, expected outputs, and historical/archive references from `tests/`, `specs/`, and `.specify/memory/` in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T014 [US1] Add static caller-to-callee invocation traces for every `proven-active-runtime` row in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T015 [US1] Document evidence gaps for every `unproven-active-runtime` row in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T016 [US1] Split mixed-mode helper findings by traced invocation mode and assign row-level owner buckets in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T017 [US1] Add explicit exclusion rows and `exclusion_or_exception_detail` coverage for non-text, binary, untracked, vendor cache, other excluded inputs, and any `follow-up-exception` rows, including reason, evidence gap, expiry or removal condition, and named follow-up decision where applicable in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T018 [US1] Reconcile summary counts by `classification`, `active_runtime_status`, `owner_bucket`, and `follow_up_spec` in `docs/ai/research/cross-platform-runtime-inventory.md`
 
 **Checkpoint**: User Story 1 is independently reviewable when the inventory table and summary counts reconcile to the recorded scan results.
 
@@ -66,9 +66,9 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [P] [US2] Add runtime must-have gates for installed-cache invocation, native platform behavior, structured filesystem, path, JSON, subprocess, stdout, stderr, exit-code behavior, packaging, and update path in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T020 [P] [US2] Add runtime weighted criteria totaling 100 for native platform behavior, installed-cache invocation, dependency footprint, packaging, offline behavior, diagnostics, maintainability, and compatibility adapters in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T021 [US2] Add candidate evidence targets for XPLAT-002 without candidate scores, ranking, sample scoring, or winner selection in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T019 [P] [US2] Add runtime must-have gates for installed-cache invocation, native platform behavior, structured filesystem, path, JSON, subprocess, stdout, stderr, exit-code behavior, packaging, and update path in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T020 [P] [US2] Add runtime weighted criteria totaling 100 for native platform behavior, installed-cache invocation, dependency footprint, packaging, offline behavior, diagnostics, maintainability, and compatibility adapters in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T021 [US2] Add candidate evidence targets for XPLAT-002 without candidate scores, ranking, sample scoring, or winner selection in `docs/ai/research/cross-platform-runtime-inventory.md`
 
 **Checkpoint**: User Story 2 is independently reviewable when the runtime rubric is complete and remains non-scoring.
 
@@ -82,10 +82,10 @@
 
 ### Implementation for User Story 3
 
-- [ ] T022 [P] [US3] Add supply-chain must-have gates for maintainer verification, consumer-local verification, truthful guarantees, generated payload integrity, and provenance evidence in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T023 [P] [US3] Add supply-chain weighted criteria totaling 100 for dependency policy, lockfiles, generated payload integrity, vulnerability scanning, provenance, checksums/signatures, SBOMs, consumer-local verification, and release documentation truthfulness in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T024 [US3] Add artifact and control evidence targets for XPLAT-003 with `first-release-gate-question`, `deferred-hardening-evidence`, or `not-claimed-guarantee` boundaries in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T025 [US3] Verify the supply-chain section does not select a required security model or mandatory control set in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T022 [P] [US3] Add supply-chain must-have gates for maintainer verification, consumer-local verification, truthful guarantees, generated payload integrity, and provenance evidence in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T023 [P] [US3] Add supply-chain weighted criteria totaling 100 for dependency policy, lockfiles, generated payload integrity, vulnerability scanning, provenance, checksums/signatures, SBOMs, consumer-local verification, and release documentation truthfulness in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T024 [US3] Add artifact and control evidence targets for XPLAT-003 with `first-release-gate-question`, `deferred-hardening-evidence`, or `not-claimed-guarantee` boundaries in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T025 [US3] Verify the supply-chain section does not select a required security model or mandatory control set in `docs/ai/research/cross-platform-runtime-inventory.md`
 
 **Checkpoint**: User Story 3 is independently reviewable when the supply-chain rubric is complete and remains non-selecting.
 
@@ -95,13 +95,13 @@
 
 **Purpose**: Static verification, spec-map checks, roadmap handoff, and PR review packet evidence.
 
-- [ ] T026 [P] Re-run every scan command recorded in the report and update coverage reconciliation notes in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T027 [P] Review every `proven-active-runtime` row for caller-to-callee trace evidence and update verification notes in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T028 [P] Review docs-only, generated payload, tests/fixtures, archive, and repository-only rows for false active-runtime promotion and update verification notes in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T029 Run `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` and record the spec-map check result in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T030 Run `git diff --check` and record the diff hygiene result in `docs/ai/research/cross-platform-runtime-inventory.md`
-- [ ] T031 Update XPLAT-001 progress, handoff notes, and deferred follow-up specs in `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md`
-- [ ] T032 Add PR review packet evidence covering what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback notes in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T026 [P] Re-run every scan command recorded in the report and update coverage reconciliation notes in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T027 [P] Review every `proven-active-runtime` row for caller-to-callee trace evidence and update verification notes in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T028 [P] Review docs-only, generated payload, tests/fixtures, archive, and repository-only rows for false active-runtime promotion and update verification notes in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T029 Run `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` and record the spec-map check result in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T030 Run `git diff --check` and record the diff hygiene result in `docs/ai/research/cross-platform-runtime-inventory.md`
+- [x] T031 Update XPLAT-001 progress, handoff notes, and deferred follow-up specs in `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md`
+- [x] T032 Add PR review packet evidence covering what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback notes in `docs/ai/research/cross-platform-runtime-inventory.md`
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T01:06:00Z",
-  "active_step": "Phase 7: Foundation (T001-T007)",
+  "updated_at": "2026-06-26T00:03:18Z",
+  "active_step": "Post: Doctor Extension Check",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
   "status": "in_progress",
@@ -317,27 +317,38 @@
     },
     {
       "step": "Phase 7: Foundation (T001-T007)",
-      "status": "in_progress"
+      "status": "completed",
+      "result": "T001-T007 complete; report outline, scan boundary, command set, row schema, allowed values, and aggregation rules added"
     },
     {
       "step": "Phase 7: US1 Inventory (T008-T018)",
-      "status": "pending"
+      "status": "completed",
+      "result": "T008-T018 complete; scan counts reconciled to 21,061 represented hits with active-source, generated, docs, tests, historical, and repo-only classification"
     },
     {
       "step": "Phase 7: US2 Runtime Rubric (T019-T021)",
-      "status": "pending"
+      "status": "completed",
+      "result": "T019-T021 complete; non-scoring runtime gates, 100-point criteria, and candidate evidence targets added"
     },
     {
       "step": "Phase 7: US3 Supply-Chain Rubric (T022-T025)",
-      "status": "pending"
+      "status": "completed",
+      "result": "T022-T025 complete; non-selecting supply-chain gates, 100-point criteria, and artifact/control evidence targets added"
     },
     {
       "step": "Phase 7: Polish and Verification (T026-T032)",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "tasks": "T026-T032 complete",
+        "scan_counts": "pass; seven scan families reconcile to report counts",
+        "spec_index": "pass; index current",
+        "diff_check": "pass",
+        "gate": "G7 pass"
+      }
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",

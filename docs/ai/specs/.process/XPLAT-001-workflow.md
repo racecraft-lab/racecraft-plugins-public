@@ -51,7 +51,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Checklist | `$speckit-checklist` | Complete | Created four domain checklists; G4 passed with zero remaining gap markers |
 | Tasks | `$speckit-tasks` | Complete | Generated 32 report-focused tasks across 5 phases with 11 parallel-safe markers |
 | Analyze | `$speckit-analyze` | Complete | 5 findings remediated; G6 marker count clean; confidence 0.98 |
-| Implement | `$speckit-implement` | In Progress | Starting Foundation tasks T001-T007 after G6/G6.5 passed |
+| Implement | `$speckit-implement` | Complete | Added inventory/rubric report, roadmap handoff, task completion, and static verification evidence |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -574,26 +574,26 @@ Also run any focused report or docs validation command created by the plan/tasks
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | Pending | Pending | Report outline, scan set, schema |
-| US1 Inventory | Pending | Pending | Whole-repo scan and classification |
-| US2 Runtime rubric | Pending | Pending | XPLAT-002 handoff |
-| US3 Supply-chain rubric | Pending | Pending | XPLAT-003 handoff |
-| Polish | Pending | Pending | Static checks and roadmap handoff |
+| Foundation | T001-T007 | Complete | Report outline, scan boundary, command set, row schema, allowed values, and aggregation rules added |
+| US1 Inventory | T008-T018 | Complete | Whole-repo tracked-text scan counts reconciled to 21,061 represented scan hits with source, generated, docs, tests, historical, and repo-only classifications |
+| US2 Runtime rubric | T019-T021 | Complete | Non-scoring XPLAT-002 runtime gates, 100-point criteria, and candidate evidence targets added |
+| US3 Supply-chain rubric | T022-T025 | Complete | Non-selecting XPLAT-003 supply-chain gates, 100-point criteria, and artifact/control evidence targets added |
+| Polish | T026-T032 | Complete | Scan rerun, trace review, false-promotion review, spec-index check, diff hygiene, roadmap handoff, and PR packet evidence completed |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] Inventory report exists under `docs/ai/research/`.
-- [ ] Report covers all planned scan commands or explains exclusions.
-- [ ] Active runtime rows include invocation traces.
-- [ ] Runtime rubric includes criteria, must-have gates, and weights without scoring candidates.
-- [ ] Supply-chain rubric includes criteria, must-have gates, and weights without selecting controls.
-- [ ] No active runtime invocation is changed.
-- [ ] `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
-- [ ] `git diff --check` passes.
-- [ ] PR packet records scope, non-goals, review order, verification evidence, known gaps, and rollback notes.
+- [x] All tasks marked complete in `tasks.md`.
+- [x] Inventory report exists under `docs/ai/research/`.
+- [x] Report covers all planned scan commands or explains exclusions.
+- [x] Active runtime rows include invocation traces.
+- [x] Runtime rubric includes criteria, must-have gates, and weights without scoring candidates.
+- [x] Supply-chain rubric includes criteria, must-have gates, and weights without selecting controls.
+- [x] No active runtime invocation is changed.
+- [x] `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
+- [x] `git diff --check` passes.
+- [x] PR packet records scope, non-goals, review order, verification evidence, known gaps, and rollback notes.
 
 ---
 
@@ -601,12 +601,23 @@ Also run any focused report or docs validation command created by the plan/tasks
 
 ### What Worked Well
 
-- Pending.
+- Aggregate rows kept the inventory reviewable while preserving scan family,
+  match count, owner bucket, proof state, and rationale.
+- Excluding the generated report from its own scan commands avoided recursive
+  self-reference without weakening source-input coverage.
 
 ### Challenges Encountered
 
-- Pending.
+- Source and generated payload rows needed separate ownership: source files are
+  authoritative edit targets, while generated active payload rows are cutover
+  guidance for XPLAT-007.
+- The task reviewability gate over-counted the planned scan surface, so the
+  accepted warning/block evidence had to stay explicit instead of silently
+  broadening implementation scope.
 
 ### Patterns to Reuse
 
-- Pending.
+- Use row-level owner buckets for mixed read-only versus mutation-capable helper
+  families.
+- Keep runtime and supply-chain rubrics non-scoring in inventory specs so later
+  decision specs can compare options without inheriting an implied selection.

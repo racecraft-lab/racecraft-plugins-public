@@ -133,8 +133,8 @@ PUBLIC RELEASE UNBLOCKED
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| XPLAT-001 | Runtime Inventory and Constraints | In Progress | `.process/XPLAT-001-workflow.md` | Run `$speckit-autopilot docs/ai/specs/.process/XPLAT-001-workflow.md` |
-| XPLAT-002 | Runtime Implementation Options and Contract Decision | Pending | — | Blocked by XPLAT-001 inventory |
+| XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
+| XPLAT-002 | Runtime Implementation Options and Contract Decision | Pending | — | Ready to scaffold from XPLAT-001 runtime rubric |
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Pending | — | Blocked by XPLAT-002 runtime decision; must finish before runner foundation |
 | XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-002 runtime decision and XPLAT-003 security model |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
@@ -151,7 +151,7 @@ PUBLIC RELEASE UNBLOCKED
 
 **Priority:** P1 | **Depends On:** None | **Enables:** XPLAT-002, XPLAT-003, XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
 
-**Status:** In Progress. Scaffolded on 2026-06-25 in branch `codex/xplat-001-runtime-inventory-constraints`; workflow file is `docs/ai/specs/.process/XPLAT-001-workflow.md`.
+**Status:** Complete. Scaffolded and implemented on 2026-06-25 in branch `codex/xplat-001-runtime-inventory-constraints`; workflow file is `docs/ai/specs/.process/XPLAT-001-workflow.md`; durable report is `docs/ai/research/cross-platform-runtime-inventory.md`.
 
 **Goal:** Produce a complete active-runtime inventory and a decision rubric for
 runtime and supply-chain choices. Do not choose or implement the replacement
@@ -219,6 +219,19 @@ implementation.
 - XPLAT-003 has a clear security/trust evaluation rubric and artifact list.
 - Every active Bash dependency has a provisional owner spec: XPLAT-005,
   XPLAT-006, XPLAT-007, or repository-only exclusion.
+
+**Completion Handoff:**
+
+- Inventory represented 21,061 scan hits across the scoped runtime-assumption
+  families: shell substrate, script-file references, JSON query usage, shell
+  quoting/operators, Unix paths, file-mode changes, and newline policy.
+- Active installed-runtime rows map to XPLAT-005 read-only helper work,
+  XPLAT-006 mutation/install/PR-emission helper work, and XPLAT-007 generated
+  payload cutover guidance.
+- XPLAT-002 should use the non-scoring runtime rubric in the report.
+- XPLAT-003 should use the non-scoring supply-chain rubric in the report.
+- XPLAT-001 did not port helpers, rebuild generated payloads, change active
+  installed invocations, score candidates, or select controls.
 
 ---
 
