@@ -43,7 +43,7 @@ roadmap text / sibling site — keep them in view:
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass; 3 sessions, 4 consensus resolutions. Key: custom `.md` endpoint, route-middleware JSON-LD, Person=F.Gabelmann, astro-og-canvas, git-lastmod serialize, retarget DOC-011 robots gate, fetch-depth:0 |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass; 5 artifacts + 11 contracts (C1–C11), 6 entities, all 29 FR/10 SC traced. Advisory LOC estimate `pass` (proj 520 mechanical; real reviewable ~300–360 < 400). |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass; 3 domains, 81 items, 27 gaps all remediated, 0 unresolved. Spec/plan hardened (single-source robots, publisher@id invariant, bulk git-log sitemap, no-history lastmod omission, fail-loud all surfaces). |
-| Tasks | `/speckit-tasks` | ⏳ Pending | |
+| Tasks | `/speckit-tasks` | ✅ Complete | G5 pass; 34 tasks (T001–T035), 8 `[P]`, 9 phases, all US1–US6 + D1–D12 covered. Atomicity route = one-navigable-PR (no split). |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Watch for drift from the 3 divergences above |
 | Implement | `/speckit-implement` | ⏳ Pending | TDD; port sibling `e2e/seo-*.spec` patterns |
 
@@ -387,10 +387,10 @@ Focus on SEO and AI discoverability requirements:
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | |
-| **Phases** | 4 |
-| **Parallel Opportunities** | |
-| **User Stories Covered** | US1-US6 |
+| **Total Tasks** | 34 (T001–T035, incl. T009A + T012a) |
+| **Phases** | 9 (Setup, Foundational, US1–US6, Polish) |
+| **Parallel Opportunities** | 8 `[P]` (T003, T005, T006, T010, T013, T014, T017, T023) |
+| **User Stories Covered** | US1–US6 (US1=4, US2=2, US3=3, US4=8, US5=2, US6=1; 14 unlabelled Setup/Foundational/Polish) |
 
 ---
 
@@ -407,10 +407,23 @@ sitemap lastmod + metric].
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope`. |
-| **Releasable** | | `true`, or `false` for a destructive-migration or concurrency-sensitive change. |
-| **Signals** | | The decisive detector findings behind the route. |
-| **Warnings** | | Any release-safety warning attached to the change. |
+| **Route** | `one-navigable-PR` | The structural-seam classifier found no safe split; ship as one reviewable PR (matches design-concept Q10 "one spec, no split"). |
+| **Releasable** | `true` | Additive change; no destructive migration or concurrency sensitivity. |
+| **Signals** | `change-shape:modify-heavy` | Touches one cohesive site-config/head surface; the A/B seam (crawler-access vs metadata) was considered and rejected as artificial (both halves edit `astro.config`). |
+| **Warnings** | none | — |
+
+### Reviewability gate (tasks mode) — size-only block, NOT a re-slicing stop
+
+`reviewability-gate.sh tasks` returned `status: block` (`reviewable_loc:1360`, `production_files:14`, `total_files:130`, `primary_surfaces:6`). This is the documented **coarse heuristic over-count**, not a real over-budget:
+- `reviewable_loc:1360` = tasks(34)×40, a flat heuristic; the Plan-phase estimator (which reads the Declared File Operations) returned `pass` with real reviewable ≈ 305–360 LOC (< 800 block, < 400 warn).
+- `total_files:130` = path-token grep counting every file path mentioned across 34 task descriptions (many repeated); the real touched-file set is ~14 code files + 19 one-line `description:` additions + generated outputs (excluded per Reviewability Notes).
+- `production_files:14` is real but cohesive (5 new src + 5 modified + 4 test specs), all SEO wiring on one config/head surface.
+
+**Resolution:** per the skill, a valid current **size-only** block is not a manual re-slicing stop. The atomicity classifier (structural seams) returned `one-navigable-PR`, so there is no safe split. Proceed as one navigable PR; the authoritative size check is the PR-time **diff-mode** gate (`final-reviewability-backstop.sh`), which measures the real diff with generated/lockfile exclusions. The PR packet will lead reviewers through a navigable review order.
+
+## Layer Plan
+
+`layer_plan.status = skipped` — atomicity route is `one-navigable-PR` (non-split), so the PRSG layer planner (`plan-layers.sh`) does not run. No marker-based PR emission; single-PR path at post-implementation.
 
 To produce the decision, run the classifier against the feature directory:
 
