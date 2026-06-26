@@ -39,8 +39,10 @@ Codex plugin surfaces; no native Windows/macOS/Linux runtime probe in this spec.
 explain exclusions; no runtime performance requirement is introduced.
 
 **Constraints**: Do not score or select runtime/security candidates, port
-helpers, change active Claude/Codex invocations, rebuild generated payloads, or
-claim native Windows support.
+helpers to a replacement runtime, change active Claude/Codex invocation paths,
+perform broad generated payload rebuilds, or claim native Windows support. If
+review remediation corrects an existing shipped helper, generated payload edits
+stay limited to synchronized copies of that helper.
 
 **Scale/Scope**: Whole-repo tracked-text scan, including hidden tracked paths,
 `dist/**`, public docs, tests, fixtures, and archive reports. Exclude `.git/`,
@@ -67,7 +69,7 @@ belong to later XPLAT specs.
 
 | Principle | Gate | Result |
 |-----------|------|--------|
-| Plugin Structure Compliance | XPLAT-001 must not change installed plugin runtime behavior, generated payloads, active skill invocations, agents, or hooks. | Pass: planned changes are a Markdown research report plus roadmap progress/handoff note. |
+| Plugin Structure Compliance | XPLAT-001 must not change installed invocation paths, active skill/agent/hook contracts, or port helpers to a replacement runtime. If review remediation corrects an existing shipped helper, generated payload edits stay limited to synchronized copies of that helper. | Pass: planned changes are a Markdown research report plus roadmap progress/handoff note; post-review generator remediation follows the narrow sync exception. |
 | Script Safety | Scan commands are transient review inputs, not a new automation layer or shipped helper. | Pass: no new helper script is planned; any command used must be recorded in the report. |
 | Test Coverage Before Merge | Static checks must verify report coverage, traceability, spec-index freshness, and diff hygiene. | Pass: verification plan uses rerun scans, invocation-trace review, spec-index check, and `git diff --check`. |
 | Conventional Commits | Commit/PR review packet must explain scope, non-goals, review order, budget, traceability, verification, known gaps, and rollback. | Pass: PR packet requirements remain in `spec.md` and will be carried into tasks. |
@@ -296,8 +298,9 @@ Static verification only:
 ### Static Verification Failure Remediation
 
 If a static verification step fails, remediation stays within the XPLAT-001
-docs/process scope and must not port helpers, change installed invocations,
-rebuild generated payloads, or introduce runtime probes.
+docs/process scope and must not port helpers to a replacement runtime, change
+installed invocation paths, perform broad generated payload rebuilds, or
+introduce runtime probes.
 
 - **Uncovered scan result**: add or correct the inventory row, or add an
   explicit exclusion with rationale, then update summary counts by

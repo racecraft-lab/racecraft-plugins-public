@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T01:25:16Z",
+  "updated_at": "2026-06-26T02:06:35Z",
   "active_step": "Complete",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
@@ -329,7 +329,7 @@
     {
       "step": "Phase 7: US1 Inventory (T008-T018)",
       "status": "completed",
-      "result": "T008-T018 complete; scan counts reconciled to 21,068 represented hits with active-source, generated, docs, tests, historical, and repo-only classification"
+      "result": "T008-T018 complete; scan counts reconciled to 21,132 represented hits with active-source, generated, docs, tests, historical, and repo-only classification"
     },
     {
       "step": "Phase 7: US2 Runtime Rubric (T019-T021)",
@@ -403,7 +403,7 @@
       "result": {
         "status": "pass",
         "command": "bash tests/speckit-pro/run-all.sh",
-        "summary": "3609/3609 passed"
+        "summary": "3613/3613 passed"
       }
     },
     {
@@ -466,10 +466,11 @@
       "result": {
         "status": "rp_review_findings_remediated",
         "tool": "rp-review-cli",
-        "findings": 5,
+        "findings": 7,
+        "review_passes": 2,
         "review_decision": "",
         "merge_state_status": "CLEAN",
-        "checks": "all completed checks passed; one matrix test was skipped by workflow"
+        "checks": "local suite passed 3613/3613 after generator remediation; PR checks pending rerun after push"
       }
     },
     {

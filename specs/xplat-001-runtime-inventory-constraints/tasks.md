@@ -176,4 +176,4 @@ Task: "T023 [P] [US3] Add supply-chain weighted criteria totaling 100 in docs/ai
 
 ### Out-of-Scope Guard
 
-Do not add tasks that port helpers, modify active installed Claude or Codex invocation paths, rebuild `dist/`, run native platform probes, score candidates, rank candidates, select a runtime, or select a security model.
+Do not add tasks that port helpers to a replacement runtime, modify active installed Claude or Codex invocation paths, perform broad `dist/` rebuilds, run native platform probes, score candidates, rank candidates, select a runtime, or select a security model. A post-PR review remediation may synchronize generated payload copies of an existing helper fix.

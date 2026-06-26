@@ -59,6 +59,36 @@ active_feature_rel() {
     "$feature" 2>/dev/null || return 1
 }
 
+moc_link_target_basename() {
+  local value="$1" target
+  target="$value"
+  case "$target" in
+    *']('*')'*) target="${target#*](}"; target="${target%%)*}" ;;
+  esac
+  target="${target%%#*}"
+  target="${target##*/}"
+  printf '%s' "$target"
+}
+
+moc_up_target_basename() {
+  local moc="$1" up
+  up="$(moc_frontmatter_field "$moc" up)" || return 1
+  [ -n "$up" ] || return 1
+  moc_link_target_basename "$up"
+}
+
+home_note_owns_spec_moc() {
+  local home_moc="$1" spec_moc="$2" home_base home_up spec_up
+  [ -n "$home_moc" ] || return 0
+  home_base="$(basename "$home_moc")"
+  home_up="$(moc_up_target_basename "$home_moc" || true)"
+  spec_up="$(moc_up_target_basename "$spec_moc" || true)"
+  [ -n "$spec_up" ] || return 1
+  [ "$spec_up" = "$home_base" ] && return 0
+  [ -n "$home_up" ] && [ "$spec_up" = "$home_up" ] && return 0
+  return 1
+}
+
 candidate_out_of_scope_reason() {
   local id="$1" first
   if [[ "$id" =~ ^[0-9]{4}($|-) ]]; then
@@ -153,25 +183,30 @@ SPECS_DIR="$REPO_ROOT/specs"
 # call site (3-arg rebuild_map -> render_index "$spec_dir") stays byte-identical to
 # the pre-activation empty body. Only is_home=1 produces rows.
 #
-# When is_home=1 the body is the repo-wide index over every gated spec under
-# $SPECS_DIR: one row `- [<spec_id>](../../../specs/<dir>/SPEC-MOC.md) · <status>`,
-# normalized-ID ascending (FR-013), spec_id/status read from frontmatter (FR-012),
-# rows whose spec_id is absent/empty skipped (FR-015a), empty status still emits a
-# row with only the separator and no trailing whitespace (FR-015), the U+00B7 PRS_SEP framing
-# (FR-012/FR-014). A relative []() target, never a [[wikilink]] (SC-006). spec_dir
-# is unused in the home-note path (the scan is repo-wide), kept for signature parity
-# with the spec-MOC call. Link + status only — no table, no H1 parse (FR-022).
+# When is_home=1 the body indexes every gated spec under $SPECS_DIR whose
+# SPEC-MOC.md `up:` target belongs to that home note: either the home MOC filename
+# itself or the technical-roadmap target in the home MOC's own `up:` field. This
+# keeps multiple roadmap-MOC home notes disjoint while preserving older fixtures
+# whose specs point directly at the MOC. Each row is
+# `- [<spec_id>](../../../specs/<dir>/SPEC-MOC.md) · <status>`, normalized-ID
+# ascending (FR-013), spec_id/status read from frontmatter (FR-012), rows whose
+# spec_id is absent/empty skipped (FR-015a), empty status still emits a row with
+# only the separator and no trailing whitespace (FR-015), the U+00B7 PRS_SEP
+# framing (FR-012/FR-014). A relative []() target, never a [[wikilink]] (SC-006).
+# spec_dir is unused in the home-note path, kept for signature parity with the
+# spec-MOC call. Link + status only — no table, no H1 parse (FR-022).
 render_index() {
-  local spec_dir="$1" is_home="${2:-0}"
+  local spec_dir="$1" is_home="${2:-0}" home_moc="${3:-}"
   [ "$is_home" = 1 ] || return 0     # spec-MOC (default): empty, byte-identical
 
-  # Repo-wide scan, LC_ALL=C sorted so enumeration order never leaks (SC-009).
+  # Home-note-scoped scan, LC_ALL=C sorted so enumeration order never leaks (SC-009).
   local sortable="" d moc spec_id status norm
   while IFS= read -r d; do
     [ -n "$d" ] || continue
     moc="$d/SPEC-MOC.md"
     [ -f "$moc" ] || continue
     moc_is_gated "$moc" || continue            # legacy/non-marked skipped (FR-016)
+    home_note_owns_spec_moc "$home_moc" "$moc" || continue
     # spec_id is the link text AND the sort key; absent/empty => skip (FR-015a).
     spec_id="$(moc_frontmatter_field "$moc" spec_id)" || continue
     [ -n "$spec_id" ] || continue
@@ -550,7 +585,7 @@ rebuild_map() {
   # assignment masks the failure under set -e. Init to empty so an absent zone's var
   # is defined under set -u.
   local idx_body="" prs_body="" bl_body=""
-  if [ "$st_index" = present ];     then idx_body="$(render_index "$spec_dir" "$is_home")"; fi
+  if [ "$st_index" = present ];     then idx_body="$(render_index "$spec_dir" "$is_home" "$moc")"; fi
   if [ "$st_prs" = present ];       then render_prs_into_or_die2 prs_body "$spec_dir"; fi
   if [ "$st_backlinks" = present ]; then bl_body="$(render_backlinks "$spec_dir")"; fi
 
@@ -700,7 +735,8 @@ main() {
   # filename `docs/ai/specs/*-roadmap-MOC.md` (0..N). Each is gated via moc_is_gated;
   # a non-gated/legacy home note is skipped (not an error). A gated home note is
   # folded into the SAME in_moc/in_new/in_branch arrays but regenerated with
-  # is_home=1 so render_index fills its INDEX repo-wide. Validation (the FR-017a
+  # is_home=1 so render_index fills its INDEX with specs that point to that home
+  # note or its technical roadmap. Validation (the FR-017a
   # missing-INDEX fail-safe, marker balance) runs HERE in PASS 1, before any PASS 2
   # write, so a malformed home note aborts the whole batch with no partial write.
   local home_dir="$REPO_ROOT/docs/ai/specs"

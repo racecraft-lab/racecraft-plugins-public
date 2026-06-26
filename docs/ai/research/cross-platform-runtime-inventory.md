@@ -12,12 +12,15 @@ Source spec: `specs/xplat-001-runtime-inventory-constraints/spec.md`
 
 XPLAT-001 inventories Bash, `.sh`, `jq`, shell quoting, Unix path,
 `chmod`, and line-ending assumptions across the tracked repository input set.
-It does not port helpers, rebuild generated payloads, change installed Claude or
-Codex invocation paths, select a runtime, or select supply-chain controls.
+It does not port helpers to a new runtime, change Claude or Codex invocation
+paths, select a runtime, or select supply-chain controls. A post-PR review
+remediation narrowed the existing spec-index generator's roadmap-MOC ownership
+logic and synchronized its generated Claude/Codex payload copies; that scoped
+helper correction is not a cross-platform runtime port.
 
 The active installed-runtime surface is real: source skills, hooks, agents, and
-helper scripts contain 3,722 represented source-reference scan hits, and
-generated payload mirrors contain 6,932 represented generated active scan hits.
+helper scripts contain 3,735 represented source-reference scan hits, and
+generated payload mirrors contain 6,958 represented generated active scan hits.
 Those active rows split into XPLAT-005 read-only helper work, XPLAT-006
 mutation/install/PR-emission helper work, and XPLAT-007 generated-payload
 cutover guidance.
@@ -44,8 +47,8 @@ Out of scope:
 
 - Runtime candidate scoring, ranking, or selection.
 - Supply-chain model or control-set selection.
-- Helper ports, runner implementation, generated payload rebuilds, and public
-  native Windows support claims.
+- Helper ports to a replacement runtime, runner implementation, broad generated
+  payload rebuilds, and public native Windows support claims.
 - Native Windows, macOS, or Linux runtime probes.
 
 ## Reviewability Decision
@@ -65,8 +68,8 @@ Input universe:
 
 | Metric | Count | Command |
 |---|---:|---|
-| Tracked files, excluding this generated report | 1,251 | `git ls-files ':!docs/ai/research/cross-platform-runtime-inventory.md' \| wc -l` |
-| Tracked text/non-empty files searched by `git grep -I`, excluding this generated report | 1,237 | `git grep -I -l -e '' -- . ':(exclude)docs/ai/research/cross-platform-runtime-inventory.md' \| wc -l` |
+| Tracked files, excluding this generated report | 1,256 | `git ls-files ':!docs/ai/research/cross-platform-runtime-inventory.md' \| wc -l` |
+| Tracked text/non-empty files searched by `git grep -I`, excluding this generated report | 1,242 | `git grep -I -l -e '' -- . ':(exclude)docs/ai/research/cross-platform-runtime-inventory.md' \| wc -l` |
 
 The scan commands below intentionally exclude this report path,
 `docs/ai/research/cross-platform-runtime-inventory.md`, after the report exists.
@@ -125,14 +128,14 @@ contains multiple scoped assumptions.
 
 | Pattern family | Total scan hits | Files |
 |---|---:|---:|
-| Bash / shell substrate | 2,376 | 460 |
-| `.sh` helper references | 4,132 | 576 |
-| `jq` references | 1,884 | 216 |
-| Shell quoting / shell operators | 10,749 | 392 |
-| Unix path assumptions | 1,809 | 338 |
+| Bash / shell substrate | 2,379 | 461 |
+| `.sh` helper references | 4,145 | 579 |
+| `jq` references | 1,885 | 217 |
+| Shell quoting / shell operators | 10,793 | 392 |
+| Unix path assumptions | 1,812 | 339 |
 | `chmod` references | 58 | 36 |
 | Line-ending references | 60 | 41 |
-| **Total represented scan hits** | **21,068** | **N/A** |
+| **Total represented scan hits** | **21,132** | **N/A** |
 
 ## Row Schema
 
@@ -211,13 +214,13 @@ mode, follow-up spec, or rationale, split that match into a separate row.
 | ID | Evidence | Classification | Active runtime status | Runtime relevance | Owner bucket | Follow-up spec | Invocation trace | Rationale |
 |---|---|---|---|---|---|---|---|---|
 | SRC-READ-001 | 1,951 scan hits across 61 source files, including `speckit-pro/codex-hooks.json`, `speckit-pro/hooks/hooks.json`, status/coach/grill-me guidance, gate/count helpers, and read-only autopilot checks. Representative evidence: `speckit-pro/codex-hooks.json` runs `jq` on submitted prompt JSON and checks `specify`; `speckit-pro/skills/speckit-status/SKILL.md` points at `generate-spec-index.sh --check "$PWD"` and `o5-topology.sh`; executor agents invoke `count-markers.sh`. | `source-reference` | `proven-active-runtime` | Installed Claude/Codex hooks, skills, agents, and read-only helper scripts depend on shell execution, `jq`, Unix paths, shell quoting, and `.sh` dispatch. | `xplat-005-read-only-helper` | `XPLAT-005` | Codex plugin manifest uses `skills: "./codex-skills/"` and `hooks: "./codex-hooks.json"`; Claude marketplace points to `dist/claude/speckit-pro`; source skills and agents instruct installed sessions to run these read-only helpers. | These references are active installed-runtime assumptions but do not intentionally mutate repository, user-local, or external state. XPLAT-005 owns parity for read-only/advisory helper behavior. |
-| SRC-MUT-001 | 1,771 scan hits across 35 source files, including install/upgrade/archive/scaffold skills, `install-codex-agents.sh`, `install-curated-set.sh`, `generate-pr-body.sh`, `generate-uat-skeleton.sh`, `generate-spec-index.sh`, `final-reviewability-backstop.sh`, `relocate-process-artifacts.sh`, `multi-pr-emission.sh`, `restack.sh`, and migration/fixup helpers. | `source-reference` | `proven-active-runtime` | Installed workflows can copy agents, create/update files, write PR packet artifacts, move process files, create branches/PRs, or mutate local SpecKit state through Bash helpers. | `xplat-006-mutation-helper` | `XPLAT-006` | Install, upgrade, scaffold, archive, PRD, and autopilot skills directly instruct the agent to run these helper scripts. Mutation-capable helpers are grouped separately from read-only helpers by invoked mode. | These references require apply/write parity and rollback-safe behavior. XPLAT-006 owns mutation, install, and PR-emission helper ports after the runner foundation exists. |
-| GEN-ACT-001 | 6,932 scan hits across 155 generated payload files under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, excluding generated README/CHANGELOG/LICENSE docs. Representative evidence mirrors generated skills, agents, hooks, and scripts such as `dist/codex/speckit-pro/codex-hooks.json` and generated autopilot scripts. | `generated-payload-reference` | `proven-active-runtime` | Marketplace installs consume generated payloads, so generated Bash and Unix assumptions matter to cutover even though source files remain authoritative edit targets. | `xplat-007-cutover-guidance` | `XPLAT-007` | `.claude-plugin/marketplace.json` points Claude to `./dist/claude/speckit-pro`; `.agents/plugins/marketplace.json` points Codex to `./dist/codex/speckit-pro`. | Generated payload rows must be regenerated or retired during cutover, but XPLAT-001 does not edit or rebuild them. XPLAT-007 owns final Claude/Codex payload cutover and public release gates. |
+| SRC-MUT-001 | 1,784 scan hits across 35 source files, including install/upgrade/archive/scaffold skills, `install-codex-agents.sh`, `install-curated-set.sh`, `generate-pr-body.sh`, `generate-uat-skeleton.sh`, `generate-spec-index.sh`, `final-reviewability-backstop.sh`, `relocate-process-artifacts.sh`, `multi-pr-emission.sh`, `restack.sh`, and migration/fixup helpers. | `source-reference` | `proven-active-runtime` | Installed workflows can copy agents, create/update files, write PR packet artifacts, move process files, create branches/PRs, or mutate local SpecKit state through Bash helpers. | `xplat-006-mutation-helper` | `XPLAT-006` | Install, upgrade, scaffold, archive, PRD, and autopilot skills directly instruct the agent to run these helper scripts. Mutation-capable helpers are grouped separately from read-only helpers by invoked mode. | These references require apply/write parity and rollback-safe behavior. XPLAT-006 owns mutation, install, and PR-emission helper ports after the runner foundation exists. |
+| GEN-ACT-001 | 6,958 scan hits across 155 generated payload files under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`, excluding generated README/CHANGELOG/LICENSE docs. Representative evidence mirrors generated skills, agents, hooks, and scripts such as `dist/codex/speckit-pro/codex-hooks.json` and generated autopilot scripts. | `generated-payload-reference` | `proven-active-runtime` | Marketplace installs consume generated payloads, so generated Bash and Unix assumptions matter to cutover even though source files remain authoritative edit targets. | `xplat-007-cutover-guidance` | `XPLAT-007` | `.claude-plugin/marketplace.json` points Claude to `./dist/claude/speckit-pro`; `.agents/plugins/marketplace.json` points Codex to `./dist/codex/speckit-pro`. | Generated payload rows generally remain cutover guidance for XPLAT-007; this PR only synchronized generated copies of the existing spec-index helper so shipped payloads match the source remediation. |
 | GEN-DOC-001 | 44 scan hits across generated `README.md`, `CHANGELOG.md`, and `LICENSE` files under `dist/**`. | `generated-payload-reference` | `not-active-runtime` | These generated documentation files can mention commands or paths, but they are not runtime entrypoints. | `generated-payload-reference` | `generated-payload-reference` | No installed invocation trace from these files to helper execution. | Keep as generated documentation references. Source README/docs should be edited before payload rebuilds. |
 | DOC-001 | 372 scan hits across 9 public documentation and marketplace metadata files, including docs-site pages, `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, and plugin manifests. | `public-docs-claim` | `not-active-runtime` | Public docs and metadata may describe `jq`, Bash, cache paths, `.sh` scripts, or Unix locations, but text claims are not active runtime dependencies without a separate trace. | `public-docs-claim` | `public-docs-claim` | No direct invocation trace from docs pages or marketplace descriptions to helper execution. | These rows stay documentation claims. XPLAT-007 should update public claims only after cutover and release validation. |
-| TEST-001 | 5,636 scan hits across 228 test, fixture, and expected-output files under `tests/**`. | `tests-fixtures` | `not-active-runtime` | Tests exercise Bash helpers and shell-shaped fixtures, but they are repository verification inputs, not installed plugin runtime surfaces. | `historical-or-archive` | `historical-or-archive` | No installed plugin invocation trace to test fixtures. | Keep out of runtime porting scope except where later specs reuse fixtures as parity evidence. |
+| TEST-001 | 5,646 scan hits across 228 test, fixture, and expected-output files under `tests/**`. | `tests-fixtures` | `not-active-runtime` | Tests exercise Bash helpers and shell-shaped fixtures, but they are repository verification inputs, not installed plugin runtime surfaces. | `historical-or-archive` | `historical-or-archive` | No installed plugin invocation trace to test fixtures. | Keep out of runtime porting scope except where later specs reuse fixtures as parity evidence. |
 | HIST-001 | 2,663 scan hits across 102 specs, workflow files, active XPLAT planning files, and `.specify/memory/**` archive reports. | `historical-or-archive` | `not-active-runtime` | Planning and archive material documents prior or current repo work; it does not execute as installed runtime. | `historical-or-archive` | `historical-or-archive` | No installed plugin invocation trace to archive/spec prose. | Keep as historical/process evidence. Later specs should cite only current source or report rows when selecting implementation work. |
-| REPO-ONLY-001 | 1,699 scan hits across 90 repository-only files such as `.github/**`, `.claude/**`, root scripts, docs-site configuration, release metadata, and SpecKit extensions. | `repository-only-exclusion` | `not-active-runtime` | Maintainer, CI, release, and repository scaffolding commands may require Bash or Unix assumptions, but they are not installed Claude/Codex plugin runtime unless invoked by an installed plugin surface. | `repository-only-exclusion` | `repository-only-exclusion` | No installed plugin invocation trace found for these repository-only surfaces. | Exclude from runtime porting scope unless a later spec intentionally promotes one of these helpers into installed runtime. |
+| REPO-ONLY-001 | 1,714 scan hits across 90 repository-only files such as `.github/**`, `.claude/**`, root scripts, docs-site configuration, release metadata, and SpecKit extensions. | `repository-only-exclusion` | `not-active-runtime` | Maintainer, CI, release, and repository scaffolding commands may require Bash or Unix assumptions, but they are not installed Claude/Codex plugin runtime unless invoked by an installed plugin surface. | `repository-only-exclusion` | `repository-only-exclusion` | No installed plugin invocation trace found for these repository-only surfaces. | Exclude from runtime porting scope unless a later spec intentionally promotes one of these helpers into installed runtime. |
 | EXCL-001 | `.git/`, untracked files, vendor/dependency caches, binary/non-text inputs skipped by `git grep -I`, and this generated report path. | `explicit-exclusion` | `not-active-runtime` | These inputs are outside the durable tracked-text source universe or would make the report recursively self-referential. | `repository-only-exclusion` | `repository-only-exclusion` | Not applicable. | Explicit exclusion details and expiry/removal conditions are recorded in the scan boundary table. |
 
 No `unproven-active-runtime` rows remain. Rows are either proven by static
@@ -233,64 +236,64 @@ Classification counts:
 
 | Classification | Represented scan hits |
 |---|---:|
-| `source-reference` | 3,722 |
-| `generated-payload-reference` | 6,976 |
+| `source-reference` | 3,735 |
+| `generated-payload-reference` | 7,002 |
 | `public-docs-claim` | 372 |
-| `tests-fixtures` | 5,636 |
+| `tests-fixtures` | 5,646 |
 | `historical-or-archive` | 2,663 |
-| `repository-only-exclusion` | 1,699 |
+| `repository-only-exclusion` | 1,714 |
 | `explicit-exclusion` | 0 |
-| **Total** | **21,068** |
+| **Total** | **21,132** |
 
 Active-runtime status counts:
 
 | Active runtime status | Represented scan hits |
 |---|---:|
-| `proven-active-runtime` | 10,654 |
+| `proven-active-runtime` | 10,693 |
 | `unproven-active-runtime` | 0 |
-| `not-active-runtime` | 10,414 |
-| **Total** | **21,068** |
+| `not-active-runtime` | 10,439 |
+| **Total** | **21,132** |
 
 Owner bucket counts:
 
 | Owner bucket | Represented scan hits |
 |---|---:|
 | `xplat-005-read-only-helper` | 1,951 |
-| `xplat-006-mutation-helper` | 1,771 |
-| `xplat-007-cutover-guidance` | 6,932 |
+| `xplat-006-mutation-helper` | 1,784 |
+| `xplat-007-cutover-guidance` | 6,958 |
 | `generated-payload-reference` | 44 |
 | `public-docs-claim` | 372 |
-| `historical-or-archive` | 8,299 |
-| `repository-only-exclusion` | 1,699 |
+| `historical-or-archive` | 8,309 |
+| `repository-only-exclusion` | 1,714 |
 | `follow-up-exception` | 0 |
-| **Total** | **21,068** |
+| **Total** | **21,132** |
 
 Follow-up spec counts:
 
 | Follow-up spec | Represented scan hits |
 |---|---:|
 | `XPLAT-005` | 1,951 |
-| `XPLAT-006` | 1,771 |
-| `XPLAT-007` | 6,932 |
+| `XPLAT-006` | 1,784 |
+| `XPLAT-007` | 6,958 |
 | `generated-payload-reference` | 44 |
 | `public-docs-claim` | 372 |
-| `historical-or-archive` | 8,299 |
-| `repository-only-exclusion` | 1,699 |
+| `historical-or-archive` | 8,309 |
+| `repository-only-exclusion` | 1,714 |
 | `follow-up-exception` | 0 |
-| **Total** | **21,068** |
+| **Total** | **21,132** |
 
 Pattern-family by row group:
 
 | Pattern family | Source read-only | Source mutation | Generated active | Generated docs | Public docs | Tests/fixtures | Historical/archive | Repo-only | Total |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Bash / shell substrate | 178 | 80 | 423 | 16 | 17 | 441 | 1,005 | 216 | 2,376 |
-| `.sh` helper references | 312 | 171 | 767 | 10 | 333 | 1,026 | 1,317 | 196 | 4,132 |
-| `jq` references | 249 | 229 | 942 | 2 | 3 | 236 | 147 | 76 | 1,884 |
-| Shell quoting / shell operators | 1,105 | 1,046 | 4,163 | 2 | 5 | 3,247 | 115 | 1,066 | 10,749 |
-| Unix path assumptions | 104 | 241 | 623 | 14 | 14 | 643 | 48 | 122 | 1,809 |
+| Bash / shell substrate | 178 | 80 | 423 | 16 | 17 | 441 | 1,005 | 219 | 2,379 |
+| `.sh` helper references | 312 | 171 | 767 | 10 | 333 | 1,030 | 1,317 | 205 | 4,145 |
+| `jq` references | 249 | 229 | 942 | 2 | 3 | 236 | 147 | 77 | 1,885 |
+| Shell quoting / shell operators | 1,105 | 1,059 | 4,189 | 2 | 5 | 3,252 | 115 | 1,066 | 10,793 |
+| Unix path assumptions | 104 | 241 | 623 | 14 | 14 | 644 | 48 | 124 | 1,812 |
 | `chmod` references | 0 | 0 | 0 | 0 | 0 | 33 | 22 | 3 | 58 |
 | Line-ending references | 3 | 4 | 14 | 0 | 0 | 10 | 9 | 20 | 60 |
-| **Total** | **1,951** | **1,771** | **6,932** | **44** | **372** | **5,636** | **2,663** | **1,699** | **21,068** |
+| **Total** | **1,951** | **1,784** | **6,958** | **44** | **372** | **5,646** | **2,663** | **1,714** | **21,132** |
 
 ## Runtime Evaluation Rubric for XPLAT-002
 
@@ -384,7 +387,7 @@ Static verification for XPLAT-001:
 
 | Check | Result |
 |---|---|
-| Scan commands rerun and counts reconciled | Passed: all seven recorded scan families matched the report counts, total 21,068 represented scan hits. |
+| Scan commands rerun and counts reconciled | Passed: all seven recorded scan families matched the report counts, total 21,132 represented scan hits. |
 | Proven active rows reviewed for caller-to-callee trace evidence | Passed: source active rows cite installed skill, hook, agent, or helper-script traces; generated active rows cite marketplace payload manifests. |
 | Docs/generated/tests/archive/repo-only rows reviewed for false active-runtime promotion | Passed: docs, generated docs, tests, archive/spec, and repo-only rows remain `not-active-runtime` without separate invocation traces. |
 | `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` | Passed: `spec-index: index current — all in-scope maps up to date.` |
@@ -408,6 +411,8 @@ What changed:
 
 - Added this Markdown inventory and rubric report.
 - Updated the XPLAT roadmap handoff notes.
+- Corrected scoped roadmap-MOC index generation after PR review and synchronized
+  the existing helper into generated Claude/Codex payload copies.
 
 Why:
 
@@ -416,8 +421,10 @@ Why:
 
 Non-goals:
 
-- No helper ports, generated payload rebuilds, runtime selection, security model
-  selection, or public native Windows support claims.
+- No helper ports to a replacement runtime, runtime selection, security model
+  selection, or public native Windows support claims. Generated payload changes
+  are limited to synchronized copies of the existing spec-index helper
+  remediation.
 
 Review order:
 
@@ -448,5 +455,5 @@ Known gaps:
 
 Rollback:
 
-- Revert this report and the roadmap handoff update. No runtime behavior or
-  generated payload was changed.
+- Revert this report, the roadmap handoff update, and the scoped spec-index
+  generator remediation plus synchronized generated payload copies.

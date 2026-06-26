@@ -106,7 +106,7 @@ As a security/trust decision-maker, I can use a weighted supply-chain evaluation
 - **FR-008**: The runtime evaluation rubric MUST define pass/fail must-have gates, explicit numeric criteria weights with a stated total, and candidate evidence targets for XPLAT-002.
 - **FR-009**: The supply-chain evaluation rubric MUST define pass/fail must-have gates, explicit numeric criteria weights with a stated total, artifact/control evidence targets for XPLAT-003, and a release-boundary distinction between first-release gate questions and deferred hardening evidence.
 - **FR-010**: XPLAT-001 artifacts MUST NOT score candidates, rank candidates, select a replacement runtime, or select supply-chain/security controls.
-- **FR-011**: XPLAT-001 artifacts MUST NOT port helpers, change active Claude or Codex invocations, rebuild generated payloads, or claim native Windows support in public docs.
+- **FR-011**: XPLAT-001 artifacts MUST NOT port helpers to a replacement runtime, change active Claude or Codex invocation paths, or claim native Windows support in public docs. If review remediation corrects an existing shipped helper, generated payload edits MUST be limited to synchronized copies of that same helper.
 - **FR-012**: Verification MUST be static and source-traceable, with no native Windows UAT, runtime smoke probes, or platform execution probes required in this spec.
 - **FR-013**: The durable report MUST be Markdown under `docs/ai/research/` and use structured tables, owner buckets, and summary counts.
 - **FR-014**: The report MUST include enough evidence for reviewers to verify that later XPLAT runtime work is scoped to real active dependencies rather than untraced text matches.
@@ -124,7 +124,7 @@ As a security/trust decision-maker, I can use a weighted supply-chain evaluation
 - **Projected production files**: 4
 - **Projected total files**: 10
 - **Budget result**: warning accepted
-- **Split decision**: Remains one spec because XPLAT-001 is a single inventory/rubric spike with no runtime implementation, no generated payload rebuild, and no active invocation changes. The setup warning is driven by two review surfaces, not by implementation size.
+- **Split decision**: Remains one spec because XPLAT-001 is a single inventory/rubric spike with no replacement-runtime implementation and no active invocation path changes. The setup warning is driven by two review surfaces, not by implementation size; post-PR generated payload edits are limited to synchronized copies of an existing helper remediation.
 
 ### PR Review Packet Requirements *(mandatory)*
 
@@ -154,7 +154,7 @@ As a security/trust decision-maker, I can use a weighted supply-chain evaluation
 - **SC-005**: The runtime rubric includes pass/fail must-have gates and numeric weighted criteria with a stated total covering native platform behavior, installed-cache invocation, dependency footprint, packaging, offline behavior, diagnostics, maintainability, and compatibility adapters.
 - **SC-006**: The supply-chain rubric includes pass/fail must-have gates and numeric weighted criteria with a stated total covering dependency policy, lockfiles, generated payload integrity, vulnerability scanning, provenance, checksums/signatures, SBOMs, and consumer-local verification, with each criterion or control evidence target clearly separated as a first-release gate question or deferred hardening evidence for XPLAT-003 decision-making.
 - **SC-007**: No XPLAT-001 artifact scores, ranks, or selects a runtime candidate or supply-chain/security model.
-- **SC-008**: No XPLAT-001 change ports helper behavior, changes active installed Claude/Codex invocation paths, rebuilds generated payloads, or claims native Windows support.
+- **SC-008**: No XPLAT-001 change ports helper behavior to a replacement runtime, changes active installed Claude/Codex invocation paths, or claims native Windows support. Any generated payload edit is limited to source-to-dist synchronization for an existing helper remediation.
 
 ## Assumptions
 

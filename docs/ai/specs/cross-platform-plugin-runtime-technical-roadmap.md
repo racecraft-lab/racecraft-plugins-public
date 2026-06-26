@@ -222,7 +222,7 @@ implementation.
 
 **Completion Handoff:**
 
-- Inventory represented 21,068 scan hits across the scoped runtime-assumption
+- Inventory represented 21,132 scan hits across the scoped runtime-assumption
   families: shell substrate, script-file references, JSON query usage, shell
   quoting/operators, Unix paths, file-mode changes, and newline policy.
 - Active installed-runtime rows map to XPLAT-005 read-only helper work,
@@ -230,8 +230,10 @@ implementation.
   payload cutover guidance.
 - XPLAT-002 should use the non-scoring runtime rubric in the report.
 - XPLAT-003 should use the non-scoring supply-chain rubric in the report.
-- XPLAT-001 did not port helpers, rebuild generated payloads, change active
-  installed invocations, score candidates, or select controls.
+- XPLAT-001 did not port helpers to a replacement runtime, change active
+  installed invocation paths, score candidates, or select controls. Post-PR
+  review remediation synchronized generated payload copies of the existing
+  spec-index helper only.
 
 ---
 

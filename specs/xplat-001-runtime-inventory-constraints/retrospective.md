@@ -16,8 +16,10 @@ positive_findings: 3
 
 XPLAT-001 completed as a static docs/process spike. The implementation produced
 the durable inventory report, runtime rubric, supply-chain rubric, roadmap
-handoff, final gate evidence, and UAT runbook without changing installed runtime
-behavior or generated payloads.
+handoff, final gate evidence, and UAT runbook. Post-PR review remediation also
+corrected scoped roadmap-MOC index generation and synchronized the existing
+helper into generated Claude/Codex payload copies, without porting helpers to a
+replacement runtime or changing installed invocation paths.
 
 Task completion was 32 of 32 tasks. Spec adherence is assessed at 100% because
 all functional requirements and success criteria are represented in the report,
@@ -41,7 +43,7 @@ None. No `spec.md` edits are recommended.
 | FR-008 | Implemented | Runtime rubric includes gates, 100-point weights, and candidate evidence targets. |
 | FR-009 | Implemented | Supply-chain rubric includes gates, 100-point weights, evidence targets, and release-boundary labels. |
 | FR-010 | Implemented | Report and roadmap avoid scoring, ranking, or selecting candidates/controls. |
-| FR-011 | Implemented | No helper ports, active invocation changes, generated payload rebuilds, or Windows support claims. |
+| FR-011 | Implemented | No helper ports to a replacement runtime, active invocation path changes, or Windows support claims; generated payload edits are limited to synchronized copies of the existing spec-index helper remediation. |
 | FR-012 | Implemented | Verification is static and source-traceable. |
 | FR-013 | Implemented | Durable report is Markdown under `docs/ai/research/`. |
 | FR-014 | Implemented | Report gives reviewer evidence for later XPLAT scoping. |
@@ -50,14 +52,14 @@ None. No `spec.md` edits are recommended.
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| SC-001 | Met | 21,068 represented scan hits reconcile after the latest `main` merge. |
+| SC-001 | Met | 21,132 represented scan hits reconcile after the latest `main` merge and review remediation. |
 | SC-002 | Met | Proven active rows include invocation traces. |
 | SC-003 | Met | Inventory rows include required schema fields or documented exclusions. |
 | SC-004 | Met | Summary count tables cover all used values. |
 | SC-005 | Met | Runtime rubric totals 100 and includes required dimensions. |
 | SC-006 | Met | Supply-chain rubric totals 100 and separates first-release/deferred/not-claimed boundaries. |
 | SC-007 | Met | No runtime or supply-chain candidate is scored, ranked, or selected. |
-| SC-008 | Met | Diff contains no runtime behavior, generated payload, or public Windows-support change. |
+| SC-008 | Met | Diff contains no replacement-runtime behavior, active invocation path change, or public Windows-support change; generated payload edits are synchronized copies of the existing spec-index helper remediation. |
 
 ## Architecture Drift
 
@@ -74,10 +76,15 @@ None.
 
 ## Minor Deviations
 
-- The final reviewability backstop produced a warning because the full PR diff
-  spans 20 files and 3 primary surfaces after including workflow, spec, report,
-  UAT, and evidence artifacts. The warning is recorded and does not block PR
-  creation.
+- The final reviewability backstop produced a warning because its scoped gate
+  input counted 20 files and 3 primary surfaces after including workflow, spec,
+  report, UAT, and evidence artifacts. The full PR diff contains 23 changed
+  files because it also includes generated roadmap-MOC refreshes. The warning is
+  recorded and does not block PR creation.
+- Post-PR review remediation expanded the diff beyond the original inventory-only
+  artifact set by correcting the existing spec-index generator and synchronized
+  generated payload copies. This is intentionally recorded as remediation, not as
+  a cross-platform runtime port.
 
 ## Innovations and Best Practices
 
@@ -92,7 +99,7 @@ None.
 
 | Principle | Result | Evidence |
 |-----------|--------|----------|
-| Plugin Structure Compliance | Pass | No installed plugin runtime files or generated payloads were changed. |
+| Plugin Structure Compliance | Pass | Existing spec-index helper changes were synchronized to generated Claude/Codex payload copies; no active invocation path or replacement-runtime port was added. |
 | Script Safety | Pass | No new shipped helper script was added. |
 | Test Coverage Before Merge | Pass | Static scans, G7, spec-index, diff hygiene, full shell suite, and PR checks passed. |
 | Conventional Commits | Pass | Checkpoint commits use conventional prefixes/scopes. |
