@@ -38,5 +38,8 @@ slice artifacts in the body below.
 - [checklists/maintainability.md](checklists/maintainability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
+- [.process/final-reviewability/gate-state.json](.process/final-reviewability/gate-state.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
+- [retrospective.md](retrospective.md)
 <!-- GENERATED:BACKLINKS:END -->
