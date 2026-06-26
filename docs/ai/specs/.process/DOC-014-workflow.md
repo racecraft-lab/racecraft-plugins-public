@@ -42,7 +42,7 @@ roadmap text / sibling site — keep them in view:
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass, 0 clarification markers; 29 FR / 6 US / 18 AC / 10 SC |
 | Clarify | `/speckit-clarify` | ✅ Complete | G2 pass; 3 sessions, 4 consensus resolutions. Key: custom `.md` endpoint, route-middleware JSON-LD, Person=F.Gabelmann, astro-og-canvas, git-lastmod serialize, retarget DOC-011 robots gate, fetch-depth:0 |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass; 5 artifacts + 11 contracts (C1–C11), 6 entities, all 29 FR/10 SC traced. Advisory LOC estimate `pass` (proj 520 mechanical; real reviewable ~300–360 < 400). |
-| Checklist | `/speckit-checklist` | ⏳ Pending | Domains: seo-metadata, performance, error-handling |
+| Checklist | `/speckit-checklist` | ✅ Complete | G4 pass; 3 domains, 81 items, 27 gaps all remediated, 0 unresolved. Spec/plan hardened (single-source robots, publisher@id invariant, bulk git-log sitemap, no-history lastmod omission, fail-loud all surfaces). |
 | Tasks | `/speckit-tasks` | ⏳ Pending | |
 | Analyze | `/speckit-analyze` | ⏳ Pending | Watch for drift from the 3 divergences above |
 | Implement | `/speckit-implement` | ⏳ Pending | TDD; port sibling `e2e/seo-*.spec` patterns |
@@ -345,10 +345,10 @@ Focus on SEO and AI discoverability requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| seo-metadata | | | |
-| performance | | | |
-| error-handling | | | |
-| **Total** | | | |
+| seo-metadata | 41 | 4 (all remediated, 0 unresolved → consensus skipped) | FR-001/002/003/004/**004a**(new)/010/011/012/**013**(extended)/014/024/027 + new "full git history at build" assumption |
+| performance | 20 | 11 (all remediated, 0 unresolved → consensus skipped) | plan.md Performance Goals/Constraints + spec "build-time cost" assumption. **KEY:** sitemap `serialize()` MUST use a single bulk `git log` walk (slug→date map), not per-page subprocess (O(pages) slow path); carry as a Tasks constraint. OG/.md/llms costs proportionate, no caching (KISS). |
+| error-handling | 20 | 12 (all remediated, 0 unresolved → consensus skipped) | FR-017/FR-018 tightened + 2 new edge cases + plan "Build-failure posture (all surfaces, never silent)". **No-git-history `lastmod`:** (1) frontmatter date if pinned, else (2) OMIT `<lastmod>` (spec-valid, never build time); visible stamp follows same order. |
+| **Total** | 81 | 27 (all remediated, 0 unresolved → all 3 consensus tasks skipped) | seo-metadata 41 / performance 20 / error-handling 20 |
 
 ---
 

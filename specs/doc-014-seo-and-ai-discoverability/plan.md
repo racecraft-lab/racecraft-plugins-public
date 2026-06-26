@@ -59,13 +59,50 @@ owns the launch flip to the production domain).
 marketplace monorepo. All work is scoped to `docs-site/` plus one CI workflow
 line and one success-metric doc.
 
-**Performance Goals**: N/A (build-time generation; no runtime perf target).
+**Performance Goals**: No *runtime* perf target — every new surface is produced
+at `astro build` with `prerender = true` and served as a static artifact, so it
+adds zero request-time/served cost (DOC-017 owns the runtime Lighthouse budget).
+The relevant cost dimension here is **build time + build-output size**, and the
+expectation is that both stay within reasonable bounds for the current ~19 content
+pages and scale linearly as that set grows. Cost breakdown:
+- **OG cards (`astro-og-canvas` / canvaskit-wasm)**: a one-time CanvasKit/Skia WASM
+  load plus one small PNG render per content page (~19 renders), all at build time
+  via `OGImageRoute` `getStaticPaths`. This is the proven Starlight OG path; no
+  caching layer is warranted at this scale (KISS). Output = ~19 small PNGs in
+  `dist`. The cards are referenced only in `<head>` (`og:image`/`twitter:image`)
+  and are **not** render-blocking or on-page-loaded assets (contracts C6).
+- **Per-page `.md` (`[...slug].md.ts`)**: a raw-`body` passthrough per page (no
+  rendering), trivially cheap; output is bounded text proportional to content. It
+  is a separate fetchable route, not an asset the rendered HTML loads (contracts C4).
+- **llms.txt digests (`starlight-llms-txt`)**: three build-time text passes over
+  the content model; bounded text output, separate routes (contracts C5).
+- **Sitemap `<lastmod>` git lookups**: see the batched-lookup constraint below —
+  the dates MUST be collected with a single bulk `git log` walk, not one
+  subprocess per page.
+- **Build-failure posture (all generated surfaces, never silent)**: OG cards, the
+  per-page `.md` endpoint, the `starlight-llms-txt` digests, the sitemap, and the
+  JSON-LD graph are all produced inside `astro build`, so a generation error on ANY
+  of them fails the build loudly rather than silently shipping a missing/broken/empty
+  artifact for a page. "Loud" is verifiable because that `astro build` is the step
+  inside `pnpm --dir docs-site validate` that the `validate-docs` CI job runs — a
+  failed generation is a non-zero build, not a degraded output (spec Edge Cases
+  "Generation failure for a single page must not ship silently"; consistent with the
+  deterministic `validate` gate). The `robots.txt` endpoint and per-page `.md` are
+  `prerender = true`, so they are produced at build time and served as static files
+  with no request-time/runtime failure path — "always emits a valid response" is a
+  structural property of static generation, not runtime error handling (FR-001).
 
 **Constraints**: Keep `site: 'https://racecraft-lab.github.io'` +
 `base: '/racecraft-plugins-public'` (no hardcoded production domain — FR-012);
 keep the DOC-011 `noindex, nofollow` head guard intact (FR-029); single canonical
 source — do NOT add `astro-seo` (FR-027); no `FAQPage`/`HowTo` and no
-`Accept`-header content negotiation (FR-028); KISS/YAGNI (constitution VI).
+`Accept`-header content negotiation (FR-028); KISS/YAGNI (constitution VI). The
+sitemap `serialize()` MUST collect per-page git dates with a **single bulk
+`git log` walk**, not one `git log` subprocess per page — per-file invocation is
+a known O(pages) build-cost problem (withastro/astro#16803), and Starlight's own
+`lastUpdated` already uses a bulk walk; the feature MUST NOT add new
+render-blocking or on-page-loaded assets (build outputs are off-page routes/PNGs
+referenced only in `<head>`), so DOC-017 inherits a clean perf baseline.
 
 **Scale/Scope**: 19 content pages (12 hand-authored + 7 generated reference).
 ~300–360 reviewable production LOC (human estimate), one spec, no split.
@@ -314,6 +351,41 @@ DOC-004/007/008/010/011 docs-site conventions already recorded in CLAUDE.md.
   the `validateDocsQuality()` runner (~line 506).
 - **OG assets** (`.ttf`/`.otf` + PNG): CanvasKit rejects `woff2`/`SVG`. These are
   build inputs under `docs-site/src/assets/og/`, excluded from reviewable LOC.
+- **Sitemap git dates — batch, do NOT call `git log` per page.** The custom
+  `serialize()` MUST resolve every page's commit date from a **single** bulk
+  `git log` walk built once before serialize runs (e.g. one
+  `git log --name-only --pretty=%cI` pass, or `git log -1 --format=%cI -- <all
+  files>` collected into a slug→date map), not one `git log -1 --pretty=%cI <file>`
+  subprocess per page. Per-file invocation is O(pages) subprocess spawns and is the
+  documented slow path (withastro/astro#16803); Starlight's `lastUpdated` (D7)
+  already does a bulk walk for the same data. The per-page frontmatter date
+  override (FR-017) is applied on top of the map. This keeps build cost flat as the
+  page set grows and is a build-only cost (zero served/runtime cost). The git
+  invocation also interacts with the docs-site safe-aids guard
+  (`validate-doc006-safe-aids.mjs` flags `child_process`); confirm the sitemap
+  config path is within the guard's allowed surface during implementation.
+- **Sitemap `<lastmod>` for a page with no commit history (FR-017 edge).** The bulk
+  `git log --name-status` walk OMITS any file with no commit history (a brand-new
+  uncommitted page, or one absent on a shallow→deep clone) — verified against
+  Starlight's `getAllNewestCommitDate`, which never adds a map entry for an unseen
+  file. The custom `serialize()` MUST therefore resolve such a page's `lastmod` as:
+  (1) an explicit frontmatter date if the page pins one; (2) otherwise leave the
+  entry's `lastmod` **undefined** so `@astrojs/sitemap` omits the `<lastmod>` element
+  for that URL (spec-valid — `<lastmod>` is optional in the sitemap protocol). It
+  MUST NOT default to `new Date()` / build time, and MUST NOT let `@astrojs/sitemap`'s
+  build-time `lastmod` option fill it in (do not set the integration's top-level
+  `lastmod` option). For the matching visible stamp, prefer a frontmatter
+  `lastUpdated`/date on a new page; absent one, the stamp is simply not shown
+  (Starlight's per-file commit-date lookup THROWS on a file with no timestamp, so the
+  per-file path is NOT used for these — the frontmatter override is the supported
+  remedy). This keeps the visible date and the sitemap `<lastmod>` consistent on the
+  no-history path (FR-017, FR-018, SC-007).
+- **`robots.txt` Sitemap line derivation.** The `Sitemap:` absolute URL is built from
+  `site`+`base` at build time. If that derivation cannot produce a valid absolute URL,
+  the endpoint MUST fail the build (a thrown error in the prerendered route) rather
+  than emit a policy with a blank/missing `Sitemap:` line — `site`+`base` are
+  statically configured (Constraints), so this is a build-time invariant, never a
+  runtime path.
 
 ## Complexity Tracking
 
