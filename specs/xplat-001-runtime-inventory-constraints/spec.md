@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-25
 
-**Status**: Draft
+**Status**: Complete
 
 **Input**: User description: "Inventory active Bash, jq, shell quoting, Unix-path, chmod, and related Unix runtime assumptions across the repository; classify them by runtime relevance and owner bucket; produce Markdown inventory and weighted runtime/security rubrics without selecting or implementing a replacement runtime."
 
