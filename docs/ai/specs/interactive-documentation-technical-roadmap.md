@@ -561,6 +561,7 @@ Budget result: within budget
 - Reconcile gate numbering to G0-G7 in `spec-kit-lifecycle.mdx`; normalize "Spec Kit" vs "SpecKit" to one deliberate convention; fix `specify version` -> `specify --version`.
 - Add an editorial linter to `validate-docs-quality.mjs` (deny-list of internal tokens like `DOC-0\d\d`, "owner DOC", "Deferred Boundary") so leaks cannot recur.
 - Apply a light answer-first style in the same pass: lead each page/section with the answer (BLUF) and keep sections self-contained, so prose is cleanly chunked and citable by AI engines. Style only — do **not** inject manufactured statistics or citation density (install/reference docs have little to legitimately cite; manufacturing it is anti-value). This is the single content-side GEO lever the roadmap owns: DOC-014 owns the metadata, DOC-015 owns the prose.
+- **Refresh the meta descriptions DOC-014 authored (handoff from DOC-014).** DOC-014 added a `description:` to all ~19 content pages solely to satisfy the presence gate (`validateMetaDescriptions`); they are placeholder-quality. In this prose pass, rewrite each to be accurate and compelling. The 7 generated reference-page descriptions live in `docs-site/scripts/generate-reference-pages.mjs` (`renderPage()` frontmatter), NOT the generated `.md` files — refresh them there so `pnpm --dir docs-site reference:generate` stays idempotent.
 
 **Out of Scope:**
 - IA restructuring or new pages.
