@@ -24,9 +24,9 @@ import {
  *    SoftwareApplication when the route slug is in the `pluginPages` allowlist
  *    (the landing page — FR-014). The WebSite `publisher["@id"]` equals the
  *    Organization `@id` (C2 cross-reference). NO `FAQPage`/`HowTo` (FR-028).
- *  - WP5/T029 (TODO below): push per-page `og:image` / `twitter:image` `<meta>`
- *    tags pointing at the `og/[...slug].ts` card for the current route, onto the
- *    SAME `head` array.
+ *  - WP5/T029 (implemented below): pushes per-page `og:image` / `twitter:image`
+ *    `<meta>` tags pointing at the `og/[...slug].ts` card for the current route,
+ *    onto the SAME `head` array.
  *
  * `SITE_BASE` derives from `site` + `base` (via `astro:config/server`, the same
  * source `robots.txt.ts` uses), so every `@id`/URL finalizes automatically at the

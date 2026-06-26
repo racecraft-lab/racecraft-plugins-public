@@ -83,7 +83,8 @@ export function buildOrganizationSchema(siteBase: string): OrganizationSchema {
     '@type': 'Organization',
     '@id': `${siteBase}#organization`,
     name: 'Racecraft Lab',
-    url: siteBase,
+    // Trailing slash to match Starlight's canonical homepage URL (trailingSlash: 'always').
+    url: `${siteBase}/`,
     logo: { '@type': 'ImageObject', url: `${siteBase}/favicon.svg` },
     sameAs: ['https://github.com/racecraft-lab'],
   };
@@ -97,7 +98,7 @@ export function buildWebSiteSchema(siteBase: string): WebSiteSchema {
   return {
     '@type': 'WebSite',
     '@id': `${siteBase}#website`,
-    url: siteBase,
+    url: `${siteBase}/`,
     name: 'Racecraft Public Plugins',
     publisher: { '@id': `${siteBase}#organization` },
   };

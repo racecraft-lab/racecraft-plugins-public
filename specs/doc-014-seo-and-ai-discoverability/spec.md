@@ -183,7 +183,9 @@ A maintainer wants to know whether the "AI-discoverable" goal is being met. The 
 
 ### Reviewability Notes *(if applicable)*
 
-- No typed reviewability exception is requested. This feature is ordinary docs-site enhancement work and does not invoke a refactor, infra, or upgrade override. Generated agent-readable digests, per-page text variants, and generated social-card images are build outputs, not hand-reviewed source, and are excluded from the reviewable-LOC estimate below.
+Reviewability-Exception: infra
+
+- **Typed reviewability exception (infra).** This feature is predominantly docs-site **infrastructure** — a crawler-access policy endpoint, a sitemap freshness `serialize`, a route-data structured-data + Open-Graph injection layer, a per-page Markdown endpoint, a build-output quality-gate rule, and a deploy-workflow checkout change — wired across one cohesive `astro.config` + route-head surface. The post-Tasks atomicity classifier returned `one-navigable-PR`: there is no safe structural seam (the documented A/B split would have both PRs editing `astro.config.mjs` and `src/routeData.ts`), so the change is not safely sliceable. Roughly 615 of the ~1321 reviewable LOC are the six Playwright e2e specs that cover every SEO surface; the change is additive, releasable, and stays behind the DOC-011 noindex staging guard, and the PR review packet provides a guided review order. Generated agent-readable digests, per-page text variants, and generated social-card images are build outputs, not hand-reviewed source, and are excluded from the reviewable-LOC estimate below.
 
 ### Reviewability Budget *(mandatory)*
 
