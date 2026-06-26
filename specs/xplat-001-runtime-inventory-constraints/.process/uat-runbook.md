@@ -3,8 +3,8 @@
 | Field | Value |
 |-------|-------|
 | Spec | xplat-001-runtime-inventory-constraints |
-| Branch | xplat-001-runtime-inventory-constraints |
-| PR | **PR:** <set on PR open> |
+| Branch | codex/xplat-001-runtime-inventory-constraints |
+| PR | [PR #263](https://github.com/racecraft-lab/racecraft-plugins-public/pull/263) |
 | Generated from | 2026-06-25T23:34:26Z |
 
 ## Env Setup

@@ -2,7 +2,7 @@
 up: "[Cross-Platform Plugin Runtime Roadmap](cross-platform-plugin-runtime-technical-roadmap.md)"
 related:
   - "[Cross-Platform Plugin Runtime PRD](../../prd-cross-platform-plugin-runtime.md)"
-status: "XPLAT specs pending"
+status: "XPLAT-001 complete; XPLAT-002 through XPLAT-007 pending"
 rank:
 spec_id: "cross-platform-plugin-runtime"
 structureVersion: 1

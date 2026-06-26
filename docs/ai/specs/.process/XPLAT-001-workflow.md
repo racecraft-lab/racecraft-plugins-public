@@ -459,6 +459,12 @@ Proceed decision: current task gate block is treated as size/scope evidence for
 this one report-focused docs/process spike, not as a correctness stop. It is
 recorded for final reviewability and PR packet handling.
 
+Marker-plan handling: this task gate result is not marker-planning input. The
+block came from task-estimator size/scope over-counting for a docs/process
+inventory spike, while atomicity routing selected `one-navigable-PR` and final
+reviewability later completed with warn/proceed and no blocked operations. The
+state file records `pr_marker_plan.status=not_required`.
+
 ---
 
 ## Atomicity Route
@@ -608,7 +614,7 @@ Also run any focused report or docs validation command created by the plan/tasks
 | UAT Runbook Generation | Complete | Skeleton generation succeeded at `specs/xplat-001-runtime-inventory-constraints/.process/uat-runbook.md`. The dedicated `uat-runbook-author` role was not exposed by the current multi-agent tool, so the parent rewrote the runbook in place. |
 | PR Packet/Body Generation | Pass | Generated transient packet `/private/tmp/xplat-001-pr-packet.json` and repo-relative transient body `specs/xplat-001-runtime-inventory-constraints/.process/pr-body.md`; `validate-pr-packet.sh` and `validate-pr-workflow-contract.sh` passed. |
 | PR Creation | Complete | Opened [PR #263](https://github.com/racecraft-lab/racecraft-plugins-public/pull/263). |
-| Review Remediation | Complete | No review feedback was present. PR checks completed successfully; one matrix test was skipped by workflow. Merge state: `CLEAN`. |
+| Review Remediation | Complete | `rp-review-cli` found 5 actionable state/report findings after PR creation; this remediation pass corrected the count split, marker-plan explanation, UAT PR/branch metadata, branch prerequisite state, and roadmap MOC status. |
 | Retrospective | Complete | Saved `specs/xplat-001-runtime-inventory-constraints/retrospective.md`; completion 100%, spec adherence 100%, critical findings 0. |
 
 ## Self-Review

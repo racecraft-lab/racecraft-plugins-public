@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T00:26:15Z",
+  "updated_at": "2026-06-26T01:25:16Z",
   "active_step": "Complete",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
@@ -18,7 +18,7 @@
     "all_pass": true,
     "branch": "codex/xplat-001-runtime-inventory-constraints",
     "is_worktree": true,
-    "on_feature_branch": false,
+    "on_feature_branch": true,
     "confidence_gate_mode": "advisory",
     "capability_coverage": "advisory coverage present",
     "agents": {
@@ -71,7 +71,13 @@
       "scheduler/runtime",
       "seed/config"
     ],
-    "proceed_decision": "recorded as current size/scope evidence; no correctness blocker detected"
+    "proceed_decision": "recorded as current size/scope evidence; no correctness blocker detected",
+    "marker_plan_handling": "not marker-planning input; the block came from task-estimator size/scope over-counting for a docs/process inventory spike, while atomicity routing selected one-navigable-PR and final reviewability later produced warn/proceed with no blocked operations"
+  },
+  "pr_marker_plan": {
+    "status": "not_required",
+    "reason": "Task reviewability block was retained as size/scope evidence only. No split-PR or marker-plan state is required because atomicity routing selected one-navigable-PR and final reviewability completed with warn/proceed.",
+    "source": "task_reviewability_gate"
   },
   "atomicity_route": {
     "route": "one-navigable-PR",
@@ -458,7 +464,9 @@
       "step": "Post: Review Remediation",
       "status": "completed",
       "result": {
-        "status": "no_remediation_needed",
+        "status": "rp_review_findings_remediated",
+        "tool": "rp-review-cli",
+        "findings": 5,
         "review_decision": "",
         "merge_state_status": "CLEAN",
         "checks": "all completed checks passed; one matrix test was skipped by workflow"
