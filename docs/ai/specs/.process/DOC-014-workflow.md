@@ -45,7 +45,7 @@ roadmap text / sibling site — keep them in view:
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass; 3 domains, 81 items, 27 gaps all remediated, 0 unresolved. Spec/plan hardened (single-source robots, publisher@id invariant, bulk git-log sitemap, no-history lastmod omission, fail-loud all surfaces). |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass; 34 tasks (T001–T035), 8 `[P]`, 9 phases, all US1–US6 + D1–D12 covered. Atomicity route = one-navigable-PR (no split). |
 | Analyze | `/speckit-analyze` | ✅ Complete | G6 pass (0 CRITICAL/HIGH); G6.5 confidence NO_DATA→soft-skip (advisory). 0 unresolved → consensus skipped. 5 findings remediated (2 MEDIUM + 3 LOW). All 7 divergences/constraints intact; 100% SC/US/contract/entity coverage. |
-| Implement | `/speckit-implement` | ⏳ Pending | TDD; port sibling `e2e/seo-*.spec` patterns |
+| Implement | `/speckit-implement` | ✅ Complete | G7 pass (34/34 tasks). 6 work-packages, all TDD-verified. `pnpm --dir docs-site validate` green (88/88 e2e). 5 source files + 6 e2e specs + 19 descriptions + CI fetch-depth + metric doc. |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
 
@@ -503,10 +503,12 @@ For each task: RED (failing test) -> GREEN (minimum impl) -> REFACTOR -> VERIFY.
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| 1 - Foundation (integrations) | | | |
-| 2 - Crawler & agent access | | | |
-| 3 - Metadata & structured data | | | |
-| 4 - Metric + polish | | | |
+| WP1 - Foundation (deps/config/skeletons) | T001-T006, T009A | ✅ | astro-og-canvas+canvaskit, starlight-llms-txt, @astrojs/sitemap; schema.ts + routeData.ts skeleton; `astro check` clean |
+| WP2 - Crawler & agent access (US1/US2) | T010-T012a, T015-T016, T031 | ✅ | robots.txt.ts 3-tier (training inverted); DOC-011 gate retargeted, noindex kept; 14/14 e2e |
+| WP3 - Agent content (US3) | T017-T019 | ✅ | per-page .md endpoint (19=1:1); 3 llms digests; 6/6 e2e |
+| WP4 - Metadata & structured data (US4) | T013-T014, T020-T025 | ✅ | JSON-LD (publisher@id==Org@id, Person, SoftwareApplication@index); git-lastmod bulk-walk; 19 descriptions + gate; 10/10 e2e + negative gate test |
+| WP5 - Open Graph cards (US5) | T003, T028-T029 | ✅ | astro-og-canvas OGImageRoute (19 PNGs); og/twitter:image (no dup twitter:card); 4/4 e2e |
+| WP6 - Metric doc + polish | T026-T027, T030, T032-T035 | ✅ | success-metric doc (no numeric target); deploy fetch-depth:0; DOC-015 refresh handoff; full validate 88/88 |
 
 ---
 
