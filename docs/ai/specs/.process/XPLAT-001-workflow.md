@@ -604,6 +604,38 @@ Also run any focused report or docs validation command created by the plan/tasks
 | Verify Tasks Phantom Check | Pass | 32 completed tasks verified; 0 partial, weak, missing, or skipped task claims. |
 | Code Review | Completed with remediation | Independent review found one medium traceability issue in the input-universe command table; fixed by adding the same report-path exclusion used by the recorded counts. |
 | Integration Suite | Pass | `bash tests/speckit-pro/run-all.sh` passed `3609/3609`. |
+| Final Reviewability Backstop | Warn, proceeds | `final-reviewability-backstop.sh` wrote `specs/xplat-001-runtime-inventory-constraints/.process/final-reviewability/gate-state.json`; blocked operations: none. Warnings: total files 20 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1. |
+| UAT Runbook Generation | Complete | Skeleton generation succeeded at `specs/xplat-001-runtime-inventory-constraints/.process/uat-runbook.md`. The dedicated `uat-runbook-author` role was not exposed by the current multi-agent tool, so the parent rewrote the runbook in place. |
+
+## Self-Review
+
+1. **Tests executed?** Yes for the checks applicable to this static docs/process
+   spike. `BUILD`, `TYPECHECK`, `LINT`, `UNIT_TEST`, and
+   `INTEGRATION_TEST` were detected as `N/A` during preflight. The equivalent
+   static verification ran and passed after the latest `origin/main` merge:
+   scan-count reconciliation, `generate-spec-index.sh --check "$PWD"`, `git
+   diff --check`, G7, and the full repository suite
+   `bash tests/speckit-pro/run-all.sh` (`3609/3609` passed).
+
+2. **Edge cases?** Acceptance coverage is artifact-based because XPLAT-001 has
+   no runtime implementation. The inventory report covers generated/source
+   duplicate references, docs-only claims, tests/fixtures/archive references,
+   repository-only helpers, mixed read/write helper ownership, ambiguous trace
+   handling, and non-scoring candidate/control mentions. No native runtime probe
+   or executable edge-case test is required by this spec.
+
+3. **Requirements matched?** All 14 functional requirements trace to completed
+   tasks and implementation evidence: FR-001 through FR-007 map to T001-T018
+   and the inventory rows/counts; FR-008 maps to T019-T021; FR-009 maps to
+   T022-T025; FR-010 through FR-012 map to report non-goals and verification;
+   FR-013 and FR-014 map to the Markdown report and roadmap handoff. Evidence
+   commits include `e2fee750`, `4110db0b`, and `8053485b`, with G7 passing.
+
+4. **Follow-up & tidiness?** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]`
+   markers were found in the spec, plan, tasks, workflow, report, or roadmap
+   handoff paths. The diff contains no helper ports, generated payload rebuilds,
+   active invocation changes, debug logging, commented-out code, temporary
+   fixtures, or orphaned files.
 
 ---
 

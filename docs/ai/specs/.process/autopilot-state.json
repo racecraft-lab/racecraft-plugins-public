@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T00:12:55Z",
-  "active_step": "Post: Reviewability Diff Gate",
+  "updated_at": "2026-06-26T00:19:04Z",
+  "active_step": "Post: PR Body Generation",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
   "status": "in_progress",
@@ -402,19 +402,38 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "status": "warn",
+        "gate_result": "warn",
+        "reason": "total files 20 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1",
+        "blocked_operations": [],
+        "evidence": "specs/xplat-001-runtime-inventory-constraints/.process/final-reviewability/gate-state.json"
+      }
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "completed",
+        "evidence": "docs/ai/specs/.process/XPLAT-001-workflow.md#self-review",
+        "edge_case_gap": false,
+        "todo_markers": 0
+      }
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "completed",
+        "skeleton_generated": true,
+        "author_agent": "unavailable in current multi-agent tool; parent rewrote skeleton in place",
+        "evidence": "specs/xplat-001-runtime-inventory-constraints/.process/uat-runbook.md"
+      }
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: PR Creation",
