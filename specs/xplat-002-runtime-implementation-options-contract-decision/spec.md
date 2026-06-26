@@ -103,6 +103,102 @@ spec responsibility.
   even though it is not selected for XPLAT-004.
 - A decision statement could be mistaken for a new public support claim.
 
+## Clarifications
+
+### Session 1: Candidate Scoring and Evidence
+
+- Candidate comparison uses a gate-first weighted evidence matrix: apply all
+  XPLAT-001 must-have gates to each candidate family, then use evidence-backed
+  0-5 ratings against the weighted criteria to support selection and rejection
+  rationale.
+- The selectable runtime candidates are limited to JavaScript/TypeScript,
+  Python, and small per-platform binary runner options. Hybrid compatibility
+  adapters may be documented as temporary migration notes, but they are not a
+  fourth selectable runtime family.
+- Required documentation evidence must come from runtime or toolchain
+  maintainers, official plugin platform documentation, or repo-local
+  source/manifests. Third-party material may be supplemental only.
+- Required smoke probes are minimal and non-mutating: runtime
+  version/availability, installed-cache or generated-payload invocation when
+  present, JSON stdin/stdout behavior, stderr/exit separation, path-with-spaces
+  handling, and shell-free subprocess or missing-command behavior. If the cache
+  or runtime is unavailable, record an evidence gap.
+- When official documentation and smoke probes conflict, record both. The
+  installed-cache probe controls invocation-reliability scoring, official docs
+  control general runtime claims, and unresolved conflict remains an evidence
+  gap unless a bounded reproduction explains the difference.
+
+### Session 2: Command Contract Envelope
+
+- The canonical runner entrypoint is `speckit-pro-runner`, resolved relative to
+  the installed plugin payload. If XPLAT-004 names a concrete path before
+  creating any new convention, the default payload-relative path is
+  `scripts/speckit-pro-runner`.
+- Helper execution reads one versioned JSON request from stdin. The request
+  includes `schema_version`, `request_id`, `helper_id`, `operation`, `mode`, and
+  `inputs`. CLI arguments are limited to metadata/help behavior such as
+  `--help` and `--version`; helper-specific arguments are not encoded in argv.
+- Successful and failed invocations emit one versioned JSON response on stdout
+  with `schema_version`, `request_id`, `helper_id`, `status`, `exit_code`,
+  `data`, `diagnostics`, and `runtime`. Stderr diagnostics are deterministic
+  line-delimited JSON objects with `severity`, `code`, `message`, `source`, and
+  `details`.
+- Runner exit codes use one common category map while preserving documented
+  legacy helper codes in `legacy_exit_code` when parity requires it:
+  `0=ok`, `1=expected helper/domain failure`, `2=input envelope/usage/schema
+  error`, `3=missing prerequisite`, `4=subprocess failure or timeout`, and
+  `5=unexpected internal failure`.
+- Path values declare their kind, such as `repo_relative`, `plugin_relative`,
+  `cache_relative`, `absolute`, or `temp`; reader-facing output prefers
+  repo/plugin-relative display paths. Subprocesses use structured argv arrays
+  with shell disabled, explicit cwd/env allowlists, captured stdout/stderr/exit,
+  timeout handling, and missing executables reported as missing prerequisites.
+  No globbing, shell interpolation, redirection, `.sh`, or `jq` fallback is
+  part of the selected contract.
+- The same runner exposes a `runtime-info` or `preflight` operation returning
+  runner name/version, contract version, selected runtime name/version,
+  platform/architecture, plugin root, source-vs-installed context, executable
+  availability, capabilities, and prerequisite records with `id`, `required`,
+  `available`, `version`, `path`, `remediation`, and `severity`.
+- XPLAT-004 fixture parity must cover success, invalid JSON, missing required
+  field, path with spaces, Windows separators, missing prerequisite,
+  subprocess nonzero, stderr-only failure, runtime-info/preflight, and at least
+  one read-only legacy-helper versus runner comparison.
+
+### Session 3: Packaging, Adapters, and Public-Claim Boundaries
+
+- Installed-cache reliability is a pass/fail gate for the selected runtime.
+  Initial plugin install or update may fetch payloads, but once the plugin cache
+  is populated the selected runner must not require `npm install`,
+  `pip install`, `uv`, `brew`, network package restoration, or any other
+  per-user dependency setup.
+- Temporary compatibility adapters are recorded as migration records, not
+  runtime candidates. Adapter IDs use the owner-first format
+  `xplat-005-compat-<legacy-helper-or-surface-slug>`,
+  `xplat-006-compat-<legacy-helper-or-surface-slug>`, or
+  `xplat-007-compat-<legacy-helper-or-surface-slug>`, with an explicit uppercase
+  `removal_spec` field preserving traceability.
+- Each adapter record includes `adapter_id`, `legacy_surface`,
+  `xplat001_source_row`, `runner_helper_id`, `runner_operation`,
+  `runner_mode`, `owner_bucket`, `owner_spec`, `removal_spec`,
+  `removal_condition`, and `evidence`.
+- XPLAT-003 receives a per-candidate supply-chain implication matrix for
+  selected and rejected runtime candidates. The matrix records dependency and
+  bootstrap footprint, manifest/lockfile impact, generated artifact shape,
+  build/release path, vulnerability-scan path, checksum/signature/SBOM/
+  provenance feasibility, consumer-local verification ideas, offline/update
+  implications, distribution trust root, transitive/build-time/native
+  dependencies, build environment inputs, runtime/install execution risk,
+  maintenance posture, and evidence gaps. XPLAT-002 records feasibility only;
+  XPLAT-003 chooses first-release, deferred, and not-claimed controls.
+- XPLAT-004 receives only the selected runtime, the `speckit-pro-runner`
+  contract, JSON/stderr/exit/path/subprocess/preflight requirements, fixture
+  parity expectations, and compatibility-adapter records.
+- XPLAT-002 must not edit README, docs-site pages, marketplace metadata,
+  changelog, release notes, or similar public surfaces to claim native support.
+  It may use decision-record, target, candidate-evidence, and handoff wording
+  only; XPLAT-007 owns public support claims after native UAT.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -110,49 +206,79 @@ spec responsibility.
 - **FR-001**: The decision record MUST evaluate JavaScript/TypeScript, Python,
   and small per-platform binary runner options before selecting a runtime.
 - **FR-002**: The evaluation MUST apply the XPLAT-001 runtime rubric to every
-  candidate family using the same criteria.
+  candidate family using a gate-first weighted evidence matrix: all must-have
+  gates are evaluated before evidence-backed weighted criteria ratings are used
+  for selection and rejection rationale.
 - **FR-003**: The evaluation MUST record runtime-specific supply-chain
   implications relevant to XPLAT-003 without selecting final supply-chain
   controls.
-- **FR-004**: The evidence base MUST cite official runtime documentation for
-  each candidate family.
+- **FR-004**: The evidence base MUST cite documentation from runtime or
+  toolchain maintainers, official plugin platform documentation, or repo-local
+  source/manifests for each candidate family; third-party material MAY be used
+  only as supplemental evidence.
 - **FR-005**: Where invocation behavior is uncertain, the evidence base MUST
-  include lightweight repo-local or installed-cache smoke probe results, or
-  explicitly record why that probe could not be completed.
+  include lightweight repo-local, generated-payload, or installed-cache smoke
+  probe results for runtime availability, JSON input/output, stderr/exit
+  separation, path-with-spaces handling, and shell-free subprocess or
+  missing-command behavior, or explicitly record why a probe could not be
+  completed.
 - **FR-006**: The final decision MUST select exactly one canonical runtime and
   MUST NOT leave XPLAT-004 with a ranked shortlist.
 - **FR-007**: The decision rationale MUST explain rejected options, including
-  the rubric criteria, evidence gaps, or tie-breakers that drove each rejection.
+  rubric gate failures, weighted criteria results, evidence gaps,
+  documentation/probe conflicts, or tie-breakers that drove each rejection.
 - **FR-008**: When candidates are otherwise close, the decision MUST use install
   reliability and installed-cache invocation reliability as the deciding
   tie-breaker.
-- **FR-009**: The command contract MUST define the canonical entrypoint name and
-  dispatch shape for future runtime commands.
+- **FR-009**: The command contract MUST define the canonical entrypoint as
+  `speckit-pro-runner`, plugin-cache-relative by default, with a
+  payload-relative default path of `scripts/speckit-pro-runner` unless XPLAT-004
+  deliberately creates a new `bin/` convention.
 - **FR-010**: The command contract MUST require structured JSON input through
-  standard input and structured JSON output through standard output.
+  standard input using a versioned envelope with `schema_version`, `request_id`,
+  `helper_id`, `operation`, `mode`, and `inputs`.
 - **FR-011**: The command contract MUST define structured diagnostic behavior on
-  standard error without mixing diagnostics into successful JSON output.
+  standard error as deterministic line-delimited JSON without mixing diagnostics
+  into successful JSON output.
 - **FR-012**: The command contract MUST define explicit exit-code categories for
-  success, user/input errors, missing prerequisites, runtime failures, and
-  unexpected internal failures.
+  success, expected helper/domain failures, input envelope or schema errors,
+  missing prerequisites, subprocess failures or timeouts, and unexpected
+  internal failures, with `legacy_exit_code` available when parity requires
+  preserving a helper-specific code.
 - **FR-013**: The command contract MUST define path-handling expectations that
-  avoid Unix-only assumptions and preserve behavior across Windows, macOS, and
-  Linux.
+  classify path values as repo-relative, plugin-relative, cache-relative,
+  absolute, or temporary and preserve behavior across Windows, macOS, and Linux.
 - **FR-014**: The command contract MUST define subprocess rules covering when
-  subprocesses are allowed, how shell-specific behavior is avoided, and how
-  prerequisites are reported.
+  subprocesses are allowed, how shell-specific behavior is avoided through
+  structured argv execution with shell disabled, and how prerequisites are
+  reported.
 - **FR-015**: The command contract MUST define runtime version reporting so
-  diagnostics and verification can identify the selected runtime environment.
-- **FR-016**: The decision record MUST optimize for no per-user dependency
-  installation and no network fetch from the public installed plugin cache.
-- **FR-017**: The handoff MUST identify what XPLAT-003 must resolve about
-  runtime-specific supply-chain implications.
+  diagnostics and verification can identify the selected runtime environment,
+  contract version, platform/architecture, plugin root, source-vs-installed
+  context, executable availability, capabilities, and prerequisite state.
+- **FR-016**: The selected runtime MUST pass the installed-cache reliability
+  gate by running from a populated plugin cache without per-user dependency
+  installation, network package restoration, `npm install`, `pip install`,
+  `uv`, `brew`, or equivalent setup.
+- **FR-017**: The handoff MUST provide XPLAT-003 a per-candidate supply-chain
+  implication matrix for selected and rejected candidates, including dependency
+  footprint, manifest/lockfile behavior, generated artifact types, build/release
+  path, vulnerability-scan path, checksum/signature/SBOM/provenance feasibility,
+  consumer-local verification ideas, offline/update implications, distribution
+  trust root, transitive/build-time/native dependencies, build environment
+  inputs, runtime/install execution risk, maintenance posture, and evidence
+  gaps, without selecting first-release controls.
 - **FR-018**: The handoff MUST identify what XPLAT-004 can build from the
-  selected runtime and command contract without reopening the language or
-  packaging choice.
-- **FR-019**: The decision record MUST avoid changing public support claims,
-  public documentation promises, or release notes beyond the decision record
-  itself.
+  selected runtime, `speckit-pro-runner` command contract, fixture parity
+  expectations, and compatibility-adapter records without reopening the language
+  or packaging choice.
+- **FR-018a**: The XPLAT-004 handoff MUST define fixture parity expectations for
+  success, invalid JSON, missing required field, path-with-spaces, Windows
+  separator, missing-prerequisite, subprocess-nonzero, stderr-only failure,
+  runtime-info or preflight, and at least one read-only legacy-helper comparison.
+- **FR-019**: The work MUST avoid changing README, docs-site pages, marketplace
+  metadata, changelog, release notes, or other public support-claim surfaces
+  beyond decision-record, target, candidate-evidence, and handoff wording.
 - **FR-020**: The work MUST remain a research and decision spike and MUST NOT
   build the runner or port helper behavior.
 
@@ -189,12 +315,39 @@ spec responsibility.
 - **Runtime Candidate**: A candidate runtime family under evaluation, including
   its documentation evidence, probe evidence, rubric results, install
   reliability, installed-cache invocation reliability, and rejection or
-  selection rationale.
+  selection rationale. Selectable candidates are JavaScript/TypeScript, Python,
+  and small per-platform binary runner options; hybrid compatibility adapters
+  are temporary migration notes, not selectable runtime families.
 - **Evaluation Evidence**: A cited documentation source, lightweight probe
-  result, or explicitly recorded evidence gap used to support candidate scoring.
+  result, documentation/probe conflict, or explicitly recorded evidence gap used
+  to support candidate scoring.
 - **Command Contract**: The selected runtime-facing command agreement covering
   entrypoint, dispatch, JSON input/output, diagnostics, exit codes, paths,
-  subprocesses, prerequisites, and runtime version reporting.
+  subprocesses, prerequisites, and runtime version reporting. The canonical
+  entrypoint is `speckit-pro-runner`; helpers are selected through JSON stdin
+  fields rather than helper-specific CLI arguments.
+- **Path Value**: A contract field that records a path plus its kind
+  (`repo_relative`, `plugin_relative`, `cache_relative`, `absolute`, or `temp`)
+  so outputs can remain readable without assuming POSIX separators.
+- **Subprocess Result**: A structured subprocess outcome containing argv, cwd,
+  captured stdout/stderr, exit code, timeout state, and missing-prerequisite
+  diagnostics without shell interpolation.
+- **Runtime Info**: The preflight/runtime-info response describing runner,
+  contract, selected runtime, platform, plugin root, source-vs-installed
+  context, capabilities, and prerequisite records.
+- **Compatibility Adapter Record**: A temporary migration record, not a runtime
+  candidate, with `adapter_id`, `legacy_surface`, `xplat001_source_row`,
+  `runner_helper_id`, `runner_operation`, `runner_mode`, `owner_bucket`,
+  `owner_spec`, `removal_spec`, `removal_condition`, and `evidence`. IDs use
+  `xplat-005-compat-*`, `xplat-006-compat-*`, or `xplat-007-compat-*` according
+  to the owning removal spec.
+- **Supply-Chain Implication Matrix**: A per-candidate handoff artifact for
+  XPLAT-003 covering selected and rejected candidates, dependency and bootstrap
+  footprint, manifests/lockfiles, generated artifacts, build/release path,
+  vulnerability scanning, checksum/signature/SBOM/provenance feasibility,
+  consumer-local verification, offline/update behavior, distribution trust root,
+  transitive/build-time/native dependencies, build inputs, install execution
+  risk, maintenance posture, and evidence gaps.
 - **Decision Record**: The reviewable artifact that selects the canonical
   runtime, explains rejected options, records tie-breakers, and prevents later
   specs from reopening the same decision.

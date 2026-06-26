@@ -46,8 +46,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created the decision-spike spec and requirements quality checklist; G1 passed with zero clarification markers |
-| Clarify | `$speckit-clarify` | In Progress | Recommended: candidate scoring boundaries, probe scope, contract envelope, packaging assumptions |
-| Plan | `$speckit-plan` | Pending | Produce the decision-record architecture and evaluation/probe plan |
+| Clarify | `$speckit-clarify` | Complete | Resolved candidate scoring, probe scope, command envelope, packaging, adapter, security handoff, and public-claim boundaries |
+| Plan | `$speckit-plan` | In Progress | Produce the decision-record architecture and evaluation/probe plan |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, error-handling, security, maintainability/reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate report/probe/decision tasks, not runner implementation tasks |
 | Analyze | `$speckit-analyze` | Pending | Check for drift between roadmap, XPLAT-001 rubric, design concept, and generated artifacts |
@@ -241,9 +241,9 @@ $speckit-clarify Focus on packaging and boundaries: confirm the no-install/no-ne
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | Candidate scoring and evidence | Pending | Pending |
-| 2 | Command contract envelope | Pending | Pending |
-| 3 | Packaging, adapters, and public-claim boundaries | Pending | Pending |
+| 1 | Candidate scoring and evidence | 5 | Gate-first weighted evidence matrix; three selectable runtime families only; official/runtime docs tier; bounded non-mutating smoke probes; doc/probe conflict handling |
+| 2 | Command contract envelope | 5 | `speckit-pro-runner` accepted by consensus as the canonical entrypoint; JSON stdin/stdout envelope; line-delimited JSON stderr diagnostics; shared exit-code map with `legacy_exit_code`; typed path/subprocess rules; runtime-info/preflight and fixture parity expectations |
+| 3 | Packaging, adapters, and public-claim boundaries | 5 | No-install/no-network installed-cache gate; owner-first compatibility adapter records with removal specs; per-candidate XPLAT-003 supply-chain matrix; XPLAT-004 receives only selected runtime, runner contract, fixture parity, and adapter records; no public support-claim surface changes before XPLAT-007 |
 
 ---
 

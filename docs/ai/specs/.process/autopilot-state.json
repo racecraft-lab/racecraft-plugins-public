@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-002-workflow.md",
-  "updated_at": "2026-06-26T23:29:42Z",
-  "active_step": "Phase 2: Clarify - Candidate scoring and evidence",
+  "updated_at": "2026-06-26T23:58:27Z",
+  "active_step": "Phase 3: Plan",
   "feature_dir": "specs/xplat-002-runtime-implementation-options-contract-decision",
   "branch": "codex/xplat-002-runtime-implementation-options-contract-decision",
   "status": "in_progress",
@@ -87,31 +87,99 @@
     },
     {
       "step": "Phase 2: Clarify - Candidate scoring and evidence",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "gate-first weighted evidence matrix",
+          "three selectable runtime families plus temporary adapter notes",
+          "required docs from runtime/toolchain maintainers, official plugin platform docs, or repo-local source/manifests",
+          "bounded non-mutating probes for runtime availability, cache invocation, JSON I/O, stderr/exit separation, path spaces, and shell-free subprocess behavior",
+          "doc/probe conflicts recorded; installed-cache probes control invocation reliability and docs control general runtime claims"
+        ],
+        "unresolved_consensus_items": 0
+      }
     },
     {
       "step": "Phase 2: Clarify - Candidate scoring and evidence Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 2: Clarify - Command contract envelope",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "canonical entrypoint is speckit-pro-runner with scripts/speckit-pro-runner as default payload-relative path unless XPLAT-004 creates bin/",
+          "versioned JSON stdin request with schema_version, request_id, helper_id, operation, mode, and inputs",
+          "versioned JSON stdout response plus deterministic line-delimited JSON stderr diagnostics",
+          "shared runner exit-code map with legacy_exit_code for parity when required",
+          "typed path values, shell-disabled structured subprocess rules, runtime-info/preflight operation, and minimum fixture parity matrix"
+        ],
+        "unresolved_consensus_items": 1
+      }
     },
     {
       "step": "Phase 2: Clarify - Command contract envelope Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "round": 1,
+        "routed_categories": [
+          "codebase",
+          "spec"
+        ],
+        "outcome": "speckit-pro-runner is accepted as the canonical plugin-scoped runner entrypoint",
+        "analysts_used": [
+          "codebase-analyst",
+          "spec-context-analyst"
+        ],
+        "confidence": "high from spec context, medium from codebase precedent",
+        "round_2_or_human_review_needed": false
+      }
     },
     {
       "step": "Phase 2: Clarify - Packaging, adapters, and public-claim boundaries",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "selected runtime must run from a populated installed plugin cache without per-user dependency install or network package restoration",
+          "temporary compatibility adapters are migration records with owner-first xplat-005/006/007 compat slugs and explicit removal_spec traceability",
+          "XPLAT-003 receives a per-candidate supply-chain implication matrix and chooses controls later",
+          "XPLAT-004 receives the selected runtime, speckit-pro-runner contract, fixture parity requirements, and adapter records only",
+          "XPLAT-002 changes no public support-claim surfaces before XPLAT-007 UAT"
+        ],
+        "unresolved_consensus_items": 2,
+        "gate": "G2 pass"
+      }
     },
     {
       "step": "Phase 2: Clarify - Packaging, adapters, and public-claim boundaries Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "round": 1,
+        "routed_categories": [
+          "codebase",
+          "spec",
+          "security"
+        ],
+        "outcomes": [
+          "compatibility adapter records use owner-first IDs such as xplat-005-compat-<legacy-helper-or-surface-slug> with explicit owner/removal fields",
+          "XPLAT-003 receives a per-candidate supply-chain implication matrix for selected and rejected candidates; XPLAT-002 records feasibility only and selects no controls"
+        ],
+        "analysts_used": [
+          "codebase-analyst",
+          "spec-context-analyst",
+          "domain-researcher"
+        ],
+        "confidence": "high",
+        "round_2_or_human_review_needed": false
+      }
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - integration",
