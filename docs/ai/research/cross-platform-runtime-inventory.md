@@ -125,14 +125,14 @@ contains multiple scoped assumptions.
 
 | Pattern family | Total scan hits | Files |
 |---|---:|---:|
-| Bash / shell substrate | 2,373 | 459 |
-| `.sh` helper references | 4,128 | 575 |
+| Bash / shell substrate | 2,376 | 460 |
+| `.sh` helper references | 4,132 | 576 |
 | `jq` references | 1,884 | 216 |
 | Shell quoting / shell operators | 10,749 | 392 |
 | Unix path assumptions | 1,809 | 338 |
 | `chmod` references | 58 | 36 |
 | Line-ending references | 60 | 41 |
-| **Total represented scan hits** | **21,061** | **N/A** |
+| **Total represented scan hits** | **21,068** | **N/A** |
 
 ## Row Schema
 
@@ -216,7 +216,7 @@ mode, follow-up spec, or rationale, split that match into a separate row.
 | GEN-DOC-001 | 44 scan hits across generated `README.md`, `CHANGELOG.md`, and `LICENSE` files under `dist/**`. | `generated-payload-reference` | `not-active-runtime` | These generated documentation files can mention commands or paths, but they are not runtime entrypoints. | `generated-payload-reference` | `generated-payload-reference` | No installed invocation trace from these files to helper execution. | Keep as generated documentation references. Source README/docs should be edited before payload rebuilds. |
 | DOC-001 | 372 scan hits across 9 public documentation and marketplace metadata files, including docs-site pages, `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json`, and plugin manifests. | `public-docs-claim` | `not-active-runtime` | Public docs and metadata may describe `jq`, Bash, cache paths, `.sh` scripts, or Unix locations, but text claims are not active runtime dependencies without a separate trace. | `public-docs-claim` | `public-docs-claim` | No direct invocation trace from docs pages or marketplace descriptions to helper execution. | These rows stay documentation claims. XPLAT-007 should update public claims only after cutover and release validation. |
 | TEST-001 | 5,636 scan hits across 228 test, fixture, and expected-output files under `tests/**`. | `tests-fixtures` | `not-active-runtime` | Tests exercise Bash helpers and shell-shaped fixtures, but they are repository verification inputs, not installed plugin runtime surfaces. | `historical-or-archive` | `historical-or-archive` | No installed plugin invocation trace to test fixtures. | Keep out of runtime porting scope except where later specs reuse fixtures as parity evidence. |
-| HIST-001 | 2,656 scan hits across 102 specs, workflow files, active XPLAT planning files, and `.specify/memory/**` archive reports. | `historical-or-archive` | `not-active-runtime` | Planning and archive material documents prior or current repo work; it does not execute as installed runtime. | `historical-or-archive` | `historical-or-archive` | No installed plugin invocation trace to archive/spec prose. | Keep as historical/process evidence. Later specs should cite only current source or report rows when selecting implementation work. |
+| HIST-001 | 2,663 scan hits across 102 specs, workflow files, active XPLAT planning files, and `.specify/memory/**` archive reports. | `historical-or-archive` | `not-active-runtime` | Planning and archive material documents prior or current repo work; it does not execute as installed runtime. | `historical-or-archive` | `historical-or-archive` | No installed plugin invocation trace to archive/spec prose. | Keep as historical/process evidence. Later specs should cite only current source or report rows when selecting implementation work. |
 | REPO-ONLY-001 | 1,699 scan hits across 90 repository-only files such as `.github/**`, `.claude/**`, root scripts, docs-site configuration, release metadata, and SpecKit extensions. | `repository-only-exclusion` | `not-active-runtime` | Maintainer, CI, release, and repository scaffolding commands may require Bash or Unix assumptions, but they are not installed Claude/Codex plugin runtime unless invoked by an installed plugin surface. | `repository-only-exclusion` | `repository-only-exclusion` | No installed plugin invocation trace found for these repository-only surfaces. | Exclude from runtime porting scope unless a later spec intentionally promotes one of these helpers into installed runtime. |
 | EXCL-001 | `.git/`, untracked files, vendor/dependency caches, binary/non-text inputs skipped by `git grep -I`, and this generated report path. | `explicit-exclusion` | `not-active-runtime` | These inputs are outside the durable tracked-text source universe or would make the report recursively self-referential. | `repository-only-exclusion` | `repository-only-exclusion` | Not applicable. | Explicit exclusion details and expiry/removal conditions are recorded in the scan boundary table. |
 
@@ -237,10 +237,10 @@ Classification counts:
 | `generated-payload-reference` | 6,976 |
 | `public-docs-claim` | 372 |
 | `tests-fixtures` | 5,636 |
-| `historical-or-archive` | 2,656 |
+| `historical-or-archive` | 2,663 |
 | `repository-only-exclusion` | 1,699 |
 | `explicit-exclusion` | 0 |
-| **Total** | **21,061** |
+| **Total** | **21,068** |
 
 Active-runtime status counts:
 
@@ -248,8 +248,8 @@ Active-runtime status counts:
 |---|---:|
 | `proven-active-runtime` | 10,654 |
 | `unproven-active-runtime` | 0 |
-| `not-active-runtime` | 10,407 |
-| **Total** | **21,061** |
+| `not-active-runtime` | 10,414 |
+| **Total** | **21,068** |
 
 Owner bucket counts:
 
@@ -260,10 +260,10 @@ Owner bucket counts:
 | `xplat-007-cutover-guidance` | 6,932 |
 | `generated-payload-reference` | 44 |
 | `public-docs-claim` | 372 |
-| `historical-or-archive` | 8,292 |
+| `historical-or-archive` | 8,299 |
 | `repository-only-exclusion` | 1,699 |
 | `follow-up-exception` | 0 |
-| **Total** | **21,061** |
+| **Total** | **21,068** |
 
 Follow-up spec counts:
 
@@ -274,23 +274,23 @@ Follow-up spec counts:
 | `XPLAT-007` | 6,932 |
 | `generated-payload-reference` | 44 |
 | `public-docs-claim` | 372 |
-| `historical-or-archive` | 8,292 |
+| `historical-or-archive` | 8,299 |
 | `repository-only-exclusion` | 1,699 |
 | `follow-up-exception` | 0 |
-| **Total** | **21,061** |
+| **Total** | **21,068** |
 
 Pattern-family by row group:
 
 | Pattern family | Source read-only | Source mutation | Generated active | Generated docs | Public docs | Tests/fixtures | Historical/archive | Repo-only | Total |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Bash / shell substrate | 128 | 130 | 423 | 16 | 17 | 441 | 1,002 | 216 | 2,373 |
-| `.sh` helper references | 242 | 241 | 767 | 10 | 333 | 1,026 | 1,313 | 196 | 4,128 |
+| Bash / shell substrate | 178 | 80 | 423 | 16 | 17 | 441 | 1,005 | 216 | 2,376 |
+| `.sh` helper references | 312 | 171 | 767 | 10 | 333 | 1,026 | 1,317 | 196 | 4,132 |
 | `jq` references | 249 | 229 | 942 | 2 | 3 | 236 | 147 | 76 | 1,884 |
 | Shell quoting / shell operators | 1,105 | 1,046 | 4,163 | 2 | 5 | 3,247 | 115 | 1,066 | 10,749 |
 | Unix path assumptions | 224 | 121 | 623 | 14 | 14 | 643 | 48 | 122 | 1,809 |
 | `chmod` references | 0 | 0 | 0 | 0 | 0 | 33 | 22 | 3 | 58 |
 | Line-ending references | 3 | 4 | 14 | 0 | 0 | 10 | 9 | 20 | 60 |
-| **Total** | **1,951** | **1,771** | **6,932** | **44** | **372** | **5,636** | **2,656** | **1,699** | **21,061** |
+| **Total** | **1,951** | **1,771** | **6,932** | **44** | **372** | **5,636** | **2,663** | **1,699** | **21,068** |
 
 ## Runtime Evaluation Rubric for XPLAT-002
 
@@ -384,7 +384,7 @@ Static verification for XPLAT-001:
 
 | Check | Result |
 |---|---|
-| Scan commands rerun and counts reconciled | Passed: all seven recorded scan families matched the report counts, total 21,061 represented scan hits. |
+| Scan commands rerun and counts reconciled | Passed: all seven recorded scan families matched the report counts, total 21,068 represented scan hits. |
 | Proven active rows reviewed for caller-to-callee trace evidence | Passed: source active rows cite installed skill, hook, agent, or helper-script traces; generated active rows cite marketplace payload manifests. |
 | Docs/generated/tests/archive/repo-only rows reviewed for false active-runtime promotion | Passed: docs, generated docs, tests, archive/spec, and repo-only rows remain `not-active-runtime` without separate invocation traces. |
 | `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` | Passed: `spec-index: index current — all in-scope maps up to date.` |

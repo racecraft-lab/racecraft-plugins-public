@@ -575,7 +575,7 @@ Also run any focused report or docs validation command created by the plan/tasks
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | Foundation | T001-T007 | Complete | Report outline, scan boundary, command set, row schema, allowed values, and aggregation rules added |
-| US1 Inventory | T008-T018 | Complete | Whole-repo tracked-text scan counts reconciled to 21,061 represented scan hits with source, generated, docs, tests, historical, and repo-only classifications |
+| US1 Inventory | T008-T018 | Complete | Whole-repo tracked-text scan counts reconciled to 21,068 represented scan hits with source, generated, docs, tests, historical, and repo-only classifications |
 | US2 Runtime rubric | T019-T021 | Complete | Non-scoring XPLAT-002 runtime gates, 100-point criteria, and candidate evidence targets added |
 | US3 Supply-chain rubric | T022-T025 | Complete | Non-selecting XPLAT-003 supply-chain gates, 100-point criteria, and artifact/control evidence targets added |
 | Polish | T026-T032 | Complete | Scan rerun, trace review, false-promotion review, spec-index check, diff hygiene, roadmap handoff, and PR packet evidence completed |
