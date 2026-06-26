@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T00:03:18Z",
-  "active_step": "Post: Doctor Extension Check",
+  "updated_at": "2026-06-26T00:12:55Z",
+  "active_step": "Post: Reviewability Diff Gate",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
   "status": "in_progress",
@@ -348,27 +348,61 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "warning": ".specify/scripts/powershell absent; no blocker for this Bash-backed repository workflow",
+        "commands": "doctor extension contract inspected and equivalent read-only checks run"
+      }
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "commands": [
+          ".specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks",
+          "scan-count reconciliation",
+          "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check \"$PWD\"",
+          "git diff --check"
+        ]
+      }
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "completed_tasks": 32,
+        "verified": 32,
+        "partial": 0,
+        "weak": 0,
+        "not_found": 0,
+        "skipped": 0
+      }
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "completed_with_remediation",
+        "findings": 1,
+        "highest_severity": "medium",
+        "remediation": "updated input-universe commands in the inventory report to include the report-path exclusion used by the recorded counts"
+      }
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "command": "bash tests/speckit-pro/run-all.sh",
+        "summary": "3609/3609 passed"
+      }
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Self-Review",

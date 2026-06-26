@@ -65,8 +65,8 @@ Input universe:
 
 | Metric | Count | Command |
 |---|---:|---|
-| Tracked files | 1,251 | `git ls-files \| wc -l` |
-| Tracked text/non-empty files searched by `git grep -I` | 1,237 | `git grep -I -l -e '' -- . \| wc -l` |
+| Tracked files, excluding this generated report | 1,251 | `git ls-files ':!docs/ai/research/cross-platform-runtime-inventory.md' \| wc -l` |
+| Tracked text/non-empty files searched by `git grep -I`, excluding this generated report | 1,237 | `git grep -I -l -e '' -- . ':(exclude)docs/ai/research/cross-platform-runtime-inventory.md' \| wc -l` |
 
 The scan commands below intentionally exclude this report path,
 `docs/ai/research/cross-platform-runtime-inventory.md`, after the report exists.
