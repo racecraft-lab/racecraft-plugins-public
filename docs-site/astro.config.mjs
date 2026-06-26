@@ -27,7 +27,13 @@ const DOCS_SITE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(DOCS_SITE_DIR, '..');
 const CONTENT_DIR_REL = 'docs-site/src/content/docs';
 const CONTENT_DIR_ABS = path.join(REPO_ROOT, CONTENT_DIR_REL);
-const SITE_BASE = 'https://racecraft-lab.github.io/racecraft-plugins-public';
+// Single source for the production origin: defineConfig() below consumes SITE/BASE,
+// and the sitemap serialize helpers derive SITE_BASE from them. The DOC-012 launch
+// flip is therefore a one-place change (update SITE/BASE) with the helpers kept in
+// sync — there is no second hardcoded domain to drift out of step (FR-012).
+const SITE = 'https://racecraft-lab.github.io';
+const BASE = '/racecraft-plugins-public';
+const SITE_BASE = `${SITE}${BASE}`;
 
 /**
  * Convert a content file path (repo-relative or absolute) to its Starlight route
@@ -134,8 +140,8 @@ function resolveLastmod(url) {
 }
 
 export default defineConfig({
-  site: 'https://racecraft-lab.github.io',
-  base: '/racecraft-plugins-public',
+  site: SITE,
+  base: BASE,
   trailingSlash: 'always',
   // DOC-013 — the brand logo/mark assets are SVG vectors that should be served
   // as-is; the passthrough image service avoids a Sharp rasterization dependency

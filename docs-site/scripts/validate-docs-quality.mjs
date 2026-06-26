@@ -600,6 +600,10 @@ function validateMetaDescriptions(diagnostics) {
       continue;
     }
 
+    // Convention (intentional): every content page carries a non-empty, single-line
+    // inline `description:` value. Starlight meta descriptions are short strings, so
+    // a one-line scalar is the enforced norm here — multi-line folded/block scalars
+    // are not used. This checks presence + non-emptiness of that inline value.
     const descLine = frontmatter[1].match(/^description:[ \t]*(.*)$/m);
     const value = descLine ? descLine[1].trim().replace(/^["']|["']$/g, '').trim() : '';
     if (!value) {

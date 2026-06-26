@@ -73,7 +73,11 @@ function buildRouteGraph(slug: string) {
     buildPersonSchema(SITE_BASE),
   ];
 
-  const pluginMeta = pluginPages[slug];
+  // Normalize landing-page route-id variants (`index` / `/`) to the `''` key
+  // pluginPages uses, so the SoftwareApplication entity is emitted regardless of
+  // which homepage route-id form Starlight reports (FR-014 robustness).
+  const pluginKey = slug === 'index' || slug === '/' ? '' : slug;
+  const pluginMeta = pluginPages[pluginKey];
   if (pluginMeta) {
     items.push(buildSoftwareApplicationSchema(SITE_BASE, pluginMeta));
   }

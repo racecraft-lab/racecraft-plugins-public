@@ -59,6 +59,14 @@ function gitCommitDate(repoRelativePath) {
   return out;
 }
 
+/** The commit date (ISO-8601) of HEAD itself — the current checkout commit. */
+function gitHeadCommitDate() {
+  return execFileSync('git', ['log', '-1', '--format=%cI'], {
+    cwd: REPO_ROOT,
+    encoding: 'utf-8',
+  }).trim();
+}
+
 /** Extract all `<loc>` values from a sitemap XML string. */
 function locs(xml) {
   return [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
@@ -117,6 +125,7 @@ test.describe('DOC-014 sitemap freshness', () => {
     const xml = await fetchText(request, SITEMAP_CHILD_PATH);
     const entries = urlEntries(xml);
     const runStart = Date.now();
+    const headIso = gitHeadCommitDate();
 
     for (const { slug, sourcePath } of GIT_SOURCED_PAGES) {
       const expectedIso = gitCommitDate(sourcePath);
@@ -139,6 +148,17 @@ test.describe('DOC-014 sitemap freshness', () => {
         Date.parse(entry.lastmod),
         `${wantLoc} <lastmod> must be in the past, not the build/run time`,
       ).toBeLessThan(runStart);
+
+      // Shallow-checkout guard (rp-review P2.4): the page's expected commit must NOT
+      // be the current HEAD/checkout commit. On a depth-1 clone the build's git walk
+      // and this test's lookup both collapse every file's date to HEAD and would
+      // falsely agree; requiring expected != HEAD makes that regression fail loudly
+      // (these content pages are not touched by the tip commit, so on a full clone
+      // their commit dates differ from HEAD's).
+      expect(
+        expectedMs,
+        `${wantLoc}: expected git date ${expectedIso} must differ from the HEAD commit date ${headIso} (shallow-clone guard)`,
+      ).not.toBe(Date.parse(headIso));
     }
   });
 });

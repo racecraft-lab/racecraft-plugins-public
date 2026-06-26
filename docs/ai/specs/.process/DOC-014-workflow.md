@@ -584,3 +584,6 @@ specs/doc-014-seo-and-ai-discoverability/
 
 Populated from the DOC-014 Grill Me interview (2026-06-25). The design concept doc at
 `docs/ai/specs/.process/DOC-014-design-concept.md` is the source of truth for every scoping decision.
+
+### PR packet validation events
+- <!-- speckit-pro-pr-packet-validation:event-id=speckit-pr-packet --> Blocked PR packet validation for `speckit-pr-packet`; result `specs/doc-014-seo-and-ai-discoverability/.process/pr-packets/speckit-pr-packet/validation.json`; rules: `unknown`.
