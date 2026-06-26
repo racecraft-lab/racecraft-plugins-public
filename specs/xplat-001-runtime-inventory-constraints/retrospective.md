@@ -52,7 +52,7 @@ None. No `spec.md` edits are recommended.
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| SC-001 | Met | 21,141 represented scan hits reconcile after the latest `main` merge and review remediation. |
+| SC-001 | Met | 21,162 represented scan hits reconcile after the latest `main` merge and review remediation. |
 | SC-002 | Met | Proven active rows include invocation traces. |
 | SC-003 | Met | Inventory rows include required schema fields or documented exclusions. |
 | SC-004 | Met | Summary count tables cover all used values. |

@@ -109,6 +109,9 @@ RMOCNI_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"
 RMOCNIP_ROOT="$FIX/roadmap-moc-no-index-partial"
 RMOCNIP_HOME="docs/ai/specs/partial-roadmap-MOC.md"
 RMOCNIP_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"
+RMOCEZ_ROOT="$FIX/roadmap-moc-extra-zones"
+RMOCEZ_HOME="docs/ai/specs/extra-zones-roadmap-MOC.md"
+RMOCEZ_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"
 
 # The middle dot in a PRS row is U+00B7 (· — two bytes 0xC2 0xB7), NOT an ASCII
 # dot. Pin the exact bytes the renderer must emit (D3 worked example).
@@ -676,5 +679,27 @@ assert_contains "$l2err" "partial-roadmap-MOC.md" "FR-017a: stderr must name the
 set_test "partial FR-017a --check also fails safe (exit 2, read-only error path)"
 rc_l2c=0; "$GEN" --check "$RMOCNIP_ROOT" >/dev/null 2>&1 || rc_l2c=$?
 assert_eq "2" "$rc_l2c" "FR-017a: --check on a partial malformed home note is exit 2"
+
+# ───────────────────────────────────────────────────────────────────────────
+section "(l3) FR-017a — a gated home note with INDEX plus PRS/BACKLINKS fails safe"
+# ───────────────────────────────────────────────────────────────────────────
+# roadmap-moc-extra-zones/ has a version-gated home note with its required INDEX
+# pair plus unsupported PRS/BACKLINKS pairs. Home notes are INDEX-only surfaces;
+# rendering PRS/BACKLINKS against docs/ai/specs/ would fabricate unrelated links.
+copy_l3="$(fresh_copy "$RMOCEZ_ROOT")"
+home_before_l3="$(shasum "$copy_l3/$RMOCEZ_HOME" | awk '{print $1}')"
+spec_before_l3="$(shasum "$copy_l3/$RMOCEZ_SPEC1" | awk '{print $1}')"
+set_test "write run over a gated home note with INDEX plus PRS/BACKLINKS -> exit 2"
+rc_l3=0; l3err="$("$GEN" "$copy_l3" 2>&1 >/dev/null)" || rc_l3=$?
+assert_eq "2" "$rc_l3" "FR-017a: home notes must fail safe when unsupported PRS/BACKLINKS zones are present"
+set_test "the extra-zones malformed home note is left wholly unmodified"
+assert_eq "$home_before_l3" "$(shasum "$copy_l3/$RMOCEZ_HOME" | awk '{print $1}')" "FR-017a: no write on extra-zone home-note fail-safe path"
+set_test "the sibling gated spec-MOC is untouched after the extra-zone fail-safe"
+assert_eq "$spec_before_l3" "$(shasum "$copy_l3/$RMOCEZ_SPEC1" | awk '{print $1}')" "FR-017a: extra-zone fail-safe aborts the batch before any write"
+set_test "the extra-zone FR-017a error message names the offending home note on stderr"
+assert_contains "$l3err" "extra-zones-roadmap-MOC.md" "FR-017a: stderr must name the malformed extra-zone home note"
+set_test "extra-zone FR-017a --check also fails safe (exit 2, read-only error path)"
+rc_l3c=0; "$GEN" --check "$RMOCEZ_ROOT" >/dev/null 2>&1 || rc_l3c=$?
+assert_eq "2" "$rc_l3c" "FR-017a: --check on an extra-zone malformed home note is exit 2"
 
 test_summary

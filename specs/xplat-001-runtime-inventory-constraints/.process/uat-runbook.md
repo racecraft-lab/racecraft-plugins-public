@@ -25,7 +25,7 @@ are the report reconciliation commands and the repository shell suite.
 
 1. Open the inventory report.
 2. Confirm the scan boundary says the report excludes itself from source scans.
-3. Confirm the scan result summary totals 21,141 represented scan hits.
+3. Confirm the scan result summary totals 21,162 represented scan hits.
 4. Confirm the inventory rows separate source, generated payload, public docs,
    tests/fixtures, historical/archive, repo-only, and explicit exclusions.
 5. Confirm proven active rows include invocation-trace evidence and that
@@ -95,7 +95,7 @@ Review these in the inventory report:
    static verification ran and passed after the latest `origin/main` merge:
    scan-count reconciliation, `generate-spec-index.sh --check "$PWD"`, `git
    diff --check`, G7, and the full repository suite
-   `bash tests/speckit-pro/run-all.sh` (`3619/3619` passed locally).
+   `bash tests/speckit-pro/run-all.sh` (`3624/3624` passed locally).
 2. **Edge cases?** Acceptance coverage is artifact-based because XPLAT-001 has
    no runtime implementation. The inventory report covers generated/source
    duplicate references, docs-only claims, tests/fixtures/archive references,

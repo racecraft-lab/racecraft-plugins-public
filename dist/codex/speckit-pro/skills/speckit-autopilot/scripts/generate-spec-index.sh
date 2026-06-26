@@ -586,6 +586,15 @@ rebuild_map() {
   st_prs="$(_zone_state "$ps" "$pe")"       || err "unbalanced GENERATED:PRS marker pair in: $moc"
   st_backlinks="$(_zone_state "$bs" "$be")" || err "unbalanced GENERATED:BACKLINKS marker pair in: $moc"
 
+  # Home notes are supported only as generated INDEX surfaces. Rendering PRS or
+  # BACKLINKS against docs/ai/specs/ would produce unrelated roadmap-doc links.
+  if [ "$is_home" = 1 ] && [ "$st_index" = absent ]; then
+    err "roadmap-MOC home note is gated but missing its GENERATED:INDEX zone: $moc"
+  fi
+  if [ "$is_home" = 1 ] && { [ "$st_prs" = present ] || [ "$st_backlinks" = present ]; }; then
+    err "roadmap-MOC home note must not carry GENERATED:PRS or GENERATED:BACKLINKS zones: $moc"
+  fi
+
   # Render the body of each present zone up front. render_prs returns non-zero on a
   # malformed manifest, having already printed the one precise stderr line naming the
   # offending prs.json; the `|| die2` propagates that into the exit-2 fail-safe
@@ -596,13 +605,6 @@ rebuild_map() {
   if [ "$st_index" = present ];     then idx_body="$(render_index "$spec_dir" "$is_home" "$moc")"; fi
   if [ "$st_prs" = present ];       then render_prs_into_or_die2 prs_body "$spec_dir"; fi
   if [ "$st_backlinks" = present ]; then bl_body="$(render_backlinks "$spec_dir")"; fi
-
-  # FR-017a fail-safe: a home-note target missing INDEX is malformed (FR-002),
-  # even if PRS/BACKLINKS pairs are present. It MUST NOT take the inject-if-missing
-  # path below, which would render spec-style zones against docs/ai/specs/.
-  if [ "$is_home" = 1 ] && [ "$st_index" = absent ]; then
-    err "roadmap-MOC home note is gated but missing its GENERATED:INDEX zone: $moc"
-  fi
 
   # Inject-if-missing: ONLY when all three pairs are absent. A map missing exactly
   # one pair (skip-one) keeps that zone absent — never injected (FR-009).

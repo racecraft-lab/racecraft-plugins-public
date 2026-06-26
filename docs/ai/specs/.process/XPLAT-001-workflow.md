@@ -583,7 +583,7 @@ Also run any focused report or docs validation command created by the plan/tasks
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
 | Foundation | T001-T007 | Complete | Report outline, scan boundary, command set, row schema, allowed values, and aggregation rules added |
-| US1 Inventory | T008-T018 | Complete | Whole-repo tracked-text scan counts reconciled to 21,141 represented scan hits with source, generated, docs, tests, historical, and repo-only classifications |
+| US1 Inventory | T008-T018 | Complete | Whole-repo tracked-text scan counts reconciled to 21,162 represented scan hits with source, generated, docs, tests, historical, and repo-only classifications |
 | US2 Runtime rubric | T019-T021 | Complete | Non-scoring XPLAT-002 runtime gates, 100-point criteria, and candidate evidence targets added |
 | US3 Supply-chain rubric | T022-T025 | Complete | Non-selecting XPLAT-003 supply-chain gates, 100-point criteria, and artifact/control evidence targets added |
 | Polish | T026-T032 | Complete | Scan rerun, trace review, false-promotion review, spec-index check, diff hygiene, roadmap handoff, and PR packet evidence completed |
@@ -611,12 +611,12 @@ Also run any focused report or docs validation command created by the plan/tasks
 | Verify Implementation | Pass | Prerequisites with tasks, scan-count reconciliation, spec-index check, and `git diff --check` passed. |
 | Verify Tasks Phantom Check | Pass | 32 completed tasks verified; 0 partial, weak, missing, or skipped task claims. |
 | Code Review | Completed with remediation | Independent review found one medium traceability issue in the input-universe command table; fixed by adding the same report-path exclusion used by the recorded counts. |
-| Integration Suite | Pass | `bash tests/speckit-pro/run-all.sh` passed `3619/3619` after the structure-version fallback scoping remediation. |
+| Integration Suite | Pass | `bash tests/speckit-pro/run-all.sh` passed `3624/3624` after the roadmap-MOC PRS/BACKLINKS fail-safe remediation. |
 | Final Reviewability Backstop | Scoped pre-PR warn, proceeds | `final-reviewability-backstop.sh` wrote `specs/xplat-001-runtime-inventory-constraints/.process/final-reviewability/gate-state.json` before post-PR review remediation; blocked operations: none. Scoped warnings: total files 20 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1. Current full PR diff evidence is recorded in the same artifact under `full_diff`: `reviewability-gate.sh diff main` reports block because total files 31 exceeds block threshold 25. |
 | UAT Runbook Generation | Complete | Skeleton generation succeeded at `specs/xplat-001-runtime-inventory-constraints/.process/uat-runbook.md`. The dedicated `uat-runbook-author` role was not exposed by the current multi-agent tool, so the parent rewrote the runbook in place. |
 | PR Packet/Body Generation | Pass | Generated transient packet `/private/tmp/xplat-001-pr-packet.json` and repo-relative transient body `specs/xplat-001-runtime-inventory-constraints/.process/pr-body.md`; `validate-pr-packet.sh` and `validate-pr-workflow-contract.sh` passed. |
 | PR Creation | Complete | Opened [PR #263](https://github.com/racecraft-lab/racecraft-plugins-public/pull/263). |
-| Review Remediation | Complete | `rp-review-cli` found 11 actionable findings across 4 passes after PR creation; remediation corrected the count split, marker-plan explanation, UAT PR/branch metadata, branch prerequisite state, roadmap MOC status, unrelated generated MOC leakage, retrospective reviewability wording, structure-version fallback scoping, stale verification claims, roadmap handoff count drift, and final reviewability scope evidence. |
+| Review Remediation | Complete | `rp-review-cli` found 12 actionable findings across 5 passes after PR creation; remediation corrected the count split, marker-plan explanation, UAT PR/branch metadata, branch prerequisite state, roadmap MOC status, unrelated generated MOC leakage, retrospective reviewability wording, structure-version fallback scoping, stale verification claims, roadmap handoff count drift, final reviewability scope evidence, and roadmap-MOC PRS/BACKLINKS fail-safe handling. |
 | Retrospective | Complete | Saved `specs/xplat-001-runtime-inventory-constraints/retrospective.md`; completion 100%, spec adherence 100%, critical findings 0. |
 
 ## Self-Review
@@ -627,8 +627,8 @@ Also run any focused report or docs validation command created by the plan/tasks
    static verification ran and passed after the latest `origin/main` merge:
    scan-count reconciliation, `generate-spec-index.sh --check "$PWD"`, `git
    diff --check`, G7, and the full repository suite
-   `bash tests/speckit-pro/run-all.sh` (`3619/3619` passed after the
-   structure-version fallback scoping remediation).
+   `bash tests/speckit-pro/run-all.sh` (`3624/3624` passed after the
+   roadmap-MOC PRS/BACKLINKS fail-safe remediation).
 
 2. **Edge cases?** Acceptance coverage is artifact-based because XPLAT-001 has
    no runtime implementation. The inventory report covers generated/source
