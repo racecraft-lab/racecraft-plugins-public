@@ -606,6 +606,7 @@ Also run any focused report or docs validation command created by the plan/tasks
 | Integration Suite | Pass | `bash tests/speckit-pro/run-all.sh` passed `3609/3609`. |
 | Final Reviewability Backstop | Warn, proceeds | `final-reviewability-backstop.sh` wrote `specs/xplat-001-runtime-inventory-constraints/.process/final-reviewability/gate-state.json`; blocked operations: none. Warnings: total files 20 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1. |
 | UAT Runbook Generation | Complete | Skeleton generation succeeded at `specs/xplat-001-runtime-inventory-constraints/.process/uat-runbook.md`. The dedicated `uat-runbook-author` role was not exposed by the current multi-agent tool, so the parent rewrote the runbook in place. |
+| PR Packet/Body Generation | Pass | Generated transient packet `/private/tmp/xplat-001-pr-packet.json` and repo-relative transient body `specs/xplat-001-runtime-inventory-constraints/.process/pr-body.md`; `validate-pr-packet.sh` and `validate-pr-workflow-contract.sh` passed. |
 
 ## Self-Review
 
