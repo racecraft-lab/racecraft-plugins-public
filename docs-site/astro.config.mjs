@@ -1,6 +1,8 @@
 import { defineConfig, passthroughImageService } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
 import starlight from '@astrojs/starlight';
 import starlightLinksValidator from 'starlight-links-validator';
+import starlightLlmsTxt from 'starlight-llms-txt';
 
 export default defineConfig({
   site: 'https://racecraft-lab.github.io',
@@ -13,8 +15,15 @@ export default defineConfig({
   integrations: [
     starlight({
       title: 'Racecraft Public Plugins',
-      plugins: [starlightLinksValidator()],
+      plugins: [starlightLinksValidator(), starlightLlmsTxt()],
       customCss: ['./src/styles/brand.css'],
+      // DOC-014 (D7) — visible "last updated" stamp from the git commit date,
+      // consistent with the sitemap <lastmod> (frontmatter date override allowed).
+      lastUpdated: true,
+      // DOC-014 (D2) — route-data middleware is the single head-injection
+      // mechanism (JSON-LD @graph + per-page OG/twitter tags); Starlight 0.40
+      // designates a Head.astro override "a last resort".
+      routeMiddleware: './src/routeData.ts',
       logo: {
         light: './src/assets/logo.svg',
         dark: './src/assets/logo-light.svg',
@@ -117,6 +126,25 @@ export default defineConfig({
           items: ['security-and-trust', 'spec-kit-lifecycle'],
         },
       ],
+    }),
+    // DOC-014 (D6) — promote @astrojs/sitemap to a direct dep so we can attach a
+    // custom serialize(). Starlight 0.40 defers to a user-provided @astrojs/sitemap,
+    // so adding it directly does NOT raise a duplicate-instance error.
+    //
+    // NOTE: the integration's top-level `lastmod` option is intentionally NOT set —
+    // a page with no git history must be able to OMIT <lastmod> entirely (the
+    // sitemap protocol allows it), and the default top-level lastmod would be the
+    // build time, which Google distrusts (FR-017).
+    sitemap({
+      serialize(item) {
+        // TODO(WP4/T021): resolve each page's <lastmod> from a SINGLE bulk
+        // `git log` walk (slug→ISO-date map built once; NOT one subprocess per
+        // page — the O(pages) slow path, withastro/astro#16803), honoring a
+        // per-page frontmatter date override. For a page with no commit history,
+        // leave `item.lastmod` undefined so @astrojs/sitemap omits <lastmod>.
+        // MUST NOT default to build time.
+        return item;
+      },
     }),
   ],
 });
