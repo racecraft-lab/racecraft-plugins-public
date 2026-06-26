@@ -45,8 +45,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `$speckit-specify` | Pending | Create the decision-spike spec with clear non-goals and no implementation commitment beyond evaluation/probe artifacts |
-| Clarify | `$speckit-clarify` | Pending | Recommended: candidate scoring boundaries, probe scope, contract envelope, packaging assumptions |
+| Specify | `$speckit-specify` | Complete | Created the decision-spike spec and requirements quality checklist; G1 passed with zero clarification markers |
+| Clarify | `$speckit-clarify` | In Progress | Recommended: candidate scoring boundaries, probe scope, contract envelope, packaging assumptions |
 | Plan | `$speckit-plan` | Pending | Produce the decision-record architecture and evaluation/probe plan |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, error-handling, security, maintainability/reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate report/probe/decision tasks, not runner implementation tasks |
@@ -201,13 +201,15 @@ SpecKit Pro's installed Claude and Codex workflows still depend on Bash, `.sh` h
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 20 |
+| User Stories | 3 |
+| Acceptance Criteria | 6 |
+| Quality Checklist | 16/16 passed |
 
 ### Files Generated
 
-- [ ] `specs/xplat-002-runtime-implementation-options-contract-decision/spec.md`
+- [x] `specs/xplat-002-runtime-implementation-options-contract-decision/spec.md`
+- [x] `specs/xplat-002-runtime-implementation-options-contract-decision/checklists/requirements.md`
 
 ---
 

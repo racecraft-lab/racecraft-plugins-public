@@ -1,26 +1,33 @@
 {
-  "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T02:56:15Z",
-  "active_step": "Complete",
-  "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
-  "branch": "codex/xplat-001-runtime-inventory-constraints",
-  "status": "complete",
+  "workflow_file": "docs/ai/specs/.process/XPLAT-002-workflow.md",
+  "updated_at": "2026-06-26T23:29:42Z",
+  "active_step": "Phase 2: Clarify - Candidate scoring and evidence",
+  "feature_dir": "specs/xplat-002-runtime-implementation-options-contract-decision",
+  "branch": "codex/xplat-002-runtime-implementation-options-contract-decision",
+  "status": "in_progress",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "current_target": "specs/xplat-001-runtime-inventory-constraints",
+    "current_target": "specs/xplat-002-runtime-implementation-options-contract-decision",
     "cleanup_mode": "feature-branch-sweep",
-    "safeToApplyCleanup": true,
-    "excluded_current_spec": "specs/xplat-001-runtime-inventory-constraints",
-    "eligible_previous_specs": [],
-    "note": "No previous active specs were eligible; specs/ contains only the current XPLAT-001 spec directory."
+    "safeToApplyCleanup": false,
+    "excluded_current_spec": "specs/xplat-002-runtime-implementation-options-contract-decision",
+    "eligible_previous_specs": [
+      "specs/xplat-001-runtime-inventory-constraints"
+    ],
+    "note": "Archive extension is installed and the current target is excluded. XPLAT-001 appears eligible for separate post-merge archive cleanup, but no cleanup was applied during XPLAT-002 startup because the installed extension exposes a Claude command contract in this checkout, not a non-interactive Codex runner."
   },
   "prerequisites": {
     "all_pass": true,
-    "branch": "codex/xplat-001-runtime-inventory-constraints",
+    "branch": "codex/xplat-002-runtime-implementation-options-contract-decision",
     "is_worktree": true,
-    "on_feature_branch": true,
+    "on_feature_branch": false,
     "confidence_gate_mode": "advisory",
     "capability_coverage": "advisory coverage present",
+    "model": {
+      "parent": "gpt-5.5",
+      "reasoning_effort": "xhigh",
+      "subagents": "required SpecKit Pro agents installed with gpt-5.5 and xhigh reasoning"
+    },
     "agents": {
       "required": [
         "phase-executor",
@@ -52,48 +59,9 @@
       "presets": [
         "speckit-pro-reviewability"
       ],
-      "extensions": "see .specify/extensions/.registry",
+      "extensions": "archive, git, verify, verify-tasks, retrospective, speckit-utils installed/enabled in registry",
       "hooks": "18 hook events configured"
     }
-  },
-  "task_reviewability_gate": {
-    "mode": "tasks",
-    "status": "block",
-    "pass": false,
-    "reviewable_loc": 1280,
-    "production_files": 0,
-    "total_files": 51,
-    "primary_surface_count": 5,
-    "primary_surfaces": [
-      "docs/process",
-      "harness/adapter",
-      "other",
-      "scheduler/runtime",
-      "seed/config"
-    ],
-    "proceed_decision": "recorded as current size/scope evidence; no correctness blocker detected",
-    "marker_plan_handling": "not marker-planning input; the block came from task-estimator size/scope over-counting for a docs/process inventory spike, while atomicity routing selected one-navigable-PR and final reviewability later produced warn/proceed with no blocked operations"
-  },
-  "pr_marker_plan": {
-    "status": "not_required",
-    "reason": "Task reviewability block was retained as size/scope evidence only. No split-PR or marker-plan state is required because atomicity routing selected one-navigable-PR and final reviewability completed with warn/proceed.",
-    "source": "task_reviewability_gate"
-  },
-  "atomicity_route": {
-    "route": "one-navigable-PR",
-    "releasable": true,
-    "signals": [
-      "change-shape:modify-heavy"
-    ],
-    "hints": [
-      "hint:flag-system:weak",
-      "hint:release-cadence:weak"
-    ],
-    "warnings": []
-  },
-  "layer_plan": {
-    "status": "skipped",
-    "reason": "atomicity route is one-navigable-PR, not split-PR"
   },
   "plan": [
     {
@@ -108,389 +76,142 @@
       "step": "Phase 1: Specify",
       "status": "completed",
       "result": {
-        "functional_requirements": 14,
+        "functional_requirements": 20,
         "user_stories": 3,
-        "acceptance_scenarios": 7,
+        "acceptance_scenarios": 6,
         "success_criteria": 8,
+        "quality_checklist": "16/16 passed",
         "clarification_markers": 0,
         "gate": "G1 pass"
       }
     },
     {
-      "step": "Phase 2: Clarify - Inventory Boundaries",
-      "status": "completed",
-      "result": {
-        "questions": 5,
-        "accepted_answers": [
-          "two-axis classification plus active runtime status",
-          "static caller-to-callee invocation trace",
-          "repository-only by invocation evidence",
-          "all tracked text scan boundary",
-          "public docs claim unless separately traced"
-        ],
-        "unresolved_consensus_items": 0
-      }
+      "step": "Phase 2: Clarify - Candidate scoring and evidence",
+      "status": "in_progress"
     },
     {
-      "step": "Phase 2: Clarify - Inventory Boundaries Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 2: Clarify - Candidate scoring and evidence Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Owner Buckets and Handoff",
-      "status": "completed",
-      "result": {
-        "questions": 5,
-        "accepted_without_consensus": [
-          "public docs rows use public-docs-claim with XPLAT-007 only for installed-workflow/cutover claims",
-          "generated dist rows use generated-payload-reference and active generated rows map to XPLAT-007 with source links",
-          "repository-only Bash tooling is repository-only-exclusion without installed-runtime invocation trace",
-          "follow-up-exception is allowed only for active or probably active rows that cannot honestly map elsewhere"
-        ],
-        "unresolved_consensus_items": 1
-      }
+      "step": "Phase 2: Clarify - Command contract envelope",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Owner Buckets and Handoff Consensus",
-      "status": "completed",
-      "result": {
-        "round": 1,
-        "routed_categories": [
-          "codebase",
-          "spec"
-        ],
-        "outcome": "use traced invocation mode with separate rows for mixed read/write helpers",
-        "analysts_used": [
-          "codebase-analyst",
-          "spec-context-analyst"
-        ],
-        "confidence": "high",
-        "round_2_or_human_review_needed": false
-      }
+      "step": "Phase 2: Clarify - Command contract envelope Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Rubric Scope",
-      "status": "completed",
-      "result": {
-        "questions": 1,
-        "accepted_answers": [
-          "pass/fail must-have gates, numeric criteria weights with stated totals, evidence targets only, no scoring or selection"
-        ],
-        "unresolved_consensus_items": 0
-      }
+      "step": "Phase 2: Clarify - Packaging, adapters, and public-claim boundaries",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Rubric Scope Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 2: Clarify - Packaging, adapters, and public-claim boundaries Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed",
-      "result": {
-        "artifacts": [
-          "specs/xplat-001-runtime-inventory-constraints/plan.md",
-          "specs/xplat-001-runtime-inventory-constraints/research.md",
-          "specs/xplat-001-runtime-inventory-constraints/data-model.md",
-          "specs/xplat-001-runtime-inventory-constraints/quickstart.md"
-        ],
-        "declared_file_operations": 2,
-        "gate": "G3 pass",
-        "plan_estimator": {
-          "status": "pass",
-          "projected": 0,
-          "production": 0,
-          "new": 1,
-          "modified": 1
-        },
-        "unresolved_markers": 0
-      }
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - data-integrity",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/data-integrity.md",
-        "items": 23,
-        "gaps": 0,
-        "fixes_applied": "created checklist; no spec or plan remediation needed"
-      }
+      "step": "Phase 4: Checklist - integration",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - data-integrity Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 4: Checklist - integration Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/error-handling.md",
-        "items": 16,
-        "gaps": 1,
-        "remaining_gap_markers": 0,
-        "fixes_applied": "added static verification failure remediation steps to plan.md"
-      }
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/security.md",
-        "items": 18,
-        "gaps": 1,
-        "remaining_gap_markers": 0,
-        "fixes_applied": "added first-release vs deferred-hardening supply-chain release boundary labels to spec.md and plan.md"
-      }
+      "status": "pending"
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - maintainability",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-001-runtime-inventory-constraints/checklists/maintainability.md",
-        "items": 24,
-        "gaps": 1,
-        "remaining_gap_markers": 0,
-        "fixes_applied": "added SC-001 aggregation constraints and plan row aggregation/match-summary rules"
-      }
+      "step": "Phase 4: Checklist - reliability",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - maintainability Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 4: Checklist - reliability Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed",
-      "result": {
-        "tasks_path": "specs/xplat-001-runtime-inventory-constraints/tasks.md",
-        "total_tasks": 32,
-        "phase_count": 5,
-        "parallel_tasks": 11,
-        "user_story_coverage": {
-          "US1": 11,
-          "US2": 3,
-          "US3": 4
-        },
-        "gate": "G5 pass",
-        "task_reviewability_gate": "status=block; recorded as size/scope evidence"
-      }
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed",
-      "result": {
-        "findings_total": 5,
-        "critical": 0,
-        "high": 1,
-        "medium": 3,
-        "low": 1,
-        "remaining_findings": 0,
-        "gate": "G6 pass",
-        "fixes_applied": [
-          "aligned roadmap scope and reviewability budget",
-          "expanded runtime rubric task coverage",
-          "expanded follow-up exception task coverage",
-          "resolved stale error-handling checklist boxes",
-          "updated workflow analysis results and confidence output"
-        ]
-      }
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "status": "pending"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "result": {
-        "mode": "advisory",
-        "threshold": 0.9,
-        "composite": 0.98,
-        "recommended_action": "proceed"
-      }
+      "status": "pending"
     },
     {
-      "step": "Phase 7: Foundation (T001-T007)",
-      "status": "completed",
-      "result": "T001-T007 complete; report outline, scan boundary, command set, row schema, allowed values, and aggregation rules added"
-    },
-    {
-      "step": "Phase 7: US1 Inventory (T008-T018)",
-      "status": "completed",
-      "result": "T008-T018 complete; scan counts reconciled to 21,162 represented hits with active-source, generated, docs, tests, historical, and repo-only classification"
-    },
-    {
-      "step": "Phase 7: US2 Runtime Rubric (T019-T021)",
-      "status": "completed",
-      "result": "T019-T021 complete; non-scoring runtime gates, 100-point criteria, and candidate evidence targets added"
-    },
-    {
-      "step": "Phase 7: US3 Supply-Chain Rubric (T022-T025)",
-      "status": "completed",
-      "result": "T022-T025 complete; non-selecting supply-chain gates, 100-point criteria, and artifact/control evidence targets added"
-    },
-    {
-      "step": "Phase 7: Polish and Verification (T026-T032)",
-      "status": "completed",
-      "result": {
-        "tasks": "T026-T032 complete",
-        "scan_counts": "pass; seven scan families reconcile to report counts",
-        "spec_index": "pass; index current",
-        "diff_check": "pass",
-        "gate": "G7 pass"
-      }
+      "step": "Phase 7: Implement - Pending task decomposition",
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "warning": ".specify/scripts/powershell absent; no blocker for this Bash-backed repository workflow",
-        "commands": "doctor extension contract inspected and equivalent read-only checks run"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "commands": [
-          ".specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks",
-          "scan-count reconciliation",
-          "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check \"$PWD\"",
-          "git diff --check"
-        ]
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "completed_tasks": 32,
-        "verified": 32,
-        "partial": 0,
-        "weak": 0,
-        "not_found": 0,
-        "skipped": 0
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "completed",
-      "result": {
-        "status": "completed_with_remediation",
-        "findings": 1,
-        "highest_severity": "medium",
-        "remediation": "updated input-universe commands in the inventory report to include the report-path exclusion used by the recorded counts"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "command": "bash tests/speckit-pro/run-all.sh",
-        "summary": "3624/3624 passed"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "completed",
-      "result": {
-        "status": "scoped_pre_pr_warn",
-        "gate_result": "warn",
-        "reason": "scoped pre-PR gate input: total files 20 exceeds warn threshold 15; primary surfaces 3 exceeds warn threshold 1",
-        "blocked_operations": [],
-        "evidence": "specs/xplat-001-runtime-inventory-constraints/.process/final-reviewability/gate-state.json",
-        "full_diff": {
-          "status": "block",
-          "command": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff main",
-          "reason": "total files 33 exceeds block threshold 25",
-          "total_files": 33,
-          "primary_surface_count": 4,
-          "note": "post-review remediation evidence; the original final gate remains scoped pre-PR warn/proceed evidence"
-        }
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "completed",
-      "result": {
-        "status": "completed",
-        "evidence": "docs/ai/specs/.process/XPLAT-001-workflow.md#self-review",
-        "edge_case_gap": false,
-        "todo_markers": 0
-      }
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "completed",
-      "result": {
-        "status": "completed",
-        "skeleton_generated": true,
-        "author_agent": "unavailable in current multi-agent tool; parent rewrote skeleton in place",
-        "evidence": "specs/xplat-001-runtime-inventory-constraints/.process/uat-runbook.md"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "packet": "/private/tmp/xplat-001-pr-packet.json",
-        "body_file": "specs/xplat-001-runtime-inventory-constraints/.process/pr-body.md",
-        "validation": "validate-pr-packet.sh passed",
-        "workflow_contract": "validate-pr-workflow-contract.sh passed"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "completed",
-      "result": {
-        "status": "created",
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/263",
-        "number": 263,
-        "base": "main",
-        "head": "codex/xplat-001-runtime-inventory-constraints",
-        "title": "feat(speckit-pro): Add runtime Inventory and Constraints"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed",
-      "result": {
-        "status": "rp_review_findings_remediated",
-        "tool": "rp-review-cli",
-        "findings": 12,
-        "review_passes": 5,
-        "review_decision": "",
-        "merge_state_status": "CLEAN",
-        "checks": "local suite passed 3624/3624 after roadmap-MOC PRS/BACKLINKS fail-safe remediation; PR checks pending rerun after push"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed",
-      "result": {
-        "status": "completed",
-        "evidence": "specs/xplat-001-runtime-inventory-constraints/retrospective.md",
-        "completion_rate": 100,
-        "spec_adherence": 100,
-        "critical_findings": 0
-      }
+      "status": "pending"
     }
   ]
 }
