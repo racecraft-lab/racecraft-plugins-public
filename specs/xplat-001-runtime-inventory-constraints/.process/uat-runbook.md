@@ -25,7 +25,7 @@ are the report reconciliation commands and the repository shell suite.
 
 1. Open the inventory report.
 2. Confirm the scan boundary says the report excludes itself from source scans.
-3. Confirm the scan result summary totals 21,068 represented scan hits.
+3. Confirm the scan result summary totals 21,141 represented scan hits.
 4. Confirm the inventory rows separate source, generated payload, public docs,
    tests/fixtures, historical/archive, repo-only, and explicit exclusions.
 5. Confirm proven active rows include invocation-trace evidence and that
@@ -95,7 +95,7 @@ Review these in the inventory report:
    static verification ran and passed after the latest `origin/main` merge:
    scan-count reconciliation, `generate-spec-index.sh --check "$PWD"`, `git
    diff --check`, G7, and the full repository suite
-   `bash tests/speckit-pro/run-all.sh` (`3609/3609` passed).
+   `bash tests/speckit-pro/run-all.sh` (`3619/3619` passed locally).
 2. **Edge cases?** Acceptance coverage is artifact-based because XPLAT-001 has
    no runtime implementation. The inventory report covers generated/source
    duplicate references, docs-only claims, tests/fixtures/archive references,
@@ -110,9 +110,10 @@ Review these in the inventory report:
    commits include `e2fee750`, `4110db0b`, and `8053485b`, with G7 passing.
 4. **Follow-up & tidiness?** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]`
    markers were found in the spec, plan, tasks, workflow, report, or roadmap
-   handoff paths. The diff contains no helper ports, generated payload rebuilds,
-   active invocation changes, debug logging, commented-out code, temporary
-   fixtures, or orphaned files.
+   handoff paths. The diff contains no helper ports, active invocation changes,
+   debug logging, commented-out code, temporary fixtures, or orphaned files.
+   Generated payload edits are limited to synchronized copies of the existing
+   spec-index helper remediation.
 ---
 
 ## Sign-off
@@ -125,5 +126,6 @@ Advisory only — these checkboxes block nothing.
 
 ## Rollback
 
-Revert the XPLAT-001 branch commits for this report and roadmap handoff. No
-runtime behavior, generated payload, database, or migration state is changed.
+Revert the XPLAT-001 branch commits for this report, roadmap handoff, and
+post-review spec-index remediation. No runtime behavior, database, or migration
+state is changed; generated payload sync reverts with the branch commits.

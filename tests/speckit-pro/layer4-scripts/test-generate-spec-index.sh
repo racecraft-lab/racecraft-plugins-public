@@ -98,6 +98,8 @@ RMOC_OTHER_HOME="docs/ai/specs/otherproject-roadmap-MOC.md"
 RMOC_SPEC1="specs/prsg-001-foo/SPEC-MOC.md"     # gated, status=complete  -> indexed
 RMOC_SPEC2="specs/prsg-002-bar/SPEC-MOC.md"     # gated, status=""        -> indexed (blank status)
 RMOC_SPEC10="specs/prsg-010-baz/SPEC-MOC.md"    # gated, status=in-progress -> indexed
+RMOC_FLAT_OWNED="specs/prsg-011-flat-owned/spec.md" # ungated flat fallback, owned by myproject
+RMOC_FLAT_UNOWNED="specs/prsg-099-flat/spec.md" # ungated flat fallback, no roadmap owner -> skipped
 RMOC_NOID="specs/prsg-003-noid/SPEC-MOC.md"     # gated, spec_id=""        -> SKIPPED (FR-015a)
 RMOC_OTHER_SPEC="specs/prsg-004-other/SPEC-MOC.md" # gated, points to other roadmap -> indexed only there
 RMOC_LEGACY="specs/legacy-thing/SPEC-MOC.md"    # NOT gated                -> SKIPPED (FR-016)
@@ -524,6 +526,18 @@ set_test "other roadmap home INDEX includes its own technical-roadmap-owned spec
 assert_contains "$other_home_k" "- [PRSG-004](../../../specs/prsg-004-other/SPEC-MOC.md) ${PRS_SEP} review" "home_up target also owns specs pointing at the technical roadmap"
 set_test "other roadmap home INDEX excludes myproject specs"
 assert_not_contains "$ohidx_k" "prsg-001-foo" "other home INDEX must not be repo-wide"
+set_test "home INDEX includes an owned flat fallback spec"
+assert_contains "$home_k" $'- [PRSG-011-FLAT-OWNED](../../../specs/prsg-011-flat-owned/spec.md) \xc2\xb7\n' "structure-version fallback rows require roadmap ownership"
+set_test "other roadmap home INDEX excludes flat fallback specs owned by myproject"
+assert_not_contains "$ohidx_k" "prsg-011-flat-owned" "flat fallback rows must be scoped to their roadmap owner"
+set_test "home INDEX excludes unowned flat fallback specs"
+assert_not_contains "$hidx_k" "prsg-099-flat" "unowned flat fallback rows must not leak into roadmap home INDEX"
+set_test "other roadmap home INDEX excludes unowned flat fallback specs"
+assert_not_contains "$ohidx_k" "prsg-099-flat" "unowned flat fallback rows must not leak into any roadmap home INDEX"
+set_test "home INDEX excludes memory fallback headings without roadmap ownership"
+assert_not_contains "$hidx_k" "PRSG-098" "memory fallback rows have no ownership metadata and must not enter scoped home INDEX"
+set_test "other roadmap home INDEX excludes memory fallback headings without roadmap ownership"
+assert_not_contains "$ohidx_k" "PRSG-098" "memory fallback rows have no ownership metadata and must not enter scoped home INDEX"
 # (3) empty-status spec STILL emits a row, separator present + blank status — pin the
 # frozen byte form (separator, no trailing whitespace, end of line) (FR-015, SC-004).
 set_test "empty-status spec still emits a row without trailing whitespace (FR-015)"

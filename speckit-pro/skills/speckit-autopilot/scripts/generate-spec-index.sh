@@ -77,16 +77,20 @@ moc_up_target_basename() {
   moc_link_target_basename "$up"
 }
 
-home_note_owns_spec_moc() {
-  local home_moc="$1" spec_moc="$2" home_base home_up spec_up
+home_note_owns_frontmatter_file() {
+  local home_moc="$1" file="$2" home_base home_up spec_up
   [ -n "$home_moc" ] || return 0
   home_base="$(basename "$home_moc")"
   home_up="$(moc_up_target_basename "$home_moc" || true)"
-  spec_up="$(moc_up_target_basename "$spec_moc" || true)"
+  spec_up="$(moc_up_target_basename "$file" || true)"
   [ -n "$spec_up" ] || return 1
   [ "$spec_up" = "$home_base" ] && return 0
   [ -n "$home_up" ] && [ "$spec_up" = "$home_up" ] && return 0
   return 1
+}
+
+home_note_owns_spec_moc() {
+  home_note_owns_frontmatter_file "$1" "$2"
 }
 
 candidate_out_of_scope_reason() {
@@ -244,6 +248,10 @@ render_index() {
           continue
         fi
       fi
+      if [ -n "$home_moc" ]; then
+        [ -f "$d/spec.md" ] || continue
+        home_note_owns_frontmatter_file "$home_moc" "$d/spec.md" || continue
+      fi
 
       target="../../../specs/$branch/spec.md"
       label="$(printf '%s' "$branch" | tr '[:lower:]' '[:upper:]')"
@@ -253,7 +261,7 @@ render_index() {
     done < <(find "$SPECS_DIR" -mindepth 1 -maxdepth 1 -type d | LC_ALL=C sort)
 
     local memory="$REPO_ROOT/.specify/memory/spec.md"
-    if [ -f "$memory" ]; then
+    if [ -z "$home_moc" ] && [ -f "$memory" ]; then
       local heading slug
       while IFS= read -r heading; do
         heading="${heading### }"

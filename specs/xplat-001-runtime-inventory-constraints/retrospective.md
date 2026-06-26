@@ -52,7 +52,7 @@ None. No `spec.md` edits are recommended.
 
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| SC-001 | Met | 21,132 represented scan hits reconcile after the latest `main` merge and review remediation. |
+| SC-001 | Met | 21,141 represented scan hits reconcile after the latest `main` merge and review remediation. |
 | SC-002 | Met | Proven active rows include invocation traces. |
 | SC-003 | Met | Inventory rows include required schema fields or documented exclusions. |
 | SC-004 | Met | Summary count tables cover all used values. |
@@ -67,7 +67,7 @@ None. No `spec.md` edits are recommended.
 |---------|--------|-------|
 | One Markdown report under `docs/ai/research/` | Implemented as `docs/ai/research/cross-platform-runtime-inventory.md` | None |
 | Roadmap handoff update | Implemented in cross-platform runtime roadmap | None |
-| Static verification only | Used scans, spec-index check, diff hygiene, G7, full shell suite, and PR checks | Positive: stronger verification than minimum |
+| Static verification only | Used scans, spec-index check, diff hygiene, G7, and full shell suite; PR checks are pending rerun after the latest push | Positive: stronger local verification than minimum |
 | No JSON/CSV report artifact | Report remains Markdown only | None |
 
 ## Significant Deviations
@@ -101,7 +101,7 @@ None.
 |-----------|--------|----------|
 | Plugin Structure Compliance | Pass | Existing spec-index helper changes were synchronized to generated Claude/Codex payload copies; no active invocation path or replacement-runtime port was added. |
 | Script Safety | Pass | No new shipped helper script was added. |
-| Test Coverage Before Merge | Pass | Static scans, G7, spec-index, diff hygiene, full shell suite, and PR checks passed. |
+| Test Coverage Before Merge | Pass | Static scans, G7, spec-index, diff hygiene, and the full shell suite passed locally; PR checks are pending rerun after the latest push. |
 | Conventional Commits | Pass | Checkpoint commits use conventional prefixes/scopes. |
 | KISS, Simplicity, YAGNI | Pass | Markdown report and existing scripts were sufficient. |
 
