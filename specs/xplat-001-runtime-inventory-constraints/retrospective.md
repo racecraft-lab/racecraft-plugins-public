@@ -79,9 +79,9 @@ None.
 - The final reviewability backstop produced a warning because its scoped pre-PR
   gate input counted 20 files and 3 primary surfaces after including workflow,
   spec, report, UAT, and evidence artifacts. Post-PR review remediation expanded
-  the full PR diff to 31 changed files and 4 primary surfaces; the current
+  the full PR diff to 33 changed files and 4 primary surfaces; the current
   `reviewability-gate.sh diff main` evidence reports a size block because total
-  files 31 exceeds the block threshold 25. The original scoped gate and current
+  files 33 exceeds the block threshold 25. The original scoped gate and current
   full-diff evidence are both recorded in
   `.process/final-reviewability/gate-state.json`.
 - Post-PR review remediation expanded the diff beyond the original inventory-only

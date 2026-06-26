@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-001-workflow.md",
-  "updated_at": "2026-06-26T02:48:01Z",
+  "updated_at": "2026-06-26T02:56:15Z",
   "active_step": "Complete",
   "feature_dir": "specs/xplat-001-runtime-inventory-constraints",
   "branch": "codex/xplat-001-runtime-inventory-constraints",
@@ -418,8 +418,8 @@
         "full_diff": {
           "status": "block",
           "command": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff main",
-          "reason": "total files 31 exceeds block threshold 25",
-          "total_files": 31,
+          "reason": "total files 33 exceeds block threshold 25",
+          "total_files": 33,
           "primary_surface_count": 4,
           "note": "post-review remediation evidence; the original final gate remains scoped pre-PR warn/proceed evidence"
         }
