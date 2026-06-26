@@ -116,7 +116,7 @@ function frontmatterDateForSlug(slug) {
     const abs = path.join(CONTENT_DIR_ABS, candidate);
     if (!fs.existsSync(abs)) continue;
     const text = fs.readFileSync(abs, 'utf-8');
-    const fm = text.match(/^---\n([\s\S]*?)\n---/);
+    const fm = text.match(/^---\r?\n([\s\S]*?)\r?\n---/);
     if (!fm) return undefined;
     const match = fm[1].match(/^(?:lastUpdated|date):\s*(.+?)\s*$/m);
     if (!match) return undefined;
