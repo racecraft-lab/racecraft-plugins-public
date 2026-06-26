@@ -147,7 +147,7 @@ direct dep, added to `integrations` with a custom `serialize()`).
 | Field | Source | Rule |
 |-------|--------|------|
 | `loc` | `site`+`base` | absolute staging URL now; flips with DOC-012 (SC-010) |
-| `lastmod` | `git log -1 --pretty=%cI <file>`; frontmatter date override | valid ISO date from real change history, never build time (FR-017, SC-007) |
+| `lastmod` | single bulk `git log` walk → slug→date map (NOT per-file subprocess, withastro/astro#16803); frontmatter date override; OMIT if no history | valid ISO date from real change history, never build time (FR-017, SC-007) |
 
 ---
 

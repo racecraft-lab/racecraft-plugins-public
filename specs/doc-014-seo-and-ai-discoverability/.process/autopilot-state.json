@@ -28,7 +28,7 @@
     "plan": "complete",
     "checklist": "complete",
     "tasks": "complete",
-    "analyze": "pending",
-    "implement": "pending"
+    "analyze": "complete",
+    "implement": "in_progress"
   }
 }

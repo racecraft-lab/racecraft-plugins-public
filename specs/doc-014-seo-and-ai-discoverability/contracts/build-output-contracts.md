@@ -130,8 +130,11 @@ shared route-data middleware.
 **Producer**: `@astrojs/sitemap` (direct dep) with a custom `serialize()`.
 
 Every page entry's `<lastmod>` MUST be a valid ISO-8601 date sourced from the
-page's git commit date (`git log -1 --pretty=%cI <file>`), with a per-page
-frontmatter date override honored. `<lastmod>` MUST NOT be the build time. `loc`
+page's git commit date, resolved via a SINGLE BULK `git log` walk into a
+slug→date map built once (NOT a per-file `git log` subprocess — the O(pages)
+slow path, withastro/astro#16803), with a per-page frontmatter date override
+honored. For a page with no commit history, `<lastmod>` is the frontmatter date
+if pinned, else OMITTED. `<lastmod>` MUST NOT be the build time. `loc`
 values derive from `site`+`base`.
 
 **Verifies**: FR-017, FR-012 · SC-007, SC-010

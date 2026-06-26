@@ -44,7 +44,7 @@ roadmap text / sibling site — keep them in view:
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass; 5 artifacts + 11 contracts (C1–C11), 6 entities, all 29 FR/10 SC traced. Advisory LOC estimate `pass` (proj 520 mechanical; real reviewable ~300–360 < 400). |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass; 3 domains, 81 items, 27 gaps all remediated, 0 unresolved. Spec/plan hardened (single-source robots, publisher@id invariant, bulk git-log sitemap, no-history lastmod omission, fail-loud all surfaces). |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass; 34 tasks (T001–T035), 8 `[P]`, 9 phases, all US1–US6 + D1–D12 covered. Atomicity route = one-navigable-PR (no split). |
-| Analyze | `/speckit-analyze` | ⏳ Pending | Watch for drift from the 3 divergences above |
+| Analyze | `/speckit-analyze` | ✅ Complete | G6 pass (0 CRITICAL/HIGH); G6.5 confidence NO_DATA→soft-skip (advisory). 0 unresolved → consensus skipped. 5 findings remediated (2 MEDIUM + 3 LOW). All 7 divergences/constraints intact; 100% SC/US/contract/entity coverage. |
 | Implement | `/speckit-implement` | ⏳ Pending | TDD; port sibling `e2e/seo-*.spec` patterns |
 
 **Status Legend:** ⏳ Pending | 🔄 In Progress | ✅ Complete | ⚠️ Blocked
@@ -461,7 +461,12 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| | | | |
+| C1 | MEDIUM | FR-016 (JSON-LD justified as rich-results/entity-disambiguation, not LLM-citation) had no producing task | Folded into T030 + cited FR-016/C2 (the success-metric doc now carries the justification) |
+| F1 | MEDIUM | Contract C7 + data-model §5 showed the per-file `git log` command the plan/T021 forbid | Updated C7 + data-model §5 to the single bulk `git log` walk wording (+ no-history OMIT) — now consistent with plan/T021 |
+| Cv1 | LOW | FR-026 covered only by the range phrase in T033, not its explicit ID | Made all FR-024..029 + FR-023 boundaries explicit in T033 |
+| Cv2 | LOW | Design-concept OG Open Question not stamped RESOLVED (downstream already landed on astro-og-canvas) | Added the RESOLVED note to the design-concept Open Question for provenance |
+| Cv3 | LOW | Task IDs skip T007/T008/T009 (T009A present) | Informational — intentional template artifact for the reviewability-budget gate task; no broken cross-references |
+| — | — | **Coverage** | FR 29/30 task-covered (FR-016 closed by C1); SC 10/10; US 6/6; contracts C1–C11 11/11; entities 6/6. 0 ambiguity, 0 duplication, 0 CRITICAL. |
 
 ---
 
