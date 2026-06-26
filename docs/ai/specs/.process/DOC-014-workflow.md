@@ -527,6 +527,15 @@ For each task: RED (failing test) -> GREEN (minimum impl) -> REFACTOR -> VERIFY.
 
 ---
 
+## Self-Review (Post-Implementation, 4-question audit)
+
+1. **Fully implements the spec?** Yes. All 29 FRs + 10 SCs covered and verified: 3-tier robots (FR-001–004a / SC-001/002), llms.txt + per-page `.md` (FR-006/007/008 / SC-005), descriptions + presence gate (FR-009/010 / SC-003), exactly one canonical (FR-011/027 / SC-004), JSON-LD graph with publisher@id==Org@id + SoftwareApplication on the landing page + Person (FR-013/014/015 / SC-006), git-sourced sitemap lastmod + visible stamp (FR-017/018 / SC-007), per-page OG cards (FR-019/020 / SC-008), success-metric doc with no numeric target (FR-021/022/023 / SC-009), staging URLs with no hardcoded prod domain (FR-012 / SC-010), negatives FR-024–029 honored. `pnpm --dir docs-site validate` green (88/88).
+2. **Shortcuts / tech debt?** (a) OG cards are text-only (no logo raster) — acceptable per FR-019 (per-page titled card); a logo PNG can be added later. (b) The 3 SEO e2e specs hardcode the staging absolute URL — must flip in lockstep at the DOC-012 launch (handoff flagged in the PR body). (c) A typed `infra` reviewability exception was taken because the change is one cohesive, unsplittable surface (atomicity = one-navigable-PR). No silent debt.
+3. **Test coverage adequate?** Strong. 6 Playwright e2e specs (robots, llms+md, schema, sitemap, og) + the `validateMetaDescriptions` gate (with a verified negative test) + the existing DOC-010 smoke suite. The sitemap spec proves git-sourcing (not build time) via an unmodified page's real commit date.
+4. **What should a reviewer look at first?** PR size (1321 reviewable LOC; ~615 are tests) — see the infra-exception rationale; the DOC-011 robots quality-gate retarget (noindex meta kept intact); the `deploy-docs.yml` `fetch-depth: 0` CI touch (no CLAUDE.md CI/CD-section update needed — checkout-depth only); and the all-identical sitemap `lastmod` today (real — every page got its `description` in one commit; the test guards via untouched pages).
+
+---
+
 ## Consensus Resolution Log
 
 | Phase | Item | Category | Round | Analysts | Outcome | Confidence |
