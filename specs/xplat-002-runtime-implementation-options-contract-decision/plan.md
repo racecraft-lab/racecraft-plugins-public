@@ -22,17 +22,19 @@ Python, and small per-platform binary runner options; the selected runtime and
 version range are implementation outputs of this spike.
 
 **Primary Dependencies**: No new runtime dependency is planned in the Plan
-phase. Candidate evaluation must record dependency/bootstrap footprint for each
-runtime family and must treat installed-cache no-install behavior as a pass/fail
-gate.
+phase. Candidate evaluation must record dependency/bootstrap footprint and
+evidence-backed versus assumed artifact shape for each runtime family, and must
+treat installed-cache no-install behavior as a pass/fail gate.
 
 **Storage**: Checked-in Markdown decision artifacts, contract documents, and
 optional lightweight probe evidence only; no database, browser storage, or
 runtime service state.
 
 **Testing**: Markdown/static validation, marker scans, git diff hygiene,
-candidate probe commands recorded in the decision evidence, and the relevant
-deterministic shell suite when source maps or helper scripts are touched.
+candidate probe commands recorded in the decision evidence, installed Claude
+and Codex plugin-cache invocation evidence or host-specific evidence gaps, and
+the relevant deterministic shell suite when source maps or helper scripts are
+touched.
 
 **Target Platform**: Installed Claude and Codex plugin cache paths, with native
 Windows, macOS, and Linux behavior evaluated through official/runtime
@@ -51,7 +53,9 @@ select one canonical runtime and command contract during implementation; no
 per-user dependency installation, network package restoration, `npm install`,
 `pip install`, `uv`, `brew`, or equivalent after cache population; no shell,
 `.sh`, `jq`, globbing, redirection, or shell interpolation fallback in the
-selected contract; no public native-platform support-claim edits.
+selected contract; dependency or artifact assumptions are recorded as XPLAT-003
+implications, not accepted security controls; no public native-platform
+support-claim edits.
 
 **Scale/Scope**: One feature directory with Plan artifacts and later decision
 evidence. Active runtime surfaces are source skills/hooks/agents/scripts and
@@ -141,12 +145,29 @@ and select the runtime.
    plugin platform documentation, or repo-local source/manifests for each
    candidate family.
 3. Use lightweight, non-mutating probes only where invocation behavior is
-   uncertain: runtime availability/version, source or installed-cache
-   invocation, JSON stdin/stdout, stderr/exit separation, path-with-spaces, and
-   shell-free subprocess or missing-command behavior.
-4. Treat installed-cache reliability as a pass/fail gate and the tie-breaker
-   when candidates are otherwise close.
-5. Record documentation/probe conflicts explicitly. Installed-cache probe
+   uncertain: runtime availability/version, installed Claude plugin-cache
+   invocation, installed Codex plugin-cache invocation, JSON stdin/stdout,
+   stderr/exit separation, path-with-spaces, and shell-free subprocess or
+   missing-command behavior. Source and generated-payload probes may supplement
+   setup evidence, but they do not replace host-specific installed-cache
+   evidence or evidence gaps.
+4. When a required probe cannot be run locally, record a structured fallback
+   plan with the missing probe, host/runtime scope, reason unavailable,
+   substitute official or repo-local evidence consulted, gate or scoring effect,
+   owner, and expiry/removal or follow-up condition. Do not score an evidence
+   gap as an installed-cache probe pass.
+5. Treat installed-cache reliability as a pass/fail gate and the tie-breaker
+   when candidates are objectively close. Close means no selection-blocking gate
+   failures plus either weighted totals within five points or a lead based only
+   on maintainer ergonomics or compatibility-adapter criteria while reliability
+   criteria are tied or favor another candidate.
+6. Apply close-candidate reliability tie-breakers from measurable evidence in
+   this order before maintainer preference: installed Claude cache probe status,
+   installed Codex cache probe status, post-cache setup burden, offline behavior,
+   first-run/bootstrap failure diagnostics, and runtime-info/preflight
+   completeness. Record the comparison as unresolved if those inputs do not
+   produce a winner.
+7. Record documentation/probe conflicts explicitly. Installed-cache probe
    evidence controls invocation-reliability scoring; official documentation
    controls general runtime claims.
 6. Record a per-candidate supply-chain implication matrix for XPLAT-003 without
@@ -160,11 +181,17 @@ and select the runtime.
 2. Define the `speckit-pro-runner` command contract as the stable handoff shape:
    JSON request on stdin, one JSON response on stdout, line-delimited JSON
    diagnostics on stderr, explicit exit-code categories, typed paths,
-   shell-disabled subprocess execution, and runtime-info/preflight reporting.
+   shell-disabled subprocess execution, installed-payload helper dispatch,
+   runtime-info/preflight reporting, and fixture-level status/exit/diagnostic
+   assertions for malformed envelopes and subprocess failures.
 3. Define temporary compatibility adapter records as migration evidence only,
    using owner-first IDs such as `xplat-005-compat-<legacy-helper-or-surface-slug>`
    with explicit `owner_spec`, `removal_spec`, and `removal_condition` fields.
-4. Define quickstart validation around artifact review, marker scans, diff
+4. Define an XPLAT-004 implementation input bundle that maps XPLAT-001 row IDs,
+   owner buckets, active invocation modes, runner helper IDs, operations/modes,
+   adapter records, fixture expectations, and explicit exclusions without
+   requiring source-checkout paths.
+5. Define quickstart validation around artifact review, marker scans, diff
    hygiene, and candidate probe evidence review. Do not add runner implementation
    commands.
 

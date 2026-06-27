@@ -29,9 +29,54 @@ Helper-specific arguments are encoded in the JSON request, not argv.
 }
 ```
 
+## Input Validation and Error Responses
+
+The runner validates the stdin envelope before helper dispatch. Validation
+failures include malformed JSON, a non-object envelope, unsupported
+`schema_version`, missing required fields, and invalid field types.
+
+When the runner process can safely emit a response, input-validation failures
+still write one JSON response to stdout and one or more line-delimited JSON
+diagnostics to stderr. For malformed JSON, `request_id` and `helper_id` are
+`null` because they cannot be read from the envelope. For schema-valid JSON
+that is missing another required field, any already-available `request_id` and
+`helper_id` values are echoed; unavailable identifiers are `null`.
+
+Input-validation responses use:
+
+- `status`: `input_error`
+- process `exit_code`: `2`
+- `legacy_exit_code`: `null`
+- stderr diagnostic `severity`: `error`
+- stderr diagnostic `source`: `runner`
+- stderr diagnostic `code`: `invalid_json`, `invalid_envelope`,
+  `unsupported_schema_version`, or `missing_required_field`
+
+## Helper Dispatch
+
+The request fields `helper_id`, `operation`, and `mode` identify a
+runner-owned helper implementation resolved from the installed plugin
+payload/cache root. The contract does not dispatch through repository authoring
+checkout paths such as `speckit-pro/skills/...` or `dist/...` source paths.
+
+XPLAT-004 may choose the concrete internal registry shape, but each dispatchable
+helper must trace to XPLAT-001 row IDs when it replaces or adapts an active
+runtime surface. Temporary compatibility adapters may map legacy surfaces to
+runner helper IDs, operations, and modes; adapters still invoke the runner
+through the installed payload entrypoint.
+
 ## Stdout Response
 
 The runner emits one versioned JSON response on stdout.
+
+Allowed `status` values are:
+
+- `ok`
+- `expected_failure`
+- `input_error`
+- `missing_prerequisite`
+- `subprocess_failure`
+- `internal_failure`
 
 ```json
 {
@@ -55,7 +100,7 @@ The runner emits one versioned JSON response on stdout.
       "kind": "plugin_relative",
       "value": "."
     },
-    "source_vs_installed_context": "source",
+    "source_vs_installed_context": "installed_plugin_cache",
     "capabilities": [],
     "prerequisites": []
   }
@@ -81,6 +126,20 @@ Diagnostic event fields:
 | `source` | Yes | Runner, helper, prerequisite, or subprocess source |
 | `details` | Yes | Structured object; may be empty |
 
+Required diagnostic codes for XPLAT-004 parity fixtures:
+
+| Code | Required scenario |
+|---|---|
+| `invalid_json` | Stdin cannot be parsed as JSON |
+| `invalid_envelope` | Parsed JSON is not a valid request object or has invalid field types |
+| `unsupported_schema_version` | `schema_version` is present but unsupported |
+| `missing_required_field` | A required request field is absent or empty |
+| `missing_prerequisite` | Required selected runtime, executable, or input prerequisite is unavailable |
+| `subprocess_nonzero` | A subprocess exits nonzero and is not mapped to expected helper/domain failure |
+| `subprocess_timeout` | A subprocess times out |
+| `subprocess_stderr_only_failure` | A helper-defined stderr-only subprocess failure category is observed |
+| `internal_failure` | Unexpected runner exception or unclassified internal failure |
+
 ## Exit-Code Map
 
 | Code | Category | Contract Meaning |
@@ -94,6 +153,13 @@ Diagnostic event fields:
 
 `legacy_exit_code` preserves a documented helper-specific exit code only when
 fixture parity requires it.
+
+If the entrypoint process starts and detects that the selected runtime or a
+required executable is unavailable, it must emit `status:
+missing_prerequisite`, a `missing_prerequisite` stderr diagnostic, and process
+exit code `3`. A host-level failure to launch the entrypoint at all is outside
+the runner response guarantee and must be recorded by XPLAT-004 as launcher
+evidence, not as a successful runner invocation.
 
 ## Path Values
 
@@ -160,6 +226,12 @@ The runner exposes a `runtime-info` or `preflight` operation returning:
 - capabilities
 - prerequisite records
 
+The `plugin_root` and `source-vs-installed context` fields must make it clear
+whether the runner is executing from an installed Claude cache, an installed
+Codex cache, or a supplemental source/generator context. Installed-cache
+reliability must be judged from installed-cache contexts, not from source-only
+probes.
+
 Prerequisite records include:
 
 - `id`
@@ -194,17 +266,39 @@ Required fields:
 xplat-005-compat-<legacy-helper-or-surface-slug>
 ```
 
+Adapter dispatch must use the installed runner entrypoint and must not require
+the repository authoring checkout. `xplat001_source_row` preserves row-level
+traceability to the inventory input that made the adapter necessary.
+
+## XPLAT-004 Implementation Inputs
+
+The XPLAT-004 handoff bundle derived from XPLAT-001 must include:
+
+- XPLAT-001 row IDs and owner buckets.
+- Active invocation modes.
+- Runner helper IDs, operations, and modes.
+- Adapter records where legacy compatibility is required.
+- Fixture parity expectations tied to the relevant rows.
+- Explicit exclusions for generated-payload cutover, public docs, repository-only
+  helpers, and other non-XPLAT-004 work.
+
+The bundle's integration target is the installed plugin payload/cache root for
+Claude and Codex, not a source checkout.
+
 ## Fixture Parity Expectations
 
-XPLAT-004 must be able to build fixture parity tests for:
+XPLAT-004 must be able to build fixture parity tests from these assertions:
 
-1. Successful helper invocation.
-2. Invalid JSON.
-3. Missing required request field.
-4. Path with spaces.
-5. Windows separators.
-6. Missing prerequisite.
-7. Subprocess nonzero.
-8. Stderr-only failure.
-9. Runtime-info or preflight.
-10. At least one read-only legacy-helper versus runner comparison.
+| Fixture | Stdout response assertion | Stderr assertion | Process exit |
+|---|---|---|---:|
+| Successful helper invocation | One JSON response with `status: ok`, `exit_code: 0`, request identifiers echoed, and helper data in `data` | No `error` severity diagnostic required for success | 0 |
+| Invalid JSON | One JSON response with `status: input_error`, `exit_code: 2`, `request_id: null`, `helper_id: null`, and `legacy_exit_code: null` | At least one JSON line with `severity: error`, `source: runner`, and `code: invalid_json` | 2 |
+| Missing required request field | One JSON response with `status: input_error`, `exit_code: 2`, available identifiers echoed or `null`, and `legacy_exit_code: null` | At least one JSON line with `code: missing_required_field` and `details.field` naming the missing field | 2 |
+| Path with spaces | The path value remains a single typed `Path Value`; no shell splitting or quote-stripping is observable | No diagnostic caused only by spaces in a path | Scenario-specific |
+| Windows separators | The path value preserves Windows separators or records a normalized display path without assuming POSIX-only separators | No diagnostic caused only by Windows separators | Scenario-specific |
+| Missing prerequisite | One JSON response with `status: missing_prerequisite`, `exit_code: 3`, and a prerequisite record when applicable | At least one JSON line with `code: missing_prerequisite` | 3 |
+| Subprocess nonzero | One JSON response with `status: subprocess_failure`, `exit_code: 4`, captured subprocess stdout/stderr, and subprocess `exit_code` | At least one JSON line with `code: subprocess_nonzero` and the child exit code in `details` | 4 |
+| Subprocess timeout | One JSON response with `status: subprocess_failure`, `exit_code: 4`, and `timed_out: true` in the subprocess result | At least one JSON line with `code: subprocess_timeout` | 4 |
+| Stderr-only failure | One JSON response with `status: subprocess_failure`, `exit_code: 4`, and captured stderr unless the helper explicitly maps it to `expected_failure` | At least one JSON line with `code: subprocess_stderr_only_failure` | 4 unless mapped to 1 |
+| Runtime-info or preflight | One JSON response with `status: ok`, `exit_code: 0`, and all required runtime-info fields | No `error` severity diagnostic required for success | 0 |
+| Read-only legacy-helper comparison | Runner response preserves documented helper parity and sets `legacy_exit_code` only when the compared helper requires it | Diagnostics remain line-delimited JSON and do not corrupt stdout | Shared map code for the scenario |

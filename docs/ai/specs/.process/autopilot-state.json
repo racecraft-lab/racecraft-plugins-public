@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-002-workflow.md",
-  "updated_at": "2026-06-27T00:08:46Z",
-  "active_step": "Phase 4: Checklist - integration",
+  "updated_at": "2026-06-27T00:39:32Z",
+  "active_step": "Phase 5: Tasks",
   "feature_dir": "specs/xplat-002-runtime-implementation-options-contract-decision",
   "branch": "codex/xplat-002-runtime-implementation-options-contract-decision",
   "status": "in_progress",
@@ -204,39 +204,89 @@
     },
     {
       "step": "Phase 4: Checklist - integration",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-002-runtime-implementation-options-contract-decision/checklists/integration.md",
+        "items": 32,
+        "gaps_found": 3,
+        "gaps_remaining": 0,
+        "remediation_loop": 1,
+        "fixes": [
+          "host-specific installed Claude and installed Codex plugin-cache evidence requirements",
+          "installed-payload helper dispatch boundaries for helper_id, operation, and mode",
+          "XPLAT-001 row-derived XPLAT-004 implementation input bundle"
+        ],
+        "markers_remaining": 0
+      }
     },
     {
       "step": "Phase 4: Checklist - integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-002-runtime-implementation-options-contract-decision/checklists/error-handling.md",
+        "items": 27,
+        "domain_items": 24,
+        "gaps_found": 1,
+        "gaps_remaining": 0,
+        "fixes": [
+          "malformed JSON and missing-required-field fixture assertions now define stdout status, process exit code, stderr diagnostic code, nullable identifiers, missing-runtime classification, and fixture rows"
+        ],
+        "markers_remaining": 0
+      }
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-002-runtime-implementation-options-contract-decision/checklists/security.md",
+        "items": 29,
+        "gaps_found": 1,
+        "gaps_remaining": 0,
+        "fixes": [
+          "dependency and artifact assumptions are explicitly classified for XPLAT-003 handoff; unknown or unverified assumptions become evidence gaps, not implicit controls"
+        ],
+        "markers_remaining": 0
+      }
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - reliability",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-002-runtime-implementation-options-contract-decision/checklists/reliability.md",
+        "items": 33,
+        "gaps_found": 2,
+        "gaps_remaining": 0,
+        "fixes": [
+          "structured fallback records for probes that cannot run locally",
+          "objective close-candidate tie-breaker rules using measurable reliability inputs before maintainer preference"
+        ],
+        "markers_remaining": 0,
+        "gate": "G4 pass"
+      }
     },
     {
       "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

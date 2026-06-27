@@ -119,10 +119,17 @@ spec responsibility.
   maintainers, official plugin platform documentation, or repo-local
   source/manifests. Third-party material may be supplemental only.
 - Required smoke probes are minimal and non-mutating: runtime
-  version/availability, installed-cache or generated-payload invocation when
-  present, JSON stdin/stdout behavior, stderr/exit separation, path-with-spaces
-  handling, and shell-free subprocess or missing-command behavior. If the cache
-  or runtime is unavailable, record an evidence gap.
+  version/availability, installed Claude plugin-cache invocation, installed
+  Codex plugin-cache invocation, JSON stdin/stdout behavior, stderr/exit
+  separation, path-with-spaces handling, and shell-free subprocess or
+  missing-command behavior. Repo-local or generated-payload probes may be
+  supplemental setup evidence, but they do not replace installed-cache evidence.
+  If either host cache or runtime is unavailable, record a host-specific
+  evidence-gap fallback plan. The fallback plan includes the missing probe,
+  host/runtime scope, reason unavailable, substitute official or repo-local
+  evidence consulted, gate or scoring effect, owner, and expiry/removal or
+  follow-up condition. Evidence gaps explain missing proof; they do not count
+  as probe passes.
 - When official documentation and smoke probes conflict, record both. The
   installed-cache probe controls invocation-reliability scoring, official docs
   control general runtime claims, and unresolved conflict remains an evidence
@@ -162,8 +169,11 @@ spec responsibility.
   `available`, `version`, `path`, `remediation`, and `severity`.
 - XPLAT-004 fixture parity must cover success, invalid JSON, missing required
   field, path with spaces, Windows separators, missing prerequisite,
-  subprocess nonzero, stderr-only failure, runtime-info/preflight, and at least
-  one read-only legacy-helper versus runner comparison.
+  subprocess nonzero, subprocess timeout, stderr-only failure,
+  runtime-info/preflight, and at least one read-only legacy-helper versus
+  runner comparison. Each failure fixture must identify expected stdout
+  `status`, process `exit_code`, stderr diagnostic `code`, and any required
+  response fields such as null request identifiers for malformed JSON.
 
 ### Session 3: Packaging, Adapters, and Public-Claim Boundaries
 
@@ -191,9 +201,19 @@ spec responsibility.
   dependencies, build environment inputs, runtime/install execution risk,
   maintenance posture, and evidence gaps. XPLAT-002 records feasibility only;
   XPLAT-003 chooses first-release, deferred, and not-claimed controls.
+- The matrix separates evidence-backed facts from assumptions for vendored
+  packages, embedded runtimes, native binaries, generated payload artifacts,
+  lockfiles/manifests, and package-manager behavior. Unknown or unverified
+  artifact assumptions are evidence gaps, not accepted controls or implicit
+  permission for XPLAT-004 to build a new security model.
 - XPLAT-004 receives only the selected runtime, the `speckit-pro-runner`
   contract, JSON/stderr/exit/path/subprocess/preflight requirements, fixture
   parity expectations, and compatibility-adapter records.
+- XPLAT-004 also receives a traceable implementation input bundle derived from
+  XPLAT-001 rows. The bundle maps row IDs and owner buckets to runner helper
+  inputs, compatibility-adapter records, fixture parity expectations, and
+  explicit exclusions so implementation does not infer work from source
+  checkout paths.
 - XPLAT-002 must not edit README, docs-site pages, marketplace metadata,
   changelog, release notes, or similar public surfaces to claim native support.
   It may use decision-record, target, candidate-evidence, and handoff wording
@@ -217,19 +237,36 @@ spec responsibility.
   source/manifests for each candidate family; third-party material MAY be used
   only as supplemental evidence.
 - **FR-005**: Where invocation behavior is uncertain, the evidence base MUST
-  include lightweight repo-local, generated-payload, or installed-cache smoke
-  probe results for runtime availability, JSON input/output, stderr/exit
-  separation, path-with-spaces handling, and shell-free subprocess or
-  missing-command behavior, or explicitly record why a probe could not be
-  completed.
+  include lightweight smoke probe results for runtime availability, installed
+  Claude plugin-cache invocation, installed Codex plugin-cache invocation, JSON
+  input/output, stderr/exit separation, path-with-spaces handling, and
+  shell-free subprocess or missing-command behavior, or explicitly record a
+  host/runtime-specific evidence-gap fallback plan when a probe cannot be
+  completed. Each fallback plan MUST include the missing probe, reason
+  unavailable, substitute official or repo-local evidence consulted, gate or
+  scoring effect, owner, and expiry/removal or follow-up condition. Repo-local
+  and generated-payload probes MAY be recorded as supplemental setup evidence,
+  but MUST NOT substitute for the installed-cache invocation evidence required
+  by the XPLAT-001 gate, and evidence gaps MUST NOT be counted as
+  installed-cache probe passes.
 - **FR-006**: The final decision MUST select exactly one canonical runtime and
   MUST NOT leave XPLAT-004 with a ranked shortlist.
 - **FR-007**: The decision rationale MUST explain rejected options, including
   rubric gate failures, weighted criteria results, evidence gaps,
   documentation/probe conflicts, or tie-breakers that drove each rejection.
-- **FR-008**: When candidates are otherwise close, the decision MUST use install
-  reliability and installed-cache invocation reliability as the deciding
-  tie-breaker.
+- **FR-008**: The decision MUST define "otherwise close" objectively before
+  applying the install-reliability tie-breaker. Candidates are close only when
+  they have no selection-blocking gate failures and their weighted totals differ
+  by five points or less, or when the leading score depends only on maintainer
+  ergonomics or compatibility-adapter criteria while reliability criteria are
+  tied or favor another candidate.
+- **FR-008a**: For close candidates, the decision MUST apply measurable
+  reliability tie-breaker inputs before maintainer preference: installed Claude
+  cache probe status, installed Codex cache probe status, post-cache dependency
+  setup burden, offline behavior after cache population, first-run/bootstrap
+  failure diagnostics, and runtime-info/preflight completeness. If those inputs
+  do not produce a winner, the decision record MUST mark the item unresolved
+  rather than hiding the tie in narrative rationale.
 - **FR-009**: The command contract MUST define the canonical entrypoint as
   `speckit-pro-runner`, plugin-cache-relative by default, with a
   payload-relative default path of `scripts/speckit-pro-runner` unless XPLAT-004
@@ -266,16 +303,30 @@ spec responsibility.
   path, vulnerability-scan path, checksum/signature/SBOM/provenance feasibility,
   consumer-local verification ideas, offline/update implications, distribution
   trust root, transitive/build-time/native dependencies, build environment
-  inputs, runtime/install execution risk, maintenance posture, and evidence
-  gaps, without selecting first-release controls.
+  inputs, runtime/install execution risk, maintenance posture, assumption status,
+  and evidence gaps, without selecting first-release controls. The matrix MUST
+  classify whether each candidate's dependency/artifact assumptions are
+  evidence-backed, unverified, or not applicable for vendored packages, embedded
+  runtimes, native binaries, generated payload artifacts, lockfiles/manifests,
+  and package-manager behavior.
 - **FR-018**: The handoff MUST identify what XPLAT-004 can build from the
   selected runtime, `speckit-pro-runner` command contract, fixture parity
   expectations, and compatibility-adapter records without reopening the language
   or packaging choice.
+- **FR-018b**: The XPLAT-004 handoff MUST include a traceable implementation
+  input bundle derived from XPLAT-001 inventory rows. The bundle MUST record
+  source row IDs, owner buckets, active invocation mode, selected runner helper
+  IDs, runner operations/modes, adapter records if needed, fixture expectations,
+  and explicit exclusions, and MUST NOT require source-checkout paths when an
+  installed plugin-cache path is the integration target.
 - **FR-018a**: The XPLAT-004 handoff MUST define fixture parity expectations for
   success, invalid JSON, missing required field, path-with-spaces, Windows
-  separator, missing-prerequisite, subprocess-nonzero, stderr-only failure,
-  runtime-info or preflight, and at least one read-only legacy-helper comparison.
+  separator, missing-prerequisite, subprocess-nonzero, subprocess-timeout,
+  stderr-only failure, runtime-info or preflight, and at least one read-only
+  legacy-helper comparison. For each failure fixture, the handoff MUST specify
+  expected stdout `status`, process `exit_code`, stderr diagnostic `code`, and
+  required response-field behavior so fixture authors can test from the
+  requirement text alone.
 - **FR-019**: The work MUST avoid changing README, docs-site pages, marketplace
   metadata, changelog, release notes, or other public support-claim surfaces
   beyond decision-record, target, candidate-evidence, and handoff wording.
@@ -320,7 +371,9 @@ spec responsibility.
   are temporary migration notes, not selectable runtime families.
 - **Evaluation Evidence**: A cited documentation source, lightweight probe
   result, documentation/probe conflict, or explicitly recorded evidence gap used
-  to support candidate scoring.
+  to support candidate scoring. Evidence gaps include the missing probe,
+  host/runtime scope, reason unavailable, substitute evidence, gate or scoring
+  effect, owner, and expiry/removal or follow-up condition.
 - **Command Contract**: The selected runtime-facing command agreement covering
   entrypoint, dispatch, JSON input/output, diagnostics, exit codes, paths,
   subprocesses, prerequisites, and runtime version reporting. The canonical
@@ -335,6 +388,11 @@ spec responsibility.
 - **Runtime Info**: The preflight/runtime-info response describing runner,
   contract, selected runtime, platform, plugin root, source-vs-installed
   context, capabilities, and prerequisite records.
+- **XPLAT-004 Implementation Input Bundle**: A handoff artifact derived from
+  XPLAT-001 inventory rows that maps row IDs, owner buckets, invocation modes,
+  runner helper IDs, operations, modes, adapter records, fixture expectations,
+  and exclusions into build-ready inputs for XPLAT-004 without assuming a source
+  checkout.
 - **Compatibility Adapter Record**: A temporary migration record, not a runtime
   candidate, with `adapter_id`, `legacy_surface`, `xplat001_source_row`,
   `runner_helper_id`, `runner_operation`, `runner_mode`, `owner_bucket`,
@@ -347,7 +405,8 @@ spec responsibility.
   vulnerability scanning, checksum/signature/SBOM/provenance feasibility,
   consumer-local verification, offline/update behavior, distribution trust root,
   transitive/build-time/native dependencies, build inputs, install execution
-  risk, maintenance posture, and evidence gaps.
+  risk, maintenance posture, assumption status, and evidence gaps. It identifies
+  artifact assumptions without treating them as selected controls.
 - **Decision Record**: The reviewable artifact that selects the canonical
   runtime, explains rejected options, records tie-breakers, and prevents later
   specs from reopening the same decision.
@@ -372,7 +431,8 @@ spec responsibility.
   mapping, path rules, subprocess rules, prerequisite reporting, and runtime
   version reporting without reopening runtime selection.
 - **SC-006**: Reviewers can trace every rejected option to a rubric result,
-  evidence gap, or install-reliability tie-breaker.
+  evidence gap, documentation/probe conflict, or objective install-reliability
+  tie-breaker.
 - **SC-007**: The decision record names all runtime-specific handoff items for
   XPLAT-003 and XPLAT-004 and contains no public support-claim, release-note, or
   public documentation promise changes.
@@ -383,8 +443,9 @@ spec responsibility.
 
 - XPLAT-001 runtime inventory and rubrics are available and are the
   authoritative baseline for this decision.
-- Lightweight smoke probes are non-mutating and may use only repo-local state or
-  the installed plugin cache already available to the reviewer.
+- Lightweight smoke probes are non-mutating. Repo-local state may establish
+  setup context, but installed Claude and Codex plugin-cache invocation evidence
+  or host-specific evidence gaps are required for the installed-cache gate.
 - The public installed plugin cache must be usable without asking each user to
   install extra dependencies or fetch packages from the network.
 - This phase records decision evidence and a command contract only; runner

@@ -34,9 +34,17 @@ runtime family.
 **Rationale**: Candidate evidence must come from runtime/toolchain maintainers,
 official plugin platform documentation, or repo-local source/manifests. When
 invocation behavior is uncertain, implementation should add lightweight,
-non-mutating probes for runtime availability, source or installed-cache
-invocation, JSON stdin/stdout behavior, stderr/exit separation, path handling,
-and shell-free subprocess or missing-command behavior.
+non-mutating probes for runtime availability, installed Claude plugin-cache
+invocation, installed Codex plugin-cache invocation, JSON stdin/stdout behavior,
+stderr/exit separation, path handling, and shell-free subprocess or
+missing-command behavior.
+
+Installed-cache invocation evidence is host-specific: installed Claude and
+installed Codex plugin-cache probes, or explicit host-specific evidence gaps,
+are required before the installed-cache gate can pass. Repo-local and generated
+payload probes are useful setup evidence, but they cannot substitute for cache
+invocation evidence because platform/plugin packaging separates marketplace or
+repo sources from the installed plugin payload that executes at runtime.
 
 **Alternatives considered**:
 
@@ -61,6 +69,45 @@ after install cannot be the selected runtime for this decision.
   install reliability outranks implementation convenience when candidates are
   otherwise close.
 
+## Decision: Require structured fallback plans for unrun probes
+
+**Rationale**: XPLAT-002 may not be able to run every host/runtime probe from a
+single local environment, but missing probes must remain reviewable evidence
+gaps rather than implied reliability passes. Each unrun required probe should
+record the missing probe, host/runtime scope, reason unavailable, substitute
+official or repo-local evidence consulted, gate or scoring effect, owner, and
+expiry/removal or follow-up condition.
+
+**Alternatives considered**:
+
+- Treat unrun probes as neutral: rejected because it can let source-only or
+  documentation-only evidence pass the installed-cache gate silently.
+- Block the decision on every unavailable local host: rejected because native
+  release-readiness UAT belongs to XPLAT-007, but the gap still needs an owner
+  and scoring effect.
+
+## Decision: Define close-candidate tie-breakers objectively
+
+**Rationale**: The XPLAT-001 rubric has explicit weights, so "otherwise close"
+must be measurable before install reliability is used as the tie-breaker.
+Candidates are close only when they have no selection-blocking gate failures and
+their weighted totals differ by five points or less, or when the leading score
+depends only on maintainer ergonomics or compatibility-adapter criteria while
+reliability criteria are tied or favor another candidate. Close candidates are
+then compared in this order: installed Claude cache probe status, installed
+Codex cache probe status, post-cache setup burden, offline behavior after cache
+population, first-run/bootstrap failure diagnostics, and runtime-info/preflight
+completeness.
+
+**Alternatives considered**:
+
+- Use narrative judgment for close candidates: rejected because reviewers could
+  not reproduce the selection from evidence records.
+- Let maintainer ergonomics break close ties first: rejected because the setup
+  decision explicitly accepted user install reliability as the tie-breaker.
+- Force a winner when reliability inputs remain tied: rejected because an
+  unresolved tie should be visible for consensus instead of hidden in rationale.
+
 ## Decision: Define one `speckit-pro-runner` command contract
 
 **Rationale**: XPLAT-004 needs a precise command target. The contract uses the
@@ -69,6 +116,11 @@ path `scripts/speckit-pro-runner` unless XPLAT-004 deliberately creates a
 `bin/` convention. Helper execution uses one versioned JSON request on stdin,
 one versioned JSON response on stdout, and deterministic line-delimited JSON
 diagnostics on stderr.
+
+Helper dispatch is part of the process boundary: `helper_id`, `operation`, and
+`mode` resolve to runner-owned implementations under the installed plugin
+payload/cache root. Source checkout paths may appear as evidence, but the
+contract must not rely on them for installed Claude or Codex invocation.
 
 **Alternatives considered**:
 
@@ -83,7 +135,10 @@ diagnostics on stderr.
 `0=ok`, `1=expected helper/domain failure`, `2=input envelope/usage/schema
 error`, `3=missing prerequisite`, `4=subprocess failure or timeout`, and
 `5=unexpected internal failure`. Legacy helper-specific codes are preserved in
-`legacy_exit_code` only when parity requires them.
+`legacy_exit_code` only when parity requires them. Fixture authors also need
+stable diagnostic codes for malformed JSON, missing fields, missing
+prerequisites, subprocess nonzero, timeout, stderr-only failure, and internal
+failure so stdout/stderr/exit assertions can be built from the contract text.
 
 **Alternatives considered**:
 
@@ -110,6 +165,22 @@ compatibility does not become permanent architecture.
 - Omit adapters until implementation: rejected because XPLAT-004 needs
   traceable migration boundaries.
 
+## Decision: Hand XPLAT-004 a row-derived implementation input bundle
+
+**Rationale**: XPLAT-001 rows are the authoritative inventory of active runtime
+surfaces, owner buckets, and invocation-mode boundaries. XPLAT-004 needs those
+rows normalized into build inputs instead of inferring work from repository path
+searches. The input bundle maps XPLAT-001 row IDs to runner helper IDs,
+operations, modes, adapter records, fixture expectations, and explicit
+exclusions.
+
+**Alternatives considered**:
+
+- Let XPLAT-004 re-scan the source tree: rejected because it can recreate the
+  source-checkout assumption and drift from XPLAT-001 owner decisions.
+- Hand off only prose summaries: rejected because adapter and fixture parity
+  work need row-level traceability.
+
 ## Decision: Hand supply-chain implications to XPLAT-003 only
 
 **Rationale**: XPLAT-002 records a per-candidate supply-chain implication matrix
@@ -117,7 +188,11 @@ covering dependency footprint, manifest and lockfile behavior, generated
 artifact shape, build/release path, scanning path, checksum/signature/SBOM/
 provenance feasibility, local verification ideas, offline/update behavior,
 trust root, native/build-time dependencies, execution risk, maintenance posture,
-and evidence gaps. XPLAT-003 chooses actual controls.
+assumption status, and evidence gaps. The matrix distinguishes evidence-backed
+facts from assumptions for vendored packages, embedded runtimes, native binaries,
+generated payload artifacts, lockfiles/manifests, and package-manager behavior.
+Unknown or unverified assumptions stay as XPLAT-003 evidence gaps; XPLAT-003
+chooses actual controls.
 
 **Alternatives considered**:
 
@@ -144,7 +219,7 @@ XPLAT-007 validates native release readiness.
 
 | Candidate Family | Must-Have Gates | Weighted Criteria | Required Evidence | Decision Output |
 |---|---|---|---|---|
-| JavaScript/TypeScript | Installed-cache invocation, native behavior, paths, JSON, subprocess, packaging | XPLAT-001 weights totaling 100 | Official runtime/toolchain docs, plugin platform docs or repo manifests, bounded probes when uncertain | Selected or rejected with rationale |
+| JavaScript/TypeScript | Installed-cache invocation, native behavior, paths, JSON, subprocess, packaging | XPLAT-001 weights totaling 100 | Official runtime/toolchain docs, plugin platform docs or repo manifests, installed Claude/Codex cache probes or host-specific evidence gaps when uncertain | Selected or rejected with rationale |
 | Python | Same gates | Same weights | Same evidence standard | Selected or rejected with rationale |
 | Small per-platform binary runner | Same gates | Same weights | Same evidence standard | Selected or rejected with rationale |
 
@@ -153,11 +228,19 @@ XPLAT-007 validates native release readiness.
 Implementation should record probe results or evidence gaps for:
 
 1. Runtime availability and version reporting.
-2. Source and installed-cache or generated-payload invocation path.
+2. Installed Claude plugin-cache invocation path and installed Codex
+   plugin-cache invocation path, plus any supplemental source or generated
+   payload invocation path used to explain setup.
 3. JSON stdin/stdout success and malformed input behavior.
 4. Stderr-only diagnostic emission and process exit separation.
 5. Path-with-spaces and Windows separator handling.
 6. Structured argv subprocess success, nonzero, timeout, and missing-command
    behavior with shell disabled.
+
+If a required local probe cannot be run, record a structured evidence-gap
+fallback plan with the missing probe, host/runtime scope, reason unavailable,
+substitute evidence consulted, gate or scoring effect, owner, and expiry/removal
+or follow-up condition. Installed-cache evidence gaps cannot be scored as
+installed-cache probe passes.
 
 All probes must be non-mutating and must not become shipped runner behavior.

@@ -48,8 +48,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Specify | `$speckit-specify` | Complete | Created the decision-spike spec and requirements quality checklist; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Resolved candidate scoring, probe scope, command envelope, packaging, adapter, security handoff, and public-claim boundaries |
 | Plan | `$speckit-plan` | Complete | Produced plan, research, data model, command contract, quickstart, and agent context pointer; G3 passed |
-| Checklist | `$speckit-checklist` | In Progress | Recommended domains: integration, error-handling, security, maintainability/reliability |
-| Tasks | `$speckit-tasks` | Pending | Generate report/probe/decision tasks, not runner implementation tasks |
+| Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability gaps remediated; G4 passed |
+| Tasks | `$speckit-tasks` | In Progress | Generate report/probe/decision tasks, not runner implementation tasks |
 | Analyze | `$speckit-analyze` | Pending | Check for drift between roadmap, XPLAT-001 rubric, design concept, and generated artifacts |
 | Implement | `$speckit-implement` | Pending | Produce the runtime decision record, probe evidence, and roadmap handoff only |
 
@@ -362,10 +362,10 @@ Focus on XPLAT-002 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| integration | Pending | Pending | Pending |
-| error-handling | Pending | Pending | Pending |
-| security | Pending | Pending | Pending |
-| reliability | Pending | Pending | Pending |
+| integration | 32 | 3 found, 0 remaining | Host-specific installed-cache evidence, installed-payload helper dispatch boundaries, and XPLAT-001 row-derived XPLAT-004 input bundle added |
+| error-handling | 24 | 1 found, 0 remaining | Malformed-envelope diagnostics and fixture-level stdout/stderr/exit assertions added |
+| security | 29 | 1 found, 0 remaining | Dependency/artifact assumption classification added to prevent implicit XPLAT-003 security controls |
+| reliability | 33 | 2 found, 0 remaining | Probe fallback records and objective close-candidate reliability tie-breaker rules added |
 
 ---
 
