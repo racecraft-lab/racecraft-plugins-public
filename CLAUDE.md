@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Active SpecKit implementation plan: `specs/xplat-002-runtime-implementation-options-contract-decision/plan.md` (XPLAT-002 - Runtime Implementation Options and Contract Decision). Inspect current workflow state under `docs/ai/specs/.process/` and active `specs/**` directories for phase status.
+Active SpecKit implementation plan: `specs/doc-014-seo-and-ai-discoverability/plan.md` (DOC-014 — SEO and AI discoverability for the docs site). Inspect current workflow state under `docs/ai/specs/.process/` and active `specs/**` directories for phase status. (DOC-013 — brand identity + marketplace landing page — shipped via PR #246 and was archived into `.specify/memory/`.)
 <!-- SPECKIT END -->
 
 ## Working in This Repo
@@ -483,8 +483,6 @@ gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloa
 - Checked-in Markdown, Astro components, package scripts, generated reference files, and CI artifacts only; no database or browser storage (doc-010-search-accessibility-deep-links-docs-validation)
 - Docs-site JavaScript ESM on Node >=22.12; GitHub Actions YAML; Markdown operator guidance + Astro 6.4.6, Starlight 0.40.0, `@astrojs/check`, `starlight-links-validator`, Playwright 1.61.0, pnpm 10.25.0 via Corepack, standard GitHub Pages Actions (doc-011-github-pages-build-and-deploy-pipeline)
 - Checked-in repository files only; GitHub Pages stores the uploaded `docs-site/dist` static artifact outside repository source control (doc-011-github-pages-build-and-deploy-pipeline)
-- Decision-stage candidates: JavaScript/TypeScript, Python, and small per-platform binary runner options; no selected runtime or new runtime dependency in Plan. (xplat-002-runtime-implementation-options-contract-decision)
-- Checked-in Markdown decision artifacts and command-contract docs only; no database, browser storage, or runtime service state. (xplat-002-runtime-implementation-options-contract-decision)
 
 ## Recent Changes
 - prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.
