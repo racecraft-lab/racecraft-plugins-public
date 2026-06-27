@@ -30,7 +30,7 @@ The first-release baseline is:
 
 **Storage**: Checked-in specification artifacts under `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`.
 
-**Testing**: Static specification validation only for this phase: marker counts, spec-index freshness, diff whitespace, and diff scope review.
+**Testing**: Static specification validation only for this phase: marker counts, G7 task completion, spec-index freshness, diff whitespace, and diff scope review.
 
 **Target Platform**: Decision applies to future packaged native runner artifacts for Windows, macOS, and Linux, but this phase does not build or claim native platform support.
 
@@ -66,7 +66,7 @@ The first-release baseline is:
 |---|---|---|
 | Plugin Structure Compliance | No runner artifacts, generated payload changes, plugin invocation changes, or release workflow changes. | Pass: phase outputs are spec artifacts only. |
 | Script Safety | Future commands are recorded as policy or verification commands only; no helper implementation lands here. | Pass: contracts describe evidence shapes and do not add scripts. |
-| Test Coverage Before Merge | Static validation must prove marker cleanliness, spec-map freshness, whitespace health, and diff scope. | Pass pending validation commands in `quickstart.md`. |
+| Test Coverage Before Merge | Static validation must prove marker cleanliness, G7 task completion, spec-map freshness, whitespace health, and diff scope. | Pass via Phase 7 validation commands in `quickstart.md`. |
 | Conventional Commits | No commit in this phase. | Not applicable. |
 | KISS, Simplicity, YAGNI | First release uses the minimum truthful trust baseline; heavier controls remain deferred unless promotion evidence appears. | Pass. |
 | Reviewability | Setup warning for two primary surfaces is recorded and accepted. | Warning status, not blocking. |

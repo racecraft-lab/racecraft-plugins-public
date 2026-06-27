@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-27
 
-**Status**: Draft
+**Status**: Complete
 
 **Input**: User description: "Choose the practical first-release security baseline and deferred hardening backlog for the XPLAT Go native runner before XPLAT-004 builds the runner and before XPLAT-007 makes public release claims."
 

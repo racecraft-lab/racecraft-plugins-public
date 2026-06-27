@@ -2,7 +2,7 @@
 
 ## Scope Check
 
-XPLAT-003 is a decision spike. A valid phase-3 diff changes only plan artifacts under:
+XPLAT-003 is a decision spike. A valid Phase 7 implementation diff changes only decision artifacts under:
 
 ```text
 specs/xplat-003-supply-chain-security-and-consumer-trust-model/
@@ -44,9 +44,8 @@ Run from the repository root in the XPLAT-003 worktree.
 ```bash
 git rev-parse --abbrev-ref HEAD
 git status --short
-bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-003-supply-chain-security-and-consumer-trust-model
-bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh findings specs/xplat-003-supply-chain-security-and-consumer-trust-model
-bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G6 specs/xplat-003-supply-chain-security-and-consumer-trust-model
+bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh all specs/xplat-003-supply-chain-security-and-consumer-trust-model
+bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-003-supply-chain-security-and-consumer-trust-model
 bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/xplat-003-supply-chain-security-and-consumer-trust-model
 speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"
 git diff --check
@@ -61,15 +60,14 @@ codex/xplat-003-supply-chain-security-and-consumer-trust-model
 
 Expected validation result:
 
-- Marker count reports zero gaps.
-- Finding marker count reports zero findings after Analyze remediation.
-- G6 validation reports zero critical or high findings.
+- Marker count reports zero gaps, clarifications, and findings.
+- G7 validation reports all implementation tasks complete.
 - Reviewability tasks gate may warn because it is a coarse planning heuristic over task path tokens; record warnings and continue only when it has no blockers and the real diff scope remains XPLAT-003 decision/process artifacts.
 - Spec index check reports current.
 - `git diff --check` reports no whitespace errors.
 - Diff scope is limited to the allowed XPLAT-003 decision/process artifacts.
 
-Project test suites are N/A for this pre-implementation decision phase. Do not run generated payload rebuilds or implementation tests as part of XPLAT-003 plan validation.
+Project test suites are N/A for this decision-artifact implementation phase. Do not run generated payload rebuilds or runner implementation tests as part of XPLAT-003 validation.
 
 ## Decision Checklist
 
