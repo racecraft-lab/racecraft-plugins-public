@@ -134,9 +134,9 @@ PUBLIC RELEASE UNBLOCKED
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
-| XPLAT-002 | Runtime Implementation Options and Contract Decision | In Review (PR #266 pending merge) | `.process/XPLAT-002-workflow.md` | PR #266 selects the Go native runtime model and runner contract; downstream work remains blocked until merge |
-| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Pending | — | Blocked by XPLAT-002 runtime decision; must finish before runner foundation |
-| XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-002 runtime decision and XPLAT-003 security model |
+| XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete | `.process/XPLAT-002-workflow.md` | Runtime decision: `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md` |
+| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | In Progress | `.process/XPLAT-003-workflow.md` | Scaffolded 2026-06-27; choose first-release supply-chain controls before runner foundation |
+| XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-003 security model |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-004; should reuse XPLAT-005 parity harness |
 | XPLAT-007 | Claude/Codex Cutover and Native Windows Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
@@ -241,7 +241,12 @@ implementation.
 
 **Priority:** P1 | **Depends On:** XPLAT-001 | **Enables:** XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
 
-**Status:** In Review (PR #266 pending merge). Scaffolded on 2026-06-26 in branch `codex/xplat-002-runtime-implementation-options-contract-decision`; workflow file is `docs/ai/specs/.process/XPLAT-002-workflow.md`; design concept is `docs/ai/specs/.process/XPLAT-002-design-concept.md`.
+**Status:** Complete. PR #266 merged on 2026-06-27 at `fff4d6b5`.
+Scaffolded on 2026-06-26 in branch
+`codex/xplat-002-runtime-implementation-options-contract-decision`; workflow
+file is `docs/ai/specs/.process/XPLAT-002-workflow.md`; design concept is
+`docs/ai/specs/.process/XPLAT-002-design-concept.md`; runtime decision is
+`specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`.
 
 **Goal:** Research and evaluate implementation options, then select the one
 runtime contract that all later specs must implement.
@@ -299,7 +304,10 @@ Budget result: within budget (decision record and probes)
 
 **Priority:** P1 | **Depends On:** XPLAT-002 | **Enables:** XPLAT-004, XPLAT-007
 
-**Status:** Pending.
+**Status:** In Progress. Scaffolded on 2026-06-27 in branch
+`codex/xplat-003-supply-chain-security-and-consumer-trust-model`; workflow file
+is `docs/ai/specs/.process/XPLAT-003-workflow.md`; design concept is
+`docs/ai/specs/.process/XPLAT-003-design-concept.md`.
 
 **Goal:** Choose the security and provenance approach for the new runtime so
 consumers can understand what they are installing and what the project verifies

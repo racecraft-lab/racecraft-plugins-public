@@ -2,14 +2,15 @@
 # Spec-level Map of Content (MOC). Frontmatter join-key contract (PRSG-002).
 # Generated from the shared spec-MOC template by speckit-scaffold-spec.
 #
-# up: MUST be a quoted relative markdown link - "[text](relative/path.md)", NEVER a
-#     [[wikilink]]. The () target is load-bearing: the stale-index lint parses the
-#     relative []() target from this value and resolves it. From specs/<branch-name>/
-#     the existing roadmap resolves as ../../docs/ai/specs/<roadmap-filename>.md, so
-#     the ../../docs/ai/specs/ prefix is hardcoded and only the filename is tokenized.
+# up: MUST be a quoted relative markdown link - "[text](relative/path.md)",
+#     never a wiki-style double-bracket link. The () target is load-bearing:
+#     the stale-index lint parses the relative []() target from this value and
+#     resolves it. From specs/<branch-name>/ the existing roadmap resolves as
+#     ../../docs/ai/specs/<roadmap-filename>.md, so the ../../docs/ai/specs/
+#     prefix is hardcoded and only the filename is tokenized.
 up: "[Cross-Platform Plugin Runtime roadmap](../../docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)"
 related: []                  # list of relative []() links; carried, unenforced in v1
-status: ""                   # carried, unenforced in v1
+status: "In Progress"        # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
 spec_id: "XPLAT-003"         # e.g., PRSG-002 - namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal

@@ -2,7 +2,7 @@
 # Spec-level Map of Content (MOC). Frontmatter join-key contract (PRSG-002).
 up: "[Cross-Platform Plugin Runtime Roadmap](../../docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)"
 related: []
-status: "In Review (PR 266 pending merge)"
+status: "Complete"
 rank:
 spec_id: "XPLAT-002"
 structureVersion: 1
