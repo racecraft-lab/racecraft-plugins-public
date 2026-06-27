@@ -24,6 +24,8 @@
 - [x] T002 [P] Collect source-truth references from `docs/ai/specs/.process/XPLAT-003-workflow.md`, `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`, and `specs/xplat-003-supply-chain-security-and-consumer-trust-model/plan.md` into the decision-evidence notes in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md`
 - [x] T003 [P] Cross-check required evidence record shapes in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/data-model.md` against `specs/xplat-003-supply-chain-security-and-consumer-trust-model/contracts/supply-chain-control-contract.md`
 - [x] T004 Verify the implementation scope remains decision-only in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/plan.md` and record any reviewability checkpoint needed before broader artifact edits
+- [x] T004a [P] Record official Anthropic Claude Code and OpenAI Codex plugin/skill/hook/MCP/script/custom-agent documentation findings in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md`
+- [x] T004b [P] Reopen the XPLAT-002 Go decision explicitly in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md` with rationale, Rust/Zig equivalence conditions, and official-doc runtime-boundary constraints
 
 **Checkpoint**: Foundation evidence is ready; user-story work can proceed in parallel.
 
@@ -40,6 +42,7 @@
 - [x] T007 [P] [US1] Validate SBOM, signature, provenance, reproducible-build, audit, marketplace-enforcement, and trust-chain feasibility decisions in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md`
 - [x] T008 [US1] Consolidate the first-release, deferred-hardening, explicit-non-claim, and out-of-scope control matrix in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md`
 - [x] T009 [US1] Verify `specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md` satisfies SC-001, SC-004, SC-007, SC-008, SC-010, SC-011, SC-012, and SC-013 from `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`
+- [x] T009a [US1] Consolidate platform capability evidence and installed-user runtime dependency boundary decisions in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md`
 
 **Checkpoint**: User Story 1 is independently reviewable as the maintainer trust-baseline decision.
 
@@ -47,7 +50,7 @@
 
 ## Phase 3: User Story 2 - Implementer Downstream Ownership (Priority: P1)
 
-**Goal**: XPLAT-004, XPLAT-007, release automation, and public wording owners can identify their inputs, evidence, and acceptance gates without reopening the runtime decision.
+**Goal**: XPLAT-004, XPLAT-007, release automation, and public wording owners can identify their inputs, evidence, and acceptance gates while preserving the reopened runtime-decision blocker.
 
 **Independent Test**: A planner can map every first-release control to a downstream owner surface and find no ownerless or gate-less required control.
 
@@ -56,6 +59,7 @@
 - [x] T012 [P] [US2] Validate release-automation acceptance evidence remains assigned-not-implemented and not-claimable in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/data-model.md` and `specs/xplat-003-supply-chain-security-and-consumer-trust-model/contracts/supply-chain-control-contract.md`
 - [x] T013 [US2] Consolidate downstream handoff language for XPLAT-004, XPLAT-007, release automation, docs, and release-note surfaces in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/plan.md`
 - [x] T014 [US2] Verify `specs/xplat-003-supply-chain-security-and-consumer-trust-model/plan.md` satisfies SC-002, SC-005, SC-006, SC-009, SC-016, and SC-017 from `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`
+- [x] T014a [US2] Add platform capability, runtime dependency boundary, and install completeness evidence contracts to `specs/xplat-003-supply-chain-security-and-consumer-trust-model/data-model.md` and `specs/xplat-003-supply-chain-security-and-consumer-trust-model/contracts/supply-chain-control-contract.md`
 
 **Checkpoint**: User Story 2 is independently reviewable as the downstream owner handoff.
 
@@ -71,6 +75,7 @@
 - [x] T016 [P] [US3] Audit current public-claim surfaces without editing them and record allowed, deferred, and forbidden claim patterns in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md`
 - [x] T017 [US3] Consolidate checksum mismatch, unavailable metadata, and maintainer reacceptance behavior in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/data-model.md` and `specs/xplat-003-supply-chain-security-and-consumer-trust-model/contracts/supply-chain-control-contract.md`
 - [x] T018 [US3] Verify consumer and public trust artifacts satisfy SC-003, SC-007, SC-014, SC-015, SC-016, and SC-017 from `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`
+- [x] T018a [US3] Record Codex custom-agent TOML registration as an install-completeness gate distinct from Claude Code plugin agents in `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`, `data-model.md`, `contracts/supply-chain-control-contract.md`, and `quickstart.md`
 
 **Checkpoint**: User Story 3 is independently reviewable as the consumer verification and public-claim boundary.
 
@@ -80,8 +85,8 @@
 
 **Purpose**: Confirm the decision-spike task set and final artifacts remain clean, traceable, and within scope.
 
-- [x] T019 [P] Run marker and gate checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`: `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh all specs/xplat-003-supply-chain-security-and-consumer-trust-model`, `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-003-supply-chain-security-and-consumer-trust-model`, and `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/xplat-003-supply-chain-security-and-consumer-trust-model`, recording any reviewability warnings as advisory unless blockers appear
-- [x] T020 [P] Run spec-map and diff hygiene checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`: `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`, `git diff --check`, and `git diff --name-only`, then refresh only `SPEC-MOC.md` if the index check requires it and confirm no implementation, generated-payload, release-workflow, or public-claim files changed
+- [x] T019 [P] Re-run marker and gate checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/` after official-doc/runtime-reopen additions: `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh all specs/xplat-003-supply-chain-security-and-consumer-trust-model`, `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-003-supply-chain-security-and-consumer-trust-model`, and `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/xplat-003-supply-chain-security-and-consumer-trust-model`, recording the size-only tasks-mode block and actual diff-mode no-blocker result
+- [x] T020 [P] Re-run spec-map and diff hygiene checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/` after official-doc/runtime-reopen additions: `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`, `git diff --check`, and `git diff --name-only`, then refresh only `SPEC-MOC.md` if the index check requires it and confirm no implementation, generated-payload, release-workflow, or public-claim files changed
 
 ---
 

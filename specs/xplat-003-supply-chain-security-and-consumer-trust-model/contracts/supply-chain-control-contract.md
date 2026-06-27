@@ -26,12 +26,131 @@ Required values for `classification`:
 - `explicitly_not_claimed`
 - `out_of_scope`
 
-## Pinned Go and Release Input Evidence Contract
+## Platform Capability Evidence Contract
 
-XPLAT-004 must record this evidence before accepting runner foundation artifacts:
+XPLAT-004 and XPLAT-007 must keep official platform capability evidence
+separate from runtime/toolchain assumptions:
 
 ```json
 {
+  "platform": "openai-codex",
+  "official_docs_refs": [
+    "https://developers.openai.com/codex/plugins",
+    "https://developers.openai.com/codex/skills",
+    "https://developers.openai.com/codex/subagents"
+  ],
+  "supported_surfaces": [
+    "plugin skills",
+    "skill scripts",
+    "MCP servers",
+    "lifecycle hooks",
+    "custom agents via .codex/agents/*.toml"
+  ],
+  "runtime_guarantees": "none_found",
+  "runtime_not_guaranteed": [
+    "Go",
+    "Rust",
+    "Zig",
+    "Node",
+    "Python",
+    "Bash",
+    "jq",
+    "package managers",
+    "WSL",
+    "Git Bash"
+  ],
+  "install_surface_distinctions": [
+    "Codex plugin skills are not the same as Codex custom-agent TOML registration."
+  ],
+  "xplat_gate_effect": "Do not claim install completeness or native support until required plugin payload and custom-agent registrations are verified."
+}
+```
+
+Contract rules:
+
+- Official docs can prove plugin packaging or registration support, but they do
+  not prove user-host runtime availability unless they explicitly guarantee that
+  runtime for the installed surface.
+- Local host probes and repository tooling are supplemental evidence only.
+- Codex custom-agent TOML registration must be checked separately from plugin
+  skill presence when agents are part of the release promise.
+
+## Runtime Dependency Boundary Contract
+
+Selected runtime evidence must identify whether the runtime is a build-time
+toolchain, user dependency, bundled runtime, or self-contained artifact:
+
+```json
+{
+  "runtime_shape": "go-native-artifact",
+  "build_time_toolchain": {
+    "name": "go",
+    "version": "reported-by-build-environment"
+  },
+  "installed_user_runtime_dependency": "none",
+  "bundled_runtime_payload": null,
+  "official_runtime_guarantee_ref": null,
+  "post_cache_setup_required": false,
+  "prerequisite_diagnostics": "Missing executable or metadata fails closed with deterministic diagnostics.",
+  "claim_effect": "Native support claim remains blocked until artifact, installed-cache, UAT, checksum, manifest, scan, source-to-dist, and claim-audit evidence pass."
+}
+```
+
+Contract rules:
+
+- First-release native-support claims require `post_cache_setup_required=false`.
+- Go, Rust, and Zig are user-runtime-free only when maintainers ship
+  self-contained per-platform artifacts; users must not be asked to install the
+  build toolchain to run the plugin.
+- Source scripts that rely on Node, Python, Bash, `jq`, package managers, WSL,
+  Git Bash, or network restoration after cache population are not claimable
+  native-support runtimes unless the runtime is officially guaranteed or bundled
+  with matching supply-chain controls.
+
+## Install Completeness Evidence Contract
+
+XPLAT-007 and install/autoheal flows must record platform-specific install
+completeness:
+
+```json
+{
+  "platform": "openai-codex",
+  "plugin_version": "2.16.0",
+  "payload_root": "installed Codex plugin cache root",
+  "skills_status": "present",
+  "scripts_status": "present_and_executable",
+  "hooks_status": "present",
+  "mcp_status": "not_applicable",
+  "agent_registration_status": {
+    "scope": ".codex/agents or ~/.codex/agents",
+    "required_agents": ["phase-executor", "clarify-executor"],
+    "status": "present"
+  },
+  "autoheal_action": "install or refresh missing TOML agents from the plugin payload when supported",
+  "fail_closed_behavior": "Report install incomplete and do not claim full Codex readiness until required agents are present."
+}
+```
+
+Contract rules:
+
+- Claude Code plugin agents and Codex custom-agent TOML registrations are
+  different install surfaces.
+- Codex plugin skill installation alone is not a complete install when required
+  Codex custom agents are missing.
+- Autoheal must repair only documented local install surfaces and must fail
+  closed when a required piece cannot be verified.
+
+## Pinned Release Input Evidence Contract
+
+If Go is explicitly re-approved, XPLAT-004 must record this evidence before
+accepting runner foundation artifacts:
+
+```json
+{
+  "runtime_shape": "go-native-artifact",
+  "toolchain_name": "go",
+  "toolchain_version": "go1.0.0",
+  "toolchain_source": "pinned toolchain source",
   "go_toolchain_version": "go1.0.0",
   "go_toolchain_source": "pinned toolchain source",
   "module_manifest_path": "go.mod",
@@ -51,6 +170,10 @@ Contract rules:
 - Unknown or unverified fields are evidence gaps, not accepted controls.
 - The record must cover the exact source revision, dependency snapshot, toolchain, build inputs, release inputs, and artifacts it claims to represent.
 - The record does not implement or imply reproducible builds, SBOMs, signatures, provenance, formal audit, marketplace-enforced verification, or native support claims.
+- `go_toolchain_version` and `go_toolchain_source` are Go-only fields. If the
+  runtime decision is amended to Rust, Zig, bundled Node, embedded Python, or
+  another runtime shape, regenerate this contract for that toolchain instead of
+  preserving stale Go-specific evidence.
 
 ## Checksum File Contract
 

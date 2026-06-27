@@ -6,11 +6,19 @@
 
 ## Summary
 
-XPLAT-003 is a decision spike that records the first-release supply-chain and consumer-trust baseline for the Go native `speckit-pro-runner` selected by XPLAT-002. The plan produces decision artifacts only: no runner implementation, helper port, generated payload rebuild, release workflow edit, or public native-support claim.
+XPLAT-003 is a decision spike that records a conditional first-release supply-chain and consumer-trust baseline for the Go native `speckit-pro-runner` currently recorded by XPLAT-002. The runtime choice has been reopened for explicit maintainer re-approval on this PR, so these decision artifacts are blocked from final acceptance until maintainers re-approve Go or amend XPLAT-002 and regenerate the trust model. Official Claude Code and OpenAI Codex documentation is now an explicit planning input: plugins and skills can package scripts/executables and MCP/hook surfaces, but those docs do not guarantee arbitrary user-host runtimes. The plan produces decision artifacts only: no runner implementation, helper port, generated payload rebuild, release workflow edit, or public native-support claim.
 
 The first-release baseline is:
 
 - Source-to-dist integrity evidence for generated plugin payloads.
+- Official platform capability evidence separating documented Claude/Codex
+  plugin surfaces from undocumented user-runtime assumptions.
+- Installed-user runtime dependency boundaries: build toolchains may exist in
+  maintainer automation, but public native claims must not require users to
+  install Go, Rust, Zig, Node, Python, Bash, `jq`, package managers, WSL, Git
+  Bash, or network package restoration after plugin cache population.
+- Codex install-completeness evidence that treats required custom-agent TOML
+  registration as separate from plugin skill installation.
 - Metadata propagation evidence proving checksum and runner manifest paths are present, equal, and fresh across source, generated Claude payload, and generated Codex payload roots before XPLAT-007 cutover.
 - SHA-256 checksums for packaged runner artifacts in `scripts/speckit-pro-runner.sha256`.
 - A runner artifact manifest at `scripts/speckit-pro-runner.manifest.json`.
@@ -24,7 +32,7 @@ The first-release baseline is:
 
 ## Technical Context
 
-**Language and Version**: Not applicable for this phase. Downstream runner implementation is Go native binary per XPLAT-002, but XPLAT-003 does not add Go code.
+**Language and Version**: Not applicable for this phase. Downstream runner implementation is conditionally described as Go native binary per XPLAT-002, but that choice is reopened for explicit maintainer re-approval and XPLAT-003 does not add Go code. Go, Rust, Zig, bundled Node, embedded Python, or another runtime shape must be treated as a packaging and supply-chain decision before implementation, not as a user-install requirement.
 
 **Primary Dependencies**: Existing repository Markdown and SpecKit helper scripts only. No new runtime dependency.
 
@@ -41,14 +49,21 @@ The first-release baseline is:
 **Constraints**:
 
 - One decision spike, not implementation.
-- Use XPLAT-001 supply-chain rubric and XPLAT-002 Go runner handoff.
+- Use XPLAT-001 supply-chain rubric and XPLAT-002 Go runner handoff as conditional source evidence while the runtime choice is reopened.
+- Use official Claude Code and OpenAI Codex documentation as the authority for
+  plugin, skill, hook, MCP, script, executable, and custom-agent surfaces.
+- Do not infer user-host runtime availability from plugin `scripts/` support,
+  local host probes, or repository tooling. A selected runtime must be bundled,
+  self-contained as per-platform artifacts, officially guaranteed for the
+  installed surface, or diagnosed as missing without support claims.
 - Do not edit release automation in XPLAT-003.
 - Do not build `speckit-pro-runner`, port helpers, change active invocation paths, or rebuild generated payloads.
 - Do not claim signatures, SBOMs, provenance or attestations, reproducible builds, formal audit, marketplace-enforced verification, cryptographic trust-chain verification, or native platform support before those controls are implemented and verified.
+- Do not treat XPLAT-003 as final, start XPLAT-004 runner implementation, or authorize XPLAT-007 public cutover until the reopened runtime choice is explicitly re-approved or amended.
 
 **Scale and Scope**: One spec directory; 0 production LOC; decision records and contracts only.
 
-**Reviewability Budget**: Setup gate returned warning status: `reviewable_loc=250`, `production_files=4`, `total_files=10`, `primary_surface_count=2`, warning `primary surfaces 2 exceeds warn threshold 1`, no blockers. XPLAT-003 remains one decision spike because it records one security and trust model and assigns downstream controls without implementation changes.
+**Reviewability Budget**: Setup gate returned warning status: `reviewable_loc=250`, `production_files=4`, `total_files=10`, `primary_surface_count=2`, warning `primary surfaces 2 exceeds warn threshold 1`, no blockers. After the official-doc/runtime-reopen additions, tasks-mode reviewability reports a size-only block (`reviewable_loc=1000`, `total_files=31`) because the task estimator counts task and file tokens broadly. The actual diff-mode PR gate remains warning-only with `reviewable_loc=0`, `production_files=0`, `total_files=24`, and no blockers. XPLAT-003 remains one decision spike because it records one security and trust model and assigns downstream controls without implementation changes.
 
 ## Declared File Operations
 
@@ -109,15 +124,24 @@ No changes under the source plugin tree, generated payload roots, docs site, wor
 `research.md` records:
 
 - XPLAT-001 supply-chain rubric mapping.
-- XPLAT-002 Go native runner handoff implications.
+- XPLAT-002 Go native runner handoff implications, now labeled conditional because the runtime choice is reopened on this PR.
+- Official Claude Code and OpenAI Codex platform capability findings.
+- Runtime reopen implications for Go, Rust, Zig, bundled Node, embedded Python,
+  source scripts, Bash, `jq`, package managers, WSL, and Git Bash.
 - First-release versus deferred hardening decisions.
 - Vulnerability actionability and exception policy.
 - Scan evidence freshness and staleness blockers.
-- Pinned Go and release input evidence requirements.
+- Conditional pinned release input evidence requirements, with Go-specific
+  fields applying only if Go is re-approved.
 - Consumer-local verification boundary.
 - Public claim allowed and prohibited language boundary.
 
-Open research result: no deferred control is promoted to first-release required in XPLAT-003. Checksums, manifest, scan policy, source-to-dist evidence, consumer verification, and truthful claims are enough for the first public release baseline.
+Open research result: no deferred cryptographic hardening control is promoted to first-release required in XPLAT-003. Checksums, manifest, scan policy, source-to-dist evidence, consumer verification, official platform capability evidence, runtime dependency separation, Codex install-completeness evidence, and truthful claims are enough for the first public release baseline.
+
+Runtime-decision blocker: the above result is conditional on explicit
+maintainer re-approval of the XPLAT-002 Go runtime choice. If maintainers amend
+the runtime decision, this plan, research, data model, and contract must be
+regenerated for the selected runtime before XPLAT-004 or XPLAT-007 consume them.
 
 ## Phase 1 Design Artifacts
 
@@ -126,7 +150,11 @@ Open research result: no deferred control is promoted to first-release required 
 `contracts/supply-chain-control-contract.md` defines the normative evidence shapes for downstream specs:
 
 - Control decision records.
-- Pinned Go and release input evidence records.
+- Pinned release input evidence records, with Go-specific fields applying only
+  if Go is re-approved.
+- Platform capability evidence records.
+- Runtime dependency boundary records.
+- Install completeness evidence records for Claude and Codex.
 - SHA-256 checksum file format.
 - Runner artifact manifest fields.
 - Runtime-info and preflight artifact-integrity fields.
@@ -143,6 +171,26 @@ Open research result: no deferred control is promoted to first-release required 
 ## First-Release Evidence Contracts
 
 XPLAT-003 defines evidence contracts only. XPLAT-004 records and implements runner build evidence. XPLAT-007 consumes accepted evidence for final cutover, release-readiness gating, consumer-local verification guidance, and public wording after native UAT passes.
+
+### Platform Capability and Runtime Boundary Gate
+
+XPLAT-004 and XPLAT-007 must treat official platform documentation as a gate
+for runtime and install claims:
+
+- Claude Code support for plugin skills, agents, hooks, MCP servers, scripts,
+  and `bin/` executables does not prove that a user host has any particular
+  language runtime or package manager.
+- OpenAI Codex support for plugin skills, apps, MCP servers, hooks, and skill
+  `scripts/` does not prove that a user host has any particular language runtime
+  or package manager.
+- Codex custom subagents are installed as `.codex/agents/*.toml` or
+  `~/.codex/agents/*.toml`; required Codex agent registrations are an install
+  completeness gate separate from plugin skill presence.
+
+The selected runner must either ship as self-contained per-platform artifacts,
+bundle the required runtime, rely on a runtime officially guaranteed for the
+installed surface, or fail closed through prerequisite diagnostics without
+public native-support claims.
 
 ### Scan Evidence Freshness Gate
 
@@ -166,13 +214,14 @@ Required scan evidence records include:
 
 Readiness fails when evidence is missing, stale, predates the source, dependency, toolchain, build input, scanner database, or artifact it covers, crosses a public release boundary without re-approval, or has unresolved actionable high and critical findings. The default freshness window is 7 calendar days before readiness review unless a stricter source, dependency, artifact, or scanner change invalidates the evidence sooner.
 
-### Pinned Go and Release Input Evidence
+### Pinned Release Input Evidence
 
-XPLAT-004 must record:
+If Go is re-approved, XPLAT-004 must record:
 
-- Go toolchain version.
-- Go toolchain source or installation method.
-- Go module manifest and `go.sum` or equivalent dependency snapshot state.
+- Selected build toolchain version.
+- Selected build toolchain source or installation method.
+- Selected runtime dependency manifest and checksum/snapshot state, such as Go
+  module manifest plus `go.sum` when Go is re-approved.
 - Target OS and architecture matrix.
 - Build command or repeatable build recipe.
 - Release package input list.
@@ -182,6 +231,11 @@ XPLAT-004 must record:
 - First-release vulnerability scan inputs and evidence references.
 
 Unknown or unverified values are evidence gaps and cannot be treated as accepted controls.
+
+If the runtime is amended to Rust, Zig, bundled Node, embedded Python, or another
+shape, this evidence section must be regenerated for that runtime's toolchain,
+dependency graph, artifact format, build inputs, scan path, checksum/manifest
+metadata, and consumer verification behavior.
 
 ### Generated Payload Metadata Propagation Gate
 

@@ -16,7 +16,7 @@
 
 ## Requirement Clarity
 
-- [x] CHK006 Is the XPLAT-004 readiness gate stated clearly enough to fail when pinned Go/release input, checksum, manifest, preflight, or scan evidence is missing, stale, unknown, or unverified? [Clarity, Spec FR-023, Plan Downstream Handoff]
+- [x] CHK006 Is the XPLAT-004 readiness gate stated clearly enough to fail when selected-runtime pinned release input, checksum, manifest, preflight, or scan evidence is missing, stale, unknown, or unverified? [Clarity, Spec FR-023, Plan Downstream Handoff]
 - [x] CHK007 Is the XPLAT-007 readiness gate stated clearly enough to fail when source-to-dist, consumer guidance, public claim audit, runtime preflight/version, native UAT, checksum, manifest, scan, or exception evidence is missing or stale? [Clarity, Spec FR-024, Plan Downstream Handoff]
 - [x] CHK008 Does the source-to-dist requirement specify how checksum and artifact manifest metadata must flow from XPLAT-004 outputs into source and generated Claude/Codex payload roots before XPLAT-007 cutover? [Resolved, Spec FR-030, Plan Generated Payload Metadata Propagation Gate, Contract Generated Payload Source-to-Dist Evidence]
 - [x] CHK009 Are runtime-info/preflight artifact-integrity fields defined with enough specificity for consumer verification without relying on runner self-verification alone? [Clarity, Spec FR-020, Contract Runtime-Info and Preflight Contract Additions]
@@ -32,7 +32,7 @@
 ## Acceptance Criteria Quality
 
 - [x] CHK015 Can reviewers objectively verify that every first-release control has a downstream owner surface before XPLAT-004 planning begins? [Acceptance Criteria, Spec SC-002, Data Model Security Control Decision]
-- [x] CHK016 Can XPLAT-004 implementers identify the exact evidence records they must produce before runner-foundation readiness passes? [Acceptance Criteria, Plan First-Release Evidence Contracts, Contract Pinned Go and Release Input Evidence]
+- [x] CHK016 Can XPLAT-004 implementers identify the exact evidence records they must produce before runner-foundation readiness passes? [Acceptance Criteria, Plan First-Release Evidence Contracts, Contract Pinned Release Input Evidence]
 - [x] CHK017 Can XPLAT-007 implementers identify the exact evidence records they must consume before public cutover and release claims pass? [Acceptance Criteria, Plan Downstream Handoff, Contract Public Claim Audit]
 - [x] CHK018 Can reviewers reject a public claim when the implementing owner, release evidence, or native UAT evidence is absent or stale? [Acceptance Criteria, Spec FR-024, Spec FR-025]
 
@@ -51,3 +51,9 @@
 
 - [x] CHK023 Does FR-029 now require release-automation-owned publication controls to remain `assigned_not_implemented` and `not_claimable` until downstream acceptance evidence proves the gate is implemented and wired into publication? [Resolved, Spec FR-029, Plan Release Automation Acceptance Evidence, Contract Release Automation Acceptance Contract]
 - [x] CHK024 Does FR-030 now require XPLAT-007 source-to-dist evidence to prove checksum and runner manifest metadata presence, equality, and freshness across source, generated Claude payload, and generated Codex payload roots? [Resolved, Spec FR-030, Plan Generated Payload Metadata Propagation Gate, Contract Generated Payload Source-to-Dist Evidence]
+
+## Rerun Verification - Loop 2
+
+- [x] CHK025 Do spec, plan, research, data model, contract, and quickstart distinguish official Claude/Codex plugin packaging support from user-host runtime availability? [Resolved, Spec FR-035, Research Official Platform Documentation Findings, Contract Platform Capability Evidence]
+- [x] CHK026 Does the selected runtime boundary require no user-side build toolchain or post-cache package restoration for public native-support claims? [Resolved, Spec FR-036, Spec FR-037, Data Model Runtime Dependency Boundary, Contract Runtime Dependency Boundary]
+- [x] CHK027 Does install-completeness evidence distinguish Claude plugin agents from Codex custom-agent TOML registration? [Resolved, Spec FR-038, Data Model Install Completeness Evidence, Contract Install Completeness Evidence]

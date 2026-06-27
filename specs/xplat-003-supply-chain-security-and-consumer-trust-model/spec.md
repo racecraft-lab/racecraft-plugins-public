@@ -4,18 +4,62 @@
 
 **Created**: 2026-06-27
 
-**Status**: Complete
+**Status**: Blocked - runtime choice reopened for explicit maintainer re-approval
 
 **Input**: User description: "Choose the practical first-release security baseline and deferred hardening backlog for the XPLAT Go native runner before XPLAT-004 builds the runner and before XPLAT-007 makes public release claims."
+
+## Runtime Choice Reopen Notice
+
+XPLAT-002 currently records a Go native runner as the selected runtime, but the
+maintainer has reopened that choice for explicit review on this PR. This
+specification is therefore a conditional trust-model draft, not a final approval
+of the Go runtime decision. XPLAT-003 may preserve the Go-specific supply-chain
+analysis for review, but merge acceptance is blocked until maintainers either:
+
+1. explicitly re-approve the Go native runner decision from XPLAT-002, or
+2. amend the runtime decision and regenerate this trust model for the selected
+   runtime.
+
+Downstream XPLAT-004 runner implementation, XPLAT-007 cutover, and public
+native-support claims remain blocked while the runtime choice is reopened.
+
+XPLAT-002 selected Go because it was evaluated as a small per-platform native
+binary that can be packaged in the installed plugin payload without requiring
+users to install Go, Node, Python, Bash, `jq`, a package manager, or network
+dependencies after cache population. That rationale is runtime-model evidence,
+not Go-specific authorization. Rust, Zig, or another native-build toolchain could
+serve the same user-facing model if it produces self-contained per-platform
+artifacts and satisfies the same installed-cache, path, JSON, subprocess,
+diagnostic, supply-chain, and release-evidence gates.
+
+Official platform documentation now constrains this decision explicitly:
+
+- Claude Code plugins support packaged skills, agents, hooks, MCP servers,
+  scripts, and `bin/` executables. Claude skills may include optional scripts.
+  These docs support packaged executable/script surfaces, but they do not
+  guarantee that every user host has Go, Rust, Zig, Node, Python, Bash, `jq`, or
+  a package manager available for plugin payloads.
+- OpenAI Codex plugins support packaged skills, apps, MCP servers, lifecycle
+  hooks, and skill `scripts/`. Codex custom subagents are documented as
+  `.codex/agents/*.toml` or `~/.codex/agents/*.toml`, not as a generic Codex
+  plugin `agents/` directory. Codex docs likewise do not guarantee arbitrary
+  language runtimes on every installed plugin host.
+
+Therefore the runtime decision must be reviewed as a packaging and dependency
+contract, not as a preference for a language. A first-release runner may rely on
+a build toolchain in maintainer/release automation, but installed users must
+receive either self-contained platform artifacts or explicit prerequisite
+detection with closed, non-claiming behavior.
 
 ## Clarifications
 
 ### Session 1: First-release Control Boundaries
 
 - Q: What is the minimum first-release control baseline that blocks public
-  cutover? A: The practical baseline is pinned Go/release inputs,
+  cutover? A: The practical baseline is selected-runtime pinned release inputs,
   vulnerability scanning, generated payload source-to-dist integrity, published
-  checksums, consumer-local verification, and truthful public claims.
+  checksums, consumer-local verification, official platform capability evidence,
+  installed-user runtime dependency separation, and truthful public claims.
 - Q: Which controls stay deferred hardening, and what evidence can promote them
   to first-release required? A: Signatures, SBOMs, provenance/attestations,
   reproducible builds, formal audit, and cryptographic trust-chain verification
@@ -122,11 +166,37 @@
   planned or deferred hardening, but not as provided, guaranteed, certified,
   enforced, or trusted today.
 
+### Session 4: Runtime Decision Reopen
+
+- Q: Should XPLAT-003 continue as if the XPLAT-002 Go runtime decision is
+  already accepted? A: No. Treat XPLAT-002's Go selection as reopened for
+  explicit maintainer re-approval on this PR. Keep the current Go-specific
+  controls visible as conditional analysis, but block XPLAT-003 acceptance,
+  XPLAT-004 implementation, XPLAT-007 cutover, and public native-support claims
+  until the runtime choice is re-approved or amended.
+- Q: Why was Go selected in XPLAT-002? A: XPLAT-002 selected Go because the
+  small native binary model scored highest against installed-cache reliability,
+  no-post-cache-install behavior, native path/JSON/subprocess behavior, and
+  packaging/update fit. The selection did not mean users install Go; Go would be
+  a build-time toolchain that produces packaged runtime artifacts.
+- Q: Could Rust or Zig satisfy the same goal? A: Yes, if the selected toolchain
+  produces self-contained per-platform artifacts and the same evidence gates are
+  met. Rust or Zig would reopen XPLAT-002's candidate comparison and would
+  require regenerated XPLAT-003 dependency, artifact, vulnerability, checksum,
+  manifest, and release-input controls for the new toolchain.
+- Q: What do official Claude Code and OpenAI Codex docs change? A: They confirm
+  plugin/skill/hook/MCP/script packaging surfaces, but they do not guarantee
+  arbitrary user-host runtimes. They also make Codex custom-agent installation a
+  separate `.codex/agents/*.toml` completeness concern rather than a generic
+  bundled plugin-agent surface.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Maintainer Reviews Trust Baseline (Priority: P1)
 
-A maintainer can read one decision record that separates first-release controls from deferred hardening for the selected native runner and its generated plugin payloads.
+A maintainer can read one decision record that separates first-release controls
+from deferred hardening for the selected native-runner model and its generated
+plugin payloads, while seeing that the exact runtime toolchain remains reopened.
 
 **Why this priority**: XPLAT-004 cannot build a release-ready runner until maintainers agree which controls block first release and which controls are documented follow-up hardening.
 
@@ -134,7 +204,12 @@ A maintainer can read one decision record that separates first-release controls 
 
 **Acceptance Scenarios**:
 
-1. **Given** XPLAT-002 selected the native runner model, **When** a maintainer reads the XPLAT-003 specification, **Then** the first-release baseline includes pinned release inputs, vulnerability scanning, generated-payload integrity, checksums, consumer-local verification, and truthful public claims.
+1. **Given** XPLAT-002 selected Go as a native-runner model and this PR reopens
+   that choice, **When** a maintainer reads the XPLAT-003 specification, **Then**
+   the conditional first-release baseline includes pinned release inputs,
+   vulnerability scanning, generated-payload integrity, checksums,
+   consumer-local verification, and truthful public claims without treating Go
+   as accepted.
 2. **Given** heavier controls such as signing, provenance, reproducible builds, SBOMs, or audit are evaluated, **When** the maintainer reviews their status, **Then** each control is identified as deferred hardening unless explicitly moved into the first-release baseline with rationale.
 3. **Given** a downstream plan references the XPLAT-003 decision, **When** the maintainer checks the plan, **Then** no downstream work can claim a stronger guarantee than the controls this specification requires.
 
@@ -142,7 +217,9 @@ A maintainer can read one decision record that separates first-release controls 
 
 ### User Story 2 - Implementer Maps Controls To Owner Specs (Priority: P1)
 
-An implementer can see which selected controls belong to XPLAT-004, XPLAT-007, release automation, and public documentation without reopening the runtime decision.
+An implementer can see which selected controls belong to XPLAT-004, XPLAT-007,
+release automation, and public documentation while preserving the reopened
+runtime-decision blocker.
 
 **Why this priority**: The runner foundation, generated payload cutover, and release-readiness work have different owners and acceptance gates.
 
@@ -193,12 +270,23 @@ A consumer or reviewer can understand what they can verify locally after install
 - Release-readiness or public-claim audit evidence exists only in expiring
   logs, raw workflow output, or unretained generated artifacts without a
   durable non-sensitive summary.
+- A downstream implementation assumes a user-installed Go, Rust, Zig, Node,
+  Python, Bash, `jq`, package manager, WSL, Git Bash, or network restoration
+  step even though official platform docs do not guarantee that runtime after
+  plugin cache population.
+- A runtime alternative such as Rust, Zig, bundled Node, embedded Python, or a
+  source-script package is substituted without regenerating dependency,
+  artifact, scan, checksum, manifest, consumer-verification, and release-input
+  controls for that runtime shape.
+- A Codex install is treated as complete because plugin skills are present, even
+  though required Codex custom-agent TOML files are missing from `.codex/agents/`
+  or `~/.codex/agents/`.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: The specification MUST record XPLAT-002's selected native runner model as the runtime context and MUST NOT reopen runtime selection.
+- **FR-001**: The specification MUST record that XPLAT-002 currently names the Go native runner model, but MUST treat that runtime choice as reopened and pending explicit maintainer re-approval before XPLAT-003 can be accepted as final.
 - **FR-002**: The specification MUST define the first-release control baseline as pinned release inputs, vulnerability scanning, generated-payload integrity, published checksums, consumer-local verification, and truthful public claims.
 - **FR-003**: The specification MUST require generated Claude and Codex payload integrity to include a source-to-dist gate that runs `bash scripts/build-plugin-payloads.sh`, checks generated payload and marketplace-manifest drift, and records command, exit status, source inputs, generated roots, checksum/manifest paths, and metadata propagation from XPLAT-004-produced checksum and manifest outputs into source and generated Claude/Codex payload roots.
 - **FR-004**: The specification MUST require first-release binary artifact integrity to include SHA-256 checksums for packaged runner artifacts in `scripts/speckit-pro-runner.sha256`.
@@ -224,19 +312,24 @@ A consumer or reviewer can understand what they can verify locally after install
 - **FR-024**: XPLAT-007 public cutover and release-claim readiness MUST fail when scan evidence, exceptions, checksums, manifest, source-to-dist evidence, consumer verification guidance, public-claim audit, runtime preflight/version evidence, or native UAT evidence is missing or stale.
 - **FR-025**: Public docs and release notes MUST NOT claim signed binaries, SBOMs, provenance or attestations, reproducible builds, formal audit or certification, marketplace-enforced verification, cryptographic trust-chain verification, or native Windows/macOS/Linux support until each claim is implemented and verified.
 - **FR-026**: Vulnerability scan evidence MUST define freshness and staleness for release-readiness review. Evidence is stale when it is older than 7 calendar days at readiness review, predates the source revision, dependency manifest or sum state, toolchain, build input, generated artifact, scanner version or vulnerability database timestamp it claims to cover, or crosses a public release boundary without re-approval.
-- **FR-027**: XPLAT-004 pinned Go and release input evidence MUST include Go toolchain version and source, Go module/dependency manifest and `go.sum` or equivalent dependency snapshot state, target OS/architecture matrix, build command or repeatable build recipe, release/package input list, source revision used to build artifacts, generated artifact names and paths, generated artifact SHA-256 checksums, and any first-release scan inputs. Unknown or unverified fields are evidence gaps, not accepted controls.
+- **FR-027**: If Go is explicitly re-approved, XPLAT-004 pinned Go and release input evidence MUST include Go toolchain version and source, Go module/dependency manifest and `go.sum` or equivalent dependency snapshot state, target OS/architecture matrix, build command or repeatable build recipe, release/package input list, source revision used to build artifacts, generated artifact names and paths, generated artifact SHA-256 checksums, and any first-release scan inputs. Unknown or unverified fields are evidence gaps, not accepted controls. If the runtime decision is amended, equivalent pinned release input evidence MUST be regenerated for the selected runtime and toolchain.
 - **FR-028**: XPLAT-007 consumer-local checksum guidance MUST include separate Windows, macOS, and Linux SHA-256 command shapes for every target platform artifact it intends to claim after UAT, MUST describe how consumers locate checksum metadata from the installed payload or release-provided offline metadata, and MUST fail closed when metadata is unavailable. This guidance MUST NOT require Bash, `jq`, source checkout paths, package-manager restoration, or network access after plugin cache population, and MUST NOT imply native platform support before XPLAT-007 UAT evidence exists.
 - **FR-029**: Release-automation-owned publication controls MUST remain `assigned_not_implemented` and `not_claimable` until the earliest downstream implementing surface records acceptance evidence with the implementing spec or release surface, control ID, publication gate location, release inputs, generated outputs, latest pass/fail evidence, and claim-dependency mapping. XPLAT-007 public cutover and release-claim readiness MUST fail when a public claim relies on release automation whose acceptance evidence is missing, stale, or not wired into the publication path.
 - **FR-030**: XPLAT-007 source-to-dist evidence MUST prove checksum and runner artifact manifest metadata propagation from XPLAT-004 runtime artifact outputs to checked-in source metadata paths, generated Claude payload metadata paths, generated Codex payload metadata paths, and final cutover evidence. Missing, stale, or unequal metadata across those locations MUST fail public cutover and release-claim readiness.
 - **FR-031**: Consumer-local checksum guidance MUST define a computed-versus-published checksum mismatch as a closed verification failure. The guidance MUST tell consumers not to rely on the artifact for native-runner claims, MUST require recording the artifact path, platform, runner identity or preflight output, checksum metadata source, expected checksum, computed checksum, plugin version or release boundary, and reporting path, and MUST NOT instruct consumers to repair the failure through source checkout, package restoration, network fetches, Bash, `jq`, or runner self-verification alone.
 - **FR-032**: Release-readiness evidence and public-claim audit evidence MUST retain durable, non-sensitive summaries beyond vulnerability scan summaries and exception records. These records MUST include release boundary, control or claim IDs, evidence references, pass/fail/blocked status, timestamp or source revision, owner surface, known gaps, and approval/status, while raw logs and large generated artifacts MUST NOT be committed by default.
 - **FR-033**: Public cutover and release claims MUST be evaluated per claimed artifact and platform. If any claimed artifact is missing, stale, mismatched, unpublished, or lacks required checksum, manifest, runtime-info/preflight, native UAT, source-to-dist, scan, exception, release-automation, or claim-audit evidence, that artifact/platform MUST be excluded from claims or the claim set MUST remain blocked; one passing platform MUST NOT imply Windows/macOS/Linux support for other platforms.
+- **FR-034**: While the runtime choice is reopened, XPLAT-003 MUST label Go-specific controls as conditional and MUST block downstream XPLAT-004 implementation readiness, XPLAT-007 cutover readiness, and public native-support claims until the runtime is explicitly re-approved or the trust model is regenerated for an amended runtime decision.
+- **FR-035**: The specification MUST separate official platform packaging support from runtime/toolchain selection. Claude Code and Codex plugin support for skills, scripts, hooks, MCP servers, and install payloads MUST NOT be treated as proof that user hosts provide Go, Rust, Zig, Node, Python, Bash, `jq`, package managers, WSL, Git Bash, or network restoration after plugin cache population.
+- **FR-036**: Any selected first-release runtime MUST require no user-side build toolchain or package restoration after plugin cache population unless official platform documentation explicitly guarantees that runtime for the relevant installed surface. Otherwise the runtime MUST ship self-contained per-platform artifacts or fail closed through prerequisite diagnostics without public native-support claims.
+- **FR-037**: Go, Rust, Zig, or another native-build toolchain MUST be evaluated as a maintainer/build-time dependency plus packaged-artifact supply-chain surface, not as a user runtime dependency, and any amended runtime decision MUST regenerate XPLAT-003 controls for that toolchain's dependency graph, artifact format, build inputs, vulnerability scan path, checksum/manifest metadata, and consumer verification behavior.
+- **FR-038**: XPLAT-007 install-completeness and source-to-dist readiness MUST distinguish Claude Code plugin agents from Codex custom-agent TOML installation. A Codex install that has plugin skills but lacks required `.codex/agents/*.toml` or `~/.codex/agents/*.toml` agent registrations MUST remain incomplete until autoheal or explicit install guidance repairs it.
 
 ### Reviewability Notes *(if applicable)*
 
 - XPLAT-003 is a decision spike. It may create or update specification artifacts and downstream handoff language, but it does not change runtime behavior, generated payloads, runner source, release automation, or public docs.
 - Any later implementation PR that crosses more than one owner surface must carry its own reviewability budget and traceability back to the XPLAT-003 control map.
-- The accepted setup reviewability warning remains in force for this decision spike: two primary surfaces were reported with no blockers because the same trust model spans docs/process evidence and future runner ownership. Tasks-mode reviewability is a coarse planning signal and must be recorded with its warnings, not treated as runner or release implementation scope.
+- The accepted setup reviewability warning remains in force for this decision spike: two primary surfaces were reported with no blockers because the same trust model spans docs/process evidence and future runner ownership. Tasks-mode reviewability is a coarse planning signal; the post-update tasks-mode result is a size-only block caused by estimator task/file-token counts, while the actual diff-mode PR gate remains warning-only with 0 production LOC and no blockers.
 
 ### Reviewability Budget *(mandatory)*
 
@@ -264,11 +357,24 @@ A consumer or reviewer can understand what they can verify locally after install
 - **Verification Exception**: A documented exception for a non-actionable vulnerability finding or control gap, including scan provenance, affected artifact, actionability classification, rationale, approval, and review condition.
 - **Public Claim Boundary**: A rule that identifies which supply-chain and native support statements may appear in public docs or release notes.
 - **Release-Readiness Evidence**: Durable non-sensitive evidence that a required control passed, was excepted, or is not yet claimable for a specific release boundary.
-- **Pinned Release Input Evidence**: A downstream record of the exact Go toolchain, dependency snapshot, build inputs, source revision, target matrix, artifact paths, and checksums used to produce first-release runner artifacts.
+- **Pinned Release Input Evidence**: A downstream record of the exact selected
+  build toolchain, dependency snapshot, build inputs, source revision, target
+  matrix, artifact paths, and checksums used to produce first-release runner
+  artifacts. Go-specific fields apply only if Go is re-approved.
 - **Consumer Verification Guidance**: A downstream XPLAT-007 record of platform-specific checksum command shapes, metadata lookup behavior, unsupported states, and no-network/no-source-checkout verification constraints.
 - **Artifact Claim Readiness**: A per-artifact and per-platform release-claim
   record showing whether a packaged runner artifact is claimable, blocked,
   deferred, excluded, or unpublished for a release boundary.
+- **Platform Capability Evidence**: Official Claude Code or OpenAI Codex
+  documentation evidence identifying what a plugin, skill, hook, MCP server,
+  script, executable, or custom-agent surface can package or register, and what
+  runtime availability the platform does or does not guarantee.
+- **Runtime Dependency Boundary**: The line between maintainer/build-time
+  toolchain dependencies and installed-user runtime dependencies after plugin
+  cache population.
+- **Install Completeness Evidence**: Surface-specific proof that a Claude Code
+  or Codex install has the expected plugin payload, skills, scripts, hooks,
+  MCP metadata, and required agent/subagent registration for that platform.
 
 ## Success Criteria *(mandatory)*
 
@@ -286,15 +392,25 @@ A consumer or reviewer can understand what they can verify locally after install
 - **SC-010**: 100% of vulnerability exceptions include expiry or re-approval conditions tied to public release boundaries and changed evidence inputs.
 - **SC-011**: 100% of raw scanner output retention rules avoid committed raw logs by default and identify the CI artifact retention period once automation exists.
 - **SC-012**: Reviewers can determine whether XPLAT-004 or XPLAT-007 readiness is blocked by stale scan evidence without relying on narrative judgment.
-- **SC-013**: Reviewers can verify that XPLAT-004 pinned-input evidence covers the Go toolchain, dependency snapshot, build inputs, source revision, target matrix, artifact paths, and checksums before runner artifacts are accepted.
+- **SC-013**: Reviewers can verify that XPLAT-004 pinned-input evidence covers the selected build toolchain, dependency snapshot, build inputs, source revision, target matrix, artifact paths, and checksums before runner artifacts are accepted.
 - **SC-014**: Reviewers can verify that XPLAT-007 checksum guidance covers Windows, macOS, and Linux command shapes and metadata lookup behavior without Bash, `jq`, source checkout paths, package restoration, post-cache network access, or pre-UAT native support claims.
 - **SC-015**: Reviewers can verify that consumer-facing checksum mismatch guidance fails closed and identifies the exact facts consumers must record/report without relying on source checkout, package restoration, network repair, Bash, `jq`, or runner self-verification alone.
 - **SC-016**: 100% of release-readiness and public-claim audit evidence needed for public claims has a durable non-sensitive retention location and evidence reference.
 - **SC-017**: 100% of claimed artifacts and platforms have per-artifact readiness status, and partial artifact readiness cannot imply unsupported platform claims.
+- **SC-018**: Reviewers can identify the runtime decision as reopened, the reason XPLAT-002 selected Go, and the exact blocker that prevents XPLAT-003 from being treated as final before explicit maintainer re-approval.
+- **SC-019**: Reviewers can identify official Claude Code and OpenAI Codex platform support findings separately from repository assumptions and can verify that no first-release runtime claim depends on an undocumented user-host runtime.
+- **SC-020**: Reviewers can distinguish Claude bundled plugin agents from Codex custom-agent TOML registration and can identify a missing Codex agent registration as an install-completeness failure, not a successful full install.
 
 ## Assumptions
 
-- XPLAT-002 is complete enough for XPLAT-003 to treat the Go native binary runner and `speckit-pro-runner` contract as settled source truth.
+- XPLAT-002 is merged, but the Go native binary runner and `speckit-pro-runner`
+  contract are not treated as settled source truth until explicit maintainer
+  re-approval is recorded or the runtime decision is amended.
+- Official Claude Code and OpenAI Codex docs support packaged plugin/skill
+  script surfaces, but do not guarantee arbitrary language runtimes for all
+  installed plugin hosts. XPLAT-003 therefore assumes the selected runtime must
+  be either self-contained in the payload or explicitly diagnosed as missing
+  without support claims.
 - The first public release can rely on published checksums and manual consumer-local checksum verification even if the plugin marketplace does not enforce checksum verification automatically.
 - Signatures, SBOMs, provenance attestations, reproducible builds, and formal third-party audit improve trust but are not required for the first release unless this decision record explicitly promotes them.
 - Generated Claude and Codex payloads remain source-derived artifacts, so their integrity gate must compare source inputs and generated outputs before public release.

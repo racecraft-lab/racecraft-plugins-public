@@ -47,15 +47,99 @@ Known owners:
 - Release automation owns publication-time evidence only after a later spec edits release automation; until downstream acceptance evidence exists, assigned release automation controls are not implemented and not claimable.
 - Public docs and release notes own wording only after implementation evidence exists.
 
+## Platform Capability Evidence
+
+Records official Claude Code and OpenAI Codex documentation findings used to
+separate supported plugin surfaces from runtime/toolchain assumptions.
+
+| Field | Required | Notes |
+|---|---|---|
+| `platform` | Yes | `claude-code` or `openai-codex`. |
+| `official_docs_refs` | Yes | Official documentation URLs used as evidence. |
+| `supported_surfaces` | Yes | Skills, scripts, hooks, MCP servers, `bin/` executables, apps, agents, or custom-agent registration surfaces documented for the platform. |
+| `runtime_guarantees` | Yes | Runtime guarantees found in docs; use `none_found` when no user-host runtime guarantee exists. |
+| `runtime_not_guaranteed` | Yes | Runtime/tool families not guaranteed for all installed plugin hosts, for example Go, Rust, Zig, Node, Python, Bash, `jq`, package managers, WSL, or Git Bash. |
+| `install_surface_distinctions` | Yes | Platform-specific distinctions such as Codex plugin skills versus `.codex/agents/*.toml` custom-agent registration. |
+| `xplat_gate_effect` | Yes | How the finding affects XPLAT-004/XPLAT-007 readiness and claims. |
+
+Validation rules:
+
+- Official platform docs may prove packaging or registration support, but they
+  must not be used as proof of arbitrary user-host runtime availability unless
+  the docs explicitly guarantee that runtime for the installed surface.
+- Local host probes and repository tooling are supplemental evidence only.
+- Missing custom-agent registration for Codex is an install-completeness gap
+  when Codex agents are part of the release promise.
+
+## Runtime Dependency Boundary
+
+Records whether a selected runtime is a build-time toolchain, an installed-user
+runtime dependency, a bundled runtime, or a self-contained artifact.
+
+| Field | Required | Notes |
+|---|---|---|
+| `runtime_shape` | Yes | Examples: `go-native-artifact`, `rust-native-artifact`, `zig-native-artifact`, `bundled-node`, `embedded-python`, `source-script`. |
+| `build_time_toolchain` | Conditional | Required when maintainers build artifacts before release. |
+| `installed_user_runtime_dependency` | Yes | Runtime the installed user must provide, or `none` for self-contained artifacts. |
+| `bundled_runtime_payload` | Conditional | Required when the payload embeds Node, Python, or another runtime. |
+| `official_runtime_guarantee_ref` | Conditional | Required when relying on a platform-provided runtime. |
+| `post_cache_setup_required` | Yes | Must be `false` for first-release native-support claims. |
+| `prerequisite_diagnostics` | Yes | Fail-closed diagnostic behavior when a runtime/executable/prerequisite is missing. |
+| `claim_effect` | Yes | Whether public native-support claims are allowed, blocked, or conditional. |
+
+Validation rules:
+
+- First-release native-support claims require `post_cache_setup_required=false`.
+- Go, Rust, and Zig are build-time toolchains when maintainers ship executable
+  artifacts; they are not user runtime dependencies unless the user is asked to
+  build from source.
+- Source scripts that require Node, Python, Bash, `jq`, package managers, WSL,
+  Git Bash, or network restoration after cache population are not valid for
+  first-release native-support claims unless official docs guarantee the runtime
+  or the payload bundles it with matching supply-chain controls.
+
+## Install Completeness Evidence
+
+Records whether a Claude Code or Codex install has every required platform
+surface for the release promise.
+
+| Field | Required | Notes |
+|---|---|---|
+| `platform` | Yes | `claude-code` or `openai-codex`. |
+| `plugin_version` | Yes | Installed plugin version under review. |
+| `payload_root` | Yes | Installed payload/cache root inspected. |
+| `skills_status` | Yes | Present/missing/stale status for required skills. |
+| `scripts_status` | Yes | Present/missing/stale/executable status for required scripts or executables. |
+| `hooks_status` | Conditional | Required when hooks are part of the platform payload. |
+| `mcp_status` | Conditional | Required when MCP servers/config are part of the platform payload. |
+| `agent_registration_status` | Conditional | Required when Claude plugin agents or Codex custom-agent TOML files are part of the release promise. |
+| `autoheal_action` | Conditional | Required when the install can be repaired automatically. |
+| `fail_closed_behavior` | Yes | User-facing blocked or repair-required state when required pieces are missing. |
+
+Validation rules:
+
+- Codex skills present in the plugin cache do not prove Codex custom agents are
+  installed; `.codex/agents/*.toml` or `~/.codex/agents/*.toml` must be checked
+  when those agents are required.
+- Claude Code plugin agents and Codex custom-agent TOML registrations are
+  different install surfaces and must not be collapsed into one generic "agents"
+  check.
+- Autoheal must repair only documented local install surfaces and must fail
+  closed when a required platform surface cannot be verified.
+
 ## Pinned Release Input Evidence
 
 Records the exact build and release inputs XPLAT-004 must capture before runner foundation artifacts can be accepted.
 
 | Field | Required | Notes |
 |---|---|---|
-| `go_toolchain_version` | Yes | Version used to build the runner artifact. |
-| `go_toolchain_source` | Yes | Installation source, distribution, or pinned toolchain reference. |
-| `module_manifest_path` | Yes | Go module manifest path or equivalent dependency manifest. |
+| `runtime_shape` | Yes | Selected runtime shape, for example `go-native-artifact`; conditional until runtime re-approval. |
+| `toolchain_name` | Yes | Go, Rust, Zig, bundled Node builder, embedded Python builder, or other selected build toolchain. |
+| `toolchain_version` | Yes | Version used to build the runner artifact. |
+| `toolchain_source` | Yes | Installation source, distribution, or pinned toolchain reference. |
+| `go_toolchain_version` | Conditional | Required only if Go is explicitly re-approved. |
+| `go_toolchain_source` | Conditional | Required only if Go is explicitly re-approved. |
+| `module_manifest_path` | Yes | Go module manifest path, Cargo manifest, Zig build file, package manifest, or equivalent dependency manifest for the selected runtime shape. |
 | `dependency_snapshot` | Yes | `go.sum` state or equivalent dependency checksum/snapshot evidence. |
 | `target_os_arch_matrix` | Yes | Target platform matrix for produced artifacts. |
 | `build_command_or_recipe` | Yes | Command or repeatable build recipe used by XPLAT-004. |
@@ -70,6 +154,10 @@ Validation rules:
 - Unknown or unverified values are evidence gaps, not accepted controls.
 - The evidence record must describe the exact source revision, dependency snapshot, toolchain, build inputs, and artifacts it covers.
 - Recording pinned inputs does not implement reproducible builds, SBOMs, signatures, provenance, or formal audit.
+- `go_toolchain_version` and `go_toolchain_source` are required only when Go is
+  explicitly re-approved. If the runtime is amended, replace Go-specific fields
+  with equivalent toolchain-specific fields instead of carrying stale Go
+  evidence forward.
 
 ## Runner Artifact Manifest
 
