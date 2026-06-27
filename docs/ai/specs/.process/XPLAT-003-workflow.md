@@ -50,8 +50,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Clarify | `$speckit-clarify` | Complete | Resolved exact control boundaries, evidence formats, vulnerability policy, and claim wording |
 | Plan | `$speckit-plan` | Complete | Produced research, policy/data model, control contract, quickstart, and handoff |
 | Checklist | `$speckit-checklist` | Complete | Security, integration, and reliability gaps remediated; no unresolved consensus items |
-| Tasks | `$speckit-tasks` | In Progress | Generate decision-spike tasks only; no runner implementation |
-| Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, XPLAT-001, XPLAT-002, spec, plan, and tasks |
+| Tasks | `$speckit-tasks` | Complete | Generated 20 decision-spike tasks; reviewability warning only, no blocker |
+| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, design concept, XPLAT-001, XPLAT-002, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Record final decision artifacts and verification evidence |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -435,10 +435,10 @@ $speckit-tasks
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 20 |
+| Phases | 5 |
+| Parallel Opportunities | 12 |
+| User Stories Covered | 3/3 |
 
 ---
 
@@ -452,10 +452,10 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/xplat
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Pending | `true`, or `false` for a destructive-migration or concurrency-sensitive change |
-| Signals | Pending | Detector findings |
-| Warnings | Pending | Release-safety warnings |
+| Route | `one-navigable-PR` | One navigable decision-artifact PR is appropriate |
+| Releasable | `true` | No destructive-migration or concurrency-sensitive change detected |
+| Signals | `change-shape:modify-heavy` | Detector findings |
+| Warnings | None | Release-safety warnings |
 
 ---
 
