@@ -91,7 +91,7 @@ diagnostic `code`, and required response fields.
 - `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-002-runtime-implementation-options-contract-decision` passed with `total=0`.
 - `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh "$PWD"` regenerated XPLAT-002 after adding decision artifacts.
 - `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passed with `spec-index: index current`.
-- `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD` passed with honored infra exception, `reviewable_loc=0`, `production_files=0`, `total_files=33`, and `primary_surface_count=6`.
+- `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD` passed with honored infra exception, `reviewable_loc=0`, `production_files=0`, `total_files=33`, and `primary_surface_count=5`.
 - `git diff --name-only origin/main...HEAD` showed tracked XPLAT-002 workflow and feature artifacts, roadmap/spec-map refreshes, PR packet title tooling/tests, and Claude/Codex payload mirrors for XPLAT scope support; no README, docs-site runtime, marketplace metadata, changelog, release-note, active installed runtime invocation path, or public support-claim surface changed.
 - `git diff --check` passed with no whitespace errors.
 - `bash tests/speckit-pro/run-all.sh --layer 1` passed `1438/1438`.
