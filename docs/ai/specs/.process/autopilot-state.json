@@ -289,7 +289,7 @@
       "status": "completed",
       "result": {
         "tasks_path": "specs/xplat-002-runtime-implementation-options-contract-decision/tasks.md",
-        "total_tasks": 32,
+        "total_tasks": 33,
         "phases": 6,
         "parallel_tasks": 7,
         "parallel_batches": [

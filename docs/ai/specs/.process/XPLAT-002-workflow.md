@@ -398,7 +398,7 @@ $speckit-tasks
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | 32 |
+| **Total Tasks** | 33 |
 | **Phases** | 6 |
 | **Parallel Opportunities** | 7 parallel tasks; batches T002-T005 and T010-T012 |
 | **User Stories Covered** | US1 candidate comparison, US2 selected contract, US3 reviewer handoff |
