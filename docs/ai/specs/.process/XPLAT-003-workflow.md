@@ -164,7 +164,7 @@ Record this warning in `plan.md`. It does not block setup.
 
 | Check | Result | Evidence |
 |-------|--------|----------|
-| SpecKit CLI | Pass | `command -v specify` returned `/Users/fredrickgabelmann/.local/bin/specify` |
+| SpecKit CLI | Pass | `command -v specify` resolved to the local user tool install |
 | Branch/worktree | Pass | Created worktree on `codex/xplat-003-supply-chain-security-and-consumer-trust-model` from `origin/main` |
 | XPLAT-002 merge state | Pass | `main` contains merge commit `fff4d6b5` for PR #266; roadmap and MOC status now mark XPLAT-002 complete and XPLAT-003 in progress |
 | Reviewability setup gate | Warn/pass | Two primary surfaces (`docs/process`, `harness/adapter`), no blockers |
@@ -534,23 +534,43 @@ specify preset resolve tasks-template
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | Pending | Pending | |
-| Control decision | Pending | Pending | |
-| Consumer/public trust | Pending | Pending | |
-| Handoff and verification | Pending | Pending | |
+| Foundation | 4 | 4 | Preserved Grill Me decisions, collected source truth, and confirmed decision-only scope |
+| Control decision | 5 | 5 | Consolidated first-release, deferred, non-claim, and out-of-scope control decisions |
+| Consumer/public trust | 4 | 4 | Finalized local verification, mismatch handling, and public-claim boundaries |
+| Handoff and verification | 7 | 7 | Finalized downstream owner gates and post-implementation validation commands |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`
-- [ ] No placeholder markers remain in spec artifacts
-- [ ] `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-003-supply-chain-security-and-consumer-trust-model` passes
-- [ ] `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes
-- [ ] `git diff --check` passes
-- [ ] Relevant SpecKit shell tests pass
+- [x] All tasks marked complete in `tasks.md`
+- [x] No placeholder markers remain in spec artifacts
+- [x] `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-003-supply-chain-security-and-consumer-trust-model` passes
+- [x] `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes
+- [x] `git diff --check` passes
+- [x] Relevant SpecKit shell tests pass
 - [ ] Reviewability diff gate result is recorded
 - [ ] PR packet is generated and validated if PR creation follows
+
+### Post-Implementation Results
+
+| Task | Status | Findings | Action Needed |
+|------|--------|----------|---------------|
+| Doctor Extension Check | Warn/pass | Required extensions and command surfaces present; branch ahead of origin; PowerShell helper tree absent; archive/git command docs live under `.specify/extensions` only | None blocking |
+| Verify Implementation | Pass | Prerequisites pass, markers clean, G7 pass, spec index current, diff hygiene clean | None |
+| Verify Tasks Phantom Check | Warn/pass | Reviewability task gate warns on 800 heuristic LOC, 22 referenced files, and 4 surfaces; no blockers | None |
+| Code Review | Medium finding remediated | Status evidence was stale across workflow, roadmap, and MOC files | Roadmap, roadmap MOC, SPEC-MOC, workflow, and state reconciled |
+| Integration Suite | Pass | Real-path suite produced one privacy false positive from pre-existing public DOC-014 identity matching this desktop path; after sanitizing the XPLAT-003 absolute path and running with neutral logical `PWD`, suite passed `3634/3634` | None |
+
+### Self-Review
+
+**Tests executed:** Project build/typecheck/lint/unit/integration commands are N/A for this decision-spec lane. Static and shell verification ran in this session: `count-markers`, G7 validation, spec-index check, `git diff --check`, reviewability task gate, and `bash tests/speckit-pro/run-all.sh`. Raw real-path suite: `3633/3634`, with only a dynamic-local-identity privacy false positive from pre-existing DOC-014 public schema content. Final suite with neutral logical `PWD`: `3634/3634` passed.
+
+**Edge cases:** XPLAT-003 has no runtime code paths. Non-happy trust cases are documented in spec artifacts: stale scan evidence, checksum mismatch, unavailable verification metadata, missing publication evidence, partial artifact publication, and overclaiming unimplemented controls. No `[edge-case-gap]` markers remain.
+
+**Requirements matched:** All 20 tasks are complete and G7 reports `20/20`. Tasks trace the maintainer control decision, downstream ownership handoff, consumer verification boundary, and verification commands. No orphan task or requirement found in the final analyze pass.
+
+**Follow-up & tidiness:** Deferred controls are intentional roadmap language inside XPLAT-003 artifacts: signatures, SBOM, provenance/attestations, reproducible builds, formal audit, marketplace-enforced verification, trust-chain verification, and native-support claims remain deferred until downstream specs implement and verify them. No placeholder, gap, critical/high/medium/low, or clarification markers remain. Diff scope has no runner code, generated payload, release workflow, or public claim-surface changes.
 
 ---
 

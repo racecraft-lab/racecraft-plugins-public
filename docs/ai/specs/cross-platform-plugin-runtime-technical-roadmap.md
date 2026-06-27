@@ -135,7 +135,7 @@ PUBLIC RELEASE UNBLOCKED
 |---|---|---|---|---|
 | XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
 | XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete | `.process/XPLAT-002-workflow.md` | Runtime decision: `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md` |
-| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | In Progress | `.process/XPLAT-003-workflow.md` | Scaffolded 2026-06-27; choose first-release supply-chain controls before runner foundation |
+| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete | `.process/XPLAT-003-workflow.md` | Decision artifacts complete; first-release controls and downstream ownership recorded |
 | XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-003 security model |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-004; should reuse XPLAT-005 parity harness |
@@ -304,10 +304,11 @@ Budget result: within budget (decision record and probes)
 
 **Priority:** P1 | **Depends On:** XPLAT-002 | **Enables:** XPLAT-004, XPLAT-007
 
-**Status:** In Progress. Scaffolded on 2026-06-27 in branch
+**Status:** Complete. Implemented on 2026-06-27 in branch
 `codex/xplat-003-supply-chain-security-and-consumer-trust-model`; workflow file
 is `docs/ai/specs/.process/XPLAT-003-workflow.md`; design concept is
-`docs/ai/specs/.process/XPLAT-003-design-concept.md`.
+`docs/ai/specs/.process/XPLAT-003-design-concept.md`; durable decision artifacts
+live under `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`.
 
 **Goal:** Choose the security and provenance approach for the new runtime so
 consumers can understand what they are installing and what the project verifies

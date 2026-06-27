@@ -10,7 +10,7 @@
 #     prefix is hardcoded and only the filename is tokenized.
 up: "[Cross-Platform Plugin Runtime roadmap](../../docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)"
 related: []                  # list of relative []() links; carried, unenforced in v1
-status: "In Progress"        # carried, unenforced in v1
+status: "Complete"           # carried, unenforced in v1
 rank:                        # carried, unenforced in v1
 spec_id: "XPLAT-003"         # e.g., PRSG-002 - namespace-matches the containing directory
 structureVersion: 1          # keep in sync with the lint scripts' hardcoded literal
