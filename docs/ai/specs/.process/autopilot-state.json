@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-003-workflow.md",
-  "updated_at": "2026-06-27T18:34:33Z",
-  "active_step": "Post: Reviewability Diff Gate",
+  "updated_at": "2026-06-27T18:43:06Z",
+  "active_step": "Post: PR Creation",
   "feature_dir": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
   "branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model",
   "status": "in_progress",
@@ -405,19 +405,46 @@
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "status": "warn",
+        "blocked_operations": [],
+        "reviewable_loc": 0,
+        "production_files": 0,
+        "total_files": 18,
+        "primary_surface_count": 4,
+        "blockers": [],
+        "evidence": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/final-reviewability/gate-state.json"
+      }
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "complete",
+        "findings_remaining": 0,
+        "evidence": "docs/ai/specs/.process/XPLAT-003-workflow.md#self-review"
+      }
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "author": "skipped: uat-runbook-author not installed in Codex surface",
+        "evidence": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/uat-runbook.md"
+      }
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "packet": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/speckit-pr-packet.json",
+        "body": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/body.md",
+        "validation": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/validation.json",
+        "workflow_contract": "passed"
+      }
     },
     {
       "step": "Post: PR Creation",
@@ -429,7 +456,11 @@
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "complete",
+        "evidence": "docs/ai/specs/.process/XPLAT-003-workflow.md#lessons-learned"
+      }
     }
   ]
 }

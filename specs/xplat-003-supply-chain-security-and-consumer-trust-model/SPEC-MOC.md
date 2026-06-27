@@ -40,5 +40,11 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
+- [.process/final-reviewability/gate-state.json](.process/final-reviewability/gate-state.json)
+- [.process/pr-packets/speckit-pr-packet/body.md](.process/pr-packets/speckit-pr-packet/body.md)
+- [.process/pr-packets/speckit-pr-packet/changed-files.txt](.process/pr-packets/speckit-pr-packet/changed-files.txt)
+- [.process/pr-packets/speckit-pr-packet/speckit-pr-packet.json](.process/pr-packets/speckit-pr-packet/speckit-pr-packet.json)
+- [.process/pr-packets/speckit-pr-packet/validation.json](.process/pr-packets/speckit-pr-packet/validation.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

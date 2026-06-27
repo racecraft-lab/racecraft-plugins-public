@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "error_class": "none",
+  "exit_code": 0,
+  "stderr_line": "",
+  "packet_id": "speckit-pr-packet",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model"
+  },
+  "status": "passed",
+  "title_value": "feat(XPLAT-003): Add supply-chain security and consumer trust model",
+  "body_file": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/body.md",
+  "rule_outcomes": [
+    {
+      "rule": "packet.validation",
+      "status": "passed",
+      "evidence": "no failures"
+    }
+  ],
+  "pr_blocked": false,
+  "failures": [],
+  "remediation_evidence": [],
+  "timestamp": "1970-01-01T00:00:00Z"
+}
