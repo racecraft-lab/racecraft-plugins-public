@@ -102,11 +102,12 @@
 
 - [ ] T026 Run `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-002-runtime-implementation-options-contract-decision` and record the zero-marker result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
 - [ ] T027 Run `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` and record the spec-map freshness result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
-- [ ] T028 Run `git diff --name-only` and confirm `README.md`, `docs-site/`, marketplace metadata, changelog, release notes, active installed invocation paths, and broad generated payloads are not changed; record the review in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
-- [ ] T029 Run `git diff --check` and record the diff hygiene result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
-- [ ] T030 Run `bash tests/speckit-pro/run-all.sh --layer 1` as the relevant structural shell suite and record the result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
-- [ ] T031 If source, generator scripts, or durable probe scripts changed unexpectedly, either return scope to docs/process only or run `bash tests/speckit-pro/run-all.sh` and record the result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
-- [ ] T032 Prepare the PR review packet content in `specs/xplat-002-runtime-implementation-options-contract-decision/handoff.md` with what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes
+- [ ] T028 Run `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD` and record the final diff reviewability status, warnings, blockers, reviewable LOC, production file count, total file count, and primary surfaces in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
+- [ ] T029 Run `git diff --name-only` and confirm `README.md`, `docs-site/`, marketplace metadata, changelog, release notes, active installed invocation paths, and broad generated payloads are not changed; record the review in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
+- [ ] T030 Run `git diff --check` and record the diff hygiene result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
+- [ ] T031 Run `bash tests/speckit-pro/run-all.sh --layer 1` as the relevant structural shell suite and record the result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
+- [ ] T032 If source, generator scripts, or durable probe scripts changed unexpectedly, either return scope to docs/process only or run `bash tests/speckit-pro/run-all.sh` and record the result in `specs/xplat-002-runtime-implementation-options-contract-decision/quickstart.md`
+- [ ] T033 Prepare the PR review packet content in `specs/xplat-002-runtime-implementation-options-contract-decision/handoff.md` with what changed, why, non-goals, review order, scope budget, traceability, verification evidence, known gaps, and rollback or feature-flag notes
 
 ---
 

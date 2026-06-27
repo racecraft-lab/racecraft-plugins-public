@@ -70,12 +70,14 @@ Confirm the artifacts cover:
 ## 5. Check Diff Hygiene
 
 ```bash
+bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD
 git diff --name-only
 git diff --check
 ```
 
-Expected changed files are Plan-phase artifacts in the feature directory plus
-the command-required agent context pointer.
+Expected reviewability status is `pass` or `warn` with no blockers. Expected
+changed files are Plan-phase artifacts in the feature directory plus the
+command-required agent context pointer.
 
 ## 6. Implementation-Phase Evidence Expectations
 

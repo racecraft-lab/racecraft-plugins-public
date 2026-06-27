@@ -50,8 +50,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Plan | `$speckit-plan` | Complete | Produced plan, research, data model, command contract, quickstart, and agent context pointer; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability gaps remediated; G4 passed |
 | Tasks | `$speckit-tasks` | Complete | Generated 32 decision-spike tasks; G5 passed |
-| Analyze | `$speckit-analyze` | In Progress | Check for drift between roadmap, XPLAT-001 rubric, design concept, and generated artifacts |
-| Implement | `$speckit-implement` | Pending | Produce the runtime decision record, probe evidence, and roadmap handoff only |
+| Analyze | `$speckit-analyze` | Complete | 3 findings (0C/0H/1M/2L), all remediated; G6 passed |
+| Implement | `$speckit-implement` | In Progress | Produce the runtime decision record, probe evidence, and roadmap handoff only |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -443,7 +443,9 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | MEDIUM | SC-008 lacked an explicit final diff reviewability verification task/quickstart command, leaving the completed-spike budget outcome under-covered. | Added T028 and quickstart validation for `reviewability-gate.sh diff origin/main...HEAD`. |
+| A2 | LOW | Integration and reliability checklists still had unchecked rows even though rerun notes and current artifacts satisfied the questions. | Marked the satisfied checklist rows complete in `checklists/integration.md` and `checklists/reliability.md`. |
+| A3 | LOW | `plan.md` Phase 0 Research Plan repeated list number `6`, making the ordered decision list inconsistent. | Renumbered the supply-chain implication item to `8`. |
 
 ---
 

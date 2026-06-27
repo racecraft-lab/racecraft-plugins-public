@@ -8,45 +8,45 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Are JavaScript/TypeScript, Python, and small per-platform binary candidates each required to use the same XPLAT-001 must-have gates and weighted criteria? [Completeness, Spec FR-001, Spec FR-002]
+- [x] CHK001 Are JavaScript/TypeScript, Python, and small per-platform binary candidates each required to use the same XPLAT-001 must-have gates and weighted criteria? [Completeness, Spec FR-001, Spec FR-002]
 - [x] CHK002 Are installed-cache evidence requirements defined for both installed Claude and installed Codex plugin-cache invocation rather than allowing source-checkout or generated-payload evidence to substitute silently? [Resolved, Spec FR-005, Spec FR-016, XPLAT-001 installed-cache gate]
-- [ ] CHK003 Are candidate evidence requirements complete for runtime availability, JSON stdin/stdout, stderr/exit separation, path-with-spaces, and shell-free subprocess or missing-command behavior? [Completeness, Spec FR-005, Research Probe Plan]
-- [ ] CHK004 Are documentation evidence sources limited to runtime/toolchain maintainers, official plugin platform documentation, or repo-local source/manifests, with third-party evidence supplemental only? [Completeness, Spec FR-004]
-- [ ] CHK005 Are supply-chain implications required for selected and rejected candidates without selecting XPLAT-003 controls? [Completeness, Spec FR-003, Spec FR-017, Research]
+- [x] CHK003 Are candidate evidence requirements complete for runtime availability, JSON stdin/stdout, stderr/exit separation, path-with-spaces, and shell-free subprocess or missing-command behavior? [Completeness, Spec FR-005, Research Probe Plan]
+- [x] CHK004 Are documentation evidence sources limited to runtime/toolchain maintainers, official plugin platform documentation, or repo-local source/manifests, with third-party evidence supplemental only? [Completeness, Spec FR-004]
+- [x] CHK005 Are supply-chain implications required for selected and rejected candidates without selecting XPLAT-003 controls? [Completeness, Spec FR-003, Spec FR-017, Research]
 
 ## Requirement Clarity
 
-- [ ] CHK006 Is the selected runner entrypoint named unambiguously as `speckit-pro-runner` with default payload-relative path `scripts/speckit-pro-runner`? [Clarity, Spec FR-009, Contract Entrypoint]
+- [x] CHK006 Is the selected runner entrypoint named unambiguously as `speckit-pro-runner` with default payload-relative path `scripts/speckit-pro-runner`? [Clarity, Spec FR-009, Contract Entrypoint]
 - [x] CHK007 Is helper dispatch defined clearly enough for XPLAT-004 to know that `helper_id`, `operation`, and `mode` resolve to installed payload/cache implementations rather than source checkout paths? [Resolved, Spec FR-010, Spec FR-018, Contract Invocation]
-- [ ] CHK008 Are CLI arguments clearly limited to metadata/help behavior while helper-specific inputs stay inside the JSON stdin envelope? [Clarity, Spec FR-010, Contract Invocation]
-- [ ] CHK009 Are stderr diagnostics and stdout response requirements separated clearly enough to prevent mixed diagnostic/output contracts? [Clarity, Spec FR-011, Contract Stderr Diagnostics]
-- [ ] CHK010 Are runtime-info/preflight fields specific enough to identify selected runtime, contract version, platform, plugin root, source-vs-installed context, capabilities, and prerequisites? [Clarity, Spec FR-015, Data Model Runtime Info]
+- [x] CHK008 Are CLI arguments clearly limited to metadata/help behavior while helper-specific inputs stay inside the JSON stdin envelope? [Clarity, Spec FR-010, Contract Invocation]
+- [x] CHK009 Are stderr diagnostics and stdout response requirements separated clearly enough to prevent mixed diagnostic/output contracts? [Clarity, Spec FR-011, Contract Stderr Diagnostics]
+- [x] CHK010 Are runtime-info/preflight fields specific enough to identify selected runtime, contract version, platform, plugin root, source-vs-installed context, capabilities, and prerequisites? [Clarity, Spec FR-015, Data Model Runtime Info]
 
 ## Requirement Consistency
 
-- [ ] CHK011 Do the spec, plan, research, data model, contract, and quickstart consistently avoid runner implementation or helper-port behavior? [Consistency, Spec FR-020, Plan Summary, Contract]
-- [ ] CHK012 Do public-claim boundaries consistently exclude README, docs-site, marketplace metadata, changelog, release notes, and public support promises? [Consistency, Spec FR-019, Research]
-- [ ] CHK013 Are compatibility adapters consistently described as temporary migration records rather than selectable runtime candidates? [Consistency, Spec Clarifications, Research, Data Model]
-- [ ] CHK014 Are adapter IDs, owners, removal specs, removal conditions, and evidence fields consistent across spec, data model, and contract artifacts? [Consistency, Spec Clarifications, Data Model, Contract]
+- [x] CHK011 Do the spec, plan, research, data model, contract, and quickstart consistently avoid runner implementation or helper-port behavior? [Consistency, Spec FR-020, Plan Summary, Contract]
+- [x] CHK012 Do public-claim boundaries consistently exclude README, docs-site, marketplace metadata, changelog, release notes, and public support promises? [Consistency, Spec FR-019, Research]
+- [x] CHK013 Are compatibility adapters consistently described as temporary migration records rather than selectable runtime candidates? [Consistency, Spec Clarifications, Research, Data Model]
+- [x] CHK014 Are adapter IDs, owners, removal specs, removal conditions, and evidence fields consistent across spec, data model, and contract artifacts? [Consistency, Spec Clarifications, Data Model, Contract]
 
 ## Acceptance Criteria Quality
 
-- [ ] CHK015 Can the selected-runtime outcome be objectively verified as exactly one canonical runtime, not a ranked shortlist? [Acceptance Criteria, Spec SC-001, Spec SC-002]
-- [ ] CHK016 Can evidence completeness be objectively verified for every candidate family, including documentation source and probe result or evidence gap? [Acceptance Criteria, Spec SC-003]
-- [ ] CHK017 Can contract completeness be objectively verified with zero unresolved placeholders or clarification markers? [Acceptance Criteria, Spec SC-004]
-- [ ] CHK018 Can XPLAT-004 readiness be objectively verified from the selected runtime, entrypoint, JSON/stderr/exit/path/subprocess/preflight contract, fixture parity expectations, and adapter records? [Acceptance Criteria, Spec SC-005]
+- [x] CHK015 Can the selected-runtime outcome be objectively verified as exactly one canonical runtime, not a ranked shortlist? [Acceptance Criteria, Spec SC-001, Spec SC-002]
+- [x] CHK016 Can evidence completeness be objectively verified for every candidate family, including documentation source and probe result or evidence gap? [Acceptance Criteria, Spec SC-003]
+- [x] CHK017 Can contract completeness be objectively verified with zero unresolved placeholders or clarification markers? [Acceptance Criteria, Spec SC-004]
+- [x] CHK018 Can XPLAT-004 readiness be objectively verified from the selected runtime, entrypoint, JSON/stderr/exit/path/subprocess/preflight contract, fixture parity expectations, and adapter records? [Acceptance Criteria, Spec SC-005]
 
 ## Scenario Coverage
 
-- [ ] CHK019 Are documentation/probe conflicts covered as explicit evidence records with scoring impact rules? [Coverage, Spec Edge Cases, Spec Clarifications, Data Model]
-- [ ] CHK020 Are unavailable cache/runtime probes covered by explicit evidence-gap handling rather than implied success or source-only substitution? [Coverage, Spec FR-005, Data Model Evaluation Evidence]
+- [x] CHK019 Are documentation/probe conflicts covered as explicit evidence records with scoring impact rules? [Coverage, Spec Edge Cases, Spec Clarifications, Data Model]
+- [x] CHK020 Are unavailable cache/runtime probes covered by explicit evidence-gap handling rather than implied success or source-only substitution? [Coverage, Spec FR-005, Data Model Evaluation Evidence]
 - [x] CHK021 Is the handoff from XPLAT-001 inventory rows to XPLAT-004 implementation inputs specified as a traceable input bundle, including row IDs, owner buckets, adapter records, fixture expectations, and exclusions? [Resolved, Spec FR-018, Data Model Handoff Item, XPLAT-001 Inventory Rows]
-- [ ] CHK022 Are XPLAT-003 and XPLAT-004 boundaries clear enough that supply-chain controls, runner implementation, helper ports, generated-payload cutover, and public support claims do not leak into XPLAT-002? [Coverage, Spec FR-017, Spec FR-018, Spec FR-019, Spec FR-020]
+- [x] CHK022 Are XPLAT-003 and XPLAT-004 boundaries clear enough that supply-chain controls, runner implementation, helper ports, generated-payload cutover, and public support claims do not leak into XPLAT-002? [Coverage, Spec FR-017, Spec FR-018, Spec FR-019, Spec FR-020]
 
 ## Dependencies & Assumptions
 
-- [ ] CHK023 Is XPLAT-001 identified as the authoritative baseline for runtime inventory rows, must-have gates, weighted criteria, and active-runtime ownership? [Dependency, Spec Assumptions, XPLAT-001 Inventory]
-- [ ] CHK024 Are installed Claude and Codex marketplace payload paths identified as integration evidence sources through repository manifests rather than assumed from local source layout? [Dependency, XPLAT-001 GEN-ACT-001, Marketplace Manifests]
+- [x] CHK023 Is XPLAT-001 identified as the authoritative baseline for runtime inventory rows, must-have gates, weighted criteria, and active-runtime ownership? [Dependency, Spec Assumptions, XPLAT-001 Inventory]
+- [x] CHK024 Are installed Claude and Codex marketplace payload paths identified as integration evidence sources through repository manifests rather than assumed from local source layout? [Dependency, XPLAT-001 GEN-ACT-001, Marketplace Manifests]
 
 ## Notes
 

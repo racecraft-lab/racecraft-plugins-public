@@ -170,7 +170,7 @@ and select the runtime.
 7. Record documentation/probe conflicts explicitly. Installed-cache probe
    evidence controls invocation-reliability scoring; official documentation
    controls general runtime claims.
-6. Record a per-candidate supply-chain implication matrix for XPLAT-003 without
+8. Record a per-candidate supply-chain implication matrix for XPLAT-003 without
    selecting controls.
 
 ## Phase 1 Design Plan

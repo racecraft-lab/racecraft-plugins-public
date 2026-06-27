@@ -8,48 +8,48 @@
 
 ## Requirement Completeness
 
-- [ ] CHK001 Are installed-cache smoke probe expectations defined for both installed Claude and installed Codex cache contexts? [Completeness, Spec FR-005, Research Probe Plan]
-- [ ] CHK002 Are runtime availability and version-reporting probes required for every candidate family before scoring? [Completeness, Spec FR-005, Spec FR-015]
-- [ ] CHK003 Are JSON stdin/stdout, stderr/exit separation, path-with-spaces, Windows separator, and shell-free subprocess or missing-command probes all named as candidate evidence inputs? [Completeness, Spec FR-005, Contract Fixture Parity Expectations]
-- [ ] CHK004 Are offline behavior and post-cache first-run/bootstrap requirements defined for a populated plugin cache? [Completeness, Spec FR-016, Research Installed-Cache Gate]
-- [ ] CHK005 Are selected-runtime diagnostics required to report runner version, contract version, selected runtime version, platform/architecture, plugin root, source-vs-installed context, capabilities, and prerequisites? [Completeness, Spec FR-015, Contract Runtime Info]
+- [x] CHK001 Are installed-cache smoke probe expectations defined for both installed Claude and installed Codex cache contexts? [Completeness, Spec FR-005, Research Probe Plan]
+- [x] CHK002 Are runtime availability and version-reporting probes required for every candidate family before scoring? [Completeness, Spec FR-005, Spec FR-015]
+- [x] CHK003 Are JSON stdin/stdout, stderr/exit separation, path-with-spaces, Windows separator, and shell-free subprocess or missing-command probes all named as candidate evidence inputs? [Completeness, Spec FR-005, Contract Fixture Parity Expectations]
+- [x] CHK004 Are offline behavior and post-cache first-run/bootstrap requirements defined for a populated plugin cache? [Completeness, Spec FR-016, Research Installed-Cache Gate]
+- [x] CHK005 Are selected-runtime diagnostics required to report runner version, contract version, selected runtime version, platform/architecture, plugin root, source-vs-installed context, capabilities, and prerequisites? [Completeness, Spec FR-015, Contract Runtime Info]
 
 ## Requirement Clarity
 
-- [ ] CHK006 Is installed-cache reliability framed as a pass/fail gate before weighted scoring can select a runtime? [Clarity, Spec FR-016, Research Installed-Cache Gate]
-- [ ] CHK007 Is it clear that source-checkout and generated-payload probes are supplemental setup evidence and cannot substitute for installed-cache probe evidence? [Clarity, Spec FR-005, Research Probe Plan]
-- [ ] CHK008 Is the no-install/no-network condition stated clearly enough to exclude `npm install`, `pip install`, `uv`, `brew`, package restoration, or equivalent post-cache setup? [Clarity, Spec FR-016]
-- [ ] CHK009 Are missing-runtime and missing-executable first-run failures classified through prerequisite diagnostics rather than public support-claim changes? [Clarity, Spec FR-012, Spec FR-019, Contract Exit-Code Map]
-- [ ] CHK010 Is runtime-info/preflight required to distinguish installed Claude cache, installed Codex cache, and supplemental source/generator contexts? [Clarity, Contract Runtime Info]
+- [x] CHK006 Is installed-cache reliability framed as a pass/fail gate before weighted scoring can select a runtime? [Clarity, Spec FR-016, Research Installed-Cache Gate]
+- [x] CHK007 Is it clear that source-checkout and generated-payload probes are supplemental setup evidence and cannot substitute for installed-cache probe evidence? [Clarity, Spec FR-005, Research Probe Plan]
+- [x] CHK008 Is the no-install/no-network condition stated clearly enough to exclude `npm install`, `pip install`, `uv`, `brew`, package restoration, or equivalent post-cache setup? [Clarity, Spec FR-016]
+- [x] CHK009 Are missing-runtime and missing-executable first-run failures classified through prerequisite diagnostics rather than public support-claim changes? [Clarity, Spec FR-012, Spec FR-019, Contract Exit-Code Map]
+- [x] CHK010 Is runtime-info/preflight required to distinguish installed Claude cache, installed Codex cache, and supplemental source/generator contexts? [Clarity, Contract Runtime Info]
 
 ## Evidence Gaps and Fallbacks
 
 - [x] CHK011 Are unavailable local probes required to record a fallback plan with host/runtime scope, reason unavailable, substitute evidence, gate/scoring effect, owner, and expiry or follow-up condition? [Resolved, Spec FR-005, Data Model Evaluation Evidence]
-- [ ] CHK012 Are host-specific installed-cache evidence gaps prevented from being scored as installed-cache passes? [Coverage, Spec FR-016, Data Model Rubric Gate Result]
-- [ ] CHK013 Are documentation/probe conflicts required to remain explicit evidence records with scoring impact rather than being collapsed into a pass? [Coverage, Spec Clarifications Session 1]
-- [ ] CHK014 Are evidence gaps assigned to the decision record or downstream XPLAT owner without turning XPLAT-002 into runner implementation or native release UAT? [Consistency, Spec FR-020, Design Concept Non-goals]
+- [x] CHK012 Are host-specific installed-cache evidence gaps prevented from being scored as installed-cache passes? [Coverage, Spec FR-016, Data Model Rubric Gate Result]
+- [x] CHK013 Are documentation/probe conflicts required to remain explicit evidence records with scoring impact rather than being collapsed into a pass? [Coverage, Spec Clarifications Session 1]
+- [x] CHK014 Are evidence gaps assigned to the decision record or downstream XPLAT owner without turning XPLAT-002 into runner implementation or native release UAT? [Consistency, Spec FR-020, Design Concept Non-goals]
 
 ## Tie-Breaker Objectivity
 
 - [x] CHK015 Are close candidates defined objectively before invoking the install-reliability tie-breaker? [Resolved, Spec FR-008, XPLAT-001 Weighted Criteria]
 - [x] CHK016 Are tie-breaker inputs measurable from evidence records rather than maintainer preference, such as host cache probe pass/fail/gap, post-cache setup burden, offline behavior, and diagnostic completeness? [Resolved, Spec FR-008a, Data Model Reliability Tie-Breaker Result]
-- [ ] CHK017 Is the tie-breaker order clear enough to resolve close candidates before maintainer ergonomics is considered? [Clarity, Design Concept Q7, Research Installed-Cache Gate]
-- [ ] CHK018 Is a remaining tie after objective reliability criteria required to be recorded as unresolved rather than hidden in narrative rationale? [Acceptance Criteria, Spec SC-006]
+- [x] CHK017 Is the tie-breaker order clear enough to resolve close candidates before maintainer ergonomics is considered? [Clarity, Design Concept Q7, Research Installed-Cache Gate]
+- [x] CHK018 Is a remaining tie after objective reliability criteria required to be recorded as unresolved rather than hidden in narrative rationale? [Acceptance Criteria, Spec SC-006]
 
 ## Scenario Coverage
 
-- [ ] CHK019 Is a candidate with strong repo-local behavior but weak installed-cache evidence covered as an edge case? [Coverage, Spec Edge Cases]
-- [ ] CHK020 Is a candidate requiring per-user dependency installation after cache population required to fail the selected-runtime gate? [Coverage, Spec FR-016]
-- [ ] CHK021 Are offline/update implications captured for selected and rejected candidates without selecting XPLAT-003 supply-chain controls? [Coverage, Spec FR-017, Research Supply-Chain Handoff]
-- [ ] CHK022 Are first-run/bootstrap failure modes covered for missing runtime, missing command, missing input prerequisite, and host-level launcher failure? [Coverage, Contract Exit-Code Map]
-- [ ] CHK023 Are public support-claim surfaces kept out of reliability remediation and implementation evidence? [Consistency, Spec FR-019]
+- [x] CHK019 Is a candidate with strong repo-local behavior but weak installed-cache evidence covered as an edge case? [Coverage, Spec Edge Cases]
+- [x] CHK020 Is a candidate requiring per-user dependency installation after cache population required to fail the selected-runtime gate? [Coverage, Spec FR-016]
+- [x] CHK021 Are offline/update implications captured for selected and rejected candidates without selecting XPLAT-003 supply-chain controls? [Coverage, Spec FR-017, Research Supply-Chain Handoff]
+- [x] CHK022 Are first-run/bootstrap failure modes covered for missing runtime, missing command, missing input prerequisite, and host-level launcher failure? [Coverage, Contract Exit-Code Map]
+- [x] CHK023 Are public support-claim surfaces kept out of reliability remediation and implementation evidence? [Consistency, Spec FR-019]
 
 ## Acceptance Criteria Quality
 
-- [ ] CHK024 Can reviewers objectively verify every uncertain invocation behavior has probe evidence or a documented evidence gap with fallback handling? [Acceptance Criteria, Spec SC-003]
-- [ ] CHK025 Can reviewers objectively verify the selected runtime passes installed-cache reliability without post-cache dependency installation or network restoration? [Acceptance Criteria, Spec FR-016]
-- [ ] CHK026 Can reviewers trace every rejected option to a rubric result, evidence gap, documentation/probe conflict, or objective install-reliability tie-breaker? [Acceptance Criteria, Spec SC-006]
-- [ ] CHK027 Can XPLAT-004 implement support diagnostics from runtime-info/preflight fields without reopening runtime selection? [Acceptance Criteria, Spec SC-005]
+- [x] CHK024 Can reviewers objectively verify every uncertain invocation behavior has probe evidence or a documented evidence gap with fallback handling? [Acceptance Criteria, Spec SC-003]
+- [x] CHK025 Can reviewers objectively verify the selected runtime passes installed-cache reliability without post-cache dependency installation or network restoration? [Acceptance Criteria, Spec FR-016]
+- [x] CHK026 Can reviewers trace every rejected option to a rubric result, evidence gap, documentation/probe conflict, or objective install-reliability tie-breaker? [Acceptance Criteria, Spec SC-006]
+- [x] CHK027 Can XPLAT-004 implement support diagnostics from runtime-info/preflight fields without reopening runtime selection? [Acceptance Criteria, Spec SC-005]
 
 ## Notes
 
