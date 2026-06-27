@@ -79,12 +79,12 @@ passes.
 |---|---|
 | Marker count | Passed: `{"type":"gaps","total":0,"spec":0,"plan":0,"checklists":0,"details":[]}` |
 | Spec index | Regenerated after adding decision artifacts, then passed: `spec-index: index current — all in-scope maps up to date.` |
-| Reviewability gate | Warn/pass: `reviewable_loc=0`, `production_files=0`, `total_files=21`, `primary_surface_count=4`, `primary_surfaces=["API","docs/process","scheduler/runtime","seed/config"]`, warnings for total files and primary surfaces, no blockers. |
-| `git diff --name-only` | Tracked diff limited to `SPEC-MOC.md`, `contracts/speckit-pro-runner-contract.md`, `quickstart.md`, and `tasks.md`. `git status --short` also shows new XPLAT-002 `evidence/`, `handoff.md`, and `runtime-decision.md` files. |
-| Scope review | Passed: all changed/untracked paths are under `specs/xplat-002-runtime-implementation-options-contract-decision/`; no README, docs-site, marketplace metadata, changelog, release notes, active installed invocation paths, or broad generated payloads changed. |
+| Reviewability gate | Warn/pass: `reviewable_loc=0`, `production_files=0`, `total_files=25`, `primary_surface_count=4`, `primary_surfaces=["API","docs/process","scheduler/runtime","seed/config"]`, warnings for total files and primary surfaces, no blockers. |
+| `git diff --name-only origin/main...HEAD` | Tracked diff includes XPLAT-002 workflow and feature artifacts, roadmap/spec-map refreshes, and no untracked files. |
+| Scope review | Passed: no README, docs-site runtime, marketplace metadata, changelog, release notes, active installed invocation paths, public support-claim surfaces, or broad generated payloads changed. |
 | `git diff --check` | Passed with no whitespace errors. |
 | Layer 1 structural suite | Passed: `bash tests/speckit-pro/run-all.sh --layer 1` reported `1438/1438 passed`. |
-| Broader shell suite | Not run intentionally: no source, generator script, durable probe script, installed invocation path, or generated payload changed unexpectedly. |
+| Broader shell suite | Attempted: focused payload determinism now passes, but `bash tests/speckit-pro/run-all.sh` remains blocked by baseline DOC-014 privacy-scan terms already present on `origin/main`. |
 
 Supplemental non-mutating probes recorded in evidence:
 

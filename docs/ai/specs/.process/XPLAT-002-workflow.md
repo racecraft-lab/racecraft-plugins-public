@@ -49,9 +49,9 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Clarify | `$speckit-clarify` | Complete | Resolved candidate scoring, probe scope, command envelope, packaging, adapter, security handoff, and public-claim boundaries |
 | Plan | `$speckit-plan` | Complete | Produced plan, research, data model, command contract, quickstart, and agent context pointer; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability gaps remediated; G4 passed |
-| Tasks | `$speckit-tasks` | Complete | Generated 32 decision-spike tasks; G5 passed |
+| Tasks | `$speckit-tasks` | Complete | Generated 33 decision-spike tasks after analysis remediation; G5/G6 passed |
 | Analyze | `$speckit-analyze` | Complete | 3 findings (0C/0H/1M/2L), all remediated; G6 passed |
-| Implement | `$speckit-implement` | In Progress | Produce the runtime decision record, probe evidence, and roadmap handoff only |
+| Implement | `$speckit-implement` | Complete | Runtime decision, probe evidence, command contract, handoff, and G7 verification recorded |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -123,7 +123,7 @@ Record this warning in `plan.md`. It does not block setup.
 
 | Check | Result | Evidence |
 |-------|--------|----------|
-| SpecKit CLI | Pass | `command -v specify` returned `/Users/fredrickgabelmann/.local/bin/specify` |
+| SpecKit CLI | Pass | `command -v specify` returned a local `specify` executable |
 | Branch/worktree | Pass | Created worktree on `codex/xplat-002-runtime-implementation-options-contract-decision` from `origin/main` |
 | Reviewability setup gate | Warn/pass | Two primary surfaces (`docs/process`, `harness/adapter`), no blockers |
 | Grill Me | Complete | 8 questions; one decision spike accepted |
@@ -499,23 +499,23 @@ Expected branch: `codex/xplat-002-runtime-implementation-options-contract-decisi
 
 | Phase | Tasks | Completed | Notes |
 |-------|-------|-----------|-------|
-| Foundation | Pending | Pending | Candidate evidence matrix and probe plan |
-| Candidate evaluation | Pending | Pending | JavaScript/TypeScript, Python, binary |
-| Contract decision | Pending | Pending | Selected runtime, JSON envelope, exit-code map |
-| Handoff and verification | Pending | Pending | XPLAT-003/XPLAT-004 notes, spec-map, diff checks |
+| Foundation | T001-T009 | Complete | Candidate evidence matrix, probe plan, and no-public-claim boundary recorded |
+| Candidate evaluation | T010-T016 | Complete | JavaScript/TypeScript, Python, and Go binary evidence evaluated against the same rubric |
+| Contract decision | T017-T019 | Complete | Go native binary selected; JSON envelope, stderr diagnostics, exit-code map, paths, subprocess, and preflight contract recorded |
+| Handoff and verification | T020-T033 | Complete | XPLAT-003/XPLAT-004 handoff, spec-map, diff hygiene, reviewability gate, Layer 1, and PR packet content recorded |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`
-- [ ] No unresolved placeholders remain in generated artifacts
-- [ ] Spec-map check passes or stale generated zones are recorded with the required follow-up
-- [ ] Diff hygiene passes with `git diff --check`
-- [ ] Relevant shell suite passes
-- [ ] Runtime decision record names selected and rejected options
-- [ ] Handoff notes for XPLAT-003 and XPLAT-004 are present
-- [ ] No public native-platform support claims changed
+- [x] All tasks marked complete in `tasks.md`
+- [x] No unresolved placeholders remain in generated artifacts
+- [x] Spec-map check passes or stale generated zones are recorded with the required follow-up
+- [x] Diff hygiene passes with `git diff --check`
+- [x] Relevant shell suite passes: Layer 1 passed `1438/1438`; full default suite was attempted and is blocked by baseline DOC-014 privacy-scan terms already present on `origin/main`
+- [x] Runtime decision record names selected and rejected options
+- [x] Handoff notes for XPLAT-003 and XPLAT-004 are present
+- [x] No public native-platform support claims changed
 
 ---
 
