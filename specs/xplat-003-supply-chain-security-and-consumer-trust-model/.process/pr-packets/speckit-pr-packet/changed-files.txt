@@ -4,6 +4,12 @@ docs/ai/specs/.process/autopilot-state.json
 docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md
 docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md
 specs/xplat-002-runtime-implementation-options-contract-decision/SPEC-MOC.md
+specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/final-reviewability/gate-state.json
+specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/body.md
+specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/changed-files.txt
+specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/speckit-pr-packet.json
+specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/validation.json
+specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/uat-runbook.md
 specs/xplat-003-supply-chain-security-and-consumer-trust-model/SPEC-MOC.md
 specs/xplat-003-supply-chain-security-and-consumer-trust-model/checklists/integration.md
 specs/xplat-003-supply-chain-security-and-consumer-trust-model/checklists/reliability.md
