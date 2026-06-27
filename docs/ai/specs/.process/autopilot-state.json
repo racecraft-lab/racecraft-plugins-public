@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-003-workflow.md",
-  "updated_at": "2026-06-27T16:23:13Z",
-  "active_step": "Phase 2: Clarify - First-release control boundaries",
+  "updated_at": "2026-06-27T16:53:56Z",
+  "active_step": "Phase 3: Plan",
   "feature_dir": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
   "branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model",
   "status": "in_progress",
@@ -98,31 +98,78 @@
     },
     {
       "step": "Phase 2: Clarify - First-release control boundaries",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "practical first-release baseline blocks public cutover",
+          "signatures, SBOMs, provenance/attestations, reproducible builds, formal audit, and cryptographic trust-chain verification stay deferred unless promotion evidence exists",
+          "controls split by owner surface across XPLAT-004, XPLAT-007, release automation, and public documentation",
+          "XPLAT-007 public claims require runner preflight/version evidence, checksums, consumer verification instructions, source-to-dist gate output, scan or exception evidence, and public-claim audit evidence",
+          "actionable high/critical vulnerability findings block release readiness unless a documented non-actionable exception exists"
+        ],
+        "unresolved_consensus_items": 0
+      }
     },
     {
       "step": "Phase 2: Clarify - First-release control boundaries Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 2: Clarify - Artifact integrity and consumer verification",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "use SHA-256 in payload-relative scripts/speckit-pro-runner.sha256",
+          "publish scripts/speckit-pro-runner.manifest.json with plugin, runner, source, checksum, and per-artifact platform fields",
+          "XPLAT-007 source-to-dist evidence runs build-plugin-payloads and verifies no generated drift across dist roots and marketplace manifests",
+          "runtime-info/preflight evidence includes artifact-integrity pointers and distinguishes installed-cache from source-only context",
+          "consumer verification uses runner identity/preflight plus platform-native SHA-256 comparison without jq, Bash, source checkout, or network restore"
+        ],
+        "unresolved_consensus_items": 0
+      }
     },
     {
       "step": "Phase 2: Clarify - Artifact integrity and consumer verification Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 2: Clarify - Vulnerability policy and claim wording",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "actionable high/critical findings combine severity with first-release trust-boundary scope and reachable, shipped, or release-affecting relevance",
+          "exception records require complete evidence, approval, compensating-control, and expiry fields, with per-release/current-evidence expiry",
+          "durable scan summaries and exception records are committed while raw scanner output is retained as 30-day CI artifacts once automation exists",
+          "XPLAT-004 blocks runner-readiness evidence and XPLAT-007 blocks public cutover/release claims; XPLAT-003 records policy only",
+          "public docs and release notes may claim only implemented-and-verified controls; deferred cryptographic, audit, marketplace-enforced, and native-support claims remain roadmap-only"
+        ],
+        "unresolved_consensus_items": 5,
+        "consensus_required": true
+      }
     },
     {
       "step": "Phase 2: Clarify - Vulnerability policy and claim wording Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "rounds": 1,
+        "items": 5,
+        "outcome": "all items resolved 3/3",
+        "analysts": [
+          "codebase-analyst",
+          "spec-context-analyst",
+          "domain-researcher"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - Security",

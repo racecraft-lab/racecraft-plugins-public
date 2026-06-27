@@ -47,8 +47,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created decision-spike spec and requirements checklist; G1 passed with 0 clarification markers |
-| Clarify | `$speckit-clarify` | In Progress | Resolve exact control boundaries, evidence formats, and claim wording |
-| Plan | `$speckit-plan` | Pending | Produce research, policy/data model, contracts, quickstart, and handoff |
+| Clarify | `$speckit-clarify` | Complete | Resolved exact control boundaries, evidence formats, vulnerability policy, and claim wording |
+| Plan | `$speckit-plan` | In Progress | Produce research, policy/data model, contracts, quickstart, and handoff |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: security, integration, reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate decision-spike tasks only; no runner implementation |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, XPLAT-001, XPLAT-002, spec, plan, and tasks |
@@ -284,9 +284,19 @@ $speckit-clarify Focus on vulnerability policy and public claims: define actiona
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---------|------------|-----------|--------------|
-| 1 | First-release control boundaries | Pending | |
-| 2 | Artifact integrity and consumer verification | Pending | |
-| 3 | Vulnerability policy and claim wording | Pending | |
+| 1 | First-release control boundaries | 5 | Practical first-release baseline accepted; signatures/SBOM/provenance/reproducible builds/formal audit deferred unless promotion evidence exists; controls split across XPLAT-004, XPLAT-007, and release surfaces; actionable high/critical findings block release readiness |
+| 2 | Artifact integrity and consumer verification | 5 | SHA-256 checksum file path accepted; runner artifact manifest fields defined; source-to-dist evidence command and drift check assigned to XPLAT-007; runtime-info/preflight artifact-integrity fields added; local verification must use identity/preflight plus platform-native checksum comparison |
+| 3 | Vulnerability policy and claim wording | 5 | Security consensus accepted actionability definition, exception expiry, scan-evidence retention, downstream blocking behavior, and implemented-and-verified public claim boundary |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|------|----------------------|------------|-------|---------|------------|---------------|
+| 1 | Clarify | Actionable high/critical criteria | security, domain | 1 | 3/3 | Severity plus first-release trust-boundary scope plus reachable, shipped, or release-affecting relevance; non-actionable findings require exception records | codebase-analyst, spec-context-analyst, domain-researcher |
+| 2 | Clarify | Exception record and expiry | security, spec | 1 | 3/3 | Full exception record fields required, with per-release/current-evidence expiry and immediate re-review after affected evidence changes | codebase-analyst, spec-context-analyst, domain-researcher |
+| 3 | Clarify | Scan evidence retention | security, codebase | 1 | 3/3 | Durable summaries and exception records are committed; raw scanner output is retained as 30-day CI artifacts once automation exists and is not committed by default | codebase-analyst, spec-context-analyst, domain-researcher |
+| 4 | Clarify | Release-blocking behavior | security, codebase | 1 | 3/3 | XPLAT-004 blocks runner-readiness evidence; XPLAT-007 blocks public cutover/release claims; XPLAT-003 records policy only and edits no release workflow | codebase-analyst, spec-context-analyst, domain-researcher |
+| 5 | Clarify | Public claim boundaries | security, spec | 1 | 3/3 | Only implemented-and-verified controls may be claimed; deferred cryptographic, audit, marketplace-enforced, and native-support claims remain roadmap-only | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 

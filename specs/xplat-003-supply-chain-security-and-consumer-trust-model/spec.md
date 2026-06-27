@@ -8,6 +8,120 @@
 
 **Input**: User description: "Choose the practical first-release security baseline and deferred hardening backlog for the XPLAT Go native runner before XPLAT-004 builds the runner and before XPLAT-007 makes public release claims."
 
+## Clarifications
+
+### Session 1: First-release Control Boundaries
+
+- Q: What is the minimum first-release control baseline that blocks public
+  cutover? A: The practical baseline is pinned Go/release inputs,
+  vulnerability scanning, generated payload source-to-dist integrity, published
+  checksums, consumer-local verification, and truthful public claims.
+- Q: Which controls stay deferred hardening, and what evidence can promote them
+  to first-release required? A: Signatures, SBOMs, provenance/attestations,
+  reproducible builds, formal audit, and cryptographic trust-chain verification
+  stay deferred unless concrete first-release evidence shows enforced
+  marketplace/install support, release automation that can produce and verify
+  the artifact, a public claim that cannot be made truthfully without the
+  control, or a blocking consumer/adoption requirement.
+- Q: How should first-release controls be split across owner surfaces? A:
+  XPLAT-004 owns runner source, dependency, artifact, preflight/version,
+  checksum generation, and applicable scan controls. XPLAT-007 owns generated
+  payload integrity, consumer verification guidance, release-note/docs claim
+  boundaries, native support readiness, and cutover evidence. Release
+  automation owns publication-time evidence only where later specs wire it in.
+- Q: What evidence must exist before XPLAT-007 can make public supply-chain or
+  native-support claims? A: Runner preflight/version evidence, checksums for
+  each packaged artifact, consumer verification instructions, source-to-dist
+  payload gate output, vulnerability scan results or exception records, and
+  public-claim audit evidence.
+- Q: How should high/critical vulnerability scan findings affect public cutover?
+  A: Actionable high/critical findings block release readiness. Non-actionable
+  exceptions must record the finding source and severity, affected
+  artifact/version, rationale, compensating control, approving maintainer, and
+  expiry or review condition.
+
+### Session 2: Artifact Integrity And Consumer Verification
+
+- Q: What checksum filename and algorithm should first-release runner artifacts
+  use? A: Use SHA-256 and publish one stable payload-relative checksum file at
+  `scripts/speckit-pro-runner.sha256`. Entries use 64 lowercase hexadecimal
+  characters, two spaces, and the payload-relative artifact path so maintainers
+  and consumers can use common SHA-256 verification tools.
+- Q: What fields must the runner artifact manifest include? A: Publish
+  `scripts/speckit-pro-runner.manifest.json` with `schema_version`,
+  `plugin_name`, `plugin_version`, `runner_name`, `runner_version`,
+  `contract_version`, `source_revision`, `checksum_algorithm`, and
+  `artifacts[]` entries containing `artifact_id`, `payload_path`, `os`, `arch`,
+  `size_bytes`, `sha256`, and `checksum_file`.
+- Q: What source-to-dist evidence should prove generated Claude/Codex payload
+  integrity? A: XPLAT-007 must run `bash scripts/build-plugin-payloads.sh`,
+  then verify no generated drift under `dist/claude/speckit-pro`,
+  `dist/codex/speckit-pro`, `.claude-plugin/marketplace.json`, and
+  `.agents/plugins/marketplace.json`, recording the command, exit status,
+  source inputs, generated roots, and checksum/manifest paths.
+- Q: What extra `runtime-info` and `preflight` fields are required for consumer
+  verification? A: Preserve the XPLAT-002 fields and add artifact-integrity
+  pointers: `executable_path`, `artifact_id`, `artifact_manifest_path`,
+  `checksum_file_path`, `checksum_algorithm`, `expected_checksum`, and
+  `verification_status`. The response distinguishes installed-cache context
+  from source-only context and does not claim external trust-chain verification.
+- Q: What local consumer verification command shape should docs require? A: Use
+  a two-step local path: run runner identity/preflight first, then compare the
+  installed artifact hash against the published checksum entry with
+  platform-native SHA-256 tooling. The verification path must not rely on
+  runner self-verification alone and must not require `jq`, Bash, a source
+  checkout, or network package restoration.
+
+### Session 3: Vulnerability Policy And Public Claims
+
+- Q: How should "actionable high/critical" be defined? A: A finding is
+  actionable when scanner severity is high/critical, or CVSS is high/critical
+  when available, and the finding affects the first-release trust boundary:
+  runner source, Go modules/toolchain, build/release inputs, packaged runner
+  artifacts, integrity metadata, generated payloads, marketplace manifests, or
+  release evidence. It must also be reachable, shipped, or capable of changing
+  release output or public claims. False positives, unreachable code,
+  non-shipped paths, repo-only/test/archive/docs-only paths, or already
+  mitigated artifact-boundary findings are non-actionable only with an
+  exception record.
+- Q: What must a vulnerability exception record contain and when does it expire?
+  A: It records scanner/source, tool version or vulnerability database
+  timestamp, advisory ID when available, severity, affected
+  artifact/dependency/version/platform, actionability classification,
+  rationale, reachability or false-positive evidence, compensating control,
+  approving maintainer, approval date, and expiry/review condition. It expires
+  before each public release unless re-approved with current evidence, and
+  immediately when the affected artifact, dependency graph, platform, toolchain,
+  scanner version/database, advisory status, severity, exploitability, or
+  compensating control changes.
+- Q: How long should scan evidence be retained? A: Durable, non-sensitive
+  release-readiness summaries and exception records are retained in the owning
+  spec, PR packet, or release-readiness artifact. Raw scanner output is not
+  committed by default; once automation exists, it is uploaded as CI artifacts
+  with 30-day retention. Raw log excerpts may be committed only when necessary
+  to support an exception record, and must be scoped or redacted to the relevant
+  finding.
+- Q: What is the exact release-blocking behavior? A: XPLAT-003 records policy,
+  control ownership, and acceptance gates only. XPLAT-004 blocks
+  runner-foundation readiness when required runner/source/dependency/artifact
+  scan evidence is missing, stale, or has unresolved actionable high/critical
+  findings. XPLAT-007 blocks public cutover and release-note/docs claims when
+  scan evidence, exceptions, checksums, manifest, source-to-dist evidence,
+  consumer verification guidance, public-claim audit, runtime preflight/version
+  evidence, or native UAT evidence is missing or stale. Current release
+  workflow implementation changes stay out of XPLAT-003.
+- Q: What docs/release-note claims are allowed versus forbidden? A: Allowed
+  claims are limited to implemented-and-verified controls for the release:
+  packaged native runner artifacts, SHA-256 checksum file and manifest, local
+  preflight/version plus checksum verification, source-to-dist payload gate, and
+  vulnerability scanning with no unresolved actionable high/critical findings.
+  Forbidden until implemented and verified: signed binaries/signatures, SBOMs,
+  provenance/attestations, reproducible builds, formal audit/certification,
+  marketplace-enforced verification, cryptographic trust-chain verification, and
+  native Windows/macOS/Linux support. Roadmap wording may describe these as
+  planned or deferred hardening, but not as provided, guaranteed, certified,
+  enforced, or trusted today.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Maintainer Reviews Trust Baseline (Priority: P1)
@@ -59,6 +173,8 @@ A consumer or reviewer can understand what they can verify locally after install
 ### Edge Cases
 
 - A vulnerability scan reports a high or critical finding that is not actionable because it is unreachable, false positive, or already mitigated by the packaged artifact boundary.
+- A vulnerability scan reports a high or critical finding in repo-only, test, archive, docs-only, or other non-shipped paths that are outside the XPLAT runtime trust boundary.
+- A vulnerability exception was approved for one release but the affected artifact, dependency graph, platform, toolchain, scanner database, advisory status, severity, exploitability, or compensating control changed before the next release.
 - Generated Claude and Codex payloads drift from their source inputs after the runner or verification metadata changes.
 - Published checksum metadata is missing, stale, or does not match a packaged runner artifact.
 - Public release wording is prepared before XPLAT-007 native-platform UAT or before the selected controls are implemented.
@@ -71,22 +187,29 @@ A consumer or reviewer can understand what they can verify locally after install
 
 - **FR-001**: The specification MUST record XPLAT-002's selected native runner model as the runtime context and MUST NOT reopen runtime selection.
 - **FR-002**: The specification MUST define the first-release control baseline as pinned release inputs, vulnerability scanning, generated-payload integrity, published checksums, consumer-local verification, and truthful public claims.
-- **FR-003**: The specification MUST require generated Claude and Codex payload integrity to include a source-to-dist gate that detects drift between source inputs and generated payload outputs.
-- **FR-004**: The specification MUST require first-release binary artifact integrity to include published checksums for packaged runner artifacts.
-- **FR-005**: The specification MUST require consumer-local verification guidance that lets a consumer confirm runner version or preflight output and compare packaged artifact checksums against the published checksum source.
+- **FR-003**: The specification MUST require generated Claude and Codex payload integrity to include a source-to-dist gate that runs `bash scripts/build-plugin-payloads.sh`, checks generated payload and marketplace-manifest drift, and records command, exit status, source inputs, generated roots, and checksum/manifest paths.
+- **FR-004**: The specification MUST require first-release binary artifact integrity to include SHA-256 checksums for packaged runner artifacts in `scripts/speckit-pro-runner.sha256`.
+- **FR-005**: The specification MUST require consumer-local verification guidance that lets a consumer confirm runner version or preflight output and compare packaged artifact checksums against the published checksum source using platform-native SHA-256 tooling without requiring `jq`, Bash, source checkout, or network package restoration.
 - **FR-006**: The specification MUST require vulnerability scans for the native runner source, dependencies, and release artifacts where applicable before public release.
-- **FR-007**: The vulnerability policy MUST fail release readiness on actionable high or critical findings.
-- **FR-008**: The vulnerability policy MUST define exception handling for non-actionable findings, including the finding, rationale, expiry or review condition, and approving maintainer.
-- **FR-009**: The specification MUST classify signatures, provenance or attestations, reproducible builds, SBOMs, formal audit, and cryptographic trust-chain verification as deferred hardening unless an explicit first-release requirement overrides that classification.
-- **FR-010**: The specification MUST assign runner source, dependency, artifact, preflight/version, checksum, and applicable vulnerability controls to XPLAT-004.
-- **FR-011**: The specification MUST assign generated-payload source-to-dist integrity, public docs or release-note claim boundaries, consumer-facing verification guidance, and native support claim readiness to XPLAT-007.
+- **FR-007**: The vulnerability policy MUST fail release readiness on actionable high or critical findings, where actionability requires high/critical severity plus first-release trust-boundary scope and reachable, shipped, or release-affecting relevance.
+- **FR-008**: The vulnerability policy MUST define exception handling for non-actionable findings, including scanner/source, tool version or vulnerability database timestamp, advisory ID when available, severity, affected artifact/dependency/version/platform, actionability classification, rationale, reachability or false-positive evidence, compensating control, approving maintainer, approval date, and expiry or review condition.
+- **FR-009**: The specification MUST classify signatures, provenance or attestations, reproducible builds, SBOMs, formal audit, and cryptographic trust-chain verification as deferred hardening unless concrete first-release evidence promotes a control into a release requirement.
+- **FR-010**: The specification MUST assign runner source, dependency, artifact, preflight/version, checksum, manifest, and applicable vulnerability controls to XPLAT-004.
+- **FR-011**: The specification MUST assign generated-payload source-to-dist integrity, public docs or release-note claim boundaries, consumer-facing verification guidance, runtime-info/preflight evidence, and native support claim readiness to XPLAT-007.
 - **FR-012**: The specification MUST identify any release-automation-owned controls and assign them to the earliest downstream spec or release surface that can implement and verify them before public release.
 - **FR-013**: Public docs and release notes MUST claim only controls that are implemented and verified.
 - **FR-014**: Public docs and release notes MUST NOT claim signing, provenance, reproducible builds, audit, or native Windows/macOS/Linux support before those guarantees have implementation and verification evidence.
-- **FR-015**: The specification MUST document the deferred hardening backlog with rationale and the condition that would move each item into a future release gate.
+- **FR-015**: The specification MUST document the deferred hardening backlog with rationale and promotion conditions, including enforced marketplace/install support, release automation that can produce and verify the artifact, required truthful public claims, or blocking consumer/adoption requirements.
 - **FR-016**: The specification MUST preserve XPLAT-001 supply-chain rubric traceability for dependency policy, lockfile discipline, generated payload integrity, vulnerability scanning, provenance, checksums or signatures, SBOM feasibility, consumer-local verification, and release-claim truthfulness.
 - **FR-017**: The specification MUST preserve XPLAT-002 handoff traceability for native runner artifact assumptions, Go module and release input policy, artifact origin evidence, build environment inputs, and installed-cache verification gaps.
 - **FR-018**: The specification MUST exclude runner implementation, helper porting, active invocation path changes, generated payload rebuilds, release automation changes, and public native support claims from XPLAT-003 implementation scope.
+- **FR-019**: The first-release artifact manifest MUST identify plugin and runner versions, contract version, source revision, checksum algorithm, and per-artifact payload path, platform, architecture, size, SHA-256 checksum, and checksum file.
+- **FR-020**: Runtime-info or preflight evidence used for consumer verification MUST include artifact-integrity pointers and MUST distinguish installed-cache context from source-only context without claiming external trust-chain verification.
+- **FR-021**: Vulnerability exception records MUST expire before each public release unless re-approved from current scan evidence, and MUST expire immediately when the affected artifact, dependency graph, platform, toolchain, scanner version/database, advisory status, severity, exploitability, or compensating control changes.
+- **FR-022**: Scan evidence retention MUST keep durable non-sensitive release-readiness summaries and exception records in spec, PR-packet, or release-readiness artifacts; raw scanner output MUST NOT be committed by default and, once automation exists, MUST be retained as CI artifacts for 30 days.
+- **FR-023**: XPLAT-004 readiness MUST fail when required runner/source/dependency/artifact scan evidence is missing, stale, or has unresolved actionable high/critical findings.
+- **FR-024**: XPLAT-007 public cutover and release-claim readiness MUST fail when scan evidence, exceptions, checksums, manifest, source-to-dist evidence, consumer verification guidance, public-claim audit, runtime preflight/version evidence, or native UAT evidence is missing or stale.
+- **FR-025**: Public docs and release notes MUST NOT claim signed binaries, SBOMs, provenance or attestations, reproducible builds, formal audit or certification, marketplace-enforced verification, cryptographic trust-chain verification, or native Windows/macOS/Linux support until each claim is implemented and verified.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -113,10 +236,12 @@ A consumer or reviewer can understand what they can verify locally after install
 
 - **Security Control Decision**: A trust or verification control evaluated by XPLAT-003, including first-release or deferred classification, rationale, owner surface, and evidence requirement.
 - **First-Release Baseline**: The minimum set of controls that must be implemented and verified before public release claims can rely on the native runner.
+- **Runner Artifact Manifest**: A payload-relative JSON record that identifies runner artifacts, platform dimensions, source revision, checksums, and the checksum file used for verification.
 - **Deferred Hardening Item**: A control intentionally not required for first release, with rationale and a future condition that can promote it into a release gate.
 - **Owner Assignment**: The downstream spec or release surface responsible for implementing and verifying a selected control.
-- **Verification Exception**: A documented exception for a non-actionable vulnerability finding or control gap, including rationale, approval, and review condition.
+- **Verification Exception**: A documented exception for a non-actionable vulnerability finding or control gap, including scan provenance, affected artifact, actionability classification, rationale, approval, and review condition.
 - **Public Claim Boundary**: A rule that identifies which supply-chain and native support statements may appear in public docs or release notes.
+- **Release-Readiness Evidence**: Durable non-sensitive evidence that a required control passed, was excepted, or is not yet claimable for a specific release boundary.
 
 ## Success Criteria *(mandatory)*
 
@@ -131,6 +256,8 @@ A consumer or reviewer can understand what they can verify locally after install
 - **SC-007**: Public wording review rejects 100% of signing, provenance, reproducible-build, audit, or native support claims that lack implementation and verification evidence.
 - **SC-008**: Vulnerability-scan release readiness fails for 100% of actionable high or critical findings unless a documented exception record exists.
 - **SC-009**: The decision record leaves 0 first-release controls without an owner or acceptance gate.
+- **SC-010**: 100% of vulnerability exceptions include expiry or re-approval conditions tied to public release boundaries and changed evidence inputs.
+- **SC-011**: 100% of raw scanner output retention rules avoid committed raw logs by default and identify the CI artifact retention period once automation exists.
 
 ## Assumptions
 
