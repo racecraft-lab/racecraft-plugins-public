@@ -48,8 +48,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created decision-spike spec and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Resolved exact control boundaries, evidence formats, vulnerability policy, and claim wording |
-| Plan | `$speckit-plan` | In Progress | Produce research, policy/data model, contracts, quickstart, and handoff |
-| Checklist | `$speckit-checklist` | Pending | Recommended domains: security, integration, reliability |
+| Plan | `$speckit-plan` | Complete | Produced research, policy/data model, control contract, quickstart, and handoff |
+| Checklist | `$speckit-checklist` | In Progress | Recommended domains: security, integration, reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate decision-spike tasks only; no runner implementation |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, XPLAT-001, XPLAT-002, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Record final decision artifacts and verification evidence |
@@ -335,11 +335,11 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, decision method, constitution checks, and reviewability warning |
-| `research.md` | Pending | Control evaluation and rationale |
-| `data-model.md` | Pending | Control, artifact, evidence, exception, and claim-boundary entities |
-| `contracts/` | Pending | Supply-chain control record and consumer verification contract if useful |
-| `quickstart.md` | Pending | Reviewer path and verification commands |
+| `plan.md` | Complete | Technical context, constitution checks, reviewability warning, downstream handoff, and phase validation path |
+| `research.md` | Complete | 17 control decisions covering first-release requirements, deferred hardening, and explicit non-claims |
+| `data-model.md` | Complete | 10 entities for controls, artifacts, evidence, exceptions, and claim boundaries |
+| `contracts/` | Complete | Supply-chain control contract with 7 normative record shapes |
+| `quickstart.md` | Complete | Reviewer path and static validation commands |
 
 ---
 
