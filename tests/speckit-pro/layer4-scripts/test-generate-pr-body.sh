@@ -533,6 +533,35 @@ assert_not_contains "$(cat "$future_packet_output")" "PRSG-012"
 set_test "Future generated packet does not fall back to plugin scope"
 assert_not_contains "$(cat "$future_packet_output")" "feat(speckit-pro):"
 
+xplat_feature_rel="specs/xplat-002-runtime-implementation-options-contract-decision"
+xplat_feature="$packet_repo/$xplat_feature_rel"
+xplat_packet_output_rel="$PR_PACKET_FIXTURE_REL/xplat-single.json"
+xplat_body_output_rel="$PR_PACKET_FIXTURE_REL/bodies/xplat-single.md"
+xplat_packet_output="$packet_repo/$xplat_packet_output_rel"
+xplat_body_output="$packet_repo/$xplat_body_output_rel"
+mkdir -p "$xplat_feature" "$(dirname "$xplat_packet_output")" "$(dirname "$xplat_body_output")"
+cat > "$xplat_feature/spec.md" <<'EOF'
+# Feature Specification: Runtime implementation options and contract decision
+EOF
+cat > "$xplat_feature/plan.md" <<'EOF'
+# Plan
+Primary surface: docs/process
+EOF
+
+set_test "Generator writes XPLAT-scoped packet metadata"
+result=0
+(cd "$packet_repo" && "$SCRIPT" --packet-output "$xplat_packet_output" "$packet_repo" "$xplat_feature" "$xplat_body_output" main...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "XPLAT generated packet uses derived XPLAT scope"
+assert_json_file_value "$xplat_packet_output" "generated_title.scope" "XPLAT-002"
+
+set_test "XPLAT generated packet title uses derived XPLAT scope"
+assert_json_file_value "$xplat_packet_output" "generated_title.value" "feat(XPLAT-002): Add runtime implementation options and contract decision"
+
+set_test "XPLAT generated packet does not fall back to plugin scope"
+assert_not_contains "$(cat "$xplat_packet_output")" "feat(speckit-pro):"
+
 doc_feature_rel="specs/doc-004-codex-marketplace-installation-path"
 doc_feature="$packet_repo/$doc_feature_rel"
 doc_packet_output_rel="$PR_PACKET_FIXTURE_REL/doc-single.json"

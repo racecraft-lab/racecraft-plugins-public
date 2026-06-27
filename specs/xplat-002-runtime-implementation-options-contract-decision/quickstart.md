@@ -75,6 +75,12 @@ passes.
 
 ## 5. Recorded Results
 
+Reviewability-Exception: infra
+
+The final PR includes a small PR-packet tooling fix so XPLAT-scoped specs can
+generate and validate `feat(XPLAT-*)` pull request titles. This is infrastructure
+support for the XPLAT-002 closeout path, not runtime implementation work.
+
 | Check | Result |
 |---|---|
 | Marker count | Passed: `{"type":"gaps","total":0,"spec":0,"plan":0,"checklists":0,"details":[]}` |

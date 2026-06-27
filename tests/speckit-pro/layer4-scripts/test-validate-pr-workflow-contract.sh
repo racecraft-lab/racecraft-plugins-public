@@ -106,6 +106,26 @@ result=0
 run_contract output stderr_output --title "feat(PRSG-012): add reviewer-ready PR packets" --changed-files "$prsg_changed" || result=$?
 assert_eq "0" "$result" "exit code"
 
+xplat_changed="$SANDBOX/xplat-changed.txt"
+write_changed_files "$xplat_changed" \
+  "specs/xplat-002-runtime-implementation-options-contract-decision/spec.md" \
+  "docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md"
+
+set_test "XPLAT implementation accepts XPLAT-scoped feature title"
+result=0
+run_contract output stderr_output --title "feat(XPLAT-002): choose runtime contract" --changed-files "$xplat_changed" || result=$?
+assert_eq "0" "$result" "exit code"
+
+mixed_xplat_changed="$SANDBOX/mixed-xplat-changed.txt"
+write_changed_files "$mixed_xplat_changed" \
+  "specs/xplat-002-runtime-implementation-options-contract-decision/spec.md" \
+  "specs/doc-014-seo-and-ai-discoverability/SPEC-MOC.md"
+
+set_test "mixed generated map update accepts matching XPLAT scope"
+result=0
+run_contract output stderr_output --title "feat(XPLAT-002): choose runtime contract" --changed-files "$mixed_xplat_changed" || result=$?
+assert_eq "0" "$result" "exit code"
+
 set_test "non-spec plugin PR still accepts plugin scope"
 plugin_changed="$SANDBOX/plugin-changed.txt"
 write_changed_files "$plugin_changed" \
