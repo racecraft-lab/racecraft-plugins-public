@@ -44,4 +44,12 @@ if grep -Fq 'No UAT runbook was generated for this feature' "$RUNBOOK"; then
   fail "uat.missing" "PR body still contains the absent-runbook fallback"
 fi
 
+if grep -Eq '<a[[:space:]][^>]*id=' "$RUNBOOK"; then
+  fail "uat.html_anchor" "runbook still contains raw HTML anchor markup"
+fi
+
+if grep -Fq '<set on PR open>' "$RUNBOOK" || grep -Fq '| PR | **PR:**' "$RUNBOOK"; then
+  fail "uat.pr_placeholder" "runbook still contains the old PR placeholder"
+fi
+
 printf 'validate-uat-runbook.sh: ok: %s\n' "$RUNBOOK"

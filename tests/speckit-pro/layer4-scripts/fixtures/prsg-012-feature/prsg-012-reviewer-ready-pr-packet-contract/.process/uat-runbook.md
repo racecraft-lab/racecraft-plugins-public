@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | prsg-012-reviewer-ready-pr-packet-contract |
 | Branch | prsg-012-reviewer-ready-pr-packet-contract |
-| PR | **PR:** <set on PR open> |
+| PR | Pending until PR is opened |
 | Generated from | 2026-06-12T19:36:21Z |
 
 ## Env Setup
@@ -13,7 +13,6 @@ From the repository root, run `bash tests/speckit-pro/run-all.sh --layer 4` to c
 
 ## Per-Story Acceptance Tests
 
-<a id="us-1"></a>
 ### User Story 1 - Specific conventional PR titles (Priority: P1)
 
 1. Generate a single packet for this fixture.
@@ -23,7 +22,6 @@ From the repository root, run `bash tests/speckit-pro/run-all.sh --layer 4` to c
 
 - [ ] The reviewer can confirm the generated title and Summary are specific.
 
-<a id="us-2"></a>
 ### User Story 2 - Structured reviewer body (Priority: P1)
 
 1. Open the rendered body.
@@ -33,7 +31,6 @@ From the repository root, run `bash tests/speckit-pro/run-all.sh --layer 4` to c
 
 - [ ] The reviewer can scan the body without hunting through generated metadata files.
 
-<a id="us-3"></a>
 ### User Story 3 - Pre-create validation block (Priority: P1)
 
 1. Run packet validation against the generated packet.
@@ -43,7 +40,6 @@ From the repository root, run `bash tests/speckit-pro/run-all.sh --layer 4` to c
 
 - [ ] The reviewer can find validation evidence before PR creation.
 
-<a id="us-4"></a>
 ### User Story 4 - Safe prose refinement (Priority: P2)
 
 1. Edit only the editable Summary, What Changed, and Why It Matters prose.

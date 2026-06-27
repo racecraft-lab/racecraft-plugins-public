@@ -75,6 +75,8 @@ cat > "$skeleton" <<'EOF'
 
 ## Per-Story Acceptance Tests
 
+<a id="us-1"></a>
+
 ### User Story 1 - Demo
 
 - [ ] Walk this story end to end and confirm the observable behavior the spec promises.
@@ -93,6 +95,56 @@ assert_eq "1" "$result" "exit code"
 
 set_test "skeleton failure identifies a UAT rule"
 assert_contains "$output" "validation_failure: uat."
+
+section "Raw anchors and PR placeholders"
+
+anchor_runbook="$TMP_ROOT/anchor-runbook.md"
+cat > "$anchor_runbook" <<'EOF'
+# UAT Runbook: demo-feature
+
+| Field | Value |
+|-------|-------|
+| PR | **PR:** <set on PR open> |
+
+## Env Setup
+
+Run `bash tests/speckit-pro/run-all.sh --layer 4`.
+
+## Per-Story Acceptance Tests
+
+<a id="us-1"></a>
+### User Story 1 - Demo
+
+1. Open the generated body.
+   Expected: the body shows concrete acceptance steps.
+
+- [ ] Reviewer completed the check.
+
+## FR Coverage Matrix
+
+| Requirement | Acceptance check |
+|-------------|------------------|
+| Reviewer sees concrete UAT. | User Story 1, step 1 |
+EOF
+
+set_test "raw HTML anchor fails"
+result=0
+output=$("$SCRIPT" "$anchor_runbook" 2>&1) || result=$?
+assert_eq "1" "$result" "exit code"
+
+set_test "raw HTML anchor failure is explicit"
+assert_contains "$output" "validation_failure: uat.html_anchor"
+
+pr_placeholder_runbook="$TMP_ROOT/pr-placeholder-runbook.md"
+sed '/<a id=/d' "$anchor_runbook" > "$pr_placeholder_runbook"
+
+set_test "old PR placeholder fails"
+result=0
+output=$("$SCRIPT" "$pr_placeholder_runbook" 2>&1) || result=$?
+assert_eq "1" "$result" "exit code"
+
+set_test "old PR placeholder failure is explicit"
+assert_contains "$output" "validation_failure: uat.pr_placeholder"
 
 section "Absent runbook"
 

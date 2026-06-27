@@ -3,7 +3,7 @@
   Rendered by generate-uat-skeleton.sh (FR-010). The eight section headers below are
   emitted in this exact order on every run; the script substitutes each {{...}} token
   with deterministic content parsed from spec.md. Do not reorder the sections — the
-  FR Coverage Matrix anchors and SC-005's `## UAT Runbook` embed depend on this order.
+  FR Coverage Matrix and SC-005's `## UAT Runbook` embed depend on this order.
 -->
 # UAT Runbook: {{SPEC_ID}}
 

@@ -474,9 +474,12 @@ validate_body_file() {
     || grep -Fq '| Command | Value |' "$visible_body" \
     || grep -Fq 'Walk this story end to end and confirm the observable behavior the spec promises.' "$visible_body" \
     || grep -Fq 'see the Per-Story Acceptance Tests block above' "$visible_body" \
-    || grep -Fq 'No UAT runbook was generated for this feature' "$visible_body"; then
+    || grep -Fq 'No UAT runbook was generated for this feature' "$visible_body" \
+    || grep -Eq '<a[[:space:]][^>]*id=' "$visible_body" \
+    || grep -Fq '<set on PR open>' "$visible_body" \
+    || grep -Fq '| PR | **PR:**' "$visible_body"; then
     add_failure "body.uat_placeholder" "body_file" \
-      "Rendered body contains missing, skeleton-only, or circular UAT runbook content." \
+      "Rendered body contains missing, skeleton-only, circular, or raw-placeholder UAT runbook content." \
       "Run the UAT authoring pass and validate the runbook before generating the PR packet."
   fi
 

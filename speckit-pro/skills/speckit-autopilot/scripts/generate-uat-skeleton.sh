@@ -92,7 +92,7 @@ spec_id="$(basename "$FEATURE_DIR")"
 spec_timestamp="$(date -r "$SPEC_PATH" -u '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || true)"
 if [ -z "$spec_timestamp" ]; then spec_timestamp="$spec_id/spec.md"; fi
 branch="$spec_id"
-pr_placeholder='**PR:** <set on PR open>'
+pr_placeholder='Pending until PR is opened'
 
 # ---------------------------------------------------------------------------
 # Parse user stories (FR-001). Non-truncating awk scan — must NOT use the
@@ -117,11 +117,9 @@ if [ "${#story_titles[@]}" -gt 0 ]; then
     idx=$((idx + 1))
     # Strip the leading "### " marker for display.
     display="$(printf '%s' "$title" | sed -E 's/^#{1,6}[[:space:]]+//')"
-    anchor="us-${idx}"
-    per_story+="<a id=\"${anchor}\"></a>"$'\n'
     per_story+="### ${display}"$'\n\n'
     per_story+="- [ ] Walk this story end to end and confirm the observable behavior the spec promises."$'\n\n'
-    fr_matrix+="| [${display}](#${anchor}) | see the Per-Story Acceptance Tests block above |"$'\n'
+    fr_matrix+="| ${display} | see the Per-Story Acceptance Tests block above |"$'\n'
   done
 fi
 

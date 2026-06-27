@@ -88,6 +88,9 @@ behavior" steps. Leave the **Self-Review Findings**, **Sign-off**, and
 **Rollback** sections as the skeleton produced them (only fix obvious
 placeholders, e.g. a `<set on PR open>` PR field).
 
+Remove raw HTML anchors such as `<a id="us-1"></a>`. Keep ordinary Markdown
+headings only; the runbook is for humans, not for anchor plumbing.
+
 ## Style — write for a non-expert public reader
 
 - Plain English. A reader who has never seen this repo should be able to
@@ -98,6 +101,7 @@ placeholders, e.g. a `<set on PR open>` PR field).
   requirement, describe the behavior it guarantees, not its ID.
 - Short, concrete, imperative steps. Expected results describe what the
   reviewer will SEE.
+- Do not leave angle-bracket placeholders or raw HTML in the runbook.
 
 ## Output contract
 

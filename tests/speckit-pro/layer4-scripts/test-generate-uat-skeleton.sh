@@ -30,10 +30,13 @@ assert_file_exists "$us1_out"
 
 us1_body=$(cat "$us1_out" 2>/dev/null || true)
 
-set_test "Per-story block count matches grep -c story count (SC-001)"
+set_test "Per-story heading count matches grep -c story count (SC-001)"
 expected_stories=$(grep -c '^### User Story [0-9]' "$FULL_SPEC")
-actual_stories=$(grep -c '^<a id="us-' "$us1_out" 2>/dev/null || echo 0)
-assert_eq "$expected_stories" "$actual_stories" "per-story anchor count"
+actual_stories=$(grep -c '^### User Story [0-9]' "$us1_out" 2>/dev/null || echo 0)
+assert_eq "$expected_stories" "$actual_stories" "per-story heading count"
+
+set_test "Skeleton does not emit raw HTML anchors"
+assert_not_contains "$us1_body" "<a id="
 
 set_test "All eight FR-010 section headers present"
 assert_contains "$us1_body" "# UAT Runbook:"
@@ -50,11 +53,11 @@ order=$(grep -nE '^(# UAT Runbook:|## (Env Setup|Per-Story Acceptance Tests|FR C
 sorted=$(printf '%s' "$order" | tr ',' '\n' | sort -n | paste -sd, -)
 assert_eq "$sorted" "$order" "section order is monotonic"
 
-set_test "FR Coverage Matrix links to a deterministic per-story anchor"
-assert_contains "$us1_body" "(#us-1)"
+set_test "FR Coverage Matrix lists the first story without raw HTML anchors"
+assert_contains "$us1_body" "| User Story 1"
 
-set_test "Header carries the static PR placeholder (FR-011)"
-assert_contains "$us1_body" "<set on PR open>"
+set_test "Header carries a readable pending PR value (FR-011)"
+assert_contains "$us1_body" "Pending until PR is opened"
 
 # ---------------------------------------------------------------------------
 # US3 — deterministic overwrite, no merge (FR-007)
