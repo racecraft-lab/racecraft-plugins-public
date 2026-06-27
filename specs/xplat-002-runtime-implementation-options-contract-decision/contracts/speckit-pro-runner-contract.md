@@ -4,6 +4,19 @@ This contract is the XPLAT-002 handoff shape for XPLAT-004. It defines the
 command interface that the selected runtime must implement after XPLAT-002
 chooses the runtime. It does not implement the runner.
 
+## Selected Runtime
+
+- Runtime family: small per-platform native binary runner.
+- Implementation runtime: Go native executable using the Go standard library.
+- Selection source:
+  `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`
+- Packaging constraint: the installed plugin payload carries the executable
+  artifacts; users must not run `npm install`, `pip install`, `uv`, `brew`, or
+  network package restoration after the plugin cache is populated.
+- Supply-chain boundary: XPLAT-003 chooses checksum, signature, SBOM,
+  provenance, vulnerability-scan, generated-artifact, and consumer-local
+  verification controls before XPLAT-004 ships binaries.
+
 ## Entrypoint
 
 - Canonical command: `speckit-pro-runner`
@@ -92,8 +105,8 @@ Allowed `status` values are:
     "runner_name": "speckit-pro-runner",
     "runner_version": "0.0.0-decision",
     "contract_version": "1.0",
-    "selected_runtime_name": "selected-at-xplat-002-implementation",
-    "selected_runtime_version": "selected-at-xplat-002-implementation",
+    "selected_runtime_name": "go-native-binary",
+    "selected_runtime_version": "reported-by-built-artifact",
     "platform": "darwin",
     "architecture": "arm64",
     "plugin_root": {
