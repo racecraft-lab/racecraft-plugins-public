@@ -1,10 +1,10 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-002-workflow.md",
-  "updated_at": "2026-06-27T00:58:58Z",
-  "active_step": "Phase 7: Implement",
+  "updated_at": "2026-06-27T01:49:04Z",
+  "active_step": "Complete",
   "feature_dir": "specs/xplat-002-runtime-implementation-options-contract-decision",
   "branch": "codex/xplat-002-runtime-implementation-options-contract-decision",
-  "status": "in_progress",
+  "status": "completed",
   "archive_sweep": {
     "archive_extension_installed": true,
     "current_target": "specs/xplat-002-runtime-implementation-options-contract-decision",
@@ -359,56 +359,110 @@
       "result": "advisory mode; G6 passed with zero critical/high findings"
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "in_progress"
+      "step": "Phase 7: Implement",
+      "status": "completed",
+      "result": {
+        "selected_runtime": "Go native executable packaged as small per-platform binaries",
+        "tasks_completed": "33/33",
+        "artifacts": [
+          "runtime-decision.md",
+          "evidence/javascript-typescript.md",
+          "evidence/python.md",
+          "evidence/small-per-platform-binary.md",
+          "contracts/speckit-pro-runner-contract.md",
+          "handoff.md",
+          "quickstart.md"
+        ],
+        "gate": "G7 pass"
+      }
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "completed",
+      "result": "local speckit-utils doctor health check passed; catalog lookup warned due network/DNS"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "result": "marker count passed with total=0; spec-index current; reviewability final gate proceeded with honored infra exception"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "result": "no unchecked tasks found; completed task count 33"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "findings": 3,
+        "remediated": [
+          "expanded XPLAT-003 supply-chain implication matrix",
+          "added adapter evidence fields",
+          "refreshed stale verification evidence"
+        ]
+      }
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "layer1": "1438/1438 passed",
+        "focused_pr_tooling": [
+          "test-generate-pr-body: 93/93 passed",
+          "test-validate-pr-workflow-contract: 17/17 passed"
+        ],
+        "full_suite": "attempted; blocked by baseline DOC-014 privacy-scan terms already present on origin/main"
+      }
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "exception",
+        "exception_class": "infra",
+        "reviewable_loc": 0,
+        "production_files": 0,
+        "total_files": 33,
+        "primary_surface_count": 5,
+        "blockers": [
+          "total files 33 exceeds block threshold 25"
+        ],
+        "exception_honored": true
+      }
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "result": "workflow, handoff, quickstart, PR packet tooling, generated payload mirrors, spec-index, and diff hygiene rechecked"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": "manual runtime UAT not required for decision spike; downstream native/cache UAT deferred to XPLAT-007"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": "generated and validated PR packet/body with XPLAT-scoped title"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/266",
+        "title": "feat(XPLAT-002): Add runtime Implementation Options and Contract Decision"
+      }
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed",
+      "result": "independent review findings remediated before PR creation"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed",
+      "result": "read-only retrospective completed; patterns recorded in workflow lessons"
     }
   ]
 }

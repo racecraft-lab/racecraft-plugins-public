@@ -523,15 +523,31 @@ Expected branch: `codex/xplat-002-runtime-implementation-options-contract-decisi
 
 ### What Worked Well
 
--
+- Gate-first candidate comparison kept JavaScript/TypeScript, Python, and Go
+  native binaries evaluated evenly before selection.
+- The `speckit-pro-runner` contract now gives XPLAT-004 enough detail for JSON
+  I/O, stderr diagnostics, exit codes, typed paths, subprocess rules, preflight,
+  and fixture parity.
+- Evidence gaps were recorded explicitly instead of counted as successful
+  installed-cache probes.
 
 ### Challenges Encountered
 
--
+- The full default shell suite remains blocked by baseline DOC-014 privacy-scan
+  terms already present on `origin/main`; XPLAT-owned privacy hits were removed.
+- PR packet tooling had to be extended for `XPLAT-*` scopes before PR creation
+  could pass the workflow contract.
+- Reviewability required an accepted `infra` exception because the PR includes
+  XPLAT PR tooling and synced Claude/Codex payload mirrors.
 
 ### Patterns to Reuse
 
--
+- Use host-specific evidence-gap records with owner/expiry when local probes are
+  unavailable.
+- Keep compatibility adapters as owner-first temporary migration records rather
+  than extra runtime candidates.
+- Include a downstream handoff bundle mapping XPLAT-001 rows to runner inputs,
+  fixtures, exclusions, and owner specs.
 
 ---
 
