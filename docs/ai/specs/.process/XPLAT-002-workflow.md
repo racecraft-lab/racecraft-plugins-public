@@ -512,7 +512,7 @@ Expected branch: `codex/xplat-002-runtime-implementation-options-contract-decisi
 - [x] No unresolved placeholders remain in generated artifacts
 - [x] Spec-map check passes or stale generated zones are recorded with the required follow-up
 - [x] Diff hygiene passes with `git diff --check`
-- [x] Relevant shell suite passes: Layer 1 passed `1438/1438`; full default suite was attempted and is blocked by baseline DOC-014 privacy-scan terms already present on `origin/main`
+- [x] Relevant shell suite passes: Layer 1 passed `1438/1438`; PR packet scope tests passed `93/93` and `17/17`; full default suite was attempted and is blocked by baseline DOC-014 privacy-scan terms already present on `origin/main`
 - [x] Runtime decision record names selected and rejected options
 - [x] Handoff notes for XPLAT-003 and XPLAT-004 are present
 - [x] No public native-platform support claims changed
