@@ -562,6 +562,52 @@ assert_json_file_value "$xplat_packet_output" "generated_title.value" "feat(XPLA
 set_test "XPLAT generated packet does not fall back to plugin scope"
 assert_not_contains "$(cat "$xplat_packet_output")" "feat(speckit-pro):"
 
+action_feature_rel="specs/xplat-003-action-prefix-title"
+action_feature="$packet_repo/$action_feature_rel"
+action_packet_output_rel="$PR_PACKET_FIXTURE_REL/action-prefix-single.json"
+action_body_output_rel="$PR_PACKET_FIXTURE_REL/bodies/action-prefix-single.md"
+action_packet_output="$packet_repo/$action_packet_output_rel"
+action_body_output="$packet_repo/$action_body_output_rel"
+mkdir -p "$action_feature" "$(dirname "$action_packet_output")" "$(dirname "$action_body_output")"
+cat > "$action_feature/spec.md" <<'EOF'
+# Feature Specification: Add Runtime API Contract
+EOF
+cat > "$action_feature/plan.md" <<'EOF'
+# Plan
+Primary surface: docs/process
+EOF
+
+set_test "Action-prefixed generated packet normalizes title remainder"
+result=0
+(cd "$packet_repo" && "$SCRIPT" --packet-output "$action_packet_output" "$packet_repo" "$action_feature" "$action_body_output" main...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "Action-prefixed generated title preserves API acronym"
+assert_json_file_value "$action_packet_output" "generated_title.value" "feat(XPLAT-003): Add runtime API contract"
+
+brand_feature_rel="specs/doc-015-brand-action-title"
+brand_feature="$packet_repo/$brand_feature_rel"
+brand_packet_output_rel="$PR_PACKET_FIXTURE_REL/brand-action-single.json"
+brand_body_output_rel="$PR_PACKET_FIXTURE_REL/bodies/brand-action-single.md"
+brand_packet_output="$packet_repo/$brand_packet_output_rel"
+brand_body_output="$packet_repo/$brand_body_output_rel"
+mkdir -p "$brand_feature" "$(dirname "$brand_packet_output")" "$(dirname "$brand_body_output")"
+cat > "$brand_feature/spec.md" <<'EOF'
+# Feature Specification: Fix OpenAI OAuth Flow
+EOF
+cat > "$brand_feature/plan.md" <<'EOF'
+# Plan
+Primary surface: docs/process
+EOF
+
+set_test "Action-prefixed generated title preserves mixed-case brands"
+result=0
+(cd "$packet_repo" && "$SCRIPT" --packet-output "$brand_packet_output" "$packet_repo" "$brand_feature" "$brand_body_output" main...HEAD) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "DOC action-prefixed generated title uses sentence-case remainder"
+assert_json_file_value "$brand_packet_output" "generated_title.value" "docs(DOC-015): Fix OpenAI OAuth flow"
+
 doc_feature_rel="specs/doc-004-codex-marketplace-installation-path"
 doc_feature="$packet_repo/$doc_feature_rel"
 doc_packet_output_rel="$PR_PACKET_FIXTURE_REL/doc-single.json"

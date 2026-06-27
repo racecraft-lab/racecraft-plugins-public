@@ -409,7 +409,7 @@
       "result": {
         "layer1": "1438/1438 passed",
         "focused_pr_tooling": [
-          "test-generate-pr-body: 93/93 passed",
+          "test-generate-pr-body: 97/97 passed",
           "test-validate-pr-workflow-contract: 17/17 passed"
         ],
         "full_suite": "attempted; blocked by baseline DOC-014 privacy-scan terms already present on origin/main"
@@ -451,7 +451,7 @@
       "status": "completed",
       "result": {
         "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/266",
-        "title": "feat(XPLAT-002): Add runtime Implementation Options and Contract Decision"
+        "title": "feat(XPLAT-002): Add runtime implementation options and contract decision"
       }
     },
     {

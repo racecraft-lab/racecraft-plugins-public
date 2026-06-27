@@ -86,6 +86,15 @@ The final PR includes a small PR-packet tooling fix so XPLAT-scoped specs can
 generate and validate `feat(XPLAT-*)` pull request titles. This is infrastructure
 support for the XPLAT-002 closeout path, not runtime implementation work.
 
+Infra exception manual audit trail: source PR tooling
+`speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh`, its
+Claude/Codex generated payload mirrors, and
+`tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh` are included only
+to make XPLAT PR packet generation reviewable and reproducible. The gate's
+`reviewable_loc=0` and `production_files=0` output is preserved as tool output;
+this manual note names the script and test surfaces covered by the honored
+`infra` exception.
+
 | Check | Result |
 |---|---|
 | Marker count | Passed: `{"type":"gaps","total":0,"spec":0,"plan":0,"checklists":0,"details":[]}` |
@@ -95,7 +104,7 @@ support for the XPLAT-002 closeout path, not runtime implementation work.
 | Scope review | Passed with infra exception: no README, docs-site runtime, marketplace metadata, changelog, release notes, active installed runtime invocation paths, or public support-claim surfaces changed; generated payload changes are limited to the two synced PR tooling scripts. |
 | `git diff --check` | Passed with no whitespace errors. |
 | Layer 1 structural suite | Passed: `bash tests/speckit-pro/run-all.sh --layer 1` reported `1438/1438 passed`. |
-| Focused PR tooling tests | Passed: `test-generate-pr-body` reported `93/93`; `test-validate-pr-workflow-contract` reported `17/17`. |
+| Focused PR tooling tests | Passed: `test-generate-pr-body` reported `97/97`; `test-validate-pr-workflow-contract` reported `17/17`. |
 | Broader shell suite | Attempted: focused payload determinism now passes, but `bash tests/speckit-pro/run-all.sh` remains blocked by baseline DOC-014 privacy-scan terms already present on `origin/main`. |
 
 Supplemental non-mutating probes recorded in evidence:

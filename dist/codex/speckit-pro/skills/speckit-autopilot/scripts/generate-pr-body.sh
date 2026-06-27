@@ -218,9 +218,11 @@ generated_title_description() {
     return 2
   fi
   case "$display_title" in
-    Add\ *|Update\ *|Fix\ *|Remove\ *|Support\ *)
-      printf '%s\n' "$display_title"
-      ;;
+    Add\ *) printf 'Add %s\n' "$(sentence_case_title "${display_title#Add }")" ;;
+    Update\ *) printf 'Update %s\n' "$(sentence_case_title "${display_title#Update }")" ;;
+    Fix\ *) printf 'Fix %s\n' "$(sentence_case_title "${display_title#Fix }")" ;;
+    Remove\ *) printf 'Remove %s\n' "$(sentence_case_title "${display_title#Remove }")" ;;
+    Support\ *) printf 'Support %s\n' "$(sentence_case_title "${display_title#Support }")" ;;
     *)
       printf 'Add %s\n' "$(sentence_case_title "$display_title")"
       ;;
