@@ -80,8 +80,8 @@
 
 **Purpose**: Confirm the decision-spike task set and final artifacts remain clean, traceable, and within scope.
 
-- [ ] T019 [P] Run marker and gate checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/` using `speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh`, `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh`, and `speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh`
-- [ ] T020 [P] Run spec-map and diff hygiene checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/` using `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check` and `git diff --check`, then refresh only `SPEC-MOC.md` if the index check requires it
+- [ ] T019 [P] Run marker and gate checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`: `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-003-supply-chain-security-and-consumer-trust-model`, `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh findings specs/xplat-003-supply-chain-security-and-consumer-trust-model`, `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G6 specs/xplat-003-supply-chain-security-and-consumer-trust-model`, and `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/xplat-003-supply-chain-security-and-consumer-trust-model`, recording any reviewability warnings as advisory unless blockers appear
+- [ ] T020 [P] Run spec-map and diff hygiene checks for `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`: `speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"`, `git diff --check`, and `git diff --name-only`, then refresh only `SPEC-MOC.md` if the index check requires it and confirm no implementation, generated-payload, release-workflow, or public-claim files changed
 
 ---
 

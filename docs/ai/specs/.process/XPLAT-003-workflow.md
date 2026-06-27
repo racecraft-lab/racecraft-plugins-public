@@ -51,8 +51,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Plan | `$speckit-plan` | Complete | Produced research, policy/data model, control contract, quickstart, and handoff |
 | Checklist | `$speckit-checklist` | Complete | Security, integration, and reliability gaps remediated; no unresolved consensus items |
 | Tasks | `$speckit-tasks` | Complete | Generated 20 decision-spike tasks; reviewability warning only, no blocker |
-| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, design concept, XPLAT-001, XPLAT-002, spec, plan, and tasks |
-| Implement | `$speckit-implement` | Pending | Record final decision artifacts and verification evidence |
+| Analyze | `$speckit-analyze` | Complete | Remediated 2 medium findings; G6 passed with 0 remaining findings |
+| Implement | `$speckit-implement` | In Progress | Record final decision artifacts and verification evidence |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -480,7 +480,18 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |----|----------|-------|------------|
-| Pending | Pending | Pending | Pending |
+| A1 | Medium | Reviewability budget drift between `spec.md`, `plan.md`, and actual tasks-mode gate output | Updated `spec.md` to record accepted setup warning and clarify tasks-mode reviewability as advisory unless blockers appear |
+| A2 | Medium | Final validation task lacked exact command arguments | Updated `tasks.md` and `quickstart.md` with exact marker, G6, reviewability, spec-index, diff hygiene, and scope-check commands |
+
+### Pre-Implement Confidence
+
+📊 Confidence: 0.95
+
+- Task understanding: 0.95
+- Approach clarity: 0.91
+- Requirements alignment: 0.93
+- Risk assessment: 1.00
+- Completeness: 0.97
 
 ---
 

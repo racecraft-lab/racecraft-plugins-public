@@ -8,13 +8,17 @@ XPLAT-003 is a decision spike. A valid phase-3 diff changes only plan artifacts 
 specs/xplat-003-supply-chain-security-and-consumer-trust-model/
 ```
 
-Allowed phase artifacts:
+Allowed XPLAT-003 decision and process artifacts:
 
 - `plan.md`
+- `spec.md`
+- `tasks.md`
 - `research.md`
 - `data-model.md`
 - `contracts/`
 - `quickstart.md`
+- `checklists/`
+- `SPEC-MOC.md` only when spec-index refresh requires it
 
 Not allowed in this phase:
 
@@ -41,6 +45,9 @@ Run from the repository root in the XPLAT-003 worktree.
 git rev-parse --abbrev-ref HEAD
 git status --short
 bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh gaps specs/xplat-003-supply-chain-security-and-consumer-trust-model
+bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh findings specs/xplat-003-supply-chain-security-and-consumer-trust-model
+bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G6 specs/xplat-003-supply-chain-security-and-consumer-trust-model
+bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh tasks specs/xplat-003-supply-chain-security-and-consumer-trust-model
 speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"
 git diff --check
 git diff --name-only
@@ -55,9 +62,12 @@ codex/xplat-003-supply-chain-security-and-consumer-trust-model
 Expected validation result:
 
 - Marker count reports zero gaps.
+- Finding marker count reports zero findings after Analyze remediation.
+- G6 validation reports zero critical or high findings.
+- Reviewability tasks gate may warn because it is a coarse planning heuristic over task path tokens; record warnings and continue only when it has no blockers and the real diff scope remains XPLAT-003 decision/process artifacts.
 - Spec index check reports current.
 - `git diff --check` reports no whitespace errors.
-- Diff scope is limited to the allowed XPLAT-003 phase artifacts.
+- Diff scope is limited to the allowed XPLAT-003 decision/process artifacts.
 
 Project test suites are N/A for this pre-implementation decision phase. Do not run generated payload rebuilds or implementation tests as part of XPLAT-003 plan validation.
 
