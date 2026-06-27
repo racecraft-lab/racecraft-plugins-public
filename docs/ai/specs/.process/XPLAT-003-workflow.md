@@ -46,8 +46,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
-| Specify | `$speckit-specify` | Pending | Create a decision-spike spec for first-release and deferred supply-chain controls |
-| Clarify | `$speckit-clarify` | Pending | Resolve exact control boundaries, evidence formats, and claim wording |
+| Specify | `$speckit-specify` | Complete | Created decision-spike spec and requirements checklist; G1 passed with 0 clarification markers |
+| Clarify | `$speckit-clarify` | In Progress | Resolve exact control boundaries, evidence formats, and claim wording |
 | Plan | `$speckit-plan` | Pending | Produce research, policy/data model, contracts, quickstart, and handoff |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: security, integration, reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate decision-spike tasks only; no runner implementation |
@@ -166,7 +166,7 @@ Record this warning in `plan.md`. It does not block setup.
 |-------|--------|----------|
 | SpecKit CLI | Pass | `command -v specify` returned `/Users/fredrickgabelmann/.local/bin/specify` |
 | Branch/worktree | Pass | Created worktree on `codex/xplat-003-supply-chain-security-and-consumer-trust-model` from `origin/main` |
-| XPLAT-002 merge state | Pass with roadmap drift note | `main` contains merge commit `fff4d6b5` for PR #266, while roadmap/MOC text still says PR #266 pending |
+| XPLAT-002 merge state | Pass | `main` contains merge commit `fff4d6b5` for PR #266; roadmap and MOC status now mark XPLAT-002 complete and XPLAT-003 in progress |
 | Reviewability setup gate | Warn/pass | Two primary surfaces (`docs/process`, `harness/adapter`), no blockers |
 | Grill Me | Complete | 7 questions; one decision spike accepted |
 | Presets | Installed/refreshed | `ensure-reviewability-preset.sh` reported `status: installed`, changed `plan-template` |
@@ -245,14 +245,14 @@ XPLAT-002 selected a Go native binary runner and the `speckit-pro-runner` comman
 
 | Metric | Value |
 |--------|-------|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 18 |
+| User Stories | 3 |
+| Acceptance Criteria | 9 acceptance scenarios; 9 success criteria |
 
 ### Files Generated
 
-- [ ] `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`
-- [ ] `specs/xplat-003-supply-chain-security-and-consumer-trust-model/checklists/requirements.md`
+- [x] `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`
+- [x] `specs/xplat-003-supply-chain-security-and-consumer-trust-model/checklists/requirements.md`
 
 ---
 
