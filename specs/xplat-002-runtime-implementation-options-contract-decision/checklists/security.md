@@ -33,7 +33,7 @@
 
 ## Acceptance Criteria Quality
 
-- [x] CHK017 Can reviewers objectively verify that the selected runtime passes the installed-cache gate without per-user dependency installation or network restoration? [Acceptance Criteria, Spec SC-006, Spec Assumptions]
+- [x] CHK017 Can reviewers objectively verify that the selected runtime model needs no per-user dependency installation or network restoration, with actual installed-cache invocation proof deferred to XPLAT-004? [Acceptance Criteria, Spec SC-006, Spec Assumptions]
 - [x] CHK018 Can reviewers objectively verify that XPLAT-003 receives dependency footprint, manifest/lockfile behavior, generated artifact types, build/release path, scan path, checksum/signature/SBOM/provenance feasibility, trust root, native/build-time dependencies, build inputs, runtime/install execution risk, maintenance posture, and evidence gaps? [Acceptance Criteria, Spec FR-017]
 - [x] CHK019 Can reviewers objectively verify that public support-claim changes are absent from XPLAT-002 outputs? [Acceptance Criteria, Spec SC-007, Quickstart]
 - [x] CHK020 Can reviewers objectively verify that XPLAT-002 remains a decision spike and does not implement runner behavior? [Acceptance Criteria, Spec FR-020, Plan Scope]

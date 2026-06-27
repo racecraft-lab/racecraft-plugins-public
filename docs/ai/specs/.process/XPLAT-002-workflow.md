@@ -2,6 +2,7 @@
 
 **Template Version**: 1.0.0
 **Created**: 2026-06-26
+**Status**: In Review (PR #266 pending merge)
 **Purpose**: Prepare XPLAT-002 for autonomous execution from the cross-platform plugin runtime roadmap and the setup Grill Me decisions.
 
 ---
@@ -51,7 +52,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability gaps remediated; G4 passed |
 | Tasks | `$speckit-tasks` | Complete | Generated 33 decision-spike tasks after analysis remediation; G5/G6 passed |
 | Analyze | `$speckit-analyze` | Complete | 3 findings (0C/0H/1M/2L), all remediated; G6 passed |
-| Implement | `$speckit-implement` | Complete | Runtime decision, probe evidence, command contract, handoff, and G7 verification recorded |
+| Implement | `$speckit-implement` | Complete | Runtime decision, probe evidence, command contract, handoff, and G7 verification recorded; PR #266 remains pending merge |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -186,7 +187,7 @@ SpecKit Pro's installed Claude and Codex workflows still depend on Bash, `.sh` h
 - Select one canonical runtime and command contract; do not hand XPLAT-004 a ranked shortlist.
 - Prefer a small stable CLI with JSON stdin/stdout, structured stderr diagnostics, and explicit exit-code mapping.
 - Optimize for no per-user dependency installation or network fetch from the public installed plugin cache.
-- Use install reliability and installed-cache invocation reliability as the tie-breaker when candidates are otherwise close.
+- Use install reliability and no-post-cache-install runtime-model reliability as the tie-breaker when candidates are otherwise close; actual installed-cache invocation proof belongs to XPLAT-004 because XPLAT-002 does not build the runner.
 - Treat XPLAT-002 as a research/decision spike; the advisory size estimate is `status=ok`, `suggested_slices=1`.
 
 ### Out of Scope
@@ -275,7 +276,7 @@ $speckit-plan
 ## Architecture Notes
 - The decision record should include candidate comparison, selected contract, rejected options, evidence gaps, and handoff notes for XPLAT-003/XPLAT-004.
 - Treat "no install step" as a first-class packaging criterion. The selected contract should be able to run from the installed plugin cache without per-user dependency installation or network fetch.
-- Tie-breaker: user install reliability and installed-cache invocation reliability outrank maintainer ergonomics when candidates are close.
+- Tie-breaker: user install reliability and no-post-cache-install runtime-model reliability outrank maintainer ergonomics when candidates are close; installed-cache invocation proof is deferred to XPLAT-004.
 - XPLAT-003 receives runtime-specific dependency/security implications; XPLAT-002 does not choose first-release supply-chain controls.
 - XPLAT-004 receives the precise command contract and fixture/probe expectations.
 ```

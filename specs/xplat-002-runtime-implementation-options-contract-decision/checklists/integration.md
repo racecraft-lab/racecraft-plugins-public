@@ -56,7 +56,7 @@
 ## Rerun Verification - Loop 1
 
 - [x] CHK025 Are installed-cache evidence requirements now host-specific for both installed Claude and installed Codex plugin-cache invocation, with source/generated probes limited to supplemental setup evidence? [Resolved, Spec FR-005, Plan Phase 0, Research Probe Plan]
-- [x] CHK026 Is the selected runtime still required to pass the installed-cache reliability gate without per-user dependency installation or network package restoration? [Consistency, Spec FR-016]
+- [x] CHK026 Is the selected runtime model still required to need no per-user dependency installation or network package restoration, with actual installed-cache invocation proof assigned to XPLAT-004? [Consistency, Spec FR-016]
 - [x] CHK027 Does the contract now define installed-payload helper dispatch for `helper_id`, `operation`, and `mode` without relying on source-checkout paths? [Resolved, Contract Helper Dispatch, Data Model Helper Dispatch]
 - [x] CHK028 Does runtime-info/preflight now distinguish installed Claude cache, installed Codex cache, and supplemental source/generator contexts? [Clarity, Contract Runtime Info]
 - [x] CHK029 Does the XPLAT-004 handoff now include a row-derived implementation input bundle with XPLAT-001 row IDs, owner buckets, invocation modes, helper IDs, operations/modes, adapter records, fixture expectations, and exclusions? [Resolved, Spec FR-018b, Data Model XPLAT-004 Implementation Input Bundle]

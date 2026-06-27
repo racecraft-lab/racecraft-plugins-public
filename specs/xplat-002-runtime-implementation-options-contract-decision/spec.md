@@ -4,7 +4,7 @@
 
 **Created**: 2026-06-26
 
-**Status**: Draft
+**Status**: In Review (PR #266 pending merge)
 
 **Input**: User description: "Runtime Implementation Options and Contract Decision"
 
@@ -293,10 +293,13 @@ spec responsibility.
   diagnostics and verification can identify the selected runtime environment,
   contract version, platform/architecture, plugin root, source-vs-installed
   context, executable availability, capabilities, and prerequisite state.
-- **FR-016**: The selected runtime MUST pass the installed-cache reliability
-  gate by running from a populated plugin cache without per-user dependency
-  installation, network package restoration, `npm install`, `pip install`,
-  `uv`, `brew`, or equivalent setup.
+- **FR-016**: The selected runtime model MUST be viable for installed-cache
+  reliability by requiring no per-user dependency installation, network package
+  restoration, `npm install`, `pip install`, `uv`, `brew`, or equivalent setup
+  after plugin-cache population. Because XPLAT-002 does not build
+  `speckit-pro-runner`, actual installed Claude/Codex cache invocation proof
+  MUST remain an XPLAT-004 acceptance item and MUST NOT be counted as passed in
+  XPLAT-002 evidence.
 - **FR-017**: The handoff MUST provide XPLAT-003 a per-candidate supply-chain
   implication matrix for selected and rejected candidates, including dependency
   footprint, manifest/lockfile behavior, generated artifact types, build/release
@@ -436,8 +439,10 @@ spec responsibility.
 - **SC-007**: The decision record names all runtime-specific handoff items for
   XPLAT-003 and XPLAT-004 and contains no public support-claim, release-note, or
   public documentation promise changes.
-- **SC-008**: The completed spike remains within the accepted reviewability
-  warning budget of 250 reviewable LOC, 4 production files, and 10 total files.
+- **SC-008**: The completed spike has a pass or warn reviewability result with
+  no non-size blockers, or an honored named `infra` exception whose overage is
+  limited to XPLAT PR-packet tooling support plus synced payload mirrors and
+  does not add runner implementation or public support-claim surfaces.
 
 ## Assumptions
 

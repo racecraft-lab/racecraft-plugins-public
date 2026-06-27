@@ -1,6 +1,6 @@
 # Runtime Decision: XPLAT-002
 
-Status: Selected
+Status: In Review (PR #266 pending merge); runtime model selected
 Date: 2026-06-26
 
 ## Decision
@@ -61,18 +61,18 @@ surfaces (`docs/process`, `harness/adapter`), no blockers, one decision spike.
 |---|---:|---:|---|
 | JavaScript/TypeScript on Node.js | Fails selected-runtime gate unless Node or a bundled Node executable is guaranteed in the installed payload. | 68/100 | Rejected |
 | Python | Fails selected-runtime gate unless Python or a bundled Python runtime is guaranteed in the installed payload. | 48/100 | Rejected |
-| Small per-platform native binary implemented in Go | Passes the runtime-model gate because the installed payload can ship the executable artifact with no user-side runtime install. Actual cache invocation remains an XPLAT-004 proof item because this spec does not build the runner. | 87/100 | Selected |
+| Small per-platform native binary implemented in Go | Runtime model is viable because the installed payload can ship the executable artifact with no user-side runtime install. Actual cache invocation remains an XPLAT-004 proof item because this spec does not build the runner. | 87/100 | Selected |
 
 ## Gate Results
 
 | Gate | JavaScript/TypeScript | Python | Go native binary |
 |---|---|---|---|
-| Installed-cache invocation | Fail for source JS/TS: local Node exists, but plugin platform docs and manifests do not guarantee Node on every user host; cache probe cannot run because no runner exists. | Fail: local Python exists, but Python is not guaranteed by the plugin platforms; cache probe cannot run because no runner exists. | Pass for selected runtime model: packaged executable needs no post-cache runtime install; actual installed-cache runner probe deferred to XPLAT-004. |
+| Installed-cache invocation | Fail for source JS/TS: local Node exists, but plugin platform docs and manifests do not guarantee Node on every user host; cache probe cannot run because no runner exists. | Fail: local Python exists, but Python is not guaranteed by the plugin platforms; cache probe cannot run because no runner exists. | Runtime model viable: packaged executable needs no post-cache runtime install; actual installed-cache runner probe deferred to XPLAT-004 and not counted as passed in XPLAT-002. |
 | Native platform behavior | Pass for Node runtime family, but selected package would still depend on Node availability or become a binary bundle. | Gap/fail for installed plugin default because Python availability varies by host and Windows install state. | Pass for per-platform native artifacts when XPLAT-004 builds the declared platform matrix. |
 | Filesystem and paths | Pass: Node `path` APIs and local probe handled spaces and Windows basename parsing. | Pass: Python `pathlib`/`ntpath` and local probe handled spaces and Windows basename parsing. | Pass: Go `path/filepath` is standard-library path handling for native OS paths. |
 | JSON handling | Pass: `JSON.parse`/`JSON.stringify`; local probe emitted JSON stdout. | Pass: Python `json`; local probe emitted JSON stdout. | Pass: Go `encoding/json` is standard library. |
 | Subprocess behavior | Pass: `child_process.spawnSync` with `shell:false`; local probe separated stdout/stderr. | Pass: `subprocess.run(..., shell=False)`; local probe separated stdout/stderr. | Pass: Go `os/exec` uses argv-style execution; XPLAT-004 must fixture nonzero, timeout, and missing-command cases. |
-| Packaging/update path | Gap/fail for source JS/TS because `node_modules`, `npm install`, or bundled Node would add post-cache setup or binary supply-chain work. | Fail/gap because `pip install`, virtualenv, or embedded Python would add setup or binary supply-chain work. | Pass as a runtime model: generated payload can carry platform artifacts; XPLAT-003 must decide checksums, SBOM, provenance, and vulnerability controls. |
+| Packaging/update path | Gap/fail for source JS/TS because `node_modules`, `npm install`, or bundled Node would add post-cache setup or binary supply-chain work. | Fail/gap because `pip install`, virtualenv, or embedded Python would add setup or binary supply-chain work. | Runtime model viable: generated payload can carry platform artifacts; XPLAT-003 must decide checksums, SBOM, provenance, and vulnerability controls. |
 
 ## Tie-Breaker
 

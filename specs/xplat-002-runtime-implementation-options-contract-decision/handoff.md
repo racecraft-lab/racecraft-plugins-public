@@ -1,6 +1,6 @@
 # Handoff: XPLAT-002
 
-Status: Ready for downstream specs after verification
+Status: In Review (PR #266 pending merge); ready for downstream specs after merge
 Selected runtime: Go native executable packaged as small per-platform binaries
 
 ## What Changed
@@ -47,7 +47,7 @@ cache is populated.
 | Distribution trust root | Marketplace payload plus package/runtime supply chain if revived. | Marketplace payload plus package/runtime supply chain if revived. | Marketplace payload plus release-built native artifacts and their integrity metadata. |
 | Transitive/build-time/native dependencies | npm package graph or bundled Node runtime; native npm modules possible. | Python package graph, wheels, or embedded interpreter; native wheels possible. | Go toolchain, modules, OS/arch cross-build inputs, and native artifact packaging. |
 | Build environment inputs | Node toolchain, package manager, lockfile, bundler or SEA/native build if revived. | Python toolchain, package manager, lockfile, wheel/embedding tooling if revived. | Go toolchain, platform matrix, signing/checksum/SBOM/provenance tooling. |
-| Runtime/install execution risk | Fails installed-cache gate unless runtime is bundled or guaranteed. | Fails installed-cache gate unless runtime is embedded or guaranteed. | Passes selected model for no user-side runtime dependency; artifact availability remains XPLAT-004/XPLAT-007 proof. |
+| Runtime/install execution risk | Fails installed-cache gate unless runtime is bundled or guaranteed. | Fails installed-cache gate unless runtime is embedded or guaranteed. | Runtime model viable for no user-side runtime dependency; actual installed-cache invocation and artifact availability remain XPLAT-004/XPLAT-007 proof. |
 | Maintenance posture | Higher churn from package/runtime dependency management if revived. | Higher churn from Python version/package/runtime embedding management if revived. | Smaller runtime surface but requires native release discipline. |
 | Evidence gaps | No installed-cache Node guarantee; no bundled Node decision; no package restoration path. | No installed-cache Python guarantee; no embedded Python decision; no package restoration path. | Local Go unavailable; no built runner exists; platform artifact controls and UAT deferred. |
 

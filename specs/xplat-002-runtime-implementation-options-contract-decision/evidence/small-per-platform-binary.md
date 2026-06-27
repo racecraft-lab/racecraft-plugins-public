@@ -1,6 +1,6 @@
 # Evidence: Small Per-Platform Binary Runtime Candidate
 
-Candidate status: Selected
+Candidate status: Selected runtime model; installed-cache invocation proof deferred to XPLAT-004
 Selected implementation runtime: Go native executable using the Go standard
 library
 Captured: 2026-06-26
@@ -49,15 +49,15 @@ installed-cache invocation.
 
 | Missing probe | Scope | Reason unavailable | Substitute evidence | Effect | Owner / expiry |
 |---|---|---|---|---|---|
-| Installed Claude cache invocation of native `speckit-pro-runner` | Claude cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; contract path is `scripts/speckit-pro-runner`; runtime model has no post-cache interpreter dependency. | Candidate runtime model passes; actual invocation proof deferred. | XPLAT-004 must run after adding runner. |
-| Installed Codex cache invocation of native `speckit-pro-runner` | Codex cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; OpenAI docs define installed cache path; runtime model has no post-cache interpreter dependency. | Candidate runtime model passes; actual invocation proof deferred. | XPLAT-004 must run after adding runner. |
+| Installed Claude cache invocation of native `speckit-pro-runner` | Claude cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; contract path is `scripts/speckit-pro-runner`; runtime model has no post-cache interpreter dependency. | Runtime model viable; actual invocation proof deferred and not counted as a probe pass. | XPLAT-004 must run after adding runner. |
+| Installed Codex cache invocation of native `speckit-pro-runner` | Codex cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; OpenAI docs define installed cache path; runtime model has no post-cache interpreter dependency. | Runtime model viable; actual invocation proof deferred and not counted as a probe pass. | XPLAT-004 must run after adding runner. |
 | Go build toolchain on this host | Maintainer/build environment | `go` is not installed locally. | Official Go docs cover build target environment; XPLAT-004 can establish build environment. | Reduces maintainer ergonomics score only. | XPLAT-004/XPLAT-003. |
 
 ## Gate Results
 
 | Gate | Result | Rationale |
 |---|---|---|
-| Installed-cache invocation | Pass for runtime model; implementation proof gap | A compiled executable in the payload can run without user-side `npm`, `pip`, `uv`, `brew`, Node, Python, Bash, or `jq`. Actual cache invocation requires XPLAT-004 artifact. |
+| Installed-cache invocation | Runtime model viable; invocation proof deferred | A compiled executable in the payload can run without user-side `npm`, `pip`, `uv`, `brew`, Node, Python, Bash, or `jq`. Actual cache invocation requires the XPLAT-004 artifact and is not counted as passed in XPLAT-002. |
 | Native platform behavior | Pass | Per-platform artifacts can target Windows, macOS, and Linux. |
 | Filesystem and paths | Pass | Go `path/filepath` and `os` APIs support native path semantics. |
 | JSON handling | Pass | Go `encoding/json` is standard library. |
@@ -65,6 +65,11 @@ installed-cache invocation.
 | Packaging/update path | Pass with XPLAT-003 controls pending | Payload can carry executable artifacts; XPLAT-003 must choose integrity and provenance controls before XPLAT-004 ships them. |
 
 ## Weighted Score
+
+The installed-cache invocation reliability score reflects no-post-cache-install
+runtime-model viability only. XPLAT-004 must replace that model score with
+actual Claude and Codex installed-cache invocation proof before implementation
+acceptance.
 
 | Criterion | Weight | Rating | Points |
 |---|---:|---:|---:|

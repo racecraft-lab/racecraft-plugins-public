@@ -67,7 +67,7 @@
 
 ### Implementation for User Story 2
 
-- [x] T015 [US2] Select exactly one canonical runtime and record why it passed the installed-cache reliability gate in `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`
+- [x] T015 [US2] Select exactly one canonical runtime model and record why it is viable without post-cache dependency setup while deferring actual installed-cache invocation proof to XPLAT-004 in `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`
 - [x] T016 [US2] Apply the objective close-candidate definition and install-reliability tie-breaker order in `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`
 - [x] T017 [US2] Update `specs/xplat-002-runtime-implementation-options-contract-decision/contracts/speckit-pro-runner-contract.md` with the selected runtime, default `speckit-pro-runner` entrypoint, and payload-relative `scripts/speckit-pro-runner` path without implementing the runner
 - [x] T018 [US2] Finalize the JSON request and response envelope, line-delimited JSON stderr diagnostics, shared exit-code map, path value rules, shell-disabled subprocess rules, prerequisite reporting, and runtime-info or preflight requirements in `specs/xplat-002-runtime-implementation-options-contract-decision/contracts/speckit-pro-runner-contract.md`

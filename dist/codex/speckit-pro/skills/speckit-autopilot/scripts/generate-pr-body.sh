@@ -222,11 +222,47 @@ generated_title_description() {
       printf '%s\n' "$display_title"
       ;;
     *)
-      printf 'Add %s%s\n' \
-        "$(printf '%s' "${display_title%"${display_title#?}"}" | tr '[:upper:]' '[:lower:]')" \
-        "${display_title#?}"
+      printf 'Add %s\n' "$(sentence_case_title "$display_title")"
       ;;
   esac
+}
+
+sentence_case_title() {
+  local input="$1" token output="" separator=""
+  for token in $input; do
+    output="${output}${separator}$(sentence_case_token "$token")"
+    separator=" "
+  done
+  printf '%s\n' "$output"
+}
+
+sentence_case_token() {
+  local token="$1" segment rest output="" separator="" normalized remainder
+  while :; do
+    segment="${token%%-*}"
+    if [ "$segment" = "$token" ]; then
+      rest=""
+    else
+      rest="${token#*-}"
+    fi
+
+    remainder="${segment#?}"
+    if [[ "$segment" =~ [[:upper:]] && ! "$segment" =~ [[:lower:]] ]]; then
+      normalized="$segment"
+    elif [[ "$remainder" =~ [[:upper:]] ]]; then
+      normalized="$segment"
+    else
+      normalized="$(printf '%s' "$segment" | tr '[:upper:]' '[:lower:]')"
+    fi
+
+    output="${output}${separator}${normalized}"
+    if [ -z "$rest" ]; then
+      break
+    fi
+    token="$rest"
+    separator="-"
+  done
+  printf '%s' "$output"
 }
 
 conventional_scope_from_feature_dir() {

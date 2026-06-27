@@ -4,7 +4,7 @@
   "active_step": "Complete",
   "feature_dir": "specs/xplat-002-runtime-implementation-options-contract-decision",
   "branch": "codex/xplat-002-runtime-implementation-options-contract-decision",
-  "status": "completed",
+  "status": "complete",
   "archive_sweep": {
     "archive_extension_installed": true,
     "current_target": "specs/xplat-002-runtime-implementation-options-contract-decision",
@@ -20,7 +20,7 @@
     "all_pass": true,
     "branch": "codex/xplat-002-runtime-implementation-options-contract-decision",
     "is_worktree": true,
-    "on_feature_branch": false,
+    "on_feature_branch": true,
     "confidence_gate_mode": "advisory",
     "capability_coverage": "advisory coverage present",
     "model": {

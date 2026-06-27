@@ -22,6 +22,9 @@ implement `speckit-pro-runner`.
 - Rejected candidates include gate and score rationale.
 - Installed-cache probe gaps are recorded without being counted as probe
   passes.
+- The Go runtime model is selected as viable for no post-cache setup; actual
+  installed Claude/Codex cache invocation proof is deferred to XPLAT-004 because
+  XPLAT-002 does not build `speckit-pro-runner`.
 - Contract still defines `speckit-pro-runner` at
   `scripts/speckit-pro-runner`.
 - The contract includes JSON stdin/stdout, line-delimited JSON stderr,
@@ -62,7 +65,9 @@ Expected: `spec-index: index current`.
 bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD
 ```
 
-Expected: pass or warn with no blockers.
+Expected: pass or warn with no blockers, or an honored named `infra` exception
+whose overage is limited to XPLAT PR-packet tooling support plus synced payload
+mirrors.
 
 ```bash
 git diff --name-only

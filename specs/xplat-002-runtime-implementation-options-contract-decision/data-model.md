@@ -14,7 +14,8 @@ Represents one selectable runtime family.
 - `probe_evidence`: list of `Evaluation Evidence` IDs.
 - `must_have_gates`: list of `Rubric Gate Result` records.
 - `weighted_scores`: list of `Weighted Criterion Result` records.
-- `installed_cache_gate`: pass/fail result with rationale.
+- `installed_cache_gate`: runtime-model viability and pass/fail/gap probe
+  status with rationale.
 - `reliability_tiebreaker`: `Reliability Tie-Breaker Result`, required when
   this candidate is part of a close-candidate comparison.
 - `supply_chain_implications`: `Supply-Chain Implication Matrix` entry.
@@ -25,7 +26,10 @@ Represents one selectable runtime family.
 
 - Exactly three selectable candidate records are required.
 - Every candidate must use the same must-have gates and weighted criteria.
-- A candidate cannot be selected unless `installed_cache_gate` is `pass`.
+- A candidate cannot be selected unless `installed_cache_gate` shows no
+  post-cache dependency setup is required. If the runner artifact does not yet
+  exist, installed-cache invocation proof remains a downstream acceptance item
+  and cannot be counted as a probe pass.
 - XPLAT-002 implementation must end with exactly one `selected` candidate.
 
 ## Evaluation Evidence
@@ -77,7 +81,10 @@ Represents one XPLAT-001 must-have gate result for a candidate.
 **Validation rules**:
 
 - Gate results are pass/fail before weighted scoring is used for selection.
-- A `fail` or unresolved `gap` on installed-cache invocation prevents selection.
+- A `fail` on installed-cache invocation prevents selection. A missing
+  invocation probe can only support selection when the runtime model has no
+  post-cache setup dependency, the missing artifact is explicitly out of
+  XPLAT-002 scope, and the proof is assigned to XPLAT-004 acceptance.
 
 ## Weighted Criterion Result
 

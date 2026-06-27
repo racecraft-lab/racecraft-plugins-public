@@ -156,8 +156,10 @@ and select the runtime.
    substitute official or repo-local evidence consulted, gate or scoring effect,
    owner, and expiry/removal or follow-up condition. Do not score an evidence
    gap as an installed-cache probe pass.
-5. Treat installed-cache reliability as a pass/fail gate and the tie-breaker
-   when candidates are objectively close. Close means no selection-blocking gate
+5. Treat no-post-cache-install reliability as a pass/fail gate for runtime-model
+   selection and the tie-breaker when candidates are objectively close. Actual
+   installed-cache invocation proof remains downstream if the runner artifact is
+   intentionally out of XPLAT-002 scope. Close means no selection-blocking gate
    failures plus either weighted totals within five points or a lead based only
    on maintainer ergonomics or compatibility-adapter criteria while reliability
    criteria are tied or favor another candidate.

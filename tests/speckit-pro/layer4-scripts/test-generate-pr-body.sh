@@ -541,7 +541,7 @@ xplat_packet_output="$packet_repo/$xplat_packet_output_rel"
 xplat_body_output="$packet_repo/$xplat_body_output_rel"
 mkdir -p "$xplat_feature" "$(dirname "$xplat_packet_output")" "$(dirname "$xplat_body_output")"
 cat > "$xplat_feature/spec.md" <<'EOF'
-# Feature Specification: Runtime implementation options and contract decision
+# Feature Specification: Runtime Implementation Options and Contract Decision
 EOF
 cat > "$xplat_feature/plan.md" <<'EOF'
 # Plan

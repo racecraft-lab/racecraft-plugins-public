@@ -134,14 +134,14 @@ PUBLIC RELEASE UNBLOCKED
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
-| XPLAT-002 | Runtime Implementation Options and Contract Decision | In Progress | `.process/XPLAT-002-workflow.md` | Scaffolded 2026-06-26; one decision spike to select the runtime contract from the XPLAT-001 rubric |
+| XPLAT-002 | Runtime Implementation Options and Contract Decision | In Review (PR #266 pending merge) | `.process/XPLAT-002-workflow.md` | PR #266 selects the Go native runtime model and runner contract; downstream work remains blocked until merge |
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Pending | — | Blocked by XPLAT-002 runtime decision; must finish before runner foundation |
 | XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-002 runtime decision and XPLAT-003 security model |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-004; should reuse XPLAT-005 parity harness |
 | XPLAT-007 | Claude/Codex Cutover and Native Windows Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
 
-**Status Legend:** Pending | In Progress | Complete | Blocked
+**Status Legend:** Pending | In Progress | In Review | Complete | Blocked
 
 ---
 
@@ -241,7 +241,7 @@ implementation.
 
 **Priority:** P1 | **Depends On:** XPLAT-001 | **Enables:** XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
 
-**Status:** In Progress. Scaffolded on 2026-06-26 in branch `codex/xplat-002-runtime-implementation-options-contract-decision`; workflow file is `docs/ai/specs/.process/XPLAT-002-workflow.md`; design concept is `docs/ai/specs/.process/XPLAT-002-design-concept.md`.
+**Status:** In Review (PR #266 pending merge). Scaffolded on 2026-06-26 in branch `codex/xplat-002-runtime-implementation-options-contract-decision`; workflow file is `docs/ai/specs/.process/XPLAT-002-workflow.md`; design concept is `docs/ai/specs/.process/XPLAT-002-design-concept.md`.
 
 **Goal:** Research and evaluate implementation options, then select the one
 runtime contract that all later specs must implement.

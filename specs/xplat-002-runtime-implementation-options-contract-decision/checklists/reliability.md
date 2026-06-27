@@ -16,7 +16,7 @@
 
 ## Requirement Clarity
 
-- [x] CHK006 Is installed-cache reliability framed as a pass/fail gate before weighted scoring can select a runtime? [Clarity, Spec FR-016, Research Installed-Cache Gate]
+- [x] CHK006 Is no-post-cache-install reliability framed as a pass/fail runtime-model gate before weighted scoring can select a runtime? [Clarity, Spec FR-016, Research Installed-Cache Gate]
 - [x] CHK007 Is it clear that source-checkout and generated-payload probes are supplemental setup evidence and cannot substitute for installed-cache probe evidence? [Clarity, Spec FR-005, Research Probe Plan]
 - [x] CHK008 Is the no-install/no-network condition stated clearly enough to exclude `npm install`, `pip install`, `uv`, `brew`, package restoration, or equivalent post-cache setup? [Clarity, Spec FR-016]
 - [x] CHK009 Are missing-runtime and missing-executable first-run failures classified through prerequisite diagnostics rather than public support-claim changes? [Clarity, Spec FR-012, Spec FR-019, Contract Exit-Code Map]
@@ -47,7 +47,7 @@
 ## Acceptance Criteria Quality
 
 - [x] CHK024 Can reviewers objectively verify every uncertain invocation behavior has probe evidence or a documented evidence gap with fallback handling? [Acceptance Criteria, Spec SC-003]
-- [x] CHK025 Can reviewers objectively verify the selected runtime passes installed-cache reliability without post-cache dependency installation or network restoration? [Acceptance Criteria, Spec FR-016]
+- [x] CHK025 Can reviewers objectively verify the selected runtime model needs no post-cache dependency installation or network restoration, while actual installed-cache invocation proof remains XPLAT-004 acceptance work? [Acceptance Criteria, Spec FR-016]
 - [x] CHK026 Can reviewers trace every rejected option to a rubric result, evidence gap, documentation/probe conflict, or objective install-reliability tie-breaker? [Acceptance Criteria, Spec SC-006]
 - [x] CHK027 Can XPLAT-004 implement support diagnostics from runtime-info/preflight fields without reopening runtime selection? [Acceptance Criteria, Spec SC-005]
 

@@ -41,10 +41,11 @@ missing-command behavior.
 
 Installed-cache invocation evidence is host-specific: installed Claude and
 installed Codex plugin-cache probes, or explicit host-specific evidence gaps,
-are required before the installed-cache gate can pass. Repo-local and generated
-payload probes are useful setup evidence, but they cannot substitute for cache
-invocation evidence because platform/plugin packaging separates marketplace or
-repo sources from the installed plugin payload that executes at runtime.
+are required before actual installed-cache invocation can pass. Repo-local and
+generated payload probes are useful setup evidence, but they cannot substitute
+for cache invocation evidence because platform/plugin packaging separates
+marketplace or repo sources from the installed plugin payload that executes at
+runtime.
 
 **Alternatives considered**:
 
@@ -53,12 +54,15 @@ repo sources from the installed plugin payload that executes at runtime.
 - Full native UAT in this spec: rejected because release-readiness UAT belongs
   to XPLAT-007 after implementation and cutover.
 
-## Decision: Make installed-cache reliability a pass/fail gate
+## Decision: Make no-post-cache-install reliability a pass/fail gate
 
 **Rationale**: The public plugin payload must run after cache population without
 per-user dependency installation or network package restoration. A candidate
 that requires `npm install`, `pip install`, `uv`, `brew`, or equivalent setup
-after install cannot be the selected runtime for this decision.
+after install cannot be the selected runtime model for this decision. Because
+XPLAT-002 does not build `speckit-pro-runner`, this gate selects a viable
+runtime model only; actual Claude/Codex installed-cache invocation proof remains
+an XPLAT-004 acceptance item.
 
 **Alternatives considered**:
 
@@ -81,7 +85,7 @@ expiry/removal or follow-up condition.
 **Alternatives considered**:
 
 - Treat unrun probes as neutral: rejected because it can let source-only or
-  documentation-only evidence pass the installed-cache gate silently.
+  documentation-only evidence pass actual installed-cache invocation silently.
 - Block the decision on every unavailable local host: rejected because native
   release-readiness UAT belongs to XPLAT-007, but the gap still needs an owner
   and scoring effect.
