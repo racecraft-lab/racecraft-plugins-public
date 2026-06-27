@@ -49,8 +49,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Specify | `$speckit-specify` | Complete | Created decision-spike spec and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Resolved exact control boundaries, evidence formats, vulnerability policy, and claim wording |
 | Plan | `$speckit-plan` | Complete | Produced research, policy/data model, control contract, quickstart, and handoff |
-| Checklist | `$speckit-checklist` | In Progress | Recommended domains: security, integration, reliability |
-| Tasks | `$speckit-tasks` | Pending | Generate decision-spike tasks only; no runner implementation |
+| Checklist | `$speckit-checklist` | Complete | Security, integration, and reliability gaps remediated; no unresolved consensus items |
+| Tasks | `$speckit-tasks` | In Progress | Generate decision-spike tasks only; no runner implementation |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, XPLAT-001, XPLAT-002, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Record final decision artifacts and verification evidence |
 
@@ -395,9 +395,9 @@ Focus on XPLAT-003 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| security | Pending | Pending | Pending |
-| integration | Pending | Pending | Pending |
-| reliability | Pending | Pending | Pending |
+| security | 30 | 3 found, 3 remediated, 0 remaining | Scan-evidence freshness, pinned Go/release input evidence, per-platform checksum command shape |
+| integration | 24 | 2 found, 2 remediated, 0 remaining | Release-automation acceptance gate and generated-payload checksum/manifest metadata flow |
+| reliability | 26 | 3 found, 3 remediated, 0 remaining | Checksum mismatch remediation, durable release/public-claim evidence retention, partial artifact publication behavior |
 
 ---
 

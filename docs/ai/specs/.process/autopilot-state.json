@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-003-workflow.md",
-  "updated_at": "2026-06-27T17:05:51Z",
-  "active_step": "Phase 4: Checklist - Security",
+  "updated_at": "2026-06-27T17:43:43Z",
+  "active_step": "Phase 5: Tasks",
   "feature_dir": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
   "branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model",
   "status": "in_progress",
@@ -197,31 +197,56 @@
     },
     {
       "step": "Phase 4: Checklist - Security",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "items": 30,
+        "gaps_found": 3,
+        "gaps_remediated": 3,
+        "remaining": 0,
+        "checklist": "checklists/security.md"
+      }
     },
     {
       "step": "Phase 4: Checklist - Security Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - Integration",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "items": 24,
+        "gaps_found": 2,
+        "gaps_remediated": 2,
+        "remaining": 0,
+        "checklist": "checklists/integration.md"
+      }
     },
     {
       "step": "Phase 4: Checklist - Integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 4: Checklist - Reliability",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "items": 26,
+        "gaps_found": 3,
+        "gaps_remediated": 3,
+        "remaining": 0,
+        "checklist": "checklists/reliability.md",
+        "gate": "G4 pass"
+      }
     },
     {
       "step": "Phase 4: Checklist - Reliability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": "skipped: no unresolved consensus items"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

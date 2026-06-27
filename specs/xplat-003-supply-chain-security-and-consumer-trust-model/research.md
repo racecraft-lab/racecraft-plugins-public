@@ -24,7 +24,7 @@ Controls are classified as:
 
 | Rubric criterion | XPLAT-003 decision |
 |---|---|
-| Dependency policy and lockfile discipline | First-release required for Go runner source and release inputs; XPLAT-004 owns concrete Go module/toolchain policy. |
+| Dependency policy and lockfile discipline | First-release required for Go runner source and release inputs; XPLAT-004 owns concrete Go module/toolchain policy and pinned-input evidence. |
 | Generated payload integrity | First-release required; XPLAT-007 owns source-to-dist gate and generated drift evidence. |
 | Vulnerability scanning | First-release required; actionable high/critical findings block readiness unless a non-actionable exception record exists. |
 | Provenance or attestation options | Deferred hardening; do not claim provenance or attestations until implemented and verified. |
@@ -47,15 +47,16 @@ Controls are classified as:
 
 | Control | Classification | Owner | Rationale | Acceptance gate |
 |---|---|---|---|---|
-| Pinned Go/release inputs | First-release required | XPLAT-004 | Native artifacts need a stable source, toolchain, and module boundary before checksums mean anything. | Runner readiness fails if toolchain/module/release input evidence is missing or stale. |
-| Generated payload source-to-dist gate | First-release required | XPLAT-007 | Marketplace installs consume generated Claude/Codex payloads; source and dist must reconcile before cutover. | Public cutover fails if rebuild/drift evidence is missing or stale. |
+| Pinned Go/release inputs | First-release required | XPLAT-004 | Native artifacts need a stable source, toolchain, module/dependency snapshot, build input, source revision, artifact path, and checksum boundary before checksums mean anything. | Runner readiness fails if pinned input evidence is missing, stale, unknown, or unverified. |
+| Generated payload source-to-dist gate | First-release required | XPLAT-007 | Marketplace installs consume generated Claude/Codex payloads; source and dist must reconcile before cutover. | Public cutover fails if rebuild/drift evidence or checksum/manifest metadata propagation evidence is missing, stale, or unequal across source and generated roots. |
 | SHA-256 checksum file | First-release required | XPLAT-004 creates; XPLAT-007 verifies/docs | Checksums are the minimum practical artifact integrity control consumers can verify without marketplace enforcement. | Each packaged runner artifact has a matching entry in `scripts/speckit-pro-runner.sha256`. |
 | Runner artifact manifest | First-release required | XPLAT-004 creates; XPLAT-007 verifies/docs | Consumers and maintainers need artifact identity, platform, version, source revision, and checksum metadata. | Manifest includes all required top-level and artifact fields. |
-| Vulnerability scans | First-release required | XPLAT-004 for runner/source/artifacts; XPLAT-007 for cutover/public readiness | Actionable high/critical findings must block release readiness before native artifacts are publicly claimed. | Readiness fails on unresolved actionable high/critical findings. |
+| Vulnerability scans | First-release required | XPLAT-004 for runner/source/artifacts; XPLAT-007 for cutover/public readiness | Actionable high/critical findings and stale evidence must block release readiness before native artifacts are publicly claimed. | Readiness fails on missing/stale evidence or unresolved actionable high/critical findings. |
 | Vulnerability exceptions | First-release required when used | Owning downstream surface | Non-actionable findings need durable rationale, approval, and expiry to avoid silently weakening the gate. | Exception records include all required fields and expire before each public release or on changed evidence. |
 | Runtime-info/preflight artifact-integrity fields | First-release required | XPLAT-004 | Consumer verification starts with identity/preflight evidence and needs pointers to checksum and manifest metadata. | Preflight/runtime-info includes artifact ID, manifest path, checksum path, expected checksum, algorithm, and verification status. |
-| Consumer-local verification guide | First-release required | XPLAT-007 | Consumers must be able to verify without `jq`, Bash, source checkout, or network package restoration. | Guidance uses identity/preflight first, then platform-native SHA-256 comparison. |
+| Consumer-local verification guide | First-release required | XPLAT-007 | Consumers must be able to verify without `jq`, Bash, source checkout, or network package restoration. | Guidance uses identity/preflight first, then platform-native SHA-256 comparison with Windows, macOS, and Linux command shapes for each target platform artifact claimed after UAT. |
 | Public claim audit | First-release required | XPLAT-007 and docs/release surfaces | Public trust depends on avoiding unimplemented guarantees. | Release notes/docs claim only implemented and verified controls. |
+| Release automation publication evidence | First-release required when a public claim depends on automation | XPLAT-007 or later release automation surface | Publication-time checks cannot support public trust claims until a downstream surface proves the gate is implemented and wired into the release path. | Claims depending on release automation fail unless current acceptance evidence names the control ID, gate location, release inputs/outputs, pass/fail evidence, and claim dependency mapping. |
 | Signatures | Deferred hardening | Future release/security surface | Useful hardening but not required without marketplace/install enforcement or a concrete first-release requirement. | Promote only with implementation, verification, and public-claim need. |
 | SBOM | Deferred hardening | Future release/security surface | Useful for dependency transparency but not first-release blocking under the chosen practical baseline. | Promote if consumer/adoption or release automation requires it. |
 | Provenance/attestations | Deferred hardening | Future release/security surface | Stronger trust evidence, but no first-release marketplace or automation support is selected here. | Promote if automation can produce/verify it or claims require it. |
@@ -75,6 +76,8 @@ An actionable finding must meet all of these conditions:
 
 Findings may be treated as non-actionable only with an exception record when they are false positives, unreachable, non-shipped, repo-only/test/archive/docs-only, or already mitigated at the artifact boundary.
 
+Scan evidence is stale when it is older than 7 calendar days at readiness review, predates the source revision, dependency manifest or sum state, toolchain, build input, generated artifact, scanner version or vulnerability database timestamp it claims to cover, or crosses a public release boundary without re-approval.
+
 Exception records expire before each public release unless re-approved from current evidence. They expire immediately when the affected artifact, dependency graph, platform, toolchain, scanner version/database, advisory status, severity, exploitability, or compensating control changes.
 
 Durable, non-sensitive summaries and exception records are retained in the owning spec, PR packet, or release-readiness artifact. Raw scanner output is not committed by default; after automation exists, raw output is retained as a 30-day CI artifact unless a scoped/redacted excerpt is required to support an exception.
@@ -85,10 +88,20 @@ The first-release consumer path is:
 
 1. Run runner identity/preflight from the installed plugin payload.
 2. Locate the artifact manifest and checksum file from runtime-info/preflight output or documented payload-relative paths.
-3. Compute SHA-256 for the installed artifact using platform-native tooling.
+3. Compute SHA-256 for the installed artifact using platform-native tooling for the target platform, for example Windows `Get-FileHash -Algorithm SHA256`, macOS `/usr/bin/shasum -a 256`, or Linux `sha256sum`.
 4. Compare the computed hash to the matching payload-relative entry in `scripts/speckit-pro-runner.sha256`.
 
-This path does not rely on runner self-verification alone and does not require `jq`, Bash, source checkout, or network package restoration.
+This path does not rely on runner self-verification alone and does not require `jq`, Bash, source checkout, or network package restoration. If artifact or checksum metadata is unavailable, guidance must fail closed with an explicit unavailable state rather than instructing consumers to fetch dependencies or clone source.
+
+A computed checksum mismatch is also a closed verification failure. Consumer
+guidance should tell users not to rely on the affected artifact for native-runner
+claims, record the artifact path, platform, runner identity/preflight output,
+metadata source, expected checksum, computed checksum, plugin version or release
+boundary, and reporting path, and wait for maintainer remediation backed by
+fresh XPLAT-004 and XPLAT-007 evidence. Local source checkout repair, package
+restoration, network replacement fetches, Bash, `jq`, and runner
+self-verification alone are rejected remediation paths because they would move
+trust outside the installed payload and release evidence boundary.
 
 ## Public Claim Boundary
 
@@ -113,6 +126,14 @@ Forbidden until implemented and verified:
 
 Roadmap wording may describe deferred items as planned or future hardening, but must not state or imply that they are provided, guaranteed, certified, enforced, trusted, or supported today.
 
+Artifact and platform claims are evaluated per claimed artifact. A platform with
+complete current evidence may be claimable for that platform only; missing,
+stale, mismatched, unpublished, or unsupported artifacts must be excluded from
+claims or keep the claim set blocked. One passing artifact does not imply native
+Windows/macOS/Linux support for any other platform.
+
 ## Result
 
 No deferred control is promoted to first-release required in XPLAT-003. The practical first-release baseline is sufficient for XPLAT-004 and XPLAT-007 planning because it gives every required control an owner, evidence shape, and release-readiness gate while preserving truthful public claims.
+
+Release automation remains assigned but not implemented in XPLAT-003. Any public claim that relies on release automation remains blocked until XPLAT-007 or a later release automation surface records current acceptance evidence.

@@ -30,7 +30,7 @@ Not allowed in this phase:
 1. Read `plan.md` for scope, reviewability warning, constitution checks, and downstream owner split.
 2. Read `research.md` for first-release versus deferred control decisions.
 3. Read `data-model.md` for decision entities and validation rules.
-4. Read `contracts/supply-chain-control-contract.md` for checksum, manifest, preflight, source-to-dist, vulnerability exception, and public claim audit evidence shapes.
+4. Read `contracts/supply-chain-control-contract.md` for pinned Go/release inputs, checksum, manifest, preflight, source-to-dist, metadata propagation, release automation acceptance, scan freshness, vulnerability exception, consumer checksum guidance, artifact claim readiness, release-readiness retention, and public claim audit evidence shapes.
 5. Confirm `spec.md` still contains no unresolved clarification markers.
 
 ## Static Validation Commands
@@ -64,9 +64,16 @@ Project test suites are N/A for this pre-implementation decision phase. Do not r
 ## Decision Checklist
 
 - First-release baseline includes source-to-dist gate, SHA-256 checksums, artifact manifest, vulnerability scan policy, consumer-local verification, strict public claim boundary, and split ownership.
-- XPLAT-004 owns runner/source/dependency/artifact/preflight/checksum/manifest/applicable scan controls.
+- Vulnerability scan evidence has objective freshness and staleness blockers: older than 7 calendar days at readiness review, older than covered source/dependency/toolchain/build/artifact/scanner evidence, or unreapproved across a public release boundary.
+- XPLAT-004 owns runner/source/dependency/artifact/preflight/checksum/manifest/applicable scan controls and pinned Go/release input evidence.
+- XPLAT-004 pinned-input evidence covers Go toolchain version/source, module manifest and `go.sum` or equivalent snapshot, target OS/architecture matrix, build recipe, release inputs, source revision, artifact paths, checksums, and scan evidence refs.
 - XPLAT-007 owns generated payload integrity, consumer guidance, public claim readiness, native UAT evidence, and cutover.
-- Release automation remains unchanged in XPLAT-003.
+- XPLAT-007 source-to-dist evidence must prove checksum and runner manifest metadata is present, equal, and fresh across source paths, generated Claude payload paths, and generated Codex payload paths.
+- XPLAT-007 consumer checksum guidance must include Windows, macOS, and Linux command shapes and metadata lookup behavior without Bash, `jq`, source checkout, package restoration, post-cache network access, or pre-UAT native support claims.
+- XPLAT-007 consumer checksum mismatch guidance must fail closed, tell users not to rely on the mismatched artifact, and identify the artifact, platform, preflight/identity output, metadata source, expected checksum, computed checksum, plugin version or release boundary, and reporting path to record.
+- Release-readiness and public-claim audit evidence must retain durable non-sensitive summaries beyond scan output, with release boundary, control/claim IDs, evidence refs, status, timestamp or source revision, owner, known gaps, and approval/status.
+- Public claims must be evaluated per claimed artifact and platform; partial artifact readiness cannot imply broad Windows/macOS/Linux support, and missing/stale/mismatched/unpublished artifacts must be excluded from claims or keep the claim set blocked.
+- Release automation remains unchanged in XPLAT-003, and any public claim depending on release automation remains blocked until downstream acceptance evidence proves the publication gate is implemented and wired into release.
 - Signatures, SBOM, provenance/attestations, reproducible builds, formal audit, marketplace-enforced verification, cryptographic trust-chain verification, and native support claims remain deferred or explicitly not claimed until implemented and verified.
 
 ## Residual Risks To Track Downstream

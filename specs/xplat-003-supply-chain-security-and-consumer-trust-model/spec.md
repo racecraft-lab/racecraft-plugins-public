@@ -174,12 +174,25 @@ A consumer or reviewer can understand what they can verify locally after install
 
 - A vulnerability scan reports a high or critical finding that is not actionable because it is unreachable, false positive, or already mitigated by the packaged artifact boundary.
 - A vulnerability scan reports a high or critical finding in repo-only, test, archive, docs-only, or other non-shipped paths that are outside the XPLAT runtime trust boundary.
+- Vulnerability scan evidence was clean when produced, but a source revision, dependency snapshot, toolchain, build input, generated artifact, scanner version, vulnerability database timestamp, advisory status, severity, exploitability, or release boundary changed before readiness review.
 - A vulnerability exception was approved for one release but the affected artifact, dependency graph, platform, toolchain, scanner database, advisory status, severity, exploitability, or compensating control changed before the next release.
 - Generated Claude and Codex payloads drift from their source inputs after the runner or verification metadata changes.
+- Checksum or runner manifest metadata exists in XPLAT-004 outputs but is not present, equal, and fresh in both generated Claude and Codex payload roots before XPLAT-007 cutover.
 - Published checksum metadata is missing, stale, or does not match a packaged runner artifact.
+- A public release or trust claim depends on release automation that has not yet recorded downstream acceptance evidence proving the publication gate is implemented and wired into the release path.
+- Consumer checksum guidance exists for one platform family but not for every target platform artifact that XPLAT-007 intends to claim after UAT.
 - Public release wording is prepared before XPLAT-007 native-platform UAT or before the selected controls are implemented.
 - A downstream implementation attempts to add signing, SBOM, provenance, reproducible-build, or audit language without corresponding implementation evidence.
 - A marketplace install path does not automatically enforce checksums, so consumer-local verification must remain manual and clearly documented.
+- A consumer computes a packaged runner artifact hash that differs from the
+  matching published checksum entry.
+- Only some platform artifacts have current checksum, manifest, scan,
+  preflight, native UAT, source-to-dist, and claim-audit evidence while another
+  intended or claimed platform artifact is missing, stale, mismatched, or
+  unpublished.
+- Release-readiness or public-claim audit evidence exists only in expiring
+  logs, raw workflow output, or unretained generated artifacts without a
+  durable non-sensitive summary.
 
 ## Requirements *(mandatory)*
 
@@ -187,7 +200,7 @@ A consumer or reviewer can understand what they can verify locally after install
 
 - **FR-001**: The specification MUST record XPLAT-002's selected native runner model as the runtime context and MUST NOT reopen runtime selection.
 - **FR-002**: The specification MUST define the first-release control baseline as pinned release inputs, vulnerability scanning, generated-payload integrity, published checksums, consumer-local verification, and truthful public claims.
-- **FR-003**: The specification MUST require generated Claude and Codex payload integrity to include a source-to-dist gate that runs `bash scripts/build-plugin-payloads.sh`, checks generated payload and marketplace-manifest drift, and records command, exit status, source inputs, generated roots, and checksum/manifest paths.
+- **FR-003**: The specification MUST require generated Claude and Codex payload integrity to include a source-to-dist gate that runs `bash scripts/build-plugin-payloads.sh`, checks generated payload and marketplace-manifest drift, and records command, exit status, source inputs, generated roots, checksum/manifest paths, and metadata propagation from XPLAT-004-produced checksum and manifest outputs into source and generated Claude/Codex payload roots.
 - **FR-004**: The specification MUST require first-release binary artifact integrity to include SHA-256 checksums for packaged runner artifacts in `scripts/speckit-pro-runner.sha256`.
 - **FR-005**: The specification MUST require consumer-local verification guidance that lets a consumer confirm runner version or preflight output and compare packaged artifact checksums against the published checksum source using platform-native SHA-256 tooling without requiring `jq`, Bash, source checkout, or network package restoration.
 - **FR-006**: The specification MUST require vulnerability scans for the native runner source, dependencies, and release artifacts where applicable before public release.
@@ -210,6 +223,14 @@ A consumer or reviewer can understand what they can verify locally after install
 - **FR-023**: XPLAT-004 readiness MUST fail when required runner/source/dependency/artifact scan evidence is missing, stale, or has unresolved actionable high/critical findings.
 - **FR-024**: XPLAT-007 public cutover and release-claim readiness MUST fail when scan evidence, exceptions, checksums, manifest, source-to-dist evidence, consumer verification guidance, public-claim audit, runtime preflight/version evidence, or native UAT evidence is missing or stale.
 - **FR-025**: Public docs and release notes MUST NOT claim signed binaries, SBOMs, provenance or attestations, reproducible builds, formal audit or certification, marketplace-enforced verification, cryptographic trust-chain verification, or native Windows/macOS/Linux support until each claim is implemented and verified.
+- **FR-026**: Vulnerability scan evidence MUST define freshness and staleness for release-readiness review. Evidence is stale when it is older than 7 calendar days at readiness review, predates the source revision, dependency manifest or sum state, toolchain, build input, generated artifact, scanner version or vulnerability database timestamp it claims to cover, or crosses a public release boundary without re-approval.
+- **FR-027**: XPLAT-004 pinned Go and release input evidence MUST include Go toolchain version and source, Go module/dependency manifest and `go.sum` or equivalent dependency snapshot state, target OS/architecture matrix, build command or repeatable build recipe, release/package input list, source revision used to build artifacts, generated artifact names and paths, generated artifact SHA-256 checksums, and any first-release scan inputs. Unknown or unverified fields are evidence gaps, not accepted controls.
+- **FR-028**: XPLAT-007 consumer-local checksum guidance MUST include separate Windows, macOS, and Linux SHA-256 command shapes for every target platform artifact it intends to claim after UAT, MUST describe how consumers locate checksum metadata from the installed payload or release-provided offline metadata, and MUST fail closed when metadata is unavailable. This guidance MUST NOT require Bash, `jq`, source checkout paths, package-manager restoration, or network access after plugin cache population, and MUST NOT imply native platform support before XPLAT-007 UAT evidence exists.
+- **FR-029**: Release-automation-owned publication controls MUST remain `assigned_not_implemented` and `not_claimable` until the earliest downstream implementing surface records acceptance evidence with the implementing spec or release surface, control ID, publication gate location, release inputs, generated outputs, latest pass/fail evidence, and claim-dependency mapping. XPLAT-007 public cutover and release-claim readiness MUST fail when a public claim relies on release automation whose acceptance evidence is missing, stale, or not wired into the publication path.
+- **FR-030**: XPLAT-007 source-to-dist evidence MUST prove checksum and runner artifact manifest metadata propagation from XPLAT-004 runtime artifact outputs to checked-in source metadata paths, generated Claude payload metadata paths, generated Codex payload metadata paths, and final cutover evidence. Missing, stale, or unequal metadata across those locations MUST fail public cutover and release-claim readiness.
+- **FR-031**: Consumer-local checksum guidance MUST define a computed-versus-published checksum mismatch as a closed verification failure. The guidance MUST tell consumers not to rely on the artifact for native-runner claims, MUST require recording the artifact path, platform, runner identity or preflight output, checksum metadata source, expected checksum, computed checksum, plugin version or release boundary, and reporting path, and MUST NOT instruct consumers to repair the failure through source checkout, package restoration, network fetches, Bash, `jq`, or runner self-verification alone.
+- **FR-032**: Release-readiness evidence and public-claim audit evidence MUST retain durable, non-sensitive summaries beyond vulnerability scan summaries and exception records. These records MUST include release boundary, control or claim IDs, evidence references, pass/fail/blocked status, timestamp or source revision, owner surface, known gaps, and approval/status, while raw logs and large generated artifacts MUST NOT be committed by default.
+- **FR-033**: Public cutover and release claims MUST be evaluated per claimed artifact and platform. If any claimed artifact is missing, stale, mismatched, unpublished, or lacks required checksum, manifest, runtime-info/preflight, native UAT, source-to-dist, scan, exception, release-automation, or claim-audit evidence, that artifact/platform MUST be excluded from claims or the claim set MUST remain blocked; one passing platform MUST NOT imply Windows/macOS/Linux support for other platforms.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -242,6 +263,11 @@ A consumer or reviewer can understand what they can verify locally after install
 - **Verification Exception**: A documented exception for a non-actionable vulnerability finding or control gap, including scan provenance, affected artifact, actionability classification, rationale, approval, and review condition.
 - **Public Claim Boundary**: A rule that identifies which supply-chain and native support statements may appear in public docs or release notes.
 - **Release-Readiness Evidence**: Durable non-sensitive evidence that a required control passed, was excepted, or is not yet claimable for a specific release boundary.
+- **Pinned Release Input Evidence**: A downstream record of the exact Go toolchain, dependency snapshot, build inputs, source revision, target matrix, artifact paths, and checksums used to produce first-release runner artifacts.
+- **Consumer Verification Guidance**: A downstream XPLAT-007 record of platform-specific checksum command shapes, metadata lookup behavior, unsupported states, and no-network/no-source-checkout verification constraints.
+- **Artifact Claim Readiness**: A per-artifact and per-platform release-claim
+  record showing whether a packaged runner artifact is claimable, blocked,
+  deferred, excluded, or unpublished for a release boundary.
 
 ## Success Criteria *(mandatory)*
 
@@ -258,6 +284,12 @@ A consumer or reviewer can understand what they can verify locally after install
 - **SC-009**: The decision record leaves 0 first-release controls without an owner or acceptance gate.
 - **SC-010**: 100% of vulnerability exceptions include expiry or re-approval conditions tied to public release boundaries and changed evidence inputs.
 - **SC-011**: 100% of raw scanner output retention rules avoid committed raw logs by default and identify the CI artifact retention period once automation exists.
+- **SC-012**: Reviewers can determine whether XPLAT-004 or XPLAT-007 readiness is blocked by stale scan evidence without relying on narrative judgment.
+- **SC-013**: Reviewers can verify that XPLAT-004 pinned-input evidence covers the Go toolchain, dependency snapshot, build inputs, source revision, target matrix, artifact paths, and checksums before runner artifacts are accepted.
+- **SC-014**: Reviewers can verify that XPLAT-007 checksum guidance covers Windows, macOS, and Linux command shapes and metadata lookup behavior without Bash, `jq`, source checkout paths, package restoration, post-cache network access, or pre-UAT native support claims.
+- **SC-015**: Reviewers can verify that consumer-facing checksum mismatch guidance fails closed and identifies the exact facts consumers must record/report without relying on source checkout, package restoration, network repair, Bash, `jq`, or runner self-verification alone.
+- **SC-016**: 100% of release-readiness and public-claim audit evidence needed for public claims has a durable non-sensitive retention location and evidence reference.
+- **SC-017**: 100% of claimed artifacts and platforms have per-artifact readiness status, and partial artifact readiness cannot imply unsupported platform claims.
 
 ## Assumptions
 
