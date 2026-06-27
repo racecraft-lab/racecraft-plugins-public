@@ -241,6 +241,9 @@ conventional_scope_from_feature_dir() {
   elif [[ "$base" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
     spec_suffix="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
     printf 'DOC-%s\n' "$spec_suffix"
+  elif [[ "$base" =~ ^[Xx][Pp][Ll][Aa][Tt]-([0-9A-Za-z]+)(-|$) ]]; then
+    spec_suffix="$(printf '%s' "${BASH_REMATCH[1]}" | tr '[:lower:]' '[:upper:]')"
+    printf 'XPLAT-%s\n' "$spec_suffix"
   else
     printf 'speckit-pro\n'
   fi

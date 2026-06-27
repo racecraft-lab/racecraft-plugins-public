@@ -77,6 +77,9 @@ spec_scope_from_feature_slug() {
   elif [[ "$slug" =~ ^[Dd][Oo][Cc]-([0-9A-Za-z]+)(-|$) ]]; then
     suffix="${BASH_REMATCH[1]^^}"
     printf 'DOC-%s\n' "$suffix"
+  elif [[ "$slug" =~ ^[Xx][Pp][Ll][Aa][Tt]-([0-9A-Za-z]+)(-|$) ]]; then
+    suffix="${BASH_REMATCH[1]^^}"
+    printf 'XPLAT-%s\n' "$suffix"
   fi
 }
 
