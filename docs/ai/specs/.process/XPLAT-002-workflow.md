@@ -47,8 +47,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 |-------|---------|--------|-------|
 | Specify | `$speckit-specify` | Complete | Created the decision-spike spec and requirements quality checklist; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Resolved candidate scoring, probe scope, command envelope, packaging, adapter, security handoff, and public-claim boundaries |
-| Plan | `$speckit-plan` | In Progress | Produce the decision-record architecture and evaluation/probe plan |
-| Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, error-handling, security, maintainability/reliability |
+| Plan | `$speckit-plan` | Complete | Produced plan, research, data model, command contract, quickstart, and agent context pointer; G3 passed |
+| Checklist | `$speckit-checklist` | In Progress | Recommended domains: integration, error-handling, security, maintainability/reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate report/probe/decision tasks, not runner implementation tasks |
 | Analyze | `$speckit-analyze` | Pending | Check for drift between roadmap, XPLAT-001 rubric, design concept, and generated artifacts |
 | Implement | `$speckit-implement` | Pending | Produce the runtime decision record, probe evidence, and roadmap handoff only |
@@ -284,11 +284,11 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| `plan.md` | Pending | Technical context, decision method, constitution check |
-| `research.md` | Pending | Candidate comparison and rejected options |
-| `data-model.md` | Pending | Runtime contract entities and JSON envelopes |
-| `contracts/` | Pending | Command envelope and exit-code contract |
-| `quickstart.md` | Pending | Reviewer path for probes and decision evidence |
+| `plan.md` | Complete | Technical context, decision method, constitution checks, and reviewability warning recorded |
+| `research.md` | Complete | Gate-first matrix, evidence/probe decisions, command contract, adapter, supply-chain, and public-claim boundaries |
+| `data-model.md` | Complete | Runtime candidate, evidence, rubric, command contract, adapter, supply-chain, and handoff entities |
+| `contracts/` | Complete | `speckit-pro-runner` command envelope, diagnostics, exit-code, path, subprocess, preflight, adapter, and fixture parity contract |
+| `quickstart.md` | Complete | Reviewer path for Plan artifacts, marker scan, diff hygiene, and implementation evidence expectations |
 
 ---
 
