@@ -49,8 +49,8 @@ Re-read the design concept before each phase. It is the source of truth for setu
 | Clarify | `$speckit-clarify` | Complete | Resolved candidate scoring, probe scope, command envelope, packaging, adapter, security handoff, and public-claim boundaries |
 | Plan | `$speckit-plan` | Complete | Produced plan, research, data model, command contract, quickstart, and agent context pointer; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability gaps remediated; G4 passed |
-| Tasks | `$speckit-tasks` | In Progress | Generate report/probe/decision tasks, not runner implementation tasks |
-| Analyze | `$speckit-analyze` | Pending | Check for drift between roadmap, XPLAT-001 rubric, design concept, and generated artifacts |
+| Tasks | `$speckit-tasks` | Complete | Generated 32 decision-spike tasks; G5 passed |
+| Analyze | `$speckit-analyze` | In Progress | Check for drift between roadmap, XPLAT-001 rubric, design concept, and generated artifacts |
 | Implement | `$speckit-implement` | Pending | Produce the runtime decision record, probe evidence, and roadmap handoff only |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -397,10 +397,10 @@ $speckit-tasks
 
 | Metric | Value |
 |--------|-------|
-| **Total Tasks** | Pending |
-| **Phases** | Pending |
-| **Parallel Opportunities** | Pending |
-| **User Stories Covered** | Pending |
+| **Total Tasks** | 32 |
+| **Phases** | 6 |
+| **Parallel Opportunities** | 7 parallel tasks; batches T002-T005 and T010-T012 |
+| **User Stories Covered** | US1 candidate comparison, US2 selected contract, US3 reviewer handoff |
 
 ---
 
@@ -414,10 +414,10 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/xplat
 
 | Field | Value | Meaning |
 |-------|-------|---------|
-| **Route** | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| **Releasable** | Pending | `true`, or `false` for release-risk classes |
-| **Signals** | Pending | Decisive detector findings |
-| **Warnings** | Pending | Release-safety warning, if any |
+| **Route** | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| **Releasable** | `true` | `true`, or `false` for release-risk classes |
+| **Signals** | `change-shape:modify-heavy` | Decisive detector findings |
+| **Warnings** | None | Release-safety warning, if any |
 
 ---
 
