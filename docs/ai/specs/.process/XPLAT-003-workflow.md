@@ -564,6 +564,8 @@ specify preset resolve tasks-template
 | Reviewability Diff Gate | Warn/pass | Final diff gate recorded `status=warn`, `blocked_operations=[]`, 24 files, 4 primary surfaces, 0 reviewable LOC, and no blockers | Evidence: `specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/final-reviewability/gate-state.json` |
 | UAT Runbook Generation | Pass/fail-open | `generate-uat-skeleton.sh` wrote the feature-local runbook; optional `uat-runbook-author` is not installed in this Codex surface, so the deterministic skeleton remains the authored artifact | Evidence: `specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/uat-runbook.md` |
 | PR Body Generation | Pass | Packet-owned PR body was generated, edited only in sanctioned fields, packet validation passed, and `validate-pr-workflow-contract.sh` passed for the single-PR title/scope | Evidence: `specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/validation.json` |
+| PR Creation | Pass | Opened ready-for-review PR #267 from `codex/xplat-003-supply-chain-security-and-consumer-trust-model` into `main` | https://github.com/racecraft-lab/racecraft-plugins-public/pull/267 |
+| Review Remediation | Pass | Initial PR review/comment check found no comments and no reviews at creation time | None |
 
 ### Self-Review
 

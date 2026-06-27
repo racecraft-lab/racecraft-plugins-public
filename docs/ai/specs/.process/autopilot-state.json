@@ -1,10 +1,10 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-003-workflow.md",
-  "updated_at": "2026-06-27T18:49:22Z",
-  "active_step": "Post: PR Creation",
+  "updated_at": "2026-06-27T18:52:17Z",
+  "active_step": "Complete",
   "feature_dir": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
   "branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model",
-  "status": "in_progress",
+  "status": "complete",
   "archive_sweep": {
     "archive_extension_installed": true,
     "current_target": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
@@ -448,11 +448,24 @@
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "pr_number": 267,
+        "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/267",
+        "title": "feat(XPLAT-003): Add supply-chain security and consumer trust model",
+        "draft": false
+      }
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "comments": 0,
+        "reviews": 0,
+        "evidence": "gh pr view 267 --json comments,reviews,reviewDecision"
+      }
     },
     {
       "step": "Post: Retrospective",
