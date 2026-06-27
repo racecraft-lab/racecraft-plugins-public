@@ -7,84 +7,84 @@
 | PR | **PR:** <set on PR open> |
 | Generated from | 2026-06-12T19:36:21Z |
 
-
-
 ## Env Setup
 
-Run these from the repository root before walking the acceptance tests.
-
-| Command | Value |
-|---------|-------|
-| BUILD | _not available for this project_ |
-| TYPECHECK | _not available for this project_ |
-| LINT | _not available for this project_ |
-| LINT_FIX | _not available for this project_ |
-| UNIT_TEST | `bash tests/speckit-pro/run-all.sh --layer 4` |
-| INTEGRATION_TEST | `bash tests/speckit-pro/run-all.sh` |
-| SINGLE_FILE_INTEGRATION | `bash tests/speckit-pro/run-all.sh --layer 1` |
+From the repository root, run `bash tests/speckit-pro/run-all.sh --layer 4` to check the script behavior used by this packet workflow. No browser setup is required for this shell-only packet workflow.
 
 ## Per-Story Acceptance Tests
 
 <a id="us-1"></a>
 ### User Story 1 - Specific conventional PR titles (Priority: P1)
 
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
+1. Generate a single packet for this fixture.
+   Expected: the packet title is a conventional commit title with the `PRSG-012` scope and a readable action phrase.
+2. Open the rendered body file recorded by the packet.
+   Expected: the Summary describes the reviewer-visible change instead of a branch name or packet id.
+
+- [ ] The reviewer can confirm the generated title and Summary are specific.
 
 <a id="us-2"></a>
 ### User Story 2 - Structured reviewer body (Priority: P1)
 
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
+1. Open the rendered body.
+   Expected: the H2 sections appear in this order: Summary, What Changed, Why It Matters, How To Review, How To UAT, Verification, Scope, Known Gaps.
+2. Inspect the editable marker pairs in Summary, What Changed, and Why It Matters.
+   Expected: each editable block has exactly one start marker and one end marker.
+
+- [ ] The reviewer can scan the body without hunting through generated metadata files.
 
 <a id="us-3"></a>
 ### User Story 3 - Pre-create validation block (Priority: P1)
 
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
+1. Run packet validation against the generated packet.
+   Expected: validation writes the feature-local validation result path from packet metadata.
+2. Inspect the validation result path.
+   Expected: the result belongs under `.process/pr-packets/<packet-id>/validation.json`.
+
+- [ ] The reviewer can find validation evidence before PR creation.
 
 <a id="us-4"></a>
 ### User Story 4 - Safe prose refinement (Priority: P2)
 
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
+1. Edit only the editable Summary, What Changed, and Why It Matters prose.
+   Expected: protected body fingerprint validation still passes.
+2. Edit a protected governance or evidence line.
+   Expected: protected body fingerprint validation fails.
 
-
+- [ ] The reviewer can refine prose without changing protected packet evidence.
 
 ## FR Coverage Matrix
 
-| Story | Acceptance test |
-|-------|-----------------|
-| [User Story 1 - Specific conventional PR titles (Priority: P1)](#us-1) | see the Per-Story Acceptance Tests block above |
-| [User Story 2 - Structured reviewer body (Priority: P1)](#us-2) | see the Per-Story Acceptance Tests block above |
-| [User Story 3 - Pre-create validation block (Priority: P1)](#us-3) | see the Per-Story Acceptance Tests block above |
-| [User Story 4 - Safe prose refinement (Priority: P2)](#us-4) | see the Per-Story Acceptance Tests block above |
-
+| Behavior | Acceptance check |
+|----------|------------------|
+| Titles are specific and conventional. | User Story 1, steps 1-2 |
+| Bodies keep required reviewer sections and editable markers. | User Story 2, steps 1-2 |
+| Validation evidence is available before PR creation. | User Story 3, steps 1-2 |
+| Editable prose can change without weakening protected evidence. | User Story 4, steps 1-2 |
 
 ## Negative-Path Tests
 
-
-- A single-PR packet and a split-PR packet require different titles, UAT details, and verification evidence for the same feature.
-- A host PR template includes legacy headings, template comments, placeholder variables, or example text in the final rendered body.
-- Manual UAT is not applicable for a packet, but the reviewer still needs explicit How To UAT and `## UAT Runbook` content explaining that no manual UAT path is required.
-- Known Gaps has no open gaps; the body must still say so explicitly rather than omit the section.
-- A source marker appears only inside a code fence, HTML comment, generated fixture, or non-rendered area.
-- One split packet fails validation while other split packets pass.
-- The packet file path is missing, unreadable, points to a directory, contains invalid JSON, or fails the packet schema before a `packet_id` can be trusted.
-- A split-PR run has already opened one or more earlier slice PRs when a later packet fails validation.
+1. Generate a packet with a body that duplicates a required H2 heading.
+   Expected: packet validation rejects the body heading order.
+2. Generate a packet whose body contains stale template text or hidden TODO comments.
+   Expected: packet validation rejects placeholder content.
+3. Generate a packet with the UAT Runbook heading but no actionable runbook content.
+   Expected: packet validation rejects the skeleton or absent-runbook fallback.
 
 ## Self-Review Findings
 
-1. **Tests executed?** Applicable verification ran in this resumed session. `bash tests/speckit-pro/run-all.sh --layer 1` passed 978/978, `bash tests/speckit-pro/run-all.sh --layer 4` passed 1622/1622, and `bash tests/speckit-pro/run-all.sh` passed 2790/2790. The project command detector reports BUILD, TYPECHECK, LINT, UNIT_TEST, and INTEGRATION_TEST as `N/A` for this shell-only plugin repository, so no separate build/typecheck/lint commands were inferred as passing.
-2. **Edge cases?** Acceptance coverage is present for single and split packet title generation, stale/title-token rejection, canonical body order, UAT compatibility, missing evidence, banned labels, input-error packet paths, stale validation, split partial-failure resume, safe prose edits, protected evidence edits, and host-template coexistence. Evidence includes `tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh:385`, `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh:390`, `tests/speckit-pro/layer4-scripts/test-validate-pr-packet.sh:530`, `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:346`, `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:1141`, and `tests/speckit-pro/layer4-scripts/test-multi-pr-emission.sh:1445`.
-3. **Requirements matched?** FR-001 through FR-004A map to checked title and PR-create tasks T010-T017; FR-005 through FR-015F map to checked validator, workflow-event, stale-result, and split-resume tasks T018-T034; FR-016 through FR-018 map to checked safe-edit and protected-fingerprint tasks T035-T041; FR-019 maps to checked mirrored guidance/parity tasks T042-T053. Verification tasks T054-T056 are checked and passed.
-4. **Follow-up?** No `[TODO]`, `[DEFERRED]`, or `[OUT-OF-SCOPE]` markers were found in `spec.md`, `plan.md`, or `tasks.md`, and branch commit subjects do not contain those markers. No self-review follow-up item is required.
----
+1. Focused Layer 4 packet-generation and packet-validation checks cover this fixture.
+2. The UAT path is shell-only; no browser or service account is required.
+3. No follow-up marker is required for this fixture.
 
 ## Sign-off
 
-Advisory only — these checkboxes block nothing.
+Advisory only; these checkboxes block nothing.
 
-- [ ] Reviewer walked every Per-Story Acceptance Test above.
-- [ ] Reviewer confirmed the Negative-Path Tests behave as described.
-- [ ] Reviewer is satisfied the PR delivers the behavior the spec promised.
+- [ ] Reviewer completed the acceptance checks above.
+- [ ] Reviewer confirmed the negative-path expectations above.
+- [ ] Reviewer is satisfied the PR body is review-ready.
 
 ## Rollback
 
-git revert <SHA>; see plan.md for data-migration considerations
+Revert the packet-generation change and regenerate the PR packet fixture.

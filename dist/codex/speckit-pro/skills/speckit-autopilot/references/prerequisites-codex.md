@@ -12,7 +12,7 @@ This is the Codex-specific mirror of `prerequisites.md`. Same checks, Codex-spec
 - [Step 0.6: Load Settings](#step-06-load-settings) — project settings YAML frontmatter
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory
 - [Step 0.9: Constitution Validation](#step-09-constitution-validation) — principle checks against current codebase
-- [Step 0.10: Codex Agent Availability Check](#step-010-codex-agent-availability-check) — verify installed custom agents under `.codex/agents/`
+- [Step 0.10: Codex Agent Availability Check](#step-010-codex-agent-availability-check) — verify and autoheal installed custom agents under `.codex/agents/`
 - [Step 0.10b: Implementation Agent Detection](#step-010b-implementation-agent-detection) — discover `PROJECT_IMPLEMENTATION_AGENT`
 - [Step 0.11: Project Command Discovery](#step-011-project-command-discovery) — `detect-commands.sh` → `PROJECT_COMMANDS`
 - [Step 0.12: Preset and Extension Detection](#step-012-preset-and-extension-detection) — `detect-presets.sh` → `PRESET_CONVENTIONS`
@@ -135,13 +135,21 @@ Read the workflow file's Prerequisites table. If already
 
 ### 0.10 Codex Agent Availability Check
 
-Before phase execution, validate that the required SpecKit Pro
-custom agents are installed on official Codex runtime paths:
+Before phase execution, validate that every bundled SpecKit Pro Codex custom
+agent is installed on official Codex runtime paths. Run the shared validator
+with autoheal:
+
+```bash
+bash '<SKILL_SCRIPTS>/validate-agent-install.sh' --surface codex --autoheal
+```
+
+The validator checks the bundled `codex-agents/*.toml` contract and verifies
+the installed runtime files on:
 
 1. `.codex/agents/<agent>.toml`
 2. `~/.codex/agents/<agent>.toml`
 
-Required agents:
+Bundled agents:
 
 - `phase-executor`
 - `clarify-executor`
@@ -151,14 +159,14 @@ Required agents:
 - `codebase-analyst`
 - `spec-context-analyst`
 - `domain-researcher`
-
-Optional helper agent:
-
 - `autopilot-fast-helper`
+- `uat-runbook-author`
 
-If any required agent file is missing from both locations, STOP and instruct
-the user to run `$install`, then restart Codex. If the optional helper is
-missing, continue without it.
+If the validator succeeds after autoheal, continue and record that Codex
+subagents were refreshed. If it still fails, STOP with its error message and
+tell the user to run `$install`, approve the expected local write, then restart
+Codex. A restart is required whenever autoheal copied or refreshed agent TOML
+files.
 
 ### 0.10b Implementation Agent Detection
 

@@ -17,6 +17,7 @@ EXPECTED_AGENTS=(
   codebase-analyst.toml
   spec-context-analyst.toml
   domain-researcher.toml
+  uat-runbook-author.toml
 )
 
 GPT55_AGENTS=(
@@ -27,6 +28,7 @@ GPT55_AGENTS=(
   codebase-analyst.toml
   spec-context-analyst.toml
   domain-researcher.toml
+  uat-runbook-author.toml
 )
 
 TMP_ROOT=$(mktemp -d)
@@ -41,6 +43,11 @@ assert_file_exists "$SCRIPT"
 
 set_test "installer script is executable"
 assert_file_executable "$SCRIPT"
+
+source_agents=$(find "$PLUGIN_ROOT/codex-agents" -maxdepth 1 -type f -name '*.toml' -print | sed 's#^.*/##' | sort | paste -sd, -)
+expected_agents=$(printf '%s\n' "${EXPECTED_AGENTS[@]}" | sort | paste -sd, -)
+set_test "test contract matches bundled codex-agents source set"
+assert_eq "$source_agents" "$expected_agents" "bundled agent list"
 
 section "Fresh install"
 
@@ -60,6 +67,9 @@ assert_contains "$output" "Model policy: gpt-5.5"
 
 set_test "installer output reports effective default model"
 assert_contains "$output" "Executor/consensus model: gpt-5.5"
+
+set_test "installer output reports all ten bundled agents"
+assert_contains "$output" "Installed 10 SpecKit Pro Codex subagents."
 
 for agent in "${EXPECTED_AGENTS[@]}"; do
   set_test "fresh install copied ${agent}"
@@ -215,6 +225,34 @@ output=$( \
     "$SYNC_DEST_DIR" 2>&1 \
 )
 assert_contains "$output" "Synced active plugin install to 1.10.2"
+
+section "Default marketplace tmp-root discovery"
+
+DEFAULT_HOME="$TMP_ROOT/default-home"
+DEFAULT_ACTIVE="$TMP_ROOT/default-active-install"
+DEFAULT_MARKETPLACE="$DEFAULT_HOME/.codex/.tmp/marketplaces/racecraft-plugins-public/dist/codex/speckit-pro"
+DEFAULT_DEST="$TMP_ROOT/default-dest"
+
+cp -R "$PLUGIN_ROOT/." "$DEFAULT_ACTIVE/"
+mkdir -p "$DEFAULT_ACTIVE/.codex-plugin"
+printf '{"version":"1.0.0"}\n' > "$DEFAULT_ACTIVE/.codex-plugin/plugin.json"
+
+mkdir -p "$(dirname "$DEFAULT_MARKETPLACE")"
+cp -R "$PLUGIN_ROOT/." "$DEFAULT_MARKETPLACE/"
+mkdir -p "$DEFAULT_MARKETPLACE/.codex-plugin"
+printf '{"version":"2.0.0"}\n' > "$DEFAULT_MARKETPLACE/.codex-plugin/plugin.json"
+
+set_test "installer discovers current dist/codex marketplace tmp root by default"
+result=0
+output=$( \
+  HOME="$DEFAULT_HOME" \
+  "$DEFAULT_ACTIVE/codex-skills/install/scripts/install-codex-agents.sh" \
+    "$DEFAULT_DEST" 2>&1 \
+) || result=$?
+assert_eq "0" "$result" "exit code"
+
+set_test "default tmp-root discovery syncs active install"
+assert_contains "$output" "Synced active plugin install to 2.0.0"
 
 section "Marketplace tmp-root sync mirrors deletions (orphan-file removal)"
 

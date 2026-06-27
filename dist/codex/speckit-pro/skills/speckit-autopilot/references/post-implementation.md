@@ -767,15 +767,11 @@ Bash("mkdir -p <feature-dir>/.process && \
 - Output is written exactly once to `<feature-dir>/.process/uat-runbook.md`
   (deterministic overwrite, no merge); the script is silent on stdout.
 
-**This step is FAIL-OPEN.** A nonzero exit (e.g., exit 1 on an
-unreadable spec) or a missing output file NEVER blocks PR creation:
-log a warning to the workflow log and continue. The guarantee is
-compositional — on a nonzero exit the script writes no partial
-`uat-runbook.md` (FR-006), so the downstream `generate-pr-body.sh`
-absent-file path fires and still emits the `## UAT Runbook` heading
-with a one-line stub note. The heading is therefore always present in
-the PR body whether the generator succeeded, failed, or never ran;
-the failure detail lives in the workflow log, not the artifact.
+The skeleton script is fail-safe for file integrity: on a nonzero exit
+(e.g., exit 1 on an unreadable spec) it writes no partial `uat-runbook.md`
+(FR-006). It is **not** a review-ready fallback. If skeleton generation fails
+or the output file is missing, mark `Post: UAT Runbook Generation` failed and
+STOP before PR-body generation or PR creation.
 
 After the skeleton is written, **spawn the `speckit-pro:uat-runbook-author`
 subagent to rewrite it in place** so the runbook reads in plain English
@@ -809,11 +805,22 @@ Agent(
 - **Pass PROJECT_COMMANDS to the agent.** This is what lets it write a
   real Env Setup instead of the skeleton's `<unknown>` rows — the same
   gap that produced the meaningless Env Setup table in earlier PRs.
-- **This step is FAIL-OPEN too.** If the author agent errors or returns
-  without editing, leave the deterministic skeleton in place and continue
-  — never block PR creation. A plain skeleton is an acceptable fallback.
+- If the author agent errors or returns without editing, leave the deterministic
+  skeleton in place for diagnosis, but do **not** continue to PR creation until
+  the quality validator below passes.
 
-Then auto-commit whatever runbook resulted (authored or skeleton):
+After authoring, validate the runbook quality:
+
+```text
+Bash("bash '<SKILL_SCRIPTS>/validate-uat-runbook.sh' <feature-dir>/.process/uat-runbook.md")
+```
+
+If validation fails, STOP before PR-body generation or PR creation and report the
+validator message. The validator rejects missing runbooks, unknown
+`PROJECT_COMMANDS` rows, skeleton per-story placeholders, circular FR Coverage
+Matrix text, and absent-runbook PR-body stubs.
+
+Then auto-commit the authored runbook:
 
 ```text
 git add <feature-dir>/.process/uat-runbook.md

@@ -109,6 +109,21 @@ output and has a clean worktree. Never invoke
 
 ## What to Do
 
+### -0.5 Verify Claude Agent Package Completeness
+
+Before parsing or mutating the repository, resolve the plugin root from this
+skill location and run the shared install validator:
+
+```text
+bash "<plugin-root>/skills/speckit-autopilot/scripts/validate-agent-install.sh" --surface claude --plugin-root "<plugin-root>"
+```
+
+This checks every bundled Claude Code `agents/*.md` file, including
+`uat-runbook-author.md`. If the validator fails, STOP and tell the user to
+update/reinstall `speckit-pro`, run `/reload-plugins`, and retry. Claude Code
+loads plugin agents directly from the plugin cache, so scaffold cannot safely
+self-heal a missing Claude agent file.
+
 ### 0. Ensure SpecKit CLI
 
 Check for the official SpecKit CLI before parsing or mutating the repository:

@@ -233,6 +233,7 @@ Return a concise installation report like:
 - codebase-analyst.toml
 - spec-context-analyst.toml
 - domain-researcher.toml
+- uat-runbook-author.toml
 
 **Next step:** Restart Codex now so the custom subagents are loaded.
 ```

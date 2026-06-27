@@ -478,6 +478,15 @@ assert_contains "$generated_body" "<!-- speckit-pro-editable:why_it_matters:star
 set_test "Rendered body preserves UAT Runbook compatibility heading"
 assert_contains "$generated_body" "## UAT Runbook"
 
+set_test "Rendered packet body embeds authored UAT runbook content"
+assert_contains "$generated_body" "The reviewer can confirm the generated title and Summary are specific."
+
+set_test "Rendered packet body does not use generic packet UAT fallback"
+assert_not_contains "$generated_body" "Manual UAT is not required for this packet metadata task"
+
+set_test "Generated packet records feature-local UAT source"
+assert_json_file_value "$packet_output" "uat.uat_source" "$PRSG_012_FEATURE_REL/.process/uat-runbook.md"
+
 set_test "Rendered body includes feature source marker"
 assert_contains "$generated_body" "Source: feature specification defines reviewer-ready PR packet behavior."
 

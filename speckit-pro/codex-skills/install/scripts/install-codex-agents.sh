@@ -18,31 +18,8 @@ TARGET_MODEL="${SPECKIT_CODEX_MODEL:-gpt-5.5}"
 # Disable with SPECKIT_SKIP_PLUGIN_SYNC=1 if you need the prior behavior
 # (e.g., when developing the plugin against a local checkout you don't
 # want overwritten).
-MARKETPLACE_TMP_ROOT="${SPECKIT_MARKETPLACE_TMP_ROOT:-$HOME/.codex/.tmp/marketplaces/racecraft-plugins-public/speckit-pro}"
+MARKETPLACE_TMP_ROOT="${SPECKIT_MARKETPLACE_TMP_ROOT:-}"
 SKIP_PLUGIN_SYNC="${SPECKIT_SKIP_PLUGIN_SYNC:-0}"
-
-EXPECTED_AGENTS=(
-  autopilot-fast-helper.toml
-  phase-executor.toml
-  clarify-executor.toml
-  checklist-executor.toml
-  analyze-executor.toml
-  implement-executor.toml
-  codebase-analyst.toml
-  spec-context-analyst.toml
-  domain-researcher.toml
-)
-
-GPT55_AGENTS=(
-  phase-executor.toml
-  clarify-executor.toml
-  checklist-executor.toml
-  analyze-executor.toml
-  implement-executor.toml
-  codebase-analyst.toml
-  spec-context-analyst.toml
-  domain-researcher.toml
-)
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -77,6 +54,17 @@ case "$TARGET_MODEL" in
     exit 2
     ;;
 esac
+
+if [ -z "$MARKETPLACE_TMP_ROOT" ]; then
+  for candidate in \
+    "$HOME/.codex/.tmp/marketplaces/racecraft-plugins-public/dist/codex/speckit-pro" \
+    "$HOME/.codex/.tmp/marketplaces/racecraft-plugins-public/speckit-pro"; do
+    if [ -f "$candidate/.codex-plugin/plugin.json" ]; then
+      MARKETPLACE_TMP_ROOT="$candidate"
+      break
+    fi
+  done
+fi
 
 # Sync active install from marketplace tmp root if it carries a newer
 # version. Runs BEFORE the agent template copy so the cp loop sees the
@@ -129,18 +117,17 @@ if [ ! -d "$SOURCE_DIR" ]; then
   exit 1
 fi
 
-missing=()
-for agent in "${EXPECTED_AGENTS[@]}"; do
-  if [ ! -f "$SOURCE_DIR/$agent" ]; then
-    missing+=("$agent")
-  fi
-done
+EXPECTED_AGENTS=()
+while IFS= read -r agent; do
+  EXPECTED_AGENTS+=("$agent")
+done < <(
+  find "$SOURCE_DIR" -maxdepth 1 -type f -name '*.toml' -print \
+    | sed 's#^.*/##' \
+    | sort
+)
 
-if [ "${#missing[@]}" -gt 0 ]; then
-  printf 'ERROR: missing bundled agent templates in %s\n' "$SOURCE_DIR" >&2
-  for agent in "${missing[@]}"; do
-    printf '  - %s\n' "$agent" >&2
-  done
+if [ "${#EXPECTED_AGENTS[@]}" -eq 0 ]; then
+  printf 'ERROR: no bundled agent templates found in %s\n' "$SOURCE_DIR" >&2
   exit 1
 fi
 
@@ -151,8 +138,10 @@ for agent in "${EXPECTED_AGENTS[@]}"; do
 done
 
 if [ "$TARGET_MODEL" != "gpt-5.5" ]; then
-  for agent in "${GPT55_AGENTS[@]}"; do
-    perl -0pi -e 's/^model = "gpt-5\.5"$/model = "'"$TARGET_MODEL"'"/m' "$DEST_DIR/$agent"
+  for agent in "${EXPECTED_AGENTS[@]}"; do
+    if grep -Eq '^model = "gpt-5\.5"$' "$DEST_DIR/$agent"; then
+      perl -0pi -e 's/^model = "gpt-5\.5"$/model = "'"$TARGET_MODEL"'"/m' "$DEST_DIR/$agent"
+    fi
   done
 fi
 

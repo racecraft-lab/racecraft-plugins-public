@@ -175,6 +175,7 @@ Expected installed TOML files:
 - `codebase-analyst.toml`
 - `spec-context-analyst.toml`
 - `domain-researcher.toml`
+- `uat-runbook-author.toml`
 
 ## Verify The Install
 
@@ -184,7 +185,7 @@ files as part of DOC-004 verification.
 
 1. Review the install skill report for the source directory, destination
    directory, effective model, copied filenames, and restart instruction.
-2. Confirm the selected destination contains the nine expected TOML filenames
+2. Confirm the selected destination contains the expected TOML filenames
    above.
 3. Confirm the copied TOML model lines match the model reported by the installer
    when you used a supported fallback model.

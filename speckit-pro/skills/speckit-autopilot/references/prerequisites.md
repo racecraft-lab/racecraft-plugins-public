@@ -6,6 +6,7 @@ The autopilot's pre-flight sequence. Run these before Step 1 (Parse Workflow Sta
 
 - [Step -1: Archive Sweep Startup](#step--1-archive-sweep-startup) — archive previously merged specs before workflow execution
 - [Step 0.0: Resolve Script Paths](#step-00-resolve-script-paths) — extract `SKILL_SCRIPTS` from the skill header (plugin path)
+- [Step 0.0b: Claude Agent Package Completeness](#step-00b-claude-agent-package-completeness) — verify bundled plugin agents are present
 - [Step 0.1–0.7: Environment Checks](#step-01-07-environment-checks) — `check-prerequisites.sh` JSON parsing, branch detection
 - [Step 0.6: Load Settings](#step-06-load-settings) — `.claude/speckit-pro.local.md` YAML frontmatter
 - [Step 0.8: Capability Coverage & Plugin Limitation Check](#step-08-capability-coverage--plugin-limitation-check) — informational research/context advisory + plugin-agent caveats
@@ -92,6 +93,24 @@ different from the autopilot scripts.
 **WARNING:** `CLAUDE_PLUGIN_ROOT` is NOT available in Bash tool
 invocations — it only exists inside agent subprocesses. Always use
 the literal path extracted from the skill header.
+
+## Step 0.0b: Claude Agent Package Completeness
+
+Before any phase work, verify the installed Claude Code plugin package includes
+every bundled SpecKit Pro agent:
+
+```text
+Bash("bash '<SKILL_SCRIPTS>/validate-agent-install.sh' --surface claude --plugin-root '<plugin-root>'")
+```
+
+Use the plugin root that owns `skills/speckit-autopilot/`; this is the directory
+above `skills/`, not the host repository root. The validator checks all bundled
+`agents/*.md` files, including `uat-runbook-author.md`.
+
+If the check fails, STOP. Claude Code loads plugin agents directly from the
+plugin cache, so autopilot cannot safely self-heal a missing Claude agent file.
+Tell the user to update/reinstall `speckit-pro`, run `/reload-plugins`, and
+retry.
 
 ## Step 0.1–0.7: Environment Checks
 

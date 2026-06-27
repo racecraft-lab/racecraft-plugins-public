@@ -414,6 +414,27 @@ single_packet_body_sha() {
   protected_body_sha "$OUTPUT_FILE" | sha256_from_stdin
 }
 
+append_uat_runbook_section() {
+  local output_file="$1"
+  local uat_runbook uat_size
+  uat_runbook="$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/.process/uat-runbook.md"
+  {
+    printf '\n## UAT Runbook\n\n'
+    if [ -f "$uat_runbook" ]; then
+      uat_size=$(wc -c < "$uat_runbook")
+      if [ "$uat_size" -lt 50000 ]; then
+        cat "$uat_runbook"
+      else
+        head -60 "$uat_runbook"
+        printf '\n[Full runbook](./.process/uat-runbook.md)\n'
+      fi
+    else
+      # shellcheck disable=SC2016  # backticks are literal Markdown, not a shell expansion
+      printf '%s\n' 'No UAT runbook was generated for this feature (expected at `.process/uat-runbook.md`).'
+    fi
+  } >> "$output_file"
+}
+
 render_single_packet_body() {
   local packet_file_rel="$1" title_description="$2" changed_files_json="$3"
   local changed_files_block
@@ -452,12 +473,12 @@ Reviewers get a deterministic conventional title and a stable packet body before
 
 ## How To UAT
 
-Run the focused Layer 4 PR body generation test and confirm the packet metadata assertions pass.
+Use the UAT Runbook below for reviewer-facing acceptance checks. If this PR only changes packet metadata, the runbook explains why no manual product path is required.
+EOF
 
-## UAT Runbook
+  append_uat_runbook_section "$OUTPUT_FILE"
 
-Manual UAT is not required for this packet metadata task. The compatibility heading remains present for downstream PR body checks.
-
+  cat >> "$OUTPUT_FILE" <<EOF
 ## Verification
 
 - Focused packet generation checks passed.
@@ -570,9 +591,9 @@ write_single_packet_metadata() {
           ]
         },
         uat: {
-          how_to_uat: "Run the focused Layer 4 PR body generation test and inspect the generated single-packet metadata.",
+          how_to_uat: "Use the UAT Runbook embedded in the rendered PR body for reviewer-facing acceptance checks.",
           uat_runbook_heading: "## UAT Runbook",
-          uat_source: $body_file
+          uat_source: ($source_feature_dir + "/.process/uat-runbook.md")
         },
         source_markers: [
           {
@@ -812,22 +833,7 @@ fi
 # the heading loop / append_missing_section / extract_heading_section above — those
 # truncate at head -40 and strip blank lines. Emitted at H2 (## UAT Runbook); SC-005
 # greps for that exact literal. Fail-open: an absent runbook still emits the heading.
-uat_runbook="$(repo_path "$FEATURE_DIR" "$REPO_ROOT")/.process/uat-runbook.md"
-{
-  printf '\n## UAT Runbook\n\n'
-  if [ -f "$uat_runbook" ]; then
-    uat_size=$(wc -c < "$uat_runbook")
-    if [ "$uat_size" -lt 50000 ]; then
-      cat "$uat_runbook"
-    else
-      head -60 "$uat_runbook"
-      printf '\n[Full runbook](./.process/uat-runbook.md)\n'
-    fi
-  else
-    # shellcheck disable=SC2016  # backticks are literal Markdown, not a shell expansion
-    printf '%s\n' 'No UAT runbook was generated for this feature (expected at `.process/uat-runbook.md`).'
-  fi
-} >> "$OUTPUT_FILE"
+append_uat_runbook_section "$OUTPUT_FILE"
 
 {
   printf '\n<!-- speckit-pro-review-packet-source\n'

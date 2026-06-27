@@ -108,8 +108,7 @@ $install
 ```
 
 The default destination is `~/.codex/agents/`; `.codex/agents/` is the explicit
-project-scoped destination override. Verify the nine installer-copied TOML
-files:
+project-scoped destination override. Verify every installer-copied TOML file:
 
 - `autopilot-fast-helper.toml`
 - `phase-executor.toml`
@@ -120,6 +119,7 @@ files:
 - `codebase-analyst.toml`
 - `spec-context-analyst.toml`
 - `domain-researcher.toml`
+- `uat-runbook-author.toml`
 
 Then restart Codex. Codex skills and custom agents are separate runtime
 surfaces: the plugin ships skills directly, while the install skill copies the
@@ -320,7 +320,7 @@ $install
 
 Then restart Codex. The plugin ships Codex skills directly, but custom agents
 must be copied into `.codex/agents/` or `~/.codex/agents/` before Codex can
-spawn them by name. The expected installed output is the nine TOML files listed
+spawn them by name. The expected installed output is the TOML files listed
 in the Codex install section above.
 
 If a plugin update changed bundled custom-agent TOML files, rerun

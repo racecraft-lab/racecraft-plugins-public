@@ -130,6 +130,21 @@ else should be derived from the repository.
 
 ## Procedure
 
+### -0.5 Verify and Autoheal Codex Agent Install
+
+Before parsing or mutating the repository, resolve the plugin root from this
+skill location and run the shared install validator:
+
+```text
+bash "<plugin-root>/skills/speckit-autopilot/scripts/validate-agent-install.sh" --surface codex --plugin-root "<plugin-root>" --autoheal
+```
+
+This checks every bundled `codex-agents/*.toml` file, including
+`uat-runbook-author.toml`, against `.codex/agents/` and `~/.codex/agents/`. If
+autoheal copies or refreshes files, tell the user Codex must be restarted after
+scaffold completes. If the validator still fails, STOP and report its exact
+message; do not continue into Grill Me with an incomplete Codex install.
+
 ### 0. Ensure SpecKit CLI
 
 Before parsing or mutating the repository, verify the official SpecKit CLI is

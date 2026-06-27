@@ -470,6 +470,16 @@ validate_body_file() {
     fi
   done
 
+  if grep -Fq 'autopilot did not pass PROJECT_COMMANDS' "$visible_body" \
+    || grep -Fq '| Command | Value |' "$visible_body" \
+    || grep -Fq 'Walk this story end to end and confirm the observable behavior the spec promises.' "$visible_body" \
+    || grep -Fq 'see the Per-Story Acceptance Tests block above' "$visible_body" \
+    || grep -Fq 'No UAT runbook was generated for this feature' "$visible_body"; then
+    add_failure "body.uat_placeholder" "body_file" \
+      "Rendered body contains missing, skeleton-only, or circular UAT runbook content." \
+      "Run the UAT authoring pass and validate the runbook before generating the PR packet."
+  fi
+
   local expected_fingerprint actual_fingerprint
   expected_fingerprint="$(jq_get "$packet" '.protected_body_fingerprint.value')"
   actual_fingerprint="$(protected_body_sha "$body_abs")"

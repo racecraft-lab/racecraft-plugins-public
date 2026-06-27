@@ -232,6 +232,8 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-post-implementation-reference.sh"
     "$TESTS_DIR/layer4-scripts/test-reviewability-marker-guidance.sh"
     "$TESTS_DIR/layer4-scripts/test-generate-uat-skeleton.sh"
+    "$TESTS_DIR/layer4-scripts/test-validate-uat-runbook.sh"
+    "$TESTS_DIR/layer4-scripts/test-validate-agent-install.sh"
     "$TESTS_DIR/layer4-scripts/test-project-fixup.sh"
     "$TESTS_DIR/layer4-scripts/test-eval-runner-skill-selection.sh"
     "$TESTS_DIR/layer4-scripts/test-refresh-local-plugin.sh"

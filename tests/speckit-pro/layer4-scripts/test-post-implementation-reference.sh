@@ -59,6 +59,16 @@ assert_contains "$codex_body" "gh pr create --base <base> --head <head> --body-f
 assert_contains "$codex_body" "restack.sh"
 assert_contains "$codex_body" 'MUST NOT modify `.github/workflows/pr-checks.yml`'
 
+set_test "Claude reference blocks skeleton-quality UAT before PR creation"
+assert_contains "$claude_body" "validate-uat-runbook.sh"
+assert_contains "$claude_body" "STOP before PR-body generation or PR creation"
+assert_not_contains "$claude_body" "A plain skeleton is an acceptable fallback"
+
+set_test "Codex reference blocks skeleton-quality UAT before PR creation"
+assert_contains "$codex_body" "validate-uat-runbook.sh"
+assert_contains "$codex_body" "STOP before PR-body generation or PR creation"
+assert_not_contains "$codex_body" "A plain skeleton is an acceptable fallback"
+
 set_test "Claude dist reference mirrors source"
 assert_eq "$(shasum -a 256 "$CLAUDE_REF" | awk '{print $1}')" \
   "$(shasum -a 256 "$CLAUDE_DIST" | awk '{print $1}')" \
