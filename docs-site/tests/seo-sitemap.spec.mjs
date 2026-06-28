@@ -51,9 +51,10 @@ const GIT_SOURCED_PAGES = [
 
 /** The newest git commit date (ISO-8601) for a repo-relative file, as the build sees it. */
 function gitCommitDate(repoRelativePath) {
-  const out = execFileSync('git', ['log', '--format=t:%cI', '--name-status', '--', repoRelativePath], {
+  const out = execFileSync('git', ['log', '--format=t:%cI', '--name-status', '--', 'docs-site/src/content/docs'], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
+    maxBuffer: 10 * 1024 * 1024,
   }).trim();
   let runningDate;
   for (const line of out.split('\n')) {
