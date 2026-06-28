@@ -190,6 +190,15 @@ diagnosed as a non-XPLAT requirement.
   official Spec Kit prerequisite boundary is accepted, compiled binaries add a
   second implementation/distribution model without improving the XPLAT user
   journey. They remain rejected historical candidates, not XPLAT fallbacks.
+- Q: What confidence level do we have that Python will work consistently across
+  Windows, macOS, and Linux? A: Planning confidence is high, but not complete
+  release evidence. Python as the universal dependency is approximately 90%
+  confidence because it is already required by official Spec Kit / `specify`.
+  Python stdlib runner behavior after launch is approximately 85-90%
+  confidence. The full Claude/Codex installed-plugin user journey remains
+  approximately 65-75% confidence until XPLAT-004 proves interpreter discovery
+  and installed-cache launch, and XPLAT-007 proves generated payload cutover and
+  platform UAT.
 - Q: What do official Claude Code and OpenAI Codex docs change? A: They confirm
   plugin/skill/hook/MCP/script packaging surfaces, but they do not guarantee
   arbitrary user-host runtimes. They also make Codex custom-agent installation a

@@ -96,6 +96,22 @@ build or claim native platform support.
   source-integrity, installed-cache invocation, and generated-payload evidence
   are implemented downstream.
 
+## Python Confidence Boundary
+
+XPLAT-003 treats Python as the correct implementation substrate, not as already
+proven release support. Confidence is high because official Spec Kit /
+`specify` requires Python 3.11+ and the selected runner uses only stdlib APIs:
+
+- Python as the universal dependency: high, approximately 90%.
+- Python stdlib runner behavior once launched: high, approximately 85-90%.
+- Full Claude/Codex installed-plugin journey today: medium, approximately
+  65-75%, because implementation and UAT proof remain downstream.
+
+XPLAT-004 must close the interpreter-discovery and installed-cache launch gap
+for Windows, macOS, and Linux. XPLAT-007 must close the generated-payload,
+consumer guidance, active Python gate, and full workflow UAT gaps before public
+support claims can pass.
+
 **Scale and Scope**: One spec directory; 0 production LOC; decision records and contracts only.
 
 **Reviewability Budget**: Setup gate returned warning status: `reviewable_loc=250`, `production_files=4`, `total_files=10`, `primary_surface_count=2`, warning `primary surfaces 2 exceeds warn threshold 1`, no blockers. After the official-doc/rejected-runtime additions, tasks-mode reviewability reports a size-only block (`reviewable_loc=1000`, `total_files=31`) because the task estimator counts task and file tokens broadly. The actual diff-mode PR gate remains warning-only with `reviewable_loc=0`, `production_files=0`, `total_files=24`, and no blockers. XPLAT-003 remains one decision spike because it records one security and trust model and assigns downstream controls without implementation changes.

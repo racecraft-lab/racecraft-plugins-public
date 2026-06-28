@@ -27,6 +27,26 @@ leans on the official Spec Kit / `specify` prerequisite boundary. That decision
 also applies to active build, test, eval, and release-readiness gates that
 validate or publish shipped plugin behavior.
 
+## Confidence Posture
+
+Python is the highest-confidence runtime path because it is already part of the
+official Spec Kit / `specify` prerequisite boundary, so XPLAT does not add a new
+user-installed implementation runtime. Planning confidence is high that Python
+3.11+ standard-library APIs can support the runner consistently across native
+Windows, macOS, and Linux:
+
+- Python as the universal dependency: high confidence, approximately 90%.
+- Python stdlib runner behavior after launch: high confidence, approximately
+  85-90%.
+- Full Claude/Codex installed-plugin user journey today: medium confidence,
+  approximately 65-75%, because XPLAT-004 and XPLAT-007 still need installed
+  cache launch proof, generated-payload cutover, and platform UAT.
+
+These confidence levels are planning inputs, not public support evidence.
+Native Windows/macOS/Linux claims remain blocked until downstream specs prove
+interpreter discovery, `specify` discovery, installed-cache execution, payload
+freshness, and full workflow UAT for every claimed platform and host product.
+
 ## Goals
 
 - A public user can install SpecKit Pro on Claude Code or Codex and run the

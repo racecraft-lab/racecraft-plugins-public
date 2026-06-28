@@ -103,6 +103,29 @@ references and unrelated repository-only shell wrappers may remain only when a
 deterministic guard proves they cannot affect installed plugin behavior,
 generated payloads, test/eval results, or release claims.
 
+## Python Confidence And Proof Boundary
+
+The Python decision has high planning confidence because official Spec Kit /
+`specify` already requires Python 3.11+, and the selected runner uses only
+standard-library behavior. Current confidence is:
+
+- High, approximately 90%, that Python is the right universal dependency for
+  SpecKit Pro because it matches the upstream Spec Kit prerequisite.
+- High, approximately 85-90%, that a Python stdlib runner will behave
+  consistently once the interpreter is launched.
+- Medium, approximately 65-75%, that the full current Claude/Codex plugin user
+  journey works across all target platforms before implementation, because
+  installed-cache launch, generated payload cutover, and native UAT are not yet
+  complete.
+
+The remaining risk is not Python itself. The risk is platform-specific
+interpreter discovery and installed plugin invocation: Windows may need
+`py -3.11`, `python`, or `python3`; macOS/Linux usually use `python3` but PATH
+can vary; launcher permissions, line endings, path handling, and executable
+lookup must be proven from installed Claude and Codex plugin caches. XPLAT-004
+must prove the runner launch path, and XPLAT-007 must prove the full user
+journey before any public native Windows/macOS/Linux claim.
+
 ## Consumer Trust Constraint
 
 After XPLAT-007, public docs and release notes MUST accurately state how the
