@@ -49,13 +49,14 @@ const GIT_SOURCED_PAGES = [
   { slug: 'first-run', sourcePath: 'docs-site/src/content/docs/first-run.md' },
 ];
 
-/** The newest git commit date (ISO-8601) for a repo-relative file, as the build sees it. */
-function gitCommitDate(repoRelativePath) {
+/** Git commit dates (ISO-8601) where a repo-relative file appears in content history. */
+function gitCommitDates(repoRelativePath) {
   const out = execFileSync('git', ['log', '--format=t:%cI', '--name-status', '--', 'docs-site/src/content/docs'], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     maxBuffer: 10 * 1024 * 1024,
   }).trim();
+  const dates = [];
   let runningDate;
   for (const line of out.split('\n')) {
     if (line.startsWith('t:')) {
@@ -65,8 +66,9 @@ function gitCommitDate(repoRelativePath) {
     const tab = line.lastIndexOf('\t');
     if (tab === -1) continue;
     const fileName = line.slice(tab + 1).trim();
-    if (runningDate && fileName === repoRelativePath) return runningDate;
+    if (runningDate && fileName === repoRelativePath) dates.push(runningDate);
   }
+  if (dates.length > 0) return dates;
   throw new Error(`No git commit date for ${repoRelativePath}`);
 }
 
@@ -137,26 +139,28 @@ test.describe('DOC-014 sitemap freshness', () => {
     const entries = urlEntries(xml);
     const runStart = Date.now();
     const headIso = gitHeadCommitDate();
+    const headMs = Date.parse(headIso);
 
     for (const { slug, sourcePath } of GIT_SOURCED_PAGES) {
-      const expectedIso = gitCommitDate(sourcePath);
-      const expectedMs = Date.parse(expectedIso);
+      const expectedDates = gitCommitDates(sourcePath);
+      const expectedTimes = expectedDates.map((date) => Date.parse(date));
 
       const wantLoc = `${SITE_BASE}/${slug}/`;
       const entry = entries.find((e) => e.loc === wantLoc);
       expect(entry, `sitemap must include ${wantLoc}`).toBeTruthy();
       expect(entry.lastmod, `${wantLoc} must carry a <lastmod> from git history`).toBeTruthy();
+      const entryMs = Date.parse(entry.lastmod);
 
-      // Same instant as the git commit date (timezone representation may differ).
+      // Same instant as one explicit git history entry for the page.
       expect(
-        Date.parse(entry.lastmod),
-        `${wantLoc} <lastmod> ${entry.lastmod} must equal the git commit date ${expectedIso}`,
-      ).toBe(expectedMs);
+        expectedTimes,
+        `${wantLoc} <lastmod> ${entry.lastmod} must match one git history date: ${expectedDates.join(', ')}`,
+      ).toContain(entryMs);
 
       // And strictly in the past relative to this test run — a build-time date
       // would be ~now and fail this guard.
       expect(
-        Date.parse(entry.lastmod),
+        entryMs,
         `${wantLoc} <lastmod> must be in the past, not the build/run time`,
       ).toBeLessThan(runStart);
 
@@ -167,9 +171,9 @@ test.describe('DOC-014 sitemap freshness', () => {
       // (these content pages are not touched by the tip commit, so on a full clone
       // their commit dates differ from HEAD's).
       expect(
-        expectedMs,
-        `${wantLoc}: expected git date ${expectedIso} must differ from the HEAD commit date ${headIso} (shallow-clone guard)`,
-      ).not.toBe(Date.parse(headIso));
+        entryMs,
+        `${wantLoc}: sitemap git date ${entry.lastmod} must differ from the HEAD commit date ${headIso} (shallow-clone guard)`,
+      ).not.toBe(headMs);
     }
   });
 });
