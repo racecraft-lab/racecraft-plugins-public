@@ -51,12 +51,22 @@ const GIT_SOURCED_PAGES = [
 
 /** The newest git commit date (ISO-8601) for a repo-relative file, as the build sees it. */
 function gitCommitDate(repoRelativePath) {
-  const out = execFileSync('git', ['log', '-1', '--format=%cI', '--', repoRelativePath], {
+  const out = execFileSync('git', ['log', '--format=t:%cI', '--name-status', '--', repoRelativePath], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
   }).trim();
-  if (!out) throw new Error(`No git commit date for ${repoRelativePath}`);
-  return out;
+  let runningDate;
+  for (const line of out.split('\n')) {
+    if (line.startsWith('t:')) {
+      runningDate = line.slice(2).trim();
+      continue;
+    }
+    const tab = line.lastIndexOf('\t');
+    if (tab === -1) continue;
+    const fileName = line.slice(tab + 1).trim();
+    if (runningDate && fileName === repoRelativePath) return runningDate;
+  }
+  throw new Error(`No git commit date for ${repoRelativePath}`);
 }
 
 /** The commit date (ISO-8601) of HEAD itself — the current checkout commit. */
