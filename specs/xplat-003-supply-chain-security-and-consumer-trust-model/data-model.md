@@ -58,7 +58,7 @@ separate supported plugin surfaces from runtime/toolchain assumptions.
 | `official_docs_refs` | Yes | Official documentation URLs used as evidence. |
 | `supported_surfaces` | Yes | Skills, scripts, hooks, MCP servers, `bin/` executables, apps, agents, or custom-agent registration surfaces documented for the platform. |
 | `runtime_guarantees` | Yes | Runtime guarantees found in docs; use `none_found` when no user-host runtime guarantee exists. |
-| `runtime_not_guaranteed` | Yes | Runtime/tool families not guaranteed for all installed plugin hosts, for example Go, Rust, Zig, Node, Python, Bash, `jq`, package managers, WSL, or Git Bash. |
+| `runtime_not_guaranteed` | Yes | Runtime/tool families not guaranteed for all installed plugin hosts by Claude/Codex platform docs alone, for example Go, Rust, Zig, Node, Bash, `jq`, package managers, WSL, or Git Bash. Python is allowed only through the official Spec Kit / `specify` prerequisite boundary and must be verified by preflight. |
 | `install_surface_distinctions` | Yes | Platform-specific distinctions such as Codex plugin skills versus `.codex/agents/*.toml` custom-agent registration. |
 | `xplat_gate_effect` | Yes | How the finding affects XPLAT-004/XPLAT-007 readiness and claims. |
 
@@ -168,31 +168,30 @@ Records the exact build and release inputs XPLAT-004 must capture before runner 
 
 | Field | Required | Notes |
 |---|---|---|
-| `runtime_shape` | Yes | Selected runtime shape, for example `go-native-artifact`; conditional until runtime re-approval. |
-| `toolchain_name` | Yes | Go, Rust, Zig, bundled Node builder, embedded Python builder, or other selected build toolchain. |
-| `toolchain_version` | Yes | Version used to build the runner artifact. |
-| `toolchain_source` | Yes | Installation source, distribution, or pinned toolchain reference. |
-| `go_toolchain_version` | Conditional | Required only if Go is explicitly re-approved. |
-| `go_toolchain_source` | Conditional | Required only if Go is explicitly re-approved. |
-| `module_manifest_path` | Yes | Go module manifest path, Cargo manifest, Zig build file, package manifest, or equivalent dependency manifest for the selected runtime shape. |
-| `dependency_snapshot` | Yes | `go.sum` state or equivalent dependency checksum/snapshot evidence. |
-| `target_os_arch_matrix` | Yes | Target platform matrix for produced artifacts. |
-| `build_command_or_recipe` | Yes | Command or repeatable build recipe used by XPLAT-004. |
+| `runtime_shape` | Yes | Selected runtime shape, currently `python-stdlib-runner`. |
+| `python_minimum_version` | Yes | Minimum supported Python version, currently `3.11`. |
+| `python_discovery_order` | Yes | Ordered interpreter lookup such as `py -3.11`, `python3`, then `python`, subject to XPLAT-004 validation. |
+| `specify_discovery` | Yes | How the runner finds and validates the official `specify` command. |
+| `dependency_policy` | Yes | First release is stdlib-only; plugin-only packages require reopening controls. |
+| `module_manifest_path` | Conditional | Only required if plugin-only Python packages or a different runtime are introduced. |
+| `dependency_snapshot` | Conditional | `none-stdlib-only` for the selected Python runner, or equivalent checksum/snapshot evidence if dependencies are introduced. |
+| `target_os_arch_matrix` | Yes | Target platform matrix for preflight and installed-cache launch evidence. |
+| `build_command_or_recipe` | Conditional | Packaging or validation recipe used by XPLAT-004; native build recipe only if a native-artifact fallback is revived. |
 | `release_package_inputs` | Yes | Files, metadata, and package inputs included in the release artifact boundary. |
-| `source_revision` | Yes | Source revision used to build artifacts. |
-| `artifact_names_and_paths` | Yes | Generated artifact names and payload-relative paths. |
-| `artifact_sha256_checksums` | Yes | SHA-256 checksums for produced artifacts. |
+| `source_revision` | Yes | Source revision used to package runner files. |
+| `runner_source_paths` | Yes | Generated runner source and launcher payload-relative paths. |
+| `runner_source_integrity` | Conditional | Checksum or source-integrity metadata where required by XPLAT-004/XPLAT-007. |
 | `scan_evidence_refs` | Yes | References to first-release scan evidence that covers the pinned inputs. |
 
 Validation rules:
 
 - Unknown or unverified values are evidence gaps, not accepted controls.
-- The evidence record must describe the exact source revision, dependency snapshot, toolchain, build inputs, and artifacts it covers.
+- The evidence record must describe the exact source revision, prerequisite
+  boundary, dependency policy, package inputs, and runner files it covers.
 - Recording pinned inputs does not implement reproducible builds, SBOMs, signatures, provenance, or formal audit.
-- `go_toolchain_version` and `go_toolchain_source` are required only when Go is
-  explicitly re-approved. If the runtime is amended, replace Go-specific fields
-  with equivalent toolchain-specific fields instead of carrying stale Go
-  evidence forward.
+- If the runtime changes to Go/Rust/Zig or another native-artifact shape,
+  replace the Python-specific fields with equivalent toolchain-specific fields
+  instead of carrying stale evidence forward.
 
 ## Runner Artifact Manifest
 
@@ -206,28 +205,29 @@ Top-level fields:
 | `plugin_name` | Yes | Plugin package name. |
 | `plugin_version` | Yes | Plugin release version. |
 | `runner_name` | Yes | Expected `speckit-pro-runner`. |
-| `runner_version` | Yes | Runner artifact version. |
+| `runner_version` | Yes | Runner source/package version. |
 | `contract_version` | Yes | Runner contract version from XPLAT-002. |
-| `source_revision` | Yes | Source revision used to build artifacts. |
+| `source_revision` | Yes | Source revision used to package runner files. |
 | `checksum_algorithm` | Yes | `sha256` for first release. |
-| `artifacts` | Yes | Non-empty list of artifact entries. |
+| `runner_files` | Yes | Non-empty list of runner source or launcher file entries. |
 
-Artifact entry fields:
+Runner file entry fields:
 
 | Field | Required | Notes |
 |---|---|---|
-| `artifact_id` | Yes | Stable identifier for the packaged artifact. |
-| `payload_path` | Yes | Payload-relative path to the artifact. |
-| `os` | Yes | Target operating system. |
-| `arch` | Yes | Target architecture. |
-| `size_bytes` | Yes | Artifact size in bytes. |
+| `runner_file_id` | Yes | Stable identifier for the packaged runner file. |
+| `payload_path` | Yes | Payload-relative path to the runner source or launcher file. |
+| `os` | Conditional | Target operating system only when a file is platform-specific. |
+| `arch` | Conditional | Target architecture only when a file is architecture-specific. |
+| `size_bytes` | Yes | File size in bytes. |
 | `sha256` | Yes | Lowercase SHA-256 hex digest. |
 | `checksum_file` | Yes | Payload-relative checksum file path. |
 
 Validation rules:
 
 - `checksum_algorithm` must be `sha256` for first release.
-- Each artifact entry must have exactly one matching checksum-file entry.
+- Each runner file entry must have exactly one matching checksum-file entry when
+  checksum metadata is required.
 - `payload_path` and `checksum_file` must be payload-relative, not absolute.
 - Manifest presence does not imply signing, provenance, SBOM, or trust-chain verification.
 
@@ -239,12 +239,13 @@ One line in `scripts/speckit-pro-runner.sha256`.
 |---|---|---|
 | `sha256` | Yes | 64 lowercase hexadecimal characters. |
 | `separator` | Yes | Two spaces between digest and path. |
-| `payload_path` | Yes | Payload-relative artifact path. |
+| `payload_path` | Yes | Payload-relative runner source or launcher path. |
 
 Validation rules:
 
 - Entries use common SHA-256 checksum file format: `<64 lowercase hex><two spaces><payload-relative path>`.
-- The checksum file must include every packaged runner artifact and no stale artifact path.
+- The checksum file must include every packaged runner source or launcher file
+  covered by the integrity claim and no stale paths.
 - Consumers must be able to verify with platform-native SHA-256 tools.
 
 ## Runtime Integrity Evidence
@@ -294,27 +295,27 @@ Validation rules:
 - Guidance must fail closed when metadata is unavailable or when the computed checksum does not match the expected checksum, and must not imply native support before XPLAT-007 UAT evidence exists.
 - Mismatch remediation must tell consumers not to rely on the artifact for native-runner claims and must collect enough facts for maintainer investigation without asking consumers to repair the artifact locally.
 
-## Artifact Claim Readiness
+## Runner File Claim Readiness
 
-Represents per-artifact and per-platform readiness for public claims.
+Represents per-runner-file and per-platform readiness for public claims.
 
 | Field | Required | Notes |
 |---|---|---|
-| `artifact_id` | Yes | Matches the runner artifact manifest entry. |
+| `runner_file_id` | Yes | Matches the runner source manifest entry. |
 | `target_platform` | Yes | Platform or OS/architecture target covered by the claim. |
-| `payload_path` | Yes | Payload-relative artifact path. |
+| `payload_path` | Yes | Payload-relative runner source or launcher path. |
 | `claim_status` | Yes | `claimable`, `not_claimable`, `deferred`, or `blocked`. |
 | `publication_status` | Yes | `published`, `unpublished`, or `excluded`. |
-| `required_evidence_status` | Yes | Per-artifact status for checksum, manifest, preflight/runtime-info, native UAT, source-to-dist, scan, exception, release-automation, and public-claim audit evidence. |
+| `required_evidence_status` | Yes | Per-runner-file status for checksum or source-integrity metadata, manifest, preflight/runtime-info, native UAT, source-to-dist, scan, exception, release-automation, and public-claim audit evidence. |
 | `blockers` | Yes | Missing, stale, mismatched, unpublished, or unsupported evidence that blocks the claim. |
 | `owner_surface` | Yes | XPLAT-004, XPLAT-007, release automation, or docs/release notes owner. |
-| `follow_up` | Conditional | Required when the artifact/platform is deferred, excluded, or blocked. |
+| `follow_up` | Conditional | Required when the runner file/platform is deferred, excluded, or blocked. |
 
 Validation rules:
 
-- A public claim is valid only when every artifact/platform in the claim set is `claimable`.
-- One ready artifact/platform does not imply support for any other platform.
-- Missing, stale, mismatched, unpublished, or unsupported evidence must either exclude that artifact/platform from claims or block the claim set.
+- A public claim is valid only when every runner file/platform in the claim set is `claimable`.
+- One ready runner file/platform does not imply support for any other platform.
+- Missing, stale, mismatched, unpublished, or unsupported evidence must either exclude that runner file/platform from claims or block the claim set.
 
 ## Generated Payload Evidence
 
@@ -449,7 +450,7 @@ Aggregates evidence at a release boundary.
 | `source_revision` | Yes | Source revision covered by the evidence. |
 | `owner_surface` | Yes | XPLAT-004, XPLAT-007, release automation, docs, or release-note owner. |
 | `control_results` | Yes | Control decision IDs and pass/fail/exception status. |
-| `artifact_claim_readiness_refs` | Conditional | Required when release readiness includes platform or artifact claims. |
+| `runner_file_claim_readiness_refs` | Conditional | Required when release readiness includes platform or runner file claims. |
 | `consumer_verification_status` | Yes | Whether guidance and metadata are current. |
 | `public_claim_audit_status` | Yes | Whether wording has passed claim-boundary review. |
 | `public_claim_audit_refs` | Conditional | Required when public wording or release notes make supply-chain or native-runner claims. |
@@ -468,17 +469,21 @@ Validation rules:
 
 - A `Security Control Decision` has one `Owner Assignment`.
 - A first-release runner artifact requires `Pinned Release Input Evidence`.
-- A first-release checksum control requires one `Runner Artifact Manifest` and one or more `Checksum Entry` records.
+- A first-release checksum control requires one runner source manifest and one
+  or more `Checksum Entry` records when checksum metadata is required.
 - `Runtime Integrity Evidence` references the manifest and checksum file.
 - `Consumer Verification Guidance` references runtime integrity evidence, checksum metadata, and XPLAT-007 native UAT evidence.
-- `Artifact Claim Readiness` references the manifest, checksum entry, runtime integrity evidence, generated payload evidence, scan evidence, native UAT evidence, release automation evidence, and public claim audit evidence for one artifact/platform.
+- `Runner File Claim Readiness` references the manifest, checksum entry,
+  runtime integrity evidence, generated payload evidence, scan evidence, native
+  UAT evidence, release automation evidence, and public claim audit evidence for
+  one runner file/platform.
 - `Generated Payload Evidence` references generated roots and checksum/manifest paths.
-- `Binary Distribution Evidence` references pinned release inputs, generated
-  payload evidence, install completeness evidence, artifact manifest, and
-  checksum entries.
+- `Distribution Evidence` references pinned release inputs, generated payload
+  evidence, install completeness evidence, runner source manifest, and checksum
+  entries where required.
 - `Vulnerability Scan Evidence` may include zero or more `Vulnerability Exception Record` records.
-- `Public Claim Boundary` consumes artifact claim readiness and release-readiness evidence before wording is allowed.
-- `Release-Readiness Evidence` aggregates all first-release control results and artifact/platform claim readiness records.
+- `Public Claim Boundary` consumes runner file claim readiness and release-readiness evidence before wording is allowed.
+- `Release-Readiness Evidence` aggregates all first-release control results and runner-file/platform claim readiness records.
 
 ## State Transitions
 

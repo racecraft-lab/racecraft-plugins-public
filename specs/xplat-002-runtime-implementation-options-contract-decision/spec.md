@@ -138,9 +138,10 @@ spec responsibility.
 ### Session 2: Command Contract Envelope
 
 - The canonical runner entrypoint is `speckit-pro-runner`, resolved relative to
-  the installed plugin payload. If XPLAT-004 names a concrete path before
-  creating any new convention, the default payload-relative path is
-  `scripts/speckit-pro-runner`.
+  the installed plugin payload. The amended Python runner source path is
+  `scripts/speckit_pro_runner.py`; XPLAT-004 may add a thin dispatch-only
+  payload-relative launcher such as `scripts/speckit-pro-runner` if the product
+  surfaces need a stable command target.
 - Helper execution reads one versioned JSON request from stdin. The request
   includes `schema_version`, `request_id`, `helper_id`, `operation`, `mode`, and
   `inputs`. CLI arguments are limited to metadata/help behavior such as
@@ -268,9 +269,9 @@ spec responsibility.
   do not produce a winner, the decision record MUST mark the item unresolved
   rather than hiding the tie in narrative rationale.
 - **FR-009**: The command contract MUST define the canonical entrypoint as
-  `speckit-pro-runner`, plugin-cache-relative by default, with a
-  payload-relative default path of `scripts/speckit-pro-runner` unless XPLAT-004
-  deliberately creates a new `bin/` convention.
+  `speckit-pro-runner`, plugin-cache-relative by default, with Python runner
+  source at `scripts/speckit_pro_runner.py` and any thin dispatch-only launcher
+  convention deferred to XPLAT-004.
 - **FR-010**: The command contract MUST require structured JSON input through
   standard input using a versioned envelope with `schema_version`, `request_id`,
   `helper_id`, `operation`, `mode`, and `inputs`.

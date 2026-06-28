@@ -1,11 +1,13 @@
 # Handoff: XPLAT-002
 
-Status: In Review (PR #266 pending merge); ready for downstream specs after merge
-Selected runtime: Go native executable packaged as small per-platform binaries
+Status: Amended 2026-06-28; ready for downstream specs after PR #267 update
+Selected runtime: Python standard-library runner aligned with official Spec Kit
+/ `specify` prerequisites
 
 ## What Changed
 
-- Added `runtime-decision.md` with the selected runtime and rejected options.
+- Amended `runtime-decision.md` so Python is selected and the previous Go
+  native-binary choice is a fallback, not the first-release default.
 - Added evidence records for JavaScript/TypeScript, Python, and small
   per-platform binary candidates.
 - Updated the `speckit-pro-runner` contract with the selected runtime.
@@ -13,10 +15,16 @@ Selected runtime: Go native executable packaged as small per-platform binaries
 
 ## Why
 
-XPLAT-004 needs one runtime and command contract. The selected Go native binary
-model best satisfies the no-post-cache-install constraint: users should not need
-Node, Python, Bash, `jq`, package restoration, or network setup after the plugin
-cache is populated.
+XPLAT-004 needs one runtime and command contract. The amended Python model best
+fits the user journey because SpecKit-Pro may require the official Spec Kit /
+`specify` prerequisite boundary, and official Spec Kit requires Python 3.11+.
+That lets SpecKit-Pro avoid a second user-facing implementation toolchain and
+avoid per-platform Go/Rust/Zig binary distribution for the first release.
+
+The selected model still preserves the no-post-cache-install constraint for
+plugin-only dependencies: users should not need Node, Bash, `jq`, Go, Rust, Zig,
+`pip install`, virtualenv restoration, package restoration, or network setup
+after the plugin cache is populated.
 
 ## Non-Goals
 
@@ -32,24 +40,24 @@ cache is populated.
 
 | Field | JavaScript/TypeScript | Python | Go native binary |
 |---|---|---|---|
-| Decision status | Rejected | Rejected | Selected |
-| Dependency footprint | Requires user-side Node unless Node is bundled. | Requires user-side Python unless Python is embedded. | No user-side runtime dependency after artifact build. |
-| Bootstrap footprint | Source JS would require `npm install`, restored `node_modules`, or a bundled runtime; post-cache setup is out of bounds. | Source Python would require `pip install`, virtualenv restoration, or an embedded runtime; post-cache setup is out of bounds. | Build environment installs Go only before release; installed users receive platform artifacts. |
-| Manifest/lockfile behavior | Would require package manifest and lockfile policy if dependencies or bundled Node are introduced. | Would require package manifest, lockfile, wheel, or virtualenv policy if dependencies or embedded Python are introduced. | Go module and release lock policy belong to XPLAT-003/XPLAT-004 once source exists. |
-| Generated artifact types | JS files, `node_modules`, bundled Node, or SEA/native artifact. | Python source, wheels, virtualenv, or embedded runtime/native bundle. | Per-platform executable plus runtime-info/preflight metadata. |
-| Artifact assumption type/status | External package manager or embedded runtime: unverified for installed-cache users. | External package manager or embedded runtime: unverified for installed-cache users. | Native binary: selected model, but artifact integrity controls are unverified until XPLAT-003. |
-| Artifact origin evidence | Node local probe and official docs show runtime behavior; plugin platform docs do not guarantee Node in installed cache. | Python local probe and official docs show runtime behavior; plugin platform docs do not guarantee Python in installed cache. | Go official docs support static/native build model; local `go` toolchain is unavailable, so build evidence is deferred. |
-| Build/release path | XPLAT-003 would need to decide whether to vendor dependencies, bundle Node, or forbid this path. | XPLAT-003 would need to decide whether to embed Python, vendor wheels, or forbid this path. | XPLAT-003 chooses controls; XPLAT-004 builds the runner; XPLAT-007 validates generated payload cutover. |
-| Vulnerability-scan path | npm package and bundled-runtime scanning would be required if revived. | Python package, wheel, and embedded-runtime scanning would be required if revived. | Go module scan plus native artifact/release scan path required before public cutover. |
-| Checksum/signature/SBOM/provenance feasibility | Feasible but expands artifact surface to packages and possible runtime bundle. | Feasible but expands artifact surface to packages and possible embedded interpreter. | Feasible and required for release controls, but not selected in XPLAT-002. |
-| Consumer-local verification ideas | Runtime-info would need to report Node version/path and package availability. | Runtime-info would need to report Python version/path and package availability. | Runtime-info/preflight reports runner version, platform, architecture, plugin root, capabilities, and prerequisite state. |
-| Offline/update implications | Offline users cannot rely on package restoration after cache population. | Offline users cannot rely on package restoration after cache population. | Offline users can run packaged artifacts; updates must replace signed/checksummed binaries. |
-| Distribution trust root | Marketplace payload plus package/runtime supply chain if revived. | Marketplace payload plus package/runtime supply chain if revived. | Marketplace payload plus release-built native artifacts and their integrity metadata. |
-| Transitive/build-time/native dependencies | npm package graph or bundled Node runtime; native npm modules possible. | Python package graph, wheels, or embedded interpreter; native wheels possible. | Go toolchain, modules, OS/arch cross-build inputs, and native artifact packaging. |
-| Build environment inputs | Node toolchain, package manager, lockfile, bundler or SEA/native build if revived. | Python toolchain, package manager, lockfile, wheel/embedding tooling if revived. | Go toolchain, platform matrix, signing/checksum/SBOM/provenance tooling. |
-| Runtime/install execution risk | Fails installed-cache gate unless runtime is bundled or guaranteed. | Fails installed-cache gate unless runtime is embedded or guaranteed. | Runtime model viable for no user-side runtime dependency; actual installed-cache invocation and artifact availability remain XPLAT-004/XPLAT-007 proof. |
-| Maintenance posture | Higher churn from package/runtime dependency management if revived. | Higher churn from Python version/package/runtime embedding management if revived. | Smaller runtime surface but requires native release discipline. |
-| Evidence gaps | No installed-cache Node guarantee; no bundled Node decision; no package restoration path. | No installed-cache Python guarantee; no embedded Python decision; no package restoration path. | Local Go unavailable; no built runner exists; platform artifact controls and UAT deferred. |
+| Decision status | Rejected | Selected | Superseded fallback |
+| Dependency footprint | Requires user-side Node unless Node is bundled. | Requires official Spec Kit prerequisite: Python 3.11+ and `specify`; no plugin-only third-party packages. | No user-side runtime dependency after artifact build, but adds maintainer build toolchain. |
+| Bootstrap footprint | Source JS would require `npm install`, restored `node_modules`, or a bundled runtime; post-cache setup is out of bounds. | Uses existing Spec Kit prerequisite; no `pip install`, virtualenv restoration, or embedded runtime allowed after plugin install. | Build environment installs Go before release; installed users receive platform artifacts. |
+| Manifest/lockfile behavior | Would require package manifest and lockfile policy if dependencies or bundled Node are introduced. | Python source integrity and stdlib-only policy required; no package lockfile unless plugin-only dependencies are introduced later. | Go module and release lock policy required if revived. |
+| Generated artifact types | JS files, `node_modules`, bundled Node, or SEA/native artifact. | Python source runner plus optional thin launcher metadata. | Per-platform executable plus runtime-info/preflight metadata. |
+| Artifact assumption type/status | External package manager or embedded runtime: unverified for installed-cache users. | Product prerequisite: verified by doctor/preflight before workflow execution. | Native binary fallback; artifact integrity controls required if revived. |
+| Artifact origin evidence | Node local probe and official docs show runtime behavior; plugin platform docs do not guarantee Node in installed cache. | Python local probe plus official Spec Kit prerequisite boundary; XPLAT-004 must prove installed-cache launch. | Go official docs support static/native build model; local `go` toolchain is unavailable. |
+| Build/release path | XPLAT-003 would need to decide whether to vendor dependencies, bundle Node, or forbid this path. | XPLAT-003 chooses Python source integrity and prerequisite verification controls; XPLAT-004 builds the runner. | XPLAT-003/XPLAT-004 must choose native artifact controls if revived. |
+| Vulnerability-scan path | npm package and bundled-runtime scanning would be required if revived. | Python source/static scan and stdlib-only verification; dependency scanning remains small unless packages are added. | Go module scan plus native artifact/release scan path required if revived. |
+| Checksum/signature/SBOM/provenance feasibility | Feasible but expands artifact surface to packages and possible runtime bundle. | Feasible for source payloads and generated manifests; no native artifact matrix for first release. | Feasible but heavier because each platform artifact needs verification. |
+| Consumer-local verification ideas | Runtime-info would need to report Node version/path and package availability. | Runtime-info/preflight reports Python path/version, `specify` path/version, platform, plugin root, capabilities, and prerequisite state. | Runtime-info/preflight reports runner version, platform, architecture, plugin root, capabilities, and artifact state. |
+| Offline/update implications | Offline users cannot rely on package restoration after cache population. | Offline users can run if official Spec Kit prerequisites are already installed; updates replace Python source payloads. | Offline users can run packaged artifacts; updates must replace signed/checksummed binaries. |
+| Distribution trust root | Marketplace payload plus package/runtime supply chain if revived. | Marketplace payload plus official Spec Kit prerequisite and Python source integrity. | Marketplace payload plus release-built native artifacts and integrity metadata. |
+| Transitive/build-time/native dependencies | npm package graph or bundled Node runtime; native npm modules possible. | No plugin-only Python dependency graph for first release. | Go toolchain, modules, OS/arch cross-build inputs, and native artifact packaging. |
+| Build environment inputs | Node toolchain, package manager, lockfile, bundler or SEA/native build if revived. | Python syntax/test/lint tooling and release manifest generation. | Go toolchain, platform matrix, signing/checksum/SBOM/provenance tooling. |
+| Runtime/install execution risk | Fails installed-cache gate unless runtime is bundled or guaranteed. | Must preflight Python 3.11+ and `specify`; unsupported installs fail closed with remediation. | Runtime model viable but generated artifact availability remains XPLAT-004/XPLAT-007 proof. |
+| Maintenance posture | Higher churn from package/runtime dependency management if revived. | Best first-release ergonomics if stdlib-only and prerequisite checks are reliable. | Smaller user runtime surface but requires native release discipline. |
+| Evidence gaps | No installed-cache Node guarantee; no bundled Node decision; no package restoration path. | Windows/macOS/Linux installed-cache launch and exact interpreter discovery must be proven in XPLAT-004. | Local Go unavailable; no built runner exists; platform artifact controls and UAT deferred. |
 
 XPLAT-002 records implications only. XPLAT-003 chooses controls and acceptance
 gates.
@@ -72,7 +80,7 @@ the runner foundation unless a later spec deliberately promotes them.
 |---|---|---|---|---|---|---|---|---|---|---|
 | `xplat-005-compat-read-only-helper-surface` | Read-only Bash/`.sh`/`jq` helper guidance and calls. | `SRC-READ-001` | `read-only-helper` | `invoke` | `read_only` | `xplat-005-read-only-helper` | `XPLAT-005` | `XPLAT-007` | Removed when read-only helper calls use the runner directly and generated payload cutover no longer needs legacy guidance. | XPLAT-001 `SRC-READ-001` plus `speckit-pro-runner` contract sections for dispatch, read-only mode, JSON I/O, paths, subprocess, and diagnostics. |
 | `xplat-006-compat-mutation-helper-surface` | Mutation/install/PR-emission Bash helper guidance and calls. | `SRC-MUT-001` | `mutation-helper` | `invoke` | `mutation` | `xplat-006-mutation-helper` | `XPLAT-006` | `XPLAT-007` | Removed when mutation-capable helpers use the runner directly with rollback-safe fixtures and generated payload cutover no longer needs legacy guidance. | XPLAT-001 `SRC-MUT-001` plus `speckit-pro-runner` contract sections for mutation mode, rollback diagnostics, exit codes, paths, subprocess, and prerequisite records. |
-| `xplat-007-compat-generated-payload-cutover` | Generated payload Bash/`.sh`/`jq` runtime references. | `GEN-ACT-001` | `generated-payload-cutover` | `verify-cutover` | `cutover` | `xplat-007-cutover-guidance` | `XPLAT-007` | `XPLAT-007` | Removed by final native release cutover after generated payloads point at the runner and native UAT passes. | XPLAT-001 `GEN-ACT-001` plus selected Go runner contract, runtime-info/preflight, fixture parity, and generated payload cutover expectations. |
+| `xplat-007-compat-generated-payload-cutover` | Generated payload Bash/`.sh`/`jq` runtime references. | `GEN-ACT-001` | `generated-payload-cutover` | `verify-cutover` | `cutover` | `xplat-007-cutover-guidance` | `XPLAT-007` | `XPLAT-007` | Removed by final native release cutover after generated payloads point at the runner and native UAT passes. | XPLAT-001 `GEN-ACT-001` plus selected Python runner contract, runtime-info/preflight, fixture parity, and generated payload cutover expectations. |
 
 Adapters are migration records only, not a fourth runtime candidate.
 
@@ -103,8 +111,8 @@ diagnostic `code`, and required response fields.
 
 - Installed Claude/Codex `speckit-pro-runner` cache invocation is not run because
   the runner does not exist in XPLAT-002.
-- Go build-tool probing is unavailable on this host because `go` is not
-  installed.
+- Windows Python launcher discovery and installed-cache invocation remain
+  XPLAT-004 proof items.
 - Native Windows/macOS/Linux release-readiness UAT is deferred to XPLAT-007.
 
 ## Rollback / Flags

@@ -8,14 +8,14 @@ Every evaluated control uses this shape in downstream planning or release-readin
 
 ```json
 {
-  "control_id": "sha256-checksums",
+  "control_id": "runner-source-integrity",
   "classification": "first_release_required",
   "owner_surface": "XPLAT-004",
   "source_trace": ["XPLAT-001 supply-chain rubric", "XPLAT-003 FR-004"],
   "evidence_required": ["scripts/speckit-pro-runner.sha256", "scripts/speckit-pro-runner.manifest.json"],
-  "acceptance_gate": "All packaged runner artifacts have matching SHA-256 entries before release readiness passes.",
+  "acceptance_gate": "All packaged runner source and launcher files covered by the integrity claim have matching SHA-256 entries before release readiness passes.",
   "promotion_condition": null,
-  "claim_boundary": "Docs may claim SHA-256 checksum verification only after artifacts, checksum file, manifest, and verification guidance exist."
+  "claim_boundary": "Docs may claim runner source verification only after runner files, checksum file, manifest, and verification guidance exist."
 }
 ```
 
@@ -147,23 +147,20 @@ Claude Code and Codex marketplace payloads:
 
 ```json
 {
-  "runtime_shape": "go-native-artifact",
-  "distribution_mode": "bundled-all-platforms",
+  "runtime_shape": "python-stdlib-runner",
+  "distribution_mode": "bundled-source",
   "source_artifact_paths": [
-    "runner-artifacts/darwin-arm64/speckit-pro-runner",
-    "runner-artifacts/windows-amd64/speckit-pro-runner.exe"
+    "speckit-pro/scripts/speckit_pro_runner.py"
   ],
   "generated_claude_payload_paths": [
-    "dist/claude/speckit-pro/bin/darwin-arm64/speckit-pro-runner",
-    "dist/claude/speckit-pro/bin/windows-amd64/speckit-pro-runner.exe"
+    "dist/claude/speckit-pro/scripts/speckit_pro_runner.py"
   ],
   "generated_codex_payload_paths": [
-    "dist/codex/speckit-pro/bin/darwin-arm64/speckit-pro-runner",
-    "dist/codex/speckit-pro/bin/windows-amd64/speckit-pro-runner.exe"
+    "dist/codex/speckit-pro/scripts/speckit_pro_runner.py"
   ],
   "launcher_surface": {
-    "claude-code": "plugin bin executable",
-    "openai-codex": "skill script or plugin-bundled MCP command"
+    "claude-code": "skill or hook dispatches through discovered Python interpreter",
+    "openai-codex": "skill script or hook dispatches through discovered Python interpreter"
   },
   "post_install_download_required": false,
   "executable_permission_policy": "Unix artifacts are executable after payload build/install; Windows artifacts use .exe paths.",
@@ -200,25 +197,28 @@ Contract rules:
 
 ## Pinned Release Input Evidence Contract
 
-If Go is explicitly re-approved, XPLAT-004 must record this evidence before
-accepting runner foundation artifacts:
+For the selected Python runner, XPLAT-004 must record this evidence before
+accepting the runner foundation:
 
 ```json
 {
-  "runtime_shape": "go-native-artifact",
-  "toolchain_name": "go",
-  "toolchain_version": "go1.0.0",
-  "toolchain_source": "pinned toolchain source",
-  "go_toolchain_version": "go1.0.0",
-  "go_toolchain_source": "pinned toolchain source",
-  "module_manifest_path": "go.mod",
-  "dependency_snapshot": "go.sum or equivalent dependency snapshot",
+  "runtime_shape": "python-stdlib-runner",
+  "python_minimum_version": "3.11",
+  "python_discovery_order": ["py -3.11", "python3", "python"],
+  "specify_discovery": {
+    "required": true,
+    "command": "specify",
+    "version_probe": "specify --version"
+  },
+  "dependency_policy": "stdlib-only",
+  "module_manifest_path": null,
+  "dependency_snapshot": "none-stdlib-only",
   "target_os_arch_matrix": ["darwin/arm64", "linux/amd64", "windows/amd64"],
-  "build_command_or_recipe": "repeatable build command or recipe",
+  "build_command_or_recipe": "payload packaging and validation recipe",
   "release_package_inputs": ["payload-relative input path"],
   "source_revision": "git-sha",
-  "artifact_names_and_paths": ["scripts/speckit-pro-runner"],
-  "artifact_sha256_checksums": ["sha256:<64 lowercase hex>"],
+  "runner_source_paths": ["scripts/speckit_pro_runner.py"],
+  "runner_source_integrity": ["sha256:<64 lowercase hex>"],
   "scan_evidence_refs": ["release-readiness scan evidence record"]
 }
 ```
@@ -226,16 +226,18 @@ accepting runner foundation artifacts:
 Contract rules:
 
 - Unknown or unverified fields are evidence gaps, not accepted controls.
-- The record must cover the exact source revision, dependency snapshot, toolchain, build inputs, release inputs, and artifacts it claims to represent.
+- The record must cover the exact source revision, prerequisite boundary,
+  dependency policy, release inputs, and runner files it claims to represent.
 - The record does not implement or imply reproducible builds, SBOMs, signatures, provenance, formal audit, marketplace-enforced verification, or native support claims.
-- `go_toolchain_version` and `go_toolchain_source` are Go-only fields. If the
-  runtime decision is amended to Rust, Zig, bundled Node, embedded Python, or
-  another runtime shape, regenerate this contract for that toolchain instead of
-  preserving stale Go-specific evidence.
+- If the runtime decision changes to Go, Rust, Zig, bundled Node, embedded
+  Python, or another runtime shape, regenerate this contract for that runtime
+  instead of preserving stale Python-specific evidence.
 
 ## Checksum File Contract
 
-First-release runner artifacts must have one payload-relative checksum file:
+First-release runner source and launcher files may use one payload-relative
+checksum file when XPLAT-004/XPLAT-007 choose checksum metadata for source
+payload integrity:
 
 ```text
 scripts/speckit-pro-runner.sha256
@@ -250,14 +252,15 @@ Line format:
 Example:
 
 ```text
-0000000000000000000000000000000000000000000000000000000000000000  scripts/speckit-pro-runner
+0000000000000000000000000000000000000000000000000000000000000000  scripts/speckit_pro_runner.py
 ```
 
 Contract rules:
 
 - Use SHA-256 for first release.
-- Include every packaged runner artifact.
-- Use payload-relative artifact paths.
+- Include every packaged runner source or launcher file covered by the source
+  integrity claim.
+- Use payload-relative paths.
 - Do not use absolute source-checkout paths.
 - Do not imply signing, provenance, or trust-chain verification.
 - A computed checksum that does not match the corresponding entry is a closed verification failure for that artifact and blocks any claim that depends on it until fresh evidence re-accepts the artifact.
@@ -306,7 +309,8 @@ Contract rules:
 
 ## Runtime-Info and Preflight Contract Additions
 
-XPLAT-002 already defines runtime-info/preflight. XPLAT-003 requires artifact-integrity pointers in that evidence when the runner is packaged.
+XPLAT-002 already defines runtime-info/preflight. XPLAT-003 requires runner
+source-integrity pointers in that evidence when the runner is packaged.
 
 Required additional fields:
 
@@ -315,9 +319,9 @@ Required additional fields:
   "runtime": {
     "executable_path": {
       "kind": "plugin_relative",
-      "value": "scripts/speckit-pro-runner"
+      "value": "scripts/speckit_pro_runner.py"
     },
-    "artifact_id": "speckit-pro-runner-darwin-arm64",
+    "runner_file_id": "speckit-pro-runner-python-source",
     "artifact_manifest_path": {
       "kind": "plugin_relative",
       "value": "scripts/speckit-pro-runner.manifest.json"
@@ -414,7 +418,7 @@ Release automation controls are assigned but not implemented by XPLAT-003. Any p
   "control_id": "publication-time-checksum-verification",
   "implementing_surface": "XPLAT-007 or later release automation spec",
   "publication_gate_location": ".github/workflows/release.yml or release-readiness artifact",
-  "release_inputs": ["runner artifact manifest", "checksum file", "source-to-dist evidence"],
+  "release_inputs": ["runner source manifest", "checksum file", "source-to-dist evidence"],
   "generated_outputs": ["release readiness summary"],
   "latest_pass_fail_evidence": "pass evidence with timestamp or release boundary",
   "claim_dependency_mapping": [
@@ -543,16 +547,16 @@ Contract rules:
 - Consumer-facing mismatch remediation must tell users not to rely on the artifact, must identify the facts to record/report, and must not ask consumers to repair the artifact through source checkout, package restoration, network fetches, Bash, `jq`, or runner self-verification alone.
 - Command shapes are downstream guidance requirements, not current public native-support claims.
 
-## Artifact Claim Readiness Contract
+## Runner File Claim Readiness Contract
 
-XPLAT-007 must evaluate public cutover and release claims per claimed artifact
-and platform:
+XPLAT-007 must evaluate public cutover and release claims per claimed runner
+file and platform:
 
 ```json
 {
-  "artifact_id": "speckit-pro-runner-windows-amd64",
+  "runner_file_id": "speckit-pro-runner-python-source",
   "target_platform": "windows/amd64",
-  "payload_path": "scripts/speckit-pro-runner.exe",
+  "payload_path": "scripts/speckit_pro_runner.py",
   "claim_status": "blocked",
   "publication_status": "unpublished",
   "required_evidence_status": {
@@ -566,17 +570,17 @@ and platform:
     "release_automation": "assigned_not_implemented",
     "public_claim_audit": "blocked"
   },
-  "blockers": ["checksum missing", "native UAT missing"],
+  "blockers": ["source integrity missing", "native UAT missing"],
   "owner_surface": "XPLAT-007",
-  "follow_up": "Exclude this artifact/platform from public claims or keep the claim set blocked."
+  "follow_up": "Exclude this runner file/platform from public claims or keep the claim set blocked."
 }
 ```
 
 Contract rules:
 
-- A public claim is valid only when every artifact/platform in the claim set is `claimable`.
-- A missing, stale, mismatched, unpublished, or unsupported claimed artifact blocks the claim set unless that artifact/platform is explicitly excluded or deferred.
-- One claimable artifact/platform does not imply native support for any other platform.
+- A public claim is valid only when every runner file/platform in the claim set is `claimable`.
+- A missing, stale, mismatched, unpublished, or unsupported claimed runner file blocks the claim set unless that runner file/platform is explicitly excluded or deferred.
+- One claimable runner file/platform does not imply native support for any other platform.
 - Unclaimed or deferred platforms must be recorded as `not_claimable`, `deferred`, `excluded`, or `blocked`, not silently omitted from the claim audit.
 
 ## Release-Readiness and Public-Claim Audit Retention Contract
@@ -587,9 +591,9 @@ or an equivalent release artifact:
 ```json
 {
   "release_boundary": "release-candidate-or-public-release",
-  "control_or_claim_ids": ["sha256-local-verification"],
-  "evidence_refs": ["runner artifact manifest", "checksum file", "source-to-dist evidence"],
-  "artifact_claim_readiness_refs": ["speckit-pro-runner-windows-amd64"],
+  "control_or_claim_ids": ["runner-source-local-verification"],
+  "evidence_refs": ["runner source manifest", "checksum file", "source-to-dist evidence"],
+  "artifact_claim_readiness_refs": ["speckit-pro-runner-python-source"],
   "status": "blocked",
   "recorded_at": "YYYY-MM-DDTHH:MM:SSZ",
   "source_revision": "git-sha",
@@ -612,15 +616,15 @@ Before public docs or release notes claim a supply-chain control, XPLAT-007 or t
 
 ```json
 {
-  "claim_id": "sha256-local-verification",
+  "claim_id": "runner-source-local-verification",
   "surface": "release-notes",
-  "claim_text_or_pattern": "Consumers can verify packaged runner artifacts with SHA-256 checksums.",
+  "claim_text_or_pattern": "Consumers can verify packaged runner source files with SHA-256 checksums.",
   "classification": "allowed_after_verification",
   "required_evidence": [
-    "runner artifact manifest",
+    "runner source manifest",
     "checksum file",
     "consumer verification guidance",
-    "artifact claim readiness",
+    "runner file claim readiness",
     "current release-readiness evidence"
   ],
   "status": "blocked_until_evidence_exists",
@@ -630,8 +634,8 @@ Before public docs or release notes claim a supply-chain control, XPLAT-007 or t
 
 Contract rules:
 
-- Public claim audit records must reference the retained release-readiness evidence and artifact claim readiness records that make the claim true.
-- Platform or native-support wording is allowed only for artifact/platform records with `claim_status: claimable`.
+- Public claim audit records must reference the retained release-readiness evidence and runner file claim readiness records that make the claim true.
+- Platform or native-support wording is allowed only for runner-file/platform records with `claim_status: claimable`.
 - Claims remain blocked when release-readiness or public-claim audit evidence exists only in expiring logs or unretained generated artifacts.
 
 Claims that remain forbidden until implemented and verified:

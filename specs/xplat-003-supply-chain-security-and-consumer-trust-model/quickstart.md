@@ -22,7 +22,7 @@ Allowed XPLAT-003 decision and process artifacts:
 
 Not allowed in this phase:
 
-- Go runner implementation.
+- Python runner implementation.
 - Rust, Zig, bundled Node, embedded Python, or other alternate runner
   implementation.
 - `speckit-pro-runner` shipped artifacts.
@@ -36,7 +36,13 @@ Not allowed in this phase:
 1. Read `plan.md` for scope, reviewability warning, constitution checks, and downstream owner split.
 2. Read `research.md` for official Claude/Codex platform findings, runtime-reopen implications, and first-release versus deferred control decisions.
 3. Read `data-model.md` for decision entities and validation rules.
-4. Read `contracts/supply-chain-control-contract.md` for platform capability, runtime dependency boundary, install completeness, binary distribution, pinned release inputs, checksum, manifest, preflight, source-to-dist, metadata propagation, release automation acceptance, scan freshness, vulnerability exception, consumer checksum guidance, artifact claim readiness, release-readiness retention, and public claim audit evidence shapes.
+4. Read `contracts/supply-chain-control-contract.md` for platform capability,
+   runtime dependency boundary, install completeness, Python runner
+   distribution, pinned release inputs, checksum/source-integrity metadata,
+   manifest, preflight, source-to-dist, metadata propagation, release automation
+   acceptance, scan freshness, vulnerability exception, consumer verification
+   guidance, runner-file claim readiness, release-readiness retention, and public
+   claim audit evidence shapes.
 5. Confirm `spec.md` still contains no unresolved clarification markers.
 
 ## Static Validation Commands
@@ -76,29 +82,39 @@ Project test suites are N/A for this decision-artifact implementation phase. Do 
 
 ## Decision Checklist
 
-- First-release baseline includes source-to-dist gate, SHA-256 checksums, artifact manifest, vulnerability scan policy, consumer-local verification, strict public claim boundary, and split ownership.
+- First-release baseline includes source-to-dist gate, runner source integrity
+  metadata, runner source manifest, vulnerability scan policy, consumer-local
+  verification, strict public claim boundary, and split ownership.
 - Official Claude Code and OpenAI Codex docs are used only to prove documented
   plugin/skill/hook/MCP/script/executable/custom-agent surfaces, not arbitrary
   user-host runtime availability.
-- The reopened runtime decision explains why XPLAT-002 selected Go and why Go,
-  Rust, Zig, bundled Node, embedded Python, or source-script alternatives must
-  each satisfy the same no-post-cache-install and supply-chain gates before
-  implementation.
+- The amended runtime decision explains why Python is now selected through the
+  official Spec Kit / `specify` prerequisite boundary and why Go, Rust, Zig,
+  bundled Node, embedded Python, or package-restoring alternatives are fallback
+  paths that require regenerated controls before implementation.
 - Claude Code bundled plugin agents and Codex custom-agent TOML registrations
   are treated as distinct install-completeness surfaces.
 - Vulnerability scan evidence has objective freshness and staleness blockers: older than 7 calendar days at readiness review, older than covered source/dependency/toolchain/build/artifact/scanner evidence, or unreapproved across a public release boundary.
-- XPLAT-004 owns runner/source/dependency/artifact/preflight/checksum/manifest/applicable scan controls and selected-runtime pinned release input evidence.
-- XPLAT-004 pinned-input evidence covers the selected build toolchain version/source, dependency manifest and checksum/snapshot state, target OS/architecture matrix, build recipe, release inputs, source revision, artifact paths, checksums, and scan evidence refs. Go-specific fields apply only if Go is re-approved.
+- XPLAT-004 owns Python runner source, stdlib-only dependency policy,
+  interpreter/specify preflight, installed-cache launch proof, generated-payload
+  source-integrity evidence, and applicable scan controls.
+- XPLAT-004 pinned-input evidence covers Python minimum version policy,
+  interpreter discovery order, `specify` discovery/version evidence, source
+  revision, payload source path, generated Claude/Codex payload paths, and scan
+  evidence refs. Go/Rust/Zig fields apply only if a native-artifact fallback is
+  revived.
 - XPLAT-007 owns generated payload integrity, consumer guidance, public claim readiness, native UAT evidence, and cutover.
 - XPLAT-007 source-to-dist evidence must prove checksum and runner manifest metadata is present, equal, and fresh across source paths, generated Claude payload paths, and generated Codex payload paths.
-- XPLAT-007 binary distribution evidence must prove every claimed platform
-  artifact and its metadata are bundled in both generated marketplace payload
-  roots, or record that the claim depends on an explicit download/repair path
-  and cannot be treated as a self-contained install.
+- XPLAT-007 distribution evidence must prove the Python runner source,
+  launcher/preflight metadata, and generated payload metadata are present, equal,
+  fresh, and runnable in both generated marketplace payload roots.
 - Claude Code can rely on its documented plugin `bin/` executable surface, but
   Codex needs a documented Codex launcher surface such as a skill script,
   plugin-bundled hook, or plugin-bundled MCP command.
-- XPLAT-007 consumer checksum guidance must include Windows, macOS, and Linux command shapes and metadata lookup behavior without Bash, `jq`, source checkout, package restoration, post-cache network access, or pre-UAT native support claims.
+- XPLAT-007 consumer verification guidance must include Windows, macOS, and
+  Linux preflight/metadata lookup behavior without Bash, `jq`, source checkout,
+  package restoration, post-cache network access, or pre-UAT native support
+  claims.
 - XPLAT-007 consumer checksum mismatch guidance must fail closed, tell users not to rely on the mismatched artifact, and identify the artifact, platform, preflight/identity output, metadata source, expected checksum, computed checksum, plugin version or release boundary, and reporting path to record.
 - Release-readiness and public-claim audit evidence must retain durable non-sensitive summaries beyond scan output, with release boundary, control/claim IDs, evidence refs, status, timestamp or source revision, owner, known gaps, and approval/status.
 - Public claims must be evaluated per claimed artifact and platform; partial artifact readiness cannot imply broad Windows/macOS/Linux support, and missing/stale/mismatched/unpublished artifacts must be excluded from claims or keep the claim set blocked.
@@ -108,9 +124,10 @@ Project test suites are N/A for this decision-artifact implementation phase. Do 
 ## Residual Risks To Track Downstream
 
 - The runner does not exist yet, so checksum, manifest, preflight, and scan evidence cannot be produced in XPLAT-003.
-- Local Go toolchain probing remains an XPLAT-004 build-environment concern only
-  if Go is re-approved. Rust, Zig, bundled Node, embedded Python, or another
-  amended runtime would need its own build-environment and supply-chain evidence.
+- Windows Python launcher discovery and installed-cache invocation remain
+  XPLAT-004 proof items. Go, Rust, Zig, bundled Node, embedded Python, or another
+  amended runtime would need its own build-environment and supply-chain evidence
+  if revived.
 - Official platform docs may change; XPLAT-004/XPLAT-007 should refresh
   Claude/Codex platform capability evidence before public runtime or install
   completeness claims.

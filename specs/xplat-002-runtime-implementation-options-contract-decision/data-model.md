@@ -150,7 +150,9 @@ Represents the selected runner command interface.
 **Fields**:
 
 - `entrypoint`: `speckit-pro-runner`.
-- `default_payload_relative_path`: `scripts/speckit-pro-runner`.
+- `runner_source_path`: `scripts/speckit_pro_runner.py`.
+- `optional_launcher_path`: `scripts/speckit-pro-runner`, only if XPLAT-004
+  needs a thin dispatch-only launcher.
 - `schema_version`: contract schema version.
 - `request_envelope`: `Runner Request`.
 - `response_envelope`: `Runner Response`.

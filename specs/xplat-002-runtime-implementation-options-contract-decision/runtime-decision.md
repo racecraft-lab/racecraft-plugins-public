@@ -1,13 +1,23 @@
 # Runtime Decision: XPLAT-002
 
-Status: In Review (PR #266 pending merge); runtime model selected
-Date: 2026-06-26
+Status: Amended 2026-06-28; runtime model selected
+Date: 2026-06-26; amended 2026-06-28
 
 ## Decision
 
-Select a small per-platform native binary runner implemented in Go with the Go
-standard library. The canonical command contract is `speckit-pro-runner`,
-resolved from the installed plugin payload at `scripts/speckit-pro-runner`.
+Select a Python standard-library runner aligned with the official Spec Kit /
+`specify` prerequisite boundary. SpecKit-Pro may require a healthy official
+Spec Kit installation, including Python 3.11+ and a working `specify` command,
+because those are user prerequisites for the product. The runner must not
+require Bash, Git Bash, WSL, `jq`, PowerShell scripts, Go, Rust, Zig, Node,
+`pip install`, virtualenv restoration, network package restoration, or
+plugin-only third-party Python packages after the plugin is installed.
+
+The canonical command contract remains `speckit-pro-runner`. XPLAT-004 owns the
+exact launcher shape, but the implementation target is a Python source runner
+using the standard library. Launch may use a discovered Python interpreter,
+`py -3.11`, `python3`, or `python`, as verified by preflight; helper logic must
+live in Python, not in platform shell or PowerShell scripts.
 
 XPLAT-002 does not implement the runner, port helpers, change active installed
 invocation paths, rebuild generated payloads, or make public native-platform
@@ -33,6 +43,24 @@ support claims.
 - No README, docs-site, marketplace metadata, changelog, release-note, or
   public native-support claim is changed.
 - XPLAT-003 receives supply-chain implications only; no controls are selected.
+
+## Amendment Rationale
+
+The original 2026-06-26 decision selected Go because Python was evaluated only
+against what Claude Code and Codex plugin platforms guarantee by themselves.
+That was too narrow for SpecKit-Pro. SpecKit-Pro is an extension of official
+Spec Kit workflows, and a working `specify` CLI is a product prerequisite. The
+official Spec Kit prerequisite boundary gives XPLAT a documented Python 3.11+
+floor that users already accept before using SpecKit-Pro.
+
+This changes the least surprising user journey: users install Spec Kit once,
+then SpecKit-Pro reuses that Python/specify environment instead of shipping
+extra per-platform binaries or asking users to understand Go/Rust/Zig artifact
+distribution.
+
+The original Go-native evidence remains useful as a fallback if Python
+preflight proves unreliable on installed Windows/macOS/Linux plugin caches, but
+it is no longer the active first-release runtime decision.
 
 ## Rubric
 
@@ -60,19 +88,19 @@ surfaces (`docs/process`, `harness/adapter`), no blockers, one decision spike.
 | Candidate | Gate result | Weighted score | Decision |
 |---|---:|---:|---|
 | JavaScript/TypeScript on Node.js | Fails selected-runtime gate unless Node or a bundled Node executable is guaranteed in the installed payload. | 68/100 | Rejected |
-| Python | Fails selected-runtime gate unless Python or a bundled Python runtime is guaranteed in the installed payload. | 48/100 | Rejected |
-| Small per-platform native binary implemented in Go | Runtime model is viable because the installed payload can ship the executable artifact with no user-side runtime install. Actual cache invocation remains an XPLAT-004 proof item because this spec does not build the runner. | 87/100 | Selected |
+| Python standard-library runner | Runtime model is viable because official Spec Kit / `specify` is a product prerequisite and requires Python 3.11+. Actual cache invocation remains an XPLAT-004 proof item because this spec does not build the runner. | 82/100 | Selected |
+| Small per-platform native binary implemented in Go | Runtime model remains viable, but it is superseded because it creates a second implementation toolchain and artifact-distribution burden that the official Spec Kit Python prerequisite can avoid. | 74/100 | Superseded fallback |
 
 ## Gate Results
 
 | Gate | JavaScript/TypeScript | Python | Go native binary |
 |---|---|---|---|
-| Installed-cache invocation | Fail for source JS/TS: local Node exists, but plugin platform docs and manifests do not guarantee Node on every user host; cache probe cannot run because no runner exists. | Fail: local Python exists, but Python is not guaranteed by the plugin platforms; cache probe cannot run because no runner exists. | Runtime model viable: packaged executable needs no post-cache runtime install; actual installed-cache runner probe deferred to XPLAT-004 and not counted as passed in XPLAT-002. |
-| Native platform behavior | Pass for Node runtime family, but selected package would still depend on Node availability or become a binary bundle. | Gap/fail for installed plugin default because Python availability varies by host and Windows install state. | Pass for per-platform native artifacts when XPLAT-004 builds the declared platform matrix. |
+| Installed-cache invocation | Fail for source JS/TS: local Node exists, but plugin platform docs and manifests do not guarantee Node on every user host; cache probe cannot run because no runner exists. | Viable with prerequisite preflight: official Spec Kit / `specify` is a product prerequisite and requires Python 3.11+, but actual installed-cache runner proof remains deferred to XPLAT-004. | Runtime model viable but superseded: packaged executable needs no post-cache runtime install, but adds release artifact complexity. |
+| Native platform behavior | Pass for Node runtime family, but selected package would still depend on Node availability or become a binary bundle. | Pass with preflight: Python standard-library path, JSON, and subprocess APIs cover Windows, macOS, and Linux; XPLAT-004 must verify Windows launcher discovery. | Pass for per-platform native artifacts when XPLAT-004 builds the declared platform matrix. |
 | Filesystem and paths | Pass: Node `path` APIs and local probe handled spaces and Windows basename parsing. | Pass: Python `pathlib`/`ntpath` and local probe handled spaces and Windows basename parsing. | Pass: Go `path/filepath` is standard-library path handling for native OS paths. |
 | JSON handling | Pass: `JSON.parse`/`JSON.stringify`; local probe emitted JSON stdout. | Pass: Python `json`; local probe emitted JSON stdout. | Pass: Go `encoding/json` is standard library. |
 | Subprocess behavior | Pass: `child_process.spawnSync` with `shell:false`; local probe separated stdout/stderr. | Pass: `subprocess.run(..., shell=False)`; local probe separated stdout/stderr. | Pass: Go `os/exec` uses argv-style execution; XPLAT-004 must fixture nonzero, timeout, and missing-command cases. |
-| Packaging/update path | Gap/fail for source JS/TS because `node_modules`, `npm install`, or bundled Node would add post-cache setup or binary supply-chain work. | Fail/gap because `pip install`, virtualenv, or embedded Python would add setup or binary supply-chain work. | Runtime model viable: generated payload can carry platform artifacts; XPLAT-003 must decide checksums, SBOM, provenance, and vulnerability controls. |
+| Packaging/update path | Gap/fail for source JS/TS because `node_modules`, `npm install`, or bundled Node would add post-cache setup or binary supply-chain work. | Pass if stdlib-only: generated payload carries Python source; user prerequisite supplies Python/specify; no plugin runtime package restoration is allowed. | Runtime model viable but heavier: generated payload can carry platform artifacts; XPLAT-003 controls are required for checksums, SBOM, provenance, and vulnerability scanning. |
 
 ## Tie-Breaker
 
@@ -81,11 +109,11 @@ failure and weighted totals differ by five points or less, or when the lead is
 only maintainer ergonomics or adapter cost while reliability ties or favors
 another option.
 
-No tie-breaker is needed. JavaScript/TypeScript and Python both have
-selection-blocking installed-cache/runtime-availability failures for a source
-runtime package. The Go native binary candidate leads by more than five points
-and is the only option whose runtime model satisfies the no-post-cache-install
-constraint.
+No tie-breaker is needed after the amendment. Python no longer has a
+selection-blocking runtime-availability failure because SpecKit-Pro can require
+the official Spec Kit / `specify` prerequisite boundary. Go remains viable but
+loses on user-journey simplicity, maintainer ergonomics, and artifact
+distribution burden.
 
 ## Rejections
 
@@ -97,32 +125,40 @@ embedded runtime and supply-chain burden. Local Node behavior remains useful
 for tests, generators, and possible build tooling, not as the installed runner
 runtime.
 
-Python is rejected because it has the same installed-cache runtime issue with a
-weaker default host guarantee. A source Python runner would require Python on
-PATH, `pip`/virtualenv assumptions, or an embedded runtime. Those assumptions
-are not acceptable for installed plugin first-run reliability.
+Python package restoration remains rejected. The selected model is not
+`pip install`, virtualenv restoration, embedded Python, or a plugin-only Python
+dependency graph. It is a Python standard-library runner launched through the
+official Spec Kit prerequisite boundary and verified by preflight.
+
+Go is superseded as the first-release runtime because it requires a new
+maintainer build toolchain, per-platform artifact matrix, and consumer-local
+artifact verification story that can be avoided if the Python/specify
+prerequisite is reliable. Go remains the fallback if XPLAT-004 proves that
+Python launch cannot be made reliable from installed Claude/Codex caches.
 
 ## Evidence Gaps
 
 | Gap | Effect | Owner / expiry |
 |---|---|---|
-| No actual `scripts/speckit-pro-runner` exists in the local Claude cache at `~/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/2.16.0/`. | Actual Claude installed-cache invocation cannot be marked as a probe pass in XPLAT-002. | XPLAT-004 must add the runner artifact and run the cache invocation probe before implementation acceptance. |
-| No actual `scripts/speckit-pro-runner` exists in the local Codex cache at `~/.codex/plugins/cache/racecraft-plugins-public/speckit-pro/2.16.0/`. | Actual Codex installed-cache invocation cannot be marked as a probe pass in XPLAT-002. | XPLAT-004 must add the runner artifact and run the cache invocation probe before implementation acceptance. |
-| Go toolchain is not installed on this host (`go version` failed with command not found). | Local Go build-tool probing is unavailable; this does not affect post-cache runtime because users will receive a built executable. | XPLAT-004 build environment must install/pin Go after XPLAT-003 chooses controls. |
+| No actual Python runner source or launcher exists in the local Claude cache at `~/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/2.16.0/`. | Actual Claude installed-cache invocation cannot be marked as a probe pass in XPLAT-002. | XPLAT-004 must add the runner source/launcher and run the cache invocation probe before implementation acceptance. |
+| No actual Python runner source or launcher exists in the local Codex cache at `~/.codex/plugins/cache/racecraft-plugins-public/speckit-pro/2.16.0/`. | Actual Codex installed-cache invocation cannot be marked as a probe pass in XPLAT-002. | XPLAT-004 must add the runner source/launcher and run the cache invocation probe before implementation acceptance. |
+| Windows Python launcher and installed-cache invocation are not yet proven. | Python is selected by prerequisite boundary, but actual Claude/Codex installed-cache runner launch still needs platform proof. | XPLAT-004 must implement preflight discovery and prove `py -3.11`, `python3`, or `python` launch from installed caches on Windows, macOS, and Linux. |
 
-No documentation/probe conflicts were found. The only conflicts are scope
-boundaries: local runtime availability proves this host can run Node/Python, but
-does not prove every installed plugin host can run Node/Python after cache
-population.
+No documentation/probe conflicts remain for the selected model. Local Python
+availability alone was not enough evidence, but the official Spec Kit
+prerequisite boundary changes Python from an incidental host runtime into an
+explicit product prerequisite that XPLAT-004 must preflight.
 
 ## Downstream Handoff
 
-- XPLAT-003: decide first-release and deferred controls for native executable
-  artifacts, including checksums, signatures, SBOM/provenance, vulnerability
-  scanning, generated-payload integrity, and consumer-local verification.
-- XPLAT-004: build `scripts/speckit-pro-runner` as Go native artifacts for the
-  supported platform matrix, implement the JSON/stderr/exit/path/subprocess
-  contract, and prove installed Claude/Codex cache invocation.
+- XPLAT-003: decide first-release and deferred controls for a Python
+  standard-library runner, including source integrity, generated-payload
+  integrity, prerequisite diagnostics, consumer-local verification, and truthful
+  public claims.
+- XPLAT-004: build the Python runner and launcher/preflight path, implement the
+  JSON/stderr/exit/path/subprocess contract, verify Python 3.11+ and `specify`,
+  avoid PowerShell/Bash helper logic, and prove installed Claude/Codex cache
+  invocation on Windows, macOS, and Linux.
 - XPLAT-005: port read-only/advisory helpers after the runner foundation exists.
 - XPLAT-006: port mutation, install, apply, PR-emission, and rollback-safe
   helpers after the runner foundation exists.

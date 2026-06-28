@@ -108,7 +108,8 @@ replacement is necessary but not sufficient.
 
 - A new user can install the latest tagged SpecKit Pro release for Claude Code,
   Codex, or both without installing Bash, Git Bash, WSL, PowerShell-specific
-  shims, `jq`, Go, Rust, Zig, or another implementation runtime.
+  shims, `jq`, Go, Rust, Zig, or another implementation runtime beyond official
+  Spec Kit / `specify` prerequisites.
 - Claude Code and Codex installs contain 100 percent of expected skills,
   bundled agents, hooks, generated payload files, runner artifacts, manifest
   entries, and local verification metadata.
@@ -162,7 +163,7 @@ PUBLIC RELEASE UNBLOCKED
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
 | XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
-| XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete | `.process/XPLAT-002-workflow.md` | Runtime decision: `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md` |
+| XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete | `.process/XPLAT-002-workflow.md` | Runtime decision amended 2026-06-28 to Python stdlib runner aligned with official Spec Kit prerequisites |
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete | `.process/XPLAT-003-workflow.md` | Decision artifacts and platform user journey supplement complete; first-release controls and downstream ownership recorded |
 | XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-003 security model |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
@@ -408,14 +409,16 @@ starts landing here.
 
 **Scope:**
 
-- Add the selected runtime's source layout under `speckit-pro/` with one stable
-  plugin entrypoint for helper execution.
+- Add the selected Python runner source layout under `speckit-pro/` with one
+  stable plugin entrypoint for helper execution.
 - Implement shared modules for path handling, JSON envelope construction,
   process execution without a shell, filesystem reads/writes, and platform
   detection.
 - Implement a preflight/helper-discovery command that returns runtime,
   platform, executable availability, plugin root, missing prerequisites, and
   runtime version as structured JSON.
+- Verify official Spec Kit prerequisites: Python 3.11+ and a working `specify`
+  command. The runner must fail closed with remediation when either is missing.
 - Add a parity harness that can run old Bash helpers and new runner helpers over
   fixtures while Bash still exists.
 - Implement the XPLAT-003 first-release controls that apply to runtime source,
@@ -441,7 +444,9 @@ starts landing here.
 
 **Done When:**
 
-- The runner executes on native Windows, macOS, and Linux.
+- The Python runner executes on native Windows, macOS, and Linux from installed
+  Claude and Codex plugin caches without Bash, PowerShell helper scripts, `jq`,
+  or plugin-only package restoration.
 - The parity harness can compare old/new helper output deterministically.
 - First-release supply-chain controls assigned to the runner are in place.
 - No active skill has been switched yet; this spec only creates the safe runway.

@@ -54,7 +54,8 @@ has been removed from individual helper scripts.
    product surface.
 3. The user runs the first documented workflow, including scaffold/status and an
    autopilot dry-run, without installing Bash, Git Bash, WSL, PowerShell-specific
-   shims, `jq`, Go, Rust, Zig, or any other implementation runtime.
+   shims, `jq`, Go, Rust, Zig, or any implementation runtime beyond official
+   Spec Kit / `specify` prerequisites.
 4. If the local install is stale or incomplete, scaffold/status/autopilot run a
    shared doctor/preflight check, auto-repair safe gaps, and report exact manual
    remediation for unsafe gaps.
@@ -250,8 +251,8 @@ dependencies or publishing incomplete Claude/Codex installs.
 
 ## Open Questions
 
-- Which implementation runtime is the best public-release contract: bundled
-  JavaScript/TypeScript, Python, or small per-platform binaries?
+- Can the amended Python standard-library runner contract prove reliable launch
+  from installed Claude and Codex caches on native Windows, macOS, and Linux?
 - Can Claude Code and Codex both reliably invoke the selected runtime from
   installed plugin caches without extra user setup?
 - Which supply-chain controls are required for the first public release, and

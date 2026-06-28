@@ -1,7 +1,7 @@
 # Quickstart: Review XPLAT-002
 
-This guide validates the completed runtime decision spike. It does not run or
-implement `speckit-pro-runner`.
+This guide validates the completed runtime decision spike and the 2026-06-28
+Python amendment. It does not run or implement `speckit-pro-runner`.
 
 ## 1. Review Order
 
@@ -16,17 +16,20 @@ implement `speckit-pro-runner`.
 
 ## 2. Decision Checklist
 
-- Exactly one runtime is selected: Go-backed small per-platform native binary.
+- Exactly one runtime is selected: Python standard-library runner aligned with
+  official Spec Kit / `specify` prerequisites.
 - JavaScript/TypeScript, Python, and small per-platform binary candidates are
   evaluated against the same XPLAT-001 gates and weights.
-- Rejected candidates include gate and score rationale.
+- Rejected or superseded candidates include gate and score rationale.
 - Installed-cache probe gaps are recorded without being counted as probe
   passes.
-- The Go runtime model is selected as viable for no post-cache setup; actual
-  installed Claude/Codex cache invocation proof is deferred to XPLAT-004 because
-  XPLAT-002 does not build `speckit-pro-runner`.
+- The Python runtime model is selected as viable because SpecKit-Pro can require
+  the official Spec Kit / `specify` prerequisite boundary, including Python
+  3.11+. Actual installed Claude/Codex cache invocation proof is deferred to
+  XPLAT-004 because XPLAT-002 does not build `speckit-pro-runner`.
 - Contract still defines `speckit-pro-runner` at
-  `scripts/speckit-pro-runner`.
+  `scripts/speckit_pro_runner.py`, with any thin launcher convention deferred
+  to XPLAT-004.
 - The contract includes JSON stdin/stdout, line-delimited JSON stderr,
   exit-code map, path rules, shell-disabled subprocess rules, prerequisite
   reporting, runtime-info/preflight, and fixture expectations.
@@ -41,9 +44,9 @@ implement `speckit-pro-runner`.
 
 | Gap | Fallback |
 |---|---|
-| Local Claude cache has no `scripts/speckit-pro-runner` because XPLAT-002 cannot implement it. | XPLAT-004 must add the runner artifact and run installed Claude cache invocation. |
-| Local Codex cache has no `scripts/speckit-pro-runner` because XPLAT-002 cannot implement it. | XPLAT-004 must add the runner artifact and run installed Codex cache invocation. |
-| `go version` is unavailable on this host. | XPLAT-004/XPLAT-003 must establish the build environment and controls; users receive built artifacts, not a Go toolchain requirement. |
+| Local Claude cache has no Python runner source or launcher because XPLAT-002 cannot implement it. | XPLAT-004 must add the runner source/launcher and run installed Claude cache invocation. |
+| Local Codex cache has no Python runner source or launcher because XPLAT-002 cannot implement it. | XPLAT-004 must add the runner source/launcher and run installed Codex cache invocation. |
+| Windows Python launcher discovery is not proven from installed plugin caches. | XPLAT-004 must implement preflight and prove `py -3.11`, `python3`, or `python` launch from Claude and Codex installed caches. |
 
 ## 4. Validation Commands
 
@@ -113,7 +116,8 @@ Supplemental non-mutating probes recorded in evidence:
 - Node JSON/path/stderr/subprocess probe -> pass
 - `python3 --version` -> `Python 3.11.0`
 - Python JSON/path/stderr/subprocess probe -> pass
-- `go version` -> unavailable on this host (`command not found`)
-- Installed Claude and Codex cache roots exist for `speckit-pro/2.16.0`, but
-  `scripts/speckit-pro-runner` is absent by design because XPLAT-002 does not
+- `go version` -> unavailable on this host (`command not found`); Go is now a
+  superseded fallback, not the active first-release runtime
+- Installed Claude and Codex cache roots exist for `speckit-pro/2.16.0`, but the
+  Python runner source/launcher is absent by design because XPLAT-002 does not
   implement the runner.

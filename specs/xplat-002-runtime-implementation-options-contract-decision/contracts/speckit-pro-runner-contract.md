@@ -6,24 +6,31 @@ chooses the runtime. It does not implement the runner.
 
 ## Selected Runtime
 
-- Runtime family: small per-platform native binary runner.
-- Implementation runtime: Go native executable using the Go standard library.
+- Runtime family: Python standard-library runner aligned with the official
+  Spec Kit / `specify` prerequisite boundary.
+- Implementation runtime: Python 3.11+ using the standard library.
 - Selection source:
   `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`
-- Packaging constraint: the installed plugin payload carries the executable
-  artifacts; users must not run `npm install`, `pip install`, `uv`, `brew`, or
-  network package restoration after the plugin cache is populated.
-- Supply-chain boundary: XPLAT-003 chooses checksum, signature, SBOM,
-  provenance, vulnerability-scan, generated-artifact, and consumer-local
-  verification controls before XPLAT-004 ships binaries.
+- Packaging constraint: the installed plugin payload carries Python runner
+  source and any thin launch metadata needed by Claude Code and Codex. Users
+  must not run `npm install`, `pip install`, virtualenv restoration, `uv`,
+  `brew`, Go/Rust/Zig toolchain setup, or network package restoration after the
+  plugin cache is populated.
+- Prerequisite boundary: SpecKit-Pro may require a healthy official Spec Kit
+  installation, including Python 3.11+ and a working `specify` command.
+- Supply-chain boundary: XPLAT-003 chooses source integrity, generated-payload,
+  prerequisite-diagnostic, consumer-local verification, and public-claim
+  controls before XPLAT-004 ships the runner.
 
 ## Entrypoint
 
 - Canonical command: `speckit-pro-runner`
-- Default payload-relative path: `scripts/speckit-pro-runner`
+- Default payload-relative runner source path: `scripts/speckit_pro_runner.py`
 - Resolution root: installed plugin payload/cache root
-- Future path convention: XPLAT-004 may deliberately create a `bin/` convention,
-  but this contract does not assume one.
+- Future launcher convention: XPLAT-004 may add a thin payload-local launcher
+  path such as `scripts/speckit-pro-runner` if Claude Code or Codex needs a
+  stable command target. Launcher logic must be dispatch-only and must not
+  implement helper behavior in Bash or PowerShell.
 
 ## Invocation
 
@@ -105,8 +112,8 @@ Allowed `status` values are:
     "runner_name": "speckit-pro-runner",
     "runner_version": "0.0.0-decision",
     "contract_version": "1.0",
-    "selected_runtime_name": "go-native-binary",
-    "selected_runtime_version": "reported-by-built-artifact",
+    "selected_runtime_name": "python-stdlib-runner",
+    "selected_runtime_version": "3.11+",
     "platform": "darwin",
     "architecture": "arm64",
     "plugin_root": {
@@ -147,7 +154,7 @@ Required diagnostic codes for XPLAT-004 parity fixtures:
 | `invalid_envelope` | Parsed JSON is not a valid request object or has invalid field types |
 | `unsupported_schema_version` | `schema_version` is present but unsupported |
 | `missing_required_field` | A required request field is absent or empty |
-| `missing_prerequisite` | Required selected runtime, executable, or input prerequisite is unavailable |
+| `missing_prerequisite` | Required selected runtime, `specify`, executable, or input prerequisite is unavailable |
 | `subprocess_nonzero` | A subprocess exits nonzero and is not mapped to expected helper/domain failure |
 | `subprocess_timeout` | A subprocess times out |
 | `subprocess_stderr_only_failure` | A helper-defined stderr-only subprocess failure category is observed |
@@ -167,7 +174,7 @@ Required diagnostic codes for XPLAT-004 parity fixtures:
 `legacy_exit_code` preserves a documented helper-specific exit code only when
 fixture parity requires it.
 
-If the entrypoint process starts and detects that the selected runtime or a
+If the entrypoint process starts and detects that Python 3.11+, `specify`, or a
 required executable is unavailable, it must emit `status:
 missing_prerequisite`, a `missing_prerequisite` stderr diagnostic, and process
 exit code `3`. A host-level failure to launch the entrypoint at all is outside
@@ -219,7 +226,7 @@ Rules:
 - No shell interpolation.
 - No globbing through a shell.
 - No redirection as a command contract primitive.
-- No `.sh` or `jq` fallback.
+- No `.sh`, PowerShell-script, or `jq` fallback.
 - cwd and env use explicit allowlists.
 - Missing executables produce exit code `3`.
 - Nonzero or timed-out subprocesses produce exit code `4` unless the helper
@@ -238,6 +245,8 @@ The runner exposes a `runtime-info` or `preflight` operation returning:
 - executable availability
 - capabilities
 - prerequisite records
+- discovered Python executable path and version
+- discovered `specify` executable path and version
 
 The `plugin_root` and `source-vs-installed context` fields must make it clear
 whether the runner is executing from an installed Claude cache, an installed
@@ -254,6 +263,15 @@ Prerequisite records include:
 - `path`
 - `remediation`
 - `severity`
+
+Required prerequisite records for the selected Python model:
+
+- `python`: required, minimum version `3.11`, with the exact executable path
+  used by the runner.
+- `specify`: required, with the executable path and version/result returned by
+  the official CLI.
+- workflow-specific tools such as `git` or `gh`: required only when the helper
+  operation needs them.
 
 ## Compatibility Adapter Records
 

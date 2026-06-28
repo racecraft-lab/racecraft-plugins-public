@@ -1,16 +1,19 @@
 # Evidence: Small Per-Platform Binary Runtime Candidate
 
-Candidate status: Selected runtime model; installed-cache invocation proof deferred to XPLAT-004
+Candidate status: Superseded fallback after 2026-06-28 Python amendment;
+installed-cache invocation proof would be deferred to XPLAT-004 if revived
 Selected implementation runtime: Go native executable using the Go standard
 library
-Captured: 2026-06-26
+Captured: 2026-06-26; superseded 2026-06-28
 
 ## Evidence Standard
 
 This record evaluates the binary candidate as a small native CLI artifact
-packaged into the installed plugin payload. XPLAT-002 selects the runtime model
-and command contract; XPLAT-004 must build the executable and prove actual
-installed-cache invocation.
+packaged into the installed plugin payload. The original XPLAT-002 decision
+selected this model, but the 2026-06-28 amendment supersedes it with a Python
+standard-library runner aligned with official Spec Kit prerequisites. This
+candidate remains a fallback if XPLAT-004 proves Python launch cannot be made
+reliable from installed Claude/Codex caches.
 
 ## Official / Runtime Documentation
 

@@ -8,15 +8,16 @@ Scope: Windows first, then macOS/Linux and managed/dual-install users
 
 SpecKit Pro is not universal just because Claude Code or Codex can install a
 plugin. Universal means a user on the claimed platform can install the platform
-product, add the Racecraft marketplace, install SpecKit Pro, get every bundled
-skill/agent/hook/runner artifact, run first-use setup, run scaffold and
-autopilot, receive a complete UAT runbook, update safely, and repair stale or
-incomplete state without cloning source or installing a language toolchain.
+product, install the official Spec Kit / `specify` prerequisites, add the
+Racecraft marketplace, install SpecKit Pro, get every bundled
+skill/agent/hook/runner file, run first-use setup, run scaffold and autopilot,
+receive a complete UAT runbook, update safely, and repair stale or incomplete
+state without cloning source or installing any plugin-only language toolchain.
 
 The current repository does not yet meet that bar. The most important gaps are
 native Windows execution, Codex custom-agent completeness, Bash/jq/rsync/perl
-assumptions in installer and hook paths, missing bundled runner artifacts, and
-lack of a shared autoheal/doctor path that scaffold and autopilot can invoke
+assumptions in installer and hook paths, missing Python runner/preflight files,
+and lack of a shared autoheal/doctor path that scaffold and autopilot can invoke
 before producing low-quality workflow output.
 
 ## Source Baseline
@@ -40,8 +41,9 @@ Official platform facts used here:
   `~/.agents/plugins/marketplace.json`, or added by
   `codex plugin marketplace add`.
 - Codex skills can include optional scripts and references, but script support
-  does not imply Bash, Node, Python, jq, rsync, perl, Go, Rust, or Zig exists
-  on every installed host.
+  does not imply Bash, Node, jq, rsync, perl, Go, Rust, or Zig exists on every
+  installed host. Python is allowed only through the documented SpecKit-Pro
+  prerequisite boundary: official Spec Kit / `specify` and Python 3.11+.
 - Codex custom agents are standalone TOML files under `~/.codex/agents/` or
   `.codex/agents/`; they are not automatically registered by a generic plugin
   skill install.
@@ -86,8 +88,8 @@ all of these steps:
    prerequisites and either repairs them through an explicit user-approved path
    or fails closed with clear guidance.
 6. Scaffold and autopilot run without depending on Bash, jq, rsync, perl, Git
-   Bash, WSL, or a language toolchain unless the platform journey explicitly
-   says that prerequisite is required.
+   Bash, WSL, or a language toolchain beyond the official Spec Kit / `specify`
+   Python prerequisite.
 7. UAT output is complete enough to use: no empty PR placeholders, no raw HTML
    anchors in reader-facing runbooks, concrete test steps, clear expected
    results, and source-backed gaps.
@@ -465,8 +467,8 @@ Do not claim any of the following until XPLAT evidence exists:
 Allowed wording before full XPLAT cutover:
 
 - "Marketplace install payload exists for Claude Code and Codex."
-- "Native-runner support is planned and blocked on packaged artifacts,
-  install-completeness evidence, and platform UAT."
+- "Python-runner support is planned and blocked on prerequisite preflight,
+  runner source integrity, install-completeness evidence, and platform UAT."
 - "Codex custom-agent registration requires a separate install/repair step
   until autoheal is implemented and verified."
 
