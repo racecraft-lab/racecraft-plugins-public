@@ -9,6 +9,7 @@
 - XPLAT-003 design concept: `docs/ai/specs/.process/XPLAT-003-design-concept.md`
 - XPLAT-003 finalized spec: `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`
 - Official Claude Code plugin docs: `https://code.claude.com/docs/en/plugins`
+- Official Claude Code plugin marketplace docs: `https://code.claude.com/docs/en/plugin-marketplaces`
 - Official Claude Code plugin reference: `https://code.claude.com/docs/en/plugins-reference`
 - Official Claude Code skills docs: `https://docs.anthropic.com/en/docs/claude-code/skills`
 - Official OpenAI Codex plugin docs: `https://developers.openai.com/codex/plugins`
@@ -48,6 +49,53 @@ scripts and executables, but they do not select a runtime. A first-release
 runtime must therefore either ship self-contained per-platform artifacts or
 have explicit prerequisite diagnostics and no public native-support claim when
 the runtime is absent.
+
+## Compiled Binary Distribution and Installation Model
+
+Official marketplace behavior supports a bundled-payload model, but does not
+remove the need for platform-specific install evidence:
+
+| Distribution shape | Marketplace/install behavior | XPLAT consequence |
+|---|---|---|
+| Bundle every target artifact in generated plugin payloads | Claude marketplace installs copy the plugin directory into a versioned local cache, and Claude plugins document `bin/` executables at the plugin root. Codex marketplace entries point at a plugin folder, install a cached copy, and document plugin skills, hooks, apps, MCP config, and assets at the plugin root. | Preferred first-release model for no-post-cache-install claims. XPLAT-004 must produce per-platform artifacts and metadata; XPLAT-007 must prove they are present, equal, fresh, and executable in both `dist/claude/speckit-pro` and `dist/codex/speckit-pro` installs. |
+| Bundle only the current host artifact | Smaller install, but marketplace users on another host receive an incomplete payload unless install-time selection is officially supported and verified. | Not acceptable for broad Windows/macOS/Linux claims unless the marketplace/install surface has a documented platform selector and XPLAT-007 proves each claimed platform receives the right artifact. |
+| Download artifact from a release asset on first use or install | Keeps plugin payload small, but requires network access, user approval or hook execution, checksum verification, retry handling, and an unavailable/offline state. Official docs reviewed here do not define an automatic native-binary postinstall resolver for either marketplace. | Not acceptable for "works after plugin cache population" claims. It can be an explicit repair/update path only if it fails closed, verifies checksums before use, and does not become the basis for public native-support claims until release automation and install evidence exist. |
+| Hybrid: bundle manifest/checksums and fetch missing artifact explicitly | Lets maintainers publish smaller payloads while documenting a manual repair flow. | Treat as a network restoration dependency, not as a self-contained install. Public claims must say the platform requires the explicit fetch step or remain blocked. |
+
+Repository-specific implication: this project does not install directly from
+`speckit-pro/`. Claude installs come from `.claude-plugin/marketplace.json`
+pointing at `./dist/claude/speckit-pro`; Codex installs come from
+`.agents/plugins/marketplace.json` pointing at `./dist/codex/speckit-pro`.
+The current `scripts/build-plugin-payloads.sh` copies selected source
+directories into those generated payload roots and does not yet copy a generic
+runner `bin/` or platform-artifact directory. XPLAT-004 or XPLAT-007 must
+therefore add any selected binary artifact source path to the payload builder
+and source-to-dist gate before install-completeness or native-support claims can
+pass.
+
+Platform-specific launcher implications:
+
+- Claude Code can use a plugin-root `bin/` convention because the official
+  docs document `bin/` executables as added to the Bash tool's `PATH` while the
+  plugin is enabled. The binary still needs per-platform artifact metadata,
+  executable permission where applicable, and closed failure when the current
+  host has no matching artifact.
+- Codex docs reviewed here do not define a plugin-root `bin/` discovery
+  convention equivalent to Claude's. Codex should invoke a bundled native
+  artifact only through documented Codex surfaces such as a skill script, a
+  plugin-bundled hook command, or a plugin-bundled MCP server command, with the
+  installed plugin root or payload-relative path recorded in evidence. A
+  Claude-only `bin/` layout is not sufficient Codex install evidence.
+- Windows artifacts need explicit `.exe` paths and PowerShell-friendly
+  verification guidance. macOS and Linux artifacts need executable-bit
+  preservation verified after the generated payload build and marketplace
+  install/cache copy. These checks belong to XPLAT-004/XPLAT-007, not XPLAT-003.
+
+Decision effect: the safest marketplace-compatible first-release shape is
+"bundle all claimed platform artifacts plus manifest/checksum metadata inside
+both generated payload roots, then select the current host artifact at runtime."
+Release-asset download can remain a later update/repair path, but it should not
+be the basis for no-install native-support claims.
 
 ## Runtime Candidate Reopen Implications
 

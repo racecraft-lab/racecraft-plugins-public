@@ -127,6 +127,41 @@ Validation rules:
 - Autoheal must repair only documented local install surfaces and must fail
   closed when a required platform surface cannot be verified.
 
+## Binary Distribution Evidence
+
+Records how compiled per-platform runner artifacts move from source or release
+inputs into installed Claude Code and Codex marketplace payloads.
+
+| Field | Required | Notes |
+|---|---|---|
+| `runtime_shape` | Yes | Selected runtime shape, for example `go-native-artifact`; conditional until runtime re-approval. |
+| `distribution_mode` | Yes | `bundled-all-platforms`, `bundled-current-host`, `release-asset-download`, or `hybrid-manifest-plus-fetch`. |
+| `source_artifact_paths` | Yes | Source or release-input paths produced by XPLAT-004. |
+| `generated_claude_payload_paths` | Yes | Payload-relative paths under `dist/claude/speckit-pro`. |
+| `generated_codex_payload_paths` | Yes | Payload-relative paths under `dist/codex/speckit-pro`. |
+| `launcher_surface` | Yes | Documented launch surface such as Claude plugin `bin/`, Codex skill script, Codex plugin-bundled hook, or Codex plugin-bundled MCP command. |
+| `post_install_download_required` | Yes | Whether the installed user must download an artifact after marketplace cache population. |
+| `executable_permission_policy` | Yes | Unix executable-bit and Windows `.exe` expectations for the generated payload and installed cache. |
+| `checksum_manifest_refs` | Yes | Manifest and checksum metadata that cover every generated artifact path. |
+| `official_docs_refs` | Yes | Official Claude/Codex docs used to justify the launch and install surface. |
+| `claim_effect` | Yes | Whether native-support claims are claimable, blocked, deferred, or require explicit repair/download wording. |
+
+Validation rules:
+
+- `bundled-all-platforms` is the preferred first-release model for
+  no-post-cache-install claims because both marketplace payload roots can carry
+  all claimed artifacts plus offline metadata.
+- `release-asset-download` and `hybrid-manifest-plus-fetch` are not
+  self-contained marketplace installs. They require explicit download,
+  checksum verification, network/failure handling, and truthful wording before
+  any platform claim can rely on them.
+- A Claude plugin `bin/` launcher does not prove Codex launch support. Codex
+  launch evidence must use a documented Codex surface such as skill scripts,
+  plugin-bundled hooks, or plugin-bundled MCP commands.
+- XPLAT-007 source-to-dist evidence must fail when source artifacts or metadata
+  exist but are missing, stale, unequal, or non-executable in either generated
+  payload root for a claimed platform.
+
 ## Pinned Release Input Evidence
 
 Records the exact build and release inputs XPLAT-004 must capture before runner foundation artifacts can be accepted.
@@ -438,6 +473,9 @@ Validation rules:
 - `Consumer Verification Guidance` references runtime integrity evidence, checksum metadata, and XPLAT-007 native UAT evidence.
 - `Artifact Claim Readiness` references the manifest, checksum entry, runtime integrity evidence, generated payload evidence, scan evidence, native UAT evidence, release automation evidence, and public claim audit evidence for one artifact/platform.
 - `Generated Payload Evidence` references generated roots and checksum/manifest paths.
+- `Binary Distribution Evidence` references pinned release inputs, generated
+  payload evidence, install completeness evidence, artifact manifest, and
+  checksum entries.
 - `Vulnerability Scan Evidence` may include zero or more `Vulnerability Exception Record` records.
 - `Public Claim Boundary` consumes artifact claim readiness and release-readiness evidence before wording is allowed.
 - `Release-Readiness Evidence` aggregates all first-release control results and artifact/platform claim readiness records.

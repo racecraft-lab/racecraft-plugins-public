@@ -103,6 +103,15 @@ detection with closed, non-claiming behavior.
   `dist/codex/speckit-pro`, `.claude-plugin/marketplace.json`, and
   `.agents/plugins/marketplace.json`, recording the command, exit status,
   source inputs, generated roots, and checksum/manifest paths.
+- Q: How should compiled per-platform binaries be distributed through Claude
+  and Codex marketplaces? A: For no-post-cache-install native-support claims,
+  bundle every claimed platform artifact plus manifest/checksum metadata inside
+  both generated payload roots. Claude can use its documented plugin `bin/`
+  executable surface, but Codex must use documented Codex surfaces such as skill
+  scripts, plugin-bundled hooks, or plugin-bundled MCP commands rather than
+  assuming a Claude-style `bin/` convention. Release-asset downloads may be an
+  explicit repair/update path only; they are not a self-contained marketplace
+  install.
 - Q: What extra `runtime-info` and `preflight` fields are required for consumer
   verification? A: Preserve the XPLAT-002 fields and add artifact-integrity
   pointers: `executable_path`, `artifact_id`, `artifact_manifest_path`,
@@ -274,6 +283,9 @@ A consumer or reviewer can understand what they can verify locally after install
   Python, Bash, `jq`, package manager, WSL, Git Bash, or network restoration
   step even though official platform docs do not guarantee that runtime after
   plugin cache population.
+- A downstream implementation ships native artifacts in source or release
+  assets but does not prove those artifacts and metadata were copied into both
+  generated marketplace payload roots before install or claim readiness.
 - A runtime alternative such as Rust, Zig, bundled Node, embedded Python, or a
   source-script package is substituted without regenerating dependency,
   artifact, scan, checksum, manifest, consumer-verification, and release-input
@@ -324,6 +336,7 @@ A consumer or reviewer can understand what they can verify locally after install
 - **FR-036**: Any selected first-release runtime MUST require no user-side build toolchain or package restoration after plugin cache population unless official platform documentation explicitly guarantees that runtime for the relevant installed surface. Otherwise the runtime MUST ship self-contained per-platform artifacts or fail closed through prerequisite diagnostics without public native-support claims.
 - **FR-037**: Go, Rust, Zig, or another native-build toolchain MUST be evaluated as a maintainer/build-time dependency plus packaged-artifact supply-chain surface, not as a user runtime dependency, and any amended runtime decision MUST regenerate XPLAT-003 controls for that toolchain's dependency graph, artifact format, build inputs, vulnerability scan path, checksum/manifest metadata, and consumer verification behavior.
 - **FR-038**: XPLAT-007 install-completeness and source-to-dist readiness MUST distinguish Claude Code plugin agents from Codex custom-agent TOML installation. A Codex install that has plugin skills but lacks required `.codex/agents/*.toml` or `~/.codex/agents/*.toml` agent registrations MUST remain incomplete until autoheal or explicit install guidance repairs it.
+- **FR-039**: XPLAT-004/XPLAT-007 MUST record binary distribution and install-model evidence for each claimed platform and runtime surface, including distribution mode, source artifact path, generated Claude payload path, generated Codex payload path, launcher surface, post-install download requirement, executable permission or Windows `.exe` behavior, checksum/manifest metadata, and official-doc basis. Native-support claims MUST fail when artifacts exist only in source or release assets but are missing, stale, or unverifiable in generated marketplace payload roots.
 
 ### Reviewability Notes *(if applicable)*
 
@@ -375,6 +388,10 @@ A consumer or reviewer can understand what they can verify locally after install
 - **Install Completeness Evidence**: Surface-specific proof that a Claude Code
   or Codex install has the expected plugin payload, skills, scripts, hooks,
   MCP metadata, and required agent/subagent registration for that platform.
+- **Binary Distribution Evidence**: Surface-specific proof that selected
+  platform artifacts and metadata are present in source and generated Claude
+  and Codex payload roots, and that the launcher surface is documented for that
+  platform.
 
 ## Success Criteria *(mandatory)*
 
@@ -400,6 +417,7 @@ A consumer or reviewer can understand what they can verify locally after install
 - **SC-018**: Reviewers can identify the runtime decision as reopened, the reason XPLAT-002 selected Go, and the exact blocker that prevents XPLAT-003 from being treated as final before explicit maintainer re-approval.
 - **SC-019**: Reviewers can identify official Claude Code and OpenAI Codex platform support findings separately from repository assumptions and can verify that no first-release runtime claim depends on an undocumented user-host runtime.
 - **SC-020**: Reviewers can distinguish Claude bundled plugin agents from Codex custom-agent TOML registration and can identify a missing Codex agent registration as an install-completeness failure, not a successful full install.
+- **SC-021**: Reviewers can identify whether native artifacts are bundled in both generated marketplace payload roots, whether any post-install download is required, and which documented Claude or Codex surface launches the artifact.
 
 ## Assumptions
 
@@ -414,5 +432,8 @@ A consumer or reviewer can understand what they can verify locally after install
 - The first public release can rely on published checksums and manual consumer-local checksum verification even if the plugin marketplace does not enforce checksum verification automatically.
 - Signatures, SBOMs, provenance attestations, reproducible builds, and formal third-party audit improve trust but are not required for the first release unless this decision record explicitly promotes them.
 - Generated Claude and Codex payloads remain source-derived artifacts, so their integrity gate must compare source inputs and generated outputs before public release.
+- A release-asset download path is not treated as a self-contained marketplace
+  install unless downstream evidence proves explicit download, checksum
+  verification, failure behavior, and truthful claims for that path.
 - Native Windows/macOS/Linux support claims remain blocked until XPLAT-007 implements cutover and captures UAT evidence.
 - XPLAT-003 records the model and acceptance gates; XPLAT-004, XPLAT-007, and release automation surfaces implement the selected controls.

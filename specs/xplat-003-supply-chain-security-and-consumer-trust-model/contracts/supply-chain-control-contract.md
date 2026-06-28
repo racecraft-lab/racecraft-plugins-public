@@ -140,6 +140,64 @@ Contract rules:
 - Autoheal must repair only documented local install surfaces and must fail
   closed when a required piece cannot be verified.
 
+## Binary Distribution Evidence Contract
+
+XPLAT-004 and XPLAT-007 must record how compiled artifacts reach installed
+Claude Code and Codex marketplace payloads:
+
+```json
+{
+  "runtime_shape": "go-native-artifact",
+  "distribution_mode": "bundled-all-platforms",
+  "source_artifact_paths": [
+    "runner-artifacts/darwin-arm64/speckit-pro-runner",
+    "runner-artifacts/windows-amd64/speckit-pro-runner.exe"
+  ],
+  "generated_claude_payload_paths": [
+    "dist/claude/speckit-pro/bin/darwin-arm64/speckit-pro-runner",
+    "dist/claude/speckit-pro/bin/windows-amd64/speckit-pro-runner.exe"
+  ],
+  "generated_codex_payload_paths": [
+    "dist/codex/speckit-pro/bin/darwin-arm64/speckit-pro-runner",
+    "dist/codex/speckit-pro/bin/windows-amd64/speckit-pro-runner.exe"
+  ],
+  "launcher_surface": {
+    "claude-code": "plugin bin executable",
+    "openai-codex": "skill script or plugin-bundled MCP command"
+  },
+  "post_install_download_required": false,
+  "executable_permission_policy": "Unix artifacts are executable after payload build/install; Windows artifacts use .exe paths.",
+  "checksum_manifest_refs": [
+    "scripts/speckit-pro-runner.sha256",
+    "scripts/speckit-pro-runner.manifest.json"
+  ],
+  "official_docs_refs": [
+    "https://code.claude.com/docs/en/plugins",
+    "https://developers.openai.com/codex/plugins/build"
+  ],
+  "claim_effect": "Native-support claims remain blocked until artifacts and metadata are present, equal, fresh, executable, and UAT-verified in both generated payload roots."
+}
+```
+
+Contract rules:
+
+- First-release no-post-cache-install claims require
+  `post_install_download_required=false`.
+- `bundled-all-platforms` is claimable only when every claimed platform
+  artifact and its metadata are present in both generated payload roots and the
+  installed cache evidence confirms the current host can select the matching
+  artifact.
+- `release-asset-download` and `hybrid-manifest-plus-fetch` are not
+  self-contained marketplace installs. They require explicit download,
+  checksum verification before execution, network/failure handling, and public
+  wording that does not imply offline installed-cache support.
+- Claude Code's documented plugin `bin/` executable surface is Claude evidence
+  only. Codex launcher evidence must use documented Codex surfaces such as skill
+  scripts, plugin-bundled hooks, or plugin-bundled MCP commands.
+- XPLAT-007 source-to-dist evidence must fail if `scripts/build-plugin-payloads.sh`
+  does not copy the selected artifact source paths and metadata into both
+  generated marketplace payload roots.
+
 ## Pinned Release Input Evidence Contract
 
 If Go is explicitly re-approved, XPLAT-004 must record this evidence before

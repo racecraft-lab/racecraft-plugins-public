@@ -36,7 +36,7 @@ Not allowed in this phase:
 1. Read `plan.md` for scope, reviewability warning, constitution checks, and downstream owner split.
 2. Read `research.md` for official Claude/Codex platform findings, runtime-reopen implications, and first-release versus deferred control decisions.
 3. Read `data-model.md` for decision entities and validation rules.
-4. Read `contracts/supply-chain-control-contract.md` for platform capability, runtime dependency boundary, install completeness, pinned release inputs, checksum, manifest, preflight, source-to-dist, metadata propagation, release automation acceptance, scan freshness, vulnerability exception, consumer checksum guidance, artifact claim readiness, release-readiness retention, and public claim audit evidence shapes.
+4. Read `contracts/supply-chain-control-contract.md` for platform capability, runtime dependency boundary, install completeness, binary distribution, pinned release inputs, checksum, manifest, preflight, source-to-dist, metadata propagation, release automation acceptance, scan freshness, vulnerability exception, consumer checksum guidance, artifact claim readiness, release-readiness retention, and public claim audit evidence shapes.
 5. Confirm `spec.md` still contains no unresolved clarification markers.
 
 ## Static Validation Commands
@@ -91,6 +91,13 @@ Project test suites are N/A for this decision-artifact implementation phase. Do 
 - XPLAT-004 pinned-input evidence covers the selected build toolchain version/source, dependency manifest and checksum/snapshot state, target OS/architecture matrix, build recipe, release inputs, source revision, artifact paths, checksums, and scan evidence refs. Go-specific fields apply only if Go is re-approved.
 - XPLAT-007 owns generated payload integrity, consumer guidance, public claim readiness, native UAT evidence, and cutover.
 - XPLAT-007 source-to-dist evidence must prove checksum and runner manifest metadata is present, equal, and fresh across source paths, generated Claude payload paths, and generated Codex payload paths.
+- XPLAT-007 binary distribution evidence must prove every claimed platform
+  artifact and its metadata are bundled in both generated marketplace payload
+  roots, or record that the claim depends on an explicit download/repair path
+  and cannot be treated as a self-contained install.
+- Claude Code can rely on its documented plugin `bin/` executable surface, but
+  Codex needs a documented Codex launcher surface such as a skill script,
+  plugin-bundled hook, or plugin-bundled MCP command.
 - XPLAT-007 consumer checksum guidance must include Windows, macOS, and Linux command shapes and metadata lookup behavior without Bash, `jq`, source checkout, package restoration, post-cache network access, or pre-UAT native support claims.
 - XPLAT-007 consumer checksum mismatch guidance must fail closed, tell users not to rely on the mismatched artifact, and identify the artifact, platform, preflight/identity output, metadata source, expected checksum, computed checksum, plugin version or release boundary, and reporting path to record.
 - Release-readiness and public-claim audit evidence must retain durable non-sensitive summaries beyond scan output, with release boundary, control/claim IDs, evidence refs, status, timestamp or source revision, owner, known gaps, and approval/status.
@@ -111,4 +118,6 @@ Project test suites are N/A for this decision-artifact implementation phase. Do 
   TOML registrations are missing; install validation and autoheal must check
   both.
 - Marketplace-enforced verification is not part of the first-release guarantee.
+- Release-asset download is not a self-contained marketplace install; it remains
+  a later repair/update path unless downstream evidence proves otherwise.
 - Public support claims remain blocked until XPLAT-007 captures native UAT and release-readiness evidence.
