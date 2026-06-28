@@ -8,7 +8,7 @@
 
 ## Requirement Completeness
 
-- [x] CHK001 Are JavaScript/TypeScript, Python, and small per-platform binary candidates each required to use the same XPLAT-001 must-have gates and weighted criteria? [Completeness, Spec FR-001, Spec FR-002]
+- [x] CHK001 Are JavaScript/TypeScript, Python, and the rejected small per-platform binary record each required to use the same XPLAT-001 must-have gates and weighted criteria? [Completeness, Spec FR-001, Spec FR-002]
 - [x] CHK002 Are installed-cache evidence requirements defined for both installed Claude and installed Codex plugin-cache invocation rather than allowing source-checkout or generated-payload evidence to substitute silently? [Resolved, Spec FR-005, Spec FR-016, XPLAT-001 installed-cache gate]
 - [x] CHK003 Are candidate evidence requirements complete for runtime availability, JSON stdin/stdout, stderr/exit separation, path-with-spaces, and shell-free subprocess or missing-command behavior? [Completeness, Spec FR-005, Research Probe Plan]
 - [x] CHK004 Are documentation evidence sources limited to runtime/toolchain maintainers, official plugin platform documentation, or repo-local source/manifests, with third-party evidence supplemental only? [Completeness, Spec FR-004]

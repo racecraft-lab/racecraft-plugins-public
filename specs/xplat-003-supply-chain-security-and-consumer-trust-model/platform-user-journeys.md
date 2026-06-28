@@ -10,15 +10,17 @@ SpecKit Pro is not universal just because Claude Code or Codex can install a
 plugin. Universal means a user on the claimed platform can install the platform
 product, install the official Spec Kit / `specify` prerequisites, add the
 Racecraft marketplace, install SpecKit Pro, get every bundled
-skill/agent/hook/runner file, run first-use setup, run scaffold and autopilot,
-receive a complete UAT runbook, update safely, and repair stale or incomplete
-state without cloning source or installing any plugin-only language toolchain.
+skill/agent/hook/runner source or launcher file, run first-use setup, run
+scaffold and autopilot, receive a complete UAT runbook, update safely, and
+repair stale or incomplete state without cloning source or installing any
+plugin-only language toolchain.
 
 The current repository does not yet meet that bar. The most important gaps are
 native Windows execution, Codex custom-agent completeness, Bash/jq/rsync/perl
 assumptions in installer and hook paths, missing Python runner/preflight files,
-and lack of a shared autoheal/doctor path that scaffold and autopilot can invoke
-before producing low-quality workflow output.
+active Bash build/test/eval/release-readiness gates, and lack of a shared
+autoheal/doctor path that scaffold and autopilot can invoke before producing
+low-quality workflow output.
 
 ## Source Baseline
 
@@ -67,8 +69,11 @@ Repository facts used here:
 - Current Codex hook command uses POSIX shell constructs plus `jq` and `grep`.
 - Current Codex custom-agent installer is a Bash script that can use `jq`,
   `sort -V`, `rsync`, `rm`, `cp`, and `perl`.
-- Current generated payloads do not include `speckit-pro-runner` artifacts,
-  a runner manifest, or runner checksums.
+- Current generated payloads do not include `speckit-pro-runner` files,
+  runner source, a runner manifest, or runner checksums.
+- Current project validation and eval gates under `tests/speckit-pro/**` plus
+  payload/release helper scripts are Bash-backed. They are not acceptable final
+  release gates for a pure Python support claim.
 
 ## Universal Support Definition
 
@@ -80,8 +85,8 @@ all of these steps:
 2. The user can add or select the Racecraft marketplace without a source
    checkout when using a public marketplace path.
 3. The installed plugin payload contains every required surface for that
-   product: skills, agents, hooks, metadata, runner artifacts, manifests, and
-   checksums.
+   product: skills, agents, hooks, metadata, runner source or launcher files,
+   manifests, and checksums.
 4. The product loads the installed payload after its documented reload or
    restart step.
 5. First-use setup detects missing SpecKit CLI/project integration
@@ -94,7 +99,9 @@ all of these steps:
    anchors in reader-facing runbooks, concrete test steps, clear expected
    results, and source-backed gaps.
 8. Update and autoheal flows can detect stale caches, missing agents, missing
-   runner artifacts, version drift, and incomplete payloads.
+   runner source or launcher files, version drift, and incomplete payloads.
+9. Build/test/eval/payload/release-readiness gates that validate or publish
+   shipped plugin behavior run through Python standard-library commands.
 
 ## Journey 1: Windows Native User + Claude Code
 
@@ -136,16 +143,18 @@ Current gaps:
   runner through the same path.
 - `/speckit-pro:speckit-install` currently wraps `specify`, `uv`, and
   `install-curated-set.sh`; this is not a proven Windows-native path.
-- Current generated payloads do not contain a Windows runner executable.
+- Current generated payloads do not contain Python runner source, launcher
+  metadata, or Windows interpreter-discovery evidence.
 - Native Windows UAT has not proven scaffold, autopilot, hooks, UAT runbook
   generation, and PR packet closeout end-to-end.
 
 Target XPLAT behavior:
 
-- The Claude payload includes a Windows runner artifact, for example
-  `scripts/speckit-pro-runner.exe`, plus manifest and SHA-256 metadata.
-- Claude skill and hook paths invoke a documented platform-compatible command,
-  or use a Claude-supported Windows command form where required.
+- The Claude payload includes `scripts/speckit_pro_runner.py`, any required
+  thin launcher metadata, and manifest/SHA-256 metadata.
+- Claude skill and hook paths invoke Python through a documented
+  platform-compatible command form and do not rely on Bash or PowerShell helper
+  logic.
 - `/speckit-pro:speckit-status`, scaffold, and autopilot preflight missing
   prerequisites before doing meaningful work.
 - If the user lacks SpecKit CLI, the plugin reports the exact setup gap without
@@ -218,8 +227,8 @@ Current gaps:
   `jq`, `sort -V`, `rsync`, or destructive wipe-and-copy fallback logic, none of
   which is acceptable as a universal native Windows repair path.
 - There is no Windows-native doctor that proves the installed Codex plugin
-  cache, copied custom-agent destination, hooks, and runner artifacts match the
-  release.
+  cache, copied custom-agent destination, hooks, and runner source or launcher
+  files match the release.
 
 Target XPLAT behavior:
 
@@ -256,7 +265,7 @@ Target XPLAT behavior:
 
 - Native Windows and WSL are tested and reported separately.
 - If WSL is supported as a fallback, the docs state that the plugin runs inside
-  WSL and uses Linux artifacts.
+  WSL and uses Linux runner files.
 - WSL success never substitutes for native Windows UAT evidence.
 
 ## Journey 4: macOS or Linux User + Claude Code
@@ -283,15 +292,15 @@ Current gaps:
 - macOS/Linux are closer to the current Bash-heavy implementation, but still
   not fully universal. `jq`, `rsync`, `perl`, `uv`, `gh`, and `specify` are not
   guaranteed for every user.
-- No macOS/Linux runner artifact or executable-bit preservation evidence exists
-  in the generated Claude payload.
+- No macOS/Linux runner source, launcher, or installed-cache invocation evidence
+  exists in the generated Claude payload.
 - Existing UAT quality issues mean a successful run can still produce a weak or
   incomplete runbook.
 
 Target XPLAT behavior:
 
-- macOS/Linux payloads include matching executable artifacts with preserved
-  executable permissions.
+- macOS/Linux payloads include matching Python runner source, any required thin
+  launcher, and installed-cache launch evidence.
 - The plugin reports missing optional tools as prerequisites, not as cryptic
   shell failures.
 - UAT output quality gates block empty placeholders and reader-facing raw HTML.
@@ -320,8 +329,8 @@ Current gaps:
 - Current Codex custom-agent install is incomplete for
   `uat-runbook-author.toml`.
 - Even on Unix-like systems, jq/rsync/perl may be absent.
-- No Codex runner artifacts, manifest, checksum, or installed-cache invocation
-  evidence exists yet.
+- No Codex runner source, launcher metadata, manifest, checksum, or
+  installed-cache invocation evidence exists yet.
 - There is no shared doctor that proves plugin cache freshness plus copied
   agent freshness before autopilot uses subagents.
 
@@ -409,8 +418,8 @@ Required checks:
 3. Identify installed plugin version, marketplace name, and payload root.
 4. Verify the installed payload contains required skills, agents, hooks, and
    scripts for that product.
-5. Verify the runner artifact for the current platform exists, is executable
-   where applicable, and matches the manifest/checksum.
+5. Verify the runner source and any thin launcher for the current platform exist
+   and match the manifest/checksum.
 6. For Claude Code, verify plugin agents are present in the installed payload.
 7. For Codex, verify every required `codex-agents/*.toml` template is copied to
    the selected custom-agent destination, including `uat-runbook-author.toml`.
@@ -431,14 +440,14 @@ Required repair behavior:
 - If a stale marketplace or cache is detected, prefer documented platform
   update/reinstall/reload flows before cache mutation.
 - Never silently continue into scaffold or autopilot when required agents,
-  runner artifacts, or project integration state are missing.
+  runner source or launcher files, or project integration state are missing.
 
 ## Gap Register
 
 | Gap | User impact | Required owner |
 |---|---|---|
-| Missing runner artifacts in both generated payloads | No no-toolchain native-support claim can be made | XPLAT-004/XPLAT-007 |
-| No Windows runner executable or command path | Native Windows users may fail before useful work starts | XPLAT-004/XPLAT-007 |
+| Missing runner source or launcher metadata in both generated payloads | No cross-platform runner claim can be made | XPLAT-004/XPLAT-007 |
+| No Windows Python interpreter-discovery command path | Native Windows users may fail before useful work starts | XPLAT-004/XPLAT-007 |
 | Claude `bin/` is Bash-tool-specific | Native Windows without Git Bash may not execute plugin `bin/` artifacts | XPLAT-004/XPLAT-007 |
 | Codex has no Claude-style `bin/` guarantee | Codex runner invocation must use documented skill/hook/MCP paths | XPLAT-004/XPLAT-007 |
 | Codex installer omits `uat-runbook-author.toml` | UAT author agent may be missing even when plugin seems installed | Install skill / XPLAT-007 |
@@ -448,6 +457,7 @@ Required repair behavior:
 | Curated-set installer depends on Bash/gh | Optional extension setup may fail without clear platform repair | Install/upgrade skills |
 | UAT runbook can contain raw HTML anchors and empty PR placeholders | UAT evidence is hard to review and not reader-ready | Autopilot / UAT author |
 | No shared doctor/preflight used by scaffold and autopilot | Broken installs can produce broken workflow artifacts | Scaffold/autopilot owners |
+| Active tests/evals/payload builders are Bash-backed | Pure Python support claims would still depend on Unix tooling to prove or publish shipped behavior | XPLAT-007 |
 | No per-platform UAT matrix for install, full use, update, and repair | Universal support claim lacks evidence | XPLAT-007 |
 | No current tag/version freshness gate across Claude and Codex payloads | Users can install stale or mismatched plugin versions | Release/process owners |
 
@@ -460,7 +470,7 @@ Do not claim any of the following until XPLAT evidence exists:
 - "No prerequisites" for full SpecKit use. The plugin can be self-contained
   while SpecKit CLI/project setup still has prerequisites.
 - "Codex agents are installed" based only on plugin skill presence.
-- "Marketplace verifies binaries" or "trusted native binary" before manifest,
+- "Marketplace verifies runner files" or "trusted runner" before manifest,
   checksum, local verification, and release evidence exist.
 - "Windows supported" when only WSL passed.
 
@@ -480,12 +490,12 @@ XPLAT is universal only when this matrix passes for each claimed platform:
 |---|---|---|---|---|---|
 | Windows native without Git Bash | Pass required if claimed | Pass required if claimed | Scaffold/autopilot/UAT pass | Version/cache pass | Doctor repair/fail-closed pass |
 | Windows native with Git for Windows | Pass required if claimed | Pass required if claimed | Scaffold/autopilot/UAT pass | Version/cache pass | Doctor repair/fail-closed pass |
-| Windows WSL2 | Pass if claimed separately | Pass if claimed separately | Linux artifact path pass | Version/cache pass | Doctor repair/fail-closed pass |
+| Windows WSL2 | Pass if claimed separately | Pass if claimed separately | Linux runner path pass | Version/cache pass | Doctor repair/fail-closed pass |
 | macOS arm64/x64 | Pass required if claimed | Pass required if claimed | Scaffold/autopilot/UAT pass | Version/cache pass | Doctor repair/fail-closed pass |
 | Linux x64/arm64 | Pass required if claimed | Pass required if claimed | Scaffold/autopilot/UAT pass | Version/cache pass | Doctor repair/fail-closed pass |
 
 Each pass must record product version, plugin version, marketplace source,
-installed payload path, runner artifact ID, checksum result, custom-agent state,
+installed payload path, runner file ID, checksum result, custom-agent state,
 SpecKit CLI state, scaffold command, autopilot command, UAT runbook quality
 result, and any repair action taken.
 
@@ -500,6 +510,9 @@ result, and any repair action taken.
    where needed.
 5. Add generated-payload gates that prove Claude and Codex dist payloads contain
    the same released version, every expected bundled agent, and every claimed
-   platform runner artifact.
-6. Add platform UAT scenarios for native Windows, WSL, macOS, Linux, Claude
+   runner source and any thin launcher.
+6. Replace active Bash tests, eval runners, payload builders, and
+   release-readiness checks with Python standard-library gates before XPLAT-007
+   cutover.
+7. Add platform UAT scenarios for native Windows, WSL, macOS, Linux, Claude
    Code, Codex, update, stale cache, missing agents, and missing SpecKit CLI.

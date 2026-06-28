@@ -1,6 +1,6 @@
 # Contract: Supply-Chain Control and Consumer Verification
 
-This contract defines the evidence shapes XPLAT-004, XPLAT-007, and later release surfaces must implement or verify. It is a planning contract only; XPLAT-003 does not create runner artifacts, release automation, generated payload updates, or public claims.
+This contract defines the evidence shapes XPLAT-004, XPLAT-007, and later release surfaces must implement or verify. It is a planning contract only; XPLAT-003 does not create runner source, launchers, release automation, generated payload updates, or public claims.
 
 ## Control Decision Record
 
@@ -52,7 +52,7 @@ separate from runtime/toolchain assumptions:
     "Rust",
     "Zig",
     "Node",
-    "Python",
+    "Python from Claude/Codex platform docs alone",
     "Bash",
     "jq",
     "package managers",
@@ -62,7 +62,7 @@ separate from runtime/toolchain assumptions:
   "install_surface_distinctions": [
     "Codex plugin skills are not the same as Codex custom-agent TOML registration."
   ],
-  "xplat_gate_effect": "Do not claim install completeness or native support until required plugin payload and custom-agent registrations are verified."
+  "xplat_gate_effect": "Python is allowed only through the official Spec Kit / specify prerequisite boundary and preflight. Do not claim install completeness or native support until required plugin payload, prerequisite, and custom-agent registrations are verified."
 }
 ```
 
@@ -77,35 +77,32 @@ Contract rules:
 
 ## Runtime Dependency Boundary Contract
 
-Selected runtime evidence must identify whether the runtime is a build-time
-toolchain, user dependency, bundled runtime, or self-contained artifact:
+Selected runtime evidence must identify the Python-only XPLAT runtime boundary:
 
 ```json
 {
-  "runtime_shape": "go-native-artifact",
-  "build_time_toolchain": {
-    "name": "go",
-    "version": "reported-by-build-environment"
-  },
-  "installed_user_runtime_dependency": "none",
+  "runtime_shape": "python-stdlib-runner",
+  "build_time_toolchain": null,
+  "installed_user_runtime_dependency": "official Spec Kit / specify prerequisite boundary, including Python 3.11+",
   "bundled_runtime_payload": null,
-  "official_runtime_guarantee_ref": null,
+  "official_runtime_guarantee_ref": "https://github.com/github/spec-kit/blob/main/pyproject.toml",
   "post_cache_setup_required": false,
-  "prerequisite_diagnostics": "Missing executable or metadata fails closed with deterministic diagnostics.",
-  "claim_effect": "Native support claim remains blocked until artifact, installed-cache, UAT, checksum, manifest, scan, source-to-dist, and claim-audit evidence pass."
+  "prerequisite_diagnostics": "Missing Python 3.11+, specify, runner file, or metadata fails closed with deterministic diagnostics.",
+  "claim_effect": "Support claims remain blocked until prerequisite preflight, installed-cache launch, UAT, checksum, manifest, scan, source-to-dist, and claim-audit evidence pass."
 }
 ```
 
 Contract rules:
 
-- First-release native-support claims require `post_cache_setup_required=false`.
-- Go, Rust, and Zig are user-runtime-free only when maintainers ship
-  self-contained per-platform artifacts; users must not be asked to install the
-  build toolchain to run the plugin.
-- Source scripts that rely on Node, Python, Bash, `jq`, package managers, WSL,
-  Git Bash, or network restoration after cache population are not claimable
-  native-support runtimes unless the runtime is officially guaranteed or bundled
-  with matching supply-chain controls.
+- First-release support claims require `post_cache_setup_required=false` beyond
+  the documented official Spec Kit / `specify` prerequisite boundary.
+- Go, Rust, Zig, bundled Node, embedded Python, and native binaries are not
+  XPLAT runtime shapes, fallbacks, or compatibility adapters.
+- Source scripts that rely on Node, Bash, `jq`, package managers, WSL, Git
+  Bash, or network restoration after cache population are not claimable support
+  runtimes unless the runtime is officially guaranteed or bundled with matching
+  supply-chain controls. Python is allowed only through the official Spec Kit /
+  `specify` prerequisite boundary and must be verified by preflight.
 
 ## Install Completeness Evidence Contract
 
@@ -140,16 +137,17 @@ Contract rules:
 - Autoheal must repair only documented local install surfaces and must fail
   closed when a required piece cannot be verified.
 
-## Binary Distribution Evidence Contract
+## Runner File Distribution Evidence Contract
 
-XPLAT-004 and XPLAT-007 must record how compiled artifacts reach installed
-Claude Code and Codex marketplace payloads:
+XPLAT-004 and XPLAT-007 must record how selected runner files reach installed
+Claude Code and Codex marketplace payloads. For the active runtime, these files
+are Python source plus any thin launch metadata:
 
 ```json
 {
   "runtime_shape": "python-stdlib-runner",
   "distribution_mode": "bundled-source",
-  "source_artifact_paths": [
+  "source_runner_paths": [
     "speckit-pro/scripts/speckit_pro_runner.py"
   ],
   "generated_claude_payload_paths": [
@@ -163,7 +161,7 @@ Claude Code and Codex marketplace payloads:
     "openai-codex": "skill script or hook dispatches through discovered Python interpreter"
   },
   "post_install_download_required": false,
-  "executable_permission_policy": "Unix artifacts are executable after payload build/install; Windows artifacts use .exe paths.",
+  "launch_metadata_policy": "The runner is invoked through Python 3.11+ discovered by preflight; any thin launcher contains dispatch only and no Bash or PowerShell helper logic.",
   "checksum_manifest_refs": [
     "scripts/speckit-pro-runner.sha256",
     "scripts/speckit-pro-runner.manifest.json"
@@ -172,7 +170,7 @@ Claude Code and Codex marketplace payloads:
     "https://code.claude.com/docs/en/plugins",
     "https://developers.openai.com/codex/plugins/build"
   ],
-  "claim_effect": "Native-support claims remain blocked until artifacts and metadata are present, equal, fresh, executable, and UAT-verified in both generated payload roots."
+  "claim_effect": "Support claims remain blocked until runner files and metadata are present, equal, fresh, launchable through documented platform surfaces, and UAT-verified in both generated payload roots."
 }
 ```
 
@@ -180,20 +178,17 @@ Contract rules:
 
 - First-release no-post-cache-install claims require
   `post_install_download_required=false`.
-- `bundled-all-platforms` is claimable only when every claimed platform
-  artifact and its metadata are present in both generated payload roots and the
-  installed cache evidence confirms the current host can select the matching
-  artifact.
+- `bundled-source` is the selected first-release model.
 - `release-asset-download` and `hybrid-manifest-plus-fetch` are not
-  self-contained marketplace installs. They require explicit download,
-  checksum verification before execution, network/failure handling, and public
-  wording that does not imply offline installed-cache support.
+  XPLAT runtime models. They may be unrelated repair/update flows only and must
+  not support pure-Python XPLAT claims.
 - Claude Code's documented plugin `bin/` executable surface is Claude evidence
   only. Codex launcher evidence must use documented Codex surfaces such as skill
   scripts, plugin-bundled hooks, or plugin-bundled MCP commands.
-- XPLAT-007 source-to-dist evidence must fail if `scripts/build-plugin-payloads.sh`
-  does not copy the selected artifact source paths and metadata into both
-  generated marketplace payload roots.
+- XPLAT-007 source-to-dist evidence must use a Python standard-library payload
+  builder and fail if it does not copy the selected runner file paths and
+  metadata into both generated marketplace payload roots. The current Bash
+  payload builder is transitional only and is not the final release gate.
 
 ## Pinned Release Input Evidence Contract
 
@@ -229,9 +224,8 @@ Contract rules:
 - The record must cover the exact source revision, prerequisite boundary,
   dependency policy, release inputs, and runner files it claims to represent.
 - The record does not implement or imply reproducible builds, SBOMs, signatures, provenance, formal audit, marketplace-enforced verification, or native support claims.
-- If the runtime decision changes to Go, Rust, Zig, bundled Node, embedded
-  Python, or another runtime shape, regenerate this contract for that runtime
-  instead of preserving stale Python-specific evidence.
+- Go/Rust/Zig/native-binary evidence is rejected historical analysis and must
+  not be carried into this contract as an XPLAT alternative.
 
 ## Checksum File Contract
 
@@ -246,7 +240,7 @@ scripts/speckit-pro-runner.sha256
 Line format:
 
 ```text
-<64 lowercase hexadecimal sha256><two spaces><payload-relative artifact path>
+<64 lowercase hexadecimal sha256><two spaces><payload-relative runner file path>
 ```
 
 Example:
@@ -263,11 +257,11 @@ Contract rules:
 - Use payload-relative paths.
 - Do not use absolute source-checkout paths.
 - Do not imply signing, provenance, or trust-chain verification.
-- A computed checksum that does not match the corresponding entry is a closed verification failure for that artifact and blocks any claim that depends on it until fresh evidence re-accepts the artifact.
+- A computed checksum that does not match the corresponding entry is a closed verification failure for that runner file and blocks any claim that depends on it until fresh evidence re-accepts the runner file.
 
-## Runner Artifact Manifest Contract
+## Runner File Manifest Contract
 
-First-release runner artifacts must have one payload-relative manifest:
+First-release runner source and launcher files must have one payload-relative manifest:
 
 ```text
 scripts/speckit-pro-runner.manifest.json
@@ -285,12 +279,12 @@ Required shape:
   "contract_version": "1.0",
   "source_revision": "git-sha",
   "checksum_algorithm": "sha256",
-  "artifacts": [
+  "runner_files": [
     {
-      "artifact_id": "speckit-pro-runner-darwin-arm64",
-      "payload_path": "scripts/speckit-pro-runner",
-      "os": "darwin",
-      "arch": "arm64",
+      "runner_file_id": "speckit-pro-runner-python-source",
+      "payload_path": "scripts/speckit_pro_runner.py",
+      "os": null,
+      "arch": null,
       "size_bytes": 0,
       "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
       "checksum_file": "scripts/speckit-pro-runner.sha256"
@@ -301,10 +295,10 @@ Required shape:
 
 Contract rules:
 
-- `artifacts` must be non-empty after XPLAT-004 builds artifacts.
+- `runner_files` must be non-empty after XPLAT-004 adds runner files.
 - `sha256` must match the corresponding checksum file entry.
 - `payload_path` and `checksum_file` must be payload-relative.
-- `source_revision` must identify the source used to build the artifact.
+- `source_revision` must identify the source used to package the runner file.
 - Manifest publication does not satisfy SBOM, provenance, signatures, reproducibility, formal audit, or marketplace-enforced verification.
 
 ## Runtime-Info and Preflight Contract Additions
@@ -317,12 +311,12 @@ Required additional fields:
 ```json
 {
   "runtime": {
-    "executable_path": {
+    "runner_path": {
       "kind": "plugin_relative",
       "value": "scripts/speckit_pro_runner.py"
     },
     "runner_file_id": "speckit-pro-runner-python-source",
-    "artifact_manifest_path": {
+    "runner_manifest_path": {
       "kind": "plugin_relative",
       "value": "scripts/speckit-pro-runner.manifest.json"
     },
@@ -358,7 +352,7 @@ XPLAT-007 owns this evidence before public cutover. The first-release evidence r
 
 ```json
 {
-  "command": "bash scripts/build-plugin-payloads.sh",
+  "command": "python3 scripts/build_plugin_payloads.py",
   "exit_status": 0,
   "source_inputs": ["speckit-pro"],
   "generated_roots": [
@@ -401,6 +395,9 @@ XPLAT-007 owns this evidence before public cutover. The first-release evidence r
 
 Contract rules:
 
+- `command` must be a Python standard-library command before XPLAT-007 can pass.
+  Bash payload-builder output may be retained only as transitional parity
+  evidence before final cutover.
 - `exit_status` must be `0`.
 - `drift_result` must be `clean`.
 - Evidence must record source inputs, generated roots, marketplace manifests, and checksum/manifest paths.
@@ -408,6 +405,49 @@ Contract rules:
 - Metadata must be present, equal, and fresh across source and generated roots before XPLAT-007 cutover passes.
 - Missing, stale, or unequal metadata blocks public cutover and release-claim readiness.
 - XPLAT-003 does not run the rebuild or update generated payloads.
+
+## Python Build/Test/Eval Gate Evidence Contract
+
+XPLAT-007 must record Python standard-library replacements for active
+build/test/eval/payload/release-readiness gates that validate or publish shipped
+plugin behavior:
+
+```json
+{
+  "gate_id": "layer4-helper-tests",
+  "gate_type": "test",
+  "python_command": "python3 tests/speckit-pro/run_all.py --layer 4",
+  "replaced_bash_paths": [
+    "tests/speckit-pro/run-all.sh",
+    "tests/speckit-pro/layer4-scripts/*.sh"
+  ],
+  "covered_plugin_behavior": "Helper script JSON output, exit semantics, and fixture behavior for shipped plugin helpers.",
+  "parity_evidence_ref": "Bash-vs-Python fixture parity evidence until cutover",
+  "platform_matrix": ["windows", "macos", "linux"],
+  "release_gate_status": "blocked",
+  "prohibited_runtime_dependencies": [
+    "Bash",
+    "jq",
+    "Git Bash",
+    "WSL",
+    "PowerShell helper scripts",
+    "package restoration"
+  ]
+}
+```
+
+Contract rules:
+
+- XPLAT-007 cannot pass while a shipped-behavior build, test, eval, payload, or
+  release-readiness gate is Bash-only.
+- Temporary Bash parity evidence must be outside the final release gate.
+- Unrelated shell wrappers may remain only when they dispatch to Python gates and
+  contain no validation, eval, payload publication, or release-readiness logic.
+- This contract covers the top-level test runner, Layer 1 structural checks,
+  Layer 2/3 eval runners, Layer 4 helper tests, Layer 5 tool scoping, Layer 6
+  efficiency checks, Layer 7 integration checks, Layer 8 parity checks, payload
+  builders, marketplace/version sync checks, and any UAT-support gate used for
+  public release readiness.
 
 ## Release Automation Acceptance Contract
 
@@ -436,17 +476,17 @@ Contract rules:
 
 ## Scan Evidence Freshness Contract
 
-Runner/source/artifact and cutover scan evidence must include:
+Runner/source/runner-file and cutover scan evidence must include:
 
 ```json
 {
   "scanner": "scanner-name",
   "scanner_version_or_db_timestamp": "version-or-db-timestamp",
-  "scan_target": "runner-source-or-artifact",
+  "scan_target": "runner-source-or-runner-file",
   "target_source_revision": "git-sha",
-  "dependency_snapshot": "go.sum or equivalent dependency snapshot",
-  "toolchain_build_input_snapshot": "toolchain and build inputs covered by scan",
-  "generated_artifact_identifier": "artifact-id-if-applicable",
+  "dependency_snapshot": "none-stdlib-only or equivalent dependency snapshot",
+  "build_input_snapshot": "build inputs covered by scan",
+  "generated_runner_file_identifier": "runner-file-id-if-applicable",
   "run_timestamp": "YYYY-MM-DDTHH:MM:SSZ",
   "freshness_expiry": "YYYY-MM-DDTHH:MM:SSZ or release-boundary",
   "result": "pass",
@@ -460,7 +500,7 @@ Contract rules:
 
 - Readiness fails when required scan evidence is missing, stale, or has unresolved actionable high/critical findings.
 - Evidence is stale when it is older than 7 calendar days at readiness review.
-- Evidence is stale immediately when it predates the source revision, dependency snapshot, toolchain, build input, generated artifact, scanner version, or vulnerability database timestamp it claims to cover.
+- Evidence is stale immediately when it predates the source revision, dependency snapshot, build input, generated runner file, scanner version, or vulnerability database timestamp it claims to cover.
 - Evidence must be re-approved at each public release boundary.
 - XPLAT-003 records this policy only and does not implement scanner automation.
 
@@ -474,9 +514,9 @@ Use this shape only for non-actionable high/critical findings. Unresolved action
   "tool_version_or_db_timestamp": "version-or-db-timestamp",
   "advisory_id": "CVE-or-advisory-if-available",
   "severity": "high",
-  "affected_artifact_dependency_version_platform": "artifact-or-dependency",
+  "affected_runner_file_dependency_policy_version_platform": "runner-file-or-dependency-policy",
   "actionability_classification": "false_positive",
-  "rationale": "Finding does not affect shipped artifact boundary.",
+  "rationale": "Finding does not affect shipped runner-file boundary.",
   "reachability_or_false_positive_evidence": "Evidence summary.",
   "compensating_control": "Boundary or mitigation summary.",
   "approving_maintainer": "maintainer-or-role",
@@ -494,24 +534,25 @@ Required actionability criteria for blocking findings:
 Exception expiry triggers:
 
 - Each public release boundary.
-- Artifact, dependency graph, platform, toolchain, scanner version/database, advisory status, severity, exploitability, or compensating control changes.
+- Runner file, dependency policy, platform, scanner version/database, advisory status, severity, exploitability, or compensating control changes.
 
 ## Consumer-Local Checksum Guidance Contract
 
-XPLAT-007 must provide platform-specific command shapes for every platform artifact it intends to claim after native UAT passes:
+XPLAT-007 must provide Python standard-library command shapes for every runner
+file it intends to claim after native UAT passes:
 
 ```json
 {
   "target_platform": "windows",
-  "sha256_command_shape": "Get-FileHash -Algorithm SHA256 <runner-path>",
-  "runner_path_source": "runtime-info/preflight executable_path or documented payload-relative path",
+  "sha256_command_shape": "<python> -c \"import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())\" <runner-path>",
+  "runner_path_source": "runtime-info/preflight runner_path or documented payload-relative path",
   "checksum_metadata_source": "installed payload checksum file or release-provided offline metadata",
   "comparison_rule": "computed lowercase SHA-256 equals matching payload-relative checksum entry",
   "unavailable_state": "verification metadata unavailable",
   "mismatch_state": "verification failed",
-  "mismatch_remediation": "Do not rely on the artifact for native-runner claims; record and report the mismatch details.",
+  "mismatch_remediation": "Do not rely on the runner file for support claims; record and report the mismatch details.",
   "reporting_fields": [
-    "artifact_path",
+    "runner_file_path",
     "target_platform",
     "runner_identity_or_preflight_output",
     "checksum_metadata_source",
@@ -525,26 +566,32 @@ XPLAT-007 must provide platform-specific command shapes for every platform artif
     "package restoration",
     "network replacement fetch",
     "Bash or jq requirement",
+    "PowerShell helper script requirement",
     "runner self-verification alone"
   ],
-  "maintainer_reacceptance_rule": "Fresh XPLAT-004 checksum/manifest/artifact evidence and XPLAT-007 source-to-dist, claim-audit, and consumer-guidance evidence are required before accepting the affected artifact again.",
+  "maintainer_reacceptance_rule": "Fresh XPLAT-004 checksum/manifest/runner-file evidence and XPLAT-007 source-to-dist, claim-audit, and consumer-guidance evidence are required before accepting the affected runner file again.",
   "native_uat_evidence_ref": "XPLAT-007 native UAT evidence"
 }
 ```
 
-Required command shapes:
+Required command shape family:
 
 | Platform | SHA-256 command shape |
 |---|---|
-| Windows | `Get-FileHash -Algorithm SHA256 <runner-path>` |
-| macOS | `/usr/bin/shasum -a 256 <runner-path>` |
-| Linux | `sha256sum <runner-path>` |
+| Windows | `<python> -c "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" <runner-path>` |
+| macOS | `<python> -c "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" <runner-path>` |
+| Linux | `<python> -c "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" <runner-path>` |
 
 Contract rules:
 
-- Guidance must not require Bash, `jq`, a source checkout, package-manager restoration, or network access after plugin cache population.
-- Guidance must fail closed when artifact or checksum metadata is unavailable or when the computed checksum differs from the expected checksum.
-- Consumer-facing mismatch remediation must tell users not to rely on the artifact, must identify the facts to record/report, and must not ask consumers to repair the artifact through source checkout, package restoration, network fetches, Bash, `jq`, or runner self-verification alone.
+- The `<python>` placeholder must resolve to the preflight-discovered Python
+  3.11+ interpreter from the official Spec Kit / `specify` prerequisite
+  boundary, or guidance must fail closed.
+- OS-native checksum commands may be supplemental cross-checks only; they are
+  not the required first-release path.
+- Guidance must not require Bash, `jq`, PowerShell helper scripts, a source checkout, package-manager restoration, or network access after plugin cache population.
+- Guidance must fail closed when runner-file or checksum metadata is unavailable or when the computed checksum differs from the expected checksum.
+- Consumer-facing mismatch remediation must tell users not to rely on the runner file, must identify the facts to record/report, and must not ask consumers to repair the runner file through source checkout, package restoration, network fetches, Bash, `jq`, PowerShell helper scripts, or runner self-verification alone.
 - Command shapes are downstream guidance requirements, not current public native-support claims.
 
 ## Runner File Claim Readiness Contract
@@ -593,7 +640,7 @@ or an equivalent release artifact:
   "release_boundary": "release-candidate-or-public-release",
   "control_or_claim_ids": ["runner-source-local-verification"],
   "evidence_refs": ["runner source manifest", "checksum file", "source-to-dist evidence"],
-  "artifact_claim_readiness_refs": ["speckit-pro-runner-python-source"],
+  "runner_file_claim_readiness_refs": ["speckit-pro-runner-python-source"],
   "status": "blocked",
   "recorded_at": "YYYY-MM-DDTHH:MM:SSZ",
   "source_revision": "git-sha",

@@ -18,9 +18,9 @@ Python amendment. It does not run or implement `speckit-pro-runner`.
 
 - Exactly one runtime is selected: Python standard-library runner aligned with
   official Spec Kit / `specify` prerequisites.
-- JavaScript/TypeScript, Python, and small per-platform binary candidates are
-  evaluated against the same XPLAT-001 gates and weights.
-- Rejected or superseded candidates include gate and score rationale.
+- JavaScript/TypeScript, Python, and the rejected small per-platform binary
+  record are evaluated against the same XPLAT-001 gates and weights.
+- Rejected historical runtime paths include gate and score rationale.
 - Installed-cache probe gaps are recorded without being counted as probe
   passes.
 - The Python runtime model is selected as viable because SpecKit-Pro can require
@@ -117,7 +117,7 @@ Supplemental non-mutating probes recorded in evidence:
 - `python3 --version` -> `Python 3.11.0`
 - Python JSON/path/stderr/subprocess probe -> pass
 - `go version` -> unavailable on this host (`command not found`); Go is now a
-  superseded fallback, not the active first-release runtime
+  rejected historical candidate, not an XPLAT fallback
 - Installed Claude and Codex cache roots exist for `speckit-pro/2.16.0`, but the
   Python runner source/launcher is absent by design because XPLAT-002 does not
   implement the runner.

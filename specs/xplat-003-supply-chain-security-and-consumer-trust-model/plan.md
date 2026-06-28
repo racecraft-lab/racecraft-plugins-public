@@ -20,6 +20,9 @@ support claim.
 The first-release baseline is:
 
 - Source-to-dist integrity evidence for generated plugin payloads.
+- Python standard-library build, test, eval, payload, and release-readiness gates
+  for shipped plugin behavior; current Bash gates are transitional evidence
+  only and must not remain the final release gate.
 - Official platform capability evidence separating documented Claude/Codex
   plugin surfaces from undocumented user-runtime assumptions.
 - Installed-user runtime dependency boundaries: official Spec Kit / `specify`
@@ -35,10 +38,11 @@ The first-release baseline is:
 - Runner preflight evidence for Python 3.11+, `specify`, plugin root,
   installed-cache context, and operation-specific prerequisites.
 - Vulnerability scanning that fails readiness on unresolved actionable high or critical findings, with documented exceptions for non-actionable findings.
-- Consumer-local verification through runner identity and preflight output plus platform-native checksum comparison.
-- Closed consumer remediation for checksum mismatches: consumers do not rely on the artifact, record mismatch facts in a report, and wait for fresh maintainer evidence.
+- Consumer-local verification through runner identity and preflight output plus
+  Python standard-library checksum comparison.
+- Closed consumer remediation for checksum mismatches: consumers do not rely on the runner file, record mismatch facts in a report, and wait for fresh maintainer evidence.
 - Durable non-sensitive retention of release-readiness and public-claim audit summaries beyond scan evidence alone.
-- Per-artifact and per-platform claim readiness so partial artifact publication cannot imply unsupported platform claims.
+- Per-runner-file and per-platform claim readiness so partial publication cannot imply unsupported platform claims.
 - Public docs and release notes limited to controls that are implemented and verified.
 - Split ownership: XPLAT-004 owns runner source, preflight, prerequisite, and
   scan controls; XPLAT-007 owns generated payload cutover, consumer guidance,
@@ -50,16 +54,23 @@ The first-release baseline is:
 **Language and Version**: Not applicable for this phase. Downstream runner
 implementation is described as Python 3.11+ standard-library source aligned with
 official Spec Kit / `specify` prerequisites. Go, Rust, Zig, bundled Node,
-embedded Python, or another runtime shape remains fallback analysis only and
-would require regenerated controls before implementation.
+embedded Python, and other runtime shapes are rejected for XPLAT.
 
-**Primary Dependencies**: Existing repository Markdown and SpecKit helper scripts only. No new runtime dependency.
+**Primary Dependencies**: Existing repository Markdown and current SpecKit helper
+scripts only. No new runtime dependency; current Bash validation scripts are
+transitional for XPLAT-003 review and must be replaced by Python
+standard-library gates before XPLAT-007 release readiness.
 
 **Storage**: Checked-in specification artifacts under `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`.
 
-**Testing**: Static specification validation only for this phase: marker counts, G7 task completion, spec-index freshness, diff whitespace, and diff scope review.
+**Testing**: Static specification validation only for this phase: marker counts,
+G7 task completion, spec-index freshness, diff whitespace, and diff scope
+review. The current repo commands are Bash-backed; this plan records them as
+current validation only, not as the XPLAT final gate.
 
-**Target Platform**: Decision applies to future packaged native runner artifacts for Windows, macOS, and Linux, but this phase does not build or claim native platform support.
+**Target Platform**: Decision applies to future packaged Python runner source
+and thin launch metadata for Windows, macOS, and Linux, but this phase does not
+build or claim native platform support.
 
 **Project Type**: Claude Code and Codex plugin marketplace decision artifact.
 
@@ -73,9 +84,10 @@ would require regenerated controls before implementation.
 - Use official Claude Code and OpenAI Codex documentation as the authority for
   plugin, skill, hook, MCP, script, executable, and custom-agent surfaces.
 - Do not infer user-host runtime availability from plugin `scripts/` support,
-  local host probes, or repository tooling. A selected runtime must be bundled,
-  self-contained as per-platform artifacts, officially guaranteed for the
-  installed surface, or diagnosed as missing without support claims.
+  local host probes, or repository tooling. The selected Python runtime must be
+  verified through the official Spec Kit / `specify` prerequisite boundary and
+  fail closed when missing. Non-Python runtimes and compiled binaries are not
+  XPLAT fallback paths.
 - Do not edit release automation in XPLAT-003.
 - Do not build `speckit-pro-runner`, port helpers, change active invocation paths, or rebuild generated payloads.
 - Do not claim signatures, SBOMs, provenance or attestations, reproducible builds, formal audit, marketplace-enforced verification, cryptographic trust-chain verification, or native platform support before those controls are implemented and verified.
@@ -86,7 +98,7 @@ would require regenerated controls before implementation.
 
 **Scale and Scope**: One spec directory; 0 production LOC; decision records and contracts only.
 
-**Reviewability Budget**: Setup gate returned warning status: `reviewable_loc=250`, `production_files=4`, `total_files=10`, `primary_surface_count=2`, warning `primary surfaces 2 exceeds warn threshold 1`, no blockers. After the official-doc/runtime-reopen additions, tasks-mode reviewability reports a size-only block (`reviewable_loc=1000`, `total_files=31`) because the task estimator counts task and file tokens broadly. The actual diff-mode PR gate remains warning-only with `reviewable_loc=0`, `production_files=0`, `total_files=24`, and no blockers. XPLAT-003 remains one decision spike because it records one security and trust model and assigns downstream controls without implementation changes.
+**Reviewability Budget**: Setup gate returned warning status: `reviewable_loc=250`, `production_files=4`, `total_files=10`, `primary_surface_count=2`, warning `primary surfaces 2 exceeds warn threshold 1`, no blockers. After the official-doc/rejected-runtime additions, tasks-mode reviewability reports a size-only block (`reviewable_loc=1000`, `total_files=31`) because the task estimator counts task and file tokens broadly. The actual diff-mode PR gate remains warning-only with `reviewable_loc=0`, `production_files=0`, `total_files=24`, and no blockers. XPLAT-003 remains one decision spike because it records one security and trust model and assigns downstream controls without implementation changes.
 
 ## Declared File Operations
 
@@ -102,7 +114,7 @@ would require regenerated controls before implementation.
 
 | Principle | Gate | Result |
 |---|---|---|
-| Plugin Structure Compliance | No runner artifacts, generated payload changes, plugin invocation changes, or release workflow changes. | Pass: phase outputs are spec artifacts only. |
+| Plugin Structure Compliance | No runner source files, generated payload changes, plugin invocation changes, or release workflow changes. | Pass: phase outputs are spec artifacts only. |
 | Script Safety | Future commands are recorded as policy or verification commands only; no helper implementation lands here. | Pass: contracts describe evidence shapes and do not add scripts. |
 | Test Coverage Before Merge | Static validation must prove marker cleanliness, G7 task completion, spec-map freshness, whitespace health, and diff scope. | Pass via Phase 7 validation commands in `quickstart.md`. |
 | Conventional Commits | No commit in this phase. | Not applicable. |
@@ -148,17 +160,19 @@ No changes under the source plugin tree, generated payload roots, docs site, wor
 
 - XPLAT-001 supply-chain rubric mapping.
 - XPLAT-002 amended Python runner handoff implications, with Go/Rust/Zig
-  preserved only as fallback runtime evidence.
+  preserved only as rejected historical evidence.
 - Official Claude Code and OpenAI Codex platform capability findings.
-- Runtime amendment implications for Python stdlib source, Go, Rust, Zig,
-  bundled Node, embedded Python, source scripts, Bash, `jq`, package managers,
-  WSL, and Git Bash.
+- Runtime amendment implications for Python stdlib source and rejected
+  alternatives such as Go, Rust, Zig, bundled Node, embedded Python, source
+  scripts, Bash, `jq`, package managers, WSL, and Git Bash.
 - First-release versus deferred hardening decisions.
 - Vulnerability actionability and exception policy.
 - Scan evidence freshness and staleness blockers.
 - Python runner source, prerequisite, preflight, and installed-cache evidence
-  requirements, with native-artifact fields applying only if Go/Rust/Zig is
-  revived.
+  requirements.
+- Python standard-library replacement requirement for active Bash build, test,
+  eval, payload, and release-readiness gates that validate or publish shipped
+  plugin behavior.
 - Consumer-local verification boundary.
 - Public claim allowed and prohibited language boundary.
 
@@ -166,8 +180,7 @@ Open research result: no deferred cryptographic hardening control is promoted to
 
 Runtime-decision status: the XPLAT-002 runtime choice has been amended to
 Python. XPLAT-004 and XPLAT-007 must consume the amended Python contract and
-must not consume stale Go-specific assumptions unless maintainers reopen the
-runtime decision again.
+must not consume stale Go/Rust/Zig/native-binary assumptions.
 
 ## Phase 1 Design Artifacts
 
@@ -177,13 +190,12 @@ runtime decision again.
 
 - Control decision records.
 - Python runner source, prerequisite, preflight, and installed-cache evidence
-  records, with native-artifact fields applying only if a Go/Rust/Zig fallback
-  is revived.
+  records.
 - Platform capability evidence records.
 - Runtime dependency boundary records.
 - Install completeness evidence records for Claude and Codex.
 - SHA-256 checksum file format.
-- Runner artifact manifest fields.
+- Runner file manifest fields.
 - Runtime-info and preflight artifact-integrity fields.
 - Source-to-dist evidence record.
 - Generated payload metadata propagation rules.
@@ -197,7 +209,11 @@ runtime decision again.
 
 ## First-Release Evidence Contracts
 
-XPLAT-003 defines evidence contracts only. XPLAT-004 records and implements runner build evidence. XPLAT-007 consumes accepted evidence for final cutover, release-readiness gating, consumer-local verification guidance, and public wording after native UAT passes.
+XPLAT-003 defines evidence contracts only. XPLAT-004 records and implements
+runner source, prerequisite, and installed-cache evidence. XPLAT-007 consumes
+accepted evidence for final cutover, Python release-readiness gating,
+consumer-local verification guidance, and public wording after native UAT
+passes.
 
 ### Platform Capability and Runtime Boundary Gate
 
@@ -214,10 +230,11 @@ for runtime and install claims:
   `~/.codex/agents/*.toml`; required Codex agent registrations are an install
   completeness gate separate from plugin skill presence.
 
-The selected runner must either ship as self-contained per-platform artifacts,
-bundle the required runtime, rely on a runtime officially guaranteed for the
-installed surface, or fail closed through prerequisite diagnostics without
-public native-support claims.
+The selected Python runner must ship runner source and launcher metadata in the
+plugin payloads, rely only on the official Spec Kit / `specify` prerequisite
+boundary, and fail closed through prerequisite diagnostics when Python or
+`specify` is unavailable. A non-Python runtime must not be introduced as an
+XPLAT fallback.
 
 ### Scan Evidence Freshness Gate
 
@@ -230,8 +247,8 @@ Required scan evidence records include:
 | Scan scope | Yes |
 | Target source revision | Yes |
 | Dependency manifest or sum snapshot | Yes |
-| Toolchain and build input snapshot | Yes |
-| Generated artifact identifier, when applicable | Yes |
+| Build input snapshot | Yes |
+| Generated runner-file identifier, when applicable | Yes |
 | Run timestamp | Yes |
 | Result and severity summary | Yes |
 | Actionable high and critical count | Yes |
@@ -239,7 +256,12 @@ Required scan evidence records include:
 | Owner surface | Yes |
 | Freshness expiry | Yes |
 
-Readiness fails when evidence is missing, stale, predates the source, dependency, toolchain, build input, scanner database, or artifact it covers, crosses a public release boundary without re-approval, or has unresolved actionable high and critical findings. The default freshness window is 7 calendar days before readiness review unless a stricter source, dependency, artifact, or scanner change invalidates the evidence sooner.
+Readiness fails when evidence is missing, stale, predates the source,
+dependency policy, build input, scanner database, or runner file it covers,
+crosses a public release boundary without re-approval, or has unresolved
+actionable high and critical findings. The default freshness window is 7
+calendar days before readiness review unless a stricter source, dependency
+policy, runner file, or scanner change invalidates the evidence sooner.
 
 ### Pinned Release Input Evidence
 
@@ -262,17 +284,16 @@ For the selected Python runner, XPLAT-004 must record:
 
 Unknown or unverified values are evidence gaps and cannot be treated as accepted controls.
 
-If the runtime is amended to Rust, Zig, bundled Node, embedded Python, or another
-shape, this evidence section must be regenerated for that runtime's toolchain,
-dependency graph, artifact format, build inputs, scan path, checksum/manifest
-metadata, and consumer verification behavior.
+Compiled binaries, bundled runtimes, and alternate source-script runtimes are
+out of scope for XPLAT and must not be represented as pinned-input alternatives.
 
 ### Generated Payload Metadata Propagation Gate
 
-XPLAT-007 must prove that checksum and runner artifact manifest metadata produced by XPLAT-004 flows into the payloads that public installs consume:
+XPLAT-007 must prove that checksum and runner file manifest metadata produced
+by XPLAT-004 flows into the payloads that public installs consume:
 
 ```text
-XPLAT-004 runtime artifact outputs
+XPLAT-004 runner file outputs
 -> source checksum and manifest paths
 -> generated Claude metadata paths
 -> generated Codex metadata paths
@@ -283,15 +304,22 @@ The gate must record producer evidence refs, source metadata paths, generated Cl
 
 ### Consumer-Local Checksum Verification Guidance
 
-XPLAT-007 must provide platform-specific command shapes for every platform artifact it intends to claim after native UAT passes:
+XPLAT-007 must provide platform-specific command shapes for every runner file it
+intends to claim after native UAT passes:
 
 | Platform | SHA-256 command shape |
 |---|---|
-| Windows | `Get-FileHash -Algorithm SHA256 <runner-path>` |
-| macOS | `shasum -a 256 <runner-path>` |
-| Linux | `sha256sum <runner-path>` |
+| Windows | `<python> -c "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" <runner-path>` |
+| macOS | `<python> -c "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" <runner-path>` |
+| Linux | `<python> -c "import hashlib,pathlib,sys; print(hashlib.sha256(pathlib.Path(sys.argv[1]).read_bytes()).hexdigest())" <runner-path>` |
 
-Guidance must describe metadata lookup from the installed payload or release-provided offline metadata. If checksum metadata is unavailable, guidance must fail closed with an explicit "verification metadata unavailable" state instead of instructing users to fetch dependencies, clone the source repository, run Bash, use `jq`, or restore packages from the network.
+Guidance must describe metadata lookup from the installed payload or
+release-provided offline metadata and resolve `<python>` from the preflight
+interpreter. If checksum metadata or the interpreter is unavailable, guidance
+must fail closed with an explicit "verification metadata unavailable" state
+instead of instructing users to fetch dependencies, clone the source repository,
+run Bash, use `jq`, use PowerShell helper scripts, or restore packages from the
+network.
 
 These command shapes are XPLAT-007 guidance requirements, not current public native-support claims.
 
@@ -299,18 +327,18 @@ These command shapes are XPLAT-007 guidance requirements, not current public nat
 
 XPLAT-007 consumer guidance must treat a computed checksum that differs from
 the matching published checksum entry as a closed verification failure. The
-consumer-facing path must say not to rely on that artifact for native-runner
-claims and must collect enough information for maintainers to investigate:
-artifact path, target platform, runner identity or preflight output, checksum
-metadata source, expected checksum, computed checksum, plugin version or release
+consumer-facing path must say not to rely on that runner file for support claims
+and must collect enough information for maintainers to investigate: runner file
+path, target platform, runner identity or preflight output, checksum metadata
+source, expected checksum, computed checksum, plugin version or release
 boundary, and reporting path.
 
 The guidance must not ask consumers to repair a mismatch by cloning source,
 restoring packages, fetching replacement dependencies from the network, running
 Bash or `jq`, or trusting runner self-verification alone. Maintainers may accept
-the artifact again only after fresh XPLAT-004 artifact, checksum, and manifest
-evidence and XPLAT-007 source-to-dist, claim-audit, and consumer-guidance
-evidence are current for the affected artifact.
+the runner file again only after fresh XPLAT-004 runner-file, checksum, and
+manifest evidence and XPLAT-007 source-to-dist, claim-audit, and
+consumer-guidance evidence are current for the affected runner file.
 
 ### Release-Readiness and Claim-Audit Retention
 
@@ -326,18 +354,18 @@ and large generated artifacts are not committed by default; once automation
 exists, they may remain short-retention CI or release artifacts that support the
 durable summary rather than replacing it.
 
-### Partial Artifact Publication Gate
+### Partial Runner-File Publication Gate
 
-Public cutover and release claims are evaluated per claimed artifact and
-platform. A platform artifact may be ready only for its own claim scope when its
-checksum, manifest, runtime-info and preflight, native UAT, source-to-dist, scan,
-exception, release-automation, and claim-audit evidence are current.
+Public cutover and release claims are evaluated per claimed runner file and
+platform. A platform runner file may be ready only for its own claim scope when
+its checksum, manifest, runtime-info and preflight, native UAT, source-to-dist,
+scan, exception, release-automation, and claim-audit evidence are current.
 
-If an intended platform artifact is missing, stale, mismatched, unpublished, or
-lacks required evidence, XPLAT-007 must either exclude that artifact and platform
-from public claims with an explicit deferred or not claimable record or keep the
-claim set blocked. One passing platform never implies Windows, macOS, and Linux
-support for other platforms.
+If an intended platform runner file is missing, stale, mismatched, unpublished,
+or lacks required evidence, XPLAT-007 must either exclude that runner file and
+platform from public claims with an explicit deferred or not claimable record or
+keep the claim set blocked. One passing platform never implies Windows, macOS,
+and Linux support for other platforms.
 
 ### Release Automation Acceptance Evidence
 
@@ -358,8 +386,8 @@ Until this record exists and is current, the release automation control remains 
 
 | Surface | Owns | Acceptance gate from XPLAT-003 |
 |---|---|---|
-| XPLAT-004 | Runner source, Go module and toolchain policy, pinned build input evidence, native artifact build inputs, checksum generation, manifest generation, applicable runner vulnerability scans, and runtime-info plus preflight artifact-integrity fields. | Runner-foundation readiness fails when required evidence is missing, stale, or has unresolved actionable high and critical findings. Unknown or unverified pinned input fields remain evidence gaps. |
-| XPLAT-007 | Generated payload source-to-dist gate, checksum and manifest metadata propagation evidence, generated drift evidence, consumer verification guidance, checksum mismatch remediation, native UAT evidence, per-artifact claim readiness, public docs and release-note claim boundaries, and public claim audit. | Public cutover and claims fail when evidence, checksums, manifest, metadata propagation, scan summaries and exceptions, consumer guidance, mismatch remediation, preflight and version evidence, public-claim audit, per-artifact readiness, or native UAT evidence is missing or stale. Consumer checksum guidance must cover each claimed target platform without pre-UAT native support claims. Partial readiness may be claimed only for explicitly ready artifacts and platforms. |
+| XPLAT-004 | Python runner source, stdlib-only dependency policy, official Spec Kit / `specify` prerequisite preflight, pinned input evidence, checksum generation, manifest generation, applicable runner vulnerability scans, runtime-info plus preflight source-integrity fields, and Python test/eval runner patterns. | Runner-foundation readiness fails when required evidence is missing, stale, or has unresolved actionable high and critical findings. Unknown or unverified pinned input fields remain evidence gaps. |
+| XPLAT-007 | Generated payload source-to-dist gate, checksum and manifest metadata propagation evidence, generated drift evidence, Python replacements for active Bash build/test/eval/release-readiness gates, consumer verification guidance, checksum mismatch remediation, native UAT evidence, per-runner-file claim readiness, public docs and release-note claim boundaries, and public claim audit. | Public cutover and claims fail when evidence, checksums, manifest, metadata propagation, scan summaries and exceptions, consumer guidance, mismatch remediation, preflight and version evidence, public-claim audit, per-runner-file readiness, native UAT evidence, or active Python test/eval gate evidence is missing or stale. Consumer checksum guidance must cover each claimed target platform without pre-UAT native support claims. Partial readiness may be claimed only for explicitly ready runner files and platforms. |
 | Release automation | Publication-time evidence once later specs wire it in. | Not edited in XPLAT-003. Any claim depending on release automation fails until the earliest downstream implementing surface records acceptance evidence with control ID, gate location, release inputs and outputs, current pass or fail evidence, and claim-dependency mapping. |
 | Public docs and release notes | Implemented-and-verified claim wording only. | Claims about unimplemented signing, SBOMs, provenance, reproducibility, audit, marketplace-enforced verification, cryptographic trust-chain verification, or native platform support are rejected or rewritten as deferred roadmap language. |
 
@@ -370,9 +398,9 @@ Until this record exists and is current, the release automation control remains 
 | First-release controls have owners | Pass: all baseline controls map to XPLAT-004, XPLAT-007, or later release and docs surfaces. |
 | Release automation claim gate is explicit | Pass: assigned release automation controls are not claimable until downstream acceptance evidence proves the gate is implemented and wired into publication. |
 | Source-to-dist metadata flow is explicit | Pass: XPLAT-007 must prove checksum and manifest metadata presence, equality, and freshness across source, generated Claude payload, and generated Codex payload roots. |
-| Checksum mismatch remediation is explicit | Pass: consumer guidance must fail closed, tell consumers not to rely on mismatched artifacts, collect mismatch facts, and require fresh maintainer evidence before re-acceptance. |
+| Checksum mismatch remediation is explicit | Pass: consumer guidance must fail closed, tell consumers not to rely on mismatched runner files, collect mismatch facts, and require fresh maintainer evidence before re-acceptance. |
 | Release-readiness and claim-audit retention is explicit | Pass: public-claim evidence needs durable non-sensitive summaries beyond scan output and short-retention logs. |
-| Partial artifact publication is deterministic | Pass: claims are evaluated per artifact and platform; incomplete, stale, mismatched, or unpublished claimed artifacts are excluded or block the claim set. |
+| Partial runner-file publication is deterministic | Pass: claims are evaluated per runner file and platform; incomplete, stale, mismatched, or unpublished claimed runner files are excluded or block the claim set. |
 | Deferred controls remain explicit | Pass: signatures, SBOM, provenance and attestations, reproducible builds, formal audit, marketplace-enforced verification, and cryptographic trust-chain verification remain deferred unless promotion evidence appears. |
 | No implementation scope slipped in | Pass: plan artifacts describe controls and evidence only. |
 | Public claim boundary is strict | Pass: only implemented-and-verified controls may be claimed. |

@@ -15,12 +15,15 @@ criterion ratings.
 - Narrative comparison only: rejected because reviewers need repeatable
   evidence and tie-breaker rationale.
 
-## Decision: Evaluate exactly three selectable runtime families
+## Decision: Preserve three-family historical evidence and select Python
 
-**Rationale**: The selectable candidates are JavaScript/TypeScript, Python, and
-small per-platform binary runner options. Temporary compatibility adapters may
-be recorded, but they are migration records rather than a fourth selectable
-runtime family.
+**Rationale**: The original evidence set covered JavaScript/TypeScript, Python,
+and small per-platform binary runner options. After the official Spec Kit
+Python prerequisite was confirmed, Python standard library is the only selected
+XPLAT runtime model. The JavaScript/TypeScript and small per-platform binary
+records remain as rejected historical evidence. Temporary compatibility
+adapters may be recorded, but they are migration records rather than runtime
+candidates.
 
 **Alternatives considered**:
 
@@ -225,7 +228,7 @@ XPLAT-007 validates native release readiness.
 |---|---|---|---|---|
 | JavaScript/TypeScript | Installed-cache invocation, native behavior, paths, JSON, subprocess, packaging | XPLAT-001 weights totaling 100 | Official runtime/toolchain docs, plugin platform docs or repo manifests, installed Claude/Codex cache probes or host-specific evidence gaps when uncertain | Selected or rejected with rationale |
 | Python | Same gates | Same weights | Same evidence standard | Selected or rejected with rationale |
-| Small per-platform binary runner | Same gates | Same weights | Same evidence standard | Selected or rejected with rationale |
+| Rejected small per-platform binary path | Same gates | Same weights | Same evidence standard | Rejected historical evidence only |
 
 ## Probe Plan
 

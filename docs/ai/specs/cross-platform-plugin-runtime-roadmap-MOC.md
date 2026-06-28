@@ -57,8 +57,9 @@ or Codex surface changes.
 Why: Public release needs proof that the installed plugin works on native
 Windows, macOS, and Linux without Unix-shell workarounds; that Claude Code and
 Codex installs include every expected skill, bundled agent, hook, generated
-payload, and runner artifact; that update and safe repair paths work; and that
-the published security claims match the implemented controls.
+payload, runner source or launcher file, and active Python test/eval gate; that
+update and safe repair paths work; and that the published security claims match
+the implemented controls.
 
 - XPLAT-007 Claude/Codex Cutover and Universal Install Release Gate
 

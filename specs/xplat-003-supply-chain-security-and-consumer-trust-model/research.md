@@ -31,13 +31,13 @@ Use the XPLAT-001 supply-chain rubric as a non-scoring template, then apply the
 amended XPLAT-002 handoff boundary: the active runtime is a Python
 standard-library runner aligned with official Spec Kit / `specify`
 prerequisites. No runner exists yet, and XPLAT-003 chooses controls without
-implementing them. Go-specific conclusions are preserved as historical fallback
-evidence only and are not downstream implementation criteria while Python is
-selected.
+implementing them. Go/Rust/Zig and other compiled-binary conclusions are
+preserved only as historical rejected evidence; they are not downstream
+implementation criteria, compatibility adapters, or fallback paths for XPLAT.
 
 Controls are classified as:
 
-- **First-release required**: must be implemented and verified before public cutover or claims rely on the native runner.
+- **First-release required**: must be implemented and verified before public cutover or claims rely on the selected Python runner.
 - **Deferred hardening**: desirable trust hardening that is not required for the first release unless promotion evidence appears.
 - **Explicitly not claimed**: guarantees public docs and release notes must not imply before implementation and verification.
 - **Out of scope**: implementation work that belongs to a downstream spec or release surface.
@@ -65,15 +65,14 @@ absent.
 
 ## Python Runner Distribution And Installation Model
 
-The amended runtime model avoids per-platform binary distribution for the first
-release:
+The amended runtime model avoids per-platform binary distribution for XPLAT:
 
 | Distribution shape | Marketplace/install behavior | XPLAT consequence |
 |---|---|---|
 | Python stdlib runner source in generated plugin payloads | Claude and Codex install the runner source with the plugin payload. The user supplies the official Spec Kit prerequisite environment. | Preferred first-release model. XPLAT-004 implements the runner and preflight; XPLAT-007 proves the runner source is present, fresh, and equal in both Claude and Codex payload roots. |
 | Thin payload-local launcher | A launcher may provide a stable command target for Claude/Codex, but it only locates Python and dispatches to the runner source. | Allowed only if the launcher contains no helper logic and no Bash/PowerShell implementation behavior. |
-| Plugin-only Python package dependencies | Would require `pip install`, vendored wheels, virtualenv restoration, or bundled Python. | Not allowed for first release unless XPLAT is reopened and dependency controls are regenerated. |
-| Native Go/Rust/Zig artifacts | Avoid Python launch concerns but require per-platform artifacts, checksums, manifests, build inputs, and artifact verification. | Historical fallback only while Python is selected. |
+| Plugin-only Python package dependencies | Would require `pip install`, vendored wheels, virtualenv restoration, or bundled Python. | Not allowed in XPLAT; the runner must remain stdlib-only. |
+| Compiled Go/Rust/Zig/native artifacts | Would add a second implementation and distribution model even though SpecKit already requires Python. | Rejected for XPLAT. Not a fallback. |
 
 Repository-specific implication: this project does not install directly from
 `speckit-pro/`. Claude installs come from `.claude-plugin/marketplace.json`
@@ -82,65 +81,16 @@ pointing at `./dist/claude/speckit-pro`; Codex installs come from
 XPLAT-007 must prove the Python runner source and any launcher/preflight
 metadata are copied into both generated payload roots.
 
-The compiled-binary model below is retained as fallback analysis only.
-
-## Compiled Binary Distribution and Installation Model
-
-Official marketplace behavior supports a bundled-payload model, but does not
-remove the need for platform-specific install evidence:
-
-| Distribution shape | Marketplace/install behavior | XPLAT consequence |
-|---|---|---|
-| Bundle every target artifact in generated plugin payloads | Claude marketplace installs copy the plugin directory into a versioned local cache, and Claude plugins document `bin/` executables at the plugin root. Codex marketplace entries point at a plugin folder, install a cached copy, and document plugin skills, hooks, apps, MCP config, and assets at the plugin root. | Preferred first-release model for no-post-cache-install claims. XPLAT-004 must produce per-platform artifacts and metadata; XPLAT-007 must prove they are present, equal, fresh, and executable in both `dist/claude/speckit-pro` and `dist/codex/speckit-pro` installs. |
-| Bundle only the current host artifact | Smaller install, but marketplace users on another host receive an incomplete payload unless install-time selection is officially supported and verified. | Not acceptable for broad Windows/macOS/Linux claims unless the marketplace/install surface has a documented platform selector and XPLAT-007 proves each claimed platform receives the right artifact. |
-| Download artifact from a release asset on first use or install | Keeps plugin payload small, but requires network access, user approval or hook execution, checksum verification, retry handling, and an unavailable/offline state. Official docs reviewed here do not define an automatic native-binary postinstall resolver for either marketplace. | Not acceptable for "works after plugin cache population" claims. It can be an explicit repair/update path only if it fails closed, verifies checksums before use, and does not become the basis for public native-support claims until release automation and install evidence exist. |
-| Hybrid: bundle manifest/checksums and fetch missing artifact explicitly | Lets maintainers publish smaller payloads while documenting a manual repair flow. | Treat as a network restoration dependency, not as a self-contained install. Public claims must say the platform requires the explicit fetch step or remain blocked. |
-
-Repository-specific implication: this project does not install directly from
-`speckit-pro/`. Claude installs come from `.claude-plugin/marketplace.json`
-pointing at `./dist/claude/speckit-pro`; Codex installs come from
-`.agents/plugins/marketplace.json` pointing at `./dist/codex/speckit-pro`.
-The current `scripts/build-plugin-payloads.sh` copies selected source
-directories into those generated payload roots and does not yet copy a generic
-runner source, launcher metadata, or platform-artifact directory. XPLAT-004 or
-XPLAT-007 must therefore add the selected runner source/launcher paths, or any
-future native-artifact fallback paths, to the payload builder and source-to-dist
-gate before install-completeness or native-support claims can pass.
-
-Platform-specific launcher implications:
-
-- Claude Code can use a plugin-root `bin/` convention because the official
-  docs document `bin/` executables as added to the Bash tool's `PATH` while the
-  plugin is enabled. The binary still needs per-platform artifact metadata,
-  executable permission where applicable, and closed failure when the current
-  host has no matching artifact.
-- Codex docs reviewed here do not define a plugin-root `bin/` discovery
-  convention equivalent to Claude's. Codex should invoke a bundled native
-  artifact only through documented Codex surfaces such as a skill script, a
-  plugin-bundled hook command, or a plugin-bundled MCP server command, with the
-  installed plugin root or payload-relative path recorded in evidence. A
-  Claude-only `bin/` layout is not sufficient Codex install evidence.
-- Windows artifacts need explicit `.exe` paths and PowerShell-friendly
-  verification guidance. macOS and Linux artifacts need executable-bit
-  preservation verified after the generated payload build and marketplace
-  install/cache copy. These checks belong to XPLAT-004/XPLAT-007, not XPLAT-003.
-
-Decision effect: the safest marketplace-compatible first-release shape is
-"bundle all claimed platform artifacts plus manifest/checksum metadata inside
-both generated payload roots, then select the current host artifact at runtime."
-Release-asset download can remain a later update/repair path, but it should not
-be the basis for no-install native-support claims.
-
-## Runtime Candidate Reopen Implications
+## Rejected Runtime Candidate Implications
 
 | Runtime shape | User install impact | XPLAT-003 consequence |
 |---|---|---|
 | Python stdlib source runner | Users install official Spec Kit / `specify`, which requires Python 3.11+. They do not install plugin-only Python dependencies. | Selected first-release model. XPLAT-004 owns interpreter/specify preflight, stdlib-only enforcement, runner source integrity, and installed-cache launch proof. |
-| Go native artifact | Users do not install Go if maintainers build and ship per-platform executables. | Historical fallback only. Go module/toolchain evidence becomes active only if the runtime decision is reopened again. |
-| Rust native artifact | Users do not install Rust if maintainers build and ship per-platform executables. | Viable same runtime model, but XPLAT-002 must be amended and XPLAT-003 controls regenerated for Cargo/crate/toolchain/artifact evidence. |
-| Zig native artifact | Users do not install Zig if maintainers build and ship per-platform executables. | Viable same runtime model, but XPLAT-002 must be amended and XPLAT-003 controls regenerated for Zig/toolchain/artifact evidence. |
-| Node source script | Users need Node unless a runtime is bundled or the platform officially guarantees it. | Not acceptable for no-post-cache-install claims without a bundled runtime, official guarantee, or fail-closed prerequisite behavior. |
-| Bundled Node or embedded Python | Users do not install the interpreter, but the payload now ships a larger runtime artifact. | Treat as native/runtime-bundle packaging with expanded vulnerability, license, checksum, manifest, and update controls. |
+| Rejected Go native-binary path | Users would not install Go if maintainers built and shipped per-platform executables, but XPLAT would gain a second implementation/distribution model. | Rejected for XPLAT because SpecKit already requires Python. Not a fallback. |
+| Rejected Rust native-binary path | Users would not install Rust if maintainers built and shipped per-platform executables, but XPLAT would gain a second implementation/distribution model. | Rejected for XPLAT because SpecKit already requires Python. Not a fallback. |
+| Rejected Zig native-binary path | Users would not install Zig if maintainers built and shipped per-platform executables, but XPLAT would gain a second implementation/distribution model. | Rejected for XPLAT because SpecKit already requires Python. Not a fallback. |
+| Node source script | Users need Node unless a runtime is bundled or the platform officially guarantees it. | Rejected for XPLAT because Node is not part of the SpecKit prerequisite boundary. |
+| Bundled Node or embedded Python | Users do not install the interpreter, but the payload now ships a larger runtime artifact. | Rejected for XPLAT because bundled runtimes add supply-chain surface that the SpecKit Python prerequisite avoids. |
 | Bash, `jq`, package-manager restoration, WSL, or Git Bash dependency | Requires user environment setup or platform-specific shell assumptions. | Not acceptable for first-release native-support claims after plugin cache population. |
 
 ## XPLAT-001 Rubric Mapping
@@ -153,7 +103,7 @@ be the basis for no-install native-support claims.
 | Provenance or attestation options | Deferred hardening; do not claim provenance or attestations until implemented and verified. |
 | Checksums/signatures | SHA-256 checksums are first-release required; signatures are deferred hardening. |
 | SBOM feasibility | Deferred hardening; keep a future path but do not require an SBOM for first release. |
-| Consumer-local verification | First-release required; use runner identity/preflight plus platform-native checksum comparison. |
+| Consumer-local verification | First-release required; use runner identity/preflight plus Python standard-library checksum comparison. OS-native checksum commands may be supplemental only. |
 | Release automation and documentation truthfulness | First-release required as a claim boundary; release workflow edits are out of scope for XPLAT-003. |
 
 ## XPLAT-002 Handoff Implications
@@ -161,8 +111,8 @@ be the basis for no-install native-support claims.
 | Handoff input | XPLAT-003 implication |
 |---|---|
 | Python stdlib runner recorded by amended XPLAT-002 | Trust model centers on Python source payload integrity, official Spec Kit prerequisite verification, and installed-cache launch evidence. |
-| No built runner exists | XPLAT-003 cannot validate installed-cache execution; XPLAT-004 must produce artifacts and preflight/version evidence. |
-| Installed users receive packaged artifacts | First-release controls must avoid post-cache dependency installation, package restoration, `jq`, Bash, or source checkout requirements. |
+| No built runner exists | XPLAT-003 cannot validate installed-cache execution; XPLAT-004 must produce runner source, launcher metadata where used, and preflight/version evidence. |
+| Installed users receive packaged runner files | First-release controls must avoid post-cache dependency installation, package restoration, `jq`, Bash, PowerShell helper scripts, or source checkout requirements. |
 | Runtime-info/preflight exists in contract | XPLAT-003 extends the evidence expected from runtime-info/preflight with runner source-integrity pointers. |
 | XPLAT-007 owns generated payload cutover | Generated payload source-to-dist evidence and public support claims stay with XPLAT-007. |
 
@@ -170,8 +120,7 @@ be the basis for no-install native-support claims.
 
 Runtime-decision status: amended to Python. The controls below are the active
 trust model for the Python standard-library runner. Go/Rust/Zig/native-binary
-controls are fallback controls only and must be regenerated before use if the
-runtime decision is reopened again.
+controls are rejected historical analysis and are not XPLAT controls.
 
 | Control | Classification | Owner | Rationale | Acceptance gate |
 |---|---|---|---|---|
@@ -180,12 +129,13 @@ runtime decision is reopened again.
 | Codex custom-agent install completeness | First-release required when Codex agents are part of the release promise | XPLAT-007 / install skill owner | Official Codex docs register custom subagents through `.codex/agents/*.toml` or `~/.codex/agents/*.toml`, not by generic plugin `agents/` bundling. | Codex install-completeness validation fails when required TOML agents are absent even if plugin skills are installed. |
 | Selected-runtime source and prerequisite evidence | First-release required | XPLAT-004 | Python runner readiness needs a stable source path, source revision, stdlib-only policy, Python minimum version, interpreter discovery order, `specify` discovery/version evidence, generated payload paths, and scan inputs. | Runner readiness fails if prerequisite, source-integrity, payload, scan, or installed-cache launch evidence is missing, stale, unknown, or unverified. |
 | Generated payload source-to-dist gate | First-release required | XPLAT-007 | Marketplace installs consume generated Claude/Codex payloads; source and dist must reconcile before cutover. | Public cutover fails if rebuild/drift evidence or checksum/manifest metadata propagation evidence is missing, stale, or unequal across source and generated roots. |
+| Python build/test/eval/release-readiness gates | First-release required | XPLAT-007 | A pure Python runtime claim is incomplete if the active gates that validate or publish shipped plugin behavior still require Bash or `jq`. | Public cutover fails if shipped-behavior build, test, eval, payload, or release-readiness gates remain Bash-only, except for historical/archive text or temporary parity evidence outside the final release gate. |
 | Runner source integrity metadata | First-release required | XPLAT-004 creates; XPLAT-007 verifies/docs | Checksums or equivalent source-integrity metadata are the minimum practical integrity control consumers can verify without marketplace enforcement. | Each packaged runner source or launcher file covered by the claim has matching integrity metadata. |
 | Runner source manifest | First-release required | XPLAT-004 creates; XPLAT-007 verifies/docs | Consumers and maintainers need runner identity, prerequisite boundary, source revision, payload path, and integrity metadata. | Manifest includes all required top-level and runner source fields. |
 | Vulnerability scans | First-release required | XPLAT-004 for runner/source; XPLAT-007 for cutover/public readiness | Actionable high/critical findings and stale evidence must block release readiness before Python runner support is publicly claimed. | Readiness fails on missing/stale evidence or unresolved actionable high/critical findings. |
 | Vulnerability exceptions | First-release required when used | Owning downstream surface | Non-actionable findings need durable rationale, approval, and expiry to avoid silently weakening the gate. | Exception records include all required fields and expire before each public release or on changed evidence. |
 | Runtime-info/preflight source-integrity fields | First-release required | XPLAT-004 | Consumer verification starts with identity/preflight evidence and needs pointers to runner source integrity and manifest metadata. | Preflight/runtime-info includes runner source path, manifest path, integrity metadata path, expected checksum if used, algorithm, and verification status. |
-| Consumer-local verification guide | First-release required | XPLAT-007 | Consumers must be able to verify without `jq`, Bash, source checkout, or network package restoration. | Guidance uses identity/preflight first, then platform-native source-integrity comparison where XPLAT-004/XPLAT-007 require checksums. |
+| Consumer-local verification guide | First-release required | XPLAT-007 | Consumers must be able to verify without `jq`, Bash, PowerShell helper scripts, source checkout, or network package restoration. | Guidance uses identity/preflight first, then Python standard-library source-integrity comparison where XPLAT-004/XPLAT-007 require checksums. |
 | Public claim audit | First-release required | XPLAT-007 and docs/release surfaces | Public trust depends on avoiding unimplemented guarantees. | Release notes/docs claim only implemented and verified controls. |
 | Release automation publication evidence | First-release required when a public claim depends on automation | XPLAT-007 or later release automation surface | Publication-time checks cannot support public trust claims until a downstream surface proves the gate is implemented and wired into the release path. | Claims depending on release automation fail unless current acceptance evidence names the control ID, gate location, release inputs/outputs, pass/fail evidence, and claim dependency mapping. |
 | Signatures | Deferred hardening | Future release/security surface | Useful hardening but not required without marketplace/install enforcement or a concrete first-release requirement. | Promote only with implementation, verification, and public-claim need. |
@@ -222,32 +172,37 @@ The first-release consumer path is:
 
 1. Run runner identity/preflight from the installed plugin payload.
 2. Locate the runner source manifest and checksum file from runtime-info/preflight output or documented payload-relative paths.
-3. Compute SHA-256 for the installed artifact using platform-native tooling for the target platform, for example Windows `Get-FileHash -Algorithm SHA256`, macOS `/usr/bin/shasum -a 256`, or Linux `sha256sum`.
+3. Compute SHA-256 for the installed runner file using a Python standard-library
+   checksum command shape that XPLAT-004/XPLAT-007 provide through the
+   preflight-discovered interpreter. OS-native checksum commands may be listed
+   as optional cross-checks only.
 4. Compare the computed hash to the matching payload-relative entry in `scripts/speckit-pro-runner.sha256`.
 
-This path does not rely on runner self-verification alone and does not require `jq`, Bash, source checkout, or network package restoration. If artifact or checksum metadata is unavailable, guidance must fail closed with an explicit unavailable state rather than instructing consumers to fetch dependencies or clone source.
+This path does not rely on runner self-verification alone and does not require
+`jq`, Bash, PowerShell helper scripts, source checkout, or network package
+restoration. If runner-file or checksum metadata is unavailable, guidance must
+fail closed with an explicit unavailable state rather than instructing consumers
+to fetch dependencies or clone source.
 
-The path also does not require users to install the implementation toolchain.
-If Go remains selected, consumers verify the packaged executable; they do not
-install Go. If Rust, Zig, bundled Node, embedded Python, or another runtime
-shape is selected instead, the verification path must be regenerated for that
-artifact shape and must preserve the same no-post-cache-install boundary.
+The path also does not require users to install an implementation toolchain.
+Go/Rust/Zig/native binaries are not XPLAT alternatives, so consumer guidance
+does not include compiled-binary verification paths.
 
 A computed checksum mismatch is also a closed verification failure. Consumer
-guidance should tell users not to rely on the affected artifact for native-runner
-claims, record the artifact path, platform, runner identity/preflight output,
+guidance should tell users not to rely on the affected runner file for support
+claims, record the runner file path, platform, runner identity/preflight output,
 metadata source, expected checksum, computed checksum, plugin version or release
 boundary, and reporting path, and wait for maintainer remediation backed by
 fresh XPLAT-004 and XPLAT-007 evidence. Local source checkout repair, package
-restoration, network replacement fetches, Bash, `jq`, and runner
-self-verification alone are rejected remediation paths because they would move
-trust outside the installed payload and release evidence boundary.
+restoration, network replacement fetches, Bash, `jq`, PowerShell helper scripts,
+and runner self-verification alone are rejected remediation paths because they
+would move trust outside the installed payload and release evidence boundary.
 
 ## Public Claim Boundary
 
 Allowed after implementation and verification:
 
-- Packaged native runner artifacts.
+- Packaged Python runner source files and any thin launchers.
 - SHA-256 checksum file and runner source manifest.
 - Local runner preflight/version plus checksum verification.
 - Generated payload source-to-dist gate.
@@ -266,11 +221,11 @@ Forbidden until implemented and verified:
 
 Roadmap wording may describe deferred items as planned or future hardening, but must not state or imply that they are provided, guaranteed, certified, enforced, trusted, or supported today.
 
-Artifact and platform claims are evaluated per claimed artifact. A platform with
-complete current evidence may be claimable for that platform only; missing,
-stale, mismatched, unpublished, or unsupported artifacts must be excluded from
-claims or keep the claim set blocked. One passing artifact does not imply native
-Windows/macOS/Linux support for any other platform.
+Runner-file and platform claims are evaluated per claimed runner file. A
+platform with complete current evidence may be claimable for that platform only;
+missing, stale, mismatched, unpublished, or unsupported runner files must be
+excluded from claims or keep the claim set blocked. One passing runner file does
+not imply native Windows/macOS/Linux support for any other platform.
 
 ## Result
 
@@ -286,10 +241,9 @@ supplement records the Windows-first install/use/update/repair path for Claude
 Code and Codex and makes clear that universal install requires payload
 completeness, Codex custom-agent registration completeness, Python
 runner/preflight files, platform-compatible hooks/scripts, scaffold/autopilot
-autoheal, and UAT runbook quality evidence. Until those gaps are closed, this
-research is a planning baseline and not a public support acceptance record. If
-the runtime changes to Go, Rust, Zig, bundled Node, embedded Python, or another
-shape, the control matrix and user journeys must be regenerated rather than
-edited opportunistically.
+autoheal, Python build/test/eval/release-readiness gates, and UAT runbook
+quality evidence. Until those gaps are closed, this research is a planning
+baseline and not a public support acceptance record. Go/Rust/Zig/native-binary
+paths are rejected for XPLAT rather than deferred.
 
 Release automation remains assigned but not implemented in XPLAT-003. Any public claim that relies on release automation remains blocked until XPLAT-007 or a later release automation surface records current acceptance evidence.

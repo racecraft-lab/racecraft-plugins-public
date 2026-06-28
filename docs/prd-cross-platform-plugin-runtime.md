@@ -21,7 +21,11 @@ Bash availability.
 This PRD defines the product requirement to replace Bash as a plugin runtime
 dependency with one cross-platform implementation path that behaves the same on
 native Windows, macOS, and Linux, and that users can adopt with reasonable
-supply-chain confidence.
+supply-chain confidence. The implementation path selected by the amended
+XPLAT-002/XPLAT-003 decision is a Python 3.11+ standard-library runner that
+leans on the official Spec Kit / `specify` prerequisite boundary. That decision
+also applies to active build, test, eval, and release-readiness gates that
+validate or publish shipped plugin behavior.
 
 ## Goals
 
@@ -32,10 +36,13 @@ supply-chain confidence.
   hooks, helper scripts, or generated payload files.
 - Installed plugin workflows no longer require Bash, Git Bash, WSL, PowerShell,
   or `jq` as the implementation substrate.
+- Active plugin build, test, eval, and release-readiness gates that validate or
+  publish shipped behavior run through Python standard-library tooling rather
+  than Bash-only scripts.
 - Claude and Codex plugin behavior stays semantically equivalent during and
   after the migration.
 - The runtime choice is evidence-backed before implementation starts.
-- Consumers can evaluate the plugin's runtime artifacts, dependencies, and
+- Consumers can evaluate the plugin's runner files, dependencies, and
   release provenance before adopting it.
 - Scaffold and autopilot can diagnose and repair incomplete installs where that
   is safe, and otherwise return a concrete remediation message.
@@ -50,8 +57,8 @@ has been removed from individual helper scripts.
 1. A user installs the latest tagged SpecKit Pro plugin release for Claude Code,
    Codex, or both.
 2. The installed plugin contains every required skill, bundled agent, hook,
-   runner artifact, manifest/checksum entry, and generated payload file for that
-   product surface.
+   runner source file, optional thin launcher, manifest/checksum entry, and
+   generated payload file for that product surface.
 3. The user runs the first documented workflow, including scaffold/status and an
    autopilot dry-run, without installing Bash, Git Bash, WSL, PowerShell-specific
    shims, `jq`, Go, Rust, Zig, or any implementation runtime beyond official
@@ -65,14 +72,18 @@ has been removed from individual helper scripts.
 6. Maintainers have a readable UAT runbook that proves the journey across native
    Windows, macOS, Linux, and any explicitly documented WSL path before public
    release claims are made.
+7. Maintainers can run the active release-readiness test/eval suite on each
+   platform without Bash, `jq`, Git Bash, WSL, or PowerShell helper scripts.
 
 ## Non-Goals
 
-- Replacing repository maintainer shell scripts that are not shipped or invoked
-  by the installed Claude/Codex plugin runtime.
-- Replacing GitHub Actions or CI shell usage.
+- Rewriting historical/archive prose that mentions prior Bash implementations.
+- Replacing GitHub Actions YAML or minimal CI shell wrappers when they only
+  dispatch to Python gates and do not contain plugin validation logic.
 - Replacing GitHub Spec Kit's own generated `.specify/scripts/bash/` helpers in
   consumer repositories.
+- Replacing unrelated repository-only shell scripts that neither build, test,
+  evaluate, publish, nor validate shipped plugin behavior.
 - Changing the user-facing SpecKit workflow model, PR-size governance behavior,
   or capability-discovery contract except where Bash removal requires invocation
   wording changes.
@@ -92,10 +103,12 @@ runtime decision.
 
 - AC-1.1: The inventory covers Claude skills, Codex skills, Claude agents, Codex
   agents, hooks, install helpers, generated payloads, and public plugin docs.
-- AC-1.2: Historical/archive/test-only Bash references are classified separately
-  from active runtime references so enforcement can avoid false positives.
-- AC-1.3: Each active runtime dependency has an owner category: read-only helper,
-  mutation/helper, cutover guidance, repository-only exclusion, or follow-up
+- AC-1.2: Historical/archive Bash references are classified separately from
+  active runtime and active verification references so enforcement can avoid
+  false positives without exempting release gates.
+- AC-1.3: Each active runtime or active release-gate dependency has an owner
+  category: read-only helper, mutation/helper, test/eval gate, build/payload
+  gate, cutover guidance, unrelated repository-only exclusion, or follow-up
   exception.
 - AC-1.4: The inventory produces an evaluation rubric for runtime candidates,
   including native Windows/macOS/Linux support, invocation from installed plugin
@@ -105,9 +118,11 @@ runtime decision.
 ### 2. Runtime Implementation Options and Contract Decision *(-> XPLAT-002)*
 
 Research and evaluate implementation options before building the runner. The
-decision must compare plausible strategies such as JavaScript/TypeScript,
-Python, and small per-platform binaries, then select one canonical runtime
-contract for later specs.
+completed decision now locks one canonical runtime contract for later specs:
+Python 3.11+ standard-library source aligned with the official Spec Kit /
+`specify` prerequisite boundary. JavaScript/TypeScript and compiled
+per-platform binaries are rejected historical candidates, not fallback paths for
+XPLAT.
 
 **Acceptance Criteria**
 
@@ -118,8 +133,9 @@ contract for later specs.
 - AC-2.2: Where runtime mechanics are uncertain, smoke probes or documented
   platform evidence verify that Claude Code and Codex can invoke the candidate
   from installed plugin caches without extra user setup.
-- AC-2.3: The decision record selects one runtime strategy, explains rejected
-  options, and names any compatibility adapters that are allowed temporarily.
+- AC-2.3: The decision record selects Python standard-library source, explains
+  rejected options, and names any compatibility adapters that are allowed
+  temporarily. Compiled binaries are not an allowed adapter or fallback.
 - AC-2.4: The selected contract defines stable command names, argument parsing,
   JSON input/output envelopes, stderr/error behavior, path normalization,
   subprocess execution rules, prerequisite reporting, and version reporting.
@@ -134,7 +150,7 @@ can understand what they are installing and how releases are produced.
 - AC-3.1: The selected approach defines dependency policy, lockfile/reproducible
   build expectations, generated payload integrity, vulnerability scanning, and
   release verification requirements appropriate to the chosen runtime.
-- AC-3.2: The approach evaluates SBOMs, provenance/attestations, artifact
+- AC-3.2: The approach evaluates SBOMs, provenance/attestations, runner-file
   checksums or signatures, dependency update cadence, and how much of that scope
   is required for the first public release.
 - AC-3.3: The trust model documents what consumers can verify locally after
@@ -158,10 +174,13 @@ to port behavior without changing plugin semantics.
   executable availability, plugin root, missing prerequisites, and runtime
   version in a JSON envelope.
 - AC-4.4: A parity harness can compare old Bash helper output with new runner
-  output for fixtures while Bash still exists.
+  output for fixtures while Bash still exists as a temporary reference oracle.
 - AC-4.5: Foundation implementation includes the XPLAT-003 first-release
   security controls that apply to runtime source, dependencies, and generated
-  runtime artifacts.
+  runner files.
+- AC-4.6: The foundation introduces Python standard-library test/eval runner
+  patterns so later ports can retire Bash-only Layer 4 tests and AI-eval
+  wrappers without changing expected semantics.
 
 ### 5. Read-Only Helper Port *(-> XPLAT-005)*
 
@@ -174,11 +193,13 @@ atomicity routing, topology checks, and spec-index generation.
 - AC-5.1: Every read-only helper used by autopilot, scaffold/status, agents, or
   docs-generation has a cross-platform implementation.
 - AC-5.2: Fixture parity proves equivalent JSON output and exit semantics against
-  current Bash behavior before cutover.
+  current Bash behavior before cutover, then the Python fixture tests become the
+  active release gate.
 - AC-5.3: The new helpers do not shell out for path traversal, JSON construction,
   text parsing, or glob expansion.
-- AC-5.4: The existing Claude and Codex guidance can still use the Bash path until
-  XPLAT-007 performs the final cutover.
+- AC-5.4: The existing Claude and Codex guidance can still use the Bash path
+  only until XPLAT-007 performs the final cutover; Bash-only tests may remain
+  only as temporary parity fixtures before then.
 
 ### 6. Mutation, Install, and PR-Emission Helper Port *(-> XPLAT-006)*
 
@@ -201,8 +222,10 @@ state. These are higher-risk because they mutate repository or user-local state.
   set for Claude Code and Codex from a source manifest or generated inventory,
   rather than from a stale hardcoded list.
 - AC-6.6: Scaffold/status/autopilot can call a shared doctor/preflight contract
-  that detects stale releases, missing runner artifacts, missing generated
+  that detects stale releases, missing runner files, missing generated
   payload files, and missing bundled agents before workflow execution continues.
+- AC-6.7: Mutation-helper test coverage is ported to Python standard-library
+  gates before the Bash helper is removed from the release-readiness path.
 
 ### 7. Claude/Codex Cutover and Universal Install Release Gate *(-> XPLAT-007)*
 
@@ -220,7 +243,10 @@ dependencies or publishing incomplete Claude/Codex installs.
   plugin workflows.
 - AC-7.3: Deterministic checks fail if an active installed-runtime surface
   reintroduces `bash`, `.sh`, `jq`, shell interpolation, or Unix-only path
-  assumptions outside explicitly allowlisted historical/test references.
+  assumptions outside explicitly allowlisted historical/archive references.
+- AC-7.3a: Deterministic checks fail if active plugin build, test, eval, payload,
+  or release-readiness gates that validate shipped behavior remain Bash-only or
+  require `jq`, Git Bash, WSL, or PowerShell helper scripts.
 - AC-7.4: Manual UAT evidence covers native Windows, macOS, and Linux for both
   Claude and Codex plugin journeys: install, bundled-agent verification,
   scaffold/status, autopilot dry-run, update, and safe repair of an incomplete
@@ -241,12 +267,15 @@ dependencies or publishing incomplete Claude/Codex installs.
 - A native Windows developer can complete install, `$install`/agent setup,
   scaffold/status, and an autopilot dry-run path without a Unix shell.
 - Claude Code and Codex installs both contain 100 percent of expected bundled
-  agents, hooks, runner artifacts, and generated payload files for the latest
+  agents, hooks, runner files, and generated payload files for the latest
   tagged release.
+- Zero active plugin test/eval/release-readiness gates that validate or publish
+  shipped behavior require Bash, `jq`, Git Bash, WSL, or PowerShell helper
+  scripts.
 - Scaffold/status/autopilot detect incomplete installs before doing meaningful
   work and either autoheal them or provide a specific, tested remediation path.
 - The release-readiness checklist has a hard gate for native Windows plugin UAT.
-- Public runtime artifacts have documented dependency, provenance, and local
+- Public runner files have documented dependency, provenance, and local
   verification expectations.
 
 ## Open Questions
@@ -257,8 +286,9 @@ dependencies or publishing incomplete Claude/Codex installs.
   installed plugin caches without extra user setup?
 - Which supply-chain controls are required for the first public release, and
   which can safely remain follow-up hardening?
-- Which repository-only scripts should remain Bash after plugin-runtime cutover,
-  and how should they be classified so enforcement stays precise?
+- Which unrelated repository-only scripts, if any, can remain Bash after
+  plugin-runtime cutover, and what guard prevents them from becoming runtime,
+  test/eval, payload, or release-readiness dependencies later?
 
 ## SPEC Catalog Crosswalk
 

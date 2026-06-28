@@ -1,7 +1,7 @@
 # Evidence: Small Per-Platform Binary Runtime Candidate
 
-Candidate status: Superseded fallback after 2026-06-28 Python amendment;
-installed-cache invocation proof would be deferred to XPLAT-004 if revived
+Candidate status: Rejected historical candidate after 2026-06-28 Python
+amendment; not a fallback for XPLAT
 Selected implementation runtime: Go native executable using the Go standard
 library
 Captured: 2026-06-26; superseded 2026-06-28
@@ -12,8 +12,8 @@ This record evaluates the binary candidate as a small native CLI artifact
 packaged into the installed plugin payload. The original XPLAT-002 decision
 selected this model, but the 2026-06-28 amendment supersedes it with a Python
 standard-library runner aligned with official Spec Kit prerequisites. This
-candidate remains a fallback if XPLAT-004 proves Python launch cannot be made
-reliable from installed Claude/Codex caches.
+candidate is rejected for XPLAT because SpecKit itself requires Python, so a
+compiled binary would create a second implementation and distribution model.
 
 ## Official / Runtime Documentation
 
@@ -42,7 +42,7 @@ reliable from installed Claude/Codex caches.
 
 | Probe | Command | Result | Scoring effect |
 |---|---|---|---|
-| Build-tool availability | `go version` | Gap on this host: `command not found`. | Does not block selected installed runtime; XPLAT-004 build environment must pin/install Go after XPLAT-003 controls. |
+| Build-tool availability | `go version` | Gap on this host: `command not found`. | Does not block selected installed runtime; Go build setup is not XPLAT work. |
 | Claude installed-cache root | `ls -la ~/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/2.16.0` | Passed: cache root exists with payload directories. | Confirms target cache shape, not runner invocation. |
 | Codex installed-cache root | `ls -la ~/.codex/plugins/cache/racecraft-plugins-public/speckit-pro/2.16.0` | Passed: cache root exists with payload directories. | Confirms target cache shape, not runner invocation. |
 | Claude installed-cache runner | `ls -la ~/.claude/plugins/cache/racecraft-public-plugins/speckit-pro/2.16.0/scripts/speckit-pro-runner` | Gap: file missing because XPLAT-002 must not implement the runner. | XPLAT-004 must prove actual invocation. |
@@ -52,20 +52,20 @@ reliable from installed Claude/Codex caches.
 
 | Missing probe | Scope | Reason unavailable | Substitute evidence | Effect | Owner / expiry |
 |---|---|---|---|---|---|
-| Installed Claude cache invocation of native `speckit-pro-runner` | Claude cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; contract path is `scripts/speckit-pro-runner`; runtime model has no post-cache interpreter dependency. | Runtime model viable; actual invocation proof deferred and not counted as a probe pass. | XPLAT-004 must run after adding runner. |
-| Installed Codex cache invocation of native `speckit-pro-runner` | Codex cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; OpenAI docs define installed cache path; runtime model has no post-cache interpreter dependency. | Runtime model viable; actual invocation proof deferred and not counted as a probe pass. | XPLAT-004 must run after adding runner. |
-| Go build toolchain on this host | Maintainer/build environment | `go` is not installed locally. | Official Go docs cover build target environment; XPLAT-004 can establish build environment. | Reduces maintainer ergonomics score only. | XPLAT-004/XPLAT-003. |
+| Installed Claude cache invocation of native `speckit-pro-runner` | Claude cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; contract path is `scripts/speckit-pro-runner`; runtime model has no post-cache interpreter dependency. | Historical rejected evidence only; not an XPLAT proof item. | No downstream owner. |
+| Installed Codex cache invocation of native `speckit-pro-runner` | Codex cache on this macOS host | Runner is intentionally not implemented. | Cache root exists; OpenAI docs define installed cache path; runtime model has no post-cache interpreter dependency. | Historical rejected evidence only; not an XPLAT proof item. | No downstream owner. |
+| Go build toolchain on this host | Maintainer/build environment | `go` is not installed locally. | Official Go docs cover build target environment. | Historical rejected evidence only. | No downstream owner. |
 
 ## Gate Results
 
 | Gate | Result | Rationale |
 |---|---|---|
-| Installed-cache invocation | Runtime model viable; invocation proof deferred | A compiled executable in the payload can run without user-side `npm`, `pip`, `uv`, `brew`, Node, Python, Bash, or `jq`. Actual cache invocation requires the XPLAT-004 artifact and is not counted as passed in XPLAT-002. |
-| Native platform behavior | Pass | Per-platform artifacts can target Windows, macOS, and Linux. |
+| Installed-cache invocation | Rejected for XPLAT | A compiled executable in the payload could run without user-side `npm`, `pip`, `uv`, `brew`, Node, Python, Bash, or `jq`, but that duplicates the Python prerequisite path. |
+| Native platform behavior | Rejected for XPLAT | Per-platform artifacts can target Windows, macOS, and Linux, but XPLAT does not need native artifacts because SpecKit requires Python. |
 | Filesystem and paths | Pass | Go `path/filepath` and `os` APIs support native path semantics. |
 | JSON handling | Pass | Go `encoding/json` is standard library. |
 | Subprocess behavior | Pass | Go `os/exec` supports structured argv-style process execution without shell contract fallback. |
-| Packaging/update path | Pass with XPLAT-003 controls pending | Payload can carry executable artifacts; XPLAT-003 must choose integrity and provenance controls before XPLAT-004 ships them. |
+| Packaging/update path | Rejected for XPLAT | Payload could carry executable artifacts, but XPLAT intentionally avoids native artifact controls. |
 
 ## Weighted Score
 

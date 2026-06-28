@@ -42,8 +42,12 @@ Maps controls to the downstream spec or release surface that implements and veri
 
 Known owners:
 
-- XPLAT-004 owns runner source, dependency, artifact, preflight/version, checksum, manifest, and applicable scan controls.
-- XPLAT-007 owns generated-payload integrity, consumer guidance, native UAT, public claim readiness, and cutover evidence.
+- XPLAT-004 owns runner source, stdlib-only dependency policy, prerequisite
+  preflight/version, launcher metadata when needed, checksum, manifest, and
+  applicable scan controls.
+- XPLAT-007 owns generated-payload integrity, Python build/test/eval/release
+  gates for shipped behavior, consumer guidance, native UAT, public claim
+  readiness, and cutover evidence.
 - Release automation owns publication-time evidence only after a later spec edits release automation; until downstream acceptance evidence exists, assigned release automation controls are not implemented and not claimable.
 - Public docs and release notes own wording only after implementation evidence exists.
 
@@ -73,16 +77,15 @@ Validation rules:
 
 ## Runtime Dependency Boundary
 
-Records whether a selected runtime is a build-time toolchain, an installed-user
-runtime dependency, a bundled runtime, or a self-contained artifact.
+Records the Python-only runtime boundary for XPLAT.
 
 | Field | Required | Notes |
 |---|---|---|
-| `runtime_shape` | Yes | Examples: `go-native-artifact`, `rust-native-artifact`, `zig-native-artifact`, `bundled-node`, `embedded-python`, `source-script`. |
-| `build_time_toolchain` | Conditional | Required when maintainers build artifacts before release. |
-| `installed_user_runtime_dependency` | Yes | Runtime the installed user must provide, or `none` for self-contained artifacts. |
-| `bundled_runtime_payload` | Conditional | Required when the payload embeds Node, Python, or another runtime. |
-| `official_runtime_guarantee_ref` | Conditional | Required when relying on a platform-provided runtime. |
+| `runtime_shape` | Yes | Must be `python-stdlib-runner` for XPLAT. |
+| `build_time_toolchain` | Conditional | Must be `null` for the Python stdlib runner. |
+| `installed_user_runtime_dependency` | Yes | Official Spec Kit / `specify` prerequisite boundary, including Python 3.11+. |
+| `bundled_runtime_payload` | Conditional | Must be `null`; bundled runtimes are out of XPLAT scope. |
+| `official_runtime_guarantee_ref` | Yes | Official Spec Kit package metadata and installation docs proving the Python prerequisite. |
 | `post_cache_setup_required` | Yes | Must be `false` for first-release native-support claims. |
 | `prerequisite_diagnostics` | Yes | Fail-closed diagnostic behavior when a runtime/executable/prerequisite is missing. |
 | `claim_effect` | Yes | Whether public native-support claims are allowed, blocked, or conditional. |
@@ -90,13 +93,14 @@ runtime dependency, a bundled runtime, or a self-contained artifact.
 Validation rules:
 
 - First-release native-support claims require `post_cache_setup_required=false`.
-- Go, Rust, and Zig are build-time toolchains when maintainers ship executable
-  artifacts; they are not user runtime dependencies unless the user is asked to
-  build from source.
-- Source scripts that require Node, Python, Bash, `jq`, package managers, WSL,
-  Git Bash, or network restoration after cache population are not valid for
-  first-release native-support claims unless official docs guarantee the runtime
-  or the payload bundles it with matching supply-chain controls.
+- Go, Rust, Zig, bundled Node, embedded Python, and native binaries are not
+  XPLAT runtime shapes, fallbacks, or compatibility adapters.
+- Source scripts that require Node, Bash, `jq`, package managers, WSL, Git
+  Bash, or network restoration after cache population are not valid for
+  first-release support claims unless official docs guarantee the runtime or the
+  payload bundles it with matching supply-chain controls. Python is allowed only
+  through the official Spec Kit / `specify` prerequisite boundary and must be
+  verified by preflight.
 
 ## Install Completeness Evidence
 
@@ -127,44 +131,43 @@ Validation rules:
 - Autoheal must repair only documented local install surfaces and must fail
   closed when a required platform surface cannot be verified.
 
-## Binary Distribution Evidence
+## Runner File Distribution Evidence
 
-Records how compiled per-platform runner artifacts move from source or release
-inputs into installed Claude Code and Codex marketplace payloads.
+Records how selected runner files move from source or release inputs into
+installed Claude Code and Codex marketplace payloads. For the selected
+first-release runtime, these are Python source and thin launcher files.
 
 | Field | Required | Notes |
 |---|---|---|
-| `runtime_shape` | Yes | Selected runtime shape, for example `go-native-artifact`; conditional until runtime re-approval. |
-| `distribution_mode` | Yes | `bundled-all-platforms`, `bundled-current-host`, `release-asset-download`, or `hybrid-manifest-plus-fetch`. |
-| `source_artifact_paths` | Yes | Source or release-input paths produced by XPLAT-004. |
+| `runtime_shape` | Yes | Selected runtime shape, currently `python-stdlib-runner`. |
+| `distribution_mode` | Yes | Must be `bundled-source` for XPLAT. |
+| `source_runner_paths` | Yes | Source or release-input runner file paths produced by XPLAT-004. |
 | `generated_claude_payload_paths` | Yes | Payload-relative paths under `dist/claude/speckit-pro`. |
 | `generated_codex_payload_paths` | Yes | Payload-relative paths under `dist/codex/speckit-pro`. |
-| `launcher_surface` | Yes | Documented launch surface such as Claude plugin `bin/`, Codex skill script, Codex plugin-bundled hook, or Codex plugin-bundled MCP command. |
-| `post_install_download_required` | Yes | Whether the installed user must download an artifact after marketplace cache population. |
-| `executable_permission_policy` | Yes | Unix executable-bit and Windows `.exe` expectations for the generated payload and installed cache. |
-| `checksum_manifest_refs` | Yes | Manifest and checksum metadata that cover every generated artifact path. |
+| `launcher_surface` | Yes | Documented launch surface such as Claude skill script, Claude hook command, Codex skill script, Codex plugin-bundled hook, or Codex plugin-bundled MCP command. |
+| `post_install_download_required` | Yes | Whether the installed user must download a runner file after marketplace cache population. |
+| `launch_metadata_policy` | Yes | Interpreter discovery, argv shape, executable-bit needs for optional thin launchers, and Windows command behavior. |
+| `checksum_manifest_refs` | Yes | Manifest and checksum metadata that cover every generated runner file path. |
 | `official_docs_refs` | Yes | Official Claude/Codex docs used to justify the launch and install surface. |
 | `claim_effect` | Yes | Whether native-support claims are claimable, blocked, deferred, or require explicit repair/download wording. |
 
 Validation rules:
 
-- `bundled-all-platforms` is the preferred first-release model for
-  no-post-cache-install claims because both marketplace payload roots can carry
-  all claimed artifacts plus offline metadata.
+- `bundled-source` is the selected first-release model because both marketplace
+  payload roots can carry the Python runner source plus offline metadata.
 - `release-asset-download` and `hybrid-manifest-plus-fetch` are not
-  self-contained marketplace installs. They require explicit download,
-  checksum verification, network/failure handling, and truthful wording before
-  any platform claim can rely on them.
+  XPLAT runtime models. They may be unrelated release repair flows only and must
+  not support pure-Python XPLAT claims.
 - A Claude plugin `bin/` launcher does not prove Codex launch support. Codex
   launch evidence must use a documented Codex surface such as skill scripts,
   plugin-bundled hooks, or plugin-bundled MCP commands.
-- XPLAT-007 source-to-dist evidence must fail when source artifacts or metadata
+- XPLAT-007 source-to-dist evidence must fail when source runner files or metadata
   exist but are missing, stale, unequal, or non-executable in either generated
   payload root for a claimed platform.
 
 ## Pinned Release Input Evidence
 
-Records the exact build and release inputs XPLAT-004 must capture before runner foundation artifacts can be accepted.
+Records the exact build and release inputs XPLAT-004 must capture before runner foundation files can be accepted.
 
 | Field | Required | Notes |
 |---|---|---|
@@ -176,7 +179,7 @@ Records the exact build and release inputs XPLAT-004 must capture before runner 
 | `module_manifest_path` | Conditional | Only required if plugin-only Python packages or a different runtime are introduced. |
 | `dependency_snapshot` | Conditional | `none-stdlib-only` for the selected Python runner, or equivalent checksum/snapshot evidence if dependencies are introduced. |
 | `target_os_arch_matrix` | Yes | Target platform matrix for preflight and installed-cache launch evidence. |
-| `build_command_or_recipe` | Conditional | Packaging or validation recipe used by XPLAT-004; native build recipe only if a native-artifact fallback is revived. |
+| `build_command_or_recipe` | Conditional | Packaging or validation recipe used by XPLAT-004. Must not be a native build recipe. |
 | `release_package_inputs` | Yes | Files, metadata, and package inputs included in the release artifact boundary. |
 | `source_revision` | Yes | Source revision used to package runner files. |
 | `runner_source_paths` | Yes | Generated runner source and launcher payload-relative paths. |
@@ -189,13 +192,12 @@ Validation rules:
 - The evidence record must describe the exact source revision, prerequisite
   boundary, dependency policy, package inputs, and runner files it covers.
 - Recording pinned inputs does not implement reproducible builds, SBOMs, signatures, provenance, or formal audit.
-- If the runtime changes to Go/Rust/Zig or another native-artifact shape,
-  replace the Python-specific fields with equivalent toolchain-specific fields
-  instead of carrying stale evidence forward.
+- Go/Rust/Zig/native-binary fields are rejected historical analysis and must not
+  be carried into XPLAT pinned-input evidence.
 
-## Runner Artifact Manifest
+## Runner File Manifest
 
-Payload-relative JSON metadata for packaged native runner artifacts.
+Payload-relative JSON metadata for packaged runner source and launcher files.
 
 Top-level fields:
 
@@ -246,7 +248,8 @@ Validation rules:
 - Entries use common SHA-256 checksum file format: `<64 lowercase hex><two spaces><payload-relative path>`.
 - The checksum file must include every packaged runner source or launcher file
   covered by the integrity claim and no stale paths.
-- Consumers must be able to verify with platform-native SHA-256 tools.
+- Consumers must be able to verify with a Python standard-library SHA-256
+  command shape. OS-native SHA-256 tools may be supplemental only.
 
 ## Runtime Integrity Evidence
 
@@ -254,9 +257,9 @@ Additional runtime-info/preflight fields required for consumer verification.
 
 | Field | Required | Notes |
 |---|---|---|
-| `executable_path` | Yes | Typed path to the running or inspected executable. |
-| `artifact_id` | Yes | Matches manifest artifact entry when running from a packaged artifact. |
-| `artifact_manifest_path` | Yes | Payload-relative or typed path to manifest. |
+| `runner_path` | Yes | Typed path to the running or inspected runner source or launcher file. |
+| `runner_file_id` | Yes | Matches manifest runner file entry when running from a packaged file. |
+| `runner_manifest_path` | Yes | Payload-relative or typed path to manifest. |
 | `checksum_file_path` | Yes | Payload-relative or typed path to checksum file. |
 | `checksum_algorithm` | Yes | `sha256` for first release. |
 | `expected_checksum` | Yes | Expected digest from checksum metadata when available. |
@@ -271,29 +274,31 @@ Validation rules:
 
 ## Consumer Verification Guidance
 
-Downstream XPLAT-007 guidance requirements for local checksum verification after native UAT and before public release claims.
+Downstream XPLAT-007 guidance requirements for local checksum verification after
+platform UAT and before public release claims.
 
 | Field | Required | Notes |
 |---|---|---|
-| `target_platform` | Yes | Windows, macOS, Linux, or a narrower artifact target. |
-| `sha256_command_shape` | Yes | Platform-native command shape for hashing the installed runner artifact. |
-| `runner_path_source` | Yes | How the consumer locates the installed artifact path from preflight/runtime-info or documented payload-relative paths. |
+| `target_platform` | Yes | Windows, macOS, Linux, or a narrower runner file target. |
+| `sha256_command_shape` | Yes | Python standard-library command shape for hashing the installed runner file, using the preflight-discovered interpreter where possible. |
+| `runner_path_source` | Yes | How the consumer locates the installed runner file path from preflight/runtime-info or documented payload-relative paths. |
 | `checksum_metadata_source` | Yes | Installed payload path or release-provided offline metadata path. |
 | `comparison_rule` | Yes | How computed and expected hashes are compared. |
-| `unavailable_state` | Yes | Closed failure state when artifact or checksum metadata is missing. |
+| `unavailable_state` | Yes | Closed failure state when runner file or checksum metadata is missing. |
 | `mismatch_state` | Yes | Closed failure state when the computed checksum differs from the expected checksum. |
 | `mismatch_remediation` | Yes | Consumer-facing stop-use/report guidance for a checksum mismatch. |
-| `reporting_fields` | Yes | Artifact path, platform, preflight or identity output, metadata source, expected checksum, computed checksum, plugin version or release boundary, and reporting path. |
-| `prohibited_remediation` | Yes | Disallowed instructions such as source checkout repair, package restoration, network fetches, Bash, `jq`, or runner self-verification alone. |
-| `maintainer_reacceptance_rule` | Yes | Fresh XPLAT-004 and XPLAT-007 evidence required before accepting the affected artifact again. |
+| `reporting_fields` | Yes | Runner file path, platform, preflight or identity output, metadata source, expected checksum, computed checksum, plugin version or release boundary, and reporting path. |
+| `prohibited_remediation` | Yes | Disallowed instructions such as source checkout repair, package restoration, network fetches, Bash, `jq`, PowerShell helper scripts, or runner self-verification alone. |
+| `maintainer_reacceptance_rule` | Yes | Fresh XPLAT-004 and XPLAT-007 evidence required before accepting the affected runner file again. |
 | `native_uat_evidence_ref` | Yes | Evidence required before the platform guidance becomes public support wording. |
 
 Validation rules:
 
-- Guidance must include separate command shapes for each target platform artifact that XPLAT-007 intends to claim after UAT.
-- Guidance must not require Bash, `jq`, a source checkout, package-manager restoration, or network access after plugin cache population.
+- Guidance must include separate command shapes for each target platform or
+  platform-specific runner file that XPLAT-007 intends to claim after UAT.
+- Guidance must not require Bash, `jq`, PowerShell helper scripts, a source checkout, package-manager restoration, or network access after plugin cache population.
 - Guidance must fail closed when metadata is unavailable or when the computed checksum does not match the expected checksum, and must not imply native support before XPLAT-007 UAT evidence exists.
-- Mismatch remediation must tell consumers not to rely on the artifact for native-runner claims and must collect enough facts for maintainer investigation without asking consumers to repair the artifact locally.
+- Mismatch remediation must tell consumers not to rely on the runner file for support claims and must collect enough facts for maintainer investigation without asking consumers to repair the runner file locally.
 
 ## Runner File Claim Readiness
 
@@ -306,7 +311,7 @@ Represents per-runner-file and per-platform readiness for public claims.
 | `payload_path` | Yes | Payload-relative runner source or launcher path. |
 | `claim_status` | Yes | `claimable`, `not_claimable`, `deferred`, or `blocked`. |
 | `publication_status` | Yes | `published`, `unpublished`, or `excluded`. |
-| `required_evidence_status` | Yes | Per-runner-file status for checksum or source-integrity metadata, manifest, preflight/runtime-info, native UAT, source-to-dist, scan, exception, release-automation, and public-claim audit evidence. |
+| `required_evidence_status` | Yes | Per-runner-file status for checksum or source-integrity metadata, manifest, preflight/runtime-info, platform UAT, source-to-dist, scan, exception, release-automation, and public-claim audit evidence. |
 | `blockers` | Yes | Missing, stale, mismatched, unpublished, or unsupported evidence that blocks the claim. |
 | `owner_surface` | Yes | XPLAT-004, XPLAT-007, release automation, or docs/release notes owner. |
 | `follow_up` | Conditional | Required when the runner file/platform is deferred, excluded, or blocked. |
@@ -323,7 +328,7 @@ Records source-to-dist integrity for generated Claude/Codex payloads.
 
 | Field | Required | Notes |
 |---|---|---|
-| `command` | Yes | Expected first-release command: `bash scripts/build-plugin-payloads.sh`. |
+| `command` | Yes | Expected first-release command: Python standard-library payload builder, for example `python3 scripts/build_plugin_payloads.py`. The current Bash builder is transitional only. |
 | `exit_status` | Yes | Numeric command status. |
 | `source_inputs` | Yes | Source roots used to generate payloads. |
 | `generated_roots` | Yes | Generated roots checked for drift. |
@@ -342,6 +347,31 @@ Validation rules:
 - Evidence must prove checksum and runner manifest metadata is present, equal, and fresh across source paths and both generated payload roots.
 - Missing, stale, or unequal metadata fails XPLAT-007 public cutover and release-claim readiness.
 - XPLAT-003 must not run a payload rebuild as an implementation action.
+
+## Python Gate Evidence
+
+Records that an active build, test, eval, payload, or release-readiness gate for
+shipped plugin behavior has a Python standard-library implementation before
+XPLAT-007 cutover.
+
+| Field | Required | Notes |
+|---|---|---|
+| `gate_id` | Yes | Stable gate identifier, for example `layer4-helper-tests` or `payload-builder`. |
+| `gate_type` | Yes | `build`, `test`, `eval`, `payload`, `release-readiness`, or `uat-support`. |
+| `python_command` | Yes | Python standard-library command that runs the gate. |
+| `replaced_bash_paths` | Yes | Bash scripts or shell command paths removed from the active gate. |
+| `covered_plugin_behavior` | Yes | Shipped plugin behavior validated or published by the gate. |
+| `parity_evidence_ref` | Conditional | Required when the gate replaces an existing Bash behavior with parity expectations. |
+| `platform_matrix` | Yes | Windows, macOS, Linux, or narrower matrix the gate supports. |
+| `release_gate_status` | Yes | `active`, `blocked`, `temporary_parity_only`, or `historical_archive_only`. |
+| `prohibited_runtime_dependencies` | Yes | Must include Bash, `jq`, Git Bash, WSL, PowerShell helper scripts, and package restoration unless explicitly out of shipped-behavior scope. |
+
+Validation rules:
+
+- XPLAT-007 cannot pass while a shipped-behavior gate is Bash-only.
+- Temporary Bash parity evidence must be outside the final release gate.
+- Unrelated shell wrappers may remain only when they dispatch to Python gates and
+  contain no validation or payload publication logic.
 
 ## Release Automation Acceptance Evidence
 
@@ -366,18 +396,18 @@ Validation rules:
 
 ## Vulnerability Scan Evidence
 
-Release-readiness summary for runner/source/artifact or cutover trust boundaries.
+Release-readiness summary for runner/source/runner-file or cutover trust boundaries.
 
 | Field | Required | Notes |
 |---|---|---|
 | `scanner` | Yes | Tool or source name. |
 | `scanner_version_or_db_timestamp` | Yes | Tool version or vulnerability database timestamp. |
-| `scan_target` | Yes | Source, module, artifact, generated payload, manifest, or release evidence target. |
-| `artifact_or_dependency` | Conditional | Required when finding affects a concrete artifact or dependency. |
+| `scan_target` | Yes | Source, runner file, generated payload, manifest, or release evidence target. |
+| `runner_file_or_dependency_policy` | Conditional | Required when finding affects a concrete runner file or dependency policy. |
 | `target_source_revision` | Yes | Source revision the scan covers. |
 | `dependency_snapshot` | Conditional | Required for source/module/dependency scans. |
-| `toolchain_build_input_snapshot` | Conditional | Required when scan evidence covers build or release inputs. |
-| `generated_artifact_identifier` | Conditional | Required when scan evidence covers a concrete generated artifact. |
+| `build_input_snapshot` | Conditional | Required when scan evidence covers build or release inputs. |
+| `generated_runner_file_identifier` | Conditional | Required when scan evidence covers a concrete generated runner file. |
 | `run_timestamp` | Yes | When the scan evidence was produced. |
 | `freshness_expiry` | Yes | Expiry timestamp or release boundary for the evidence. |
 | `result` | Yes | `pass`, `fail`, or `pass_with_exceptions`. |
@@ -388,7 +418,7 @@ Release-readiness summary for runner/source/artifact or cutover trust boundaries
 Validation rules:
 
 - Missing, stale, or unresolved actionable high/critical evidence fails readiness.
-- Evidence is stale when it is older than 7 calendar days at readiness review, predates the source revision, dependency snapshot, toolchain, build input, generated artifact, scanner version, or vulnerability database timestamp it claims to cover, or crosses a public release boundary without re-approval.
+- Evidence is stale when it is older than 7 calendar days at readiness review, predates the source revision, dependency snapshot, build input, generated runner file, scanner version, or vulnerability database timestamp it claims to cover, or crosses a public release boundary without re-approval.
 - Raw scanner output is not committed by default.
 - Once automation exists, raw output is retained as CI artifacts for 30 days.
 
@@ -402,7 +432,7 @@ Documents a non-actionable high/critical finding.
 | `tool_version_or_db_timestamp` | Yes | Current evidence version. |
 | `advisory_id` | Conditional | Required when available. |
 | `severity` | Yes | Scanner severity or CVSS severity. |
-| `affected_artifact_dependency_version_platform` | Yes | Concrete affected surface. |
+| `affected_runner_file_dependency_policy_version_platform` | Yes | Concrete affected surface. |
 | `actionability_classification` | Yes | Why it is not actionable. |
 | `rationale` | Yes | Maintainer-readable explanation. |
 | `reachability_or_false_positive_evidence` | Yes | Evidence supporting the classification. |
@@ -415,7 +445,7 @@ Validation rules:
 
 - Exceptions are not permanent.
 - Re-approval requires current scan evidence.
-- Changed artifact, dependency graph, platform, toolchain, scanner/database, advisory status, severity, exploitability, or compensating control immediately invalidates the exception.
+- Changed runner file, dependency policy, platform, scanner/database, advisory status, severity, exploitability, or compensating control immediately invalidates the exception.
 
 ## Public Claim Boundary
 
@@ -427,7 +457,7 @@ Classifies release-note/docs wording.
 | `claim_text_or_pattern` | Yes | Wording or wording family under review. |
 | `classification` | Yes | `allowed_after_verification`, `deferred_roadmap_only`, or `forbidden_until_implemented`. |
 | `required_evidence` | Conditional | Required for allowed claims. |
-| `artifact_claim_readiness_refs` | Conditional | Required when a claim names platform or artifact availability. |
+| `runner_file_claim_readiness_refs` | Conditional | Required when a claim names platform or runner file availability. |
 | `prohibited_terms` | Conditional | Required for forbidden/deferred claims. |
 | `owner_surface` | Yes | XPLAT-007, docs, release notes, or marketplace metadata owner. |
 
@@ -453,7 +483,7 @@ Aggregates evidence at a release boundary.
 | `runner_file_claim_readiness_refs` | Conditional | Required when release readiness includes platform or runner file claims. |
 | `consumer_verification_status` | Yes | Whether guidance and metadata are current. |
 | `public_claim_audit_status` | Yes | Whether wording has passed claim-boundary review. |
-| `public_claim_audit_refs` | Conditional | Required when public wording or release notes make supply-chain or native-runner claims. |
+| `public_claim_audit_refs` | Conditional | Required when public wording or release notes make supply-chain or native support claims. |
 | `release_automation_acceptance_status` | Conditional | Required when public claims depend on release automation evidence. |
 | `known_gaps` | Yes | Deferred controls or non-claims. |
 | `approval_status` | Yes | `ready`, `blocked`, or `ready_with_recorded_exceptions`. |
@@ -468,7 +498,7 @@ Validation rules:
 ## Relationships
 
 - A `Security Control Decision` has one `Owner Assignment`.
-- A first-release runner artifact requires `Pinned Release Input Evidence`.
+- A first-release runner file requires `Pinned Release Input Evidence`.
 - A first-release checksum control requires one runner source manifest and one
   or more `Checksum Entry` records when checksum metadata is required.
 - `Runtime Integrity Evidence` references the manifest and checksum file.
@@ -478,9 +508,11 @@ Validation rules:
   UAT evidence, release automation evidence, and public claim audit evidence for
   one runner file/platform.
 - `Generated Payload Evidence` references generated roots and checksum/manifest paths.
-- `Distribution Evidence` references pinned release inputs, generated payload
+- `Runner File Distribution Evidence` references pinned release inputs, generated payload
   evidence, install completeness evidence, runner source manifest, and checksum
   entries where required.
+- `Python Gate Evidence` references generated payload evidence, release-readiness
+  evidence, and any parity evidence used to retire Bash gates.
 - `Vulnerability Scan Evidence` may include zero or more `Vulnerability Exception Record` records.
 - `Public Claim Boundary` consumes runner file claim readiness and release-readiness evidence before wording is allowed.
 - `Release-Readiness Evidence` aggregates all first-release control results and runner-file/platform claim readiness records.

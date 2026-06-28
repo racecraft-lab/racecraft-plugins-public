@@ -58,9 +58,10 @@ then SpecKit-Pro reuses that Python/specify environment instead of shipping
 extra per-platform binaries or asking users to understand Go/Rust/Zig artifact
 distribution.
 
-The original Go-native evidence remains useful as a fallback if Python
-preflight proves unreliable on installed Windows/macOS/Linux plugin caches, but
-it is no longer the active first-release runtime decision.
+The original Go-native evidence remains useful only as historical rejected
+analysis explaining why the decision changed. Because SpecKit itself requires
+Python, Go/Rust/Zig/native binaries are not XPLAT fallbacks, compatibility
+adapters, or contingency plans.
 
 ## Rubric
 
@@ -89,18 +90,18 @@ surfaces (`docs/process`, `harness/adapter`), no blockers, one decision spike.
 |---|---:|---:|---|
 | JavaScript/TypeScript on Node.js | Fails selected-runtime gate unless Node or a bundled Node executable is guaranteed in the installed payload. | 68/100 | Rejected |
 | Python standard-library runner | Runtime model is viable because official Spec Kit / `specify` is a product prerequisite and requires Python 3.11+. Actual cache invocation remains an XPLAT-004 proof item because this spec does not build the runner. | 82/100 | Selected |
-| Small per-platform native binary implemented in Go | Runtime model remains viable, but it is superseded because it creates a second implementation toolchain and artifact-distribution burden that the official Spec Kit Python prerequisite can avoid. | 74/100 | Superseded fallback |
+| Small per-platform native binary implemented in Go | Rejected for XPLAT because it creates a second implementation toolchain and artifact-distribution burden that the official Spec Kit Python prerequisite makes unnecessary. | 74/100 | Rejected historical candidate |
 
 ## Gate Results
 
-| Gate | JavaScript/TypeScript | Python | Go native binary |
+| Gate | JavaScript/TypeScript | Python | Native binary (rejected evidence only) |
 |---|---|---|---|
-| Installed-cache invocation | Fail for source JS/TS: local Node exists, but plugin platform docs and manifests do not guarantee Node on every user host; cache probe cannot run because no runner exists. | Viable with prerequisite preflight: official Spec Kit / `specify` is a product prerequisite and requires Python 3.11+, but actual installed-cache runner proof remains deferred to XPLAT-004. | Runtime model viable but superseded: packaged executable needs no post-cache runtime install, but adds release artifact complexity. |
-| Native platform behavior | Pass for Node runtime family, but selected package would still depend on Node availability or become a binary bundle. | Pass with preflight: Python standard-library path, JSON, and subprocess APIs cover Windows, macOS, and Linux; XPLAT-004 must verify Windows launcher discovery. | Pass for per-platform native artifacts when XPLAT-004 builds the declared platform matrix. |
-| Filesystem and paths | Pass: Node `path` APIs and local probe handled spaces and Windows basename parsing. | Pass: Python `pathlib`/`ntpath` and local probe handled spaces and Windows basename parsing. | Pass: Go `path/filepath` is standard-library path handling for native OS paths. |
-| JSON handling | Pass: `JSON.parse`/`JSON.stringify`; local probe emitted JSON stdout. | Pass: Python `json`; local probe emitted JSON stdout. | Pass: Go `encoding/json` is standard library. |
-| Subprocess behavior | Pass: `child_process.spawnSync` with `shell:false`; local probe separated stdout/stderr. | Pass: `subprocess.run(..., shell=False)`; local probe separated stdout/stderr. | Pass: Go `os/exec` uses argv-style execution; XPLAT-004 must fixture nonzero, timeout, and missing-command cases. |
-| Packaging/update path | Gap/fail for source JS/TS because `node_modules`, `npm install`, or bundled Node would add post-cache setup or binary supply-chain work. | Pass if stdlib-only: generated payload carries Python source; user prerequisite supplies Python/specify; no plugin runtime package restoration is allowed. | Runtime model viable but heavier: generated payload can carry platform artifacts; XPLAT-003 controls are required for checksums, SBOM, provenance, and vulnerability scanning. |
+| Installed-cache invocation | Fail for source JS/TS: local Node exists, but plugin platform docs and manifests do not guarantee Node on every user host; cache probe cannot run because no runner exists. | Viable with prerequisite preflight: official Spec Kit / `specify` is a product prerequisite and requires Python 3.11+, but actual installed-cache runner proof remains deferred to XPLAT-004. | Rejected: packaged executable needs no post-cache runtime install, but adds a second distribution model XPLAT does not need. |
+| Native platform behavior | Pass for Node runtime family, but selected package would still depend on Node availability or become a binary bundle. | Pass with preflight: Python standard-library path, JSON, and subprocess APIs cover Windows, macOS, and Linux; XPLAT-004 must verify Windows launcher discovery. | Rejected despite native capability because it duplicates the Python prerequisite path. |
+| Filesystem and paths | Pass: Node `path` APIs and local probe handled spaces and Windows basename parsing. | Pass: Python `pathlib`/`ntpath` and local probe handled spaces and Windows basename parsing. | Historical evidence: Go `path/filepath` is standard-library path handling for native OS paths, but native binaries are rejected for XPLAT. |
+| JSON handling | Pass: `JSON.parse`/`JSON.stringify`; local probe emitted JSON stdout. | Pass: Python `json`; local probe emitted JSON stdout. | Historical evidence: Go `encoding/json` is standard library, but native binaries are rejected for XPLAT. |
+| Subprocess behavior | Pass: `child_process.spawnSync` with `shell:false`; local probe separated stdout/stderr. | Pass: `subprocess.run(..., shell=False)`; local probe separated stdout/stderr. | Historical evidence: Go `os/exec` uses argv-style execution, but no XPLAT spec may consume this as runner input. |
+| Packaging/update path | Gap/fail for source JS/TS because `node_modules`, `npm install`, or bundled Node would add post-cache setup or binary supply-chain work. | Pass if stdlib-only: generated payload carries Python source; user prerequisite supplies Python/specify; no plugin runtime package restoration is allowed. | Rejected: generated payload would need platform artifacts, checksums, and binary release discipline that XPLAT avoids. |
 
 ## Tie-Breaker
 
@@ -111,9 +112,9 @@ another option.
 
 No tie-breaker is needed after the amendment. Python no longer has a
 selection-blocking runtime-availability failure because SpecKit-Pro can require
-the official Spec Kit / `specify` prerequisite boundary. Go remains viable but
-loses on user-journey simplicity, maintainer ergonomics, and artifact
-distribution burden.
+the official Spec Kit / `specify` prerequisite boundary. Go is rejected for this
+XPLAT lane because it adds artifact distribution burden without improving the
+SpecKit-centered user journey.
 
 ## Rejections
 
@@ -130,11 +131,10 @@ Python package restoration remains rejected. The selected model is not
 dependency graph. It is a Python standard-library runner launched through the
 official Spec Kit prerequisite boundary and verified by preflight.
 
-Go is superseded as the first-release runtime because it requires a new
-maintainer build toolchain, per-platform artifact matrix, and consumer-local
-artifact verification story that can be avoided if the Python/specify
-prerequisite is reliable. Go remains the fallback if XPLAT-004 proves that
-Python launch cannot be made reliable from installed Claude/Codex caches.
+Go is rejected for the XPLAT lane because it requires a new maintainer build
+toolchain, per-platform artifact matrix, and consumer-local artifact
+verification story that is unnecessary once the Python/specify prerequisite is
+accepted. Go/Rust/Zig/native binaries are not XPLAT fallbacks.
 
 ## Evidence Gaps
 

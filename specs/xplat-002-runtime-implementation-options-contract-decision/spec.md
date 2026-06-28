@@ -4,7 +4,13 @@
 
 **Created**: 2026-06-26
 
-**Status**: In Review (PR #266 pending merge)
+**Status**: Complete; amended 2026-06-28 after official Spec Kit Python
+prerequisite confirmation
+
+> Amendment: XPLAT no longer treats compiled per-platform binaries as a
+> candidate, fallback, compatibility adapter, or downstream implementation
+> input. The small per-platform binary evidence remains only to document the
+> rejected historical path.
 
 **Input**: User description: "Runtime Implementation Options and Contract Decision"
 
@@ -12,9 +18,10 @@
 
 ### User Story 1 - Compare Runtime Candidates (Priority: P1)
 
-Maintainers can compare JavaScript/TypeScript, Python, and small per-platform
-binary runner candidates against the XPLAT-001 runtime rubric using grounded
-documentation and lightweight probe evidence.
+Maintainers can review the historical JavaScript/TypeScript, Python, and small
+per-platform binary comparison against the XPLAT-001 runtime rubric using
+grounded documentation and lightweight probe evidence, with Python selected and
+compiled binaries rejected for XPLAT.
 
 **Why this priority**: The runtime choice is the primary decision this spike
 must settle before later cross-platform implementation work can proceed.
@@ -26,8 +33,9 @@ evidence expectations.
 **Acceptance Scenarios**:
 
 1. **Given** the XPLAT-001 runtime rubric, **When** a maintainer reviews the
-   runtime comparison, **Then** JavaScript/TypeScript, Python, and small
-   per-platform binary options are each evaluated against the same criteria.
+   amended runtime comparison, **Then** Python is selected and
+   JavaScript/TypeScript plus small per-platform binary options are retained
+   only as rejected historical candidates.
 2. **Given** invocation behavior is uncertain for a candidate, **When** the
    evidence is reviewed, **Then** the record identifies official documentation
    and any lightweight repo-local or installed-cache probe used to reduce that
@@ -107,14 +115,15 @@ spec responsibility.
 
 ### Session 1: Candidate Scoring and Evidence
 
-- Candidate comparison uses a gate-first weighted evidence matrix: apply all
-  XPLAT-001 must-have gates to each candidate family, then use evidence-backed
-  0-5 ratings against the weighted criteria to support selection and rejection
-  rationale.
-- The selectable runtime candidates are limited to JavaScript/TypeScript,
-  Python, and small per-platform binary runner options. Hybrid compatibility
-  adapters may be documented as temporary migration notes, but they are not a
-  fourth selectable runtime family.
+- Historical candidate comparison used a gate-first weighted evidence matrix:
+  apply all XPLAT-001 must-have gates to each evaluated runtime family, then use
+  evidence-backed 0-5 ratings against the weighted criteria to support
+  selection and rejection rationale.
+- The amended selected runtime is Python standard library only. Historical
+  JavaScript/TypeScript and small per-platform binary records are retained as
+  rejected evidence, not selectable XPLAT runtime families. Hybrid
+  compatibility adapters may be documented as temporary migration notes, but
+  they are not a fourth selectable runtime family.
 - Required documentation evidence must come from runtime or toolchain
   maintainers, official plugin platform documentation, or repo-local
   source/manifests. Third-party material may be supplemental only.
@@ -193,9 +202,9 @@ spec responsibility.
   `xplat001_source_row`, `runner_helper_id`, `runner_operation`,
   `runner_mode`, `owner_bucket`, `owner_spec`, `removal_spec`,
   `removal_condition`, and `evidence`.
-- XPLAT-003 receives a per-candidate supply-chain implication matrix for
-  selected and rejected runtime candidates. The matrix records dependency and
-  bootstrap footprint, manifest/lockfile impact, generated artifact shape,
+- XPLAT-003 receives a supply-chain implication matrix for the selected Python
+  runtime and rejected historical runtime paths. The matrix records dependency
+  and bootstrap footprint, manifest/lockfile impact, generated output shape,
   build/release path, vulnerability-scan path, checksum/signature/SBOM/
   provenance feasibility, consumer-local verification ideas, offline/update
   implications, distribution trust root, transitive/build-time/native
@@ -224,8 +233,10 @@ spec responsibility.
 
 ### Functional Requirements
 
-- **FR-001**: The decision record MUST evaluate JavaScript/TypeScript, Python,
-  and small per-platform binary runner options before selecting a runtime.
+- **FR-001**: The decision record MUST preserve the historical evaluation of
+  JavaScript/TypeScript, Python, and small per-platform binary runner options,
+  identify Python as the amended selected runtime, and label compiled binaries
+  as rejected historical evidence only.
 - **FR-002**: The evaluation MUST apply the XPLAT-001 runtime rubric to every
   candidate family using a gate-first weighted evidence matrix: all must-have
   gates are evaluated before evidence-backed weighted criteria ratings are used
@@ -235,8 +246,8 @@ spec responsibility.
   controls.
 - **FR-004**: The evidence base MUST cite documentation from runtime or
   toolchain maintainers, official plugin platform documentation, or repo-local
-  source/manifests for each candidate family; third-party material MAY be used
-  only as supplemental evidence.
+  source/manifests for each evaluated runtime family; third-party material MAY
+  be used only as supplemental evidence.
 - **FR-005**: Where invocation behavior is uncertain, the evidence base MUST
   include lightweight smoke probe results for runtime availability, installed
   Claude plugin-cache invocation, installed Codex plugin-cache invocation, JSON
@@ -367,12 +378,13 @@ spec responsibility.
 
 ### Key Entities *(include if feature involves data)*
 
-- **Runtime Candidate**: A candidate runtime family under evaluation, including
+- **Runtime Candidate**: A runtime family under historical evaluation, including
   its documentation evidence, probe evidence, rubric results, install
   reliability, installed-cache invocation reliability, and rejection or
-  selection rationale. Selectable candidates are JavaScript/TypeScript, Python,
-  and small per-platform binary runner options; hybrid compatibility adapters
-  are temporary migration notes, not selectable runtime families.
+  selection rationale. Python is the amended selected runtime; JavaScript/
+  TypeScript and small per-platform binary records are rejected historical
+  evidence only; hybrid compatibility adapters are temporary migration notes,
+  not selectable runtime families.
 - **Evaluation Evidence**: A cited documentation source, lightweight probe
   result, documentation/probe conflict, or explicitly recorded evidence gap used
   to support candidate scoring. Evidence gaps include the missing probe,

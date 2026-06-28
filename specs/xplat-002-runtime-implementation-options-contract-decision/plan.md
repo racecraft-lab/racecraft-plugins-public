@@ -6,20 +6,25 @@
 
 ## Summary
 
-XPLAT-002 is a research and decision spike that compares JavaScript/TypeScript,
-Python, and small per-platform binary runner options against the XPLAT-001
-runtime rubric, then produces one selected runtime decision and one
-`speckit-pro-runner` command contract for XPLAT-004. The plan uses a
-gate-first weighted evidence matrix, lightweight non-mutating probes where
-invocation behavior is uncertain, and explicit handoff notes for XPLAT-003 and
-XPLAT-004. It does not build the runner, port helper behavior, change active
-installed invocation paths, or update public native-platform support claims.
+XPLAT-002 is a research and decision spike that historically compared
+JavaScript/TypeScript, Python, and small per-platform binary runner options
+against the XPLAT-001 runtime rubric, then produced one selected runtime
+decision and one `speckit-pro-runner` command contract for XPLAT-004. The
+amended decision selects a Python standard-library runner aligned with official
+Spec Kit / `specify` prerequisites. Compiled per-platform binaries are rejected
+historical evidence only, not a fallback, compatibility adapter, or downstream
+implementation input. The plan uses a gate-first weighted evidence matrix,
+lightweight non-mutating probes where invocation behavior is uncertain, and
+explicit handoff notes for XPLAT-003 and XPLAT-004. It does not build the
+runner, port helper behavior, change active installed invocation paths, or
+update public native-platform support claims.
 
 ## Technical Context
 
-**Language/Version**: Decision-stage candidates are JavaScript/TypeScript,
-Python, and small per-platform binary runner options; the selected runtime and
-version range are implementation outputs of this spike.
+**Language/Version**: Historical decision-stage evidence covered
+JavaScript/TypeScript, Python, and small per-platform binary runner options.
+The amended selected runtime is Python 3.11+ standard library through the
+official Spec Kit / `specify` prerequisite boundary.
 
 **Primary Dependencies**: No new runtime dependency is planned in the Plan
 phase. Candidate evaluation must record dependency/bootstrap footprint and
@@ -48,8 +53,9 @@ deterministic JSON stdin/stdout and stderr separation; subprocess timeouts and
 diagnostics that support fixture parity. No throughput or latency optimization
 is in scope.
 
-**Constraints**: One decision spike; evaluate all three runtime families evenly;
-select one canonical runtime and command contract during implementation; no
+**Constraints**: One decision spike; preserve the historical candidate evidence
+while selecting one canonical runtime and command contract; no compiled binary
+fallback, compatibility adapter, or downstream implementation input; no
 per-user dependency installation, network package restoration, `npm install`,
 `pip install`, `uv`, `brew`, or equivalent after cache population; no shell,
 `.sh`, `jq`, globbing, redirection, or shell interpolation fallback in the
@@ -135,12 +141,14 @@ surfaces in this phase.
 
 ## Phase 0 Research Plan
 
-Research resolves planning decisions, not the final runtime selection. The
-implementation phase of XPLAT-002 will collect the actual candidate evidence
-and select the runtime.
+Research resolves planning decisions and preserves the historical candidate
+evidence that led to the amended Python runtime selection. The implementation
+phase of XPLAT-002 collected the candidate evidence; the 2026-06-28 amendment
+marks compiled binaries as rejected historical evidence only.
 
-1. Apply all XPLAT-001 must-have gates to JavaScript/TypeScript, Python, and
-   small per-platform binary runner candidates before scoring weighted criteria.
+1. Preserve the XPLAT-001 must-have gate results for JavaScript/TypeScript,
+   Python, and the rejected small per-platform binary path before scoring
+   weighted criteria.
 2. Record documentation evidence from runtime/toolchain maintainers, official
    plugin platform documentation, or repo-local source/manifests for each
    candidate family.
@@ -158,8 +166,8 @@ and select the runtime.
    gap as an installed-cache probe pass.
 5. Treat no-post-cache-install reliability as a pass/fail gate for runtime-model
    selection and the tie-breaker when candidates are objectively close. Actual
-   installed-cache invocation proof remains downstream if the runner artifact is
-   intentionally out of XPLAT-002 scope. Close means no selection-blocking gate
+   installed-cache invocation proof remains downstream because the Python runner
+   source is intentionally out of XPLAT-002 scope. Close means no selection-blocking gate
    failures plus either weighted totals within five points or a lead based only
    on maintainer ergonomics or compatibility-adapter criteria while reliability
    criteria are tied or favor another candidate.

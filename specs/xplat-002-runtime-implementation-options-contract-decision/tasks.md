@@ -21,7 +21,7 @@
 - [x] T001 Create the decision record shell in `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md` using `spec.md`, `plan.md`, `research.md`, `data-model.md`, `contracts/speckit-pro-runner-contract.md`, `quickstart.md`, and `docs/ai/specs/.process/XPLAT-002-design-concept.md`
 - [x] T002 [P] Create the JavaScript/TypeScript evidence record in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/javascript-typescript.md`
 - [x] T003 [P] Create the Python evidence record in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/python.md`
-- [x] T004 [P] Create the small per-platform binary evidence record in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/small-per-platform-binary.md`
+- [x] T004 [P] Create the rejected small per-platform binary evidence record in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/small-per-platform-binary.md`
 - [x] T005 [P] Create the downstream handoff record in `specs/xplat-002-runtime-implementation-options-contract-decision/handoff.md`
 
 ---
@@ -43,7 +43,7 @@
 
 ## Phase 3: User Story 1 - Compare Runtime Candidates (Priority: P1) MVP
 
-**Goal**: Maintainers can compare JavaScript/TypeScript, Python, and small per-platform binary runner candidates against the same XPLAT-001 rubric using grounded documentation and lightweight probe evidence.
+**Goal**: Maintainers can review the historical JavaScript/TypeScript, Python, and rejected small per-platform binary comparison against the same XPLAT-001 rubric using grounded documentation and lightweight probe evidence.
 
 **Independent Test**: Review `runtime-decision.md` and the three files under `evidence/` and confirm all candidate families are evaluated against the same gates, weights, documentation standard, probe expectations, and evidence-gap rules.
 
@@ -51,11 +51,11 @@
 
 - [x] T010 [P] [US1] Record official/runtime documentation evidence, repo-local source evidence, installed-cache probe results or host-specific evidence gaps, gate results, weighted scores, and supply-chain implications for JavaScript/TypeScript in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/javascript-typescript.md`
 - [x] T011 [P] [US1] Record official/runtime documentation evidence, repo-local source evidence, installed-cache probe results or host-specific evidence gaps, gate results, weighted scores, and supply-chain implications for Python in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/python.md`
-- [x] T012 [P] [US1] Record official/runtime documentation evidence, repo-local source evidence, installed-cache probe results or host-specific evidence gaps, gate results, weighted scores, and supply-chain implications for small per-platform binaries in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/small-per-platform-binary.md`
+- [x] T012 [P] [US1] Record official/runtime documentation evidence, repo-local source evidence, installed-cache probe results or host-specific evidence gaps, gate results, weighted scores, and supply-chain implications for the rejected small per-platform binary path in `specs/xplat-002-runtime-implementation-options-contract-decision/evidence/small-per-platform-binary.md`
 - [x] T013 [US1] Synthesize the gate-first weighted comparison across all three candidates in `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`
 - [x] T014 [US1] Record documentation/probe conflicts, unrun probes, and evidence gaps without scoring evidence gaps as installed-cache probe passes in `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`
 
-**Checkpoint**: Candidate comparison is complete and reviewable without selecting by unstated preference.
+**Checkpoint**: Historical candidate comparison is complete and reviewable without selecting by unstated preference.
 
 ---
 
@@ -141,7 +141,7 @@
 ```bash
 Task: "Record JavaScript/TypeScript evidence in specs/xplat-002-runtime-implementation-options-contract-decision/evidence/javascript-typescript.md"
 Task: "Record Python evidence in specs/xplat-002-runtime-implementation-options-contract-decision/evidence/python.md"
-Task: "Record small per-platform binary evidence in specs/xplat-002-runtime-implementation-options-contract-decision/evidence/small-per-platform-binary.md"
+Task: "Record rejected small per-platform binary evidence in specs/xplat-002-runtime-implementation-options-contract-decision/evidence/small-per-platform-binary.md"
 ```
 
 ---

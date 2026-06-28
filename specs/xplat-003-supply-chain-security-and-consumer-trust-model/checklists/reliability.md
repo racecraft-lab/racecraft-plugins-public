@@ -1,6 +1,6 @@
 # Reliability Checklist: Supply-Chain Security and Consumer Trust Model
 
-**Purpose**: Validate reliability requirement quality for XPLAT-003 release gates, vulnerability scan failures, exception handling, checksum mismatch behavior, evidence retention, public claim auditability, and partial artifact publication.
+**Purpose**: Validate reliability requirement quality for XPLAT-003 release gates, vulnerability scan failures, exception handling, checksum mismatch behavior, evidence retention, public claim auditability, and partial runner-file publication.
 **Created**: 2026-06-27
 **Feature**: [spec.md](../spec.md)
 
@@ -8,10 +8,10 @@
 
 ## Requirement Completeness
 
-- [x] CHK001 Is the vulnerability scan failure policy complete for actionable high/critical findings across runner source, dependencies, release inputs, packaged artifacts, generated payloads, marketplace manifests, and release evidence? [Completeness, Spec FR-006, Spec FR-007, Research Vulnerability Policy]
+- [x] CHK001 Is the vulnerability scan failure policy complete for actionable high/critical findings across runner source, dependency policy, release inputs, packaged runner files, generated payloads, marketplace manifests, and release evidence? [Completeness, Spec FR-006, Spec FR-007, Research Vulnerability Policy]
 - [x] CHK002 Are non-actionable high/critical findings required to have exception records instead of silently bypassing release readiness? [Completeness, Spec FR-008, Spec FR-021, Contract Vulnerability Exception]
 - [x] CHK003 Are stale or missing scan evidence states included as readiness blockers for XPLAT-004 and XPLAT-007? [Completeness, Spec FR-023, Spec FR-024, Spec FR-026, Plan Scan Evidence Freshness Gate]
-- [x] CHK004 Does consumer-local checksum guidance define consumer-facing remediation when a computed artifact hash mismatches the published checksum entry? [Resolved, Spec FR-031, Plan Checksum Mismatch Remediation, Contract Consumer-Local Checksum Guidance]
+- [x] CHK004 Does consumer-local checksum guidance define consumer-facing remediation when a computed runner-file hash mismatches the published checksum entry? [Resolved, Spec FR-031, Plan Checksum Mismatch Remediation, Contract Consumer-Local Checksum Guidance]
 - [x] CHK005 Are durable retention requirements defined for release-readiness evidence and public-claim audit evidence beyond vulnerability scan summaries and exception records? [Resolved, Spec FR-032, Plan Release-Readiness and Claim-Audit Retention, Contract Release-Readiness and Public-Claim Audit Retention]
 
 ## Requirement Clarity
@@ -20,7 +20,7 @@
 - [x] CHK007 Is vulnerability actionability defined with severity, first-release trust-boundary scope, and reachable/shipped/release-affecting relevance? [Clarity, Spec FR-007, Research Vulnerability Policy]
 - [x] CHK008 Are exception expiry and re-approval conditions specific enough to prevent permanent exceptions across release boundaries and changed evidence inputs? [Clarity, Spec FR-021, Contract Vulnerability Exception]
 - [x] CHK009 Are unavailable checksum metadata states required to fail closed without source checkout, network package restoration, Bash, or `jq` requirements? [Clarity, Spec FR-028, Plan Consumer-Local Checksum Verification Guidance]
-- [x] CHK010 Does the spec define deterministic handling for partial artifact publication, such as one platform artifact having complete evidence while another claimed artifact is missing, stale, mismatched, or unpublished? [Resolved, Spec FR-033, Data Model Artifact Claim Readiness, Contract Artifact Claim Readiness]
+- [x] CHK010 Does the spec define deterministic handling for partial runner-file publication, such as one claimed platform surface having complete evidence while another is missing, stale, mismatched, or unpublished? [Resolved, Spec FR-033, Data Model Runner File Claim Readiness, Contract Runner File Claim Readiness]
 
 ## Requirement Consistency
 
@@ -34,7 +34,7 @@
 
 - [x] CHK016 Can reviewers determine whether stale scan evidence blocks readiness without relying on narrative judgment? [Acceptance Criteria, Spec SC-012, Spec FR-026]
 - [x] CHK017 Can reviewers verify that all raw scanner output retention rules avoid committed raw logs by default and identify the future CI artifact retention period? [Acceptance Criteria, Spec SC-011, Spec FR-022]
-- [x] CHK018 Can reviewers determine whether consumer checksum guidance covers every claimed platform artifact with metadata lookup and platform-native command shapes? [Acceptance Criteria, Spec SC-014, Spec FR-028]
+- [x] CHK018 Can reviewers determine whether consumer checksum guidance covers every claimed runner file with metadata lookup and Python stdlib command shapes for Windows, macOS, and Linux? [Acceptance Criteria, Spec SC-014, Spec FR-028]
 - [x] CHK019 Can public wording reviewers reject unsupported claims when implementation, release evidence, native UAT evidence, or release automation acceptance evidence is absent or stale? [Acceptance Criteria, Spec SC-007, Spec FR-024, Spec FR-025, Spec FR-029]
 
 ## Scenario and Edge Case Coverage
@@ -46,16 +46,16 @@
 
 ## Notes
 
-- Initial checklist pass found three true reliability gaps: consumer-facing checksum mismatch remediation was not specified, non-scan release/public-claim evidence retention was not explicit, and partial artifact publication handling was not deterministic.
+- Initial checklist pass found three true reliability gaps: consumer-facing checksum mismatch remediation was not specified, non-scan release/public-claim evidence retention was not explicit, and partial runner-file publication handling was not deterministic.
 
 ## Rerun Verification - Loop 1
 
 - [x] CHK024 Do spec, plan, research, data model, contract, and quickstart now define checksum mismatch as a closed consumer verification failure with stop-use/report guidance and fresh-evidence reacceptance? [Resolved, Spec FR-031, Plan Checksum Mismatch Remediation, Research Consumer Verification Boundary, Data Model Consumer Verification Guidance, Contract Consumer-Local Checksum Guidance, Quickstart Decision Checklist]
 - [x] CHK025 Do spec, plan, data model, contract, and quickstart now define durable non-sensitive release-readiness and public-claim audit evidence retention beyond scan summaries and exception records? [Resolved, Spec FR-032, Plan Release-Readiness and Claim-Audit Retention, Data Model Release-Readiness Evidence, Contract Release-Readiness and Public-Claim Audit Retention, Quickstart Decision Checklist]
-- [x] CHK026 Do spec, plan, research, data model, contract, and quickstart now define deterministic per-artifact/per-platform handling for partial artifact publication and claim readiness? [Resolved, Spec FR-033, Plan Partial Artifact Publication Gate, Research Public Claim Boundary, Data Model Artifact Claim Readiness, Contract Artifact Claim Readiness, Quickstart Decision Checklist]
+- [x] CHK026 Do spec, plan, research, data model, contract, and quickstart now define deterministic per-runner-file/per-platform handling for partial publication and claim readiness? [Resolved, Spec FR-033, Plan Partial Runner File Publication Gate, Research Public Claim Boundary, Data Model Runner File Claim Readiness, Contract Runner File Claim Readiness, Quickstart Decision Checklist]
 
 ## Rerun Verification - Loop 2
 
 - [x] CHK027 Do spec, plan, research, data model, contract, and quickstart now define missing user-host runtime guarantees as a reliability blocker unless the runtime is self-contained, bundled, officially guaranteed, or diagnosed fail-closed? [Resolved, Spec FR-035, Spec FR-036, Contract Runtime Dependency Boundary, Quickstart Decision Checklist]
-- [x] CHK028 Does the runtime-reopen path make Go, Rust, Zig, bundled Node, embedded Python, and source-script alternatives regenerate reliability and supply-chain evidence instead of inheriting stale Go assumptions? [Resolved, Spec FR-037, Research Runtime Candidate Reopen Implications, Plan Pinned Release Input Evidence]
+- [x] CHK028 Does the rejected-runtime path mark Go, Rust, Zig, bundled Node, embedded Python, and native binaries as ineligible XPLAT alternatives instead of inheriting stale Go assumptions? [Resolved, Spec FR-037, Research Rejected Runtime Candidate Implications, Plan Pinned Release Input Evidence]
 - [x] CHK029 Does Codex install-completeness checking fail closed when required custom-agent TOML registrations are missing even if plugin skills are present? [Resolved, Spec FR-038, Data Model Install Completeness Evidence, Contract Install Completeness Evidence]

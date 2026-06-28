@@ -8,12 +8,12 @@
 
 ## Requirement Completeness
 
-- [x] CHK001 Are JavaScript/TypeScript, Python, and small per-platform binary candidates all required to record dependency and bootstrap footprint before selection? [Completeness, Spec FR-001, Spec FR-017, Plan Technical Context]
+- [x] CHK001 Are JavaScript/TypeScript, Python, and the rejected small per-platform binary record all required to record dependency and bootstrap footprint before selection? [Completeness, Spec FR-001, Spec FR-017, Plan Technical Context]
 - [x] CHK002 Is installed-cache no-install behavior a pass/fail gate rather than a weighted preference? [Completeness, Spec FR-016, Research Installed-Cache Gate]
 - [x] CHK003 Are post-cache package installs and package restoration explicitly prohibited for the selected runner? [Completeness, Spec FR-016, Plan Constraints]
 - [x] CHK004 Is the initial plugin install or update fetch separated from prohibited post-cache package restoration? [Completeness, Spec Clarifications Session 3]
 - [x] CHK005 Is XPLAT-003 required to receive selected and rejected candidate supply-chain implications without XPLAT-002 choosing first-release controls? [Completeness, Spec FR-003, Spec FR-017, Research]
-- [x] CHK006 Are candidate dependency and artifact assumptions classified explicitly enough that vendored packages, embedded runtimes, native binaries, generated artifacts, lockfiles/manifests, or unknown package-manager expectations cannot become implicit security controls for XPLAT-003? [Resolved, Spec FR-017, Data Model Supply-Chain Implication Matrix]
+- [x] CHK006 Are evaluated-runtime dependency and output assumptions classified explicitly enough that vendored packages, embedded runtimes, native binaries, generated artifacts, lockfiles/manifests, or unknown package-manager expectations cannot become implicit security controls for XPLAT-003? [Resolved, Spec FR-017, Data Model Supply-Chain Implication Matrix]
 
 ## Requirement Clarity
 

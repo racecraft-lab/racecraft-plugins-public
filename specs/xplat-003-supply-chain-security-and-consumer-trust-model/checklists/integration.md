@@ -1,6 +1,6 @@
 # Integration Checklist: Supply-Chain Security and Consumer Trust Model
 
-**Purpose**: Validate integration requirement quality for XPLAT-003 handoffs across XPLAT-004, XPLAT-007, release automation, generated payload integrity, artifact metadata flow, and consumer-verification preflight evidence.
+**Purpose**: Validate integration requirement quality for XPLAT-003 handoffs across XPLAT-004, XPLAT-007, release automation, generated payload integrity, runner manifest metadata flow, and consumer-verification preflight evidence.
 **Created**: 2026-06-27
 **Feature**: [spec.md](../spec.md)
 
@@ -8,7 +8,7 @@
 
 ## Requirement Completeness
 
-- [x] CHK001 Are XPLAT-004-owned controls documented for runner source, dependency snapshot, artifact build inputs, checksum generation, manifest generation, runtime-info/preflight fields, and applicable scan evidence? [Completeness, Spec FR-010, Plan Downstream Handoff]
+- [x] CHK001 Are XPLAT-004-owned controls documented for runner source, Python prerequisite evidence, dependency policy, release inputs, checksum generation, manifest generation, runtime-info/preflight fields, and applicable scan evidence? [Completeness, Spec FR-010, Plan Downstream Handoff]
 - [x] CHK002 Are XPLAT-007-owned controls documented for generated payload source-to-dist integrity, consumer verification guidance, native UAT evidence, public claim readiness, and cutover? [Completeness, Spec FR-011, Plan Downstream Handoff]
 - [x] CHK003 Are release-automation-owned publication controls assigned to an explicit downstream acceptance gate before public release claims rely on them? [Resolved, Spec FR-029, Plan Release Automation Acceptance Evidence, Contract Release Automation Acceptance Contract]
 - [x] CHK004 Are public docs and release-note wording responsibilities integrated with the XPLAT-007 claim audit instead of treated as standalone proof of implemented controls? [Completeness, Spec FR-013, Spec FR-024, Contract Public Claim Audit]
@@ -18,14 +18,14 @@
 
 - [x] CHK006 Is the XPLAT-004 readiness gate stated clearly enough to fail when selected-runtime pinned release input, checksum, manifest, preflight, or scan evidence is missing, stale, unknown, or unverified? [Clarity, Spec FR-023, Plan Downstream Handoff]
 - [x] CHK007 Is the XPLAT-007 readiness gate stated clearly enough to fail when source-to-dist, consumer guidance, public claim audit, runtime preflight/version, native UAT, checksum, manifest, scan, or exception evidence is missing or stale? [Clarity, Spec FR-024, Plan Downstream Handoff]
-- [x] CHK008 Does the source-to-dist requirement specify how checksum and artifact manifest metadata must flow from XPLAT-004 outputs into source and generated Claude/Codex payload roots before XPLAT-007 cutover? [Resolved, Spec FR-030, Plan Generated Payload Metadata Propagation Gate, Contract Generated Payload Source-to-Dist Evidence]
-- [x] CHK009 Are runtime-info/preflight artifact-integrity fields defined with enough specificity for consumer verification without relying on runner self-verification alone? [Clarity, Spec FR-020, Contract Runtime-Info and Preflight Contract Additions]
+- [x] CHK008 Does the source-to-dist requirement specify how checksum and runner manifest metadata must flow from XPLAT-004 outputs into source and generated Claude/Codex payload roots before XPLAT-007 cutover? [Resolved, Spec FR-030, Plan Generated Payload Metadata Propagation Gate, Contract Generated Payload Source-to-Dist Evidence]
+- [x] CHK009 Are runtime-info/preflight runner-file integrity fields defined with enough specificity for consumer verification without relying on runner self-verification alone? [Clarity, Spec FR-020, Contract Runtime-Info and Preflight Contract Additions]
 - [x] CHK010 Is source-only versus installed-cache context distinguished so downstream specs cannot accept source-only probes as installed-consumer verification? [Clarity, Spec FR-020, XPLAT-002 Runner Contract]
 
 ## Requirement Consistency
 
 - [x] CHK011 Do spec, plan, research, data model, contract, and quickstart consistently keep XPLAT-003 as a decision spike with no implementation or release workflow changes? [Consistency, Spec FR-018, Plan Summary, Quickstart Scope Check]
-- [x] CHK012 Do owner assignments consistently route runner/source/artifact controls to XPLAT-004 and generated payload, docs/release-note claim, native UAT, and cutover controls to XPLAT-007? [Consistency, Spec FR-010, Spec FR-011, Research Control Decisions]
+- [x] CHK012 Do owner assignments consistently route runner/source/dependency-policy controls to XPLAT-004 and generated payload, docs/release-note claim, native UAT, and cutover controls to XPLAT-007? [Consistency, Spec FR-010, Spec FR-011, Research Control Decisions]
 - [x] CHK013 Are release automation controls described as publication-time evidence without implying current release workflows already enforce the XPLAT-003 trust model? [Consistency, Spec FR-012, Plan Downstream Handoff]
 - [x] CHK014 Are consumer verification requirements consistent with XPLAT-002's no post-cache Bash, `jq`, package restoration, or network dependency constraints? [Consistency, Spec FR-005, Spec FR-028, XPLAT-002 Handoff]
 
@@ -45,7 +45,7 @@
 
 ## Notes
 
-- Initial checklist pass found two true integration gaps: release-automation-owned controls lacked an explicit downstream acceptance gate, and generated payload source-to-dist evidence did not specify how checksum and runner manifest metadata flows from XPLAT-004 outputs into source and generated Claude/Codex payload roots.
+- Initial checklist pass found two true integration gaps: release-automation-owned controls lacked an explicit downstream acceptance gate, and generated payload source-to-dist evidence did not specify how checksum and runner manifest metadata flow from XPLAT-004 outputs into source and generated Claude/Codex payload roots.
 
 ## Rerun Verification - Loop 1
 
@@ -55,5 +55,5 @@
 ## Rerun Verification - Loop 2
 
 - [x] CHK025 Do spec, plan, research, data model, contract, and quickstart distinguish official Claude/Codex plugin packaging support from user-host runtime availability? [Resolved, Spec FR-035, Research Official Platform Documentation Findings, Contract Platform Capability Evidence]
-- [x] CHK026 Does the selected runtime boundary require no user-side build toolchain or post-cache package restoration for public native-support claims? [Resolved, Spec FR-036, Spec FR-037, Data Model Runtime Dependency Boundary, Contract Runtime Dependency Boundary]
+- [x] CHK026 Does the selected Python runtime boundary require no user-side build toolchain or post-cache package restoration for public native-support claims? [Resolved, Spec FR-036, Spec FR-037, Data Model Runtime Dependency Boundary, Contract Runtime Dependency Boundary]
 - [x] CHK027 Does install-completeness evidence distinguish Claude plugin agents from Codex custom-agent TOML registration? [Resolved, Spec FR-038, Data Model Install Completeness Evidence, Contract Install Completeness Evidence]

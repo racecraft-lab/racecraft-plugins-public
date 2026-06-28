@@ -1,6 +1,6 @@
 # Security Checklist: Supply-Chain Security and Consumer Trust Model
 
-**Purpose**: Validate security requirement quality for XPLAT-003 first-release versus deferred control boundaries, artifact integrity, vulnerability scanning, generated-payload integrity, consumer-local verification, and public claim restrictions.
+**Purpose**: Validate security requirement quality for XPLAT-003 first-release versus deferred control boundaries, runner-source integrity, vulnerability scanning, generated-payload integrity, consumer-local verification, and public claim restrictions.
 **Created**: 2026-06-27
 **Feature**: [spec.md](../spec.md)
 
@@ -8,17 +8,17 @@
 
 ## Requirement Completeness
 
-- [x] CHK001 Does the first-release baseline include source-to-dist integrity, SHA-256 checksums, artifact manifest, vulnerability scanning, consumer-local verification, and truthful public claims? [Completeness, Spec FR-002, Plan Summary]
+- [x] CHK001 Does the first-release baseline include source-to-dist integrity, SHA-256 checksums, runner manifest metadata, vulnerability scanning, consumer-local verification, and truthful public claims? [Completeness, Spec FR-002, Plan Summary]
 - [x] CHK002 Are signatures, SBOMs, provenance/attestations, reproducible builds, formal audit, marketplace-enforced verification, cryptographic trust-chain verification, and native support claims classified as deferred or explicitly not claimed until implemented and verified? [Completeness, Spec FR-009, Spec FR-025, Research Public Claim Boundary]
 - [x] CHK003 Are runner implementation, helper porting, active invocation path changes, generated payload rebuilds, release workflow edits, and public native-support claims excluded from XPLAT-003 implementation scope? [Completeness, Spec FR-018, Plan Constraints]
 - [x] CHK004 Are generated Claude/Codex payload integrity requirements assigned to XPLAT-007 without implying XPLAT-003 has already rebuilt or verified generated payloads? [Completeness, Spec FR-003, Spec FR-011, Contract Generated Payload Source-to-Dist Evidence]
-- [x] CHK005 Are checksum and manifest requirements defined for packaged runner artifacts without implying signing, provenance, SBOM, reproducible builds, audit, or marketplace-enforced verification? [Completeness, Spec FR-004, Spec FR-019, Contract Checksum File, Contract Runner Artifact Manifest]
+- [x] CHK005 Are checksum and manifest requirements defined for packaged Python runner files without implying signing, provenance, SBOM, reproducible builds, audit, or marketplace-enforced verification? [Completeness, Spec FR-004, Spec FR-019, Contract Runner File Manifest]
 
 ## Requirement Clarity
 
 - [x] CHK006 Is actionability for high/critical vulnerability findings defined with severity, first-release trust-boundary scope, and reachable/shipped/release-affecting relevance? [Clarity, Spec FR-007, Research Vulnerability Policy]
 - [x] CHK007 Is vulnerability scan evidence staleness defined objectively enough that XPLAT-004 and XPLAT-007 can fail readiness without narrative judgment? [Resolved, Spec FR-026, Plan Scan Evidence Freshness Gate, Data Model Vulnerability Scan Evidence, Contract Scan Evidence Freshness]
-- [x] CHK008 Are selected-runtime pinned release input evidence fields specific enough for XPLAT-004 to record toolchain, dependency, build/release input, source revision, artifact, and checksum state before accepting runner artifacts? [Resolved, Spec FR-027, Plan Pinned Release Input Evidence, Data Model Pinned Release Input Evidence, Contract Pinned Release Input Evidence]
+- [x] CHK008 Are selected-runtime pinned release input evidence fields specific enough for XPLAT-004 to record Python prerequisite, dependency policy, release input, source revision, runner source path, and checksum state before accepting runner files? [Resolved, Spec FR-027, Plan Pinned Release Input Evidence, Data Model Pinned Release Input Evidence, Contract Pinned Release Input Evidence]
 - [x] CHK009 Are vulnerability exception records complete enough to prevent non-actionable high/critical findings from becoming permanent or undocumented release bypasses? [Clarity, Spec FR-008, Spec FR-021, Contract Vulnerability Exception]
 - [x] CHK010 Does scan-evidence retention distinguish durable non-sensitive summaries from raw scanner output and define where raw output lives once automation exists? [Clarity, Spec FR-022, Data Model Vulnerability Scan Evidence]
 - [x] CHK011 Does consumer-local checksum verification require per-target-platform command shapes and metadata lookup behavior while still avoiding Bash, `jq`, source checkout, package restoration, network access, and pre-UAT native support claims? [Resolved, Spec FR-028, Plan Consumer-Local Checksum Verification Guidance, Data Model Consumer Verification Guidance, Contract Consumer-Local Checksum Guidance]
@@ -28,7 +28,7 @@
 - [x] CHK012 Do spec, plan, research, data model, contract, and quickstart consistently state that XPLAT-003 records policy and evidence contracts only? [Consistency, Spec FR-018, Plan Summary, Contract Introduction, Quickstart Scope Check]
 - [x] CHK013 Do public docs and release-note restrictions consistently reject unimplemented claims for signing, SBOMs, provenance, reproducibility, formal audit/certification, marketplace-enforced verification, cryptographic trust-chain verification, and native support? [Consistency, Spec FR-013, Spec FR-014, Spec FR-025, Contract Public Claim Audit]
 - [x] CHK014 Are allowed public claims limited to implemented-and-verified controls rather than to controls selected in XPLAT-003 but not yet implemented downstream? [Consistency, Spec FR-013, Spec FR-024, Research Public Claim Boundary]
-- [x] CHK015 Does the owner split consistently assign runner/source/artifact controls to XPLAT-004 and generated-payload, consumer guidance, claim readiness, native UAT, and cutover controls to XPLAT-007? [Consistency, Spec FR-010, Spec FR-011, Plan Downstream Handoff]
+- [x] CHK015 Does the owner split consistently assign runner/source/dependency-policy controls to XPLAT-004 and generated-payload, consumer guidance, claim readiness, native UAT, and cutover controls to XPLAT-007? [Consistency, Spec FR-010, Spec FR-011, Plan Downstream Handoff]
 - [x] CHK016 Are release automation controls described only as downstream publication-time evidence and not as changes implemented by XPLAT-003? [Consistency, Spec FR-012, Plan Downstream Handoff]
 
 ## Acceptance Criteria Quality
@@ -53,7 +53,7 @@
 
 - [x] CHK025 Does FR-026 now define scan evidence staleness using the 7-calendar-day freshness window plus source, dependency, toolchain, build input, artifact, scanner/database, and release-boundary invalidation triggers? [Resolved, Spec FR-026]
 - [x] CHK026 Do plan, data model, and contract artifacts now require scan records to include scan tool, scanner/database timestamp, scope, target source revision, dependency snapshot, build input snapshot, artifact identifier, run timestamp, result/severity summary, owner, and freshness expiry? [Resolved, Plan Scan Evidence Freshness Gate, Data Model Vulnerability Scan Evidence, Contract Scan Evidence Freshness]
-- [x] CHK027 Does FR-027 now require selected-runtime pinned release input evidence fields for XPLAT-004 before runner artifacts are accepted? [Resolved, Spec FR-027]
+- [x] CHK027 Does FR-027 now require selected-runtime pinned release input evidence fields for XPLAT-004 before runner files are accepted? [Resolved, Spec FR-027]
 - [x] CHK028 Do plan, data model, and contract artifacts now treat unknown or unverified pinned input fields as evidence gaps, not accepted controls? [Resolved, Plan Pinned Release Input Evidence, Data Model Pinned Release Input Evidence, Contract Pinned Release Input Evidence]
 - [x] CHK029 Does FR-028 now require Windows, macOS, and Linux checksum command shapes, metadata lookup behavior, and fail-closed unavailable states without Bash, `jq`, source checkout, package restoration, post-cache network access, or pre-UAT support claims? [Resolved, Spec FR-028]
 - [x] CHK030 Do plan, research, data model, contract, and quickstart artifacts now consistently frame platform command shapes as XPLAT-007 guidance requirements rather than current public native-support claims? [Resolved, Plan Consumer-Local Checksum Verification Guidance, Research Consumer Verification Boundary, Data Model Consumer Verification Guidance, Contract Consumer-Local Checksum Guidance, Quickstart Decision Checklist]
@@ -61,5 +61,5 @@
 ## Rerun Verification - Loop 2
 
 - [x] CHK031 Do official Claude Code and OpenAI Codex docs findings prevent plugin script support from being treated as proof of Go, Rust, Zig, Node, Python, Bash, `jq`, package-manager, WSL, or Git Bash availability? [Resolved, Spec FR-035, Research Official Platform Documentation Findings, Contract Platform Capability Evidence]
-- [x] CHK032 Does the runtime boundary require self-contained artifacts, bundled runtime controls, official runtime guarantee, or fail-closed prerequisite diagnostics before public native-support claims? [Resolved, Spec FR-036, Spec FR-037, Contract Runtime Dependency Boundary]
+- [x] CHK032 Does the runtime boundary reject non-Python runtimes, bundled runtimes, and native binaries while requiring fail-closed Python/Spec Kit prerequisite diagnostics before public native-support claims? [Resolved, Spec FR-036, Spec FR-037, Contract Runtime Dependency Boundary]
 - [x] CHK033 Does Codex install-completeness checking include custom-agent TOML registration separately from plugin skills? [Resolved, Spec FR-038, Contract Install Completeness Evidence]

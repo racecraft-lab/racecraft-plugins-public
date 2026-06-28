@@ -32,8 +32,9 @@
 ## Notes
 
 - Validation passed on 2026-06-27 with 0 unresolved clarification markers.
-- The selected native-runner context is inherited from XPLAT-002 but reopened
-  for explicit maintainer re-approval; language/toolchain names are part of the
-  decision subject and acceptance gates, not implementation work in XPLAT-003.
+- The selected Python runner context is inherited from the amended XPLAT-002
+  handoff. Go/Rust/Zig/native-binary language is retained only as rejected
+  historical evidence, not as implementation work or a fallback path in
+  XPLAT-003.
 - Official Claude Code and OpenAI Codex documentation findings are included to
   constrain platform support claims and do not add runtime behavior.
