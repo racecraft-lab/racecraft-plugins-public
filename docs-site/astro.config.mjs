@@ -13,10 +13,10 @@ import starlightLlmsTxt from 'starlight-llms-txt';
 //
 // The sitemap freshness signal MUST come from each page's real git commit date,
 // never the build time (FR-017). We collect every page's date with a SINGLE bulk
-// `git log` walk built ONCE and memoized (NOT one subprocess per page — the
-// O(pages) slow path, withastro/astro#16803). This mirrors Starlight's own
-// `getAllNewestCommitDate`, which likewise does one `git log --name-status` pass
-// and never records a date for a file with no history.
+// `git log --full-history` walk built ONCE and memoized (NOT one subprocess per
+// page — the O(pages) slow path, withastro/astro#16803). This mirrors
+// Starlight's own `getAllNewestCommitDate`, while avoiding PR-merge history
+// simplification that can hide the real content commit in GitHub Actions.
 //
 // `child_process` here is within the docs-site safe-aids guard's allowed surface:
 // neither validate-doc006-safe-aids.mjs nor validate-docs-quality.mjs scans
@@ -59,9 +59,10 @@ function urlToSlug(url) {
 }
 
 /**
- * Build (once) a `slug -> ISO-8601 date` map from a single bulk `git log` walk
- * over the content dir. A file with no commit history gets NO entry (so its
- * `<lastmod>` is omitted downstream unless a frontmatter date pins it).
+ * Build (once) a `slug -> ISO-8601 date` map from a single bulk
+ * `git log --full-history` walk over the content dir. A file with no commit
+ * history gets NO entry (so its `<lastmod>` is omitted downstream unless a
+ * frontmatter date pins it).
  */
 let gitDateMapCache;
 function gitDateMap() {
@@ -71,7 +72,7 @@ function gitDateMap() {
   try {
     stdout = execFileSync(
       'git',
-      ['log', '--format=t:%cI', '--name-status', '--', CONTENT_DIR_REL],
+      ['log', '--full-history', '--format=t:%cI', '--name-status', '--', CONTENT_DIR_REL],
       { cwd: REPO_ROOT, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 },
     );
   } catch {
