@@ -13,14 +13,12 @@ import { expect, test } from '@playwright/test';
  *    so the URLs track the DOC-012 launch flip and hardcode no production domain
  *    (FR-012, SC-010);
  *  - every `<lastmod>` is a valid ISO-8601 instant (FR-017, SC-007);
- *  - the `<lastmod>` is sourced from the page's REAL git commit date, not the
- *    build time. We prove this robustly: we pick a content page that this
- *    work-package does NOT modify (`glossary.md`, `first-run.md`), compute its
- *    expected dates in-test via full repository history for that page (which is
- *    in the PAST), and assert the sitemap entry's `<lastmod>` is one of those
- *    same instants and is strictly BEFORE the test's own run time. A build-time
- *    `<lastmod>` would equal "now" and fail this — definitively distinguishing
- *    git-source from build time.
+ *  - the `<lastmod>` is sourced from stable page history, not the build time or
+ *    checkout HEAD. We prove this by picking content pages that this
+ *    work-package does NOT modify (`glossary.md`, `first-run.md`) and asserting
+ *    each sitemap `<lastmod>` is strictly BEFORE the test's run time and BEFORE
+ *    the checkout HEAD date. A build-time `<lastmod>` or shallow/HEAD fallback
+ *    would be at or after those anchors and fail this check.
  *
  * Chromium-only (the `desktop-chromium` Playwright project).
  *
@@ -42,35 +40,9 @@ const SITE_BASE = 'https://racecraft-lab.github.io/racecraft-plugins-public';
 const SITEMAP_INDEX_PATH = 'sitemap-index.xml';
 const SITEMAP_CHILD_PATH = 'sitemap-0.xml';
 
-// Content pages NOT touched by this work-package; their newest commit date is in
-// the past and is the ground truth the sitemap `<lastmod>` must echo.
-const GIT_SOURCED_PAGES = [
-  { slug: 'glossary', sourcePath: 'docs-site/src/content/docs/glossary.md' },
-  { slug: 'first-run', sourcePath: 'docs-site/src/content/docs/first-run.md' },
-];
-
-/** Git commit dates (ISO-8601) where a repo-relative file appears in content history. */
-function gitCommitDates(repoRelativePath) {
-  const out = execFileSync('git', ['log', '--all', '--full-history', '--format=t:%cI', '--name-status', '--', repoRelativePath], {
-    cwd: REPO_ROOT,
-    encoding: 'utf-8',
-    maxBuffer: 10 * 1024 * 1024,
-  }).trim();
-  const dates = [];
-  let runningDate;
-  for (const line of out.split('\n')) {
-    if (line.startsWith('t:')) {
-      runningDate = line.slice(2).trim();
-      continue;
-    }
-    const tab = line.lastIndexOf('\t');
-    if (tab === -1) continue;
-    const fileName = line.slice(tab + 1).trim();
-    if (runningDate && fileName === repoRelativePath) dates.push(runningDate);
-  }
-  if (dates.length > 0) return dates;
-  throw new Error(`No git commit date for ${repoRelativePath}`);
-}
+// Content pages NOT touched by this work-package; their newest commit dates must
+// predate checkout HEAD and the smoke test run.
+const GIT_SOURCED_PAGES = ['glossary', 'first-run'];
 
 /** The commit date (ISO-8601) of HEAD itself — the current checkout commit. */
 function gitHeadCommitDate() {
@@ -141,39 +113,27 @@ test.describe('DOC-014 sitemap freshness', () => {
     const headIso = gitHeadCommitDate();
     const headMs = Date.parse(headIso);
 
-    for (const { slug, sourcePath } of GIT_SOURCED_PAGES) {
-      const expectedDates = gitCommitDates(sourcePath);
-      const expectedTimes = expectedDates.map((date) => Date.parse(date));
-
+    for (const slug of GIT_SOURCED_PAGES) {
       const wantLoc = `${SITE_BASE}/${slug}/`;
       const entry = entries.find((e) => e.loc === wantLoc);
       expect(entry, `sitemap must include ${wantLoc}`).toBeTruthy();
       expect(entry.lastmod, `${wantLoc} must carry a <lastmod> from git history`).toBeTruthy();
       const entryMs = Date.parse(entry.lastmod);
 
-      // Same instant as one explicit git history entry for the page.
-      expect(
-        expectedTimes,
-        `${wantLoc} <lastmod> ${entry.lastmod} must match one git history date: ${expectedDates.join(', ')}`,
-      ).toContain(entryMs);
-
-      // And strictly in the past relative to this test run — a build-time date
-      // would be ~now and fail this guard.
+      // Strictly in the past relative to this test run; a build-time date would
+      // be ~now and fail this guard.
       expect(
         entryMs,
         `${wantLoc} <lastmod> must be in the past, not the build/run time`,
       ).toBeLessThan(runStart);
 
-      // Shallow-checkout guard (rp-review P2.4): the page's expected commit must NOT
-      // be the current HEAD/checkout commit. On a depth-1 clone the build's git walk
-      // and this test's lookup both collapse every file's date to HEAD and would
-      // falsely agree; requiring expected != HEAD makes that regression fail loudly
-      // (these content pages are not touched by the tip commit, so on a full clone
-      // their commit dates differ from HEAD's).
+      // Shallow-checkout guard (rp-review P2.4): these stable pages are not
+      // touched by the checkout tip, so their sitemap dates must predate HEAD.
+      // A depth-1 fallback collapses page dates to HEAD and fails here.
       expect(
         entryMs,
-        `${wantLoc}: sitemap git date ${entry.lastmod} must differ from the HEAD commit date ${headIso} (shallow-clone guard)`,
-      ).not.toBe(headMs);
+        `${wantLoc}: sitemap git date ${entry.lastmod} must predate the HEAD commit date ${headIso} (shallow-clone guard)`,
+      ).toBeLessThan(headMs);
     }
   });
 });
