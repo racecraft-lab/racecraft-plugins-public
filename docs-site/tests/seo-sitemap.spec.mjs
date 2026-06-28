@@ -16,11 +16,11 @@ import { expect, test } from '@playwright/test';
  *  - the `<lastmod>` is sourced from the page's REAL git commit date, not the
  *    build time. We prove this robustly: we pick a content page that this
  *    work-package does NOT modify (`glossary.md`, `first-run.md`), compute its
- *    expected dates in-test via the same full-history bulk git walk used by the
- *    build (which is in the PAST), and assert the sitemap entry's `<lastmod>` is
- *    one of those same instants and is strictly BEFORE the test's own run time.
- *    A build-time `<lastmod>` would equal "now" and fail this — definitively
- *    distinguishing git-source from build time.
+ *    expected dates in-test via full repository history for that page (which is
+ *    in the PAST), and assert the sitemap entry's `<lastmod>` is one of those
+ *    same instants and is strictly BEFORE the test's own run time. A build-time
+ *    `<lastmod>` would equal "now" and fail this — definitively distinguishing
+ *    git-source from build time.
  *
  * Chromium-only (the `desktop-chromium` Playwright project).
  *
@@ -51,7 +51,7 @@ const GIT_SOURCED_PAGES = [
 
 /** Git commit dates (ISO-8601) where a repo-relative file appears in content history. */
 function gitCommitDates(repoRelativePath) {
-  const out = execFileSync('git', ['log', '--full-history', '--format=t:%cI', '--name-status', '--', 'docs-site/src/content/docs'], {
+  const out = execFileSync('git', ['log', '--all', '--full-history', '--format=t:%cI', '--name-status', '--', repoRelativePath], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     maxBuffer: 10 * 1024 * 1024,
