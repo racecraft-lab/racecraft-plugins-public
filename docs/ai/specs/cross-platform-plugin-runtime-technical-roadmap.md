@@ -14,7 +14,10 @@ release blocker. Each SPEC is prepared for implementation with
 that the plugin can install but core Claude/Codex workflows break when they hit
 Bash-backed helper execution. Refined 2026-06-25 after roadmap audit split the
 runtime decision and supply-chain security model out of the first implementation
-slice.
+slice. Refined 2026-06-28 after XPLAT-003 user-journey analysis clarified that
+the release gate must prove install completeness, first-use success, update, and
+autoheal behavior across Claude Code and Codex, not only native Windows runtime
+execution.
 
 ---
 
@@ -31,7 +34,7 @@ dependency tiers**:
 | 4 | XPLAT-004 | Build the cross-platform runner foundation and parity harness | Sequential after runtime and security decisions |
 | 5 | XPLAT-005 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
 | 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Can overlap late XPLAT-005 only after shared runner APIs are stable |
-| 7 | XPLAT-007 | Cut over Claude/Codex surfaces, rebuild payloads, and prove native Windows release readiness | Sequential release gate |
+| 7 | XPLAT-007 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Sequential release gate |
 
 **Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007
 
@@ -98,6 +101,31 @@ runtime artifacts are built, what dependencies they include, what consumers can
 verify locally, and which security guarantees are intentionally not claimed.
 Supply-chain guarantees must be implemented before they are marketed.
 
+## Journey-Aligned Release Bar
+
+The XPLAT lane is complete only when the user journey works end to end. Runtime
+replacement is necessary but not sufficient.
+
+- A new user can install the latest tagged SpecKit Pro release for Claude Code,
+  Codex, or both without installing Bash, Git Bash, WSL, PowerShell-specific
+  shims, `jq`, Go, Rust, Zig, or another implementation runtime.
+- Claude Code and Codex installs contain 100 percent of expected skills,
+  bundled agents, hooks, generated payload files, runner artifacts, manifest
+  entries, and local verification metadata.
+- The first documented workflows succeed: scaffold/status, agent availability
+  checks, autopilot dry-run, PR-packet/UAT generation paths, and safe no-op
+  validation paths.
+- Scaffold/status/autopilot call a shared doctor/preflight contract before
+  meaningful work. The doctor must detect stale plugin versions, missing bundled
+  agents, missing runner artifacts, missing generated payload files, and
+  unsupported platform claims; it auto-repairs only safe gaps and gives exact
+  remediation for unsafe gaps.
+- The update path verifies that Claude Code and Codex are both on the latest
+  tagged plugin release and that generated payloads match the release manifest.
+- UAT evidence is readable and complete. Runbooks must not ship placeholder PR
+  fields, raw implementation anchors, empty expected-result sections, or
+  unfilled platform/product rows.
+
 ---
 
 ## Dependency Graph
@@ -121,7 +149,7 @@ XPLAT-005 Read-Only Helper Port
 XPLAT-006 Mutation, Install, and PR-Emission Helper Port
     |
     v
-XPLAT-007 Claude/Codex Cutover and Native Windows Release Gate
+XPLAT-007 Claude/Codex Cutover and Universal Install Release Gate
     |
     v
 PUBLIC RELEASE UNBLOCKED
@@ -135,11 +163,11 @@ PUBLIC RELEASE UNBLOCKED
 |---|---|---|---|---|
 | XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
 | XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete | `.process/XPLAT-002-workflow.md` | Runtime decision: `specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md` |
-| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete | `.process/XPLAT-003-workflow.md` | Decision artifacts complete; first-release controls and downstream ownership recorded |
+| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete | `.process/XPLAT-003-workflow.md` | Decision artifacts and platform user journey supplement complete; first-release controls and downstream ownership recorded |
 | XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-003 security model |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-004; should reuse XPLAT-005 parity harness |
-| XPLAT-007 | Claude/Codex Cutover and Native Windows Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
+| XPLAT-007 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
 
 **Status Legend:** Pending | In Progress | In Review | Complete | Blocked
 
@@ -501,6 +529,13 @@ if XPLAT-001 inventory shows the combined scope is too large.
 - Port helpers that write files, update state, install Codex agents, manage the
   curated set, migrate or relocate process artifacts, generate PR bodies, emit
   split-PR state, or perform restack planning/apply operations.
+- Port install-completeness and repair helpers that verify the expected Claude
+  Code and Codex bundled-agent set from a generated inventory or manifest,
+  rather than from a stale hardcoded list.
+- Add the shared doctor/preflight contract used by scaffold/status/autopilot to
+  detect stale releases, missing bundled agents, missing runner artifacts,
+  missing generated payload files, and unsafe repair cases before workflow
+  execution continues.
 - Preserve atomic write and dry-run/apply semantics where the Bash helper
   currently promises them.
 - Preserve PR packet, workflow-contract, split-PR, restack, install, and
@@ -529,24 +564,31 @@ if XPLAT-001 inventory shows the combined scope is too large.
 - `relocate-process-artifacts`
 - `install-curated-set`
 - `install-codex-agents`
+- `doctor` / install-completeness repair helpers if introduced by XPLAT-004
 - coach fixup/preset helpers that write files
 
 **Done When:**
 
 - Every mutation-capable installed-runtime helper has a runner equivalent.
+- Claude Code and Codex install helpers verify the complete expected bundled
+  agent and generated-payload set from a source-controlled manifest or generated
+  inventory.
+- Scaffold/status/autopilot have a shared doctor/preflight contract with
+  deterministic safe-repair and manual-remediation outcomes.
 - Fixture parity covers destructive and dry-run paths before active cutover.
 
 ---
 
-### XPLAT-007: Claude/Codex Cutover and Native Windows Release Gate
+### XPLAT-007: Claude/Codex Cutover and Universal Install Release Gate
 
 **Priority:** P1 | **Depends On:** XPLAT-005, XPLAT-006 | **Enables:** Public release readiness
 
 **Status:** Pending.
 
 **Goal:** Switch active Claude and Codex plugin runtime surfaces to the
-cross-platform runner and prove public-release readiness with native Windows UAT
-and accurate consumer-trust documentation.
+cross-platform runner and prove public-release readiness with complete
+Claude/Codex installs, universal first-use journeys, update/repair behavior,
+native Windows UAT, and accurate consumer-trust documentation.
 
 **Reviewability Budget:** Primary surfaces: docs/process + seed/config |
 Projected reviewable LOC: 250-500 |
@@ -560,16 +602,26 @@ split only if generated payload rebuilds make the review packet too large.
 - Update active Claude skills, Codex skills, agents, hooks, and install guidance
   to invoke the runner instead of Bash helpers.
 - Rebuild Claude and Codex generated payloads from source.
+- Add generated-payload gates proving Claude Code and Codex payloads contain the
+  same release version, every expected bundled agent, every expected hook, every
+  required runner artifact, and the release manifest/checksum metadata assigned
+  by XPLAT-003.
 - Remove Bash and `jq` from installed plugin runtime prerequisites.
 - Add deterministic guards that fail when active installed-runtime guidance
   reintroduces `bash`, `.sh`, `jq`, shell interpolation, or Unix-only path
   assumptions outside the XPLAT-001 allowlist.
-- Add or update docs so Windows users see the supported native path, not a WSL or
-  Git Bash workaround.
+- Add or update docs so Windows users see the supported native path, any
+  explicitly supported WSL path is labeled as optional, and macOS/Linux users see
+  the same install-to-first-use journey.
 - Document the implemented XPLAT-003 security model in public docs and release
   notes without overstating guarantees.
 - Capture manual UAT evidence for Claude and Codex on native Windows, macOS, and
-  Linux.
+  Linux covering install, bundled-agent verification, scaffold/status,
+  autopilot dry-run, update to the latest tagged release, and safe repair of an
+  intentionally incomplete install.
+- Require UAT runbooks to be filled, readable, and release-reviewable, with no
+  placeholder PR fields, raw HTML anchors, empty expected-result sections, or
+  unfilled platform/product rows.
 
 **Out of Scope:**
 
@@ -601,8 +653,16 @@ split only if generated payload rebuilds make the review packet too large.
 - Native Windows, macOS, and Linux UAT all pass for installed Claude and Codex
   plugin workflows without Bash, Git Bash, WSL, PowerShell-specific commands, or
   `jq`.
+- Claude Code and Codex installs are proven 100 percent complete for skills,
+  bundled agents, hooks, generated payloads, runner artifacts, and XPLAT-003
+  verification metadata.
+- Scaffold/status/autopilot doctor checks detect stale or incomplete installs
+  and either autoheal safe gaps or produce exact manual remediation steps.
+- Users can update both Claude Code and Codex installs to the latest tagged
+  release and rerun the first-use workflows successfully.
 - A release-readiness guard blocks publication if active runtime Bash
-  dependencies are reintroduced.
+  dependencies, incomplete generated payloads, missing bundled agents, stale
+  version metadata, or incomplete UAT runbooks are detected.
 - Public docs and release notes match the implemented consumer-trust model.
 
 ---
@@ -611,9 +671,11 @@ split only if generated payload rebuilds make the review packet too large.
 
 SpecKit Pro should not be marketed as a public, cross-platform Claude/Codex
 plugin until XPLAT-007 is complete. Before then, native Windows support is not a
-documentation problem; it is an implementation gap. Consumer trust also remains a
-planning gap until XPLAT-003 is complete and an implementation gap until its
-required controls are wired into XPLAT-004 and XPLAT-007.
+documentation problem; it is an implementation gap. A complete public claim also
+requires proven Claude/Codex install completeness, latest-tag update behavior,
+doctor/autoheal behavior, and filled UAT runbooks. Consumer trust is now
+specified by XPLAT-003, but it remains an implementation gap until its required
+controls are wired into XPLAT-004 and XPLAT-007.
 
 ## References
 

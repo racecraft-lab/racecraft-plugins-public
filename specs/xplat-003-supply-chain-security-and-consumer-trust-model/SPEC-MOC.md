@@ -46,5 +46,6 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [.process/pr-packets/speckit-pr-packet/speckit-pr-packet.json](.process/pr-packets/speckit-pr-packet/speckit-pr-packet.json)
 - [.process/pr-packets/speckit-pr-packet/validation.json](.process/pr-packets/speckit-pr-packet/validation.json)
 - [.process/uat-runbook.md](.process/uat-runbook.md)
+- [platform-user-journeys.md](platform-user-journeys.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

@@ -8,6 +8,8 @@
 - XPLAT-002 runner contract: `specs/xplat-002-runtime-implementation-options-contract-decision/contracts/speckit-pro-runner-contract.md`
 - XPLAT-003 design concept: `docs/ai/specs/.process/XPLAT-003-design-concept.md`
 - XPLAT-003 finalized spec: `specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md`
+- XPLAT-003 platform user journeys and gaps:
+  `specs/xplat-003-supply-chain-security-and-consumer-trust-model/platform-user-journeys.md`
 - Official Claude Code plugin docs: `https://code.claude.com/docs/en/plugins`
 - Official Claude Code plugin marketplace docs: `https://code.claude.com/docs/en/plugin-marketplaces`
 - Official Claude Code plugin reference: `https://code.claude.com/docs/en/plugins-reference`
@@ -246,9 +248,15 @@ agents are part of the release promise.
 
 The practical first-release baseline is sufficient for XPLAT-004 and XPLAT-007
 planning only if maintainers explicitly re-approve the Go native runner
-decision. Until then, this research is a conditional analysis and not a final
-runtime acceptance record. If the runtime changes to Rust, Zig, bundled Node,
-embedded Python, or another shape, the control matrix must be regenerated rather
-than edited opportunistically.
+decision. The platform user-journey supplement records the Windows-first
+install/use/update/repair path for Claude Code and Codex and makes clear that
+universal install requires payload completeness, Codex custom-agent
+registration completeness, runner artifacts, platform-compatible hooks/scripts,
+scaffold/autopilot autoheal, and UAT runbook quality evidence. Until the
+runtime choice is re-approved and those gaps are closed, this research is a
+conditional analysis and not a final runtime acceptance record. If the runtime
+changes to Rust, Zig, bundled Node, embedded Python, or another shape, the
+control matrix and user journeys must be regenerated rather than edited
+opportunistically.
 
 Release automation remains assigned but not implemented in XPLAT-003. Any public claim that relies on release automation remains blocked until XPLAT-007 or a later release automation surface records current acceptance evidence.

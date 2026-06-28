@@ -2,7 +2,7 @@
 
 **Status**: Draft
 **Created**: 2026-06-24
-**Last updated**: 2026-06-25
+**Last updated**: 2026-06-28
 **Owner**: Racecraft Lab
 **Spec ID prefix**: `XPLAT-###`
 **Technical roadmap**: [docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md](ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)
@@ -27,6 +27,9 @@ supply-chain confidence.
 
 - A public user can install SpecKit Pro on Claude Code or Codex and run the
   documented plugin workflows on native Windows, macOS, and Linux.
+- A first-time user can move from install to first successful scaffold/status
+  and autopilot dry-run without manually repairing missing bundled agents,
+  hooks, helper scripts, or generated payload files.
 - Installed plugin workflows no longer require Bash, Git Bash, WSL, PowerShell,
   or `jq` as the implementation substrate.
 - Claude and Codex plugin behavior stays semantically equivalent during and
@@ -34,8 +37,33 @@ supply-chain confidence.
 - The runtime choice is evidence-backed before implementation starts.
 - Consumers can evaluate the plugin's runtime artifacts, dependencies, and
   release provenance before adopting it.
+- Scaffold and autopilot can diagnose and repair incomplete installs where that
+  is safe, and otherwise return a concrete remediation message.
 - The migration is reviewable: each implementation spec is small enough to test,
   compare, and roll back independently.
+
+## Desired Universal User Journey
+
+XPLAT is complete only when the normal user journey works, not merely when Bash
+has been removed from individual helper scripts.
+
+1. A user installs the latest tagged SpecKit Pro plugin release for Claude Code,
+   Codex, or both.
+2. The installed plugin contains every required skill, bundled agent, hook,
+   runner artifact, manifest/checksum entry, and generated payload file for that
+   product surface.
+3. The user runs the first documented workflow, including scaffold/status and an
+   autopilot dry-run, without installing Bash, Git Bash, WSL, PowerShell-specific
+   shims, `jq`, Go, Rust, Zig, or any other implementation runtime.
+4. If the local install is stale or incomplete, scaffold/status/autopilot run a
+   shared doctor/preflight check, auto-repair safe gaps, and report exact manual
+   remediation for unsafe gaps.
+5. The user can update to the latest tagged release and rerun the same workflows
+   with version, payload, and bundled-agent consistency verified across Claude
+   Code and Codex.
+6. Maintainers have a readable UAT runbook that proves the journey across native
+   Windows, macOS, Linux, and any explicitly documented WSL path before public
+   release claims are made.
 
 ## Non-Goals
 
@@ -168,13 +196,19 @@ state. These are higher-risk because they mutate repository or user-local state.
 - AC-6.4: The parity harness covers success, invalid-input, missing-prerequisite,
   dirty-worktree, and partial-failure cases before any active skill points at the
   new helper.
+- AC-6.5: Install and agent helpers verify the complete expected bundled-agent
+  set for Claude Code and Codex from a source manifest or generated inventory,
+  rather than from a stale hardcoded list.
+- AC-6.6: Scaffold/status/autopilot can call a shared doctor/preflight contract
+  that detects stale releases, missing runner artifacts, missing generated
+  payload files, and missing bundled agents before workflow execution continues.
 
-### 7. Claude/Codex Cutover and Native Windows Release Gate *(-> XPLAT-007)*
+### 7. Claude/Codex Cutover and Universal Install Release Gate *(-> XPLAT-007)*
 
 Switch active Claude and Codex plugin surfaces from Bash helpers to the
 cross-platform runner, remove Bash/`jq` from plugin-runtime prerequisites, rebuild
 payloads, and add release gates that block reintroducing active Bash runtime
-dependencies.
+dependencies or publishing incomplete Claude/Codex installs.
 
 **Acceptance Criteria**
 
@@ -187,11 +221,16 @@ dependencies.
   reintroduces `bash`, `.sh`, `jq`, shell interpolation, or Unix-only path
   assumptions outside explicitly allowlisted historical/test references.
 - AC-7.4: Manual UAT evidence covers native Windows, macOS, and Linux for both
-  Claude and Codex plugin flows.
+  Claude and Codex plugin journeys: install, bundled-agent verification,
+  scaffold/status, autopilot dry-run, update, and safe repair of an incomplete
+  install.
 - AC-7.5: Public release is blocked until the native Windows UAT path passes
   without WSL, Git Bash, or PowerShell-specific workarounds.
 - AC-7.6: Public release notes and docs accurately describe the implemented
   supply-chain security model without overstating guarantees.
+- AC-7.7: UAT runbooks are human-readable and complete, with no placeholder PR
+  fields, raw HTML anchors, empty expected-result sections, or unfilled
+  platform/product rows.
 
 ## Success Metrics
 
@@ -200,6 +239,11 @@ dependencies.
   after cutover.
 - A native Windows developer can complete install, `$install`/agent setup,
   scaffold/status, and an autopilot dry-run path without a Unix shell.
+- Claude Code and Codex installs both contain 100 percent of expected bundled
+  agents, hooks, runner artifacts, and generated payload files for the latest
+  tagged release.
+- Scaffold/status/autopilot detect incomplete installs before doing meaningful
+  work and either autoheal them or provide a specific, tested remediation path.
 - The release-readiness checklist has a hard gate for native Windows plugin UAT.
 - Public runtime artifacts have documented dependency, provenance, and local
   verification expectations.
@@ -225,4 +269,4 @@ dependencies.
 | Runner foundation | AC-4.* | XPLAT-004 | XPLAT-002, XPLAT-003 | P1 |
 | Read-only helper port | AC-5.* | XPLAT-005 | XPLAT-004 | P1 |
 | Mutation/install/PR-emission helper port | AC-6.* | XPLAT-006 | XPLAT-004, XPLAT-005 | P1 |
-| Claude/Codex cutover and release gate | AC-7.* | XPLAT-007 | XPLAT-005, XPLAT-006 | P1 |
+| Claude/Codex cutover and universal install release gate | AC-7.* | XPLAT-007 | XPLAT-005, XPLAT-006 | P1 |
