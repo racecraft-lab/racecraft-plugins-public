@@ -3,10 +3,10 @@
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-Define the first-release supply-chain trust model for the cross-platform runtime. This PR records which controls block public cutover, which controls stay deferred, and what evidence downstream specs must produce before any public trust claim is made.
+Define the first-release supply-chain trust model for the cross-platform runtime and lock the XPLAT lane to a Python 3.11+ standard-library runtime path. This PR records which controls block public cutover, which controls stay deferred, and what evidence downstream specs must produce before any public trust claim is made.
 <!-- speckit-pro-editable:summary:end -->
 
-Source: feature specification defines reviewer-ready PR packet behavior.
+Source: XPLAT-003 feature specification and cross-platform runtime roadmap.
 
 ## What Changed
 
@@ -21,7 +21,7 @@ Source: schema contract defines editable field markers.
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-The repo now has a concrete trust boundary for the Go runner handoff: release readiness blocks on practical first-release evidence, while signatures, SBOMs, provenance, reproducible builds, formal audit, marketplace enforcement, and native trust-chain claims remain explicitly deferred until implemented and verified.
+The repo now has a concrete trust boundary for the Python-only runner handoff: release readiness blocks on practical first-release evidence, while signatures, SBOMs, provenance, reproducible builds, formal audit, marketplace enforcement, and native trust-chain claims remain explicitly deferred until implemented and verified.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review
@@ -35,7 +35,7 @@ Run the focused Layer 4 PR body generation test and confirm the packet metadata 
 
 ## UAT Runbook
 
-Manual UAT is not required for this packet metadata task. The compatibility heading remains present for downstream PR body checks.
+Manual UAT is documentation review only for this decision-spec lane. Reviewers should confirm the spec, roadmap, contracts, quickstart, and UAT runbook all describe Python-only XPLAT planning and do not claim an implemented runner, generated-payload cutover, release automation change, or public native-platform support.
 
 ## Verification
 
@@ -47,10 +47,10 @@ Source: generated PR packet.
 ## Scope
 
 - Source feature: recorded in packet metadata.
-- Scope: this PR is limited to generated PR packet title and body behavior.
+- Scope: this PR adds the XPLAT-003 decision-spec artifacts, updates the cross-platform runtime PRD/roadmap handoff, and records process evidence for the supply-chain trust model.
 - Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
-- Non-goals: split title generation and multi-PR emission behavior.
+- Non-goals: Python runner implementation, helper migration, generated payload cutover, release automation edits, and public native-support claims.
 
 ## Known Gaps
 
-No known gaps for single-PR packet title metadata. Split packet title generation remains deferred.
+No runner implementation, helper port, generated payload cutover, release automation edit, or public native-support claim is implemented in XPLAT-003.

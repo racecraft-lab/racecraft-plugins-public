@@ -18,6 +18,7 @@ TEST_REPO="$SANDBOX/repo"
 RUN_DIR="$SANDBOX/runs"
 FAKE_BIN="$SANDBOX/bin"
 GH_CAPTURE="$RUN_DIR/gh-calls.log"
+VALIDATION_TIMESTAMP="2026-06-28T23:38:36Z"
 trap 'rm -rf "$SANDBOX"' EXIT
 
 mkdir -p "$RUN_DIR" "$FAKE_BIN" "$TEST_REPO/tests/speckit-pro/layer4-scripts/fixtures" "$TEST_REPO/specs" "$TEST_REPO/docs/ai/specs/.process"
@@ -72,7 +73,7 @@ run_validator_capture() {
   set +e
   (
     cd "$TEST_REPO"
-    GH_CAPTURE="$GH_CAPTURE" PATH="$FAKE_BIN:$PATH" "$SCRIPT" "$@"
+    GH_CAPTURE="$GH_CAPTURE" SPECKIT_PR_PACKET_TIMESTAMP="$VALIDATION_TIMESTAMP" PATH="$FAKE_BIN:$PATH" "$SCRIPT" "$@"
   ) >"$LAST_STDOUT" 2>"$LAST_STDERR"
   rc=$?
   set -e
@@ -214,9 +215,12 @@ assert_success_json() {
   set_test "$packet_id stdout records pr_blocked false"
   assert_json_file_field "$LAST_STDOUT" "pr_blocked" "False"
 
+  set_test "$packet_id stdout records real validation timestamp"
+  assert_json_file_field "$LAST_STDOUT" "timestamp" "$VALIDATION_TIMESTAMP"
+
   set_test "$packet_id stdout matches validation_result schema shape"
   assert_json_file_check "$LAST_STDOUT" \
-    "'validation_result_path' not in data and data['stderr_line'] == '' and data['target']['base_branch'] and data['target']['head_branch'] and len(data['rule_outcomes']) >= 1 and data['timestamp']" \
+    "'validation_result_path' not in data and data['stderr_line'] == '' and data['target']['base_branch'] and data['target']['head_branch'] and len(data['rule_outcomes']) >= 1 and data['timestamp'] and data['timestamp'] != '1970-01-01T00:00:00Z'" \
     "success JSON should use validation_result contract fields"
 
   set_test "$packet_id validation result file exists"
@@ -245,9 +249,12 @@ assert_failure_json() {
   assert_json_file_check "$LAST_STDOUT" "len(data['failures']) >= 1 and len(data['remediation_evidence']) >= 1" \
     "failure JSON should include at least one failure and remediation item"
 
+  set_test "$packet_id stdout records real validation timestamp"
+  assert_json_file_field "$LAST_STDOUT" "timestamp" "$VALIDATION_TIMESTAMP"
+
   set_test "$packet_id stdout matches validation_result schema shape"
   assert_json_file_check "$LAST_STDOUT" \
-    "'validation_result_path' not in data and 'target' in data and data['stderr_line'] and len(data['rule_outcomes']) >= 1 and data['timestamp'] and all(isinstance(item, str) for item in data['remediation_evidence']) and all('rule_id' not in f and 'affected_field' not in f and 'rule' in f and 'field' in f and 'message' in f for f in data['failures'])" \
+    "'validation_result_path' not in data and 'target' in data and data['stderr_line'] and len(data['rule_outcomes']) >= 1 and data['timestamp'] and data['timestamp'] != '1970-01-01T00:00:00Z' and all(isinstance(item, str) for item in data['remediation_evidence']) and all('rule_id' not in f and 'affected_field' not in f and 'rule' in f and 'field' in f and 'message' in f for f in data['failures'])" \
     "failure JSON should use validation_result contract fields"
 
   if [ "$result_path" != "no-path" ]; then

@@ -132,6 +132,14 @@ upsert_workflow_event() {
   persist_text_atomic "$workflow_path" "$next" >/dev/null 2>&1 || true
 }
 
+validation_timestamp() {
+  if [ -n "${SPECKIT_PR_PACKET_TIMESTAMP:-}" ]; then
+    printf '%s\n' "$SPECKIT_PR_PACKET_TIMESTAMP"
+    return
+  fi
+  date -u +%Y-%m-%dT%H:%M:%SZ
+}
+
 emit_result() {
   local status="$1"
   local error_class="$2"
@@ -146,10 +154,11 @@ emit_result() {
   local target_base="${11:-}"
   local target_head="${12:-}"
 
-  local failures_json remediation_json output_file
+  local failures_json remediation_json output_file timestamp
   failures_json="$(json_array_from_jsonl "$failures_file")"
   remediation_json="$(json_array_from_jsonl "$remediation_file")"
   output_file="$tmp_dir/result.json"
+  timestamp="$(validation_timestamp)"
 
   jq -n \
     --arg schema_version "1.0.0" \
@@ -163,7 +172,7 @@ emit_result() {
     --arg target_head "$target_head" \
     --arg title_value "$title_value" \
     --arg body_file "$body_file" \
-    --arg timestamp "1970-01-01T00:00:00Z" \
+    --arg timestamp "$timestamp" \
     --argjson pr_blocked "$pr_blocked" \
     --argjson failures "$failures_json" \
     --argjson remediation_evidence "$remediation_json" \

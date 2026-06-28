@@ -20,14 +20,14 @@ stop_reason: "natural"
 
 ## Goals
 
-- Choose a practical first-release supply-chain baseline for the selected Go
-  native runner before XPLAT-004 builds the runner.
+- Choose a practical first-release supply-chain baseline for the selected
+  Python stdlib runner before XPLAT-004 builds the runner.
 - Require source-to-dist integrity evidence for generated Claude and Codex
   payloads.
 - Require published checksums and consumer-local checksum verification for
   first release; evaluate signatures, SBOM, and provenance as deferred
   hardening unless this spec proves one must ship before launch.
-- Require Go/module and artifact/dependency vulnerability scans that fail on
+- Require Python/package and artifact/dependency vulnerability scans that fail on
   actionable high or critical findings, with documented exception handling.
 - Define consumer-local verification as runner version/preflight plus checksum
   comparison.
@@ -42,12 +42,12 @@ stop_reason: "natural"
 
 ## Non-goals
 
-- Building the Go runner or adding `speckit-pro-runner` artifacts.
+- Building the Python stdlib runner or adding `speckit-pro-runner` artifacts.
 - Porting helpers or changing active Claude/Codex invocation paths.
 - Rebuilding generated payloads.
 - Implementing CI/release changes in this spec.
-- Selecting the runtime independently of XPLAT-002; the selected runtime is the
-  Go native binary model from XPLAT-002.
+- Selecting a compiled runtime fallback; the selected runtime is the Python
+  3.11+ standard-library model aligned with Spec Kit / `specify`.
 - Requiring signatures, SBOMs, or provenance attestations for first release
   unless XPLAT-003's analysis finds they are necessary.
 - Making public native Windows/macOS/Linux support claims before XPLAT-007 UAT.
@@ -76,8 +76,8 @@ stop_reason: "natural"
 **Branch:** First-release control posture
 
 **Recommended answer:** Practical baseline
-> Decide the minimum controls XPLAT-004/XPLAT-007 must implement now: pinned Go
-> build inputs, vulnerability scan policy, generated-payload integrity,
+> Decide the minimum controls XPLAT-004/XPLAT-007 must implement now: pinned
+> Python/package inputs, vulnerability scan policy, generated-payload integrity,
 > checksums, consumer verification, and truthful claims; defer heavier
 > attestations unless justified.
 
@@ -111,12 +111,12 @@ stop_reason: "natural"
 
 ---
 
-### Q3. Which binary artifact controls should be first-release requirements for the Go runner?
+### Q3. Which runner and payload integrity controls should be first-release requirements for the Python runner?
 
-**Branch:** Native binary artifact controls
+**Branch:** Python runner and generated-payload integrity controls
 
 **Recommended answer:** Checksums now
-> Require published checksums plus local verification guidance now; evaluate
+> Require published integrity metadata plus local verification guidance now; evaluate
 > signatures, SBOM, and provenance as explicit deferred hardening unless this
 > spec finds they are needed before launch.
 
@@ -134,7 +134,7 @@ stop_reason: "natural"
 **Branch:** Vulnerability scanning and failure policy
 
 **Recommended answer:** Fail on actionable highs
-> Require Go/module and artifact/dependency scans with a documented failure
+> Require Python runner, package, and artifact/dependency scans with a documented failure
 > policy for actionable high/critical findings; allow documented non-actionable
 > or tooling false-positive exceptions.
 
@@ -170,7 +170,7 @@ stop_reason: "natural"
 **Branch:** Public claim boundaries
 
 **Recommended answer:** Claim only implemented controls
-> Allow docs to state native artifact packaging, checksums, scan policy, and
+> Allow docs to state runner packaging, checksums, scan policy, and
 > local verification only after those controls exist; explicitly forbid claims
 > of signing, provenance, reproducible builds, or audit unless implemented.
 
@@ -205,7 +205,7 @@ stop_reason: "natural"
 - **What:** Exact vulnerability scanning commands, data sources, and exception
   record shape.
   **Why deferred:** The interview selected the policy; tool choice needs plan
-  research against the Go/native-binary build path.
+  research against the Python stdlib runner and packaged-payload path.
   **Suggested next step:** Resolve in `$speckit-clarify` and `$speckit-plan`.
 - **What:** Exact checksum file naming, manifest location, and generated-payload
   integrity metadata shape.

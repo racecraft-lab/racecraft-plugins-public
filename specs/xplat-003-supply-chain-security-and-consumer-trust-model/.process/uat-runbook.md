@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | xplat-003-supply-chain-security-and-consumer-trust-model |
 | Branch | codex/xplat-003-supply-chain-security-and-consumer-trust-model |
-| PR | **PR:** <set on PR open> |
+| PR | [racecraft-lab/racecraft-plugins-public#267](https://github.com/racecraft-lab/racecraft-plugins-public/pull/267) |
 | Generated from | 2026-06-27T18:13:05Z |
 
 
@@ -13,32 +13,36 @@
 
 Run these from the repository root before walking the acceptance tests.
 
-| Command | Value |
-|---------|-------|
-| BUILD | _not available for this project_ |
-| TYPECHECK | _not available for this project_ |
-| LINT | _not available for this project_ |
-| LINT_FIX | _not available for this project_ |
-| UNIT_TEST | _not available for this project_ |
-| INTEGRATION_TEST | _not available for this project_ |
-| SINGLE_FILE_INTEGRATION | _not available for this project_ |
+| Check | Command |
+|-------|---------|
+| Marker scan | `bash speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh all specs/xplat-003-supply-chain-security-and-consumer-trust-model` |
+| Task gate | `bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-003-supply-chain-security-and-consumer-trust-model` |
+| Spec index freshness | `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` |
+| Whitespace check | `git diff --check` |
+| Structural suite | `bash tests/speckit-pro/run-all.sh --layer 1` |
 
 ## Per-Story Acceptance Tests
 
-<a id="us-1"></a>
-### User Story 1 - Maintainer Reviews Trust Baseline (Priority: P1)
+### US-1: Maintainer Reviews Trust Baseline (Priority: P1)
 
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
+- [ ] Read `spec.md`, `data-model.md`, and `contracts/supply-chain-control-contract.md`.
+- [ ] Confirm actionable high/critical findings are treated as release blockers only when they affect shipped or release-affecting XPLAT boundaries.
+- [ ] Confirm signatures, SBOMs, provenance, reproducible builds, formal audit, marketplace-enforced verification, and native trust-chain claims remain deferred until implemented and verified.
+- [ ] Confirm public docs/release notes may claim only implemented-and-verified controls.
 
-<a id="us-2"></a>
-### User Story 2 - Implementer Maps Controls To Owner Specs (Priority: P1)
+### US-2: Implementer Maps Controls To Owner Specs (Priority: P1)
 
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
+- [ ] Read `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md`.
+- [ ] Confirm XPLAT-004 owns Python interpreter discovery, `specify` discovery, stdlib-only policy, source-integrity checks, and installed-cache launch proof.
+- [ ] Confirm XPLAT-007 owns Claude/Codex payload cutover, bundled-agent completeness, autoheal behavior, active Python validation gates, and full platform UAT.
+- [ ] Confirm no XPLAT downstream item is allowed to use Go, Rust, Zig, native compiled binaries, or Bash/PowerShell as the shipped runtime fallback.
 
-<a id="us-3"></a>
-### User Story 3 - Consumer Understands Local Verification And Limits (Priority: P2)
+### US-3: Consumer Understands Local Verification And Limits (Priority: P2)
 
-- [ ] Walk this story end to end and confirm the observable behavior the spec promises.
+- [ ] Read `quickstart.md` and `platform-user-journeys.md`.
+- [ ] Confirm the consumer journey says Python 3.11+ is inherited from Spec Kit / `specify`, while installed-plugin launch behavior still needs XPLAT-004/XPLAT-007 proof.
+- [ ] Confirm checksum and payload-freshness verification remain manual until release automation or marketplace enforcement is implemented.
+- [ ] Confirm no public Windows, macOS, or Linux support claim is allowed before the platform UAT evidence exists.
 
 
 
@@ -46,9 +50,9 @@ Run these from the repository root before walking the acceptance tests.
 
 | Story | Acceptance test |
 |-------|-----------------|
-| [User Story 1 - Maintainer Reviews Trust Baseline (Priority: P1)](#us-1) | see the Per-Story Acceptance Tests block above |
-| [User Story 2 - Implementer Maps Controls To Owner Specs (Priority: P1)](#us-2) | see the Per-Story Acceptance Tests block above |
-| [User Story 3 - Consumer Understands Local Verification And Limits (Priority: P2)](#us-3) | see the Per-Story Acceptance Tests block above |
+| US-1: Maintainer Reviews Trust Baseline | Confirm blocker/deferred-control policy and public-claim limits in the spec, data model, and contract. |
+| US-2: Implementer Maps Controls To Owner Specs | Confirm XPLAT-004 and XPLAT-007 own the remaining implementation, install, autoheal, validation, and UAT gates. |
+| US-3: Consumer Understands Local Verification And Limits | Confirm consumer guidance states the inherited Python prerequisite, manual verification limits, and native-support claim boundary. |
 
 
 ## Negative-Path Tests
@@ -94,4 +98,4 @@ Advisory only — these checkboxes block nothing.
 
 ## Rollback
 
-git revert <SHA>; see plan.md for data-migration considerations
+git revert <SHA>; no data migration is expected because XPLAT-003 changes decision and process artifacts only.

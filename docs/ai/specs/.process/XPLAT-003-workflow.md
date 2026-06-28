@@ -62,7 +62,7 @@ Re-read the design concept before each phase. It is the source of truth for setu
 |------|------------|-------------------|
 | G1 | After Specify | Scope is security/trust decision only; no runner build, helper port, payload rebuild, or public native-support claim |
 | G2 | After Clarify | First-release vs deferred controls, checksum format, scan policy, consumer verification, and claim boundaries are unambiguous |
-| G3 | After Plan | Plan uses XPLAT-001 supply-chain rubric, XPLAT-002 Go runner handoff, and records reviewability warning |
+| G3 | After Plan | Plan uses XPLAT-001 supply-chain rubric, amends the XPLAT-002 runtime handoff to Python stdlib, and records reviewability warning |
 | G4 | After Checklist | All true requirement-quality gaps are remediated or explicitly out of scope |
 | G5 | After Tasks | Tasks cover research, control matrix, acceptance gates, downstream ownership, public-claim audit, and verification |
 | G6 | After Analyze | No critical drift remains between roadmap, design concept, prior XPLAT artifacts, spec, plan, and tasks |
@@ -189,7 +189,7 @@ Record this warning in `plan.md`. It does not block setup.
 
 ### Success Criteria Summary
 
-- XPLAT-004 knows which first-release controls must be built into the Go runner source, build inputs, artifacts, and preflight metadata.
+- XPLAT-004 knows which first-release controls must be built into the Python stdlib runner source, package inputs, artifacts, and preflight metadata.
 - XPLAT-007 knows which generated payload integrity, release readiness, and public claim gates must pass before cutover.
 - The decision record separates first-release requirements from deferred hardening for checksums, signatures, SBOM, provenance, vulnerability scanning, generated-payload integrity, and consumer verification.
 - Public docs and release-note wording is bounded to implemented, verified controls only.
@@ -209,30 +209,30 @@ $speckit-specify
 ## Feature: Supply-Chain Security and Consumer Trust Model
 
 ### Problem Statement
-XPLAT-002 selected a Go native binary runner and the `speckit-pro-runner` command contract, but deliberately did not choose checksum, signature, SBOM, provenance, vulnerability-scan, generated-artifact, or consumer-local verification controls. XPLAT-003 must choose the practical first-release security baseline and the deferred hardening backlog before XPLAT-004 builds the runner and before XPLAT-007 can make public release claims.
+XPLAT-002 originally recorded a Go native binary runner and the `speckit-pro-runner` command contract, but the XPLAT lane is now amended to a Python 3.11+ standard-library runner because Spec Kit / `specify` already requires Python. XPLAT-003 must choose the practical first-release security baseline and the deferred hardening backlog before XPLAT-004 builds the Python runner and before XPLAT-007 can make public release claims.
 
 ### Users
-- Maintainers deciding what the project must verify before publishing native runner artifacts.
+- Maintainers deciding what the project must verify before publishing Python runner and generated payload artifacts.
 - Implementers of XPLAT-004 who need exact runner/source/artifact controls and acceptance gates.
 - Implementers of XPLAT-007 who need generated-payload integrity gates and truthful docs/release-note boundaries.
 - Plugin consumers who need to know what they can verify locally after install.
 
 ### User Stories
-1. As a maintainer, I can read one decision record that distinguishes first-release controls from deferred hardening for the Go native runner.
+1. As a maintainer, I can read one decision record that distinguishes first-release controls from deferred hardening for the Python stdlib runner.
 2. As an implementer, I can see which controls belong to XPLAT-004, XPLAT-007, release automation, and public documentation.
 3. As a consumer or reviewer, I can understand what local verification is possible and which trust guarantees are intentionally not claimed.
 
 ### Constraints
-- Use the XPLAT-001 supply-chain rubric and XPLAT-002 Go-native-binary implication matrix as source truth.
-- First-release baseline from Grill Me: pinned Go/release inputs, vulnerability scan policy, generated-payload integrity, checksums, consumer verification, and truthful claims.
+- Use the XPLAT-001 supply-chain rubric and XPLAT-002 runtime evaluation as historical source truth, with XPLAT-003 recording the Python-only amendment.
+- First-release baseline from Grill Me: pinned Python/package/release inputs, vulnerability scan policy, generated-payload integrity, checksums, consumer verification, and truthful claims.
 - Generated Claude/Codex payload integrity must include a source-to-dist gate.
-- First-release binary artifact integrity must include published checksums and consumer-local checksum verification.
+- First-release runner and generated-payload integrity must include published freshness/integrity evidence and consumer-local verification guidance.
 - Vulnerability scans must fail on actionable high/critical findings, with documented exception handling.
 - Public docs and release notes may claim only implemented and verified controls; do not claim signing, provenance, reproducible builds, audit, or native support before those are real.
 - Assign controls to the downstream spec that owns the surface.
 
 ### Out of Scope
-- Building the Go runner or adding `scripts/speckit-pro-runner`.
+- Building the Python stdlib runner or adding `scripts/speckit-pro-runner`.
 - Porting helpers or changing active invocation paths.
 - Rebuilding generated payloads.
 - Implementing CI/release automation changes.
@@ -311,14 +311,14 @@ $speckit-plan
 
 ## Tech Stack and Runtime Context
 - Repository: Claude Code and Codex plugin marketplace with source under `speckit-pro/` and generated payloads under `dist/claude/speckit-pro/` and `dist/codex/speckit-pro/`.
-- Selected runtime from XPLAT-002: Go native executable packaged as small per-platform binaries.
+- Selected runtime amendment: Python 3.11+ standard-library runner, aligned with the official Spec Kit / `specify` prerequisite boundary.
 - Runner contract: `speckit-pro-runner`, default payload-relative path `scripts/speckit-pro-runner`, JSON stdin/stdout, structured stderr diagnostics, explicit exit-code map, typed paths, shell-disabled subprocess rules, runtime-info/preflight.
 - Current release automation: release-please plus GitHub Actions workflows. XPLAT-003 records required controls and acceptance gates; it does not implement CI changes.
 
 ## Constraints
 - One decision spike, not implementation.
 - Use the XPLAT-001 supply-chain rubric: dependency policy, generated payload integrity, vulnerability scanning, provenance/attestation options, checksums/signatures, SBOM feasibility, consumer-local verification, release automation, and documentation truthfulness.
-- Use the XPLAT-002 handoff: Go native binary is selected; checksums, signatures, SBOM/provenance, vulnerability scanning, generated-payload integrity, and consumer-local verification remain undecided until this spec.
+- Use the amended XPLAT handoff: Python stdlib runner is selected; checksums/freshness, signatures, SBOM/provenance, vulnerability scanning, generated-payload integrity, and consumer-local verification remain policy decisions for this spec.
 - First-release baseline selected by Grill Me: practical baseline with source-to-dist gate, checksums now, actionable high/critical scan failures, version+checksum consumer verification, strict implemented-claims-only docs, and split ownership.
 - Record the setup reviewability warning: two primary surfaces, no blockers.
 
@@ -351,7 +351,7 @@ $speckit-plan
 
 #### 1. Security Checklist
 
-Why: XPLAT-003 selects the security baseline for native runner artifacts and public trust claims.
+Why: XPLAT-003 selects the security baseline for Python runner artifacts, generated payloads, and public trust claims.
 
 ```bash
 $speckit-checklist security
@@ -395,7 +395,7 @@ Focus on XPLAT-003 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |-----------|-------|------|-----------------|
-| security | 30 | 3 found, 3 remediated, 0 remaining | Scan-evidence freshness, pinned Go/release input evidence, per-platform checksum command shape |
+| security | 30 | 3 found, 3 remediated, 0 remaining | Scan-evidence freshness, pinned Python/package/release input evidence, per-platform checksum command shape |
 | integration | 24 | 2 found, 2 remediated, 0 remaining | Release-automation acceptance gate and generated-payload checksum/manifest metadata flow |
 | reliability | 26 | 3 found, 3 remediated, 0 remaining | Checksum mismatch remediation, durable release/public-claim evidence retention, partial artifact publication behavior |
 

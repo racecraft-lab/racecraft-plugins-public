@@ -118,7 +118,7 @@ support claims can pass.
 
 ## Declared File Operations
 
-- MODIFIED specs/xplat-003-supply-chain-security-and-consumer-trust-model/plan.md
+- NEW specs/xplat-003-supply-chain-security-and-consumer-trust-model/plan.md
 - NEW specs/xplat-003-supply-chain-security-and-consumer-trust-model/research.md
 - NEW specs/xplat-003-supply-chain-security-and-consumer-trust-model/data-model.md
 - NEW specs/xplat-003-supply-chain-security-and-consumer-trust-model/contracts/supply-chain-control-contract.md

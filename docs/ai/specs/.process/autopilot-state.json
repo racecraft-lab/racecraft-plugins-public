@@ -148,7 +148,7 @@
           "XPLAT-004 blocks runner-readiness evidence and XPLAT-007 blocks public cutover/release claims; XPLAT-003 records policy only",
           "public docs and release notes may claim only implemented-and-verified controls; deferred cryptographic, audit, marketplace-enforced, and native-support claims remain roadmap-only"
         ],
-        "unresolved_consensus_items": 5,
+        "unresolved_consensus_items": 0,
         "consensus_required": true
       }
     },
