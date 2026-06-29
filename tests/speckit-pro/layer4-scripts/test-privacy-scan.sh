@@ -53,28 +53,6 @@ assert_no_match() {
   fi
 }
 
-filter_allowed_dynamic_local_hits() {
-  awk '
-    $0 ~ /^\.\/docs-site\/src\/lib\/schema[.]ts:/ && $0 ~ /(name:|sameAs:|github[.]com)/ { next }
-    $0 ~ /^\.\/docs-site\/tests\/seo-schema-org[.]spec[.]mjs:/ && $0 ~ /(Person|name|schema)/ { next }
-    $0 ~ /^\.\/docs\/ai\/specs\/[.]process\/DOC-014-workflow[.]md:/ && $0 ~ /(Person|sameAs|identity|schema[.]org|Clarify)/ { next }
-    { print }
-  '
-}
-
-assert_no_dynamic_local_match() {
-  local label="$1"
-  local pattern="$2"
-  local hits=""
-
-  hits=$(scan_for "$pattern" | filter_allowed_dynamic_local_hits || true)
-  if [ -n "$hits" ]; then
-    _fail "$label leaked into current tree: $(printf '%s\n' "$hits" | head -3 | tr '\n' '; ')"
-  else
-    _pass
-  fi
-}
-
 assert_no_non_allowlisted_email() {
   local label="$1"
   local hits=""
@@ -90,6 +68,63 @@ assert_no_non_allowlisted_email() {
 
 regex_escape() {
   printf '%s' "$1" | sed 's/[][(){}.^$+*?|\\]/\\&/g'
+}
+
+build_doc014_public_identity_pattern() {
+  local schema_file="$REPO_ROOT/docs-site/src/lib/schema.ts"
+  [ -r "$schema_file" ] || return 0
+
+  {
+    sed -nE "/buildPersonSchema/,/};/s/.*name: '([^']+)'.*/\\1/p" "$schema_file"
+    sed -nE "/buildPersonSchema/,/};/s#.*sameAs: \\['(https://github[.]com/[A-Za-z0-9_.-]+)'\\].*#\\1#p" "$schema_file"
+    sed -nE "/buildPersonSchema/,/};/s#.*sameAs: \\['https://(github[.]com/[A-Za-z0-9_.-]+)'\\].*#\\1#p" "$schema_file"
+  } \
+    | while IFS= read -r literal; do
+        [ -n "$literal" ] || continue
+        regex_escape "$literal"
+        printf '\n'
+      done \
+    | sort -u \
+    | paste -sd'|' -
+}
+
+filter_allowed_dynamic_local_hits() {
+  local dynamic_pattern="$1"
+  local allowed_pattern=""
+
+  allowed_pattern="$(build_doc014_public_identity_pattern)"
+  if [ -z "$allowed_pattern" ]; then
+    cat
+    return
+  fi
+
+  awk \
+    -v dynamic_pattern="$dynamic_pattern" \
+    -v allowed_pattern="$allowed_pattern" '
+      /^\.\/docs-site\/src\/lib\/schema[.]ts:/ ||
+      /^\.\/docs-site\/tests\/seo-schema-org[.]spec[.]mjs:/ ||
+      /^\.\/docs\/ai\/specs\/[.]process\/DOC-014-workflow[.]md:/ {
+        sanitized = $0
+        gsub(allowed_pattern, "<DOC014_PUBLIC_IDENTITY>", sanitized)
+        if (sanitized !~ dynamic_pattern) {
+          next
+        }
+      }
+      { print }
+    '
+}
+
+assert_no_dynamic_local_match() {
+  local label="$1"
+  local pattern="$2"
+  local hits=""
+
+  hits=$(scan_for "$pattern" | filter_allowed_dynamic_local_hits "$pattern" || true)
+  if [ -n "$hits" ]; then
+    _fail "$label leaked into current tree: $(printf '%s\n' "$hits" | head -3 | tr '\n' '; ')"
+  else
+    _pass
+  fi
 }
 
 is_sensitive_local_term() {

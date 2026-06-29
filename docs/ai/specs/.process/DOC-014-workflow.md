@@ -40,7 +40,7 @@ roadmap text / sibling site — keep them in view:
 | Phase | Command | Status | Notes |
 |-------|---------|--------|-------|
 | Specify | `/speckit-specify` | ✅ Complete | G1 pass, 0 clarification markers; 29 FR / 6 US / 18 AC / 10 SC |
-| Clarify | `/speckit-clarify` | ✅ Complete | G2 pass; 3 sessions, 4 consensus resolutions. Key: custom `.md` endpoint, route-middleware JSON-LD, Person=F.Gabelmann, astro-og-canvas, git-lastmod serialize, retarget DOC-011 robots gate, fetch-depth:0 |
+| Clarify | `/speckit-clarify` | ✅ Complete | G2 pass; 3 sessions, 4 consensus resolutions. Key: custom `.md` endpoint, route-middleware JSON-LD, Person author entity, astro-og-canvas, git-lastmod serialize, retarget DOC-011 robots gate, fetch-depth:0 |
 | Plan | `/speckit-plan` | ✅ Complete | G3 pass; 5 artifacts + 11 contracts (C1–C11), 6 entities, all 29 FR/10 SC traced. Advisory LOC estimate `pass` (proj 520 mechanical; real reviewable ~300–360 < 400). |
 | Checklist | `/speckit-checklist` | ✅ Complete | G4 pass; 3 domains, 81 items, 27 gaps all remediated, 0 unresolved. Spec/plan hardened (single-source robots, publisher@id invariant, bulk git-log sitemap, no-history lastmod omission, fail-loud all surfaces). |
 | Tasks | `/speckit-tasks` | ✅ Complete | G5 pass; 34 tasks (T001–T035), 8 `[P]`, 9 phases, all US1–US6 + D1–D12 covered. Atomicity route = one-navigable-PR (no split). |
