@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 <!-- SPECKIT START -->
-Active SpecKit implementation plan: `specs/doc-014-seo-and-ai-discoverability/plan.md` (DOC-014 — SEO and AI discoverability for the docs site). Inspect current workflow state under `docs/ai/specs/.process/` and active `specs/**` directories for phase status. (DOC-013 — brand identity + marketplace landing page — shipped via PR #246 and was archived into `.specify/memory/`.)
+No active SpecKit implementation plan is selected. DOC-014 shipped via PR #264 and is archived into `.specify/memory/`; inspect current workflow state under `docs/ai/specs/.process/`, active `specs/**` directories, and `.specify/memory/archive-reports/` before starting new scaffold or cleanup work.
 <!-- SPECKIT END -->
 
 ## Working in This Repo

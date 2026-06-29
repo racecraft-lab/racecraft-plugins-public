@@ -72,7 +72,7 @@ DOC-007 -> DOC-008
 | DOC-011 | GitHub Pages build-and-deploy pipeline | Completed/archived | `.process/DOC-011-workflow.md` | Archived after PR #243 |
 | DOC-012 | Custom domain + base-path migration to plugins.racecraft.co | ⏳ Pending | — | **LAST — public launch gate**; runs after all other DOC specs (P1) |
 | DOC-013 | Brand identity and marketplace landing page | Completed/archived | `.process/DOC-013-workflow.md` | Archived after PR #246 |
-| DOC-014 | SEO and AI discoverability | 🔄 In Progress | `.process/DOC-014-workflow.md` | Scaffolded 2026-06-25 (one spec, no split); max-discoverability posture — training bots allowed; URLs finalize at DOC-012 launch (P1) |
+| DOC-014 | SEO and AI discoverability | Completed/archived | `.process/DOC-014-workflow.md` | Archived after PR #264; max-discoverability posture shipped, URLs finalize at DOC-012 launch (P1) |
 | DOC-015 | Editorial and content-QA pass | ⏳ Pending | — | Not started — production readiness (P1) |
 | DOC-016 | WCAG 2.1 AA accessibility hardening | ⏳ Pending | — | Not started — depends on DOC-013 (P2) |
 | DOC-017 | Performance budget and Lighthouse CI | ⏳ Pending | — | Not started — depends on DOC-013/014 plus the shipped DOC-011 deploy foundation (P2) |
@@ -501,7 +501,11 @@ Budget result: within budget
 
 **Priority:** P1 | **Depends On:** DOC-011 (canonical/sitemap URLs derive from astro `site` and finalize automatically when DOC-012 flips the domain at launch) | **Enables:** public launch
 
-**Status:** Pending. 0 of 19 content pages carry `description:` frontmatter (no meta descriptions); there is no Open Graph / social-card setup, no `robots.txt`, no `llms.txt`, no JSON-LD structured data, and no canonical-URL handling for the final domain. The sibling site already ships `astro-llms-txt`, a sitemap, a 3-tier crawler `robots.txt` (`landing-page/website/e2e/seo-robots-txt.spec.ts`), and a JSON-LD `@graph` (`landing-page/website/e2e/seo-schema-org.spec.ts`) — most of this spec is a **port of proven sibling artifacts**, not new research.
+**Status:** Completed/archived. PR #264 merged on 2026-06-26 at `6c24f568`;
+workflow file is `docs/ai/specs/.process/DOC-014-workflow.md`; design concept is
+`docs/ai/specs/.process/DOC-014-design-concept.md`; active spec artifacts are
+archived in
+`.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`.
 
 **Goal:** Make the docs indexable, shareable, and discoverable across both classic search and AI answer engines, with correct metadata for the production domain. Serve two distinct AI surfaces deliberately: **answer-engine citation** (ChatGPT Search, Perplexity, Google AI Overviews, Claude) is won by crawler access + entity clarity, **not** by `llms.txt`; **coding-agent retrieval** (Cursor, Claude Code, Copilot) is the one surface `llms.txt` measurably serves.
 

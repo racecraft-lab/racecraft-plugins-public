@@ -200,8 +200,8 @@ PUBLIC RELEASE UNBLOCKED
 
 | Spec | Name | Status | Workflow File | Next Phase |
 |---|---|---|---|---|
-| XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
-| XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete | `.process/XPLAT-002-workflow.md` | Runtime decision amended 2026-06-28 to Python stdlib runner aligned with official Spec Kit prerequisites |
+| XPLAT-001 | Runtime Inventory and Constraints | Complete / Archived | `.process/XPLAT-001-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`; inventory report remains `docs/ai/research/cross-platform-runtime-inventory.md` |
+| XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete / Archived | `.process/XPLAT-002-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`; Python stdlib runner decision carried forward |
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete / Archived | `.process/XPLAT-003-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`; active spec folder removed after PR #267 |
 | XPLAT-004 | Cross-Platform Runner Foundation | Ready | — | Next scaffold: build Python stdlib runner foundation and first-release controls from XPLAT-002/XPLAT-003 |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
@@ -218,7 +218,13 @@ PUBLIC RELEASE UNBLOCKED
 
 **Priority:** P1 | **Depends On:** None | **Enables:** XPLAT-002, XPLAT-003, XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
 
-**Status:** Complete. Scaffolded and implemented on 2026-06-25 in branch `codex/xplat-001-runtime-inventory-constraints`; workflow file is `docs/ai/specs/.process/XPLAT-001-workflow.md`; durable report is `docs/ai/research/cross-platform-runtime-inventory.md`.
+**Status:** Complete / Archived. Scaffolded and implemented on 2026-06-25 in
+branch `codex/xplat-001-runtime-inventory-constraints`; merged through PR #263
+on 2026-06-26 at `a7f9ca97`; workflow file is
+`docs/ai/specs/.process/XPLAT-001-workflow.md`; durable report is
+`docs/ai/research/cross-platform-runtime-inventory.md`; active spec artifacts
+are archived in
+`.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`.
 
 **Goal:** Produce a complete active-runtime inventory and a decision rubric for
 runtime and supply-chain choices. Do not choose or implement the replacement
@@ -310,12 +316,13 @@ implementation.
 
 **Priority:** P1 | **Depends On:** XPLAT-001 | **Enables:** XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
 
-**Status:** Complete. PR #266 merged on 2026-06-27 at `fff4d6b5`.
+**Status:** Complete / Archived. PR #266 merged on 2026-06-27 at `fff4d6b5`.
 Scaffolded on 2026-06-26 in branch
 `codex/xplat-002-runtime-implementation-options-contract-decision`; workflow
 file is `docs/ai/specs/.process/XPLAT-002-workflow.md`; design concept is
-`docs/ai/specs/.process/XPLAT-002-design-concept.md`; runtime decision is
-`specs/xplat-002-runtime-implementation-options-contract-decision/runtime-decision.md`.
+`docs/ai/specs/.process/XPLAT-002-design-concept.md`; active spec artifacts are
+archived in
+`.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`.
 
 **Goal:** Research and evaluate implementation options, then select the one
 runtime contract that all later specs must implement. The amended and current

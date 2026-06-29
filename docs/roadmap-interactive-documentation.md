@@ -2,7 +2,7 @@
 
 **Target PRD:** [docs/prd-interactive-documentation.md](prd-interactive-documentation.md)  
 **Date:** 2026-06-12 (companion role since 2026-06-19)  
-**Status:** DOC-001 through DOC-011 shipped and archived; DOC-012 through DOC-021 pending (production readiness + content/IA excellence). Custom-domain go-live is sequenced last.
+**Status:** DOC-001 through DOC-011 plus DOC-013 and DOC-014 shipped and archived; DOC-012 and DOC-015 through DOC-021 pending (production readiness + content/IA excellence). Custom-domain go-live is sequenced last.
 **Intended downstream consumer:** Spec-Driven Development autopilot  
 **Authoritative SPEC catalog:** [docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)
 
@@ -18,8 +18,8 @@ Every user-visible PRD feature group has exactly one roadmap SPEC with stable ID
 
 The authoritative catalog of every DOC spec (DOC-001 through DOC-021), the dependency tiers, the dependency graph, and the execution/launch order live in **[docs/ai/specs/interactive-documentation-technical-roadmap.md](ai/specs/interactive-documentation-technical-roadmap.md)**. Snapshot as of 2026-06-23:
 
-- **Shipped and archived — content + IA plus staging deploy foundation:** DOC-001 through DOC-011.
-- **Pending — production readiness (Tier 7):** DOC-012 (custom domain — runs last), DOC-014 (SEO), DOC-015 (editorial), DOC-016 (accessibility), DOC-017 (performance), DOC-018 (launch hygiene). DOC-013 (brand identity + landing page) shipped via PR #246.
+- **Shipped and archived — content + IA plus staging deploy/discoverability foundation:** DOC-001 through DOC-011, DOC-013, and DOC-014.
+- **Pending — production readiness (Tier 7):** DOC-012 (custom domain — runs last), DOC-015 (editorial), DOC-016 (accessibility), DOC-017 (performance), DOC-018 (launch hygiene).
 - **Pending — content & IA excellence (Tier 8):** DOC-019 (voice & ELI5 tone), DOC-020 (per-page value & right-sizing), DOC-021 (task-based IA & wayfinding).
 - **Launch policy:** DOC-011 shipped the staging deploy workflow and search-engine `noindex` guard; the custom-domain go-live (DOC-012) is sequenced **dead last**, so the site is not overtly public until launch-ready.
 

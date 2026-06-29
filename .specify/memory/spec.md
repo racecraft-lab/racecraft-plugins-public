@@ -1649,3 +1649,63 @@ Archived into project memory on 2026-06-29 (PR #267,
 removed from `specs/**` in the post-merge cleanup. Recovery commands and
 provenance are recorded in
 `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`.
+
+## XPLAT-001 Runtime Inventory and Constraints
+
+[Source: specs/xplat-001-runtime-inventory-constraints]
+
+XPLAT-001 shipped a source-traceable runtime inventory and non-scoring runtime
+and supply-chain rubrics for the cross-platform plugin runtime lane. The main
+reviewable artifact is `docs/ai/research/cross-platform-runtime-inventory.md`.
+It represented 21,162 scoped scan hits across shell substrate, script-file
+references, JSON query usage, shell quoting/operators, Unix paths, file-mode
+changes, and newline policy. It classified active installed-runtime findings,
+generated payload references, public-doc claims, tests/fixtures, repository-only
+tooling, and historical/archive material without selecting a replacement
+runtime or changing installed invocation paths.
+
+Cleanup note: archived on 2026-06-29 after PR #263 merged at
+`a7f9ca97548ebe4b50cf84a19828d745471756a0`. The active
+`specs/xplat-001-runtime-inventory-constraints/` folder was removed; recovery
+commands are recorded in
+`.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`.
+
+## XPLAT-002 Runtime Implementation Options and Contract Decision
+
+[Source: specs/xplat-002-runtime-implementation-options-contract-decision]
+
+XPLAT-002 shipped the amended runtime implementation decision and
+`speckit-pro-runner` command contract. Python 3.11+ standard-library source is
+the selected XPLAT implementation substrate because it aligns with official
+Spec Kit / `specify` prerequisites. JavaScript/TypeScript and small
+per-platform binaries remain historical rejected evidence only; compiled
+binaries are not a fallback, compatibility adapter, or downstream
+implementation input. The contract covers JSON stdin/stdout, deterministic
+stderr diagnostics, exit-code categories, typed path values, shell-disabled
+subprocess execution, and `runtime-info`/preflight behavior for XPLAT-004.
+
+Cleanup note: archived on 2026-06-29 after PR #266 merged at
+`fff4d6b5e7f4bf5ca85b2e55225417152b70b45f`. The active
+`specs/xplat-002-runtime-implementation-options-contract-decision/` folder was
+removed; recovery commands are recorded in
+`.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`.
+
+## DOC-014 SEO and AI Discoverability
+
+[Source: specs/doc-014-seo-and-ai-discoverability]
+
+DOC-014 shipped the docs-site discoverability baseline before public launch
+while preserving the staging noindex guard. It added a dynamic three-tier
+crawler-access policy, `starlight-llms-txt` whole-site digests, per-page
+Markdown routes, JSON-LD route-data injection, per-page Open Graph cards,
+git-backed sitemap freshness, visible last-updated behavior, meta descriptions
+for all content pages, a quality gate requiring descriptions, focused SEO
+Playwright coverage, and the AI-discoverability success metric document. DOC-012
+still owns the public custom-domain/indexing launch; DOC-015 owns prose and
+meta-description quality refresh.
+
+Cleanup note: archived on 2026-06-29 after PR #264 merged at
+`6c24f56885f09755dd85e0a451deb923e5ef437a`. The active
+`specs/doc-014-seo-and-ai-discoverability/` folder was removed; recovery
+commands are recorded in
+`.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`.

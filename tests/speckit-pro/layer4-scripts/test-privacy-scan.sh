@@ -53,6 +53,28 @@ assert_no_match() {
   fi
 }
 
+filter_allowed_dynamic_local_hits() {
+  awk '
+    $0 ~ /^\.\/docs-site\/src\/lib\/schema[.]ts:/ && $0 ~ /(name:|sameAs:|github[.]com)/ { next }
+    $0 ~ /^\.\/docs-site\/tests\/seo-schema-org[.]spec[.]mjs:/ && $0 ~ /(Person|name|schema)/ { next }
+    $0 ~ /^\.\/docs\/ai\/specs\/[.]process\/DOC-014-workflow[.]md:/ && $0 ~ /(Person|sameAs|identity|schema[.]org|Clarify)/ { next }
+    { print }
+  '
+}
+
+assert_no_dynamic_local_match() {
+  local label="$1"
+  local pattern="$2"
+  local hits=""
+
+  hits=$(scan_for "$pattern" | filter_allowed_dynamic_local_hits || true)
+  if [ -n "$hits" ]; then
+    _fail "$label leaked into current tree: $(printf '%s\n' "$hits" | head -3 | tr '\n' '; ')"
+  else
+    _pass
+  fi
+}
+
 assert_no_non_allowlisted_email() {
   local label="$1"
   local hits=""
@@ -187,7 +209,7 @@ assert_no_match "$TEST_NAME" "$UUID_PATTERN"
 
 set_test "dynamic local identity and workspace terms absent"
 if [ -n "$dynamic_local_pattern" ]; then
-  assert_no_match "$TEST_NAME" "$dynamic_local_pattern"
+  assert_no_dynamic_local_match "$TEST_NAME" "$dynamic_local_pattern"
 else
   _pass
 fi

@@ -1167,3 +1167,50 @@ control contract that later implementation specs must satisfy.
 `specs/xplat-003-supply-chain-security-and-consumer-trust-model` was removed
 from active `specs/**` in the post-merge cleanup after PR #267 merged. Recovery
 commands and provenance are recorded in the XPLAT-003 archive report.
+
+## XPLAT-001 Runtime Inventory and Constraints
+
+[Source: specs/xplat-001-runtime-inventory-constraints]
+
+XPLAT-001 was a docs/process inventory spike. It used repo-local scans and
+static invocation-trace review to classify Bash, `.sh`, `jq`, shell quoting,
+Unix-path, `chmod`, and line-ending assumptions across tracked text files. The
+durable output is `docs/ai/research/cross-platform-runtime-inventory.md`; the
+feature did not port helpers, select a runtime, select security controls, or
+claim native Windows support. Verification centered on scan reproducibility,
+spec-index checks, diff hygiene, and the repository structural suite.
+
+Cleanup note: the active spec folder was removed after PR #263 merged. Recovery
+commands and provenance are recorded in the completed-active-specs archive
+report.
+
+## XPLAT-002 Runtime Implementation Options and Contract Decision
+
+[Source: specs/xplat-002-runtime-implementation-options-contract-decision]
+
+XPLAT-002 was a decision and contract spike. It preserved historical candidate
+evidence, amended the selected runtime to Python 3.11+ standard-library source,
+and recorded the `speckit-pro-runner` request/response/diagnostic/exit/path/
+subprocess/preflight contract for XPLAT-004. It explicitly avoided runner
+implementation, helper ports, generated-payload cutover, release automation, and
+public native-platform support claims.
+
+Cleanup note: the active spec folder was removed after PR #266 merged. Recovery
+commands and provenance are recorded in the completed-active-specs archive
+report.
+
+## DOC-014 SEO and AI Discoverability
+
+[Source: specs/doc-014-seo-and-ai-discoverability]
+
+DOC-014 was a docs-site infrastructure slice on Astro/Starlight. It added
+static build-time discoverability outputs: crawler policy, llms digests,
+per-page Markdown, schema graph, OG cards, sitemap freshness, descriptions,
+quality validation, and SEO Playwright tests. New dependencies were
+`starlight-llms-txt`, `astro-og-canvas` plus CanvasKit, and `@astrojs/sitemap`.
+Verification used the docs-site validation path and SEO-specific Playwright
+coverage. The noindex staging guard remains until DOC-012.
+
+Cleanup note: the active spec folder was removed after PR #264 merged. Recovery
+commands and provenance are recorded in the completed-active-specs archive
+report.
