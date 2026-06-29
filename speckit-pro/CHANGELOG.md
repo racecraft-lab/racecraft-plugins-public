@@ -1,5 +1,19 @@
 # Changelog
 
+## [2.17.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.16.0...speckit-pro-v2.17.0) (2026-06-29)
+
+
+### Features
+
+* **speckit-pro:** Add runtime Inventory and Constraints ([#263](https://github.com/racecraft-lab/racecraft-plugins-public/issues/263)) ([a7f9ca9](https://github.com/racecraft-lab/racecraft-plugins-public/commit/a7f9ca97548ebe4b50cf84a19828d745471756a0))
+* **XPLAT-002:** Add runtime implementation options and contract decision ([#266](https://github.com/racecraft-lab/racecraft-plugins-public/issues/266)) ([fff4d6b](https://github.com/racecraft-lab/racecraft-plugins-public/commit/fff4d6b5e7f4bf5ca85b2e55225417152b70b45f))
+* **XPLAT-003:** Add supply-chain security and consumer trust model ([#267](https://github.com/racecraft-lab/racecraft-plugins-public/issues/267)) ([1ab96b3](https://github.com/racecraft-lab/racecraft-plugins-public/commit/1ab96b38da7e400b3c8e78b21d92e7b05302cfdd))
+
+
+### Bug Fixes
+
+* **skills:** validate bundled agents and UAT runbooks ([#268](https://github.com/racecraft-lab/racecraft-plugins-public/issues/268)) ([d36358f](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d36358fe4cddd1dfe5c95f0c390ba6cce59defcd))
+
 ## [2.16.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.15.1...speckit-pro-v2.16.0) (2026-06-25)
 
 
