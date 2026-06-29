@@ -10,10 +10,8 @@
     "current_target": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
     "cleanup_mode": "post-merge-archive-cleanup",
     "safeToApplyCleanup": true,
-    "excluded_current_spec": "None",
-    "eligible_previous_specs": [
-      "specs/xplat-003-supply-chain-security-and-consumer-trust-model"
-    ],
+    "excluded_current_spec": null,
+    "eligible_previous_specs": [],
     "cleanup_applied": true,
     "archive_report": ".specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md",
     "cleanup_branch": "codex/xplat-003-post-merge-hygiene",

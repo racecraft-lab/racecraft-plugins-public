@@ -22,8 +22,9 @@ the active implementation path is now a Python 3.11+ standard-library runner
 aligned with official Spec Kit / `specify` prerequisites, and the Bash
 deprecation scope includes active build, test, eval, payload, and
 release-readiness gates that validate or publish shipped plugin behavior.
-Archived 2026-06-29 after XPLAT-003 merged in PR #267; XPLAT-004 is now ready
-to scaffold from the archived Python-only security/control model.
+Updated 2026-06-29 after XPLAT-003 merged in PR #267 and was archived;
+XPLAT-004 is now ready to scaffold from the archived Python-only
+security/control model.
 
 ---
 
