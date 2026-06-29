@@ -1,21 +1,25 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-003-workflow.md",
-  "updated_at": "2026-06-27T18:52:17Z",
-  "active_step": "Complete",
+  "updated_at": "2026-06-29T00:26:40Z",
+  "active_step": "Archived",
   "feature_dir": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
   "branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model",
-  "status": "complete",
+  "status": "completed_archived",
   "archive_sweep": {
     "archive_extension_installed": true,
     "current_target": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
-    "cleanup_mode": "feature-branch-sweep",
-    "safeToApplyCleanup": false,
-    "excluded_current_spec": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
+    "cleanup_mode": "post-merge-archive-cleanup",
+    "safeToApplyCleanup": true,
+    "excluded_current_spec": "None",
     "eligible_previous_specs": [
-      "specs/xplat-001-runtime-inventory-constraints",
-      "specs/xplat-002-runtime-implementation-options-contract-decision"
+      "specs/xplat-003-supply-chain-security-and-consumer-trust-model"
     ],
-    "note": "Archive extension is installed and the current target is excluded. No cleanup was applied during XPLAT-003 startup because the installed extension exposes a command-document contract in this checkout rather than a non-interactive Codex runner."
+    "cleanup_applied": true,
+    "archive_report": ".specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md",
+    "cleanup_branch": "codex/xplat-003-post-merge-hygiene",
+    "merged_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/267",
+    "merge_commit": "1ab96b38da7e400b3c8e78b21d92e7b05302cfdd",
+    "note": "XPLAT-003 was archived after PR #267 merged. The active spec folder was removed; docs/ai/specs/.process/XPLAT-003-workflow.md and XPLAT-003-design-concept.md are preserved as process evidence."
   },
   "prerequisites": {
     "all_pass": true,

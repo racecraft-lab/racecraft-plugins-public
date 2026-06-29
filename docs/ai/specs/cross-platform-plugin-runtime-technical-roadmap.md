@@ -22,6 +22,8 @@ the active implementation path is now a Python 3.11+ standard-library runner
 aligned with official Spec Kit / `specify` prerequisites, and the Bash
 deprecation scope includes active build, test, eval, payload, and
 release-readiness gates that validate or publish shipped plugin behavior.
+Archived 2026-06-29 after XPLAT-003 merged in PR #267; XPLAT-004 is now ready
+to scaffold from the archived Python-only security/control model.
 
 ---
 
@@ -199,13 +201,13 @@ PUBLIC RELEASE UNBLOCKED
 |---|---|---|---|---|
 | XPLAT-001 | Runtime Inventory and Constraints | Complete | `.process/XPLAT-001-workflow.md` | Inventory report: `docs/ai/research/cross-platform-runtime-inventory.md` |
 | XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete | `.process/XPLAT-002-workflow.md` | Runtime decision amended 2026-06-28 to Python stdlib runner aligned with official Spec Kit prerequisites |
-| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete | `.process/XPLAT-003-workflow.md` | Decision artifacts and platform user journey supplement complete; first-release controls and downstream ownership recorded |
-| XPLAT-004 | Cross-Platform Runner Foundation | Pending | — | Blocked by XPLAT-003 security model |
+| XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete / Archived | `.process/XPLAT-003-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`; active spec folder removed after PR #267 |
+| XPLAT-004 | Cross-Platform Runner Foundation | Ready | — | Next scaffold: build Python stdlib runner foundation and first-release controls from XPLAT-002/XPLAT-003 |
 | XPLAT-005 | Read-Only Helper Port | Pending | — | Blocked by XPLAT-004 runner foundation |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-004; should reuse XPLAT-005 parity harness |
 | XPLAT-007 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
 
-**Status Legend:** Pending | In Progress | In Review | Complete | Blocked
+**Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
 ---
 
@@ -374,11 +376,15 @@ Budget result: within budget (decision record and probes)
 
 **Priority:** P1 | **Depends On:** XPLAT-002 | **Enables:** XPLAT-004, XPLAT-007
 
-**Status:** Complete. Implemented on 2026-06-27 in branch
+**Status:** Complete / Archived. Implemented on 2026-06-27 in branch
 `codex/xplat-003-supply-chain-security-and-consumer-trust-model`; workflow file
 is `docs/ai/specs/.process/XPLAT-003-workflow.md`; design concept is
-`docs/ai/specs/.process/XPLAT-003-design-concept.md`; durable decision artifacts
-live under `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`.
+`docs/ai/specs/.process/XPLAT-003-design-concept.md`; merged through PR #267 on
+2026-06-29 at `1ab96b38`. Durable decision artifacts are archived in
+`.specify/memory/` and recoverable through
+`.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`;
+the active `specs/xplat-003-supply-chain-security-and-consumer-trust-model/`
+folder was removed after merge.
 
 **Goal:** Choose the security and provenance approach for the new runtime so
 consumers can understand what they are installing and what the project verifies
@@ -436,7 +442,9 @@ Budget result: within budget (decision record and policy)
 
 **Priority:** P1 | **Depends On:** XPLAT-002, XPLAT-003 | **Enables:** XPLAT-005, XPLAT-006, XPLAT-007
 
-**Status:** Pending.
+**Status:** Ready. XPLAT-002 and XPLAT-003 are complete; XPLAT-003 merged in PR
+#267 and is archived in
+`.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`.
 
 **Goal:** Build the shared runner, support library, and parity harness that make
 future helper ports consistent and testable.
