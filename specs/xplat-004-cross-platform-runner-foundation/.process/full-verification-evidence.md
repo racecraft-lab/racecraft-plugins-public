@@ -19,4 +19,3 @@
 - No generated payloads under `dist/**` were changed.
 - No active Claude Code or Codex skills, hooks, install behavior, or public docs were switched to the runner.
 - Native installed-cache UAT, generated payload propagation, and public support claims remain XPLAT-007 scope.
-
