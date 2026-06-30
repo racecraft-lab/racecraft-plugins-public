@@ -292,7 +292,7 @@ class RunnerFoundationTests(unittest.TestCase):
 
     def test_no_cutover_or_public_claim_surfaces_changed(self) -> None:
         completed = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
+            ["git", "diff", "--name-only", "origin/main...HEAD"],
             cwd=REPO_ROOT,
             text=True,
             capture_output=True,
