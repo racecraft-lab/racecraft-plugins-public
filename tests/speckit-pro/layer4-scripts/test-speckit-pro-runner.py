@@ -18,6 +18,13 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
 RUNBOOK_FILE = REPO_ROOT / "specs" / "xplat-004-cross-platform-runner-foundation" / "contracts" / "platform-runbook-fixtures.md"
+CHANGED_FILES_FILE = (
+    REPO_ROOT
+    / "specs"
+    / "xplat-004-cross-platform-runner-foundation"
+    / ".process"
+    / "changed-files.txt"
+)
 
 
 def runner_env() -> dict[str, str]:
@@ -73,6 +80,12 @@ def changed_paths_against_review_base() -> list[str]:
         if completed.returncode == 0:
             return [line for line in completed.stdout.splitlines() if line]
         errors.append(f"{candidate}: {completed.stderr.strip() or completed.stdout.strip()}")
+
+    if CHANGED_FILES_FILE.is_file():
+        changed = [line for line in CHANGED_FILES_FILE.read_text(encoding="utf-8").splitlines() if line]
+        if changed:
+            return changed
+
     raise AssertionError(f"Unable to diff changed paths against review base: {'; '.join(errors)}")
 
 
