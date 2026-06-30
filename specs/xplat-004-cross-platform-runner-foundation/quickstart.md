@@ -19,7 +19,7 @@ printf '%s\n' '{"schema_version":"1.0","helper_id":"runner","operation":"runtime
 Expected result:
 
 - stdout contains one JSON response.
-- `status` is `"success"` when the request is valid.
+- `status` is `"ok"` when the request is valid.
 - `data` identifies `runner_name: "speckit_pro_runner"`, `runner_contract_id: "speckit-pro-runner"`, and `selected_runtime_name: "python-stdlib-runner"`.
 
 ## Run Preflight
@@ -31,16 +31,16 @@ printf '%s\n' '{"schema_version":"1.0","helper_id":"runner","operation":"preflig
 
 Expected result on a valid source checkout:
 
-- stdout contains one JSON response with `status: "success"`.
+- stdout contains one JSON response with `status: "ok"`.
 - The report includes Python version, platform, architecture, plugin root, prerequisite records, runner identity, source-checkout context, and typed metadata pointers.
 - stderr is empty or contains only line-delimited JSON diagnostics.
 
 Expected result when a required prerequisite is unavailable:
 
 - stdout still contains one JSON response.
-- `status` is non-success.
+- `status` is `"missing_prerequisite"`.
 - diagnostics include a stable missing-prerequisite code.
-- the process uses the runner contract exit code for prerequisite failure.
+- the process exits with code `3` for prerequisite failure.
 
 ## Run Runner Contract Tests
 

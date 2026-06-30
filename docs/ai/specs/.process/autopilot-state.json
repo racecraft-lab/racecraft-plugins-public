@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-004-workflow.md",
   "updated_at": "2026-06-30T00:00:00Z",
-  "active_step": "Phase 4: Checklist - integration",
+  "active_step": "Phase 5: Tasks",
   "feature_dir": "specs/xplat-004-cross-platform-runner-foundation",
   "branch": "codex/xplat-004-cross-platform-runner-foundation",
   "status": "in_progress",
@@ -198,7 +198,21 @@
     },
     {
       "step": "Phase 4: Checklist - integration",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-004-cross-platform-runner-foundation/checklists/integration.md",
+        "items": 20,
+        "initial_gaps": 5,
+        "current_gaps": 0,
+        "remediations": [
+          "locked downstream helper ports to the same package, module entrypoint, and dispatch contract",
+          "made XPLAT-002 status and exit-code vocabulary explicit across spec, plan, contracts, data model, and quickstart",
+          "specified plugin-root detection anchors",
+          "specified plugin-relative metadata path semantics",
+          "added downstream helper handoff rules"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - integration Consensus",
@@ -206,7 +220,23 @@
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-004-cross-platform-runner-foundation/checklists/error-handling.md",
+        "items": 20,
+        "initial_gaps": 7,
+        "current_gaps": 0,
+        "remediations": [
+          "named exact envelope diagnostic codes",
+          "specified Python too-old and launcher-unavailable fail-closed behavior",
+          "specified specify_missing remediation",
+          "mapped metadata readiness failures to fail-closed diagnostics",
+          "centralized subprocess diagnostic codes",
+          "tightened diagnostic schema with bounded remediation",
+          "required remediation assertions for non-ok fixtures"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
@@ -214,7 +244,15 @@
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-004-cross-platform-runner-foundation/checklists/security.md",
+        "items": 20,
+        "initial_gaps": 0,
+        "current_gaps": 0,
+        "remediations": [],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
@@ -222,7 +260,21 @@
     },
     {
       "step": "Phase 4: Checklist - reliability",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-004-cross-platform-runner-foundation/checklists/reliability.md",
+        "items": 20,
+        "initial_gaps": 3,
+        "current_gaps": 0,
+        "remediations": [
+          "specified fixture subprocess timeout and output bounds",
+          "added output-capture and subprocess-result proof fields",
+          "added Windows/Linux source-checkout runbook fixture non-claim contract",
+          "added plugin_root_missing diagnostic code during parent review"
+        ],
+        "human_escalation_required": false,
+        "gate": "G4 pass"
+      }
     },
     {
       "step": "Phase 4: Checklist - reliability Consensus",
@@ -230,7 +282,7 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",

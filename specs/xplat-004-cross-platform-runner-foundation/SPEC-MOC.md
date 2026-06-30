@@ -25,8 +25,13 @@ slice artifacts in the body below.
 - [plan.md](plan.md)
 - [data-model.md](data-model.md)
 - [research.md](research.md)
+- [contracts/platform-runbook-fixtures.md](contracts/platform-runbook-fixtures.md)
 - [contracts/runner-envelope.schema.json](contracts/runner-envelope.schema.json)
 - [contracts/runner-manifest.schema.json](contracts/runner-manifest.schema.json)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/integration.md](checklists/integration.md)
+- [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/security.md](checklists/security.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

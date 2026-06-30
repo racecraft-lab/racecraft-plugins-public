@@ -49,8 +49,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Specify | `$speckit-specify` | Complete | Created runner-foundation spec and requirements checklist; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Complete | G2 passed after package naming, fixture matrix, metadata, and claim-boundary decisions |
 | Plan | `$speckit-plan` | Complete | Created small-package architecture, two-slice plan, contracts, data model, research, and quickstart; G3 passed |
-| Checklist | `$speckit-checklist` | In Progress | Recommended domains: integration, error-handling, security, reliability |
-| Tasks | `$speckit-tasks` | Pending | Generate tasks grouped into the accepted two implementation slices |
+| Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability checklists complete; G4 passed with zero gap markers |
+| Tasks | `$speckit-tasks` | In Progress | Generate tasks grouped into the accepted two implementation slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Implement only runner foundation, contract fixtures, and metadata |
 
