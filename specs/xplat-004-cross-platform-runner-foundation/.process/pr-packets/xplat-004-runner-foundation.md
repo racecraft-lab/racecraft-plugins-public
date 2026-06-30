@@ -6,7 +6,7 @@
 Add a Python standard-library runner foundation for XPLAT-004.
 <!-- speckit-pro-editable:summary:end -->
 
-Source: feature specification defines reviewer-ready PR packet behavior.
+Source: XPLAT-004 specification defines the runner foundation behavior.
 
 ## What Changed
 
@@ -15,7 +15,7 @@ Source: feature specification defines reviewer-ready PR packet behavior.
 - Added contract fixtures, Layer 4 runner coverage, generated tests reference refresh, and process evidence for the XPLAT-004 branch.
 <!-- speckit-pro-editable:what_changed:end -->
 
-Source: schema contract defines editable field markers.
+Source: runner contracts and tests define the review boundary.
 
 ## Why It Matters
 
@@ -25,12 +25,13 @@ This establishes the no-new-runtime-dependency runner seam for future helper por
 
 ## How To Review
 
-1. Inspect the generated packet JSON for mode, target, title, body path, and validation path.
-2. Inspect this body for required reviewer headings, editable markers, and source evidence.
+1. Inspect `speckit-pro/speckit_pro_runner/` for the Python stdlib runner envelope, runtime reporting, preflight checks, and metadata verification.
+2. Inspect `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` plus `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/contract-fixtures.json` for contract coverage.
+3. Confirm the branch does not change `dist/**`, active skills/hooks, installed-plugin launch behavior, or public support claims.
 
 ## How To UAT
 
-Use the UAT Runbook below for reviewer-facing acceptance checks. If this PR only changes packet metadata, the runbook explains why no manual product path is required.
+Use the UAT Runbook below for reviewer-facing acceptance checks. Native installed-cache execution remains deferred to XPLAT-007.
 
 ## UAT Runbook
 
@@ -40,7 +41,7 @@ Use the UAT Runbook below for reviewer-facing acceptance checks. If this PR only
 |-------|-------|
 | Spec | xplat-004-cross-platform-runner-foundation |
 | Branch | xplat-004-cross-platform-runner-foundation |
-| PR | Pending until PR is opened |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/274 |
 | Generated from | 2026-06-30T04:01:02Z |
 
 
@@ -100,12 +101,12 @@ Run these from the repository root before walking the acceptance tests.
 
 ## Self-Review Findings
 
-Before PR creation, record:
-- Tests executed.
-- Scope boundaries preserved.
-- Known gaps.
-- Whether native Windows/Linux execution happened or remains runbook-only for XPLAT-007.
-- Review order for the two planned slices.
+Recorded before final push:
+- Focused runner tests passed.
+- Default deterministic SpecKit Pro suite passed.
+- Generated docs reference and docs quality checks passed.
+- Scope boundaries preserve no installed-plugin cutover and no public support claim.
+- Native Windows/Linux installed-cache execution remains runbook-only for XPLAT-007.
 ---
 
 ## Sign-off
@@ -121,18 +122,21 @@ Advisory only — these checkboxes block nothing.
 git revert <SHA>; see plan.md for data-migration considerations
 ## Verification
 
-- Focused packet generation checks passed.
-- Packet metadata and rendered body assertions passed.
+- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` passed, 9/9.
+- `bash tests/speckit-pro/run-all.sh` passed, 3713/3713.
+- `node docs-site/scripts/generate-reference-pages.mjs --check` passed.
+- `node docs-site/scripts/validate-docs-quality.mjs` passed.
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh specs/xplat-004-cross-platform-runner-foundation/.process/pr-packets/xplat-004-runner-foundation.json` passed.
 
 Source: generated PR packet.
 
 ## Scope
 
-- Source feature: recorded in packet metadata.
-- Scope: this PR is limited to generated PR packet title and body behavior.
-- Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
-- Non-goals: split title generation and multi-PR emission behavior.
+- Source feature: `specs/xplat-004-cross-platform-runner-foundation`.
+- Scope: source-checkout Python stdlib runner package, runner manifest/checksum metadata, contract fixtures, runner tests, generated tests reference refresh, and process evidence.
+- Traceability: source feature, runner body, validation, and changed-file scope are recorded in the packet metadata.
+- Non-goals: generated payload propagation, active skill/hook/install cutover, native installed-cache UAT, and public platform-support claims.
 
 ## Known Gaps
 
-No known gaps for single-PR packet title metadata. Split packet title generation remains deferred.
+Native Windows/Linux installed-cache UAT, generated payload propagation, and public support claims remain deferred to XPLAT-007. No active skill invokes the runner yet.

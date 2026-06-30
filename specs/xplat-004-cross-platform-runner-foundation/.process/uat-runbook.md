@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | xplat-004-cross-platform-runner-foundation |
 | Branch | xplat-004-cross-platform-runner-foundation |
-| PR | Pending until PR is opened |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/274 |
 | Generated from | 2026-06-30T04:01:02Z |
 
 
