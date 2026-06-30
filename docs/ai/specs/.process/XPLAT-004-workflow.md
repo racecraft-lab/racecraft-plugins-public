@@ -51,8 +51,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Plan | `$speckit-plan` | Complete | Created small-package architecture, two-slice plan, contracts, data model, research, and quickstart; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability checklists complete; G4 passed with zero gap markers |
 | Tasks | `$speckit-tasks` | Complete | Generated 47 tasks across two implementation slices; G5 passed |
-| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, design concept, spec, plan, and tasks |
-| Implement | `$speckit-implement` | Pending | Implement only runner foundation, contract fixtures, and metadata |
+| Analyze | `$speckit-analyze` | Complete | Found and remediated roadmap/design-concept drift; G6 passed |
+| Implement | `$speckit-implement` | In Progress | Implement only runner foundation, contract fixtures, and metadata |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -473,7 +473,18 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| Pending | Pending | Pending | Pending |
+| A1 | High | Roadmap XPLAT-004 scope still described a broader shared runner, support library, and parity harness. | Narrowed roadmap scope to the minimal source-checkout Python runner foundation, `runtime-info`/`preflight`, synthetic contract fixtures, source metadata, and XPLAT-007 claim boundaries. |
+| A2 | Medium | Design concept open questions still suggested `speckit-pro/scripts/` and deferred the fixture matrix after clarify/plan had already resolved both. | Replaced open-question next steps with resolution notes for `speckit-pro/speckit_pro_runner/`, `<python> -m speckit_pro_runner`, and the accepted fixture matrix. |
+
+### Pre-Implement Confidence
+
+📊 Confidence: 0.94
+
+- Task understanding: 0.95
+- Approach clarity: 0.94
+- Requirements alignment: 0.96
+- Risk assessment: 0.91
+- Completeness: 0.94
 
 ---
 

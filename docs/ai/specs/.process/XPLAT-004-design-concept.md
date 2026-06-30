@@ -207,10 +207,10 @@ stop_reason: "natural"
 
 - **What:** Exact module path and package names for the runner files.
   **Why deferred:** The interview selected "small package" and "Python module" but did not need to freeze file names beyond the XPLAT-003 runner-file contract examples.
-  **Suggested next step:** Resolve during `$speckit-plan`; prefer a package under `speckit-pro/scripts/` that supports `python -m` invocation and payload-relative metadata.
+  **Resolution note:** Resolved during clarification and planning as `speckit-pro/speckit_pro_runner/` with `<python> -m speckit_pro_runner`; avoid `speckit-pro/scripts/` because current payload generation copies that directory into `dist/**`, while generated payload propagation remains XPLAT-007 scope.
 - **What:** Exact contract fixture matrix.
   **Why deferred:** The interview selected contract fixtures, but final cases should derive from the XPLAT-002 envelope/diagnostic/exit-code/path/subprocess contract and XPLAT-003 preflight additions.
-  **Suggested next step:** Resolve during `$speckit-plan` and validate with `$speckit-checklist integration` and `$speckit-checklist error-handling`.
+  **Resolution note:** Resolved in `spec.md`, `plan.md`, `data-model.md`, `contracts/`, and `tasks.md` as invalid JSON, invalid envelope, unsupported schema version, missing fields, typed paths, paths with spaces, Windows separators, traversal-boundary behavior, missing prerequisites, subprocess nonzero, subprocess timeout, stderr-only failure, runtime-info/preflight, checksum, manifest, and metadata-readiness fixtures.
 
 ## Recommended Next Step
 

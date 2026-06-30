@@ -459,63 +459,98 @@ Budget result: within budget (decision record and policy)
 XPLAT-003 are complete; XPLAT-003 merged in PR #267 and is archived in
 `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`.
 
-**Goal:** Build the shared runner, support library, and parity harness that make
-future helper ports consistent and testable.
+**Goal:** Build the minimal source-checkout Python 3.11+ standard-library
+runner foundation, runtime-info/preflight surface, contract smoke fixtures, and
+source integrity metadata that make future helper ports consistent and testable.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
-Projected reviewable LOC: 250-400 |
+Projected reviewable LOC: 350-420 |
 Production files: 3-6 |
 Total files: 8-14 |
-Budget result: within budget if the runner stays minimal; split if helper logic
-starts landing here.
+Budget result: warning accepted through two planned reviewable slices inside one
+XPLAT-004 workflow. Split or trim if real helper behavior, generated payload
+propagation, active cutover, or native installed-cache proof starts landing
+here.
 
 **Scope:**
 
-- Add the selected Python runner source layout under `speckit-pro/` with one
-  stable plugin entrypoint for helper execution.
-- Implement shared modules for path handling, JSON envelope construction,
-  process execution without a shell, filesystem reads/writes, and platform
-  detection.
-- Implement a preflight/helper-discovery command that returns runtime,
-  platform, executable availability, plugin root, missing prerequisites, and
-  runtime version as structured JSON.
+- Add the Python runner source layout under `speckit-pro/speckit_pro_runner/`
+  with the stable module entrypoint `<python> -m speckit_pro_runner`.
+- Implement shared runner primitives for JSON envelope
+  validation/construction, strict diagnostics/remediation, typed path rendering,
+  shell-disabled fixture subprocess records, platform detection, plugin-root
+  detection, and bounded source metadata checks.
+- Implement `runtime-info` and `preflight` operations that return runtime,
+  platform, architecture, plugin root, Python and `specify` prerequisite status,
+  runner identity, source-checkout context, metadata pointers, and runtime
+  version as structured JSON.
 - Verify official Spec Kit prerequisites: Python 3.11+ and a working `specify`
-  command. The runner must fail closed with remediation when either is missing.
-- Add a parity harness that can run old Bash helpers and new runner helpers over
-  fixtures while Bash still exists.
-- Add Python standard-library test/eval runner patterns that later specs can use
-  to replace Bash-only Layer 4 helper tests and AI-eval wrappers.
-- Implement the XPLAT-003 first-release controls that apply to runtime source,
-  dependencies, and generated runner files.
-- Document how Claude and Codex skills will invoke the runner after cutover.
+  command. The runner must fail closed with deterministic diagnostics and
+  remediation when either is missing or unsupported.
+- Add a Python standard-library Layer 4 runner test entrypoint and compact
+  contract fixture matrix for envelope validation, diagnostics, typed paths,
+  subprocess result records, runtime-info, and preflight behavior.
+- Keep contract fixtures synthetic. They must not run old Bash helpers, port
+  real helper behavior, or compare old/new production helper output.
+- Implement the XPLAT-003 first-release controls assigned to runner source:
+  runner identity, checksum file, manifest metadata, and source metadata
+  verification behavior.
+- Add deterministic Windows/Linux source-checkout runbook fixture guidance with
+  explicit non-claim language. Installed-cache launch proof, native matrix UAT,
+  release-readiness, and public platform claims remain XPLAT-007.
+- Document the future Claude/Codex invocation contract for downstream cutover
+  without editing active skills, hooks, generated payloads, install behavior, or
+  public docs.
 
 **Out of Scope:**
 
-- Porting existing helper behavior except tiny smoke/preflight helpers needed to
-  prove the runner contract.
+- Porting existing helper behavior beyond `runtime-info`, `preflight`, and
+  synthetic contract smoke fixtures.
+- Running old Bash helpers and new runner helpers in parity; real helper parity
+  belongs to XPLAT-005 and XPLAT-006.
+- Implementing general filesystem read/write helper APIs or mutation semantics
+  beyond source metadata checks and fixture files.
 - Removing Bash helpers or Bash-only release gates.
-- Updating public install docs.
+- Updating active Claude Code or Codex skills, hooks, generated payloads,
+  install behavior, or public docs to invoke the runner.
+- Copying runner files into `dist/**`.
+- Proving installed-cache execution on native Windows, macOS, or Linux.
+- Making public native-platform support claims.
 - Implementing release automation controls that XPLAT-003 assigns outside the
   runner foundation.
 
 **Key Files Likely To Change:**
 
-- `speckit-pro/<selected-runtime-source>/**`
-- `speckit-pro/.claude-plugin/plugin.json`
-- `speckit-pro/.codex-plugin/plugin.json`
-- `tests/speckit-pro/**`
+- `speckit-pro/speckit_pro_runner/**`
+- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py`
+- `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh`
+- `tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/**`
+- `tests/speckit-pro/run-all.sh` only if needed to include the runner-specific
+  Layer 4 wrapper
+- `specs/xplat-004-cross-platform-runner-foundation/contracts/platform-runbook-fixtures.md`
 - `speckit-pro/README.md` only if needed for maintainer-facing development notes
 
 **Done When:**
 
-- The Python runner executes on native Windows, macOS, and Linux from installed
-  Claude and Codex plugin caches without Bash, PowerShell helper scripts, `jq`,
-  or plugin-only package restoration.
-- The parity harness can compare old/new helper output deterministically.
-- At least one Python test/eval runner path exists so downstream helper ports do
-  not need to preserve Bash-only release gates.
-- First-release supply-chain controls assigned to the runner are in place.
-- No active skill has been switched yet; this spec only creates the safe runway.
+- The Python runner executes from a source checkout through
+  `<python> -m speckit_pro_runner` with JSON stdin, one JSON stdout response,
+  and line-delimited JSON stderr diagnostics.
+- `runtime-info` and `preflight` report source-checkout runtime, platform,
+  plugin-root, prerequisite, runner identity, and metadata information, and
+  fail closed for missing Python 3.11+, missing `specify`, missing plugin root,
+  or invalid runner metadata.
+- Contract smoke fixtures cover envelope validation, diagnostics, typed paths,
+  subprocess result records, runtime-info, and preflight without running old
+  Bash helpers or porting real production helpers.
+- A Python standard-library runner unit/contract test entrypoint exists so
+  downstream helper ports can reuse the runner test pattern.
+- Runner source checksum and manifest metadata exist, validate, and are checked
+  by preflight.
+- Windows/Linux runbook fixtures clearly identify `source_checkout` context and
+  state that installed-cache launch proof, native UAT, release-readiness, and
+  public platform claims remain XPLAT-007 responsibilities.
+- No active skill, hook, generated payload, install behavior, or public
+  documentation claim has been switched to the runner.
 
 ---
 
