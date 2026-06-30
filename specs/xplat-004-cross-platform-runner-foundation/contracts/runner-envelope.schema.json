@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.local/contracts/speckit-pro-runner-envelope.schema.json",
+  "title": "SpecKit Pro Runner Envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "helper_id", "operation", "mode", "inputs"],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "helper_id": {
+      "const": "runner"
+    },
+    "operation": {
+      "type": "string",
+      "enum": ["preflight", "runtime-info"]
+    },
+    "mode": {
+      "const": "read_only"
+    },
+    "inputs": {
+      "type": "object"
+    }
+  },
+  "$defs": {
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["severity", "source", "code", "message"],
+      "properties": {
+        "severity": {
+          "type": "string",
+          "enum": ["info", "warning", "error"]
+        },
+        "source": {
+          "const": "runner"
+        },
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string",
+          "minLength": 1
+        },
+        "details": {
+          "type": "object"
+        }
+      }
+    },
+    "typed_path": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value", "display"],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": ["plugin_relative", "repo_relative", "absolute"]
+        },
+        "value": {
+          "type": "string"
+        },
+        "display": {
+          "type": "string"
+        }
+      }
+    },
+    "response": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["schema_version", "status", "exit_code", "legacy_exit_code", "diagnostics", "data"],
+      "properties": {
+        "schema_version": {
+          "const": "1.0"
+        },
+        "request_id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["success", "input_error", "prerequisite_missing", "subprocess_failure", "internal_error"]
+        },
+        "exit_code": {
+          "type": "integer"
+        },
+        "legacy_exit_code": {
+          "type": ["integer", "null"]
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/diagnostic"
+          }
+        },
+        "data": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

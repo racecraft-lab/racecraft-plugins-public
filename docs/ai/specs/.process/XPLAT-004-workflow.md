@@ -48,8 +48,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created runner-foundation spec and requirements checklist; G1 passed with zero clarification markers |
 | Clarify | `$speckit-clarify` | Complete | G2 passed after package naming, fixture matrix, metadata, and claim-boundary decisions |
-| Plan | `$speckit-plan` | In Progress | Produce the small-package architecture, two-slice plan, and verification strategy |
-| Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, error-handling, security, reliability |
+| Plan | `$speckit-plan` | Complete | Created small-package architecture, two-slice plan, contracts, data model, research, and quickstart; G3 passed |
+| Checklist | `$speckit-checklist` | In Progress | Recommended domains: integration, error-handling, security, reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks grouped into the accepted two implementation slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Implement only runner foundation, contract fixtures, and metadata |
@@ -300,11 +300,11 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Pending | Must record small package, two-slice plan, and complexity tracking for any warning |
-| `research.md` | Pending | Should record Python stdlib runner source layout and metadata decisions |
-| `data-model.md` | Pending | Should define request/response, diagnostics, path values, prerequisites, and metadata records |
-| `contracts/` | Pending | Should capture runner request/response/preflight/checksum/manifest contracts if useful |
-| `quickstart.md` | Pending | Should give maintainer runner invocation and verification path |
+| `plan.md` | Complete | Records `speckit-pro/speckit_pro_runner/`, Python 3.11+ stdlib, accepted two-slice plan, reviewability warning, and deferred XPLAT-007 boundaries |
+| `research.md` | Complete | Records package layout, runtime substrate, envelope ownership, preflight, metadata placement, fixture shape, and two-slice delivery decisions |
+| `data-model.md` | Complete | Defines request/response envelopes, diagnostics, typed paths, preflight report, prerequisites, subprocess results, metadata manifest, and fixtures |
+| `contracts/` | Complete | Added runner envelope and manifest JSON schemas |
+| `quickstart.md` | Complete | Documents planned source-checkout invocation, tests, metadata validation, index/whitespace checks, and scope boundaries |
 
 ---
 
