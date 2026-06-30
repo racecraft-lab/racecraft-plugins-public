@@ -110,7 +110,13 @@
 - [x] T046 [US3] Review `git diff --name-only` and confirm no XPLAT-004 changes under `dist/**`, active skill/hook/generated payload/install/public-doc cutover surfaces, or public native-platform claim surfaces (FR-012, FR-013, SC-005)
 - [x] T047 [US3] Prepare the PR review packet with both planned slices, review order, changed surfaces, traceability, verification evidence, known gaps, rollback notes, and deferred boundaries for XPLAT-005, XPLAT-006, and XPLAT-007 (FR-014, FR-018, FR-022, SC-006)
 
-## Dependencies And Execution Order
+## Dependencies & Execution Order
+
+### Incremental Delivery
+
+- Slice 1 delivers the runner/preflight core first so downstream work can invoke `<python> -m speckit_pro_runner`.
+- Slice 2 layers contract fixture parity, metadata, runbook evidence, no-cutover checks, and review packet preparation on top of Slice 1.
+- Keep both slices in one navigable XPLAT-004 PR unless marker planning is needed only for reviewability evidence.
 
 ### Slice Dependencies
 

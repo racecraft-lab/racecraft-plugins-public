@@ -6,6 +6,8 @@ Define the deterministic Windows/Linux runbook fixture evidence XPLAT-004 may
 produce without claiming installed-cache readiness, native matrix UAT, release
 readiness, or public platform support.
 
+Reviewability-Exception: infra
+
 ## Required Fields
 
 Each fixture row MUST include:
