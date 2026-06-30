@@ -50,8 +50,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Clarify | `$speckit-clarify` | Complete | G2 passed after package naming, fixture matrix, metadata, and claim-boundary decisions |
 | Plan | `$speckit-plan` | Complete | Created small-package architecture, two-slice plan, contracts, data model, research, and quickstart; G3 passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability checklists complete; G4 passed with zero gap markers |
-| Tasks | `$speckit-tasks` | In Progress | Generate tasks grouped into the accepted two implementation slices |
-| Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
+| Tasks | `$speckit-tasks` | Complete | Generated 47 tasks across two implementation slices; G5 passed |
+| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Implement only runner foundation, contract fixtures, and metadata |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -376,10 +376,10 @@ Focus on XPLAT-004 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |---|---|---|---|
-| integration | Pending | Pending | |
-| error-handling | Pending | Pending | |
-| security | Pending | Pending | |
-| reliability | Pending | Pending | |
+| integration | 20 | 0 current; 5 remediated | FR-002, FR-015, FR-016, FR-017, FR-018 |
+| error-handling | 20 | 0 current; 7 remediated | FR-004, FR-005, FR-006, FR-008, FR-010, FR-019, FR-020 |
+| security | 20 | 0 | FR-010, FR-012, FR-013 |
+| reliability | 20 | 0 current; 3 remediated | FR-021, FR-022, SC-007 |
 
 ---
 
@@ -426,10 +426,10 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | Pending |
-| Phases/Slices | 2 implementation slices expected |
-| Parallel Opportunities | Pending |
-| User Stories Covered | 3 expected |
+| Total Tasks | 47 |
+| Phases/Slices | 8 task phases across 2 implementation slices |
+| Parallel Opportunities | 6 task-level `[P]` markers; primary safe parallelism is Phase 1 setup plus runbook fixture population |
+| User Stories Covered | 3/3 |
 
 ---
 
@@ -443,10 +443,10 @@ bash speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh specs/xplat
 
 | Field | Value | Meaning |
 |---|---|---|
-| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Pending | `true`, or `false` for release-risk classes |
-| Signals | Pending | Decisive detector findings |
-| Warnings | Pending | Release-safety warnings |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | `true` | `true`, or `false` for release-risk classes |
+| Signals | `change-shape:modify-heavy` | Decisive detector findings |
+| Warnings | none | Release-safety warnings |
 
 The Grill Me sizing branch already accepted two planned PR slices. The atomicity classifier still controls the final route after real tasks exist.
 
