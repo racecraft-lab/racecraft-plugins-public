@@ -41,20 +41,33 @@
   ],
   "verification_evidence": [
     {
-      "kind": "layer4_script",
-      "source": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
-      "summary": "Focused generator test covers single packet metadata and rendered body paths.",
-      "result": "pending"
+      "kind": "runner_test",
+      "source": "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh",
+      "summary": "Focused runner contract suite passed locally.",
+      "result": "passed"
+    },
+    {
+      "kind": "full_suite",
+      "source": "bash tests/speckit-pro/run-all.sh",
+      "summary": "Default deterministic SpecKit Pro suite passed locally.",
+      "result": "passed"
+    },
+    {
+      "kind": "docs_reference",
+      "source": "node docs-site/scripts/generate-reference-pages.mjs --check",
+      "summary": "Generated reference pages are current after adding runner tests.",
+      "result": "passed"
     }
   ],
   "scope_evidence": {
     "reviewable_loc": 0,
     "production_files": 0,
-    "total_files": 42,
-    "budget_result": "within_budget",
+    "total_files": 43,
+    "budget_result": "exception",
     "changed_files": [
       ".gitignore",
       ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+      "docs-site/src/content/docs/reference/tests.md",
       "docs/ai/specs/.process/XPLAT-004-design-concept.md",
       "docs/ai/specs/.process/XPLAT-004-workflow.md",
       "docs/ai/specs/.process/autopilot-state.json",

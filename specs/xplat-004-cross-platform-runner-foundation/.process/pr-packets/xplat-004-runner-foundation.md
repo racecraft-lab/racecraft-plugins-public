@@ -3,7 +3,7 @@
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-Add cross-platform runner foundation.
+Add a Python standard-library runner foundation for XPLAT-004.
 <!-- speckit-pro-editable:summary:end -->
 
 Source: feature specification defines reviewer-ready PR packet behavior.
@@ -11,8 +11,8 @@ Source: feature specification defines reviewer-ready PR packet behavior.
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- Generated a single-PR reviewer packet with packet-owned title metadata.
-- Rendered the reviewer body at the packet-owned body path.
+- Added the source-checkout `speckit_pro_runner` package with JSON request/response handling, preflight checks, typed path validation, subprocess fixture execution, and runner metadata verification.
+- Added contract fixtures, Layer 4 runner coverage, generated tests reference refresh, and process evidence for the XPLAT-004 branch.
 <!-- speckit-pro-editable:what_changed:end -->
 
 Source: schema contract defines editable field markers.
@@ -20,7 +20,7 @@ Source: schema contract defines editable field markers.
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-Reviewers get a deterministic conventional title and a stable packet body before PR creation.
+This establishes the no-new-runtime-dependency runner seam for future helper ports without cutting over installed-plugin behavior or making public support claims early.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review

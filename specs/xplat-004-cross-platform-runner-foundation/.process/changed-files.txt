@@ -1,5 +1,6 @@
 .gitignore
 .specify/presets/speckit-pro-reviewability/templates/plan-template.md
+docs-site/src/content/docs/reference/tests.md
 docs/ai/specs/.process/XPLAT-004-design-concept.md
 docs/ai/specs/.process/XPLAT-004-workflow.md
 docs/ai/specs/.process/autopilot-state.json
