@@ -1,6 +1,8 @@
 .DS_Store
 *.log
 .env
+__pycache__/
+*.pyc
 
 # SpecKit generated cache artifacts
 .specify/presets/.cache/
