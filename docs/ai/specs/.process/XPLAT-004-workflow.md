@@ -552,6 +552,9 @@ Implement the tasks from `specs/xplat-004-cross-platform-runner-foundation/tasks
 | Reviewability Diff Gate | Pass with exception | Final diff is size/file-count blocked but accepted through the branch-added typed `infra` reviewability exception; blocked operations are empty | Evidence: `specs/xplat-004-cross-platform-runner-foundation/.process/final-reviewability-state.json` |
 | UAT Runbook Generation | Pass | Feature-local UAT runbook generated, authored with concrete XPLAT-004 checks, and validated | Evidence: `specs/xplat-004-cross-platform-runner-foundation/.process/uat-runbook.md` |
 | PR Body Generation | Pass | Single-PR packet/body generated and validation passed | Evidence: `specs/xplat-004-cross-platform-runner-foundation/.process/pr-packets/xplat-004-runner-foundation/validation.json` |
+| PR Creation | Pass | Opened PR #274 from `codex/xplat-004-cross-platform-runner-foundation` into `main` | https://github.com/racecraft-lab/racecraft-plugins-public/pull/274 |
+| Review Remediation | Pass | Initial PR inspection found no comments and no reviews at creation time; checks were pending | None |
+| Retrospective | Pass | Runner source metadata must be refreshed after any source-byte cleanup; final diff reviewability should be rerun after post packet commits | None |
 
 ---
 
