@@ -46,8 +46,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Create the runner-foundation spec from the roadmap and design concept |
-| Clarify | `$speckit-clarify` | Pending | Focus on package naming, fixture matrix, and metadata boundaries |
+| Specify | `$speckit-specify` | Complete | Created runner-foundation spec and requirements checklist; G1 passed with zero clarification markers |
+| Clarify | `$speckit-clarify` | In Progress | Session 1 focuses package naming, fixture matrix, and metadata boundaries |
 | Plan | `$speckit-plan` | Pending | Produce the small-package architecture, two-slice plan, and verification strategy |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, error-handling, security, reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks grouped into the accepted two implementation slices |
@@ -197,14 +197,17 @@ SpecKit Pro installed Claude Code and Codex workflows still depend on Bash-backe
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Pending |
-| User Stories | 3 expected from setup |
-| Acceptance Criteria | At least 8 roadmap/design-concept criteria |
+| Functional Requirements | 14 |
+| User Stories | 3 |
+| Acceptance Criteria | 8 acceptance scenarios; 6 measurable success criteria |
+| Requirements Checklist | 16/16 passed |
+| Clarification Markers | 0 |
+| Gate | G1 passed |
 
 ### Files Generated
 
-- [ ] `specs/xplat-004-cross-platform-runner-foundation/spec.md`
-- [ ] `specs/xplat-004-cross-platform-runner-foundation/checklists/requirements.md`
+- [x] `specs/xplat-004-cross-platform-runner-foundation/spec.md`
+- [x] `specs/xplat-004-cross-platform-runner-foundation/checklists/requirements.md`
 
 ---
 

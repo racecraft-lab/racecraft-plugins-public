@@ -1,35 +1,30 @@
 {
-  "workflow_file": "docs/ai/specs/.process/XPLAT-003-workflow.md",
-  "updated_at": "2026-06-29T00:26:40Z",
-  "active_step": "Archived",
-  "feature_dir": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
-  "branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model",
-  "status": "completed_archived",
+  "workflow_file": "docs/ai/specs/.process/XPLAT-004-workflow.md",
+  "updated_at": "2026-06-30T00:00:00Z",
+  "active_step": "Phase 2: Clarify - Package and entrypoint shape",
+  "feature_dir": "specs/xplat-004-cross-platform-runner-foundation",
+  "branch": "codex/xplat-004-cross-platform-runner-foundation",
+  "status": "in_progress",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "current_target": "specs/xplat-003-supply-chain-security-and-consumer-trust-model",
-    "cleanup_mode": "post-merge-archive-cleanup",
-    "safeToApplyCleanup": true,
-    "excluded_current_spec": null,
+    "current_target": "specs/xplat-004-cross-platform-runner-foundation",
+    "cleanup_mode": "disabled-on-active-feature-branch",
+    "safeToApplyCleanup": false,
+    "excluded_current_spec": "specs/xplat-004-cross-platform-runner-foundation",
     "eligible_previous_specs": [],
-    "cleanup_applied": true,
-    "archive_report": ".specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md",
-    "cleanup_branch": "codex/xplat-003-post-merge-hygiene",
-    "merged_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/267",
-    "merge_commit": "1ab96b38da7e400b3c8e78b21d92e7b05302cfdd",
-    "note": "XPLAT-003 was archived after PR #267 merged. The active spec folder was removed; docs/ai/specs/.process/XPLAT-003-workflow.md and XPLAT-003-design-concept.md are preserved as process evidence."
+    "cleanup_applied": false,
+    "note": "Archive extension is installed. The current target is excluded and no cleanup was applied during active XPLAT-004 execution."
   },
   "prerequisites": {
     "all_pass": true,
-    "branch": "codex/xplat-003-supply-chain-security-and-consumer-trust-model",
+    "branch": "codex/xplat-004-cross-platform-runner-foundation",
     "is_worktree": true,
     "on_feature_branch": false,
     "confidence_gate_mode": "advisory",
     "capability_coverage": "advisory coverage present",
     "model": {
-      "parent": "gpt-5.5",
-      "reasoning_effort": "xhigh",
-      "subagents": "required SpecKit Pro phase and analyst agents installed with gpt-5.5 and xhigh reasoning"
+      "parent": "not introspectable from this Codex session",
+      "subagents": "required SpecKit Pro phase and analyst agents are installed as gpt-5.5/xhigh per runtime tool metadata"
     },
     "agents": {
       "required": [
@@ -40,33 +35,31 @@
         "implement-executor",
         "codebase-analyst",
         "spec-context-analyst",
-        "domain-researcher"
+        "domain-researcher",
+        "autopilot-fast-helper",
+        "uat-runbook-author"
       ],
       "required_available": true,
       "optional_fast_helper_available": true,
-      "project_implementation_agent": "implement-executor",
-      "notes": [
-        "consensus-synthesizer is not installed as a callable Codex agent; parent orchestrator will synthesize consensus results when needed",
-        "uat-runbook-author is not installed as a callable Codex agent; UAT skeleton generation remains fail-open"
-      ]
+      "project_implementation_agent": "implement-executor"
     },
     "project_commands": {
       "BUILD": "N/A",
       "TYPECHECK": "N/A",
       "LINT": "N/A",
       "LINT_FIX": "N/A",
-      "UNIT_TEST": "N/A",
-      "INTEGRATION_TEST": "N/A",
+      "UNIT_TEST": "bash tests/speckit-pro/run-all.sh --layer 4",
+      "INTEGRATION_TEST": "bash tests/speckit-pro/run-all.sh --layer 1",
       "SINGLE_FILE_TEST": "N/A",
       "SINGLE_FILE_INTEGRATION": "N/A",
-      "FULL_VERIFY": "N/A"
+      "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
     },
     "preset_conventions": {
       "has_presets": true,
       "presets": [
         "speckit-pro-reviewability"
       ],
-      "extensions": "archive, git, verify, verify-tasks, retrospective, speckit-utils installed/enabled in registry",
+      "extensions": "archive and git installed; verify, verify-tasks, retrospective, and speckit-utils hooks are configured",
       "hooks": "18 hook events configured",
       "templates": {
         "spec": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
@@ -88,10 +81,10 @@
       "step": "Phase 1: Specify",
       "status": "completed",
       "result": {
-        "functional_requirements": 18,
+        "functional_requirements": 14,
         "user_stories": 3,
-        "acceptance_scenarios": 9,
-        "success_criteria": 9,
+        "acceptance_scenarios": 8,
+        "success_criteria": 6,
         "quality_checklist": "16/16 passed",
         "clarification_markers": 0,
         "gap_markers": 0,
@@ -99,383 +92,132 @@
       }
     },
     {
-      "step": "Phase 2: Clarify - First-release control boundaries",
-      "status": "completed",
-      "result": {
-        "questions": 5,
-        "accepted_answers": [
-          "practical first-release baseline blocks public cutover",
-          "signatures, SBOMs, provenance/attestations, reproducible builds, formal audit, and cryptographic trust-chain verification stay deferred unless promotion evidence exists",
-          "controls split by owner surface across XPLAT-004, XPLAT-007, release automation, and public documentation",
-          "XPLAT-007 public claims require runner preflight/version evidence, checksums, consumer verification instructions, source-to-dist gate output, scan or exception evidence, and public-claim audit evidence",
-          "actionable high/critical vulnerability findings block release readiness unless a documented non-actionable exception exists"
-        ],
-        "unresolved_consensus_items": 0
-      }
+      "step": "Phase 2: Clarify - Package and entrypoint shape",
+      "status": "in_progress"
     },
     {
-      "step": "Phase 2: Clarify - First-release control boundaries Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 2: Clarify - Package and entrypoint shape Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Artifact integrity and consumer verification",
-      "status": "completed",
-      "result": {
-        "questions": 5,
-        "accepted_answers": [
-          "use SHA-256 in payload-relative scripts/speckit-pro-runner.sha256",
-          "publish scripts/speckit-pro-runner.manifest.json with plugin, runner, source, checksum, and per-artifact platform fields",
-          "XPLAT-007 source-to-dist evidence runs build-plugin-payloads and verifies no generated drift across dist roots and marketplace manifests",
-          "runtime-info/preflight evidence includes artifact-integrity pointers and distinguishes installed-cache from source-only context",
-          "consumer verification uses runner identity/preflight plus platform-native SHA-256 comparison without jq, Bash, source checkout, or network restore"
-        ],
-        "unresolved_consensus_items": 0
-      }
+      "step": "Phase 2: Clarify - Contract fixture matrix",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Artifact integrity and consumer verification Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 2: Clarify - Contract fixture matrix Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Vulnerability policy and claim wording",
-      "status": "completed",
-      "result": {
-        "questions": 5,
-        "accepted_answers": [
-          "actionable high/critical findings combine severity with first-release trust-boundary scope and reachable, shipped, or release-affecting relevance",
-          "exception records require complete evidence, approval, compensating-control, and expiry fields, with per-release/current-evidence expiry",
-          "durable scan summaries and exception records are committed while raw scanner output is retained as 30-day CI artifacts once automation exists",
-          "XPLAT-004 blocks runner-readiness evidence and XPLAT-007 blocks public cutover/release claims; XPLAT-003 records policy only",
-          "public docs and release notes may claim only implemented-and-verified controls; deferred cryptographic, audit, marketplace-enforced, and native-support claims remain roadmap-only"
-        ],
-        "unresolved_consensus_items": 0,
-        "consensus_required": true
-      }
+      "step": "Phase 2: Clarify - Metadata and claim boundary",
+      "status": "pending"
     },
     {
-      "step": "Phase 2: Clarify - Vulnerability policy and claim wording Consensus",
-      "status": "completed",
-      "result": {
-        "rounds": 1,
-        "items": 5,
-        "outcome": "all items resolved 3/3",
-        "analysts": [
-          "codebase-analyst",
-          "spec-context-analyst",
-          "domain-researcher"
-        ],
-        "human_escalation_required": false
-      }
+      "step": "Phase 2: Clarify - Metadata and claim boundary Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed",
-      "result": {
-        "artifacts": [
-          "plan.md",
-          "research.md",
-          "data-model.md",
-          "contracts/supply-chain-control-contract.md",
-          "quickstart.md"
-        ],
-        "control_decisions": 17,
-        "first_release_required_controls": 9,
-        "deferred_hardening_controls": 5,
-        "explicit_non_claims": 3,
-        "data_model_entities": 10,
-        "contract_record_shapes": 7,
-        "source_or_payload_changes": 0,
-        "gate": "G3 pass",
-        "reviewable_loc": {
-          "status": "pass",
-          "projected": 0,
-          "production": 0,
-          "new": 4,
-          "modified": 1
-        }
-      }
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Security",
-      "status": "completed",
-      "result": {
-        "items": 30,
-        "gaps_found": 3,
-        "gaps_remediated": 3,
-        "remaining": 0,
-        "checklist": "checklists/security.md"
-      }
+      "step": "Phase 4: Checklist - integration",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Security Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 4: Checklist - integration Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Integration",
-      "status": "completed",
-      "result": {
-        "items": 24,
-        "gaps_found": 2,
-        "gaps_remediated": 2,
-        "remaining": 0,
-        "checklist": "checklists/integration.md"
-      }
+      "step": "Phase 4: Checklist - error-handling",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Integration Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 4: Checklist - error-handling Consensus",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Reliability",
-      "status": "completed",
-      "result": {
-        "items": 26,
-        "gaps_found": 3,
-        "gaps_remediated": 3,
-        "remaining": 0,
-        "checklist": "checklists/reliability.md",
-        "gate": "G4 pass"
-      }
+      "step": "Phase 4: Checklist - security",
+      "status": "pending"
     },
     {
-      "step": "Phase 4: Checklist - Reliability Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "step": "Phase 4: Checklist - security Consensus",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - reliability",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 4: Checklist - reliability Consensus",
+      "status": "pending"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed",
-      "result": {
-        "task_count": 20,
-        "phase_count": 5,
-        "parallel_opportunities": 12,
-        "user_stories_covered": "3/3",
-        "gate": "G5 pass",
-        "atomicity_route": {
-          "route": "one-navigable-PR",
-          "releasable": true,
-          "signals": [
-            "change-shape:modify-heavy"
-          ],
-          "warnings": []
-        },
-        "reviewability": {
-          "status": "warn",
-          "pass": true,
-          "reviewable_loc": 800,
-          "production_files": 2,
-          "total_files": 22,
-          "primary_surface_count": 4,
-          "warnings": [
-            "reviewable LOC 800 exceeds warn threshold 400",
-            "total files 22 exceeds warn threshold 15",
-            "primary surfaces 4 exceeds warn threshold 1"
-          ],
-          "blockers": []
-        }
-      }
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed",
-      "result": {
-        "findings": {
-          "critical": 0,
-          "high": 0,
-          "medium": 2,
-          "low": 0,
-          "remaining": 0
-        },
-        "remediations": [
-          "Recorded accepted setup warning and tasks-mode advisory reviewability behavior in spec.md",
-          "Added exact final validation command arguments to tasks.md and quickstart.md"
-        ],
-        "gate": "G6 pass",
-        "repo_prompt_context_builder": "fallback used after transport close; direct repo/script/source checks completed"
-      }
+      "status": "pending"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "completed",
-      "result": "skipped: no unresolved consensus items"
+      "status": "pending"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "result": {
-        "pass": true,
-        "composite": 0.95,
-        "threshold": 0.9,
-        "mode": "advisory",
-        "recommended_action": "proceed",
-        "criteria": {
-          "task_understanding": 0.95,
-          "approach_clarity": 0.91,
-          "requirements_alignment": 0.93,
-          "risk_assessment": 1.0,
-          "completeness": 0.97
-        }
-      }
+      "status": "pending"
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "completed",
-      "result": {
-        "tasks_completed": "20/20",
-        "task_ids": "T001-T020",
-        "gate": "G7 pass",
-        "changed_files": [
-          "specs/xplat-003-supply-chain-security-and-consumer-trust-model/spec.md",
-          "specs/xplat-003-supply-chain-security-and-consumer-trust-model/plan.md",
-          "specs/xplat-003-supply-chain-security-and-consumer-trust-model/quickstart.md",
-          "specs/xplat-003-supply-chain-security-and-consumer-trust-model/tasks.md"
-        ],
-        "reviewability": {
-          "status": "warn",
-          "blockers": []
-        },
-        "scope": "decision artifacts only; no runner code, generated payloads, release workflow, or public claim surface changed"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "completed",
-      "result": {
-        "status": "warn",
-        "blocking_issues": 0,
-        "notes": [
-          "Required extensions and command surfaces present",
-          "Branch ahead of origin",
-          "PowerShell helper tree absent",
-          "archive/git command docs live under .specify/extensions only"
-        ]
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "evidence": [
-          "check-prerequisites all_pass true",
-          "count-markers all zero",
-          "G7 pass 20/20",
-          "spec-index current",
-          "git diff --check clean"
-        ]
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "completed",
-      "result": {
-        "status": "warn",
-        "pass": true,
-        "blockers": [],
-        "warnings": [
-          "reviewable LOC 800 exceeds warn threshold 400",
-          "total files 22 exceeds warn threshold 15",
-          "primary surfaces 4 exceeds warn threshold 1"
-        ]
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Code Review",
-      "status": "completed",
-      "result": {
-        "status": "remediated",
-        "findings": {
-          "medium": 1,
-          "remaining": 0
-        },
-        "remediation": "Reconciled XPLAT-003 status in roadmap, roadmap MOC, SPEC-MOC, workflow, and autopilot state"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "command": "PWD=/tmp/racecraft-public HOME=/tmp USER=codex LOGNAME=codex GIT_CONFIG_COUNT=2 ... bash tests/speckit-pro/run-all.sh",
-        "summary": "3634/3634 passed",
-        "raw_real_path_note": "Raw real-path suite produced one privacy false positive from pre-existing public DOC-014 identity matching local path-derived terms; XPLAT-003 absolute path leak was sanitized first"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "completed",
-      "result": {
-        "status": "warn",
-        "blocked_operations": [],
-        "reviewable_loc": 0,
-        "production_files": 0,
-        "total_files": 24,
-        "primary_surface_count": 4,
-        "blockers": [],
-        "evidence": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/final-reviewability/gate-state.json"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Self-Review",
-      "status": "completed",
-      "result": {
-        "status": "complete",
-        "findings_remaining": 0,
-        "evidence": "docs/ai/specs/.process/XPLAT-003-workflow.md#self-review"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "author": "skipped: uat-runbook-author not installed in Codex surface",
-        "evidence": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/uat-runbook.md"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "packet": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/speckit-pr-packet.json",
-        "body": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/body.md",
-        "validation": "specs/xplat-003-supply-chain-security-and-consumer-trust-model/.process/pr-packets/speckit-pr-packet/validation.json",
-        "workflow_contract": "passed"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: PR Creation",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "pr_number": 267,
-        "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/267",
-        "title": "feat(XPLAT-003): Add supply-chain security and consumer trust model",
-        "draft": false
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "completed",
-      "result": {
-        "status": "pass",
-        "comments": 0,
-        "reviews": 0,
-        "evidence": "gh pr view 267 --json comments,reviews,reviewDecision"
-      }
+      "status": "pending"
     },
     {
       "step": "Post: Retrospective",
-      "status": "completed",
-      "result": {
-        "status": "complete",
-        "evidence": "docs/ai/specs/.process/XPLAT-003-workflow.md#lessons-learned"
-      }
+      "status": "pending"
     }
   ]
 }
