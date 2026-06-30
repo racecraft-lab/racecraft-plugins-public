@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-004-workflow.md",
   "updated_at": "2026-06-30T12:00:00Z",
-  "active_step": "Post: Doctor Extension Check",
+  "active_step": "Post: PR Creation",
   "feature_dir": "specs/xplat-004-cross-platform-runner-foundation",
   "branch": "codex/xplat-004-cross-platform-runner-foundation",
   "status": "in_progress",
@@ -376,43 +376,91 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "findings": "required scripts and deterministic gates are available"
+      }
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "gate": "G7 pass",
+        "manifest_json": "pass",
+        "spec_index": "pass",
+        "diff_check": "pass"
+      }
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "tasks_completed": "47/47",
+        "canonical_heading_repair": true
+      }
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "fixes": [
+          "removed accidentally tracked Python bytecode",
+          "tightened no-cutover test to inspect origin/main...HEAD",
+          "recorded explicit reviewability exception for infra file-count block"
+        ]
+      }
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "command": "bash tests/speckit-pro/run-all.sh",
+        "summary": "3713/3713 passed"
+      }
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "exception",
+        "exception_class": "infra",
+        "blocked_operations": [],
+        "evidence": "specs/xplat-004-cross-platform-runner-foundation/.process/final-reviewability-state.json"
+      }
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "known_gaps": "installed-cache proof, generated payload propagation, native matrix UAT, release-readiness, and public claim audit remain XPLAT-007"
+      }
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "evidence": "specs/xplat-004-cross-platform-runner-foundation/.process/uat-runbook.md"
+      }
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "status": "pass",
+        "packet": "specs/xplat-004-cross-platform-runner-foundation/.process/pr-packets/xplat-004-runner-foundation.json",
+        "validation": "specs/xplat-004-cross-platform-runner-foundation/.process/pr-packets/xplat-004-runner-foundation/validation.json"
+      }
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Review Remediation",

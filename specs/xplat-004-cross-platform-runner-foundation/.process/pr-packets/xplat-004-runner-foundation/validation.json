@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "error_class": "none",
+  "exit_code": 0,
+  "stderr_line": "",
+  "packet_id": "xplat-004-runner-foundation",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "codex/xplat-004-cross-platform-runner-foundation"
+  },
+  "status": "passed",
+  "title_value": "feat(XPLAT-004): Add cross-platform runner foundation",
+  "body_file": "specs/xplat-004-cross-platform-runner-foundation/.process/pr-packets/xplat-004-runner-foundation.md",
+  "rule_outcomes": [
+    {
+      "rule": "packet.validation",
+      "status": "passed",
+      "evidence": "no failures"
+    }
+  ],
+  "pr_blocked": false,
+  "failures": [],
+  "remediation_evidence": [],
+  "timestamp": "2026-06-30T04:59:26Z"
+}

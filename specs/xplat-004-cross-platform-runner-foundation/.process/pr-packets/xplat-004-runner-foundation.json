@@ -1,0 +1,147 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "xplat-004-runner-foundation",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "codex/xplat-004-cross-platform-runner-foundation"
+  },
+  "source_feature_dir": "specs/xplat-004-cross-platform-runner-foundation",
+  "generated_title": {
+    "value": "feat(XPLAT-004): Add cross-platform runner foundation",
+    "type": "feat",
+    "scope": "XPLAT-004",
+    "description": "Add cross-platform runner foundation",
+    "source_evidence": {
+      "kind": "feature_spec",
+      "source": "specs/xplat-004-cross-platform-runner-foundation/spec.md",
+      "summary": "Feature title normalized into a public action phrase."
+    },
+    "rejected_candidates": [
+      {
+        "value": "Cross-Platform Runner Foundation",
+        "reason": "Feature display title is source evidence, not the final conventional title."
+      },
+      {
+        "value": "codex/xplat-004-cross-platform-runner-foundation",
+        "reason": "Branch names remain metadata and are not title descriptions."
+      }
+    ]
+  },
+  "body_file": "specs/xplat-004-cross-platform-runner-foundation/.process/pr-packets/xplat-004-runner-foundation.md",
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "verification_evidence": [
+    {
+      "kind": "layer4_script",
+      "source": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+      "summary": "Focused generator test covers single packet metadata and rendered body paths.",
+      "result": "pending"
+    }
+  ],
+  "scope_evidence": {
+    "reviewable_loc": 0,
+    "production_files": 0,
+    "total_files": 32,
+    "budget_result": "within_budget",
+    "changed_files": [
+      ".gitignore",
+      ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
+      "docs/ai/specs/.process/XPLAT-004-design-concept.md",
+      "docs/ai/specs/.process/XPLAT-004-workflow.md",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md",
+      "docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md",
+      "speckit-pro/speckit_pro_runner/__init__.py",
+      "speckit-pro/speckit_pro_runner/__main__.py",
+      "speckit-pro/speckit_pro_runner/envelope.py",
+      "speckit-pro/speckit_pro_runner/runtime.py",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/xplat-004-cross-platform-runner-foundation/SPEC-MOC.md",
+      "specs/xplat-004-cross-platform-runner-foundation/checklists/error-handling.md",
+      "specs/xplat-004-cross-platform-runner-foundation/checklists/integration.md",
+      "specs/xplat-004-cross-platform-runner-foundation/checklists/reliability.md",
+      "specs/xplat-004-cross-platform-runner-foundation/checklists/requirements.md",
+      "specs/xplat-004-cross-platform-runner-foundation/checklists/security.md",
+      "specs/xplat-004-cross-platform-runner-foundation/contracts/platform-runbook-fixtures.md",
+      "specs/xplat-004-cross-platform-runner-foundation/contracts/runner-envelope.schema.json",
+      "specs/xplat-004-cross-platform-runner-foundation/contracts/runner-manifest.schema.json",
+      "specs/xplat-004-cross-platform-runner-foundation/data-model.md",
+      "specs/xplat-004-cross-platform-runner-foundation/plan.md",
+      "specs/xplat-004-cross-platform-runner-foundation/quickstart.md",
+      "specs/xplat-004-cross-platform-runner-foundation/research.md",
+      "specs/xplat-004-cross-platform-runner-foundation/spec.md",
+      "specs/xplat-004-cross-platform-runner-foundation/tasks.md",
+      "tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/contract-fixtures.json",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh",
+      "tests/speckit-pro/run-all.sh"
+    ],
+    "non_goals": [
+      "Split title generation is not implemented by this single-packet task.",
+      "Multi-PR emission behavior is not modified by this single-packet task."
+    ]
+  },
+  "uat": {
+    "how_to_uat": "Use the UAT Runbook embedded in the rendered PR body for reviewer-facing acceptance checks.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/xplat-004-cross-platform-runner-foundation/.process/uat-runbook.md"
+  },
+  "source_markers": [
+    {
+      "marker_id": "feature-spec",
+      "rendered_text": "Source: feature specification defines reviewer-ready PR packet behavior.",
+      "source": "specs/xplat-004-cross-platform-runner-foundation/spec.md"
+    },
+    {
+      "marker_id": "schema-contract",
+      "rendered_text": "Source: schema contract defines editable field markers.",
+      "source": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+    },
+    {
+      "marker_id": "quickstart-verification",
+      "rendered_text": "Source: quickstart defines single-packet validation evidence.",
+      "source": "specs/xplat-004-cross-platform-runner-foundation/quickstart.md"
+    }
+  ],
+  "editable_fields": [
+    {
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->",
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->"
+    },
+    {
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->",
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->"
+    },
+    {
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->",
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->"
+    }
+  ],
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "value": "15a57b7dfd831007f95fe5e1ae12b55524decf999af490d53777975f23c77ec2",
+    "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ]
+  },
+  "validation_result_path": "specs/xplat-004-cross-platform-runner-foundation/.process/pr-packets/xplat-004-runner-foundation/validation.json"
+}
