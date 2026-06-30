@@ -47,8 +47,8 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created runner-foundation spec and requirements checklist; G1 passed with zero clarification markers |
-| Clarify | `$speckit-clarify` | In Progress | Session 1 focuses package naming, fixture matrix, and metadata boundaries |
-| Plan | `$speckit-plan` | Pending | Produce the small-package architecture, two-slice plan, and verification strategy |
+| Clarify | `$speckit-clarify` | Complete | G2 passed after package naming, fixture matrix, metadata, and claim-boundary decisions |
+| Plan | `$speckit-plan` | In Progress | Produce the small-package architecture, two-slice plan, and verification strategy |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, error-handling, security, reliability |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks grouped into the accepted two implementation slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
@@ -239,9 +239,19 @@ $speckit-clarify Focus on runner metadata and claim boundaries: checksum file pa
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
-| 1 | Package and entrypoint shape | Pending | |
-| 2 | Contract fixture matrix | Pending | |
-| 3 | Metadata and claim boundary | Pending | |
+| 1 | Package and entrypoint shape | 5 | Locked `speckit-pro/speckit_pro_runner/`, `<python> -m speckit_pro_runner`, Python 3.11+ discovery, `plugin_relative` source metadata, Python Layer 4 runner test entrypoint, and XPLAT-002 preflight/runtime-info envelope |
+| 2 | Contract fixture matrix | 5 | Locked separate input-error fixtures, typed path object behavior, deterministic prerequisite simulation, distinct subprocess failure fixtures, and Python/source-checkout runtime-info shape |
+| 3 | Metadata and claim boundary | 5 | Locked source-checkout metadata under `speckit-pro/speckit_pro_runner/`, source-file checksum coverage, split runner/contract/runtime identities, typed metadata pointers with checked verification status, and XPLAT-007 boundaries for payload propagation, installed-cache proof, native UAT, and public claim audit |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 1 | Clarify | Runner source package path and module invocation | [codebase, spec] | 1 | both-agree | Use `speckit-pro/speckit_pro_runner/` with `<python> -m speckit_pro_runner`; avoid `speckit-pro/scripts/` because current payload build copies it into `dist/**` | codebase-analyst, spec-context-analyst |
+| 2 | Clarify | Layer 4 runner test invocation without shell launchers | [codebase, spec] | 1 | both-agree | Keep `run-all.sh --layer 4` as outer gate, add a Python stdlib runner test entrypoint, and launch runner via argv + `shell=False` inside that test | codebase-analyst, spec-context-analyst |
+| 3 | Clarify | Runtime-info/preflight shape after Python amendment | [spec] | 1 | high-confidence | Preserve XPLAT-002 envelope mechanics, use XPLAT-003 Python identity, and mark XPLAT-004 context as `source_checkout` with installed-cache proof deferred to XPLAT-007 | spec-context-analyst |
+| 4 | Clarify | Source-checkout metadata file placement | [codebase, spec] | 1 | both-agree | Place `speckit-pro-runner.manifest.json` and `speckit-pro-runner.sha256` under `speckit-pro/speckit_pro_runner/`; treat archived `speckit-pro/scripts/` examples as stale for XPLAT-004 source layout | codebase-analyst, spec-context-analyst |
+| 5 | Clarify | Runner identity split after module-invocation amendment | [codebase, spec] | 1 | both-agree | Use `runner_name: "speckit_pro_runner"`, `runner_contract_id: "speckit-pro-runner"`, and `selected_runtime_name: "python-stdlib-runner"` to preserve the durable contract while reflecting the Python module | codebase-analyst, spec-context-analyst |
 
 ---
 
@@ -271,10 +281,10 @@ $speckit-plan
 - Do not copy runner files into `dist/**`, do not switch active skills/hooks, and do not make public support claims.
 
 ## Architecture Notes
-- Prefer a small package under `speckit-pro/scripts/` or another payload-relative source path that supports module-style invocation through discovered Python 3.11+.
+- Use the clarified small package under `speckit-pro/speckit_pro_runner/` with module-style invocation through discovered Python 3.11+.
 - The runner core should own envelope parsing, response construction, diagnostics, typed path rendering, subprocess result records, prerequisite discovery, and preflight.
 - The first helper surface is runtime-info/preflight plus contract smoke fixtures only.
-- Checksum and manifest metadata should describe source runner files and remain payload-relative.
+- Checksum and manifest metadata should live under `speckit-pro/speckit_pro_runner/`, describe source runner files, and use `plugin_relative` source-checkout paths.
 - Windows/Linux evidence in this spec is deterministic runbook/fixture guidance unless native hosts are available; XPLAT-007 owns full matrix UAT.
 
 ## Verification Strategy

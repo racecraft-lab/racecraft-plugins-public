@@ -8,6 +8,34 @@
 
 **Input**: User description: "Create the minimal Python 3.11+ standard-library runner foundation for SpecKit Pro installed Claude Code and Codex workflows, preserving the XPLAT-002 command envelope and XPLAT-003 runtime decision while avoiding helper ports, public native-platform claims, and generated payload cutover."
 
+## Clarifications
+
+### Session 1 - Package and Entrypoint Shape
+
+- XPLAT-004 locks the runner source package at `speckit-pro/speckit_pro_runner/` and the supported module invocation as `<python> -m speckit_pro_runner`.
+- `<python>` means a discovered Python 3.11+ executable. Discovery starts with an explicit `SPECKIT_PRO_PYTHON` override when present, then may use the current Python interpreter or platform PATH candidates, and must reject candidates below Python 3.11.
+- XPLAT-004 must not place runner source under `speckit-pro/scripts/` because that directory is copied into generated Claude/Codex payloads by the existing payload builder; generated payload propagation remains XPLAT-007 scope.
+- Runner metadata uses `plugin_relative` paths rooted at `speckit-pro/` in `source_checkout` context for XPLAT-004. Installed-cache context is recorded as deferred to XPLAT-007.
+- Layer 4 keeps `tests/speckit-pro/run-all.sh --layer 4` as the outer deterministic gate, but runner-specific tests use a Python stdlib test entrypoint such as `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py`. That Python test launches the runner with argv form and `shell=False`, not through a new shell launcher.
+- Preflight and runtime-info requests use the XPLAT-002 JSON envelope with `schema_version: "1.0"`, `helper_id: "runner"`, `operation: "preflight"` or `"runtime-info"`, `mode: "read_only"`, and JSON inputs on stdin. CLI argv is reserved for command metadata such as `--help` and `--version`.
+
+### Session 2 - Contract Fixture Matrix
+
+- Invalid JSON, invalid envelope, unsupported schema version, and missing required fields are four separate contract fixture cases. Each returns one stdout JSON response with `status: "input_error"`, process `exit_code: 2`, `legacy_exit_code: null`, and line-delimited stderr JSON with `severity: "error"`, `source: "runner"`, and the corresponding diagnostic code.
+- Typed path fixtures accept only typed path objects. They preserve `kind`, `value`, and reader `display`; paths with spaces must not split, Windows separators must not imply POSIX-only behavior, and traversal is rejected only when it escapes the declared trust boundary.
+- Missing prerequisite fixtures use test-controlled discovery for `specify` and operation tools after Python starts. Host-level failure to launch Python is outside the runner response guarantee and is covered by discovery/preflight tests plus runbook evidence.
+- Subprocess nonzero, timeout, and stderr-only failure fixtures stay distinct. All three return `status: "subprocess_failure"`, process `exit_code: 4`, captured subprocess fields, and diagnostic codes `subprocess_nonzero`, `subprocess_timeout`, or `subprocess_stderr_only_failure`; stderr-only failure is represented by an explicit fixture flag such as `stderr_is_failure: true`.
+- Runtime-info/preflight preserves the XPLAT-002 response envelope while using the XPLAT-003/XPLAT-004 Python source-checkout identity: `selected_runtime_name: "python-stdlib-runner"`, actual Python version, platform and architecture, `source_vs_installed_context: "source_checkout"`, `plugin_relative` plugin-root/path metadata, Python and `specify` prerequisite records, and runner checksum/manifest pointers with `verification_status`. Do not use `verified` unless current metadata was actually checked.
+- XPLAT-002 controls durable envelope, status, exit, diagnostics, typed-path, subprocess, and runtime-info/preflight categories. XPLAT-003 supersedes stale Go/native-binary runtime identity, and XPLAT-004 controls the source package layout and source-checkout context until XPLAT-007.
+
+### Session 3 - Metadata and Claim Boundary
+
+- Source-checkout runner metadata lives with the runner package at `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` and `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`. Archived XPLAT-003 examples under `speckit-pro/scripts/` are stale path examples for XPLAT-004; XPLAT-007 owns final installed-payload metadata placement.
+- Checksum coverage includes runner implementation source files under `speckit-pro/speckit_pro_runner/**.py` and any future thin launchers. The checksum file and manifest file are not included in their own checksum set.
+- The manifest keeps identities distinct: Python module/package `runner_name: "speckit_pro_runner"`, durable contract identity `runner_contract_id: "speckit-pro-runner"`, runtime identity `selected_runtime_name: "python-stdlib-runner"`, plus `contract_version`, `plugin_version`, `runner_version`, `source_revision`, `python_minimum_version`, `specify_required`, `checksum_algorithm`, and `runner_files[]`.
+- Runtime-info/preflight emits typed `plugin_relative` path objects for the plugin root, runner package, manifest file, and checksum file, sets `source_vs_installed_context: "source_checkout"`, computes source-checkout checksums when metadata is present, and uses `verification_status` values such as `verified`, `mismatch`, `missing_metadata`, or `not_checked`.
+- XPLAT-004 proves source-checkout runner invocation, local preflight/runtime-info, XPLAT-002 envelope fixtures, fail-closed prerequisite fixtures, manifest JSON validation, source checksum coverage, and deterministic Windows/Linux runbook fixtures. XPLAT-007 owns generated payload propagation, active Claude/Codex cutover, installed-cache launch proof, consumer checksum guidance, native Windows/macOS/Linux UAT, release-readiness, and public claim audit.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Structured runner preflight (Priority: P1)
@@ -71,16 +99,16 @@ Release reviewers can inspect the runner source identity, checksum coverage, and
 
 ### Functional Requirements
 
-- **FR-001**: The runner foundation MUST expose a module-oriented invocation path that accepts JSON input and returns JSON output through standard streams.
+- **FR-001**: The runner foundation MUST expose `speckit-pro/speckit_pro_runner/` through `<python> -m speckit_pro_runner`, accepting JSON input and returning JSON output through standard streams.
 - **FR-002**: The runner foundation MUST preserve the durable command-envelope expectations selected by XPLAT-002, including deterministic success and failure shapes for later helper ports.
-- **FR-003**: The preflight response MUST report runtime version, platform details, plugin root, prerequisite status, runner identity, and metadata pointers.
+- **FR-003**: The preflight response MUST report runtime version, platform details, plugin root, prerequisite status, runner identity, source-checkout context, and typed metadata pointers for the runner package, manifest file, and checksum file.
 - **FR-004**: The preflight behavior MUST fail closed when the required Python 3.11+ runtime boundary is not satisfied.
 - **FR-005**: The preflight behavior MUST fail closed when the official SpecKit `specify` prerequisite is missing or unavailable.
 - **FR-006**: The runner foundation MUST validate incoming request shape before executing a requested action and return deterministic diagnostics for validation failures.
 - **FR-007**: The runner foundation MUST provide platform-neutral typed path handling for runner-owned inputs and outputs without relying on Unix-only paths or shell quoting.
 - **FR-008**: The runner foundation MUST provide a subprocess-result primitive that records command outcome, exit status, standard output, standard error, and timeout diagnostics for fixture use.
-- **FR-009**: Contract fixtures MUST cover at least valid envelope handling, invalid envelope handling, typed path behavior, subprocess behavior, diagnostics, and preflight behavior.
-- **FR-010**: Runner source metadata MUST identify runner-owned source files and provide checksum coverage for each file.
+- **FR-009**: Contract fixtures MUST cover at least valid envelope handling, invalid envelope handling, typed path behavior, subprocess behavior, diagnostics, and preflight behavior through a Python stdlib Layer 4 test entrypoint.
+- **FR-010**: Runner source metadata MUST identify runner-owned Python source files, keep manifest and checksum files under `speckit-pro/speckit_pro_runner/`, and provide checksum coverage for each covered source file.
 - **FR-011**: XPLAT-004 MUST NOT port real production helper behavior beyond runtime-info, preflight, and contract smoke fixtures.
 - **FR-012**: XPLAT-004 MUST NOT switch active Claude Code skills, Codex skills, hooks, generated payloads, public docs, or install behavior to the runner.
 - **FR-013**: XPLAT-004 MUST NOT copy runner files into `dist/**` or make public native-platform support claims.
@@ -125,7 +153,7 @@ Release reviewers can inspect the runner source identity, checksum coverage, and
 - **SC-001**: A maintainer can run the preflight on a valid local environment and receive a structured success response containing all required report fields in under 5 seconds.
 - **SC-002**: Missing runtime or missing `specify` prerequisite cases produce deterministic non-success diagnostics in 100% of covered preflight fixtures.
 - **SC-003**: Contract fixtures cover 100% of the required primitive categories: envelope success, envelope validation failure, typed paths, subprocess outcomes, diagnostics, and preflight.
-- **SC-004**: Reviewers can account for checksum coverage for 100% of runner-owned source files listed in the runner metadata manifest.
+- **SC-004**: Reviewers can account for checksum coverage for 100% of runner-owned source files listed in the source-checkout runner metadata manifest.
 - **SC-005**: Active plugin skills, hooks, generated payloads, public docs, and install behavior have zero runner cutover or public native-platform support claims in XPLAT-004.
 - **SC-006**: The final review packet identifies both planned PR slices, their changed surfaces, their verification evidence, and their deferred follow-up boundaries.
 
@@ -133,6 +161,6 @@ Release reviewers can inspect the runner source identity, checksum coverage, and
 
 - XPLAT-002 remains the controlling source for the command envelope, diagnostics, exit behavior, path handling, subprocess expectations, and preflight contract.
 - XPLAT-003 remains the controlling source for the Python 3.11+ standard-library runtime decision and the official SpecKit `specify` prerequisite boundary.
-- Local runner execution plus deterministic runbook evidence is sufficient for XPLAT-004; full native installed-cache UAT remains deferred to XPLAT-007.
+- Local source-checkout runner execution plus deterministic runbook evidence is sufficient for XPLAT-004; generated payload propagation, installed-cache launch proof, public claim audit, and full native installed-cache UAT remain deferred to XPLAT-007.
 - Existing Bash-backed test, eval, release, and documentation gates remain in place during XPLAT-004.
 - Helper-port implementers in XPLAT-005 and XPLAT-006 will consume the runner primitives but will not depend on production helper behavior being ported in this feature.

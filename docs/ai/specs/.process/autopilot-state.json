@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-004-workflow.md",
   "updated_at": "2026-06-30T00:00:00Z",
-  "active_step": "Phase 2: Clarify - Package and entrypoint shape",
+  "active_step": "Phase 3: Plan",
   "feature_dir": "specs/xplat-004-cross-platform-runner-foundation",
   "branch": "codex/xplat-004-cross-platform-runner-foundation",
   "status": "in_progress",
@@ -93,31 +93,95 @@
     },
     {
       "step": "Phase 2: Clarify - Package and entrypoint shape",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "runner source package path is speckit-pro/speckit_pro_runner/",
+          "supported invocation is <python> -m speckit_pro_runner",
+          "Python discovery requires Python 3.11+ and may use SPECKIT_PRO_PYTHON, current interpreter, or platform PATH candidates",
+          "payload-relative metadata uses plugin_relative paths in source_checkout context for XPLAT-004",
+          "Layer 4 keeps run-all.sh as the outer gate but invokes a Python stdlib runner test entrypoint without a shell launcher",
+          "preflight/runtime-info uses the XPLAT-002 JSON envelope with helper_id runner and read_only mode"
+        ],
+        "unresolved_consensus_items": 2,
+        "gate": "G2 pass"
+      }
     },
     {
       "step": "Phase 2: Clarify - Package and entrypoint shape Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "rounds": 1,
+        "items": 2,
+        "outcome": "both items resolved by codebase and spec-context agreement",
+        "analysts": [
+          "codebase-analyst",
+          "spec-context-analyst"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 2: Clarify - Contract fixture matrix",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "invalid JSON, invalid envelope, unsupported schema version, and missing required field are separate input_error fixtures",
+          "typed path fixtures accept typed objects and preserve kind/value/display across spaces and Windows separators",
+          "missing prerequisite tests use controlled discovery after Python starts, while host-level Python launch failure remains runbook/discovery evidence",
+          "subprocess nonzero, timeout, and stderr-only failures are distinct subprocess_failure fixtures with exit_code 4",
+          "runtime-info/preflight preserves XPLAT-002 envelope mechanics while using Python/source_checkout runtime identity from XPLAT-003/XPLAT-004"
+        ],
+        "unresolved_consensus_items": 1
+      }
     },
     {
       "step": "Phase 2: Clarify - Contract fixture matrix Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "rounds": 1,
+        "items": 1,
+        "outcome": "resolved by spec-context high-confidence answer",
+        "analysts": [
+          "spec-context-analyst"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 2: Clarify - Metadata and claim boundary",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "questions": 5,
+        "accepted_answers": [
+          "source-checkout manifest and checksum files live under speckit-pro/speckit_pro_runner/",
+          "checksum coverage includes runner implementation source files and future thin launchers, not metadata files themselves",
+          "manifest identity splits runner_name speckit_pro_runner from runner_contract_id speckit-pro-runner and selected_runtime_name python-stdlib-runner",
+          "runtime-info/preflight emits typed plugin_relative metadata pointers and only reports verified after current checksum comparison",
+          "XPLAT-004 proves source-checkout runner invocation, local preflight/runtime-info, envelope fixtures, fail-closed prerequisites, manifest validation, source checksum coverage, and deterministic runbook fixtures while XPLAT-007 owns installed/payload/public-claim proof"
+        ],
+        "unresolved_consensus_items": 2
+      }
     },
     {
       "step": "Phase 2: Clarify - Metadata and claim boundary Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "rounds": 1,
+        "items": 2,
+        "outcome": "both items resolved by codebase and spec-context agreement",
+        "analysts": [
+          "codebase-analyst",
+          "spec-context-analyst"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - integration",
