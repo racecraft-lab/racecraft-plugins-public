@@ -1,0 +1,46 @@
+{
+  "runner_name": "speckit_pro_runner",
+  "runner_contract_id": "speckit-pro-runner",
+  "selected_runtime_name": "python-stdlib-runner",
+  "contract_version": "1.0",
+  "plugin_version": "2.17.0",
+  "runner_version": "0.1.0",
+  "source_revision": "unknown",
+  "python_minimum_version": "3.11",
+  "specify_required": true,
+  "checksum_algorithm": "sha256",
+  "runner_files": [
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/__init__.py",
+        "display": "speckit_pro_runner/__init__.py"
+      },
+      "sha256": "f389c740898ef9131c7cd3a7b4b8c6eec168f3526e3ab9103c98a6211da11a41"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/__main__.py",
+        "display": "speckit_pro_runner/__main__.py"
+      },
+      "sha256": "54fb0909cb2e5025289261e2fcdc78e9e72060170c2dad3d710f267981b8292b"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/envelope.py",
+        "display": "speckit_pro_runner/envelope.py"
+      },
+      "sha256": "739604f8752c2b7a1a14a0e7e3f09ccd8d6de40c1bbd9843180e30c44cd849e7"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/runtime.py",
+        "display": "speckit_pro_runner/runtime.py"
+      },
+      "sha256": "81e53c58b3bc586938ed7c849ffadcdd4a5f5276f82416cd61dbbad81e68a4ad"
+    }
+  ]
+}

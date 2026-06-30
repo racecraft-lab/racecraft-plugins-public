@@ -39,3 +39,12 @@ Each fixture row MUST include:
   remediation.
 - XPLAT-007 owns installed-cache launch proof, generated payload propagation,
   native Windows/macOS/Linux UAT, release-readiness, and public claim audit.
+
+## Fixture Rows
+
+| fixture_id | platform_family | evidence_context | launcher_command_family | request_kind | expected_status | expected_exit_code | expected_diagnostic_codes | metadata_verification_status | non_claim_statement |
+|---|---|---|---|---|---|---:|---|---|---|
+| xplat004-windows-source-preflight-ok | windows | source_checkout | `py -3.11 -m speckit_pro_runner` | preflight | ok | 0 | none | verified | Source-checkout guidance only; installed-cache launch proof, native UAT, release-readiness, and public platform support remain XPLAT-007 scope. |
+| xplat004-windows-launcher-unavailable | windows | source_checkout | `py -3.11` discovery | preflight | missing_prerequisite | null | python_launcher_unavailable | not_checked | Host-level discovery evidence only; no runner stdout response is claimed, and installed-cache launch proof, native UAT, release-readiness, and public platform support remain XPLAT-007 scope. |
+| xplat004-linux-source-runtime-info | linux | source_checkout | `python3 -m speckit_pro_runner` | runtime-info | ok | 0 | none | not_checked | Source-checkout guidance only; installed-cache launch proof, native UAT, release-readiness, and public platform support remain XPLAT-007 scope. |
+| xplat004-linux-specify-missing | linux | source_checkout | `python3 -m speckit_pro_runner` | preflight | missing_prerequisite | 3 | specify_missing | verified | Source-checkout prerequisite fixture only; installed-cache launch proof, native UAT, release-readiness, and public platform support remain XPLAT-007 scope. |

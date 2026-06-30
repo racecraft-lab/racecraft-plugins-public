@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-004-workflow.md",
   "updated_at": "2026-06-30T12:00:00Z",
-  "active_step": "Phase 7: Implement - Pending task decomposition",
+  "active_step": "Post: Doctor Extension Check",
   "feature_dir": "specs/xplat-004-cross-platform-runner-foundation",
   "branch": "codex/xplat-004-cross-platform-runner-foundation",
   "status": "in_progress",
@@ -349,12 +349,34 @@
       }
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "in_progress"
+      "step": "Phase 7: Implement",
+      "status": "completed",
+      "result": {
+        "tasks_completed": "47/47",
+        "slices_completed": 2,
+        "changed_surfaces": [
+          "speckit-pro/speckit_pro_runner/",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh",
+          "tests/speckit-pro/layer4-scripts/fixtures/speckit-pro-runner/contract-fixtures.json",
+          "tests/speckit-pro/run-all.sh",
+          "specs/xplat-004-cross-platform-runner-foundation/contracts/platform-runbook-fixtures.md"
+        ],
+        "gate": "G7 pass",
+        "verification": [
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh: 9/9 passed",
+          "bash tests/speckit-pro/run-all.sh --layer 4: 2075/2075 passed",
+          "bash tests/speckit-pro/run-all.sh --layer 1: 1438/1438 passed",
+          "bash tests/speckit-pro/run-all.sh: 3713/3713 passed",
+          "generate-spec-index.sh --check: pass",
+          "git diff --check: pass",
+          "python3 -m json.tool speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json: pass"
+        ]
+      }
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",

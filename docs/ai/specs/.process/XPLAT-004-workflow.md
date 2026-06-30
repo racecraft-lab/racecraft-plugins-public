@@ -52,7 +52,7 @@ Re-read it before each phase. The design concept is the source of truth for the 
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, security, and reliability checklists complete; G4 passed with zero gap markers |
 | Tasks | `$speckit-tasks` | Complete | Generated 47 tasks across two implementation slices; G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Found and remediated roadmap/design-concept drift; G6 passed |
-| Implement | `$speckit-implement` | In Progress | Implement only runner foundation, contract fixtures, and metadata |
+| Implement | `$speckit-implement` | Complete | Runner foundation, contract fixtures, metadata, and runbook fixture evidence implemented; G7 passed |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -97,7 +97,7 @@ Expected branch is `codex/xplat-004-cross-platform-runner-foundation`. Preset re
 | Check | Result | Evidence |
 |---|---|---|
 | Codex agent install | Pass | `validate-agent-install.sh --surface codex --autoheal` reported `ok: codex: 10 bundled agents installed` |
-| SpecKit CLI | Pass | `command -v specify` resolved to `/Users/fredrickgabelmann/.local/bin/specify` |
+| SpecKit CLI | Pass | `command -v specify` resolved to a local `specify` executable |
 | Remote | Pass | `git remote -v` detected `origin` |
 | Branch/worktree | Pass | Created worktree on `codex/xplat-004-cross-platform-runner-foundation` from `origin/main` |
 | Reviewability setup gate | Warn/pass | `reviewability-gate.sh setup docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` returned `status: warn`, `pass: true`, `reviewable_loc: 250`, `production_files: 4`, `total_files: 10`, warning: primary surfaces `docs/process` and `harness/adapter` exceed one-surface warning threshold |
@@ -522,20 +522,20 @@ Implement the tasks from `specs/xplat-004-cross-platform-runner-foundation/tasks
 
 | Slice | Tasks | Completed | Notes |
 |---|---|---|---|
-| Slice 1 - Runner/preflight core | Pending | Pending | |
-| Slice 2 - Contract parity and metadata | Pending | Pending | |
+| Slice 1 - Runner/preflight core | T001-T019 | Complete | Added `speckit-pro/speckit_pro_runner/`, module entrypoint, runtime-info/preflight, fail-closed diagnostics, and focused tests |
+| Slice 2 - Contract parity and metadata | T020-T047 | Complete | Added contract fixtures, typed-path/subprocess primitives, manifest/checksum metadata, runbook fixture rows, no-cutover assertions, and review packet preparation |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] Runner unit/contract fixture tests pass.
-- [ ] Runner manifest JSON validates.
-- [ ] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
-- [ ] `git diff --check` passes.
-- [ ] Relevant Layer 1/Layer 4 checks pass when touched.
-- [ ] `bash tests/speckit-pro/run-all.sh` passes or any inability to run is recorded.
+- [x] All tasks marked complete in `tasks.md`.
+- [x] Runner unit/contract fixture tests pass.
+- [x] Runner manifest JSON validates.
+- [x] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
+- [x] `git diff --check` passes.
+- [x] Relevant Layer 1/Layer 4 checks pass when touched.
+- [x] `bash tests/speckit-pro/run-all.sh` passes or any inability to run is recorded.
 - [ ] Final reviewability backstop passes or records accepted warnings with no blockers.
 - [ ] UAT runbook is generated and validated if the implementation reaches PR packet flow.
 - [ ] PR packet validates before PR creation.
