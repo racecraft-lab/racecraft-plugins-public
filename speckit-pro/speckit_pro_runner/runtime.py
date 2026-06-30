@@ -456,4 +456,3 @@ def output_capture(raw: bytes | str) -> dict[str, Any]:
         "limit_bytes": CAPTURE_LIMIT_BYTES,
         "truncated": truncated,
     }
-

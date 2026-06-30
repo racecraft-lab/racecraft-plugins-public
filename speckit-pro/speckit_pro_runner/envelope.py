@@ -154,4 +154,3 @@ def emit_response(body: dict[str, Any]) -> int:
         print(json.dumps(diag, sort_keys=True, separators=(",", ":")), file=sys.stderr)
     print(json.dumps(body, sort_keys=True, separators=(",", ":")))
     return int(body["exit_code"])
-
