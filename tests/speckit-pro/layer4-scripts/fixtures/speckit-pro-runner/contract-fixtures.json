@@ -1,0 +1,267 @@
+{
+  "fixtures": [
+    {
+      "case_id": "valid-runtime-info",
+      "category": "runtime-info",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "valid-runtime-info",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {}
+      },
+      "expected_status": "ok",
+      "expected_exit_code": 0,
+      "expected_diagnostic_codes": []
+    },
+    {
+      "case_id": "invalid-json",
+      "category": "envelope",
+      "raw_request": "{",
+      "expected_status": "input_error",
+      "expected_exit_code": 2,
+      "expected_diagnostic_codes": ["invalid_json"],
+      "expected_remediation": true
+    },
+    {
+      "case_id": "invalid-envelope-extra-field",
+      "category": "envelope",
+      "request": {
+        "schema_version": "1.0",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {},
+        "unexpected": true
+      },
+      "expected_status": "input_error",
+      "expected_exit_code": 2,
+      "expected_diagnostic_codes": ["invalid_envelope"],
+      "expected_remediation": true
+    },
+    {
+      "case_id": "unsupported-schema-version",
+      "category": "envelope",
+      "request": {
+        "schema_version": "9.0",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {}
+      },
+      "expected_status": "input_error",
+      "expected_exit_code": 2,
+      "expected_diagnostic_codes": ["unsupported_schema_version"],
+      "expected_remediation": true
+    },
+    {
+      "case_id": "missing-required-field",
+      "category": "envelope",
+      "request": {
+        "schema_version": "1.0",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only"
+      },
+      "expected_status": "input_error",
+      "expected_exit_code": 2,
+      "expected_diagnostic_codes": ["missing_required_field"],
+      "expected_remediation": true
+    },
+    {
+      "case_id": "typed-path-spaces",
+      "category": "typed_path",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "typed-path-spaces",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "typed_path",
+          "trust_boundary": "fixtures",
+          "path": {
+            "kind": "plugin_relative",
+            "value": "fixtures/path with spaces/input.json",
+            "display": "fixtures/path with spaces/input.json"
+          }
+        }
+      },
+      "expected_status": "ok",
+      "expected_exit_code": 0,
+      "expected_diagnostic_codes": []
+    },
+    {
+      "case_id": "typed-path-windows-separators",
+      "category": "typed_path",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "typed-path-windows-separators",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "typed_path",
+          "trust_boundary": "fixtures",
+          "path": {
+            "kind": "plugin_relative",
+            "value": "fixtures\\windows\\input.json",
+            "display": "fixtures\\windows\\input.json"
+          }
+        }
+      },
+      "expected_status": "ok",
+      "expected_exit_code": 0,
+      "expected_diagnostic_codes": []
+    },
+    {
+      "case_id": "typed-path-in-bound-traversal",
+      "category": "typed_path",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "typed-path-in-bound-traversal",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "typed_path",
+          "trust_boundary": "fixtures",
+          "path": {
+            "kind": "plugin_relative",
+            "value": "fixtures/nested/../input.json",
+            "display": "fixtures/nested/../input.json"
+          }
+        }
+      },
+      "expected_status": "ok",
+      "expected_exit_code": 0,
+      "expected_diagnostic_codes": []
+    },
+    {
+      "case_id": "typed-path-out-of-bound-traversal",
+      "category": "typed_path",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "typed-path-out-of-bound-traversal",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "typed_path",
+          "trust_boundary": "fixtures",
+          "path": {
+            "kind": "plugin_relative",
+            "value": "../outside.json",
+            "display": "../outside.json"
+          }
+        }
+      },
+      "expected_status": "input_error",
+      "expected_exit_code": 2,
+      "expected_diagnostic_codes": ["invalid_envelope"],
+      "expected_remediation": true
+    },
+    {
+      "case_id": "typed-path-untyped-value",
+      "category": "typed_path",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "typed-path-untyped-value",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "typed_path",
+          "trust_boundary": "fixtures",
+          "path": "fixtures/input.json"
+        }
+      },
+      "expected_status": "input_error",
+      "expected_exit_code": 2,
+      "expected_diagnostic_codes": ["invalid_envelope"],
+      "expected_remediation": true
+    },
+    {
+      "case_id": "subprocess-nonzero",
+      "category": "subprocess",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "subprocess-nonzero",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "subprocess",
+          "subprocess": {
+            "argv": ["__PYTHON__", "-c", "import sys; print('fixture'); sys.exit(7)"],
+            "timeout_seconds": 5,
+            "stderr_is_failure": false
+          }
+        }
+      },
+      "expected_status": "subprocess_failure",
+      "expected_exit_code": 4,
+      "expected_diagnostic_codes": ["subprocess_nonzero"],
+      "expected_remediation": true,
+      "expected_output_bounds": {
+        "timeout_seconds_max": 5,
+        "limit_bytes": 16384
+      }
+    },
+    {
+      "case_id": "subprocess-timeout",
+      "category": "subprocess",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "subprocess-timeout",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "subprocess",
+          "subprocess": {
+            "argv": ["__PYTHON__", "-c", "import time; time.sleep(2)"],
+            "timeout_seconds": 1,
+            "stderr_is_failure": false
+          }
+        }
+      },
+      "expected_status": "subprocess_failure",
+      "expected_exit_code": 4,
+      "expected_diagnostic_codes": ["subprocess_timeout"],
+      "expected_remediation": true,
+      "expected_output_bounds": {
+        "timeout_seconds_max": 5,
+        "limit_bytes": 16384
+      }
+    },
+    {
+      "case_id": "subprocess-stderr-only",
+      "category": "subprocess",
+      "request": {
+        "schema_version": "1.0",
+        "request_id": "subprocess-stderr-only",
+        "helper_id": "runner",
+        "operation": "runtime-info",
+        "mode": "read_only",
+        "inputs": {
+          "fixture_category": "subprocess",
+          "subprocess": {
+            "argv": ["__PYTHON__", "-c", "import sys; print('stderr fixture', file=sys.stderr)"],
+            "timeout_seconds": 5,
+            "stderr_is_failure": true
+          }
+        }
+      },
+      "expected_status": "subprocess_failure",
+      "expected_exit_code": 4,
+      "expected_diagnostic_codes": ["subprocess_stderr_only_failure"],
+      "expected_remediation": true,
+      "expected_output_bounds": {
+        "timeout_seconds_max": 5,
+        "limit_bytes": 16384
+      }
+    }
+  ]
+}
