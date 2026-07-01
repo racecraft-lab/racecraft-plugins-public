@@ -215,11 +215,12 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 |-----|-------------|
 | `detect` | Detects which plugins changed relative to the base branch — a plugin counts as changed when either its own directory (`<plugin>/`) or its out-of-plugin test suite (`tests/<plugin>/`) changed. Outputs a JSON array of plugin names. |
 | `test (<plugin>)` | Runs `bash tests/<plugin>/run-all.sh` for each changed plugin (e.g. `test (speckit-pro)`). The name is dynamic — one job per plugin in the matrix. Skipped only when neither the plugin nor its `tests/<plugin>/` suite changed (e.g. docs-only PRs). |
-| `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when all `test` matrix jobs passed or were skipped; fails when any matrix job failed or was cancelled. Provides the stable check name that branch protection requires. |
+| `test latest jq (speckit-pro)` | Runs `tests/speckit-pro/run-all.sh` against the latest upstream `jq` release (downloaded and SHA-256-verified against the release API digest) to catch parser/regression drift before the runner image's `jq` updates. Runs only when `speckit-pro` is in `detect`'s output; skipped on docs-only PRs. **Note:** because it downloads from `api.github.com`/`jqlang/jq`, an upstream asset rename, a missing digest, or a network/API outage fails this leg — and, via the sentinel, blocks every speckit-pro PR until resolved (see Recovery → Scenario 7). |
+| `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when both the `test` matrix and the `test latest jq` leg passed or were skipped; fails when either failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
 | `validate-docs` | Detects docs-site, generated-reference, release metadata, and docs-validation contract changes. Runs full docs validation for rendered docs or docs-contract changes, and reference plus quality validation for generated-reference changes. |
 
-**Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates all matrix results into one stable name that branch protection can require.
+**Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates all matrix results — plus the `test latest jq` leg — into one stable name that branch protection can require.
 
 **Docs-only PRs:** When a PR touches only documentation (no plugin directory and no `tests/<plugin>/` suite), `detect` outputs `[]`, `test` is skipped (job-level `if:` evaluates to false — GitHub treats a skipped job as passing, not pending), and `validate-plugins` also passes. Docs-only PRs are not blocked by the test matrix. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` runs the matching docs validation mode.
 
@@ -464,6 +465,28 @@ git commit -m "chore: sync plugin payloads, marketplace versions, and docs refer
 git push origin <sync-branch>
 gh pr create --base main --head <sync-branch> --title "chore: sync plugin payloads and marketplace versions"
 ```
+
+---
+
+### Scenario 7: The `test latest jq` leg blocks PRs for upstream reasons
+
+**Symptom:** Open speckit-pro PRs show `validate-plugins` failing (and a red `test latest jq (speckit-pro)` check) even though the PR's own code is fine. Because the latest-`jq` leg is wired into the `validate-plugins` sentinel, an upstream or infrastructure failure here blocks **every** speckit-pro PR, not just one.
+
+**Detection:**
+```bash
+gh run view <run-id> --log-failed
+```
+Look at the `Install latest jq release` step. Common upstream causes:
+- `jqlang/jq` renamed or dropped the `jq-linux-amd64` release asset (`latest jq release did not include jq-linux-amd64`).
+- The latest release asset has no `digest` field (`latest jq release asset is missing a sha256 digest`).
+- `api.github.com` was unreachable or rate-limited at run time.
+
+**Recovery:**
+1. **Transient (network/API):** re-run the failed jobs — `gh run rerun <run-id> --failed`. No code change needed.
+2. **Upstream asset/digest change:** this is a real workflow fix, not a per-PR fix. Update the `test-latest-jq` job in `.github/workflows/pr-checks.yml` to the new asset name (and the `validate-pr-checks-sentinel.sh` assertions if the digest handling changes), land it through a normal PR, then re-run the blocked PRs' checks.
+3. **Emergency unblock:** if a maintainer must merge before the upstream fix lands, temporarily relax the sentinel — drop `test-latest-jq` from `needs:` and the `latest_jq_result` check in `validate-plugins` — or merge via admin override, then restore the gate in a follow-up. Treat this as a stopgap, not a permanent state, so drift between `pr-checks.yml` and the required-check name does not accumulate (see the **Maintenance warning** above).
+
+If this leg proves flaky enough to disrupt the merge queue, consider demoting it to advisory (`continue-on-error: true` and out of the sentinel `needs:`) so it still surfaces `jq` drift without gating merges.
 
 ## Active Technologies
 - Bash 4+ shell scripts, Markdown skills, YAML manifests, JSON Schema 2020-12 contracts, and `bash`, `jq`, `git`, `gh` at PR-emission boundaries (prsg-010-harden-the-hatch)
