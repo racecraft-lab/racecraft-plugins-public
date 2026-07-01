@@ -17,13 +17,12 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 RUNNER_DIR = PLUGIN_ROOT / "speckit_pro_runner"
 FIXTURE_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "contract-fixtures.json"
-RUNBOOK_FILE = REPO_ROOT / "specs" / "xplat-004-cross-platform-runner-foundation" / "contracts" / "platform-runbook-fixtures.md"
+RUNBOOK_FILE = Path(__file__).resolve().parent / "fixtures" / "speckit-pro-runner" / "platform-runbook-fixtures.md"
 CHANGED_FILES_FILE = (
-    REPO_ROOT
-    / "specs"
-    / "xplat-004-cross-platform-runner-foundation"
-    / ".process"
-    / "changed-files.txt"
+    Path(__file__).resolve().parent
+    / "fixtures"
+    / "speckit-pro-runner"
+    / "changed-files-xplat-004.txt"
 )
 
 

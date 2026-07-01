@@ -1,26 +1,31 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-004-workflow.md",
-  "updated_at": "2026-06-30T12:00:00Z",
-  "active_step": "Complete",
+  "updated_at": "2026-07-01T22:13:40Z",
+  "active_step": "Archived",
   "feature_dir": "specs/xplat-004-cross-platform-runner-foundation",
   "branch": "codex/xplat-004-cross-platform-runner-foundation",
-  "status": "complete",
+  "status": "completed_archived",
   "pr": {
     "number": 274,
     "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/274",
-    "state": "OPEN",
+    "state": "MERGED",
     "base": "main",
-    "head": "codex/xplat-004-cross-platform-runner-foundation"
+    "head": "codex/xplat-004-cross-platform-runner-foundation",
+    "merged_at": "2026-07-01T22:13:40Z",
+    "merge_commit": "cef3ed260dabf73833d3de82f82cacdb2c7758fa"
   },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "current_target": "specs/xplat-004-cross-platform-runner-foundation",
-    "cleanup_mode": "disabled-on-active-feature-branch",
-    "safeToApplyCleanup": false,
-    "excluded_current_spec": "specs/xplat-004-cross-platform-runner-foundation",
+    "current_target": null,
+    "cleanup_mode": "post-merge-cleanup-applied",
+    "safeToApplyCleanup": true,
+    "excluded_current_spec": null,
     "eligible_previous_specs": [],
-    "cleanup_applied": false,
-    "note": "Archive extension is installed. The current target is excluded and no cleanup was applied during active XPLAT-004 execution."
+    "cleanup_applied": true,
+    "archive_report": ".specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md",
+    "removed_spec": "specs/xplat-004-cross-platform-runner-foundation",
+    "cleanup_branch": "codex/archive-xplat-004-post-merge-hygiene",
+    "note": "Archive extension is installed. XPLAT-004 merged via PR #274 and active spec cleanup was applied after preserving recovery commands and decoupling live runner tests from specs/**."
   },
   "prerequisites": {
     "all_pass": true,
