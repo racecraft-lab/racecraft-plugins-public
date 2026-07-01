@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.18.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.17.0...speckit-pro-v2.18.0) (2026-07-01)
+
+
+### Features
+
+* **XPLAT-004:** Add cross-platform runner foundation ([#274](https://github.com/racecraft-lab/racecraft-plugins-public/issues/274)) ([cef3ed2](https://github.com/racecraft-lab/racecraft-plugins-public/commit/cef3ed260dabf73833d3de82f82cacdb2c7758fa))
+
+
+### Bug Fixes
+
+* **curated-set:** detect preset version under nested preset.yml schema ([#271](https://github.com/racecraft-lab/racecraft-plugins-public/issues/271)) ([d75fcf1](https://github.com/racecraft-lab/racecraft-plugins-public/commit/d75fcf1ae454d45527d94d761acf8e5abd42f8af))
+
 ## [2.17.0](https://github.com/racecraft-lab/racecraft-plugins-public/compare/speckit-pro-v2.16.0...speckit-pro-v2.17.0) (2026-06-29)
 
 
