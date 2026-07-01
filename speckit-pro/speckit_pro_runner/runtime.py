@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import platform
 import shutil
 import subprocess
@@ -16,7 +15,6 @@ from typing import Any
 from . import (
     CONTRACT_VERSION,
     PYTHON_MINIMUM,
-    PYTHON_MINIMUM_VERSION,
     RUNNER_CONTRACT_ID,
     RUNNER_NAME,
     RUNNER_VERSION,

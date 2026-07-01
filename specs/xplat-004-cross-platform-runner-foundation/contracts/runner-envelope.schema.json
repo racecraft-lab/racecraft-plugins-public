@@ -141,7 +141,7 @@
     "subprocess_result": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["argv", "exit_code", "stdout", "stderr", "timed_out", "timeout_seconds", "duration_ms", "stderr_is_failure"],
+      "required": ["argv", "shell", "exit_code", "stdout", "stderr", "timed_out", "timeout_seconds", "duration_ms", "stderr_is_failure"],
       "properties": {
         "argv": {
           "type": "array",
@@ -149,6 +149,9 @@
           "items": {
             "type": "string"
           }
+        },
+        "shell": {
+          "const": false
         },
         "exit_code": {
           "type": ["integer", "null"]
