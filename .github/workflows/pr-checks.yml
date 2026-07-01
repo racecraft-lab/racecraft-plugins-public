@@ -116,9 +116,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
+      - name: Report test toolchain
+        env:
+          PLUGIN: ${{ matrix.plugin }}
+        run: |
+          set -euo pipefail
+          checker="tests/${PLUGIN}/check-toolchain.sh"
+          if [ -f "$checker" ]; then
+            bash "$checker" --mode tests
+          else
+            echo "No toolchain checker found for ${PLUGIN}; continuing."
+          fi
+
       - name: Run test suite
         env:
           PLUGIN: ${{ matrix.plugin }}
+          SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
         run: |
           set -euo pipefail
 
@@ -134,6 +147,80 @@ jobs:
           fi
 
           bash "$runner"
+
+  # ───────────────────────────────────────────────────────────────────
+  # Job 2b: Run speckit-pro against the latest upstream jq release.
+  # The runner image jq can lag behind Homebrew/latest-release behavior, so
+  # this leg catches parser/regression drift before maintainers discover it
+  # locally on newer toolchains.
+  # ───────────────────────────────────────────────────────────────────
+  test-latest-jq:
+    name: test latest jq (speckit-pro)
+    runs-on: ubuntu-latest
+    if: needs.detect.result == 'success' && contains(needs.detect.outputs.plugins, 'speckit-pro')
+    needs: [detect]
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Install latest jq release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          jq_metadata="$(
+            python3 - <<'PY'
+          import json
+          import os
+          import sys
+          from urllib.request import Request, urlopen
+
+          request = Request(
+              "https://api.github.com/repos/jqlang/jq/releases/latest",
+              headers={
+                  "Accept": "application/vnd.github+json",
+                  "Authorization": f"Bearer {os.environ['GITHUB_TOKEN']}",
+              },
+          )
+          with urlopen(request, timeout=30) as response:
+              release = json.load(response)
+
+          for asset in release.get("assets", []):
+              if asset.get("name") == "jq-linux-amd64":
+                  digest = asset.get("digest", "")
+                  if not digest.startswith("sha256:"):
+                      print("latest jq release asset is missing a sha256 digest", file=sys.stderr)
+                      sys.exit(1)
+                  print(asset["browser_download_url"])
+                  print(digest.split(":", 1)[1])
+                  break
+          else:
+              print("latest jq release did not include jq-linux-amd64", file=sys.stderr)
+              sys.exit(1)
+          PY
+          )"
+
+          jq_url="$(printf '%s\n' "$jq_metadata" | sed -n '1p')"
+          jq_sha256="$(printf '%s\n' "$jq_metadata" | sed -n '2p')"
+          curl -fsSL "$jq_url" -o "${RUNNER_TEMP}/jq"
+          printf '%s  %s\n' "$jq_sha256" "${RUNNER_TEMP}/jq" | sha256sum -c -
+          chmod 0755 "${RUNNER_TEMP}/jq"
+          echo "${RUNNER_TEMP}" >> "$GITHUB_PATH"
+
+      - name: Report latest-jq toolchain
+        run: |
+          set -euo pipefail
+          jq --version
+          bash tests/speckit-pro/check-toolchain.sh --mode tests
+
+      - name: Run speckit-pro suite with latest jq
+        env:
+          SPECKIT_SKIP_TOOLCHAIN_CHECK: "1"
+        run: bash tests/speckit-pro/run-all.sh
 
   # ───────────────────────────────────────────────────────────────────
   # Job 3: Validate PR title against Conventional Commits format
@@ -333,6 +420,10 @@ jobs:
         if: steps.docs.outputs.should_validate_docs == 'true'
         run: pnpm --dir docs-site install --frozen-lockfile
 
+      - name: Report docs toolchain
+        if: steps.docs.outputs.should_validate_docs == 'true'
+        run: bash tests/speckit-pro/check-toolchain.sh --mode docs
+
       - name: Install Playwright browsers
         if: steps.docs.outputs.validation_mode == 'full'
         run: pnpm --dir docs-site exec playwright install --with-deps chromium
@@ -368,24 +459,31 @@ jobs:
     name: validate-plugins
     runs-on: ubuntu-latest
     if: always()
-    needs: [detect, test]
+    needs: [detect, test, test-latest-jq]
     permissions: {}
 
     steps:
-      - name: Check test matrix result
+      - name: Check plugin test results
         run: |
           set -euo pipefail
           detect_result="${{ needs.detect.result }}"
           test_result="${{ needs.test.result }}"
+          latest_jq_result="${{ needs.test-latest-jq.result }}"
           # detect failure or cancellation means the workflow itself is broken — fail the sentinel
           if [[ "$detect_result" == "failure" || "$detect_result" == "cancelled" ]]; then
             echo "::error::Detect job did not succeed (result: ${detect_result}). Workflow is broken."
             exit 1
           fi
           if [[ "$test_result" == "success" || "$test_result" == "skipped" ]]; then
-            echo "Plugin tests passed or were skipped (result: ${test_result})."
-            exit 0
+            :
           else
             echo "::error::Plugin tests failed or were cancelled (result: ${test_result})."
             exit 1
           fi
+          if [[ "$latest_jq_result" == "success" || "$latest_jq_result" == "skipped" ]]; then
+            :
+          else
+            echo "::error::Latest jq tests failed or were cancelled (result: ${latest_jq_result})."
+            exit 1
+          fi
+          echo "Plugin tests passed or were skipped (result: ${test_result}); latest-jq tests passed or were skipped (result: ${latest_jq_result})."

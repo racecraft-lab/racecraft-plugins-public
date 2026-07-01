@@ -116,13 +116,34 @@ fi
 section "pr-checks.yml — Sentinel Job Dependencies"
 
 set_test "sentinel depends on detect job"
-assert_contains "$CONTENT" "needs: [detect, test]"
+assert_contains "$CONTENT" "needs: [detect, test, test-latest-jq]"
 
 set_test "sentinel runs if: always()"
 assert_contains "$CONTENT" "if: always()"
 
 set_test "sentinel has permissions: {}"
 assert_contains "$CONTENT" "permissions: {}"
+
+section "pr-checks.yml — Latest jq Job"
+
+set_test "latest jq job is defined"
+assert_contains "$CONTENT" "test-latest-jq:"
+
+set_test "latest jq job authenticates release API request"
+if [[ "$CONTENT" == *'GITHUB_TOKEN: ${{ github.token }}'* \
+  && "$CONTENT" == *'"Authorization": f"Bearer {os.environ['* ]]; then
+  _pass
+else
+  _fail "expected latest-jq release API request to use the workflow GITHUB_TOKEN"
+fi
+
+set_test "latest jq job verifies downloaded binary digest"
+if [[ "$CONTENT" == *"digest.startswith(\"sha256:\")"* \
+  && "$CONTENT" == *"sha256sum -c"* ]]; then
+  _pass
+else
+  _fail "expected latest-jq job to require and verify a sha256 digest before execution"
+fi
 
 section "pr-checks.yml — Sentinel Job Logic"
 
@@ -132,8 +153,14 @@ assert_contains "$CONTENT" 'detect_result'
 set_test "sentinel checks test_result for success or skipped"
 assert_contains "$CONTENT" 'test_result'
 
+set_test "sentinel checks latest_jq_result for success or skipped"
+assert_contains "$CONTENT" 'latest_jq_result'
+
 set_test "sentinel exits 0 on success or skipped"
 assert_contains "$CONTENT" '"success" || "$test_result" == "skipped"'
+
+set_test "sentinel exits 0 on latest jq success or skipped"
+assert_contains "$CONTENT" '"success" || "$latest_jq_result" == "skipped"'
 
 set_test "sentinel exits 1 on detect failure"
 assert_contains "$CONTENT" '"failure"'

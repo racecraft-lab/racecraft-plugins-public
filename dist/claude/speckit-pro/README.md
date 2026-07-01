@@ -44,7 +44,18 @@ You need:
 - GitHub Spec Kit installed from the official GitHub source
 - A repository initialized for Spec Kit
 - `gh` for PR creation and review-comment workflows
-- `jq` for validation scripts
+- Bash 4.3 or newer for the shell validation and planning scripts
+- `jq` 1.6 or newer for JSON validation and emitted workflow state
+- `git` for branch, diff, reviewability, and workflow-state checks
+- Python 3 for preset installation and repository validation helpers
+- `sha256sum` or `shasum` for PR-packet fingerprint checks
+- Standard Unix text tools, including version-aware `sort -V`
+
+The tools above are all you need to install and run the plugin in a project.
+Contributors working from a source checkout have an additional maintainer-only
+toolchain (Node, Corepack, `pnpm`, Playwright) plus a preflight that verifies
+both — see the
+[contributing guide](https://racecraft-lab.github.io/racecraft-plugins-public/contribute-and-release/).
 
 Spec Kit's official docs recommend installing from the GitHub repository. This
 plugin's examples use the same GitHub source:

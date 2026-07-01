@@ -65,6 +65,7 @@ commands that match the PR surface and explain any skipped command in the PR
 body.
 
 ```bash
+bash tests/speckit-pro/check-toolchain.sh --mode tests
 bash scripts/build-plugin-payloads.sh
 bash scripts/sync-marketplace-versions.sh
 bash tests/speckit-pro/run-all.sh
@@ -76,6 +77,7 @@ What each command proves:
 
 | Command | Use when | Evidence it provides |
 |---------|----------|----------------------|
+| `bash tests/speckit-pro/check-toolchain.sh --mode tests` | Before deterministic shell validation or when tool versions are in question | Reports Bash, `jq`, `git`, Python, checksum, YAML, and optional live-eval tools before failures appear deeper in the suite. |
 | `bash scripts/build-plugin-payloads.sh` | Plugin source or release payloads changed | Rebuilds isolated Claude and Codex install payloads under `dist/`. |
 | `bash scripts/sync-marketplace-versions.sh` | Marketplace versions or release sync are in scope | Syncs marketplace entry versions from platform plugin manifests. |
 | `bash tests/speckit-pro/run-all.sh` | Release readiness, especially plugin or release-affecting work | Runs the default deterministic shell suite. |
@@ -85,6 +87,21 @@ What each command proves:
 `pnpm --dir docs-site validate` is required for changes under `docs-site/**`.
 Non-site Markdown changes do not automatically require docs-site validation, but
 they still need reviewable evidence that matches the PR scope.
+
+Maintainer validation has two toolchain buckets:
+
+| Bucket | Required tools |
+|---|---|
+| Deterministic plugin suite | Bash 4.3+, `jq` 1.6+, `git`, Python 3, common Unix text tools, `sort -V`, `sha256sum` or `shasum`, and either Python PyYAML or Ruby YAML for workflow syntax checks. |
+| Docs-site validation | Node 22 or newer, Corepack, `pnpm@10.25.0`, installed `docs-site` dependencies, and Playwright for smoke validation. |
+
+PR Checks run the default plugin suite on the GitHub-hosted runner toolchain and
+a speckit-pro-only latest-`jq` leg. The extra `jq` leg exists because local
+package managers can expose parser behavior before the runner image updates.
+
+Live, AI-backed, or PR-backed validation can additionally require authenticated
+`gh`, `specify`, `claude`, `codex`, the skill-creator plugin, and
+`timeout`/`gtimeout` depending on the layer.
 
 Primary sources: [docs-site/package.json](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/docs-site/package.json), [build-plugin-payloads.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/build-plugin-payloads.sh), [sync-marketplace-versions.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/scripts/sync-marketplace-versions.sh), and [tests/speckit-pro/run-all.sh](https://github.com/racecraft-lab/racecraft-plugins-public/blob/main/tests/speckit-pro/run-all.sh).
 
@@ -142,8 +159,8 @@ Current behavior to account for in review:
   `dist/codex/<plugin>/`, marketplace registries, packaging scripts,
   release-please config, or PR/release workflow files.
 - Docs-only PRs with no plugin-affecting paths skip the plugin test matrix.
-- `validate-plugins` still runs as the stable sentinel and passes when plugin
-  tests passed or were skipped.
+- `validate-plugins` still runs as the stable sentinel and passes only when the
+  plugin test matrix and speckit-pro latest-`jq` leg passed or were skipped.
 - `validate-pr-title` still checks the PR title against the split workflow and
   Conventional Commit contract.
 

@@ -128,6 +128,75 @@ should_run() {
   fi
 }
 
+print_summary() {
+  GRAND_TOTAL=$((TOTAL_PASS + TOTAL_FAIL))
+
+  printf "\n${BOLD}%s${RESET}\n" "════════════════════════════════════════"
+  printf "${BOLD}speckit-pro test suite${RESET}: "
+  if [ "$TOTAL_FAIL" -eq 0 ] && [ "$GRAND_TOTAL" -gt 0 ]; then
+    printf "${GREEN}%d/%d passed${RESET}\n" "$TOTAL_PASS" "$GRAND_TOTAL"
+  else
+    printf "${RED}%d/%d passed (%d failed)${RESET}\n" \
+      "$TOTAL_PASS" "$GRAND_TOTAL" "$TOTAL_FAIL"
+  fi
+
+  for lr in "${LAYER_RESULTS[@]}"; do
+    printf "  %s\n" "$lr"
+  done
+  printf "\n"
+}
+
+run_toolchain_preflight() {
+  local mode="shell"
+  if [ "${SPECKIT_SKIP_TOOLCHAIN_CHECK:-0}" = "1" ]; then
+    return 0
+  fi
+  if ! should_run 1 && ! should_run 4 && ! should_run 5 && ! should_run 7; then
+    return 0
+  fi
+  if should_run 1; then
+    mode="tests"
+  fi
+
+  printf "\n${BOLD}${CYAN}Toolchain Preflight${RESET}\n"
+  printf "%s\n" "────────────────────────────────────────"
+
+  # The preflight is a deterministic gate, not a scored layer. Its result is
+  # NOT folded into the suite total: optional tools vary by machine, and CI runs
+  # the preflight as a separate step (SPECKIT_SKIP_TOOLCHAIN_CHECK=1), so folding
+  # it in would make the headline "X/Y passed" differ across machines and between
+  # local and CI for the same commit. We gate on exit code only.
+  local output exit_code=0
+  output=$(bash "$TESTS_DIR/check-toolchain.sh" --mode "$mode" 2>&1) || exit_code=$?
+
+  if [ "$exit_code" -eq 0 ]; then
+    printf "  ${GREEN}PASS${RESET} check-toolchain (gate; not counted in suite total)\n"
+    LAYER_RESULTS+=("toolchain preflight: ok (gate, not counted)")
+    return 0
+  fi
+
+  printf "  ${RED}FAIL${RESET} check-toolchain (gate)\n"
+  local fails
+  fails=$(echo "$output" | grep -E '^FAIL' || true)
+  if [ -n "$fails" ]; then
+    echo "$fails" | head -5 | while read -r line; do
+      printf "       %s\n" "$line"
+    done
+  else
+    echo "$output" | tail -3 | while read -r line; do
+      printf "       %s\n" "$line"
+    done
+  fi
+  LAYER_RESULTS+=("toolchain preflight: FAILED (gate)")
+  return 1
+}
+
+if ! run_toolchain_preflight; then
+  printf "\n${RED}Toolchain preflight failed — aborting before running any layer.${RESET}\n" >&2
+  printf "Fix the tools listed above, or set SPECKIT_SKIP_TOOLCHAIN_CHECK=1 to bypass the gate.\n" >&2
+  exit 1
+fi
+
 # ─────────────────────────────────────────
 # Layer 1: Structural Validation
 # ─────────────────────────────────────────
@@ -220,6 +289,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-resolve-confidence-mode.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-commands.sh"
     "$TESTS_DIR/layer4-scripts/test-check-prerequisites.sh"
+    "$TESTS_DIR/layer4-scripts/test-check-toolchain.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-presets.sh"
     "$TESTS_DIR/layer4-scripts/test-reviewability-gate.sh"
     "$TESTS_DIR/layer4-scripts/test-final-reviewability-backstop.sh"
@@ -393,24 +463,5 @@ if should_run 7; then
   fi
 fi
 
-# ─────────────────────────────────────────
-# Summary
-# ─────────────────────────────────────────
-
-GRAND_TOTAL=$((TOTAL_PASS + TOTAL_FAIL))
-
-printf "\n${BOLD}%s${RESET}\n" "════════════════════════════════════════"
-printf "${BOLD}speckit-pro test suite${RESET}: "
-if [ "$TOTAL_FAIL" -eq 0 ] && [ "$GRAND_TOTAL" -gt 0 ]; then
-  printf "${GREEN}%d/%d passed${RESET}\n" "$TOTAL_PASS" "$GRAND_TOTAL"
-else
-  printf "${RED}%d/%d passed (%d failed)${RESET}\n" \
-    "$TOTAL_PASS" "$GRAND_TOTAL" "$TOTAL_FAIL"
-fi
-
-for lr in "${LAYER_RESULTS[@]}"; do
-  printf "  %s\n" "$lr"
-done
-printf "\n"
-
+print_summary
 [ "$TOTAL_FAIL" -eq 0 ]
