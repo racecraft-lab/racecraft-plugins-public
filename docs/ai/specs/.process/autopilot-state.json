@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
-  "updated_at": "2026-07-02T15:44:08Z",
-  "active_step": "Phase 3: Plan",
+  "updated_at": "2026-07-02T15:58:06Z",
+  "active_step": "Phase 4: Checklist - integration",
   "feature_dir": "specs/xplat-005-read-only-helper-port",
   "branch": "codex/xplat-005-read-only-helper-port",
   "status": "running",
@@ -172,11 +172,28 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "plan": "specs/xplat-005-read-only-helper-port/plan.md",
+        "research": "specs/xplat-005-read-only-helper-port/research.md",
+        "data_model": "specs/xplat-005-read-only-helper-port/data-model.md",
+        "quickstart": "specs/xplat-005-read-only-helper-port/quickstart.md",
+        "contracts": [
+          "specs/xplat-005-read-only-helper-port/contracts/read-only-helper-request.schema.json",
+          "specs/xplat-005-read-only-helper-port/contracts/helper-promotion-record.schema.json"
+        ],
+        "planned_slices": 2,
+        "in_scope_target_rows": 16,
+        "out_of_scope_rows": 4,
+        "declared_file_operations": 10,
+        "reviewability_split_decision": "remain one workflow with two internal slices",
+        "gate": "G3 pass",
+        "markers": 0
+      }
     },
     {
       "step": "Phase 4: Checklist - integration",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - integration Consensus",

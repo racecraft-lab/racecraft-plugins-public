@@ -57,7 +57,7 @@ accepted scope:
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created the read-only helper port spec and requirements checklist; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved helper grouping, parity comparison, gate promotion, read-only mixed-mode boundaries, and macOS smoke scope |
-| Plan | `$speckit-plan` | Pending | Produce the two-slice architecture, helper registry plan, parity contract, and test strategy |
+| Plan | `$speckit-plan` | Complete | Produced the two-slice architecture, helper registry plan, parity contracts, promotion matrix, and test strategy |
 | Checklist | `$speckit-checklist` | Pending | Run integration, error-handling, reliability, and security checklists |
 | Tasks | `$speckit-tasks` | Pending | Generate ordered tasks across the accepted two slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
@@ -343,11 +343,11 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Pending | Technical context, execution flow, reviewability warning, two-slice strategy |
-| `research.md` | Pending | Existing helper behavior and parity decisions if needed |
-| `data-model.md` | Pending | Helper registry entries, operation inputs, fixture records, promotion state |
-| `contracts/` | Pending | JSON schemas or fixture contracts for helper parity where useful |
-| `quickstart.md` | Pending | Maintainer commands for running Python helper tests and local macOS smoke |
+| `plan.md` | Complete | Technical context, declared file operations, reviewability warning, two-slice strategy, 16 in-scope helper/mode rows, and 4 out-of-scope rows |
+| `research.md` | Complete | Runner reuse, registry, parity, normalization, two-slice, Bash-reference, and smoke decisions |
+| `data-model.md` | Complete | Helper registry entries, invocation requests/results, fixtures, comparisons, normalization, promotion records, smoke evidence, and scope audit |
+| `contracts/` | Complete | `read-only-helper-request.schema.json` and `helper-promotion-record.schema.json` |
+| `quickstart.md` | Complete | Maintainer commands for source-checkout smoke, helper parity tests, Layer 4, deterministic gate, scope audit, and promotion evidence |
 
 ---
 

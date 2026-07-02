@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.local/specs/xplat-005/helper-promotion-record.schema.json",
+  "title": "XPLAT-005 Helper Promotion Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "helper_id",
+    "slice",
+    "bash_script_path",
+    "runner_operation",
+    "runner_module",
+    "fixture_ids",
+    "bash_comparison_ids",
+    "normalized_fields",
+    "status",
+    "authoritative_test_command",
+    "deferred_follow_up"
+  ],
+  "properties": {
+    "helper_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "slice": {
+      "oneOf": [
+        {
+          "type": "integer",
+          "enum": [1, 2]
+        },
+        {
+          "type": "string",
+          "const": "N/A"
+        }
+      ]
+    },
+    "bash_script_path": {
+      "type": ["string", "null"]
+    },
+    "runner_operation": {
+      "type": ["string", "null"]
+    },
+    "runner_module": {
+      "type": ["string", "null"]
+    },
+    "fixture_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "bash_comparison_ids": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "normalized_fields": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "python_authoritative",
+        "bash_reference_only",
+        "out_of_scope"
+      ]
+    },
+    "authoritative_test_command": {
+      "type": ["string", "null"]
+    },
+    "deferred_follow_up": {
+      "type": ["string", "null"]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "python_authoritative"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "fixture_ids": {
+            "minItems": 1
+          },
+          "authoritative_test_command": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "out_of_scope"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "deferred_follow_up": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  ]
+}
