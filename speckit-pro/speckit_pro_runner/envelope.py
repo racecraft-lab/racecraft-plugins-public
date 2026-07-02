@@ -20,13 +20,15 @@ STATUS_EXIT_CODES = {
 
 REQUIRED_FIELDS = ("schema_version", "helper_id", "operation", "mode", "inputs")
 ALLOWED_FIELDS = set(REQUIRED_FIELDS) | {"request_id"}
-SUPPORTED_OPERATIONS = {"preflight", "runtime-info"}
+SUPPORTED_RUNNER_OPERATIONS = {"preflight", "runtime-info"}
 
 
 @dataclass(frozen=True)
 class RunnerRequest:
     request_id: str | None
+    helper_id: str
     operation: str
+    mode: str
     inputs: dict[str, Any]
 
 
@@ -90,8 +92,8 @@ def input_error(code: str, message: str, *, details: dict[str, Any] | None = Non
         details=details,
         remediation_summary="Send a valid SpecKit runner request envelope.",
         remediation_actions=[
-            "Use schema_version 1.0, helper_id runner, mode read_only, and an object inputs field.",
-            "Retry with operation runtime-info or preflight.",
+            "Use schema_version 1.0, a known helper_id, mode read_only, and an object inputs field.",
+            "Retry with a supported runner or read-only helper operation.",
         ],
     )
     return response("input_error", diagnostics=[diag])
@@ -126,26 +128,37 @@ def parse_request(raw_stdin: str) -> tuple[RunnerRequest | None, dict[str, Any] 
         )
 
     extra = sorted(set(parsed) - ALLOWED_FIELDS)
+    helper_id = parsed.get("helper_id")
+    operation = parsed.get("operation")
+    mode = parsed.get("mode")
+    inputs = parsed.get("inputs")
     invalid = (
         extra
-        or parsed.get("helper_id") != "runner"
-        or parsed.get("operation") not in SUPPORTED_OPERATIONS
-        or parsed.get("mode") != "read_only"
-        or not isinstance(parsed.get("inputs"), dict)
+        or not isinstance(helper_id, str)
+        or helper_id == ""
+        or not isinstance(operation, str)
+        or operation == ""
+        or (helper_id == "runner" and operation not in SUPPORTED_RUNNER_OPERATIONS)
+        or mode != "read_only"
+        or not isinstance(inputs, dict)
         or ("request_id" in parsed and not isinstance(parsed.get("request_id"), str))
     )
     if invalid:
         details: dict[str, Any] = {}
         if extra:
             details["unexpected_fields"] = extra
-        if parsed.get("operation") not in SUPPORTED_OPERATIONS:
-            details["operation"] = parsed.get("operation")
+        if helper_id == "runner" and operation not in SUPPORTED_RUNNER_OPERATIONS:
+            details["operation"] = operation
+        if mode != "read_only":
+            details["mode"] = mode
         return None, input_error("invalid_envelope", "request envelope has unsupported field values", details=details)
 
     return RunnerRequest(
         request_id=parsed.get("request_id"),
-        operation=parsed["operation"],
-        inputs=parsed["inputs"],
+        helper_id=helper_id,
+        operation=operation,
+        mode=mode,
+        inputs=inputs,
     ), None
 
 

@@ -1,10 +1,10 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
-  "updated_at": "2026-07-02T16:21:40Z",
-  "active_step": "Phase 7: Implement",
+  "updated_at": "2026-07-02T16:59:00Z",
+  "active_step": "Post: open PR",
   "feature_dir": "specs/xplat-005-read-only-helper-port",
   "branch": "codex/xplat-005-read-only-helper-port",
-  "status": "running",
+  "status": "complete",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "dry-run-noop",
@@ -342,55 +342,121 @@
     },
     {
       "step": "Phase 7: Implement",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "tasks_total": 85,
+        "tasks_done": 85,
+        "gate": "G7 pass",
+        "source_changes": [
+          "speckit-pro/speckit_pro_runner/helpers/__init__.py",
+          "speckit-pro/speckit_pro_runner/helpers/registry.py",
+          "speckit-pro/speckit_pro_runner/helpers/read_only.py",
+          "speckit-pro/speckit_pro_runner/envelope.py",
+          "speckit-pro/speckit_pro_runner/runtime.py"
+        ],
+        "test_changes": [
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh",
+          "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+          "tests/speckit-pro/run-all.sh"
+        ],
+        "metadata_refreshed": true,
+        "active_cutover_changed": false
+      }
     },
     {
       "step": "Post: mark tasks complete",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "gate": "G7 pass",
+        "tasks_done": 85,
+        "tasks_total": 85
+      }
     },
     {
       "step": "Post: Python helper tests",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "command": "bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh",
+        "result": "7/7 passed"
+      }
     },
     {
       "step": "Post: Bash-reference comparisons",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "evidence": "included in test-speckit-pro-read-only-helpers.py",
+        "result": "passed"
+      }
     },
     {
       "step": "Post: runner test",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "command": "bash tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh",
+        "result": "9/9 passed"
+      }
     },
     {
       "step": "Post: spec-index check",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "command": "included in default deterministic suite",
+        "result": "validate-spec-index-determinism 15/15 and test-generate-spec-index 113/113 passed"
+      }
     },
     {
       "step": "Post: Layer 1",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "command": "bash tests/speckit-pro/run-all.sh",
+        "result": "Layer 1 992/992 and Codex Layer 1 451/451 passed"
+      }
     },
     {
       "step": "Post: Layer 4",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "command": "bash tests/speckit-pro/run-all.sh --layer 4; bash tests/speckit-pro/run-all.sh",
+        "result": "2108/2108 passed"
+      }
     },
     {
       "step": "Post: local macOS source-checkout smoke",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "command": "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json via helper suite",
+        "result": "runner runtime-info ok source_checkout"
+      }
     },
     {
       "step": "Post: no active cutover/public claim diff review",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "result": "no dist, skills, hooks, generated payload, install, marketplace, docs-site, PR-emission, split-state, restack, relocation, install repair, or autoheal surface edited"
+      }
     },
     {
       "step": "Post: PR packet",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "result": "handoff evidence recorded in workflow, tasks, fixture manifest, and bash-reference manifest"
+      }
     },
     {
       "step": "Post: commit and push",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "result": "pending external git operation at state update time"
+      }
     },
     {
       "step": "Post: open PR",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "result": "pending external git operation at state update time"
+      }
     }
   ]
 }

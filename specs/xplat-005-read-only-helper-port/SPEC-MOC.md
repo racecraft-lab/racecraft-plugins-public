@@ -42,5 +42,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
+- [.process/final-reviewability/gate-state.json](.process/final-reviewability/gate-state.json)
+- [.process/pr-packets/xplat-005-read-only-helper-port.json](.process/pr-packets/xplat-005-read-only-helper-port.json)
+- [.process/pr-packets/xplat-005-read-only-helper-port.md](.process/pr-packets/xplat-005-read-only-helper-port.md)
+- [.process/pr-packets/xplat-005-read-only-helper-port/validation.json](.process/pr-packets/xplat-005-read-only-helper-port/validation.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

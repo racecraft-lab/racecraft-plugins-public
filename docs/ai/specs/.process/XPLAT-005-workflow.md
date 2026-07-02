@@ -61,7 +61,7 @@ accepted scope:
 | Checklist | `$speckit-checklist` | Complete | Ran integration, error-handling, reliability, and security checklists; remediated all six true gaps |
 | Tasks | `$speckit-tasks` | Complete | Generated 85 ordered tasks across the accepted two slices with 5 parallel-safe setup fixture tasks |
 | Analyze | `$speckit-analyze` | Complete | Remediated metadata and scope-audit drift; G6 passed with no remaining findings |
-| Implement | `$speckit-implement` | Pending | Port helpers, tests, parity fixtures, and source-checkout smoke evidence |
+| Implement | `$speckit-implement` | Complete | Ported helpers, tests, parity fixtures, metadata, and source-checkout smoke evidence |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -148,13 +148,13 @@ higher-priority override exists.
 
 ### Success Criteria Summary
 
-- [ ] All accepted read-only helpers have runner equivalents with fixture parity.
-- [ ] Python helper outputs preserve current JSON stdout schemas, stderr diagnostics, and documented exit-code behavior.
-- [ ] Bash-reference comparisons pass for helpers where current behavior is deterministic enough to compare.
-- [ ] Windows-style path fixtures and no-Bash behavior are covered without requiring native Windows UAT.
-- [ ] A local macOS source-checkout smoke proves the accepted runner/helper path without installed-cache or public support claims.
-- [ ] Python tests become authoritative for each helper only after parity is accepted; Bash helpers remain temporary references until XPLAT-007.
-- [ ] No active Claude/Codex invocation, generated payload, install behavior, or public documentation claim is switched in this spec.
+- [x] All accepted read-only helpers have runner equivalents with fixture parity.
+- [x] Python helper outputs preserve current JSON stdout schemas, stderr diagnostics, and documented exit-code behavior.
+- [x] Bash-reference comparisons pass for helpers where current behavior is deterministic enough to compare.
+- [x] Windows-style path fixtures and no-Bash behavior are covered without requiring native Windows UAT.
+- [x] A local macOS source-checkout smoke proves the accepted runner/helper path without installed-cache or public support claims.
+- [x] Python tests become authoritative for each helper only after parity is accepted; Bash helpers remain temporary references until XPLAT-007.
+- [x] No active Claude/Codex invocation, generated payload, install behavior, or public documentation claim is switched in this spec.
 
 ### Accepted Two-Slice Plan
 
@@ -566,27 +566,38 @@ For each helper or helper group:
 
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
-| Foundation and Slice 1 | Pending | Pending | Registry/dispatch and prereq/status helpers |
-| Slice 2 | Pending | Pending | Index/topology/planning validators and read-only PR-packet validation |
-| Smoke and Handoff | Pending | Pending | Local macOS source-checkout smoke and XPLAT-006/XPLAT-007 handoff |
+| Foundation and Slice 1 | 51 | 51 | Registry/dispatch plus prerequisite, detection, marker, validation, reviewability, and confidence helpers implemented and covered |
+| Slice 2 | 25 | 25 | Spec-index, topology, atomicity, layer-planning, workflow-contract, and read-only PR-packet helper paths implemented and covered |
+| Smoke and Handoff | 9 | 9 | Local source-checkout smoke, metadata refresh, diff hygiene, default suite, and XPLAT-006/XPLAT-007 handoff evidence completed |
 
 ---
 
 ## Post-Implementation Checklist
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] Python helper tests pass for accepted helper ports.
-- [ ] Bash-reference comparison passes for helpers requiring direct comparison.
-- [ ] `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` passes.
-- [ ] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
-- [ ] Local macOS source-checkout smoke evidence is recorded.
-- [ ] No active Claude/Codex invocation, generated payload, install behavior, or
+- [x] All tasks marked complete in `tasks.md`.
+- [x] Python helper tests pass for accepted helper ports.
+- [x] Bash-reference comparison passes for helpers requiring direct comparison.
+- [x] `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` passes.
+- [x] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
+- [x] Local macOS source-checkout smoke evidence is recorded.
+- [x] No active Claude/Codex invocation, generated payload, install behavior, or
   public platform claim changed.
-- [ ] PR packet includes review order, scope budget, parity evidence,
+- [x] PR packet includes review order, scope budget, parity evidence,
   per-helper gate-promotion state, known gaps, rollback notes, and XPLAT-006/
   XPLAT-007 handoff.
+
+### Final Verification Evidence
+
+Recorded `2026-07-02T16:59:00Z`:
+
+- `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` -> `7/7 passed`
+- `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` -> `9/9 passed`
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/xplat-005-read-only-helper-port` -> `pass: true`, `task_count: 85`
+- `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-005-read-only-helper-port` -> `pass: true`, `done: 85`
+- `bash tests/speckit-pro/run-all.sh --layer 4` -> `2108/2108 passed`
+- `bash tests/speckit-pro/run-all.sh` -> `3751/3751 passed`
 
 ---
 
@@ -609,3 +620,6 @@ specs/xplat-005-read-only-helper-port/
   plan.md
   tasks.md
 ```
+
+### PR packet validation events
+- <!-- speckit-pro-pr-packet-validation:event-id=xplat-005-read-only-helper-port --> Blocked PR packet validation for `xplat-005-read-only-helper-port`; result `specs/xplat-005-read-only-helper-port/.process/pr-packets/xplat-005-read-only-helper-port/validation.json`; rules: `unknown`.

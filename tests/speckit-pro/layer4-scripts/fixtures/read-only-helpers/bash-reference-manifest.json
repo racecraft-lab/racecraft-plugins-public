@@ -1,0 +1,87 @@
+{
+  "schema_version": "1.0",
+  "comparison_policy": {
+    "stdout": "exact",
+    "stderr": "exact",
+    "exit_code": "exact",
+    "shell": false,
+    "bounded_input": true
+  },
+  "comparisons": [
+    {
+      "helper_id": "check-prerequisites",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh", "docs/ai/specs/.process/XPLAT-005-workflow.md"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "detect-commands",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "detect-presets",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "count-markers",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh", "all", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "validate-gate",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh", "G7", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "reviewability-gate",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh", "setup", "docs/ai/specs/.process/XPLAT-005-workflow.md"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "estimate-reviewable-loc",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh", "specs/xplat-005-read-only-helper-port/plan.md"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "resolve-confidence-mode",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh", "--", "--advisory", "docs/ai/specs/.process/XPLAT-005-workflow.md"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "confidence-gate",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh", "docs/ai/specs/.process/XPLAT-005-workflow.md", "--mode", "advisory"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "generate-spec-index-check",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh", "--check", "."], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "o5-topology",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "atomicity-route",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "plan-layers-feature-dir",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "validate-pr-workflow-contract",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-pr-workflow-contract.sh", "--title", "feat(XPLAT-005): Add read-only helper port", "--repo-root", "."], "timeout_seconds": 30}
+    },
+    {
+      "helper_id": "validate-pr-packet-read-only",
+      "source_script": "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/missing-pr-packet.json"], "timeout_seconds": 30}
+    }
+  ]
+}
