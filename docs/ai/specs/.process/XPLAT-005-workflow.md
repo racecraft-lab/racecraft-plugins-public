@@ -55,8 +55,8 @@ accepted scope:
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Create the read-only helper port spec and requirements checklist |
-| Clarify | `$speckit-clarify` | Pending | Resolve helper grouping, parity comparison, gate promotion, and macOS smoke scope |
+| Specify | `$speckit-specify` | Complete | Created the read-only helper port spec and requirements checklist; G1 passed |
+| Clarify | `$speckit-clarify` | Complete | Resolved helper grouping, parity comparison, gate promotion, read-only mixed-mode boundaries, and macOS smoke scope |
 | Plan | `$speckit-plan` | Pending | Produce the two-slice architecture, helper registry plan, parity contract, and test strategy |
 | Checklist | `$speckit-checklist` | Pending | Run integration, error-handling, reliability, and security checklists |
 | Tasks | `$speckit-tasks` | Pending | Generate ordered tasks across the accepted two slices |
@@ -112,7 +112,7 @@ higher-priority override exists.
 | Check | Result | Evidence |
 |---|---|---|
 | Codex agent install | Pass | `validate-agent-install.sh --surface codex --autoheal` reported `ok: codex: 10 bundled agents installed` |
-| SpecKit CLI | Pass | `command -v specify` resolved to `/Users/fredrickgabelmann/.local/bin/specify` |
+| SpecKit CLI | Pass | `command -v specify` resolved to an installed local executable |
 | Remote | Pass | `git remote -v` detected `origin` |
 | Branch/worktree | Pass | Created worktree on `codex/xplat-005-read-only-helper-port` from `origin/main` at `9f5a32ae` |
 | Reviewability setup gate | Warn/pass | `reviewability-gate.sh setup docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` returned `status: warn`, `pass: true`, `reviewable_loc: 250`, `production_files: 4`, `total_files: 10`, warning: primary surfaces `docs/process` and `harness/adapter` exceed one-surface warning threshold |
@@ -238,14 +238,14 @@ the read-only helper surface to the runner with fixture parity and stable tests.
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 22 |
+| User Stories | 3 |
+| Acceptance Criteria | 10 |
 
 ### Files Generated
 
-- [ ] `specs/xplat-005-read-only-helper-port/spec.md`
-- [ ] `specs/xplat-005-read-only-helper-port/checklists/requirements.md`
+- [x] `specs/xplat-005-read-only-helper-port/spec.md`
+- [x] `specs/xplat-005-read-only-helper-port/checklists/requirements.md`
 
 ---
 
@@ -278,9 +278,16 @@ $speckit-clarify Focus on local macOS source-checkout smoke and cutover boundari
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
-| 1 | Slice and helper grouping | Pending | Pending |
-| 2 | Parity and gate promotion | Pending | Pending |
-| 3 | Platform smoke and cutover boundary | Pending | Pending |
+| 1 | Slice and helper grouping | 5 | Slice 1 includes registry/dispatch, prerequisite/detection/marker/validation/reviewability/confidence helpers; Slice 2 includes `generate-spec-index --check`, topology, atomicity, layer-planning, workflow-contract validation, and late read-only PR-packet validation; `detect-stack-manager`, write/regenerate modes, marker-plan output, and persistence writes are deferred |
+| 2 | Parity and gate promotion | 5 | Every promoted Bash-backed helper requires golden fixtures plus source-checkout Bash comparison; golden-only fixtures are limited to runner/synthetic safety cases; normalization is allowlisted; promotion uses a per-helper matrix |
+| 3 | Platform smoke and cutover boundary | 4 | Smallest smoke is `runtime-info` through the source-checkout runner; it proves local source-checkout launch/envelope/metadata only and does not prove installed-cache launch, helper parity, active cutover, mutation safety, or native matrix support |
+
+### Clarify Consensus
+
+| Item | Resolution | Evidence |
+|---|---|---|
+| `generate-spec-index` write mode | XPLAT-005 ports only read-only `--check` parity; default write/regenerate behavior is deferred because it mutates `SPEC-MOC.md` artifacts | Codebase and spec-context consensus agreed with high confidence |
+| `validate-pr-packet` persistence writes | XPLAT-005 ports only read-only validation output, diagnostics, and exit-code parity; validation-result files and workflow-event upserts remain out of scope | Codebase and spec-context consensus agreed with high confidence |
 
 ---
 
