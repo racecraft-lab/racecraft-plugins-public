@@ -1,6 +1,6 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
-  "updated_at": "2026-07-02T16:59:00Z",
+  "updated_at": "2026-07-02T17:06:00Z",
   "active_step": "Post: open PR",
   "feature_dir": "specs/xplat-005-read-only-helper-port",
   "branch": "codex/xplat-005-read-only-helper-port",
@@ -441,21 +441,30 @@
       "step": "Post: PR packet",
       "status": "completed",
       "result": {
-        "result": "handoff evidence recorded in workflow, tasks, fixture manifest, and bash-reference manifest"
+        "packet": "specs/xplat-005-read-only-helper-port/.process/pr-packets/xplat-005-read-only-helper-port.json",
+        "body": "specs/xplat-005-read-only-helper-port/.process/pr-packets/xplat-005-read-only-helper-port.md",
+        "validation": "passed",
+        "workflow_contract": "passed",
+        "final_reviewability": "exception accepted: infra"
       }
     },
     {
       "step": "Post: commit and push",
       "status": "completed",
       "result": {
-        "result": "pending external git operation at state update time"
+        "implementation_commit": "255c6dc7",
+        "branch": "codex/xplat-005-read-only-helper-port",
+        "pushed": true
       }
     },
     {
       "step": "Post: open PR",
       "status": "completed",
       "result": {
-        "result": "pending external git operation at state update time"
+        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/276",
+        "number": 276,
+        "draft": true,
+        "title": "feat(XPLAT-005): Add read-only helper port"
       }
     }
   ]

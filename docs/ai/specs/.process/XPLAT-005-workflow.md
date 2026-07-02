@@ -598,6 +598,7 @@ Recorded `2026-07-02T16:59:00Z`:
 - `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-005-read-only-helper-port` -> `pass: true`, `done: 85`
 - `bash tests/speckit-pro/run-all.sh --layer 4` -> `2108/2108 passed`
 - `bash tests/speckit-pro/run-all.sh` -> `3751/3751 passed`
+- Draft PR opened: https://github.com/racecraft-lab/racecraft-plugins-public/pull/276
 
 ---
 
