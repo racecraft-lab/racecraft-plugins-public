@@ -92,6 +92,11 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 - **FR-020**: The feature MUST preserve the accepted two-slice strategy: Slice 1 for foundational registry/dispatch and prerequisite/status helpers; Slice 2 for index/topology/planning validators and late read-only PR-packet validation.
 - **FR-021**: The feature MUST NOT update active Claude Code or Codex skill files, hook configuration, generated payloads, installer behavior, marketplace/public documentation, or install-facing invocation paths.
 - **FR-022**: The PR review packet MUST identify non-goals, helper promotion status, Bash-reference retention, verification evidence, known gaps, rollback expectations, and the review order for the two slices.
+- **FR-023**: For helpers that currently emit machine-readable failure output, rejected-input fixtures MUST define the expected stdout JSON schema, stderr diagnostics, diagnostic/remediation content where present, and exact nonzero exit class.
+- **FR-024**: The parity plan MUST map each applicable helper failure class to an exact nonzero exit code for invalid input, missing input, malformed JSON, missing file, unsupported path, prerequisite failure, validation failure, and subprocess/preflight failure.
+- **FR-025**: Each applicable helper MUST include fixture coverage for every rejected-input scenario class it supports, rather than relying on one generic rejected fixture per helper.
+- **FR-026**: New Python helper ports and Bash-reference comparison harnesses MUST NOT use `shell=True`, shell-command strings, `os.system`, shell interpolation, or unbounded subprocess input; unavoidable subprocess calls MUST use explicit argv sequences.
+- **FR-027**: Filesystem inputs MUST be resolved against the repo or plugin trust boundary before reading, including symlinks and relative components, and helpers MUST reject traversal or symlink escapes.
 
 ### Phase 2 Clarifications
 
@@ -118,6 +123,9 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 - Golden-only fixtures are limited to runner envelope/registry dispatch behavior, typed-path and subprocess safety, malformed runner request cases, synthetic Windows/no-Bash/path fixtures, and normalization unit tests.
 - JSON stdout MUST be compared semantically. Stderr diagnostics, diagnostic codes, statuses, booleans, counts, route/status enums, public text, and exit codes MUST remain exact unless a field is explicitly listed as normalized.
 - Normalization MAY apply only to repo/worktree absolute paths converted to repo-relative values, temp paths, timestamps, executable paths or versions when not fixture-controlled, platform/architecture/runtime identity fields, and branch/worktree metadata when the test intentionally uses live git state.
+- Rejected-input parity MUST cover helper-specific failure classes, stdout JSON for helpers that emit it, stderr diagnostics, deterministic remediation text or runner diagnostic remediation actions where present, and exact nonzero exit-code mapping.
+- Helper implementations and Bash-reference comparison harnesses MUST use argv-list subprocess calls only when subprocess execution is unavoidable; shell invocation and shell interpolation are out of scope for promoted Python helper logic.
+- Helper path handling MUST canonicalize file inputs through repo/plugin trust-boundary checks and reject path traversal or symlink escapes before reading.
 - The helper promotion record MUST include helper id, slice, Bash script path, runner operation/module, fixture ids, Bash comparison ids, normalized fields, status (`python_authoritative`, `bash_reference_only`, or `out_of_scope`), authoritative test command, and deferred follow-up.
 
 #### Local Source-Checkout Smoke Boundary

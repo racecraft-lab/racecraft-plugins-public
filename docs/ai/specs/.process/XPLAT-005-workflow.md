@@ -58,7 +58,7 @@ accepted scope:
 | Specify | `$speckit-specify` | Complete | Created the read-only helper port spec and requirements checklist; G1 passed |
 | Clarify | `$speckit-clarify` | Complete | Resolved helper grouping, parity comparison, gate promotion, read-only mixed-mode boundaries, and macOS smoke scope |
 | Plan | `$speckit-plan` | Complete | Produced the two-slice architecture, helper registry plan, parity contracts, promotion matrix, and test strategy |
-| Checklist | `$speckit-checklist` | Pending | Run integration, error-handling, reliability, and security checklists |
+| Checklist | `$speckit-checklist` | Complete | Ran integration, error-handling, reliability, and security checklists; remediated all six true gaps |
 | Tasks | `$speckit-tasks` | Pending | Generate ordered tasks across the accepted two slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Port helpers, tests, parity fixtures, and source-checkout smoke evidence |
@@ -412,10 +412,10 @@ Focus on XPLAT-005 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |---|---|---|---|
-| Integration | Pending | Pending | Pending |
-| Error-handling | Pending | Pending | Pending |
-| Reliability | Pending | Pending | Pending |
-| Security | Pending | Pending | Pending |
+| Integration | 24 | 0 | Runner foundation reuse, registry/module integration, parity harness, slice handoff, and cutover exclusions |
+| Error-handling | 24 | 4 found, 4 remediated | Added rejected-input stdout schema, failure-class exit mapping, deterministic remediation, and per-class fixture requirements |
+| Reliability | 20 | 0 | Deterministic parity evidence, promotion gates, source-checkout smoke repeatability, environment isolation, and regression boundaries |
+| Security | 22 | 2 found, 2 remediated | Added argv-only subprocess policy and repo/plugin trust-boundary path requirements |
 
 ---
 

@@ -1,7 +1,7 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
-  "updated_at": "2026-07-02T15:58:06Z",
-  "active_step": "Phase 4: Checklist - integration",
+  "updated_at": "2026-07-02T16:06:21Z",
+  "active_step": "Phase 5: Tasks",
   "feature_dir": "specs/xplat-005-read-only-helper-port",
   "branch": "codex/xplat-005-read-only-helper-port",
   "status": "running",
@@ -193,39 +193,93 @@
     },
     {
       "step": "Phase 4: Checklist - integration",
-      "status": "in_progress"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-005-read-only-helper-port/checklists/integration.md",
+        "items": 24,
+        "initial_gaps": 0,
+        "current_gaps": 0,
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "outcome": "no integration consensus needed",
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - error-handling",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-005-read-only-helper-port/checklists/error-handling.md",
+        "items": 24,
+        "initial_gaps": 4,
+        "current_gaps": 0,
+        "remediations": [
+          "added rejected-input stdout schema requirements",
+          "added per-helper failure-class to nonzero-exit mapping requirements",
+          "added deterministic remediation text/action requirements",
+          "added per-class rejected-input fixture coverage requirements"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - error-handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "outcome": "parent remediated all error-handling gaps in spec, plan, data model, contracts, and checklist",
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - reliability",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-005-read-only-helper-port/checklists/reliability.md",
+        "items": 20,
+        "initial_gaps": 0,
+        "current_gaps": 0,
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - reliability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "outcome": "no reliability consensus needed",
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - security",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "checklist": "specs/xplat-005-read-only-helper-port/checklists/security.md",
+        "items": 22,
+        "initial_gaps": 2,
+        "current_gaps": 0,
+        "remediations": [
+          "added argv-only subprocess policy and shell invocation ban",
+          "added repo/plugin trust-boundary path resolution and symlink/traversal rejection requirements"
+        ],
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 4: Checklist - security Consensus",
-      "status": "pending"
+      "status": "completed",
+      "result": {
+        "outcome": "parent remediated all security gaps in spec, plan, data model, contracts, and checklist",
+        "human_escalation_required": false
+      }
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 5: Atomicity route",

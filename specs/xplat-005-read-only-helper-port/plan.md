@@ -24,7 +24,7 @@ Port the read-only and advisory helper surface onto the XPLAT-004 Python runner 
 
 **Performance Goals**: Deterministic helper invocation with no network, no package restore, no virtualenv restore, no shell dependency for promoted Python helper execution, and stable comparison output after explicit normalization
 
-**Constraints**: Read-only/advisory helper behavior only; preserve stdout JSON schema, stderr diagnostics, and exit-code semantics; every promoted Bash-backed helper requires golden fixture parity plus source-checkout Bash-reference comparison before `python_authoritative` status; normalization is explicit and limited to environment-sensitive fields
+**Constraints**: Read-only/advisory helper behavior only; preserve stdout JSON schema, stderr diagnostics, and exit-code semantics; rejected-input fixtures define stdout JSON schemas where helpers emit them, deterministic remediation content where present, and per-helper failure-class to nonzero-exit mappings; every promoted Bash-backed helper requires golden fixture parity plus source-checkout Bash-reference comparison before `python_authoritative` status; normalization is explicit and limited to environment-sensitive fields; Python helper ports and Bash-reference harnesses must avoid shell invocation and must resolve filesystem inputs inside repo/plugin trust boundaries
 
 **Scale/Scope**: One workflow with two internal slices covering registry/dispatch plus sixteen in-scope helper or mode ports; out-of-scope mutation, persistence, stack, relocation, install, autoheal, and active cutover helpers stay unported
 
@@ -127,6 +127,14 @@ Add read-only/advisory ports for `generate-spec-index --check`, `o5-topology`, `
 
 Status values are target promotion states. `python_authoritative` applies only after the helper has passed the listed golden fixture parity and Bash-reference comparison. Golden-only cases are limited to runner envelope, registry dispatch, typed-path/subprocess safety, malformed request, synthetic Windows/no-Bash/path, and normalization unit tests.
 
+### Error And Security Requirements
+
+- Rejected-input fixture coverage must be helper-specific and include each applicable invalid-input, missing-input, malformed JSON, missing-file, unsupported-path, prerequisite-failure, validation-failure, and subprocess/preflight-failure class.
+- For helpers that emit machine-readable failure output, each rejected-input fixture must define expected stdout JSON schema, stderr diagnostics, deterministic remediation text or runner diagnostic remediation actions where present, and the exact nonzero exit code.
+- The parity harness must carry a failure-class mapping per helper so implementation can distinguish usage/input errors from missing prerequisites, validation failures, stale/advisory outcomes, subprocess failures, and internal failures.
+- Python helper ports and Bash-reference comparison harnesses must not use `shell=True`, shell-command strings, `os.system`, shell interpolation, or unbounded subprocess input. When subprocesses are unavoidable, calls must use explicit argv sequences with bounded inputs and captured stdout/stderr.
+- Filesystem inputs must be resolved with repo/plugin trust-boundary checks before reading. Relative components and symlinks must be canonicalized, and traversal or symlink escapes must be rejected before helper logic consumes the file.
+
 | Helper id | Slice | Bash script path | Runner operation/module | Fixture ids | Bash comparison ids | Normalized fields | Status | Authoritative test command | Deferred follow-up |
 |---|---:|---|---|---|---|---|---|---|---|
 | helper-registry-dispatch | 1 | N/A | `helper.dispatch` / `speckit_pro_runner.helpers.registry` | `golden.registry.valid`, `golden.registry.unknown-helper`, `golden.registry.malformed-request` | N/A | none | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper helper-registry-dispatch` | XPLAT-006 may reuse registry for mutation helpers |
@@ -183,6 +191,14 @@ Status values are target promotion states. `python_authoritative` applies only a
    ```
 
 5. Confirm scope audit has zero active Claude Code or Codex skill, hook, generated payload, install, marketplace/public docs, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits.
+6. Confirm error/security parity coverage:
+
+   - rejected-input fixtures cover every applicable helper failure class
+   - helpers with machine-readable failure output define stdout JSON schemas
+   - diagnostic remediation text/actions are deterministic
+   - nonzero exit mappings are exact per helper
+   - no helper or harness uses shell invocation
+   - path fixtures reject traversal and symlink escapes outside repo/plugin boundaries
 
 ## Phase 1 Design Recheck
 

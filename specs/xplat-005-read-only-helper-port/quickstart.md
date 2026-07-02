@@ -32,6 +32,7 @@ Expected result:
 
 - Every promoted helper passes its golden fixtures
 - Every promoted Bash-backed helper passes source-checkout Bash-reference comparison
+- Every applicable rejected-input failure class has a fixture with expected stdout schema when machine-readable output exists, deterministic remediation content when diagnostics are emitted, and exact nonzero exit mapping
 - JSON stdout is compared semantically
 - Stderr diagnostics and exit codes match exactly unless an explicit normalization rule applies
 
@@ -68,6 +69,8 @@ Review the implementation diff and confirm:
 - `generate-spec-index` is covered only in `--check` mode
 - `plan-layers` excludes marker-plan output
 - `validate-pr-packet` covers read-only validation output, diagnostics, and exit codes only
+- Python helper ports and Bash-reference harnesses use argv-list subprocess calls only and do not use `shell=True`, shell-command strings, `os.system`, or shell interpolation
+- Filesystem inputs resolve relative components and symlinks against repo/plugin trust boundaries and reject traversal or symlink escapes before reading
 
 ## 6. Review Promotion Evidence
 
@@ -76,5 +79,5 @@ Use the promotion matrix in `plan.md` and the schema in `contracts/helper-promot
 Expected result:
 
 - Every XPLAT-005 helper is listed as `python_authoritative`, `bash_reference_only`, or `out_of_scope`
-- `python_authoritative` helpers have fixture ids, Bash comparison ids when Bash-backed, normalized fields, an authoritative test command, and deferred follow-up notes
+- `python_authoritative` helpers have fixture ids, Bash comparison ids when Bash-backed, failure-class mappings, normalized fields, subprocess/path-boundary policies, an authoritative test command, and deferred follow-up notes
 - Out-of-scope helpers point to XPLAT-006 or XPLAT-007 as appropriate

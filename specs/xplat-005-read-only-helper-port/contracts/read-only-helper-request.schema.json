@@ -50,7 +50,47 @@
       "const": "read_only"
     },
     "inputs": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "value"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": ["repo_relative", "plugin_relative", "absolute_fixture"]
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1
+              },
+              "trust_boundary": {
+                "type": "string",
+                "enum": ["repo", "plugin"]
+              }
+            }
+          }
+        },
+        "failure_class": {
+          "type": "string",
+          "enum": [
+            "none",
+            "invalid_input",
+            "missing_input",
+            "malformed_json",
+            "missing_file",
+            "unsupported_path",
+            "missing_prerequisite",
+            "validation_failure",
+            "subprocess_failure",
+            "preflight_failure"
+          ]
+        }
+      }
     }
   }
 }

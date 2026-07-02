@@ -12,7 +12,10 @@
     "runner_module",
     "fixture_ids",
     "bash_comparison_ids",
+    "failure_class_mappings",
     "normalized_fields",
+    "subprocess_policy",
+    "path_boundary_policy",
     "status",
     "authoritative_test_command",
     "deferred_follow_up"
@@ -63,6 +66,68 @@
         "type": "string"
       }
     },
+    "failure_class_mappings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "failure_class",
+          "expected_exit_code",
+          "fixture_ids"
+        ],
+        "properties": {
+          "failure_class": {
+            "type": "string",
+            "enum": [
+              "invalid_input",
+              "missing_input",
+              "malformed_json",
+              "missing_file",
+              "unsupported_path",
+              "missing_prerequisite",
+              "validation_failure",
+              "subprocess_failure",
+              "preflight_failure"
+            ]
+          },
+          "expected_exit_code": {
+            "type": "integer"
+          },
+          "stdout_schema_ref": {
+            "type": ["string", "null"]
+          },
+          "diagnostic_code": {
+            "type": ["string", "null"]
+          },
+          "remediation_required": {
+            "type": "boolean"
+          },
+          "fixture_ids": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          }
+        }
+      }
+    },
+    "subprocess_policy": {
+      "type": "string",
+      "enum": [
+        "argv_only",
+        "not_applicable"
+      ]
+    },
+    "path_boundary_policy": {
+      "type": "string",
+      "enum": [
+        "repo_or_plugin_boundary_required",
+        "not_applicable"
+      ]
+    },
     "status": {
       "type": "string",
       "enum": [
@@ -90,6 +155,9 @@
       "then": {
         "properties": {
           "fixture_ids": {
+            "minItems": 1
+          },
+          "failure_class_mappings": {
             "minItems": 1
           },
           "authoritative_test_command": {

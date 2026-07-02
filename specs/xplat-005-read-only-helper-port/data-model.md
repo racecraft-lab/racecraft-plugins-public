@@ -76,11 +76,16 @@ A deterministic input/output case for one helper.
 - `expected_stdout_json`
 - `expected_stderr`
 - `expected_exit_code`
+- `failure_class`: one of `invalid_input`, `missing_input`, `malformed_json`, `missing_file`, `unsupported_path`, `missing_prerequisite`, `validation_failure`, `subprocess_failure`, `preflight_failure`, or `none`
+- `expected_stdout_schema`: schema reference required when the helper emits machine-readable failure output
+- `expected_remediation`: deterministic remediation text or runner diagnostic remediation actions when diagnostics are emitted
 - `normalization_rule_ids`
 
 **Validation Rules**
 
-- Every promoted helper must have at least one accepted and one rejected fixture unless the helper has no rejected state.
+- Every promoted helper must have at least one accepted fixture and one fixture for each applicable rejected-input failure class unless the helper has no rejected state.
+- Helpers that emit machine-readable rejected-input output must define the rejected stdout JSON schema.
+- Diagnostics with remediation must assert deterministic remediation text or remediation actions.
 - Golden-only fixtures are limited to runner envelope/registry dispatch, typed-path/subprocess safety, malformed request cases, synthetic Windows/no-Bash/path fixtures, and normalization unit tests.
 
 ## Bash Reference Comparison
@@ -98,13 +103,58 @@ Evidence that a Python helper matches the current source-checkout Bash helper.
 - `stdout_comparison`: `semantic_json`
 - `stderr_comparison`: `exact` or listed normalization rule
 - `exit_code_comparison`: `exact`
+- `subprocess_policy`: `argv_only`
+- `bounded_input`: boolean indicating the harness avoids unbounded subprocess input
 - `result`: `pass` or `fail`
 
 **Validation Rules**
 
 - Bash-reference comparisons run only from a source checkout.
 - Bash comparison is required before a Bash-backed helper can be promoted.
+- Bash-reference comparison harnesses must not use `shell=True`, shell-command strings, `os.system`, shell interpolation, or unbounded subprocess input.
+- Subprocess execution must use explicit argv sequences and capture stdout/stderr.
 - Failed comparisons must identify the field, stream, or exit-code difference.
+
+## Failure Class Mapping
+
+Defines exact rejected-input semantics per helper.
+
+**Fields**
+
+- `helper_id`
+- `failure_class`
+- `expected_status`
+- `expected_exit_code`
+- `stdout_schema_ref`
+- `stderr_required`
+- `diagnostic_code`
+- `remediation_required`
+- `fixture_ids`
+
+**Validation Rules**
+
+- Every applicable rejected-input fixture must map to a failure class.
+- Missing-input, invalid-input, malformed-JSON, missing-file, unsupported-path, prerequisite-failure, validation-failure, subprocess-failure, and preflight-failure classes must not collapse into a generic error unless the Bash reference already exposes only one class.
+- Exit codes and diagnostic codes must match the Bash reference or documented runner envelope status.
+
+## Trusted Path Input
+
+Represents a filesystem input after trust-boundary resolution.
+
+**Fields**
+
+- `kind`: `repo_relative`, `plugin_relative`, or `absolute_fixture`
+- `raw_value`
+- `resolved_value`
+- `trust_boundary`: repo root or plugin root
+- `accepted`
+- `rejection_reason`
+
+**Validation Rules**
+
+- Relative components and symlinks must be resolved before reading files.
+- Resolved paths must stay inside the declared repo or plugin trust boundary.
+- Traversal and symlink escapes must be rejected before helper logic consumes the file.
 
 ## Normalization Rule
 
