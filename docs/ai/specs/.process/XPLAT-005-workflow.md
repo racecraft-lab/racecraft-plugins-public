@@ -59,7 +59,7 @@ accepted scope:
 | Clarify | `$speckit-clarify` | Complete | Resolved helper grouping, parity comparison, gate promotion, read-only mixed-mode boundaries, and macOS smoke scope |
 | Plan | `$speckit-plan` | Complete | Produced the two-slice architecture, helper registry plan, parity contracts, promotion matrix, and test strategy |
 | Checklist | `$speckit-checklist` | Complete | Ran integration, error-handling, reliability, and security checklists; remediated all six true gaps |
-| Tasks | `$speckit-tasks` | Pending | Generate ordered tasks across the accepted two slices |
+| Tasks | `$speckit-tasks` | Complete | Generated 84 ordered tasks across the accepted two slices with 5 parallel-safe setup fixture tasks |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Implement | `$speckit-implement` | Pending | Port helpers, tests, parity fixtures, and source-checkout smoke evidence |
 
@@ -459,10 +459,10 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 84 |
+| Phases | 5 |
+| Parallel Opportunities | 5 `[P]` setup fixture tasks only |
+| User Stories Covered | US1: 47 tasks; US2: 6 tasks; US3: 24 tasks; setup/unlabeled: 7 tasks |
 
 ---
 
@@ -474,10 +474,10 @@ branches by itself.
 
 | Field | Value | Meaning |
 |---|---|---|
-| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Pending | `true`, or `false` for destructive/concurrency-sensitive work |
-| Signals | Pending | Detector findings behind the route |
-| Warnings | Pending | Release-safety warnings |
+| Route | `one-navigable-PR` | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
+| Releasable | `true` | `true`, or `false` for destructive/concurrency-sensitive work |
+| Signals | `change-shape:modify-heavy`; hint `hint:release-cadence:weak` | Detector findings behind the route |
+| Warnings | None | Release-safety warnings |
 
 Classifier command:
 
