@@ -44,7 +44,7 @@
 
 **Decision**: Keep XPLAT-005 as one workflow with Slice 1 for registry/prereq/status helpers and Slice 2 for index/topology/planning validators plus late read-only PR-packet validation.
 
-**Rationale**: The setup reviewability gate warned but passed. The plan keeps the implementation to four production files and ten total planned files, with helper evidence organized by matrix rows.
+**Rationale**: The setup reviewability gate warned but passed. The plan keeps the implementation to four production files and twelve total planned files after runner source metadata updates, with helper evidence organized by matrix rows.
 
 **Alternatives considered**: Child specs were rejected because planning does not prove a split is required. A single undifferentiated implementation slice was rejected because reviewers need to inspect foundational helper parity before later planning and PR-packet validation ports.
 

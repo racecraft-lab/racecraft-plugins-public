@@ -28,7 +28,7 @@ Port the read-only and advisory helper surface onto the XPLAT-004 Python runner 
 
 **Scale/Scope**: One workflow with two internal slices covering registry/dispatch plus sixteen in-scope helper or mode ports; out-of-scope mutation, persistence, stack, relocation, install, autoheal, and active cutover helpers stay unported
 
-**Reviewability Budget**: setup reviewability warning recorded as `status=warn`, `pass=true`; two primary surfaces `docs/process` and `harness/adapter`; supporting test fixture surface; projected reviewable LOC 250; projected production files 4; projected total files 10; no blockers
+**Reviewability Budget**: setup reviewability warning recorded as `status=warn`, `pass=true`; two primary surfaces `docs/process` and `harness/adapter`; supporting test fixture surface; projected reviewable LOC 250; projected production files 4; projected total files 12 after runner source metadata updates; no blockers
 
 ## Declared File Operations
 
@@ -42,6 +42,8 @@ Port the read-only and advisory helper surface onto the XPLAT-004 Python runner 
 - NEW tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/synthetic-paths.json
 - NEW tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/normalization-cases.json
 - NEW tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json
+- MODIFIED speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json
+- MODIFIED speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256
 
 ## Constitution Check
 
@@ -78,6 +80,8 @@ specs/xplat-005-read-only-helper-port/
 speckit-pro/
 +-- speckit_pro_runner/
 |   +-- __main__.py
+|   +-- speckit-pro-runner.manifest.json
+|   +-- speckit-pro-runner.sha256
 |   +-- helpers/
 |       +-- __init__.py
 |       +-- registry.py
@@ -121,7 +125,7 @@ Build the registry/dispatch path and promote prerequisite, detection, marker, va
 
 Add read-only/advisory ports for `generate-spec-index --check`, `o5-topology`, `atomicity-route`, `plan-layers <feature-dir>`, `validate-pr-workflow-contract`, and `validate-pr-packet` validation-only behavior. This slice excludes write/regenerate modes, marker-plan output, validation-result persistence, workflow-event upserts, PR body generation, PR emission, split state, restack, relocation, install repair, autoheal, and active Claude/Codex cutover.
 
-**Reviewability split decision**: Remain one XPLAT-005 workflow with two internal slices. Planning does not prove a child-spec split is required because the accepted implementation surface is four production files, ten total planned files, and the only reviewability warning is the already accepted surface warning.
+**Reviewability split decision**: Remain one XPLAT-005 workflow with two internal slices. Planning does not prove a child-spec split is required because the accepted implementation surface is four production files, twelve total planned files after runner source metadata updates, and the only reviewability warning is the already accepted surface warning.
 
 ## Helper Promotion Matrix Plan
 
@@ -190,8 +194,9 @@ Status values are target promotion states. `python_authoritative` applies only a
    bash tests/speckit-pro/run-all.sh
    ```
 
-5. Confirm scope audit has zero active Claude Code or Codex skill, hook, generated payload, install, marketplace/public docs, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits.
-6. Confirm error/security parity coverage:
+5. Validate runner source manifest and checksum metadata after adding or modifying helper runner files, keeping generated payload propagation deferred to XPLAT-007.
+6. Confirm scope audit has zero active Claude Code or Codex skill, hook, generated payload, install, marketplace/public docs, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits.
+7. Confirm error/security parity coverage:
 
    - rejected-input fixtures cover every applicable helper failure class
    - helpers with machine-readable failure output define stdout JSON schemas

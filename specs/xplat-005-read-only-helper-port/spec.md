@@ -97,6 +97,7 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 - **FR-025**: Each applicable helper MUST include fixture coverage for every rejected-input scenario class it supports, rather than relying on one generic rejected fixture per helper.
 - **FR-026**: New Python helper ports and Bash-reference comparison harnesses MUST NOT use `shell=True`, shell-command strings, `os.system`, shell interpolation, or unbounded subprocess input; unavoidable subprocess calls MUST use explicit argv sequences.
 - **FR-027**: Filesystem inputs MUST be resolved against the repo or plugin trust boundary before reading, including symlinks and relative components, and helpers MUST reject traversal or symlink escapes.
+- **FR-028**: Runner source manifest and checksum metadata MUST include every new or modified XPLAT-005 runner source file and MUST remain source-checkout metadata only, with generated-payload propagation deferred to XPLAT-007.
 
 ### Phase 2 Clarifications
 
@@ -154,7 +155,7 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 - **Secondary surfaces, if any**: docs/process; test fixtures
 - **Projected reviewable LOC**: 250
 - **Projected production files**: 4
-- **Projected total files**: 10
+- **Projected total files**: 12
 - **Budget result**: warning accepted
 - **Split decision**: Remain one XPLAT-005 workflow with two internal slices. Split into child specs only if Plan or Tasks proves the helper registry plus read-only parity work cannot stay reviewable.
 
@@ -195,6 +196,7 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 - **SC-004**: Verification evidence includes the local macOS source-checkout `runtime-info` runner smoke for the accepted read-only path and includes no installed-plugin or native-matrix support claim.
 - **SC-005**: Scope audit finds zero active Claude Code or Codex skill/hook/generated-payload/install/public-doc cutover edits and zero mutation-helper ports in XPLAT-005.
 - **SC-006**: The implementation remains reviewable as the accepted two-slice workflow or records a Plan/Tasks split decision before implementation begins.
+- **SC-007**: Runner source manifest and checksum metadata validate after the helper runner files are added or modified, without copying metadata into generated payloads or claiming installed-cache proof.
 
 ## Assumptions
 

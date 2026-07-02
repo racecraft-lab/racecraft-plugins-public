@@ -59,8 +59,8 @@ accepted scope:
 | Clarify | `$speckit-clarify` | Complete | Resolved helper grouping, parity comparison, gate promotion, read-only mixed-mode boundaries, and macOS smoke scope |
 | Plan | `$speckit-plan` | Complete | Produced the two-slice architecture, helper registry plan, parity contracts, promotion matrix, and test strategy |
 | Checklist | `$speckit-checklist` | Complete | Ran integration, error-handling, reliability, and security checklists; remediated all six true gaps |
-| Tasks | `$speckit-tasks` | Complete | Generated 84 ordered tasks across the accepted two slices with 5 parallel-safe setup fixture tasks |
-| Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
+| Tasks | `$speckit-tasks` | Complete | Generated 85 ordered tasks across the accepted two slices with 5 parallel-safe setup fixture tasks |
+| Analyze | `$speckit-analyze` | Complete | Remediated metadata and scope-audit drift; G6 passed with no remaining findings |
 | Implement | `$speckit-implement` | Pending | Port helpers, tests, parity fixtures, and source-checkout smoke evidence |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -459,7 +459,7 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | 84 |
+| Total Tasks | 85 |
 | Phases | 5 |
 | Parallel Opportunities | 5 `[P]` setup fixture tasks only |
 | User Stories Covered | US1: 47 tasks; US2: 6 tasks; US3: 24 tasks; setup/unlabeled: 7 tasks |
@@ -509,7 +509,8 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| Pending | Pending | Pending | Pending |
+| A1 | HIGH | Runner source files were planned without runner manifest/checksum metadata updates | Added `FR-028`, `SC-007`, metadata file operations, metadata verification, and task T077 |
+| A2 | MEDIUM | Final scope audit did not explicitly cover generated payload directories and related active surfaces | Expanded final scope audit task to cover `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, agents, hooks, `.agents/`, scripts, and related surfaces |
 
 ---
 

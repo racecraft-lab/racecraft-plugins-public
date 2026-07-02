@@ -192,14 +192,15 @@
 
 **Independent Test**: A reviewer can inspect helper promotion records, run the smoke/parity commands, and confirm zero active cutover or mutation-helper leakage.
 
-- [ ] T077 [US3] Run the local source-checkout runtime-info smoke using `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json`
-- [ ] T078 [US3] Run the focused helper parity suite from `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py`
-- [ ] T079 [US3] Run the focused Layer 4 script gate using `tests/speckit-pro/run-all.sh`
-- [ ] T080 [US3] Run the default deterministic gate using `tests/speckit-pro/run-all.sh`
-- [ ] T081 [US3] Audit the implementation diff for zero active Claude/Codex skill, hook, generated payload, install, marketplace/public-doc, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits across `.claude/`, `speckit-pro/skills/`, `speckit-pro/hooks/`, `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/`, `docs-site/`, and `.claude-plugin/`
-- [ ] T082 [US3] Verify every in-scope and out-of-scope helper has an unambiguous promotion status, review order, known gap, Bash-reference retention note, rollback/deferred follow-up, and authoritative command in `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`
-- [ ] T083 [US3] Prepare the orchestrator handoff evidence from `specs/xplat-005-read-only-helper-port/quickstart.md`, `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`, and `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/bash-reference-manifest.json` without generating a PR body or emitting PR state
-- [ ] T084 [US3] Validate the task artifact with `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/xplat-005-read-only-helper-port` so `specs/xplat-005-read-only-helper-port/tasks.md` is checked by the gate script
+- [ ] T077 [US3] Refresh and validate runner source metadata for `speckit-pro/speckit_pro_runner/__main__.py`, `speckit-pro/speckit_pro_runner/helpers/__init__.py`, `speckit-pro/speckit_pro_runner/helpers/registry.py`, and `speckit-pro/speckit_pro_runner/helpers/read_only.py` in `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` and `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`
+- [ ] T078 [US3] Run the local source-checkout runtime-info smoke using `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json`
+- [ ] T079 [US3] Run the focused helper parity suite from `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py`
+- [ ] T080 [US3] Run the focused Layer 4 script gate with `bash tests/speckit-pro/run-all.sh --layer 4`
+- [ ] T081 [US3] Run the default deterministic gate with `bash tests/speckit-pro/run-all.sh`
+- [ ] T082 [US3] Audit the implementation diff for zero active Claude/Codex skill, hook, generated payload, install, marketplace/public-doc, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits across `.claude/`, `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/`, `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/`, `speckit-pro/codex-hooks.json`, `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, `docs-site/`, `.agents/`, `.claude-plugin/`, and `scripts/`
+- [ ] T083 [US3] Verify every in-scope and out-of-scope helper has an unambiguous promotion status, review order, known gap, Bash-reference retention note, rollback/deferred follow-up, and authoritative command in `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`
+- [ ] T084 [US3] Prepare the orchestrator handoff evidence from `specs/xplat-005-read-only-helper-port/quickstart.md`, `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`, and `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/bash-reference-manifest.json` without generating a PR body or emitting PR state
+- [ ] T085 [US3] Validate the task artifact with `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/xplat-005-read-only-helper-port` so `specs/xplat-005-read-only-helper-port/tasks.md` is checked by the gate script
 
 ---
 
@@ -211,7 +212,7 @@
 - **Phase 2**: Depends on Phase 1 directories and fixture skeletons.
 - **Phase 3 / Slice 1**: Depends on Phase 2 registry, harness, path-boundary, and Bash-reference comparison primitives.
 - **Phase 4 / Slice 2**: Depends on Slice 1 checkpoint so reviewers can inspect foundational helper parity before later planning and PR-packet validators.
-- **Phase 5**: Depends on all intended helper promotions and evidence updates.
+- **Phase 5**: Depends on all intended helper promotions, runner source metadata updates, and evidence updates.
 
 ### Helper Promotion Order
 
