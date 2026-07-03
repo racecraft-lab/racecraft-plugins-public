@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T20:05:51Z",
+  "updated_at": "2026-07-03T20:08:54Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 5: Tasks",
+  "active_step": "Phase 6: Analyze",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible",
@@ -148,11 +148,11 @@
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
@@ -332,6 +332,34 @@
       },
       "consensus": "skipped: no checklist reported a true gap",
       "outcome": "Integration, error-handling, reliability, and security checklists all passed. The hardening requirement remains explicit: phase-coverage source/generated mirror changes are allowed only for the validator-backed autopilot fix, and scope-audit tests still block other active cutover surfaces."
+    },
+    "tasks": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:08:54Z",
+      "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/tasks.md",
+      "total_tasks": 60,
+      "open_tasks": 54,
+      "completed_hardening_tasks": 6,
+      "g5_gate": {
+        "pass": true,
+        "markers": 0,
+        "task_count": 54
+      },
+      "phases": [
+        "completed hardening baseline",
+        "foundational blocking work",
+        "US1 mutation safety foundation",
+        "US2 manifest-driven install completeness and doctor",
+        "US3 PR-emission, restack, relocation, and reviewability proof",
+        "cross-cutting verification and handoff"
+      ],
+      "parallel_opportunities": [
+        "independent fixture seed files",
+        "independent failing test groups",
+        "US2 and US3 after shared mutation primitives are accepted",
+        "final hardening and scope-audit checks after implementation"
+      ],
+      "outcome": "Tasks preserve the accepted three-slice order and keep hardening proof explicit. Parallel markers are limited to independent fixture or test work and do not compete for shared mutation primitives, registry entries, manifests, or promotion records."
     }
   }
 }

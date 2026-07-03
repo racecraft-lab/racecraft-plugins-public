@@ -62,8 +62,8 @@ accepted scope:
 | Clarify | `$speckit-clarify` | Complete | Sessions 1-4 complete; G2 passed with 0 clarification markers |
 | Plan | `$speckit-plan` | Complete | Created plan, research, data model, quickstart, and five contracts; G3 passed with 0 markers; hardening evidence passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, reliability, and security checklists complete with no gaps; consensus skipped |
-| Tasks | `$speckit-tasks` | In Progress | Generate ordered tasks across the accepted three slices |
-| Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
+| Tasks | `$speckit-tasks` | Complete | Generated 60 total tasks: 6 completed hardening tasks and 54 open implementation/handoff tasks; G5 passed |
+| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Run the pre-implementation confidence gate after Analyze and before task execution |
 | Implement | `$speckit-implement` | Pending | Port helpers, fixtures, tests, and handoff evidence |
 | Post | Autopilot post-implementation items | Pending | Complete doctor, verification, review, PR packet, PR creation, remediation, and retrospective items |
@@ -550,10 +550,11 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | Pending until Tasks runs |
+| Total Tasks | 60 total; 54 open tasks reported by G5 because 6 hardening tasks are already complete |
 | Phases | Three accepted implementation slices plus setup and handoff |
-| Parallel Opportunities | Pending; only independent fixture/docs/helper tasks may be marked `[P]` |
-| User Stories Covered | Pending until Tasks runs |
+| Parallel Opportunities | Fixture seeds, independent failing test groups, US2/US3 after shared mutation primitives, and final hardening/scope checks |
+| User Stories Covered | HARD baseline, US1 mutation safety, US2 install/doctor, US3 PR-emission/reviewability, HANDOFF |
+| G5 | Pass: `validate-gate.sh G5` reported 54 open tasks and 0 markers |
 
 ---
 
