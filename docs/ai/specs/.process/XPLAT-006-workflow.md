@@ -57,7 +57,7 @@ accepted scope:
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Create the mutation/install/PR-emission helper port spec and requirements checklist |
+| Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Pending | Resolve helper/mode matrix, mutation envelope, doctor inventory, parity, and approval boundaries |
 | Plan | `$speckit-plan` | Pending | Produce the three-slice architecture, mutation safety model, install/doctor plan, and test strategy |
 | Checklist | `$speckit-checklist` | Pending | Run integration, error-handling, reliability, and security checklists |
@@ -266,14 +266,14 @@ approval boundaries before XPLAT-007 removes Bash from active repo-local gates.
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Pending until Specify runs |
-| User Stories | 3 seed stories; final count pending Specify |
-| Acceptance Criteria | 7 roadmap/PRD criteria seeded; final count pending Specify |
+| Functional Requirements | 34 |
+| User Stories | 3 |
+| Acceptance Criteria | 11 acceptance scenarios |
 
 ### Files Generated
 
-- [ ] `specs/xplat-006-mutation-install-pr-emission-helper-port/spec.md`
-- [ ] `specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/requirements.md`
+- [x] `specs/xplat-006-mutation-install-pr-emission-helper-port/spec.md`
+- [x] `specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/requirements.md`
 
 ---
 
