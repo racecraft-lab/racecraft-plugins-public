@@ -1721,6 +1721,7 @@ def child_status(root: Path, child_path: str) -> tuple[str, str]:
             if json.loads(gate_text).get("status") == "block":
                 return "blocked", "final reviewability gate"
         except json.JSONDecodeError:
+            # Malformed gate state falls through to the lower-confidence MOC status fallback.
             pass
     moc = child_dir / "SPEC-MOC.md"
     moc_text = trusted_text(moc, root)
