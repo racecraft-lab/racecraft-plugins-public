@@ -43,4 +43,5 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
 - [quickstart.md](quickstart.md)
+- [uat-runbook.md](uat-runbook.md)
 <!-- GENERATED:BACKLINKS:END -->

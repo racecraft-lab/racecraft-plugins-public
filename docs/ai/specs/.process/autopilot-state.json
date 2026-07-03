@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T20:12:42Z",
+  "updated_at": "2026-07-03T22:10:00Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 7: Implement - T007 reviewability checkpoint",
+  "active_step": "Post: Doctor Extension Check",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible",
@@ -165,11 +165,12 @@
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "in_progress"
+      "status": "completed",
+      "evidence": "XPLAT-006 tasks complete with golden/deferred promotion boundary; mutation hardening test passes 11/11 and Layer 4 includes it."
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Verify Implementation",
@@ -394,6 +395,24 @@
         "plan_step_count": 37
       },
       "outcome": "Advisory confidence gate soft-skipped without blocking implementation. The phase-coverage validator passed and remains the hard stop for missing canonical phases."
+    },
+    "implementation": {
+      "status": "completed",
+      "completed_at": "2026-07-03T21:35:00Z",
+      "tasks_total": 61,
+      "tasks_complete": 61,
+      "promotion_boundary": "No Bash-backed mutation helper is Python-authoritative in XPLAT-006; remaining Bash parity and active cutover stay in XPLAT-007/XPLAT-008.",
+      "hardening_proof": {
+        "red": "test-speckit-pro-mutation-helpers initially failed 9/10 before implementation",
+        "green": "test-speckit-pro-mutation-helpers passed 11/11 after implementation",
+        "layer4": "bash tests/speckit-pro/run-all.sh passed 3795/3795 including mutation-helper hardening"
+      },
+      "focused_tests": {
+        "mutation_helpers": "11/11 passed",
+        "runner": "9/9 passed",
+        "read_only_helpers": "32/32 passed"
+      },
+      "default_suite": "3795/3795 passed"
     }
   }
 }

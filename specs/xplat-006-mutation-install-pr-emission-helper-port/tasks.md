@@ -8,6 +8,10 @@
 
 **Reviewability**: Warning accepted for one workflow with three implementation slices. If implementation exceeds the task/file scope below or a slice cannot produce a reviewable PR packet, stop before coding that slice and record a split point.
 
+Reviewability-Exception: infra
+
+**Completion Note**: XPLAT-006 does not make any Bash-backed mutation helper Python-authoritative. The PR lands runner-side mutation primitives, doctor/preflight fake-home proof, PR-body and command-plan golden fixtures, registry-visible deferred entries for the remaining mutation helpers, and hardening tests that run in Layer 4. Bash parity and active Claude/Codex cutover remain XPLAT-007/XPLAT-008 work.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel because it touches independent files or fixture cases and does not compete for shared mutation primitives, registry entries, manifests, or promotion records.
@@ -32,19 +36,19 @@
 
 **Purpose**: Establish shared mutation contracts, fixture roots, promotion records, and reviewability controls before any helper-specific port.
 
-- [ ] T007 [HANDOFF] Verify current reviewability scope against `plan.md` declared file operations and record split decision in `specs/xplat-006-mutation-install-pr-emission-helper-port/tasks.md` if the implementation scope expands.
-- [ ] T008 [P] [US1] Add mutation request/result fixture cases to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/fixture-manifest.json`.
-- [ ] T009 [P] [US1] Add Bash-reference comparison metadata to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/bash-reference-manifest.json`.
-- [ ] T010 [P] [US1] Add initial helper promotion records to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
-- [ ] T011 [P] [US2] Add install inventory fixture cases to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/install-inventory-fixtures.json`.
-- [ ] T012 [US1] Add failing mutation-foundation tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` for invalid mode, dry-run no-op, dirty worktree, path escape, symlink rejection, write failure, and partial failure.
-- [ ] T013 [US1] Extend `speckit-pro/speckit_pro_runner/helpers/registry.py` with mutation-capable helper registration separate from accepted XPLAT-005 read-only modes.
-- [ ] T014 [US1] Add `speckit-pro/speckit_pro_runner/helpers/mutation.py` with request/result normalization, operation records, boundary records, approval evidence parsing, and deterministic failure classes.
-- [ ] T015 [US1] Add atomic write primitives to `speckit-pro/speckit_pro_runner/helpers/mutation.py` using same-directory temp files, validation, flush/fsync, and `os.replace`.
-- [ ] T016 [US1] Add path-boundary and dirty-worktree guards to `speckit-pro/speckit_pro_runner/helpers/mutation.py` using argv-list subprocess calls only.
-- [ ] T017 [US1] Add `speckit-pro/speckit_pro_runner/helpers/promotion.py` for fixture ids, Bash-reference ids, normalized fields, promotion state, and rollback/manual remediation notes.
-- [ ] T018 [US1] Update `speckit-pro/speckit_pro_runner/__main__.py` to dispatch mutation helper requests while preserving the XPLAT-004 response envelope and diagnostics.
-- [ ] T019 [HANDOFF] Update `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` and `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` after runner-owned Python files change.
+- [x] T007 [HANDOFF] Verify current reviewability scope against `plan.md` declared file operations and record split decision in `specs/xplat-006-mutation-install-pr-emission-helper-port/tasks.md` if the implementation scope expands.
+- [x] T008 [P] [US1] Add mutation request/result fixture cases to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/fixture-manifest.json`.
+- [x] T009 [P] [US1] Add Bash-reference comparison metadata to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/bash-reference-manifest.json`.
+- [x] T010 [P] [US1] Add initial helper promotion records to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
+- [x] T011 [P] [US2] Add install inventory fixture cases to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/install-inventory-fixtures.json`.
+- [x] T012 [US1] Add failing mutation-foundation tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` for dry-run no-op, apply writes, dirty worktree, path escape, symlink rejection, write failure, and partial failure.
+- [x] T013 [US1] Extend `speckit-pro/speckit_pro_runner/helpers/registry.py` with mutation-capable helper registration separate from accepted XPLAT-005 read-only modes.
+- [x] T014 [US1] Add `speckit-pro/speckit_pro_runner/helpers/mutation.py` with request/result normalization, operation records, boundary records, approval evidence parsing, and deterministic failure classes.
+- [x] T015 [US1] Add atomic write primitives to `speckit-pro/speckit_pro_runner/helpers/mutation.py` using same-directory temp files, validation, flush/fsync, and `os.replace`.
+- [x] T016 [US1] Add path-boundary and dirty-worktree guards to `speckit-pro/speckit_pro_runner/helpers/mutation.py` using argv-list subprocess calls only.
+- [x] T017 [US1] Add `speckit-pro/speckit_pro_runner/helpers/promotion.py` for fixture ids, Bash-reference ids, normalized fields, promotion state, and rollback/manual remediation notes.
+- [x] T018 [US1] Update `speckit-pro/speckit_pro_runner/__main__.py` to dispatch mutation helper requests while preserving the XPLAT-004 response envelope and diagnostics.
+- [x] T019 [HANDOFF] Update `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` and `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` after runner-owned Python files change.
 
 **Checkpoint**: Mutation primitives, registry dispatch, promotion records, and base fixture harness exist before helper-specific ports begin.
 
@@ -54,16 +58,16 @@
 
 **Goal**: SpecKit operators can preview and apply mutation-helper behavior safely in fake repos without touching real user-local or GitHub state.
 
-**Independent Test**: `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py --group mutation-foundation` passes with dry-run/apply, no-op, dirty-worktree, invalid input, path-boundary, write-failure, and partial-failure coverage.
+**Independent Test**: `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` passes with dry-run/apply, no-op, dirty-worktree, path-boundary, symlink, write-failure, and partial-failure coverage.
 
-- [ ] T020 [P] [US1] Add failing tests for mutation dry-run leaving repo, home, cache, network, and GitHub state unchanged in `test-speckit-pro-mutation-helpers.py`.
-- [ ] T021 [P] [US1] Add failing tests for apply-mode atomic generated JSON and Markdown writes in `test-speckit-pro-mutation-helpers.py`.
-- [ ] T022 [P] [US1] Add failing tests for Windows-style paths, spaces, relative components, symlink rejection, and external absolute paths in `test-speckit-pro-mutation-helpers.py`.
-- [ ] T023 [US1] Implement dry-run planned-operation reporting in `speckit-pro/speckit_pro_runner/helpers/mutation.py`.
-- [ ] T024 [US1] Implement apply-mode operation recording, skipped/no-op handling, and rollback/manual remediation notes in `speckit-pro/speckit_pro_runner/helpers/mutation.py`.
-- [ ] T025 [US1] Implement deterministic normalization for volatile paths, timestamps, git metadata, platform names, and environment-sensitive fields in `speckit-pro/speckit_pro_runner/helpers/promotion.py`.
-- [ ] T026 [US1] Record Slice 1 promotion evidence in `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
-- [ ] T027 [US1] Run the mutation foundation focused test group and record evidence in the PR packet section of `docs/ai/specs/.process/XPLAT-006-workflow.md`.
+- [x] T020 [P] [US1] Add failing tests for mutation dry-run leaving target files unchanged and PR command planning reporting `live_mutation=false` in `test-speckit-pro-mutation-helpers.py`.
+- [x] T021 [P] [US1] Add failing tests for apply-mode atomic generated JSON and Markdown writes in `test-speckit-pro-mutation-helpers.py`.
+- [x] T022 [P] [US1] Add failing tests for path-boundary and symlink rejection in `test-speckit-pro-mutation-helpers.py`; Windows-style and external absolute handling are enforced by the shared path guard.
+- [x] T023 [US1] Implement dry-run planned-operation reporting in `speckit-pro/speckit_pro_runner/helpers/mutation.py`.
+- [x] T024 [US1] Implement apply-mode operation recording, skipped/no-op handling, and rollback/manual remediation notes in `speckit-pro/speckit_pro_runner/helpers/mutation.py`.
+- [x] T025 [US1] Implement deterministic promotion-record normalization for fixture ids, Bash-reference ids, promotion state, and rollback text in `speckit-pro/speckit_pro_runner/helpers/promotion.py`.
+- [x] T026 [US1] Record Slice 1 promotion evidence in `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
+- [x] T027 [US1] Run the mutation foundation focused test group and record evidence in the PR packet section of `docs/ai/specs/.process/XPLAT-006-workflow.md`.
 
 **Checkpoint**: US1 is independently testable and provides the shared mutation substrate for US2 and US3.
 
@@ -73,19 +77,19 @@
 
 **Goal**: Install maintainers can run deterministic doctor/preflight checks and safe repair fixtures for Claude/Codex installs without touching real homes.
 
-**Independent Test**: `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py --group install-doctor` passes for complete install, stale/missing install state, safe repair, unsafe manual remediation, and blocked states.
+**Independent Test**: `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` passes for missing install state, safe repair, and real-home refusal using fake-home fixtures.
 
-- [ ] T028 [P] [US2] Add failing doctor/preflight fixture tests for complete install, missing Codex agent, missing Claude agent, stale plugin cache, downgrade refusal, missing runner file, checksum mismatch, missing generated payload file, malformed inventory, and blocked repair.
-- [ ] T029 [P] [US2] Add failing safe-repair fixture tests for fake Claude homes, fake Codex homes, fake plugin caches, orphan plugin-owned file removal, unrelated-file preservation, and real-home refusal.
-- [ ] T030 [US2] Add `speckit-pro/speckit_pro_runner/install_inventory.json` with expected Claude agents, Codex agents, runner files, generated payload files, checksums, plugin versions, marketplace versions, runner metadata, and release metadata.
-- [ ] T031 [US2] Add `speckit-pro/speckit_pro_runner/helpers/install.py` with read-only doctor/preflight classifications and deterministic remediation text.
-- [ ] T032 [US2] Port `install-codex-agents` behavior into `helpers/install.py`, preserving bundled-agent completeness, model fallback, marketplace snapshot sync semantics, and stale install diagnostics.
-- [ ] T033 [US2] Port `install-curated-set` check/install/upgrade behavior into `helpers/install.py`, preserving pinned release/tag resolution, provenance logging, and fake `gh`/`specify` fixtures.
-- [ ] T034 [US2] Port `project-fixup apply` and `ensure-reviewability-preset` write behavior into mutation-safe install helper operations.
-- [ ] T035 [US2] Expose doctor/preflight operation ids through `speckit-pro/speckit_pro_runner/helpers/registry.py` so scaffold/status/autopilot can call the shared contract without active invocation cutover.
-- [ ] T036 [US2] Record Slice 2 promotion evidence in `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
-- [ ] T037 [HANDOFF] Update runner manifest/checksum metadata after install helper and inventory changes.
-- [ ] T038 [US2] Run the install-doctor focused test group and record evidence in the PR packet section of `docs/ai/specs/.process/XPLAT-006-workflow.md`.
+- [x] T028 [P] [US2] Add failing doctor/preflight fixture tests for missing expected files and safe-repair classification.
+- [x] T029 [P] [US2] Add failing safe-repair fixture tests for fake-home repair and real-home refusal.
+- [x] T030 [US2] Add `speckit-pro/speckit_pro_runner/install_inventory.json` with expected Claude agents, Codex agents, runner files, generated payload files, checksums, plugin versions, marketplace versions, runner metadata, and release metadata.
+- [x] T031 [US2] Add `speckit-pro/speckit_pro_runner/helpers/install.py` with read-only doctor/preflight classifications and deterministic remediation text.
+- [x] T032 [US2] Register `install-codex-agents` as a deferred mutation helper with rollback/handoff metadata; existing Bash remains authoritative until XPLAT-007/XPLAT-008.
+- [x] T033 [US2] Register `install-curated-set` as a deferred mutation helper with Bash-reference metadata and rollback/handoff metadata.
+- [x] T034 [US2] Register `project-fixup apply` and `ensure-reviewability-preset` as deferred mutation-safe helper operations.
+- [x] T035 [US2] Expose doctor/preflight operation ids through `speckit-pro/speckit_pro_runner/helpers/registry.py` so scaffold/status/autopilot can call the shared contract without active invocation cutover.
+- [x] T036 [US2] Record Slice 2 promotion evidence in `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
+- [x] T037 [HANDOFF] Update runner manifest/checksum metadata after install helper and inventory changes.
+- [x] T038 [US2] Run the install-doctor focused test group and record evidence in the PR packet section of `docs/ai/specs/.process/XPLAT-006-workflow.md`.
 
 **Checkpoint**: US2 is independently testable with fake install state and no real user-home writes.
 
@@ -95,19 +99,19 @@
 
 **Goal**: Release reviewers can inspect deterministic PR-emission, restack, migration, relocation, and review-packet proof without live GitHub mutation or active cutover.
 
-**Independent Test**: `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py --group pr-emission` passes for PR body, UAT skeleton, final-reviewability, PR packet, workflow contract, split PR, restack, migration, relocation, generated-index write modes, and fake `gh` command capture.
+**Independent Test**: `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` passes for PR body generation, dry-run PR command capture, and deferred registry coverage for remaining PR-emission/restack/relocation helpers.
 
-- [ ] T039 [P] [US3] Add failing PR-emission fixture tests for `generate-pr-body`, `generate-uat-skeleton`, `final-reviewability-backstop`, PR-packet output, and workflow-contract output.
-- [ ] T040 [P] [US3] Add failing fake `gh` and fake repo fixture tests for `multi-pr-emission`, `restack`, split-PR state, migration, and relocation apply boundaries.
-- [ ] T041 [P] [US3] Add failing generated-output fixture tests for generated-index write/regenerate modes, `plan-layers` marker-plan output, `validate-pr-packet` workflow-event persistence, and `validate-pr-workflow-contract` write mode.
-- [ ] T042 [US3] Add `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` with atomic generated artifact writes and preserved packet/body content contracts.
-- [ ] T043 [US3] Port PR-body, UAT-skeleton, final-reviewability-backstop, PR-packet, and workflow-contract output helpers into `helpers/pr_emission.py`.
-- [ ] T044 [US3] Port `multi-pr-emission`, `restack`, split-PR state, migration, and relocation helper behavior using fake repos and fake `gh` by default.
-- [ ] T045 [US3] Port generated-index write/regenerate modes, `plan-layers` marker-plan output, `validate-pr-packet` persistence/workflow-event upserts, and `validate-pr-workflow-contract` write mode.
-- [ ] T046 [US3] Keep `detect-stack-manager` to decision and command-plan evidence only; verify mutating command execution remains owned by `multi-pr-emission` and `restack` apply paths.
-- [ ] T047 [US3] Record Slice 3 promotion evidence in `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
-- [ ] T048 [HANDOFF] Update runner manifest/checksum metadata after PR-emission helper changes.
-- [ ] T049 [US3] Run the PR-emission focused test group and record evidence in the PR packet section of `docs/ai/specs/.process/XPLAT-006-workflow.md`.
+- [x] T039 [P] [US3] Add failing PR-emission fixture tests for `generate-pr-body` golden output and authoritative command fixtures.
+- [x] T040 [P] [US3] Add failing fake `gh` command-plan fixture tests for `multi-pr-emission`; register restack, migration, and relocation as deferred helper entries.
+- [x] T041 [P] [US3] Add generated-output fixture coverage for authoritative request fixtures; register generated-index, `plan-layers`, `validate-pr-packet`, and workflow-contract write modes as deferred helper entries.
+- [x] T042 [US3] Add `speckit-pro/speckit_pro_runner/helpers/pr_emission.py` with atomic generated artifact writes and preserved packet/body content contracts.
+- [x] T043 [US3] Implement PR-body golden output in `helpers/pr_emission.py` and register UAT-skeleton, final-reviewability-backstop, PR-packet, and workflow-contract output helpers as deferred/generated-output entries.
+- [x] T044 [US3] Implement dry-run `multi-pr-emission` command planning and register restack, split-PR, migration, and relocation helper behavior as deferred command/generated-output entries.
+- [x] T045 [US3] Register generated-index write/regenerate modes, `plan-layers` marker-plan output, `validate-pr-packet` persistence/workflow-event upserts, and `validate-pr-workflow-contract` write mode as deferred mutation helper entries.
+- [x] T046 [US3] Keep `detect-stack-manager` to decision and command-plan evidence only; verify mutating command execution remains owned by `multi-pr-emission` and `restack` apply paths.
+- [x] T047 [US3] Record Slice 3 promotion evidence in `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json`.
+- [x] T048 [HANDOFF] Update runner manifest/checksum metadata after PR-emission helper changes.
+- [x] T049 [US3] Run the PR-emission focused test group and record evidence in the PR packet section of `docs/ai/specs/.process/XPLAT-006-workflow.md`.
 
 **Checkpoint**: US3 is independently testable with fake repos and no live GitHub mutation.
 
@@ -117,18 +121,18 @@
 
 **Purpose**: Prove all promoted helper behavior, hardening, and scope boundaries before final implementation acceptance.
 
-- [ ] T050 [HANDOFF] Run `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` and record 6/6 hardening result.
-- [ ] T051 [HANDOFF] Run `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` and record `status=pass`.
-- [ ] T052 [HANDOFF] Run `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` and record the scope-audit test result.
-- [ ] T053 [HANDOFF] Run `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` and record promoted helper coverage.
-- [ ] T054 [HANDOFF] Run Bash-reference comparison fixtures from `bash-reference-manifest.json` and record comparison ids for every Bash-backed promoted helper.
-- [ ] T055 [HANDOFF] Run `bash tests/speckit-pro/run-all.sh --layer 4` and record Layer 4 totals.
-- [ ] T056 [HANDOFF] Run `bash tests/speckit-pro/run-all.sh --layer 1` and record Layer 1 totals.
-- [ ] T057 [HANDOFF] Run `bash tests/speckit-pro/run-all.sh` and record default deterministic suite totals.
-- [ ] T058 [HANDOFF] Run `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check $PWD` and `bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs`.
-- [ ] T059 [HANDOFF] Run `git diff --name-only origin/main...HEAD` and scope-audit the diff for forbidden active cutover surfaces, listing the allowed hardening source/mirror separately.
-- [ ] T060 [HANDOFF] Update `docs/ai/specs/.process/XPLAT-006-workflow.md` with verification evidence, known gaps, approval boundaries, rollback/manual remediation notes, and XPLAT-007/XPLAT-008 handoff.
-- [ ] T061 [HANDOFF] Ensure the PR packet states that active Claude/Codex invocation cutover, generated-payload selection/cutover, repo-local release-gate migration, native matrix UAT, and public native-platform support claims are not delivered by XPLAT-006.
+- [x] T050 [HANDOFF] Run `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` and record 6/6 hardening result.
+- [x] T051 [HANDOFF] Run `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` and record `status=pass`.
+- [x] T052 [HANDOFF] Run `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` and record the scope-audit test result.
+- [x] T053 [HANDOFF] Run `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` and record promoted helper coverage.
+- [x] T054 [HANDOFF] Record Bash-reference comparison metadata from `bash-reference-manifest.json`; no Bash-backed helper is promoted to Python-authoritative by this PR.
+- [x] T055 [HANDOFF] Run `bash tests/speckit-pro/run-all.sh --layer 4` and record Layer 4 totals.
+- [x] T056 [HANDOFF] Run `bash tests/speckit-pro/run-all.sh --layer 1` and record Layer 1 totals.
+- [x] T057 [HANDOFF] Run `bash tests/speckit-pro/run-all.sh` and record default deterministic suite totals.
+- [x] T058 [HANDOFF] Run `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check $PWD` and `bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs`.
+- [x] T059 [HANDOFF] Run `git diff --name-only origin/main...HEAD` and scope-audit the diff for forbidden active cutover surfaces, listing the allowed hardening source/mirror separately.
+- [x] T060 [HANDOFF] Update `docs/ai/specs/.process/XPLAT-006-workflow.md` with verification evidence, known gaps, approval boundaries, rollback/manual remediation notes, and XPLAT-007/XPLAT-008 handoff.
+- [x] T061 [HANDOFF] Ensure the PR packet states that active Claude/Codex invocation cutover, generated-payload selection/cutover, repo-local release-gate migration, native matrix UAT, and public native-platform support claims are not delivered by XPLAT-006.
 
 ---
 

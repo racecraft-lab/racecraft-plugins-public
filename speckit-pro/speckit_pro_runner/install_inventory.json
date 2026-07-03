@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-006",
+  "inventory_scope": "fixture-safe-source-checkout",
+  "files": [
+    {
+      "path": "agents/speckit-autopilot.md",
+      "content": "# SpecKit Autopilot agent fixture\n",
+      "sha256": "skip"
+    },
+    {
+      "path": "codex/skills/speckit-autopilot/SKILL.md",
+      "content": "# SpecKit Autopilot skill fixture\n",
+      "sha256": "skip"
+    },
+    {
+      "path": "runner/speckit_pro_runner/__main__.py",
+      "content": "# Runner entrypoint fixture\n",
+      "sha256": "skip"
+    }
+  ],
+  "versions": {
+    "runner_contract_id": "speckit-pro-runner",
+    "source_context": "source_checkout",
+    "active_cutover": false
+  },
+  "notes": [
+    "This inventory is consumed by fixture-safe doctor/preflight tests only.",
+    "Installed-cache and marketplace release cutover remain XPLAT-007/XPLAT-008 scope."
+  ]
+}

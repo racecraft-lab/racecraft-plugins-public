@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-006",
+  "helpers": [
+    {
+      "helper_id": "mutation-foundation",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["dry-run-write", "apply-write", "dirty-worktree", "path-escape", "partial-failure"],
+      "bash_reference_ids": [],
+      "authoritative_python_command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Disable mutation helper registry entries before active cutover."
+    },
+    {
+      "helper_id": "doctor-preflight",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["complete-install", "missing-files", "safe-repair", "real-home-refusal"],
+      "bash_reference_ids": [],
+      "authoritative_python_command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Keep existing install scripts authoritative until XPLAT-007/XPLAT-008."
+    },
+    {
+      "helper_id": "doctor-repair",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["safe-repair", "real-home-refusal"],
+      "bash_reference_ids": [],
+      "authoritative_python_command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Remove doctor-repair registry entry."
+    },
+    {
+      "helper_id": "generate-pr-body",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["pr-body-apply"],
+      "bash_reference_ids": ["generate-pr-body"],
+      "authoritative_python_command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Use generate-pr-body.sh until XPLAT-007 gate migration."
+    },
+    {
+      "helper_id": "multi-pr-emission",
+      "promotion_status": "golden_only",
+      "fixture_ids": ["fake-gh-command-capture"],
+      "bash_reference_ids": [],
+      "authoritative_python_command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
+      "rollback": "Keep multi-pr-emission.sh authoritative for live PR work."
+    },
+    {
+      "helper_id": "relocate-process-artifacts",
+      "promotion_status": "deferred",
+      "fixture_ids": [],
+      "bash_reference_ids": ["relocate-process-artifacts"],
+      "authoritative_python_command": "",
+      "rollback": "No active cutover in XPLAT-006."
+    }
+  ]
+}

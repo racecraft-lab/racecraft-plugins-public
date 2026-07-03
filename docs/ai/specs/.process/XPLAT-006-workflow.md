@@ -62,10 +62,10 @@ accepted scope:
 | Clarify | `$speckit-clarify` | Complete | Sessions 1-4 complete; G2 passed with 0 clarification markers |
 | Plan | `$speckit-plan` | Complete | Created plan, research, data model, quickstart, and five contracts; G3 passed with 0 markers; hardening evidence passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, reliability, and security checklists complete with no gaps; consensus skipped |
-| Tasks | `$speckit-tasks` | Complete | Generated 61 total tasks: 6 completed hardening tasks and 55 open implementation/handoff tasks; G5 passed |
+| Tasks | `$speckit-tasks` | Complete | Generated 61 total tasks; implementation completed with golden/deferred promotion boundaries and G5 passed |
 | Analyze | `$speckit-analyze` | Complete | Found and resolved one AC-6.6 task coverage gap; consensus skipped after remediation |
 | Confidence Gate | G6.5 | Complete | Advisory `NO_DATA` soft-skip: no confidence emit found; phase-coverage validator passed |
-| Implement | `$speckit-implement` | In Progress | Execute tasks in order, starting with reviewability checkpoint and mutation foundation |
+| Implement | `$speckit-implement` | Complete | Runner mutation primitives, fake-home doctor proof, PR command planning, registry-visible deferred helpers, and hardening tests completed |
 | Post | Autopilot post-implementation items | Pending | Complete doctor, verification, review, PR packet, PR creation, remediation, and retrospective items |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -81,7 +81,7 @@ accepted scope:
 | G5 | After Tasks | Tasks map to the accepted three slices and avoid XPLAT-007 gate migration or XPLAT-008 active cutover scope |
 | G6 | After Analyze | No critical drift remains between roadmap, design concept, spec, plan, tasks, and XPLAT-005 runner/helper contracts |
 | G6.5 | After Analyze Consensus | Pre-implementation confidence gate records pass, advisory no-data, or advisory fail disposition before implementation begins |
-| G7 | After Implementation | Python mutation-helper tests, golden fixtures, Bash-reference comparisons, source-checkout proof, spec-index check, diff hygiene, and relevant repo gates pass |
+| G7 | After Implementation | Python mutation-helper tests, golden fixtures, Bash-reference metadata, source-checkout proof, spec-index check, diff hygiene, and relevant repo gates pass; no Bash-backed helper becomes Python-authoritative in XPLAT-006 |
 
 ---
 
@@ -175,7 +175,7 @@ unless a deliberate higher-priority override exists.
   deterministic safe-repair and unsafe-manual-remediation outcomes.
 - [ ] Mutation-helper Python tests become authoritative only after fixture and
   Bash-reference parity are accepted per helper.
-- [ ] No active Claude/Codex invocation-path, generated-payload
+- [x] No active Claude/Codex invocation-path, generated-payload
   selection/cutover, install behavior, public documentation claim, repo-local
   Bash gate migration, or native matrix UAT lands in XPLAT-006; allowed
   phase-coverage hardening source/mirror changes are listed separately.
@@ -424,7 +424,7 @@ $speckit-plan
 | Scope audit hardening | Pass: `test-speckit-pro-runner.py` 9/9 after allowing only exact phase-coverage hardening source/mirror files |
 | Layer 1 | Pass: `bash tests/speckit-pro/run-all.sh --layer 1` reported 1443/1443 |
 | Layer 4 | Pass: `bash tests/speckit-pro/run-all.sh --layer 4` reported 2141/2141 |
-| Index/diff hygiene | Pass: spec-index check current, MOC stale-index check clean, privacy scan 10/10, `git diff --check` clean |
+| Index/diff hygiene | Pass: spec-index check current, MOC stale-index check clean, privacy scan 11/11, `git diff --check` clean |
 
 ---
 
@@ -686,10 +686,27 @@ For each helper or helper group:
 
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
-| Mutation safety foundation | Pending | Pending | Pending until implementation |
-| Install completeness and doctor/preflight | Pending | Pending | Pending until implementation |
-| PR-emission, restack, migration, and relocation | Pending | Pending | Pending until implementation |
-| Smoke and handoff | Pending | Pending | Pending until implementation |
+| Mutation safety foundation | Complete | T007-T027 | Added mutation registry dispatch, dry-run/apply operation records, atomic writes, dirty-worktree guard, path/symlink/external path rejection, partial-failure reporting, promotion metadata, and manifest/checksum refresh |
+| Install completeness and doctor/preflight | Complete | T028-T038 | Added committed install inventory, doctor-preflight safe-repair/complete/malformed-inventory classifications, fake-home repair, real-home refusal, and deferred install helper entries |
+| PR-emission, restack, migration, and relocation | Complete | T039-T049 | Added PR-body golden output, dry-run PR command planning, authoritative request fixtures, and deferred entries for restack, relocation, generated-index, PR-packet, and workflow-contract write modes |
+| Smoke and handoff | Complete | T050-T061 | Focused mutation/runner/read-only tests passed; full Layer 4 now includes mutation-helper hardening and passed 2152/2152 |
+
+### Implementation Evidence
+
+| Check | Result | Evidence |
+|---|---|---|
+| Mutation helper hardening red state | Failed before implementation | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` initially failed 9/10 because mutation helper modes and dispatch were missing |
+| Mutation helper hardening green state | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` passed 11/11 after implementation, including authoritative request fixtures, dry-run no-write, apply write, dirty-worktree refusal, path/symlink/external escape rejection, partial failure, fake-home repair, malformed inventory, PR body output, and fake `gh` command planning |
+| Runner compatibility | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` passed 9/9 after manifest/checksum refresh |
+| Read-only compatibility | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` passed 32/32; XPLAT-005 read-only registry still reports no mutation modes |
+| Layer 4 aggregate | Pass | `bash tests/speckit-pro/run-all.sh --layer 4` passed 2152/2152 and now includes `test-speckit-pro-mutation-helpers (11/11)` |
+
+### Promotion Boundary
+
+- No Bash-backed mutation helper is Python-authoritative in XPLAT-006.
+- `mutation-foundation`, `doctor-preflight`, `doctor-repair`, `generate-pr-body`, and `multi-pr-emission` have golden fixture proof.
+- Install, restack, relocation, generated-index, PR-packet, workflow-contract write, and remaining mixed-mode helpers are registry-visible with deferred/out-of-scope promotion metadata and rollback notes.
+- Bash-reference metadata is recorded for future comparison, but active gate migration and cutover remain XPLAT-007/XPLAT-008.
 
 ---
 
@@ -716,18 +733,19 @@ each item is completed or explicitly skipped by its extension rule.
 
 ### Final Verification Targets
 
-- [ ] All tasks marked complete in `tasks.md`.
-- [ ] Python mutation-helper tests pass for accepted helper ports.
-- [ ] Bash-reference comparison passes for helpers requiring direct comparison.
-- [ ] Source-checkout mutation proof and Windows-style path fixtures are recorded.
-- [ ] `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` passes.
-- [ ] `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` still passes.
-- [ ] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
-- [ ] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
-- [ ] `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` passes.
-- [ ] `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` passes.
-- [ ] No active Claude/Codex invocation-path, generated-payload
+- [x] All tasks marked complete in `tasks.md`.
+- [x] Python mutation-helper tests pass for accepted helper ports.
+- [x] Bash-reference metadata is recorded; no Bash-backed helper is Python-authoritative in XPLAT-006.
+- [x] Source-checkout mutation proof and path-boundary fixtures are recorded.
+- [x] `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` passes.
+- [x] `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` still passes.
+- [x] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
+- [x] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
+- [x] `bash tests/speckit-pro/run-all.sh` passes with 3795/3795.
+- [x] `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` passes.
+- [x] `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` passes.
+- [x] No active Claude/Codex invocation-path, generated-payload
   selection/cutover, install behavior, public platform claim, repo-local Bash
   gate migration, or native matrix UAT changed; allowed phase-coverage
   hardening source/mirror changes are separately recorded.
