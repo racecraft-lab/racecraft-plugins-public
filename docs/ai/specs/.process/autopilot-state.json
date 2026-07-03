@@ -2,7 +2,7 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T23:15:43Z",
+  "updated_at": "2026-07-03T23:30:13Z",
   "confidence_gate_mode": "advisory",
   "active_step": "Post: Retrospective",
   "archive_sweep": {
@@ -166,17 +166,17 @@
     {
       "step": "Phase 7: Implement - Pending task decomposition",
       "status": "completed",
-      "evidence": "XPLAT-006 tasks complete with golden/deferred promotion boundary; mutation hardening test passes 15/15 and Layer 4 includes it."
+      "evidence": "XPLAT-006 tasks complete with golden/deferred promotion boundary; mutation hardening test passes 17/17 and Layer 4 includes it."
     },
     {
       "step": "Post: Doctor Extension Check",
       "status": "completed",
-      "evidence": "Doctor/preflight fake-home proof covered by mutation-helper test 15/15."
+      "evidence": "Doctor/preflight fake-home proof covered by mutation-helper test 17/17."
     },
     {
       "step": "Post: Verify Implementation",
       "status": "completed",
-      "evidence": "Default deterministic suite passed 3800/3800."
+      "evidence": "Default deterministic suite passed 3803/3803."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
@@ -221,7 +221,7 @@
     {
       "step": "Post: Review Remediation",
       "status": "completed",
-      "evidence": "RepoPrompt findings remediated with fail-closed apply checks, fake-home boundary enforcement, deferred command-plan apply, schema contract tests, canonical phase-label tests, and refreshed verification."
+      "evidence": "RepoPrompt findings remediated with safe envelope parsing, fail-closed apply checks, fake-home traversal/boundary enforcement, batch conflict preflight, deferred command-plan apply, schema contract tests, canonical phase-label tests, and refreshed verification."
     },
     {
       "step": "Post: Retrospective",
@@ -409,26 +409,26 @@
     },
     "implementation": {
       "status": "completed",
-      "completed_at": "2026-07-03T23:15:43Z",
+      "completed_at": "2026-07-03T23:30:13Z",
       "tasks_total": 61,
       "tasks_complete": 61,
       "promotion_boundary": "No Bash-backed mutation helper is Python-authoritative in XPLAT-006; remaining Bash parity and active cutover stay in XPLAT-007/XPLAT-008.",
       "hardening_proof": {
         "red": "test-speckit-pro-mutation-helpers initially failed 9/10 before implementation",
-        "green": "test-speckit-pro-mutation-helpers passed 15/15 after review remediation",
-        "layer4": "bash tests/speckit-pro/run-all.sh passed 3800/3800 including mutation-helper hardening"
+        "green": "test-speckit-pro-mutation-helpers passed 17/17 after review remediation",
+        "layer4": "bash tests/speckit-pro/run-all.sh passed 3803/3803 including mutation-helper hardening"
       },
       "focused_tests": {
-        "mutation_helpers": "15/15 passed",
+        "mutation_helpers": "17/17 passed",
         "runner": "9/9 passed",
         "read_only_helpers": "32/32 passed"
       },
-      "default_suite": "3800/3800 passed"
+      "default_suite": "3803/3803 passed"
     },
     "post": {
       "status": "in_progress",
       "active_step": "Post: Retrospective",
-      "verification": "bash tests/speckit-pro/run-all.sh passed 3800/3800",
+      "verification": "bash tests/speckit-pro/run-all.sh passed 3803/3803",
       "reviewability": "status=exception pass=true exception_honored=true; final backstop proceeded",
       "pr_packet": "validate-pr-packet passed for specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/packet.json",
       "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/281",

@@ -4,7 +4,7 @@
   "title": "Autopilot Phase Coverage Report",
   "type": "object",
   "additionalProperties": false,
-  "required": ["status", "workflow_file", "state_file", "plan_step_count"],
+  "required": ["status"],
   "properties": {
     "status": { "type": "string", "enum": ["pass", "fail", "input_error"] },
     "code": { "type": "string" },
@@ -44,5 +44,29 @@
       "type": "array",
       "items": { "type": "string" }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "enum": ["pass", "fail"] } }, "required": ["status"] },
+      "then": {
+        "required": [
+          "workflow_file",
+          "state_file",
+          "plan_step_count",
+          "missing_workflow_sections",
+          "missing_workflow_tokens",
+          "missing_workflow_post_items",
+          "missing_state_prefixes",
+          "missing_state_post_items",
+          "duplicate_state_steps",
+          "state_order_errors",
+          "in_progress_errors"
+        ]
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "input_error" } }, "required": ["status"] },
+      "then": { "required": ["code", "message"] }
+    }
+  ]
 }

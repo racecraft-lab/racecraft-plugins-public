@@ -79,6 +79,10 @@ def run_mutation_helper(
         if path_diag is not None:
             return response("input_error", request_id=request.request_id, data=base_data, diagnostics=[path_diag])
 
+    batch_diag = validate_batch_write_conflicts(normalized, repo_root)
+    if batch_diag is not None:
+        return response("input_error", request_id=request.request_id, data=base_data, diagnostics=[batch_diag])
+
     if request.mode == "dry_run":
         mutation["mutation_status"] = "planned" if normalized else "no_op"
         return response("ok", request_id=request.request_id, data=base_data)
@@ -96,6 +100,11 @@ def run_mutation_helper(
     if not normalized:
         mutation["mutation_status"] = "no_op"
         return response("ok", request_id=request.request_id, data=base_data)
+
+    command_plan_diag = command_plan_apply_diagnostic(normalized, entry.helper_id)
+    if command_plan_diag is not None:
+        mutation["mutation_status"] = "blocked"
+        return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[command_plan_diag])
 
     dirty_diag = dirty_worktree_diagnostic(request.inputs, repo_root)
     if dirty_diag is not None:
@@ -266,6 +275,74 @@ def validate_target_path(raw: str, repo_root: Path) -> dict[str, Any] | None:
             break
         current = current.parent
     return None
+
+
+def validate_batch_write_conflicts(operations: list[dict[str, Any]], repo_root: Path) -> dict[str, Any] | None:
+    write_targets: list[tuple[dict[str, Any], Path]] = [
+        (op, resolve_candidate_path(op["target"], repo_root).resolve(strict=False))
+        for op in operations
+        if op["kind"] == "write_file"
+    ]
+    seen: dict[Path, str] = {}
+    for op, target in write_targets:
+        previous = seen.get(target)
+        if previous is not None:
+            return conflicting_operations(
+                "duplicate mutation write target",
+                op,
+                previous_operation_id=previous,
+                target=target,
+                repo_root=repo_root,
+            )
+        seen[target] = op["operation_id"]
+
+    for parent_op, parent_target in write_targets:
+        for child_op, child_target in write_targets:
+            if parent_op["operation_id"] == child_op["operation_id"]:
+                continue
+            if is_relative_to(child_target, parent_target):
+                return conflicting_operations(
+                    "mutation write target conflicts with another planned target parent",
+                    child_op,
+                    previous_operation_id=parent_op["operation_id"],
+                    target=child_target,
+                    repo_root=repo_root,
+                )
+    return None
+
+
+def conflicting_operations(
+    message: str,
+    operation: dict[str, Any],
+    *,
+    previous_operation_id: str,
+    target: Path,
+    repo_root: Path,
+) -> dict[str, Any]:
+    return diagnostic(
+        "conflicting_operations",
+        message,
+        details={
+            "operation_id": operation["operation_id"],
+            "conflicts_with": previous_operation_id,
+            "target": repo_relative(target, repo_root),
+        },
+        remediation_summary="Preflight mutation batches must not contain internally conflicting write paths.",
+        remediation_actions=["Split conflicting writes into separate requests.", "Use unique file targets that are not parent/child paths."],
+    )
+
+
+def command_plan_apply_diagnostic(operations: list[dict[str, Any]], helper_id: str) -> dict[str, Any] | None:
+    if not any(op["kind"] == "command_plan" for op in operations):
+        return None
+    return diagnostic(
+        "deferred_live_mutation",
+        "command-plan apply mode is deferred until the active mutation cutover",
+        details={"helper_id": helper_id},
+        remediation_summary="Use dry_run for command planning; execute live command plans outside the runner until cutover.",
+        remediation_actions=["Switch to dry_run.", "Use the existing approved path for live command work."],
+        deferred_to="XPLAT-007/XPLAT-008",
+    )
 
 
 def resolve_candidate_path(raw: str, repo_root: Path) -> Path:

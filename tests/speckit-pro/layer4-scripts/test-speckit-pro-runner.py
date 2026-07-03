@@ -199,6 +199,8 @@ class RunnerFoundationTests(unittest.TestCase):
             ({"schema_version": "9.0", "helper_id": "runner", "operation": "runtime-info", "mode": "read_only", "inputs": {}}, "unsupported_schema_version"),
             ({"schema_version": "1.0", "helper_id": "runner", "operation": "runtime-info", "mode": "read_only"}, "missing_required_field"),
             ({"schema_version": "1.0", "helper_id": "runner", "operation": "unsupported", "mode": "read_only", "inputs": {}}, "invalid_envelope"),
+            ({"schema_version": "1.0", "helper_id": "mutation-foundation", "operation": "mutation-foundation", "mode": [], "inputs": {}}, "invalid_envelope"),
+            ({"schema_version": "1.0", "helper_id": "runner", "operation": [], "mode": "read_only", "inputs": {}}, "invalid_envelope"),
         ]
         for request, expected_code in cases:
             with self.subTest(expected_code=expected_code):

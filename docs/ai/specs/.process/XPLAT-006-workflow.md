@@ -689,17 +689,17 @@ For each helper or helper group:
 | Mutation safety foundation | Complete | T007-T027 | Added mutation registry dispatch, dry-run/apply operation records, atomic writes, dirty-worktree guard, path/symlink/external path rejection, partial-failure reporting, promotion metadata, and manifest/checksum refresh |
 | Install completeness and doctor/preflight | Complete | T028-T038 | Added committed install inventory, doctor-preflight safe-repair/complete/malformed-inventory classifications, fake-home repair, real-home refusal, and deferred install helper entries |
 | PR-emission, restack, migration, and relocation | Complete | T039-T049 | Added PR-body golden output, dry-run PR command planning, authoritative request fixtures, and deferred entries for restack, relocation, generated-index, PR-packet, and workflow-contract write modes |
-| Smoke and handoff | Complete | T050-T061 | Focused mutation/runner/read-only tests passed; full Layer 4 now includes mutation-helper hardening and passed 2157/2157 |
+| Smoke and handoff | Complete | T050-T061 | Focused mutation/runner/read-only tests passed; full Layer 4 now includes mutation-helper hardening and passed 2160/2160 |
 
 ### Implementation Evidence
 
 | Check | Result | Evidence |
 |---|---|---|
 | Mutation helper hardening red state | Failed before implementation | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` initially failed 9/10 because mutation helper modes and dispatch were missing |
-| Mutation helper hardening green state | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` passed 15/15 after remediation, including schema contract drift checks, dry-run no-write, apply write, dirty-worktree refusal, git-status fail-closed refusal, no-op apply, path/symlink/external escape rejection, preflight parent-file rejection, partial failure, fake-home boundary repair, malformed inventory, PR body output, and deferred PR command-plan apply |
+| Mutation helper hardening green state | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` passed 17/17 after remediation, including schema contract drift checks, dry-run no-write, apply write, dirty-worktree refusal, git-status fail-closed refusal, no-op apply, path/symlink/external escape rejection, batch conflict preflight, partial failure, fake-home boundary/traversal repair rejection, malformed inventory, PR body output, and deferred PR command-plan apply |
 | Runner compatibility | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` passed 9/9 after manifest/checksum refresh |
 | Read-only compatibility | Pass | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` passed 32/32; XPLAT-005 read-only registry still reports no mutation modes |
-| Layer 4 aggregate | Pass | `bash tests/speckit-pro/run-all.sh --layer 4` passed 2157/2157 and now includes `test-speckit-pro-mutation-helpers (15/15)` |
+| Layer 4 aggregate | Pass | `bash tests/speckit-pro/run-all.sh` passed 3803/3803 and now includes `test-speckit-pro-mutation-helpers (17/17)` |
 
 ### Promotion Boundary
 
@@ -718,8 +718,8 @@ each item is completed or explicitly skipped by its extension rule.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | Complete | Doctor/preflight and fake-home repair covered by `test-speckit-pro-mutation-helpers.py` 15/15 |
-| Post: Verify Implementation | Complete | `bash tests/speckit-pro/run-all.sh` passed 3800/3800 |
+| Post: Doctor Extension Check | Complete | Doctor/preflight and fake-home repair covered by `test-speckit-pro-mutation-helpers.py` 17/17 |
+| Post: Verify Implementation | Complete | `bash tests/speckit-pro/run-all.sh` passed 3803/3803 |
 | Post: Verify Tasks Phantom Check | Complete | G7 passed: all 61 tasks complete |
 | Post: Code Review | Complete | Self-review found and fixed deterministic `write_failure` handling before final suite run |
 | Post: Integration Suite | Complete | Default deterministic suite passed Layer 1, Layer 4, and Layer 5 |
@@ -728,7 +728,7 @@ each item is completed or explicitly skipped by its extension rule.
 | Post: UAT Runbook Generation | Complete | Authored `.process/uat-runbook.md`; `test-validate-uat-runbook.sh` passed 12/12 |
 | Post: PR Body Generation | Complete | Generated repo-relative packet/body under `.process/pr-packets/xplat-006-pr-packet/`; `validate-pr-packet.sh` passed |
 | Post: PR Creation | Complete | https://github.com/racecraft-lab/racecraft-plugins-public/pull/281 |
-| Post: Review Remediation | Complete | RepoPrompt review findings remediated with fail-closed apply checks, fake-home boundary enforcement, deferred command-plan apply, schema contract tests, canonical phase-label tests, and refreshed verification |
+| Post: Review Remediation | Complete | RepoPrompt review findings remediated with safe envelope parsing, fail-closed apply checks, fake-home traversal/boundary enforcement, batch conflict preflight, deferred command-plan apply, schema contract tests, canonical phase-label tests, and refreshed verification |
 | Post: Retrospective | Pending | Final post item before completion can be reported |
 
 ### Final Verification Targets
@@ -742,7 +742,7 @@ each item is completed or explicitly skipped by its extension rule.
 - [x] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
 - [x] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
 - [x] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
-- [x] `bash tests/speckit-pro/run-all.sh` passes with 3800/3800.
+- [x] `bash tests/speckit-pro/run-all.sh` passes with 3803/3803.
 - [x] `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` passes.
 - [x] `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` passes.
 - [x] No active Claude/Codex invocation-path, generated-payload

@@ -13,6 +13,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 VALIDATOR = REPO_ROOT / "speckit-pro" / "skills" / "speckit-autopilot" / "scripts" / "validate-autopilot-phase-coverage.py"
+REPORT_SCHEMA = (
+    REPO_ROOT
+    / "specs"
+    / "xplat-006-mutation-install-pr-emission-helper-port"
+    / "contracts"
+    / "autopilot-phase-coverage-report.schema.json"
+)
 
 POST_STEPS = [
     "Post: Doctor Extension Check",
@@ -211,6 +218,18 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         self.assertEqual(report["status"], "input_error")
         self.assertEqual(report["code"], "input_error")
         self.assertIn("invalid state JSON", report["message"])
+
+    def test_report_schema_allows_input_error_without_plan_fields(self) -> None:
+        schema = json.loads(REPORT_SCHEMA.read_text(encoding="utf-8"))
+        self.assertEqual(schema["required"], ["status"])
+        input_error_branch = schema["allOf"][1]["then"]["required"]
+        self.assertEqual(input_error_branch, ["code", "message"])
+        exit_code, report = self.run_validator(workflow_text(), "{")
+        self.assertEqual(exit_code, 2)
+        for required in input_error_branch:
+            self.assertIn(required, report)
+        self.assertNotIn("workflow_file", report)
+        self.assertNotIn("plan_step_count", report)
 
 
 if __name__ == "__main__":

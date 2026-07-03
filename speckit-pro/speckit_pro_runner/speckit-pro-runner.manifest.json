@@ -32,7 +32,7 @@
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
-      "sha256": "71dbee569738985b4468a2fd1808ed386bb4fdcb018720e3eda36c12a3797366"
+      "sha256": "92149300e87756e4986e88326ed89ebc37f28145fbd18d91723db36300aba6bb"
     },
     {
       "path": {
@@ -48,7 +48,7 @@
         "value": "speckit_pro_runner/helpers/install.py",
         "display": "speckit_pro_runner/helpers/install.py"
       },
-      "sha256": "025f4d65f3576a7e098659fa043301bb9fdaa76100a2f6273009cf0a0d581fdf"
+      "sha256": "a850e3efdeb8586f2327e66cce22986868579e7834ec8dd8ea052c626e230095"
     },
     {
       "path": {
@@ -56,7 +56,7 @@
         "value": "speckit_pro_runner/helpers/mutation.py",
         "display": "speckit_pro_runner/helpers/mutation.py"
       },
-      "sha256": "4913ec0e75926f97092d364df3f56c3780ee771b2dd89c179ced85feef65517d"
+      "sha256": "b455be69ce2ad875c0fc4c4c88f2bf70e1f1160570d8b7c292b1d5f2b70cd5c2"
     },
     {
       "path": {

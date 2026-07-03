@@ -14,7 +14,7 @@
       "helper_id": "mutation-foundation",
       "operation": "mutation-foundation",
       "modes": ["dry_run", "apply"],
-      "failure_classes": ["invalid_input", "dirty_worktree", "git_status_unavailable", "unsupported_path", "write_failure", "partial_failure"],
+      "failure_classes": ["invalid_input", "dirty_worktree", "git_status_unavailable", "unsupported_path", "conflicting_operations", "write_failure", "partial_failure"],
       "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/mutation-foundation.json"
     },
     {

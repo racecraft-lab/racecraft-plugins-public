@@ -18,6 +18,7 @@ FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "mutation-helpers"
 SPEC_DIR = REPO_ROOT / "specs" / "xplat-006-mutation-install-pr-emission-helper-port"
 REQUEST_SCHEMA = SPEC_DIR / "contracts" / "mutation-helper-request.schema.json"
 RESULT_SCHEMA = SPEC_DIR / "contracts" / "mutation-helper-result.schema.json"
+PROMOTION_SCHEMA = SPEC_DIR / "contracts" / "helper-promotion-record.schema.json"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
@@ -144,6 +145,7 @@ class MutationHelperTests(unittest.TestCase):
                     self.assertNotIn("target", operation)
 
     def test_mutation_registry_lists_promoted_contracts_without_cutover(self) -> None:
+        promotion_schema = json.loads(PROMOTION_SCHEMA.read_text(encoding="utf-8"))
         completed, response, stderr_records = run_runner(
             helper_request("mutation-registry-dispatch", operation="mutation-registry-dispatch", mode="read_only")
         )
@@ -163,6 +165,11 @@ class MutationHelperTests(unittest.TestCase):
                 self.assertEqual(record["authoritative_command"], "")
             else:
                 self.assertTrue(command_stdin_fixture(record["authoritative_command"]).is_file())
+            promotion = record["promotion"]
+            for required in promotion_schema["required"]:
+                self.assertIn(required, promotion)
+            self.assertEqual(promotion["helper_id"], record["helper_id"])
+            self.assertIn(promotion["promotion_status"], promotion_schema["properties"]["promotion_status"]["enum"])
 
     def test_dry_run_reports_planned_write_without_mutating(self) -> None:
         tmp, target, rel = self.temp_repo_path("dry-run-output.json")
@@ -351,6 +358,40 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_path"])
             self.assertFalse(target.exists())
 
+    def test_batch_write_conflicts_are_rejected_before_apply_writes(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            parent = git_root / "generated" / "parent.md"
+            child = parent / "child.md"
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "mutation-foundation",
+                    mode="apply",
+                    inputs={
+                        "operations": [
+                            {
+                                "operation_id": "parent",
+                                "kind": "write_file",
+                                "target": "generated/parent.md",
+                                "content": "parent\n",
+                            },
+                            {
+                                "operation_id": "child",
+                                "kind": "write_file",
+                                "target": "generated/parent.md/child.md",
+                                "content": "child\n",
+                            },
+                        ]
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["conflicting_operations"])
+            self.assertFalse(parent.exists())
+            self.assertFalse(child.exists())
+
     def test_partial_failure_reports_applied_operation_and_manual_remediation(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
@@ -478,6 +519,35 @@ class MutationHelperTests(unittest.TestCase):
             self.assert_response(response, "input_error", 2)
             self.assertEqual([diag["code"] for diag in stderr_records], ["fake_home_boundary_refused"])
 
+    def test_doctor_repair_rejects_backslash_traversal_inventory_path(self) -> None:
+        tmp, git_root = self.temp_clean_git_repo()
+        with tmp:
+            install_root = git_root / "tests" / "speckit-pro" / "layer4-scripts" / "fixtures" / "fake-home"
+            completed, response, stderr_records = run_runner(
+                helper_request(
+                    "doctor-repair",
+                    mode="apply",
+                    inputs={
+                        "install_root": install_root.relative_to(git_root).as_posix(),
+                        "inventory": {
+                            "files": [
+                                {
+                                    "path": "..\\escaped.md",
+                                    "content": "escape\n",
+                                    "sha256": "skip",
+                                }
+                            ]
+                        },
+                        "fake_home": True,
+                    },
+                ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["malformed_inventory"])
+            self.assertFalse((git_root / "tests" / "speckit-pro" / "layer4-scripts" / "fixtures" / "escaped.md").exists())
+
     def test_pr_emission_apply_writes_generated_body_and_command_plans_do_not_execute_gh(self) -> None:
         tmp, git_root = self.temp_clean_git_repo()
         with tmp:
@@ -518,6 +588,18 @@ class MutationHelperTests(unittest.TestCase):
                     mode="apply",
                     inputs={"commands": [["gh", "pr", "create", "--draft"]], "live_mutation_approved": True},
                 ),
+                cwd=git_root,
+            )
+            self.assertEqual(completed.returncode, 1)
+            self.assert_response(response, "expected_failure", 1)
+            self.assertEqual([diag["code"] for diag in stderr_records], ["deferred_live_mutation"])
+            mutation = response["data"]["mutation"]
+            self.assertEqual(mutation["mutation_status"], "blocked")
+            self.assertEqual(mutation["applied_operations"], [])
+            self.assertFalse(mutation["live_mutation"])
+
+            completed, response, stderr_records = run_runner(
+                helper_request("generate-uat-skeleton", mode="apply", inputs={}),
                 cwd=git_root,
             )
             self.assertEqual(completed.returncode, 1)

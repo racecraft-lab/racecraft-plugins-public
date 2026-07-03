@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from ..envelope import diagnostic, response
@@ -67,16 +67,22 @@ def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
         )
         return response("input_error", request_id=request.request_id, data={"doctor": doctor}, diagnostics=[diag])
 
-    repair_ops = [
-        {
-            "operation_id": f"repair:{record['path']}",
-            "kind": "write_file",
-            "target": (install_root / record["path"]).relative_to(repo_root).as_posix(),
-            "content": record["content"],
-        }
-        for record in inventory["files"]
-        if record["path"] in doctor["missing_files"] or record["path"] in doctor["checksum_mismatches"]
-    ]
+    repair_ops: list[dict[str, Any]] = []
+    for record in inventory["files"]:
+        if record["path"] not in doctor["missing_files"] and record["path"] not in doctor["checksum_mismatches"]:
+            continue
+        target = install_root / record["path"]
+        repair_diag = repair_target_boundary_diagnostic(target, install_root, repo_root)
+        if repair_diag is not None:
+            return response("input_error", request_id=request.request_id, data={"doctor": doctor}, diagnostics=[repair_diag])
+        repair_ops.append(
+            {
+                "operation_id": f"repair:{record['path']}",
+                "kind": "write_file",
+                "target": target.relative_to(repo_root).as_posix(),
+                "content": record["content"],
+            }
+        )
     return run_mutation_helper(entry, request, operations=repair_ops, extra_data={"doctor": doctor})
 
 
@@ -122,13 +128,17 @@ def inventory_from_inputs(inputs: dict[str, Any], repo_root: Path) -> dict[str, 
         path = item.get("path")
         content = item.get("content")
         digest = item.get("sha256", "skip")
-        if not isinstance(path, str) or not path or path.startswith("/") or ".." in Path(path).parts:
+        if not isinstance(path, str) or not path:
+            return malformed_inventory("inventory file path must be repo-relative without traversal", index=index)
+        normalized_path = path.replace("\\", "/")
+        parts = PurePosixPath(normalized_path).parts
+        if normalized_path.startswith("/") or any(part in {"", ".", ".."} for part in parts):
             return malformed_inventory("inventory file path must be repo-relative without traversal", index=index)
         if not isinstance(content, str):
             return malformed_inventory("inventory file content must be a string", index=index)
         if not isinstance(digest, str) or not digest:
             return malformed_inventory("inventory sha256 must be a string", index=index)
-        normalized_files.append({"path": path.replace("\\", "/"), "content": content, "sha256": digest})
+        normalized_files.append({"path": normalized_path, "content": content, "sha256": digest})
     return {"files": normalized_files}
 
 
@@ -145,6 +155,18 @@ def fake_home_boundary_diagnostic(install_root: Path, repo_root: Path) -> dict[s
             "Move the install_root under tests/speckit-pro/layer4-scripts/fixtures.",
             "Use doctor-preflight without fake_home for real installs.",
         ],
+    )
+
+
+def repair_target_boundary_diagnostic(target: Path, install_root: Path, repo_root: Path) -> dict[str, Any] | None:
+    if is_relative_to(target.resolve(strict=False), install_root.resolve(strict=False)):
+        return None
+    return diagnostic(
+        "install_root_escape",
+        "repair target escapes the selected install_root",
+        details={"target": repo_relative(target, repo_root), "install_root": repo_relative(install_root, repo_root)},
+        remediation_summary="Keep install inventory repair paths inside install_root.",
+        remediation_actions=["Remove traversal from the inventory path.", "Retry doctor-repair with a normalized inventory."],
     )
 
 
