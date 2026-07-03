@@ -26,12 +26,12 @@
     {
       "helper_id": "count-markers",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh", "all", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh", "all", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"], "timeout_seconds": 30}
     },
     {
       "helper_id": "validate-gate",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh", "G7", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh", "G7", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"], "timeout_seconds": 30}
     },
     {
       "helper_id": "reviewability-gate",
@@ -41,7 +41,7 @@
     {
       "helper_id": "estimate-reviewable-loc",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh", "specs/xplat-005-read-only-helper-port/plan.md"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/plan.md"], "timeout_seconds": 30}
     },
     {
       "helper_id": "resolve-confidence-mode",
@@ -61,18 +61,18 @@
     {
       "helper_id": "o5-topology",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/o5-topology.sh", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"], "timeout_seconds": 30}
     },
     {
       "helper_id": "atomicity-route",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
       "stdout_comparison": "json_semantic",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"], "timeout_seconds": 30}
     },
     {
       "helper_id": "plan-layers-feature-dir",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh",
-      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
+      "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/plan-layers.sh", "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"], "timeout_seconds": 30}
     },
     {
       "helper_id": "validate-pr-workflow-contract",

@@ -5,6 +5,6 @@
   "operation": "atomicity-route",
   "mode": "read_only",
   "inputs": {
-    "feature_dir": "specs/xplat-005-read-only-helper-port"
+    "feature_dir": "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"
   }
 }

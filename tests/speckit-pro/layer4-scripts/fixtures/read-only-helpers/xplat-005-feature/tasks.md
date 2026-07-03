@@ -35,7 +35,7 @@ The final reviewability block is caused by the infrastructure/test-fixture file 
 
 **Purpose**: Prepare the feature workspace and enforce the accepted two-slice boundary before source edits.
 
-- [x] T001 Re-check the accepted reviewability scope and record the continue-or-split decision in `specs/xplat-005-read-only-helper-port/tasks.md`
+- [x] T001 Re-check the accepted reviewability scope and record the continue-or-split decision in `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/tasks.md`
 - [x] T002 Create the helper package and fixture directories at `speckit-pro/speckit_pro_runner/helpers/` and `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/`
 - [x] T003 [P] Add the local source-checkout runtime-info smoke request fixture in `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json`
 - [x] T004 [P] Add synthetic Windows, no-Bash, spaces-in-paths, traversal, and symlink-escape fixture cases in `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/synthetic-paths.json`
@@ -205,8 +205,8 @@ The final reviewability block is caused by the infrastructure/test-fixture file 
 - [x] T081 [US3] Run the default deterministic gate with `bash tests/speckit-pro/run-all.sh`
 - [x] T082 [US3] Audit the implementation diff for zero active Claude/Codex skill, hook, generated payload, install, marketplace/public-doc, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal activation edits across `.claude/`, `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/`, `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/`, `speckit-pro/codex-hooks.json`, `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, `docs-site/`, `.agents/`, `.claude-plugin/`, and `scripts/`
 - [x] T083 [US3] Verify every in-scope and out-of-scope helper has an unambiguous promotion status, review order, known gap, Bash-reference retention note, rollback/deferred follow-up, and authoritative command in `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`
-- [x] T084 [US3] Prepare the orchestrator handoff evidence from `specs/xplat-005-read-only-helper-port/quickstart.md`, `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`, and `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/bash-reference-manifest.json` without generating a PR body or emitting PR state
-- [ ] T085 [US3] Validate the task artifact with `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/xplat-005-read-only-helper-port` so `specs/xplat-005-read-only-helper-port/tasks.md` is checked by the gate script
+- [x] T084 [US3] Prepare the orchestrator handoff evidence from the feature quickstart summary, `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`, and `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/bash-reference-manifest.json` without generating a PR body or emitting PR state
+- [ ] T085 [US3] Validate the task artifact with `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature` so `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/tasks.md` is checked by the gate script
 
 ---
 
