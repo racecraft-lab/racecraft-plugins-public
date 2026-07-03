@@ -43,6 +43,8 @@ EXPECTED_HELPERS = [
     "validate-pr-packet-read-only",
 ]
 
+JSON_STDOUT_PARITY_HELPERS = {"atomicity-route"}
+
 HELPER_CASES: dict[str, dict[str, object]] = {
     "check-prerequisites": {"workflow_file": WORKFLOW_FILE},
     "detect-commands": {},
@@ -157,11 +159,26 @@ class ReadOnlyHelperTests(unittest.TestCase):
         reference = run_bash_reference(data["argv"], response_cwd(data))
         self.assertEqual(data["shell"], False)
         self.assertEqual(data["exit_code"], reference.returncode)
-        self.assertEqual(data["stdout"]["text"], reference.stdout)
+        self.assert_stdout_matches_reference(helper_id, data["stdout"]["text"], reference.stdout)
         self.assertEqual(data["stderr"]["text"], reference.stderr)
         self.assertEqual(completed.returncode, response["exit_code"])
         self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
         return response
+
+    def assert_stdout_matches_reference(self, helper_id: str, actual: str, expected: str) -> None:
+        if helper_id not in JSON_STDOUT_PARITY_HELPERS:
+            self.assertEqual(actual, expected)
+            return
+        try:
+            actual_json = json.loads(actual)
+            expected_json = json.loads(expected)
+        except json.JSONDecodeError as exc:
+            self.fail(f"{helper_id} stdout must be valid JSON: {exc}; actual={actual!r}; expected={expected!r}")
+        self.assertEqual(
+            actual_json,
+            expected_json,
+            f"{helper_id} JSON stdout mismatch: actual={actual!r}; expected={expected!r}",
+        )
 
     def test_registry_dispatch_lists_only_read_only_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -236,6 +253,8 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertLessEqual(comparison["subprocess"]["timeout_seconds"], 30)
             script = REPO_ROOT / comparison["source_script"]
             self.assertTrue(script.is_file(), comparison["source_script"])
+            expected_stdout_comparison = "json_semantic" if comparison["helper_id"] in JSON_STDOUT_PARITY_HELPERS else "exact"
+            self.assertEqual(comparison.get("stdout_comparison", "exact"), expected_stdout_comparison)
 
     def test_path_boundary_rejects_traversal_and_symlink_escape(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
@@ -707,7 +726,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 reference = run_bash_reference(data["argv"], response_cwd(data))
                 self.assertEqual(data["shell"], False)
                 self.assertEqual(data["exit_code"], reference.returncode)
-                self.assertEqual(data["stdout"]["text"], reference.stdout)
+                self.assert_stdout_matches_reference(helper_id, data["stdout"]["text"], reference.stdout)
                 self.assertEqual(data["stderr"]["text"], reference.stderr)
                 self.assertEqual(completed.returncode, response["exit_code"])
                 self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])

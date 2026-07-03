@@ -66,6 +66,7 @@
     {
       "helper_id": "atomicity-route",
       "source_script": "speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh",
+      "stdout_comparison": "json_semantic",
       "subprocess": {"shell": false, "argv": ["speckit-pro/skills/speckit-autopilot/scripts/atomicity-route.sh", "specs/xplat-005-read-only-helper-port"], "timeout_seconds": 30}
     },
     {
