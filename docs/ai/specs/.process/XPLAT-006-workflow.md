@@ -718,16 +718,16 @@ each item is completed or explicitly skipped by its extension rule.
 
 | Item | Status | Evidence |
 |---|---|---|
-| Post: Doctor Extension Check | Pending | Pending until after G7 |
-| Post: Verify Implementation | Pending | Pending until after G7 |
-| Post: Verify Tasks Phantom Check | Pending | Pending until after G7 |
-| Post: Code Review | Pending | Pending until after G7 |
-| Post: Integration Suite | Pending | Pending until after G7 |
-| Post: Reviewability Diff Gate | Pending | Pending until after G7 |
-| Post: Self-Review | Pending | Pending until after G7 |
-| Post: UAT Runbook Generation | Pending | Pending until after G7 |
-| Post: PR Body Generation | Pending | Pending until after G7 |
-| Post: PR Creation | Pending | Pending until after G7 |
+| Post: Doctor Extension Check | Complete | Doctor/preflight and fake-home repair covered by `test-speckit-pro-mutation-helpers.py` 11/11 |
+| Post: Verify Implementation | Complete | `bash tests/speckit-pro/run-all.sh` passed 3795/3795 |
+| Post: Verify Tasks Phantom Check | Complete | G7 passed: all 61 tasks complete |
+| Post: Code Review | Complete | Self-review found and fixed deterministic `write_failure` handling before final suite run |
+| Post: Integration Suite | Complete | Default deterministic suite passed Layer 1, Layer 4, and Layer 5 |
+| Post: Reviewability Diff Gate | Complete | `reviewability-gate.sh diff origin/main...HEAD` returned `status=exception`, `pass=true`, `exception_honored=true`; final backstop proceeded with collapsed full-spec marker plan |
+| Post: Self-Review | Complete | No active invocation cutover, generated-payload cutover, repo-local Bash gate migration, native matrix UAT, or public support claim shipped |
+| Post: UAT Runbook Generation | Complete | Authored `.process/uat-runbook.md`; `test-validate-uat-runbook.sh` passed 12/12 |
+| Post: PR Body Generation | Complete | Generated repo-relative packet/body under `.process/pr-packets/xplat-006-pr-packet/`; `validate-pr-packet.sh` passed |
+| Post: PR Creation | In Progress | Pending until branch push and PR creation |
 | Post: Review Remediation | Pending | Pending until after PR creation |
 | Post: Retrospective | Pending | Final post item before completion can be reported |
 
@@ -749,7 +749,7 @@ each item is completed or explicitly skipped by its extension rule.
   selection/cutover, install behavior, public platform claim, repo-local Bash
   gate migration, or native matrix UAT changed; allowed phase-coverage
   hardening source/mirror changes are separately recorded.
-- [ ] PR packet includes review order, scope budget, parity evidence,
+- [x] PR packet includes review order, scope budget, parity evidence,
   per-helper gate-promotion state, known gaps, approval boundaries, rollback
   notes, and XPLAT-007/XPLAT-008 handoff.
 
@@ -777,3 +777,7 @@ specs/xplat-006-mutation-install-pr-emission-helper-port/
   plan.md
   tasks.md
 ```
+
+### PR packet validation events
+- <!-- speckit-pro-pr-packet-validation:event-id=xplat-006-pr-packet --> Blocked PR packet validation for `xplat-006-pr-packet`; result `specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/validation.json`; rules: `unknown`.
+- <!-- speckit-pro-pr-packet-validation:event-id=packet --> Blocked PR packet validation for `packet`; result `specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/packet/validation.json`; rules: `unknown`.

@@ -42,6 +42,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
+- [.process/marker-plan/final-marker-split-result.json](.process/marker-plan/final-marker-split-result.json)
+- [.process/pr-packets/packet/validation.json](.process/pr-packets/packet/validation.json)
+- [.process/pr-packets/xplat-006-pr-packet/body.md](.process/pr-packets/xplat-006-pr-packet/body.md)
+- [.process/pr-packets/xplat-006-pr-packet/packet.json](.process/pr-packets/xplat-006-pr-packet/packet.json)
+- [.process/uat-runbook.md](.process/uat-runbook.md)
 - [quickstart.md](quickstart.md)
-- [uat-runbook.md](uat-runbook.md)
 <!-- GENERATED:BACKLINKS:END -->

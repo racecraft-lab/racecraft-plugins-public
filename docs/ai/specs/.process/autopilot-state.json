@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T22:10:00Z",
+  "updated_at": "2026-07-03T22:35:00Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Post: Doctor Extension Check",
+  "active_step": "Post: PR Creation",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible",
@@ -170,43 +170,53 @@
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "in_progress"
+      "status": "completed",
+      "evidence": "Doctor/preflight fake-home proof covered by mutation-helper test 11/11."
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Default deterministic suite passed 3795/3795."
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "G7 passed with all 61 tasks complete."
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Self-review fixed deterministic write_failure handling before final suite run."
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Layer 1, Layer 4, and Layer 5 passed in default suite."
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Reviewability diff gate passed by honored infra exception; final backstop proceeded with collapsed full-spec marker plan."
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "No active cutover or public platform claim shipped."
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Authored .process/uat-runbook.md; UAT validation passed 12/12."
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Repo-relative PR packet/body generated and validate-pr-packet passed."
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "in_progress",
+      "evidence": "Pending branch push and GitHub PR creation."
     },
     {
       "step": "Post: Review Remediation",
@@ -413,6 +423,13 @@
         "read_only_helpers": "32/32 passed"
       },
       "default_suite": "3795/3795 passed"
+    },
+    "post": {
+      "status": "in_progress",
+      "active_step": "Post: PR Creation",
+      "verification": "bash tests/speckit-pro/run-all.sh passed 3795/3795",
+      "reviewability": "status=exception pass=true exception_honored=true; final backstop proceeded",
+      "pr_packet": "validate-pr-packet passed for specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/packet.json"
     }
   }
 }
