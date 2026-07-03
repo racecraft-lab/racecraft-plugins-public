@@ -5,6 +5,6 @@
   "operation": "o5-topology",
   "mode": "read_only",
   "inputs": {
-    "target": "specs/xplat-005-read-only-helper-port"
+    "target": "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"
   }
 }

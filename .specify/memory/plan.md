@@ -1260,3 +1260,50 @@ validation remain XPLAT-007 responsibilities.
 `specs/xplat-004-cross-platform-runner-foundation` was removed from active
 `specs/**` in the post-merge cleanup after PR #274 merged. Recovery commands
 and provenance are recorded in the XPLAT-004 archive report.
+
+## XPLAT-005 Read-Only Helper Port
+
+[Source: specs/xplat-005-read-only-helper-port]
+
+XPLAT-005 implemented the bounded read-only/advisory helper migration on top of
+the XPLAT-004 runner. The production surface lives under
+`speckit-pro/speckit_pro_runner/helpers/` and extends the runner envelope,
+runtime metadata, and dispatch path without changing active installed-plugin
+invocation surfaces.
+
+### Technical Approach
+
+- Add a small explicit helper registry rather than dynamic discovery, so
+  mutation helpers cannot be exposed by accident.
+- Group read-only behavior in `helpers/read_only.py` and preserve current Bash
+  helper argv shape, stdout/stderr text, JSON stdout semantics, and exit codes
+  through source-checkout Bash-reference comparisons.
+- Classify each helper as `python_authoritative`, `bash_reference_only`, or
+  `out_of_scope` with authoritative request fixtures and rollback notes.
+- Keep `generate-spec-index` limited to `--check` and keep
+  `validate-pr-packet` limited to read-only validation output; write,
+  persistence, and PR-body generation remain downstream.
+- Refresh runner manifest/checksum metadata for the new helper source files.
+- Preserve fixture inputs under
+  `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/` so Layer 4
+  remains runnable after the active XPLAT-005 spec folder is archived.
+
+### Testing Strategy
+
+XPLAT-005 verification uses the read-only helper Layer 4 entrypoint,
+`bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh`,
+the runner Layer 4 entrypoint, `bash tests/speckit-pro/run-all.sh --layer 4`,
+Layer 1 structural validation, spec-index checks, JSON validation, diff
+hygiene, PR-packet validation, workflow-contract validation, and a local macOS
+source-checkout runtime-info smoke through the runner fixture suite. Native
+installed-cache UAT, generated payload propagation, update/autoheal proof,
+mutation-helper verification, and public claim validation remain XPLAT-006 and
+XPLAT-007 responsibilities.
+
+### Cleanup Notes
+
+`specs/xplat-005-read-only-helper-port` was removed from active `specs/**` in
+the post-merge cleanup after PR #276 merged. Recovery commands and provenance
+are recorded in the XPLAT-005 archive report. Minimal spec inputs needed by
+helper parity tests were copied to the read-only helper fixture tree before
+cleanup.

@@ -952,7 +952,7 @@ def generate_spec_index_check(inputs: dict[str, Any], repo_root: Path) -> dict[s
     )
     if has_moc:
         return make_result("spec-index: index current — all in-scope maps up to date.\n")
-    return make_result("spec-index: index current — no maps needed regenerating.\n")
+    return make_result("spec-index: index current — all in-scope maps up to date.\n")
 
 
 def o5_topology(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:

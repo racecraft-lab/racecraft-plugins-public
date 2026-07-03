@@ -1,18 +1,31 @@
 {
   "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
-  "updated_at": "2026-07-02T17:06:00Z",
-  "active_step": "Post: open PR",
+  "updated_at": "2026-07-03T03:16:56Z",
+  "active_step": "Archived",
   "feature_dir": "specs/xplat-005-read-only-helper-port",
   "branch": "codex/xplat-005-read-only-helper-port",
-  "status": "complete",
+  "status": "completed_archived",
+  "pr": {
+    "number": 276,
+    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/276",
+    "state": "MERGED",
+    "base": "main",
+    "head": "codex/xplat-005-read-only-helper-port",
+    "merged_at": "2026-07-03T03:16:56Z",
+    "merge_commit": "c4642f50ae99172170798a49f0c8fd990891c0f9"
+  },
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "dry-run-noop",
-    "current_target": "specs/xplat-005-read-only-helper-port",
-    "excluded_current_spec": "specs/xplat-005-read-only-helper-port",
+    "cleanup_mode": "post-merge-cleanup-applied",
+    "current_target": null,
+    "excluded_current_spec": null,
     "eligible_previous_specs": [],
-    "cleanup_applied": false,
-    "note": "Active specs tree contains only the XPLAT-005 target and .gitkeep; no previously merged active specs are eligible for cleanup."
+    "safeToApplyCleanup": true,
+    "cleanup_applied": true,
+    "archive_report": ".specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md",
+    "removed_spec": "specs/xplat-005-read-only-helper-port",
+    "cleanup_branch": "codex/xplat-005-archive-cleanup",
+    "note": "Archive extension is installed. XPLAT-005 merged via PR #276 and active spec cleanup was applied after preserving recovery commands and decoupling read-only helper parity tests from specs/**."
   },
   "prerequisites": {
     "all_pass": true,

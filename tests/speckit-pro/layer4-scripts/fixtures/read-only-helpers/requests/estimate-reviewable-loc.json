@@ -5,6 +5,6 @@
   "operation": "estimate-reviewable-loc",
   "mode": "read_only",
   "inputs": {
-    "plan_file": "specs/xplat-005-read-only-helper-port/plan.md"
+    "plan_file": "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature/plan.md"
   }
 }

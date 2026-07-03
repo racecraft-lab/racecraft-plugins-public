@@ -30,7 +30,10 @@ accepted a two-slice implementation plan inside one workflow. Updated
 2026-07-01 after XPLAT-004 merged in PR #274 and the active spec folder was
 archived; XPLAT-005 became ready to scaffold. Updated again on 2026-07-01 after
 XPLAT-005 scaffold started on `codex/xplat-005-read-only-helper-port`; the setup
-design concept accepted one workflow with two internal slices.
+design concept accepted one workflow with two internal slices. Updated
+2026-07-03 after XPLAT-005 merged in PR #276 and the active spec folder was
+archived; XPLAT-006 is ready to scaffold from the read-only helper registry and
+parity fixture pattern.
 
 ---
 
@@ -210,9 +213,9 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete / Archived | `.process/XPLAT-002-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`; Python stdlib runner decision carried forward |
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete / Archived | `.process/XPLAT-003-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`; active spec folder removed after PR #267 |
 | XPLAT-004 | Cross-Platform Runner Foundation | Complete / Archived | `.process/XPLAT-004-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`; runner source, metadata, contract fixtures, and tests landed in PR #274 |
-| XPLAT-005 | Read-Only Helper Port | In Progress | `.process/XPLAT-005-workflow.md` | Scaffolded on branch `codex/xplat-005-read-only-helper-port`; run autopilot next |
-| XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-005 read-only parity; should reuse XPLAT-005 patterns |
-| XPLAT-007 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
+| XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
+| XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Ready | — | Ready to scaffold from XPLAT-005 registry/parity patterns; owns mutation, install, PR-emission, restack, and state-writing helper ports |
+| XPLAT-007 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-006; XPLAT-005 read-only dependency is satisfied |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -561,11 +564,11 @@ here.
 
 **Priority:** P1 | **Depends On:** XPLAT-004 | **Enables:** XPLAT-007 and reduces XPLAT-006 risk
 
-**Status:** In Progress. XPLAT-004 is complete and archived after PR #274, so
-the runner foundation dependency is satisfied. Scaffolded on 2026-07-01 in
-branch `codex/xplat-005-read-only-helper-port`; workflow file is
-`docs/ai/specs/.process/XPLAT-005-workflow.md`; design concept is
-`docs/ai/specs/.process/XPLAT-005-design-concept.md`.
+**Status:** Complete / Archived. XPLAT-005 merged in PR #276 on 2026-07-03 and
+the active `specs/xplat-005-read-only-helper-port/` folder was removed in the
+post-merge archive cleanup. Workflow and design concept files remain preserved
+under `docs/ai/specs/.process/`; recovery commands are recorded in
+`.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`.
 
 **Goal:** Port all read-only and advisory plugin helpers to the new runner while
 preserving current JSON and exit semantics.
@@ -630,9 +633,11 @@ inventory shows this cannot land reviewably.
 
 **Priority:** P1 | **Depends On:** XPLAT-004, XPLAT-005 | **Enables:** XPLAT-007
 
-**Status:** Pending. XPLAT-004 is complete, but this remains blocked by
-XPLAT-005 read-only helper parity unless a later XPLAT-005 phase explicitly
-stabilizes shared runner APIs for parallel mutation-helper work.
+**Status:** Ready. XPLAT-004 and XPLAT-005 are complete and archived, so the
+runner foundation, helper registry, and read-only parity patterns are available
+for mutation/install/PR-emission helper ports. XPLAT-006 should reuse the
+XPLAT-005 fixture and Bash-reference comparison model while preserving active
+Claude/Codex cutover for XPLAT-007.
 
 **Goal:** Port the state-mutating helpers after the runner and read-only parity
 patterns are stable.

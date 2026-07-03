@@ -18,7 +18,8 @@ from unittest.mock import patch
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "read-only-helpers"
-FEATURE_DIR = "specs/xplat-005-read-only-helper-port"
+FEATURE_DIR = "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/xplat-005-feature"
+ARCHIVED_FEATURE_DIR = "specs/xplat-005-read-only-helper-port"
 WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
 
 if str(PLUGIN_ROOT) not in sys.path:
@@ -482,7 +483,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             )
         self.assertEqual(completed.returncode, 0)
         self.assert_response(response, "ok", 0)
-        self.assertIn("no maps needed", response["data"]["stdout"]["text"])
+        self.assertIn("all in-scope maps up to date", response["data"]["stdout"]["text"])
         self.assertEqual(stderr_records, [])
 
     def test_o5_topology_reports_bad_child_shapes_without_crashing(self) -> None:
@@ -538,7 +539,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
             project_path = Path(project)
             changed_files = project_path / "changed-files.txt"
-            changed_files.write_text(f"{FEATURE_DIR}/plan.md\n", encoding="utf-8")
+            changed_files.write_text(f"{ARCHIVED_FEATURE_DIR}/plan.md\n", encoding="utf-8")
             redundant_changed_files = f"{project_path.relative_to(REPO_ROOT).as_posix()}/../{project_path.name}/changed-files.txt"
             response = self.assert_helper_matches_bash_reference(
                 "validate-pr-workflow-contract",
