@@ -98,6 +98,7 @@ git checkout c4642f50ae99172170798a49f0c8fd990891c0f9 -- specs/xplat-005-read-on
 | `docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` | Marked XPLAT-005 archived and XPLAT-006 ready |
 | `docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md` | Replaced the active XPLAT-005 link with an archive pointer and marked XPLAT-006 ready |
 | `docs/ai/specs/.process/autopilot-state.json` | Marked XPLAT-005 as post-merge archived state |
+| `docs-site/src/content/docs/reference/tests.md` | Refreshed generated test reference content after preserving XPLAT-005 fixture inputs |
 | `speckit-pro/speckit_pro_runner/helpers/read_only.py` | Aligned the no-active-map `generate-spec-index --check` helper response with the Bash `--check` output |
 | `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` | Refreshed runner source metadata after the read-only helper edge-case fix |
 | `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` | Refreshed runner source checksum after the read-only helper edge-case fix |
@@ -116,10 +117,15 @@ git checkout c4642f50ae99172170798a49f0c8fd990891c0f9 -- specs/xplat-005-read-on
 - `git diff --check`
 - `bash tests/speckit-pro/run-all.sh --layer 1`
 - `bash tests/speckit-pro/run-all.sh --layer 4`
+- `corepack pnpm reference:generate` from `docs-site/`
+- `corepack pnpm reference:check` from `docs-site/`
+- `corepack pnpm validate:quality` from `docs-site/`
 
 Result: pass. `find specs` reported only `specs/.gitkeep`; focused read-only
 helper tests reported `32/32 passed`; Layer 1 structural validation reported
-`1443/1443 passed`; Layer 4 script validation reported `2135/2135 passed`.
+`1443/1443 passed`; Layer 4 script validation reported `2135/2135 passed`;
+docs reference and quality checks passed after regenerating the tests reference
+page.
 
 ## Feature Status
 `Completed / Archived`. The active spec folder was removed from `specs/**`; the
