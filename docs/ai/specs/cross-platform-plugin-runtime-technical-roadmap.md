@@ -20,8 +20,10 @@ autoheal behavior across Claude Code and Codex, not only native Windows runtime
 execution. Refined again on 2026-06-28 after the runtime decision was reopened:
 the active implementation path is now a Python 3.11+ standard-library runner
 aligned with official Spec Kit / `specify` prerequisites, and the Bash
-deprecation scope includes active build, test, eval, payload, and
-release-readiness gates that validate or publish shipped plugin behavior.
+deprecation scope includes active helper tooling, build, test, eval, payload,
+install-verification, and release-readiness paths. Bash may remain only as
+GitHub CI/CD dispatch glue that calls Python gates and contains no validation,
+packaging, install, or runtime logic.
 Updated 2026-06-29 after XPLAT-003 merged in PR #267 and was archived;
 XPLAT-004 became ready to scaffold from the archived Python-only
 security/control model. Updated 2026-06-30 after XPLAT-004 scaffold started on
@@ -109,11 +111,11 @@ but SpecKit Pro cannot depend on them for installed plugin runtime behavior.
 
 The selected implementation substrate is Python 3.11+ standard-library code
 through the official Spec Kit / `specify` prerequisite boundary. Active plugin
-build, test, eval, payload-generation, and release-readiness gates that validate
-or publish shipped plugin behavior are inside this lane. Historical/archive
-references and unrelated repository-only shell wrappers may remain only when a
-deterministic guard proves they cannot affect installed plugin behavior,
-generated payloads, test/eval results, or release claims.
+helper tooling, build, test, eval, payload-generation, install-verification, and
+release-readiness gates are inside this lane. Historical/archive references may
+remain as prose only. Shell may remain only as GitHub CI/CD dispatch glue that
+invokes Python gates and contains no validation, packaging, install, or runtime
+logic.
 
 ## Python Confidence And Proof Boundary
 
@@ -165,9 +167,10 @@ replacement is necessary but not sufficient.
   agents, missing runner files, missing generated payload files, and
   unsupported platform claims; it auto-repairs only safe gaps and gives exact
   remediation for unsafe gaps.
-- Active build, test, eval, and release-readiness gates that validate or publish
-  shipped plugin behavior run through Python standard-library tooling and do not
-  require Bash, Git Bash, WSL, PowerShell helper scripts, or `jq`.
+- Active helper tooling, build, test, eval, payload-generation,
+  install-verification, and release-readiness gates run through Python
+  standard-library tooling and do not require Bash, Git Bash, WSL, PowerShell
+  helper scripts, or `jq`.
 - The update path verifies that Claude Code and Codex are both on the latest
   tagged plugin release and that generated payloads match the release manifest.
 - UAT evidence is readable and complete. Runbooks must not ship placeholder PR
@@ -254,13 +257,13 @@ implementation.
   Unix-path, `chmod`, and line-ending assumptions, including generated payloads,
   public docs, tests, fixtures, and historical/archive references.
 - Classify references as active runtime, generated payload, public docs,
-  active test/eval gate, active build/release gate, unrelated repository-only
-  maintainer tooling, temporary parity fixture, or historical/archive.
+  active test/eval gate, active build/release gate, GitHub CI/CD dispatch glue,
+  temporary parity fixture, or historical/archive.
 - Require static caller-to-callee invocation-trace evidence before marking any
   finding as a proven active installed-runtime dependency.
 - Map every active runtime dependency to an owner category: read-only helper,
-  mutation/helper, cutover guidance, repository-only exclusion, or follow-up
-  exception.
+  mutation/helper, cutover guidance, GitHub CI/CD dispatch exception, or
+  follow-up exception.
 - Produce a runtime evaluation rubric covering native Windows/macOS/Linux
   behavior, installed-cache invocation, dependency footprint, packaging,
   offline behavior, diagnostics, maintainability, and compatibility adapters.
@@ -301,8 +304,8 @@ implementation.
 - XPLAT-002 has a clear runtime evaluation rubric and candidate evidence list.
 - XPLAT-003 has a clear security/trust evaluation rubric and runner-file list.
 - Every active Bash dependency has a provisional owner spec: XPLAT-005,
-  XPLAT-006, XPLAT-007, active-gate migration, or unrelated repository-only
-  exclusion.
+  XPLAT-006, XPLAT-007, active-gate migration, or GitHub CI/CD dispatch
+  exception.
 
 **Completion Handoff:**
 
@@ -625,7 +628,8 @@ inventory shows this cannot land reviewably.
 - All read-only helpers have runner equivalents with fixture parity.
 - Native Windows fixture runs pass without Bash or `jq`.
 - Read-only helper release gates use Python tests; Bash fixtures are retained
-  only as temporary parity or archived historical evidence.
+  only as temporary migration evidence and must be removed from active gates by
+  XPLAT-007.
 
 ---
 
@@ -676,8 +680,8 @@ if XPLAT-001 inventory shows the combined scope is too large.
 
 - Active skill cutover.
 - Public release docs.
-- Replacing unrelated repository-only release scripts unless they build,
-  publish, test, evaluate, or validate shipped plugin behavior.
+- Replacing GitHub CI/CD dispatch glue that only invokes Python gates and
+  contains no validation, packaging, install, or runtime logic.
 
 **Likely Helper Set:**
 
@@ -704,7 +708,8 @@ if XPLAT-001 inventory shows the combined scope is too large.
   deterministic safe-repair and manual-remediation outcomes.
 - Fixture parity covers destructive and dry-run paths before active cutover.
 - Mutation-helper release gates use Python tests; Bash tests are retained only
-  as temporary parity or archived historical evidence.
+  as temporary migration evidence and must be removed from active gates by
+  XPLAT-007.
 
 ---
 
@@ -744,6 +749,9 @@ split only if generated payload rebuilds make the review packet too large.
   builder, marketplace/version sync checks, Layer 1 structural checks, Layer 4
   helper tests, AI-eval runners, tool-scoping checks, integration/parity suites,
   and the top-level test runner.
+- Replace active repo-local Bash helpers, tests, evals, payload builders,
+  install-verification scripts, and release scripts with Python commands. Bash
+  may remain only as GitHub CI/CD dispatch glue that invokes those Python gates.
 - Add or update docs so Windows users see the supported native path, any
   explicitly supported WSL path is labeled as optional, and macOS/Linux users see
   the same install-to-first-use journey.
@@ -761,8 +769,6 @@ split only if generated payload rebuilds make the review packet too large.
 
 - Replacing GitHub Actions YAML or minimal shell wrappers that only dispatch to
   Python gates and contain no plugin validation logic.
-- Replacing unrelated repository maintainer scripts that do not build, publish,
-  test, evaluate, or validate shipped plugin behavior.
 - Changing GitHub Spec Kit's own generated `.specify/scripts/bash/` helpers in
   consumer projects.
 - Claiming cryptographic guarantees that were not implemented.
@@ -804,9 +810,10 @@ split only if generated payload rebuilds make the review packet too large.
   dependencies, incomplete generated payloads, missing bundled agents, stale
   version metadata, or incomplete UAT runbooks are detected.
 - The active test/eval/build/release-readiness suite for shipped plugin behavior
-  has no Bash-only gate. Any remaining Bash is historical/archive text,
-  temporary parity evidence explicitly outside the release gate, or an unrelated
-  wrapper proven not to validate shipped behavior.
+  has no Bash-only gate. Active repo-local helpers, tests, evals, payload
+  builders, install-verification scripts, and release scripts are Python.
+  Remaining shell is limited to historical/archive prose or GitHub CI/CD
+  dispatch glue that only invokes Python gates.
 - Public docs and release notes match the implemented consumer-trust model.
 
 ---
