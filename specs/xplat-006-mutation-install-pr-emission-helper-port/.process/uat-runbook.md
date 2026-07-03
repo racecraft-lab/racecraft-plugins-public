@@ -3,8 +3,8 @@
 | Field | Value |
 |-------|-------|
 | Spec | xplat-006-mutation-install-pr-emission-helper-port |
-| Branch | xplat-006-mutation-install-pr-emission-helper-port |
-| PR | Pending until PR is opened |
+| Branch | codex/xplat-006-mutation-install-pr-emission-helper-port |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/281 |
 | Generated from | 2026-07-03T19:55:50Z |
 
 
