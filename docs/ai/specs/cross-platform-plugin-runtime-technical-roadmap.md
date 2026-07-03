@@ -35,7 +35,7 @@ XPLAT-005 scaffold started on `codex/xplat-005-read-only-helper-port`; the setup
 design concept accepted one workflow with two internal slices. Updated
 2026-07-03 after XPLAT-005 merged in PR #276 and the active spec folder was
 archived; XPLAT-006 is ready to scaffold from the read-only helper registry and
-parity fixture pattern. Updated after PR #279 to split the final Python-only
+parity fixture pattern. Updated after PR #280 to split the final Python-only
 goal into XPLAT-007 for Python tooling/release-gate migration and XPLAT-008 for
 Claude/Codex cutover, install/update/autoheal UAT, and public release readiness.
 
