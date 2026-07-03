@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-resolve-confidence-mode",
+  "helper_id": "resolve-confidence-mode",
+  "operation": "resolve-confidence-mode",
+  "mode": "read_only",
+  "inputs": {
+    "autopilot_args": [
+      "--advisory",
+      "docs/ai/specs/.process/XPLAT-005-workflow.md"
+    ]
+  }
+}

@@ -28,7 +28,9 @@ security/control model. Updated 2026-06-30 after XPLAT-004 scaffold started on
 `codex/xplat-004-cross-platform-runner-foundation`; the setup design concept
 accepted a two-slice implementation plan inside one workflow. Updated
 2026-07-01 after XPLAT-004 merged in PR #274 and the active spec folder was
-archived; XPLAT-005 is now ready to scaffold.
+archived; XPLAT-005 became ready to scaffold. Updated again on 2026-07-01 after
+XPLAT-005 scaffold started on `codex/xplat-005-read-only-helper-port`; the setup
+design concept accepted one workflow with two internal slices.
 
 ---
 
@@ -208,7 +210,7 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-002 | Runtime Implementation Options and Contract Decision | Complete / Archived | `.process/XPLAT-002-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-completed-active-specs-post-merge-hygiene.md`; Python stdlib runner decision carried forward |
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete / Archived | `.process/XPLAT-003-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`; active spec folder removed after PR #267 |
 | XPLAT-004 | Cross-Platform Runner Foundation | Complete / Archived | `.process/XPLAT-004-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`; runner source, metadata, contract fixtures, and tests landed in PR #274 |
-| XPLAT-005 | Read-Only Helper Port | Ready | — | Unblocked by XPLAT-004 runner foundation; scaffold next |
+| XPLAT-005 | Read-Only Helper Port | In Progress | `.process/XPLAT-005-workflow.md` | Scaffolded on branch `codex/xplat-005-read-only-helper-port`; run autopilot next |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Pending | — | Blocked by XPLAT-005 read-only parity; should reuse XPLAT-005 patterns |
 | XPLAT-007 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-005 and XPLAT-006 |
 
@@ -559,8 +561,11 @@ here.
 
 **Priority:** P1 | **Depends On:** XPLAT-004 | **Enables:** XPLAT-007 and reduces XPLAT-006 risk
 
-**Status:** Ready. XPLAT-004 is complete and archived after PR #274, so the
-runner foundation dependency is satisfied.
+**Status:** In Progress. XPLAT-004 is complete and archived after PR #274, so
+the runner foundation dependency is satisfied. Scaffolded on 2026-07-01 in
+branch `codex/xplat-005-read-only-helper-port`; workflow file is
+`docs/ai/specs/.process/XPLAT-005-workflow.md`; design concept is
+`docs/ai/specs/.process/XPLAT-005-design-concept.md`.
 
 **Goal:** Port all read-only and advisory plugin helpers to the new runner while
 preserving current JSON and exit semantics.

@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-validate-pr-packet-read-only",
+  "helper_id": "validate-pr-packet-read-only",
+  "operation": "validate-pr-packet-read-only",
+  "mode": "read_only",
+  "inputs": {
+    "packet_path": "tests/speckit-pro/layer4-scripts/fixtures/pr-packet/valid-single.json"
+  }
+}

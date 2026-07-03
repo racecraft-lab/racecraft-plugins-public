@@ -506,6 +506,8 @@ If this leg proves flaky enough to disrupt the merge queue, consider demoting it
 - Checked-in Markdown, Astro components, package scripts, generated reference files, and CI artifacts only; no database or browser storage (doc-010-search-accessibility-deep-links-docs-validation)
 - Docs-site JavaScript ESM on Node >=22.12; GitHub Actions YAML; Markdown operator guidance + Astro 6.4.6, Starlight 0.40.0, `@astrojs/check`, `starlight-links-validator`, Playwright 1.61.0, pnpm 10.25.0 via Corepack, standard GitHub Pages Actions (doc-011-github-pages-build-and-deploy-pipeline)
 - Checked-in repository files only; GitHub Pages stores the uploaded `docs-site/dist` static artifact outside repository source control (doc-011-github-pages-build-and-deploy-pipeline)
+- Python 3.11+ standard library through `speckit-pro/speckit_pro_runner/` + Existing XPLAT-004 runner envelope, diagnostics, typed path, runtime-info, and preflight primitives; current Bash helper scripts remain temporary source-checkout references only (xplat-005-read-only-helper-port)
+- Checked-in fixture, contract, and evidence files only; ported helpers must not write repository or user-local state (xplat-005-read-only-helper-port)
 
 ## Recent Changes
 - prsg-010-harden-the-hatch: Added PRSG-010 foundation artifacts, contract schemas, workflow state updates, and planning docs for the split PR stack.

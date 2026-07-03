@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-detect-commands",
+  "helper_id": "detect-commands",
+  "operation": "detect-commands",
+  "mode": "read_only",
+  "inputs": {}
+}

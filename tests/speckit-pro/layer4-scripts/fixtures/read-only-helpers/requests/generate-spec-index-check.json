@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-generate-spec-index-check",
+  "helper_id": "generate-spec-index-check",
+  "operation": "generate-spec-index-check",
+  "mode": "read_only",
+  "inputs": {}
+}

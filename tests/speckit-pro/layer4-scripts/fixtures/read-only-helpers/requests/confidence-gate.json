@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-confidence-gate",
+  "helper_id": "confidence-gate",
+  "operation": "confidence-gate",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
+    "mode_name": "advisory"
+  }
+}

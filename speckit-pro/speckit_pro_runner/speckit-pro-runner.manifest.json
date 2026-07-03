@@ -32,7 +32,31 @@
         "value": "speckit_pro_runner/envelope.py",
         "display": "speckit_pro_runner/envelope.py"
       },
-      "sha256": "663c06f9b70532e75d0bf82239563c9a48687e7ab9023a94712fd29383ec388d"
+      "sha256": "d51f842d211da1b7b4a92d0b93760ab399b01d0ad7c964300773c65100991cee"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/__init__.py",
+        "display": "speckit_pro_runner/helpers/__init__.py"
+      },
+      "sha256": "00fe68ad0f274c880dfd550325423d301d61e8c9eb066611080f9e378191a4f1"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/read_only.py",
+        "display": "speckit_pro_runner/helpers/read_only.py"
+      },
+      "sha256": "0585d4a8eaf8cc43fb544399f1098daddb34bfec1c25c03b49053b42e8a4fcef"
+    },
+    {
+      "path": {
+        "kind": "plugin_relative",
+        "value": "speckit_pro_runner/helpers/registry.py",
+        "display": "speckit_pro_runner/helpers/registry.py"
+      },
+      "sha256": "6d1d7c1532a5e43c888c4be0c8f43e5fa1e6695660b86c54811efe40cc81d68c"
     },
     {
       "path": {
@@ -40,7 +64,7 @@
         "value": "speckit_pro_runner/runtime.py",
         "display": "speckit_pro_runner/runtime.py"
       },
-      "sha256": "a44ddfc2b5f669ac7c11f2200f92a8f4f1ec10bcbfa4a17e19b62f956fd0425d"
+      "sha256": "df0b268a3d866bdd58294c0d56506e1fafa639ffbaa9ee71588e79e8e4d0b495"
     }
   ]
 }

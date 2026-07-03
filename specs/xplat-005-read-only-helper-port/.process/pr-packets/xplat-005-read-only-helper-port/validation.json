@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "error_class": "none",
+  "exit_code": 0,
+  "stderr_line": "",
+  "packet_id": "xplat-005-read-only-helper-port",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "codex/xplat-005-read-only-helper-port"
+  },
+  "status": "passed",
+  "title_value": "feat(XPLAT-005): Add read-only helper port",
+  "body_file": "specs/xplat-005-read-only-helper-port/.process/pr-packets/xplat-005-read-only-helper-port.md",
+  "rule_outcomes": [
+    {
+      "rule": "packet.validation",
+      "status": "passed",
+      "evidence": "no failures"
+    }
+  ],
+  "pr_blocked": false,
+  "failures": [],
+  "remediation_evidence": [],
+  "timestamp": "2026-07-03T01:16:55Z"
+}

@@ -29,6 +29,10 @@ CHECKSUM_NAME = "speckit-pro-runner.sha256"
 
 
 def handle_request(request: Any) -> dict[str, Any]:
+    if getattr(request, "helper_id", "runner") != "runner":
+        from .helpers.registry import dispatch_helper
+
+        return dispatch_helper(request)
     if request.operation == "runtime-info":
         return runtime_info(request.request_id, request.inputs)
     if request.operation == "preflight":
@@ -240,7 +244,7 @@ def metadata_report(
         base["verification_status"] = "incomplete_metadata"
         return base
 
-    source_files = sorted(path for path in package_dir.glob("*.py"))
+    source_files = runner_source_files(package_dir)
     expected_values = {plugin_relative(plugin_root, path): sha256_file(path) for path in source_files}
     manifest_records = manifest.get("runner_files")
     if not isinstance(manifest_records, list):
@@ -275,6 +279,14 @@ def metadata_report(
         for path, digest in sorted(expected_values.items())
     ]
     return base
+
+
+def runner_source_files(package_dir: Path) -> list[Path]:
+    return sorted(
+        path
+        for path in package_dir.rglob("*.py")
+        if "__pycache__" not in path.parts
+    )
 
 
 def parse_checksum_file(path: Path) -> dict[str, str]:
