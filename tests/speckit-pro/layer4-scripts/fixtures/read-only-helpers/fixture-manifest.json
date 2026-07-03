@@ -35,6 +35,7 @@
       "rejected_stdout_schema": {"stack": "string", "commands": "object"},
       "deterministic_remediation": {"summary": "Run detection from a repository root.", "actions": ["Retry from repo root.", "Compare stdout JSON to Bash reference."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "execution_context_policy": {"repo_root_input": "reported_as_effective_cwd", "cwd_kind": "repo_relative"},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
       "authoritative_command": "python -m speckit_pro_runner < detect-commands.json",
       "rollback": "Leave project command discovery on the Bash helper."
@@ -47,6 +48,7 @@
       "rejected_stdout_schema": {"has_presets": "boolean", "templates": "object"},
       "deterministic_remediation": {"summary": "Run preset detection from a SpecKit project checkout.", "actions": ["Check .specify paths.", "Compare stdout JSON to Bash reference."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
+      "execution_context_policy": {"repo_root_input": "reported_as_effective_cwd", "cwd_kind": "repo_relative"},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
       "authoritative_command": "python -m speckit_pro_runner < detect-presets.json",
       "rollback": "Leave preset detection on the Bash helper."

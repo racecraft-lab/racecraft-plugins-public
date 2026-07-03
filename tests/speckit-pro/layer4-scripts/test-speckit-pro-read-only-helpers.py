@@ -11,6 +11,8 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -18,6 +20,9 @@ PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "read-only-helpers"
 FEATURE_DIR = "specs/xplat-005-read-only-helper-port"
 WORKFLOW_FILE = "docs/ai/specs/.process/XPLAT-005-workflow.md"
+
+if str(PLUGIN_ROOT) not in sys.path:
+    sys.path.insert(0, str(PLUGIN_ROOT))
 
 EXPECTED_HELPERS = [
     "helper-registry-dispatch",
@@ -98,13 +103,22 @@ def run_runner(
     return completed, response, stderr_records
 
 
-def run_bash_reference(argv: list[str]) -> subprocess.CompletedProcess[str]:
+def response_cwd(data: dict[str, object]) -> Path:
+    record = data.get("effective_cwd") or data.get("cwd")
+    if not isinstance(record, dict):
+        return REPO_ROOT
+    value = str(record.get("value") or ".")
+    path = Path(value)
+    return path if path.is_absolute() else REPO_ROOT / path
+
+
+def run_bash_reference(argv: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
     real_argv = [str(REPO_ROOT / argv[0]), *argv[1:]]
     return subprocess.run(
         real_argv,
         text=True,
         capture_output=True,
-        cwd=REPO_ROOT,
+        cwd=cwd or REPO_ROOT,
         env=runner_env(),
         shell=False,
         check=False,
@@ -127,6 +141,18 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertIn(self.helper_filter, EXPECTED_HELPERS)
             return [self.helper_filter]
         return EXPECTED_HELPERS
+
+    def assert_helper_matches_bash_reference(self, helper_id: str, inputs: dict[str, object]) -> dict[str, object]:
+        completed, response, stderr_records = run_runner(helper_request(helper_id, inputs))
+        data = response["data"]
+        reference = run_bash_reference(data["argv"], response_cwd(data))
+        self.assertEqual(data["shell"], False)
+        self.assertEqual(data["exit_code"], reference.returncode)
+        self.assertEqual(data["stdout"]["text"], reference.stdout)
+        self.assertEqual(data["stderr"]["text"], reference.stderr)
+        self.assertEqual(completed.returncode, response["exit_code"])
+        self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
+        return response
 
     def test_registry_dispatch_lists_only_read_only_helpers(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
@@ -221,6 +247,359 @@ class ReadOnlyHelperTests(unittest.TestCase):
                     self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
                     self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_path"])
 
+    def test_windows_style_relative_paths_are_normalized_in_reported_argv(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("path-normalization case uses check-prerequisites")
+        windows_workflow = WORKFLOW_FILE.replace("/", "\\")
+        completed, response, stderr_records = run_runner(
+            helper_request("check-prerequisites", {"workflow_file": windows_workflow})
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        self.assertIn(WORKFLOW_FILE, response["data"]["argv"])
+        self.assertNotIn(windows_workflow, response["data"]["argv"])
+        self.assertEqual(stderr_records, [])
+
+    def test_explicit_repo_root_cannot_redefine_trust_boundary(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("repo_root trust-boundary case uses detect-commands")
+        with tempfile.TemporaryDirectory() as outside:
+            outside_root = Path(outside)
+            (outside_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            completed, response, stderr_records = run_runner(
+                helper_request("detect-commands", {"repo_root": str(outside_root)})
+            )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
+        self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_path"])
+
+    def test_repo_root_symlink_escape_is_rejected(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("repo_root symlink-boundary case uses detect-commands")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            outside_root = Path(outside)
+            (outside_root / "speckit-pro" / "speckit_pro_runner").mkdir(parents=True)
+            link = project_path / "external"
+            try:
+                link.symlink_to(outside_root, target_is_directory=True)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+            completed, response, stderr_records = run_runner(
+                helper_request("detect-commands", {"repo_root": link.relative_to(REPO_ROOT).as_posix()})
+            )
+        self.assertEqual(completed.returncode, 2)
+        self.assert_response(response, "input_error", 2)
+        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["unsupported_path"])
+        self.assertEqual([diag["code"] for diag in stderr_records], ["unsupported_path"])
+
+    def test_find_repo_root_rejects_symlinked_plugin_anchor(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("repo-root discovery case uses check-prerequisites")
+        with tempfile.TemporaryDirectory() as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            outside_plugin = Path(outside) / "speckit-pro"
+            (outside_plugin / "speckit_pro_runner").mkdir(parents=True)
+            try:
+                (project_path / "speckit-pro").symlink_to(outside_plugin, target_is_directory=True)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+            from speckit_pro_runner.helpers.read_only import find_repo_root
+
+            self.assertIsNone(find_repo_root(project_path))
+
+    def test_helper_argv_rejects_symlinked_registered_script(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("helper argv script-boundary case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            outside_script = Path(outside) / "helper.sh"
+            outside_script.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+            try:
+                (project_path / "helper.sh").symlink_to(outside_script)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+            from speckit_pro_runner.helpers.read_only import helper_argv
+
+            result = helper_argv(SimpleNamespace(helper_id="check-prerequisites", script="helper.sh"), {}, project_path)
+            self.assertIsInstance(result, dict)
+            self.assertEqual(result["code"], "missing_prerequisite")
+
+    def test_detect_commands_rejects_file_repo_root_and_reports_directory_cwd(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("detect-commands repo_root validation case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            file_root = project_path / "not-a-directory"
+            file_root.write_text("", encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request("detect-commands", {"repo_root": file_root.relative_to(REPO_ROOT).as_posix()})
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["invalid_input"])
+            self.assertEqual([diag["code"] for diag in stderr_records], ["invalid_input"])
+
+            (project_path / "pnpm-lock.yaml").write_text("", encoding="utf-8")
+            (project_path / "package.json").write_text('{"scripts":{"test":"vitest"}}\n', encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request("detect-commands", {"repo_root": project_path.relative_to(REPO_ROOT).as_posix()})
+            )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        self.assertEqual(response["data"]["cwd"]["value"], ".")
+        self.assertEqual(response["data"]["effective_cwd"]["value"], project_path.relative_to(REPO_ROOT).as_posix())
+        self.assertEqual(stderr_records, [])
+
+    def test_detect_commands_defaults_package_json_only_node_to_npm(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("detect-commands package-json-only case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / "package.json").write_text('{"scripts":{"build":"vite","test":"vitest"}}\n', encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request("detect-commands", {"repo_root": project_path.relative_to(REPO_ROOT).as_posix()})
+            )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        stdout_json = response["data"]["stdout_json"]
+        self.assertEqual(stdout_json["stack"], "nodejs")
+        self.assertEqual(stdout_json["package_manager"], "npm")
+        self.assertEqual(stdout_json["commands"]["BUILD"], "npm build")
+        self.assertEqual(stdout_json["commands"]["UNIT_TEST"], "npm test")
+        self.assertEqual(stderr_records, [])
+
+    def test_detect_commands_subdir_matches_bash_reference_from_effective_cwd(self) -> None:
+        if self.helper_filter and self.helper_filter != "detect-commands":
+            self.skipTest("detect-commands effective-cwd parity case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            (project_path / "package-lock.json").write_text("{}\n", encoding="utf-8")
+            (project_path / "package.json").write_text(
+                '{"scripts":{"build":"vite","typecheck":"tsc --noEmit","lint":"eslint .","test":"vitest","test:e2e":"playwright test"}}\n',
+                encoding="utf-8",
+            )
+            response = self.assert_helper_matches_bash_reference(
+                "detect-commands",
+                {"repo_root": project_path.relative_to(REPO_ROOT).as_posix()},
+            )
+        self.assertEqual(response["data"]["cwd"]["value"], ".")
+        self.assertNotEqual(response["data"]["effective_cwd"]["value"], ".")
+
+    def test_reported_path_argv_is_canonicalized_for_replay(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate canonical argv case")
+        redundant_workflow = "docs/ai/specs/.process/../.process/XPLAT-005-workflow.md"
+        response = self.assert_helper_matches_bash_reference(
+            "confidence-gate",
+            {"workflow_file": redundant_workflow, "mode_name": "advisory"},
+        )
+        self.assertIn(WORKFLOW_FILE, response["data"]["argv"])
+        self.assertNotIn("..", " ".join(response["data"]["argv"]))
+
+    def test_check_prerequisites_uses_canonical_input_for_replay(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("check-prerequisites canonical argv case")
+        redundant_workflow = "docs/ai/specs/.process/../.process/XPLAT-005-workflow.md"
+        response = self.assert_helper_matches_bash_reference(
+            "check-prerequisites",
+            {"workflow_file": redundant_workflow},
+        )
+        self.assertIn(WORKFLOW_FILE, response["data"]["argv"])
+        self.assertNotIn("..", " ".join(response["data"]["argv"]))
+
+    def test_confidence_gate_rejects_invalid_threshold(self) -> None:
+        if self.helper_filter and self.helper_filter != "confidence-gate":
+            self.skipTest("confidence-gate threshold case")
+        cases = [
+            {"workflow_file": WORKFLOW_FILE, "threshold": "abc"},
+            {"workflow_file": WORKFLOW_FILE, "threshold": "nan"},
+            {"workflow_file": WORKFLOW_FILE, "mode_name": "maybe"},
+        ]
+        for inputs in cases:
+            with self.subTest(inputs=inputs):
+                completed, response, stderr_records = run_runner(helper_request("confidence-gate", inputs))
+                self.assertEqual(completed.returncode, 2)
+                self.assert_response(response, "input_error", 2)
+                self.assertTrue("invalid threshold" in response["data"]["stdout_json"]["error"] or "invalid mode" in response["data"]["stdout_json"]["error"])
+                self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
+
+    def test_generate_spec_index_ignores_symlinked_spec_children(self) -> None:
+        if self.helper_filter and self.helper_filter != "generate-spec-index-check":
+            self.skipTest("generate-spec-index path-boundary case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
+            root = Path(project)
+            specs = root / "specs"
+            specs.mkdir()
+            outside_spec = Path(outside) / "escaped"
+            outside_spec.mkdir()
+            (outside_spec / "SPEC-MOC.md").write_text("---\nstatus: complete\n---\n", encoding="utf-8")
+            try:
+                (specs / "escaped").symlink_to(outside_spec, target_is_directory=True)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+            completed, response, stderr_records = run_runner(
+                helper_request("generate-spec-index-check", {"repo_root": root.relative_to(REPO_ROOT).as_posix()})
+            )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        self.assertIn("no maps needed", response["data"]["stdout"]["text"])
+        self.assertEqual(stderr_records, [])
+
+    def test_o5_topology_reports_bad_child_shapes_without_crashing(self) -> None:
+        if self.helper_filter and self.helper_filter != "o5-topology":
+            self.skipTest("o5-topology shape case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            manifest = Path(project) / "o5-parent-manifest.json"
+            manifest.write_text(
+                json.dumps({"schemaVersion": 1, "kind": "o5_parent_manifest", "parent": {}, "children": ["bad", {"id": "c", "path": "specs/c", "dependsOn": "bad"}]}),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request("o5-topology", {"target": manifest.relative_to(REPO_ROOT).as_posix()})
+            )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok", 0)
+        codes = {problem["code"] for problem in response["data"]["stdout_json"]["problems"]}
+        self.assertIn("invalid_child_shape", codes)
+        self.assertIn("invalid_depends_on", codes)
+        self.assertEqual(stderr_records, [])
+
+    def test_validate_pr_packet_rejects_non_object_and_bad_nested_shapes(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-packet-read-only":
+            self.skipTest("validate-pr-packet shape case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            packet = Path(project) / "packet.json"
+            packet.write_text("[]\n", encoding="utf-8")
+            completed, response, stderr_records = run_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            )
+            self.assertEqual(completed.returncode, 2)
+            self.assert_response(response, "input_error", 2)
+            self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
+
+            packet.write_text(
+                json.dumps({"verification_evidence": ["ok"], "scope_evidence": [], "generated_title": [], "target": [], "validation_result_path": "../outside.json", "body_file": []}),
+                encoding="utf-8",
+            )
+            completed, response, stderr_records = run_runner(
+                helper_request("validate-pr-packet-read-only", {"packet_path": packet.relative_to(REPO_ROOT).as_posix()})
+            )
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure", 1)
+        rules = {failure["rule"] for failure in response["data"]["stdout_json"]["failures"]}
+        self.assertIn("input.shape.scope_evidence", rules)
+        self.assertIn("input.path.validation_result_path", rules)
+        self.assertIn("input.path.body_file", rules)
+        self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
+
+    def test_validate_pr_workflow_contract_changed_files_is_canonicalized_and_evaluated(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":
+            self.skipTest("validate-pr-workflow-contract changed-files case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            changed_files = project_path / "changed-files.txt"
+            changed_files.write_text(f"{FEATURE_DIR}/plan.md\n", encoding="utf-8")
+            redundant_changed_files = f"{project_path.relative_to(REPO_ROOT).as_posix()}/../{project_path.name}/changed-files.txt"
+            response = self.assert_helper_matches_bash_reference(
+                "validate-pr-workflow-contract",
+                {
+                    "title": "feat(OTHER): Wrong scope",
+                    "repo_root": ".",
+                    "changed_files": redundant_changed_files,
+                },
+            )
+        self.assertIn("--changed-files", response["data"]["argv"])
+        self.assertNotIn("..", " ".join(response["data"]["argv"]))
+        failures = response["data"]["stdout_json"]["failures"]
+        self.assertEqual(failures[0]["rule"], "title.spec_scope")
+
+    def test_validate_pr_workflow_contract_unreadable_changed_files_is_input_error(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":
+            self.skipTest("validate-pr-workflow-contract changed-files read-error case")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            changed_files = Path(project) / "changed-files.txt"
+            changed_files.write_text(f"{FEATURE_DIR}/plan.md\n", encoding="utf-8")
+            from speckit_pro_runner.helpers.read_only import validate_pr_workflow_contract
+
+            with patch.object(Path, "read_text", side_effect=PermissionError("denied")):
+                result = validate_pr_workflow_contract(
+                    {
+                        "title": "feat(XPLAT-005): Scope check",
+                        "repo_root": ".",
+                        "changed_files": changed_files.relative_to(REPO_ROOT).as_posix(),
+                    },
+                    REPO_ROOT,
+                )
+        self.assertEqual(result["exit_code"], 2)
+        self.assertEqual(result["stdout"], "")
+        self.assertIn("changed-files list not readable", result["stderr"])
+
+    def test_git_branch_rejects_untrusted_gitdir_pointer(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git branch pointer case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            (project_path / ".git").write_text(f"gitdir: {outside}\n", encoding="utf-8")
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "")
+
+    def test_trusted_text_returns_none_on_read_error(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("trusted text read-error case uses shared helper behavior")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            path = Path(project) / "unreadable.md"
+            path.write_text("secret\n", encoding="utf-8")
+            from speckit_pro_runner.helpers.read_only import trusted_text
+
+            with patch.object(Path, "read_text", side_effect=PermissionError("denied")):
+                self.assertIsNone(trusted_text(path, REPO_ROOT))
+
+    def test_git_branch_rejects_symlinked_git_paths(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git branch symlink case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            outside_git = Path(outside) / "gitfile"
+            outside_git.write_text("gitdir: /tmp/outside\n", encoding="utf-8")
+            try:
+                (project_path / ".git").symlink_to(outside_git)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "")
+
+    def test_git_branch_rejects_symlinked_head_escape(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git HEAD symlink case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project, tempfile.TemporaryDirectory() as outside:
+            project_path = Path(project)
+            git_dir = project_path / ".git"
+            git_dir.mkdir()
+            outside_head = Path(outside) / "HEAD"
+            outside_head.write_text("ref: refs/heads/external\n", encoding="utf-8")
+            try:
+                (git_dir / "HEAD").symlink_to(outside_head)
+            except OSError:
+                self.skipTest("symlink creation is unavailable")
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "")
+
+    def test_repo_root_for_specs_path_uses_rightmost_specs_segment(self) -> None:
+        if self.helper_filter and self.helper_filter != "o5-topology":
+            self.skipTest("spec root inference case uses o5-topology")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            target = project_path / "outer" / "specs" / "container" / "repo" / "specs" / "feature"
+            expected = project_path / "outer" / "specs" / "container" / "repo"
+            from speckit_pro_runner.helpers.read_only import repo_root_for_specs_path
+
+            self.assertEqual(repo_root_for_specs_path(target, project_path), expected.resolve(strict=False))
+
     def test_runtime_info_smoke_fixture_still_works(self) -> None:
         if self.helper_filter and self.helper_filter != "helper-registry-dispatch":
             self.skipTest("runtime smoke is registry-level")
@@ -250,6 +629,26 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(response["data"]["stdout_json"]["stack"], "nodejs")
         self.assertEqual(stderr_records, [])
 
+    def test_count_markers_modes_match_bash_reference(self) -> None:
+        if self.helper_filter and self.helper_filter != "count-markers":
+            self.skipTest("count-markers expanded parity cases")
+        for marker_type in ("gaps", "findings", "clarifications", "all"):
+            with self.subTest(marker_type=marker_type):
+                self.assert_helper_matches_bash_reference(
+                    "count-markers",
+                    {"type": marker_type, "feature_dir": FEATURE_DIR},
+                )
+
+    def test_validate_gate_modes_match_bash_reference(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-gate":
+            self.skipTest("validate-gate expanded parity cases")
+        for gate in ("G1", "G2", "G3", "G4", "G5", "G6", "G7"):
+            with self.subTest(gate=gate):
+                self.assert_helper_matches_bash_reference(
+                    "validate-gate",
+                    {"gate": gate, "feature_dir": FEATURE_DIR},
+                )
+
     def test_helper_bash_reference_parity(self) -> None:
         for helper_id in self.filtered_helpers():
             if helper_id == "helper-registry-dispatch":
@@ -257,7 +656,7 @@ class ReadOnlyHelperTests(unittest.TestCase):
             with self.subTest(helper_id=helper_id):
                 completed, response, stderr_records = run_runner(helper_request(helper_id, HELPER_CASES[helper_id]))
                 data = response["data"]
-                reference = run_bash_reference(data["argv"])
+                reference = run_bash_reference(data["argv"], response_cwd(data))
                 self.assertEqual(data["shell"], False)
                 self.assertEqual(data["exit_code"], reference.returncode)
                 self.assertEqual(data["stdout"]["text"], reference.stdout)
