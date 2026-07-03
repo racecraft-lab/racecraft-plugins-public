@@ -61,8 +61,8 @@ accepted scope:
 | Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Sessions 1-4 complete; G2 passed with 0 clarification markers |
 | Plan | `$speckit-plan` | Complete | Created plan, research, data model, quickstart, and five contracts; G3 passed with 0 markers; hardening evidence passed |
-| Checklist | `$speckit-checklist` | In Progress | Running integration, error-handling, reliability, and security checklists |
-| Tasks | `$speckit-tasks` | Pending | Generate ordered tasks across the accepted three slices |
+| Checklist | `$speckit-checklist` | Complete | Integration, error-handling, reliability, and security checklists complete with no gaps; consensus skipped |
+| Tasks | `$speckit-tasks` | In Progress | Generate ordered tasks across the accepted three slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Run the pre-implementation confidence gate after Analyze and before task execution |
 | Implement | `$speckit-implement` | Pending | Port helpers, fixtures, tests, and handoff evidence |
@@ -489,10 +489,13 @@ Focus on XPLAT-006 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |---|---|---|---|
-| Integration | Pending | Pending | Pending until checklist runs |
-| Error-handling | Pending | Pending | Pending until checklist runs |
-| Reliability | Pending | Pending | Pending until checklist runs |
-| Security | Pending | Pending | Pending until checklist runs |
+| Integration | 12 complete | 0 | FR-001 through FR-036; SC-001, SC-005, SC-006; `checklists/integration.md` |
+| Error-handling | 12 complete | 0 | FR-004 through FR-021; FR-035 through FR-036; SC-002 through SC-004; `checklists/error-handling.md` |
+| Reliability | 13 complete | 0 | FR-012 through FR-019; FR-027 through FR-031; FR-035 through FR-036; SC-001 through SC-004; `checklists/reliability.md` |
+| Security | 11 complete | 0 | FR-007 through FR-013; FR-032 through FR-036; SC-005; `checklists/security.md` |
+
+Consensus: skipped for all four domains because no checklist reported a true
+gap.
 
 ---
 

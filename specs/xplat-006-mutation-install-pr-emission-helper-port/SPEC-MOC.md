@@ -36,6 +36,10 @@ later spec; v1 ships only this minimal parent-linked marker).
 - [contracts/helper-promotion-record.schema.json](contracts/helper-promotion-record.schema.json)
 - [contracts/mutation-helper-request.schema.json](contracts/mutation-helper-request.schema.json)
 - [contracts/mutation-helper-result.schema.json](contracts/mutation-helper-result.schema.json)
+- [checklists/error-handling.md](checklists/error-handling.md)
+- [checklists/integration.md](checklists/integration.md)
+- [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/security.md](checklists/security.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

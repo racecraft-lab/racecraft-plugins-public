@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T20:03:18Z",
+  "updated_at": "2026-07-03T20:05:51Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 4: Checklist - Integration",
+  "active_step": "Phase 5: Tasks",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible",
@@ -112,39 +112,43 @@
     },
     {
       "step": "Phase 4: Checklist - Integration",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Integration Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No gaps reported by checklist"
     },
     {
       "step": "Phase 4: Checklist - Error-Handling",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Error-Handling Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No gaps reported by checklist"
     },
     {
       "step": "Phase 4: Checklist - Reliability",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Reliability Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No gaps reported by checklist"
     },
     {
       "step": "Phase 4: Checklist - Security",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Security Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No gaps reported by checklist"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 6: Analyze",
@@ -300,6 +304,34 @@
         "git diff --check"
       ],
       "outcome": "Generated the plan, research, data model, quickstart, and contract schemas. Scope language now allows only the autopilot phase-coverage hardening source/generated mirror while preserving forbidden active cutover boundaries. G3 passed, Layer 1 passed 1443/1443, Layer 4 passed 2141/2141, phase-coverage validator returned status pass, and the scope-audit test passed 9/9."
+    },
+    "checklists": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:05:51Z",
+      "domains": {
+        "integration": {
+          "items": 12,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/integration.md"
+        },
+        "error_handling": {
+          "items": 12,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/error-handling.md"
+        },
+        "reliability": {
+          "items": 13,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/reliability.md"
+        },
+        "security": {
+          "items": 11,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/security.md"
+        }
+      },
+      "consensus": "skipped: no checklist reported a true gap",
+      "outcome": "Integration, error-handling, reliability, and security checklists all passed. The hardening requirement remains explicit: phase-coverage source/generated mirror changes are allowed only for the validator-backed autopilot fix, and scope-audit tests still block other active cutover surfaces."
     }
   }
 }
