@@ -2,7 +2,7 @@
 
 **Status**: Draft
 **Created**: 2026-06-24
-**Last updated**: 2026-06-28
+**Last updated**: 2026-07-03
 **Owner**: Racecraft Lab
 **Spec ID prefix**: `XPLAT-###`
 **Technical roadmap**: [docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md](ai/specs/cross-platform-plugin-runtime-technical-roadmap.md)
@@ -39,8 +39,9 @@ Windows, macOS, and Linux:
 - Python stdlib runner behavior after launch: high confidence, approximately
   85-90%.
 - Full Claude/Codex installed-plugin user journey today: medium confidence,
-  approximately 65-75%, because XPLAT-004 and XPLAT-007 still need installed
-  cache launch proof, generated-payload cutover, and platform UAT.
+  approximately 65-75%, because XPLAT-004, XPLAT-007, and XPLAT-008 still need
+  Python release-gate migration, installed-cache launch proof,
+  generated-payload cutover, and platform UAT.
 
 These confidence levels are planning inputs, not public support evidence.
 Native Windows/macOS/Linux claims remain blocked until downstream specs prove
@@ -219,7 +220,7 @@ atomicity routing, topology checks, and spec-index generation.
 - AC-5.3: The new helpers do not shell out for path traversal, JSON construction,
   text parsing, or glob expansion.
 - AC-5.4: The existing Claude and Codex guidance can still use the Bash path
-  only until XPLAT-007 performs the final cutover; Bash-only tests may remain
+  only until XPLAT-008 performs the final cutover; Bash-only tests may remain
   only as temporary parity fixtures before then and must be removed from active
   gates by XPLAT-007.
 
@@ -249,39 +250,58 @@ state. These are higher-risk because they mutate repository or user-local state.
 - AC-6.7: Mutation-helper test coverage is ported to Python standard-library
   gates before the Bash helper is removed from the release-readiness path.
 
-### 7. Claude/Codex Cutover and Universal Install Release Gate *(-> XPLAT-007)*
+### 7. Python Tooling and Release-Gate Migration *(-> XPLAT-007)*
 
-Switch active Claude and Codex plugin surfaces from Bash helpers to the
-cross-platform runner, remove Bash/`jq` from plugin-runtime prerequisites, rebuild
-payloads, and add release gates that block reintroducing active Bash runtime
-dependencies or publishing incomplete Claude/Codex installs.
+Replace active Bash-based repository helpers, tests, evals, payload builders,
+release checks, install-verification scripts, and release-readiness gates with
+Python standard-library commands. Keep only GitHub CI/CD dispatch glue that
+calls Python gates and contains no validation, packaging, install, or runtime
+logic.
 
 **Acceptance Criteria**
 
-- AC-7.1: Active Claude and Codex skills, agents, hooks, install guidance, and
-  generated payloads invoke the cross-platform runner, not Bash scripts.
-- AC-7.2: Public plugin docs state the new runtime prerequisites and no longer
-  describe Bash, Git Bash, WSL, PowerShell, or `jq` as required for installed
-  plugin workflows.
-- AC-7.3: Deterministic checks fail if an active installed-runtime surface
-  reintroduces `bash`, `.sh`, `jq`, shell interpolation, or Unix-only path
-  assumptions outside explicitly allowlisted historical/archive references.
-- AC-7.3a: Deterministic checks fail if active plugin build, test, eval, payload,
+- AC-7.1: Active plugin build, test, eval, payload, install-verification,
+  repository-helper, and release-readiness commands have Python standard-library
+  entrypoints.
+- AC-7.2: Deterministic checks fail if active plugin build, test, eval, payload,
   or release-readiness gates that validate shipped behavior remain Bash-only or
   require `jq`, Git Bash, WSL, or PowerShell helper scripts.
-- AC-7.3b: Active tests, evals, payload builders, release checks, install
+- AC-7.3: Active tests, evals, payload builders, release checks, install
   verification, and repo helper tooling use Python commands. Bash may remain
   only as GitHub CI/CD dispatch glue that calls Python gates and contains no
   validation, packaging, install, or runtime logic.
-- AC-7.4: Manual UAT evidence covers native Windows, macOS, and Linux for both
+- AC-7.4: Bash parity fixtures from XPLAT-005/XPLAT-006 are removed from active
+  release gates or preserved only as historical/archive evidence.
+- AC-7.5: CI/workflow shell snippets are allowlisted only when they dispatch to
+  Python gates and do not contain validation, packaging, install, or runtime
+  logic.
+
+### 8. Claude/Codex Cutover and Universal Install Release Gate *(-> XPLAT-008)*
+
+Switch active Claude and Codex plugin surfaces from Bash helpers to the
+cross-platform runner, remove Bash/`jq` from plugin-runtime prerequisites,
+rebuild payloads, and add release gates that block reintroducing active Bash
+runtime dependencies or publishing incomplete Claude/Codex installs.
+
+**Acceptance Criteria**
+
+- AC-8.1: Active Claude and Codex skills, agents, hooks, install guidance, and
+  generated payloads invoke the cross-platform runner, not Bash scripts.
+- AC-8.2: Public plugin docs state the new runtime prerequisites and no longer
+  describe Bash, Git Bash, WSL, PowerShell, or `jq` as required for installed
+  plugin workflows.
+- AC-8.3: Deterministic checks fail if an active installed-runtime surface
+  reintroduces `bash`, `.sh`, `jq`, shell interpolation, or Unix-only path
+  assumptions outside explicitly allowlisted historical/archive references.
+- AC-8.4: Manual UAT evidence covers native Windows, macOS, and Linux for both
   Claude and Codex plugin journeys: install, bundled-agent verification,
   scaffold/status, autopilot dry-run, update, and safe repair of an incomplete
   install.
-- AC-7.5: Public release is blocked until the native Windows UAT path passes
+- AC-8.5: Public release is blocked until the native Windows UAT path passes
   without WSL, Git Bash, or PowerShell-specific workarounds.
-- AC-7.6: Public release notes and docs accurately describe the implemented
+- AC-8.6: Public release notes and docs accurately describe the implemented
   supply-chain security model without overstating guarantees.
-- AC-7.7: UAT runbooks are human-readable and complete, with no placeholder PR
+- AC-8.7: UAT runbooks are human-readable and complete, with no placeholder PR
   fields, raw HTML anchors, empty expected-result sections, or unfilled
   platform/product rows.
 
@@ -328,4 +348,5 @@ dependencies or publishing incomplete Claude/Codex installs.
 | Runner foundation | AC-4.* | XPLAT-004 | XPLAT-002, XPLAT-003 | P1 |
 | Read-only helper port | AC-5.* | XPLAT-005 | XPLAT-004 | P1 |
 | Mutation/install/PR-emission helper port | AC-6.* | XPLAT-006 | XPLAT-004, XPLAT-005 | P1 |
-| Claude/Codex cutover and universal install release gate | AC-7.* | XPLAT-007 | XPLAT-005, XPLAT-006 | P1 |
+| Python tooling and release-gate migration | AC-7.* | XPLAT-007 | XPLAT-006 | P1 |
+| Claude/Codex cutover and universal install release gate | AC-8.* | XPLAT-008 | XPLAT-006, XPLAT-007 | P1 |
