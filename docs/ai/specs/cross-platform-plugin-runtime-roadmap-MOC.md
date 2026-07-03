@@ -2,7 +2,7 @@
 up: "[Cross-Platform Plugin Runtime Roadmap](cross-platform-plugin-runtime-technical-roadmap.md)"
 related:
   - "[Cross-Platform Plugin Runtime PRD](../../prd-cross-platform-plugin-runtime.md)"
-status: "XPLAT-001 through XPLAT-005 complete/archived; XPLAT-006 ready; XPLAT-007 and XPLAT-008 pending"
+status: "XPLAT-001 through XPLAT-005 complete/archived; XPLAT-006 in progress; XPLAT-007 and XPLAT-008 pending"
 rank:
 spec_id: "cross-platform-plugin-runtime"
 structureVersion: 1
@@ -60,8 +60,9 @@ or Codex surface changes.
 - XPLAT-005 Read-Only Helper Port (completed and archived after PR #276;
   recovery report:
   `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`)
-- XPLAT-006 Mutation, Install, and PR-Emission Helper Port (ready to scaffold
-  from the XPLAT-005 registry and parity fixture pattern)
+- XPLAT-006 Mutation, Install, and PR-Emission Helper Port (in progress on
+  `codex/xplat-006-mutation-install-pr-emission-helper-port`; scaffold artifacts
+  live under `docs/ai/specs/.process/`)
 
 ### Python Gate Migration
 

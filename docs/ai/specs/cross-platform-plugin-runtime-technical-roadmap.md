@@ -34,10 +34,13 @@ archived; XPLAT-005 became ready to scaffold. Updated again on 2026-07-01 after
 XPLAT-005 scaffold started on `codex/xplat-005-read-only-helper-port`; the setup
 design concept accepted one workflow with two internal slices. Updated
 2026-07-03 after XPLAT-005 merged in PR #276 and the active spec folder was
-archived; XPLAT-006 is ready to scaffold from the read-only helper registry and
-parity fixture pattern. Updated after PR #280 to split the final Python-only
-goal into XPLAT-007 for Python tooling/release-gate migration and XPLAT-008 for
-Claude/Codex cutover, install/update/autoheal UAT, and public release readiness.
+archived; XPLAT-006 became ready to scaffold from the read-only helper registry
+and parity fixture pattern. Updated after PR #280 to split the final
+Python-only goal into XPLAT-007 for Python tooling/release-gate migration and
+XPLAT-008 for Claude/Codex cutover, install/update/autoheal UAT, and public
+release readiness. Updated again on 2026-07-03 after XPLAT-006 scaffold started
+on `codex/xplat-006-mutation-install-pr-emission-helper-port`; the setup design
+concept accepted one workflow with three internal slices.
 
 ---
 
@@ -228,7 +231,7 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete / Archived | `.process/XPLAT-003-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`; active spec folder removed after PR #267 |
 | XPLAT-004 | Cross-Platform Runner Foundation | Complete / Archived | `.process/XPLAT-004-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`; runner source, metadata, contract fixtures, and tests landed in PR #274 |
 | XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
-| XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Ready | — | Ready to scaffold from XPLAT-005 registry/parity patterns; owns mutation, install, PR-emission, restack, and state-writing helper ports |
+| XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | In Progress | `.process/XPLAT-006-workflow.md` | Scaffolded on 2026-07-03 in branch `codex/xplat-006-mutation-install-pr-emission-helper-port`; owns mutation safety, install/doctor, PR-emission, restack, migration, relocation, and state-writing helper ports |
 | XPLAT-007 | Python Tooling and Release-Gate Migration | Pending | — | Blocked by XPLAT-006; owns active repo-local tests, evals, payload/build/release tooling, install verification, and CI dispatch allowlist guards |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-006 and XPLAT-007; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
 
@@ -650,11 +653,17 @@ inventory shows this cannot land reviewably.
 
 **Priority:** P1 | **Depends On:** XPLAT-004, XPLAT-005 | **Enables:** XPLAT-007, XPLAT-008
 
-**Status:** Ready. XPLAT-004 and XPLAT-005 are complete and archived, so the
-runner foundation, helper registry, and read-only parity patterns are available
-for mutation/install/PR-emission helper ports. XPLAT-006 should reuse the
-XPLAT-005 fixture and Bash-reference comparison model while preserving active
-Claude/Codex cutover for XPLAT-008.
+**Status:** In Progress. Scaffolded on 2026-07-03 in branch
+`codex/xplat-006-mutation-install-pr-emission-helper-port`; workflow file is
+`docs/ai/specs/.process/XPLAT-006-workflow.md`; design concept is
+`docs/ai/specs/.process/XPLAT-006-design-concept.md`. XPLAT-004 and XPLAT-005
+are complete and archived, so the runner foundation, helper registry, and
+read-only parity patterns are available for mutation/install/PR-emission helper
+ports. The setup design concept accepted one workflow with three internal
+slices: mutation safety foundation, install completeness and doctor/preflight,
+then PR-emission/restack/migration/relocation helpers. XPLAT-006 should reuse
+the XPLAT-005 fixture and Bash-reference comparison model while preserving
+active Claude/Codex cutover for XPLAT-008.
 
 **Goal:** Port the state-mutating helpers after the runner and read-only parity
 patterns are stable.
