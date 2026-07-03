@@ -3,34 +3,37 @@
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-Add read-only helper port.
+This PR implements: Add read-only helper port.
 <!-- speckit-pro-editable:summary:end -->
 
-Source: feature specification defines reviewer-ready PR packet behavior.
+Source: feature specification and changed-file scope.
 
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- Generated a single-PR reviewer packet with packet-owned title metadata.
-- Rendered the reviewer body at the packet-owned body path.
+- Updated the Python runner implementation for the requested feature behavior.
+- Added or updated focused Layer 4 coverage and fixtures for the changed behavior.
+- Added or updated the source spec, task, UAT, and review packet evidence for reviewer traceability.
+- Updated roadmap, workflow, or repository guidance that tracks the feature state.
 <!-- speckit-pro-editable:what_changed:end -->
 
-Source: schema contract defines editable field markers.
+Source: generated PR packet changed-file evidence.
 
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-Reviewers get a deterministic conventional title and a stable packet body before PR creation.
+Reviewers can evaluate the actual implementation, its verification evidence, and its scope limits without reverse-engineering the packet metadata.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review
 
-1. Inspect the generated packet JSON for mode, target, title, body path, and validation path.
-2. Inspect this body for required reviewer headings, editable markers, and source evidence.
+1. Start with the implementation files changed for this feature.
+2. Review the focused tests and fixtures that prove the expected behavior and rejected-input paths.
+3. Check the scope notes and UAT runbook to confirm deferred work is not being claimed here.
 
 ## How To UAT
 
-Use the UAT Runbook below for reviewer-facing acceptance checks. If this PR only changes packet metadata, the runbook explains why no manual product path is required.
+Use the UAT runbook below for reviewer-facing acceptance checks. Treat installed-plugin, native-platform, and public-support claims as out of scope unless the runbook explicitly includes them.
 
 ## UAT Runbook
 
@@ -40,7 +43,7 @@ Use the UAT Runbook below for reviewer-facing acceptance checks. If this PR only
 |-------|-------|
 | Spec | xplat-005-read-only-helper-port |
 | Branch | xplat-005-read-only-helper-port |
-| PR | Pending until PR is opened |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/276 |
 | Generated from | 2026-07-02T16:19:35Z |
 
 
@@ -60,7 +63,7 @@ Run these from the repository root before walking the acceptance tests.
 ### User Story 1 - Run Read-Only Helpers Through The Runner (Priority: P1)
 
 - [ ] Run `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json` and confirm the response has `status:"ok"` and `source_vs_installed_context:"source_checkout"`.
-- [ ] Run `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` and confirm `7/7 passed`.
+- [ ] Run `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` and confirm `32/32 passed`.
 - [ ] Inspect `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json` and confirm every in-scope helper has a `python_authoritative` promotion record, deterministic remediation, path-boundary policy, rollback note, and authoritative command.
 
 ### User Story 2 - Add Helper Ports Through A Small Registry Pattern (Priority: P2)
@@ -71,8 +74,8 @@ Run these from the repository root before walking the acceptance tests.
 
 ### User Story 3 - Review Release-Gate Promotion And Scope Boundaries (Priority: P3)
 
-- [ ] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm `2108/2108 passed`.
-- [ ] Run `bash tests/speckit-pro/run-all.sh` and confirm `3751/3751 passed`.
+- [ ] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm `2135/2135 passed`.
+- [ ] Run `bash tests/speckit-pro/run-all.sh` and confirm `3778/3778 passed`.
 - [ ] Review `git diff --name-only origin/main...HEAD` and confirm there are no edits under active skill, hook, generated payload, install, marketplace, docs-site, PR-emission, split-state, restack, relocation, install repair, or autoheal surfaces.
 
 
@@ -113,18 +116,19 @@ Advisory only — these checkboxes block nothing.
 git revert <SHA>; see plan.md for data-migration considerations
 ## Verification
 
-- Focused packet generation checks passed.
-- Packet metadata and rendered body assertions passed.
+- Run the focused and repository-level verification commands listed in the UAT runbook.
+- Confirm generated packet validation passes before using this body for PR creation.
 
 Source: generated PR packet.
 
 ## Scope
 
-- Source feature: recorded in packet metadata.
-- Scope: this PR is limited to generated PR packet title and body behavior.
+- Source feature: specs/xplat-005-read-only-helper-port.
+- Changed files recorded in packet metadata: 41.
+- Scope: this PR implements Add read-only helper port.
 - Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
-- Non-goals: split title generation and multi-PR emission behavior.
+- Non-goals: split PR emission, unrelated install/update behavior, and claims not covered by the UAT runbook.
 
 ## Known Gaps
 
-No known gaps for single-PR packet title metadata. Split packet title generation remains deferred.
+No known gaps are recorded by the generated packet. Review the UAT runbook and source spec for feature-specific deferred work.

@@ -406,7 +406,7 @@ validate_body_file() {
       "Regenerate the body from finalized packet evidence before PR creation."
   fi
 
-  if grep -Eiq 'Adds reviewer-ready split PR packet evidence for|Prepared `[^`]+` for review against|Slice PR body placeholder|^slice_id:|^slice_packet:' "$visible_body"; then
+  if grep -Eiq 'Adds reviewer-ready split PR packet evidence for|Generated a single-PR reviewer packet|packet-owned title metadata|stable packet body|Prepared `[^`]+` for review against|Slice PR body placeholder|^slice_id:|^slice_packet:' "$visible_body"; then
     add_failure "body.generic_packet_prose" "body_file" \
       "Rendered body describes packet mechanics instead of the reviewer-visible change." \
       "Rewrite Summary, What Changed, and Why It Matters in strict plain English that names the actual change and preserves technical evidence below."

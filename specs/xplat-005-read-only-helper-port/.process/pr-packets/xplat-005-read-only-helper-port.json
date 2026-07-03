@@ -108,17 +108,17 @@
   "source_markers": [
     {
       "marker_id": "feature-spec",
-      "rendered_text": "Source: feature specification defines reviewer-ready PR packet behavior.",
+      "rendered_text": "Source: feature specification and changed-file scope.",
       "source": "specs/xplat-005-read-only-helper-port/spec.md"
     },
     {
-      "marker_id": "schema-contract",
-      "rendered_text": "Source: schema contract defines editable field markers.",
-      "source": "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+      "marker_id": "changed-file-scope",
+      "rendered_text": "Source: generated PR packet changed-file evidence.",
+      "source": "specs/xplat-005-read-only-helper-port/.process/pr-packets/xplat-005-read-only-helper-port.md"
     },
     {
       "marker_id": "quickstart-verification",
-      "rendered_text": "Source: quickstart defines single-packet validation evidence.",
+      "rendered_text": "Source: generated PR packet.",
       "source": "specs/xplat-005-read-only-helper-port/quickstart.md"
     }
   ],
@@ -144,7 +144,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "08d36ebdc3d00bb8ebe84e06b9db205d69923b1652f151f480da2cefb314203f",
+    "value": "e81c2f0b7f6f58a8fb773601f150e93a40161a5838a999b3920ad2d30afb1192",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

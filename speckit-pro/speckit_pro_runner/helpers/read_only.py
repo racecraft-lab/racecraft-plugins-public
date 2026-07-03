@@ -7,6 +7,7 @@ import math
 import os
 import re
 import shutil
+import subprocess
 import time
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable
@@ -1103,6 +1104,11 @@ def validate_pr_workflow_contract(inputs: dict[str, Any], repo_root: Path) -> di
         if changed_text is None:
             return make_result("", f"validate-pr-workflow-contract.sh: input_error: changed-files list not readable: {changed_files}\n", 2)
         changed_paths = [line for line in changed_text.splitlines() if line.strip()]
+    else:
+        detected_paths = git_diff_changed_paths(contract_root)
+        if detected_paths is None:
+            return make_result("", "validate-pr-workflow-contract.sh: input_error: missing --changed-files and origin/main is unavailable\n", 2)
+        changed_paths = detected_paths
     scopes = sorted({scope for path in changed_paths if (scope := spec_scope_from_changed_path(path))})
     if len(scopes) == 1:
         expected_scope = scopes[0]
@@ -1570,6 +1576,8 @@ def git_branch(repo_root: Path) -> str:
     value = head_text.strip()
     if value.startswith("ref: refs/heads/"):
         return value.removeprefix("ref: refs/heads/")
+    if re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", value):
+        return "HEAD"
     return value
 
 
@@ -1592,6 +1600,30 @@ def find_specify() -> str | None:
     home = Path(os.environ.get("HOME", ""))
     local = home / ".local" / "bin" / "specify"
     return str(local) if local.is_file() else None
+
+
+def git_diff_changed_paths(repo_root: Path) -> list[str] | None:
+    verify = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--verify", "origin/main"],
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+    )
+    if verify.returncode != 0:
+        return None
+    diff = subprocess.run(
+        ["git", "-C", str(repo_root), "diff", "--name-only", "origin/main...HEAD"],
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+    )
+    if diff.returncode != 0:
+        return None
+    return [line for line in diff.stdout.splitlines() if line.strip()]
 
 
 def looks_like_windows_absolute_path(raw: str) -> bool:

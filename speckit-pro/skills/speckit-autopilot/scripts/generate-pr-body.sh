@@ -437,8 +437,20 @@ append_uat_runbook_section() {
 
 render_single_packet_body() {
   local packet_file_rel="$1" title_description="$2" changed_files_json="$3"
-  local changed_files_block
-  changed_files_block=$(printf '%s' "$changed_files_json" | jq -r '.[] | "- `" + . + "`"')
+  local changed_count changed_path
+  local has_runner=false has_helper_tests=false has_specs=false has_docs=false has_workflows=false
+  changed_count=$(printf '%s' "$changed_files_json" | jq 'length')
+  while IFS= read -r changed_path; do
+    case "$changed_path" in
+      speckit-pro/speckit_pro_runner/*) has_runner=true ;;
+      tests/speckit-pro/layer4-scripts/*) has_helper_tests=true ;;
+      specs/*) has_specs=true ;;
+      docs/ai/specs/*) has_docs=true ;;
+      .github/workflows/*) has_workflows=true ;;
+    esac
+  done <<EOF_CHANGED
+$(printf '%s' "$changed_files_json" | jq -r '.[]')
+EOF_CHANGED
 
   cat > "$OUTPUT_FILE" <<EOF
 <!-- speckit-pro-review-packet-source: $packet_file_rel -->
@@ -446,34 +458,51 @@ render_single_packet_body() {
 ## Summary
 
 <!-- speckit-pro-editable:summary:start -->
-$title_description.
+This PR implements: $title_description.
 <!-- speckit-pro-editable:summary:end -->
 
-Source: feature specification defines reviewer-ready PR packet behavior.
+Source: feature specification and changed-file scope.
 
 ## What Changed
 
 <!-- speckit-pro-editable:what_changed:start -->
-- Generated a single-PR reviewer packet with packet-owned title metadata.
-- Rendered the reviewer body at the packet-owned body path.
+EOF
+  if [ "$has_runner" = "true" ]; then
+    printf '%s\n' '- Updated the Python runner implementation for the requested feature behavior.' >> "$OUTPUT_FILE"
+  fi
+  if [ "$has_helper_tests" = "true" ]; then
+    printf '%s\n' '- Added or updated focused Layer 4 coverage and fixtures for the changed behavior.' >> "$OUTPUT_FILE"
+  fi
+  if [ "$has_specs" = "true" ]; then
+    printf '%s\n' '- Added or updated the source spec, task, UAT, and review packet evidence for reviewer traceability.' >> "$OUTPUT_FILE"
+  fi
+  if [ "$has_docs" = "true" ] || [ "$has_workflows" = "true" ]; then
+    printf '%s\n' '- Updated roadmap, workflow, or repository guidance that tracks the feature state.' >> "$OUTPUT_FILE"
+  fi
+  if [ "$has_runner" = "false" ] && [ "$has_helper_tests" = "false" ] && [ "$has_specs" = "false" ] && [ "$has_docs" = "false" ] && [ "$has_workflows" = "false" ]; then
+    printf -- '- Updated %s file(s) for the requested feature.\n' "$changed_count" >> "$OUTPUT_FILE"
+  fi
+
+  cat >> "$OUTPUT_FILE" <<EOF
 <!-- speckit-pro-editable:what_changed:end -->
 
-Source: schema contract defines editable field markers.
+Source: generated PR packet changed-file evidence.
 
 ## Why It Matters
 
 <!-- speckit-pro-editable:why_it_matters:start -->
-Reviewers get a deterministic conventional title and a stable packet body before PR creation.
+Reviewers can evaluate the actual implementation, its verification evidence, and its scope limits without reverse-engineering the packet metadata.
 <!-- speckit-pro-editable:why_it_matters:end -->
 
 ## How To Review
 
-1. Inspect the generated packet JSON for mode, target, title, body path, and validation path.
-2. Inspect this body for required reviewer headings, editable markers, and source evidence.
+1. Start with the implementation files changed for this feature.
+2. Review the focused tests and fixtures that prove the expected behavior and rejected-input paths.
+3. Check the scope notes and UAT runbook to confirm deferred work is not being claimed here.
 
 ## How To UAT
 
-Use the UAT Runbook below for reviewer-facing acceptance checks. If this PR only changes packet metadata, the runbook explains why no manual product path is required.
+Use the UAT runbook below for reviewer-facing acceptance checks. Treat installed-plugin, native-platform, and public-support claims as out of scope unless the runbook explicitly includes them.
 EOF
 
   append_uat_runbook_section "$OUTPUT_FILE"
@@ -481,21 +510,22 @@ EOF
   cat >> "$OUTPUT_FILE" <<EOF
 ## Verification
 
-- Focused packet generation checks passed.
-- Packet metadata and rendered body assertions passed.
+- Run the focused and repository-level verification commands listed in the UAT runbook.
+- Confirm generated packet validation passes before using this body for PR creation.
 
 Source: generated PR packet.
 
 ## Scope
 
-- Source feature: recorded in packet metadata.
-- Scope: this PR is limited to generated PR packet title and body behavior.
+- Source feature: $feature_dir_rel.
+- Changed files recorded in packet metadata: $changed_count.
+- Scope: this PR implements $title_description.
 - Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
-- Non-goals: split title generation and multi-PR emission behavior.
+- Non-goals: split PR emission, unrelated install/update behavior, and claims not covered by the UAT runbook.
 
 ## Known Gaps
 
-No known gaps for single-PR packet title metadata. Split packet title generation remains deferred.
+No known gaps are recorded by the generated packet. Review the UAT runbook and source spec for feature-specific deferred work.
 EOF
 }
 
@@ -598,17 +628,17 @@ write_single_packet_metadata() {
         source_markers: [
           {
             marker_id: "feature-spec",
-            rendered_text: "Source: feature specification defines reviewer-ready PR packet behavior.",
+            rendered_text: "Source: feature specification and changed-file scope.",
             source: $title_source
           },
           {
-            marker_id: "schema-contract",
-            rendered_text: "Source: schema contract defines editable field markers.",
-            source: "speckit-pro/skills/speckit-autopilot/contracts/pr-packet.schema.json"
+            marker_id: "changed-file-scope",
+            rendered_text: "Source: generated PR packet changed-file evidence.",
+            source: $body_file
           },
           {
             marker_id: "quickstart-verification",
-            rendered_text: "Source: quickstart defines single-packet validation evidence.",
+            rendered_text: "Source: generated PR packet.",
             source: ($source_feature_dir + "/quickstart.md")
           }
         ],

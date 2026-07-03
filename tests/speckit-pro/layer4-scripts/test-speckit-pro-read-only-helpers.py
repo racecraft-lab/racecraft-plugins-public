@@ -536,6 +536,23 @@ class ReadOnlyHelperTests(unittest.TestCase):
         self.assertEqual(result["stdout"], "")
         self.assertIn("changed-files list not readable", result["stderr"])
 
+    def test_validate_pr_workflow_contract_matches_bash_when_origin_main_is_missing(self) -> None:
+        if self.helper_filter and self.helper_filter != "validate-pr-workflow-contract":
+            self.skipTest("validate-pr-workflow-contract missing-origin case")
+        from speckit_pro_runner.helpers.read_only import validate_pr_workflow_contract
+
+        with patch("speckit_pro_runner.helpers.read_only.git_diff_changed_paths", return_value=None):
+            result = validate_pr_workflow_contract(
+                {
+                    "title": "feat(XPLAT-005): Scope check",
+                    "repo_root": ".",
+                },
+                REPO_ROOT,
+            )
+        self.assertEqual(result["exit_code"], 2)
+        self.assertEqual(result["stdout"], "")
+        self.assertIn("missing --changed-files and origin/main is unavailable", result["stderr"])
+
     def test_git_branch_rejects_untrusted_gitdir_pointer(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":
             self.skipTest("git branch pointer case uses check-prerequisites")
@@ -571,6 +588,18 @@ class ReadOnlyHelperTests(unittest.TestCase):
             from speckit_pro_runner.helpers.read_only import git_branch
 
             self.assertEqual(git_branch(project_path), "")
+
+    def test_git_branch_reports_head_for_detached_checkout(self) -> None:
+        if self.helper_filter and self.helper_filter != "check-prerequisites":
+            self.skipTest("git branch detached-HEAD case uses check-prerequisites")
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as project:
+            project_path = Path(project)
+            git_dir = project_path / ".git"
+            git_dir.mkdir()
+            (git_dir / "HEAD").write_text("2d7388cc96f81cb805948bc19a8ccdd1cf896222\n", encoding="utf-8")
+            from speckit_pro_runner.helpers.read_only import git_branch
+
+            self.assertEqual(git_branch(project_path), "HEAD")
 
     def test_git_branch_rejects_symlinked_head_escape(self) -> None:
         if self.helper_filter and self.helper_filter != "check-prerequisites":

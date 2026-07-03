@@ -4,7 +4,7 @@
 |-------|-------|
 | Spec | xplat-005-read-only-helper-port |
 | Branch | xplat-005-read-only-helper-port |
-| PR | Pending until PR is opened |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/276 |
 | Generated from | 2026-07-02T16:19:35Z |
 
 
@@ -24,7 +24,7 @@ Run these from the repository root before walking the acceptance tests.
 ### User Story 1 - Run Read-Only Helpers Through The Runner (Priority: P1)
 
 - [ ] Run `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json` and confirm the response has `status:"ok"` and `source_vs_installed_context:"source_checkout"`.
-- [ ] Run `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` and confirm `7/7 passed`.
+- [ ] Run `bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` and confirm `32/32 passed`.
 - [ ] Inspect `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json` and confirm every in-scope helper has a `python_authoritative` promotion record, deterministic remediation, path-boundary policy, rollback note, and authoritative command.
 
 ### User Story 2 - Add Helper Ports Through A Small Registry Pattern (Priority: P2)
@@ -35,8 +35,8 @@ Run these from the repository root before walking the acceptance tests.
 
 ### User Story 3 - Review Release-Gate Promotion And Scope Boundaries (Priority: P3)
 
-- [ ] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm `2108/2108 passed`.
-- [ ] Run `bash tests/speckit-pro/run-all.sh` and confirm `3751/3751 passed`.
+- [ ] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm `2135/2135 passed`.
+- [ ] Run `bash tests/speckit-pro/run-all.sh` and confirm `3778/3778 passed`.
 - [ ] Review `git diff --name-only origin/main...HEAD` and confirm there are no edits under active skill, hook, generated payload, install, marketplace, docs-site, PR-emission, split-state, restack, relocation, install repair, or autoheal surfaces.
 
 

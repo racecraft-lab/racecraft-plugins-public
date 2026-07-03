@@ -488,13 +488,19 @@ set_test "Generated packet records feature-local UAT source"
 assert_json_file_value "$packet_output" "uat.uat_source" "$PRSG_012_FEATURE_REL/.process/uat-runbook.md"
 
 set_test "Rendered body includes feature source marker"
-assert_contains "$generated_body" "Source: feature specification defines reviewer-ready PR packet behavior."
+assert_contains "$generated_body" "Source: feature specification and changed-file scope."
 
-set_test "Rendered body includes schema source marker"
-assert_contains "$generated_body" "Source: schema contract defines editable field markers."
+set_test "Rendered body includes changed-file source marker"
+assert_contains "$generated_body" "Source: generated PR packet changed-file evidence."
 
 set_test "Rendered body uses packet source marker for verification"
 assert_contains "$generated_body" "Source: generated PR packet."
+
+set_test "Rendered body names implementation scope instead of packet mechanics"
+assert_contains "$generated_body" "This PR implements: Add reviewer-ready PR packet contract."
+
+set_test "Rendered body does not describe generator internals as the change"
+assert_not_contains "$generated_body" "Generated a single-PR reviewer packet with packet-owned title metadata."
 
 set_test "Rendered body includes traceability mapping"
 assert_contains "$generated_body" "Traceability:"
