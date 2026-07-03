@@ -35,13 +35,15 @@ XPLAT-005 scaffold started on `codex/xplat-005-read-only-helper-port`; the setup
 design concept accepted one workflow with two internal slices. Updated
 2026-07-03 after XPLAT-005 merged in PR #276 and the active spec folder was
 archived; XPLAT-006 is ready to scaffold from the read-only helper registry and
-parity fixture pattern.
+parity fixture pattern. Updated after PR #280 to split the final Python-only
+goal into XPLAT-007 for Python tooling/release-gate migration and XPLAT-008 for
+Claude/Codex cutover, install/update/autoheal UAT, and public release readiness.
 
 ---
 
 ## Roadmap Overview
 
-The release-blocker work is decomposed into **7 specifications** across **7
+The release-blocker work is decomposed into **8 specifications** across **8
 dependency tiers**:
 
 | Tier | Specs | Purpose | Parallelization |
@@ -51,10 +53,11 @@ dependency tiers**:
 | 3 | XPLAT-003 | Research and choose the supply-chain security / consumer-trust model | Sequential after runtime decision |
 | 4 | XPLAT-004 | Build the cross-platform runner foundation and parity harness | Sequential after runtime and security decisions |
 | 5 | XPLAT-005 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
-| 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Can overlap late XPLAT-005 only after shared runner APIs are stable |
-| 7 | XPLAT-007 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Sequential release gate |
+| 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Sequential after XPLAT-005; ready now that shared runner/helper APIs are stable |
+| 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Sequential after helper ports |
+| 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Sequential release gate |
 
-**Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007
+**Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008
 
 **Dependency Constraints:**
 
@@ -69,8 +72,13 @@ dependency tiers**:
   shape and shared JSON/path library.
 - XPLAT-006 requires XPLAT-004 and should reuse XPLAT-005 test patterns, but can
   start once the runner's mutation-safe file APIs are stable.
-- XPLAT-007 requires XPLAT-005 and XPLAT-006 because no active Claude/Codex
-  surface should switch until every plugin-runtime helper has a replacement.
+- XPLAT-007 requires XPLAT-006 because active repo-local Bash helpers, tests,
+  evals, payload builders, install-verification scripts, and release gates
+  cannot become Python-authoritative until every plugin-runtime helper has a
+  replacement.
+- XPLAT-008 requires XPLAT-006 and XPLAT-007 because no active Claude/Codex
+  surface should switch and no public release claim should ship until every
+  plugin-runtime helper and release gate has a Python path.
 
 ## Reviewability Contract
 
@@ -104,7 +112,7 @@ recorded.
 
 ## Non-Negotiable Product Constraint
 
-After XPLAT-007, installed Claude and Codex plugin workflows MUST NOT require
+After XPLAT-008, installed Claude and Codex plugin workflows MUST NOT require
 Bash, Git Bash, WSL, PowerShell, or `jq` as the implementation substrate on
 native Windows, macOS, or Linux. Shells may still exist in a user's environment,
 but SpecKit Pro cannot depend on them for installed plugin runtime behavior.
@@ -137,12 +145,12 @@ interpreter discovery and installed plugin invocation: Windows may need
 `py -3.11`, `python`, or `python3`; macOS/Linux usually use `python3` but PATH
 can vary; launcher permissions, line endings, path handling, and executable
 lookup must be proven from installed Claude and Codex plugin caches. XPLAT-004
-must prove the runner launch path, and XPLAT-007 must prove the full user
+must prove the runner launch path, and XPLAT-008 must prove the full user
 journey before any public native Windows/macOS/Linux claim.
 
 ## Consumer Trust Constraint
 
-After XPLAT-007, public docs and release notes MUST accurately state how the
+After XPLAT-008, public docs and release notes MUST accurately state how the
 runner files are packaged, what dependencies they include, what consumers can
 verify locally, and which security guarantees are intentionally not claimed.
 Supply-chain guarantees must be implemented before they are marketed.
@@ -200,7 +208,10 @@ XPLAT-005 Read-Only Helper Port
 XPLAT-006 Mutation, Install, and PR-Emission Helper Port
     |
     v
-XPLAT-007 Claude/Codex Cutover and Universal Install Release Gate
+XPLAT-007 Python Tooling and Release-Gate Migration
+    |
+    v
+XPLAT-008 Claude/Codex Cutover and Universal Install Release Gate
     |
     v
 PUBLIC RELEASE UNBLOCKED
@@ -218,7 +229,8 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-004 | Cross-Platform Runner Foundation | Complete / Archived | `.process/XPLAT-004-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`; runner source, metadata, contract fixtures, and tests landed in PR #274 |
 | XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
 | XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Ready | — | Ready to scaffold from XPLAT-005 registry/parity patterns; owns mutation, install, PR-emission, restack, and state-writing helper ports |
-| XPLAT-007 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-006; XPLAT-005 read-only dependency is satisfied |
+| XPLAT-007 | Python Tooling and Release-Gate Migration | Pending | — | Blocked by XPLAT-006; owns active repo-local tests, evals, payload/build/release tooling, install verification, and CI dispatch allowlist guards |
+| XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-006 and XPLAT-007; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
 
@@ -228,7 +240,7 @@ PUBLIC RELEASE UNBLOCKED
 
 ### XPLAT-001: Runtime Inventory and Constraints
 
-**Priority:** P1 | **Depends On:** None | **Enables:** XPLAT-002, XPLAT-003, XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
+**Priority:** P1 | **Depends On:** None | **Enables:** XPLAT-002, XPLAT-003, XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007, XPLAT-008
 
 **Status:** Complete / Archived. Scaffolded and implemented on 2026-06-25 in
 branch `codex/xplat-001-runtime-inventory-constraints`; merged through PR #263
@@ -278,7 +290,7 @@ implementation.
 - Porting helpers.
 - Editing active Claude/Codex skill invocations.
 - Rebuilding generated payloads.
-- Making public docs claim Windows support before XPLAT-007 passes.
+- Making public docs claim Windows support before XPLAT-008 passes.
 
 **Key Files To Audit:**
 
@@ -313,8 +325,9 @@ implementation.
   families: shell substrate, script-file references, JSON query usage, shell
   quoting/operators, Unix paths, file-mode changes, and newline policy.
 - Active installed-runtime rows map to XPLAT-005 read-only helper work,
-  XPLAT-006 mutation/install/PR-emission helper work, and XPLAT-007 generated
-  payload, test/eval, release-readiness, and final cutover guidance.
+  XPLAT-006 mutation/install/PR-emission helper work, XPLAT-007 test/eval,
+  payload, install-verification, and release-gate migration, and XPLAT-008 final
+  cutover guidance.
 - XPLAT-002 should use the non-scoring runtime rubric in the report.
 - XPLAT-003 should use the non-scoring supply-chain rubric in the report.
 - XPLAT-001 did not port helpers to a replacement runtime, change active
@@ -326,7 +339,7 @@ implementation.
 
 ### XPLAT-002: Runtime Implementation Options and Contract Decision
 
-**Priority:** P1 | **Depends On:** XPLAT-001 | **Enables:** XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007
+**Priority:** P1 | **Depends On:** XPLAT-001 | **Enables:** XPLAT-004, XPLAT-005, XPLAT-006, XPLAT-007, XPLAT-008
 
 **Status:** Complete / Archived. PR #266 merged on 2026-06-27 at `fff4d6b5`.
 Scaffolded on 2026-06-26 in branch
@@ -394,7 +407,7 @@ Budget result: within budget (decision record and probes)
 
 ### XPLAT-003: Supply-Chain Security and Consumer Trust Model
 
-**Priority:** P1 | **Depends On:** XPLAT-002 | **Enables:** XPLAT-004, XPLAT-007
+**Priority:** P1 | **Depends On:** XPLAT-002 | **Enables:** XPLAT-004, XPLAT-007, XPLAT-008
 
 **Status:** Complete / Archived. Implemented on 2026-06-27 in branch
 `codex/xplat-003-supply-chain-security-and-consumer-trust-model`; workflow file
@@ -453,14 +466,14 @@ Budget result: within budget (decision record and policy)
 
 - XPLAT-004 knows which security controls must be built into the runner and
   generated runner files.
-- XPLAT-007 knows which release/docs claims are allowed.
+- XPLAT-008 knows which release/docs claims are allowed.
 - Deferred supply-chain hardening is explicit and justified.
 
 ---
 
 ### XPLAT-004: Cross-Platform Runner Foundation
 
-**Priority:** P1 | **Depends On:** XPLAT-002, XPLAT-003 | **Enables:** XPLAT-005, XPLAT-006, XPLAT-007
+**Priority:** P1 | **Depends On:** XPLAT-002, XPLAT-003 | **Enables:** XPLAT-005, XPLAT-006, XPLAT-007, XPLAT-008
 
 **Status:** Complete / Archived. Scaffolded on 2026-06-30 in branch
 `codex/xplat-004-cross-platform-runner-foundation` and merged through PR #274
@@ -507,7 +520,7 @@ here.
   verification behavior.
 - Add deterministic Windows/Linux source-checkout runbook fixture guidance with
   explicit non-claim language. Installed-cache launch proof, native matrix UAT,
-  release-readiness, and public platform claims remain XPLAT-007.
+  release-readiness, and public platform claims remain XPLAT-008.
 - Document the future Claude/Codex invocation contract for downstream cutover
   without editing active skills, hooks, generated payloads, install behavior, or
   public docs.
@@ -557,7 +570,7 @@ here.
   by preflight.
 - Windows/Linux runbook fixtures clearly identify `source_checkout` context and
   state that installed-cache launch proof, native UAT, release-readiness, and
-  public platform claims remain XPLAT-007 responsibilities.
+  public platform claims remain XPLAT-008 responsibilities.
 - No active skill, hook, generated payload, install behavior, or public
   documentation claim has been switched to the runner.
 
@@ -565,7 +578,7 @@ here.
 
 ### XPLAT-005: Read-Only Helper Port
 
-**Priority:** P1 | **Depends On:** XPLAT-004 | **Enables:** XPLAT-007 and reduces XPLAT-006 risk
+**Priority:** P1 | **Depends On:** XPLAT-004 | **Enables:** XPLAT-006, XPLAT-007, XPLAT-008
 
 **Status:** Complete / Archived. XPLAT-005 merged in PR #276 on 2026-07-03 and
 the active `specs/xplat-005-read-only-helper-port/` folder was removed in the
@@ -635,13 +648,13 @@ inventory shows this cannot land reviewably.
 
 ### XPLAT-006: Mutation, Install, and PR-Emission Helper Port
 
-**Priority:** P1 | **Depends On:** XPLAT-004, XPLAT-005 | **Enables:** XPLAT-007
+**Priority:** P1 | **Depends On:** XPLAT-004, XPLAT-005 | **Enables:** XPLAT-007, XPLAT-008
 
 **Status:** Ready. XPLAT-004 and XPLAT-005 are complete and archived, so the
 runner foundation, helper registry, and read-only parity patterns are available
 for mutation/install/PR-emission helper ports. XPLAT-006 should reuse the
 XPLAT-005 fixture and Bash-reference comparison model while preserving active
-Claude/Codex cutover for XPLAT-007.
+Claude/Codex cutover for XPLAT-008.
 
 **Goal:** Port the state-mutating helpers after the runner and read-only parity
 patterns are stable.
@@ -713,9 +726,80 @@ if XPLAT-001 inventory shows the combined scope is too large.
 
 ---
 
-### XPLAT-007: Claude/Codex Cutover and Universal Install Release Gate
+### XPLAT-007: Python Tooling and Release-Gate Migration
 
-**Priority:** P1 | **Depends On:** XPLAT-005, XPLAT-006 | **Enables:** Public release readiness
+**Priority:** P1 | **Depends On:** XPLAT-006 | **Enables:** XPLAT-008
+
+**Status:** Pending.
+
+**Goal:** Replace active repo-local Bash helpers, tests, evals, payload builders,
+install-verification scripts, and release-readiness gates with Python
+standard-library commands before active Claude/Codex cutover.
+
+**Reviewability Budget:** Primary surfaces: harness/adapter + docs/process |
+Projected reviewable LOC: 400-800 |
+Production files: 6-8 |
+Total files: 12-25 |
+Budget result: likely warn; split into test/eval gate, payload/release helper,
+and CI-dispatch guard slices if a single workflow exceeds review budget.
+
+**Scope:**
+
+- Replace active Bash-based test/eval/build/release-readiness gates for shipped
+  plugin behavior with Python standard-library commands, including the payload
+  builder, marketplace/version sync checks, Layer 1 structural checks, Layer 4
+  helper tests, AI-eval runners, tool-scoping checks, integration/parity suites,
+  and the top-level test runner.
+- Replace active repo-local Bash helpers, tests, evals, payload builders,
+  install-verification scripts, and release scripts with Python commands. Bash
+  may remain only as GitHub CI/CD dispatch glue that invokes those Python gates.
+- Add deterministic guards that fail if active test/eval/build/payload/release
+  paths call Bash, `jq`, Git Bash, WSL, PowerShell helper scripts, or shell-only
+  parsing.
+- Add a CI dispatch allowlist proving any remaining shell snippets live only in
+  GitHub CI/CD dispatch glue and contain no validation, packaging, install, or
+  runtime logic.
+- Preserve temporary Bash parity evidence only as archived historical evidence
+  after Python gates become authoritative.
+
+**Out of Scope:**
+
+- Active Claude/Codex skill, agent, hook, and install-guidance cutover.
+- Rebuilding generated Claude/Codex payloads for release.
+- Public release docs, release notes, or platform support claims.
+- Native Windows/macOS/Linux installed-plugin UAT.
+- Changing GitHub Spec Kit's own generated `.specify/scripts/bash/` helpers in
+  consumer projects.
+
+**Key Files Likely To Change:**
+
+- `tests/speckit-pro/**`
+- `scripts/build-plugin-payloads.sh` -> Python standard-library replacement
+- `scripts/refresh-local-plugin.sh` -> Python standard-library replacement
+- `scripts/sync-marketplace-versions.sh` -> Python standard-library replacement
+- `speckit-pro/skills/**/scripts/**`
+- `speckit-pro/codex-skills/**/scripts/**`
+- `speckit-pro/scripts/**`
+- `.github/workflows/**` only where workflow steps must call Python gates instead
+  of Bash implementations
+
+**Done When:**
+
+- Active repo-local helpers, tests, evals, payload builders,
+  install-verification scripts, and release scripts use Python commands.
+- The active test/eval/build/release-readiness suite for shipped plugin behavior
+  has no Bash-only gate.
+- A guard fails if active repo-local release paths reintroduce Bash, `.sh`, `jq`,
+  shell interpolation, or Unix-only assumptions outside historical/archive prose
+  and GitHub CI/CD dispatch glue.
+- Remaining shell is limited to GitHub CI/CD dispatch glue that only invokes
+  Python gates.
+
+---
+
+### XPLAT-008: Claude/Codex Cutover and Universal Install Release Gate
+
+**Priority:** P1 | **Depends On:** XPLAT-006, XPLAT-007 | **Enables:** Public release readiness
 
 **Status:** Pending.
 
@@ -744,14 +828,6 @@ split only if generated payload rebuilds make the review packet too large.
 - Add deterministic guards that fail when active installed-runtime guidance
   reintroduces `bash`, `.sh`, `jq`, shell interpolation, or Unix-only path
   assumptions outside the XPLAT-001 allowlist.
-- Replace active Bash-based test/eval/build/release-readiness gates for shipped
-  plugin behavior with Python standard-library commands, including the payload
-  builder, marketplace/version sync checks, Layer 1 structural checks, Layer 4
-  helper tests, AI-eval runners, tool-scoping checks, integration/parity suites,
-  and the top-level test runner.
-- Replace active repo-local Bash helpers, tests, evals, payload builders,
-  install-verification scripts, and release scripts with Python commands. Bash
-  may remain only as GitHub CI/CD dispatch glue that invokes those Python gates.
 - Add or update docs so Windows users see the supported native path, any
   explicitly supported WSL path is labeled as optional, and macOS/Linux users see
   the same install-to-first-use journey.
@@ -769,6 +845,8 @@ split only if generated payload rebuilds make the review packet too large.
 
 - Replacing GitHub Actions YAML or minimal shell wrappers that only dispatch to
   Python gates and contain no plugin validation logic.
+- Replacing Python tooling, test, eval, payload, release, and install-verification
+  gates already owned by XPLAT-007.
 - Changing GitHub Spec Kit's own generated `.specify/scripts/bash/` helpers in
   consumer projects.
 - Claiming cryptographic guarantees that were not implemented.
@@ -788,11 +866,6 @@ split only if generated payload rebuilds make the review packet too large.
 - `docs-site/src/content/docs/first-run.md`
 - `dist/claude/speckit-pro/**`
 - `dist/codex/speckit-pro/**`
-- `tests/speckit-pro/**`
-- `scripts/build-plugin-payloads.sh` -> Python standard-library replacement
-- `scripts/sync-marketplace-versions.sh` -> Python standard-library replacement
-- `.github/workflows/**` only where workflow steps must call the new Python
-  gates instead of Bash implementations
 
 **Done When:**
 
@@ -809,11 +882,8 @@ split only if generated payload rebuilds make the review packet too large.
 - A release-readiness guard blocks publication if active runtime Bash
   dependencies, incomplete generated payloads, missing bundled agents, stale
   version metadata, or incomplete UAT runbooks are detected.
-- The active test/eval/build/release-readiness suite for shipped plugin behavior
-  has no Bash-only gate. Active repo-local helpers, tests, evals, payload
-  builders, install-verification scripts, and release scripts are Python.
-  Remaining shell is limited to historical/archive prose or GitHub CI/CD
-  dispatch glue that only invokes Python gates.
+- XPLAT-007's Python tooling and release-gate migration is complete and remains
+  enforced during release validation.
 - Public docs and release notes match the implemented consumer-trust model.
 
 ---
@@ -821,12 +891,12 @@ split only if generated payload rebuilds make the review packet too large.
 ## Release Blocker Statement
 
 SpecKit Pro should not be marketed as a public, cross-platform Claude/Codex
-plugin until XPLAT-007 is complete. Before then, native Windows support is not a
+plugin until XPLAT-008 is complete. Before then, native Windows support is not a
 documentation problem; it is an implementation gap. A complete public claim also
 requires proven Claude/Codex install completeness, latest-tag update behavior,
 doctor/autoheal behavior, and filled UAT runbooks. Consumer trust is now
 specified by XPLAT-003, but it remains an implementation gap until its required
-controls are wired into XPLAT-004 and XPLAT-007.
+controls are wired into XPLAT-004, XPLAT-007, and XPLAT-008.
 
 ## References
 
