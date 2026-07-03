@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-006/autopilot-phase-coverage-report.schema.json",
+  "title": "Autopilot Phase Coverage Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "workflow_file", "state_file", "plan_step_count"],
+  "properties": {
+    "status": { "type": "string", "enum": ["pass", "fail", "input_error"] },
+    "code": { "type": "string" },
+    "message": { "type": "string" },
+    "workflow_file": { "type": "string" },
+    "state_file": { "type": "string" },
+    "plan_step_count": { "type": "integer", "minimum": 0 },
+    "missing_workflow_sections": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "missing_workflow_tokens": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "missing_workflow_post_items": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "missing_state_prefixes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "missing_state_post_items": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "duplicate_state_steps": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "state_order_errors": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "in_progress_errors": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

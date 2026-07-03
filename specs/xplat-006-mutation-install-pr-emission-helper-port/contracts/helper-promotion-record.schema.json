@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-006/helper-promotion-record.schema.json",
+  "title": "Helper Promotion Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["helper_id", "operation", "mode", "status", "fixture_ids", "python_test_command"],
+  "properties": {
+    "helper_id": { "type": "string", "minLength": 1 },
+    "operation": { "type": "string", "minLength": 1 },
+    "mode": { "type": "string", "enum": ["dry_run", "apply", "mixed"] },
+    "status": {
+      "type": "string",
+      "enum": ["golden_only", "bash_compared", "python_authoritative", "deferred", "out_of_scope"]
+    },
+    "fixture_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "bash_comparison_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "normalized_fields": {
+      "type": "array",
+      "items": { "type": "string" },
+      "uniqueItems": true
+    },
+    "python_test_command": { "type": "string", "minLength": 1 },
+    "rollback_guidance": { "type": "string" },
+    "deferred_follow_up": { "type": ["string", "null"] },
+    "review_notes": { "type": "string" }
+  }
+}

@@ -43,13 +43,16 @@ workflow with three internal implementation slices.
 - Keep live repository, user-local, and GitHub mutations behind explicit
   approval and dry-run proof; default test coverage uses temporary fixtures and
   fake `gh`, `specify`, and Codex/Claude homes.
-- Preserve active Claude/Codex cutover, generated-payload switching, public
-  release docs, and native installed-cache UAT for later XPLAT specs.
+- Preserve active Claude/Codex cutover, generated-payload selection/cutover, public
+  release docs, and native installed-cache UAT for later XPLAT specs, except
+  for the explicit autopilot phase-coverage hardening source/payload mirror.
 
 ## Non-Goals
 
-- Do not update active Claude Code or Codex skill, hook, generated payload,
-  install, or public documentation invocation paths.
+- Do not update active Claude Code or Codex invocation paths, hook behavior,
+  generated-payload selection/cutover behavior, install guidance, or public
+  documentation claims; phase-coverage hardening may update autopilot
+  instructions and generated mirrors without changing invocation behavior.
 - Do not replace repo-local Bash test/eval/build/payload/release gates; that is
   XPLAT-007.
 - Do not run full native Windows/macOS/Linux installed-plugin UAT; that remains
@@ -79,7 +82,7 @@ install/doctor/coach/preset writes; Slice 3 owns PR-emission, restack,
 migration, relocation, generated write modes, and `detect-stack-manager`
 support. XPLAT-005 read-only modes are already accepted and are not re-ported;
 XPLAT-007 owns active repo-local gate migration and XPLAT-008 owns active
-Claude/Codex cutover, generated payload cutover, installed-cache/native UAT,
+Claude/Codex cutover, generated-payload selection/cutover, installed-cache/native UAT,
 update/autoheal proof, and public support claims.
 
 ## Grill Me Q&A Log
@@ -127,9 +130,11 @@ operator approval and after dry-run evidence exists.
 
 **Accepted answer:** No active cutover.
 
-XPLAT-006 ports helpers, doctor contracts, fixtures, and Python gates. Active
-skill, hook, generated-payload, install-guidance, and public-doc switching
-remains XPLAT-008 after XPLAT-007 makes repo-local gates Python-authoritative.
+XPLAT-006 ports helpers, doctor contracts, fixtures, Python gates, and the
+autopilot phase-coverage hardening needed by this PR. Active skill invocation
+paths, hook behavior, generated-payload selection, install-guidance, and
+public-doc switching remain XPLAT-008 after XPLAT-007 makes repo-local gates
+Python-authoritative.
 
 ### Q7. How should XPLAT-006 handle helpers that have both read-only and write/apply modes?
 
@@ -198,6 +203,6 @@ fixtures instead of assuming instruction text is enough.
 - XPLAT-007 should remove Bash from active repo-local tests, evals, payload
   builders, install verification, release checks, and release-readiness gates
   after XPLAT-006 ports mutation helper behavior.
-- XPLAT-008 remains responsible for active Claude/Codex cutover, generated
-  payload propagation, installed-cache launch proof, native Windows/macOS/Linux
+- XPLAT-008 remains responsible for active Claude/Codex cutover,
+  generated-payload selection/cutover, installed-cache launch proof, native Windows/macOS/Linux
   UAT, update/autoheal proof, public release docs, and public platform claims.

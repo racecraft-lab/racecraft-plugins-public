@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-006/mutation-helper-request.schema.json",
+  "title": "Mutation Helper Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["helper_id", "operation", "mode", "inputs", "boundary_context"],
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "helper_id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "operation": {
+      "type": "string",
+      "minLength": 1
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["dry_run", "apply"]
+    },
+    "inputs": {
+      "type": "object"
+    },
+    "boundary_context": {
+      "$ref": "#/$defs/boundary_context"
+    },
+    "approval_evidence": {
+      "oneOf": [
+        { "$ref": "#/$defs/approval_evidence" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "$defs": {
+    "boundary_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo_root", "plugin_root", "temp_root", "live_mutation_allowed"],
+      "properties": {
+        "repo_root": { "type": "string", "minLength": 1 },
+        "plugin_root": { "type": "string", "minLength": 1 },
+        "temp_root": { "type": "string", "minLength": 1 },
+        "fake_home": { "type": ["string", "null"] },
+        "fake_cache": { "type": ["string", "null"] },
+        "fake_gh": { "type": ["string", "null"] },
+        "fake_specify": { "type": ["string", "null"] },
+        "live_mutation_allowed": { "type": "boolean" },
+        "allowed_boundaries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["repo", "plugin", "fake_home", "fake_cache", "temp", "network", "github"]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "approval_evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "approval_id",
+        "approver",
+        "timestamp",
+        "channel",
+        "dry_run_result_id",
+        "dry_run_hash",
+        "allowed_boundaries",
+        "allowed_operations"
+      ],
+      "properties": {
+        "approval_id": { "type": "string", "minLength": 1 },
+        "approver": { "type": "string", "minLength": 1 },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "channel": { "type": "string", "minLength": 1 },
+        "dry_run_result_id": { "type": "string", "minLength": 1 },
+        "dry_run_hash": { "type": "string", "minLength": 1 },
+        "allowed_boundaries": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "allowed_operations": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "expires_at": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  }
+}

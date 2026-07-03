@@ -42,8 +42,9 @@ accepted scope:
   promoting Python behavior for each Bash-backed mutation helper.
 - Mixed-mode helpers only bring forward deferred write/apply behavior; accepted
   XPLAT-005 read-only modes are not re-ported.
-- No active Claude Code or Codex skill, hook, generated payload, install, or
-  public documentation cutover.
+- No active Claude Code or Codex invocation-path, hook, generated-payload
+  selection/cutover, install, or public documentation cutover; phase-coverage
+  hardening may update autopilot instructions and generated mirrors only.
 - Local source-checkout mutation proof and Windows-style path fixtures only;
   installed-cache launch and native matrix UAT remain XPLAT-008.
 
@@ -59,8 +60,8 @@ accepted scope:
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist; G1 passed with 0 clarification markers |
 | Clarify | `$speckit-clarify` | Complete | Sessions 1-4 complete; G2 passed with 0 clarification markers |
-| Plan | `$speckit-plan` | In Progress | Next phase: produce the three-slice architecture, mutation safety model, install/doctor plan, and test strategy |
-| Checklist | `$speckit-checklist` | Pending | Run integration, error-handling, reliability, and security checklists |
+| Plan | `$speckit-plan` | Complete | Created plan, research, data model, quickstart, and five contracts; G3 passed with 0 markers; hardening evidence passed |
+| Checklist | `$speckit-checklist` | In Progress | Running integration, error-handling, reliability, and security checklists |
 | Tasks | `$speckit-tasks` | Pending | Generate ordered tasks across the accepted three slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Run the pre-implementation confidence gate after Analyze and before task execution |
@@ -174,9 +175,10 @@ unless a deliberate higher-priority override exists.
   deterministic safe-repair and unsafe-manual-remediation outcomes.
 - [ ] Mutation-helper Python tests become authoritative only after fixture and
   Bash-reference parity are accepted per helper.
-- [ ] No active Claude/Codex invocation, generated payload, install behavior,
-  public documentation claim, repo-local Bash gate migration, or native matrix
-  UAT lands in XPLAT-006.
+- [ ] No active Claude/Codex invocation-path, generated-payload
+  selection/cutover, install behavior, public documentation claim, repo-local
+  Bash gate migration, or native matrix UAT lands in XPLAT-006; allowed
+  phase-coverage hardening source/mirror changes are listed separately.
 
 ### Accepted Three-Slice Plan
 
@@ -256,8 +258,9 @@ approval boundaries before XPLAT-007 removes Bash from active repo-local gates.
   required.
 
 ### Out of Scope
-- Active Claude Code or Codex skill, hook, generated payload, install, or public
-  documentation cutover.
+- Active Claude Code or Codex invocation-path, hook, generated-payload
+  selection/cutover, install, or public documentation cutover, except the
+  explicit phase-coverage hardening source and generated mirror.
 - Replacing repo-local Bash tests, evals, payload builders, release scripts,
   install-verification scripts, or release-readiness gates; that is XPLAT-007.
 - Full native Windows/macOS/Linux installed-plugin UAT; that is XPLAT-008.
@@ -354,10 +357,15 @@ $speckit-plan
   `speckit-pro/scripts/`.
 - Tests: Python standard-library mutation-helper tests plus existing shell-layer
   gates as temporary migration/reference evidence until XPLAT-007.
+- Hardening: Python standard-library autopilot phase-coverage validator and
+  regression tests for missing Phase 6.5, missing Post items, collapsed later
+  phases, and malformed state JSON.
 - Docs/process: SpecKit CONTRACT artifacts under
   `specs/xplat-006-mutation-install-pr-emission-helper-port/` and EXHAUST
   artifacts under `docs/ai/specs/.process/`.
-- Generated payloads and active install guidance: Out of scope for XPLAT-006.
+- Generated-payload selection/cutover and active install guidance: Out of scope
+  for XPLAT-006, except the generated mirror required to prove phase-coverage
+  hardening parity.
 
 ## Constraints
 - Record the setup reviewability warning: `status=warn`, `pass=true`, two
@@ -373,8 +381,11 @@ $speckit-plan
 - Use golden fixtures plus source-checkout Bash-reference comparison before
   promotion for every Bash-backed mutation helper.
 - Keep helper ports Python 3.11+ standard-library only.
-- Keep active Claude/Codex cutover, generated-payload switching, public docs,
-  and native matrix UAT out of scope.
+- Keep active Claude/Codex cutover, generated-payload selection/cutover, public
+  docs, and native matrix UAT out of scope; only the autopilot hardening source
+  and generated mirror may change.
+- Do not assume instruction text is enough to harden autopilot phase tracking;
+  include deterministic validator/test proof in the plan and PR packet.
 
 ## Architecture Notes
 - Reuse the XPLAT-004 runner envelope, diagnostics, typed path, source metadata,
@@ -387,6 +398,9 @@ $speckit-plan
 - Build install completeness from source-controlled manifests or generated
   inventory, not stale hardcoded bundled-agent lists.
 - Require argv-list subprocess handling and fake CLIs for parity fixtures.
+- Include the phase-coverage validator in the plan as a shipped hardening path:
+  workflow/state validation must fail before a run advances if Phase 6.5 or
+  canonical Post items are missing.
 - Reference `docs/ai/specs/.process/XPLAT-006-design-concept.md` for the
   accepted Grill Me decisions and non-goals.
 ```
@@ -395,11 +409,22 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Pending | Must include technical context, declared file operations, reviewability warning, three-slice strategy, helper/mode matrix, and safety model |
-| `research.md` | Pending | Should capture runner mutation model, manifest source, parity strategy, fake/live boundary, and cutover deferral decisions |
-| `data-model.md` | Pending | Should define mutation helper request/result, planned/applied operation, safe-repair result, fixture, comparison, promotion record, and scope audit entities |
-| `contracts/` | Pending | Should include mutation-helper request/result and promotion/doctor schemas if the plan confirms schema artifacts |
-| `quickstart.md` | Pending | Should include maintainer commands for fake fixture runs, source-checkout mutation proof, focused tests, and scope audit |
+| `plan.md` | Complete | Records technical context, declared file operations, reviewability warning, three-slice strategy, helper/mode matrix, safety model, and scope-boundary hardening |
+| `research.md` | Complete | Captures runner mutation model, manifest source, parity strategy, fake/live boundary, hardening rationale, and cutover deferral decisions |
+| `data-model.md` | Complete | Defines mutation helper request/result, planned/applied operation, safe-repair result, fixture, comparison, promotion record, scope audit, and phase-coverage report entities |
+| `contracts/` | Complete | Includes mutation-helper request/result, doctor/preflight result, helper-promotion record, and autopilot phase-coverage report schemas |
+| `quickstart.md` | Complete | Includes maintainer commands for hardening validation, fake fixture runs, source-checkout mutation proof, focused tests, and scope audit |
+
+### Plan Verification Evidence
+
+| Check | Result |
+|---|---|
+| G3 | Pass: `validate-gate.sh G3` reported `pass=true`, 0 markers |
+| Phase coverage hardening | Pass: regression test 6/6 and live workflow/state validator `status=pass` with 37 plan steps |
+| Scope audit hardening | Pass: `test-speckit-pro-runner.py` 9/9 after allowing only exact phase-coverage hardening source/mirror files |
+| Layer 1 | Pass: `bash tests/speckit-pro/run-all.sh --layer 1` reported 1443/1443 |
+| Layer 4 | Pass: `bash tests/speckit-pro/run-all.sh --layer 4` reported 2141/2141 |
+| Index/diff hygiene | Pass: spec-index check current, MOC stale-index check clean, privacy scan 10/10, `git diff --check` clean |
 
 ---
 
@@ -421,7 +446,7 @@ Focus on XPLAT-006 requirements:
 - XPLAT-005 registry/module pattern reuse without forcing mutation behavior through read-only mode.
 - Helper/mode matrix across install, doctor, PR-emission, restack, migration, relocation, UAT, reviewability, and mixed write modes.
 - Manifest-driven install completeness for Claude/Codex bundled agents, generated payload files, runner files, and metadata.
-- Pay special attention to avoiding active Claude/Codex invocation, generated payload, install-guidance, public-doc, or release-gate migration scope.
+- Pay special attention to avoiding active Claude/Codex invocation behavior, generated-payload selection/cutover, install-guidance, public-doc, or release-gate migration scope; allowed phase-coverage hardening source/mirror changes must be listed separately.
 ```
 
 #### 2. Error-Handling Checklist
@@ -505,8 +530,10 @@ $speckit-tasks
    modes, fake `gh` fixtures, and handoff evidence.
 
 ## Constraints
-- Do not update active Claude/Codex invocations, generated payloads, install
-  guidance, public docs, release notes, or native UAT artifacts.
+- Do not update active Claude/Codex invocation behavior, generated-payload
+  selection/cutover, install guidance, public docs, release notes, or native
+  UAT artifacts; allowed phase-coverage hardening source/mirror changes must be
+  listed separately.
 - Do not replace repo-local Bash test/eval/build/payload/release gates in this
   spec.
 - Keep live repo/user-local/GitHub mutation out of deterministic tests unless
@@ -560,7 +587,7 @@ $speckit-analyze
 
 Focus on:
 1. Drift between the roadmap, PRD AC-6.*, XPLAT-006 design concept, spec.md, plan.md, and tasks.md.
-2. Scope leakage into active Claude/Codex cutover, generated payload switching, public docs, native matrix UAT, or XPLAT-007 repo-local Bash gate migration.
+2. Scope leakage into active Claude/Codex cutover, generated-payload selection/cutover, public docs, native matrix UAT, or XPLAT-007 repo-local Bash gate migration, with phase-coverage hardening source/mirror changes listed separately.
 3. Coverage of each accepted mutation helper group, dry-run/apply behavior, atomic write rule, dirty-worktree guard, fake/live mutation boundary, parity fixture, Bash-reference comparison, and per-helper promotion rule.
 4. Consistency with XPLAT-004 runner envelope/preflight/source metadata and XPLAT-005 helper registry/parity patterns.
 5. Reviewability risk: verify the three-slice task plan remains reviewable or records a concrete split before implementation starts.
@@ -643,8 +670,10 @@ For each helper or helper group:
   environment-specific fields in parity comparisons before asserting equality.
 - Keep Bash helpers available as temporary source-checkout references until
   XPLAT-007 removes or archives them from active release gates.
-- Do not update active skill text, hook config, generated payloads, install docs,
-  public support claims, or release-readiness gates in this spec.
+- Do not update active invocation behavior, hook config, generated-payload
+  selection/cutover, install docs, public support claims, or release-readiness
+  gates in this spec; the only allowed skill/payload updates are the
+  phase-coverage hardening source and generated mirror.
 ```
 
 ### Implementation Progress
@@ -692,9 +721,10 @@ each item is completed or explicitly skipped by its extension rule.
 - [ ] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
 - [ ] `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` passes.
 - [ ] `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` passes.
-- [ ] No active Claude/Codex invocation, generated payload, install behavior,
-  public platform claim, repo-local Bash gate migration, or native matrix UAT
-  changed.
+- [ ] No active Claude/Codex invocation-path, generated-payload
+  selection/cutover, install behavior, public platform claim, repo-local Bash
+  gate migration, or native matrix UAT changed; allowed phase-coverage
+  hardening source/mirror changes are separately recorded.
 - [ ] PR packet includes review order, scope budget, parity evidence,
   per-helper gate-promotion state, known gaps, approval boundaries, rollback
   notes, and XPLAT-007/XPLAT-008 handoff.

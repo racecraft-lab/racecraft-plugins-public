@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T19:29:42Z",
+  "updated_at": "2026-07-03T20:03:18Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - Integration",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible",
@@ -108,11 +108,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Integration",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - Integration Consensus",
@@ -268,6 +268,38 @@
         ],
         "outcome": "Added Python phase-coverage validator and regression tests so missing Phase 6.5, missing Post items, collapsed later phases, and malformed state JSON fail deterministically. Focused tests passed 6/6, the current workflow/state pair returned status pass, Layer 4 passed 2141/2141, and Layer 1 passed 1443/1443."
       }
+    },
+    "plan": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:03:18Z",
+      "files_created": [
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/plan.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/research.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/data-model.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/quickstart.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/mutation-helper-request.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/mutation-helper-result.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/doctor-preflight-result.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/helper-promotion-record.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/autopilot-phase-coverage-report.schema.json"
+      ],
+      "g3_gate": {
+        "pass": true,
+        "markers": 0
+      },
+      "verification": [
+        "python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+        "python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json",
+        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G3 specs/xplat-006-mutation-install-pr-emission-helper-port",
+        "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+        "bash tests/speckit-pro/run-all.sh --layer 1",
+        "bash tests/speckit-pro/run-all.sh --layer 4",
+        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check $PWD",
+        "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
+        "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh",
+        "git diff --check"
+      ],
+      "outcome": "Generated the plan, research, data model, quickstart, and contract schemas. Scope language now allows only the autopilot phase-coverage hardening source/generated mirror while preserving forbidden active cutover boundaries. G3 passed, Layer 1 passed 1443/1443, Layer 4 passed 2141/2141, phase-coverage validator returned status pass, and the scope-audit test passed 9/9."
     }
   }
 }

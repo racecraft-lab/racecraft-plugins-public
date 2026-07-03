@@ -56,7 +56,7 @@ As a release reviewer, I can inspect deterministic fixtures, promotion records, 
 
 1. **Given** a promoted Bash-backed helper, **When** a reviewer opens its promotion record, **Then** the record names fixture ids, Bash comparison ids, normalized fields, authoritative Python test command, current status, and deferred follow-up if any.
 2. **Given** a helper that performs PR-body, UAT, split-PR, restack, migration, or relocation work, **When** parity tests run, **Then** fake CLIs and fake repositories cover success, no-op, dry-run, invalid input, write failure, and partial-failure cases where applicable.
-3. **Given** the final PR review packet, **When** a reviewer reads the known gaps and non-goals, **Then** active Claude/Codex invocation cutover, generated payload cutover, repo-local release-gate migration, native matrix UAT, and public support claims are clearly deferred to XPLAT-007 or XPLAT-008.
+3. **Given** the final PR review packet, **When** a reviewer reads the known gaps and non-goals, **Then** active Claude/Codex invocation cutover, generated-payload selection/cutover, repo-local release-gate migration, native matrix UAT, and public support claims are clearly deferred to XPLAT-007 or XPLAT-008.
 
 ---
 
@@ -75,7 +75,7 @@ As a release reviewer, I can inspect deterministic fixtures, promotion records, 
 - A live PR-emission, restack, migration, or relocation request supplies only a boolean approval flag or CLI switch instead of auditable approval evidence tied to prior dry-run output.
 - An autopilot workflow or `autopilot-state.json` plan omits Phase 6.5, collapses later phase families, or drops canonical Post items while a run is still incomplete.
 - A live mutation path is requested without prior dry-run evidence and explicit operator approval.
-- A proposed implementation touches active skill text, hook configuration, generated payloads, public docs, release gates, or native installed-cache claims that are out of scope for XPLAT-006.
+- A proposed implementation touches active invocation paths, hook configuration, generated-payload selection/cutover, public docs, release gates, or native installed-cache claims outside the explicit autopilot phase-coverage hardening scope.
 
 ## Requirements *(mandatory)*
 
@@ -112,7 +112,7 @@ As a release reviewer, I can inspect deterministic fixtures, promotion records, 
 - **FR-029**: New runner helper logic MUST use Python 3.11+ standard library only, with no new runtime dependency, package install, virtualenv restore, `jq`, Bash, PowerShell, Node, Go, Rust, or Zig for promoted helper execution.
 - **FR-030**: New Python subprocess usage MUST avoid `shell=True`, shell-command strings, shell interpolation, and `os.system`; unavoidable subprocess calls MUST use explicit argv sequences and captured stdout/stderr.
 - **FR-031**: The implementation MUST update runner manifest/checksum metadata for new or changed runner-owned Python files before claiming preflight readiness.
-- **FR-032**: XPLAT-006 MUST NOT change active Claude Code or Codex skill invocation paths, hooks, generated payloads, install guidance, public documentation claims, repo-local release-readiness gates, or native platform UAT evidence.
+- **FR-032**: XPLAT-006 MUST NOT change active Claude Code or Codex skill invocation paths, hooks, generated-payload selection/cutover behavior, install guidance, public documentation claims, repo-local release-readiness gates, or native platform UAT evidence; the only allowed skill/payload touch is the explicit Codex autopilot phase-coverage hardening and its generated-payload mirror required by FR-035 and FR-036.
 - **FR-033**: The final scope audit MUST prove zero forbidden active-cutover surfaces changed, or else record a gate failure before implementation can be accepted.
 - **FR-034**: The PR review packet MUST map each major helper group and success criterion to changed files, fixture evidence, Bash-reference evidence, promotion status, known gaps, and rollback or manual remediation notes.
 - **FR-035**: The implementation MUST harden the Codex autopilot phase-coverage audit with a Python standard-library validator that fails when the workflow or `autopilot-state.json` omits Phase 6.5, collapses later canonical phase families, drops canonical Post items, contains duplicate plan steps, has multiple `in_progress` items, or orders phase checkpoints incorrectly.
@@ -127,7 +127,7 @@ As a release reviewer, I can inspect deterministic fixtures, promotion records, 
 | Slice 3 | `generate-pr-body`, `generate-uat-skeleton`, `final-reviewability-backstop`, PR-packet output, workflow-contract output, `multi-pr-emission`, `restack`, `migrate-structure`, `relocate-process-artifacts`, generated-index write/regenerate modes, `plan-layers` marker-plan output, `validate-pr-packet` persistence/workflow-event upserts, `validate-pr-workflow-contract` workflow-event write mode | In scope as PR-emission, restack, migration, relocation, generated-output, and deferred mixed write behavior. Candidate PR emission is dry-run command capture, fake PR fixtures may exercise apply paths, and live GitHub/repo mutation remains exceptional approved apply |
 | Slice 3 support | `detect-stack-manager` `detect`/`link`/`sync`/`restack` command-plan and evidence-persistence behavior | In scope as mutation-adjacent support for emission and restack using fake `gh`; the detector emits decisions and command plans only, and actual mutating command execution remains owned by `multi-pr-emission` and `restack` apply paths |
 | XPLAT-005 read-only modes | Accepted read-only/advisory helper modes such as prerequisite, detection, marker counting, validation, planning, topology, atomicity routing, and read-only PR-packet validation | Already accepted by XPLAT-005; do not re-port in XPLAT-006 |
-| Later specs | Active repo-local gate migration, generated payload cutover, active Claude/Codex invocation cutover, installed-cache native UAT, release-readiness migration, update/autoheal proof, public support claims | Out of scope for XPLAT-006; XPLAT-007 owns active repo-local Python gate migration and XPLAT-008 owns active Claude/Codex cutover plus native installed-plugin proof |
+| Later specs | Active repo-local gate migration, generated-payload selection/cutover, active Claude/Codex invocation cutover, installed-cache native UAT, release-readiness migration, update/autoheal proof, public support claims | Out of scope for XPLAT-006; XPLAT-006 may only update autopilot phase-coverage hardening source/generated mirror, XPLAT-007 owns active repo-local Python gate migration, and XPLAT-008 owns active Claude/Codex cutover plus native installed-plugin proof |
 
 ### Reviewability Notes *(if applicable)*
 
@@ -151,7 +151,7 @@ As a release reviewer, I can inspect deterministic fixtures, promotion records, 
 - Deferred work MUST name the follow-up spec or issue.
 - Helper promotion evidence MUST list each promoted helper, mode, fixture ids, Bash-reference comparison ids, normalized fields, authoritative Python test command, and rollback or manual remediation note.
 - Known gaps MUST separate unpromoted in-scope helpers, deferred XPLAT-007/XPLAT-008 active cutover work, and live-coverage limits; generic "no known gaps" text is not acceptable unless all three categories are explicitly empty.
-- The PR packet MUST state that active Claude/Codex invocation cutover, generated payload cutover, repo-local release-gate migration, native matrix UAT, and public native-platform support claims are not delivered by XPLAT-006.
+- The PR packet MUST state that active Claude/Codex invocation cutover, generated-payload selection/cutover, repo-local release-gate migration, native matrix UAT, and public native-platform support claims are not delivered by XPLAT-006, while separately identifying allowed autopilot phase-coverage hardening source/generated mirror changes.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -165,7 +165,7 @@ As a release reviewer, I can inspect deterministic fixtures, promotion records, 
 - **Parity Fixture**: Golden input/output case proving helper behavior for success, no-op, dry-run, apply, rejected input, write failure, or partial failure.
 - **Bash Reference Comparison**: Source-checkout comparison between the existing Bash helper and the Python runner helper using fake state and explicit normalization.
 - **Helper Promotion Record**: Per-helper evidence record showing whether Python behavior is golden-only, Bash-compared, Python-authoritative, deferred, or out of scope.
-- **Scope Audit Record**: Verification artifact proving the implementation did not modify forbidden active-cutover surfaces.
+- **Scope Audit Record**: Verification artifact proving the implementation did not modify forbidden active-cutover surfaces, while separately listing any allowed autopilot phase-coverage hardening source and generated-payload mirror changes.
 - **Autopilot Phase Coverage Report**: Python validator output proving the workflow file and `autopilot-state.json` contain Phase 6.5, every canonical phase family, every required Post item, valid ordering, no duplicate plan steps, and no more than one `in_progress` item.
 
 ## Success Criteria *(mandatory)*
@@ -176,7 +176,7 @@ As a release reviewer, I can inspect deterministic fixtures, promotion records, 
 - **SC-002**: 100 percent of promoted mutation helpers have deterministic fixture coverage for dry-run and apply behavior, plus no-op, dirty-worktree, invalid-input, path-boundary, write-failure, and partial-failure cases where applicable.
 - **SC-003**: Doctor/preflight fixtures detect complete install, missing Codex agent, missing Claude package agent, stale plugin cache, downgrade refusal, orphan plugin-owned file removal, missing runner file, checksum mismatch, missing generated payload file, malformed inventory, path escape or symlink rejection, missing fake `gh` or `specify`, real-home refusal, safe-repair, unsafe-manual-remediation, and blocked states without touching real user-local state.
 - **SC-004**: Focused Python mutation-helper tests and Bash-reference comparison tests pass from a source checkout using Python 3.11+ standard library only and no network, package restore, real GitHub mutation, or real user-home writes.
-- **SC-005**: Scope audit reports zero active Claude/Codex skill, hook, generated payload, install-guidance, public-doc, release-gate, or native-UAT cutover changes.
+- **SC-005**: Scope audit reports zero active Claude/Codex invocation-path, hook, generated-payload selection, install-guidance, public-doc, release-gate, or native-UAT cutover changes, and separately identifies the allowed autopilot phase-coverage hardening source/payload mirror.
 - **SC-006**: The PR review packet maps all Slice 1, Slice 2, and Slice 3 helper groups to changed files, verification commands, fixture evidence, promotion status, known gaps, and rollback or manual remediation notes.
 - **SC-007**: Phase-coverage hardening tests pass and include regression proof that missing Phase 6.5, missing Post items, collapsed later phases, and malformed `autopilot-state.json` are rejected before an autopilot run can advance.
 

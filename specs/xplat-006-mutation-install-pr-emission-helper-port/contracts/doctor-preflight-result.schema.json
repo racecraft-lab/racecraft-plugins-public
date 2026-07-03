@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-006/doctor-preflight-result.schema.json",
+  "title": "Doctor Preflight Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "inventory_id", "targets"],
+  "properties": {
+    "schema_version": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["complete", "safe_repair", "unsafe_manual_remediation", "blocked", "stale_release", "downgrade_refusal", "malformed_inventory", "source_truth_checksum_mismatch"] },
+    "inventory_id": { "type": "string", "minLength": 1 },
+    "targets": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/target_result" }
+    },
+    "remediation_text": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "target_result": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_id", "target_kind", "status", "planned_repair_operations"],
+      "properties": {
+        "target_id": { "type": "string", "minLength": 1 },
+        "target_kind": {
+          "type": "string",
+          "enum": ["claude_home", "codex_home", "plugin_cache", "runner_file", "generated_payload", "metadata"]
+        },
+        "status": { "type": "string", "enum": ["complete", "safe_repair", "unsafe_manual_remediation", "blocked", "stale_release", "downgrade_refusal", "malformed_inventory", "source_truth_checksum_mismatch"] },
+        "planned_repair_operations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "required_approval": { "type": "boolean" },
+        "preserved_unrelated_files": { "type": "boolean" },
+        "remediation_text": { "type": "string" }
+      }
+    }
+  }
+}

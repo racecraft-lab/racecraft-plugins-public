@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-006/mutation-helper-result.schema.json",
+  "title": "Mutation Helper Result",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema_version", "status", "exit_code", "diagnostics", "data"],
+  "properties": {
+    "schema_version": { "type": "string", "minLength": 1 },
+    "status": { "type": "string", "enum": ["pass", "fail", "blocked", "input_error"] },
+    "exit_code": { "type": "integer" },
+    "legacy_exit_code": { "type": ["integer", "null"] },
+    "diagnostics": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "data": {
+      "type": "object",
+      "required": ["mutation"],
+      "properties": {
+        "mutation": { "$ref": "#/$defs/mutation" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "mutation_status", "planned_operations", "applied_operations", "skipped_operations", "planned_paths", "touched_paths"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["dry_run", "apply"] },
+        "mutation_status": {
+          "type": "string",
+          "enum": ["planned", "applied", "noop", "blocked", "partial_failure", "failed"]
+        },
+        "planned_operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/planned_operation" }
+        },
+        "applied_operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/applied_operation" }
+        },
+        "skipped_operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/planned_operation" }
+        },
+        "planned_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "touched_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "dirty_worktree": {
+          "oneOf": [
+            { "$ref": "#/$defs/dirty_worktree" },
+            { "type": "null" }
+          ]
+        },
+        "failure_operation": {
+          "oneOf": [
+            { "$ref": "#/$defs/applied_operation" },
+            { "type": "null" }
+          ]
+        },
+        "rollback_notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "manual_remediation_actions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "planned_operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "kind", "target", "boundary", "mode", "expected_result"],
+      "properties": {
+        "operation_id": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "enum": ["write", "delete", "copy", "command", "pr_action", "repair", "migration", "relocation", "generated_output"]
+        },
+        "target": { "type": "string", "minLength": 1 },
+        "boundary": { "type": "string", "minLength": 1 },
+        "mode": { "type": "string", "enum": ["dry_run", "apply"] },
+        "content_sha256": { "type": ["string", "null"] },
+        "line_ending_policy": { "type": ["string", "null"] },
+        "expected_result": { "type": "string", "minLength": 1 }
+      }
+    },
+    "applied_operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "kind", "target", "boundary", "mode", "result"],
+      "properties": {
+        "operation_id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "boundary": { "type": "string", "minLength": 1 },
+        "mode": { "type": "string", "enum": ["dry_run", "apply"] },
+        "result": { "type": "string", "minLength": 1 },
+        "failure_class": { "type": ["string", "null"] },
+        "content_sha256": { "type": ["string", "null"] },
+        "line_ending_policy": { "type": ["string", "null"] },
+        "rollback_note": { "type": ["string", "null"] },
+        "manual_remediation": { "type": ["string", "null"] }
+      }
+    },
+    "dirty_worktree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["checked", "is_dirty", "entries"],
+      "properties": {
+        "checked": { "type": "boolean" },
+        "is_dirty": { "type": "boolean" },
+        "entries": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}

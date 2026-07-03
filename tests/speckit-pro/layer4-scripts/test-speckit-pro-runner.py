@@ -341,10 +341,19 @@ class RunnerFoundationTests(unittest.TestCase):
         )
         allowed_exact = {
             "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
             "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
             "docs-site/src/content/docs/reference/tests.md",
+            "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+            "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+            "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+            "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
             "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
             "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
         }
