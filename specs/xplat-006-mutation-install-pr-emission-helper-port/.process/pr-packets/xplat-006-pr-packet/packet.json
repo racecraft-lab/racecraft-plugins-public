@@ -50,7 +50,7 @@
   "scope_evidence": {
     "reviewable_loc": 0,
     "production_files": 0,
-    "total_files": 55,
+    "total_files": 59,
     "budget_result": "within_budget",
     "changed_files": [
       "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
@@ -76,6 +76,11 @@
       "speckit-pro/speckit_pro_runner/install_inventory.json",
       "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
       "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/marker-plan/final-marker-split-result.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/packet/validation.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/body.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/packet.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/uat-runbook.md",
       "specs/xplat-006-mutation-install-pr-emission-helper-port/SPEC-MOC.md",
       "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/error-handling.md",
       "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/integration.md",
@@ -93,7 +98,6 @@
       "specs/xplat-006-mutation-install-pr-emission-helper-port/research.md",
       "specs/xplat-006-mutation-install-pr-emission-helper-port/spec.md",
       "specs/xplat-006-mutation-install-pr-emission-helper-port/tasks.md",
-      "specs/xplat-006-mutation-install-pr-emission-helper-port/uat-runbook.md",
       "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/bash-reference-manifest.json",
       "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/fixture-manifest.json",
       "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/install-inventory-fixtures.json",
@@ -158,7 +162,7 @@
   ],
   "protected_body_fingerprint": {
     "algorithm": "sha256",
-    "value": "0ad4be965c7ddb1a6763c013b8895006dfbc9a273f350c84a3a283b39a700a08",
+    "value": "758f0a5e521c2f56ea38f820274183a8fb5d79ed246d18dc10296a2905be41ce",
     "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
     "elided_fields": [
       "summary",

@@ -77,7 +77,7 @@ Run these from the repository root before walking the acceptance tests.
 ### User Story 3 - Review Deterministic Parity Evidence (Priority: P2)
 
 - [x] Run `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` and confirm XPLAT-005 read-only registry compatibility remains intact with no mutation modes exposed there.
-- [x] Run `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD` and confirm the typed `Reviewability-Exception: infra` is honored for this one-workflow XPLAT-006 PR.
+- [x] Run `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD` and confirm the typed infra reviewability exception is honored for this one-workflow XPLAT-006 PR.
 - [x] Review `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json` and confirm no Bash-backed helper is marked Python-authoritative in this PR.
 
 
@@ -134,7 +134,7 @@ Source: generated PR packet.
 ## Scope
 
 - Source feature: specs/xplat-006-mutation-install-pr-emission-helper-port.
-- Changed files recorded in packet metadata: 55.
+- Changed files recorded in packet metadata: 59.
 - Scope: this PR implements Add mutation, install, and PR-emission helper port.
 - Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
 - Non-goals: split PR emission, unrelated install/update behavior, and claims not covered by the UAT runbook.

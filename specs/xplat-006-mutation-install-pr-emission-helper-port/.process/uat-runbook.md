@@ -38,7 +38,7 @@ Run these from the repository root before walking the acceptance tests.
 ### User Story 3 - Review Deterministic Parity Evidence (Priority: P2)
 
 - [x] Run `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py` and confirm XPLAT-005 read-only registry compatibility remains intact with no mutation modes exposed there.
-- [x] Run `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD` and confirm the typed `Reviewability-Exception: infra` is honored for this one-workflow XPLAT-006 PR.
+- [x] Run `bash speckit-pro/skills/speckit-autopilot/scripts/reviewability-gate.sh diff origin/main...HEAD` and confirm the typed infra reviewability exception is honored for this one-workflow XPLAT-006 PR.
 - [x] Review `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json` and confirm no Bash-backed helper is marked Python-authoritative in this PR.
 
 
