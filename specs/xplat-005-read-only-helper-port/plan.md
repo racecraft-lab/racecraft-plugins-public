@@ -6,7 +6,7 @@
 
 ## Summary
 
-Port the read-only and advisory helper surface onto the XPLAT-004 Python runner by adding a small helper registry/dispatch layer plus bounded per-helper module targets. XPLAT-005 preserves current JSON stdout, stderr diagnostics, and exit-code semantics through deterministic golden fixtures and source-checkout Bash-reference comparisons. Active Claude Code, Codex, install, generated payload, public docs, mutation-helper, and native installed-plugin cutover work remains deferred.
+Port the read-only and advisory helper surface onto the XPLAT-004 Python runner by adding a small helper registry/dispatch layer plus bounded per-helper module targets. XPLAT-005 preserves current JSON stdout, stderr diagnostics, and exit-code semantics through deterministic golden fixtures and source-checkout Bash-reference comparisons. Active Claude Code, Codex, install, generated payload, public docs, mutation-helper, and native installed-plugin activation work remains deferred.
 
 ## Technical Context
 
@@ -26,7 +26,7 @@ Port the read-only and advisory helper surface onto the XPLAT-004 Python runner 
 
 **Constraints**: Read-only/advisory helper behavior only; preserve stdout JSON schema, stderr diagnostics, and exit-code semantics; rejected-input fixtures define stdout JSON schemas where helpers emit them, deterministic remediation content where present, and per-helper failure-class to nonzero-exit mappings; every promoted Bash-backed helper requires golden fixture parity plus source-checkout Bash-reference comparison before `python_authoritative` status; normalization is explicit and limited to environment-sensitive fields; Python helper ports and Bash-reference harnesses must avoid shell invocation and must resolve filesystem inputs inside repo/plugin trust boundaries
 
-**Scale/Scope**: One workflow with two internal slices covering registry/dispatch plus sixteen in-scope helper or mode ports; out-of-scope mutation, persistence, stack, relocation, install, autoheal, and active cutover helpers stay unported
+**Scale/Scope**: One workflow with two internal slices covering registry/dispatch plus sixteen in-scope helper or mode ports; out-of-scope mutation, persistence, stack, relocation, install, autoheal, and active invocation helpers stay unported
 
 **Reviewability Budget**: setup reviewability warning recorded as `status=warn`, `pass=true`; two primary surfaces `docs/process` and `harness/adapter`; supporting test fixture surface; projected reviewable LOC 250; projected production files 4; projected total files 12 after runner source metadata updates; no blockers
 
@@ -56,7 +56,7 @@ Port the read-only and advisory helper surface onto the XPLAT-004 Python runner 
 | III. Semantic Versioning | PASS | No manual version edits are planned; active release/version changes remain outside this phase. |
 | IV. Test Coverage Before Merge | PASS | Each promoted helper requires golden fixture parity, Bash-reference comparison, and an authoritative Python Layer 4 command before release-gate promotion. |
 | V. Conventional Commits | PASS | Commit/PR behavior is outside this phase, but the planned scope supports a conventional `feat(speckit-pro): ...` change if later committed by the orchestrator. |
-| VI. KISS, Simplicity & YAGNI | PASS | The runner gains one explicit registry and one bounded read-only helper module, not a generic helper framework. Mutation and active cutover work is deferred. |
+| VI. KISS, Simplicity & YAGNI | PASS | The runner gains one explicit registry and one bounded read-only helper module, not a generic helper framework. Mutation and active activation work is deferred. |
 
 ## Project Structure
 
@@ -123,7 +123,7 @@ Build the registry/dispatch path and promote prerequisite, detection, marker, va
 
 ### Slice 2 - Planning, Index, Topology, And Late PR-Packet Validation
 
-Add read-only/advisory ports for `generate-spec-index --check`, `o5-topology`, `atomicity-route`, `plan-layers <feature-dir>`, `validate-pr-workflow-contract`, and `validate-pr-packet` validation-only behavior. This slice excludes write/regenerate modes, marker-plan output, validation-result persistence, workflow-event upserts, PR body generation, PR emission, split state, restack, relocation, install repair, autoheal, and active Claude/Codex cutover.
+Add read-only/advisory ports for `generate-spec-index --check`, `o5-topology`, `atomicity-route`, `plan-layers <feature-dir>`, `validate-pr-workflow-contract`, and `validate-pr-packet` validation-only behavior. This slice excludes write/regenerate modes, marker-plan output, validation-result persistence, workflow-event upserts, PR body generation, PR emission, split state, restack, relocation, install repair, autoheal, and active Claude/Codex activation.
 
 **Reviewability split decision**: Remain one XPLAT-005 workflow with two internal slices. Planning does not prove a child-spec split is required because the accepted implementation surface is four production files, twelve total planned files after runner source metadata updates, and the only reviewability warning is the already accepted surface warning.
 
@@ -143,7 +143,7 @@ Status values are target promotion states. `python_authoritative` applies only a
 |---|---:|---|---|---|---|---|---|---|---|
 | helper-registry-dispatch | 1 | N/A | `helper.dispatch` / `speckit_pro_runner.helpers.registry` | `golden.registry.valid`, `golden.registry.unknown-helper`, `golden.registry.malformed-request` | N/A | none | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper helper-registry-dispatch` | XPLAT-006 may reuse registry for mutation helpers |
 | check-prerequisites | 1 | `speckit-pro/skills/speckit-autopilot/scripts/check-prerequisites.sh` | `helper.check-prerequisites` / `speckit_pro_runner.helpers.read_only:check_prerequisites` | `golden.check-prerequisites.valid`, `golden.check-prerequisites.missing-spec`, `golden.check-prerequisites.no-bash` | `bash.check-prerequisites.valid`, `bash.check-prerequisites.missing-spec` | repo absolute paths, command executable paths, branch metadata | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper check-prerequisites` | Installed-cache proof in XPLAT-007 |
-| detect-commands | 1 | `speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh` | `helper.detect-commands` / `speckit_pro_runner.helpers.read_only:detect_commands` | `golden.detect-commands.available`, `golden.detect-commands.missing`, `golden.detect-commands.windows-paths` | `bash.detect-commands.available`, `bash.detect-commands.missing` | executable paths, repo root, platform identity | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper detect-commands` | Active command invocation cutover in XPLAT-007 |
+| detect-commands | 1 | `speckit-pro/skills/speckit-autopilot/scripts/detect-commands.sh` | `helper.detect-commands` / `speckit_pro_runner.helpers.read_only:detect_commands` | `golden.detect-commands.available`, `golden.detect-commands.missing`, `golden.detect-commands.windows-paths` | `bash.detect-commands.available`, `bash.detect-commands.missing` | executable paths, repo root, platform identity | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper detect-commands` | Active command invocation switch in XPLAT-007 |
 | detect-presets | 1 | `speckit-pro/skills/speckit-autopilot/scripts/detect-presets.sh` | `helper.detect-presets` / `speckit_pro_runner.helpers.read_only:detect_presets` | `golden.detect-presets.reviewability`, `golden.detect-presets.none`, `golden.detect-presets.path-spaces` | `bash.detect-presets.reviewability`, `bash.detect-presets.none` | repo absolute paths, preset path separators | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper detect-presets` | Preset install repair remains out of scope |
 | count-markers | 1 | `speckit-pro/skills/speckit-autopilot/scripts/count-markers.sh` | `helper.count-markers` / `speckit_pro_runner.helpers.read_only:count_markers` | `golden.count-markers.clean`, `golden.count-markers.needs-clarification`, `golden.count-markers.gaps` | `bash.count-markers.clean`, `bash.count-markers.needs-clarification` | repo absolute paths only if emitted | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper count-markers` | None |
 | validate-gate | 1 | `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh` | `helper.validate-gate` / `speckit_pro_runner.helpers.read_only:validate_gate` | `golden.validate-gate.g3-pass`, `golden.validate-gate.g3-fail`, `golden.validate-gate.usage` | `bash.validate-gate.g3-pass`, `bash.validate-gate.g3-fail` | repo absolute paths only if emitted | `python_authoritative` | `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper validate-gate` | None |
@@ -195,7 +195,7 @@ Status values are target promotion states. `python_authoritative` applies only a
    ```
 
 5. Validate runner source manifest and checksum metadata after adding or modifying helper runner files, keeping generated payload propagation deferred to XPLAT-007.
-6. Confirm scope audit has zero active Claude Code or Codex skill, hook, generated payload, install, marketplace/public docs, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits.
+6. Confirm scope audit has zero active Claude Code or Codex skill, hook, generated payload, install, marketplace/public docs, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal activation edits.
 7. Confirm error/security parity coverage:
 
    - rejected-input fixtures cover every applicable helper failure class
@@ -214,10 +214,10 @@ Status values are target promotion states. `python_authoritative` applies only a
 | III. Semantic Versioning | PASS | No version file changes are planned. |
 | IV. Test Coverage Before Merge | PASS | The promotion matrix gives every in-scope helper a fixture set, Bash comparison set, and authoritative Python test command. |
 | V. Conventional Commits | PASS | No commit is produced in this phase. |
-| VI. KISS, Simplicity & YAGNI | PASS | The registry pattern is explicit and bounded to read-only helper dispatch; deferred mutation and cutover work is recorded. |
+| VI. KISS, Simplicity & YAGNI | PASS | The registry pattern is explicit and bounded to read-only helper dispatch; deferred mutation and activation work is recorded. |
 
 ## Complexity Tracking
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |---|---|---|
-| Reviewability surface warning: `docs/process` plus `harness/adapter` | Helper parity must be planned and reviewed with process evidence so maintainers can distinguish promoted, Bash-reference-only, and out-of-scope helpers. | A code-only plan would hide the migration proof and could be mistaken for active cutover or installed-platform support. |
+| Reviewability surface warning: `docs/process` plus `harness/adapter` | Helper parity must be planned and reviewed with process evidence so maintainers can distinguish promoted, Bash-reference-only, and out-of-scope helpers. | A code-only plan would hide the migration proof and could be mistaken for active invocation switching or installed-platform support. |

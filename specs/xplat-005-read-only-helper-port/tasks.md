@@ -18,11 +18,11 @@
 - Resolve filesystem inputs against repo/plugin trust boundaries and reject traversal or symlink escapes before helper logic reads files.
 - Do not generate PR bodies, emit split-PR state, install agents, relocate artifacts, mutate repository/user-local state, update active Claude/Codex invocations, or update generated payloads.
 
-**Implementation Decision**: Continued as one navigable PR after the Phase 7 reviewability re-check. The implementation stayed inside the accepted runner-owned source, helper fixtures, focused Layer 4 test, metadata, and task artifact surfaces; no active Claude/Codex skill, hook, generated payload, marketplace, install, PR-emission, split-state, restack, relocation, autoheal, or public-doc cutover surface was edited.
+**Implementation Decision**: Continued as one navigable PR after the Phase 7 reviewability re-check. The implementation stayed inside the accepted runner-owned source, helper fixtures, focused Layer 4 test, metadata, and task artifact surfaces; no active Claude/Codex skill, hook, generated payload, marketplace, install, PR-emission, split-state, restack, relocation, autoheal, or public-doc activation surface was edited.
 
 Reviewability-Exception: infra
 
-The final reviewability block is caused by the infrastructure/test-fixture file count for the runner-owned helper port and process evidence. The implementation remains in the accepted one-PR scope, with source changes limited to runner package files plus focused Layer 4 fixtures/tests and no active invocation cutover.
+The final reviewability block is caused by the infrastructure/test-fixture file count for the runner-owned helper port and process evidence. The implementation remains in the accepted one-PR scope, with source changes limited to runner package files plus focused Layer 4 fixtures/tests and no active invocation switch.
 
 ## Format: `[ID] [P?] [Story?] Description`
 
@@ -140,7 +140,7 @@ The final reviewability block is caused by the infrastructure/test-fixture file 
 
 ## Phase 4: Slice 2 - Spec Index, Topology, Atomicity, Layer Planning, Workflow Contract, And PR-Packet Validation
 
-**Purpose**: Promote Slice 2 read-only/advisory helper modes without enabling write/regenerate, marker-plan output, persistence, workflow-event upserts, PR body generation, PR emission, split state, restack, relocation, install repair, autoheal, or active Claude/Codex cutover.
+**Purpose**: Promote Slice 2 read-only/advisory helper modes without enabling write/regenerate, marker-plan output, persistence, workflow-event upserts, PR body generation, PR emission, split state, restack, relocation, install repair, autoheal, or active Claude/Codex activation.
 
 **Independent Test**: For each Slice 2 helper, run `python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py --helper <helper-id>` and verify golden parity, Bash-reference parity, rejected-input coverage, and mode-boundary rejection.
 
@@ -196,14 +196,14 @@ The final reviewability block is caused by the infrastructure/test-fixture file 
 
 **Purpose**: Verify the accepted source-checkout runner path, promotion evidence, scope boundaries, and release-gate commands without PR body generation or PR emission.
 
-**Independent Test**: A reviewer can inspect helper promotion records, run the smoke/parity commands, and confirm zero active cutover or mutation-helper leakage.
+**Independent Test**: A reviewer can inspect helper promotion records, run the smoke/parity commands, and confirm zero active invocation switching or mutation-helper leakage.
 
 - [x] T077 [US3] Refresh and validate runner source metadata for `speckit-pro/speckit_pro_runner/__main__.py`, `speckit-pro/speckit_pro_runner/helpers/__init__.py`, `speckit-pro/speckit_pro_runner/helpers/registry.py`, and `speckit-pro/speckit_pro_runner/helpers/read_only.py` in `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` and `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256`
 - [x] T078 [US3] Run the local source-checkout runtime-info smoke using `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json`
 - [x] T079 [US3] Run the focused helper parity suite from `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py`
 - [x] T080 [US3] Run the focused Layer 4 script gate with `bash tests/speckit-pro/run-all.sh --layer 4`
 - [x] T081 [US3] Run the default deterministic gate with `bash tests/speckit-pro/run-all.sh`
-- [x] T082 [US3] Audit the implementation diff for zero active Claude/Codex skill, hook, generated payload, install, marketplace/public-doc, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal cutover edits across `.claude/`, `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/`, `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/`, `speckit-pro/codex-hooks.json`, `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, `docs-site/`, `.agents/`, `.claude-plugin/`, and `scripts/`
+- [x] T082 [US3] Audit the implementation diff for zero active Claude/Codex skill, hook, generated payload, install, marketplace/public-doc, mutation-helper, PR-emission, split-state, restack, relocation, install repair, or autoheal activation edits across `.claude/`, `speckit-pro/skills/`, `speckit-pro/agents/`, `speckit-pro/hooks/`, `speckit-pro/codex-skills/`, `speckit-pro/codex-agents/`, `speckit-pro/codex-hooks.json`, `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/`, `docs-site/`, `.agents/`, `.claude-plugin/`, and `scripts/`
 - [x] T083 [US3] Verify every in-scope and out-of-scope helper has an unambiguous promotion status, review order, known gap, Bash-reference retention note, rollback/deferred follow-up, and authoritative command in `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`
 - [x] T084 [US3] Prepare the orchestrator handoff evidence from `specs/xplat-005-read-only-helper-port/quickstart.md`, `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/fixture-manifest.json`, and `tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/bash-reference-manifest.json` without generating a PR body or emitting PR state
 - [ ] T085 [US3] Validate the task artifact with `speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G5 specs/xplat-005-read-only-helper-port` so `specs/xplat-005-read-only-helper-port/tasks.md` is checked by the gate script
@@ -249,7 +249,7 @@ For each helper:
 1. Add each helper's failing fixtures and Bash-reference cases before porting that helper.
 2. Keep the Python authoritative gate helper-by-helper; do not batch-promote helpers without accepted parity.
 3. Preserve Bash helpers as temporary references through XPLAT-005.
-4. Use Phase 5 evidence to hand off review without active Claude/Codex cutover or PR-emission behavior.
+4. Use Phase 5 evidence to hand off review without active Claude/Codex activation or PR-emission behavior.
 
 ## Out Of Scope
 
@@ -257,4 +257,4 @@ For each helper:
 - `generate-spec-index` write/regenerate mode
 - `plan-layers marker-plan` output mode
 - `validate-pr-packet` persistence, workflow-event upserts, PR body generation, PR emission, and restack behavior
-- Split PR state, artifact relocation, install repair, autoheal, generated payload changes, active Claude Code/Codex skill or hook cutover, marketplace/public documentation claims, and full native installed-plugin UAT
+- Split PR state, artifact relocation, install repair, autoheal, generated payload changes, active Claude Code/Codex skill or hook activation, marketplace/public documentation claims, and full native installed-plugin UAT
