@@ -62,10 +62,10 @@ accepted scope:
 | Clarify | `$speckit-clarify` | Complete | Sessions 1-4 complete; G2 passed with 0 clarification markers |
 | Plan | `$speckit-plan` | Complete | Created plan, research, data model, quickstart, and five contracts; G3 passed with 0 markers; hardening evidence passed |
 | Checklist | `$speckit-checklist` | Complete | Integration, error-handling, reliability, and security checklists complete with no gaps; consensus skipped |
-| Tasks | `$speckit-tasks` | Complete | Generated 60 total tasks: 6 completed hardening tasks and 54 open implementation/handoff tasks; G5 passed |
-| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, design concept, spec, plan, and tasks |
-| Confidence Gate | G6.5 | Pending | Run the pre-implementation confidence gate after Analyze and before task execution |
-| Implement | `$speckit-implement` | Pending | Port helpers, fixtures, tests, and handoff evidence |
+| Tasks | `$speckit-tasks` | Complete | Generated 61 total tasks: 6 completed hardening tasks and 55 open implementation/handoff tasks; G5 passed |
+| Analyze | `$speckit-analyze` | Complete | Found and resolved one AC-6.6 task coverage gap; consensus skipped after remediation |
+| Confidence Gate | G6.5 | Complete | Advisory `NO_DATA` soft-skip: no confidence emit found; phase-coverage validator passed |
+| Implement | `$speckit-implement` | In Progress | Execute tasks in order, starting with reviewability checkpoint and mutation foundation |
 | Post | Autopilot post-implementation items | Pending | Complete doctor, verification, review, PR packet, PR creation, remediation, and retrospective items |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -550,11 +550,11 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | 60 total; 54 open tasks reported by G5 because 6 hardening tasks are already complete |
+| Total Tasks | 61 total; 55 open tasks reported by G5 because 6 hardening tasks are already complete |
 | Phases | Three accepted implementation slices plus setup and handoff |
 | Parallel Opportunities | Fixture seeds, independent failing test groups, US2/US3 after shared mutation primitives, and final hardening/scope checks |
 | User Stories Covered | HARD baseline, US1 mutation safety, US2 install/doctor, US3 PR-emission/reviewability, HANDOFF |
-| G5 | Pass: `validate-gate.sh G5` reported 54 open tasks and 0 markers |
+| G5 | Pass: `validate-gate.sh G5` reported 55 open tasks and 0 markers |
 
 ---
 
@@ -601,7 +601,9 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| Pending | Pending | Pending until Analyze runs | Pending until Analyze runs |
+| AN-001 | Medium | AC-6.6 requires scaffold/status/autopilot to be able to call a shared doctor/preflight contract before workflow execution, but `tasks.md` only required the contract implementation and did not explicitly require registry-exposed callable operation ids. | Resolved by adding T035 to expose doctor/preflight operation ids through `speckit-pro/speckit_pro_runner/helpers/registry.py` without active invocation cutover; G5 now passes with 55 open tasks and 0 markers. |
+
+Consensus: skipped after remediation because no unresolved Analyze issues remain.
 
 ---
 
@@ -621,7 +623,7 @@ bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh specs/xplat
 
 | Mode | Exit | Result | Notes |
 |---|---|---|---|
-| advisory | Pending | Pending until Analyze completes | Advisory mode records the outcome and advances unless a separate correctness stop is present |
+| advisory | 1 | `NO_DATA` soft-skip | `confidence-gate.sh docs/ai/specs/.process/XPLAT-006-workflow.md --mode advisory` found no confidence emit; phase-coverage validator passed, so implementation may proceed |
 
 ---
 

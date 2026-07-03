@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T20:08:54Z",
+  "updated_at": "2026-07-03T20:12:42Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 6: Analyze",
+  "active_step": "Phase 7: Implement - T007 reviewability checkpoint",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible",
@@ -152,19 +152,20 @@
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze - Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "Analyze issue remediated; no unresolved issues remained"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - Pending task decomposition",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -337,13 +338,13 @@
       "status": "completed",
       "completed_at": "2026-07-03T20:08:54Z",
       "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/tasks.md",
-      "total_tasks": 60,
-      "open_tasks": 54,
+      "total_tasks": 61,
+      "open_tasks": 55,
       "completed_hardening_tasks": 6,
       "g5_gate": {
         "pass": true,
         "markers": 0,
-        "task_count": 54
+        "task_count": 55
       },
       "phases": [
         "completed hardening baseline",
@@ -360,6 +361,39 @@
         "final hardening and scope-audit checks after implementation"
       ],
       "outcome": "Tasks preserve the accepted three-slice order and keep hardening proof explicit. Parallel markers are limited to independent fixture or test work and do not compete for shared mutation primitives, registry entries, manifests, or promotion records."
+    },
+    "analyze": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:11:44Z",
+      "issues": [
+        {
+          "id": "AN-001",
+          "severity": "medium",
+          "issue": "AC-6.6 requires scaffold/status/autopilot to be able to call a shared doctor/preflight contract before workflow execution, but tasks.md only required the contract implementation and did not explicitly require registry-exposed callable operation ids.",
+          "resolution": "Added T035 to expose doctor/preflight operation ids through speckit-pro/speckit_pro_runner/helpers/registry.py without active invocation cutover."
+        }
+      ],
+      "consensus": "skipped: issue remediated and no unresolved issues remained",
+      "g5_gate_after_remediation": {
+        "pass": true,
+        "markers": 0,
+        "task_count": 55
+      },
+      "outcome": "No critical drift remains between roadmap, PRD AC-6.*, design concept, spec, plan, checklists, and tasks. XPLAT-007/XPLAT-008 boundaries remain explicit, and the hardening source/generated mirror exception remains constrained to validator-backed phase coverage."
+    },
+    "confidence_gate": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:12:42Z",
+      "mode": "advisory",
+      "exit_code": 1,
+      "result": "NO_DATA",
+      "recommended_action": "soft_skip",
+      "reason": "No synthesizer confidence emit found in docs/ai/specs/.process/XPLAT-006-workflow.md.",
+      "phase_coverage_validator": {
+        "status": "pass",
+        "plan_step_count": 37
+      },
+      "outcome": "Advisory confidence gate soft-skipped without blocking implementation. The phase-coverage validator passed and remains the hard stop for missing canonical phases."
     }
   }
 }
