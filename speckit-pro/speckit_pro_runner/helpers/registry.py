@@ -33,6 +33,11 @@ class HelperEntry:
 
 
 SCRIPT_BASE = "speckit-pro/skills/speckit-autopilot/scripts"
+REQUEST_FIXTURE_BASE = "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests"
+
+
+def authoritative_request(helper_id: str) -> str:
+    return f"python -m speckit_pro_runner < {REQUEST_FIXTURE_BASE}/{helper_id}.json"
 
 
 HELPERS: dict[str, HelperEntry] = {
@@ -42,7 +47,7 @@ HELPERS: dict[str, HelperEntry] = {
         None,
         "python_authoritative",
         "registry_metadata",
-        "python -m speckit_pro_runner < helper-registry-dispatch.json",
+        authoritative_request("helper-registry-dispatch"),
     ),
     "check-prerequisites": HelperEntry(
         "check-prerequisites",
@@ -50,7 +55,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/check-prerequisites.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < check-prerequisites.json",
+        authoritative_request("check-prerequisites"),
     ),
     "detect-commands": HelperEntry(
         "detect-commands",
@@ -58,7 +63,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/detect-commands.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < detect-commands.json",
+        authoritative_request("detect-commands"),
     ),
     "detect-presets": HelperEntry(
         "detect-presets",
@@ -66,7 +71,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/detect-presets.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < detect-presets.json",
+        authoritative_request("detect-presets"),
     ),
     "count-markers": HelperEntry(
         "count-markers",
@@ -74,7 +79,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/count-markers.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < count-markers.json",
+        authoritative_request("count-markers"),
     ),
     "validate-gate": HelperEntry(
         "validate-gate",
@@ -82,7 +87,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/validate-gate.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < validate-gate.json",
+        authoritative_request("validate-gate"),
     ),
     "reviewability-gate": HelperEntry(
         "reviewability-gate",
@@ -90,7 +95,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/reviewability-gate.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < reviewability-gate.json",
+        authoritative_request("reviewability-gate"),
     ),
     "estimate-reviewable-loc": HelperEntry(
         "estimate-reviewable-loc",
@@ -98,7 +103,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/estimate-reviewable-loc.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < estimate-reviewable-loc.json",
+        authoritative_request("estimate-reviewable-loc"),
     ),
     "resolve-confidence-mode": HelperEntry(
         "resolve-confidence-mode",
@@ -106,7 +111,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/resolve-confidence-mode.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < resolve-confidence-mode.json",
+        authoritative_request("resolve-confidence-mode"),
     ),
     "confidence-gate": HelperEntry(
         "confidence-gate",
@@ -114,7 +119,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/confidence-gate.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < confidence-gate.json",
+        authoritative_request("confidence-gate"),
     ),
     "generate-spec-index-check": HelperEntry(
         "generate-spec-index-check",
@@ -122,7 +127,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/generate-spec-index.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < generate-spec-index-check.json",
+        authoritative_request("generate-spec-index-check"),
         ("write", "regenerate"),
     ),
     "o5-topology": HelperEntry(
@@ -131,7 +136,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/o5-topology.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < o5-topology.json",
+        authoritative_request("o5-topology"),
     ),
     "atomicity-route": HelperEntry(
         "atomicity-route",
@@ -139,7 +144,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/atomicity-route.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < atomicity-route.json",
+        authoritative_request("atomicity-route"),
         ("mutation-routing",),
     ),
     "plan-layers-feature-dir": HelperEntry(
@@ -148,7 +153,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/plan-layers.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < plan-layers-feature-dir.json",
+        authoritative_request("plan-layers-feature-dir"),
         ("marker-plan",),
     ),
     "validate-pr-workflow-contract": HelperEntry(
@@ -157,7 +162,7 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/validate-pr-workflow-contract.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < validate-pr-workflow-contract.json",
+        authoritative_request("validate-pr-workflow-contract"),
         ("workflow-event-write",),
     ),
     "validate-pr-packet-read-only": HelperEntry(
@@ -166,8 +171,8 @@ HELPERS: dict[str, HelperEntry] = {
         f"{SCRIPT_BASE}/validate-pr-packet.sh",
         "python_authoritative",
         "bash_reference",
-        "python -m speckit_pro_runner < validate-pr-packet-read-only.json",
-        ("persistence", "workflow-event-upsert", "pr-body-generation", "pr-emission", "restack"),
+        authoritative_request("validate-pr-packet-read-only"),
+        ("persistence", "workflow-event-upserts", "pr-body-generation", "pr-emission", "restack"),
     ),
 }
 

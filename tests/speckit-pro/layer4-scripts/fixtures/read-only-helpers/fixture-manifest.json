@@ -12,7 +12,7 @@
       "deterministic_remediation": {"summary": "Use a registered read-only helper id.", "actions": ["Inspect registry output.", "Retry with a known helper id."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < helper-registry-dispatch.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/helper-registry-dispatch.json",
       "rollback": "Remove the registry entry before active helper cutover."
     },
     {
@@ -24,7 +24,7 @@
       "deterministic_remediation": {"summary": "Retry with a repo-relative workflow file.", "actions": ["Check the workflow_file path.", "Run the Bash-reference comparison."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < check-prerequisites.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/check-prerequisites.json",
       "rollback": "Keep the Bash script authoritative until XPLAT-007 active cutover."
     },
     {
@@ -37,7 +37,7 @@
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "execution_context_policy": {"repo_root_input": "reported_as_effective_cwd", "cwd_kind": "repo_relative"},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < detect-commands.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/detect-commands.json",
       "rollback": "Leave project command discovery on the Bash helper."
     },
     {
@@ -50,7 +50,7 @@
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "execution_context_policy": {"repo_root_input": "reported_as_effective_cwd", "cwd_kind": "repo_relative"},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < detect-presets.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/detect-presets.json",
       "rollback": "Leave preset detection on the Bash helper."
     },
     {
@@ -62,7 +62,7 @@
       "deterministic_remediation": {"summary": "Provide marker type and feature_dir.", "actions": ["Set type to gaps, findings, clarifications, or all.", "Use a repo-relative feature_dir."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < count-markers.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/count-markers.json",
       "rollback": "Use count-markers.sh directly."
     },
     {
@@ -74,7 +74,7 @@
       "deterministic_remediation": {"summary": "Provide gate and feature_dir.", "actions": ["Use G1 through G7.", "Inspect gate JSON details."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < validate-gate.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/validate-gate.json",
       "rollback": "Use validate-gate.sh directly."
     },
     {
@@ -86,7 +86,7 @@
       "deterministic_remediation": {"summary": "Provide reviewability mode and target.", "actions": ["Use setup, tasks, or diff.", "Keep target inside the repo trust boundary."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < reviewability-gate.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/reviewability-gate.json",
       "rollback": "Use reviewability-gate.sh directly."
     },
     {
@@ -98,7 +98,7 @@
       "deterministic_remediation": {"summary": "Provide a repo-relative plan.md file.", "actions": ["Check plan_file.", "Retry the estimator."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < estimate-reviewable-loc.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/estimate-reviewable-loc.json",
       "rollback": "Use estimate-reviewable-loc.sh directly."
     },
     {
@@ -110,7 +110,7 @@
       "deterministic_remediation": {"summary": "Provide valid confidence-mode args.", "actions": ["Do not combine --strict and --advisory.", "Retry with bounded autopilot args."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < resolve-confidence-mode.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/resolve-confidence-mode.json",
       "rollback": "Use resolve-confidence-mode.sh directly."
     },
     {
@@ -122,7 +122,7 @@
       "deterministic_remediation": {"summary": "Provide workflow_file and optional mode/threshold.", "actions": ["Check confidence emit source.", "Retry in advisory or strict mode."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < confidence-gate.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/confidence-gate.json",
       "rollback": "Use confidence-gate.sh directly."
     },
     {
@@ -134,7 +134,7 @@
       "deterministic_remediation": {"summary": "Only --check mode is promoted.", "actions": ["Remove write/regenerate mode.", "Run the check from repo root."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < generate-spec-index-check.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/generate-spec-index-check.json",
       "rollback": "Use generate-spec-index.sh --check directly.",
       "out_of_scope": ["write", "regenerate"]
     },
@@ -147,7 +147,7 @@
       "deterministic_remediation": {"summary": "Provide a repo-relative O5 parent manifest or feature dir.", "actions": ["Check target.", "Retry topology validation."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < o5-topology.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/o5-topology.json",
       "rollback": "Use o5-topology.sh directly."
     },
     {
@@ -159,7 +159,7 @@
       "deterministic_remediation": {"summary": "Provide a repo-relative feature_dir.", "actions": ["Check feature_dir.", "Retry atomicity classification."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < atomicity-route.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/atomicity-route.json",
       "rollback": "Use atomicity-route.sh directly.",
       "out_of_scope": ["mutation-routing"]
     },
@@ -172,7 +172,7 @@
       "deterministic_remediation": {"summary": "Only feature-dir planning is promoted.", "actions": ["Provide feature_dir.", "Do not request marker-plan output."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < plan-layers-feature-dir.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/plan-layers-feature-dir.json",
       "rollback": "Use plan-layers.sh directly.",
       "out_of_scope": ["marker-plan"]
     },
@@ -185,7 +185,7 @@
       "deterministic_remediation": {"summary": "Provide PR workflow metadata without workflow-event writes.", "actions": ["Set a conventional title.", "Keep changed-files input repo-relative."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < validate-pr-workflow-contract.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/validate-pr-workflow-contract.json",
       "rollback": "Use validate-pr-workflow-contract.sh directly.",
       "out_of_scope": ["workflow-event-write"]
     },
@@ -198,7 +198,7 @@
       "deterministic_remediation": {"summary": "Only read-only packet validation is promoted.", "actions": ["Provide an existing packet path.", "Do not request persistence, PR body generation, PR emission, or restack."]},
       "subprocess_policy": {"shell": false, "bounded_input": true, "timeout_seconds": 30},
       "path_boundary_policy": {"boundary": "repo_or_plugin", "rejects": ["traversal", "symlink_escape", "external_absolute_path"]},
-      "authoritative_command": "python -m speckit_pro_runner < validate-pr-packet-read-only.json",
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/requests/validate-pr-packet-read-only.json",
       "rollback": "Use validate-pr-packet.sh directly for existing workflow behavior.",
       "out_of_scope": ["persistence", "workflow-event-upserts", "pr-body-generation", "pr-emission", "restack"]
     }

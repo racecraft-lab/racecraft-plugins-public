@@ -76,7 +76,7 @@ Run these from the repository root before walking the acceptance tests.
 
 - [ ] Run `bash tests/speckit-pro/run-all.sh --layer 4` and confirm `2135/2135 passed`.
 - [ ] Run `bash tests/speckit-pro/run-all.sh` and confirm `3778/3778 passed`.
-- [ ] Review `git diff --name-only origin/main...HEAD` and confirm there are no edits under active skill, hook, generated payload, install, marketplace, docs-site, PR-emission, split-state, restack, relocation, install repair, or autoheal surfaces.
+- [ ] Review `git diff --name-only origin/main...HEAD` and confirm there are no active cutover edits outside the bounded PR-review packet rendering remediation files allowed by the spec.
 
 
 
@@ -124,7 +124,7 @@ Source: generated PR packet.
 ## Scope
 
 - Source feature: specs/xplat-005-read-only-helper-port.
-- Changed files recorded in packet metadata: 41.
+- Changed files recorded in packet metadata: 49.
 - Scope: this PR implements Add read-only helper port.
 - Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
 - Non-goals: split PR emission, unrelated install/update behavior, and claims not covered by the UAT runbook.

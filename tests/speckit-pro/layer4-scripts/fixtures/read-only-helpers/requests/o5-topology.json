@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-o5-topology",
+  "helper_id": "o5-topology",
+  "operation": "o5-topology",
+  "mode": "read_only",
+  "inputs": {
+    "target": "specs/xplat-005-read-only-helper-port"
+  }
+}

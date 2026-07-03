@@ -54,7 +54,7 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 
 1. **Given** a helper has accepted fixture and Bash-reference parity, **When** release-gate status is reviewed, **Then** the Python standard-library test is identified as authoritative for that helper while the Bash helper remains only as a temporary reference until XPLAT-007 cutover.
 2. **Given** unported or not-yet-promoted helpers remain, **When** release-gate status is reviewed, **Then** those helpers are clearly identified as still using the current Bash reference path and not counted as Python-promoted.
-3. **Given** XPLAT-005 has completed, **When** the scope is audited, **Then** there are no active Claude Code or Codex skill, hook, generated payload, install, public documentation, PR-emission, split-state, restack, or repository/user-local mutation cutovers.
+3. **Given** XPLAT-005 has completed, **When** the scope is audited, **Then** there are no active Claude Code or Codex skill, hook, generated payload, install, public documentation, PR-emission, split-state, restack, or repository/user-local mutation cutovers, except for bounded PR-review packet rendering remediation that does not add runner mutation behavior.
 4. **Given** local macOS source-checkout smoke evidence exists, **When** a reviewer reads it, **Then** it proves the accepted source-checkout runner path only and does not claim installed-cache launch proof or full native Windows/macOS/Linux matrix support.
 
 ### Edge Cases
@@ -90,7 +90,7 @@ As a release reviewer, I can see which helpers have been promoted to Python rele
 - **FR-018**: The implementation evidence MUST separate source-checkout parity from installed-plugin launch proof and public native-platform support claims.
 - **FR-019**: The local macOS smoke MUST run against the source checkout and MUST avoid claims about installed-cache execution or full native Windows/macOS/Linux support.
 - **FR-020**: The feature MUST preserve the accepted two-slice strategy: Slice 1 for foundational registry/dispatch and prerequisite/status helpers; Slice 2 for index/topology/planning validators and late read-only PR-packet validation.
-- **FR-021**: The feature MUST NOT update active Claude Code or Codex skill files, hook configuration, generated payloads, installer behavior, marketplace/public documentation, or install-facing invocation paths.
+- **FR-021**: The feature MUST NOT update active Claude Code or Codex skill files, hook configuration, generated payloads, installer behavior, marketplace/public documentation, or install-facing invocation paths, except for bounded PR-review packet generator/validator remediation required to make the XPLAT-005 review packet describe the actual feature scope.
 - **FR-022**: The PR review packet MUST identify non-goals, helper promotion status, Bash-reference retention, verification evidence, known gaps, rollback expectations, and the review order for the two slices.
 - **FR-023**: For helpers that currently emit machine-readable failure output, rejected-input fixtures MUST define the expected stdout JSON schema, stderr diagnostics, diagnostic/remediation content where present, and exact nonzero exit class.
 - **FR-024**: The parity plan MUST map each applicable helper failure class to an exact nonzero exit code for invalid input, missing input, malformed JSON, missing file, unsupported path, prerequisite failure, validation failure, and subprocess/preflight failure.
@@ -172,6 +172,7 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 
 - XPLAT-005 is limited to read-only and advisory helper ports plus their tests and internal evidence.
 - Active Claude Code and Codex skill, hook, generated payload, install, marketplace, and public documentation cutover remain XPLAT-007.
+- Bounded PR-review packet rendering remediation may update `generate-pr-body.sh`, `validate-pr-packet.sh`, their generated source copies, and generated reference docs only to keep this PR's reviewer packet truthful; the runner must still not invoke PR body generation or PR emission.
 - Mutation helpers for PR packets, PR bodies, split PR state, restack, artifact relocation, installer behavior, and repository/user-local writes remain out of scope for XPLAT-005.
 - `generate-spec-index` write/regenerate mode and `validate-pr-packet` validation-result or workflow-event persistence remain out of scope; XPLAT-005 may port only their read-only validation behavior.
 - Full native Windows/macOS/Linux installed-plugin UAT remains XPLAT-007.
@@ -194,7 +195,7 @@ parity, mutation-helper safety, or full native Windows/macOS/Linux support.
 - **SC-002**: For every Python-promoted Slice 2 helper, golden fixture comparison and Bash-reference comparison pass before the helper is listed as an authoritative Python gate.
 - **SC-003**: A helper promotion record identifies every XPLAT-005 helper as Python-promoted, Bash-reference-only, or out of scope, with no ambiguous status entries.
 - **SC-004**: Verification evidence includes the local macOS source-checkout `runtime-info` runner smoke for the accepted read-only path and includes no installed-plugin or native-matrix support claim.
-- **SC-005**: Scope audit finds zero active Claude Code or Codex skill/hook/generated-payload/install/public-doc cutover edits and zero mutation-helper ports in XPLAT-005.
+- **SC-005**: Scope audit finds zero active Claude Code or Codex skill/hook/generated-payload/install/public-doc cutover edits and zero mutation-helper ports in XPLAT-005, excluding the bounded PR-review packet rendering remediation files explicitly allowed above.
 - **SC-006**: The implementation remains reviewable as the accepted two-slice workflow or records a Plan/Tasks split decision before implementation begins.
 - **SC-007**: Runner source manifest and checksum metadata validate after the helper runner files are added or modified, without copying metadata into generated payloads or claiming installed-cache proof.
 

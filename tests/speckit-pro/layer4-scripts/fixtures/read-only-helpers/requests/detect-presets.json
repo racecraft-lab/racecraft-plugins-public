@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-detect-presets",
+  "helper_id": "detect-presets",
+  "operation": "detect-presets",
+  "mode": "read_only",
+  "inputs": {}
+}

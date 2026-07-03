@@ -340,7 +340,13 @@ class RunnerFoundationTests(unittest.TestCase):
             "docs-site/",
         )
         allowed_exact = {
+            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+            "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+            "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
             "docs-site/src/content/docs/reference/tests.md",
+            "speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh",
+            "speckit-pro/skills/speckit-autopilot/scripts/validate-pr-packet.sh",
         }
         forbidden_exact = {
             "speckit-pro/.claude-plugin/plugin.json",

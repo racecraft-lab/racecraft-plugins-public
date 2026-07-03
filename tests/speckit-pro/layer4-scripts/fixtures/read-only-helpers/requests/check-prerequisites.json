@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-check-prerequisites",
+  "helper_id": "check-prerequisites",
+  "operation": "check-prerequisites",
+  "mode": "read_only",
+  "inputs": {
+    "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md"
+  }
+}

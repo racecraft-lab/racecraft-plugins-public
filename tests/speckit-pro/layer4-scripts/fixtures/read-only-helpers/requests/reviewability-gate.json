@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-reviewability-gate",
+  "helper_id": "reviewability-gate",
+  "operation": "reviewability-gate",
+  "mode": "read_only",
+  "inputs": {
+    "mode_name": "setup",
+    "target": "docs/ai/specs/.process/XPLAT-005-workflow.md"
+  }
+}

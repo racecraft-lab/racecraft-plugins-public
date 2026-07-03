@@ -157,14 +157,6 @@ def validate_bounded_inputs(helper_id: str, inputs: dict[str, Any], repo_root: P
             path_diag = validate_path_value(helper_id, key, value, repo_root)
             if path_diag is not None:
                 return path_diag
-    if isinstance(args, list):
-        for index, arg in enumerate(args):
-            if "\x00" in arg:
-                return path_diagnostic("invalid_input", "helper argv contains a NUL byte", {"helper_id": helper_id, "index": index})
-            if arg.startswith("/") or "/" in arg or "\\" in arg:
-                path_diag = validate_path_value(helper_id, f"args[{index}]", arg, repo_root)
-                if path_diag is not None:
-                    return path_diag
     if inputs.get("write_mode") is True:
         return diagnostic(
             "unsupported_mode",
@@ -271,9 +263,6 @@ def helper_argv(entry: Any, inputs: dict[str, Any], repo_root: Path) -> list[str
 
 
 def explicit_or_derived_args(helper_id: str, inputs: dict[str, Any], repo_root: Path) -> list[str] | dict[str, Any]:
-    explicit = inputs.get("args")
-    if isinstance(explicit, list):
-        return explicit
     if helper_id in {"detect-commands", "detect-presets"}:
         return []
     if helper_id == "check-prerequisites":

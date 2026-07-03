@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-plan-layers-feature-dir",
+  "helper_id": "plan-layers-feature-dir",
+  "operation": "plan-layers-feature-dir",
+  "mode": "read_only",
+  "inputs": {
+    "feature_dir": "specs/xplat-005-read-only-helper-port"
+  }
+}

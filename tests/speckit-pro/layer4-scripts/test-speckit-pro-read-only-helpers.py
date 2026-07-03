@@ -125,6 +125,15 @@ def run_bash_reference(argv: list[str], cwd: Path | None = None) -> subprocess.C
     )
 
 
+def command_stdin_fixture(command: str) -> Path:
+    if "<" not in command:
+        raise AssertionError(f"authoritative_command must include a stdin fixture: {command}")
+    stdin_path = command.split("<", 1)[1].strip()
+    if not stdin_path or any(char.isspace() for char in stdin_path):
+        raise AssertionError(f"authoritative_command must use one stdin fixture path: {command}")
+    return REPO_ROOT / stdin_path
+
+
 class ReadOnlyHelperTests(unittest.TestCase):
     helper_filter: str | None = None
 
@@ -171,6 +180,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
             self.assertIn(record["promotion_status"], {"python_authoritative", "bash_reference_only", "out_of_scope"})
             self.assertNotIn("generate-pr-body", str(record))
             self.assertNotIn("restack.sh", str(record))
+            fixture_path = command_stdin_fixture(record["authoritative_command"])
+            self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
+            request = json.loads(fixture_path.read_text(encoding="utf-8"))
+            self.assertEqual(request["helper_id"], record["helper_id"])
+            self.assertEqual(request["operation"], record["operation"])
 
     def test_envelope_rejects_unknown_and_mutation_modes(self) -> None:
         if self.helper_filter:
@@ -211,6 +225,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
                 self.assertIn(field, record)
             self.assertEqual(record["subprocess_policy"]["shell"], False)
             self.assertTrue(record["deterministic_remediation"]["actions"])
+            fixture_path = command_stdin_fixture(record["authoritative_command"])
+            self.assertTrue(fixture_path.is_file(), record["authoritative_command"])
+            request = json.loads(fixture_path.read_text(encoding="utf-8"))
+            self.assertEqual(request["helper_id"], record["helper_id"])
+            self.assertEqual(request["operation"], record["operation"])
         for comparison in bash_manifest["comparisons"]:
             self.assertFalse(comparison["subprocess"]["shell"])
             self.assertIsInstance(comparison["subprocess"]["argv"], list)
