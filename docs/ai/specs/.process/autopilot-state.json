@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-03T19:02:35Z",
+  "updated_at": "2026-07-03T19:29:42Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 2: Clarify - Helper And Mode Matrix",
+  "active_step": "Phase 3: Plan",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible",
@@ -72,39 +72,43 @@
     },
     {
       "step": "Phase 2: Clarify - Helper And Mode Matrix",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Helper And Mode Matrix Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 2: Clarify - Mutation Safety And Atomicity",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Mutation Safety And Atomicity Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 2: Clarify - Install Completeness And Doctor",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Install Completeness And Doctor Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 2: Clarify - PR, Restack, Relocation, And Approval Boundary",
-      "status": "pending"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - PR, Restack, Relocation, And Approval Boundary Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - Integration",
@@ -223,6 +227,47 @@
         "markers": 0
       },
       "executor_note": "$speckit-specify was unavailable as a direct Codex skill/executable, so the phase executor generated artifacts from the workflow prompt, preset template, and grounded source files."
+    },
+    "clarify": {
+      "helper_and_mode_matrix": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:08:46Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Slice 1 is shared mutation foundation only; Slice 2 owns install/doctor/coach/preset writes; Slice 3 owns PR/restack/migration/relocation/generated write modes plus detect-stack-manager support; XPLAT-005 read-only modes are not re-ported."
+      },
+      "mutation_safety_and_atomicity": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:14:14Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Stable data.mutation response model, per-file atomic replace policy, strict dirty-worktree default, write-boundary and symlink rejection, deterministic LF generated-output policy, and partial-failure reporting."
+      },
+      "install_completeness_and_doctor": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:22:24Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Committed generated install inventory is the source of truth; doctor/preflight is read-only by default; repair is separate approved apply-mode; stale detection is offline and deterministic; safe repair is limited to fake or explicitly approved declared boundaries."
+      },
+      "pr_restack_relocation_and_approval_boundary": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:29:42Z",
+        "questions_resolved": 6,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Candidate PR emission is dry-run command capture; fake PR/restack fixtures may exercise apply paths; live GitHub and repo mutation require structured approval evidence after dry-run and clean-worktree checks; detect-stack-manager emits decisions only; known gaps must separate unpromoted helpers, XPLAT-007/XPLAT-008 cutover, and live-coverage limits."
+      },
+      "phase_coverage_hardening": {
+        "status": "focused_verified",
+        "tests": [
+          "python3 -m py_compile speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+          "python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+          "python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json",
+          "bash tests/speckit-pro/run-all.sh --layer 4",
+          "bash tests/speckit-pro/run-all.sh --layer 1"
+        ],
+        "outcome": "Added Python phase-coverage validator and regression tests so missing Phase 6.5, missing Post items, collapsed later phases, and malformed state JSON fail deterministically. Focused tests passed 6/6, the current workflow/state pair returned status pass, Layer 4 passed 2141/2141, and Layer 1 passed 1443/1443."
+      }
     }
   }
 }

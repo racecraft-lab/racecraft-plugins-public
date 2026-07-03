@@ -58,12 +58,14 @@ accepted scope:
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist; G1 passed with 0 clarification markers |
-| Clarify | `$speckit-clarify` | Pending | Resolve helper/mode matrix, mutation envelope, doctor inventory, parity, and approval boundaries |
-| Plan | `$speckit-plan` | Pending | Produce the three-slice architecture, mutation safety model, install/doctor plan, and test strategy |
+| Clarify | `$speckit-clarify` | Complete | Sessions 1-4 complete; G2 passed with 0 clarification markers |
+| Plan | `$speckit-plan` | In Progress | Next phase: produce the three-slice architecture, mutation safety model, install/doctor plan, and test strategy |
 | Checklist | `$speckit-checklist` | Pending | Run integration, error-handling, reliability, and security checklists |
 | Tasks | `$speckit-tasks` | Pending | Generate ordered tasks across the accepted three slices |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, and tasks |
+| Confidence Gate | G6.5 | Pending | Run the pre-implementation confidence gate after Analyze and before task execution |
 | Implement | `$speckit-implement` | Pending | Port helpers, fixtures, tests, and handoff evidence |
+| Post | Autopilot post-implementation items | Pending | Complete doctor, verification, review, PR packet, PR creation, remediation, and retrospective items |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
 
@@ -77,6 +79,7 @@ accepted scope:
 | G4 | After Checklist | All true integration, error-handling, reliability, and security gaps are remediated or explicitly out of scope |
 | G5 | After Tasks | Tasks map to the accepted three slices and avoid XPLAT-007 gate migration or XPLAT-008 active cutover scope |
 | G6 | After Analyze | No critical drift remains between roadmap, design concept, spec, plan, tasks, and XPLAT-005 runner/helper contracts |
+| G6.5 | After Analyze Consensus | Pre-implementation confidence gate records pass, advisory no-data, or advisory fail disposition before implementation begins |
 | G7 | After Implementation | Python mutation-helper tests, golden fixtures, Bash-reference comparisons, source-checkout proof, spec-index check, diff hygiene, and relevant repo gates pass |
 
 ---
@@ -121,7 +124,7 @@ unless a deliberate higher-priority override exists.
 | Check | Result | Evidence |
 |---|---|---|
 | Codex agent install | Pass | `validate-agent-install.sh --surface codex --autoheal` reported `ok: codex: 10 bundled agents installed` |
-| SpecKit CLI | Pass | `command -v specify` resolved to `/Users/fredrickgabelmann/.local/bin/specify` |
+| SpecKit CLI | Pass | `command -v specify` resolved to an installed `specify` executable; local absolute path intentionally omitted |
 | Remote | Pass | `git remote -v` detected `origin` |
 | Branch/worktree | Pass | Created worktree on `codex/xplat-006-mutation-install-pr-emission-helper-port` from `origin/main` at `b9fa4987` |
 | Reviewability setup gate | Warn/pass | `reviewability-gate.sh setup docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md` returned `status: warn`, `pass: true`, `reviewable_loc: 250`, `production_files: 4`, `total_files: 10`, warning: primary surfaces `docs/process` and `harness/adapter` exceed one-surface warning threshold |
@@ -313,10 +316,20 @@ $speckit-clarify Focus on PR-emission, restack, migration, relocation, and appro
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
-| 1 | Helper and mode matrix | Pending | Pending until Clarify runs |
-| 2 | Mutation safety and atomicity | Pending | Pending until Clarify runs |
-| 3 | Install completeness and doctor | Pending | Pending until Clarify runs |
-| 4 | PR/restack/relocation and approval boundary | Pending | Pending until Clarify runs |
+| 1 | Helper and mode matrix | 5 resolved | Slice 1 is shared mutation foundation only; Slice 2 owns install/doctor/coach/preset writes; Slice 3 owns PR/restack/migration/relocation/generated write modes plus `detect-stack-manager` support; XPLAT-005 read-only modes are not re-ported |
+| 2 | Mutation safety and atomicity | 5 resolved | Stable mutation response model, per-file atomic replace policy, strict dirty-worktree default, boundary/symlink rejection for writes, and deterministic LF generated-output policy |
+| 3 | Install completeness and doctor | 5 resolved | Committed generated install inventory is the doctor source of truth; doctor/preflight is read-only by default; repair is separate approved apply-mode; stale detection is offline and deterministic; safe repair is limited to fake or explicitly approved declared boundaries with fake-home fixture coverage |
+| 4 | PR/restack/relocation and approval boundary | 6 resolved | Candidate PR emission is dry-run command capture; fake PR/restack fixtures may exercise apply paths; live GitHub/repo mutation requires structured approval evidence after dry-run and clean-worktree checks; `detect-stack-manager` emits decisions only; known gaps must separate unpromoted helpers, XPLAT-007/XPLAT-008 cutover, and live-coverage limits |
+
+### Clarify Gate And Hardening Evidence
+
+| Check | Result | Evidence |
+|---|---|---|
+| G2 | Pass | `validate-gate.sh G2 specs/xplat-006-mutation-install-pr-emission-helper-port` returned 0 markers |
+| Autopilot phase coverage regression | Pass | `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` returned 6/6 passed |
+| Current workflow/state phase coverage | Pass | `validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` returned `status: pass` with 37 plan steps |
+| Layer 4 suite | Pass | `bash tests/speckit-pro/run-all.sh --layer 4` returned 2141/2141 passed |
+| Layer 1 suite | Pass | `bash tests/speckit-pro/run-all.sh --layer 1` returned 1443/1443 passed |
 
 ---
 
@@ -561,6 +574,26 @@ Focus on:
 
 ---
 
+## Phase 6.5: Confidence Gate
+
+**When to run:** After Analyze consensus completes and before Phase 7 task
+execution begins.
+
+### Confidence Gate Command
+
+```text
+bash speckit-pro/skills/speckit-autopilot/scripts/resolve-confidence-mode.sh "$PWD"
+bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh specs/xplat-006-mutation-install-pr-emission-helper-port
+```
+
+### Confidence Gate Results
+
+| Mode | Exit | Result | Notes |
+|---|---|---|---|
+| advisory | Pending | Pending until Analyze completes | Advisory mode records the outcome and advances unless a separate correctness stop is present |
+
+---
+
 ## Phase 7: Implement
 
 **When to run:** After tasks are generated and analyzed with no blocking
@@ -627,17 +660,38 @@ For each helper or helper group:
 
 ## Post-Implementation Checklist
 
+These items are canonical autopilot phases and must remain visible in
+`docs/ai/specs/.process/autopilot-state.json` and the active progress plan until
+each item is completed or explicitly skipped by its extension rule.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Post: Doctor Extension Check | Pending | Pending until after G7 |
+| Post: Verify Implementation | Pending | Pending until after G7 |
+| Post: Verify Tasks Phantom Check | Pending | Pending until after G7 |
+| Post: Code Review | Pending | Pending until after G7 |
+| Post: Integration Suite | Pending | Pending until after G7 |
+| Post: Reviewability Diff Gate | Pending | Pending until after G7 |
+| Post: Self-Review | Pending | Pending until after G7 |
+| Post: UAT Runbook Generation | Pending | Pending until after G7 |
+| Post: PR Body Generation | Pending | Pending until after G7 |
+| Post: PR Creation | Pending | Pending until after G7 |
+| Post: Review Remediation | Pending | Pending until after PR creation |
+| Post: Retrospective | Pending | Final post item before completion can be reported |
+
+### Final Verification Targets
+
 - [ ] All tasks marked complete in `tasks.md`.
 - [ ] Python mutation-helper tests pass for accepted helper ports.
 - [ ] Bash-reference comparison passes for helpers requiring direct comparison.
-- [ ] Source-checkout mutation proof and Windows-style path fixtures are
-  recorded.
+- [ ] Source-checkout mutation proof and Windows-style path fixtures are recorded.
 - [ ] `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh` passes.
-- [ ] `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh`
-  still passes.
+- [ ] `tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh` still passes.
 - [ ] `bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check "$PWD"` passes.
 - [ ] `bash tests/speckit-pro/run-all.sh --layer 1` passes.
 - [ ] `bash tests/speckit-pro/run-all.sh --layer 4` passes.
+- [ ] `python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` passes.
+- [ ] `python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json` passes.
 - [ ] No active Claude/Codex invocation, generated payload, install behavior,
   public platform claim, repo-local Bash gate migration, or native matrix UAT
   changed.

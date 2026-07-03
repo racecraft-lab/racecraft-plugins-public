@@ -401,6 +401,13 @@ Phase 3:
 Phase 4:
 Phase 5:
 Phase 6:
+Phase 6.5:
 Phase 7:
 Post:
+```
+
+Then run the deterministic guard against the workflow/state pair:
+
+```bash
+python3 "<SKILL_SCRIPTS>/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
 ```

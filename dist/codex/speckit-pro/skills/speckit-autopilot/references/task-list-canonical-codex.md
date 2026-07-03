@@ -68,7 +68,9 @@ silently drop it.
 the 12 entries above and confirm every single one is present in
 both `update_plan` and `autopilot-state.json` (in addition to all
 Phase / Consensus items). If any are missing, ADD them before
-advancing.
+advancing. Then run
+`validate-autopilot-phase-coverage.py --workflow <workflow> --state <workflow-dir>/autopilot-state.json`
+and do not advance unless it exits 0.
 
 ## Item Naming Rules
 

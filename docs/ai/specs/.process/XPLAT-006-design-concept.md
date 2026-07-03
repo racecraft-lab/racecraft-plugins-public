@@ -35,6 +35,9 @@ workflow with three internal implementation slices.
   and safe repair cases from source-controlled inventory.
 - Port PR-emission, restack, migration, relocation, UAT, and final-reviewability
   helper behavior with deterministic fake-repo and fake-CLI fixtures.
+- Harden Codex autopilot phase tracking so a workflow/state pair cannot silently
+  omit Phase 6.5, collapse later phase families, or drop canonical Post items
+  without a deterministic Python validation failure.
 - Use golden fixtures plus source-checkout Bash-reference comparison before
   promoting Python behavior for each Bash-backed mutation helper.
 - Keep live repository, user-local, and GitHub mutations behind explicit
@@ -56,6 +59,8 @@ workflow with three internal implementation slices.
 - Do not require live GitHub mutation, live plugin installation, or writes to
   the real user home as part of deterministic test coverage.
 - Do not make public native-platform support claims.
+- Do not treat updated instructions as sufficient hardening without a validator
+  and failing regression fixtures.
 
 ## Accepted Slice Strategy
 
@@ -63,10 +68,19 @@ workflow with three internal implementation slices.
 |---|---|---|
 | Slice 1 | Mutation safety foundation | Add runner mutation mode contracts, dry-run/apply request and response shapes, atomic write helpers, dirty-worktree and path-boundary guards, failure classes, and fake-repo fixture harnesses before porting high-risk helpers |
 | Slice 2 | Install completeness and doctor/preflight | Port install-curated-set, install-codex-agents, coach/preset write helpers, and manifest-driven doctor behavior using fake homes and generated inventory fixtures |
-| Slice 3 | PR-emission, restack, migration, and relocation | Port generate-pr-body, generate-uat-skeleton, final-reviewability-backstop, multi-pr-emission, restack, migrate-structure, relocate-process-artifacts, and deferred write modes after Slice 1 and Slice 2 primitives are accepted |
+| Slice 3 | PR-emission, restack, migration, relocation, and autopilot hardening | Port generate-pr-body, generate-uat-skeleton, final-reviewability-backstop, multi-pr-emission, restack, migrate-structure, relocate-process-artifacts, deferred write modes, and deterministic Codex autopilot phase-coverage validation after Slice 1 and Slice 2 primitives are accepted |
 
 Split into child specs only if Specify, Plan, or Tasks prove the three-slice
 workflow cannot stay within the roadmap reviewability budget.
+
+Clarify session 1 resolved the helper/mode matrix without adding clarification
+markers: Slice 1 remains shared mutation foundation only; Slice 2 owns
+install/doctor/coach/preset writes; Slice 3 owns PR-emission, restack,
+migration, relocation, generated write modes, and `detect-stack-manager`
+support. XPLAT-005 read-only modes are already accepted and are not re-ported;
+XPLAT-007 owns active repo-local gate migration and XPLAT-008 owns active
+Claude/Codex cutover, generated payload cutover, installed-cache/native UAT,
+update/autoheal proof, and public support claims.
 
 ## Grill Me Q&A Log
 
@@ -133,26 +147,51 @@ Use local macOS source-checkout mutation fixtures plus Windows-style path
 fixtures to prove runner path handling and write safety. Installed-cache launch
 proof and native matrix UAT remain XPLAT-008.
 
+### Q9. What autopilot phase-coverage hardening is required?
+
+**Accepted answer:** Python validator plus regression proof.
+
+Add a Python standard-library validator that checks the workflow file and
+`autopilot-state.json` for Phase 6.5, every canonical phase family, the full
+Post list, valid ordering, duplicate plan steps, and multiple `in_progress`
+items. The PR packet must include focused test output for passing and failing
+fixtures instead of assuming instruction text is enough.
+
 ## Open Questions For Clarify
 
-- Exact helper and mode matrix: confirm which helpers are in Slice 2 versus
-  Slice 3, and which mixed-mode write paths are deferred or out of scope.
-- Mutation request model: decide how `mode`, `dry_run`, `apply`, planned
-  operations, applied operations, rollback notes, and partial-failure records
-  are represented in runner responses.
-- Manifest source: decide the canonical source-controlled inventory for
-  expected Claude/Codex agents, runner files, generated payload files, and
-  release metadata.
-- Doctor safe-repair boundary: define which missing or stale install states are
-  auto-repairable and which require manual remediation.
-- Atomic write policy: specify temp-file, fsync/rename, backup, and rollback
-  behavior for helpers that currently promise safe writes or dry-run/apply
-  semantics.
-- PR/GitHub boundary: define which PR-emission and restack tests use fake `gh`,
-  which paths can remain dry-run only, and what explicit approval is required
-  for any live mutation.
-- Platform fixture set: decide which Windows-style paths, spaces, symlinks,
-  line endings, and permission cases belong in deterministic fixtures.
+- Exact helper and mode matrix: resolved by Clarify session 1. Slice 1 is
+  shared mutation foundation only; Slice 2 owns install/doctor/coach/preset
+  writes; Slice 3 owns PR/restack/migration/relocation/generated write modes
+  plus `detect-stack-manager` support; XPLAT-005 read-only modes are not
+  re-ported.
+- Mutation request model: resolved by Clarify session 2. Mutation helpers keep
+  the stable runner envelope and report mutation details under `data.mutation`,
+  including mode, planned/applied/skipped operations, path evidence, dirty state,
+  failure operation, rollback notes, and remediation actions.
+- Manifest source: resolved by Clarify session 3. Use a committed generated
+  inventory under `speckit-pro/speckit_pro_runner/` for expected Claude/Codex
+  agents, runner files, generated payload files, checksums, plugin versions,
+  marketplace versions, runner metadata, and release metadata.
+- Doctor safe-repair boundary: resolved by Clarify session 3. Doctor/preflight
+  is read-only by default; repair is a separate apply-mode operation after
+  dry-run evidence and approval, and safe repair is limited to fake or explicitly
+  approved declared boundaries.
+- Atomic write policy: resolved by Clarify session 2. File writes generate
+  complete content before opening the target, use same-directory temporary files,
+  validate and flush/fsync before `os.replace`, and report partial failure rather
+  than promising global rollback.
+- PR/GitHub boundary: resolved by Clarify session 4. Candidate PR emission is
+  dry-run command capture, fake PR/restack fixtures may exercise apply paths,
+  live GitHub/repo mutation requires structured approval evidence after dry-run
+  and clean-worktree checks, `detect-stack-manager` emits decisions only, and
+  known gaps must distinguish unpromoted helpers, deferred XPLAT-007/XPLAT-008
+  cutover, and live-coverage limits.
+- Platform fixture set: partially resolved by Clarify sessions 2 and 3 for path,
+  symlink, dirty-worktree, no-op, line-ending, complete install, missing agent,
+  stale cache, downgrade refusal, missing runner file, checksum mismatch,
+  malformed inventory, missing fake CLI, real-home refusal, fake PR/restack
+  apply, dry-run command capture, approval rejection, and autopilot
+  phase-coverage regression fixtures.
 
 ## Downstream Handoff
 
