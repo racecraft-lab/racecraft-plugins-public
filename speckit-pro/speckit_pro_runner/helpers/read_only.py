@@ -478,7 +478,7 @@ def check_prerequisites(inputs: dict[str, Any], repo_root: Path) -> dict[str, An
         all_pass = False
 
     branch = git_branch(repo_root)
-    is_worktree = (repo_root / ".git").is_file()
+    is_worktree = git_is_worktree(repo_root)
     on_feature = re.match(r"^[0-9]{3}[A-Za-z0-9]*-", branch or "") is not None
     checks.append(check("branch", True, f"Branch: {branch}", f"worktree={str(is_worktree).lower()},feature={str(on_feature).lower()}"))
     settings = repo_root / ".claude" / "speckit-pro.local.md"
@@ -1568,6 +1568,30 @@ def git_branch(repo_root: Path) -> str:
     if re.fullmatch(r"[0-9a-fA-F]{40}|[0-9a-fA-F]{64}", value):
         return "HEAD"
     return value
+
+
+def git_is_worktree(repo_root: Path) -> bool:
+    git_dir = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--git-dir"],
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+    )
+    git_common = subprocess.run(
+        ["git", "-C", str(repo_root), "rev-parse", "--git-common-dir"],
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+    )
+    if git_dir.returncode != 0 or git_common.returncode != 0:
+        return False
+    git_dir_text = git_dir.stdout.strip()
+    git_common_text = git_common.stdout.strip()
+    return bool(git_dir_text and git_common_text and git_dir_text != git_common_text)
 
 
 def allowed_git_dir(git_dir: Path, repo_root: Path) -> bool:
