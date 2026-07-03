@@ -1037,13 +1037,16 @@ def atomicity_route(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any]:
     tasks_text = trusted_text(tasks, repo_root)
     if not tasks_text:
         return make_result(json_text({"route": "out-of-scope", "releasable": True, "signals": [], "hints": [], "warnings": []}))
-    corpus = "\n".join(text for text in (tasks_text, trusted_text(plan, repo_root), trusted_text(spec, repo_root)) if text)
+    plan_text = trusted_text(plan, repo_root)
+    spec_text = trusted_text(spec, repo_root)
+    corpus = "\n".join(text for text in (tasks_text, plan_text, spec_text) if text)
+    context_corpus = "\n".join(text for text in (tasks_text, plan_text) if text)
     signals: list[str] = []
     hints: list[str] = []
     warnings: list[str] = []
     route = "one-navigable-PR"
     releasable = True
-    if re.search(r"release[ -]?(cadence|train|window|held|hold)|ship[ -]?cadence|deploy[ -]?cadence|cutover", corpus, re.I):
+    if re.search(r"release[ -]?(cadence|train|window|held|hold)|ship[ -]?cadence|deploy[ -]?cadence|cutover", context_corpus, re.I):
         hints.append("hint:release-cadence:weak")
     if re.search(r"(^|[^A-Za-z0-9_])(UPDATE|DELETE|DROP|CHECK)([^A-Za-z0-9_]|$)", corpus, re.I):
         signals.append("change-shape:modify-heavy")
