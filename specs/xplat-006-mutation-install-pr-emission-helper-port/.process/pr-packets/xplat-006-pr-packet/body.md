@@ -42,8 +42,8 @@ Use the UAT runbook below for reviewer-facing acceptance checks. Treat installed
 | Field | Value |
 |-------|-------|
 | Spec | xplat-006-mutation-install-pr-emission-helper-port |
-| Branch | xplat-006-mutation-install-pr-emission-helper-port |
-| PR | Pending until PR is opened |
+| Branch | codex/xplat-006-mutation-install-pr-emission-helper-port |
+| PR | https://github.com/racecraft-lab/racecraft-plugins-public/pull/281 |
 | Generated from | 2026-07-03T19:55:50Z |
 
 
@@ -134,7 +134,7 @@ Source: generated PR packet.
 ## Scope
 
 - Source feature: specs/xplat-006-mutation-install-pr-emission-helper-port.
-- Changed files recorded in packet metadata: 59.
+- Changed files recorded in packet metadata: 60.
 - Scope: this PR implements Add mutation, install, and PR-emission helper port.
 - Traceability: source feature, rendered body, validation, and changed-file scope are recorded in the packet metadata.
 - Non-goals: split PR emission, unrelated install/update behavior, and claims not covered by the UAT runbook.
