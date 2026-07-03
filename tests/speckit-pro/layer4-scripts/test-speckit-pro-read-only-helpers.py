@@ -173,11 +173,11 @@ class ReadOnlyHelperTests(unittest.TestCase):
             actual_json = json.loads(actual)
             expected_json = json.loads(expected)
         except json.JSONDecodeError as exc:
-            self.fail(f"{helper_id} stdout must be valid JSON: {exc}; actual={actual!r}; expected={expected!r}")
+            self.fail(f"FAIL detail: {helper_id} stdout must be valid JSON: {exc}; actual={actual!r}; expected={expected!r}")
         self.assertEqual(
             actual_json,
             expected_json,
-            f"{helper_id} JSON stdout mismatch: actual={actual!r}; expected={expected!r}",
+            f"FAIL detail: {helper_id} JSON stdout mismatch: actual_json={actual_json!r}; expected_json={expected_json!r}; actual={actual!r}; expected={expected!r}",
         )
 
     def test_registry_dispatch_lists_only_read_only_helpers(self) -> None:
