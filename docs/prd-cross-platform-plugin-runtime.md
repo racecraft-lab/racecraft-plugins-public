@@ -59,6 +59,9 @@ freshness, and full workflow UAT for every claimed platform and host product.
 - Active plugin build, test, eval, and release-readiness gates that validate or
   publish shipped behavior run through Python standard-library tooling rather
   than Bash-only scripts.
+- Active repository tests, evals, helper tooling, payload builders, release
+  checks, and install-verification paths run through Python; Bash is not an
+  acceptable fallback outside narrowly scoped GitHub CI/CD dispatch glue.
 - Claude and Codex plugin behavior stays semantically equivalent during and
   after the migration.
 - The runtime choice is evidence-backed before implementation starts.
@@ -102,8 +105,6 @@ has been removed from individual helper scripts.
   dispatch to Python gates and do not contain plugin validation logic.
 - Replacing GitHub Spec Kit's own generated `.specify/scripts/bash/` helpers in
   consumer repositories.
-- Replacing unrelated repository-only shell scripts that neither build, test,
-  evaluate, publish, nor validate shipped plugin behavior.
 - Changing the user-facing SpecKit workflow model, PR-size governance behavior,
   or capability-discovery contract except where Bash removal requires invocation
   wording changes.
@@ -128,7 +129,7 @@ runtime decision.
   false positives without exempting release gates.
 - AC-1.3: Each active runtime or active release-gate dependency has an owner
   category: read-only helper, mutation/helper, test/eval gate, build/payload
-  gate, cutover guidance, unrelated repository-only exclusion, or follow-up
+  gate, cutover guidance, GitHub CI/CD dispatch exception, or follow-up
   exception.
 - AC-1.4: The inventory produces an evaluation rubric for runtime candidates,
   including native Windows/macOS/Linux support, invocation from installed plugin
@@ -219,7 +220,8 @@ atomicity routing, topology checks, and spec-index generation.
   text parsing, or glob expansion.
 - AC-5.4: The existing Claude and Codex guidance can still use the Bash path
   only until XPLAT-007 performs the final cutover; Bash-only tests may remain
-  only as temporary parity fixtures before then.
+  only as temporary parity fixtures before then and must be removed from active
+  gates by XPLAT-007.
 
 ### 6. Mutation, Install, and PR-Emission Helper Port *(-> XPLAT-006)*
 
@@ -267,6 +269,10 @@ dependencies or publishing incomplete Claude/Codex installs.
 - AC-7.3a: Deterministic checks fail if active plugin build, test, eval, payload,
   or release-readiness gates that validate shipped behavior remain Bash-only or
   require `jq`, Git Bash, WSL, or PowerShell helper scripts.
+- AC-7.3b: Active tests, evals, payload builders, release checks, install
+  verification, and repo helper tooling use Python commands. Bash may remain
+  only as GitHub CI/CD dispatch glue that calls Python gates and contains no
+  validation, packaging, install, or runtime logic.
 - AC-7.4: Manual UAT evidence covers native Windows, macOS, and Linux for both
   Claude and Codex plugin journeys: install, bundled-agent verification,
   scaffold/status, autopilot dry-run, update, and safe repair of an incomplete
@@ -292,6 +298,8 @@ dependencies or publishing incomplete Claude/Codex installs.
 - Zero active plugin test/eval/release-readiness gates that validate or publish
   shipped behavior require Bash, `jq`, Git Bash, WSL, or PowerShell helper
   scripts.
+- Zero active repo-local test, eval, helper, payload, install-verification, or
+  release scripts require Bash outside GitHub CI/CD dispatch glue.
 - Scaffold/status/autopilot detect incomplete installs before doing meaningful
   work and either autoheal them or provide a specific, tested remediation path.
 - The release-readiness checklist has a hard gate for native Windows plugin UAT.
@@ -306,9 +314,9 @@ dependencies or publishing incomplete Claude/Codex installs.
   installed plugin caches without extra user setup?
 - Which supply-chain controls are required for the first public release, and
   which can safely remain follow-up hardening?
-- Which unrelated repository-only scripts, if any, can remain Bash after
-  plugin-runtime cutover, and what guard prevents them from becoming runtime,
-  test/eval, payload, or release-readiness dependencies later?
+- Which GitHub CI/CD dispatch snippets, if any, can remain shell after
+  plugin-runtime cutover, and what guard proves they only invoke Python gates
+  without containing validation, packaging, install, or runtime logic?
 
 ## SPEC Catalog Crosswalk
 
