@@ -168,7 +168,7 @@ in XPLAT-006.
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 | --- | --- | --- |
 | Reviewability warning: multiple primary surfaces | XPLAT-006 must connect runner mutation semantics, fake harness proof, install doctor proof, PR-emission proof, and workflow hardening before XPLAT-007 can migrate gates. | Splitting mutation safety away from install/PR helpers would leave no single PR packet proving the promotion boundary and deferred cutover scope. |
-| Shared mutation primitives | Atomic writes, approval evidence, path-boundary checks, dirty-worktree guards, and partial-failure records must be consistent across helper groups. | Per-helper ad hoc mutation handling would create inconsistent safety semantics and make parity evidence harder to review. |
+| Shared mutation primitives | Atomic writes, path-boundary checks, dirty-worktree guards, deferred live-mutation diagnostics, and partial-failure records must be consistent across helper groups. | Per-helper ad hoc mutation handling would create inconsistent safety semantics and make parity evidence harder to review. |
 
 ## Implementation Slices
 
@@ -176,10 +176,10 @@ in XPLAT-006.
 
 Scope:
 - Add mutation-capable dispatch separate from XPLAT-005 `read_only`.
-- Define helper id, operation, mode, input, boundary context, and approval evidence request schema.
+- Define helper id, operation, mode, input, and runner-envelope request schema.
 - Define stable result shape under `data.mutation` with planned, applied, skipped, no-op, dirty-worktree, failure, rollback, and remediation fields.
 - Implement atomic write primitives using complete content generation, same-directory temp files, validation, flush/fsync, and `os.replace`.
-- Add path-boundary checks for repo, plugin, fake-home, fake-cache, and temp fixture roots.
+- Add path-boundary checks for repository paths and fixture fake-home repair roots.
 - Add dirty-worktree guard using argv-list subprocess calls only.
 - Add promotion records and fixture metadata before any named helper becomes Python-authoritative.
 
@@ -195,7 +195,7 @@ Scope:
 - Port `install-codex-agents`, `install-curated-set` check/install/upgrade, doctor install completeness, `project-fixup apply`, and `ensure-reviewability-preset` write behavior.
 - Verify expected Claude agents, Codex agents, runner files, generated payload files, plugin version metadata, marketplace version metadata, runner manifest, and checksums from the inventory.
 - Keep doctor/preflight read-only by default; make repair a separate apply-mode operation.
-- Limit safe repair to fake homes/caches by default or explicitly approved declared boundaries.
+- Limit safe repair to fixture fake-home roots in XPLAT-006.
 
 Acceptance proof:
 - Fake Claude home, fake Codex home, fake plugin cache, fake `gh`, and fake `specify` fixtures.
@@ -207,7 +207,7 @@ Scope:
 - Port `generate-pr-body`, `generate-uat-skeleton`, `final-reviewability-backstop`, PR-packet output, workflow-contract output, `multi-pr-emission`, `restack`, `migrate-structure`, `relocate-process-artifacts`, generated-index write/regenerate modes, `plan-layers` marker-plan output, and deferred write modes for mixed helpers.
 - Keep candidate PR emission as dry-run command capture.
 - Allow fake PR/restack fixtures to exercise apply paths.
-- Keep live GitHub or live repo mutation exceptional and blocked without structured approval evidence tied to prior dry-run output and clean-worktree checks.
+- Keep live GitHub or live repo command-plan apply deferred with deterministic diagnostics in XPLAT-006.
 - Include `detect-stack-manager` only as decision and command-plan support; mutating command execution remains owned by apply paths.
 - Ship and maintain the Python standard-library validator `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py`.
 
@@ -215,7 +215,7 @@ Autopilot phase-coverage proof:
 - `tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` must include one passing complete workflow/state fixture.
 - Missing Phase 6.5 in workflow and missing Phase 6.5 in state must fail deterministically.
 - Missing canonical Post items must fail deterministically.
-- Collapsed later phases must fail deterministically.
+- Collapsed or semantically mislabeled later phases must fail deterministically.
 - Malformed `autopilot-state.json` must return deterministic `input_error`.
 - Validator output must be referenced in the PR packet and G6.5 evidence before implementation advances.
 
@@ -226,7 +226,7 @@ Autopilot phase-coverage proof:
 | Mutation request/result model, registry extension, atomic writes, path guards, dirty guard, fixture harness, failure classes, promotion records | Slice 1 | Shared foundation only; no named helper promoted by Slice 1 alone. |
 | `install-curated-set`, `install-codex-agents`, doctor install checks, safe repair, `project-fixup apply`, `ensure-reviewability-preset` | Slice 2 | Fake Claude/Codex homes and fake plugin caches by default. |
 | `generate-pr-body`, `generate-uat-skeleton`, `final-reviewability-backstop`, PR packet/workflow-contract outputs | Slice 3 | Atomic generated outputs; preserve existing output contracts. |
-| `multi-pr-emission`, `restack`, split-PR state, `migrate-structure`, `relocate-process-artifacts` | Slice 3 | Fake repositories and fake `gh` by default; live apply requires structured approval. |
+| `multi-pr-emission`, `restack`, split-PR state, `migrate-structure`, `relocate-process-artifacts` | Slice 3 | Fake repositories and fake `gh` by default; command-plan apply remains deferred in XPLAT-006. |
 | Generated-index write/regenerate modes, `plan-layers` marker-plan output, `validate-pr-packet` persistence/workflow-event upserts, `validate-pr-workflow-contract` workflow-event write mode | Slice 3 | Deferred write/apply modes only. |
 | `detect-stack-manager` detect/link/sync/restack command-plan and evidence-persistence behavior | Slice 3 support | Emits decisions and command plans only; no mutating execution in detector. |
 | XPLAT-005 read-only/advisory modes | Already accepted | Do not re-port. |
@@ -235,9 +235,9 @@ Autopilot phase-coverage proof:
 ## Safety Model
 
 - Dry-run mode reports planned write, delete, copy, command, PR action, install repair, migration, relocation, or generated-output operations and performs no mutation.
-- Apply mode requires explicit mode selection, valid inputs, satisfied boundary checks, clean-worktree checks where required, and approval evidence for live mutation.
-- Approval evidence for live mutation must include approval id, approver, timestamp, channel, dry-run result id, dry-run hash, allowed boundaries, allowed operations, and optional expiration.
-- Path resolution rejects external absolute paths, traversal, symlinks, directories where a file is required, devices, and writes outside declared repo/plugin/fake-home/fake-cache/temp boundaries.
+- Apply mode requires explicit mode selection, valid inputs, repository boundary checks, and clean-worktree checks.
+- Command-plan apply for live GitHub/repo mutation returns a deferred-live-mutation diagnostic in XPLAT-006.
+- Path resolution rejects external absolute paths, traversal, symlinks, directories or parent files where a file path is required, devices, and writes outside the repository boundary; fixture repair additionally requires the committed fake-home boundary.
 - Generated JSON and Markdown are UTF-8 LF with one final newline. Targeted host-file edits preserve existing line endings or report explicit LF normalization.
 - Multi-operation helpers preflight before the first write and report partial failure with rollback/manual remediation notes instead of promising global rollback.
 - Subprocess use is argv-list only with captured stdout/stderr and bounded fixture inputs.
@@ -253,18 +253,18 @@ request/result shapes and reviewer-facing promotion/doctor proof records.
 - `contracts/helper-promotion-record.schema.json`
 - `contracts/autopilot-phase-coverage-report.schema.json`
 
-The data model defines mutation requests/results, approval evidence,
-planned/applied operations, install inventory, safe repair records, parity
-fixtures, Bash-reference comparisons, promotion records, scope audits, and
-autopilot phase coverage reports.
+The data model defines mutation requests/results, deferred live-mutation
+boundaries, planned/applied operations, install inventory, safe repair records,
+parity fixtures, Bash-reference comparisons, promotion records, scope audits,
+and autopilot phase coverage reports.
 
 ## PR Packet Traceability Requirements
 
 The final PR packet must map:
 - Slice 1 mutation primitives to changed files, fixture ids, Bash-reference evidence, promotion records, and rollback/manual remediation notes.
 - Slice 2 install/doctor helpers to inventory records, fake-home fixture ids, repair classifications, and no-real-home proof.
-- Slice 3 PR/restack/migration/relocation helpers to fake `gh`/fake repo fixture ids, command-capture evidence, approval-boundary proof, and known live-coverage limits.
-- Autopilot phase-coverage hardening to `validate-autopilot-phase-coverage.py`, `test-autopilot-phase-coverage.py`, the passing workflow/state fixture, and failing fixtures for missing Phase 6.5, missing Post items, collapsed later phases, and malformed state JSON.
+- Slice 3 PR/restack/migration/relocation helpers to fake `gh`/fake repo fixture ids, command-capture evidence, deferred-live-mutation proof, and known live-coverage limits.
+- Autopilot phase-coverage hardening to `validate-autopilot-phase-coverage.py`, `test-autopilot-phase-coverage.py`, the passing workflow/state fixture, and failing fixtures for missing Phase 6.5, missing Post items, collapsed or semantically mislabeled later phases, and malformed state JSON.
 - Scope audit evidence proving no active Claude/Codex invocation behavior, hook, generated-payload selection/cutover, install guidance, public docs, release gate, or native UAT cutover changes landed, with allowed phase-coverage hardening source/mirror changes listed separately.
 
 Known gaps in the PR packet must separate unpromoted in-scope helpers,

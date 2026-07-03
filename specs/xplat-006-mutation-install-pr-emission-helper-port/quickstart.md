@@ -28,6 +28,7 @@ Expected outcome:
 - Missing Phase 6.5 fails.
 - Missing canonical Post items fail.
 - Collapsed later phases fail.
+- Semantically mislabeled phase numbers fail.
 - Malformed `autopilot-state.json` returns deterministic `input_error`.
 
 Run the validator against the active workflow/state when state exists:
@@ -54,9 +55,9 @@ python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py
 Expected outcome:
 - Dry-run fixtures report planned operations and mutate no repo, home, cache,
   network, or GitHub state.
-- Apply fixtures mutate only declared fake boundaries.
-- Dirty-worktree, path-escape, malformed JSON, write-failure, and partial-failure
-  fixtures fail deterministically.
+- Apply fixtures mutate only clean fake repositories or fixture fake-home roots.
+- Dirty-worktree, unavailable git-status, path-escape, malformed JSON,
+  write-failure, and partial-failure fixtures fail deterministically.
 - Each promoted Bash-backed helper references accepted Bash comparison evidence.
 
 ## 3. Run Install and Doctor Fixture Proof
@@ -79,7 +80,7 @@ Planned fixture coverage:
 
 Expected outcome:
 - Doctor/preflight remains read-only by default.
-- Repair runs only as explicit apply mode inside fake or approved boundaries.
+- Repair runs only as explicit apply mode inside fixture fake-home boundaries.
 - Unrelated files are preserved.
 
 ## 4. Run PR-Emission and Restack Fixture Proof
@@ -91,13 +92,12 @@ Planned fixture coverage:
 - Multi-PR emission command capture
 - Fake restack apply
 - Migration and relocation fake repo apply
-- Live GitHub/repo approval rejection without structured approval evidence
+- Live GitHub/repo command-plan apply rejection as deferred
 
 Expected outcome:
 - Candidate PR emission remains dry-run command capture.
-- Fake `gh` fixtures may exercise apply paths.
-- Live mutation stays blocked without prior dry-run evidence, clean-worktree
-  checks, and structured approval evidence.
+- Command-plan apply returns a deterministic deferred-live-mutation failure in
+  XPLAT-006.
 
 ## 5. Run Repository Gates
 

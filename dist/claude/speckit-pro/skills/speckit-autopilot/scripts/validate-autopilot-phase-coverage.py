@@ -31,15 +31,15 @@ WORKFLOW_TOKENS = (
 
 STATE_PREFIXES = (
     "Archive Sweep:",
-    "Phase 0:",
-    "Phase 1:",
-    "Phase 2:",
-    "Phase 3:",
-    "Phase 4:",
-    "Phase 5:",
-    "Phase 6:",
-    "Phase 6.5:",
-    "Phase 7:",
+    "Phase 0: Prerequisites",
+    "Phase 1: Specify",
+    "Phase 2: Clarify",
+    "Phase 3: Plan",
+    "Phase 4: Checklist",
+    "Phase 5: Tasks",
+    "Phase 6: Analyze",
+    "Phase 6.5: Confidence Gate",
+    "Phase 7: Implement",
 )
 
 POST_STEPS = (
@@ -59,15 +59,15 @@ POST_STEPS = (
 
 ORDERED_STATE_CHECKPOINTS = (
     "Archive Sweep:",
-    "Phase 0:",
-    "Phase 1:",
-    "Phase 2:",
-    "Phase 3:",
-    "Phase 4:",
-    "Phase 5:",
-    "Phase 6:",
-    "Phase 6.5:",
-    "Phase 7:",
+    "Phase 0: Prerequisites",
+    "Phase 1: Specify",
+    "Phase 2: Clarify",
+    "Phase 3: Plan",
+    "Phase 4: Checklist",
+    "Phase 5: Tasks",
+    "Phase 6: Analyze",
+    "Phase 6.5: Confidence Gate",
+    "Phase 7: Implement",
     "Post: Doctor Extension Check",
     "Post: Retrospective",
 )

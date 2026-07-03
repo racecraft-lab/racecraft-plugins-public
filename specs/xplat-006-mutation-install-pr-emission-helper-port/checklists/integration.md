@@ -8,7 +8,7 @@
 
 - [x] INT001 Plan reuses the XPLAT-004 runner envelope, diagnostics, typed path, source metadata, and preflight primitives.
 - [x] INT002 Plan extends the XPLAT-005 helper registry pattern without forcing mutation behavior through read-only helper modes.
-- [x] INT003 Mutation request/result contracts define dry-run/apply mode, planned operations, applied operations, diagnostics, approval evidence, and rollback/manual-remediation notes.
+- [x] INT003 Mutation request/result contracts define read-only/dry-run/apply mode, planned operations, applied operations, diagnostics, deferred live-mutation status, and rollback/manual-remediation notes.
 - [x] INT004 Helper promotion records preserve golden-only, Bash-compared, Python-authoritative, deferred, and out-of-scope states.
 
 ## Helper Matrix Coverage
@@ -21,7 +21,7 @@
 ## Install And Scope Boundaries
 
 - [x] INT009 Install completeness checks include expected Claude agents, Codex agents, runner files, generated payload files, version metadata, marketplace metadata, manifest metadata, and checksums.
-- [x] INT010 Doctor/preflight remains read-only by default, with repair modeled as a separate approved apply-mode operation.
+- [x] INT010 Doctor/preflight remains read-only by default, with repair modeled as a separate fixture-bound apply-mode operation.
 - [x] INT011 The scope audit forbids active Claude/Codex invocation behavior, hook changes, generated-payload selection/cutover, install guidance, public docs, release gates, native UAT, and public platform claims.
 - [x] INT012 The allowed phase-coverage hardening source/generated mirror is explicitly named in spec, plan, research, data model, quickstart, workflow, and scope-audit test evidence.
 

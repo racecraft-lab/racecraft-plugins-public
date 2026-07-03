@@ -25,9 +25,9 @@ modules and modes instead of routing write/apply behavior through the XPLAT-005
 `read_only` module.
 
 **Rationale**: XPLAT-005 already accepted read-only/advisory behavior. Mutation
-helpers need dry-run/apply, approval evidence, boundary checks, atomic writes,
-dirty-worktree gating, and partial-failure reporting that do not belong in a
-read-only abstraction.
+helpers need dry-run/apply, boundary checks, atomic writes, dirty-worktree
+gating, deferred live-mutation diagnostics, and partial-failure reporting that
+do not belong in a read-only abstraction.
 
 **Alternatives considered**:
 - Add write flags to `read_only.py`. Rejected because it would blur accepted
@@ -52,22 +52,23 @@ rollback notes, and remediation actions.
 - Change the top-level runner envelope. Rejected because XPLAT-004 established
   that contract.
 
-## Decision 4: Default to Fake State and Require Structured Live Approval
+## Decision 4: Default to Fake State and Defer Live Mutation
 
 **Decision**: Deterministic tests use fake repositories, fake `gh`, fake
 `specify`, fake Claude homes, fake Codex homes, fake plugin caches, and temp
-boundaries. Live repo, user-local, plugin-cache, network, or GitHub mutation is
-blocked unless structured approval evidence references prior dry-run output.
+boundaries. Live repo, user-local, plugin-cache, network, or GitHub command-plan
+apply remains blocked in XPLAT-006; the structured approval contract is deferred
+to XPLAT-007/XPLAT-008.
 
 **Rationale**: XPLAT-006 must prove mutation behavior without relying on real
 user state or network side effects. Boolean flags and mode names are not enough
-to authorize live mutation.
+to authorize live mutation, and XPLAT-006 must not pretend they are.
 
 **Alternatives considered**:
 - Allow live apply in normal tests. Rejected because it would make tests
   non-deterministic and unsafe.
 - Accept a simple `--yes` flag for live mutation. Rejected because approval must
-  be auditable and tied to specific dry-run evidence.
+  be auditable and tied to specific dry-run evidence in a later cutover contract.
 
 ## Decision 5: Use Source-Controlled Install Inventory
 
@@ -107,7 +108,7 @@ becoming authoritative before comparison is accepted.
 **Decision**: Keep `validate-autopilot-phase-coverage.py` as a Python
 standard-library validator and require deterministic Layer 4 tests for a passing
 workflow/state pair plus failures for missing Phase 6.5, missing Post items,
-collapsed later phases, and malformed state JSON.
+collapsed or semantically mislabeled later phases, and malformed state JSON.
 
 **Rationale**: The design concept explicitly rejects instruction-only
 hardening. The validator must fail before a run advances if canonical phases or

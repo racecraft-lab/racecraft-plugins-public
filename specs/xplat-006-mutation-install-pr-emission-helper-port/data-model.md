@@ -8,39 +8,35 @@ Fields:
 - `helper_id`: Stable helper identifier.
 - `operation`: Helper-specific operation such as `check`, `install`, `repair`,
   `generate`, `emit`, `restack`, `migrate`, or `relocate`.
-- `mode`: `dry_run` or `apply`.
+- `schema_version`: Runner request contract version, currently `1.0`.
+- `mode`: `read_only`, `dry_run`, or `apply`.
 - `inputs`: Helper-specific JSON object.
-- `boundary_context`: Declared repo, plugin, fake-home, fake-cache, temp, CLI,
-  and network/GitHub boundaries.
-- `approval_evidence`: Optional live mutation approval evidence.
 - `request_id`: Optional deterministic id for fixture and PR packet traceability.
 
 Validation rules:
 - Reject unsupported helper/mode/operation combinations before helper execution.
 - Require explicit `apply` mode before mutation.
-- Require approval evidence for live repo, user-local, plugin-cache, network, or
-  GitHub mutation.
-- Reject path inputs that escape declared boundaries.
+- Reject extra top-level request fields.
+- Reject path inputs that escape the repository trust boundary.
+- Refuse apply mode unless `git status --porcelain` proves the worktree is clean.
+- Trust `fake_home: true` only inside the committed fixture fake-home boundary.
 
-## Live Mutation Approval Evidence
+## Deferred Live Mutation Boundary
 
-Auditable approval object for exceptional live mutation.
+The XPLAT-006 runner does not accept a live mutation approval object yet.
+Command-plan helpers remain dry-run only for live GitHub/PR actions until the
+active cutover work lands.
 
 Fields:
-- `approval_id`
-- `approver`
-- `timestamp`
-- `channel`
-- `dry_run_result_id`
-- `dry_run_hash`
-- `allowed_boundaries`
-- `allowed_operations`
-- `expires_at`
+- `data.mutation.planned_operations`: Command plans captured as argv lists.
+- `data.mutation.live_mutation`: Always `false` in XPLAT-006.
+- `diagnostics[].code`: `deferred_live_mutation` when apply mode is requested
+  for command-plan helpers.
 
 Validation rules:
-- Boolean flags or mode names alone are not valid approval.
-- Approval must reference prior dry-run output and allowed boundaries.
-- Expired approval cannot authorize apply.
+- `live_mutation_approved: true` cannot turn command-plan apply into success.
+- Live PR creation, restack, and GitHub mutation stay outside the runner until
+  XPLAT-007/XPLAT-008 cutover gates define the approval contract.
 
 ## Mutation Helper Result
 
@@ -60,7 +56,8 @@ Fields:
 - `data.mutation.dirty_worktree`
 - `data.mutation.failure_operation`
 - `data.mutation.rollback_notes`
-- `data.mutation.manual_remediation_actions`
+- `data.mutation.manual_remediation`
+- `data.mutation.live_mutation`
 
 Validation rules:
 - Dry-run results contain planned operations and no touched paths.
@@ -75,17 +72,12 @@ Deterministic dry-run operation record.
 
 Fields:
 - `operation_id`
-- `kind`: `write`, `delete`, `copy`, `command`, `pr_action`, `repair`,
-  `migration`, `relocation`, or `generated_output`.
-- `target`
-- `boundary`
-- `mode`
-- `content_sha256`
-- `line_ending_policy`
-- `expected_result`
+- `kind`: `write_file` or `command_plan`.
+- `target`: Present for `write_file`.
+- `command`: Present for `command_plan` as an argv-list representation.
 
 Validation rules:
-- File targets must resolve inside declared boundaries.
+- File targets must resolve inside the repository trust boundary.
 - Generated JSON and Markdown use UTF-8 LF with one final newline.
 - Command operations use argv-list subprocess representation.
 
@@ -96,15 +88,8 @@ Apply-mode operation result.
 Fields:
 - `operation_id`
 - `kind`
-- `target`
-- `boundary`
-- `mode`
-- `result`
-- `failure_class`
-- `content_sha256`
-- `line_ending_policy`
-- `rollback_note`
-- `manual_remediation`
+- `target`: Present for `write_file`.
+- `command`: Present for `command_plan`.
 
 Validation rules:
 - Apply records every operation attempted.
@@ -145,14 +130,14 @@ Fields:
   `stale_release`, `downgrade_refusal`, `malformed_inventory`, or
   `source_truth_checksum_mismatch`.
 - `planned_repair_operations`
-- `required_approval`
+- `deferred_live_mutation`
 - `remediation_text`
 - `preserved_unrelated_files`
 
 Validation rules:
 - Doctor/preflight is read-only by default.
 - Repair is a separate apply-mode operation.
-- Safe repair is limited to fake or explicitly approved declared boundaries.
+- Safe repair is limited to fixture fake-home boundaries in XPLAT-006.
 
 ## Parity Fixture
 

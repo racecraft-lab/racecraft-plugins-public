@@ -14,7 +14,7 @@
 ## Path And Write Safety
 
 - [x] SEC005 Path resolution rejects external absolute paths, traversal, symlinks, directories where a file is required, devices, and writes outside declared boundaries.
-- [x] SEC006 Mutation apply mode requires explicit mode selection, valid inputs, clean-worktree checks where required, boundary checks, and approval evidence for live mutation.
+- [x] SEC006 Mutation apply mode requires explicit mode selection, valid inputs, repository boundary checks, and fail-closed clean-worktree checks; live command-plan apply remains deferred.
 - [x] SEC007 Atomic-write behavior, partial-failure reporting, and rollback/manual-remediation notes are required before helper promotion.
 - [x] SEC008 Fake homes, fake caches, and fake CLIs are the default test boundary for install, doctor, PR, restack, migration, and relocation behavior.
 

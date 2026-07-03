@@ -15,7 +15,7 @@
 - [x] ERR004 Dry-run/apply divergence is represented explicitly in mutation helper request/result contracts.
 - [x] ERR005 No-op, dirty-worktree, invalid-input, malformed-JSON, missing-prerequisite, path-boundary, symlink, write-failure, and partial-failure cases are required fixture coverage.
 - [x] ERR006 Multi-operation helpers must preflight before the first write and report partial failure with rollback/manual-remediation notes instead of promising global rollback.
-- [x] ERR007 Live repository, user-local, plugin-cache, and GitHub mutation require structured approval evidence after dry-run proof.
+- [x] ERR007 Live repository, user-local, plugin-cache, and GitHub command-plan apply returns deterministic deferred-live-mutation diagnostics in XPLAT-006.
 
 ## Doctor And Install Failures
 
@@ -25,7 +25,7 @@
 
 ## Hardening Failure Cases
 
-- [x] ERR011 Phase-coverage validation fails deterministically for missing Phase 6.5, missing canonical Post items, collapsed later phases, duplicate state steps, malformed state JSON, and multiple in-progress items.
+- [x] ERR011 Phase-coverage validation fails deterministically for missing Phase 6.5, missing canonical Post items, collapsed or semantically mislabeled later phases, duplicate state steps, malformed state JSON, and multiple in-progress items.
 - [x] ERR012 The current workflow/state pair has passing validator evidence before Checklist proceeds.
 
 ## Notes

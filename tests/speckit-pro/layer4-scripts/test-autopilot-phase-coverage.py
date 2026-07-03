@@ -169,7 +169,7 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         exit_code, report = self.run_validator(workflow_text(), state_json(include_confidence=False))
         self.assertEqual(exit_code, 1)
         self.assertEqual(report["status"], "fail")
-        self.assertIn("Phase 6.5:", report["missing_state_prefixes"])
+        self.assertIn("Phase 6.5: Confidence Gate", report["missing_state_prefixes"])
 
     def test_missing_post_items_in_state_fails(self) -> None:
         exit_code, report = self.run_validator(workflow_text(), state_json(include_post=False))
@@ -181,8 +181,29 @@ class AutopilotPhaseCoverageTests(unittest.TestCase):
         exit_code, report = self.run_validator(workflow_text(), state_json(collapsed=True))
         self.assertEqual(exit_code, 1)
         self.assertEqual(report["status"], "fail")
-        self.assertIn("Phase 6.5:", report["missing_state_prefixes"])
+        self.assertIn("Phase 6.5: Confidence Gate", report["missing_state_prefixes"])
         self.assertEqual(report["missing_state_post_items"], POST_STEPS)
+
+    def test_mislabeled_numbered_phases_fail_even_when_prefix_numbers_exist(self) -> None:
+        state = state_json()
+        state["plan"] = [
+            {"step": "Archive Sweep: previously merged specs dry-run/apply eligibility", "status": "completed"},
+            {"step": "Phase 0: Prerequisites", "status": "completed"},
+            {"step": "Phase 1: Specify", "status": "completed"},
+            {"step": "Phase 2: Clarify - Session 1", "status": "completed"},
+            {"step": "Phase 3: Plan", "status": "pending"},
+            {"step": "Phase 4: Tasks", "status": "pending"},
+            {"step": "Phase 5: Implement tasks", "status": "pending"},
+            {"step": "Phase 6: Analyze", "status": "pending"},
+            {"step": "Phase 6.5: Confidence Gate", "status": "pending"},
+            {"step": "Phase 7: Implement - Pending task decomposition", "status": "pending"},
+            *({"step": post, "status": "pending"} for post in POST_STEPS),
+        ]
+        exit_code, report = self.run_validator(workflow_text(), state)
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(report["status"], "fail")
+        self.assertIn("Phase 4: Checklist", report["missing_state_prefixes"])
+        self.assertIn("Phase 5: Tasks", report["missing_state_prefixes"])
 
     def test_malformed_state_is_input_error(self) -> None:
         exit_code, report = self.run_validator(workflow_text(), "{")

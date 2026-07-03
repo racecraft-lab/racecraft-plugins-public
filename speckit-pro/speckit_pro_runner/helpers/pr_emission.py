@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from ..envelope import diagnostic, response
-from .mutation import run_mutation_helper
+from .mutation import empty_mutation, operation_records, run_mutation_helper
 
 
 def run_pr_emission_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -78,15 +78,32 @@ def plan_commands(entry: Any, request: Any) -> dict[str, Any]:
             return input_error(request, "each command must be a non-empty string array", details={"command_index": index})
         operations.append({"operation_id": f"{entry.helper_id}:{index + 1}", "kind": "command_plan", "command": command})
 
-    if request.mode == "apply" and request.inputs.get("live_mutation_approved") is not True:
+    if request.mode == "apply":
+        mutation = empty_mutation(request.mode)
+        mutation["planned_operations"] = operation_records(operations)
+        mutation["mutation_status"] = "blocked"
         diag = diagnostic(
-            "approval_required",
-            "live PR command emission requires explicit approval",
-            details={"helper_id": entry.helper_id},
-            remediation_summary="Use dry_run for command planning unless live mutation has been explicitly approved.",
-            remediation_actions=["Switch to dry_run.", "Provide live_mutation_approved true only for approved live runs."],
+            "deferred_live_mutation",
+            "command-plan apply mode is deferred until the active PR-emission cutover",
+            details={"helper_id": entry.helper_id, "active_cutover": False},
+            remediation_summary="Use dry_run for command planning; execute live PR operations outside the runner until cutover.",
+            remediation_actions=["Switch to dry_run.", "Use the existing GitHub PR path for live PR work."],
+            deferred_to="XPLAT-007/XPLAT-008",
         )
-        return response("expected_failure", request_id=request.request_id, diagnostics=[diag])
+        return response(
+            "expected_failure",
+            request_id=request.request_id,
+            data={
+                "helper_id": entry.helper_id,
+                "operation": entry.operation,
+                "mode": request.mode,
+                "promotion_status": entry.promotion_status,
+                "comparison_mode": entry.comparison_mode,
+                "writes_state": False,
+                "mutation": mutation,
+            },
+            diagnostics=[diag],
+        )
 
     result = run_mutation_helper(entry, request, operations=operations)
     data = result.get("data")

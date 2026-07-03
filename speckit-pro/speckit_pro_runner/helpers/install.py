@@ -9,9 +9,10 @@ from typing import Any
 
 from ..envelope import diagnostic, response
 from .mutation import resolve_candidate_path, run_mutation_helper, validate_target_path
-from .read_only import find_repo_root, repo_relative
+from .read_only import find_repo_root, is_relative_to, repo_relative
 
 INVENTORY_NAME = "install_inventory.json"
+FAKE_HOME_FIXTURE_ROOT = Path("tests") / "speckit-pro" / "layer4-scripts" / "fixtures"
 
 
 def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
@@ -33,7 +34,13 @@ def run_install_helper(entry: Any, request: Any) -> dict[str, Any]:
         return response("input_error", request_id=request.request_id, diagnostics=[inventory_result])
     inventory = inventory_result
 
-    doctor = doctor_report(install_root, inventory, repo_root, fake_home=bool(request.inputs.get("fake_home")))
+    fake_home = request.inputs.get("fake_home") is True
+    if fake_home:
+        fake_diag = fake_home_boundary_diagnostic(install_root, repo_root)
+        if fake_diag is not None:
+            return response("input_error", request_id=request.request_id, diagnostics=[fake_diag])
+
+    doctor = doctor_report(install_root, inventory, repo_root, fake_home=fake_home)
 
     if request.helper_id == "doctor-preflight":
         return response(
@@ -123,6 +130,22 @@ def inventory_from_inputs(inputs: dict[str, Any], repo_root: Path) -> dict[str, 
             return malformed_inventory("inventory sha256 must be a string", index=index)
         normalized_files.append({"path": path.replace("\\", "/"), "content": content, "sha256": digest})
     return {"files": normalized_files}
+
+
+def fake_home_boundary_diagnostic(install_root: Path, repo_root: Path) -> dict[str, Any] | None:
+    allowed_root = repo_root / FAKE_HOME_FIXTURE_ROOT
+    if is_relative_to(install_root.resolve(strict=False), allowed_root.resolve(strict=False)):
+        return None
+    return diagnostic(
+        "fake_home_boundary_refused",
+        "fake_home true is only trusted inside the fixture fake-home boundary",
+        details={"install_root": repo_relative(install_root, repo_root), "allowed_root": repo_relative(allowed_root, repo_root)},
+        remediation_summary="Use fake_home only with repo fixture roots until active install cutover.",
+        remediation_actions=[
+            "Move the install_root under tests/speckit-pro/layer4-scripts/fixtures.",
+            "Use doctor-preflight without fake_home for real installs.",
+        ],
+    )
 
 
 def malformed_inventory(message: str, *, index: int | None = None) -> dict[str, Any]:

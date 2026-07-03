@@ -82,6 +82,10 @@ def mutation_authoritative_request(helper_id: str) -> str:
     return f"python -m speckit_pro_runner < {MUTATION_REQUEST_FIXTURE_BASE}/{helper_id}.json"
 
 
+def deferred_authoritative_request() -> str:
+    return ""
+
+
 HELPERS: dict[str, HelperEntry] = {
     "helper-registry-dispatch": HelperEntry(
         "helper-registry-dispatch",
@@ -267,7 +271,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "speckit-pro/skills/speckit-scaffold-spec/scripts/install-codex-agents.sh",
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("install-codex-agents"),
+        deferred_authoritative_request(),
         rollback="Keep existing installer scripts authoritative until XPLAT-007/XPLAT-008.",
     ),
     "install-curated-set": MutationEntry(
@@ -277,7 +281,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         "speckit-pro/scripts/install-curated-set.sh",
         "deferred",
         "bash_reference",
-        mutation_authoritative_request("install-curated-set"),
+        deferred_authoritative_request(),
         bash_reference_ids=("install-curated-set",),
         rollback="Keep install-curated-set.sh authoritative until install cutover.",
     ),
@@ -288,7 +292,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         None,
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("project-fixup-apply"),
+        deferred_authoritative_request(),
     ),
     "ensure-reviewability-preset": MutationEntry(
         "ensure-reviewability-preset",
@@ -297,7 +301,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         None,
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("ensure-reviewability-preset"),
+        deferred_authoritative_request(),
     ),
     "generate-pr-body": MutationEntry(
         "generate-pr-body",
@@ -318,7 +322,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/generate-uat-skeleton.sh",
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("generate-uat-skeleton"),
+        deferred_authoritative_request(),
     ),
     "final-reviewability-backstop": MutationEntry(
         "final-reviewability-backstop",
@@ -327,7 +331,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/final-reviewability-backstop.sh",
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("final-reviewability-backstop"),
+        deferred_authoritative_request(),
     ),
     "pr-packet-output": MutationEntry(
         "pr-packet-output",
@@ -336,7 +340,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         None,
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("pr-packet-output"),
+        deferred_authoritative_request(),
     ),
     "validate-pr-workflow-contract-write": MutationEntry(
         "validate-pr-workflow-contract-write",
@@ -345,7 +349,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/validate-pr-workflow-contract.sh",
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("validate-pr-workflow-contract-write"),
+        deferred_authoritative_request(),
     ),
     "multi-pr-emission": MutationEntry(
         "multi-pr-emission",
@@ -365,7 +369,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/restack.sh",
         "deferred",
         "command_plan",
-        mutation_authoritative_request("restack"),
+        deferred_authoritative_request(),
     ),
     "migrate-structure": MutationEntry(
         "migrate-structure",
@@ -374,7 +378,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         None,
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("migrate-structure"),
+        deferred_authoritative_request(),
     ),
     "relocate-process-artifacts": MutationEntry(
         "relocate-process-artifacts",
@@ -383,7 +387,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/relocate-process-artifacts.sh",
         "deferred",
         "json_semantic",
-        mutation_authoritative_request("relocate-process-artifacts"),
+        deferred_authoritative_request(),
         bash_reference_ids=("relocate-process-artifacts",),
     ),
     "generate-spec-index-write": MutationEntry(
@@ -393,7 +397,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/generate-spec-index.sh",
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("generate-spec-index-write"),
+        deferred_authoritative_request(),
     ),
     "plan-layers-marker-plan": MutationEntry(
         "plan-layers-marker-plan",
@@ -402,7 +406,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/plan-layers.sh",
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("plan-layers-marker-plan"),
+        deferred_authoritative_request(),
     ),
     "validate-pr-packet-write": MutationEntry(
         "validate-pr-packet-write",
@@ -411,7 +415,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         f"{SCRIPT_BASE}/validate-pr-packet.sh",
         "deferred",
         "golden_fixture",
-        mutation_authoritative_request("validate-pr-packet-write"),
+        deferred_authoritative_request(),
     ),
     "detect-stack-manager-plan": MutationEntry(
         "detect-stack-manager-plan",
@@ -420,7 +424,7 @@ MUTATION_HELPERS: dict[str, MutationEntry] = {
         None,
         "out_of_scope",
         "command_plan",
-        mutation_authoritative_request("detect-stack-manager-plan"),
+        deferred_authoritative_request(),
     ),
 }
 

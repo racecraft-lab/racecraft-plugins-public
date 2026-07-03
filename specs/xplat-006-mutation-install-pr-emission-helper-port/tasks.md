@@ -24,7 +24,7 @@ Reviewability-Exception: infra
 **Purpose**: Preserve the user-required autopilot hardening that prevents missing phases from recurring. These tasks are already complete in this PR and must stay proven by tests.
 
 - [x] T001 [HARD] Add `speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py` to validate workflow Markdown and `docs/ai/specs/.process/autopilot-state.json`.
-- [x] T002 [HARD] Add `tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` with passing complete workflow/state fixture and failing fixtures for missing Phase 6.5, missing Post items, collapsed later phases, and malformed state JSON.
+- [x] T002 [HARD] Add `tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py` with passing complete workflow/state fixture and failing fixtures for missing Phase 6.5, missing Post items, collapsed or semantically mislabeled later phases, and malformed state JSON.
 - [x] T003 [HARD] Wire Python `.py` Layer 4 script tests into `tests/speckit-pro/run-all.sh` so hardening runs in the standard script suite.
 - [x] T004 [HARD] Mirror the validator and phase-coverage instructions into allowed Codex/generated payload surfaces under `speckit-pro/codex-skills/` and `dist/`.
 - [x] T005 [HARD] Tighten `tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py` so scope audit allows only exact phase-coverage hardening source/mirror files and still rejects active cutover surfaces.
@@ -43,7 +43,7 @@ Reviewability-Exception: infra
 - [x] T011 [P] [US2] Add install inventory fixture cases to `tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/install-inventory-fixtures.json`.
 - [x] T012 [US1] Add failing mutation-foundation tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py` for dry-run no-op, apply writes, dirty worktree, path escape, symlink rejection, write failure, and partial failure.
 - [x] T013 [US1] Extend `speckit-pro/speckit_pro_runner/helpers/registry.py` with mutation-capable helper registration separate from accepted XPLAT-005 read-only modes.
-- [x] T014 [US1] Add `speckit-pro/speckit_pro_runner/helpers/mutation.py` with request/result normalization, operation records, boundary records, approval evidence parsing, and deterministic failure classes.
+- [x] T014 [US1] Add `speckit-pro/speckit_pro_runner/helpers/mutation.py` with request/result normalization, operation records, repository boundary checks, fail-closed dirty-worktree guards, and deterministic failure classes.
 - [x] T015 [US1] Add atomic write primitives to `speckit-pro/speckit_pro_runner/helpers/mutation.py` using same-directory temp files, validation, flush/fsync, and `os.replace`.
 - [x] T016 [US1] Add path-boundary and dirty-worktree guards to `speckit-pro/speckit_pro_runner/helpers/mutation.py` using argv-list subprocess calls only.
 - [x] T017 [US1] Add `speckit-pro/speckit_pro_runner/helpers/promotion.py` for fixture ids, Bash-reference ids, normalized fields, promotion state, and rollback/manual remediation notes.

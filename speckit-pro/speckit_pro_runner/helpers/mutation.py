@@ -93,10 +93,14 @@ def run_mutation_helper(
         )
         return response("input_error", request_id=request.request_id, data=base_data, diagnostics=[diag])
 
+    if not normalized:
+        mutation["mutation_status"] = "no_op"
+        return response("ok", request_id=request.request_id, data=base_data)
+
     dirty_diag = dirty_worktree_diagnostic(request.inputs, repo_root)
     if dirty_diag is not None:
         mutation["mutation_status"] = "blocked"
-        mutation["dirty_worktree"] = True
+        mutation["dirty_worktree"] = dirty_diag["code"] == "dirty_worktree"
         return response("expected_failure", request_id=request.request_id, data=base_data, diagnostics=[dirty_diag])
 
     simulate_failure_after = request.inputs.get("simulate_failure_after")
@@ -224,25 +228,43 @@ def validate_target_path(raw: str, repo_root: Path) -> dict[str, Any] | None:
             "path escapes the repo/plugin trust boundary",
             {"field": "target", "path": normalize_display(raw)},
         )
-    if target.exists() and target.is_symlink():
+    if target.is_symlink():
         return path_diagnostic(
             "unsupported_path",
             "mutation target must not be a symlink",
             {"field": "target", "path": repo_relative(target, repo_root)},
         )
-    parent = target.parent
-    if parent.exists() and parent.is_symlink():
+    if target.exists() and not target.is_file():
         return path_diagnostic(
             "unsupported_path",
-            "mutation target parent must not be a symlink",
-            {"field": "target", "path": repo_relative(parent, repo_root)},
+            "mutation target must be a regular file path",
+            {"field": "target", "path": repo_relative(target, repo_root)},
         )
+    parent = target.parent
     if not is_relative_to(parent.resolve(strict=False), repo_root):
         return path_diagnostic(
             "unsupported_path",
             "mutation target parent escapes the repo/plugin trust boundary",
             {"field": "target", "path": normalize_display(raw)},
         )
+    current = parent
+    while is_relative_to(current.resolve(strict=False), repo_root):
+        if current.exists():
+            if current.is_symlink():
+                return path_diagnostic(
+                    "unsupported_path",
+                    "mutation target parent must not be a symlink",
+                    {"field": "target", "path": repo_relative(current, repo_root)},
+                )
+            if not current.is_dir():
+                return path_diagnostic(
+                    "unsupported_path",
+                    "mutation target parent must be a directory",
+                    {"field": "target", "path": repo_relative(current, repo_root)},
+                )
+        if current == repo_root:
+            break
+        current = current.parent
     return None
 
 
@@ -255,36 +277,54 @@ def resolve_candidate_path(raw: str, repo_root: Path) -> Path:
 def dirty_worktree_diagnostic(inputs: dict[str, Any], repo_root: Path) -> dict[str, Any] | None:
     overrides = inputs.get("test_overrides")
     if isinstance(overrides, dict) and overrides.get("dirty_worktree") is True:
-        return diagnostic(
-            "dirty_worktree",
-            "mutation helper refused apply mode because the worktree is dirty",
-            details={"repo_root": repo_relative(repo_root, repo_root), "source": "test_override"},
-            remediation_summary="Start mutation apply from a clean worktree or use dry_run.",
-            remediation_actions=["Commit or stash unrelated changes.", "Retry apply mode or use dry_run."],
-        )
-    if inputs.get("require_clean_worktree") is True and git_worktree_dirty(repo_root):
-        return diagnostic(
-            "dirty_worktree",
-            "mutation helper refused apply mode because the worktree is dirty",
-            details={"repo_root": repo_relative(repo_root, repo_root), "source": "git_status"},
-            remediation_summary="Start mutation apply from a clean worktree or use dry_run.",
-            remediation_actions=["Commit or stash unrelated changes.", "Retry apply mode or use dry_run."],
-        )
+        return dirty_worktree_block(repo_root, "test_override")
+    if isinstance(overrides, dict) and overrides.get("git_status_error") is True:
+        return git_status_unavailable(repo_root, "test_override")
+    status = git_worktree_status(repo_root)
+    if isinstance(status, dict):
+        return status
+    if status:
+        return dirty_worktree_block(repo_root, "git_status")
     return None
 
 
-def git_worktree_dirty(repo_root: Path) -> bool:
+def dirty_worktree_block(repo_root: Path, source: str) -> dict[str, Any]:
+    return diagnostic(
+        "dirty_worktree",
+        "mutation helper refused apply mode because the worktree is dirty",
+        details={"repo_root": repo_relative(repo_root, repo_root), "source": source},
+        remediation_summary="Start mutation apply from a clean worktree or use dry_run.",
+        remediation_actions=["Commit or stash unrelated changes.", "Retry apply mode or use dry_run."],
+    )
+
+
+def git_status_unavailable(repo_root: Path, source: str) -> dict[str, Any]:
+    return diagnostic(
+        "git_status_unavailable",
+        "mutation helper refused apply mode because git status could not prove the worktree is clean",
+        details={"repo_root": repo_relative(repo_root, repo_root), "source": source},
+        remediation_summary="Start mutation apply only after git status can verify a clean worktree.",
+        remediation_actions=["Run git status --porcelain.", "Fix the git status error or use dry_run."],
+    )
+
+
+def git_worktree_status(repo_root: Path) -> bool | dict[str, Any]:
     import subprocess
 
-    completed = subprocess.run(
-        ["git", "-C", str(repo_root), "status", "--porcelain"],
-        text=True,
-        capture_output=True,
-        shell=False,
-        check=False,
-        timeout=10,
-    )
-    return completed.returncode == 0 and bool(completed.stdout.strip())
+    try:
+        completed = subprocess.run(
+            ["git", "-C", str(repo_root), "status", "--porcelain=v1", "--untracked-files=all"],
+            text=True,
+            capture_output=True,
+            shell=False,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return git_status_unavailable(repo_root, "git_status")
+    if completed.returncode != 0:
+        return git_status_unavailable(repo_root, "git_status")
+    return bool(completed.stdout.strip())
 
 
 def write_file_atomic(target: Path, content: str) -> None:
