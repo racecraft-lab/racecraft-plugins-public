@@ -21,6 +21,7 @@
       "items": { "type": "string" },
       "uniqueItems": true
     },
+    "authoritative_python_command": { "type": "string" },
     "rollback": { "type": "string", "minLength": 1 }
   }
 }

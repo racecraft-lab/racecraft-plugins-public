@@ -639,6 +639,8 @@ class MutationHelperTests(unittest.TestCase):
     def test_fixture_manifests_cover_mutation_helpers(self) -> None:
         fixture_manifest = json.loads((FIXTURE_DIR / "fixture-manifest.json").read_text(encoding="utf-8"))
         promotion_records = json.loads((FIXTURE_DIR / "promotion-records.json").read_text(encoding="utf-8"))
+        promotion_schema = json.loads(PROMOTION_SCHEMA.read_text(encoding="utf-8"))
+        promotion_fields = set(promotion_schema["properties"])
         self.assertGreaterEqual(len(fixture_manifest["helpers"]), 6)
         self.assertGreaterEqual(len(promotion_records["helpers"]), 6)
         for record in fixture_manifest["helpers"]:
@@ -656,6 +658,9 @@ class MutationHelperTests(unittest.TestCase):
             self.assertEqual(completed.returncode, response["exit_code"])
             self.assertEqual([diag["code"] for diag in stderr_records], [diag["code"] for diag in response["diagnostics"]])
         for record in promotion_records["helpers"]:
+            self.assertFalse(set(record) - promotion_fields, record["helper_id"])
+            for required in promotion_schema["required"]:
+                self.assertIn(required, record)
             self.assertIn(record["promotion_status"], {"golden_only", "bash_compared", "deferred", "out_of_scope"})
             self.assertIn("rollback", record)
 
