@@ -727,8 +727,8 @@ each item is completed or explicitly skipped by its extension rule.
 | Post: Self-Review | Complete | No active invocation cutover, generated-payload cutover, repo-local Bash gate migration, native matrix UAT, or public support claim shipped |
 | Post: UAT Runbook Generation | Complete | Authored `.process/uat-runbook.md`; `test-validate-uat-runbook.sh` passed 12/12 |
 | Post: PR Body Generation | Complete | Generated repo-relative packet/body under `.process/pr-packets/xplat-006-pr-packet/`; `validate-pr-packet.sh` passed |
-| Post: PR Creation | In Progress | Pending until branch push and PR creation |
-| Post: Review Remediation | Pending | Pending until after PR creation |
+| Post: PR Creation | Complete | https://github.com/racecraft-lab/racecraft-plugins-public/pull/281 |
+| Post: Review Remediation | Pending | Pending review feedback/check results |
 | Post: Retrospective | Pending | Final post item before completion can be reported |
 
 ### Final Verification Targets
