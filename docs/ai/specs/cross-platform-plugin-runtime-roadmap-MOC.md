@@ -2,7 +2,7 @@
 up: "[Cross-Platform Plugin Runtime Roadmap](cross-platform-plugin-runtime-technical-roadmap.md)"
 related:
   - "[Cross-Platform Plugin Runtime PRD](../../prd-cross-platform-plugin-runtime.md)"
-status: "XPLAT-001 through XPLAT-006 complete/archived; XPLAT-007 ready; XPLAT-008 pending"
+status: "XPLAT-001 through XPLAT-006 complete/archived; XPLAT-007 in progress; XPLAT-008 pending"
 rank:
 spec_id: "cross-platform-plugin-runtime"
 structureVersion: 1
@@ -70,7 +70,8 @@ Why: Make the repository's active helpers, tests, evals, payload builders,
 install-verification scripts, and release-readiness gates Python-authoritative
 before any public cutover claim.
 
-- XPLAT-007 Python Tooling and Release-Gate Migration (ready)
+- XPLAT-007 Python Tooling and Release-Gate Migration (in progress on
+  `codex/xplat-007-python-tooling-and-release-gate-migration`)
 
 ### Public Release Gate
 
