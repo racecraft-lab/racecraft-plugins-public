@@ -728,7 +728,7 @@ each item is completed or explicitly skipped by its extension rule.
 | Post: UAT Runbook Generation | Complete | Authored `.process/uat-runbook.md`; `test-validate-uat-runbook.sh` passed 12/12 |
 | Post: PR Body Generation | Complete | Generated repo-relative packet/body under `.process/pr-packets/xplat-006-pr-packet/`; `validate-pr-packet.sh` passed |
 | Post: PR Creation | Complete | https://github.com/racecraft-lab/racecraft-plugins-public/pull/281 |
-| Post: Review Remediation | Complete | RepoPrompt review findings remediated with safe envelope parsing, fail-closed apply checks, fake-home traversal/boundary enforcement, batch conflict preflight, deferred command-plan apply, schema contract tests, canonical phase-label tests, and refreshed verification |
+| Post: Review Remediation | Complete | RepoPrompt review loop closed; final focused review reported no actionable findings remain for the last promotion fixture schema issue after safe envelope parsing, fail-closed apply checks, fake-home traversal/boundary enforcement, batch conflict preflight, deferred command-plan apply, schema contract tests, canonical phase-label tests, and refreshed verification |
 | Post: Retrospective | Pending | Final post item before completion can be reported |
 
 ### Final Verification Targets
