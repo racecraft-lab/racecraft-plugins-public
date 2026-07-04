@@ -2,20 +2,25 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
   "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
   "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
-  "updated_at": "2026-07-04T00:00:50Z",
+  "updated_at": "2026-07-04T04:06:56Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Post: Retrospective",
+  "active_step": "Archived: XPLAT-006 post-merge cleanup",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "feature-branch-apply-eligible",
-    "current_target": "specs/xplat-006-mutation-install-pr-emission-helper-port",
-    "excluded_current_spec": "specs/xplat-006-mutation-install-pr-emission-helper-port",
-    "eligible_previous_specs": [],
-    "active_specs_inventory": [
+    "cleanup_mode": "post-merge-apply-cleanup",
+    "current_target": null,
+    "excluded_current_spec": null,
+    "eligible_previous_specs": [
       "specs/xplat-006-mutation-install-pr-emission-helper-port"
     ],
-    "safeToApplyCleanup": false,
-    "notes": "Archive extension is enabled. Active specs inventory contains only the current XPLAT-006 target, so no previously merged active spec folder was eligible for cleanup in this startup sweep."
+    "active_specs_inventory": [],
+    "safeToApplyCleanup": true,
+    "notes": "Post-merge archive cleanup applied for XPLAT-006 after PR #281 merged; active spec folder removed after preserving Layer 4 contract fixtures.",
+    "cleanupApplied": true,
+    "archive_report": ".specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md",
+    "cleanup_branch": "codex/archive-merged-specs-20260704",
+    "merged_pr": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/281",
+    "merge_commit": "85e79cd4b5ccc0116a2c5cdd0f04ce274294075f"
   },
   "preflight": {
     "model": "gpt-5.5",
@@ -225,7 +230,13 @@
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "completed",
+      "evidence": "Post-merge archive cleanup applied after PR #281 merged; archive report and recovery commands recorded."
+    },
+    {
+      "step": "Archive Cleanup: XPLAT-006 post-merge",
+      "status": "completed",
+      "evidence": ".specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md"
     }
   ],
   "phase_results": {
@@ -426,14 +437,17 @@
       "default_suite": "3803/3803 passed"
     },
     "post": {
-      "status": "in_progress",
-      "active_step": "Post: Retrospective",
+      "status": "completed_archived",
+      "active_step": "Archived: XPLAT-006 post-merge cleanup",
       "verification": "bash tests/speckit-pro/run-all.sh passed 3803/3803",
       "reviewability": "status=exception pass=true exception_honored=true; final backstop proceeded",
       "pr_packet": "validate-pr-packet passed for specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/packet.json",
       "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/281",
       "pr_creation": "completed",
-      "review_remediation": "RepoPrompt review loop closed; final focused review reported no actionable findings remain for the last promotion fixture schema issue."
+      "review_remediation": "RepoPrompt review loop closed; final focused review reported no actionable findings remain for the last promotion fixture schema issue.",
+      "archive_cleanup": "completed",
+      "archive_report": ".specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md",
+      "merge_commit": "85e79cd4b5ccc0116a2c5cdd0f04ce274294075f"
     }
   }
 }

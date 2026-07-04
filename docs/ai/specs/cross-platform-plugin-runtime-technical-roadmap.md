@@ -40,7 +40,10 @@ Python-only goal into XPLAT-007 for Python tooling/release-gate migration and
 XPLAT-008 for Claude/Codex cutover, install/update/autoheal UAT, and public
 release readiness. Updated again on 2026-07-03 after XPLAT-006 scaffold started
 on `codex/xplat-006-mutation-install-pr-emission-helper-port`; the setup design
-concept accepted one workflow with three internal slices.
+concept accepted one workflow with three internal slices. Updated 2026-07-04
+after XPLAT-006 merged in PR #281 and the active spec folder was archived;
+XPLAT-007 became ready to scaffold from the Python runner helper contracts,
+fixture tree, install inventory, and deferred-live-mutation boundaries.
 
 ---
 
@@ -56,8 +59,8 @@ dependency tiers**:
 | 3 | XPLAT-003 | Research and choose the supply-chain security / consumer-trust model | Sequential after runtime decision |
 | 4 | XPLAT-004 | Build the cross-platform runner foundation and parity harness | Sequential after runtime and security decisions |
 | 5 | XPLAT-005 | Port read-only/advisory helpers with fixture parity | Sequential after runner foundation |
-| 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Sequential after XPLAT-005; ready now that shared runner/helper APIs are stable |
-| 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Sequential after helper ports |
+| 6 | XPLAT-006 | Port mutation, install, and PR-emission helpers | Complete / archived after PR #281 |
+| 7 | XPLAT-007 | Replace active repo-local Bash helpers, tests, evals, payload builders, release checks, install verification, and release-readiness gates with Python commands | Ready after helper contracts and deferred boundaries landed |
 | 8 | XPLAT-008 | Cut over Claude/Codex surfaces, rebuild payloads, and prove universal install/full-use/update/autoheal release readiness | Sequential release gate |
 
 **Execution Order:** XPLAT-001 -> XPLAT-002 -> XPLAT-003 -> XPLAT-004 -> XPLAT-005 -> XPLAT-006 -> XPLAT-007 -> XPLAT-008
@@ -73,12 +76,12 @@ dependency tiers**:
   one selected runtime contract and the first-release security controls.
 - XPLAT-005 requires XPLAT-004 because parity tests need the final runner command
   shape and shared JSON/path library.
-- XPLAT-006 requires XPLAT-004 and should reuse XPLAT-005 test patterns, but can
-  start once the runner's mutation-safe file APIs are stable.
+- XPLAT-006 required XPLAT-004 and reused XPLAT-005 test patterns; it is now
+  complete and archived after PR #281.
 - XPLAT-007 requires XPLAT-006 because active repo-local Bash helpers, tests,
   evals, payload builders, install-verification scripts, and release gates
   cannot become Python-authoritative until every plugin-runtime helper has a
-  replacement.
+  runner-side contract, fixture boundary, and migration handoff.
 - XPLAT-008 requires XPLAT-006 and XPLAT-007 because no active Claude/Codex
   surface should switch and no public release claim should ship until every
   plugin-runtime helper and release gate has a Python path.
@@ -231,8 +234,8 @@ PUBLIC RELEASE UNBLOCKED
 | XPLAT-003 | Supply-Chain Security and Consumer Trust Model | Complete / Archived | `.process/XPLAT-003-workflow.md` | Archived in `.specify/memory/archive-reports/2026-06-29-xplat-003-post-merge-hygiene.md`; active spec folder removed after PR #267 |
 | XPLAT-004 | Cross-Platform Runner Foundation | Complete / Archived | `.process/XPLAT-004-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-01-xplat-004-post-merge-hygiene.md`; runner source, metadata, contract fixtures, and tests landed in PR #274 |
 | XPLAT-005 | Read-Only Helper Port | Complete / Archived | `.process/XPLAT-005-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md`; read-only helper registry, Python-authoritative records, parity fixtures, and Layer 4 gates landed in PR #276 |
-| XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | In Progress | `.process/XPLAT-006-workflow.md` | Scaffolded on 2026-07-03 in branch `codex/xplat-006-mutation-install-pr-emission-helper-port`; owns mutation safety, install/doctor, PR-emission, restack, migration, relocation, and state-writing helper ports |
-| XPLAT-007 | Python Tooling and Release-Gate Migration | Pending | — | Blocked by XPLAT-006; owns active repo-local tests, evals, payload/build/release tooling, install verification, and CI dispatch allowlist guards |
+| XPLAT-006 | Mutation, Install, and PR-Emission Helper Port | Complete / Archived | `.process/XPLAT-006-workflow.md` | Archived in `.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`; mutation primitives, install inventory/doctor proof, PR-body/command-plan fixtures, phase-coverage hardening, and Layer 4 mutation-helper gates landed in PR #281 |
+| XPLAT-007 | Python Tooling and Release-Gate Migration | Ready | — | Ready after XPLAT-006; owns active repo-local tests, evals, payload/build/release tooling, install verification, and CI dispatch allowlist guards |
 | XPLAT-008 | Claude/Codex Cutover and Universal Install Release Gate | Pending | — | Blocked by XPLAT-006 and XPLAT-007; owns active Claude/Codex cutover, payload rebuild, docs, UAT, update, autoheal, and public release readiness |
 
 **Status Legend:** Pending | Ready | In Progress | In Review | Complete | Complete / Archived | Blocked
@@ -653,20 +656,18 @@ inventory shows this cannot land reviewably.
 
 **Priority:** P1 | **Depends On:** XPLAT-004, XPLAT-005 | **Enables:** XPLAT-007, XPLAT-008
 
-**Status:** In Progress. Scaffolded on 2026-07-03 in branch
-`codex/xplat-006-mutation-install-pr-emission-helper-port`; workflow file is
-`docs/ai/specs/.process/XPLAT-006-workflow.md`; design concept is
-`docs/ai/specs/.process/XPLAT-006-design-concept.md`. XPLAT-004 and XPLAT-005
-are complete and archived, so the runner foundation, helper registry, and
-read-only parity patterns are available for mutation/install/PR-emission helper
-ports. The setup design concept accepted one workflow with three internal
-slices: mutation safety foundation, install completeness and doctor/preflight,
-then PR-emission/restack/migration/relocation helpers. XPLAT-006 should reuse
-the XPLAT-005 fixture and Bash-reference comparison model while preserving
-active Claude/Codex cutover for XPLAT-008.
+**Status:** Complete / Archived. Merged in PR #281 on 2026-07-04 and archived in
+`.specify/memory/archive-reports/2026-07-04-xplat-006-post-merge-hygiene.md`;
+workflow file is `docs/ai/specs/.process/XPLAT-006-workflow.md`; design concept
+is `docs/ai/specs/.process/XPLAT-006-design-concept.md`. XPLAT-006 delivered
+runner-side mutation primitives, install inventory/doctor proof, generated
+PR-body output, deferred command-plan diagnostics for live mutation, registry
+handoff records, phase-coverage hardening, and Layer 4 mutation-helper gates.
+It preserved active Claude/Codex invocation cutover and public native-platform
+claims for XPLAT-008, and active repo-local Bash gate migration for XPLAT-007.
 
-**Goal:** Port the state-mutating helpers after the runner and read-only parity
-patterns are stable.
+**Goal:** Completed. Port the state-mutating helper substrate and reviewable
+handoff evidence after the runner and read-only parity patterns stabilized.
 
 **Reviewability Budget:** Primary surface: harness/adapter |
 Projected reviewable LOC: 400-800 |
@@ -729,9 +730,9 @@ if XPLAT-001 inventory shows the combined scope is too large.
 - Scaffold/status/autopilot have a shared doctor/preflight contract with
   deterministic safe-repair and manual-remediation outcomes.
 - Fixture parity covers destructive and dry-run paths before active cutover.
-- Mutation-helper release gates use Python tests; Bash tests are retained only
-  as temporary migration evidence and must be removed from active gates by
-  XPLAT-007.
+- Mutation-helper release gates have Python Layer 4 tests and preserved
+  contract fixtures; Bash tests are retained only as temporary migration
+  evidence and must be removed from active gates by XPLAT-007.
 
 ---
 
