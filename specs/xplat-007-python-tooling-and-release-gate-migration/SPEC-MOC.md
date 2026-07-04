@@ -37,6 +37,10 @@ links to the slice artifacts in the body below.
 - [contracts/payload-evidence.schema.json](contracts/payload-evidence.schema.json)
 - [contracts/promotion-record.schema.json](contracts/promotion-record.schema.json)
 - [contracts/release-readiness-result.schema.json](contracts/release-readiness-result.schema.json)
+- [checklists/integration.md](checklists/integration.md)
+- [checklists/release-readiness.md](checklists/release-readiness.md)
+- [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
+- [checklists/security.md](checklists/security.md)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

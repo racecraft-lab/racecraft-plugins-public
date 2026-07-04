@@ -58,8 +58,8 @@ accepted scope:
 | Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist for active repo-local Python tooling and release-gate migration |
 | Clarify | `$speckit-clarify` | Complete | Resolved gate inventory, command taxonomy, no-shell guard scope, payload boundary, docs boundary, and platform proof |
 | Plan | `$speckit-plan` | Complete | Produced technical plan, research, data model, contracts, and quickstart for the three-slice migration |
-| Checklist | `$speckit-checklist` | In Progress | Recommended domains: integration, reliability, security, and release-readiness |
-| Tasks | `$speckit-tasks` | Pending | Generate tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
+| Checklist | `$speckit-checklist` | Complete | Completed integration, reliability, security, and release-readiness with 0 remaining gaps |
+| Tasks | `$speckit-tasks` | In Progress | Generate tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, PRD AC-7.*, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Resolve confidence mode and record pass/advisory disposition before implementation |
 | Implement | `$speckit-implement` | Pending | Execute Python gate migration with fixture parity, promotion records, and no-shell guard evidence |
@@ -464,10 +464,16 @@ Focus on XPLAT-007 requirements:
 
 | Checklist | Items | Gaps | Spec References |
 |---|---|---|---|
-| Integration | Pending | Pending | Pending |
-| Reliability | Pending | Pending | Pending |
-| Security | Pending | Pending | Pending |
-| Release-readiness | Pending | Pending | Pending |
+| Integration | 28 | 0 found, 0 remediated, 0 remaining | FR-001 through FR-018; SC/source evidence in spec, plan, research, data model, contracts, quickstart, XPLAT-004/005/006 archived source evidence |
+| Reliability | 30 | 0 found, 0 remediated, 0 remaining | FR-003 through FR-018; SC-002 through SC-007; runner stream/exit, promotion, payload evidence, active-path guard, install verification, and release-readiness contracts |
+| Security | 25 | 0 found, 0 remediated, 0 remaining | FR-004 through FR-018; no-shell command safety, bounded path/write safety, guard scope, install/payload boundaries, public-claim controls, and XPLAT-008 handoff requirements |
+| Release-readiness | 28 | 0 found, 0 remediated, 0 remaining | FR-002, FR-007 through FR-018; marketplace/version sync, test payload evidence, install verification, active-path no-shell guard, release-readiness result contract, and XPLAT-008 handoff requirements |
+
+### Addressing Gaps
+
+No checklist gaps remain. Integration, reliability, security, and
+release-readiness all completed with zero true `[Gap]` markers and no
+unresolved consensus items.
 
 ---
 
