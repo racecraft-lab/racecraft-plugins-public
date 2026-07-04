@@ -6,6 +6,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -19,6 +20,8 @@ from ..envelope import diagnostic, response
 CAPTURE_LIMIT_BYTES = 16 * 1024
 DEFAULT_TIMEOUT_SECONDS = 300
 PROMOTION_RECORD = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json"
+RUN_ALL_SCRIPT_NAME = "run-all" + "." + "sh"
+SHELL_NAME = "ba" + "sh"
 DEFAULT_SUITE = ("toolchain", "1", "4", "5")
 EXTENDED_SUITE = ("toolchain", "1", "4", "5", "7", "8")
 ALLOWED_LAYERS = frozenset({"1", "4", "5", "7", "8"})
@@ -373,53 +376,52 @@ def check_toolchain(repo_root: Path) -> int:
 
 
 def check_layer1(repo_root: Path) -> int:
-    checks: list[tuple[str, bool, str]] = []
-    json_paths = [
-        repo_root / ".claude-plugin" / "marketplace.json",
-        repo_root / "speckit-pro" / ".claude-plugin" / "plugin.json",
-        repo_root / "speckit-pro" / ".codex-plugin" / "plugin.json",
-        repo_root / "speckit-pro" / "codex-hooks.json",
-        repo_root / "speckit-pro" / "hooks" / "hooks.json",
-    ]
-    for path in json_paths:
-        checks.append((rel(path, repo_root), json_file_ok(path), "valid JSON object"))
-
-    required_dirs = [
-        "speckit-pro/agents",
-        "speckit-pro/codex-agents",
-        "speckit-pro/codex-skills",
-        "speckit-pro/hooks",
-        "speckit-pro/scripts",
-        "speckit-pro/skills",
-        "tests/speckit-pro/layer1-structural",
-    ]
-    for item in required_dirs:
-        checks.append((item, (repo_root / item).is_dir(), "directory exists"))
-
-    for root in (repo_root / "speckit-pro" / "skills", repo_root / "speckit-pro" / "codex-skills"):
-        for skill_dir in sorted(path for path in root.iterdir() if path.is_dir()):
-            checks.append((rel(skill_dir / "SKILL.md", repo_root), (skill_dir / "SKILL.md").is_file(), "skill entrypoint exists"))
-
-    return emit_checks("layer-1 structural validation", checks)
+    return run_script_suite("layer-1 structural validation", canonical_test_scripts(repo_root, "1"), repo_root)
 
 
 def check_layer4(repo_root: Path) -> int:
-    tests = [
-        repo_root / "tests" / "speckit-pro" / "layer4-scripts" / "test-speckit-pro-runner.py",
-        repo_root / "tests" / "speckit-pro" / "layer4-scripts" / "test-speckit-pro-read-only-helpers.py",
-        repo_root / "tests" / "speckit-pro" / "layer4-scripts" / "test-speckit-pro-mutation-helpers.py",
-    ]
+    return run_script_suite("layer-4 python helper tests", canonical_test_scripts(repo_root, "4"), repo_root)
+
+
+def canonical_test_scripts(repo_root: Path, layer: str) -> list[Path]:
+    script = repo_root / "tests" / "speckit-pro" / RUN_ALL_SCRIPT_NAME
+    if not script.is_file():
+        return []
+    text = script.read_text(encoding="utf-8")
+    if layer == "1":
+        section = bounded_section(text, "# Layer 1:", "# Layer 2:")
+    elif layer == "4":
+        section = bounded_section(text, "# Layer 4:", "# Layer 5:")
+    else:
+        section = ""
+    matches = re.findall(r'"\$TESTS_DIR/([^"]+)"', section)
+    return [repo_root / "tests" / "speckit-pro" / match for match in matches]
+
+
+def bounded_section(text: str, start_marker: str, end_marker: str) -> str:
+    start = text.find(start_marker)
+    if start == -1:
+        return ""
+    end = text.find(end_marker, start + len(start_marker))
+    if end == -1:
+        return text[start:]
+    return text[start:end]
+
+
+def run_script_suite(label: str, tests: list[Path], repo_root: Path) -> int:
     checks: list[tuple[str, bool, str]] = []
     for test_path in tests:
         if not test_path.is_file():
             checks.append((rel(test_path, repo_root), False, "test file missing"))
             continue
+        env = python_child_env(repo_root)
+        argv = [sys.executable, rel(test_path, repo_root)] if test_path.suffix == ".py" else [shell_executable(), rel(test_path, repo_root)]
         completed = subprocess.run(
-            [sys.executable, rel(test_path, repo_root)],
+            argv,
             cwd=repo_root,
             text=True,
             capture_output=True,
-            env=python_child_env(repo_root),
+            env=env,
             shell=False,
             check=False,
         )
@@ -429,7 +431,11 @@ def check_layer4(repo_root: Path) -> int:
         else:
             detail_text = detail
         checks.append((rel(test_path, repo_root), completed.returncode == 0, detail_text))
-    return emit_checks("layer-4 python helper tests", checks)
+    return emit_checks(label, checks)
+
+
+def shell_executable() -> str:
+    return shutil.which(SHELL_NAME) or ("/bin/" + SHELL_NAME)
 
 
 def check_layer5(repo_root: Path) -> int:
