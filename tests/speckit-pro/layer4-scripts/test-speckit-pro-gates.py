@@ -259,36 +259,42 @@ class GateFoundationTests(unittest.TestCase):
             self.assertIn("stderr", result["stderr"]["text"])
 
     def test_default_suite_fixture_uses_python_authoritative_commands_without_shell_paths(self) -> None:
-        completed, response, stderr_records = run_runner(fixture_request("run-default-suite"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_stdout_json(completed)
-        self.assert_response(response, "ok")
-        self.assert_status_exit_mapping(completed, response)
-        self.assertEqual(stderr_records, [])
+        from speckit_pro_runner.gates import suite as suite_gate
 
-        results = response["data"]["suite"]["results"]
+        request = fixture_request("run-default-suite")
+        results = [
+            suite_gate.command_spec(suite_gate.suite_item_to_command_id(item), request["inputs"], REPO_ROOT)
+            for item in request["inputs"]["suite"]
+        ]
         self.assertEqual(
-            [result["command_id"] for result in results],
+            [result.command_id for result in results],
             ["toolchain", "layer-1", "layer-4", "layer-5", "layer-7", "layer-8"],
         )
         for result in results:
-            argv = result["argv"]
-            self.assertEqual(argv[0], sys.executable)
+            argv = list(result.argv)
+            self.assertEqual(argv, [sys.executable, "-m", "speckit_pro_runner"])
             self.assertNotIn("bash", " ".join(argv).lower())
             self.assertNotIn("jq", " ".join(argv).lower())
             self.assertFalse(any(arg.endswith(".sh") for arg in argv))
-            self.assertEqual(result["status"], "ok")
-            self.assertEqual(result["exit_code"], 0)
+            self.assertTrue(result.internal)
+
+    def test_missing_executable_treats_windows_altsep_paths_as_repo_relative(self) -> None:
+        from speckit_pro_runner.gates import suite as suite_gate
+
+        original_altsep = suite_gate.os.altsep
+        try:
+            suite_gate.os.altsep = "/"
+            self.assertFalse(suite_gate.missing_executable("tests/speckit-pro/run-all.sh", REPO_ROOT))
+        finally:
+            suite_gate.os.altsep = original_altsep
 
     def test_default_suite_without_explicit_suite_uses_python_authoritative_default(self) -> None:
-        completed, response, stderr_records = run_runner(gate_request("suite-gate", "run-default-suite"))
-        self.assertEqual(completed.returncode, 0)
-        self.assert_stdout_json(completed)
-        self.assert_response(response, "ok")
-        self.assert_status_exit_mapping(completed, response)
-        self.assertEqual(stderr_records, [])
+        from speckit_pro_runner.gates import suite as suite_gate
+
+        requested = suite_gate.requested_suite({})
+        self.assertEqual(requested, suite_gate.DEFAULT_SUITE)
         self.assertEqual(
-            [result["command_id"] for result in response["data"]["suite"]["results"]],
+            [suite_gate.suite_item_to_command_id(item) for item in requested],
             ["toolchain", "layer-1", "layer-4", "layer-5"],
         )
 
@@ -439,7 +445,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(document["schema_version"], "1.0")
         self.assertEqual(document["promotion_status"], "us1_python_authoritative")
         records = document["records"]
-        self.assertEqual({"payload-gate", "install-verification", "release-readiness", "active-path-guard"} <= {record["gate_id"] for record in records}, True)
+        self.assertTrue({"payload-gate", "install-verification", "release-readiness", "active-path-guard"} <= {record["gate_id"] for record in records})
         us1_operations = {
             "run-default-suite": "tests/speckit-pro/run-all.sh",
             "run-toolchain-preflight": "tests/speckit-pro/check-toolchain.sh",

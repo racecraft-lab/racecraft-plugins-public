@@ -272,10 +272,7 @@ def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Pat
     if command_id in {"layer-1", "layer-4", "layer-5"}:
         return internal_command_spec(command_id)
     if command_id == "layer-7":
-        argv = [sys.executable, "-m", "speckit_pro_runner", "suite-gate", command_id]
-        if inputs.get("live") is True:
-            argv.append("--live")
-        return CommandSpec(command_id, tuple(argv), internal=True)
+        return internal_command_spec(command_id)
     if command_id == "layer-8":
         return internal_command_spec(command_id)
     return unsafe_command_diagnostic(command_id, "unknown suite command id")
@@ -284,7 +281,7 @@ def default_command_spec(command_id: str, inputs: dict[str, Any], repo_root: Pat
 def internal_command_spec(command_id: str) -> CommandSpec:
     return CommandSpec(
         command_id=command_id,
-        argv=(sys.executable, "-m", "speckit_pro_runner", "suite-gate", command_id),
+        argv=(sys.executable, "-m", "speckit_pro_runner"),
         internal=True,
     )
 
@@ -742,7 +739,8 @@ def rel(path: Path, repo_root: Path) -> str:
 
 def missing_executable(executable: str, repo_root: Path) -> bool:
     path = Path(executable)
-    if path.is_absolute() or os.sep in executable:
+    has_path_separator = os.sep in executable or (os.altsep is not None and os.altsep in executable)
+    if path.is_absolute() or has_path_separator:
         candidate = path if path.is_absolute() else repo_root / path
         return not candidate.exists()
     return shutil.which(executable) is None
