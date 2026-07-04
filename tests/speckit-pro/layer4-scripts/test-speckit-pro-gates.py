@@ -206,7 +206,7 @@ class GateFoundationTests(unittest.TestCase):
 
     def test_request_fixture_root_exists_before_user_story_fixtures(self) -> None:
         self.assertTrue(REQUESTS_DIR.is_dir())
-        self.assertEqual(sorted(REQUESTS_DIR.iterdir()), [])
+        self.assertEqual([path.name for path in sorted(REQUESTS_DIR.iterdir())], [".gitkeep"])
 
     def test_contract_schemas_parse_as_json_objects(self) -> None:
         schema_paths = sorted(CONTRACT_DIR.glob("*.json"))
