@@ -47,21 +47,61 @@ jobs:
         with:
           node-version: 22
 
-      - name: Sync release PR payloads
+      - name: Validate release PR readiness
+        if: steps.release.outputs.prs_created == 'true'
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
+
+      - name: Dispatch PR Checks for release PRs
         if: steps.release.outputs.prs_created == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_PRS: ${{ steps.release.outputs.prs }}
-        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+
+          release_prs = json.loads(os.environ.get("RELEASE_PRS") or "[]")
+          if not release_prs:
+              print("prs_created=true but returned no PR metadata", file=sys.stderr)
+              sys.exit(1)
+
+          for release_pr in release_prs:
+              branch = release_pr.get("headBranchName") or release_pr.get("headRefName") or ""
+              number = str(release_pr.get("number") or "")
+              title = release_pr.get("title") or "chore(release): release speckit-pro"
+              if not branch or not number:
+                  print("release PR metadata missing branch or number", file=sys.stderr)
+                  sys.exit(1)
+              subprocess.run(
+                  [
+                      "gh",
+                      "workflow",
+                      "run",
+                      "pr-checks.yml",
+                      "--ref",
+                      branch,
+                      "-f",
+                      "pr_number=" + number,
+                      "-f",
+                      "pr_title=" + title,
+                      "-f",
+                      "base_ref=main",
+                  ],
+                  check=True,
+              )
+          PY
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
 
-      - name: Build clean plugin payloads
+      - name: Verify generated test payload evidence
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json
 
-      - name: Sync marketplace versions
+      - name: Validate post-release readiness
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
         run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
 

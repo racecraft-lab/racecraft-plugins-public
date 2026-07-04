@@ -291,7 +291,7 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         ("read_only",),
         "speckit_pro_runner.gates.active_path_guard",
         None,
-        request_fixture("active-path-guard"),
+        request_fixture("classify-shell-finding"),
         "US3",
         "active_repo_helper",
         implemented=True,

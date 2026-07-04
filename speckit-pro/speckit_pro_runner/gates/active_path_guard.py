@@ -156,17 +156,28 @@ def classify_shell_finding(entry: Any, request: Any, repo_root: Path) -> dict[st
                 "fixture",
             )
         ]
-    data = base_data(entry, request.operation, "ok")
+    blocking = [finding for finding in findings if finding.classification == "blocking_active_gate"]
+    status = "expected_failure" if blocking else "ok"
+    data = base_data(entry, request.operation, status)
     data.update(
         {
             "schema_version": "1.0",
-            "status": "ok",
-            "blocking_count": 0,
+            "status": status,
+            "blocking_count": len(blocking),
             "classified_counts": classified_counts(findings),
-            "findings": [findings[0].as_record()],
+            "findings": [finding.as_record() for finding in findings],
         }
     )
-    return response("ok", request_id=request.request_id, data=data)
+    if not blocking:
+        return response("ok", request_id=request.request_id, data=data)
+    diag = diagnostic(
+        "active_path_guard_blocked",
+        "classify-shell-finding found a shell-specific dependency in an active repo-local gate",
+        details={"path": blocking[0].path, "category": blocking[0].category},
+        remediation_summary="Remove the active shell dependency or reclassify the retained path as inactive parity/XPLAT-008 evidence.",
+        remediation_actions=["Inspect data.findings for the blocking_active_gate entry.", "Migrate the active path to a Python runner gate."],
+    )
+    return response("expected_failure", request_id=request.request_id, data=data, diagnostics=[diag])
 
 
 def guard_response(entry: Any, request: Any, findings: list[RawFinding]) -> dict[str, Any]:

@@ -217,7 +217,7 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 
 | Job | Description |
 |-----|-------------|
-| `detect` | Detects which plugins changed relative to the base branch — a plugin counts as changed when either its own directory (`<plugin>/`) or its out-of-plugin test suite (`tests/<plugin>/`) changed. Outputs a JSON array of plugin names. |
+| `detect` | Emits the current Python-gated plugin matrix. During XPLAT-007, this is intentionally fixed to `["speckit-pro"]`; selective changed-file matrices are deferred until the Python gate owns that decision. |
 | `test (<plugin>)` | Dispatches the Python runner toolchain and default-suite gates for each plugin in the matrix. |
 | `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when the plugin test matrix passed or was skipped; fails when it failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
@@ -225,7 +225,7 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 
 **Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates matrix results into one stable name that branch protection can require.
 
-**Docs-only PRs:** When a PR touches only documentation (no plugin directory and no `tests/<plugin>/` suite), `detect` outputs `[]`, `test` is skipped (job-level `if:` evaluates to false — GitHub treats a skipped job as passing, not pending), and `validate-plugins` also passes. Docs-only PRs are not blocked by the test matrix. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` runs the matching docs validation mode.
+**Docs-only PRs:** During XPLAT-007, `detect` emits `["speckit-pro"]` for every non-draft PR, so docs-only PRs still run the Python-dispatched plugin gate suite. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` also runs the matching docs validation mode.
 
 **Release-please PRs:** GitHub suppresses normal `pull_request` workflow runs for PRs created or updated by `GITHUB_TOKEN`, so the Release workflow dispatches `PR Checks` manually after it syncs generated `dist/**` payloads onto the release PR branch. Those dispatched (`workflow_dispatch`) check runs are visible on the PR but live in a check suite that is **not associated with the PR**, so branch protection does not count them — which is why a `GITHUB_TOKEN`-authored release PR shows `BLOCKED` even with everything green. When the optional `RELEASE_PLEASE_TOKEN` secret is configured (see **Release Process → Release token**), the release PR is authored by that identity instead, its `pull_request` checks run un-gated and satisfy branch protection directly, and the manual dispatch becomes a fallback. Without the secret the workflow falls back to `GITHUB_TOKEN` and behaves as before.
 

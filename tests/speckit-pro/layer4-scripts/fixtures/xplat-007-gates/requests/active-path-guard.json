@@ -8,7 +8,6 @@
     "repo_root": ".",
     "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
     "case_id": "final-current-implementation",
-    "allow_ci_dispatch_glue": true,
     "xplat_008_cutover_allowed": false
   }
 }
