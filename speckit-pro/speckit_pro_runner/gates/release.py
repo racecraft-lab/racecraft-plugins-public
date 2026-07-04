@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -143,7 +145,7 @@ def build_check(operation: str, case: dict[str, Any]) -> tuple[dict[str, Any], d
         changed_files = [item for item in case.get("changed_files", []) if isinstance(item, str)]
         changed = any(is_plugin_change(path) for path in changed_files)
         expected = case.get("expected_changed_plugin")
-        ok = expected is None or changed is bool(expected)
+        ok = expected is None or (isinstance(expected, bool) and changed == expected)
         return check_record(operation, ok, [f"changed_plugin={str(changed).lower()}"]), {
             "changed_plugin": {"changed": changed, "changed_files": changed_files}
         }
@@ -302,7 +304,66 @@ def load_release_case(repo_root: Path, inputs: dict[str, Any]) -> dict[str, Any]
     base["_required_promotion_operations"] = [
         item for item in document.get("required_promotion_operations", []) if isinstance(item, str)
     ]
+    github_context = inputs.get("github_context")
+    if isinstance(github_context, dict) and github_context.get("enabled") is True:
+        live_overrides = github_context_overrides(repo_root, github_context)
+        if is_diagnostic(live_overrides):
+            return live_overrides
+        deep_merge(base, live_overrides)
     return base
+
+
+def github_context_overrides(repo_root: Path, context: dict[str, Any]) -> dict[str, Any]:
+    title_env = str(context.get("title_env") or "TITLE")
+    title = os.environ.get(title_env, "")
+    if not title:
+        return diagnostic(
+            "missing_github_context",
+            "live release-readiness request could not read the PR title environment variable",
+            details={"title_env": title_env},
+            remediation_summary="Provide the GitHub PR title to the runner request environment.",
+            remediation_actions=[f"Set {title_env} before dispatching the release-readiness runner gate."],
+        )
+
+    changed_files = github_changed_files(repo_root, context)
+    if is_diagnostic(changed_files):
+        return changed_files
+
+    overrides: dict[str, Any] = {
+        "pr_title": title,
+        "changed_files": changed_files,
+    }
+    workflow_contract = context.get("workflow_contract")
+    if isinstance(workflow_contract, dict):
+        overrides["workflow_contract"] = copy.deepcopy(workflow_contract)
+    return overrides
+
+
+def github_changed_files(repo_root: Path, context: dict[str, Any]) -> list[str] | dict[str, Any]:
+    fixture_files = context.get("changed_files")
+    if isinstance(fixture_files, list) and all(isinstance(item, str) for item in fixture_files):
+        return list(fixture_files)
+
+    base_ref_env = str(context.get("base_ref_env") or "BASE_REF")
+    base_ref = os.environ.get(base_ref_env) or str(context.get("base_ref") or "main")
+    diff_range = f"origin/{base_ref}...HEAD"
+    completed = subprocess.run(
+        ["git", "diff", "--name-only", diff_range],
+        cwd=repo_root,
+        text=True,
+        capture_output=True,
+        shell=False,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return diagnostic(
+            "github_changed_files_unavailable",
+            "live release-readiness request could not determine changed files",
+            details={"base_ref": base_ref, "stderr": completed.stderr[-400:]},
+            remediation_summary="Fetch the base ref before dispatching the release-readiness runner gate.",
+            remediation_actions=["Use actions/checkout with fetch-depth: 0.", f"Ensure origin/{base_ref} is available."],
+        )
+    return [line for line in completed.stdout.splitlines() if line]
 
 
 def deep_merge(target: dict[str, Any], overrides: dict[str, Any]) -> None:

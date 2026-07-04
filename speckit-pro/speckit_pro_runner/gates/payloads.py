@@ -212,7 +212,14 @@ def write_payload_evidence(evidence: list[dict[str, Any]], output_root: Path) ->
 
 
 def payload_evidence_filename(surface: str) -> str:
-    return f"{surface.replace('_', '-')}-payload-evidence.json"
+    raw = str(surface).strip().replace("\\", "/")
+    parts = [part for part in raw.split("/") if part not in {"", ".", ".."}]
+    stem = parts[-1] if parts else "payload"
+    safe = "".join(ch if ch.isalnum() or ch in ".-" else "-" for ch in stem.replace("_", "-"))
+    while ".." in safe:
+        safe = safe.replace("..", ".")
+    safe = safe.strip(".-") or "payload"
+    return f"{safe}-payload-evidence.json"
 
 
 def command_plans(operation: str, repair_paths: list[str]) -> list[dict[str, Any]]:
@@ -347,7 +354,8 @@ def load_install_inventory(repo_root: Path, case: dict[str, Any]) -> list[dict[s
 
 def normalized_content(content: str, case: dict[str, Any]) -> str:
     if case.get("installed_files") == "from_inventory_crlf":
-        return content.replace("\n", "\r\n").replace("\r\r\n", "\r\n").replace("\r\n", "\n")
+        normalized = content.replace("\r\n", "\n").replace("\r", "\n")
+        return normalized.replace("\n", "\r\n")
     return content
 
 

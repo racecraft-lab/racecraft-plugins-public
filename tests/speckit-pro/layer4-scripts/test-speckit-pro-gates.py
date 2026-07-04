@@ -585,6 +585,17 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["stale_generated_payload_evidence"])
 
+    def test_payload_evidence_filename_and_crlf_normalization_are_safe(self) -> None:
+        from speckit_pro_runner.gates import payloads as payload_gate
+
+        self.assertEqual(payload_gate.payload_evidence_filename("../bad\\surface_name"), "surface-name-payload-evidence.json")
+        self.assertNotIn("/", payload_gate.payload_evidence_filename("nested/path/../surface"))
+        self.assertNotIn("..", payload_gate.payload_evidence_filename("nested/path/../surface"))
+        self.assertEqual(
+            payload_gate.normalized_content("one\ntwo\r\nthree\r", {"installed_files": "from_inventory_crlf"}),
+            "one\r\ntwo\r\nthree\r\n",
+        )
+
     def test_install_verification_uses_fake_home_roots_and_command_plans_only(self) -> None:
         completed, response, stderr_records = run_runner(fixture_request("install-verification"))
         self.assertEqual(completed.returncode, 0)
@@ -732,6 +743,17 @@ class GateFoundationTests(unittest.TestCase):
         self.assert_response(response, "expected_failure")
         self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_blocked"])
         self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
+
+    def test_detect_changed_plugin_requires_boolean_expected_value(self) -> None:
+        from speckit_pro_runner.gates import release as release_gate
+
+        check, details = release_gate.build_check(
+            "detect-changed-plugin",
+            {"changed_files": ["speckit-pro/speckit_pro_runner/runtime.py"], "expected_changed_plugin": 1},
+        )
+        self.assertEqual(check["status"], "fail")
+        self.assertTrue(check["blocking"])
+        self.assertTrue(details["changed_plugin"]["changed"])
 
     def test_us2_gate_implementations_use_no_shell_true_os_system_or_command_string_subprocess(self) -> None:
         for module in ["payloads.py", "release.py"]:
