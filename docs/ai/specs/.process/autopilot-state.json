@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T16:53:45Z",
+  "updated_at": "2026-07-04T16:58:46Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules",
+  "active_step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible-noop",
@@ -87,15 +87,16 @@
     },
     {
       "step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup Consensus",
@@ -263,6 +264,18 @@
           "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
           "docs/ai/specs/.process/XPLAT-007-workflow.md"
         ]
+      },
+      "runner_command_surface_and_promotion_rules": {
+        "status": "completed",
+        "completed_at": "2026-07-04T16:58:46Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Accepted python -m speckit_pro_runner JSON-envelope operations as the authoritative active gate surface, with standalone Python limited to non-authoritative harnesses or justified wrappers; runner stream/exit semantics, promotion records, mutable command modes, and Bash retirement rules are now explicit.",
+        "artifact_updates": [
+          "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
+          "docs/ai/specs/.process/XPLAT-007-workflow.md"
+        ],
+        "source_note": "Runner contract files are __main__.py, envelope.py, runtime.py, and helpers/registry.py; cli.py and contracts.py are not present in this worktree."
       }
     }
   }

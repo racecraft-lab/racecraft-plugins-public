@@ -72,13 +72,13 @@ accepted scope:
 | Gate | Checkpoint | Approval Criteria |
 |---|---|---|
 | G1 | After Specify | Scope is active repo-local Python tooling and release-gate migration only; no active Claude/Codex cutover, public support claim, release payload cutover, or native installed-plugin UAT |
-| G2 | After Clarify | Gate inventory, command taxonomy, Bash comparison retirement, no-shell guard definition, test payload boundary, active-doc boundary, and platform proof are unambiguous |
+| G2 | After Clarify | Gate inventory, runner-command taxonomy, promotion-record evidence, Bash comparison retirement, no-shell guard definition, test payload boundary, active-doc boundary, and platform proof are unambiguous |
 | G3 | After Plan | Plan records the reviewability warning, three-slice strategy, runner command surface, parity/promotion model, no-shell guard, and XPLAT-008 handoff |
 | G4 | After Checklist | All true integration, reliability, security, and release-readiness gaps are remediated or explicitly out of scope |
 | G5 | After Tasks | Tasks map to the accepted three slices and avoid active Claude/Codex cutover or broad public documentation scope |
 | G6 | After Analyze | No critical drift remains between roadmap, PRD AC-7.*, design concept, spec, plan, tasks, XPLAT-005 read-only gates, and XPLAT-006 mutation-helper contracts |
 | G6.5 | After Analyze Consensus | Confidence gate records pass, advisory no-data, or advisory fail disposition before implementation begins |
-| G7 | After Implementation | Python test/eval/payload/release gates, parity fixtures, test payload evidence, no-shell active-path guard, spec-index check, diff hygiene, and relevant repo gates pass |
+| G7 | After Implementation | Python test/eval/payload/release gates, parity fixtures, per-gate promotion records, Bash-reference retirement evidence, test payload evidence, no-shell active-path guard, spec-index check, diff hygiene, and relevant repo gates pass |
 
 ---
 
@@ -311,7 +311,7 @@ $speckit-clarify Focus on payload/release helpers and proof boundaries: decide w
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
 | 1 | Active gate inventory and ownership | 5 resolved | Classify by invocation role: active runner/workflow/release/helper entrypoints are XPLAT-007 gates; fixtures and Bash-reference manifests are temporary parity evidence; installed Claude/Codex invocation cutover remains XPLAT-008. Consensus skipped because the clarify executor reported no unresolved items. |
-| 2 | Runner command surface and promotion rules | Pending | Pending |
+| 2 | Runner command surface and promotion rules | 5 resolved | Make `python -m speckit_pro_runner` JSON-envelope operations authoritative for active release/gate surfaces; standalone Python is allowed only for unit/eval harnesses or justified non-authoritative wrappers. Preserve runner stdout/stderr/exit semantics, require per-gate promotion records, restrict mutable helper apply writes to source-checkout evidence/fixtures/metadata, and retire Bash references from active gates. Consensus skipped because the clarify executor reported no unresolved items. |
 | 3 | No-shell guard and legacy cleanup | Pending | Pending |
 | 4 | Payload, install, release, and platform proof | Pending | Pending |
 

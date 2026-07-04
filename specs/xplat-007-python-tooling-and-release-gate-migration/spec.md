@@ -97,6 +97,41 @@ Reviewers can inspect deterministic guard output that fails if active build, tes
   evidence. Record them as XPLAT-008 cutover surfaces or inactive historical
   evidence.
 
+### Session 2: Command Taxonomy And Promotion Rules
+
+- **Runner Operation Rule**: Make active release and gate surfaces
+  `python -m speckit_pro_runner` operations wherever practical, including the
+  suite runner, toolchain preflight, Layer 1/4/5/7/8 gates, Layer 2/3 eval
+  dispatch, payload test build, local fixture refresh, marketplace/version sync,
+  install verification, release-readiness, and active-path guard. Standalone
+  Python commands are allowed only for unit/eval test harnesses or a narrowly
+  justified ergonomic wrapper that reuses the same implementation and is not
+  the authoritative release contract.
+- **Runner Stream And Exit Contract**: Promoted runner operations preserve the
+  existing runner envelope: one JSON response on stdout, line-delimited JSON
+  diagnostics on stderr, and status-based exits `ok=0`,
+  `expected_failure=1`, `input_error=2`, `missing_prerequisite=3`,
+  `subprocess_failure=4`, and `internal_failure=5`. During parity, compare
+  legacy exit status/stdout/stderr exactly unless a fixture declares semantic
+  JSON stdout comparison; after promotion, legacy process output belongs in
+  structured response data rather than mixed process streams.
+- **Promotion Record Rule**: Each promoted gate needs a promotion record naming
+  the prior Bash gate, Python operation, request fixture, failure classes,
+  path/artifact coverage, comparison mode, exact or semantic stdout/stderr rule,
+  exit-code result, artifact hash/diff result, rollback path, and Bash-reference
+  retirement classification. Promotion is complete only when the active-path
+  guard proves no active gate still invokes the Bash reference.
+- **Mutable Command Mode Rule**: Payload, install, and release helper operations
+  use explicit `read_only`, `dry_run`, and `apply` modes. In XPLAT-007, `apply`
+  may write only source-checkout test evidence, temporary fixtures, or
+  explicitly scoped repo-local verification metadata. It must not select,
+  publish, or cut over generated release payloads.
+- **Bash Retirement Rule**: Remove Bash-reference manifests and `.sh` files from
+  active release gates and active runner/workflow paths after promotion. Keep
+  them only as inactive historical or parity evidence when provenance requires
+  it, with active-path guard allowlist classification. Thin Bash wrappers are
+  not allowed as active transition entrypoints.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
