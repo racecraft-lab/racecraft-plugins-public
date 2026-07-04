@@ -61,8 +61,8 @@ accepted scope:
 | Checklist | `$speckit-checklist` | Complete | Completed integration, reliability, security, and release-readiness with 0 remaining gaps |
 | Tasks | `$speckit-tasks` | Complete | Generated tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
 | Analyze | `$speckit-analyze` | Complete | Resolved 4 drift/coverage findings with no unresolved consensus items |
-| Confidence Gate | G6.5 | In Progress | Resolve confidence mode and record pass/advisory disposition before implementation |
-| Implement | `$speckit-implement` | Pending | Execute Python gate migration with fixture parity, promotion records, and no-shell guard evidence |
+| Confidence Gate | G6.5 | Complete | Advisory no-data soft-skip recorded because no synthesizer confidence emit was present |
+| Implement | `$speckit-implement` | In Progress | Execute Python gate migration with fixture parity, promotion records, and no-shell guard evidence |
 | Post | Autopilot post-implementation items | Pending | Complete doctor, verification, review, PR packet, PR creation, remediation, and retrospective items |
 
 **Status Legend:** Pending | In Progress | Complete | Blocked
@@ -598,7 +598,7 @@ bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh specs/xplat
 
 | Mode | Exit | Result | Notes |
 |---|---|---|---|
-| Pending | Pending | Pending | Pending |
+| advisory | 1 | no_data soft-skip | `confidence-gate.sh docs/ai/specs/.process/XPLAT-007-workflow.md --threshold 0.90 --mode advisory` found no synthesizer confidence emit; advisory mode proceeds to implementation |
 
 ---
 
