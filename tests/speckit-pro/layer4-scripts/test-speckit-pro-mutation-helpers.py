@@ -15,10 +15,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[3]
 PLUGIN_ROOT = REPO_ROOT / "speckit-pro"
 FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures" / "mutation-helpers"
-SPEC_DIR = REPO_ROOT / "specs" / "xplat-006-mutation-install-pr-emission-helper-port"
-REQUEST_SCHEMA = SPEC_DIR / "contracts" / "mutation-helper-request.schema.json"
-RESULT_SCHEMA = SPEC_DIR / "contracts" / "mutation-helper-result.schema.json"
-PROMOTION_SCHEMA = SPEC_DIR / "contracts" / "helper-promotion-record.schema.json"
+CONTRACT_DIR = FIXTURE_DIR / "contracts"
+REQUEST_SCHEMA = CONTRACT_DIR / "mutation-helper-request.schema.json"
+RESULT_SCHEMA = CONTRACT_DIR / "mutation-helper-result.schema.json"
+PROMOTION_SCHEMA = CONTRACT_DIR / "helper-promotion-record.schema.json"
 
 if str(PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(PLUGIN_ROOT))
