@@ -268,7 +268,7 @@ Reviewers can inspect deterministic guard output that fails if active build, tes
 - **SC-002**: The migrated repo-local verification suite produces equivalent pass/fail results for the accepted golden fixtures before the Python gates are treated as authoritative.
 - **SC-003**: The active-path no-shell/no-jq guard exits nonzero for every fixture that places Bash, `.sh`, `jq`, shell interpolation, or shell-only parsing in an active gate, and exits successfully for the final implementation's allowed scope.
 - **SC-004**: 100% of promoted gates have promotion records that identify fixture coverage, comparison evidence, and Bash-reference retirement or inactive classification.
-- **SC-005**: Test payload rebuild evidence exists, and zero generated release payload cutover, active payload selection, public docs, or release-note changes are included.
+- **SC-005**: Test payload rebuild evidence exists, and zero generated release payload cutover, active payload selection, public install/runtime docs, platform-support claim docs, or release-note changes are included.
 - **SC-006**: Source-checkout platform proof covers Windows-style paths and local macOS smoke without asserting native installed-plugin UAT.
 - **SC-007**: The final PR packet maps every major requirement and success criterion to verification evidence and names all remaining XPLAT-008 release-gate responsibilities.
 

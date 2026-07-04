@@ -60,8 +60,8 @@ accepted scope:
 | Plan | `$speckit-plan` | Complete | Produced technical plan, research, data model, contracts, and quickstart for the three-slice migration |
 | Checklist | `$speckit-checklist` | Complete | Completed integration, reliability, security, and release-readiness with 0 remaining gaps |
 | Tasks | `$speckit-tasks` | Complete | Generated tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
-| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, PRD AC-7.*, design concept, spec, plan, and tasks |
-| Confidence Gate | G6.5 | Pending | Resolve confidence mode and record pass/advisory disposition before implementation |
+| Analyze | `$speckit-analyze` | Complete | Resolved 4 drift/coverage findings with no unresolved consensus items |
+| Confidence Gate | G6.5 | In Progress | Resolve confidence mode and record pass/advisory disposition before implementation |
 | Implement | `$speckit-implement` | Pending | Execute Python gate migration with fixture parity, promotion records, and no-shell guard evidence |
 | Post | Autopilot post-implementation items | Pending | Complete doctor, verification, review, PR packet, PR creation, remediation, and retrospective items |
 
@@ -575,7 +575,10 @@ Focus on:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| Pending | Pending | Pending | Pending |
+| A1 | HIGH | Release-readiness subchecks from the spec/checklists were collapsed into generic plan/task wording, leaving changed-plugin detection, suite result aggregation, release-PR payload-sync parsing, and post-release drift checks under-specified. | Resolved in `plan.md`, `tasks.md`, and `quickstart.md` by naming the runner operations, fixture cases, tests, registry work, and validation requests. |
+| A2 | MEDIUM | XPLAT-004 preflight/source metadata validation was not explicit after runner manifest/checksum updates. | Resolved in `plan.md`, `tasks.md`, and `quickstart.md` by adding source-checkout `preflight` verification alongside `runtime-info`. |
+| A3 | MEDIUM | Active maintainer-facing repo-local documentation scope omitted `CLAUDE.md` even though workflow and release command paths are planned to change. | Resolved in `plan.md` and `tasks.md` by declaring `CLAUDE.md` and updating the maintainer-doc task and PR packet evidence. |
+| A4 | LOW | A success criterion and independent test said "public docs" broadly, conflicting with the accepted narrow maintainer run-instruction update boundary. | Resolved in `spec.md` and `tasks.md` by narrowing the exclusion to public install/runtime docs, platform-support claim docs, and release notes. |
 
 ---
 

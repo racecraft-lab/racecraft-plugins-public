@@ -78,6 +78,7 @@ slice order cannot stay under the roadmap block thresholds.
 - NEW tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json
 - MODIFIED .github/workflows/pr-checks.yml
 - MODIFIED .github/workflows/release.yml
+- MODIFIED CLAUDE.md
 - MODIFIED docs-site/src/content/docs/contribute-and-release.md
 
 Legacy `.sh` entrypoints are expected to leave active gate/release paths after
@@ -177,11 +178,11 @@ Promotion bar:
 ### Slice 2: Payload, Install, And Release Helpers
 
 Move test payload evidence, local plugin refresh fixtures, marketplace/version
-sync, install verification, release checks, and release-readiness checks into
-runner operations. Operations use `read_only`, `dry_run`, and narrowly scoped
-`apply` modes. In XPLAT-007, `apply` may write only source-checkout test
-evidence, temporary fixtures, or explicitly declared repo-local verification
-metadata.
+sync, install verification, release checks, release-PR payload-sync parsing,
+post-release drift checks, and release-readiness aggregation into runner
+operations. Operations use `read_only`, `dry_run`, and narrowly scoped `apply`
+modes. In XPLAT-007, `apply` may write only source-checkout test evidence,
+temporary fixtures, or explicitly declared repo-local verification metadata.
 
 Boundary:
 
@@ -224,7 +225,7 @@ Planned operation groups:
 |---|---|---|
 | Suite gates | `run-default-suite`, `run-layer`, `run-ai-evals`, `run-integration-suite`, `run-parity-suite` | Runner-authoritative after promotion |
 | Payload/install | `build-test-payload-evidence`, `refresh-local-plugin-fixture`, `verify-install` | Runner-authoritative fixture/dry-run/apply modes only |
-| Release readiness | `check-marketplace-version-sync`, `release-readiness`, `validate-pr-title`, `validate-workflow-contract` | Runner-authoritative |
+| Release readiness | `detect-changed-plugin`, `aggregate-suite-results`, `check-marketplace-version-sync`, `validate-pr-title`, `validate-workflow-contract`, `check-payload-evidence`, `parse-release-pr-payload-sync`, `check-post-release-drift`, `release-readiness` | Runner-authoritative |
 | Guardrails | `active-path-guard`, `classify-shell-finding` | Runner-authoritative |
 
 Standalone Python is allowed only for unit/eval harnesses that call the same
@@ -263,7 +264,8 @@ Planning artifacts:
 
 Implementation phase targets:
 
-1. Run runner source-checkout smoke through `runtime-info`.
+1. Run runner source-checkout smoke through `runtime-info` and `preflight`,
+   including manifest/checksum metadata validation after runner file changes.
 2. Run focused gate fixtures for each migrated operation.
 3. Run active-path guard and verify blocking count is zero.
 4. Rebuild test payload evidence and verify release cutover remains false.

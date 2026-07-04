@@ -16,11 +16,19 @@ launches and emits the JSON envelope:
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json
 ```
 
+Then run preflight after any runner manifest/checksum update:
+
+```bash
+printf '%s\n' '{"schema_version":"1.0","request_id":"xplat-007-preflight-smoke","helper_id":"runner","operation":"preflight","mode":"read_only","inputs":{}}' | PYTHONPATH=speckit-pro python3 -m speckit_pro_runner
+```
+
 Expected outcome:
 
 - stdout is one JSON response
 - `status` is `ok`
 - `data.report.source_vs_installed_context` is `source_checkout`
+- preflight validates runner source metadata, including manifest/checksum
+  consistency
 - no installed-cache or native UAT claim is made
 
 ## 2. Run Python Test/Eval Gates
@@ -89,7 +97,8 @@ Expected outcome:
 
 - no real `HOME` or installed plugin cache is mutated
 - bundled-agent inventory and version consistency are checked from fixtures
-- stale marketplace/version or payload evidence blocks release readiness
+- stale marketplace/version, payload evidence, release-PR payload-sync, or
+  post-release drift evidence blocks release readiness
 
 ## XPLAT-008 Exclusions
 
