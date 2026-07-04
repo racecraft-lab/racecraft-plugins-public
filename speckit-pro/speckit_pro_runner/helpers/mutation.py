@@ -418,6 +418,7 @@ def write_file_atomic(target: Path, content: str) -> None:
             try:
                 tmp.unlink()
             except OSError:
+                # Best-effort cleanup only; the write outcome is already determined.
                 pass
 
 
