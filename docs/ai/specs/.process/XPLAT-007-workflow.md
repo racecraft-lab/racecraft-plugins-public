@@ -681,7 +681,8 @@ the current marker plan instead of a single unscoped implementation pass.
 
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
-| Test/eval runner gates | Pending | Pending | Pending |
+| Foundation marker | T001-T013 | Complete | Commit `2b7158daf837402fb364d46af71ccaebb8981448`; checkpoint evidence `specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/foundation-checkpoint.json`; Layer 4 passed 2160/2160 |
+| Test/eval runner gates | T014-T028 | In Progress | Next marker `us1` |
 | Payload/install/release helpers | Pending | Pending | Pending |
 | Active-path guardrails and cleanup | Pending | Pending | Pending |
 | Smoke and handoff | Pending | Pending | Pending |
