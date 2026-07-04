@@ -437,17 +437,41 @@ render_prs() {
   done
 }
 
+list_spec_files() {
+  local spec_dir="$1" root_abs spec_abs rel_root
+  if command -v git >/dev/null 2>&1 && git -C "$REPO_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    root_abs="$(cd "$REPO_ROOT" && pwd)"
+    spec_abs="$(cd "$spec_dir" && pwd)"
+    case "$spec_abs" in
+      "$root_abs"/*) rel_root="${spec_abs#"$root_abs"/}" ;;
+      *) rel_root="$spec_dir" ;;
+    esac
+    git -C "$REPO_ROOT" ls-files -- "$rel_root" \
+      | while IFS= read -r path; do
+          case "$path" in
+            "$rel_root"/*) printf '%s\n' "${path#"$rel_root"/}" ;;
+          esac
+        done \
+      | LC_ALL=C sort
+    return 0
+  fi
+
+  cd "$spec_dir" && find . -type f | sed 's#^\./##' | LC_ALL=C sort
+}
+
 # render_backlinks <spec_dir> <branch> — relative reachability links to that spec's
 # OWN on-disk artifacts (FR-006/FR-018), relative to the MOC's own directory.
 # Excludes SPEC-MOC.md itself (it is the map note, never its own backlink). Fixed
-# artifact precedence then lexicographic path within each bucket (FR-005, SC-002);
-# only files that exist on disk (no dangling links). Output: "- [path](path)" lines.
+# artifact precedence then lexicographic path within each bucket (FR-005, SC-002).
+# In a git worktree, only tracked files are considered so ignored local evidence
+# logs cannot make committed MOC links nondeterministic. Archive/consumer roots
+# without .git fall back to all regular files. Output: "- [path](path)" lines.
 render_backlinks() {
   local spec_dir="$1"
-  # All regular files under the spec dir, path RELATIVE to spec_dir, LC_ALL=C sorted
-  # so enumeration order never leaks (SC-009). Exclude the map note itself.
+  # All eligible files under the spec dir, path RELATIVE to spec_dir, LC_ALL=C
+  # sorted so enumeration order never leaks (SC-009). Exclude the map note itself.
   local all
-  all="$(cd "$spec_dir" && find . -type f | sed 's#^\./##' | LC_ALL=C sort)"
+  all="$(list_spec_files "$spec_dir")"
 
   local rel
   # Bucket each file by the fixed precedence; emit buckets in order, lexicographic
