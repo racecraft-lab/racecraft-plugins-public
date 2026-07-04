@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-generate-pr-body",
+  "helper_id": "generate-pr-body",
+  "operation": "generate-pr-body",
+  "mode": "dry_run",
+  "inputs": {
+    "output_path": "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/generated/pr-body.md",
+    "title": "feat(XPLAT-006): helper port",
+    "sections": ["Summary", "Verification"]
+  }
+}

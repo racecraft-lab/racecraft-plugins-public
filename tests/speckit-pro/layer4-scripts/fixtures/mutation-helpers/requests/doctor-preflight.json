@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-doctor-preflight",
+  "helper_id": "doctor-preflight",
+  "operation": "doctor-preflight",
+  "mode": "read_only",
+  "inputs": {
+    "install_root": "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/fake-home",
+    "fake_home": true,
+    "inventory": {
+      "files": [
+        {
+          "path": "agents/a.md",
+          "content": "agent\n",
+          "sha256": "skip"
+        }
+      ]
+    }
+  }
+}

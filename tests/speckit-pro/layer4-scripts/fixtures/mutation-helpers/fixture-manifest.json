@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "feature_id": "XPLAT-006",
+  "mode": "mutation",
+  "helpers": [
+    {
+      "helper_id": "mutation-registry-dispatch",
+      "operation": "mutation-registry-dispatch",
+      "modes": ["read_only"],
+      "failure_classes": ["invalid_input"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/mutation-registry-dispatch.json"
+    },
+    {
+      "helper_id": "mutation-foundation",
+      "operation": "mutation-foundation",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "dirty_worktree", "git_status_unavailable", "unsupported_path", "conflicting_operations", "write_failure", "partial_failure"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/mutation-foundation.json"
+    },
+    {
+      "helper_id": "doctor-preflight",
+      "operation": "doctor-preflight",
+      "modes": ["read_only"],
+      "failure_classes": ["malformed_inventory", "source_truth_checksum_mismatch", "safe_repair", "blocked"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/doctor-preflight.json"
+    },
+    {
+      "helper_id": "doctor-repair",
+      "operation": "doctor-repair",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["real_home_refused", "fake_home_boundary_refused", "unsafe_manual_remediation", "blocked"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/doctor-repair.json"
+    },
+    {
+      "helper_id": "generate-pr-body",
+      "operation": "generate-pr-body",
+      "modes": ["dry_run", "apply"],
+      "failure_classes": ["invalid_input", "unsupported_path", "write_failure"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/generate-pr-body.json"
+    },
+    {
+      "helper_id": "multi-pr-emission",
+      "operation": "multi-pr-emission",
+      "modes": ["dry_run"],
+      "failure_classes": ["invalid_input", "deferred_live_mutation"],
+      "authoritative_command": "python -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/multi-pr-emission.json"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-mutation-registry-dispatch",
+  "helper_id": "mutation-registry-dispatch",
+  "operation": "mutation-registry-dispatch",
+  "mode": "read_only",
+  "inputs": {}
+}

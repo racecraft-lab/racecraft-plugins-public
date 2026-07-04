@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "error_class": "none",
+  "exit_code": 0,
+  "stderr_line": "",
+  "packet_id": "packet",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port"
+  },
+  "status": "passed",
+  "title_value": "feat(XPLAT-006): Add mutation, install, and PR-emission helper port",
+  "body_file": "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/body.md",
+  "rule_outcomes": [
+    {
+      "rule": "packet.validation",
+      "status": "passed",
+      "evidence": "no failures"
+    }
+  ],
+  "pr_blocked": false,
+  "failures": [],
+  "remediation_evidence": [],
+  "timestamp": "2026-07-03T21:15:30Z"
+}

@@ -1,0 +1,175 @@
+{
+  "schema_version": "1.0.0",
+  "packet_id": "packet",
+  "mode": "single",
+  "target": {
+    "base_branch": "main",
+    "head_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port"
+  },
+  "source_feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
+  "generated_title": {
+    "value": "feat(XPLAT-006): Add mutation, install, and PR-emission helper port",
+    "type": "feat",
+    "scope": "XPLAT-006",
+    "description": "Add mutation, install, and PR-emission helper port",
+    "source_evidence": {
+      "kind": "feature_spec",
+      "source": "specs/xplat-006-mutation-install-pr-emission-helper-port/spec.md",
+      "summary": "Feature title normalized into a public action phrase."
+    },
+    "rejected_candidates": [
+      {
+        "value": "Mutation, Install, and PR-Emission Helper Port",
+        "reason": "Feature display title is source evidence, not the final conventional title."
+      },
+      {
+        "value": "codex/xplat-006-mutation-install-pr-emission-helper-port",
+        "reason": "Branch names remain metadata and are not title descriptions."
+      }
+    ]
+  },
+  "body_file": "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/body.md",
+  "required_headings": [
+    "Summary",
+    "What Changed",
+    "Why It Matters",
+    "How To Review",
+    "How To UAT",
+    "Verification",
+    "Scope",
+    "Known Gaps"
+  ],
+  "verification_evidence": [
+    {
+      "kind": "layer4_script",
+      "source": "tests/speckit-pro/layer4-scripts/test-generate-pr-body.sh",
+      "summary": "Focused generator test covers single packet metadata and rendered body paths.",
+      "result": "pending"
+    }
+  ],
+  "scope_evidence": {
+    "reviewable_loc": 0,
+    "production_files": 0,
+    "total_files": 60,
+    "budget_result": "within_budget",
+    "changed_files": [
+      "dist/claude/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/SKILL.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/phase-execution-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "dist/codex/speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "docs-site/src/content/docs/reference/tests.md",
+      "docs/ai/specs/.process/XPLAT-006-design-concept.md",
+      "docs/ai/specs/.process/XPLAT-006-workflow.md",
+      "docs/ai/specs/.process/autopilot-state.json",
+      "docs/ai/specs/cross-platform-plugin-runtime-roadmap-MOC.md",
+      "docs/ai/specs/cross-platform-plugin-runtime-technical-roadmap.md",
+      "speckit-pro/codex-skills/speckit-autopilot/SKILL.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/phase-execution-codex.md",
+      "speckit-pro/codex-skills/speckit-autopilot/references/task-list-canonical-codex.md",
+      "speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py",
+      "speckit-pro/speckit_pro_runner/envelope.py",
+      "speckit-pro/speckit_pro_runner/helpers/install.py",
+      "speckit-pro/speckit_pro_runner/helpers/mutation.py",
+      "speckit-pro/speckit_pro_runner/helpers/pr_emission.py",
+      "speckit-pro/speckit_pro_runner/helpers/promotion.py",
+      "speckit-pro/speckit_pro_runner/helpers/registry.py",
+      "speckit-pro/speckit_pro_runner/install_inventory.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json",
+      "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/marker-plan/final-marker-split-result.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/packet/validation.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/body.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/packet.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/uat-runbook.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/SPEC-MOC.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/error-handling.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/integration.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/reliability.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/requirements.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/security.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/autopilot-phase-coverage-report.schema.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/doctor-preflight-result.schema.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/helper-promotion-record.schema.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/mutation-helper-request.schema.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/mutation-helper-result.schema.json",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/data-model.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/plan.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/quickstart.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/research.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/spec.md",
+      "specs/xplat-006-mutation-install-pr-emission-helper-port/tasks.md",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/bash-reference-manifest.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/fixture-manifest.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/install-inventory-fixtures.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/promotion-records.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/doctor-preflight.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/doctor-repair.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/generate-pr-body.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/multi-pr-emission.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/mutation-foundation.json",
+      "tests/speckit-pro/layer4-scripts/fixtures/mutation-helpers/requests/mutation-registry-dispatch.json",
+      "tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-mutation-helpers.py",
+      "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+      "tests/speckit-pro/run-all.sh"
+    ],
+    "non_goals": [
+      "Split title generation is not implemented by this single-packet task.",
+      "Multi-PR emission behavior is not modified by this single-packet task."
+    ]
+  },
+  "uat": {
+    "how_to_uat": "Use the UAT Runbook embedded in the rendered PR body for reviewer-facing acceptance checks.",
+    "uat_runbook_heading": "## UAT Runbook",
+    "uat_source": "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/uat-runbook.md"
+  },
+  "source_markers": [
+    {
+      "marker_id": "feature-spec",
+      "rendered_text": "Source: feature specification and changed-file scope.",
+      "source": "specs/xplat-006-mutation-install-pr-emission-helper-port/spec.md"
+    },
+    {
+      "marker_id": "changed-file-scope",
+      "rendered_text": "Source: generated PR packet changed-file evidence.",
+      "source": "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/body.md"
+    },
+    {
+      "marker_id": "quickstart-verification",
+      "rendered_text": "Source: generated PR packet.",
+      "source": "specs/xplat-006-mutation-install-pr-emission-helper-port/quickstart.md"
+    }
+  ],
+  "editable_fields": [
+    {
+      "field_id": "summary",
+      "heading": "Summary",
+      "start_marker": "<!-- speckit-pro-editable:summary:start -->",
+      "end_marker": "<!-- speckit-pro-editable:summary:end -->"
+    },
+    {
+      "field_id": "what_changed",
+      "heading": "What Changed",
+      "start_marker": "<!-- speckit-pro-editable:what_changed:start -->",
+      "end_marker": "<!-- speckit-pro-editable:what_changed:end -->"
+    },
+    {
+      "field_id": "why_it_matters",
+      "heading": "Why It Matters",
+      "start_marker": "<!-- speckit-pro-editable:why_it_matters:start -->",
+      "end_marker": "<!-- speckit-pro-editable:why_it_matters:end -->"
+    }
+  ],
+  "protected_body_fingerprint": {
+    "algorithm": "sha256",
+    "value": "ee331398c8baa2423046e1bfdfabdafbca39236b9452b7afb0924be52e05011f",
+    "normalization": "canonical packet block only; LF line endings; trailing whitespace trimmed; final newline ensured; editable block bodies replaced by <elided:field_id> before sha256.",
+    "elided_fields": [
+      "summary",
+      "what_changed",
+      "why_it_matters"
+    ]
+  },
+  "validation_result_path": "specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/packet/validation.json"
+}

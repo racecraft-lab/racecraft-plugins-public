@@ -1,85 +1,61 @@
 {
-  "workflow_file": "docs/ai/specs/.process/XPLAT-005-workflow.md",
-  "updated_at": "2026-07-03T03:16:56Z",
-  "active_step": "Archived",
-  "feature_dir": "specs/xplat-005-read-only-helper-port",
-  "branch": "codex/xplat-005-read-only-helper-port",
-  "status": "completed_archived",
-  "pr": {
-    "number": 276,
-    "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/276",
-    "state": "MERGED",
-    "base": "main",
-    "head": "codex/xplat-005-read-only-helper-port",
-    "merged_at": "2026-07-03T03:16:56Z",
-    "merge_commit": "c4642f50ae99172170798a49f0c8fd990891c0f9"
-  },
+  "workflow_file": "docs/ai/specs/.process/XPLAT-006-workflow.md",
+  "feature_dir": "specs/xplat-006-mutation-install-pr-emission-helper-port",
+  "feature_branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
+  "updated_at": "2026-07-04T00:00:50Z",
+  "confidence_gate_mode": "advisory",
+  "active_step": "Post: Retrospective",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "post-merge-cleanup-applied",
-    "current_target": null,
-    "excluded_current_spec": null,
+    "cleanup_mode": "feature-branch-apply-eligible",
+    "current_target": "specs/xplat-006-mutation-install-pr-emission-helper-port",
+    "excluded_current_spec": "specs/xplat-006-mutation-install-pr-emission-helper-port",
     "eligible_previous_specs": [],
-    "safeToApplyCleanup": true,
-    "cleanup_applied": true,
-    "archive_report": ".specify/memory/archive-reports/2026-07-03-xplat-005-post-merge-hygiene.md",
-    "removed_spec": "specs/xplat-005-read-only-helper-port",
-    "cleanup_branch": "codex/xplat-005-archive-cleanup",
-    "note": "Archive extension is installed. XPLAT-005 merged via PR #276 and active spec cleanup was applied after preserving recovery commands and decoupling read-only helper parity tests from specs/**."
+    "active_specs_inventory": [
+      "specs/xplat-006-mutation-install-pr-emission-helper-port"
+    ],
+    "safeToApplyCleanup": false,
+    "notes": "Archive extension is enabled. Active specs inventory contains only the current XPLAT-006 target, so no previously merged active spec folder was eligible for cleanup in this startup sweep."
   },
-  "prerequisites": {
-    "all_pass": true,
-    "branch": "codex/xplat-005-read-only-helper-port",
-    "is_worktree": true,
-    "on_feature_branch": false,
-    "confidence_gate_mode": "advisory",
-    "capability_coverage": "advisory coverage present",
-    "agents": {
-      "required_available": true,
-      "required": [
-        "phase-executor",
-        "clarify-executor",
-        "checklist-executor",
-        "analyze-executor",
-        "implement-executor",
-        "codebase-analyst",
-        "spec-context-analyst",
-        "domain-researcher",
-        "autopilot-fast-helper",
-        "uat-runbook-author"
-      ],
-      "project_implementation_agent": "implement-executor"
+  "preflight": {
+    "model": "gpt-5.5",
+    "model_reasoning_effort": "xhigh",
+    "codex_agent_install": "validate-agent-install.sh --surface codex --autoheal passed with 10 bundled agents installed",
+    "check_prerequisites": {
+      "all_pass": true,
+      "branch": "codex/xplat-006-mutation-install-pr-emission-helper-port",
+      "is_worktree": true,
+      "on_feature_branch": false,
+      "specify_version": "0.11.8"
+    },
+    "reviewability_setup_gate": {
+      "status": "pass",
+      "pass": true,
+      "reviewable_loc": 0,
+      "production_files": 0,
+      "total_files": 0,
+      "primary_surfaces": [
+        "docs/process"
+      ]
     },
     "project_commands": {
       "BUILD": "N/A",
       "TYPECHECK": "N/A",
       "LINT": "N/A",
       "LINT_FIX": "N/A",
-      "UNIT_TEST": "bash tests/speckit-pro/run-all.sh --layer 4",
-      "INTEGRATION_TEST": "bash tests/speckit-pro/run-all.sh --layer 1",
+      "UNIT_TEST": "N/A",
+      "INTEGRATION_TEST": "N/A",
       "SINGLE_FILE_TEST": "N/A",
       "SINGLE_FILE_INTEGRATION": "N/A",
-      "FULL_VERIFY": "bash tests/speckit-pro/run-all.sh"
+      "FULL_VERIFY": "N/A"
     },
     "preset_conventions": {
       "has_presets": true,
       "presets": [
         "speckit-pro-reviewability"
-      ],
-      "extensions": "archive and git installed; verify, verify-tasks, retrospective, and speckit-utils hooks are configured",
-      "hooks": "18 hook events configured",
-      "templates": {
-        "spec": ".specify/presets/speckit-pro-reviewability/templates/spec-template.md",
-        "plan": ".specify/presets/speckit-pro-reviewability/templates/plan-template.md",
-        "tasks": ".specify/presets/speckit-pro-reviewability/templates/tasks-template.md"
-      }
-    }
-  },
-  "baseline_verification": {
-    "layer4_initial": "failed privacy scan due to local absolute path evidence in workflow preflight table",
-    "remediation": "rewrote the evidence to avoid machine-specific identity and path data",
-    "focused_privacy_scan": "10/10 passed",
-    "layer4_after_fix": "2101/2101 passed"
+      ]
+    },
+    "implementation_agent": "implement-executor"
   },
   "plan": [
     {
@@ -87,398 +63,377 @@
       "status": "completed"
     },
     {
-      "step": "Phase 0: Prerequisites and baseline gates",
+      "step": "Phase 0: Prerequisites",
       "status": "completed"
     },
     {
       "step": "Phase 1: Specify",
-      "status": "completed",
-      "result": {
-        "spec": "specs/xplat-005-read-only-helper-port/spec.md",
-        "requirements_checklist": "specs/xplat-005-read-only-helper-port/checklists/requirements.md",
-        "functional_requirements": 22,
-        "user_stories": 3,
-        "acceptance_scenarios": 10,
-        "success_criteria": 6,
-        "requirements_checklist_items": 20,
-        "markers": 0,
-        "gate": "G1 pass"
-      }
+      "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Slice and helper grouping",
-      "status": "completed",
-      "result": {
-        "questions": 5,
-        "accepted_answers": [
-          "Slice 1 includes helper registry/dispatch, check-prerequisites, detect-commands, detect-presets, count-markers, validate-gate, reviewability-gate, estimate-reviewable-loc, resolve-confidence-mode, and confidence-gate.",
-          "Slice 2 includes generate-spec-index --check, o5-topology, atomicity-route, plan-layers <feature-dir>, validate-pr-workflow-contract, and late validate-pr-packet read-only validation.",
-          "detect-stack-manager is deferred to XPLAT-006 because it is tied to PR emission/restack behavior and persistence.",
-          "Mixed-mode helpers are limited to read-only/check behavior; write/regenerate, marker-plan output, validation-result persistence, and workflow-event writes are deferred."
-        ],
-        "spec_updated": true
-      }
+      "step": "Phase 2: Clarify - Helper And Mode Matrix",
+      "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Slice and helper grouping Consensus",
+      "step": "Phase 2: Clarify - Helper And Mode Matrix Consensus",
       "status": "completed",
-      "result": {
-        "items": 2,
-        "outcome": "generate-spec-index is --check only; validate-pr-packet is read-only validation output only",
-        "analysts": [
-          "codebase-analyst",
-          "spec-context-analyst"
-        ],
-        "human_escalation_required": false
-      }
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
-      "step": "Phase 2: Clarify - Parity and gate promotion",
-      "status": "completed",
-      "result": {
-        "questions": 5,
-        "accepted_answers": [
-          "Every promoted Bash-backed helper requires golden fixtures plus source-checkout Bash comparison.",
-          "Golden-only fixtures are limited to runner envelope/registry dispatch, typed-path/subprocess safety, malformed request, synthetic Windows/no-Bash/path, and normalization unit tests.",
-          "Normalization is allowlisted to volatile path, temp, timestamp, executable/version, platform/runtime identity, and live git metadata fields.",
-          "Promotion is recorded in a per-helper matrix with helper id, slice, Bash path, runner module/operation, fixture ids, comparison ids, normalized fields, status, authoritative test command, and deferred follow-up.",
-          "validate-pr-packet parity excludes validation-result and workflow-event persistence writes."
-        ],
-        "spec_updated": true
-      }
+      "step": "Phase 2: Clarify - Mutation Safety And Atomicity",
+      "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Parity and gate promotion Consensus",
+      "step": "Phase 2: Clarify - Mutation Safety And Atomicity Consensus",
       "status": "completed",
-      "result": {
-        "items": 1,
-        "outcome": "validate-pr-packet persistence remains out of scope; read-only validation output is in scope",
-        "analysts": [
-          "codebase-analyst",
-          "spec-context-analyst"
-        ],
-        "human_escalation_required": false
-      }
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
-      "step": "Phase 2: Clarify - Platform smoke and cutover boundary",
-      "status": "completed",
-      "result": {
-        "questions": 4,
-        "accepted_answers": [
-          "Smallest local macOS source-checkout smoke is a runtime-info JSON request through PYTHONPATH=speckit-pro python3 -m speckit_pro_runner.",
-          "The smoke proves source-checkout runner launch, JSON stdin envelope handling, one JSON stdout response, ok status, source_checkout context, and runtime/plugin-relative metadata.",
-          "The smoke does not prove installed-cache launch, generated payload propagation, active Claude/Codex invocation, helper parity, mutation-helper safety, or full native platform support.",
-          "The spec prevents cutover scope by limiting XPLAT-005 to source helper ports, tests, parity evidence, and internal review packets."
-        ],
-        "spec_updated": true
-      }
+      "step": "Phase 2: Clarify - Install Completeness And Doctor",
+      "status": "completed"
     },
     {
-      "step": "Phase 2: Clarify - Platform smoke and cutover boundary Consensus",
+      "step": "Phase 2: Clarify - Install Completeness And Doctor Consensus",
       "status": "completed",
-      "result": {
-        "items": 0,
-        "outcome": "no unresolved consensus items",
-        "human_escalation_required": false
-      }
+      "skipped": "No unresolved items reported by clarify-executor"
+    },
+    {
+      "step": "Phase 2: Clarify - PR, Restack, Relocation, And Approval Boundary",
+      "status": "completed"
+    },
+    {
+      "step": "Phase 2: Clarify - PR, Restack, Relocation, And Approval Boundary Consensus",
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 3: Plan",
-      "status": "completed",
-      "result": {
-        "plan": "specs/xplat-005-read-only-helper-port/plan.md",
-        "research": "specs/xplat-005-read-only-helper-port/research.md",
-        "data_model": "specs/xplat-005-read-only-helper-port/data-model.md",
-        "quickstart": "specs/xplat-005-read-only-helper-port/quickstart.md",
-        "contracts": [
-          "specs/xplat-005-read-only-helper-port/contracts/read-only-helper-request.schema.json",
-          "specs/xplat-005-read-only-helper-port/contracts/helper-promotion-record.schema.json"
-        ],
-        "planned_slices": 2,
-        "in_scope_target_rows": 16,
-        "out_of_scope_rows": 4,
-        "declared_file_operations": 10,
-        "reviewability_split_decision": "remain one workflow with two internal slices",
-        "gate": "G3 pass",
-        "markers": 0
-      }
+      "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - integration",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-005-read-only-helper-port/checklists/integration.md",
-        "items": 24,
-        "initial_gaps": 0,
-        "current_gaps": 0,
-        "human_escalation_required": false
-      }
+      "step": "Phase 4: Checklist - Integration",
+      "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - integration Consensus",
+      "step": "Phase 4: Checklist - Integration Consensus",
       "status": "completed",
-      "result": {
-        "outcome": "no integration consensus needed",
-        "human_escalation_required": false
-      }
+      "skipped": "No gaps reported by checklist"
     },
     {
-      "step": "Phase 4: Checklist - error-handling",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-005-read-only-helper-port/checklists/error-handling.md",
-        "items": 24,
-        "initial_gaps": 4,
-        "current_gaps": 0,
-        "remediations": [
-          "added rejected-input stdout schema requirements",
-          "added per-helper failure-class to nonzero-exit mapping requirements",
-          "added deterministic remediation text/action requirements",
-          "added per-class rejected-input fixture coverage requirements"
-        ],
-        "human_escalation_required": false
-      }
+      "step": "Phase 4: Checklist - Error-Handling",
+      "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - error-handling Consensus",
+      "step": "Phase 4: Checklist - Error-Handling Consensus",
       "status": "completed",
-      "result": {
-        "outcome": "parent remediated all error-handling gaps in spec, plan, data model, contracts, and checklist",
-        "human_escalation_required": false
-      }
+      "skipped": "No gaps reported by checklist"
     },
     {
-      "step": "Phase 4: Checklist - reliability",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-005-read-only-helper-port/checklists/reliability.md",
-        "items": 20,
-        "initial_gaps": 0,
-        "current_gaps": 0,
-        "human_escalation_required": false
-      }
+      "step": "Phase 4: Checklist - Reliability",
+      "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - reliability Consensus",
+      "step": "Phase 4: Checklist - Reliability Consensus",
       "status": "completed",
-      "result": {
-        "outcome": "no reliability consensus needed",
-        "human_escalation_required": false
-      }
+      "skipped": "No gaps reported by checklist"
     },
     {
-      "step": "Phase 4: Checklist - security",
-      "status": "completed",
-      "result": {
-        "checklist": "specs/xplat-005-read-only-helper-port/checklists/security.md",
-        "items": 22,
-        "initial_gaps": 2,
-        "current_gaps": 0,
-        "remediations": [
-          "added argv-only subprocess policy and shell invocation ban",
-          "added repo/plugin trust-boundary path resolution and symlink/traversal rejection requirements"
-        ],
-        "human_escalation_required": false
-      }
+      "step": "Phase 4: Checklist - Security",
+      "status": "completed"
     },
     {
-      "step": "Phase 4: Checklist - security Consensus",
+      "step": "Phase 4: Checklist - Security Consensus",
       "status": "completed",
-      "result": {
-        "outcome": "parent remediated all security gaps in spec, plan, data model, contracts, and checklist",
-        "human_escalation_required": false
-      }
+      "skipped": "No gaps reported by checklist"
     },
     {
       "step": "Phase 5: Tasks",
-      "status": "completed",
-      "result": {
-        "tasks": "specs/xplat-005-read-only-helper-port/tasks.md",
-        "total_tasks": 85,
-        "phases": 5,
-        "parallel_tasks": 5,
-        "story_counts": {
-          "US1": 47,
-          "US2": 6,
-          "US3": 24,
-          "setup_unlabeled": 7
-        },
-        "gate": "G5 pass"
-      }
-    },
-    {
-      "step": "Phase 5: Atomicity route",
-      "status": "completed",
-      "result": {
-        "route": "one-navigable-PR",
-        "releasable": true,
-        "signals": [
-          "change-shape:modify-heavy"
-        ],
-        "hints": [
-          "hint:release-cadence:weak"
-        ],
-        "warnings": []
-      }
+      "status": "completed"
     },
     {
       "step": "Phase 6: Analyze",
-      "status": "completed",
-      "result": {
-        "findings_total": 2,
-        "critical": 0,
-        "high": 1,
-        "medium": 1,
-        "low": 0,
-        "remediated": 2,
-        "remaining_critical_high": 0,
-        "gate": "G6 pass"
-      }
+      "status": "completed"
     },
     {
-      "step": "Phase 6: Analyze Consensus",
+      "step": "Phase 6: Analyze - Consensus",
       "status": "completed",
-      "result": {
-        "outcome": "no unresolved consensus needed after remediation",
-        "human_escalation_required": false
-      }
+      "skipped": "Analyze issue remediated; no unresolved issues remained"
     },
     {
       "step": "Phase 6.5: Confidence Gate",
-      "status": "completed",
-      "result": {
-        "mode": "advisory",
-        "outcome": "no unresolved confidence blockers",
-        "human_escalation_required": false
-      }
+      "status": "completed"
     },
     {
-      "step": "Phase 7: Implement",
+      "step": "Phase 7: Implement - Pending task decomposition",
       "status": "completed",
-      "result": {
-        "tasks_total": 85,
-        "tasks_done": 85,
-        "gate": "G7 pass",
-        "source_changes": [
-          "speckit-pro/speckit_pro_runner/helpers/__init__.py",
-          "speckit-pro/speckit_pro_runner/helpers/registry.py",
-          "speckit-pro/speckit_pro_runner/helpers/read_only.py",
-          "speckit-pro/speckit_pro_runner/envelope.py",
-          "speckit-pro/speckit_pro_runner/runtime.py"
-        ],
-        "test_changes": [
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.py",
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh",
-          "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/",
-          "tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
-          "tests/speckit-pro/run-all.sh"
-        ],
-        "metadata_refreshed": true,
-        "active_cutover_changed": false
-      }
+      "evidence": "XPLAT-006 tasks complete with golden/deferred promotion boundary; mutation hardening test passes 17/17 and Layer 4 includes it."
     },
     {
-      "step": "Post: mark tasks complete",
+      "step": "Post: Doctor Extension Check",
       "status": "completed",
-      "result": {
-        "gate": "G7 pass",
-        "tasks_done": 85,
-        "tasks_total": 85
-      }
+      "evidence": "Doctor/preflight fake-home proof covered by mutation-helper test 17/17."
     },
     {
-      "step": "Post: Python helper tests",
+      "step": "Post: Verify Implementation",
       "status": "completed",
-      "result": {
-        "command": "bash tests/speckit-pro/layer4-scripts/test-speckit-pro-read-only-helpers.sh",
-        "result": "7/7 passed"
-      }
+      "evidence": "Default deterministic suite passed 3803/3803."
     },
     {
-      "step": "Post: Bash-reference comparisons",
+      "step": "Post: Verify Tasks Phantom Check",
       "status": "completed",
-      "result": {
-        "evidence": "included in test-speckit-pro-read-only-helpers.py",
-        "result": "passed"
-      }
+      "evidence": "G7 passed with all 61 tasks complete."
     },
     {
-      "step": "Post: runner test",
+      "step": "Post: Code Review",
       "status": "completed",
-      "result": {
-        "command": "bash tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.sh",
-        "result": "9/9 passed"
-      }
+      "evidence": "Self-review and RepoPrompt review findings remediated before final suite run."
     },
     {
-      "step": "Post: spec-index check",
+      "step": "Post: Integration Suite",
       "status": "completed",
-      "result": {
-        "command": "included in default deterministic suite",
-        "result": "validate-spec-index-determinism 15/15 and test-generate-spec-index 113/113 passed"
-      }
+      "evidence": "Layer 1, Layer 4, and Layer 5 passed in default suite."
     },
     {
-      "step": "Post: Layer 1",
+      "step": "Post: Reviewability Diff Gate",
       "status": "completed",
-      "result": {
-        "command": "bash tests/speckit-pro/run-all.sh",
-        "result": "Layer 1 992/992 and Codex Layer 1 451/451 passed"
-      }
+      "evidence": "Reviewability diff gate passed by honored infra exception; final backstop proceeded with collapsed full-spec marker plan."
     },
     {
-      "step": "Post: Layer 4",
+      "step": "Post: Self-Review",
       "status": "completed",
-      "result": {
-        "command": "bash tests/speckit-pro/run-all.sh --layer 4; bash tests/speckit-pro/run-all.sh",
-        "result": "2108/2108 passed"
-      }
+      "evidence": "No active cutover or public platform claim shipped."
     },
     {
-      "step": "Post: local macOS source-checkout smoke",
+      "step": "Post: UAT Runbook Generation",
       "status": "completed",
-      "result": {
-        "command": "tests/speckit-pro/layer4-scripts/fixtures/read-only-helpers/smoke-runtime-info-request.json via helper suite",
-        "result": "runner runtime-info ok source_checkout"
-      }
+      "evidence": "Authored .process/uat-runbook.md; UAT validation passed 12/12."
     },
     {
-      "step": "Post: no active cutover/public claim diff review",
+      "step": "Post: PR Body Generation",
       "status": "completed",
-      "result": {
-        "result": "no dist, skills, hooks, generated payload, install, marketplace, docs-site, PR-emission, split-state, restack, relocation, install repair, or autoheal surface edited"
-      }
+      "evidence": "Repo-relative PR packet/body generated and validate-pr-packet passed."
     },
     {
-      "step": "Post: PR packet",
+      "step": "Post: PR Creation",
       "status": "completed",
-      "result": {
-        "packet": "specs/xplat-005-read-only-helper-port/.process/pr-packets/xplat-005-read-only-helper-port.json",
-        "body": "specs/xplat-005-read-only-helper-port/.process/pr-packets/xplat-005-read-only-helper-port.md",
-        "validation": "passed",
-        "workflow_contract": "passed",
-        "final_reviewability": "exception accepted: infra"
-      }
+      "evidence": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/281"
     },
     {
-      "step": "Post: commit and push",
+      "step": "Post: Review Remediation",
       "status": "completed",
-      "result": {
-        "implementation_commit": "255c6dc7",
-        "branch": "codex/xplat-005-read-only-helper-port",
-        "pushed": true
-      }
+      "evidence": "RepoPrompt review loop closed: final focused review reported no actionable findings remain for the last promotion fixture schema issue after safe envelope parsing, fail-closed apply checks, fake-home traversal/boundary enforcement, batch conflict preflight, deferred command-plan apply, schema contract tests, canonical phase-label tests, and refreshed verification."
     },
     {
-      "step": "Post: open PR",
-      "status": "completed",
-      "result": {
-        "url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/276",
-        "number": 276,
-        "draft": true,
-        "title": "feat(XPLAT-005): Add read-only helper port"
-      }
+      "step": "Post: Retrospective",
+      "status": "pending"
     }
-  ]
+  ],
+  "phase_results": {
+    "specify": {
+      "status": "completed",
+      "completed_at": "2026-07-03T19:02:35Z",
+      "files_created": [
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/spec.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/requirements.md"
+      ],
+      "functional_requirements": 34,
+      "user_stories": 3,
+      "acceptance_scenarios": 11,
+      "g1_gate": {
+        "pass": true,
+        "markers": 0
+      },
+      "executor_note": "$speckit-specify was unavailable as a direct Codex skill/executable, so the phase executor generated artifacts from the workflow prompt, preset template, and grounded source files."
+    },
+    "clarify": {
+      "helper_and_mode_matrix": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:08:46Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Slice 1 is shared mutation foundation only; Slice 2 owns install/doctor/coach/preset writes; Slice 3 owns PR/restack/migration/relocation/generated write modes plus detect-stack-manager support; XPLAT-005 read-only modes are not re-ported."
+      },
+      "mutation_safety_and_atomicity": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:14:14Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Stable data.mutation response model, per-file atomic replace policy, strict dirty-worktree default, write-boundary and symlink rejection, deterministic LF generated-output policy, and partial-failure reporting."
+      },
+      "install_completeness_and_doctor": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:22:24Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Committed generated install inventory is the source of truth; doctor/preflight is read-only by default; repair is separate approved apply-mode; stale detection is offline and deterministic; safe repair is limited to fake or explicitly approved declared boundaries."
+      },
+      "pr_restack_relocation_and_approval_boundary": {
+        "status": "completed",
+        "completed_at": "2026-07-03T19:29:42Z",
+        "questions_resolved": 6,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Candidate PR emission is dry-run command capture; fake PR/restack fixtures may exercise apply paths; live GitHub and repo mutation require structured approval evidence after dry-run and clean-worktree checks; detect-stack-manager emits decisions only; known gaps must separate unpromoted helpers, XPLAT-007/XPLAT-008 cutover, and live-coverage limits."
+      },
+      "phase_coverage_hardening": {
+        "status": "focused_verified",
+        "tests": [
+          "python3 -m py_compile speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+          "python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+          "python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json",
+          "bash tests/speckit-pro/run-all.sh --layer 4",
+          "bash tests/speckit-pro/run-all.sh --layer 1"
+        ],
+        "outcome": "Added Python phase-coverage validator and regression tests so missing Phase 6.5, missing Post items, collapsed later phases, and malformed state JSON fail deterministically. Focused tests passed 6/6, the current workflow/state pair returned status pass, Layer 4 passed 2141/2141, and Layer 1 passed 1443/1443."
+      }
+    },
+    "plan": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:03:18Z",
+      "files_created": [
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/plan.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/research.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/data-model.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/quickstart.md",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/mutation-helper-request.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/mutation-helper-result.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/doctor-preflight-result.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/helper-promotion-record.schema.json",
+        "specs/xplat-006-mutation-install-pr-emission-helper-port/contracts/autopilot-phase-coverage-report.schema.json"
+      ],
+      "g3_gate": {
+        "pass": true,
+        "markers": 0
+      },
+      "verification": [
+        "python3 tests/speckit-pro/layer4-scripts/test-autopilot-phase-coverage.py",
+        "python3 speckit-pro/skills/speckit-autopilot/scripts/validate-autopilot-phase-coverage.py --workflow docs/ai/specs/.process/XPLAT-006-workflow.md --state docs/ai/specs/.process/autopilot-state.json",
+        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G3 specs/xplat-006-mutation-install-pr-emission-helper-port",
+        "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+        "bash tests/speckit-pro/run-all.sh --layer 1",
+        "bash tests/speckit-pro/run-all.sh --layer 4",
+        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check $PWD",
+        "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
+        "bash tests/speckit-pro/layer4-scripts/test-privacy-scan.sh",
+        "git diff --check"
+      ],
+      "outcome": "Generated the plan, research, data model, quickstart, and contract schemas. Scope language now allows only the autopilot phase-coverage hardening source/generated mirror while preserving forbidden active cutover boundaries. G3 passed, Layer 1 passed 1443/1443, Layer 4 passed 2141/2141, phase-coverage validator returned status pass, and the scope-audit test passed 9/9."
+    },
+    "checklists": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:05:51Z",
+      "domains": {
+        "integration": {
+          "items": 12,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/integration.md"
+        },
+        "error_handling": {
+          "items": 12,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/error-handling.md"
+        },
+        "reliability": {
+          "items": 13,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/reliability.md"
+        },
+        "security": {
+          "items": 11,
+          "gaps": 0,
+          "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/checklists/security.md"
+        }
+      },
+      "consensus": "skipped: no checklist reported a true gap",
+      "outcome": "Integration, error-handling, reliability, and security checklists all passed. The hardening requirement remains explicit: phase-coverage source/generated mirror changes are allowed only for the validator-backed autopilot fix, and scope-audit tests still block other active cutover surfaces."
+    },
+    "tasks": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:08:54Z",
+      "file": "specs/xplat-006-mutation-install-pr-emission-helper-port/tasks.md",
+      "total_tasks": 61,
+      "open_tasks": 55,
+      "completed_hardening_tasks": 6,
+      "g5_gate": {
+        "pass": true,
+        "markers": 0,
+        "task_count": 55
+      },
+      "phases": [
+        "completed hardening baseline",
+        "foundational blocking work",
+        "US1 mutation safety foundation",
+        "US2 manifest-driven install completeness and doctor",
+        "US3 PR-emission, restack, relocation, and reviewability proof",
+        "cross-cutting verification and handoff"
+      ],
+      "parallel_opportunities": [
+        "independent fixture seed files",
+        "independent failing test groups",
+        "US2 and US3 after shared mutation primitives are accepted",
+        "final hardening and scope-audit checks after implementation"
+      ],
+      "outcome": "Tasks preserve the accepted three-slice order and keep hardening proof explicit. Parallel markers are limited to independent fixture or test work and do not compete for shared mutation primitives, registry entries, manifests, or promotion records."
+    },
+    "analyze": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:11:44Z",
+      "issues": [
+        {
+          "id": "AN-001",
+          "severity": "medium",
+          "issue": "AC-6.6 requires scaffold/status/autopilot to be able to call a shared doctor/preflight contract before workflow execution, but tasks.md only required the contract implementation and did not explicitly require registry-exposed callable operation ids.",
+          "resolution": "Added T035 to expose doctor/preflight operation ids through speckit-pro/speckit_pro_runner/helpers/registry.py without active invocation cutover."
+        }
+      ],
+      "consensus": "skipped: issue remediated and no unresolved issues remained",
+      "g5_gate_after_remediation": {
+        "pass": true,
+        "markers": 0,
+        "task_count": 55
+      },
+      "outcome": "No critical drift remains between roadmap, PRD AC-6.*, design concept, spec, plan, checklists, and tasks. XPLAT-007/XPLAT-008 boundaries remain explicit, and the hardening source/generated mirror exception remains constrained to validator-backed phase coverage."
+    },
+    "confidence_gate": {
+      "status": "completed",
+      "completed_at": "2026-07-03T20:12:42Z",
+      "mode": "advisory",
+      "exit_code": 1,
+      "result": "NO_DATA",
+      "recommended_action": "soft_skip",
+      "reason": "No synthesizer confidence emit found in docs/ai/specs/.process/XPLAT-006-workflow.md.",
+      "phase_coverage_validator": {
+        "status": "pass",
+        "plan_step_count": 37
+      },
+      "outcome": "Advisory confidence gate soft-skipped without blocking implementation. The phase-coverage validator passed and remains the hard stop for missing canonical phases."
+    },
+    "implementation": {
+      "status": "completed",
+      "completed_at": "2026-07-03T23:30:13Z",
+      "tasks_total": 61,
+      "tasks_complete": 61,
+      "promotion_boundary": "No Bash-backed mutation helper is Python-authoritative in XPLAT-006; remaining Bash parity and active cutover stay in XPLAT-007/XPLAT-008.",
+      "hardening_proof": {
+        "red": "test-speckit-pro-mutation-helpers initially failed 9/10 before implementation",
+        "green": "test-speckit-pro-mutation-helpers passed 17/17 after review remediation",
+        "layer4": "bash tests/speckit-pro/run-all.sh passed 3803/3803 including mutation-helper hardening"
+      },
+      "focused_tests": {
+        "mutation_helpers": "17/17 passed",
+        "runner": "9/9 passed",
+        "read_only_helpers": "32/32 passed"
+      },
+      "default_suite": "3803/3803 passed"
+    },
+    "post": {
+      "status": "in_progress",
+      "active_step": "Post: Retrospective",
+      "verification": "bash tests/speckit-pro/run-all.sh passed 3803/3803",
+      "reviewability": "status=exception pass=true exception_honored=true; final backstop proceeded",
+      "pr_packet": "validate-pr-packet passed for specs/xplat-006-mutation-install-pr-emission-helper-port/.process/pr-packets/xplat-006-pr-packet/packet.json",
+      "pr_url": "https://github.com/racecraft-lab/racecraft-plugins-public/pull/281",
+      "pr_creation": "completed",
+      "review_remediation": "RepoPrompt review loop closed; final focused review reported no actionable findings remain for the last promotion fixture schema issue."
+    }
+  }
 }

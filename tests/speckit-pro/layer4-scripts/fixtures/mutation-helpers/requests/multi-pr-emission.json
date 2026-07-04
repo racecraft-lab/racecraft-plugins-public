@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0",
+  "request_id": "fixture-multi-pr-emission",
+  "helper_id": "multi-pr-emission",
+  "operation": "multi-pr-emission",
+  "mode": "dry_run",
+  "inputs": {
+    "commands": [["gh", "pr", "create", "--draft"]],
+    "live_mutation_approved": false
+  }
+}

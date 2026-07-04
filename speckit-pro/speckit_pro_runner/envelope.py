@@ -21,6 +21,7 @@ STATUS_EXIT_CODES = {
 REQUIRED_FIELDS = ("schema_version", "helper_id", "operation", "mode", "inputs")
 ALLOWED_FIELDS = set(REQUIRED_FIELDS) | {"request_id"}
 SUPPORTED_RUNNER_OPERATIONS = {"preflight", "runtime-info"}
+SUPPORTED_HELPER_MODES = {"read_only", "dry_run", "apply"}
 
 
 @dataclass(frozen=True)
@@ -132,14 +133,19 @@ def parse_request(raw_stdin: str) -> tuple[RunnerRequest | None, dict[str, Any] 
     operation = parsed.get("operation")
     mode = parsed.get("mode")
     inputs = parsed.get("inputs")
+    runner_request = helper_id == "runner"
+    operation_is_string = isinstance(operation, str)
+    mode_is_string = isinstance(mode, str)
     invalid = (
         extra
         or not isinstance(helper_id, str)
         or helper_id == ""
-        or not isinstance(operation, str)
+        or not operation_is_string
         or operation == ""
-        or (helper_id == "runner" and operation not in SUPPORTED_RUNNER_OPERATIONS)
-        or mode != "read_only"
+        or not mode_is_string
+        or (runner_request and operation_is_string and operation not in SUPPORTED_RUNNER_OPERATIONS)
+        or (runner_request and mode != "read_only")
+        or ((not runner_request) and mode_is_string and mode not in SUPPORTED_HELPER_MODES)
         or not isinstance(inputs, dict)
         or ("request_id" in parsed and not isinstance(parsed.get("request_id"), str))
     )
@@ -147,9 +153,11 @@ def parse_request(raw_stdin: str) -> tuple[RunnerRequest | None, dict[str, Any] 
         details: dict[str, Any] = {}
         if extra:
             details["unexpected_fields"] = extra
-        if helper_id == "runner" and operation not in SUPPORTED_RUNNER_OPERATIONS:
+        if runner_request and operation_is_string and operation not in SUPPORTED_RUNNER_OPERATIONS:
             details["operation"] = operation
-        if mode != "read_only":
+        if runner_request and mode != "read_only":
+            details["mode"] = mode
+        if (not runner_request) and (not mode_is_string or mode not in SUPPORTED_HELPER_MODES):
             details["mode"] = mode
         return None, input_error("invalid_envelope", "request envelope has unsupported field values", details=details)
 

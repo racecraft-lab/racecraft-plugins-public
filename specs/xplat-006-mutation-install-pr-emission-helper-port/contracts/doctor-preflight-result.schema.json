@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-006/doctor-preflight-result.schema.json",
+  "title": "Doctor Preflight Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "install_root",
+    "fake_home",
+    "missing_files",
+    "checksum_mismatches",
+    "safe_repairs",
+    "unsafe_manual_remediations",
+    "blocked",
+    "inventory_file_count"
+  ],
+  "properties": {
+    "status": { "type": "string", "enum": ["complete", "safe_repair", "blocked"] },
+    "install_root": { "type": "string", "minLength": 1 },
+    "fake_home": { "type": "boolean" },
+    "missing_files": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "checksum_mismatches": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "safe_repairs": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "unsafe_manual_remediations": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "blocked": { "type": "boolean" },
+    "inventory_file_count": { "type": "integer", "minimum": 0 }
+  }
+}

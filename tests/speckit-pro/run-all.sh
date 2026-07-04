@@ -72,7 +72,14 @@ run_layer() {
     fi
 
     local output exit_code=0
-    output=$(bash "$script" 2>&1) || exit_code=$?
+    if [[ "$script" == *.py ]]; then
+      output=$(python3 "$script" 2>&1) || exit_code=$?
+    else
+      output=$(bash "$script" 2>&1) || exit_code=$?
+    fi
+    local script_label
+    script_label="$(basename "$script")"
+    script_label="${script_label%.*}"
 
     # Extract pass/fail from the summary line (format: "name: X/Y passed")
     local summary
@@ -86,10 +93,10 @@ run_layer() {
       layer_fail=$((layer_fail + failed))
 
       if [ "$failed" -eq 0 ]; then
-        printf "  ${GREEN}PASS${RESET} %s (%d/%d)\n" "$(basename "$script" .sh)" "$passed" "$total"
+        printf "  ${GREEN}PASS${RESET} %s (%d/%d)\n" "$script_label" "$passed" "$total"
       else
         printf "  ${RED}FAIL${RESET} %s (%d/%d, %d failed)\n" \
-          "$(basename "$script" .sh)" "$passed" "$total" "$failed"
+          "$script_label" "$passed" "$total" "$failed"
         # Show failure details
         echo "$output" | grep -E 'FAIL' | head -5 | while read -r line; do
           printf "       %s\n" "$line"
@@ -98,9 +105,9 @@ run_layer() {
     else
       # No summary line — script may have crashed
       if [ "$exit_code" -eq 0 ]; then
-        printf "  ${GREEN}PASS${RESET} %s (no summary)\n" "$(basename "$script" .sh)"
+        printf "  ${GREEN}PASS${RESET} %s (no summary)\n" "$script_label"
       else
-        printf "  ${RED}FAIL${RESET} %s (exit %d)\n" "$(basename "$script" .sh)" "$exit_code"
+        printf "  ${RED}FAIL${RESET} %s (exit %d)\n" "$script_label" "$exit_code"
         echo "$output" | tail -3 | while read -r line; do
           printf "       %s\n" "$line"
         done
@@ -285,6 +292,7 @@ if should_run 4; then
 
   layer4_scripts=(
     "$TESTS_DIR/layer4-scripts/test-validate-gate.sh"
+    "$TESTS_DIR/layer4-scripts/test-autopilot-phase-coverage.py"
     "$TESTS_DIR/layer4-scripts/test-confidence-gate.sh"
     "$TESTS_DIR/layer4-scripts/test-resolve-confidence-mode.sh"
     "$TESTS_DIR/layer4-scripts/test-detect-commands.sh"
@@ -315,6 +323,7 @@ if should_run 4; then
     "$TESTS_DIR/layer4-scripts/test-privacy-scan.sh"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-runner.sh"
     "$TESTS_DIR/layer4-scripts/test-speckit-pro-read-only-helpers.sh"
+    "$TESTS_DIR/layer4-scripts/test-speckit-pro-mutation-helpers.py"
     "$TESTS_DIR/layer4-scripts/test-l6-codex-runner.sh"
     "$TESTS_DIR/layer4-scripts/test-l8-extractors.sh"
     "$TESTS_DIR/layer4-scripts/test-l8-judge.sh"
@@ -337,7 +346,13 @@ if should_run 4; then
     layer4_pass=0 layer4_fail=0
     for script in "${layer4_scripts[@]}"; do
       if [ ! -f "$script" ]; then continue; fi
-      local_output=$(bash "$script" "$LIVE_FLAG" 2>&1) || true
+      script_label="$(basename "$script")"
+      script_label="${script_label%.*}"
+      if [[ "$script" == *.py ]]; then
+        local_output=$(python3 "$script" "$LIVE_FLAG" 2>&1) || true
+      else
+        local_output=$(bash "$script" "$LIVE_FLAG" 2>&1) || true
+      fi
       summary=$(echo "$local_output" | grep -E '[0-9]+/[0-9]+ passed' | tail -1)
       if [ -n "$summary" ]; then
         passed=$(echo "$summary" | grep -oE '[0-9]+/[0-9]+' | head -1 | cut -d/ -f1)
@@ -348,10 +363,10 @@ if should_run 4; then
         TOTAL_PASS=$((TOTAL_PASS + passed))
         TOTAL_FAIL=$((TOTAL_FAIL + failed))
         if [ "$failed" -eq 0 ]; then
-          printf "  ${GREEN}PASS${RESET} %s (%d/%d)\n" "$(basename "$script" .sh)" "$passed" "$total"
+          printf "  ${GREEN}PASS${RESET} %s (%d/%d)\n" "$script_label" "$passed" "$total"
         else
           printf "  ${RED}FAIL${RESET} %s (%d/%d, %d failed)\n" \
-            "$(basename "$script" .sh)" "$passed" "$total" "$failed"
+            "$script_label" "$passed" "$total" "$failed"
           echo "$local_output" | grep -E 'FAIL' | head -5 | while read -r line; do
             printf "       %s\n" "$line"
           done
@@ -359,7 +374,7 @@ if should_run 4; then
       else
         # No summary — script may have crashed before test_summary was reached
         printf "  ${RED}FAIL${RESET} %s (no summary — script may have crashed)\n" \
-          "$(basename "$script" .sh)"
+          "$script_label"
         echo "$local_output" | tail -3 | while read -r line; do
           printf "       %s\n" "$line"
         done

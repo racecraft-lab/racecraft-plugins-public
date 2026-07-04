@@ -590,12 +590,20 @@ silently drop the item.
 Before any subagent is spawned, verify that the plan includes at least
 one item whose name starts with each of these exact prefixes:
 `Archive Sweep:`, `Phase 0:`, `Phase 1:`, `Phase 2:`, `Phase 3:`,
-`Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 7:`, `Post:`.
+`Phase 4:`, `Phase 5:`, `Phase 6:`, `Phase 6.5:`, `Phase 7:`,
+`Post:`.
 
 If any prefix is missing from `update_plan` or `autopilot-state.json`,
 STOP, repair both stores, print the corrected checklist summary, and
 repeat this coverage audit. A complete workflow plan is required even
 when `--from-phase` starts execution in the middle of the workflow.
+
+After writing or repairing `autopilot-state.json`, run the deterministic
+coverage guard and STOP on nonzero exit:
+
+```bash
+python3 "<SKILL_SCRIPTS>/validate-autopilot-phase-coverage.py" --workflow "$WORKFLOW_FILE" --state "$WORKFLOW_DIR/autopilot-state.json"
+```
 
 **CRITICAL — Consensus items are MANDATORY:**
 
@@ -612,9 +620,10 @@ Before Phase 1 starts, validate all of the following or STOP:
 - `update_plan` succeeded and the active plan matches the workflow-derived checklist
 - `autopilot-state.json` exists and contains the same ordered step list
 - Exactly one plan item is `in_progress`
-- Every canonical phase family prefix from Phase 0 through Phase 7 plus Post
-  appears in both `update_plan` and `autopilot-state.json`, with the Archive
-  Sweep item recorded before Phase 0
+- Every canonical phase family prefix from Phase 0 through Phase 7 plus
+  Phase 6.5 and Post appears in both `update_plan` and
+  `autopilot-state.json`, with the Archive Sweep item recorded before Phase 0
+- `validate-autopilot-phase-coverage.py` exits 0 for the workflow/state pair
 - Every Clarify session, Checklist domain, and Analyze phase has its
   mandatory Consensus item
 - The checklist summary was printed so progress is visible to the user

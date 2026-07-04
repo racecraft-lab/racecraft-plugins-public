@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://racecraft.dev/speckit-pro/xplat-006/mutation-helper-result.schema.json",
+  "title": "Mutation Helper Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "status", "exit_code", "legacy_exit_code", "diagnostics", "data"],
+  "properties": {
+    "schema_version": { "type": "string", "const": "1.0" },
+    "request_id": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "expected_failure", "input_error", "missing_prerequisite", "subprocess_failure", "internal_failure"]
+    },
+    "exit_code": { "type": "integer" },
+    "legacy_exit_code": { "type": ["integer", "null"] },
+    "diagnostics": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/diagnostic" }
+    },
+    "data": {
+      "type": "object",
+      "properties": {
+        "mutation": { "$ref": "#/$defs/mutation" },
+        "doctor": { "type": "object" }
+      },
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "diagnostic": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["severity", "source", "code", "message", "remediation"],
+      "properties": {
+        "severity": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "const": "runner" },
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "details": { "type": "object" },
+        "remediation": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["summary", "actions"],
+          "properties": {
+            "summary": { "type": "string", "minLength": 1 },
+            "actions": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "deferred_to": { "type": "string" }
+          }
+        }
+      }
+    },
+    "mutation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode",
+        "mutation_status",
+        "planned_operations",
+        "applied_operations",
+        "skipped_operations",
+        "no_op_operations",
+        "planned_paths",
+        "touched_paths",
+        "dirty_worktree",
+        "failure_operation",
+        "rollback_notes",
+        "manual_remediation",
+        "live_mutation"
+      ],
+      "properties": {
+        "mode": { "type": "string", "enum": ["read_only", "dry_run", "apply"] },
+        "mutation_status": {
+          "type": "string",
+          "enum": ["planned", "applied", "no_op", "blocked", "partial_failure"]
+        },
+        "planned_operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation_record" }
+        },
+        "applied_operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation_record" }
+        },
+        "skipped_operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation_record" }
+        },
+        "no_op_operations": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/operation_record" }
+        },
+        "planned_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "touched_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "dirty_worktree": { "type": "boolean" },
+        "failure_operation": {
+          "oneOf": [
+            { "$ref": "#/$defs/operation_record" },
+            { "type": "null" }
+          ]
+        },
+        "rollback_notes": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "manual_remediation": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "live_mutation": { "type": "boolean" }
+      }
+    },
+    "operation_record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation_id", "kind"],
+      "properties": {
+        "operation_id": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["write_file", "command_plan"] },
+        "target": { "type": "string", "minLength": 1 },
+        "command": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  }
+}
