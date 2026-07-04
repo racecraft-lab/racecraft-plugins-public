@@ -63,6 +63,40 @@ Reviewers can inspect deterministic guard output that fails if active build, tes
 - Windows-style paths, spaces in paths, line-ending differences, missing prerequisites, stale generated files, and local macOS source-checkout smoke must produce deterministic results.
 - Any accidental active Claude/Codex invocation cutover, generated release payload cutover, public docs/release-note update, native installed-plugin UAT, update path, autoheal path, or public support claim is out of scope and must be deferred to XPLAT-008.
 
+## Clarifications
+
+### Session 1: Active Gate Inventory And Ownership
+
+- **Test Inventory Rule**: Classify active runner scripts as gates, including
+  `tests/speckit-pro/run-all.sh`, `check-toolchain.sh`, runner-invoked Layer
+  1/4/5 scripts, and opt-in Layer 2/3/6/7/8 runner scripts. Classify
+  `fixtures/**`, eval JSON, expected-output files, and test docs as temporary
+  parity fixtures or inactive evidence unless a runner directly executes them.
+- **Payload/Release Inventory Rule**: Classify
+  `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh`,
+  and `scripts/refresh-local-plugin.sh` as active payload/release/helper
+  commands for XPLAT-007. Release payload selection or cutover remains
+  XPLAT-008; XPLAT-007 may rebuild test payload evidence only.
+- **Helper Surface Inventory Rule**: Classify direct executable helpers under
+  `speckit-pro/skills/**/scripts/**`, `speckit-pro/codex-skills/**/scripts/**`,
+  and `speckit-pro/scripts/**` as active helper commands when reachable from a
+  skill, test, runner, workflow, or registry. Classify `lib/*.sh` as active
+  helper dependencies when imported by active helpers. Classify
+  `bash-reference-manifest.json` and request fixtures as temporary parity
+  evidence unless promoted into an active gate.
+- **CI Workflow Inventory Rule**: Classify `.github/workflows/pr-checks.yml`
+  and `.github/workflows/release.yml` jobs as active release-readiness or
+  release gates when they validate, test, package, verify versions, or check
+  artifact drift. Allowlist workflow shell only when it dispatches directly to
+  Python gates and contains no validation, packaging, install, release, or
+  runtime logic. Treat docs deploy validation as out of plugin release-gate
+  scope except for dispatch allowlist review.
+- **Inactive/XPLAT-008 Boundary Rule**: Classify generated payload mirrors,
+  public docs, archive/history, and installed Claude/Codex invocation surfaces,
+  but do not port or rewrite them unless they are active repo-local gate
+  evidence. Record them as XPLAT-008 cutover surfaces or inactive historical
+  evidence.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements

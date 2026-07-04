@@ -310,7 +310,7 @@ $speckit-clarify Focus on payload/release helpers and proof boundaries: decide w
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
-| 1 | Active gate inventory and ownership | Pending | Pending |
+| 1 | Active gate inventory and ownership | 5 resolved | Classify by invocation role: active runner/workflow/release/helper entrypoints are XPLAT-007 gates; fixtures and Bash-reference manifests are temporary parity evidence; installed Claude/Codex invocation cutover remains XPLAT-008. Consensus skipped because the clarify executor reported no unresolved items. |
 | 2 | Runner command surface and promotion rules | Pending | Pending |
 | 3 | No-shell guard and legacy cleanup | Pending | Pending |
 | 4 | Payload, install, release, and platform proof | Pending | Pending |

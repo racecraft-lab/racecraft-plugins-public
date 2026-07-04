@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T16:48:02Z",
+  "updated_at": "2026-07-04T16:53:45Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 2: Clarify - Active Gate Inventory And Ownership",
+  "active_step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible-noop",
@@ -78,15 +78,16 @@
     },
     {
       "step": "Phase 2: Clarify - Active Gate Inventory And Ownership",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - Active Gate Inventory And Ownership Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Runner Command Surface And Promotion Rules Consensus",
@@ -250,6 +251,19 @@
         "git diff --check"
       ],
       "outcome": "Generated XPLAT-007 spec and requirements checklist with explicit XPLAT-008 boundaries and zero clarification, gap, or critical markers."
+    },
+    "clarify": {
+      "active_gate_inventory_and_ownership": {
+        "status": "completed",
+        "completed_at": "2026-07-04T16:53:45Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Accepted invocation-role taxonomy: active runner/workflow/release/helper entrypoints are XPLAT-007 gates; fixtures and Bash-reference manifests are temporary parity evidence; installed Claude/Codex invocation cutover remains XPLAT-008.",
+        "artifact_updates": [
+          "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
+          "docs/ai/specs/.process/XPLAT-007-workflow.md"
+        ]
+      }
     }
   }
 }
