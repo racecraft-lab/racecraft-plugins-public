@@ -18,7 +18,7 @@ Four rules, in priority order. These exist because plugin/marketplace edits have
 ### 2. Simplest change that solves it
 - No new abstractions for one-call-site code. No new test layers, scripts, or helpers unless a second use exists or is explicitly asked for.
 - No flags/options "for future flexibility" — add them when a second caller actually appears.
-- For shell scripts under `speckit-pro/scripts/` and `tests/speckit-pro/`, prefer plain `bash` + `jq` over introducing a new dependency.
+- For XPLAT-007 repo-local gates, prefer `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < <request.json>` over new shell or `jq` logic. Retained shell scripts are inactive parity evidence until XPLAT-008 cutover work.
 
 ### 3. Surgical edits
 - Touch only what the request requires. Don't reformat adjacent JSON, reorder keys in `plugin.json` / `marketplace.json`, or "clean up" comments you didn't author.
@@ -27,7 +27,7 @@ Four rules, in priority order. These exist because plugin/marketplace edits have
 - Match existing style in shell scripts, YAML, and Markdown even if you'd write it differently.
 
 ### 4. Verifiable success criteria
-- Translate every task into a check before coding: "edit X" → "after edit, `bash tests/speckit-pro/run-all.sh --layer 1` passes" or "`gh pr view <N>` shows green".
+- Translate every task into a check before coding: "edit X" → "after edit, `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json` passes" or "`gh pr view <N>` shows green".
 - For workflow / release changes, the success check is "the next release PR from release-please reflects this" — say that out loud before editing.
 - For multi-step work, list the steps + their verification commands up front, then loop on them.
 
@@ -39,7 +39,7 @@ Tradeoff: these bias toward caution over speed. For a one-line `chore:` edit, us
 - **Release config:** `release-please-config.json` + `.release-please-manifest.json` (kept in sync; see "Adding a New Plugin to Release Automation" below)
 - **Pipeline verification runbook:** `docs/ai/specs/cicd-release-pipeline-verification.md` (authoritative for branch-protection, release-please, and docs deploy setup)
 - **Per-plugin entry:** `<plugin>/.claude-plugin/plugin.json` (name, version, description)
-- **Test runner:** `tests/<plugin>/run-all.sh` (see "Running Tests") — lives at the repo root, outside the plugin dir, so it is not shipped to consumers
+- **Repo-local gate runner:** `PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json` (see "Running Tests")
 
 ## What This Repo Is
 
@@ -86,28 +86,32 @@ Skills live under `skills/<skill-name>/` with a `SKILL.md` entry point. Supporti
 
 ## Running Tests
 
-All tests are shell scripts. Run from the repository root:
+The repo-local XPLAT-007 gate entrypoints use the Python 3.11+ standard-library
+runner. Run from the repository root:
 
 ```bash
-# Default: Layers 1, 4, 5 (fast, deterministic)
-bash tests/speckit-pro/run-all.sh
+# Default deterministic suite gate
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
 
-# With live SpecKit project tests
-bash tests/speckit-pro/run-all.sh --live
+# Toolchain preflight
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
 
-# Single layer
-bash tests/speckit-pro/run-all.sh --layer 1   # Structural validation
-bash tests/speckit-pro/run-all.sh --layer 4   # Script unit tests
-bash tests/speckit-pro/run-all.sh --layer 5   # Agent tool scoping
+# Single deterministic layer
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-layer.json
 
-# Layers 2 & 3 (AI evals — require skill-creator plugin and claude -p)
-bash tests/speckit-pro/layer2-trigger/run-trigger-evals.sh speckit-coach
-bash tests/speckit-pro/layer2-trigger/run-trigger-evals.sh speckit-autopilot
+# Active no-shell/no-jq guard
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json
 
-# Layer 7 — multi-agent dispatch graph (replay = free, live = $$)
-bash tests/speckit-pro/run-all.sh --integration         # all 3 classes, replay
-bash tests/speckit-pro/run-all.sh --integration --live  # all 3 classes, live
+# Payload/install/release readiness fixture gates
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
 ```
+
+Legacy shell scripts under `tests/speckit-pro/`, `scripts/`, and plugin skill
+script directories remain checked in as inactive parity or XPLAT-008 handoff
+evidence. Do not present them as the active repo-local release gates for
+XPLAT-007.
 
 ### Test Layers
 | Layer | What it tests | Cost |
@@ -162,7 +166,7 @@ The SessionStart hook warns if `specify` is not found.
 
 ## Tooling
 
-- **Runtime:** Bash (macOS/Linux), `jq` for JSON
+- **Runtime:** Python 3.11+ standard-library runner for XPLAT-007 repo-local gates; retained Bash/`jq` paths are inactive parity evidence until XPLAT-008
 - **Release automation:** `googleapis/release-please-action@v5`
 - **CI:** GitHub Actions (`actions/checkout@v4`, inline Bash)
 - **PR / repo ops:** GitHub CLI (`gh`) v2+
@@ -214,13 +218,12 @@ The PR Checks workflow (`.github/workflows/pr-checks.yml`) runs on every non-dra
 | Job | Description |
 |-----|-------------|
 | `detect` | Detects which plugins changed relative to the base branch — a plugin counts as changed when either its own directory (`<plugin>/`) or its out-of-plugin test suite (`tests/<plugin>/`) changed. Outputs a JSON array of plugin names. |
-| `test (<plugin>)` | Runs `bash tests/<plugin>/run-all.sh` for each changed plugin (e.g. `test (speckit-pro)`). The name is dynamic — one job per plugin in the matrix. Skipped only when neither the plugin nor its `tests/<plugin>/` suite changed (e.g. docs-only PRs). |
-| `test latest jq (speckit-pro)` | Runs `tests/speckit-pro/run-all.sh` against the latest upstream `jq` release (downloaded and SHA-256-verified against the release API digest) to catch parser/regression drift before the runner image's `jq` updates. Runs only when `speckit-pro` is in `detect`'s output; skipped on docs-only PRs. **Note:** because it downloads from `api.github.com`/`jqlang/jq`, an upstream asset rename, a missing digest, or a network/API outage fails this leg — and, via the sentinel, blocks every speckit-pro PR until resolved (see Recovery → Scenario 7). |
-| `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when both the `test` matrix and the `test latest jq` leg passed or were skipped; fails when either failed or was cancelled. Provides the stable check name that branch protection requires. |
+| `test (<plugin>)` | Dispatches the Python runner toolchain and default-suite gates for each plugin in the matrix. |
+| `validate-plugins` | Sentinel/aggregator job. Always runs. Passes when the plugin test matrix passed or was skipped; fails when it failed or was cancelled. Provides the stable check name that branch protection requires. |
 | `validate-pr-title` | Validates the PR title against the Conventional Commits pattern. |
 | `validate-docs` | Detects docs-site, generated-reference, release metadata, and docs-validation contract changes. Runs full docs validation for rendered docs or docs-contract changes, and reference plus quality validation for generated-reference changes. |
 
-**Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates all matrix results — plus the `test latest jq` leg — into one stable name that branch protection can require.
+**Why a sentinel job?** The `test` matrix job name is dynamic (`test (speckit-pro)`, `test (other-plugin)`, etc.) and cannot be registered as a stable required check name. The `validate-plugins` sentinel aggregates matrix results into one stable name that branch protection can require.
 
 **Docs-only PRs:** When a PR touches only documentation (no plugin directory and no `tests/<plugin>/` suite), `detect` outputs `[]`, `test` is skipped (job-level `if:` evaluates to false — GitHub treats a skipped job as passing, not pending), and `validate-plugins` also passes. Docs-only PRs are not blocked by the test matrix. If the changed documentation is part of the docs-site, generated-reference, or docs-validation contract surfaces, `validate-docs` runs the matching docs validation mode.
 
@@ -250,7 +253,7 @@ Releases are fully automated via [release-please](https://github.com/googleapis/
 
 1. **Conventional commit analysis:** After a PR is squash-merged to `main`, the Release workflow (`.github/workflows/release.yml`) runs. release-please scans new conventional commits and determines whether a release is warranted. Only `fix:`, `feat:`, and breaking-change commits trigger a release PR — `chore:` and `docs:` commits alone do not.
 
-2. **Release PR creation:** When releasable commits exist, release-please opens or updates a PR that bumps `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json` and `speckit-pro/.codex-plugin/plugin.json`. The Release workflow then checks out the release PR branch, rebuilds generated `dist/**` payload files, syncs the `marketplace.json` versions (`scripts/sync-marketplace-versions.sh`), regenerates the docs reference (`pnpm --dir docs-site reference:generate`), commits them back to that branch when needed, and dispatches `PR Checks` for the branch. This keeps the release PR **fully self-consistent** — source, dist, marketplace, and docs reference all at the new version — so **merging the release PR completes the release with no follow-up sync PR**.
+2. **Release PR creation:** When releasable commits exist, release-please opens or updates a PR that bumps `CHANGELOG.md` and the version fields in `speckit-pro/.claude-plugin/plugin.json` and `speckit-pro/.codex-plugin/plugin.json`. During XPLAT-007, plugin validation and release-readiness workflow steps dispatch Python runner gates. Generated release payload cutover, public release notes, update, autoheal, installed-cache UAT, and native platform UAT remain XPLAT-008 handoff work.
 
 3. **GitHub Release publication:** When the release PR is merged, release-please creates a GitHub Release with a version tag (e.g., `speckit-pro-v1.2.0`).
 

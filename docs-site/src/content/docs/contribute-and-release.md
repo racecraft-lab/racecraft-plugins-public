@@ -17,8 +17,8 @@ DOC-002 created this route shell. DOC-009 owns the full workflow content here.
 | Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | [Source vs dist](/racecraft-plugins-public/reference/source-vs-dist/) |
 | Claude marketplace | `.claude-plugin/marketplace.json` | Version values synced from the Claude payload manifest under the marketplace entry's `source` path | [Manifests](/racecraft-plugins-public/reference/manifests/) |
 | Codex marketplace | `.agents/plugins/marketplace.json` | Version values synced from the Codex payload manifest under the marketplace entry's `source.path` | [Manifests](/racecraft-plugins-public/reference/manifests/) |
-| Payload scripts | `scripts/build-plugin-payloads.sh`, `scripts/sync-marketplace-versions.sh` | Generated payloads and marketplace version sync PRs | [Scripts](/racecraft-plugins-public/reference/scripts/) |
-| Tests | `tests/speckit-pro/run-all.sh` | Deterministic release-readiness evidence | [Tests](/racecraft-plugins-public/reference/tests/) |
+| Repo-local Python gates | `speckit-pro/speckit_pro_runner/` and `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/*.json` | Deterministic release-readiness, payload-evidence, install-verification, and active-path guard evidence | [Tests](/racecraft-plugins-public/reference/tests/) |
+| Retained parity scripts | `scripts/*.sh`, `tests/speckit-pro/**/*.sh` | Inactive parity evidence until XPLAT-008 cutover | [Scripts](/racecraft-plugins-public/reference/scripts/) |
 | Docs site | `docs-site/src/content/docs/` and `docs-site/package.json` | Static Astro/Starlight site output | [Reference overview](/racecraft-plugins-public/reference/) |
 | Generated references | `docs-site/scripts/generate-reference-pages.mjs` | `docs-site/src/content/docs/reference/*.md` | [Reference overview](/racecraft-plugins-public/reference/) |
 
@@ -30,7 +30,7 @@ Primary sources: [CLAUDE.md](https://github.com/racecraft-lab/racecraft-plugins-
 |-------------|----------------|-----------------------------------|-------------------|
 | Docs-only, outside docs site | Markdown docs outside `docs-site/` | None by default | Explain changed docs and include any relevant source review evidence. |
 | Docs-site content | `docs-site/src/content/docs/` | Astro/Starlight build output | `pnpm --dir docs-site validate`; use `reference:check` when generated references are involved. |
-| Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | Payload rebuild evidence and `bash tests/speckit-pro/run-all.sh`. |
+| Plugin source | `speckit-pro/` | `dist/claude/speckit-pro/`, `dist/codex/speckit-pro/` | Python runner release-readiness evidence. |
 | Generated payload/dist | `scripts/build-plugin-payloads.sh` output or a release PR payload sync | `dist/**` | Explain the source change or release automation that generated the payloads. |
 | Marketplace registry | `.claude-plugin/marketplace.json`, `.agents/plugins/marketplace.json` | Version fields synced from platform plugin manifests | Marketplace sync evidence and manifest version consistency evidence. |
 | Release automation | `.github/workflows/release.yml`, `release-please-config.json`, `.release-please-manifest.json` | Release PRs, GitHub Releases, payload/marketplace sync PRs | Release workflow rationale, PR Checks evidence, and rollback notes. |
@@ -65,10 +65,12 @@ commands that match the PR surface and explain any skipped command in the PR
 body.
 
 ```bash
-bash tests/speckit-pro/check-toolchain.sh --mode tests
-bash scripts/build-plugin-payloads.sh
-bash scripts/sync-marketplace-versions.sh
-bash tests/speckit-pro/run-all.sh
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
 pnpm --dir docs-site reference:check
 pnpm --dir docs-site validate
 ```
@@ -77,10 +79,12 @@ What each command proves:
 
 | Command | Use when | Evidence it provides |
 |---------|----------|----------------------|
-| `bash tests/speckit-pro/check-toolchain.sh --mode tests` | Before deterministic shell validation or when tool versions are in question | Reports Bash, `jq`, `git`, Python, checksum, YAML, and optional live-eval tools before failures appear deeper in the suite. |
-| `bash scripts/build-plugin-payloads.sh` | Plugin source or release payloads changed | Rebuilds isolated Claude and Codex install payloads under `dist/`. |
-| `bash scripts/sync-marketplace-versions.sh` | Marketplace versions or release sync are in scope | Syncs marketplace entry versions from platform plugin manifests. |
-| `bash tests/speckit-pro/run-all.sh` | Release readiness, especially plugin or release-affecting work | Runs the default deterministic shell suite. |
+| `run-toolchain-preflight.json` | Before deterministic runner validation or when tool versions are in question | Reports Python runner prerequisites and source metadata readiness. |
+| `run-default-suite.json` | Release readiness, especially plugin or release-affecting work | Runs the default deterministic Python runner suite gate. |
+| `active-path-guard.json` | Any gate, workflow, helper, or release-readiness path changed | Proves active repo-local gates do not depend on Bash, `.sh`, `jq`, shell parsing, or shell interpolation. |
+| `test-payload-evidence.json` | Payload evidence changed | Builds fixture-bound Claude/Codex test payload evidence only; generated release payload cutover remains XPLAT-008. |
+| `install-verification.json` | Install inventory or local fixture behavior changed | Verifies fake-home install completeness and safe repair plans without mutating real installed caches. |
+| `release-readiness.json` | Release, marketplace, workflow, payload, or PR-title checks are in scope | Aggregates fixture-bound release-readiness evidence and XPLAT-008 handoff items. |
 | `pnpm --dir docs-site reference:check` | Generated reference drift is possible | Verifies generated reference pages match the generator. |
 | `pnpm --dir docs-site validate` | Any `docs-site/**` file changed | Runs `reference:check`, `astro check`, and `astro build` through the docs-site script chain. |
 
@@ -92,12 +96,13 @@ Maintainer validation has two toolchain buckets:
 
 | Bucket | Required tools |
 |---|---|
-| Deterministic plugin suite | Bash 4.3+, `jq` 1.6+, `git`, Python 3, common Unix text tools, `sort -V`, `sha256sum` or `shasum`, and either Python PyYAML or Ruby YAML for workflow syntax checks. |
+| Deterministic plugin suite | Python 3.11+ and `git`; retained Bash/`jq` scripts are parity evidence, not XPLAT-007 active repo-local gates. |
 | Docs-site validation | Node 22 or newer, Corepack, `pnpm@10.25.0`, installed `docs-site` dependencies, and Playwright for smoke validation. |
 
-PR Checks run the default plugin suite on the GitHub-hosted runner toolchain and
-a speckit-pro-only latest-`jq` leg. The extra `jq` leg exists because local
-package managers can expose parser behavior before the runner image updates.
+PR Checks dispatch the Python runner toolchain and default-suite gates on the
+GitHub-hosted runner toolchain. Public release payload cutover, installed-cache
+UAT, native platform UAT, update, autoheal, public release notes, and public
+release-readiness claims remain XPLAT-008 work.
 
 Live, AI-backed, or PR-backed validation can additionally require authenticated
 `gh`, `specify`, `claude`, `codex`, the skill-creator plugin, and
@@ -112,10 +117,10 @@ Treat version fields as owned by their source hierarchy:
 - Release-please owns release version bumps for
   `speckit-pro/.claude-plugin/plugin.json` and
   `speckit-pro/.codex-plugin/plugin.json`.
-- Generated payload manifests under `dist/` are rebuilt from source by
-  `bash scripts/build-plugin-payloads.sh`.
-- Marketplace registry versions are synchronized from platform plugin manifests
-  by `bash scripts/sync-marketplace-versions.sh`.
+- Generated payload manifests under `dist/` remain XPLAT-008 public cutover
+  work; XPLAT-007 runner gates build fixture-bound test payload evidence only.
+- Marketplace registry version sync remains governed by release-readiness
+  evidence until XPLAT-008 promotes public release payload cutover.
 - Manual version edits should be rare and explicitly explained, such as a
   maintainer-approved release recovery.
 
@@ -129,10 +134,10 @@ The maintainer-facing release flow is:
    workflow.
 2. Release-please opens or updates a release PR when releasable Conventional
    Commits exist.
-3. When release PRs are created, the Release workflow checks out the release PR
-   branch, runs `bash scripts/build-plugin-payloads.sh`, commits `dist/**`
-   payload updates back to that branch when needed, and manually dispatches
-   `PR Checks`.
+3. During XPLAT-007, release workflow validation dispatches Python runner
+   release-readiness and payload-evidence gates. Generated release payloads,
+   public release notes, update, autoheal, installed-cache UAT, and native
+   platform UAT remain XPLAT-008 handoff items.
 4. When a release PR is merged, release-please publishes the GitHub Release.
 5. After release publication, the Release workflow rebuilds payloads, runs
    `bash scripts/sync-marketplace-versions.sh`, and opens or updates a
@@ -153,16 +158,15 @@ by the Release workflow for release-please PR branches.
 
 Current behavior to account for in review:
 
-- The `detect` job compares changed files against the base branch.
-- Plugin test matrix jobs run only when plugin-affecting paths changed, such as
-  the plugin source directory, `tests/<plugin>/`, `dist/claude/<plugin>/`,
-  `dist/codex/<plugin>/`, marketplace registries, packaging scripts,
-  release-please config, or PR/release workflow files.
-- Docs-only PRs with no plugin-affecting paths skip the plugin test matrix.
+- The `detect` job emits the current speckit-pro plugin matrix for runner-gate
+  validation.
+- Plugin test matrix jobs dispatch Python runner gates instead of Bash or `jq`
+  plugin validation logic.
 - `validate-plugins` still runs as the stable sentinel and passes only when the
-  plugin test matrix and speckit-pro latest-`jq` leg passed or were skipped.
-- `validate-pr-title` still checks the PR title against the split workflow and
-  Conventional Commit contract.
+  plugin test matrix passed or was skipped.
+- `validate-pr-title` dispatches runner release-readiness evidence during
+  XPLAT-007; full active PR-title cutover remains bounded by XPLAT-008 release
+  readiness.
 
 Do not describe this as docs-site CI hardening. DOC-009 documents the current
 PR Checks behavior and local docs-site validation expectations. DOC-010 owns
@@ -184,10 +188,10 @@ Before requesting review, confirm:
   scope.
 - Source plugin manifest versions, generated payload manifest versions, and
   marketplace versions are consistent with the release/version ownership model.
-- `bash scripts/build-plugin-payloads.sh` ran or was not applicable.
-- `bash scripts/sync-marketplace-versions.sh` ran or was not applicable.
-- `bash tests/speckit-pro/run-all.sh` ran for release readiness or the PR body
-  explains why it was not needed.
+- Python runner payload-evidence and release-readiness gates ran or were not
+  applicable.
+- Python runner default-suite and active-path guard gates ran for release
+  readiness or the PR body explains why they were not needed.
 - `pnpm --dir docs-site validate` ran for any `docs-site/**` change.
 - The PR title uses Conventional Commit format and plain English.
 - The PR body is public-readable and includes validation evidence, known gaps,

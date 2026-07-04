@@ -9,6 +9,7 @@ from ..envelope import diagnostic, response
 from .payloads import run_payload_gate
 from .release import run_release_gate
 from .suite import run_suite_gate
+from .active_path_guard import run_active_path_guard
 
 
 REQUEST_BASE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests"
@@ -293,6 +294,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("active-path-guard"),
         "US3",
         "active_repo_helper",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "active-path-guard",
@@ -304,6 +307,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("active-path-guard"),
         "US3",
         "active_repo_helper",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
 )
 
@@ -408,6 +413,8 @@ def dispatch_gate(request: Any) -> dict[str, Any]:
         return run_payload_gate(entry, request)
     if entry.group == "release":
         return run_release_gate(entry, request)
+    if entry.group == "guard":
+        return run_active_path_guard(entry, request)
 
     return response("internal_failure", request_id=request.request_id)
 

@@ -76,8 +76,50 @@
         "required_before_public_claim": true
       },
       {
+        "item_id": "xplat-008-generated-release-payload",
+        "category": "generated_release_payload",
+        "owner_spec": "XPLAT-008",
+        "required_before_public_claim": true
+      },
+      {
+        "item_id": "xplat-008-public-docs",
+        "category": "public_docs",
+        "owner_spec": "XPLAT-008",
+        "required_before_public_claim": true
+      },
+      {
+        "item_id": "xplat-008-release-notes",
+        "category": "release_notes",
+        "owner_spec": "XPLAT-008",
+        "required_before_public_claim": true
+      },
+      {
+        "item_id": "xplat-008-installed-cache-uat",
+        "category": "installed_cache_uat",
+        "owner_spec": "XPLAT-008",
+        "required_before_public_claim": true
+      },
+      {
         "item_id": "xplat-008-native-platform-uat",
         "category": "native_platform_uat",
+        "owner_spec": "XPLAT-008",
+        "required_before_public_claim": true
+      },
+      {
+        "item_id": "xplat-008-update",
+        "category": "update",
+        "owner_spec": "XPLAT-008",
+        "required_before_public_claim": true
+      },
+      {
+        "item_id": "xplat-008-autoheal",
+        "category": "autoheal",
+        "owner_spec": "XPLAT-008",
+        "required_before_public_claim": true
+      },
+      {
+        "item_id": "xplat-008-public-release-readiness",
+        "category": "public_release_readiness",
         "owner_spec": "XPLAT-008",
         "required_before_public_claim": true
       }

@@ -37,11 +37,8 @@ jobs:
         if: steps.release.outputs.prs_created == 'true'
         with:
           fetch-depth: 0
-          # Persist the same token so the payload-sync commit below is PUSHED by
-          # that actor too (the git author stays github-actions[bot]; what gates
-          # the checks is the pushing actor, not the commit author) — otherwise
-          # the final release-PR head SHA is GITHUB_TOKEN-pushed and its checks
-          # get gated again.
+          # Persist the same token for the release PR checkout. XPLAT-007 keeps
+          # public payload-sync mutation deferred to XPLAT-008.
           token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
 
       - name: Set up Node
@@ -55,76 +52,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_PRS: ${{ steps.release.outputs.prs }}
-        run: |
-          set -euo pipefail
-
-          # docs-site reference pages embed the plugin version, so the release
-          # branch needs them regenerated alongside the version bump (below).
-          corepack enable
-          corepack prepare pnpm@10.25.0 --activate
-
-          release_prs="${RELEASE_PRS:-[]}"
-          if [ -z "$release_prs" ] || [ "$release_prs" = "null" ]; then
-            release_prs="[]"
-          fi
-
-          if ! printf '%s' "$release_prs" | jq -e 'type == "array"' >/dev/null; then
-            echo "::error::Release Please prs output is not a JSON array."
-            exit 1
-          fi
-
-          if [ "$(printf '%s' "$release_prs" | jq 'length')" -eq 0 ]; then
-            echo "::error::Release Please reported prs_created=true but returned no PR metadata."
-            exit 1
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          printf '%s\n' "$release_prs" | jq -c '.[]' | while IFS= read -r pr; do
-            pr_number=$(printf '%s' "$pr" | jq -r '.number')
-            branch=$(printf '%s' "$pr" | jq -r '.headBranchName // .headRefName // empty')
-            title=$(printf '%s' "$pr" | jq -r '.title')
-
-            if [ -z "$pr_number" ] || [ "$pr_number" = "null" ] || [ -z "$branch" ]; then
-              echo "::error::Release Please PR metadata is missing number or head branch: ${pr}"
-              exit 1
-            fi
-
-            echo "Syncing generated payloads for PR #${pr_number} (${branch})."
-            git fetch origin "$branch"
-            git switch --detach "origin/${branch}"
-
-            bash scripts/build-plugin-payloads.sh
-            bash scripts/sync-marketplace-versions.sh
-            # reference:generate is a pure node: built-in script — no node_modules needed.
-            pnpm --dir docs-site reference:generate
-
-            if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference; then
-              echo "Payloads already current for PR #${pr_number}."
-            else
-              git add dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
-              git commit -m "chore(speckit-pro): sync release payloads, marketplace versions, and docs reference"
-              git push origin "HEAD:${branch}"
-            fi
-
-            gh workflow run pr-checks.yml \
-              --ref "$branch" \
-              -f pr_number="$pr_number" \
-              -f pr_title="$title" \
-              -f base_ref="main"
-          done
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
 
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
 
       - name: Build clean plugin payloads
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: bash scripts/build-plugin-payloads.sh
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json
 
       - name: Sync marketplace versions
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
-        run: bash scripts/sync-marketplace-versions.sh
+        run: PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
 
       - name: Set up Node
         if: steps.release.outputs['speckit-pro--release_created'] == 'true'
@@ -146,15 +85,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          # The release PR's payload-sync step already committed dist, marketplace
-          # versions, and the docs reference, so main is already consistent after
-          # the merge — there is intentionally NO separate follow-up sync PR.
-          # This step only VERIFIES that invariant and fails loudly if it drifts.
+          # Public generated payload synchronization remains an XPLAT-008
+          # cutover item. This retained check is release-surface parity evidence.
           if git diff --quiet -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference; then
-            echo "Release artifacts are consistent; the release PR carried the full sync. No follow-up PR needed."
+            echo "Release artifacts are currently consistent. Public payload-sync mutation remains deferred to XPLAT-008."
             exit 0
           fi
 
-          echo "::error::Release artifacts drifted after publishing. The release PR's payload-sync step should have committed dist/, both marketplace.json files, and the docs reference, but a clean rebuild here differs — usually because the payload-sync step did not run on the release PR. Re-run the Release workflow (workflow_dispatch) to re-sync the release PR before merging next time. Drift:"
+          echo "::error::Release artifacts drifted after publishing. Public payload-sync mutation remains deferred to XPLAT-008; this retained parity check records the drift for maintainer review:"
           git --no-pager diff --stat -- dist .claude-plugin/marketplace.json .agents/plugins/marketplace.json docs-site/src/content/docs/reference
           exit 1

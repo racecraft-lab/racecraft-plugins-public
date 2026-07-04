@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-007-us3-active-path-guard",
+  "helper_id": "active-path-guard",
+  "operation": "active-path-guard",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": ".",
+    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
+    "case_id": "final-current-implementation",
+    "allow_ci_dispatch_glue": true,
+    "xplat_008_cutover_allowed": false
+  }
+}

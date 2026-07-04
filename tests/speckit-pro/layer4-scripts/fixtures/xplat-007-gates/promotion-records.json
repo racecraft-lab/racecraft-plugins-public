@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "feature_id": "XPLAT-007",
-  "promotion_status": "us2_python_authoritative",
+  "promotion_status": "us3_python_authoritative",
   "records": [
     {
       "schema_version": "1.0",
@@ -395,17 +395,24 @@
       "prior_bash_gate": null,
       "python_operation": "active-path-guard",
       "request_fixture": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json",
-      "fixture_ids": [],
+      "fixture_ids": [
+        "blocking-active-patterns",
+        "nonblocking-classifications",
+        "workflow-dispatch-good",
+        "workflow-dispatch-with-plugin-logic",
+        "final-current-implementation"
+      ],
       "bash_reference_ids": [],
-      "failure_classes": [],
-      "comparison_mode": "not_applicable",
-      "normalized_fields": [],
-      "exit_code_result": "not_applicable",
-      "stream_result": "not_applicable",
+      "failure_classes": ["active_path_guard_blocked", "xplat_008_cutover_refused"],
+      "comparison_mode": "json_semantic",
+      "normalized_fields": ["finding_order", "line_numbers", "classification_counts"],
+      "exit_code_result": "match",
+      "stream_result": "match",
       "artifact_result": "not_applicable",
-      "active_path_guard_result": "not_run",
+      "active_path_guard_result": "pass",
       "bash_reference_retirement": "not_applicable",
-      "rollback": "Remove the guard registry entry if US3 promotion exposes blocking false positives."
+      "rollback": "Remove the guard registry entry if US3 promotion exposes blocking false positives.",
+      "promoted_at": "2026-07-04T00:00:00Z"
     }
   ]
 }
