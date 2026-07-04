@@ -55,8 +55,8 @@ accepted scope:
 
 | Phase | Command | Status | Notes |
 |---|---|---|---|
-| Specify | `$speckit-specify` | Pending | Create `spec.md` and requirements checklist for active repo-local Python tooling and release-gate migration |
-| Clarify | `$speckit-clarify` | Pending | Resolve gate inventory, command taxonomy, no-shell guard scope, payload boundary, docs boundary, and platform proof |
+| Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist for active repo-local Python tooling and release-gate migration |
+| Clarify | `$speckit-clarify` | In Progress | Resolve gate inventory, command taxonomy, no-shell guard scope, payload boundary, docs boundary, and platform proof |
 | Plan | `$speckit-plan` | Pending | Produce technical plan, research, data model, contracts, and quickstart for the three-slice migration |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, reliability, security, and release-readiness |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
@@ -259,14 +259,18 @@ can switch Claude/Codex surfaces or make public cross-platform claims.
 
 | Metric | Value |
 |---|---|
-| Functional Requirements | Pending |
-| User Stories | Pending |
-| Acceptance Criteria | Pending |
+| Functional Requirements | 18 |
+| User Stories | 3 |
+| Acceptance Criteria | 7 acceptance scenarios; 7 measurable success criteria |
+
+G1 validation: `validate-gate.sh G1 specs/xplat-007-python-tooling-and-release-gate-migration`
+passed with `markers=0`. Phase 1 executor reported `0` `[NEEDS CLARIFICATION]`
+markers, `0` `[Gap]` markers, and `0` `[CRITICAL]` markers.
 
 ### Files Generated
 
-- [ ] `specs/xplat-007-python-tooling-and-release-gate-migration/spec.md`
-- [ ] `specs/xplat-007-python-tooling-and-release-gate-migration/checklists/requirements.md`
+- [x] `specs/xplat-007-python-tooling-and-release-gate-migration/spec.md`
+- [x] `specs/xplat-007-python-tooling-and-release-gate-migration/checklists/requirements.md`
 
 ---
 
