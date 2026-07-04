@@ -1,6 +1,7 @@
 # PRD: SpecKit Pro Harness Engineering Uplift
 
 **Status**: Draft
+**Spec ID prefix**: `HRNS-###`
 **Source**: Maintainer direction to harden SpecKit Pro harness behavior as
 runner, helper, and long-running workflow surfaces expand.
 **Created**: 2026-07-03

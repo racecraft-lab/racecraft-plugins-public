@@ -20,8 +20,9 @@ SpecKit Pro harness hardening lane.
 
 ## Roadmap Overview
 
-The feature is decomposed into **8 specifications** across **7 dependency
-tiers**:
+The feature is decomposed into **8 specifications** across **6 spec dependency
+tiers**. A separate follow-on scaffold lane turns accepted roadmap items into
+reviewable implementation branches.
 
 | Tier | Specs | Purpose | Parallelization |
 |---|---|---|---|
@@ -31,7 +32,9 @@ tiers**:
 | 4 | HRNS-006 | Trace/debug packet contract spanning helpers, evals, and permissions | Sequential after HRNS-003 through HRNS-005 |
 | 5 | HRNS-007 | Long-horizon orchestration and resumption controls | Sequential after HRNS-002 and HRNS-006 |
 | 6 | HRNS-008 | Harness drift and garbage-collection remediation loop | Sequential after HRNS-002, HRNS-005, and HRNS-006 |
-| 7 | Follow-on scaffold lane | Scaffold ready HRNS specs as reviewable implementation branches | Sequential by chosen priority |
+
+**Follow-on scaffold lane:** After maintainers accept this roadmap, scaffold ready
+HRNS specs as reviewable implementation branches in the selected priority order.
 
 **Execution Order:** HRNS-001 -> HRNS-002 + HRNS-003 -> HRNS-004 + HRNS-005 ->
 HRNS-006 -> HRNS-007 -> HRNS-008
@@ -45,8 +48,9 @@ HRNS-006 -> HRNS-007 -> HRNS-008
   and helper/tool contracts touch related but separable surfaces.
 - HRNS-004 requires HRNS-003 because permission and sandbox controls need helper
   risk metadata and mutability declarations.
-- HRNS-005 requires HRNS-001 and benefits from HRNS-003 because evals should map
-  to concrete skills/helpers and not generic benchmark claims.
+- HRNS-005 requires HRNS-001 and HRNS-003 because evals should map to concrete
+  skills/helpers, helper records, and capability contracts rather than generic
+  benchmark claims.
 - HRNS-006 requires HRNS-003, HRNS-004, and HRNS-005 because trace/debug packets
   summarize helper selection, authorization, and verification evidence.
 - HRNS-007 requires HRNS-002 and HRNS-006 because resumption needs durable state
@@ -103,24 +107,13 @@ The harness hardening lane centers on these requirements:
 ## Dependency Graph
 
 ```text
-HRNS-001 Harness Surface Inventory and Gap Taxonomy
-    |
-    +--> HRNS-002 Progressive Context and Durable State
-    |       |
-    |       +--------------------+
-    |                            |
-    +--> HRNS-003 Helper, Tool, and Capability Contract
-            |
-            +--> HRNS-004 Permission, Sandbox, and Authorization
-            |
-            +--> HRNS-005 Feedback Sensors and Eval Readiness
-                    |
-                    v
-            HRNS-006 Trace, Debug, and Review Evidence Packets
-                    |
-                    +--> HRNS-007 Long-Horizon Orchestration
-                    |
-                    +--> HRNS-008 Harness Drift and Garbage Collection
+HRNS-001 -> HRNS-002 Progressive Context and Durable State
+HRNS-001 -> HRNS-003 Helper, Tool, and Capability Contract
+HRNS-003 -> HRNS-004 Permission, Sandbox, and Authorization
+HRNS-001 + HRNS-003 -> HRNS-005 Feedback Sensors and Eval Readiness
+HRNS-003 + HRNS-004 + HRNS-005 -> HRNS-006 Trace, Debug, and Review Evidence Packets
+HRNS-002 + HRNS-006 -> HRNS-007 Long-Horizon Orchestration
+HRNS-002 + HRNS-005 + HRNS-006 -> HRNS-008 Harness Drift and Garbage Collection
 ```
 
 ---
@@ -133,7 +126,7 @@ HRNS-001 Harness Surface Inventory and Gap Taxonomy
 | HRNS-002 | Progressive Context and Durable State Contract | Pending | - | Blocked by HRNS-001 |
 | HRNS-003 | Helper, Tool, and Capability Contract | Pending | - | Blocked by HRNS-001 |
 | HRNS-004 | Permission, Sandbox, and Pre-action Authorization Controls | Pending | - | Blocked by HRNS-003 |
-| HRNS-005 | Feedback Sensors and Eval Readiness Ladder | Pending | - | Blocked by HRNS-001; can use HRNS-003 helper inventory when ready |
+| HRNS-005 | Feedback Sensors and Eval Readiness Ladder | Pending | - | Blocked by HRNS-001 and HRNS-003 |
 | HRNS-006 | Trace, Debug, and Review Evidence Packets | Pending | - | Blocked by HRNS-003, HRNS-004, and HRNS-005 |
 | HRNS-007 | Long-horizon Orchestration and Resumption Controls | Pending | - | Blocked by HRNS-002 and HRNS-006 |
 | HRNS-008 | Harness Drift, Garbage Collection, and Self-healing Remediation | Pending | - | Blocked by HRNS-002, HRNS-005, and HRNS-006 |
@@ -191,6 +184,15 @@ Budget result: within budget
 - `docs/ai/specs/harness-engineering-uplift-technical-roadmap.md` - Roadmap
   updates if evidence changes spec boundaries.
 
+**Done When:**
+
+- A durable taxonomy artifact exists and covers every SpecKit Pro harness surface
+  named in PRD AC-1.*.
+- Each retained gap has surface tags, state classification, owner workflow, and
+  downstream HRNS ownership.
+- The PR packet includes the taxonomy path, review scope, verification command or
+  docs-only check, and any intentionally deferred gaps.
+
 ---
 
 ### HRNS-002: Progressive Context and Durable State Contract
@@ -226,6 +228,15 @@ Budget result: within budget
 - `speckit-pro/skills/*/SKILL.md` - Entry-point guidance audit targets.
 - `speckit-pro/skills/*/references/` - Progressive disclosure reference targets.
 - `docs/ai/specs/.process/` - Workflow state examples and conventions.
+
+**Done When:**
+
+- Entry-point guidance distinguishes short maps from deeper references for each
+  audited workflow.
+- Durable state artifacts and freshness checks are specified for long-running
+  PRD, scaffold, status, autopilot, resolve-pr, and archive flows.
+- Verification includes a focused docs/reference check or fixture proving stale
+  roadmap, workflow, feature, generated payload, or archive pointers are caught.
 
 ---
 
@@ -267,6 +278,15 @@ Budget result: within budget
 - `speckit-pro/skills/speckit-autopilot/references/capability-discovery.md` -
   Capability-first guidance.
 
+**Done When:**
+
+- Helper/tool records declare operation ID, purpose, mutability, schemas, exit
+  behavior, generated artifacts, and owner workflow.
+- Mutating, networked, credentialed, and PR/release-emitting helpers expose
+  dry-run or readiness behavior.
+- Tests or generated-doc checks prove registry, docs, runner metadata, and
+  fixtures cannot drift silently.
+
 ---
 
 ### HRNS-004: Permission, Sandbox, and Pre-action Authorization Controls
@@ -304,8 +324,20 @@ Budget result: within budget
 - `speckit-pro/speckit_pro_runner/` - Runner preflight and helper authorization
   integration points.
 - `speckit-pro/hooks/` - Hook and harness-control protection considerations.
-- `.codex-plugin/plugin.json` and `.claude-plugin/marketplace.json` - Protected
-  manifest examples.
+- `speckit-pro/.codex-plugin/plugin.json` and
+  `speckit-pro/.claude-plugin/plugin.json` - Plugin manifests.
+- `.agents/plugins/marketplace.json` and `.claude-plugin/marketplace.json` -
+  Marketplace registries.
+
+**Done When:**
+
+- Helper/tool risk records include the required mutability, network, credential,
+  private-data, destructive, and approval flags.
+- Governed mutating helpers run through pre-action authorization with normalized
+  arguments, cwd/worktree, path scope, branch state, credential, and network
+  posture checks.
+- Preflight, safe-stop, protected-surface, and autoheal behavior is covered by
+  focused fixtures or runner/helper tests.
 
 ---
 
@@ -345,6 +377,15 @@ Budget result: within budget
 - `docs/ai/specs/harness-engineering-uplift-gap-taxonomy.md` - Gap taxonomy
   from HRNS-001.
 
+**Done When:**
+
+- The verification ladder is documented from structural checks through calibrated
+  rubric review, including when each layer is advisory or blocking.
+- New or changed skill/helper behavior has a deterministic fixture/eval or a
+  recorded discard rationale.
+- Eval report fixtures include model, skill version, runner/helper version,
+  allowed tools, permission mode, command evidence, and trace/debug evidence.
+
 ---
 
 ### HRNS-006: Trace, Debug, and Review Evidence Packets
@@ -382,6 +423,16 @@ Budget result: within budget
 - `speckit-pro/skills/speckit-autopilot/scripts/generate-pr-body.sh` - PR packet
   summary integration target.
 - `docs/ai/specs/.process/` - Workflow trace summary conventions.
+
+**Done When:**
+
+- Trace/debug record schemas cover helper and workflow runs with request ID,
+  workflow, selected tool/helper, normalized inputs, authorization decision,
+  timestamps, status, artifact paths, and safe-stop reason.
+- PR packet summaries include compact trace/debug evidence without raw log dumps
+  or secrets.
+- Failure classification and replay/reproduction expectations are covered by
+  focused fixtures or PR-packet validation.
 
 ---
 
@@ -424,6 +475,16 @@ Budget result: within budget
 - `speckit-pro/agents/` - Planner/evaluator role guidance.
 - `docs/ai/specs/.process/` - Workflow state and checkpoint examples.
 
+**Done When:**
+
+- Long-running workflows record checkpoint, next-action, file ownership,
+  branch/worktree, dependency, stop-condition, and continuation state in durable
+  artifacts.
+- Planner, generator, and evaluator handoff boundaries are explicit for high-risk
+  or long-running flows.
+- Resume checks reject stale, partial, conflicting, or user-instruction-stale
+  state before work continues.
+
 ---
 
 ### HRNS-008: Harness Drift, Garbage Collection, and Self-healing Remediation
@@ -462,6 +523,16 @@ Budget result: within budget
 - `speckit-pro/skills/` - Skill guidance drift targets.
 - `speckit-pro/speckit_pro_runner/` - Helper/runner drift targets.
 - `.specify/memory/archive-reports/` - Archive and recovery precedent.
+
+**Done When:**
+
+- A bounded scanner or checklist identifies stale docs, roadmap pointers,
+  examples, generated payloads, skill guidance, helper references, and workflow
+  artifacts with concrete repo evidence.
+- Cleanup output is split into reviewable remediation batches or an explicit
+  no-op archive.
+- Protected harness-control file changes require reviewable diffs, trace
+  evidence, and human-visible remediation artifacts.
 
 ---
 
