@@ -174,22 +174,27 @@
 
 ---
 
-## Dependencies and Execution Order
+## Dependencies & Execution Order
 
 ### Phase Dependencies
 
 - **Phase 1 Setup**: No dependencies.
-- **Phase 2 Foundational Runner Contracts**: Depends on Phase 1 and blocks all user stories.
-- **Phase 3 / US1**: Depends on Phase 2. Must complete before US2 promotion because payload/release work relies on Python-authoritative test/eval gates.
-- **Phase 4 / US2**: Depends on Phase 2 and should run after US1 promotion evidence exists.
-- **Phase 5 / US3**: Depends on US1 and US2 promotion records for final zero-blocker guard status, but guard fixtures and tests can be prepared earlier.
-- **Phase 6 Validation**: Depends on selected user stories and final promotion state.
+- **Phase 2 Foundation**: Depends on Phase 1.
+- **US1**: Depends on Foundation.
+- **US2**: Depends on US1.
+- **US3**: Depends on US2.
+- **Phase 6 Validation**: Depends on US3.
 
 ### Story Dependencies
 
-- **US1 (P1)**: Required MVP and verification base.
-- **US2 (P2)**: Can prepare fixtures in parallel after Phase 2, but promotion depends on US1 gates being available.
-- **US3 (P3)**: Guard fixture/test work can start after Phase 2; final cleanup depends on promoted US1 and US2 replacements.
+- **US1**: Depends on Foundation only.
+- **US2**: Depends on US1.
+- **US3**: Depends on US2.
+
+US1 remains the MVP verification base. US2 fixture preparation can start after
+Foundation, but US2 promotion waits for US1 gate evidence. US3 guard fixture
+work can start after Foundation, but final cleanup waits for promoted US1 and
+US2 replacements.
 
 ### Within Each Gate Group
 

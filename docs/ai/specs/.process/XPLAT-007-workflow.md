@@ -663,6 +663,22 @@ For each migrated gate or helper group:
 
 ### Implementation Progress
 
+### Marker Plan Evidence
+
+Reviewability task gate returned a size-only `block`, so implementation follows
+the current marker plan instead of a single unscoped implementation pass.
+
+| Field | Value |
+|---|---|
+| Reviewability evidence | `specs/xplat-007-python-tooling-and-release-gate-migration/.process/reviewability/tasks-reviewability.json` |
+| Hazard route evidence | `specs/xplat-007-python-tooling-and-release-gate-migration/.process/reviewability/atomicity-route.json` |
+| Marker plan | `specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/pr-marker-plan.json` |
+| Marker IDs | `foundation`, `us1`, `us2`, `us3` |
+| Fingerprint status | current |
+| Final marker split | Pending |
+| Packet validation | Pending |
+| PR mappings | Pending |
+
 | Phase | Tasks | Completed | Notes |
 |---|---|---|---|
 | Test/eval runner gates | Pending | Pending | Pending |

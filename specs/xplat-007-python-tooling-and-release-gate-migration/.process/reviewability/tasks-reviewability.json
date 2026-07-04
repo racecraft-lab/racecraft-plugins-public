@@ -1,0 +1,49 @@
+{
+  "mode": "tasks",
+  "status": "block",
+  "pass": false,
+  "reviewable_loc": 3000,
+  "production_files": 3,
+  "total_files": 82,
+  "primary_surface_count": 6,
+  "primary_surfaces": [
+    "API",
+    "docs/process",
+    "harness/adapter",
+    "other",
+    "scheduler/runtime",
+    "seed/config"
+  ],
+  "greenfield": false,
+  "thresholds": {
+    "warn": {
+      "reviewable_loc": 400,
+      "production_files": 6,
+      "total_files": 15,
+      "primary_surfaces": 1
+    },
+    "block": {
+      "reviewable_loc": 800,
+      "production_files": 8,
+      "total_files": 25,
+      "primary_surfaces": 1
+    }
+  },
+  "exception_honored": false,
+  "exception_class": null,
+  "exceptions": {
+    "accepted": [],
+    "rejected": []
+  },
+  "warnings": [
+    "reviewable LOC 3000 exceeds warn threshold 400",
+    "total files 82 exceeds warn threshold 15",
+    "primary surfaces 6 exceeds warn threshold 1"
+  ],
+  "blockers": [
+    "reviewable LOC 3000 exceeds block threshold 800",
+    "total files 82 exceeds block threshold 25"
+  ],
+  "feature_id": "xplat-007-python-tooling-and-release-gate-migration",
+  "is_size_only": true
+}

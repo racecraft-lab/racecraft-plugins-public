@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T17:56:17Z",
+  "updated_at": "2026-07-04T17:58:51Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 7: Implement - Pending task decomposition",
+  "active_step": "Phase 7: Implement - foundation (T001-T013)",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible-noop",
@@ -170,8 +170,24 @@
       "no_data": true
     },
     {
-      "step": "Phase 7: Implement - Pending task decomposition",
+      "step": "Phase 7: Implement - foundation (T001-T013)",
       "status": "in_progress"
+    },
+    {
+      "step": "Phase 7: Implement - us1 (T014-T028)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - us2 (T029-T050)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - us3 (T051-T065)",
+      "status": "pending"
+    },
+    {
+      "step": "Phase 7: Implement - validation (T066-T075)",
+      "status": "pending"
     },
     {
       "step": "Post: Doctor Extension Check",
@@ -539,5 +555,399 @@
       "command": "bash speckit-pro/skills/speckit-autopilot/scripts/confidence-gate.sh docs/ai/specs/.process/XPLAT-007-workflow.md --threshold 0.90 --mode advisory",
       "outcome": "No synthesizer confidence emit was present in the workflow file. Advisory mode records the no-data soft-skip and proceeds to implementation."
     }
+  },
+  "pr_marker_plan": {
+    "schema_version": "pr-marker-plan.v1",
+    "kind": "pr_marker_plan",
+    "feature_id": "xplat-007-python-tooling-and-release-gate-migration",
+    "status": "planned",
+    "source_fingerprint": {
+      "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
+      "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
+      "tasks_sha": "6ba2506de15c67f0afc45dbc8a77cd84bb3f5683225c8cce90b3a78c4e125de8",
+      "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
+      "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
+    },
+    "markers": [
+      {
+        "id": "foundation",
+        "review_order": 1,
+        "kind": "foundation",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "Foundation",
+          "story_id": null,
+          "start_task_id": "T001",
+          "end_task_id": "T013"
+        },
+        "task_ids": [
+          "T001",
+          "T002",
+          "T003",
+          "T004",
+          "T005",
+          "T006",
+          "T007",
+          "T008",
+          "T009",
+          "T010",
+          "T011",
+          "T012",
+          "T013"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/__init__.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/active_path_guard.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/payloads.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/release.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/suite.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/runtime.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/xplat-007-python-tooling-and-release-gate-migration/tasks.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "foundation",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us1",
+        "review_order": 2,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 1 - Run Repo-Local Gates Through Python",
+          "story_id": 1,
+          "start_task_id": "T014",
+          "end_task_id": "T028"
+        },
+        "task_ids": [
+          "T014",
+          "T015",
+          "T016",
+          "T017",
+          "T018",
+          "T019",
+          "T020",
+          "T021",
+          "T022",
+          "T023",
+          "T024",
+          "T025",
+          "T026",
+          "T027",
+          "T028"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/suite.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/runtime.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/check-toolchain.sh",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+          "tests/speckit-pro/run-all.sh"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us1",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us2",
+        "review_order": 3,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 2 - Run Payload, Install, And Release Checks Through Python",
+          "story_id": 2,
+          "start_task_id": "T029",
+          "end_task_id": "T050"
+        },
+        "task_ids": [
+          "T029",
+          "T030",
+          "T031",
+          "T032",
+          "T033",
+          "T034",
+          "T035",
+          "T036",
+          "T037",
+          "T038",
+          "T039",
+          "T040",
+          "T041",
+          "T042",
+          "T043",
+          "T044",
+          "T045",
+          "T046",
+          "T047",
+          "T048",
+          "T049",
+          "T050"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": "scripts/build-plugin-payloads.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "scripts/refresh-local-plugin.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "scripts/sync-marketplace-versions.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/payloads.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/release.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/install_inventory.json"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/runtime.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/payload-evidence-cases.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us2",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      },
+      {
+        "id": "us3",
+        "review_order": 4,
+        "kind": "user_story",
+        "parent_marker_id": null,
+        "source_boundary": {
+          "section": "User Story 3 - Review Active No-Shell Guardrails",
+          "story_id": 3,
+          "start_task_id": "T051",
+          "end_task_id": "T065"
+        },
+        "task_ids": [
+          "T051",
+          "T052",
+          "T053",
+          "T054",
+          "T055",
+          "T056",
+          "T057",
+          "T058",
+          "T059",
+          "T060",
+          "T061",
+          "T062",
+          "T063",
+          "T064",
+          "T065"
+        ],
+        "folded_polish_task_ids": [],
+        "folded_polish_target_reason": "",
+        "declared_files": [
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/pr-checks.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": ".github/workflows/release.yml"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "docs-site/src/content/docs/contribute-and-release.md"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "scripts/*.sh"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/active_path_guard.py"
+          },
+          {
+            "operation": "MODIFIED",
+            "path": "speckit-pro/speckit_pro_runner/gates/registry.py"
+          }
+        ],
+        "declared_tests": [
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/active-path-guard-cases.json",
+          "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/active-path-guard.json",
+          "tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py"
+        ],
+        "reviewability": {
+          "status": "block",
+          "mode": "tasks",
+          "scope": "us3",
+          "evidence_path": ""
+        },
+        "hazards": [
+          "change-shape:modify-heavy"
+        ],
+        "subdivision": {
+          "status": "none",
+          "details": {}
+        },
+        "implementation_checkpoint": {
+          "status": "pending"
+        },
+        "emission_mapping": {
+          "status": "pending"
+        },
+        "warnings": []
+      }
+    ],
+    "warnings": [
+      {
+        "code": "reviewability_size_warning",
+        "severity": "warning",
+        "message": "Reviewability sizing result is marker-planning input.",
+        "source": "reviewability",
+        "details": {
+          "status": "block",
+          "mode": "tasks",
+          "evidence_path": ""
+        }
+      }
+    ]
+  },
+  "current_source_fingerprint": {
+    "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
+    "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
+    "tasks_sha": "6ba2506de15c67f0afc45dbc8a77cd84bb3f5683225c8cce90b3a78c4e125de8",
+    "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
+    "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
   }
 }
