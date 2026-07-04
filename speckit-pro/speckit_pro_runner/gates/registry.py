@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..envelope import diagnostic, response
+from .payloads import run_payload_gate
+from .release import run_release_gate
 from .suite import run_suite_gate
 
 
@@ -135,6 +137,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("test-payload-evidence"),
         "US2",
         "active_payload_gate",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "install-verification",
@@ -146,6 +150,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("install-verification"),
         "US2",
         "active_install_verification",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "install-verification",
@@ -157,6 +163,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("install-verification"),
         "US2",
         "active_install_verification",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -168,6 +176,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -179,6 +189,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -190,6 +202,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -201,6 +215,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -212,6 +228,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -223,6 +241,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -234,6 +254,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -245,6 +267,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "release-readiness",
@@ -256,6 +280,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("release-readiness"),
         "US2",
         "active_release_readiness",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "active-path-guard",
@@ -378,6 +404,10 @@ def dispatch_gate(request: Any) -> dict[str, Any]:
 
     if entry.group == "suite":
         return run_suite_gate(entry, request)
+    if entry.group in {"payload", "install"}:
+        return run_payload_gate(entry, request)
+    if entry.group == "release":
+        return run_release_gate(entry, request)
 
     return response("internal_failure", request_id=request.request_id)
 

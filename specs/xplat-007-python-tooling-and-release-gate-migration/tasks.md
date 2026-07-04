@@ -96,31 +96,31 @@
 
 > Write these fixtures/tests first and confirm they fail before implementation.
 
-- [ ] T029 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json` for Claude/Codex test payload evidence only.
-- [ ] T030 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/payload-evidence-cases.json` covering fingerprints, output roots, stale generated files, and `release_payload_cutover=false`.
-- [ ] T031 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json` for fake-home local refresh and install verification.
-- [ ] T032 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json` covering stubbed CLIs, bundled-agent inventory, safe repair plans, Windows-style paths, spaces, traversal rejection, and line-ending normalization.
-- [ ] T033 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json` for changed-plugin detection, suite result aggregation, marketplace/version sync, PR title, workflow contract, payload evidence, release-PR payload-sync parsing, post-release drift checks, and release-readiness aggregation.
-- [ ] T034 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json` covering stale version data, missing promotion records, stale payload evidence, changed-plugin false positives, suite aggregation failures, release-PR payload-sync parse failures, post-release drift, workflow contract failures, and XPLAT-008 handoff items.
-- [ ] T035 [US2] Add failing payload evidence tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `build-test-payload-evidence` read-only, dry-run, and fixture-scoped apply modes.
-- [ ] T036 [US2] Add failing install verification tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `refresh-local-plugin-fixture` and `verify-install` with fake-home roots only.
-- [ ] T037 [US2] Add failing release-readiness tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `detect-changed-plugin`, `aggregate-suite-results`, `check-marketplace-version-sync`, `validate-pr-title`, `validate-workflow-contract`, `check-payload-evidence`, `parse-release-pr-payload-sync`, `check-post-release-drift`, and `release-readiness`.
-- [ ] T038 [US2] Add Bash-reference comparison expectations in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` for `scripts/build-plugin-payloads.sh`, `scripts/refresh-local-plugin.sh`, `scripts/sync-marketplace-versions.sh`, and release workflow checks.
+- [x] T029 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json` for Claude/Codex test payload evidence only.
+- [x] T030 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/payload-evidence-cases.json` covering fingerprints, output roots, stale generated files, and `release_payload_cutover=false`.
+- [x] T031 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/install-verification.json` for fake-home local refresh and install verification.
+- [x] T032 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json` covering stubbed CLIs, bundled-agent inventory, safe repair plans, Windows-style paths, spaces, traversal rejection, and line-ending normalization.
+- [x] T033 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json` for changed-plugin detection, suite result aggregation, marketplace/version sync, PR title, workflow contract, payload evidence, release-PR payload-sync parsing, post-release drift checks, and release-readiness aggregation.
+- [x] T034 [P] [US2] Add `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json` covering stale version data, missing promotion records, stale payload evidence, changed-plugin false positives, suite aggregation failures, release-PR payload-sync parse failures, post-release drift, workflow contract failures, and XPLAT-008 handoff items.
+- [x] T035 [US2] Add failing payload evidence tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `build-test-payload-evidence` read-only, dry-run, and fixture-scoped apply modes.
+- [x] T036 [US2] Add failing install verification tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `refresh-local-plugin-fixture` and `verify-install` with fake-home roots only.
+- [x] T037 [US2] Add failing release-readiness tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `detect-changed-plugin`, `aggregate-suite-results`, `check-marketplace-version-sync`, `validate-pr-title`, `validate-workflow-contract`, `check-payload-evidence`, `parse-release-pr-payload-sync`, `check-post-release-drift`, and `release-readiness`.
+- [x] T038 [US2] Add Bash-reference comparison expectations in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` for `scripts/build-plugin-payloads.sh`, `scripts/refresh-local-plugin.sh`, `scripts/sync-marketplace-versions.sh`, and release workflow checks.
 
 ### Implementation for User Story 2
 
-- [ ] T039 [US2] Implement `build-test-payload-evidence` in `speckit-pro/speckit_pro_runner/gates/payloads.py` with fixture or temporary output roots only.
-- [ ] T040 [US2] Implement `refresh-local-plugin-fixture` in `speckit-pro/speckit_pro_runner/gates/payloads.py` using read-only and dry-run command plans against fixture roots.
-- [ ] T041 [US2] Implement `verify-install` in `speckit-pro/speckit_pro_runner/gates/payloads.py` using `speckit-pro/speckit_pro_runner/install_inventory.json` and XPLAT-006 bundled-agent boundaries without native UAT claims.
-- [ ] T042 [US2] Register `build-test-payload-evidence`, `refresh-local-plugin-fixture`, and `verify-install` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
-- [ ] T043 [US2] Implement `detect-changed-plugin`, `aggregate-suite-results`, `check-marketplace-version-sync`, `validate-pr-title`, `validate-workflow-contract`, `check-payload-evidence`, `parse-release-pr-payload-sync`, `check-post-release-drift`, and `release-readiness` in `speckit-pro/speckit_pro_runner/gates/release.py`.
-- [ ] T044 [US2] Register all release-readiness operations named in `plan.md` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
-- [ ] T045 [US2] Update `speckit-pro/speckit_pro_runner/runtime.py` to expose US2 operations while preserving existing helper behavior.
-- [ ] T046 [US2] Record Bash-reference comparison results for payload, install, version-sync, and release-readiness gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json`.
-- [ ] T047 [US2] Promote US2 gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` only after parity, artifact hash, stream, and exit-code results pass.
-- [ ] T048 [US2] Remove `scripts/build-plugin-payloads.sh`, `scripts/refresh-local-plugin.sh`, and `scripts/sync-marketplace-versions.sh` from active release gate paths, or classify retained references as inactive parity evidence.
-- [ ] T049 [US2] Rebuild XPLAT-007 test payload evidence through the Python runner into fixture or temporary output roots and verify `release_payload_cutover=false`.
-- [ ] T050 [US2] Update `specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md` with fixture-bound payload, install, and release-readiness commands.
+- [x] T039 [US2] Implement `build-test-payload-evidence` in `speckit-pro/speckit_pro_runner/gates/payloads.py` with fixture or temporary output roots only.
+- [x] T040 [US2] Implement `refresh-local-plugin-fixture` in `speckit-pro/speckit_pro_runner/gates/payloads.py` using read-only and dry-run command plans against fixture roots.
+- [x] T041 [US2] Implement `verify-install` in `speckit-pro/speckit_pro_runner/gates/payloads.py` using `speckit-pro/speckit_pro_runner/install_inventory.json` and XPLAT-006 bundled-agent boundaries without native UAT claims.
+- [x] T042 [US2] Register `build-test-payload-evidence`, `refresh-local-plugin-fixture`, and `verify-install` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
+- [x] T043 [US2] Implement `detect-changed-plugin`, `aggregate-suite-results`, `check-marketplace-version-sync`, `validate-pr-title`, `validate-workflow-contract`, `check-payload-evidence`, `parse-release-pr-payload-sync`, `check-post-release-drift`, and `release-readiness` in `speckit-pro/speckit_pro_runner/gates/release.py`.
+- [x] T044 [US2] Register all release-readiness operations named in `plan.md` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
+- [x] T045 [US2] Update `speckit-pro/speckit_pro_runner/runtime.py` to expose US2 operations while preserving existing helper behavior.
+- [x] T046 [US2] Record Bash-reference comparison results for payload, install, version-sync, and release-readiness gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json`.
+- [x] T047 [US2] Promote US2 gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` only after parity, artifact hash, stream, and exit-code results pass.
+- [x] T048 [US2] Remove `scripts/build-plugin-payloads.sh`, `scripts/refresh-local-plugin.sh`, and `scripts/sync-marketplace-versions.sh` from active release gate paths, or classify retained references as inactive parity evidence.
+- [x] T049 [US2] Rebuild XPLAT-007 test payload evidence through the Python runner into fixture or temporary output roots and verify `release_payload_cutover=false`.
+- [x] T050 [US2] Update `specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md` with fixture-bound payload, install, and release-readiness commands.
 
 **Checkpoint**: User Stories 1 and 2 are independently testable through Python runner requests; release cutover remains deferred.
 

@@ -8,6 +8,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
@@ -78,6 +79,10 @@ def fixture_request(name: str) -> dict[str, Any]:
     return json.loads((REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
 
 
+def fixture_cases(name: str) -> dict[str, Any]:
+    return json.loads((FIXTURE_DIR / f"{name}-cases.json").read_text(encoding="utf-8"))
+
+
 def python_argv(source: str) -> list[str]:
     return [sys.executable, "-c", source]
 
@@ -139,6 +144,17 @@ class GateFoundationTests(unittest.TestCase):
             self.assertFalse(path.is_absolute(), artifact["path"])
             self.assertNotIn("..", path.parts)
 
+    def assert_no_shell_argv(self, argv: list[str]) -> None:
+        joined = " ".join(argv).lower()
+        self.assertNotIn("bash", joined)
+        self.assertNotIn("jq", joined)
+        self.assertNotIn("powershell", joined)
+        self.assertNotIn("pwsh", joined)
+        self.assertFalse(any(arg.lower().endswith(".sh") for arg in argv))
+
+    def repo_rel(self, path: Path) -> str:
+        return path.resolve(strict=False).relative_to(REPO_ROOT.resolve(strict=False)).as_posix()
+
     def assert_input_error_code(self, request: dict[str, object], expected_code: str) -> dict[str, Any]:
         completed, response, stderr_records = run_runner(request)
         self.assert_stdout_json(completed)
@@ -171,10 +187,28 @@ class GateFoundationTests(unittest.TestCase):
             "run-integration-suite",
             "run-parity-suite",
         }
+        us2_operations = {
+            "build-test-payload-evidence",
+            "refresh-local-plugin-fixture",
+            "verify-install",
+            "detect-changed-plugin",
+            "aggregate-suite-results",
+            "check-marketplace-version-sync",
+            "validate-pr-title",
+            "validate-workflow-contract",
+            "check-payload-evidence",
+            "parse-release-pr-payload-sync",
+            "check-post-release-drift",
+            "release-readiness",
+        }
         for operation in operations:
             if operation.operation in us1_operations:
                 self.assertEqual(operation.group, "suite")
                 self.assertEqual(operation.story, "US1")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            elif operation.operation in us2_operations:
+                self.assertEqual(operation.story, "US2")
                 self.assertTrue(operation.implemented)
                 self.assertEqual(operation.promotion_status, "python_authoritative")
             else:
@@ -191,6 +225,9 @@ class GateFoundationTests(unittest.TestCase):
             "run-ai-evals.json",
             "run-integration-suite.json",
             "run-parity-suite.json",
+            "test-payload-evidence.json",
+            "install-verification.json",
+            "release-readiness.json",
         }
         self.assertEqual({path.name for path in REQUESTS_DIR.iterdir()}, expected)
 
@@ -201,7 +238,14 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(default_request["inputs"]["suite"], ["toolchain", "1", "4", "5", "7", "8"])
         self.assertFalse(default_request["inputs"]["xplat_008_cutover_allowed"])
 
-        for name in sorted(path.stem for path in REQUESTS_DIR.iterdir()):
+        for name in [
+            "run-default-suite",
+            "run-layer",
+            "run-toolchain-preflight",
+            "run-ai-evals",
+            "run-integration-suite",
+            "run-parity-suite",
+        ]:
             with self.subTest(fixture=name):
                 request = fixture_request(name)
                 self.assertEqual(request["schema_version"], "1.0")
@@ -215,6 +259,59 @@ class GateFoundationTests(unittest.TestCase):
                     "run-integration-suite",
                     "run-parity-suite",
                 })
+
+        payload_request = fixture_request("test-payload-evidence")
+        self.assertEqual(payload_request["helper_id"], "payload-gate")
+        self.assertEqual(payload_request["operation"], "build-test-payload-evidence")
+        self.assertEqual(payload_request["mode"], "read_only")
+        self.assertFalse(payload_request["inputs"]["release_payload_cutover"])
+
+        install_request = fixture_request("install-verification")
+        self.assertEqual(install_request["helper_id"], "install-verification")
+        self.assertEqual(install_request["operation"], "verify-install")
+        self.assertTrue(install_request["inputs"]["fake_home"])
+
+        release_request = fixture_request("release-readiness")
+        self.assertEqual(release_request["helper_id"], "release-readiness")
+        self.assertEqual(release_request["operation"], "release-readiness")
+        self.assertFalse(release_request["inputs"]["xplat_008_cutover_allowed"])
+
+    def test_us2_case_fixtures_cover_payload_install_and_release_failures(self) -> None:
+        payload_cases = fixture_cases("payload-evidence")
+        self.assertEqual(payload_cases["schema_version"], "1.0")
+        self.assertIn("release_payload_cutover=false", payload_cases["coverage"])
+        self.assertEqual({case["case_id"] for case in payload_cases["cases"]}, {"claude-codex-test-payloads", "stale-generated-files"})
+
+        install_cases = fixture_cases("install-verification")
+        self.assertEqual(install_cases["schema_version"], "1.0")
+        self.assertEqual(
+            {case["case_id"] for case in install_cases["cases"]},
+            {
+                "complete-fake-home",
+                "safe-repair-plan",
+                "windows-style-paths",
+                "traversal-rejection",
+                "line-ending-normalization",
+            },
+        )
+
+        release_cases = fixture_cases("release-readiness")
+        self.assertEqual(release_cases["schema_version"], "1.0")
+        self.assertEqual(
+            {case["case_id"] for case in release_cases["cases"]},
+            {
+                "ready",
+                "stale-version-data",
+                "missing-promotion-records",
+                "stale-payload-evidence",
+                "changed-plugin-false-positive",
+                "suite-aggregation-failure",
+                "release-pr-payload-sync-parse-failure",
+                "post-release-drift",
+                "workflow-contract-failure",
+                "xplat-008-handoff-items",
+            },
+        )
 
     def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
         request = gate_request(
@@ -411,6 +508,262 @@ class GateFoundationTests(unittest.TestCase):
                 )
                 self.assertEqual(response["data"]["gate"]["operation"], "run-layer")
 
+    def test_payload_evidence_modes_are_fixture_bound_and_cutover_safe(self) -> None:
+        completed, response, stderr_records = run_runner(fixture_request("test-payload-evidence"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+        evidence = response["data"]["payload_evidence"]
+        self.assertEqual({item["payload_surface"] for item in evidence}, {"claude_test", "codex_test"})
+        for item in evidence:
+            self.assertEqual(item["mode"], "read_only")
+            self.assertFalse(item["release_payload_cutover"])
+            self.assertRegex(item["file_tree_hash"], r"^[a-f0-9]{64}$")
+            self.assertTrue(item["files"])
+            self.assertTrue(item["output_root"].startswith("tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/"))
+
+        with tempfile.TemporaryDirectory(dir=FIXTURE_DIR) as tmp:
+            output_root = self.repo_rel(Path(tmp) / "payload-output")
+            dry_run_request = gate_request(
+                "payload-gate",
+                "build-test-payload-evidence",
+                mode="dry_run",
+                inputs={
+                    "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/payload-evidence-cases.json",
+                    "case_id": "claude-codex-test-payloads",
+                    "output_root": output_root,
+                    "release_payload_cutover": False,
+                },
+            )
+            completed, response, stderr_records = run_runner(dry_run_request)
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok")
+            self.assertEqual(stderr_records, [])
+            self.assertFalse((REPO_ROOT / output_root).exists())
+
+            apply_request = dict(dry_run_request)
+            apply_request["request_id"] = "test-build-test-payload-evidence-apply"
+            apply_request["mode"] = "apply"
+            completed, response, stderr_records = run_runner(apply_request)
+            self.assertEqual(completed.returncode, 0)
+            self.assert_response(response, "ok")
+            self.assertEqual(stderr_records, [])
+            written = sorted(path.name for path in (REPO_ROOT / output_root).glob("*.json"))
+            self.assertEqual(written, ["claude-test-payload-evidence.json", "codex-test-payload-evidence.json"])
+            for item in response["data"]["payload_evidence"]:
+                self.assertEqual(item["mode"], "apply")
+                self.assertFalse(item["release_payload_cutover"])
+
+    def test_payload_evidence_rejects_release_cutover_and_stale_generated_payloads(self) -> None:
+        release_cutover = gate_request(
+            "payload-gate",
+            "build-test-payload-evidence",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/payload-evidence-cases.json",
+                "case_id": "claude-codex-test-payloads",
+                "output_root": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/generated/payload-evidence",
+                "release_payload_cutover": True,
+            },
+        )
+        response = self.assert_input_error_code(release_cutover, "release_payload_cutover_refused")
+        self.assertEqual(response["data"]["gate"]["operation"], "build-test-payload-evidence")
+
+        stale = gate_request(
+            "payload-gate",
+            "build-test-payload-evidence",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/payload-evidence-cases.json",
+                "case_id": "stale-generated-files",
+                "output_root": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/generated/payload-evidence",
+                "release_payload_cutover": False,
+            },
+        )
+        completed, response, stderr_records = run_runner(stale)
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["stale_generated_payload_evidence"])
+
+    def test_install_verification_uses_fake_home_roots_and_command_plans_only(self) -> None:
+        completed, response, stderr_records = run_runner(fixture_request("install-verification"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        install = response["data"]["install_verification"]
+        self.assertEqual(install["status"], "complete")
+        self.assertTrue(install["fake_home"])
+        self.assertTrue(install["stubbed_cli"])
+        self.assertGreaterEqual(install["bundled_agent_count"], 1)
+        self.assertEqual(install["missing_files"], [])
+        self.assertEqual(install["checksum_mismatches"], [])
+        self.assertFalse(install["native_uat_claimed"])
+
+        dry_run = gate_request(
+            "install-verification",
+            "refresh-local-plugin-fixture",
+            mode="dry_run",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json",
+                "case_id": "safe-repair-plan",
+                "fake_home": True,
+            },
+        )
+        completed, response, stderr_records = run_runner(dry_run)
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        install = response["data"]["install_verification"]
+        self.assertEqual(install["status"], "safe_repair")
+        self.assertTrue(install["safe_repairs"])
+        for plan in install["command_plans"]:
+            self.assert_no_shell_argv(plan["argv"])
+
+        traversal = gate_request(
+            "install-verification",
+            "verify-install",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json",
+                "case_id": "traversal-rejection",
+                "fake_home": True,
+            },
+        )
+        self.assert_input_error_code(traversal, "fixture_install_root_refused")
+
+    def test_install_verification_handles_windows_paths_spaces_and_line_endings(self) -> None:
+        for case_id in ["windows-style-paths", "line-ending-normalization"]:
+            with self.subTest(case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "install-verification",
+                        "verify-install",
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/install-verification-cases.json",
+                            "case_id": case_id,
+                            "fake_home": True,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 0)
+                self.assert_response(response, "ok")
+                self.assertEqual(stderr_records, [])
+                install = response["data"]["install_verification"]
+                self.assertEqual(install["status"], "complete")
+                self.assertTrue(install["install_root"].startswith("tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/"))
+
+    def test_release_readiness_operations_report_pass_and_blocking_failures(self) -> None:
+        pass_cases = [
+            ("detect-changed-plugin", "ready", "changed_plugin"),
+            ("detect-changed-plugin", "changed-plugin-false-positive", "changed_plugin"),
+            ("validate-pr-title", "ready", "pr_title"),
+        ]
+        for operation, case_id, data_key in pass_cases:
+            with self.subTest(operation=operation, case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "release-readiness",
+                        operation,
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json",
+                            "case_id": case_id,
+                            "xplat_008_cutover_allowed": False,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 0)
+                self.assert_response(response, "ok")
+                self.assertEqual(stderr_records, [])
+                self.assertIn(data_key, response["data"])
+                self.assertEqual(response["data"]["release_check"]["status"], "pass")
+
+        blocking_cases = [
+            ("aggregate-suite-results", "suite-aggregation-failure"),
+            ("check-marketplace-version-sync", "stale-version-data"),
+            ("validate-workflow-contract", "workflow-contract-failure"),
+            ("check-payload-evidence", "stale-payload-evidence"),
+            ("parse-release-pr-payload-sync", "release-pr-payload-sync-parse-failure"),
+            ("check-post-release-drift", "post-release-drift"),
+        ]
+        for operation, case_id in blocking_cases:
+            with self.subTest(operation=operation, case_id=case_id):
+                completed, response, stderr_records = run_runner(
+                    gate_request(
+                        "release-readiness",
+                        operation,
+                        inputs={
+                            "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json",
+                            "case_id": case_id,
+                            "xplat_008_cutover_allowed": False,
+                        },
+                    )
+                )
+                self.assertEqual(completed.returncode, 1)
+                self.assert_response(response, "expected_failure")
+                self.assertEqual([diag["code"] for diag in stderr_records], ["release_check_failed"])
+                self.assertTrue(response["data"]["release_check"]["blocking"])
+
+    def test_release_readiness_aggregates_promotion_evidence_and_handoff_items(self) -> None:
+        completed, response, stderr_records = run_runner(fixture_request("release-readiness"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        readiness = response["data"]["release_readiness"]
+        self.assertEqual(readiness["status"], "pass")
+        self.assertEqual(readiness["blocking_count"], 0)
+        self.assertGreaterEqual(readiness["promotion_record_count"], 12)
+        self.assertEqual(set(readiness["test_payload_evidence_ids"]), {"us2-claude-test-payload", "us2-codex-test-payload"})
+        self.assertEqual(readiness["install_verification_ids"], ["us2-install-complete-fake-home"])
+        self.assertEqual(readiness["active_path_guard_summary"], {"status": "ok", "blocking_count": 0})
+        self.assertTrue(readiness["xplat_008_handoff_items"])
+        for item in readiness["xplat_008_handoff_items"]:
+            self.assertEqual(item["owner_spec"], "XPLAT-008")
+
+        missing_promotion = gate_request(
+            "release-readiness",
+            "release-readiness",
+            inputs={
+                "case_file": "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/release-readiness-cases.json",
+                "case_id": "missing-promotion-records",
+                "xplat_008_cutover_allowed": False,
+            },
+        )
+        completed, response, stderr_records = run_runner(missing_promotion)
+        self.assertEqual(completed.returncode, 1)
+        self.assert_response(response, "expected_failure")
+        self.assertEqual([diag["code"] for diag in stderr_records], ["release_readiness_blocked"])
+        self.assertGreater(response["data"]["release_readiness"]["blocking_count"], 0)
+
+    def test_us2_gate_implementations_use_no_shell_true_os_system_or_command_string_subprocess(self) -> None:
+        for module in ["payloads.py", "release.py"]:
+            with self.subTest(module=module):
+                path = PLUGIN_ROOT / "speckit_pro_runner" / "gates" / module
+                tree = ast.parse(path.read_text(encoding="utf-8"), filename=path.as_posix())
+                for node in ast.walk(tree):
+                    if not isinstance(node, ast.Call):
+                        continue
+                    if isinstance(node.func, ast.Attribute):
+                        self.assertFalse(
+                            node.func.attr == "system"
+                            and isinstance(node.func.value, ast.Name)
+                            and node.func.value.id == "os",
+                            f"{module} must not use os.system",
+                        )
+                        if (
+                            node.func.attr in {"run", "Popen", "call", "check_call", "check_output"}
+                            and isinstance(node.func.value, ast.Name)
+                            and node.func.value.id == "subprocess"
+                        ):
+                            for keyword in node.keywords:
+                                self.assertFalse(
+                                    keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True,
+                                    f"{module} must not use shell=True",
+                                )
+                            if node.args:
+                                self.assertFalse(
+                                    isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str),
+                                    f"{module} must not pass a command string to subprocess",
+                                )
+
     def test_suite_implementation_uses_no_shell_true_os_system_or_command_string_subprocess(self) -> None:
         suite_path = PLUGIN_ROOT / "speckit_pro_runner" / "gates" / "suite.py"
         tree = ast.parse(suite_path.read_text(encoding="utf-8"), filename=suite_path.as_posix())
@@ -443,7 +796,7 @@ class GateFoundationTests(unittest.TestCase):
         promotion_schema = json.loads((CONTRACT_DIR / "promotion-record.schema.json").read_text(encoding="utf-8"))
         document = json.loads(PROMOTION_RECORDS.read_text(encoding="utf-8"))
         self.assertEqual(document["schema_version"], "1.0")
-        self.assertEqual(document["promotion_status"], "us1_python_authoritative")
+        self.assertEqual(document["promotion_status"], "us2_python_authoritative")
         records = document["records"]
         self.assertTrue({"payload-gate", "install-verification", "release-readiness", "active-path-guard"} <= {record["gate_id"] for record in records})
         us1_operations = {
@@ -471,6 +824,33 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(record["active_path_guard_result"], "pass")
                 self.assertEqual(record["bash_reference_retirement"], "inactive_parity_evidence")
                 self.assertIn("promoted_at", record)
+        us2_operations = {
+            "build-test-payload-evidence": "scripts/build-plugin-payloads.sh",
+            "refresh-local-plugin-fixture": "scripts/refresh-local-plugin.sh",
+            "verify-install": "scripts/refresh-local-plugin.sh",
+            "detect-changed-plugin": ".github/workflows/pr-checks.yml",
+            "aggregate-suite-results": ".github/workflows/pr-checks.yml",
+            "check-marketplace-version-sync": "scripts/sync-marketplace-versions.sh",
+            "validate-pr-title": ".github/workflows/pr-checks.yml",
+            "validate-workflow-contract": ".github/workflows/pr-checks.yml",
+            "check-payload-evidence": ".github/workflows/release.yml",
+            "parse-release-pr-payload-sync": ".github/workflows/release.yml",
+            "check-post-release-drift": ".github/workflows/release.yml",
+            "release-readiness": ".github/workflows/release.yml",
+        }
+        for operation, bash_reference in us2_operations.items():
+            with self.subTest(operation=operation):
+                record = records_by_operation[operation]
+                self.assertEqual(record["prior_bash_gate"], bash_reference)
+                self.assertTrue(record["fixture_ids"])
+                self.assertTrue(record["bash_reference_ids"])
+                self.assertIn(record["comparison_mode"], {"artifact_hash", "command_plan", "json_semantic"})
+                self.assertEqual(record["exit_code_result"], "match")
+                self.assertEqual(record["stream_result"], "match")
+                self.assertIn(record["artifact_result"], {"match", "not_applicable"})
+                self.assertEqual(record["active_path_guard_result"], "pass")
+                self.assertEqual(record["bash_reference_retirement"], "inactive_parity_evidence")
+                self.assertIn("promoted_at", record)
         required = set(promotion_schema["required"])
         allowed = set(promotion_schema["properties"])
         for record in records:
@@ -488,6 +868,20 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertIsInstance(parsed, dict)
                 self.assertEqual(parsed["$schema"], "https://json-schema.org/draft/2020-12/schema")
                 self.assertEqual(parsed["type"], "object")
+                if schema_path.name == "migrated-gate-request.schema.json":
+                    operations = set(parsed["properties"]["operation"]["enum"])
+                    self.assertTrue(
+                        {
+                            "detect-changed-plugin",
+                            "aggregate-suite-results",
+                            "validate-pr-title",
+                            "validate-workflow-contract",
+                            "check-payload-evidence",
+                            "parse-release-pr-payload-sync",
+                            "check-post-release-drift",
+                        }
+                        <= operations
+                    )
 
 
 if __name__ == "__main__":

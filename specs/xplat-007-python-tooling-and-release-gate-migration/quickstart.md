@@ -102,12 +102,23 @@ After Slice 2 implementation, run:
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/test-payload-evidence.json
 ```
 
+The checked-in request runs `build-test-payload-evidence` in `read_only` mode
+against `payload-evidence-cases.json`. Focused test coverage also exercises
+`dry_run` and fixture-scoped `apply` output roots; `apply` is limited to
+`tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/` or OS temp roots.
+
 Expected outcome:
 
 - Claude/Codex test payload evidence is written only to fixture or temporary
   output roots
 - fingerprints and file-tree evidence are recorded
 - `release_payload_cutover` remains `false`
+
+Non-goals:
+
+- selecting generated release payloads
+- publishing marketplace payloads
+- changing active Claude/Codex installed invocation paths
 
 ## 5. Verify Install And Release Readiness
 
@@ -119,12 +130,37 @@ PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/release-readiness.json
 ```
 
+The install request runs `verify-install` against
+`install-verification-cases.json`. Unit coverage also exercises
+`refresh-local-plugin-fixture` in `dry_run` mode for safe repair plans, Windows
+style paths, spaces, traversal rejection, and line-ending normalization.
+
+The release request runs the `release-readiness` aggregate against
+`release-readiness-cases.json`. The aggregate covers:
+
+- `detect-changed-plugin`
+- `aggregate-suite-results`
+- `check-marketplace-version-sync`
+- `validate-pr-title`
+- `validate-workflow-contract`
+- `check-payload-evidence`
+- `parse-release-pr-payload-sync`
+- `check-post-release-drift`
+- `release-readiness`
+
 Expected outcome:
 
 - no real `HOME` or installed plugin cache is mutated
 - bundled-agent inventory and version consistency are checked from fixtures
 - stale marketplace/version, payload evidence, release-PR payload-sync, or
   post-release drift evidence blocks release readiness
+
+Non-goals:
+
+- native installed-plugin UAT
+- real installed-cache repair
+- generated release payload cutover
+- public release readiness claims
 
 ## XPLAT-008 Exclusions
 
