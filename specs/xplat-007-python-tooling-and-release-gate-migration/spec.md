@@ -168,6 +168,43 @@ Reviewers can inspect deterministic guard output that fails if active build, tes
   with the same finding codes. A clean run emits `status: "ok"`, exit `0`, and
   classified nonblocking counts.
 
+### Session 4: Payload, Install, Release, And Platform Proof
+
+- **Test Payload Evidence Rule**: Rebuild isolated Claude and Codex test
+  payload evidence only, using fixture or temporary output roots plus file-tree
+  and fingerprint assertions. XPLAT-007 must not select, publish, or cut over
+  generated release payloads.
+- **Local Refresh And Install Verification Rule**: Test local plugin refresh and
+  install verification through runner operations in `read_only` or `dry_run`
+  mode against fixture roots and stubbed Claude/Codex CLIs. Verify command
+  plans, marketplace-source validation, version consistency, bundled-agent
+  inventory, and fake-home doctor checks. Do not mutate real HOME directories
+  or real installed plugin caches.
+- **Release-Readiness Migration Rule**: Move plugin release gates to
+  `python -m speckit_pro_runner`, including changed-plugin detection, suite
+  dispatch/result aggregation, PR-title and workflow-contract validation,
+  payload evidence checks, marketplace/version sync, release-PR payload-sync
+  parsing, and post-release drift checks. Leave docs-site Node/pnpm validation
+  as docs tooling, with workflow shell only as direct dispatch glue.
+- **Maintainer Documentation Boundary Rule**: Update only active
+  maintainer-facing repo-local instructions required to run XPLAT-007 gates,
+  such as `CLAUDE.md`, `docs-site/src/content/docs/contribute-and-release.md`,
+  generated reference pages when source-driven, and XPLAT-007 `quickstart.md`.
+  Do not update public install/runtime docs, release notes, update/rollback
+  docs, or platform support claims except to avoid broken maintainer commands.
+- **Platform Proof Rule**: XPLAT-007 requires source-checkout proof only: local
+  macOS smoke plus deterministic Windows-style path fixtures covering
+  backslashes, spaces, traversal rejection, fake-home install roots, and
+  line-ending/path normalization. Installed-cache launch proof, native
+  Windows/macOS/Linux installed-plugin UAT, update, autoheal, and public platform
+  claims remain XPLAT-008 responsibilities.
+- **Legacy Fixture Supersession Rule**: Older XPLAT-004 fixture prose that says
+  installed-cache launch proof, native UAT, release-readiness, or public claim
+  audit remain XPLAT-007 scope is superseded by the post-PR #280 roadmap split
+  and this XPLAT-007 clarification. Update or annotate that fixture if touched
+  by XPLAT-007 gate work; do not treat the older wording as an active
+  requirement.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements

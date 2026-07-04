@@ -56,8 +56,8 @@ accepted scope:
 | Phase | Command | Status | Notes |
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist for active repo-local Python tooling and release-gate migration |
-| Clarify | `$speckit-clarify` | In Progress | Resolve gate inventory, command taxonomy, no-shell guard scope, payload boundary, docs boundary, and platform proof |
-| Plan | `$speckit-plan` | Pending | Produce technical plan, research, data model, contracts, and quickstart for the three-slice migration |
+| Clarify | `$speckit-clarify` | Complete | Resolved gate inventory, command taxonomy, no-shell guard scope, payload boundary, docs boundary, and platform proof |
+| Plan | `$speckit-plan` | In Progress | Produce technical plan, research, data model, contracts, and quickstart for the three-slice migration |
 | Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, reliability, security, and release-readiness |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, PRD AC-7.*, design concept, spec, plan, and tasks |
@@ -313,7 +313,13 @@ $speckit-clarify Focus on payload/release helpers and proof boundaries: decide w
 | 1 | Active gate inventory and ownership | 5 resolved | Classify by invocation role: active runner/workflow/release/helper entrypoints are XPLAT-007 gates; fixtures and Bash-reference manifests are temporary parity evidence; installed Claude/Codex invocation cutover remains XPLAT-008. Consensus skipped because the clarify executor reported no unresolved items. |
 | 2 | Runner command surface and promotion rules | 5 resolved | Make `python -m speckit_pro_runner` JSON-envelope operations authoritative for active release/gate surfaces; standalone Python is allowed only for unit/eval harnesses or justified non-authoritative wrappers. Preserve runner stdout/stderr/exit semantics, require per-gate promotion records, restrict mutable helper apply writes to source-checkout evidence/fixtures/metadata, and retire Bash references from active gates. Consensus skipped because the clarify executor reported no unresolved items. |
 | 3 | No-shell guard and legacy cleanup | 5 resolved | Guard scans tracked text with classified findings, but fails only active repo-local gate/release paths that still depend on Bash, `.sh`, `jq`, shell interpolation, or shell-only parsing. CI shell is allowlisted only as Python-gate dispatch glue, archive/provenance and consumer helper text are nonblocking unless reachable from active gates, and guard failures use the runner JSON-envelope contract. Consensus skipped because the clarify executor reported no unresolved items. |
-| 4 | Payload, install, release, and platform proof | Pending | Pending |
+| 4 | Payload, install, release, and platform proof | 5 resolved | Rebuild isolated Claude/Codex test payload evidence only; test local refresh/install verification through runner `read_only`/`dry_run` operations with fixture roots, stubbed CLIs, bundled-agent inventory, and fake-home doctor checks; migrate plugin release-readiness gates to runner operations; update only active maintainer-facing repo-local instructions; platform proof is source-checkout macOS smoke plus Windows-style path fixtures only. Consensus resolved the older XPLAT-004 fixture conflict: installed-cache launch proof and native UAT remain XPLAT-008. |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 1 | Clarify | Session 4 platform proof boundary versus older XPLAT-004 fixture wording | [spec] | 1 | high-confidence | XPLAT-007 requires source-checkout proof only; older fixture wording is superseded or annotated if touched, and installed-cache/native UAT remains XPLAT-008 | spec-context-analyst |
 
 ---
 
