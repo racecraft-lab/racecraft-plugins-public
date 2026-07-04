@@ -132,6 +132,42 @@ Reviewers can inspect deterministic guard output that fails if active build, tes
   it, with active-path guard allowlist classification. Thin Bash wrappers are
   not allowed as active transition entrypoints.
 
+### Session 3: No-Shell Guard And Legacy Cleanup
+
+- **Guard Scope Rule**: The active-path guard discovers shell-specific evidence
+  across tracked text and classifies findings, but fails only for active
+  repo-local gate or release paths. Blocking scope includes
+  `tests/speckit-pro/**` runner-invoked gates, `scripts/*` release helpers,
+  reachable `speckit-pro/**/scripts/**`, and plugin release/test workflows.
+- **Forbidden Pattern Rule**: Blocking findings in active paths include
+  Bash/shebangs, `.sh` executable calls, `jq` command use, Git Bash, WSL,
+  PowerShell helper dependency, shell-only parsing such as `grep`/`sed`/`awk`
+  pipelines, command substitution, `shell=True`, `os.system`, and command-string
+  subprocess calls.
+- **False Positive Rule**: Prose, archived code blocks, fixture text, GitHub
+  `${{ }}` expressions, and non-executed classification examples are not
+  blocking unless they are reachable from an active XPLAT-007 gate.
+- **CI Dispatch Allowlist Rule**: Workflow shell is allowed only as dispatch
+  glue when a `run:` step directly invokes `python -m speckit_pro_runner` or
+  non-plugin docs tooling. Workflow shell must not contain plugin validation,
+  packaging, install, release, `jq`, loop, or parsing logic. Existing plugin
+  `pr-checks.yml` and `release.yml` Bash/`jq` logic remains blocking until
+  migrated.
+- **Nonblocking Classification Rule**: Classify archive/provenance text,
+  vendored Spec Kit consumer helpers, parity fixtures, generated payload
+  mirrors, and XPLAT-008 cutover surfaces as `archive_provenance`,
+  `consumer_spec_kit_helper`, `temporary_parity_evidence`,
+  `xplat_008_cutover_surface`, or `docs_out_of_scope` unless reachable from an
+  active gate. Do not rewrite `.specify/memory/**`, `.specify/scripts/bash/**`,
+  generated payload mirrors, or parity fixtures solely to remove Bash wording.
+- **Guard Output Contract**: The guard is a `python -m speckit_pro_runner`
+  JSON-envelope operation. Blocking findings emit `status: "expected_failure"`,
+  exit `1`, and `data.blocking_count` plus `data.findings[]` entries with
+  `path`, `line`, `category`, `pattern`, `reason`, `active_role`,
+  `classification`, and `remediation`. Stderr emits line-delimited diagnostics
+  with the same finding codes. A clean run emits `status: "ok"`, exit `0`, and
+  classified nonblocking counts.
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements

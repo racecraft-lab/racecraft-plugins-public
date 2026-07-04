@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T16:58:46Z",
+  "updated_at": "2026-07-04T17:03:00Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup",
+  "active_step": "Phase 2: Clarify - Payload, Install, Release, And Platform Proof",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible-noop",
@@ -96,15 +96,16 @@
     },
     {
       "step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 2: Clarify - No-Shell Guard And Legacy Cleanup Consensus",
-      "status": "pending"
+      "status": "completed",
+      "skipped": "No unresolved items reported by clarify-executor"
     },
     {
       "step": "Phase 2: Clarify - Payload, Install, Release, And Platform Proof",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 2: Clarify - Payload, Install, Release, And Platform Proof Consensus",
@@ -276,6 +277,17 @@
           "docs/ai/specs/.process/XPLAT-007-workflow.md"
         ],
         "source_note": "Runner contract files are __main__.py, envelope.py, runtime.py, and helpers/registry.py; cli.py and contracts.py are not present in this worktree."
+      },
+      "no_shell_guard_and_legacy_cleanup": {
+        "status": "completed",
+        "completed_at": "2026-07-04T17:03:00Z",
+        "questions_resolved": 5,
+        "consensus": "skipped: clarify-executor reported no unresolved items",
+        "outcome": "Accepted classified active-path guard behavior: scan tracked text, fail only active repo-local gate/release paths for shell-specific dependencies, allow workflow shell only as Python-gate dispatch glue, classify archive/provenance and consumer helpers as nonblocking unless reachable, and emit runner JSON-envelope findings.",
+        "artifact_updates": [
+          "specs/xplat-007-python-tooling-and-release-gate-migration/spec.md",
+          "docs/ai/specs/.process/XPLAT-007-workflow.md"
+        ]
       }
     }
   }

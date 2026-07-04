@@ -312,7 +312,7 @@ $speckit-clarify Focus on payload/release helpers and proof boundaries: decide w
 |---|---|---|---|
 | 1 | Active gate inventory and ownership | 5 resolved | Classify by invocation role: active runner/workflow/release/helper entrypoints are XPLAT-007 gates; fixtures and Bash-reference manifests are temporary parity evidence; installed Claude/Codex invocation cutover remains XPLAT-008. Consensus skipped because the clarify executor reported no unresolved items. |
 | 2 | Runner command surface and promotion rules | 5 resolved | Make `python -m speckit_pro_runner` JSON-envelope operations authoritative for active release/gate surfaces; standalone Python is allowed only for unit/eval harnesses or justified non-authoritative wrappers. Preserve runner stdout/stderr/exit semantics, require per-gate promotion records, restrict mutable helper apply writes to source-checkout evidence/fixtures/metadata, and retire Bash references from active gates. Consensus skipped because the clarify executor reported no unresolved items. |
-| 3 | No-shell guard and legacy cleanup | Pending | Pending |
+| 3 | No-shell guard and legacy cleanup | 5 resolved | Guard scans tracked text with classified findings, but fails only active repo-local gate/release paths that still depend on Bash, `.sh`, `jq`, shell interpolation, or shell-only parsing. CI shell is allowlisted only as Python-gate dispatch glue, archive/provenance and consumer helper text are nonblocking unless reachable from active gates, and guard failures use the runner JSON-envelope contract. Consensus skipped because the clarify executor reported no unresolved items. |
 | 4 | Payload, install, release, and platform proof | Pending | Pending |
 
 ---
