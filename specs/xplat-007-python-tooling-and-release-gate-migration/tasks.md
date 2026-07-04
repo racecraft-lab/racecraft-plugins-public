@@ -8,6 +8,8 @@
 
 **Reviewability**: The setup warning for two surfaces (`harness/adapter`, `docs/process`) is accepted for one workflow with three internal slices. Before implementation starts, confirm the planned diff still fits the XPLAT-007 plan envelope; if it expands beyond the roadmap reviewability budget, split after Slice 1 before payload/release helper implementation.
 
+**Foundation split confirmation (T007, 2026-07-04)**: The foundation marker stays within the planned `harness/adapter` and `docs/process` surfaces. It adds gate package scaffolding, planned-operation metadata, dispatch rejection behavior, fixtures, tests, and runner metadata only; active US1/US2/US3 gate rewrites remain deferred to later markers.
+
 **Organization**: Tasks are grouped by independently testable user story and accepted implementation slice. `[P]` marks only tasks that touch independent fixtures, command adapters, docs/process evidence, or guard cases and do not compete for shared runner registration, promotion records, payload fixtures, or release-readiness summaries.
 
 ## Format: `[ID] [P?] [Story] Description`
@@ -22,13 +24,13 @@
 
 **Purpose**: Create the XPLAT-007 runner gate and fixture scaffolding without changing active command behavior.
 
-- [ ] T001 Create `speckit-pro/speckit_pro_runner/gates/__init__.py` and export the gate package without registering active operations.
-- [ ] T002 Create `speckit-pro/speckit_pro_runner/gates/registry.py` with planned gate operation metadata for suite, payload, release, install, and guard groups.
-- [ ] T003 Create empty implementation modules `speckit-pro/speckit_pro_runner/gates/suite.py`, `speckit-pro/speckit_pro_runner/gates/payloads.py`, `speckit-pro/speckit_pro_runner/gates/release.py`, and `speckit-pro/speckit_pro_runner/gates/active_path_guard.py`.
-- [ ] T004 Create `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/` and the XPLAT-007 fixture root expected by `plan.md`.
-- [ ] T005 Create `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` with schema-valid planned records for each migrated gate group.
-- [ ] T006 Add the initial XPLAT-007 test harness skeleton in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`.
-- [ ] T007 Confirm the implementation split decision against the reviewability budget in `specs/xplat-007-python-tooling-and-release-gate-migration/tasks.md` before active gate rewrites begin.
+- [x] T001 Create `speckit-pro/speckit_pro_runner/gates/__init__.py` and export the gate package without registering active operations.
+- [x] T002 Create `speckit-pro/speckit_pro_runner/gates/registry.py` with planned gate operation metadata for suite, payload, release, install, and guard groups.
+- [x] T003 Create empty implementation modules `speckit-pro/speckit_pro_runner/gates/suite.py`, `speckit-pro/speckit_pro_runner/gates/payloads.py`, `speckit-pro/speckit_pro_runner/gates/release.py`, and `speckit-pro/speckit_pro_runner/gates/active_path_guard.py`.
+- [x] T004 Create `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/` and the XPLAT-007 fixture root expected by `plan.md`.
+- [x] T005 Create `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` with schema-valid planned records for each migrated gate group.
+- [x] T006 Add the initial XPLAT-007 test harness skeleton in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py`.
+- [x] T007 Confirm the implementation split decision against the reviewability budget in `specs/xplat-007-python-tooling-and-release-gate-migration/tasks.md` before active gate rewrites begin.
 
 **Checkpoint**: Fixture roots, gate modules, and promotion-record scaffolding exist; no active Bash path has been retired yet.
 
@@ -40,12 +42,12 @@
 
 **Critical**: User story implementation must not promote any Python gate until this phase is complete.
 
-- [ ] T008 Implement shared operation lookup and validation in `speckit-pro/speckit_pro_runner/gates/registry.py` for the operation groups named in `plan.md`.
-- [ ] T009 Wire gate operation dispatch into `speckit-pro/speckit_pro_runner/runtime.py` without changing existing helper operation behavior.
-- [ ] T010 Extend `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` with reusable assertions for runner stdout JSON, stderr diagnostics, status-to-exit mapping, and artifact path checks.
-- [ ] T011 Update `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` to include new gate package files after the skeleton dispatch is present.
-- [ ] T012 Update `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` after manifest-covered runner files are added.
-- [ ] T013 Validate all schemas under `specs/xplat-007-python-tooling-and-release-gate-migration/contracts/` with Python JSON parsing before adding gate-specific fixtures.
+- [x] T008 Implement shared operation lookup and validation in `speckit-pro/speckit_pro_runner/gates/registry.py` for the operation groups named in `plan.md`.
+- [x] T009 Wire gate operation dispatch into `speckit-pro/speckit_pro_runner/runtime.py` without changing existing helper operation behavior.
+- [x] T010 Extend `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` with reusable assertions for runner stdout JSON, stderr diagnostics, status-to-exit mapping, and artifact path checks.
+- [x] T011 Update `speckit-pro/speckit_pro_runner/speckit-pro-runner.manifest.json` to include new gate package files after the skeleton dispatch is present.
+- [x] T012 Update `speckit-pro/speckit_pro_runner/speckit-pro-runner.sha256` after manifest-covered runner files are added.
+- [x] T013 Validate all schemas under `specs/xplat-007-python-tooling-and-release-gate-migration/contracts/` with Python JSON parsing before adding gate-specific fixtures.
 
 **Checkpoint**: Runner can reject unknown gate operations deterministically through the JSON envelope; user-story work can start.
 

@@ -43,5 +43,8 @@ links to the slice artifacts in the body below.
 - [checklists/reliability.md](checklists/reliability.md)
 - [checklists/requirements.md](checklists/requirements.md)
 - [checklists/security.md](checklists/security.md)
+- [.process/marker-plan/pr-marker-plan.json](.process/marker-plan/pr-marker-plan.json)
+- [.process/reviewability/atomicity-route.json](.process/reviewability/atomicity-route.json)
+- [.process/reviewability/tasks-reviewability.json](.process/reviewability/tasks-reviewability.json)
 - [quickstart.md](quickstart.md)
 <!-- GENERATED:BACKLINKS:END -->

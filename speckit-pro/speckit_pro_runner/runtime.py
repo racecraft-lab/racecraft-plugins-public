@@ -30,6 +30,11 @@ CHECKSUM_NAME = "speckit-pro-runner.sha256"
 
 def handle_request(request: Any) -> dict[str, Any]:
     if getattr(request, "helper_id", "runner") != "runner":
+        from .gates.registry import dispatch_gate, is_gate_helper_id
+
+        if is_gate_helper_id(request.helper_id):
+            return dispatch_gate(request)
+
         from .helpers.registry import dispatch_helper
 
         return dispatch_helper(request)
