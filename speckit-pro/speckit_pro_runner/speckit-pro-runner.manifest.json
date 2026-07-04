@@ -64,7 +64,7 @@
         "value": "speckit_pro_runner/gates/registry.py",
         "display": "speckit_pro_runner/gates/registry.py"
       },
-      "sha256": "c622d107217973aafe3a02e75659e59a30d6ae2a3fc99e2a85899d53b43160e5"
+      "sha256": "2c1176fe04e2083a86c52e359629b0fb85b9bd0b39802385ebe5b2380a4a0b53"
     },
     {
       "path": {
@@ -80,7 +80,7 @@
         "value": "speckit_pro_runner/gates/suite.py",
         "display": "speckit_pro_runner/gates/suite.py"
       },
-      "sha256": "cd04aa1cda6a4945045cd00c74f2789e33a93dbf4566e3725d311bba05e4709a"
+      "sha256": "343007eb0d317fdf8d3587b21b64b7e20a957284f2a561760720c11f3d4bdeec"
     },
     {
       "path": {

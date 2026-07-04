@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import subprocess
@@ -73,6 +74,30 @@ def run_runner(request: object) -> tuple[subprocess.CompletedProcess[str], dict[
     return completed, response, stderr_records
 
 
+def fixture_request(name: str) -> dict[str, Any]:
+    return json.loads((REQUESTS_DIR / f"{name}.json").read_text(encoding="utf-8"))
+
+
+def python_argv(source: str) -> list[str]:
+    return [sys.executable, "-c", source]
+
+
+def successful_command(label: str) -> dict[str, Any]:
+    return {
+        "argv": python_argv(f"import sys; print('{label} stdout'); print('{label} stderr', file=sys.stderr)"),
+        "timeout_seconds": 5,
+    }
+
+
+def failing_command(label: str, exit_code: int = 1) -> dict[str, Any]:
+    return {
+        "argv": python_argv(
+            f"import sys; print('{label} stdout'); print('{label} stderr', file=sys.stderr); raise SystemExit({exit_code})"
+        ),
+        "timeout_seconds": 5,
+    }
+
+
 class GateFoundationTests(unittest.TestCase):
     maxDiff = None
 
@@ -124,12 +149,12 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual([diag["code"] for diag in response["diagnostics"]], [expected_code])
         return response
 
-    def test_registry_lists_planned_gate_operations_without_active_cutover(self) -> None:
+    def test_registry_marks_us1_suite_operations_implemented_without_active_cutover(self) -> None:
         from speckit_pro_runner.gates.registry import all_gate_operations, gate_registry_report
 
         report = gate_registry_report()
         self.assertEqual(report["schema_version"], "1.0")
-        self.assertEqual(report["promotion_status"], "planned")
+        self.assertEqual(report["promotion_status"], "mixed")
         self.assertFalse(report["active_cutover"])
         self.assertEqual(
             set(report["groups"]),
@@ -138,23 +163,134 @@ class GateFoundationTests(unittest.TestCase):
 
         operations = all_gate_operations()
         self.assertGreaterEqual(len(operations), 20)
+        us1_operations = {
+            "run-default-suite",
+            "run-layer",
+            "run-toolchain-preflight",
+            "run-ai-evals",
+            "run-integration-suite",
+            "run-parity-suite",
+        }
         for operation in operations:
-            self.assertEqual(operation.promotion_status, "planned")
-            self.assertFalse(operation.implemented)
+            if operation.operation in us1_operations:
+                self.assertEqual(operation.group, "suite")
+                self.assertEqual(operation.story, "US1")
+                self.assertTrue(operation.implemented)
+                self.assertEqual(operation.promotion_status, "python_authoritative")
+            else:
+                self.assertEqual(operation.promotion_status, "planned")
+                self.assertFalse(operation.implemented)
             self.assertIn(operation.group, report["groups"])
             self.assertIn(operation.helper_id, report["gate_helper_ids"])
 
-    def test_planned_gate_operation_rejects_until_story_implementation(self) -> None:
-        response = self.assert_input_error_code(
-            gate_request("suite-gate", "run-default-suite"),
-            "gate_operation_not_implemented",
+    def test_us1_request_fixtures_cover_suite_operations(self) -> None:
+        expected = {
+            "run-default-suite.json",
+            "run-layer.json",
+            "run-toolchain-preflight.json",
+            "run-ai-evals.json",
+            "run-integration-suite.json",
+            "run-parity-suite.json",
+        }
+        self.assertEqual({path.name for path in REQUESTS_DIR.iterdir()}, expected)
+
+        default_request = fixture_request("run-default-suite")
+        self.assertEqual(default_request["helper_id"], "suite-gate")
+        self.assertEqual(default_request["operation"], "run-default-suite")
+        self.assertEqual(default_request["mode"], "read_only")
+        self.assertEqual(default_request["inputs"]["suite"], ["toolchain", "1", "4", "5", "7", "8"])
+        self.assertFalse(default_request["inputs"]["xplat_008_cutover_allowed"])
+
+        for name in sorted(path.stem for path in REQUESTS_DIR.iterdir()):
+            with self.subTest(fixture=name):
+                request = fixture_request(name)
+                self.assertEqual(request["schema_version"], "1.0")
+                self.assertEqual(request["helper_id"], "suite-gate")
+                self.assertEqual(request["mode"], "read_only")
+                self.assertIn(request["operation"], {
+                    "run-default-suite",
+                    "run-layer",
+                    "run-toolchain-preflight",
+                    "run-ai-evals",
+                    "run-integration-suite",
+                    "run-parity-suite",
+                })
+
+    def test_run_default_suite_aggregates_success_stdout_stderr_and_exit_behavior(self) -> None:
+        request = gate_request(
+            "suite-gate",
+            "run-default-suite",
+            inputs={
+                "suite": ["toolchain", "1", "4", "5", "7", "8"],
+                "test_commands": {
+                    "toolchain": successful_command("toolchain"),
+                    "layer-1": successful_command("layer1"),
+                    "layer-4": successful_command("layer4"),
+                    "layer-5": successful_command("layer5"),
+                    "layer-7": successful_command("layer7"),
+                    "layer-8": successful_command("layer8"),
+                },
+            },
         )
+        completed, response, stderr_records = run_runner(request)
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
         gate = response["data"]["gate"]
         self.assertEqual(gate["gate_id"], "suite-gate")
         self.assertEqual(gate["operation"], "run-default-suite")
-        self.assertEqual(gate["gate_status"], "input_error")
-        self.assertFalse(gate["promoted"])
-        self.assertTrue(gate["blocking"])
+        self.assertEqual(gate["gate_status"], "pass")
+        self.assertTrue(gate["promoted"])
+        self.assertFalse(gate["blocking"])
+        summary = response["data"]["suite"]["summary"]
+        self.assertEqual(summary, {"total": 6, "passed": 6, "failed": 0, "skipped": 0})
+        results = response["data"]["suite"]["results"]
+        self.assertEqual([result["command_id"] for result in results], ["toolchain", "layer-1", "layer-4", "layer-5", "layer-7", "layer-8"])
+        for result in results:
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["exit_code"], 0)
+            self.assertFalse(result["shell"])
+            self.assertIsInstance(result["argv"], list)
+            self.assertIn("stdout", result)
+            self.assertIn("stderr", result)
+            self.assertIn("stdout", result["stdout"]["text"])
+            self.assertIn("stderr", result["stderr"]["text"])
+
+    def test_default_suite_fixture_uses_python_authoritative_commands_without_shell_paths(self) -> None:
+        completed, response, stderr_records = run_runner(fixture_request("run-default-suite"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+
+        results = response["data"]["suite"]["results"]
+        self.assertEqual(
+            [result["command_id"] for result in results],
+            ["toolchain", "layer-1", "layer-4", "layer-5", "layer-7", "layer-8"],
+        )
+        for result in results:
+            argv = result["argv"]
+            self.assertEqual(argv[0], sys.executable)
+            self.assertNotIn("bash", " ".join(argv).lower())
+            self.assertNotIn("jq", " ".join(argv).lower())
+            self.assertFalse(any(arg.endswith(".sh") for arg in argv))
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(result["exit_code"], 0)
+
+    def test_default_suite_without_explicit_suite_uses_python_authoritative_default(self) -> None:
+        completed, response, stderr_records = run_runner(gate_request("suite-gate", "run-default-suite"))
+        self.assertEqual(completed.returncode, 0)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+        self.assertEqual(
+            [result["command_id"] for result in response["data"]["suite"]["results"]],
+            ["toolchain", "layer-1", "layer-4", "layer-5"],
+        )
 
     def test_unknown_gate_operation_rejects_deterministically(self) -> None:
         response = self.assert_input_error_code(
@@ -180,33 +316,162 @@ class GateFoundationTests(unittest.TestCase):
         )
         self.assertEqual(unsupported["diagnostics"][0]["details"]["supported_modes"], ["read_only"])
 
+    def test_run_layer_expected_failure_preserves_streams_and_exit_mapping(self) -> None:
+        request = gate_request(
+            "suite-gate",
+            "run-layer",
+            inputs={
+                "layer": "4",
+                "test_commands": {
+                    "layer-4": failing_command("layer4", exit_code=1),
+                },
+            },
+        )
+        completed, response, stderr_records = run_runner(request)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "expected_failure")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["gate_expected_failure"])
+        self.assertEqual([diag["code"] for diag in stderr_records], ["gate_expected_failure"])
+        result = response["data"]["suite"]["results"][0]
+        self.assertEqual(result["command_id"], "layer-4")
+        self.assertEqual(result["exit_code"], 1)
+        self.assertEqual(result["status"], "expected_failure")
+        self.assertIn("layer4 stdout", result["stdout"]["text"])
+        self.assertIn("layer4 stderr", result["stderr"]["text"])
+        self.assertEqual(response["data"]["gate"]["gate_status"], "fail")
+
+    def test_toolchain_integration_and_parity_suite_dispatch(self) -> None:
+        cases = [
+            ("run-toolchain-preflight", "toolchain"),
+            ("run-integration-suite", "layer-7"),
+            ("run-parity-suite", "layer-8"),
+        ]
+        for operation, command_id in cases:
+            with self.subTest(operation=operation):
+                request = gate_request(
+                    "suite-gate",
+                    operation,
+                    inputs={"test_commands": {command_id: successful_command(command_id.replace("-", ""))}},
+                )
+                completed, response, stderr_records = run_runner(request)
+                self.assert_stdout_json(completed)
+                self.assert_response(response, "ok")
+                self.assert_status_exit_mapping(completed, response)
+                self.assertEqual(stderr_records, [])
+                self.assertEqual(response["data"]["suite"]["results"][0]["command_id"], command_id)
+
+    def test_run_ai_evals_dispatch_and_missing_prerequisites_are_stable(self) -> None:
+        success = gate_request(
+            "suite-gate",
+            "run-ai-evals",
+            inputs={"layers": ["2", "3", "6"], "test_overrides": {"available_tools": ["claude", "codex"]}},
+        )
+        completed, response, stderr_records = run_runner(success)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "ok")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual(stderr_records, [])
+        self.assertEqual([plan["layer"] for plan in response["data"]["suite"]["planned_dispatch"]], ["2", "3", "6"])
+
+        missing = gate_request(
+            "suite-gate",
+            "run-ai-evals",
+            inputs={"layers": ["2", "3", "6"], "test_overrides": {"available_tools": []}},
+        )
+        completed, response, stderr_records = run_runner(missing)
+        self.assert_stdout_json(completed)
+        self.assert_response(response, "missing_prerequisite")
+        self.assert_status_exit_mapping(completed, response)
+        self.assertEqual([diag["code"] for diag in response["diagnostics"]], ["gate_missing_prerequisite"])
+        self.assertEqual([diag["code"] for diag in stderr_records], ["gate_missing_prerequisite"])
+        missing_by_layer = response["diagnostics"][0]["details"]["missing_by_layer"]
+        self.assertEqual(set(missing_by_layer), {"2", "3", "6"})
+
+    def test_unsafe_command_specs_are_rejected(self) -> None:
+        unsafe_cases = [
+            {"layer-1": "python -c 'print(1)'"},
+            {"layer-1": {"argv": "python -c 'print(1)'"}},
+            {"layer-1": {"argv": python_argv("print(1)"), "shell": True}},
+            {"layer-1": {"argv": ["bash", "tests/speckit-pro/run-all.sh", "--layer", "1"]}},
+            {"layer-1": {"argv": [sys.executable, "tests/speckit-pro/run-all.sh"]}},
+            {"layer-1": {"argv": ["jq", "."]}},
+        ]
+        for commands in unsafe_cases:
+            with self.subTest(commands=commands):
+                response = self.assert_input_error_code(
+                    gate_request("suite-gate", "run-layer", inputs={"layer": "1", "test_commands": commands}),
+                    "unsafe_command_spec",
+                )
+                self.assertEqual(response["data"]["gate"]["operation"], "run-layer")
+
+    def test_suite_implementation_uses_no_shell_true_os_system_or_command_string_subprocess(self) -> None:
+        suite_path = PLUGIN_ROOT / "speckit_pro_runner" / "gates" / "suite.py"
+        tree = ast.parse(suite_path.read_text(encoding="utf-8"), filename=suite_path.as_posix())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Attribute):
+                    self.assertFalse(
+                        node.func.attr == "system"
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == "os",
+                        "suite.py must not use os.system",
+                    )
+                    if (
+                        node.func.attr in {"run", "Popen", "call", "check_call", "check_output"}
+                        and isinstance(node.func.value, ast.Name)
+                        and node.func.value.id == "subprocess"
+                    ):
+                        for keyword in node.keywords:
+                            self.assertFalse(
+                                keyword.arg == "shell" and isinstance(keyword.value, ast.Constant) and keyword.value.value is True,
+                                "suite.py must not use shell=True",
+                            )
+                        if node.args:
+                            self.assertFalse(
+                                isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str),
+                                "suite.py must not pass a command string to subprocess",
+                            )
+
     def test_promotion_records_cover_planned_groups(self) -> None:
         promotion_schema = json.loads((CONTRACT_DIR / "promotion-record.schema.json").read_text(encoding="utf-8"))
         document = json.loads(PROMOTION_RECORDS.read_text(encoding="utf-8"))
         self.assertEqual(document["schema_version"], "1.0")
-        self.assertEqual(document["promotion_status"], "planned")
+        self.assertEqual(document["promotion_status"], "us1_python_authoritative")
         records = document["records"]
-        self.assertEqual(
-            {record["gate_id"] for record in records},
-            {"suite-gate", "payload-gate", "install-verification", "release-readiness", "active-path-guard"},
-        )
+        self.assertEqual({"payload-gate", "install-verification", "release-readiness", "active-path-guard"} <= {record["gate_id"] for record in records}, True)
+        us1_operations = {
+            "run-default-suite": "tests/speckit-pro/run-all.sh",
+            "run-toolchain-preflight": "tests/speckit-pro/check-toolchain.sh",
+            "run-layer-1": "tests/speckit-pro/run-all.sh --layer 1",
+            "run-layer-4": "tests/speckit-pro/run-all.sh --layer 4",
+            "run-layer-5": "tests/speckit-pro/run-all.sh --layer 5",
+            "run-integration-suite": "tests/speckit-pro/layer7-integration/run-all-fixtures.sh",
+            "run-parity-suite": "tests/speckit-pro/layer8-parity/run-parity-fixtures.sh",
+            "run-ai-evals": "tests/speckit-pro/run-all.sh --layer 2/3/6",
+        }
+        records_by_operation = {record["python_operation"]: record for record in records}
+        for operation, bash_reference in us1_operations.items():
+            with self.subTest(operation=operation):
+                record = records_by_operation[operation]
+                self.assertEqual(record["gate_id"], "suite-gate")
+                self.assertEqual(record["prior_bash_gate"], bash_reference)
+                self.assertTrue(record["fixture_ids"])
+                self.assertTrue(record["bash_reference_ids"])
+                self.assertEqual(record["comparison_mode"], "command_plan")
+                self.assertEqual(record["exit_code_result"], "match")
+                self.assertEqual(record["stream_result"], "match")
+                self.assertEqual(record["artifact_result"], "not_applicable")
+                self.assertEqual(record["active_path_guard_result"], "pass")
+                self.assertEqual(record["bash_reference_retirement"], "inactive_parity_evidence")
+                self.assertIn("promoted_at", record)
         required = set(promotion_schema["required"])
         allowed = set(promotion_schema["properties"])
         for record in records:
             self.assertTrue(required <= set(record), record["gate_id"])
             self.assertFalse(set(record) - allowed, record["gate_id"])
             self.assertEqual(record["schema_version"], "1.0")
-            self.assertEqual(record["comparison_mode"], "not_applicable")
-            self.assertEqual(record["exit_code_result"], "not_applicable")
-            self.assertEqual(record["stream_result"], "not_applicable")
-            self.assertEqual(record["artifact_result"], "not_applicable")
-            self.assertEqual(record["active_path_guard_result"], "not_run")
-            self.assertEqual(record["bash_reference_retirement"], "not_applicable")
             self.assertTrue(record["rollback"])
-
-    def test_request_fixture_root_exists_before_user_story_fixtures(self) -> None:
-        self.assertTrue(REQUESTS_DIR.is_dir())
-        self.assertEqual([path.name for path in sorted(REQUESTS_DIR.iterdir())], [".gitkeep"])
 
     def test_contract_schemas_parse_as_json_objects(self) -> None:
         schema_paths = sorted(CONTRACT_DIR.glob("*.json"))
