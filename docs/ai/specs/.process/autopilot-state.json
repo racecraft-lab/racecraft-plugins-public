@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T17:09:40Z",
+  "updated_at": "2026-07-04T17:25:06Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 3: Plan",
+  "active_step": "Phase 4: Checklist - Integration",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible-noop",
@@ -113,11 +113,11 @@
     },
     {
       "step": "Phase 3: Plan",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 4: Checklist - Integration",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - Integration Consensus",
@@ -312,6 +312,55 @@
           "resolution": "XPLAT-007 requires source-checkout proof only; older fixture wording is superseded or annotated if touched, and installed-cache/native UAT remains XPLAT-008."
         }
       }
+    },
+    "plan": {
+      "status": "completed",
+      "completed_at": "2026-07-04T17:25:06Z",
+      "files_created": [
+        "specs/xplat-007-python-tooling-and-release-gate-migration/plan.md",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/research.md",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/data-model.md",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/active-path-guard-result.schema.json",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/install-verification-result.schema.json",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/migrated-gate-request.schema.json",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/migrated-gate-result.schema.json",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/payload-evidence.schema.json",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/promotion-record.schema.json",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/contracts/release-readiness-result.schema.json"
+      ],
+      "files_modified": [
+        "CLAUDE.md",
+        "specs/xplat-007-python-tooling-and-release-gate-migration/SPEC-MOC.md",
+        "docs/ai/specs/.process/XPLAT-007-workflow.md",
+        "docs/ai/specs/.process/autopilot-state.json"
+      ],
+      "declared_file_operations": {
+        "new": 17,
+        "modified": 7,
+        "total_entries": 24
+      },
+      "research_decisions": 9,
+      "contract_schemas": 7,
+      "reviewability_estimate": {
+        "status": "pass",
+        "projected": 0,
+        "declared_files_total": 24
+      },
+      "g3_gate": {
+        "pass": true,
+        "markers": 0
+      },
+      "validation": [
+        "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G3 specs/xplat-007-python-tooling-and-release-gate-migration",
+        "bash speckit-pro/skills/speckit-autopilot/scripts/estimate-reviewable-loc.sh specs/xplat-007-python-tooling-and-release-gate-migration/plan.md",
+        "python3 -m json.tool for each schema in specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
+        "rg -n \"NEEDS CLARIFICATION|\\\\[Gap\\\\]|\\\\[CRITICAL\\\\]\" specs/xplat-007-python-tooling-and-release-gate-migration/plan.md specs/xplat-007-python-tooling-and-release-gate-migration/research.md specs/xplat-007-python-tooling-and-release-gate-migration/data-model.md specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
+        "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
+        "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
+        "git diff --check"
+      ],
+      "outcome": "Generated the technical plan, research, data model, seven contract schemas, quickstart, CLAUDE context update, and refreshed SPEC-MOC backlinks. The plan keeps XPLAT-007 as one workflow with three internal slices and preserves XPLAT-008 cutover boundaries."
     }
   }
 }

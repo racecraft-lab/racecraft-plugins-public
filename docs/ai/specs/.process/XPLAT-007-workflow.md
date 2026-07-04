@@ -57,8 +57,8 @@ accepted scope:
 |---|---|---|---|
 | Specify | `$speckit-specify` | Complete | Created `spec.md` and requirements checklist for active repo-local Python tooling and release-gate migration |
 | Clarify | `$speckit-clarify` | Complete | Resolved gate inventory, command taxonomy, no-shell guard scope, payload boundary, docs boundary, and platform proof |
-| Plan | `$speckit-plan` | In Progress | Produce technical plan, research, data model, contracts, and quickstart for the three-slice migration |
-| Checklist | `$speckit-checklist` | Pending | Recommended domains: integration, reliability, security, and release-readiness |
+| Plan | `$speckit-plan` | Complete | Produced technical plan, research, data model, contracts, and quickstart for the three-slice migration |
+| Checklist | `$speckit-checklist` | In Progress | Recommended domains: integration, reliability, security, and release-readiness |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
 | Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, PRD AC-7.*, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Resolve confidence mode and record pass/advisory disposition before implementation |
@@ -388,11 +388,19 @@ $speckit-plan
 
 | Artifact | Status | Notes |
 |---|---|---|
-| `plan.md` | Pending | Must record technical context, file operations, reviewability warning, three-slice strategy, command surface, parity model, and no-shell guard |
-| `research.md` | Pending | Should capture command taxonomy, promotion rules, guard scope, payload boundary, CI mechanics, and platform proof rationale |
-| `data-model.md` | Pending | Should define migrated gate, command operation, parity comparison, promotion record, active-path guard finding, payload evidence, and release-readiness result entities |
-| `contracts/` | Pending | Should include relevant command/result schemas or fixture contracts for migrated gates |
-| `quickstart.md` | Pending | Should include maintainer commands for Python gates, no-shell guard, test payload evidence, and local smoke |
+| `plan.md` | Complete | Records technical context, 24 declared file operations, setup reviewability warn/pass, three-slice strategy, runner command surface, parity/promotion model, no-shell guard, and XPLAT-008 handoff |
+| `research.md` | Complete | Captures 9 decisions covering invocation-role taxonomy, runner command authority, promotion evidence, guard scope, payload boundary, CI dispatch glue, source-checkout platform proof, stale fixture supersession, and single-workflow reviewability |
+| `data-model.md` | Complete | Defines migrated gate, command operation, parity comparison, promotion record, active-path guard finding, payload evidence, install verification result, and release-readiness result entities |
+| `contracts/` | Complete | Added 7 JSON schemas for migrated gate requests/results, active-path guard results, install verification, payload evidence, promotion records, and release-readiness |
+| `quickstart.md` | Complete | Includes source-checkout runner smoke, Python gate requests, no-shell guard, test payload evidence, fixture-bound install/release checks, and XPLAT-008 exclusions |
+
+Validation evidence:
+
+- `validate-gate.sh G3 specs/xplat-007-python-tooling-and-release-gate-migration` passed with 0 unresolved markers.
+- `estimate-reviewable-loc.sh specs/xplat-007-python-tooling-and-release-gate-migration/plan.md` returned `status=pass`, `declared_files.total_entries=24`, `new=17`, `modified=7`.
+- All 7 contract JSON schemas parsed with `python3 -m json.tool`.
+- Marker scan for `NEEDS CLARIFICATION`, `[Gap]`, and `[CRITICAL]` returned no matches.
+- `generate-spec-index.sh --check .`, `validate-moc-stale-index.sh specs`, and `git diff --check` passed after regenerating the XPLAT-007 SPEC-MOC index.
 
 ---
 
