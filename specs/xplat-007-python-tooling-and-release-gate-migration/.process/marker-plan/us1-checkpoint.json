@@ -1,0 +1,70 @@
+{
+  "schema_version": "1.0",
+  "marker_id": "us1",
+  "status": "completed",
+  "completed_at": "2026-07-04T18:52:23Z",
+  "commit_sha": "b3ae3c52e77988f01ec3534b72b3beb45a0b31fa",
+  "task_ids": [
+    "T014",
+    "T015",
+    "T016",
+    "T017",
+    "T018",
+    "T019",
+    "T020",
+    "T021",
+    "T022",
+    "T023",
+    "T024",
+    "T025",
+    "T026",
+    "T027",
+    "T028"
+  ],
+  "validation": [
+    {
+      "command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py",
+      "result": "14/14 passed"
+    },
+    {
+      "command": "PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json",
+      "result": "status ok; 6/6 suite commands passed"
+    },
+    {
+      "command": "python3 tests/speckit-pro/layer4-scripts/test-speckit-pro-runner.py",
+      "result": "9/9 passed"
+    },
+    {
+      "command": "python3 -m json.tool for each schema in specs/xplat-007-python-tooling-and-release-gate-migration/contracts",
+      "result": "7 schemas parsed"
+    },
+    {
+      "command": "bash speckit-pro/skills/speckit-autopilot/scripts/generate-spec-index.sh --check .",
+      "result": "index current"
+    },
+    {
+      "command": "bash tests/speckit-pro/layer1-structural/validate-moc-stale-index.sh specs",
+      "result": "passed"
+    },
+    {
+      "command": "bash tests/speckit-pro/run-all.sh --layer 4",
+      "result": "2160/2160 passed"
+    },
+    {
+      "command": "git diff --check",
+      "result": "passed"
+    },
+    {
+      "command": "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-007-python-tooling-and-release-gate-migration",
+      "result": "expected incomplete: 28/75 tasks done; 47 tasks incomplete"
+    }
+  ],
+  "warnings": [],
+  "blocked_tasks": [],
+  "fixed_tasks": [
+    {
+      "task_id": "T019-T022",
+      "note": "Parent review tightened the implementation so default suite requests use Python-authoritative internal checks rather than invoking legacy Bash scripts."
+    }
+  ]
+}
