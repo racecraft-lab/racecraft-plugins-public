@@ -59,8 +59,8 @@ accepted scope:
 | Clarify | `$speckit-clarify` | Complete | Resolved gate inventory, command taxonomy, no-shell guard scope, payload boundary, docs boundary, and platform proof |
 | Plan | `$speckit-plan` | Complete | Produced technical plan, research, data model, contracts, and quickstart for the three-slice migration |
 | Checklist | `$speckit-checklist` | Complete | Completed integration, reliability, security, and release-readiness with 0 remaining gaps |
-| Tasks | `$speckit-tasks` | In Progress | Generate tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
-| Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, PRD AC-7.*, design concept, spec, plan, and tasks |
+| Tasks | `$speckit-tasks` | Complete | Generated tasks ordered by test/eval gates, payload/release helpers, then active-path guardrails |
+| Analyze | `$speckit-analyze` | In Progress | Check drift across roadmap, PRD AC-7.*, design concept, spec, plan, and tasks |
 | Confidence Gate | G6.5 | Pending | Resolve confidence mode and record pass/advisory disposition before implementation |
 | Implement | `$speckit-implement` | Pending | Execute Python gate migration with fixture parity, promotion records, and no-shell guard evidence |
 | Post | Autopilot post-implementation items | Pending | Complete doctor, verification, review, PR packet, PR creation, remediation, and retrospective items |
@@ -525,10 +525,10 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | Pending |
-| Phases | Pending |
-| Parallel Opportunities | Pending |
-| User Stories Covered | Pending |
+| Total Tasks | 75 |
+| Phases | 6 |
+| Parallel Opportunities | 9 `[P]` tasks plus documented fixture/docs opportunities |
+| User Stories Covered | 3 of 3 |
 
 ---
 
@@ -540,10 +540,10 @@ branches by itself.
 
 | Field | Value | Meaning |
 |---|---|---|
-| Route | Pending | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Pending | `true`, or `false` for destructive/concurrency-sensitive work |
-| Signals | Pending | Detector findings behind the route |
-| Warnings | Pending | Release-safety warnings |
+| Route | `one-navigable-PR` | One navigable PR remains acceptable for the three accepted slices |
+| Releasable | `true` | Classifier did not identify destructive or concurrency-sensitive blockers |
+| Signals | `change-shape:modify-heavy`; hint `hint:release-cadence:weak` | Detector findings behind the route |
+| Warnings | None | Release-safety warnings |
 
 Classifier command:
 
