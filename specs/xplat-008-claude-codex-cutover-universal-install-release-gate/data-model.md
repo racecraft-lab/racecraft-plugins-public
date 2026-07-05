@@ -43,14 +43,18 @@ Captures the installed-runtime command contract for one operation.
 
 | Field | Type | Required | Notes |
 |---|---|---|---|
+| `schema_version` | string | yes | Must be `1.0`. |
 | `request_id` | string | yes | Correlates request and response. |
-| `surface_id` | string | yes | Links to `InstalledRuntimeSurface`. |
-| `operation` | enum | yes | `preflight`, `scaffold`, `status`, `autopilot_dry_run`, `doctor`, `update`, or `autoheal`. |
-| `argv` | array[string] | yes | Must equal `[resolved_python, "-m", "speckit_pro_runner"]` after resolution. |
-| `stdin_json` | object | yes | Runner request envelope. |
-| `stdout_json` | object or null | yes | Runner response envelope on success. |
-| `stderr` | string | no | Diagnostic text only, not JSON parsing dependency. |
+| `product` | enum | yes | `claude` or `codex`. |
+| `platform` | enum | yes | `windows`, `macos`, or `linux`. |
+| `surface_path` | string | yes | Links to the installed-runtime source or generated payload path. |
+| `operation` | enum | yes | `preflight`, `scaffold`, `status`, `autopilot-dry-run`, `doctor`, `update`, or `autoheal`. |
+| `interpreter_resolution` | InterpreterResolutionRecord | yes | Platform discovery result used for invocation. |
+| `invocation` | object | yes | Contains argv `[resolved_python, "-m", "speckit_pro_runner"]`, stdin/stdout/stderr modes, and `shell_used=false`. |
+| `runner_request` | object | yes | Runner request envelope. |
+| `runner_response` | object or null | yes | Runner response envelope on success. |
 | `status` | enum | yes | `pass`, `fail`, or `blocked`. |
+| `diagnostics` | array[object] | yes | Structured user-facing diagnostic and remediation records. |
 
 ## PayloadInventoryItem
 
@@ -75,7 +79,8 @@ Aggregates the payload gate for Claude or Codex.
 | `payload_surface` | enum | yes | `claude` or `codex`. |
 | `plugin_version` | string | yes | Must match release source of truth. |
 | `runner_version` | string | yes | Independent runner contract version. |
-| `expected_items` | array[PayloadInventoryItem] | yes | Source-derived expected files. |
+| `expected_files` | array[PayloadInventoryItem] | yes | Source-derived expected files. |
+| `actual_files` | array[PayloadInventoryItem] | yes | Generated payload files found during comparison. |
 | `missing_paths` | array[string] | yes | Blocking when non-empty. |
 | `extra_paths` | array[string] | yes | Blocking unless explicitly allowed. |
 | `mismatched_paths` | array[string] | yes | Blocking digest or transform mismatches. |
@@ -97,6 +102,7 @@ Represents one required product/platform installed-plugin journey.
 | `plugin_version_or_latest_tag` | string | yes | Installed plugin version or latest tag. |
 | `installed_cache_path` | string | yes | Installed cache root. |
 | `interpreter_resolution` | InterpreterResolutionRecord | yes | Must be accepted. |
+| `runner_invocation_ids` | array[string] | yes | Request IDs linking this UAT row to aggregate runner invocation records. |
 | `install_result` | enum | yes | `pass` or `fail`. |
 | `bundled_agent_verification` | enum | yes | `pass` or `fail`. |
 | `first_use` | enum | yes | `pass` or `fail`. |
@@ -169,6 +175,7 @@ Aggregates final public release readiness.
 | `uat_rows` | array[NativeUATRow] | yes | Six rows. |
 | `repair_actions` | array[RepairAction] | yes | Doctor/autoheal evidence. |
 | `public_claim_results` | array[object] | yes | Supported and rejected claims. |
+| `runner_invocations` | array[RunnerInvocationRecord] | yes | Active installed-runtime invocation evidence for first-use, update, doctor, and autoheal journeys. |
 | `traceability` | array[object] | yes | Requirement/success criterion to evidence mapping. |
 
 **Blocking classes**:
@@ -188,4 +195,4 @@ Aggregates final public release readiness.
 - `PayloadInventoryItem` rolls up into `PayloadCompletenessResult`.
 - `NativeUATRow` uses `RunnerInvocationRecord`, `InterpreterResolutionRecord`, and `RepairAction` evidence.
 - `InstallHealthFinding` produces `RepairAction`.
-- `ReleaseReadinessGateRecord` aggregates payload results, UAT rows, repair actions, public claim results, and traceability evidence.
+- `ReleaseReadinessGateRecord` aggregates payload results, UAT rows, repair actions, public claim results, runner invocation records, and traceability evidence.

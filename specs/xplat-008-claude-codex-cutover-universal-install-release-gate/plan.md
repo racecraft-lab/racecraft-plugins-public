@@ -94,7 +94,7 @@ Rebuild generated Claude and Codex payloads from source and add a source-derived
 
 ### Slice 3 - Native UAT, Update, Repair, and Release Blocker
 
-Fill the feature-local UAT matrix for Claude and Codex on Windows, macOS, and Linux. Each row must cover install, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, incomplete-install repair, expected result, actual result, evidence link, operator notes, and pass/fail. Release-readiness must fail on missing, placeholder-only, smoke-only, failing, or claim-incomplete UAT rows. Doctor/autoheal must repair only trusted missing or stale artifacts inside the installed cache and print exact manual remediation for unsafe drift.
+Fill the feature-local UAT matrix for Claude and Codex on Windows, macOS, and Linux. Each row must cover install, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, incomplete-install repair, runner invocation IDs, expected result, actual result, evidence link, operator notes, and pass/fail. Release-readiness must fail on missing, placeholder-only, smoke-only, failing, or claim-incomplete UAT rows. Doctor/autoheal must repair only trusted missing or stale artifacts inside the installed cache and print exact manual remediation for unsafe drift.
 
 ## Technical Decisions
 

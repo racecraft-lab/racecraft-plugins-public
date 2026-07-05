@@ -63,7 +63,7 @@ accepted scope:
 | Plan | `$speckit-plan` | Pending | Produce the technical plan for three vertical slices and record reviewability warning handling |
 | Checklist | `$speckit-checklist` | Pending | Run integration, security, reliability, and release-readiness checklists |
 | Tasks | `$speckit-tasks` | Pending | Generate tasks ordered by active surface cutover, payload/release/docs gates, then UAT/update/autoheal |
-| Analyze | `$speckit-analyze` | Pending | Check drift across roadmap, design concept, spec, plan, tasks, and prior XPLAT handoffs |
+| Analyze | `$speckit-analyze` | Complete | 4 findings remediated; structured release/UAT contracts aligned; G6 marker counter clean |
 | Confidence Gate | G6.5 | Pending | Record the pre-Implement confidence score in advisory mode before implementation starts |
 | Implement | `$speckit-implement` | Pending | Execute the accepted slices with tests, payload evidence, UAT runbooks, and release-readiness gates |
 | Post | Post | Pending | Run verification, reviewability, UAT runbook, PR packet, PR creation, review remediation, and retrospective items |
@@ -654,7 +654,11 @@ Focus on XPLAT-008 cross-artifact consistency:
 
 | ID | Severity | Issue | Resolution |
 |---|---|---|---|
-| Fill after Analyze | Fill after Analyze | Fill after Analyze | Fill after Analyze |
+| A1 | HIGH | `uat-matrix.schema.json` required six rows but did not enforce the exact Claude/Codex by Windows/macOS/Linux row set required by FR-012, Clarify Session 3, Research Decision 7, and release-readiness CHK011 | Added one-and-only-one `contains`/`minContains`/`maxContains` constraints for all six product/platform rows |
+| A2 | HIGH | `release-readiness.schema.json` allowed string evidence references to substitute for the structured aggregate payload/UAT/repair/public-claim records described by the data model and T018 | Replaced required string-only `evidence` with structured `payload_results`, `uat_rows`, `repair_actions`, `public_claim_results`, `runner_invocations`, and `traceability`; retained optional `evidence_refs` |
+| A3 | MEDIUM | `PayloadCompletenessResult` in `data-model.md` used `expected_items` and omitted `actual_files`, while the payload contract and release-readiness aggregate use expected/actual generated file records | Renamed the field to `expected_files` and added required `actual_files` |
+| A4 | LOW | `RunnerInvocationRecord.operation` in `data-model.md` used `autopilot_dry_run`, while runner operation values and the runner invocation schema use hyphenated operation IDs | Aligned the operation enum to `autopilot-dry-run`; kept the UAT row field `autopilot_dry_run` unchanged |
+| A5 | MEDIUM | Analyze consensus found `runner_invocations` was required by `release-readiness.schema.json` but missing from the `ReleaseReadinessGateRecord` data model, and the embedded release-readiness runner invocation shape drifted from the standalone runner invocation contract | Added `runner_invocations` to the data model, aligned the embedded release-readiness runner invocation shape to `runner-invocation.schema.json`, and added `runner_invocation_ids` links to UAT rows |
 
 ---
 
@@ -663,6 +667,14 @@ Focus on XPLAT-008 cross-artifact consistency:
 **When to run:** After Analyze and before implementation. The Analyze consensus
 step must emit the canonical pre-Implement confidence block that
 `confidence-gate.sh` reads.
+
+📊 Confidence: 0.93
+
+- Task understanding: 0.96
+- Approach clarity: 0.93
+- Requirements alignment: 0.94
+- Risk assessment: 0.91
+- Completeness: 0.92
 
 ### Confidence Gate Prompt
 
@@ -686,9 +698,9 @@ Phase 7 starts.
 |---|---|
 | Mode | advisory |
 | Threshold | 0.90 |
-| Composite Score | Fill after Analyze |
-| Lowest Criterion | Fill after Analyze |
-| Decision | Pending |
+| Composite Score | 0.93 |
+| Lowest Criterion | Risk assessment 0.91 |
+| Decision | Pass; proceed to Phase 7 |
 
 ---
 

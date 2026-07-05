@@ -68,6 +68,7 @@ Implementation focus:
 - Create `specs/xplat-008-claude-codex-cutover-universal-install-release-gate/.process/uat-matrix.md`.
 - Fill six rows: Claude on Windows, Claude on macOS, Claude on Linux, Codex on Windows, Codex on macOS, and Codex on Linux.
 - Prove install, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, and incomplete-install repair.
+- Link each row to the relevant runner invocation records through `runner_invocation_ids`.
 - Add doctor/autoheal evidence for trusted missing/stale artifacts and manual remediation evidence for unsafe drift.
 
 Verification focus:

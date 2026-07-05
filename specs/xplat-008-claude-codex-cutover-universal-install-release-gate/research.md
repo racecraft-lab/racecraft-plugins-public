@@ -68,7 +68,7 @@
 
 **Rows required**: Claude on Windows, Claude on macOS, Claude on Linux, Codex on Windows, Codex on macOS, and Codex on Linux.
 
-**Fields required**: platform, product, operator/date, host version, plugin version or latest tag, installed cache path, interpreter resolution, install result, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, incomplete-install repair, expected result, actual result, evidence link, operator notes, and pass/fail.
+**Fields required**: platform, product, operator/date, host version, plugin version or latest tag, installed cache path, interpreter resolution, runner invocation IDs, install result, bundled-agent verification, first use, scaffold/status, autopilot dry-run, latest-tag update, incomplete-install repair, expected result, actual result, evidence link, operator notes, and pass/fail.
 
 ## Decision 8: Limit autoheal to checksum-backed trusted cache artifacts
 
