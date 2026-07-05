@@ -445,7 +445,7 @@ class GateFoundationTests(unittest.TestCase):
         self.assertEqual(document["schema_version"], "1.0")
         self.assertEqual(document["promotion_status"], "us1_python_authoritative")
         records = document["records"]
-        self.assertTrue({"payload-gate", "install-verification", "release-readiness", "active-path-guard"} <= {record["gate_id"] for record in records})
+        self.assertLessEqual({"payload-gate", "install-verification", "release-readiness", "active-path-guard"}, {record["gate_id"] for record in records})
         us1_operations = {
             "run-default-suite": "tests/speckit-pro/run-all.sh",
             "run-toolchain-preflight": "tests/speckit-pro/check-toolchain.sh",
