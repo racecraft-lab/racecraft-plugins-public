@@ -2,21 +2,23 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T19:23:04Z",
+  "updated_at": "2026-07-05T19:07:05Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 7: Implement - us3 (T051-T065)",
+  "active_step": "Post-merge archive cleanup applied",
   "archive_sweep": {
     "archive_extension_installed": true,
-    "cleanup_mode": "feature-branch-apply-eligible-noop",
-    "current_target": "specs/xplat-007-python-tooling-and-release-gate-migration",
-    "excluded_current_spec": "specs/xplat-007-python-tooling-and-release-gate-migration",
-    "eligible_previous_specs": [],
-    "active_specs_inventory": [
+    "cleanup_mode": "post-merge-apply",
+    "current_target": null,
+    "excluded_current_spec": null,
+    "eligible_previous_specs": [
       "specs/xplat-007-python-tooling-and-release-gate-migration"
     ],
+    "active_specs_inventory": [],
     "safeToApplyCleanup": true,
-    "cleanupApplied": false,
-    "notes": "Archive extension is installed and enabled. Startup sweep found no previously merged active specs to archive or clean because specs/ contains only the current XPLAT-007 target."
+    "cleanupApplied": true,
+    "notes": "Post-merge cleanup archived XPLAT-007 after PRs #284-#287 merged; process workflow/design files remain preserved under docs/ai/specs/.process/.",
+    "archived_spec": "specs/xplat-007-python-tooling-and-release-gate-migration",
+    "archive_report": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
   },
   "preflight": {
     "model": "gpt-5.5 available for required installed Codex subagents",
@@ -183,59 +185,73 @@
     },
     {
       "step": "Phase 7: Implement - us3 (T051-T065)",
-      "status": "in_progress"
+      "status": "completed",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Phase 7: Implement - validation (T066-T075)",
-      "status": "pending"
+      "status": "completed",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Doctor Extension Check",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Verify Implementation",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Verify Tasks Phantom Check",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Code Review",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Integration Suite",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Reviewability Diff Gate",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Self-Review",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: UAT Runbook Generation",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: PR Body Generation",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: PR Creation",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Review Remediation",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     },
     {
       "step": "Post: Retrospective",
-      "status": "pending"
+      "status": "archived",
+      "archived_by": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md"
     }
   ],
   "phase_results": {
@@ -556,7 +572,7 @@
       "outcome": "No synthesizer confidence emit was present in the workflow file. Advisory mode records the no-data soft-skip and proceeds to implementation."
     },
     "implementation": {
-      "status": "in_progress",
+      "status": "completed_archived",
       "markers": {
         "foundation": {
           "status": "completed",
@@ -582,12 +598,17 @@
           "outcome": "Python-authoritative payload evidence, install verification, and release-readiness gates are complete; native installed-plugin and release-payload cutover remain XPLAT-008 handoff items."
         },
         "us3": {
-          "status": "in_progress",
-          "task_range": "T051-T065"
+          "status": "completed",
+          "task_range": "T051-T065",
+          "commit_sha": "0ff2d8d731698cde02b334cdc3b2a377216b5d45",
+          "completed_at": "2026-07-05T18:57:01Z",
+          "outcome": "Active-path guardrails and no-shell review surface merged in PR #287."
         },
         "validation": {
-          "status": "pending",
-          "task_range": "T066-T075"
+          "status": "completed",
+          "task_range": "T066-T075",
+          "completed_at": "2026-07-05T18:57:01Z",
+          "outcome": "Validation evidence merged across PRs #284-#287; post-merge archive verification recorded in archive report."
         }
       },
       "latest_validation": [
@@ -639,7 +660,12 @@
           "command": "bash speckit-pro/skills/speckit-autopilot/scripts/validate-gate.sh G7 specs/xplat-007-python-tooling-and-release-gate-migration",
           "result": "expected incomplete: 50/75 tasks done; 25 tasks incomplete"
         }
-      ]
+      ],
+      "archive_cleanup": {
+        "status": "completed_archived",
+        "archive_report": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md",
+        "cleanup_applied": true
+      }
     }
   },
   "pr_marker_plan": {
@@ -1047,5 +1073,21 @@
     "tasks_sha": "da587566f3230f9951d60108ac56b7ea2a7d6e868321689b9e22ef28424b498d",
     "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
     "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
+  },
+  "status": "completed_archived",
+  "archive_cleanup": {
+    "status": "completed_archived",
+    "archived_spec": "specs/xplat-007-python-tooling-and-release-gate-migration",
+    "archive_report": ".specify/memory/archive-reports/2026-07-05-xplat-007-post-merge-hygiene.md",
+    "cleanup_branch": "codex/xplat-007-archive-cleanup",
+    "cleanup_command": "git rm -r specs/xplat-007-python-tooling-and-release-gate-migration",
+    "cleanup_applied": true,
+    "completed_at": "2026-07-05T19:07:05Z",
+    "merge_commits": {
+      "284": "6c0af6cf6cd53e1569bcb03c9a56d939360a4b24",
+      "285": "cb1697290b8f7cb289d0740e59c899285dc95c33",
+      "286": "a0d2dd015f0a33e85634256061926e5274fdb69a",
+      "287": "0ff2d8d731698cde02b334cdc3b2a377216b5d45"
+    }
   }
 }

@@ -168,7 +168,7 @@
       "overrides": {
         "changed_files": [
           "docs-site/src/content/docs/index.mdx",
-          "specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md"
+          "docs/ai/specs/.process/XPLAT-007-workflow.md"
         ],
         "expected_changed_plugin": false
       }
