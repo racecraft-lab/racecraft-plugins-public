@@ -586,10 +586,10 @@ $speckit-tasks
 
 | Metric | Value |
 |---|---|
-| Total Tasks | Fill after Tasks |
-| Phases | Fill after Tasks |
-| Parallel Opportunities | Fill after Tasks |
-| User Stories Covered | Fill after Tasks |
+| Total Tasks | 47 |
+| Phases | 4 implementation phases across the accepted three slices plus polish/release packet |
+| Parallel Opportunities | 15 `[P]` tasks |
+| User Stories Covered | 4 (`US1`-`US4`) |
 
 ---
 
@@ -600,10 +600,10 @@ This route is intentionally blank during scaffold.
 
 | Field | Value | Meaning |
 |---|---|---|
-| Route | Fill after Tasks | One of `split-PR`, `one-navigable-PR`, `single-atomic-PR`, `branch-by-abstraction`, or `out-of-scope` |
-| Releasable | Fill after Tasks | `true`, or `false` for a destructive-migration or concurrency-sensitive change |
-| Signals | Fill after Tasks | Decisive detector findings |
-| Warnings | Fill after Tasks | Release-safety warnings |
+| Route | `one-navigable-PR` | One coherent PR with ordered review sections and release gate evidence |
+| Releasable | `true` | No destructive migration or concurrency-sensitive cutover detector fired |
+| Signals | `change-shape:modify-heavy` | Modify-heavy cross-surface release-readiness work |
+| Warnings | none | Atomicity classifier returned no release-safety warnings |
 
 To produce the decision:
 
