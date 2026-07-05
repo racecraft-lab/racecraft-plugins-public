@@ -862,6 +862,24 @@ class GateFoundationTests(unittest.TestCase):
 
         request = fixture_request("release-readiness-live-github")
         request["inputs"]["github_context"]["changed_files"] = [
+            "docs/prd-harness-engineering-uplift.md",
+            "docs/ai/specs/harness-engineering-uplift-technical-roadmap.md",
+        ]
+        completed, response, stderr_records = run_runner(
+            request,
+            extra_env={"TITLE": "docs(specs): add harness engineering uplift roadmap", "BASE_REF": "main"},
+        )
+        self.assertEqual(completed.returncode, 0)
+        self.assert_response(response, "ok")
+        self.assertEqual(stderr_records, [])
+        readiness = response["data"]["release_readiness"]
+        self.assertEqual(readiness["status"], "pass")
+        checks = {check["check_id"]: check for check in readiness["checks"]}
+        self.assertEqual(checks["validate-pr-title"]["evidence"], ["docs(specs): add harness engineering uplift roadmap"])
+        self.assertEqual(checks["detect-changed-plugin"]["evidence"], ["changed_plugin=false"])
+
+        request = fixture_request("release-readiness-live-github")
+        request["inputs"]["github_context"]["changed_files"] = [
             "speckit-pro/speckit_pro_runner/gates/release.py"
         ]
         completed, response, stderr_records = run_runner(
