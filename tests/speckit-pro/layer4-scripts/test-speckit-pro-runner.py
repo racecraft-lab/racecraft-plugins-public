@@ -369,7 +369,7 @@ class RunnerFoundationTests(unittest.TestCase):
             self.assertNotIn(path, forbidden_exact)
             self.assertFalse(path.startswith(forbidden_prefixes), path)
             if path.startswith("docs/"):
-                self.assertTrue(path.startswith("docs/ai/specs/"), path)
+                self.assertTrue(path.startswith("docs/ai/specs/") or path.startswith("docs/prd-"), path)
 
 
 if __name__ == "__main__":

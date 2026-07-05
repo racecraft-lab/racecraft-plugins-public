@@ -332,6 +332,7 @@ def github_context_overrides(repo_root: Path, context: dict[str, Any]) -> dict[s
     overrides: dict[str, Any] = {
         "pr_title": title,
         "changed_files": changed_files,
+        "expected_changed_plugin": any(is_plugin_change(path) for path in changed_files),
     }
     workflow_contract = context.get("workflow_contract")
     if isinstance(workflow_contract, dict):
