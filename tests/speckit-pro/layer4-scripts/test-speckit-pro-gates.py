@@ -892,7 +892,7 @@ class GateFoundationTests(unittest.TestCase):
                 self.assertEqual(parsed["type"], "object")
                 if schema_path.name == "migrated-gate-request.schema.json":
                     operations = set(parsed["properties"]["operation"]["enum"])
-                    self.assertTrue(
+                    self.assertLessEqual(
                         {
                             "detect-changed-plugin",
                             "aggregate-suite-results",
@@ -901,8 +901,8 @@ class GateFoundationTests(unittest.TestCase):
                             "check-payload-evidence",
                             "parse-release-pr-payload-sync",
                             "check-post-release-drift",
-                        }
-                        <= operations
+                        },
+                        operations,
                     )
 
 
