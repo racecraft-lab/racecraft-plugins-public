@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-008-workflow.md",
   "feature_dir": "specs/xplat-008-claude-codex-cutover-universal-install-release-gate",
   "feature_branch": "codex/xplat-008-claude-codex-cutover-universal-install-release-gate",
-  "updated_at": "2026-07-05T20:34:00Z",
+  "updated_at": "2026-07-05T21:04:21Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 2: Clarify - Active Surface Inventory",
+  "active_step": "Phase 3: Plan",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-sweep-static",
@@ -81,31 +81,37 @@
     },
     {
       "step": "Phase 2: Clarify - Active Surface Inventory",
-      "status": "in_progress"
+      "status": "completed",
+      "summary": "Accepted 5 clarification answers covering active surface scope, direct runner invocation, payload manifest source, UAT matrix path, and bounded autoheal."
     },
     {
       "step": "Phase 2: Clarify - Active Surface Inventory Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Consensus refined interpreter discovery and confirmed bounded manifest/checksum-backed real-cache autoheal only."
     },
     {
       "step": "Phase 2: Clarify - Payload, Release, and Trust Contract",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted source-derived Claude/Codex payload inventories, temporary rebuild comparison against committed dist outputs, blocking version consistency, seeded release blockers, and implemented-only public trust/support claims."
     },
     {
       "step": "Phase 2: Clarify - Payload, Release, and Trust Contract Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Three-way consensus accepted the allow/deny list for public trust claims and denied stronger assurances unless separately implemented and evidenced."
     },
     {
       "step": "Phase 2: Clarify - UAT, Update, and Autoheal",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Accepted a feature-local UAT matrix plus optional detail files, six Claude/Codex by platform rows, required install-to-repair fields, structured matrix fill-state gating, prior interpreter discovery order with diagnostics, and checksum-backed repair boundaries."
     },
     {
       "step": "Phase 2: Clarify - UAT, Update, and Autoheal Consensus",
-      "status": "pending"
+      "status": "completed",
+      "summary": "Three-way consensus confirmed a structured six-row native UAT matrix gate and bounded checksum-backed installed-cache repair only; checksum repair is integrity/completeness repair, not signing, provenance, SLSA, or cryptographic trust-chain evidence."
     },
     {
       "step": "Phase 3: Plan",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 4: Checklist - integration",

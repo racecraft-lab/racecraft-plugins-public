@@ -368,9 +368,18 @@ Focus on native installed-plugin UAT, update, and safe repair for XPLAT-008:
 
 | Session | Focus Area | Questions | Key Outcomes |
 |---|---|---|---|
-| 1 | Active surface inventory | Fill after Clarify | Fill after Clarify |
-| 2 | Payload/release/trust contract | Fill after Clarify | Fill after Clarify |
-| 3 | UAT/update/autoheal | Fill after Clarify | Fill after Clarify |
+| 1 | Active surface inventory | 5 | Accepted active-runtime guard scope, argv-style runner invocation, source-derived payload manifest, feature-local UAT matrix, and bounded autoheal trust boundary; consensus refined interpreter discovery to Windows `py -V:3` -> `py -3` -> `python` -> `python3`, macOS/Linux `python3` -> `python` |
+| 2 | Payload/release/trust contract | 5 | Accepted source-derived Claude/Codex payload inventory, temp/staging rebuild comparison with explicit transforms, blocking version consistency across source/dist/marketplace/release evidence, seeded release blockers, and implemented-only trust/support claims |
+| 3 | UAT/update/autoheal | 5 | Accepted feature-local `.process/uat-matrix.md` plus optional detail files, six Claude/Codex by platform rows with install-to-repair fields, structured matrix fill-state release gate, prior interpreter discovery order with diagnostics, and checksum-backed repair only |
+
+### Consensus Resolution Log
+
+| # | Type | Question/Gap/Finding | Categories | Round | Outcome | Resolution | Analysts Used |
+|---|---|---|---|---|---|---|---|
+| 1 | Clarify | Per-platform interpreter discovery order | [codebase, domain] | 1 | both-agree with refinement | Use argv-style probing; Windows `py -V:3` -> `py -3` -> `python` -> `python3`, macOS/Linux `python3` -> `python`; accept only Python >=3.11 and record executable/version | codebase-analyst, domain-researcher |
+| 2 | Clarify | Real installed-cache repair boundary | [codebase, security] | 1 | 3/3 | Enable automatic repair only for bounded manifest/checksum-backed refreshes; unsafe drift remains manual remediation | codebase-analyst, spec-context-analyst, domain-researcher |
+| 3 | Clarify | Public trust and support claim boundary | [codebase, spec-context, domain] | 2 | 3/3 | Claim only implemented and verified controls; deny signing, SBOMs, provenance attestations, reproducible-build guarantees, audits/certifications, vulnerability-free status, marketplace-enforced verification, and cryptographic trust-chain claims unless separately implemented and evidenced | codebase-analyst, spec-context-analyst, domain-researcher |
+| 4 | Clarify | Structured native UAT matrix and repair boundary | [codebase, spec-context, domain] | 3 | 3/3 | Require six Claude/Codex by Windows/macOS/Linux rows in `.process/uat-matrix.md`; gate missing, placeholder, smoke-only, failing, or unsupported-claim rows; limit autoheal to bounded checksum-backed installed-cache refreshes and route unsafe drift to exact manual remediation | codebase-analyst, spec-context-analyst, domain-researcher |
 
 ---
 
