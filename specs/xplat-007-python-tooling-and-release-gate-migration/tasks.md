@@ -63,24 +63,24 @@
 
 > Write these fixtures/tests first and confirm they fail before implementation.
 
-- [ ] T014 [P] [US1] Add the default suite request fixture in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json` covering top-level, Layer 1, Layer 4, Layer 5, Layer 7, and Layer 8 gate dispatch.
-- [ ] T015 [US1] Add failing suite-runner tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `run-default-suite` and `run-layer` success, expected failure, stdout, stderr, and exit-code behavior.
-- [ ] T016 [US1] Add Bash-reference comparison expectations in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` for `tests/speckit-pro/run-all.sh`, `tests/speckit-pro/check-toolchain.sh`, Layer 1, Layer 4, Layer 5, Layer 7, and Layer 8.
-- [ ] T017 [US1] Add failing tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` that reject shell command strings, `shell=True`, `os.system`, and command-string subprocess use in promoted suite operations.
-- [ ] T018 [US1] Add failing tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for AI-eval dispatch and missing-prerequisite diagnostics for Layer 2, Layer 3, and Layer 6.
+- [x] T014 [P] [US1] Add the default suite request fixture in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json` covering top-level, Layer 1, Layer 4, Layer 5, Layer 7, and Layer 8 gate dispatch.
+- [x] T015 [US1] Add failing suite-runner tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for `run-default-suite` and `run-layer` success, expected failure, stdout, stderr, and exit-code behavior.
+- [x] T016 [US1] Add Bash-reference comparison expectations in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` for `tests/speckit-pro/run-all.sh`, `tests/speckit-pro/check-toolchain.sh`, Layer 1, Layer 4, Layer 5, Layer 7, and Layer 8.
+- [x] T017 [US1] Add failing tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` that reject shell command strings, `shell=True`, `os.system`, and command-string subprocess use in promoted suite operations.
+- [x] T018 [US1] Add failing tests in `tests/speckit-pro/layer4-scripts/test-speckit-pro-gates.py` for AI-eval dispatch and missing-prerequisite diagnostics for Layer 2, Layer 3, and Layer 6.
 
 ### Implementation for User Story 1
 
-- [ ] T019 [US1] Implement `run-default-suite` in `speckit-pro/speckit_pro_runner/gates/suite.py` with deterministic aggregation for the current default deterministic layers.
-- [ ] T020 [US1] Implement `run-layer` in `speckit-pro/speckit_pro_runner/gates/suite.py` for Layer 1 structural checks, Layer 4 helper tests, Layer 5 tool-scoping checks, Layer 7 integration, and Layer 8 parity.
-- [ ] T021 [US1] Implement `run-ai-evals` in `speckit-pro/speckit_pro_runner/gates/suite.py` for opt-in Layer 2, Layer 3, and Layer 6 dispatch with stable missing-prerequisite results.
-- [ ] T022 [US1] Implement `run-integration-suite` and `run-parity-suite` in `speckit-pro/speckit_pro_runner/gates/suite.py` using argv-list subprocesses only where subprocesses are unavoidable.
-- [ ] T023 [US1] Register `run-default-suite`, `run-layer`, `run-ai-evals`, `run-integration-suite`, and `run-parity-suite` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
-- [ ] T024 [US1] Update `speckit-pro/speckit_pro_runner/runtime.py` to expose the US1 operations through the runner envelope.
-- [ ] T025 [US1] Record Bash-reference comparison results for US1 gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json`.
-- [ ] T026 [US1] Promote US1 gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` only after fixture parity, exit-code, stream, and artifact comparisons pass.
-- [ ] T027 [US1] Remove US1 Bash command paths from active runner or workflow invocations, or reclassify retained references as inactive parity evidence in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json`.
-- [ ] T028 [US1] Update `specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md` with the Python suite-gate request and explicit US1 non-goals.
+- [x] T019 [US1] Implement `run-default-suite` in `speckit-pro/speckit_pro_runner/gates/suite.py` with deterministic aggregation for the current default deterministic layers.
+- [x] T020 [US1] Implement `run-layer` in `speckit-pro/speckit_pro_runner/gates/suite.py` for Layer 1 structural checks, Layer 4 helper tests, Layer 5 tool-scoping checks, Layer 7 integration, and Layer 8 parity.
+- [x] T021 [US1] Implement `run-ai-evals` in `speckit-pro/speckit_pro_runner/gates/suite.py` for opt-in Layer 2, Layer 3, and Layer 6 dispatch with stable missing-prerequisite results.
+- [x] T022 [US1] Implement `run-integration-suite` and `run-parity-suite` in `speckit-pro/speckit_pro_runner/gates/suite.py` using argv-list subprocesses only where subprocesses are unavoidable.
+- [x] T023 [US1] Register `run-default-suite`, `run-layer`, `run-ai-evals`, `run-integration-suite`, and `run-parity-suite` in `speckit-pro/speckit_pro_runner/gates/registry.py`.
+- [x] T024 [US1] Update `speckit-pro/speckit_pro_runner/runtime.py` to expose the US1 operations through the runner envelope.
+- [x] T025 [US1] Record Bash-reference comparison results for US1 gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json`.
+- [x] T026 [US1] Promote US1 gates in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json` only after fixture parity, exit-code, stream, and artifact comparisons pass.
+- [x] T027 [US1] Remove US1 Bash command paths from active runner or workflow invocations, or reclassify retained references as inactive parity evidence in `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json`.
+- [x] T028 [US1] Update `specs/xplat-007-python-tooling-and-release-gate-migration/quickstart.md` with the Python suite-gate request and explicit US1 non-goals.
 
 **Checkpoint**: User Story 1 is independently testable through Python runner requests and has promotion evidence for the migrated test/eval gates.
 

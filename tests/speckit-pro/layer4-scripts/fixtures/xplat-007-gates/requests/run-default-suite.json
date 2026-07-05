@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "request_id": "xplat-007-us1-run-default-suite",
+  "helper_id": "suite-gate",
+  "operation": "run-default-suite",
+  "mode": "read_only",
+  "inputs": {
+    "repo_root": ".",
+    "suite": ["toolchain", "1", "4", "5", "7", "8"],
+    "xplat_008_cutover_allowed": false
+  }
+}

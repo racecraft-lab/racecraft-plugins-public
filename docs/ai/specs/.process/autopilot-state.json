@@ -2,9 +2,9 @@
   "workflow_file": "docs/ai/specs/.process/XPLAT-007-workflow.md",
   "feature_dir": "specs/xplat-007-python-tooling-and-release-gate-migration",
   "feature_branch": "codex/xplat-007-python-tooling-and-release-gate-migration",
-  "updated_at": "2026-07-04T17:58:51Z",
+  "updated_at": "2026-07-04T18:17:39Z",
   "confidence_gate_mode": "advisory",
-  "active_step": "Phase 7: Implement - foundation (T001-T013)",
+  "active_step": "Phase 7: Implement - us1 (T014-T028)",
   "archive_sweep": {
     "archive_extension_installed": true,
     "cleanup_mode": "feature-branch-apply-eligible-noop",
@@ -171,11 +171,11 @@
     },
     {
       "step": "Phase 7: Implement - foundation (T001-T013)",
-      "status": "in_progress"
+      "status": "completed"
     },
     {
       "step": "Phase 7: Implement - us1 (T014-T028)",
-      "status": "pending"
+      "status": "in_progress"
     },
     {
       "step": "Phase 7: Implement - us2 (T029-T050)",
@@ -564,7 +564,7 @@
     "source_fingerprint": {
       "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
       "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
-      "tasks_sha": "6ba2506de15c67f0afc45dbc8a77cd84bb3f5683225c8cce90b3a78c4e125de8",
+      "tasks_sha": "90a92360230161365906f306beb19ace4256ff1419ed92f0fd41092820444dd4",
       "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
       "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
     },
@@ -657,7 +657,11 @@
           "details": {}
         },
         "implementation_checkpoint": {
-          "status": "pending"
+          "status": "completed",
+          "evidence_path": "specs/xplat-007-python-tooling-and-release-gate-migration/.process/marker-plan/foundation-checkpoint.json",
+          "commit_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
+          "head_sha": "2b7158daf837402fb364d46af71ccaebb8981448",
+          "completed_at": "2026-07-04T18:17:39Z"
         },
         "emission_mapping": {
           "status": "pending"
@@ -946,7 +950,7 @@
   "current_source_fingerprint": {
     "feature_spec_sha": "5aee7bde6b4ced83500dc5fd40f7adedbe106a1e2a1007daed43f434159aa382",
     "plan_declared_scope_sha": "c8bf742590eb6644f93e2f38812237f4d5d76d64896203686b7fbb90b9eac468",
-    "tasks_sha": "6ba2506de15c67f0afc45dbc8a77cd84bb3f5683225c8cce90b3a78c4e125de8",
+    "tasks_sha": "90a92360230161365906f306beb19ace4256ff1419ed92f0fd41092820444dd4",
     "reviewability_sha": "d48d218c423be02574df96ba3a15b9f09addc29af7855f938ec1a9a753f777fc",
     "hazard_route_sha": "cd814db7ea0c124c10b53bed28ffac9c4288c63a419fb78e15f182b5d7ac7772"
   }

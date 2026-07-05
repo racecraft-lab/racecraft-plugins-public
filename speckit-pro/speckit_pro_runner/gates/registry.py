@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from ..envelope import diagnostic, response
+from .suite import run_suite_gate
 
 
 REQUEST_BASE = "tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests"
@@ -56,6 +57,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("run-default-suite"),
         "US1",
         "active_test_gate",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "suite-gate",
@@ -67,6 +70,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("run-layer"),
         "US1",
         "active_test_gate",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "suite-gate",
@@ -78,6 +83,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("run-toolchain-preflight"),
         "US1",
         "active_test_gate",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "suite-gate",
@@ -89,6 +96,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("run-ai-evals"),
         "US1",
         "active_eval_gate",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "suite-gate",
@@ -100,6 +109,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("run-integration-suite"),
         "US1",
         "active_test_gate",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "suite-gate",
@@ -111,6 +122,8 @@ GATE_OPERATIONS: tuple[GateOperation, ...] = (
         request_fixture("run-parity-suite"),
         "US1",
         "active_test_gate",
+        implemented=True,
+        promotion_status="python_authoritative",
     ),
     GateOperation(
         "payload-gate",
@@ -289,7 +302,7 @@ def gate_registry_report() -> dict[str, Any]:
     return {
         "schema_version": "1.0",
         "feature_id": "XPLAT-007",
-        "promotion_status": "planned",
+        "promotion_status": "mixed",
         "active_cutover": False,
         "groups": groups,
         "gate_helper_ids": sorted(GATE_HELPER_IDS),
@@ -362,6 +375,9 @@ def dispatch_gate(request: Any) -> dict[str, Any]:
             remediation_actions=["Keep existing Bash gates authoritative.", "Add the user-story fixture before enabling execution."],
             deferred_to=f"XPLAT-007 {entry.story}",
         )
+
+    if entry.group == "suite":
+        return run_suite_gate(entry, request)
 
     return response("internal_failure", request_id=request.request_id)
 

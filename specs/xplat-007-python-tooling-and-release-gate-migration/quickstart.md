@@ -33,17 +33,43 @@ Expected outcome:
 
 ## 2. Run Python Test/Eval Gates
 
-After Slice 1 implementation, run the migrated default suite through the runner:
+US1 suite gates are runner-envelope operations. The default request covers the
+toolchain preflight plus Layers 1, 4, 5, 7, and 8:
 
 ```bash
 PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-default-suite.json
 ```
 
+Focused suite requests are also available:
+
+```bash
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-toolchain-preflight.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-layer.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-ai-evals.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-integration-suite.json
+PYTHONPATH=speckit-pro python3 -m speckit_pro_runner < tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/requests/run-parity-suite.json
+```
+
 Expected outcome:
 
-- active test/eval gate result is reported in the runner response
-- legacy Bash output is represented only as parity evidence until promotion
-- promoted gates have matching promotion records
+- stdout is one JSON runner response
+- stderr contains only line-delimited runner diagnostics when a gate is not
+  green
+- command stdout, stderr, argv, exit code, and duration are captured under
+  `data.suite.results[]`
+- Layer 2, Layer 3, and Layer 6 eval dispatch reports stable
+  `missing_prerequisite` diagnostics when local eval runners are unavailable
+- retained Bash references are recorded as inactive parity evidence in
+  `tests/speckit-pro/layer4-scripts/fixtures/xplat-007-gates/promotion-records.json`
+
+US1 does not:
+
+- migrate payload, install, marketplace/version, release, or release-readiness
+  helper behavior
+- clean up workflow shell or active-path guard findings
+- cut over Claude/Codex installed invocation paths
+- rebuild or publish generated release payloads
+- claim native installed-plugin UAT or public platform support
 
 ## 3. Run The Active No-Shell Guard
 
